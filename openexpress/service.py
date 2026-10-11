@@ -12,7 +12,10 @@ from typing import Callable
 
 from openexpress import paths, sync
 from openexpress.auth import store
-from openexpress.connect import GarminClient
+from openexpress.connect import (
+    ApiError, ClockSkew, GarminClient, NotAccountDevice, OwnershipError, OwnershipUnknown,
+    Unauthorized,
+)
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import _, ngettext
@@ -27,6 +30,8 @@ class DeviceSession:
     device: GarminDevice
     settings: Settings
     client: GarminClient
+    # Set by check_session(): why account features are unavailable for this watch.
+    ownership_error: Exception | None = None
 
     @property
     def logged_in(self) -> bool:
@@ -63,6 +68,61 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None) 
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
+
+
+def _unit_id(value) -> int | None:
+    """A unit ID from the server: a positive int or a string of digits; else ignored."""
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        value = int(value)
+    return value if type(value) is int and value > 0 else None
+
+
+def require_account_device(client: GarminClient, unit_id: int) -> None:
+    """Allow account operations on this watch only if the account lists it.
+
+    Asks Garmin Connect every time (no cache, no override). Raises NotAccountDevice
+    when the watch is not on the list and OwnershipUnknown when the list cannot be
+    fetched: the watch is never assumed to be the user's. An expired login or a wrong
+    clock is raised as such, so the user gets the usual advice.
+    """
+    if client.verified_unit_id != unit_id:
+        client.verified_unit_id = None
+    # While the same watch is checked again, tasks sharing the client (pictures, icons)
+    # keep working; the result replaces the old one only when the answer is in.
+    verified = None
+    try:
+        try:
+            devices = client.account_devices()
+        except (Unauthorized, ClockSkew):
+            raise
+        except ApiError as e:
+            raise OwnershipUnknown(
+                _("Could not check whether this watch belongs to your Garmin account "
+                  "({error}). Nothing was synced.").format(error=e)) from e
+        if unit_id not in {_unit_id(d.get("unitid")) for d in devices}:
+            raise NotAccountDevice(
+                _("This watch is not registered to your Garmin account. To use it with "
+                  "Garmin Connect here, sign in to the account it belongs to or add the "
+                  "watch to your account in Garmin Connect."))
+        verified = unit_id
+    finally:
+        client.verified_unit_id = verified
+
+
+def check_session(s: DeviceSession) -> DeviceSession:
+    """For the window: run the ownership check and keep the refusal instead of raising.
+
+    A rejected login makes the session logged out, so the window asks to log in again.
+    """
+    s.ownership_error = None
+    if s.logged_in:
+        try:
+            require_account_device(s.client, s.device.unit_id)
+        except Unauthorized:
+            s.client.auth = None
+        except (OwnershipError, ClockSkew) as e:
+            s.ownership_error = e
+    return s
 
 
 @dataclass
@@ -147,13 +207,14 @@ def load_last_sync(unit_id: int | None = None) -> dict | None:
 def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     if not s.logged_in:
         raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
+    require_account_device(s.client, s.device.unit_id)
     out = SyncSummary()
     state = s.state
     progress(_("Fetching configuration from the Garmin server…"))
     cfg = s.client.upload_settings(s.device.unit_id)
     if s.first_sync:
         if first_run == "baseline":
-            n = sync.mark_baseline(s.device, s.storage, cfg, state)
+            n = sync.mark_baseline(s.device, s.storage, cfg, state, s.client)
             out.lines.append(ngettext("Marked {count} existing file as already uploaded.",
                                       "Marked {count} existing files as already uploaded.",
                                       n).format(count=n))

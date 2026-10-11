@@ -28,6 +28,9 @@ class FakeClient:
         self.uploads = []
         self.acks = []
 
+    def require_verified(self, unit_id=None):
+        pass
+
     def activity_matches(self, unit_id, ids):
         return {i: i in self.matches for i in ids}
 
@@ -126,7 +129,7 @@ def test_failed_upload_kept_as_pending(device_root, tmp_path):
 
 def test_baseline(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
-    assert sync.mark_baseline(dev, st, UPLOAD_CONFIG, state) == 4
+    assert sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, FakeClient()) == 4
     assert sync.plan_uploads(dev, st, UPLOAD_CONFIG, state).candidates == []
 
 

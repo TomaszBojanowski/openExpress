@@ -20,6 +20,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 from openexpress import i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import RESTART_STEPS, _human  # noqa: E402
+from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
@@ -342,7 +343,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _update_actions(self) -> None:
         s = self.session
-        self.lookup_action("sync").set_enabled(bool(s and s.logged_in) and not self.busy)
+        self.lookup_action("sync").set_enabled(
+            bool(s and s.logged_in and s.ownership_error is None) and not self.busy)
         self.lookup_action("refresh").set_enabled(not self.busy)
 
     def _on_nav_selected(self, _box, row) -> None:
@@ -528,7 +530,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         if self.session is None:
             self.sections["watch"].show("loading")
-        self.run_task(_("Detecting the watch…"), service.open_session, done, failed)
+        self.run_task(_("Detecting the watch…"),
+                      lambda: service.check_session(service.open_session()), done, failed)
 
     def show_device(self) -> None:
         self.maps_cache = self.updates_cache = self.apps_cache = None
@@ -556,6 +559,14 @@ class MainWindow(Adw.ApplicationWindow):
             self.banner.set_button_label(_("Log In"))
             self._banner_kind = "login"
             self.banner.set_revealed(True)
+        elif s is not None and s.ownership_error is not None:
+            unknown = not isinstance(s.ownership_error, NotAccountDevice)
+            self.banner.set_title(
+                _("Could not check whether this watch belongs to your Garmin account") if unknown
+                else _("This watch is not registered to your Garmin account"))
+            self.banner.set_button_label(_("Try Again") if unknown else None)
+            self._banner_kind = "recheck"
+            self.banner.set_revealed(True)
         else:
             self.banner.set_revealed(False)
 
@@ -563,8 +574,11 @@ class MainWindow(Adw.ApplicationWindow):
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
-        if getattr(self, "_banner_kind", "") == "setup":
+        kind = getattr(self, "_banner_kind", "")
+        if kind == "setup":
             self.choose_dll()
+        elif kind == "recheck":
+            self.refresh_device()
         else:
             self.login()
 
@@ -659,11 +673,15 @@ class MainWindow(Adw.ApplicationWindow):
         g.add(row)
 
         g = sec.group(_("Sync with Garmin Connect"))
-        self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
-        self._last_sync_children = []
-        g.add(self.last_sync_row)
-        self._show_last_sync()
-        if not self._background_enabled():
+        if s.ownership_error is not None:
+            g.add(Adw.ActionRow(title=_("Sync is not available for this watch"),
+                                subtitle=GLib.markup_escape_text(str(s.ownership_error))))
+        else:
+            self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
+            self._last_sync_children = []
+            g.add(self.last_sync_row)
+            self._show_last_sync()
+        if s.ownership_error is None and not self._background_enabled():
             row = Adw.ActionRow(title=_("Automatic sync is off"),
                                 subtitle=_("Turn it on to sync whenever the watch is connected"))
             # TRANSLATORS: button that turns on automatic sync
@@ -718,7 +736,7 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
-        if not s.logged_in:
+        if not s.logged_in or s.ownership_error is not None:
             return
 
         def work():
@@ -794,7 +812,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.in_background(work, done, failed)
 
     def _show_last_sync(self) -> None:
-        if not hasattr(self, "last_sync_row") or self.session is None:
+        if (not hasattr(self, "last_sync_row") or self.session is None
+                or self.session.ownership_error is not None):
             return
         row = self.last_sync_row
         for child in self._last_sync_children:
@@ -1039,7 +1058,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def start_sync(self, first_run: str | None = None) -> None:
         s = self.session
-        if not s or not s.logged_in:
+        if not s or not s.logged_in or s.ownership_error is not None:
             return
 
         def done(summary: service.SyncSummary):
@@ -1051,6 +1070,10 @@ class MainWindow(Adw.ApplicationWindow):
             if isinstance(e, service.FirstSyncChoiceNeeded):
                 self.ask_first_sync()
                 return True
+            if isinstance(e, OwnershipError) and self.session is s:
+                # The account or its device list changed since the watch was detected.
+                s.ownership_error = e
+                self.show_device()
             return False
 
         self.run_task(_("Syncing…"),
@@ -1369,6 +1392,12 @@ class MainWindow(Adw.ApplicationWindow):
             sec.error.set_description(_("Sign in to manage apps."))
             sec.show("error")
             return
+        if s.ownership_error is not None:
+            sec.clear()
+            sec.error.set_title("Connect IQ")
+            sec.error.set_description(str(s.ownership_error))
+            sec.show("error")
+            return
 
         def work():
             api = ciq.StoreApi(s.client)
@@ -1462,7 +1491,7 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import ciq
 
         s = self.session
-        if not images or not s.logged_in:
+        if not images or not s.logged_in or s.ownership_error is not None:
             return
 
         def work():
@@ -1501,6 +1530,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
 
         def work():
+            service.require_account_device(s.client, s.device.unit_id)
             api = ciq.StoreApi(s.client)
             api.queue_install(s.device, apps)
             return ciq.install_queued(s.device, s.storage, s.client,
@@ -1535,6 +1565,8 @@ class MainWindow(Adw.ApplicationWindow):
                 return
 
             def work():
+                if r == "forget":
+                    service.require_account_device(s.client, s.device.unit_id)
                 removed = ciq.remove(s.device, s.storage, app)
                 if r == "forget":
                     ciq.StoreApi(s.client).forget(s.device, [app.app_id])

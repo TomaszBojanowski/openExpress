@@ -265,7 +265,9 @@ class StoreApi:
         self.client = client
         self.base = base
 
-    def _request(self, method: str, path: str, what: str, json_body=None, params=None):
+    def _request(self, method: str, path: str, what: str, json_body=None, params=None,
+                 unit_id: int | None = None):
+        self.client.require_verified(unit_id)
         url = self.base + path
         if params:
             url += "?" + urlencode(params)
@@ -280,7 +282,7 @@ class StoreApi:
         data = self._request("GET", "express/appstore/rest/apps/downloads",
                              _("Connect IQ apps"),
                              params={"unitId": device.unit_id, "locale": locale,
-                                     "sku": device.part_number})
+                                     "sku": device.part_number}, unit_id=device.unit_id)
         return [_store_app(a) for a in data or []]
 
     def updates(self, device: GarminDevice, installed: list[InstalledApp], locale: str) -> list[StoreApp]:
@@ -288,7 +290,7 @@ class StoreApi:
                          for a in installed],
                 "deviceSKU": device.part_number, "locale": locale}
         data = self._request("POST", "express/appstore/rest/apps/updates",
-                             _("Connect IQ updates"), json_body=body)
+                             _("Connect IQ updates"), json_body=body, unit_id=device.unit_id)
         # The server also lists apps that are already current; keep only newer versions.
         current = {a.app_id: a.version or 0 for a in installed}
         return [u for u in (_store_app(a) for a in data or [])
@@ -298,7 +300,8 @@ class StoreApi:
         body = {"apps": [{"appId": str(a.app_id), "internalVersionNumber": a.latest_version}
                          for a in apps], "unitId": device.unit_id}
         data = self._request("POST", "express/appstore/rest/apps/installApps",
-                             _("Connect IQ install"), json_body=body) or []
+                             _("Connect IQ install"), json_body=body,
+                             unit_id=device.unit_id) or []
         bad = [r for r in data if int(r.get("status") or 0) != 200]
         if bad:
             apps = ", ".join(f"{r.get('appid')} ({r.get('status')})" for r in bad)
@@ -321,7 +324,7 @@ class StoreApi:
         body = {"apps": [{"appId": str(i), "internalVersionNumber": 0} for i in app_ids],
                 "unitId": device.unit_id}
         self._request("POST", "express/appstore/rest/apps/removeInstalledApps",
-                      _("Connect IQ remove"), json_body=body)
+                      _("Connect IQ remove"), json_body=body, unit_id=device.unit_id)
 
 
 def _store_app(a: dict) -> StoreApp:

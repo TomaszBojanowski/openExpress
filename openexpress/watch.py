@@ -17,6 +17,7 @@ gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 from openexpress import service  # noqa: E402
+from openexpress.connect import OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
@@ -123,6 +124,8 @@ class Watcher(Gio.Application):
             if not s.logged_in:
                 log.info("Not logged in: skipping sync")
                 return
+            # First, so a watch of another account gets one notification and nothing else.
+            service.require_account_device(s.client, s.device.unit_id)
             if s.first_sync:
                 GLib.idle_add(self.notify, _("Garmin: first sync required"),
                               _("Open openExpress and choose how to sync the watch."))
@@ -138,6 +141,9 @@ class Watcher(Gio.Application):
             GLib.idle_add(self.notify, _("Sync finished"), body)
         except service.SyncBusy:
             log.info("A sync is running in another process")
+        except OwnershipError as e:
+            log.info("Not syncing: %s", e)
+            GLib.idle_add(self.notify, _("Garmin: this watch was not synced"), str(e))
         except Exception as e:  # noqa: BLE001
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("Sync failed"), str(e))

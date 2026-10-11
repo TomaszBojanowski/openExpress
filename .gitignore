@@ -18,6 +18,7 @@ flatpak-repo/
 
 # Local notes for AI coding sessions (contain private paths)
 AGENTS.md
+PLAN.md
 
 # Local list of secret patterns used by tools/check-secrets.sh
 tools/secret-patterns.txt

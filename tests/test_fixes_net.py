@@ -72,8 +72,10 @@ def make_client(monkeypatch, base):
     base = base.rstrip("/") + "/"
     monkeypatch.setitem(settings_mod.ENVIRONMENTS, "test",
                         {"sso": base, "connectapi": base, "omt": base, "gcs": base})
-    return GarminClient(Settings(environment="test", client_guid="g"),
-                        Consumer("ckey", "csecret"), store.ConnectAuth("tok", "tsec"))
+    c = GarminClient(Settings(environment="test", client_guid="g"),
+                     Consumer("ckey", "csecret"), store.ConnectAuth("tok", "tsec"))
+    c.verified_unit_id = 1  # as after service.require_account_device()
+    return c
 
 
 # --- 1. network and JSON errors -> ApiError ---------------------------------------------
@@ -379,6 +381,7 @@ def test_activity_matches_body_not_signed():
             return Resp()
 
     client = GarminClient(Settings(), Consumer("ck", "cs"), ConnectAuth("t", "ts"), Session())
+    client.verified_unit_id = 42
     assert client.activity_matches(42, ["2", "1"]) == {"1": True, "2": False}
     query = urlsplit(sent["url"]).query
     assert sent["data"] == query == "deviceId=42&externalIds=1&externalIds=2"

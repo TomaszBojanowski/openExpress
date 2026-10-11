@@ -43,6 +43,22 @@ class ClockSkew(ApiError):
     pass
 
 
+class OwnershipError(Exception):
+    """The connected watch could not be confirmed as a device of the logged-in account."""
+
+
+class NotAccountDevice(OwnershipError):
+    """The watch is not on the account's device list."""
+
+
+class OwnershipUnknown(OwnershipError):
+    """The account's device list could not be fetched or understood."""
+
+
+class DeviceNotVerified(OwnershipError):
+    """An account request for a watch was attempted without the ownership check."""
+
+
 def lower_keys(obj: Any) -> Any:
     """Garmin servers return either camelCase or PascalCase; normalize the keys."""
     if isinstance(obj, dict):
@@ -73,6 +89,8 @@ class GarminClient:
         self.auth = auth
         self.http = session or requests.Session()
         self.session_id = str(uuid.uuid4())
+        # Set by service.require_account_device(); kept in memory only.
+        self.verified_unit_id: int | None = None
 
     # --- helpers ---------------------------------------------------------------------
 
@@ -105,6 +123,16 @@ class GarminClient:
         return authorization_header(
             method, url, self.consumer.key, self.consumer.secret, token, secret, form
         )
+
+    def require_verified(self, unit_id: int | None = None) -> None:
+        """Refuse account requests for a watch that was not checked against the account.
+
+        Without `unit_id` (requests that do not name the watch) any verified watch is enough.
+        """
+        if self.verified_unit_id is None or unit_id not in (None, self.verified_unit_id):
+            raise DeviceNotVerified(
+                _("Internal error: this watch was not checked against your Garmin account. "
+                  "Nothing was sent."))
 
     @staticmethod
     def _prepared_url(method: str, url: str) -> str:
@@ -228,6 +256,7 @@ class GarminClient:
 
     def activity_matches(self, unit_id: int, external_ids: list[str]) -> dict[str, bool]:
         """Which activities (by time_created) Connect already has. Returns {id: in_connect}."""
+        self.require_verified(unit_id)
         if not external_ids:
             return {}
         ids = sorted(external_ids)
@@ -262,6 +291,7 @@ class GarminClient:
         last_file: bool,
         authenticated: bool,
     ) -> UploadResult:
+        self.require_verified()
         headers: dict[str, str] = {}
         files = None
         body: bytes | None = data
@@ -301,6 +331,7 @@ class GarminClient:
         0 means the status could not be checked (network error). A relative `url` is
         resolved against `base` (the upload URL).
         """
+        self.require_verified()
         if base:
             url = urljoin(base, url)
         url = self._prepared_url("GET", url)
@@ -382,12 +413,23 @@ class GarminClient:
 
     def device_image_url(self, unit_id: int) -> str | None:
         """Product picture of the watch, from the device registered in Garmin Connect."""
+        self.require_verified(unit_id)
         what = _("Device info")
         r = self._connect("GET", f"device-service/deviceservice/device-info/{unit_id}", what)
         body = lower_keys(self._json(r, what))
         return (body.get("imageurl") if isinstance(body, dict) else None) or None
 
+    def account_devices(self) -> list[dict]:
+        """Devices registered to the logged-in account; each entry carries `unitid`."""
+        what = _("Account device list")
+        r = self._connect("GET", "device-service/deviceregistration/devices", what)
+        body = lower_keys(self._json(r, what))
+        if not isinstance(body, list) or not all(isinstance(d, dict) for d in body):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+        return body
+
     def device_messages(self, unit_id: int) -> list[dict]:
+        self.require_verified(unit_id)
         what = _("Connect file queue")
         r = self._connect(
             "GET",
@@ -402,6 +444,7 @@ class GarminClient:
 
     def download_message(self, message_url: str, absolute: bool) -> bytes | None:
         """Download a file from the queue. None means no content (404/204): just acknowledge it."""
+        self.require_verified()
         url = message_url if absolute else self.connect_url(message_url)
         url = self._prepared_url("GET", url)
         what = _("Downloading file from Connect")
@@ -415,6 +458,7 @@ class GarminClient:
         return resp.content
 
     def ack_message(self, message_id: int | str) -> None:
+        self.require_verified()
         self._connect(
             "POST",
             f"device-service/devicemessage/message/{message_id}",

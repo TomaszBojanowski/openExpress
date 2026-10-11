@@ -461,8 +461,13 @@ def _failure_codes(body) -> set[int]:
 
 
 def mark_baseline(device: GarminDevice, storage: Storage, upload_config: dict,
-                  state: SyncState) -> int:
-    """Mark all files currently on the watch as already uploaded (without uploading)."""
+                  state: SyncState, client: GarminClient) -> int:
+    """Mark all files currently on the watch as already uploaded (without uploading).
+
+    The state says "this account already has these files", so it needs the same
+    ownership check as an upload.
+    """
+    client.require_verified(device.unit_id)
     plan = plan_uploads(device, storage, upload_config, state, include_consent_locations=True)
     n = 0
     for c in plan.candidates:

@@ -73,6 +73,7 @@ they show the plan and do nothing without `--apply`.
 | Device | Status |
 |---|---|
 | fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, Connect IQ app list. **Not yet tested on the watch:** installing a software update, installing Connect IQ apps, copying music |
+| epix (part 006-B3943) | read-only commands and backup tested |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a
@@ -163,7 +164,8 @@ systemctl --user enable --now openexpress-watch.service
 The background service syncs the watch every time it is connected and shows a notification.
 It does nothing until you log in and perform the first sync
 (in the application window or with `openexpress baseline`/`sync`). The window and the service
-never sync at the same time (shared lock).
+never sync at the same time (shared lock). A watch that is not registered to the signed-in
+account only gets a notification.
 
 ## Privacy and security
 
@@ -191,6 +193,11 @@ never sync at the same time (shared lock).
 
 ## Sync details
 
+- The watch must be registered to the Garmin account you are signed in to. Before every sync
+  and every Connect IQ operation the account's device list is fetched from Garmin Connect;
+  if the watch is not on it, or the list cannot be fetched, nothing is uploaded and nothing
+  is written to the watch. `openexpress baseline` therefore needs a login now. Features
+  without the account (backup, software updates, maps, music) work with any watch.
 - **TrueUp** (`FIT_TYPE_39`): when you own several Garmin devices, Connect asks the client to
   check back after a short delay (at most 90 s) and then sends adjusted daily totals, which
   are written to the watch.

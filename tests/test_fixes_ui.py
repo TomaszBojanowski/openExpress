@@ -26,6 +26,13 @@ class FakeClient:
         self.fail_config = fail_config
         self.uploads = []
         self.auth = object()
+        self.verified_unit_id = None
+
+    def account_devices(self):
+        return [{"unitid": 1234567890}]
+
+    def require_verified(self, unit_id=None):
+        assert self.verified_unit_id is not None
 
     def upload_settings(self, unit_id):
         if self.fail_config:

@@ -93,6 +93,12 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.7" date="2026-10-11">
+      <description>
+        <p>Sync and Connect IQ now refuse a watch that is not registered to the signed-in
+        Garmin account.</p>
+      </description>
+    </release>
     <release version="0.3.6" date="2026-10-11">
       <description>
         <p>Fixes "Operation not supported" when writing courses, workouts, maps, apps or

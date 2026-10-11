@@ -11,7 +11,9 @@ from pathlib import Path
 
 from openexpress import __version__, i18n, paths
 from openexpress.auth import store
-from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized
+from openexpress.connect import (
+    ApiError, ClockSkew, GarminClient, OwnershipError, Unauthorized,
+)
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, ngettext
@@ -290,6 +292,10 @@ def cmd_sync(args) -> int:
         logged_in = False
         client = make_client(settings, need_auth=False)
         print(_("(not logged in: showing the upload plan only)"))
+    if logged_in:
+        from openexpress import service
+
+        service.require_account_device(client, dev.unit_id)
 
     up_plan = None
     if not args.download_only:
@@ -414,10 +420,12 @@ def cmd_sync(args) -> int:
 
 
 def cmd_baseline(args) -> int:
-    from openexpress import sync
+    from openexpress import service, sync
 
     st, dev, settings, state = _sync_context(args)
-    cfg = GarminClient(settings).upload_settings(dev.unit_id)
+    client = make_client(settings, need_auth=True)
+    service.require_account_device(client, dev.unit_id)
+    cfg = client.upload_settings(dev.unit_id)
     plan = sync.plan_uploads(dev, st, cfg, state, include_consent_locations=True)
     n = sum(1 for c in plan.candidates if c.device_path)
     if not args.apply:
@@ -425,10 +433,8 @@ def cmd_baseline(args) -> int:
                        "Dry run: {count} files would be marked as already uploaded. Add --apply.",
                        n).format(count=n))
         return 0
-    from openexpress import service
-
     with service.sync_lock():
-        n = sync.mark_baseline(dev, st, cfg, sync.SyncState(dev.unit_id))
+        n = sync.mark_baseline(dev, st, cfg, sync.SyncState(dev.unit_id), client)
     print(ngettext("Marked {count} file as already uploaded. "
                    "The next `sync` will upload only new data.",
                    "Marked {count} files as already uploaded. "
@@ -671,6 +677,9 @@ def cmd_apps(args) -> int:
     st, dev = open_device(args)
     settings = Settings.load()
     client = make_client(settings, need_auth=True)
+    from openexpress import service
+
+    service.require_account_device(client, dev.unit_id)
     api = ciq.StoreApi(client)
     locale = settings.locale.replace("_", "-")
     state = ciq.read_installed(dev, st)
@@ -1160,7 +1169,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from openexpress import service
 
-    user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew,
+    user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
                    Unauthorized, service.SyncBusy) + _domain_errors()
     try:
         return args.func(args)
