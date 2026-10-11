@@ -1621,6 +1621,13 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import music
 
         s = self.session
+        if not music.supported_kinds(s.device):
+            sec = self.sections["music"]
+            sec.clear()
+            sec.error.set_title(pgettext("tab", "Music"))
+            sec.error.set_description(music.no_media_message())
+            sec.show("error")
+            return
         self._load("music", _("Reading music on the device…"),
                    lambda: (music.list_device(s.device, s.storage),
                             music.list_playlists(s.device, s.storage)),
@@ -1634,15 +1641,17 @@ class MainWindow(Adw.ApplicationWindow):
         items, playlists = result
         sec = self.sections["music"]
         free = self.session.storage.free_space()
+        # Only the kinds of media this device declares.
+        kinds = music.supported_kinds(self.session.device)
         g = sec.group(_("Add to the device"), _("Free space: {size}").format(size=_human(free)))
-        for kind, label in music.KIND_NAMES.items():
-            row = Adw.ActionRow(title=_(label))
+        for kind in kinds:
+            row = Adw.ActionRow(title=_(music.KIND_NAMES[kind]))
             row.add_suffix(self._button(_("Folders…"), lambda k=kind: self.choose_music(k, True)))
             row.add_suffix(self._button(_("Files…"), lambda k=kind: self.choose_music(k, False)))
             g.add(row)
         on_watch = {"track": _("Music on the device"), "podcast": _("Podcasts on the device"),
                     "audiobook": _("Audiobooks on the device")}
-        for kind in music.KIND_NAMES:
+        for kind in kinds:
             files = [i for i in items if i.kind == kind]
             n = len(files)
             g = sec.group(on_watch[kind],

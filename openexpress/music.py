@@ -71,6 +71,19 @@ def media_dir(device: GarminDevice, kind: str) -> str:
     return files[0].path.strip("/")
 
 
+def supported_kinds(device: GarminDevice) -> list[str]:
+    """Kinds of media the device declares (e.g. a bike computer declares none)."""
+    return [kind for kind, datatype in KINDS.items() if device.targets(datatype)]
+
+
+def supports_playlists(device: GarminDevice) -> bool:
+    return bool(device.targets(PLAYLIST))
+
+
+def no_media_message() -> str:
+    return _("This device does not play music, podcasts or audiobooks.")
+
+
 def supported_extensions(device: GarminDevice, kind: str) -> set[str]:
     return {f.extension.lower() for f in device.targets(KINDS[kind]) if f.extension}
 

@@ -819,12 +819,24 @@ def cmd_music(args) -> int:
 
     st, dev = open_device(args)
     cmd = args.music_cmd or "list"
+    if cmd == "remove":
+        bad = [p for p in args.paths if len(p.strip()) < MIN_MUSIC_PATTERN]
+        if bad:
+            print(_("Error: each TEXT must have at least {count} characters: {texts}").format(
+                count=MIN_MUSIC_PATTERN, texts=", ".join(repr(p) for p in bad)), file=sys.stderr)
+            return 1
+    kinds = music.supported_kinds(dev)
+    if not kinds:
+        if cmd != "list":
+            raise music.MusicError(music.no_media_message())
+        print(music.no_media_message())
+        return 0
     if cmd == "list":
         items = music.list_device(dev, st)
         by_kind: dict[str, list] = {}
         for i in items:
             by_kind.setdefault(i.kind, []).append(i)
-        for kind in ("track", "podcast", "audiobook"):
+        for kind in kinds:
             files = by_kind.get(kind, [])
             print(_(MUSIC_KIND_LINES[kind]).format(
                 count=len(files), size=_human(sum(f.size for f in files))))
@@ -834,7 +846,7 @@ def cmd_music(args) -> int:
         pls = music.list_playlists(dev, st)
         if pls:
             print(_("Playlists: {count}: {names}").format(count=len(pls), names=", ".join(pls)))
-        else:
+        elif music.supports_playlists(dev):
             print(_("Playlists: {count}").format(count=len(pls)))
         print(_("Free space: {size}").format(size=_human(st.free_space())))
         return 0
@@ -882,11 +894,6 @@ def cmd_music(args) -> int:
         return 0
 
     # remove
-    bad = [p for p in args.paths if len(p.strip()) < MIN_MUSIC_PATTERN]
-    if bad:
-        print(_("Error: each TEXT must have at least {count} characters: {texts}").format(
-            count=MIN_MUSIC_PATTERN, texts=", ".join(repr(p) for p in bad)), file=sys.stderr)
-        return 1
     items = music.list_device(dev, st)
     pls = music.list_playlists(dev, st)
     roots = [f.path for kind in (*music.KINDS.values(), music.PLAYLIST)

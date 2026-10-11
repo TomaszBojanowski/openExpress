@@ -141,3 +141,84 @@ def test_music_layout_and_playlist(iq_device, tmp_path):
     assert pl == "Music/Run_ mix.m3u8"
     assert (st.root / pl).read_text() == "Music/Artist A/Album B/01 Song.mp3\n"
     assert music.list_playlists(dev, st) == ["Music/Run_ mix.m3u8"]
+
+
+# --- only the kinds of media that the device declares -----------------------------------------
+
+NO_MEDIA = "This device does not play music, podcasts or audiobooks."
+
+
+def test_supported_kinds(iq_device, device_root):
+    _st, dev = iq_device
+    assert music.supported_kinds(dev) == ["track", "podcast"]  # no audiobooks declared
+    assert music.supports_playlists(dev)
+
+
+def test_music_command_lists_declared_kinds_only(iq_device, device_root, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(device_root), "music"]) == 0
+    out = capsys.readouterr().out
+    assert "Tracks: 0" in out and "Podcasts: 0" in out and "Playlists: 0" in out
+    assert "Audiobooks" not in out and NO_MEDIA not in out
+
+    # Without playlists: no playlist line either.
+    xml = device_root / "GARMIN/GarminDevice.xml"
+    xml.write_text(xml.read_text().replace("MEDIA_PLAYLIST", "SOMETHING_ELSE"))
+    assert main(["--path", str(device_root), "music"]) == 0
+    out = capsys.readouterr().out
+    assert "Tracks: 0" in out and "Playlists" not in out
+
+
+def test_music_command_on_a_device_without_media(device_root, tmp_path, capsys):
+    from openexpress.cli import main
+
+    st = LocalStorage(device_root)
+    assert music.supported_kinds(parse(st.read("GARMIN/GarminDevice.xml"))) == []
+    before = sorted(p.name for p in device_root.rglob("*"))
+    assert main(["--path", str(device_root), "music"]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.strip() == NO_MEDIA  # one message, no empty "Tracks: 0" lists
+    song = tmp_path / "song.mp3"
+    song.write_bytes(b"ID3" + b"\x00" * 10)
+    m3u = tmp_path / "list.m3u"
+    m3u.write_text("song.mp3\n")
+    for argv in (["add", str(song), "--apply"], ["playlist", str(m3u), "--apply"],
+                 ["remove", "song", "--apply"]):
+        assert main(["--path", str(device_root), "music", *argv]) == 1, argv
+        captured = capsys.readouterr()
+        assert NO_MEDIA in captured.err and "Traceback" not in captured.err
+    assert sorted(p.name for p in device_root.rglob("*")) == before
+
+
+def test_music_page_on_a_device_without_media(device_root):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st = LocalStorage(device_root)
+    session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")), storage=st)
+    shown, started = [], []
+    section = types.SimpleNamespace(
+        clear=lambda: shown.append("clear"), show=shown.append,
+        error=types.SimpleNamespace(set_title=lambda t: shown.append(("title", t)),
+                                    set_description=lambda d: shown.append(("text", d))))
+    win = types.SimpleNamespace(session=session, sections={"music": section},
+                                _load=lambda *a: started.append(a))
+    MainWindow.load_music(win)
+    assert started == []  # nothing is read from the device
+    assert shown == ["clear", ("title", "Music"), ("text", NO_MEDIA), "error"]
+
+
+def test_music_page_reads_the_device_when_it_has_media(iq_device):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    started = []
+    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
+                                sections={}, _load=lambda *a: started.append(a[0]),
+                                show_music=None)
+    MainWindow.load_music(win)
+    assert started == ["music"]
