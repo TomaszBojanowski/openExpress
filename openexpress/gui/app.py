@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 import traceback
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import gi
@@ -34,7 +36,10 @@ def gui_settings_path() -> Path:
 
 def load_gui_settings() -> dict:
     p = gui_settings_path()
-    return json.loads(p.read_text()) if p.exists() else {"auto_sync": False}
+    try:
+        return json.loads(p.read_text()) if p.exists() else {}
+    except ValueError:
+        return {}
 
 
 def save_gui_settings(data: dict) -> None:
@@ -60,89 +65,248 @@ def save_ui_language(code: str) -> None:
     paths.write_private(p, json.dumps(data, indent=2))
 
 
+def format_when(ts: float) -> str:
+    when = datetime.fromtimestamp(ts)
+    now = datetime.now()
+    clock = when.strftime("%H:%M")
+    if when.date() == now.date():
+        return _("Today at {time}").format(time=clock)
+    if when.date() == (now - timedelta(days=1)).date():
+        return _("Yesterday at {time}").format(time=clock)
+    return when.strftime("%x %H:%M")
+
+
+def cached_download(http, url: str, name: str) -> Path | None:
+    """Downloads a small file (picture, icon) once into the cache."""
+    target = paths.cache_dir() / "images" / name
+    if target.exists() and target.stat().st_size:
+        return target
+    try:
+        resp = http.get(url, timeout=20)
+        if not resp.ok or not resp.content:
+            return None
+    except Exception:  # noqa: BLE001 - pictures are optional
+        return None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(resp.content)
+    return target
+
+
+def load_texture(path: Path, size: int):
+    """Picture as a texture scaled to `size`; handles formats GTK cannot load (e.g. GIF)."""
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import Gdk, GdkPixbuf
+
+    try:
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), size, size, True)
+        return Gdk.Texture.new_for_pixbuf(pixbuf)
+    except GLib.Error:
+        return None
+
+
+def trash_button(tooltip: str, cb) -> Gtk.Button:
+    b = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text=tooltip, valign=Gtk.Align.CENTER)
+    b.add_css_class("flat")
+    b.connect("clicked", lambda *_a: cb())
+    return b
+
+
+class Section:
+    """One page of the window: shows a placeholder, a spinner, an error or the content."""
+
+    def __init__(self, key: str, title: str, icon: str, loading_text: str):
+        self.key, self.title, self.icon = key, title, icon
+        self.loaded = False
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.empty = Adw.StatusPage(
+            icon_name=APP_ID, title=_("Connect your watch"),
+            description=_("Connect your Garmin watch with a USB cable. "
+                          "It will be detected automatically."))
+        self.loading = Adw.StatusPage(title=loading_text)
+        if hasattr(Adw, "SpinnerPaintable"):
+            self.loading.set_paintable(Adw.SpinnerPaintable.new(self.loading))
+        self.error = Adw.StatusPage(icon_name="dialog-warning-symbolic")
+        self.retry = Gtk.Button(label=_("Try again"), halign=Gtk.Align.CENTER)
+        self.retry.add_css_class("pill")
+        self.error.set_child(self.retry)
+        self.page = Adw.PreferencesPage()
+        for name, widget in (("empty", self.empty), ("loading", self.loading),
+                             ("error", self.error), ("content", self.page)):
+            self.stack.add_named(widget, name)
+        self.groups: list[Adw.PreferencesGroup] = []
+
+    def show(self, name: str) -> None:
+        self.stack.set_visible_child_name(name)
+
+    def show_error(self, text: str) -> None:
+        self.error.set_title(_("Something went wrong"))
+        self.error.set_description(GLib.markup_escape_text(text))
+        self.show("error")
+
+    def clear(self) -> None:
+        for g in self.groups:
+            self.page.remove(g)
+        self.groups = []
+
+    def group(self, title: str = "", description: str = "") -> Adw.PreferencesGroup:
+        g = Adw.PreferencesGroup(title=title, description=description)
+        self.page.add(g)
+        self.groups.append(g)
+        return g
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
-        super().__init__(application=app, title="openExpress", default_width=1160,
-                         default_height=720)
+        super().__init__(application=app, title="openExpress", default_width=1000,
+                         default_height=740)
+        self.set_size_request(360, 480)
         self.session: service.DeviceSession | None = None
         self.busy = False
         self.gui_settings = load_gui_settings()
         self.maps_cache = None
         self.apps_cache = None
-        self.music_cache = None
         self.updates_cache = None
+        self.update_state: str | None = None  # None = unknown, "current", "available"
         self._action_buttons: list[Gtk.Widget] = []
 
-        self.toasts = Adw.ToastOverlay()
-        view = Adw.ToolbarView()
-        header = Adw.HeaderBar()
-        self.stack = Adw.ViewStack()
-        header.set_title_widget(Adw.ViewSwitcher(stack=self.stack,
-                                                 policy=Adw.ViewSwitcherPolicy.WIDE))
-        refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text=_("Refresh"))
-        refresh.connect("clicked", lambda *_: self.refresh_device())
-        header.pack_start(refresh)
-        about = Gtk.Button(icon_name="help-about-symbolic", tooltip_text=_("About openExpress"))
-        about.connect("clicked", lambda *_a: self.show_about())
-        header.pack_end(about)
-        view.add_top_bar(header)
+        # TRANSLATORS: tab title
+        self.sections = {s.key: s for s in (
+            Section("watch", pgettext("tab", "Watch"), "preferences-system-time-symbolic",
+                    _("Detecting the watch…")),
+            # TRANSLATORS: tab title
+            Section("updates", pgettext("tab", "Updates"), "software-update-available-symbolic",
+                    _("Checking for updates…")),
+            # TRANSLATORS: tab title
+            Section("maps", pgettext("tab", "Maps"), "mark-location-symbolic",
+                    _("Checking maps…")),
+            # TRANSLATORS: tab title (Connect IQ apps)
+            Section("apps", pgettext("tab", "Apps"), "view-app-grid-symbolic",
+                    _("Loading Connect IQ apps…")),
+            # TRANSLATORS: tab title
+            Section("music", pgettext("tab", "Music"), "audio-x-generic-symbolic",
+                    _("Reading music on the watch…")),
+        )}
+        for sec in self.sections.values():
+            sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
 
-        self.progress_bar = Gtk.ProgressBar(show_text=False, hexpand=True)
-        self.progress_label = Gtk.Label(xalign=0, ellipsize=3, hexpand=True)
-        self.spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
-        bar = Gtk.ActionBar(revealed=False)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
-        box.append(self.progress_label)
-        box.append(self.progress_bar)
-        bar.pack_start(self.spinner)
-        bar.set_center_widget(box)
-        self.action_bar = bar
-        view.add_bottom_bar(bar)
-
-        self.device_page = Adw.PreferencesPage()
-        self.sync_page = Adw.PreferencesPage()
-        self.updates_page = Adw.PreferencesPage()
-        self.maps_page = Adw.PreferencesPage()
-        self.apps_page = Adw.PreferencesPage()
-        self.music_page = Adw.PreferencesPage()
-        self.no_device = Adw.StatusPage(
-            icon_name="phone-symbolic", title=_("Connect your watch"),
-            description=_("Connect your Garmin watch with a USB cable. "
-                          "It will be detected automatically."),
-        )
-        self.device_stack = Gtk.Stack()
-        self.device_stack.add_named(self.no_device, "empty")
-        self.device_stack.add_named(self.device_page, "device")
-        # TRANSLATORS: tab title
-        self.stack.add_titled_with_icon(self.device_stack, "device", pgettext("tab", "Watch"),
-                                        "computer-symbolic")
-        # TRANSLATORS: tab title
-        self.stack.add_titled_with_icon(self.sync_page, "sync", pgettext("tab", "Sync"),
-                                        "mail-send-receive-symbolic")
-        # TRANSLATORS: tab title
-        self.stack.add_titled_with_icon(self.updates_page, "updates", pgettext("tab", "Updates"),
-                                        "software-update-available-symbolic")
-        # TRANSLATORS: tab title
-        self.stack.add_titled_with_icon(self.maps_page, "maps", pgettext("tab", "Maps"),
-                                        "mark-location-symbolic")
-        # TRANSLATORS: tab title (Connect IQ apps)
-        self.stack.add_titled_with_icon(self.apps_page, "apps", pgettext("tab", "Apps"),
-                                        "view-app-grid-symbolic")
-        # TRANSLATORS: tab title
-        self.stack.add_titled_with_icon(self.music_page, "music", pgettext("tab", "Music"),
-                                        "audio-x-generic-symbolic")
-        self.stack.connect("notify::visible-child-name", self._on_page_changed)
-        view.set_content(self.stack)
-        self.toasts.set_child(view)
-        self.set_content(self.toasts)
-
-        self._build_sync_page()
-        self._groups: dict[str, list] = {}
+        self._build_layout()
+        self._install_actions()
 
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
+        self._watch_last_sync()
         self.refresh_device()
+
+    # --- layout -----------------------------------------------------------------------
+
+    def _build_layout(self) -> None:
+        self.split = Adw.NavigationSplitView(min_sidebar_width=210, max_sidebar_width=260)
+
+        menu = Gio.Menu()
+        section = Gio.Menu()
+        section.append(_("Preferences"), "app.preferences")
+        if hasattr(Adw, "ShortcutsDialog"):
+            section.append(_("Keyboard Shortcuts"), "app.shortcuts")
+        section.append(_("About openExpress"), "app.about")
+        menu.append_section(None, section)
+        menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
+                                     tooltip_text=_("Main Menu"), primary=True)
+        sidebar_header = Adw.HeaderBar()
+        sidebar_header.pack_end(menu_button)
+        sidebar_view = Adw.ToolbarView()
+        sidebar_view.add_top_bar(sidebar_header)
+        self.nav = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
+        self.nav.add_css_class("navigation-sidebar")
+        for sec in self.sections.values():
+            box = Gtk.Box(spacing=12, margin_top=6, margin_bottom=6, margin_start=6,
+                          margin_end=6)
+            box.append(Gtk.Image(icon_name=sec.icon))
+            box.append(Gtk.Label(label=sec.title, xalign=0, hexpand=True))
+            row = Gtk.ListBoxRow(child=box)
+            row.key = sec.key
+            self.nav.append(row)
+        self.nav.connect("row-selected", self._on_nav_selected)
+        self.nav.connect("row-activated", lambda *_a: self.split.set_show_content(True))
+        sidebar_view.set_content(Gtk.ScrolledWindow(child=self.nav,
+                                                    hscrollbar_policy=Gtk.PolicyType.NEVER))
+        self.split.set_sidebar(Adw.NavigationPage(title="openExpress", child=sidebar_view))
+
+        content_view = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        self.refresh_button = Gtk.Button(icon_name="view-refresh-symbolic",
+                                         tooltip_text=_("Refresh"), action_name="win.refresh")
+        header.pack_start(self.refresh_button)
+        # TRANSLATORS: button that starts syncing
+        self.sync_button = Gtk.Button(label=_("Sync"), action_name="win.sync")
+        self.sync_button.add_css_class("suggested-action")
+        header.pack_end(self.sync_button)
+        self.sync_icon_button = Gtk.Button(icon_name="mail-send-receive-symbolic",
+                                           tooltip_text=_("Sync"), action_name="win.sync",
+                                           visible=False)
+        self.sync_icon_button.add_css_class("suggested-action")
+        header.pack_end(self.sync_icon_button)
+        content_view.add_top_bar(header)
+        self.banner = Adw.Banner(revealed=False)
+        self.banner.connect("button-clicked", lambda *_a: self._banner_action())
+        content_view.add_top_bar(self.banner)
+
+        self.pages = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        for sec in self.sections.values():
+            self.pages.add_named(sec.stack, sec.key)
+        content_view.set_content(self.pages)
+
+        self.progress_bar = Gtk.ProgressBar(show_text=False, hexpand=True)
+        self.progress_label = Gtk.Label(xalign=0, ellipsize=3, hexpand=True)
+        spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
+        box.append(self.progress_label)
+        box.append(self.progress_bar)
+        self.action_bar = Gtk.ActionBar(revealed=False)
+        self.action_bar.pack_start(spinner)
+        self.action_bar.set_center_widget(box)
+        content_view.add_bottom_bar(self.action_bar)
+
+        self.content_page = Adw.NavigationPage(title=self.sections["watch"].title,
+                                               child=content_view)
+        self.split.set_content(self.content_page)
+
+        breakpoint = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 620sp"))
+        breakpoint.add_setter(self.split, "collapsed", True)
+        breakpoint.add_setter(self.sync_button, "visible", False)
+        breakpoint.add_setter(self.sync_icon_button, "visible", True)
+        self.add_breakpoint(breakpoint)
+
+        self.toasts = Adw.ToastOverlay(child=self.split)
+        self.set_content(self.toasts)
+        self.nav.select_row(self.nav.get_row_at_index(0))
+
+    def _install_actions(self) -> None:
+        for name, cb in (("refresh", lambda *_a: self.refresh_device()),
+                         ("sync", lambda *_a: self.start_sync())):
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", cb)
+            self.add_action(action)
+        self._update_actions()
+
+    def _update_actions(self) -> None:
+        s = self.session
+        self.lookup_action("sync").set_enabled(bool(s and s.logged_in) and not self.busy)
+        self.lookup_action("refresh").set_enabled(not self.busy)
+
+    def _on_nav_selected(self, _box, row) -> None:
+        if row is None:
+            return
+        sec = self.sections[row.key]
+        self.pages.set_visible_child_name(sec.key)
+        self.content_page.set_title(sec.title)
+        self.load_section(sec.key)
+
+    def select_section(self, key: str) -> None:
+        for i, sec in enumerate(self.sections.values()):
+            if sec.key == key:
+                self.nav.select_row(self.nav.get_row_at_index(i))
+        self.split.set_show_content(True)
 
     # --- helpers ----------------------------------------------------------------------
 
@@ -159,8 +323,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.action_bar.set_revealed(busy)
         self.progress_label.set_text(text)
         self.progress_bar.set_fraction(0)
+        self._action_buttons = [b for b in self._action_buttons if b.get_root() is not None]
         for b in self._action_buttons:
             b.set_sensitive(not busy)
+        self._update_actions()
 
     def progress(self, text: str) -> None:
         GLib.idle_add(self.progress_label.set_text, text)
@@ -201,6 +367,19 @@ class MainWindow(Adw.ApplicationWindow):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    @staticmethod
+    def in_background(fn, on_done) -> None:
+        """Run optional work (pictures, status checks) without blocking the window."""
+        def worker():
+            try:
+                result = fn()
+            except Exception:  # noqa: BLE001
+                log.debug("%s", traceback.format_exc())
+                return
+            GLib.idle_add(lambda: (on_done(result), False)[1])
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _button(self, label: str, cb, style: str | None = None) -> Gtk.Button:
         b = Gtk.Button(label=label, valign=Gtk.Align.CENTER)
         if style:
@@ -210,169 +389,376 @@ class MainWindow(Adw.ApplicationWindow):
         self._action_buttons.append(b)
         return b
 
-    def _reset_group(self, page: Adw.PreferencesPage, key: str, title: str,
-                     description: str = "") -> Adw.PreferencesGroup:
-        old = self._groups.pop(f"{id(page)}:{key}", None)
-        if old is not None:
-            page.remove(old)
-        g = Adw.PreferencesGroup(title=title, description=description)
-        page.add(g)
-        self._groups[f"{id(page)}:{key}"] = g
-        return g
+    def _trash(self, tooltip: str, cb) -> Gtk.Button:
+        b = trash_button(tooltip, cb)
+        b.set_sensitive(not self.busy)
+        self._action_buttons.append(b)
+        return b
 
     @staticmethod
     def _removed_files(count: int) -> str:
         return ngettext("Removed {count} file", "Removed {count} files", count).format(count=count)
 
-    def _clear_page(self, page: Adw.PreferencesPage) -> None:
-        for k in [k for k in self._groups if k.startswith(f"{id(page)}:")]:
-            page.remove(self._groups.pop(k))
+    @staticmethod
+    def _search_filter(entry: Gtk.SearchEntry, rows: list[tuple[Gtk.Widget, str]],
+                       expander: Adw.ExpanderRow | None = None) -> None:
+        def changed(e):
+            text = e.get_text().casefold()
+            for row, haystack in rows:
+                row.set_visible(text in haystack)
+            if expander is not None and text:
+                expander.set_expanded(True)
+        entry.connect("search-changed", changed)
 
     # --- device ----------------------------------------------------------------------
 
     def _on_mount_added(self, _mon, mount):
         if _is_garmin_uri(mount.get_root().get_uri()):
-            GLib.timeout_add(1500, self._device_arrived)
-
-    def _device_arrived(self):
-        self.refresh_device(auto_sync=True)
-        return False
+            GLib.timeout_add(1500, lambda: (self.refresh_device(), False)[1])
 
     def _on_mount_removed(self, _mon, mount):
         if _is_garmin_uri(mount.get_root().get_uri()):
             self.session = None
-            self.maps_cache = self.updates_cache = self.apps_cache = self.music_cache = None
             self.show_device()
 
-    def refresh_device(self, auto_sync: bool = False) -> None:
+    def refresh_device(self) -> None:
+        if self.busy:
+            return
+
         def done(sess):
             self.session = sess
-            self.maps_cache = self.updates_cache = self.apps_cache = self.music_cache = None
             self.show_device()
-            if (auto_sync and self.gui_settings.get("auto_sync") and sess.logged_in
-                    and not sess.first_sync):
-                self.start_sync()
 
-        def failed(e):
+        def failed(_e):
             self.session = None
             self.show_device()
             return True
 
-        if self.busy:
-            return
+        if self.session is None:
+            self.sections["watch"].show("loading")
         self.run_task(_("Detecting the watch…"), service.open_session, done, failed)
 
     def show_device(self) -> None:
-        s = self.session
-        if s is None:
-            self.device_stack.set_visible_child_name("empty")
-            for page in (self.updates_page, self.maps_page, self.apps_page, self.music_page):
-                self._clear_page(page)
-            self._refresh_sync_page()
+        self.maps_cache = self.updates_cache = self.apps_cache = None
+        self.update_state = None
+        for sec in self.sections.values():
+            sec.loaded = False
+            sec.clear()
+            sec.show("empty" if self.session is None else "loading")
+        self._update_banner()
+        self._update_actions()
+        if self.session is None:
             return
-        self.device_stack.set_visible_child_name("device")
-        d = s.device
-        g = self._reset_group(self.device_page, "info", d.description)
-        for title, value in (
-            # TRANSLATORS: watch software version
-            (_("Software"), d.software_version_str),
-            (_("Part number"), d.part_number),
-            (_("Free space"), _human(s.storage.free_space())),
-        ):
-            g.add(Adw.ActionRow(title=title, subtitle=value, subtitle_selectable=True))
+        self.show_overview()
+        self.load_section(self.pages.get_visible_child_name())
+        self._check_updates_quietly()
 
-        g = self._reset_group(self.device_page, "account", _("Garmin Connect account"))
-        if s.client.consumer is None:
-            row = Adw.ActionRow(
-                title=_("Setup required"),
-                subtitle=_("Select the official Garmin Express installer (GarminExpress.exe)"),
-            )
-            row.add_suffix(self._button(_("Choose file…"), self.choose_dll, "suggested-action"))
+    def _update_banner(self) -> None:
+        s = self.session
+        if s is not None and s.client.consumer is None:
+            self.banner.set_title(_("openExpress needs a one-time setup"))
+            self.banner.set_button_label(_("Choose Installer…"))
+            self._banner_kind = "setup"
+            self.banner.set_revealed(True)
+        elif s is not None and not s.logged_in:
+            self.banner.set_title(_("Not logged in to Garmin Connect"))
+            self.banner.set_button_label(_("Log In"))
+            self._banner_kind = "login"
+            self.banner.set_revealed(True)
+        else:
+            self.banner.set_revealed(False)
+
+    def _banner_action(self) -> None:
+        if getattr(self, "_banner_kind", "") == "setup":
+            self.choose_dll()
+        else:
+            self.login()
+
+    def load_section(self, key: str, force: bool = False) -> None:
+        sec = self.sections[key]
+        if self.session is None or (sec.loaded and not force) or key == "watch":
+            if key == "watch" and self.session is not None and force:
+                self.refresh_device()
+            return
+        loader = {"updates": self.load_updates, "maps": self.load_maps,
+                  "apps": self.load_apps, "music": self.load_music}[key]
+        loader()
+
+    def _load(self, key: str, title: str, work, show) -> None:
+        """Common pattern: spinner in the section, work in a thread, then `show(result)`."""
+        sec = self.sections[key]
+        sec.show("loading")
+
+        def done(result):
+            sec.loaded = True
+            sec.clear()
+            show(result)
+            sec.show("content")
+
+        def failed(e):
+            sec.show_error(str(e) or e.__class__.__name__)
+            return True
+
+        if self.busy:
+            # Another task runs; try again shortly so the page does not stay empty.
+            GLib.timeout_add(700, lambda: (self._load(key, title, work, show), False)[1])
+            return
+        self.run_task(title, work, done, failed)
+
+    # --- overview ---------------------------------------------------------------------
+
+    def show_overview(self) -> None:
+        s = self.session
+        sec = self.sections["watch"]
+        sec.clear()
+        d = s.device
+
+        hero = sec.group()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER,
+                      margin_bottom=12)
+        self.device_image = Gtk.Image(icon_name=APP_ID, pixel_size=128)
+        self.device_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, can_shrink=True,
+                                          visible=False)
+        self.device_picture.set_size_request(180, 180)
+        box.append(self.device_image)
+        box.append(self.device_picture)
+        title = Gtk.Label(label=d.description, wrap=True, justify=Gtk.Justification.CENTER)
+        title.add_css_class("title-1")
+        box.append(title)
+        self.software_label = Gtk.Label(
+            label=_("Software {version}").format(version=d.software_version_str))
+        self.software_label.add_css_class("dim-label")
+        box.append(self.software_label)
+        hero.add(box)
+        self._load_device_picture()
+
+        free, total = s.storage.free_space(), s.storage.capacity()
+        g = sec.group(_("Storage"))
+        row = Adw.ActionRow(title=_("Watch storage"))
+        if free is not None and total:
+            row.set_subtitle(_("{free} free of {total}").format(free=_human(free),
+                                                                 total=_human(total)))
+            bar = Gtk.LevelBar(min_value=0, max_value=1, value=1 - free / total,
+                               valign=Gtk.Align.CENTER, width_request=120)
+            bar.add_offset_value("low", 0.75)
+            bar.add_offset_value("high", 0.9)
+            bar.add_offset_value("full", 1.0)
+            row.add_suffix(bar)
+        else:
+            row.set_subtitle(_("{size} free").format(size=_human(free)))
+        g.add(row)
+
+        g = sec.group(_("Sync with Garmin Connect"))
+        self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
+        g.add(self.last_sync_row)
+        self._show_last_sync()
+        if not self._background_enabled():
+            row = Adw.ActionRow(title=_("Automatic sync is off"),
+                                subtitle=_("Turn it on to sync whenever the watch is connected"))
+            # TRANSLATORS: button that turns on automatic sync
+            row.add_suffix(self._button(_("Turn On"), lambda: self.set_background(True)))
             g.add(row)
-        elif s.logged_in:
-            row = Adw.ActionRow(title=_("Logged in"),
-                                subtitle=GLib.markup_escape_text(s.client.auth.display))
+
+        g = sec.group(pgettext("tab", "Updates"))
+        self.update_row = Adw.ActionRow(title=_("Watch software"), activatable=True,
+                                        subtitle=_("Checking…"))
+        self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
+        g.add(self.update_row)
+
+        if s.logged_in:
+            g = sec.group(_("Garmin Connect account"))
+            row = Adw.ActionRow(title=GLib.markup_escape_text(s.client.auth.display))
             row.add_suffix(self._button(_("Log out"), self.logout))
             g.add(row)
-        else:
-            row = Adw.ActionRow(title=_("Not logged in"),
-                                subtitle=_("Logging in is required for syncing"))
-            row.add_suffix(self._button(_("Log in"), self.login, "suggested-action"))
-            g.add(row)
 
-        g = self._reset_group(self.device_page, "opts", _("Settings"))
-        sw = Adw.SwitchRow(title=_("Sync when connected"),
-                           subtitle=_("While the application window is open"),
-                           active=bool(self.gui_settings.get("auto_sync")))
-        sw.connect("notify::active", self._on_auto_sync)
-        g.add(sw)
-        g.add(self._background_row())
+        g = sec.group(_("Tools"))
         row = Adw.ActionRow(title=_("Backup"),
                             subtitle=GLib.markup_escape_text(str(paths.default_backup_dir())))
         # TRANSLATORS: button that creates a backup
         row.add_suffix(self._button(_("Create"), self.backup))
         g.add(row)
-        g.add(self._language_row())
-        self._refresh_sync_page()
+        row = Adw.ActionRow(title=_("Part number"), subtitle=d.part_number,
+                            subtitle_selectable=True)
+        g.add(row)
+        sec.loaded = True
+        sec.show("content")
 
-    def _on_auto_sync(self, row, _pspec):
-        self.gui_settings["auto_sync"] = row.get_active()
-        save_gui_settings(self.gui_settings)
+    def _load_device_picture(self) -> None:
+        s = self.session
+        if not s.logged_in:
+            return
 
-    def _background_row(self) -> Adw.SwitchRow:
+        def work():
+            url = s.client.device_image_url(s.device.unit_id)
+            return cached_download(s.client.http, url, f"device-{s.device.part_number}.png") \
+                if url else None
+
+        def done(path):
+            texture = load_texture(path, 360) if path else None
+            if texture and self.session is s:
+                self.device_picture.set_paintable(texture)
+                self.device_picture.set_visible(True)
+                self.device_image.set_visible(False)
+
+        self.in_background(work, done)
+
+    def _check_updates_quietly(self) -> None:
+        from openexpress import updates as upd
+
+        s = self.session
+
+        def work():
+            return [u for u in upd.parse_updates(s.client.software_updates(s.device.raw))
+                    if not u.is_reinstall and not u.is_metadata]
+
+        def done(new):
+            if self.session is not s or not hasattr(self, "update_row"):
+                return
+            if new:
+                self.update_state = "available"
+                self.update_row.set_subtitle(ngettext(
+                    "{count} update available", "{count} updates available",
+                    len(new)).format(count=len(new)))
+                self.software_label.set_label(self.software_label.get_label() + " · "
+                                              + _("update available"))
+            else:
+                self.update_state = "current"
+                self.update_row.set_subtitle(_("Software is up to date."))
+
+        self.in_background(work, done)
+
+    def _show_last_sync(self) -> None:
+        if not hasattr(self, "last_sync_row") or self.session is None:
+            return
+        row = self.last_sync_row
+        for child in getattr(self, "_last_sync_children", []):
+            row.remove(child)
+        self._last_sync_children = []
+        data = service.load_last_sync(self.session.device.unit_id)
+        if not data:
+            row.set_subtitle(_("Not synced yet with openExpress"))
+            row.set_enable_expansion(False)
+            return
+        summary = ngettext("{count} file uploaded", "{count} files uploaded",
+                           data.get("uploaded", 0)).format(count=data.get("uploaded", 0)) \
+            + " · " + ngettext("{count} received", "{count} received",
+                               data.get("downloaded", 0)).format(count=data.get("downloaded", 0))
+        errors = data.get("errors") or []
+        if errors:
+            summary += " · " + ngettext("{count} error", "{count} errors",
+                                        len(errors)).format(count=len(errors))
+        row.set_subtitle(GLib.markup_escape_text(
+            format_when(data.get("time", time.time())) + " · " + summary))
+        row.set_enable_expansion(True)
+        for line in (data.get("lines") or []) + errors:
+            child = Adw.ActionRow(title=GLib.markup_escape_text(line), title_lines=3)
+            child.add_css_class("property")
+            row.add_row(child)
+            self._last_sync_children.append(child)
+
+    def _watch_last_sync(self) -> None:
+        """Updates the overview when the background service finishes a sync."""
+        path = service.last_sync_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._last_sync_monitor = Gio.File.new_for_path(str(path)).monitor_file(
+            Gio.FileMonitorFlags.WATCH_MOVES, None)
+        self._last_sync_monitor.connect("changed", lambda *_a: self._show_last_sync())
+
+    # --- background sync, language, setup, account ------------------------------------
+
+    def _background_enabled(self) -> bool:
         from openexpress import background
 
         state = background.is_enabled()
-        if state is None:
-            state = bool(self.gui_settings.get("background"))
-        row = Adw.SwitchRow(
-            title=_("Sync in the background"),
-            subtitle=_("Starts at login and syncs whenever the watch is connected, "
-                       "also when this window is closed"),
-            active=state)
-        row.connect("notify::active", self._on_background)
-        return row
+        return bool(self.gui_settings.get("background")) if state is None else state
 
-    def _on_background(self, row, _pspec):
+    def set_background(self, enabled: bool, on_result=None) -> None:
         from openexpress import background
 
-        enabled = row.get_active()
-        if enabled == bool(self.gui_settings.get("background")) and background.in_flatpak():
-            return
-
         def done(ok: bool, error: str) -> None:
-            if not ok:
-                row.handler_block_by_func(self._on_background)
-                row.set_active(not enabled)
-                row.handler_unblock_by_func(self._on_background)
+            if ok:
+                self.gui_settings["background"] = enabled
+                save_gui_settings(self.gui_settings)
+                self.toast(_("Background sync enabled") if enabled
+                           else _("Background sync disabled"))
+                if self.session is not None:
+                    self.show_overview()
+            else:
                 self.error(_("Background sync"), error or _("The change failed."))
-                return
-            self.gui_settings["background"] = enabled
-            save_gui_settings(self.gui_settings)
-            self.toast(_("Background sync enabled") if enabled
-                       else _("Background sync disabled"))
+            if on_result:
+                on_result(ok)
 
         background.set_enabled(enabled, done)
 
-    def _language_row(self) -> Adw.ComboRow:
+    def show_preferences(self) -> None:
+        dialog = Adw.PreferencesDialog()
+        page = Adw.PreferencesPage(title=_("General"), icon_name="preferences-system-symbolic")
+        g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
+        sw = Adw.SwitchRow(
+            title=_("Sync in the background"),
+            subtitle=_("Starts at login and syncs whenever the watch is connected, "
+                       "also when this window is closed"),
+            active=self._background_enabled())
+
+        def toggled(row, _pspec):
+            wanted = row.get_active()
+            if wanted == self._background_enabled():
+                return
+
+            def result(ok):
+                if not ok:
+                    row.handler_block_by_func(toggled)
+                    row.set_active(not wanted)
+                    row.handler_unblock_by_func(toggled)
+
+            self.set_background(wanted, result)
+
+        sw.connect("notify::active", toggled)
+        g.add(sw)
+        page.add(g)
+
+        g = Adw.PreferencesGroup(title=_("Language"))
         codes = [""] + i18n.available_languages()
         names = [_("System default")] + [i18n.LANGUAGE_NAMES.get(c, c) for c in codes[1:]]
         current = load_ui_language()
-        row = Adw.ComboRow(title=_("Language"), model=Gtk.StringList.new(names))
-        row.set_selected(codes.index(current) if current in codes else 0)
-        row.connect("notify::selected",
-                    lambda r, _p: self._on_language(codes[r.get_selected()]))
-        return row
+        combo = Adw.ComboRow(title=_("Interface language"), model=Gtk.StringList.new(names))
+        combo.set_selected(codes.index(current) if current in codes else 0)
 
-    def _on_language(self, code: str) -> None:
-        if code == load_ui_language():
-            return
-        try:
-            save_ui_language(code)
-        except (OSError, ValueError) as e:
-            self.error(_("Language"), str(e))
-            return
-        self.toast(_("Restart the application to change the language"))
+        def language_changed(r, _p):
+            code = codes[r.get_selected()]
+            if code == load_ui_language():
+                return
+            try:
+                save_ui_language(code)
+            except (OSError, ValueError) as e:
+                self.error(_("Language"), str(e))
+                return
+            dialog.add_toast(Adw.Toast(title=_("Restart the application to change the language")))
+
+        combo.connect("notify::selected", language_changed)
+        g.add(combo)
+        page.add(g)
+
+        g = Adw.PreferencesGroup(title=_("Setup"))
+        row = Adw.ActionRow(title=_("Garmin Express installer"),
+                            subtitle=_("Read the application key again from the official installer"))
+        row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
+        g.add(row)
+        page.add(g)
+        dialog.add(page)
+        dialog.present(self)
+
+    def show_shortcuts(self) -> None:
+        dialog = Adw.ShortcutsDialog()
+        section = Adw.ShortcutsSection(title=_("General"))
+        for title, accel in ((_("Sync"), "<Control>s"), (_("Refresh"), "<Control>r"),
+                             (_("Preferences"), "<Control>comma"),
+                             (_("Keyboard Shortcuts"), "<Control>question"),
+                             (_("Quit"), "<Control>q")):
+            section.add(Adw.ShortcutsItem(title=title, accelerator=accel))
+        dialog.add(section)
+        dialog.present(self)
 
     def choose_dll(self) -> None:
         dialog = Gtk.FileDialog(
@@ -399,6 +785,7 @@ class MainWindow(Adw.ApplicationWindow):
             def saved(consumer):
                 save_consumer(consumer)
                 self.toast(_("Application key saved"))
+                self.session = None
                 self.refresh_device()
 
             self.run_task(_("Reading the installer…"), lambda: read(path), saved)
@@ -423,10 +810,12 @@ class MainWindow(Adw.ApplicationWindow):
                 store.save(auth)
                 return auth
 
-            GLib.idle_add(lambda: self.run_task(
-                _("Logging in…"), work,
-                lambda auth: (self.toast(_("Logged in as {account}").format(account=auth.display)),
-                              self.refresh_device())) and False)
+            def done(auth):
+                self.toast(_("Logged in as {account}").format(account=auth.display))
+                self.session = None
+                self.refresh_device()
+
+            GLib.idle_add(lambda: (self.run_task(_("Logging in…"), work, done), False)[1])
 
         sso.create_login_window(settings, on_ticket, application=self.get_application(),
                                 parent=self).present()
@@ -434,6 +823,7 @@ class MainWindow(Adw.ApplicationWindow):
     def logout(self) -> None:
         store.delete()
         self.toast(_("Logged out"))
+        self.session = None
         self.refresh_device()
 
     def backup(self) -> None:
@@ -453,44 +843,15 @@ class MainWindow(Adw.ApplicationWindow):
 
     # --- sync -------------------------------------------------------------------------
 
-    def _build_sync_page(self) -> None:
-        g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
-        self.sync_row = Adw.ActionRow(title=_("Sync now"))
-        # TRANSLATORS: button that starts syncing
-        self.sync_button = self._button(_("Sync"), self.start_sync, "suggested-action")
-        self.sync_row.add_suffix(self.sync_button)
-        g.add(self.sync_row)
-        self.sync_page.add(g)
-        lg = Adw.PreferencesGroup(title=_("Last sync"))
-        self.sync_log = Gtk.Label(xalign=0, wrap=True, selectable=True,
-                                  label=_("Not synced yet in this session."))
-        self.sync_log.add_css_class("dim-label")
-        lg.add(self.sync_log)
-        self.sync_page.add(lg)
-
-    def _refresh_sync_page(self) -> None:
-        s = self.session
-        if s is None:
-            self.sync_row.set_subtitle(_("No watch connected"))
-        elif not s.logged_in:
-            self.sync_row.set_subtitle(_("Log in on the Watch tab"))
-        else:
-            self.sync_row.set_subtitle(GLib.markup_escape_text(
-                _("Account {account}").format(account=s.client.auth.display)))
-        self.sync_button.set_sensitive(bool(s and s.logged_in) and not self.busy)
-
     def start_sync(self, first_run: str | None = None) -> None:
         s = self.session
         if not s or not s.logged_in:
             return
 
         def done(summary: service.SyncSummary):
-            text = summary.text + ("\n\n" + _("Errors:") + "\n" + "\n".join(summary.errors)
-                                   if summary.errors else "")
-            self.sync_log.set_label(text)
             self.toast(_("Sync finished") if not summary.errors
                        else _("Sync finished with errors"))
-            self._refresh_sync_page()
+            self._show_last_sync()
 
         def failed(e):
             if isinstance(e, service.FirstSyncChoiceNeeded):
@@ -518,49 +879,55 @@ class MainWindow(Adw.ApplicationWindow):
 
     # --- updates ----------------------------------------------------------------------
 
-    def _on_page_changed(self, *_):
-        name = self.stack.get_visible_child_name()
-        if name == "updates" and self.session and self.updates_cache is None:
-            self.load_updates()
-        elif name == "maps" and self.session and self.maps_cache is None:
-            self.load_maps()
-        elif name == "apps" and self.session and self.apps_cache is None:
-            self.load_apps()
-        elif name == "music" and self.session and self.music_cache is None:
-            self.load_music()
-
     def load_updates(self) -> None:
         from openexpress import updates as upd
 
         s = self.session
-        if not s:
-            return
-
-        def work():
-            resp = s.client.software_updates(s.device.raw, include_reinstalls=True)
-            return upd.parse_updates(resp)
-
-        self.run_task(_("Checking for updates…"), work, self.show_updates)
+        self._load("updates", _("Checking for updates…"),
+                   lambda: upd.parse_updates(s.client.software_updates(
+                       s.device.raw, include_reinstalls=True)),
+                   self.show_updates)
 
     def show_updates(self, items) -> None:
         self.updates_cache = items
-        self._clear_page(self.updates_page)
+        sec = self.sections["updates"]
+        d = self.session.device
         new = [u for u in items if not u.is_reinstall and not u.is_metadata]
-        g = self._reset_group(self.updates_page, "new", _("Available updates"),
-                              _("Software is up to date.") if not new else "")
-        for u in new:
-            self._update_row(g, u)
+        if not new:
+            g = sec.group()
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                          halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
+            icon = Gtk.Image(icon_name="object-select-symbolic", pixel_size=64)
+            icon.add_css_class("success")
+            box.append(icon)
+            title = Gtk.Label(label=_("Software is up to date."))
+            title.add_css_class("title-2")
+            box.append(title)
+            sub = Gtk.Label(label=_("{model} · software {version}").format(
+                model=d.description, version=d.software_version_str))
+            sub.add_css_class("dim-label")
+            box.append(sub)
+            check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
+            check.add_css_class("pill")
+            check.connect("clicked", lambda *_a: self.load_section("updates", force=True))
+            box.append(check)
+            g.add(box)
+        else:
+            g = sec.group(_("Available updates"))
+            for u in new:
+                self._update_row(g, u)
         re = [u for u in items if u.is_reinstall and not u.is_metadata]
-        g = self._reset_group(
-            # TRANSLATORS: group of updates that can be installed again
-            self.updates_page, "re", _("Reinstall"),
-            _("Components already on the watch. Useful for troubleshooting."),
-        )
-        exp = Adw.ExpanderRow(title=ngettext("Show {count} component", "Show {count} components",
-                                             len(re)).format(count=len(re)))
-        g.add(exp)
-        for u in sorted(re, key=lambda x: x.name):
-            self._update_row(exp, u, reinstall=True)
+        if re:
+            g = sec.group(_("Advanced"))
+            exp = Adw.ExpanderRow(
+                title=_("Reinstall components"),
+                subtitle=ngettext("{count} component already on the watch; useful for "
+                                  "troubleshooting",
+                                  "{count} components already on the watch; useful for "
+                                  "troubleshooting", len(re)).format(count=len(re)))
+            g.add(exp)
+            for u in sorted(re, key=lambda x: x.name):
+                self._update_row(exp, u, reinstall=True)
 
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
         row = Adw.ActionRow(
@@ -614,40 +981,58 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import maps as mp
 
         s = self.session
-        if not s:
-            return
-        self.run_task(_("Checking maps…"),
-                      lambda: mp.parse_maps(s.client.universal_maps(s.device.raw)),
-                      self.show_maps)
+        self._load("maps", _("Checking maps…"),
+                   lambda: mp.parse_maps(s.client.universal_maps(s.device.raw)),
+                   self.show_maps)
 
     def show_maps(self, all_maps) -> None:
         self.maps_cache = all_maps
-        self._clear_page(self.maps_page)
-        free = self.session.storage.free_space() if self.session else None
-        g = self._reset_group(self.maps_page, "installed", _("On the watch"),
-                              _("Free space: {size}").format(size=_human(free)))
-        for m in sorted((m for m in all_maps if m.installed), key=lambda m: m.name):
+        sec = self.sections["maps"]
+        s = self.session
+        free, total = s.storage.free_space(), s.storage.capacity()
+        installed = sorted((m for m in all_maps if m.installed), key=lambda m: (m.map_type, m.name))
+        g = sec.group(_("On the watch"))
+        if free is not None and total:
+            used_by_maps = sum(m.size for m in installed)
+            row = Adw.ActionRow(
+                title=_("{free} free of {total}").format(free=_human(free), total=_human(total)),
+                subtitle=_("Maps use {size}").format(size=_human(used_by_maps)))
+            row.add_suffix(Gtk.LevelBar(min_value=0, max_value=1, value=1 - free / total,
+                                        valign=Gtk.Align.CENTER, width_request=120))
+            g.add(row)
+        for m in installed:
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(
-                                    f"{m.version} · {_human(m.size)} · {m.status}"))
+                                    f"{m.map_type} · {m.version} · {_human(m.size)} · {m.status}"))
             if m.update_available:
                 # TRANSLATORS: button
                 row.add_suffix(self._button(_("Update"), lambda m=m: self.confirm_map(m),
                                             "suggested-action"))
             if m.can_uninstall:
-                # TRANSLATORS: button
-                row.add_suffix(self._button(_("Remove"), lambda m=m: self.confirm_remove(m),
-                                            "destructive-action"))
+                row.add_suffix(self._trash(_("Remove {name}").format(name=m.name),
+                                           lambda m=m: self.confirm_remove(m)))
             g.add(row)
+
+        available = sorted((m for m in all_maps if not m.installed),
+                           key=lambda m: (m.region, m.name))
+        if not available:
+            return
         # TRANSLATORS: group title: maps that can be installed
-        g = self._reset_group(self.maps_page, "available", _("Available"),
-                              _("Free maps available for this watch"))
-        for m in sorted((m for m in all_maps if not m.installed), key=lambda m: m.name):
+        g = sec.group(_("Available"), _("Free maps available for this watch"))
+        search = Gtk.SearchEntry(placeholder_text=_("Search maps or regions"), margin_bottom=12)
+        g.add(search)
+        rows = []
+        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        listbox.add_css_class("boxed-list")
+        for m in available:
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(
                                     f"{m.region} · {m.version} · {_human(m.size)}"))
             row.add_suffix(self._button(_("Install"), lambda m=m: self.confirm_map(m)))
-            g.add(row)
+            listbox.append(row)
+            rows.append((row, f"{m.name} {m.region} {m.map_type}".casefold()))
+        g.add(listbox)
+        self._search_filter(search, rows)
 
     def confirm_map(self, m) -> None:
         from openexpress import maps as mp
@@ -687,7 +1072,7 @@ class MainWindow(Adw.ApplicationWindow):
                                    transfer_progress=self.fraction,
                                    url_salt=s.client.consumer.url_salt),
                 lambda rep: (self.toast(_("Installed {name}").format(name=m.name)),
-                             self.load_maps()),
+                             self.load_section("maps", force=True)),
             )
 
         d.connect("response", response)
@@ -707,9 +1092,9 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", lambda _d, r: r == "ok" and self.run_task(
             _("Removing {name}…").format(name=m.name),
             lambda: mp.uninstall(m, self.maps_cache, s.storage, progress=self.progress),
-            lambda removed: (self.toast(self._removed_files(len(removed))), self.load_maps())))
+            lambda removed: (self.toast(self._removed_files(len(removed))),
+                             self.load_section("maps", force=True))))
         d.present(self)
-
 
     def show_about(self) -> None:
         from openexpress import __version__
@@ -740,12 +1125,12 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import ciq
 
         s = self.session
-        if not s:
-            return
+        sec = self.sections["apps"]
         if not s.logged_in:
-            self._clear_page(self.apps_page)
-            self._reset_group(self.apps_page, "info", "Connect IQ",
-                              _("Sign in on the Watch tab to manage apps."))
+            sec.clear()
+            sec.error.set_title("Connect IQ")
+            sec.error.set_description(_("Sign in to manage apps."))
+            sec.show("error")
             return
 
         def work():
@@ -756,16 +1141,15 @@ class MainWindow(Adw.ApplicationWindow):
             updates = api.updates(s.device, state.store_apps, locale)
             return state, account, updates
 
-        self.run_task(_("Loading Connect IQ apps…"), work, self.show_apps)
+        self._load("apps", _("Loading Connect IQ apps…"), work, self.show_apps)
 
     def show_apps(self, result) -> None:
         state, account, updates = result
         self.apps_cache = result
-        self._clear_page(self.apps_page)
+        sec = self.sections["apps"]
         upd = {u.app_id: u for u in updates}
-        g = self._reset_group(
-            self.apps_page, "installed", _("On the watch"),
-            self._apps_space(state))
+        icons: dict = {}
+        g = sec.group(_("On the watch"), self._apps_space(state))
         if updates:
             b = self._button(_("Update all"), lambda: self.install_apps(updates),
                              "suggested-action")
@@ -779,18 +1163,19 @@ class MainWindow(Adw.ApplicationWindow):
                 sub += " · " + _("update {version}").format(version=upd[a.app_id].version_name)
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(sub))
+            icons[a.app_id] = self._app_icon(row)
             if a.app_id in upd:
                 row.add_suffix(self._button(_("Update"),
                                             lambda u=upd[a.app_id]: self.install_apps([u]),
                                             "suggested-action"))
             if a.removable:
-                row.add_suffix(self._button(_("Remove"), lambda a=a: self.confirm_remove_app(a),
-                                            "destructive-action"))
+                row.add_suffix(self._trash(_("Remove {name}").format(name=a.name),
+                                           lambda a=a: self.confirm_remove_app(a)))
             g.add(row)
         installed = {a.app_id for a in state.apps}
         missing = [a for a in account if a.app_id not in installed]
-        g = self._reset_group(
-            self.apps_page, "account", _("In your Garmin account"),
+        g = sec.group(
+            _("In your Garmin account"),
             _("Apps you added in the Connect IQ store (website or phone).") if missing
             else _("Add apps in the Connect IQ store (website or phone); "
                    "they will show up here."))
@@ -798,22 +1183,59 @@ class MainWindow(Adw.ApplicationWindow):
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(
                                     f"{self._store_type_name(a)} · {a.version_name} · "
-                                    f"{_human(a.size)} · "
-                                    f"{a.developer}"))
+                                    f"{_human(a.size)} · {a.developer}"))
+            icons[a.app_id] = self._app_icon(row)
             row.add_suffix(self._button(_("Install"), lambda a=a: self.install_apps([a])))
             g.add(row)
-        g = self._reset_group(self.apps_page, "builtin", _("Built-in activities and apps"),
-                              _("Changes take effect after you disconnect the watch."))
-        n = sum(1 for a in state.apps if a.preloaded)
+        self._load_app_icons(icons)
+
+        builtin = sorted((a for a in state.apps if a.preloaded), key=lambda a: a.name)
+        g = sec.group(_("Built-in activities and apps"),
+                      _("Changes take effect after you disconnect the watch."))
+        search = Gtk.SearchEntry(placeholder_text=_("Search activities"), margin_bottom=12)
+        g.add(search)
         exp = Adw.ExpanderRow(title=ngettext("Show {count} item", "Show {count} items",
-                                             n).format(count=n))
-        g.add(exp)
-        for a in sorted((a for a in state.apps if a.preloaded), key=lambda a: a.name):
+                                             len(builtin)).format(count=len(builtin)))
+        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        listbox.add_css_class("boxed-list")
+        listbox.append(exp)
+        g.add(listbox)
+        rows = []
+        for a in builtin:
             sw = Adw.SwitchRow(title=GLib.markup_escape_text(a.name),
                                subtitle=GLib.markup_escape_text(a.type_name),
                                active=not a.disabled)
             sw.connect("notify::active", lambda row, _p, a=a: self.toggle_app(a, row.get_active()))
             exp.add_row(sw)
+            rows.append((sw, a.name.casefold()))
+        self._search_filter(search, rows, exp)
+
+    @staticmethod
+    def _app_icon(row: Adw.ActionRow) -> Gtk.Image:
+        image = Gtk.Image(icon_name="application-x-addon-symbolic", pixel_size=32)
+        row.add_prefix(image)
+        return image
+
+    def _load_app_icons(self, images: dict) -> None:
+        from openexpress import ciq
+
+        s = self.session
+        if not images or not s.logged_in:
+            return
+
+        def work():
+            urls = ciq.StoreApi(s.client).icon_urls(list(images))
+            return {app_id: cached_download(s.client.http, url, f"app-{app_id}.png")
+                    for app_id, url in urls.items()}
+
+        def done(files):
+            for app_id, path in files.items():
+                texture = load_texture(path, 64) if path else None
+                if texture and app_id in images:
+                    images[app_id].set_from_paintable(texture)
+                    images[app_id].set_pixel_size(32)
+
+        self.in_background(work, done)
 
     @staticmethod
     def _store_type_name(app) -> str:
@@ -851,7 +1273,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast(_("Installed {names}").format(names=", ".join(rep.installed)))
             else:
                 self.toast(_("Queued; it will be installed on the next sync"))
-            self.load_apps()
+            self.load_section("apps", force=True)
 
         self.run_task(_("Installing apps…"), work, done)
 
@@ -878,7 +1300,7 @@ class MainWindow(Adw.ApplicationWindow):
 
             self.run_task(_("Removing {name}…").format(name=app.name), work,
                           lambda removed: (self.toast(_("Removed {name}").format(name=app.name)),
-                                           self.load_apps()))
+                                           self.load_section("apps", force=True)))
 
         d.connect("response", response)
         d.present(self)
@@ -901,22 +1323,18 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import music
 
         s = self.session
-        if not s:
-            return
-        self.run_task(_("Reading music on the watch…"),
-                      lambda: (music.list_device(s.device, s.storage),
-                               music.list_playlists(s.device, s.storage)),
-                      self.show_music)
+        self._load("music", _("Reading music on the watch…"),
+                   lambda: (music.list_device(s.device, s.storage),
+                            music.list_playlists(s.device, s.storage)),
+                   self.show_music)
 
     def show_music(self, result) -> None:
         from openexpress import music
 
         items, playlists = result
-        self.music_cache = result
-        self._clear_page(self.music_page)
-        free = self.session.storage.free_space() if self.session else None
-        g = self._reset_group(self.music_page, "add", _("Add to the watch"),
-                              _("Free space: {size}").format(size=_human(free)))
+        sec = self.sections["music"]
+        free = self.session.storage.free_space()
+        g = sec.group(_("Add to the watch"), _("Free space: {size}").format(size=_human(free)))
         for kind, label in music.KIND_NAMES.items():
             row = Adw.ActionRow(title=_(label))
             row.add_suffix(self._button(_("Folders…"), lambda k=kind: self.choose_music(k, True)))
@@ -927,10 +1345,9 @@ class MainWindow(Adw.ApplicationWindow):
         for kind in music.KIND_NAMES:
             files = [i for i in items if i.kind == kind]
             n = len(files)
-            g = self._reset_group(
-                self.music_page, kind, on_watch[kind],
-                ngettext("{count} file · {size}", "{count} files · {size}", n).format(
-                    count=n, size=_human(sum(f.size for f in files))))
+            g = sec.group(on_watch[kind],
+                          ngettext("{count} file · {size}", "{count} files · {size}", n).format(
+                              count=n, size=_human(sum(f.size for f in files))))
             if not files:
                 continue
             exp = Adw.ExpanderRow(title=ngettext("Show {count} file", "Show {count} files",
@@ -939,15 +1356,13 @@ class MainWindow(Adw.ApplicationWindow):
             for f in files:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(f.path.split("/")[-1]),
                                     subtitle=GLib.markup_escape_text(f.path))
-                row.add_suffix(self._button(_("Remove"), lambda p=f.path: self.remove_music([p]),
-                                            "destructive-action"))
+                row.add_suffix(self._trash(_("Remove"), lambda p=f.path: self.remove_music([p])))
                 exp.add_row(row)
         if playlists:
-            g = self._reset_group(self.music_page, "playlists", _("Playlists"))
+            g = sec.group(_("Playlists"))
             for p in playlists:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(p.split("/")[-1]))
-                row.add_suffix(self._button(_("Remove"), lambda p=p: self.remove_music([p]),
-                                            "destructive-action"))
+                row.add_suffix(self._trash(_("Remove"), lambda p=p: self.remove_music([p])))
                 g.add(row)
 
     def choose_music(self, kind: str, folders: bool) -> None:
@@ -996,7 +1411,7 @@ class MainWindow(Adw.ApplicationWindow):
                                    transfer_progress=self.fraction),
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
-                                 self.load_music())))
+                                 self.load_section("music", force=True))))
             d.present(self)
 
         self.run_task(_("Scanning files…"), plan, confirm)
@@ -1007,7 +1422,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         self.run_task(_("Removing…"), lambda: music.remove(s.storage, device_paths),
                       lambda removed: (self.toast(self._removed_files(len(removed))),
-                                       self.load_music()))
+                                       self.load_section("music", force=True)))
 
 
 class App(Adw.Application):
@@ -1022,6 +1437,25 @@ class App(Adw.Application):
         Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).add_search_path(
             str(Path(__file__).resolve().parent.parent / "data"))
         Gtk.Window.set_default_icon_name(APP_ID)
+
+        def window_call(name):
+            return lambda *_a: getattr(self.get_active_window(), name)()
+
+        actions = {"preferences": window_call("show_preferences"),
+                   "about": window_call("show_about"),
+                   "quit": lambda *_a: self.quit()}
+        if hasattr(Adw, "ShortcutsDialog"):
+            actions["shortcuts"] = window_call("show_shortcuts")
+        for name, cb in actions.items():
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", cb)
+            self.add_action(action)
+        for action, accels in (("app.quit", ["<Control>q"]),
+                               ("app.preferences", ["<Control>comma"]),
+                               ("app.shortcuts", ["<Control>question"]),
+                               ("win.refresh", ["<Control>r", "F5"]),
+                               ("win.sync", ["<Control>s"])):
+            self.set_accels_for_action(action, accels)
 
     def do_activate(self):
         win = self.get_active_window() or MainWindow(self)

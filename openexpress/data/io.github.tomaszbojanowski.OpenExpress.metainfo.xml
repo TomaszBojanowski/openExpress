@@ -93,6 +93,16 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.0" date="2026-10-11">
+      <description>
+        <ul>
+          <li>New layout with a sidebar that adapts to narrow windows</li>
+          <li>Watch overview with a picture of the watch, storage, last sync and software status</li>
+          <li>Preferences window, keyboard shortcuts and a banner when you are not logged in</li>
+          <li>Search for maps and built-in activities, Connect IQ app icons</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-10-11">
       <description>
         <p>Running openExpress without a command opens the application window.</p>

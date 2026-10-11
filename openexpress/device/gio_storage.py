@@ -107,6 +107,13 @@ class GioStorage(Storage):
         free = info.get_attribute_uint64("filesystem::free")
         return free or None
 
+    def capacity(self) -> int | None:
+        try:
+            info = self.root.query_filesystem_info("filesystem::size", None)
+        except GLib.Error:
+            return None
+        return info.get_attribute_uint64("filesystem::size") or None
+
 
 @dataclass
 class FoundDevice:

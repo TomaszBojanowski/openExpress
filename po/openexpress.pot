@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: openexpress 0.2.0\n"
+"Project-Id-Version: openexpress 0.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-11 03:13+0200\n"
+"POT-Creation-Date: 2026-10-11 03:33+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -123,39 +123,39 @@ msgstr ""
 msgid "The server refused to queue: {apps}"
 msgstr ""
 
-#: openexpress/ciq.py:257
+#: openexpress/ciq.py:270
 msgid "Connect IQ remove"
 msgstr ""
 
-#: openexpress/ciq.py:321
+#: openexpress/ciq.py:334
 msgid "no free app slots on the watch"
 msgstr ""
 
-#: openexpress/ciq.py:322 openexpress/sync.py:484
+#: openexpress/ciq.py:335 openexpress/sync.py:484
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
 
-#: openexpress/ciq.py:328
+#: openexpress/ciq.py:341
 msgid "not enough Connect IQ space on the watch"
 msgstr ""
 
-#: openexpress/ciq.py:331
+#: openexpress/ciq.py:344
 #, python-brace-format
 msgid "the watch does not accept {datatype}"
 msgstr ""
 
-#: openexpress/ciq.py:335
+#: openexpress/ciq.py:348
 #, python-brace-format
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:359
+#: openexpress/ciq.py:372
 #, python-brace-format
 msgid "{name} is part of the watch software and cannot be removed"
 msgstr ""
 
-#: openexpress/ciq.py:374
+#: openexpress/ciq.py:387
 msgid "App not found on the watch"
 msgstr ""
 
@@ -431,7 +431,7 @@ msgstr ""
 msgid "{device}, software {version}"
 msgstr ""
 
-#: openexpress/cli.py:459 openexpress/gui/app.py:550
+#: openexpress/cli.py:459 openexpress/gui/app.py:627 openexpress/gui/app.py:903
 msgid "Software is up to date."
 msgstr ""
 
@@ -592,7 +592,7 @@ msgstr ""
 
 #. TRANSLATORS: state of a Connect IQ app or built-in activity on the watch
 #. TRANSLATORS: state of a Connect IQ app
-#: openexpress/cli.py:619 openexpress/gui/app.py:777
+#: openexpress/cli.py:619 openexpress/gui/app.py:1161
 msgid "disabled"
 msgstr ""
 
@@ -712,7 +712,7 @@ msgstr ""
 msgid "Playlists: {count}"
 msgstr ""
 
-#: openexpress/cli.py:751 openexpress/gui/app.py:628 openexpress/gui/app.py:919
+#: openexpress/cli.py:751 openexpress/gui/app.py:1337
 #, python-brace-format
 msgid "Free space: {size}"
 msgstr ""
@@ -755,7 +755,8 @@ msgstr ""
 #: openexpress/cli.py:829
 msgid ""
 "In the Flatpak version, the menu entry is installed by Flatpak. Turn on "
-"background sync in the window: Watch tab, Settings, Sync in the background."
+"background sync in the window: main menu, Preferences, Sync in the "
+"background."
 msgstr ""
 
 #: openexpress/cli.py:836
@@ -877,236 +878,236 @@ msgstr ""
 msgid "MTP device URI, e.g. {example}"
 msgstr ""
 
-#: openexpress/cli.py:902
+#: openexpress/cli.py:904
 msgid "configuration: OAuth1 key, environment, locale"
 msgstr ""
 
-#: openexpress/cli.py:904
+#: openexpress/cli.py:906
 msgid "read the needed data from the official Garmin Express installer"
 msgstr ""
 
-#: openexpress/cli.py:905
+#: openexpress/cli.py:907
 msgid "path to Networking.dll from Garmin Express"
 msgstr ""
 
-#: openexpress/cli.py:907
+#: openexpress/cli.py:909
 msgid "path to Utilities.dll (default: next to Networking.dll)"
 msgstr ""
 
-#: openexpress/cli.py:911
+#: openexpress/cli.py:913
 #, python-brace-format
 msgid "e.g. {example}"
 msgstr ""
 
-#: openexpress/cli.py:913
+#: openexpress/cli.py:915
 msgid "language of this program (\"system\": follow the system locale)"
 msgstr ""
 
-#: openexpress/cli.py:916
+#: openexpress/cli.py:918
 msgid "information about the connected watch"
 msgstr ""
 
-#: openexpress/cli.py:920
+#: openexpress/cli.py:922
 msgid "files on the watch by data type"
 msgstr ""
 
-#: openexpress/cli.py:921
+#: openexpress/cli.py:923
 #, python-brace-format
 msgid "e.g. {example} (activities)"
 msgstr ""
 
-#: openexpress/cli.py:922
+#: openexpress/cli.py:924
 msgid "show only the last N files"
 msgstr ""
 
-#: openexpress/cli.py:925
+#: openexpress/cli.py:927
 msgid "log in to Garmin Connect"
 msgstr ""
 
-#: openexpress/cli.py:926
+#: openexpress/cli.py:928
 msgid "log in using a regular browser"
 msgstr ""
 
-#: openexpress/cli.py:929
+#: openexpress/cli.py:931
 msgid "remove the local token"
 msgstr ""
 
-#: openexpress/cli.py:932
+#: openexpress/cli.py:934
 msgid "logged-in account"
 msgstr ""
 
-#: openexpress/cli.py:933
+#: openexpress/cli.py:935
 msgid "verify the token with the server"
 msgstr ""
 
-#: openexpress/cli.py:937
+#: openexpress/cli.py:939
 msgid "upload configuration from the Garmin server (OMT)"
 msgstr ""
 
-#: openexpress/cli.py:941
+#: openexpress/cli.py:943
 msgid "sync with Garmin Connect (dry run by default)"
 msgstr ""
 
-#: openexpress/cli.py:942
+#: openexpress/cli.py:944
 msgid "actually upload and write"
 msgstr ""
 
-#: openexpress/cli.py:943
+#: openexpress/cli.py:945
 msgid "upload everything on the first sync"
 msgstr ""
 
-#: openexpress/cli.py:946
+#: openexpress/cli.py:948
 msgid "only the given data type (repeatable)"
 msgstr ""
 
-#: openexpress/cli.py:948
+#: openexpress/cli.py:950
 msgid "also upload to locations that require specific GDPR consents"
 msgstr ""
 
-#: openexpress/cli.py:950
+#: openexpress/cli.py:952
 msgid "also upload watch diagnostics and telemetry to Garmin"
 msgstr ""
 
-#: openexpress/cli.py:953
+#: openexpress/cli.py:955
 msgid "mark current files as already uploaded"
 msgstr ""
 
-#: openexpress/cli.py:957
+#: openexpress/cli.py:959
 msgid "local backup of watch data"
 msgstr ""
 
-#: openexpress/cli.py:958
+#: openexpress/cli.py:960
 #, python-brace-format
 msgid "destination directory (default: {path})"
 msgstr ""
 
-#: openexpress/cli.py:960
+#: openexpress/cli.py:962
 msgid "how many most recent backups to keep"
 msgstr ""
 
-#: openexpress/cli.py:964
+#: openexpress/cli.py:966
 msgid "watch software updates"
 msgstr ""
 
-#: openexpress/cli.py:966
+#: openexpress/cli.py:968
 msgid "also show items available for reinstall"
 msgstr ""
 
-#: openexpress/cli.py:968
+#: openexpress/cli.py:970
 msgid "part numbers to install, or 'all'"
 msgstr ""
 
-#: openexpress/cli.py:972
+#: openexpress/cli.py:974
 msgid "maps on the watch (TopoActive, base maps, CourseView…)"
 msgstr ""
 
-#: openexpress/cli.py:973
+#: openexpress/cli.py:975
 msgid "also show maps available for download"
 msgstr ""
 
-#: openexpress/cli.py:975
+#: openexpress/cli.py:977
 msgid "install a map"
 msgstr ""
 
-#: openexpress/cli.py:978
+#: openexpress/cli.py:980
 msgid "update installed maps"
 msgstr ""
 
-#: openexpress/cli.py:980
+#: openexpress/cli.py:982
 msgid "remove a map from the watch"
 msgstr ""
 
-#: openexpress/cli.py:985
+#: openexpress/cli.py:987
 msgid "Connect IQ apps, watch faces and data fields"
 msgstr ""
 
-#: openexpress/cli.py:986
+#: openexpress/cli.py:988
 msgid "also list built-in activities"
 msgstr ""
 
-#: openexpress/cli.py:988
+#: openexpress/cli.py:990
 msgid "install an app from your Garmin account"
 msgstr ""
 
-#: openexpress/cli.py:989
+#: openexpress/cli.py:991
 msgid "remove an app from the watch"
 msgstr ""
 
-#: openexpress/cli.py:990
+#: openexpress/cli.py:992
 msgid "enable an app or built-in activity"
 msgstr ""
 
-#: openexpress/cli.py:991
+#: openexpress/cli.py:993
 msgid "disable an app or built-in activity"
 msgstr ""
 
-#: openexpress/cli.py:993
+#: openexpress/cli.py:995
 msgid "app name (or part of it) or app id"
 msgstr ""
 
-#: openexpress/cli.py:997
+#: openexpress/cli.py:999
 msgid "also remove it from the app list in your Garmin account"
 msgstr ""
 
-#: openexpress/cli.py:998
+#: openexpress/cli.py:1000
 msgid "update installed apps"
 msgstr ""
 
-#: openexpress/cli.py:1002
+#: openexpress/cli.py:1004
 msgid "music, podcasts and audiobooks on the watch"
 msgstr ""
 
-#: openexpress/cli.py:1004
+#: openexpress/cli.py:1006
 msgid "copy audio files or folders to the watch"
 msgstr ""
 
-#: openexpress/cli.py:1007
+#: openexpress/cli.py:1009
 msgid "treat all files as this kind (default: detect from genre tag)"
 msgstr ""
 
-#: openexpress/cli.py:1008
+#: openexpress/cli.py:1010
 msgid "also create a playlist with these files"
 msgstr ""
 
-#: openexpress/cli.py:1010
+#: openexpress/cli.py:1012
 msgid "copy a local .m3u/.m3u8 playlist and its tracks"
 msgstr ""
 
-#: openexpress/cli.py:1014
+#: openexpress/cli.py:1016
 msgid "remove files or playlists whose path contains TEXT"
 msgstr ""
 
-#: openexpress/cli.py:1019
+#: openexpress/cli.py:1021
 msgid "application window"
 msgstr ""
 
-#: openexpress/cli.py:1022
+#: openexpress/cli.py:1024
 msgid "background service: sync when the watch is connected"
 msgstr ""
 
-#: openexpress/cli.py:1026
+#: openexpress/cli.py:1028
 msgid "add an application menu entry and a background sync service"
 msgstr ""
 
-#: openexpress/cli.py:1029
+#: openexpress/cli.py:1031
 msgid "remove the menu entry, icon and service instead"
 msgstr ""
 
-#: openexpress/cli.py:1031
+#: openexpress/cli.py:1033
 msgid "install even if the Flatpak of openExpress is installed"
 msgstr ""
 
-#: openexpress/cli.py:1075
+#: openexpress/cli.py:1077
 #, python-brace-format
 msgid "Error: {error}"
 msgstr ""
 
-#: openexpress/cli.py:1078
+#: openexpress/cli.py:1080
 #, python-brace-format
 msgid "Server error: {error}"
 msgstr ""
 
-#: openexpress/cli.py:1083
+#: openexpress/cli.py:1085
 msgid "Interrupted."
 msgstr ""
 
@@ -1170,15 +1171,15 @@ msgstr ""
 msgid "Map activation"
 msgstr ""
 
-#: openexpress/connect.py:333
+#: openexpress/connect.py:339
 msgid "Connect file queue"
 msgstr ""
 
-#: openexpress/connect.py:347
+#: openexpress/connect.py:353
 msgid "Downloading file from Connect"
 msgstr ""
 
-#: openexpress/connect.py:354
+#: openexpress/connect.py:360
 msgid "Receipt acknowledgement"
 msgstr ""
 
@@ -1224,32 +1225,32 @@ msgstr ""
 msgid "Cannot create directory {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:155
+#: openexpress/device/gio_storage.py:162
 msgid "Cannot mount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:165
+#: openexpress/device/gio_storage.py:172
 msgid ""
 "No Garmin device (MTP) found. Connect the watch with a USB cable and unlock "
 "it if it asks to allow the connection."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:170
+#: openexpress/device/gio_storage.py:177
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:182
+#: openexpress/device/gio_storage.py:189
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr ""
 
-#: openexpress/device/storage.py:103
+#: openexpress/device/storage.py:107
 #, python-brace-format
 msgid "File not found on the device: {path}"
 msgstr ""
 
-#: openexpress/device/storage.py:165 openexpress/device/storage.py:173
+#: openexpress/device/storage.py:169 openexpress/device/storage.py:177
 #, python-brace-format
 msgid "Not a directory: {path}"
 msgstr ""
@@ -1285,474 +1286,586 @@ msgstr ""
 msgid "No file_id message"
 msgstr ""
 
-#: openexpress/gui/app.py:82
-msgid "Refresh"
+#: openexpress/gui/app.py:73
+#, python-brace-format
+msgid "Today at {time}"
 msgstr ""
 
-#: openexpress/gui/app.py:85
-msgid "About openExpress"
+#: openexpress/gui/app.py:75
+#, python-brace-format
+msgid "Yesterday at {time}"
 msgstr ""
 
-#: openexpress/gui/app.py:109
+#: openexpress/gui/app.py:122
 msgid "Connect your watch"
 msgstr ""
 
-#: openexpress/gui/app.py:110
+#: openexpress/gui/app.py:123
 msgid ""
 "Connect your Garmin watch with a USB cable. It will be detected "
 "automatically."
 msgstr ""
 
-#. TRANSLATORS: tab title
-#: openexpress/gui/app.py:117
+#: openexpress/gui/app.py:129
+msgid "Try again"
+msgstr ""
+
+#: openexpress/gui/app.py:142
+msgid "Something went wrong"
+msgstr ""
+
+#: openexpress/gui/app.py:174
 msgctxt "tab"
 msgid "Watch"
 msgstr ""
 
-#. TRANSLATORS: tab title
-#: openexpress/gui/app.py:120
-msgctxt "tab"
-msgid "Sync"
+#: openexpress/gui/app.py:175 openexpress/gui/app.py:439
+msgid "Detecting the watch…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:123
+#: openexpress/gui/app.py:177 openexpress/gui/app.py:562
 msgctxt "tab"
 msgid "Updates"
 msgstr ""
 
+#: openexpress/gui/app.py:178 openexpress/gui/app.py:886
+msgid "Checking for updates…"
+msgstr ""
+
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:126
+#: openexpress/gui/app.py:180
 msgctxt "tab"
 msgid "Maps"
 msgstr ""
 
+#: openexpress/gui/app.py:181 openexpress/gui/app.py:984
+msgid "Checking maps…"
+msgstr ""
+
 #. TRANSLATORS: tab title (Connect IQ apps)
-#: openexpress/gui/app.py:129
+#: openexpress/gui/app.py:183
 msgctxt "tab"
 msgid "Apps"
 msgstr ""
 
+#: openexpress/gui/app.py:184 openexpress/gui/app.py:1144
+msgid "Loading Connect IQ apps…"
+msgstr ""
+
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:132
+#: openexpress/gui/app.py:186
 msgctxt "tab"
 msgid "Music"
 msgstr ""
 
-#: openexpress/gui/app.py:154
+#: openexpress/gui/app.py:187 openexpress/gui/app.py:1326
+msgid "Reading music on the watch…"
+msgstr ""
+
+#: openexpress/gui/app.py:208 openexpress/gui/app.py:756
+msgid "Preferences"
+msgstr ""
+
+#: openexpress/gui/app.py:210 openexpress/gui/app.py:757
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: openexpress/gui/app.py:211
+msgid "About openExpress"
+msgstr ""
+
+#: openexpress/gui/app.py:214
+msgid "Main Menu"
+msgstr ""
+
+#: openexpress/gui/app.py:238 openexpress/gui/app.py:755
+msgid "Refresh"
+msgstr ""
+
+#. TRANSLATORS: button that starts syncing
+#: openexpress/gui/app.py:241 openexpress/gui/app.py:245
+#: openexpress/gui/app.py:755
+msgid "Sync"
+msgstr ""
+
+#: openexpress/gui/app.py:318
 msgid "OK"
 msgstr ""
 
-#: openexpress/gui/app.py:176
+#: openexpress/gui/app.py:342
 msgid "Another operation is in progress"
 msgstr ""
 
-#: openexpress/gui/app.py:225
+#: openexpress/gui/app.py:400
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:263
-msgid "Detecting the watch…"
+#: openexpress/gui/app.py:459
+msgid "openExpress needs a one-time setup"
 msgstr ""
 
-#. TRANSLATORS: watch software version
-#: openexpress/gui/app.py:278
-msgid "Software"
+#: openexpress/gui/app.py:460
+msgid "Choose Installer…"
 msgstr ""
 
-#: openexpress/gui/app.py:279
-msgid "Part number"
+#: openexpress/gui/app.py:464
+msgid "Not logged in to Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/app.py:280
-msgid "Free space"
+#: openexpress/gui/app.py:465
+msgid "Log In"
 msgstr ""
 
-#: openexpress/gui/app.py:284
+#: openexpress/gui/app.py:529
+#, python-brace-format
+msgid "Software {version}"
+msgstr ""
+
+#: openexpress/gui/app.py:536
+msgid "Storage"
+msgstr ""
+
+#: openexpress/gui/app.py:537
+msgid "Watch storage"
+msgstr ""
+
+#: openexpress/gui/app.py:539 openexpress/gui/app.py:998
+#, python-brace-format
+msgid "{free} free of {total}"
+msgstr ""
+
+#: openexpress/gui/app.py:548 openexpress/gui/app.py:1252
+#, python-brace-format
+msgid "{size} free"
+msgstr ""
+
+#: openexpress/gui/app.py:551 openexpress/gui/app.py:697
+msgid "Sync with Garmin Connect"
+msgstr ""
+
+#: openexpress/gui/app.py:552
+msgid "Last sync"
+msgstr ""
+
+#: openexpress/gui/app.py:556
+msgid "Automatic sync is off"
+msgstr ""
+
+#: openexpress/gui/app.py:557
+msgid "Turn it on to sync whenever the watch is connected"
+msgstr ""
+
+#. TRANSLATORS: button that turns on automatic sync
+#: openexpress/gui/app.py:559
+msgid "Turn On"
+msgstr ""
+
+#: openexpress/gui/app.py:563
+msgid "Watch software"
+msgstr ""
+
+#: openexpress/gui/app.py:564
+msgid "Checking…"
+msgstr ""
+
+#: openexpress/gui/app.py:570
 msgid "Garmin Connect account"
 msgstr ""
 
-#: openexpress/gui/app.py:287
-msgid "Setup required"
-msgstr ""
-
-#: openexpress/gui/app.py:288
-msgid "Select the official Garmin Express installer (GarminExpress.exe)"
-msgstr ""
-
-#: openexpress/gui/app.py:290
-msgid "Choose file…"
-msgstr ""
-
-#: openexpress/gui/app.py:293
-msgid "Logged in"
-msgstr ""
-
-#: openexpress/gui/app.py:295
+#: openexpress/gui/app.py:572
 msgid "Log out"
 msgstr ""
 
-#: openexpress/gui/app.py:298
-msgid "Not logged in"
+#: openexpress/gui/app.py:575
+msgid "Tools"
 msgstr ""
 
-#: openexpress/gui/app.py:299
-msgid "Logging in is required for syncing"
-msgstr ""
-
-#: openexpress/gui/app.py:300
-msgid "Log in"
-msgstr ""
-
-#: openexpress/gui/app.py:303
-msgid "Settings"
-msgstr ""
-
-#: openexpress/gui/app.py:304
-msgid "Sync when connected"
-msgstr ""
-
-#: openexpress/gui/app.py:305
-msgid "While the application window is open"
-msgstr ""
-
-#: openexpress/gui/app.py:310
+#: openexpress/gui/app.py:576
 msgid "Backup"
 msgstr ""
 
 #. TRANSLATORS: button that creates a backup
-#: openexpress/gui/app.py:313
+#: openexpress/gui/app.py:579
 msgid "Create"
 msgstr ""
 
-#: openexpress/gui/app.py:329
+#: openexpress/gui/app.py:581
+msgid "Part number"
+msgstr ""
+
+#: openexpress/gui/app.py:621
+#, python-brace-format
+msgid "{count} update available"
+msgid_plural "{count} updates available"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: map status
+#: openexpress/gui/app.py:624 openexpress/maps.py:72
+msgid "update available"
+msgstr ""
+
+#: openexpress/gui/app.py:640
+msgid "Not synced yet with openExpress"
+msgstr ""
+
+#: openexpress/gui/app.py:643
+#, python-brace-format
+msgid "{count} file uploaded"
+msgid_plural "{count} files uploaded"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:645
+#, python-brace-format
+msgid "{count} received"
+msgid_plural "{count} received"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:649
+#, python-brace-format
+msgid "{count} error"
+msgid_plural "{count} errors"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:683
+msgid "Background sync enabled"
+msgstr ""
+
+#: openexpress/gui/app.py:684
+msgid "Background sync disabled"
+msgstr ""
+
+#: openexpress/gui/app.py:688
+msgid "Background sync"
+msgstr ""
+
+#: openexpress/gui/app.py:688
+msgid "The change failed."
+msgstr ""
+
+#: openexpress/gui/app.py:696 openexpress/gui/app.py:754
+msgid "General"
+msgstr ""
+
+#: openexpress/gui/app.py:699
 msgid "Sync in the background"
 msgstr ""
 
-#: openexpress/gui/app.py:330
+#: openexpress/gui/app.py:700
 msgid ""
 "Starts at login and syncs whenever the watch is connected, also when this "
 "window is closed"
 msgstr ""
 
-#: openexpress/gui/app.py:348
-msgid "Background sync"
-msgstr ""
-
-#: openexpress/gui/app.py:348
-msgid "The change failed."
-msgstr ""
-
-#: openexpress/gui/app.py:352
-msgid "Background sync enabled"
-msgstr ""
-
-#: openexpress/gui/app.py:353
-msgid "Background sync disabled"
-msgstr ""
-
-#: openexpress/gui/app.py:359
-msgid "System default"
-msgstr ""
-
-#: openexpress/gui/app.py:361 openexpress/gui/app.py:373
+#: openexpress/gui/app.py:721 openexpress/gui/app.py:735
 msgid "Language"
 msgstr ""
 
-#: openexpress/gui/app.py:375
+#: openexpress/gui/app.py:723
+msgid "System default"
+msgstr ""
+
+#: openexpress/gui/app.py:725
+msgid "Interface language"
+msgstr ""
+
+#: openexpress/gui/app.py:737
 msgid "Restart the application to change the language"
 msgstr ""
 
-#: openexpress/gui/app.py:379
+#: openexpress/gui/app.py:743
+msgid "Setup"
+msgstr ""
+
+#: openexpress/gui/app.py:744
+msgid "Garmin Express installer"
+msgstr ""
+
+#: openexpress/gui/app.py:745
+msgid "Read the application key again from the official installer"
+msgstr ""
+
+#: openexpress/gui/app.py:746
+msgid "Choose File…"
+msgstr ""
+
+#: openexpress/gui/app.py:758
+msgid "Quit"
+msgstr ""
+
+#: openexpress/gui/app.py:765
 msgid "Select the Garmin Express installer (GarminExpress.exe)"
 msgstr ""
 
-#: openexpress/gui/app.py:401
+#: openexpress/gui/app.py:787
 msgid "Application key saved"
 msgstr ""
 
-#: openexpress/gui/app.py:404
+#: openexpress/gui/app.py:791
 msgid "Reading the installer…"
 msgstr ""
 
-#: openexpress/gui/app.py:427
-msgid "Logging in…"
-msgstr ""
-
-#: openexpress/gui/app.py:428
+#: openexpress/gui/app.py:814
 #, python-brace-format
 msgid "Logged in as {account}"
 msgstr ""
 
-#: openexpress/gui/app.py:436
+#: openexpress/gui/app.py:818
+msgid "Logging in…"
+msgstr ""
+
+#: openexpress/gui/app.py:825
 msgid "Logged out"
 msgstr ""
 
-#: openexpress/gui/app.py:446
+#: openexpress/gui/app.py:836
 msgid "Creating backup…"
 msgstr ""
 
-#: openexpress/gui/app.py:449
+#: openexpress/gui/app.py:839
 #, python-brace-format
 msgid "Copied {count} file to {path}"
 msgid_plural "Copied {count} files to {path}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:457
-msgid "Sync with Garmin Connect"
-msgstr ""
-
-#: openexpress/gui/app.py:458
-msgid "Sync now"
-msgstr ""
-
-#. TRANSLATORS: button that starts syncing
-#: openexpress/gui/app.py:460
-msgid "Sync"
-msgstr ""
-
-#: openexpress/gui/app.py:464
-msgid "Last sync"
-msgstr ""
-
-#: openexpress/gui/app.py:466
-msgid "Not synced yet in this session."
-msgstr ""
-
-#: openexpress/gui/app.py:474
-msgid "No watch connected"
-msgstr ""
-
-#: openexpress/gui/app.py:476
-msgid "Log in on the Watch tab"
-msgstr ""
-
-#: openexpress/gui/app.py:479
-#, python-brace-format
-msgid "Account {account}"
-msgstr ""
-
-#: openexpress/gui/app.py:488
-msgid "Errors:"
-msgstr ""
-
-#: openexpress/gui/app.py:491 openexpress/watch.py:85
+#: openexpress/gui/app.py:852 openexpress/watch.py:85
 msgid "Sync finished"
 msgstr ""
 
-#: openexpress/gui/app.py:492
+#: openexpress/gui/app.py:853
 msgid "Sync finished with errors"
 msgstr ""
 
-#: openexpress/gui/app.py:501
+#: openexpress/gui/app.py:862
 msgid "Syncing…"
 msgstr ""
 
-#: openexpress/gui/app.py:506
+#: openexpress/gui/app.py:867
 msgid "First sync"
 msgstr ""
 
-#: openexpress/gui/app.py:507
+#: openexpress/gui/app.py:868
 msgid ""
 "If the watch also syncs via your phone, most data is already in Garmin "
 "Connect. You can mark the current files as uploaded and upload only new "
 "ones, or upload everything (Connect skips duplicates)."
 msgstr ""
 
-#: openexpress/gui/app.py:511 openexpress/gui/app.py:593
-#: openexpress/gui/app.py:674 openexpress/gui/app.py:704
-#: openexpress/gui/app.py:864 openexpress/gui/app.py:989
+#: openexpress/gui/app.py:872 openexpress/gui/app.py:960
+#: openexpress/gui/app.py:1059 openexpress/gui/app.py:1089
+#: openexpress/gui/app.py:1286 openexpress/gui/app.py:1404
 msgid "Cancel"
 msgstr ""
 
-#: openexpress/gui/app.py:512
+#: openexpress/gui/app.py:873
 msgid "Upload everything"
 msgstr ""
 
-#: openexpress/gui/app.py:513
+#: openexpress/gui/app.py:874
 msgid "New data only"
 msgstr ""
 
-#: openexpress/gui/app.py:543
-msgid "Checking for updates…"
+#: openexpress/gui/app.py:906
+#, python-brace-format
+msgid "{model} · software {version}"
 msgstr ""
 
-#: openexpress/gui/app.py:549
+#: openexpress/gui/app.py:910
+msgid "Check Again"
+msgstr ""
+
+#: openexpress/gui/app.py:916
 msgid "Available updates"
 msgstr ""
 
-#. TRANSLATORS: group of updates that can be installed again
-#. TRANSLATORS: button
-#: openexpress/gui/app.py:556 openexpress/gui/app.py:574
-msgid "Reinstall"
+#: openexpress/gui/app.py:921
+msgid "Advanced"
 msgstr ""
 
-#: openexpress/gui/app.py:557
-msgid "Components already on the watch. Useful for troubleshooting."
+#: openexpress/gui/app.py:923
+msgid "Reinstall components"
 msgstr ""
 
-#: openexpress/gui/app.py:559
+#: openexpress/gui/app.py:924
 #, python-brace-format
-msgid "Show {count} component"
-msgid_plural "Show {count} components"
+msgid "{count} component already on the watch; useful for troubleshooting"
+msgid_plural ""
+"{count} components already on the watch; useful for troubleshooting"
 msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: marks the main firmware in an update list
-#: openexpress/gui/app.py:571
+#: openexpress/gui/app.py:938
 msgid "system"
 msgstr ""
 
-#: openexpress/gui/app.py:574 openexpress/gui/app.py:649
-#: openexpress/gui/app.py:803
+#. TRANSLATORS: button
+#: openexpress/gui/app.py:941
+msgid "Reinstall"
+msgstr ""
+
+#: openexpress/gui/app.py:941 openexpress/gui/app.py:1031
+#: openexpress/gui/app.py:1188
 msgid "Install"
 msgstr ""
 
-#: openexpress/gui/app.py:585
+#: openexpress/gui/app.py:952
 #, python-brace-format
 msgid "Size: {size}"
 msgstr ""
 
-#: openexpress/gui/app.py:586
+#: openexpress/gui/app.py:953
 #, python-brace-format
 msgid "On the watch: {path}"
 msgstr ""
 
-#: openexpress/gui/app.py:587
+#: openexpress/gui/app.py:954
 msgid "Changes:"
 msgstr ""
 
-#: openexpress/gui/app.py:589 openexpress/gui/app.py:669
+#: openexpress/gui/app.py:956 openexpress/gui/app.py:1054
 #, python-brace-format
 msgid "License: {url}"
 msgstr ""
 
-#: openexpress/gui/app.py:590
+#: openexpress/gui/app.py:957
 msgid "Do not disconnect the watch while copying."
 msgstr ""
 
-#: openexpress/gui/app.py:592
+#: openexpress/gui/app.py:959
 msgid "Install update?"
 msgstr ""
 
-#: openexpress/gui/app.py:594 openexpress/gui/app.py:675
+#: openexpress/gui/app.py:961 openexpress/gui/app.py:1060
 msgid "Accept and install"
 msgstr ""
 
-#: openexpress/gui/app.py:601
+#: openexpress/gui/app.py:968
 msgid "Installing update…"
 msgstr ""
 
-#: openexpress/gui/app.py:604
+#: openexpress/gui/app.py:971
 msgid "Done"
 msgstr ""
 
-#: openexpress/gui/app.py:604
+#: openexpress/gui/app.py:971
 msgid "Files copied to the watch."
 msgstr ""
 
-#: openexpress/gui/app.py:619
-msgid "Checking maps…"
-msgstr ""
-
-#: openexpress/gui/app.py:627 openexpress/gui/app.py:767
+#: openexpress/gui/app.py:994 openexpress/gui/app.py:1152
 msgid "On the watch"
 msgstr ""
 
+#: openexpress/gui/app.py:999
+#, python-brace-format
+msgid "Maps use {size}"
+msgstr ""
+
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:635 openexpress/gui/app.py:783
+#: openexpress/gui/app.py:1009 openexpress/gui/app.py:1168
 msgid "Update"
 msgstr ""
 
-#. TRANSLATORS: button
-#: openexpress/gui/app.py:639 openexpress/gui/app.py:705
-#: openexpress/gui/app.py:787 openexpress/gui/app.py:866
-#: openexpress/gui/app.py:942 openexpress/gui/app.py:949
-msgid "Remove"
+#: openexpress/gui/app.py:1012 openexpress/gui/app.py:1172
+#, python-brace-format
+msgid "Remove {name}"
 msgstr ""
 
 #. TRANSLATORS: group title: maps that can be installed
-#: openexpress/gui/app.py:643
+#: openexpress/gui/app.py:1021
 msgid "Available"
 msgstr ""
 
-#: openexpress/gui/app.py:644
+#: openexpress/gui/app.py:1021
 msgid "Free maps available for this watch"
 msgstr ""
 
-#: openexpress/gui/app.py:657
+#: openexpress/gui/app.py:1022
+msgid "Search maps or regions"
+msgstr ""
+
+#: openexpress/gui/app.py:1042
 msgid "Setup missing"
 msgstr ""
 
-#: openexpress/gui/app.py:658
+#: openexpress/gui/app.py:1043
 msgid ""
 "Downloading maps requires the Utilities.dll file from Garmin Express.\n"
 "Run: openexpress setup --utilities-dll /path/to/Utilities.dll"
 msgstr ""
 
-#: openexpress/gui/app.py:663
+#: openexpress/gui/app.py:1048
 #, python-brace-format
 msgid "Download: {size}"
 msgstr ""
 
-#: openexpress/gui/app.py:664
+#: openexpress/gui/app.py:1049
 #, python-brace-format
 msgid "Space on the watch: {needed} ({free} free)"
 msgstr ""
 
-#: openexpress/gui/app.py:666
+#: openexpress/gui/app.py:1051
 #, python-brace-format
 msgid "Files: {count}"
 msgstr ""
 
-#: openexpress/gui/app.py:667
+#: openexpress/gui/app.py:1052
 #, python-brace-format
 msgid "Old files to remove: {count}"
 msgstr ""
 
-#: openexpress/gui/app.py:670
+#: openexpress/gui/app.py:1055
 msgid "Copying large maps over USB can take tens of minutes."
 msgstr ""
 
-#: openexpress/gui/app.py:671
+#: openexpress/gui/app.py:1056
 #, python-brace-format
 msgid "Update {name}?"
 msgstr ""
 
-#: openexpress/gui/app.py:671
+#: openexpress/gui/app.py:1056
 #, python-brace-format
 msgid "Install {name}?"
 msgstr ""
 
-#: openexpress/gui/app.py:682
+#: openexpress/gui/app.py:1067
 #, python-brace-format
 msgid "Installing {name}…"
 msgstr ""
 
-#: openexpress/gui/app.py:689
+#: openexpress/gui/app.py:1074
 #, python-brace-format
 msgid "Installed {name}"
 msgstr ""
 
-#: openexpress/gui/app.py:701 openexpress/gui/app.py:862
+#: openexpress/gui/app.py:1086 openexpress/gui/app.py:1284
 #, python-brace-format
 msgid "Remove {name}?"
 msgstr ""
 
-#: openexpress/gui/app.py:702
+#: openexpress/gui/app.py:1087
 msgid "These files will be removed from the watch:"
 msgstr ""
 
-#: openexpress/gui/app.py:708 openexpress/gui/app.py:879
+#: openexpress/gui/app.py:1090 openexpress/gui/app.py:1288
+#: openexpress/gui/app.py:1359 openexpress/gui/app.py:1365
+msgid "Remove"
+msgstr ""
+
+#: openexpress/gui/app.py:1093 openexpress/gui/app.py:1301
 #, python-brace-format
 msgid "Removing {name}…"
 msgstr ""
 
-#: openexpress/gui/app.py:725
+#: openexpress/gui/app.py:1110
 msgid ""
 "Unofficial Linux app for Garmin watches: sync with Garmin Connect, software "
 "updates, maps, Connect IQ apps and music.\n"
@@ -1763,169 +1876,160 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: replace with your name(s) in the translated version
-#: openexpress/gui/app.py:732
+#: openexpress/gui/app.py:1117
 msgid "translator-credits"
 msgstr ""
 
-#: openexpress/gui/app.py:748
-msgid "Sign in on the Watch tab to manage apps."
+#: openexpress/gui/app.py:1132
+msgid "Sign in to manage apps."
 msgstr ""
 
-#: openexpress/gui/app.py:759
-msgid "Loading Connect IQ apps…"
-msgstr ""
-
-#: openexpress/gui/app.py:770
+#: openexpress/gui/app.py:1154
 msgid "Update all"
 msgstr ""
 
-#: openexpress/gui/app.py:779
+#: openexpress/gui/app.py:1163
 #, python-brace-format
 msgid "update {version}"
 msgstr ""
 
-#: openexpress/gui/app.py:793
+#: openexpress/gui/app.py:1178
 msgid "In your Garmin account"
 msgstr ""
 
-#: openexpress/gui/app.py:794
+#: openexpress/gui/app.py:1179
 msgid "Apps you added in the Connect IQ store (website or phone)."
 msgstr ""
 
-#: openexpress/gui/app.py:795
+#: openexpress/gui/app.py:1180
 msgid ""
 "Add apps in the Connect IQ store (website or phone); they will show up here."
 msgstr ""
 
-#: openexpress/gui/app.py:805
+#: openexpress/gui/app.py:1193
 msgid "Built-in activities and apps"
 msgstr ""
 
-#: openexpress/gui/app.py:806
+#: openexpress/gui/app.py:1194
 msgid "Changes take effect after you disconnect the watch."
 msgstr ""
 
-#: openexpress/gui/app.py:808
+#: openexpress/gui/app.py:1195
+msgid "Search activities"
+msgstr ""
+
+#: openexpress/gui/app.py:1197
 #, python-brace-format
 msgid "Show {count} item"
 msgid_plural "Show {count} items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:830
-#, python-brace-format
-msgid "{size} free"
-msgstr ""
-
-#: openexpress/gui/app.py:831
+#: openexpress/gui/app.py:1253
 #, python-brace-format
 msgid "{count} free slot · {size} free"
 msgid_plural "{count} free slots · {size} free"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:851
+#: openexpress/gui/app.py:1273
 #, python-brace-format
 msgid "Installed {names}"
 msgstr ""
 
-#: openexpress/gui/app.py:853
+#: openexpress/gui/app.py:1275
 msgid "Queued; it will be installed on the next sync"
 msgstr ""
 
-#: openexpress/gui/app.py:856
+#: openexpress/gui/app.py:1278
 msgid "Installing apps…"
 msgstr ""
 
-#: openexpress/gui/app.py:863
+#: openexpress/gui/app.py:1285
 msgid "The app and its settings will be deleted from the watch."
 msgstr ""
 
-#: openexpress/gui/app.py:865
+#: openexpress/gui/app.py:1287
 msgid "Remove and forget"
 msgstr ""
 
-#: openexpress/gui/app.py:880
+#: openexpress/gui/app.py:1302
 #, python-brace-format
 msgid "Removed {name}"
 msgstr ""
 
-#: openexpress/gui/app.py:893
+#: openexpress/gui/app.py:1315
 #, python-brace-format
 msgid "{name} enabled"
 msgstr ""
 
-#: openexpress/gui/app.py:893
+#: openexpress/gui/app.py:1315
 #, python-brace-format
 msgid "{name} disabled"
 msgstr ""
 
-#: openexpress/gui/app.py:894
+#: openexpress/gui/app.py:1316
 msgid "Saving…"
 msgstr ""
 
-#: openexpress/gui/app.py:906
-msgid "Reading music on the watch…"
-msgstr ""
-
-#: openexpress/gui/app.py:918
+#: openexpress/gui/app.py:1337
 msgid "Add to the watch"
 msgstr ""
 
-#: openexpress/gui/app.py:922
+#: openexpress/gui/app.py:1340
 msgid "Folders…"
 msgstr ""
 
-#: openexpress/gui/app.py:923
+#: openexpress/gui/app.py:1341
 msgid "Files…"
 msgstr ""
 
-#: openexpress/gui/app.py:925
+#: openexpress/gui/app.py:1343
 msgid "Music on the watch"
 msgstr ""
 
-#: openexpress/gui/app.py:925
+#: openexpress/gui/app.py:1343
 msgid "Podcasts on the watch"
 msgstr ""
 
-#: openexpress/gui/app.py:926
+#: openexpress/gui/app.py:1344
 msgid "Audiobooks on the watch"
 msgstr ""
 
-#: openexpress/gui/app.py:932
+#: openexpress/gui/app.py:1349
 #, python-brace-format
 msgid "{count} file · {size}"
 msgid_plural "{count} files · {size}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:936
+#: openexpress/gui/app.py:1353
 #, python-brace-format
 msgid "Show {count} file"
 msgid_plural "Show {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:946
+#: openexpress/gui/app.py:1362
 msgid "Playlists"
 msgstr ""
 
-#: openexpress/gui/app.py:954
+#: openexpress/gui/app.py:1369
 msgid "Choose music to copy to the watch"
 msgstr ""
 
-#: openexpress/gui/app.py:981
+#: openexpress/gui/app.py:1396
 msgid "Nothing new to copy"
 msgstr ""
 
-#: openexpress/gui/app.py:985
+#: openexpress/gui/app.py:1400
 #, python-brace-format
 msgid "Copy {count} file?"
 msgid_plural "Copy {count} files?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:986
+#: openexpress/gui/app.py:1401
 #, python-brace-format
 msgid "{size} will be copied to the watch ({count} file already there)."
 msgid_plural ""
@@ -1934,26 +2038,26 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:991
+#: openexpress/gui/app.py:1406
 msgid "Copy"
 msgstr ""
 
-#: openexpress/gui/app.py:994
+#: openexpress/gui/app.py:1409
 msgid "Copying music…"
 msgstr ""
 
-#: openexpress/gui/app.py:997
+#: openexpress/gui/app.py:1412
 #, python-brace-format
 msgid "Copied {count} file"
 msgid_plural "Copied {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:1002
+#: openexpress/gui/app.py:1417
 msgid "Scanning files…"
 msgstr ""
 
-#: openexpress/gui/app.py:1008
+#: openexpress/gui/app.py:1423
 msgid "Removing…"
 msgstr ""
 
@@ -2000,11 +2104,6 @@ msgstr ""
 
 #: openexpress/maps.py:24
 msgid "newer on watch"
-msgstr ""
-
-#. TRANSLATORS: map status
-#: openexpress/maps.py:72
-msgid "update available"
 msgstr ""
 
 #. TRANSLATORS: map status
@@ -2126,73 +2225,73 @@ msgstr ""
 msgid "Unsupported wire type {type}"
 msgstr ""
 
-#: openexpress/service.py:92
+#: openexpress/service.py:94
 msgid "A sync is already running in another process."
 msgstr ""
 
-#: openexpress/service.py:112
+#: openexpress/service.py:141
 msgid "Not logged in to Garmin Connect."
 msgstr ""
 
-#: openexpress/service.py:115
+#: openexpress/service.py:144
 msgid "Fetching configuration from the Garmin server…"
 msgstr ""
 
-#: openexpress/service.py:120
+#: openexpress/service.py:149
 #, python-brace-format
 msgid "Marked {count} existing file as already uploaded."
 msgid_plural "Marked {count} existing files as already uploaded."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:126
+#: openexpress/service.py:155
 msgid "Looking for new files on the watch…"
 msgstr ""
 
-#: openexpress/service.py:132
+#: openexpress/service.py:161
 #, python-brace-format
 msgid "New files: {types}"
 msgstr ""
 
-#: openexpress/service.py:137
+#: openexpress/service.py:166
 #, python-brace-format
 msgid ""
 "Uploaded {uploaded}, already in Connect {known}, rejected {rejected}, errors "
 "{errors}."
 msgstr ""
 
-#: openexpress/service.py:142
+#: openexpress/service.py:171
 msgid "No new data to upload."
 msgstr ""
 
-#: openexpress/service.py:143
+#: openexpress/service.py:172
 msgid "Checking for files from Garmin Connect…"
 msgstr ""
 
-#: openexpress/service.py:151
+#: openexpress/service.py:180
 #, python-brace-format
 msgid "Wrote {count} file from Connect to the watch."
 msgid_plural "Wrote {count} files from Connect to the watch."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:161
+#: openexpress/service.py:190
 #, python-brace-format
 msgid "Skipped {count} item from Connect (not accepted by the watch)."
 msgid_plural "Skipped {count} items from Connect (not accepted by the watch)."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:180
+#: openexpress/service.py:209
 #, python-brace-format
 msgid "Installed Connect IQ apps: {names}."
 msgstr ""
 
-#: openexpress/service.py:192
+#: openexpress/service.py:221
 msgid "TrueUp: daily totals aligned with your other Garmin devices."
 msgstr ""
 
-#: openexpress/service.py:193
+#: openexpress/service.py:222
 #, python-brace-format
 msgid "TrueUp: {note}."
 msgstr ""

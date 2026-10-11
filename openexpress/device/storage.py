@@ -52,6 +52,10 @@ class Storage(ABC):
     def free_space(self) -> int | None:
         return None
 
+    def capacity(self) -> int | None:
+        """Total size of the storage in bytes, when known."""
+        return None
+
     def resolve(self, path: str) -> str | None:
         """Return the real path (with the correct case) or None."""
         real = ""
@@ -194,3 +198,6 @@ class LocalStorage(Storage):
 
     def free_space(self) -> int | None:
         return shutil.disk_usage(self.root).free
+
+    def capacity(self) -> int | None:
+        return shutil.disk_usage(self.root).total

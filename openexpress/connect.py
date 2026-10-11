@@ -326,6 +326,12 @@ class GarminClient:
 
     # --- download (Connect queue -> device) -------------------------------------------
 
+    def device_image_url(self, unit_id: int) -> str | None:
+        """Product picture of the watch, from the device registered in Garmin Connect."""
+        r = self._connect("GET", f"device-service/deviceservice/device-info/{unit_id}",
+                          "Device info")
+        return lower_keys(r.json()).get("imageurl") or None
+
     def device_messages(self, unit_id: int) -> list[dict]:
         r = self._connect(
             "GET",

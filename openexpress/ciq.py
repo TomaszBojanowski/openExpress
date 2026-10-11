@@ -250,6 +250,19 @@ class StoreApi:
             apps = ", ".join(f"{r.get('appid')} ({r.get('status')})" for r in bad)
             raise CiqError(_("The server refused to queue: {apps}").format(apps=apps))
 
+    def icon_urls(self, app_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        if not app_ids:
+            return {}
+        data = self._request("POST", "express/appstore/rest/apps/appIconUrl",
+                             "Connect IQ icons", json_body=[str(i) for i in app_ids]) or []
+        out = {}
+        for item in data:
+            try:
+                out[uuid.UUID(item.get("appid"))] = item.get("iconurl") or ""
+            except (TypeError, ValueError):
+                continue
+        return {k: v for k, v in out.items() if v}
+
     def forget(self, device: GarminDevice, app_ids: list[uuid.UUID]) -> None:
         body = {"apps": [{"appId": str(i), "internalVersionNumber": 0} for i in app_ids],
                 "unitId": device.unit_id}

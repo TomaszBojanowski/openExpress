@@ -42,3 +42,22 @@ def test_no_command_opens_the_window(monkeypatch):
     assert cli.main([]) == 0
     assert cli.main(["--lang", "en"]) == 0
     assert len(called) == 2
+
+
+def test_last_sync_is_remembered(xdg):
+    from openexpress import service
+
+    summary = service.SyncSummary(uploaded=2, downloaded=1, errors=[], lines=["Uploaded 2."])
+    service.save_last_sync(42, summary)
+    data = service.load_last_sync(42)
+    assert data["uploaded"] == 2 and data["lines"] == ["Uploaded 2."]
+    assert service.load_last_sync(7) is None  # another watch
+
+
+def test_format_when():
+    import time
+
+    from openexpress.gui.app import format_when
+
+    assert format_when(time.time()).startswith("Today at ")
+    assert format_when(time.time() - 86400).startswith("Yesterday at ")

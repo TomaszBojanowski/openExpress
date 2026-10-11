@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import collections
+import json
+import time
 import contextlib
 import fcntl
 from dataclasses import dataclass, field
@@ -104,7 +106,34 @@ def run_sync(
 ) -> SyncSummary:
     """Full sync. `first_run`: 'baseline' or 'all' for the first time."""
     with sync_lock():
-        return _run_sync(s, first_run, progress, include_diagnostics)
+        summary = _run_sync(s, first_run, progress, include_diagnostics)
+    save_last_sync(s.device.unit_id, summary)
+    return summary
+
+
+def last_sync_path():
+    return paths.data_dir() / "last_sync.json"
+
+
+def save_last_sync(unit_id: int, summary: "SyncSummary") -> None:
+    data = {"time": time.time(), "unit_id": unit_id, "uploaded": summary.uploaded,
+            "downloaded": summary.downloaded, "skipped_known": summary.skipped_known,
+            "errors": summary.errors, "lines": summary.lines}
+    path = last_sync_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
+    tmp.replace(path)
+
+
+def load_last_sync(unit_id: int | None = None) -> dict | None:
+    try:
+        data = json.loads(last_sync_path().read_text())
+    except (OSError, ValueError):
+        return None
+    if unit_id is not None and data.get("unit_id") != unit_id:
+        return None
+    return data
 
 
 def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:

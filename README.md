@@ -15,8 +15,9 @@
 > app; Garmin may change them at any time. Use at your own risk.
 
 <p align="center">
-  <img src="docs/screenshots/maps.png" width="45%" alt="Maps">
-  <img src="docs/screenshots/apps.png" width="45%" alt="Connect IQ apps">
+  <img src="docs/screenshots/maps.png" width="32%" alt="Maps">
+  <img src="docs/screenshots/apps.png" width="32%" alt="Connect IQ apps">
+  <img src="docs/screenshots/music.png" width="32%" alt="Music">
 </p>
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
@@ -77,8 +78,9 @@ flatpak install --user openexpress-*.flatpak   # needs the Flathub remote for th
 flatpak run io.github.tomaszbojanowski.OpenExpress
 ```
 
-openExpress then appears in your application menu. On the **Watch** tab select the
-Garmin Express installer, sign in, and optionally turn on **Sync in the background**.
+openExpress then appears in your application menu. Click **Choose Installer…** in the banner
+at the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
+the Watch page (or in Preferences) to sync whenever the watch is connected.
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
 
@@ -122,8 +124,8 @@ openexpress baseline --apply         # if the watch also syncs via your phone
 openexpress sync --apply
 ```
 
-The easiest way is the window: `openexpress gui`, then select the installer on the Watch tab
-and sign in there.
+The easiest way is the window: `openexpress gui`, then click **Choose Installer…** in the
+banner at the top and **Log In**.
 
 If the login window does not capture the ticket, use `openexpress login --manual`: you
 sign in using a regular browser and paste the final URL containing `ticket=ST-…`.
@@ -180,7 +182,7 @@ never sync at the same time (shared lock).
 The interface is available in English and Polish. The language follows the system
 locale; you can override it:
 
-- in the window: Watch tab → Settings → Language,
+- in the window: main menu (☰) → Preferences → Language,
 - for one command: `openexpress --lang pl …` or `OPENEXPRESS_LANG=pl`,
 - permanently: `openexpress setup --ui-language pl` (`system` restores the default).
 
