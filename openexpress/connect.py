@@ -231,15 +231,17 @@ class GarminClient:
         if not external_ids:
             return {}
         ids = sorted(external_ids)
-        pairs = [("externalIds", i) for i in ids]
-        params = [("deviceId", str(unit_id))] + pairs
+        params = [("deviceId", str(unit_id))] + [("externalIds", i) for i in ids]
         what = _("Duplicate check")
+        # Like Garmin Express: the same parameters in the URL and as a form body, but the
+        # body is NOT part of the OAuth1 signature (Garmin rejects such a signature with 401).
         r = self._connect(
             "POST",
             "activity-search-service-1.2/json/matchesByDeviceId",
             what,
             params=params,
-            form=pairs,
+            data=urlencode(params),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         body = lower_keys(self._json(r, what))
         matches = (body.get("matches") if isinstance(body, dict) else None) or {}

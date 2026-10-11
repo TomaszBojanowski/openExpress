@@ -350,3 +350,48 @@ def test_damaged_consumer(xdg):
         p.write_text(content)
         with pytest.raises(SetupError):
             settings_mod.load_consumer()
+
+
+def test_activity_matches_body_not_signed():
+    """Garmin rejects (401) a signature that includes the form body; Express doesn't sign it."""
+    from urllib.parse import parse_qsl, urlsplit
+
+    from openexpress.auth.store import ConnectAuth
+    from openexpress.connect import GarminClient
+    from openexpress.settings import Consumer, Settings
+
+    sent = {}
+
+    class Resp:
+        status_code = 200
+        ok = True
+        headers = {}
+        content = b'{"matches": {"1": {"match": {"activityId": 5}}}}'
+        text = content.decode()
+
+        def json(self):
+            import json
+            return json.loads(self.content)
+
+    class Session:
+        def request(self, method, url, headers=None, data=None, **kw):
+            sent.update(method=method, url=url, headers=headers, data=data)
+            return Resp()
+
+    client = GarminClient(Settings(), Consumer("ck", "cs"), ConnectAuth("t", "ts"), Session())
+    assert client.activity_matches(42, ["2", "1"]) == {"1": True, "2": False}
+    query = urlsplit(sent["url"]).query
+    assert sent["data"] == query == "deviceId=42&externalIds=1&externalIds=2"
+    assert sent["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
+    # The signature must cover only the URL: recompute it without the body and compare.
+    import re
+
+    from openexpress.auth.oauth1 import authorization_header
+
+    auth = sent["headers"]["Authorization"]
+    nonce = re.search(r'oauth_nonce="([^"]+)"', auth).group(1)
+    ts = int(re.search(r'oauth_timestamp="(\d+)"', auth).group(1))
+    expected = authorization_header("POST", sent["url"], "ck", "cs", "t", "ts",
+                                    nonce=nonce, timestamp=ts)
+    assert auth == expected
+    assert dict(parse_qsl(query))  # sanity
