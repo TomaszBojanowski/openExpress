@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openexpress"
+version = "0.1.0"
+description = "Unofficial Linux app for Garmin watches: Garmin Connect sync, software updates, maps, Connect IQ apps and music"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Tomasz Bojanowski" }]
+keywords = ["garmin", "fenix", "linux", "sync", "mtp", "gtk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Natural Language :: Polish",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+dependencies = ["requests>=2.28"]
+
+[project.urls]
+Homepage = "https://github.com/TomaszBojanowski/openExpress"
+Issues = "https://github.com/TomaszBojanowski/openExpress/issues"
+
+[project.optional-dependencies]
+gui = ["PyGObject>=3.46"]
+music = ["mutagen>=1.45"]
+test = ["pytest>=7"]
+
+[project.scripts]
+openexpress = "openexpress.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["openexpress*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+openexpress = ["locale/*/LC_MESSAGES/*.mo", "data/*.svg"]

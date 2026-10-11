@@ -1,0 +1,99 @@
+"""TrueUp: aligning daily totals (steps, calories, …) across several Garmin devices.
+
+Flow as in Garmin Express (SyncTrueUpOperation, docs/analiza/03 section 3.4):
+  1. Connect queues a FIT_TYPE_39 `check_back` file containing the time at which
+     the client should ask again. It is downloaded and acknowledged.
+  2. The client waits until that time (at most 90 s), up to 3 rounds.
+  3. Connect then queues a `true_up` file, which is downloaded, acknowledged
+     and written to the watch.
+"""
+
+from __future__ import annotations
+
+import posixpath
+import time
+import uuid
+from dataclasses import dataclass
+from typing import Callable
+
+from openexpress.connect import GarminClient
+from openexpress.device.storage import Storage
+from openexpress.device.xmldevice import GarminDevice
+from openexpress.fit import FitError, true_up_time
+from openexpress.i18n import _
+
+DATATYPE = "FIT_TYPE_39"
+CHECK_BACK = "check_back"
+TRUE_UP = "true_up"
+MAX_ROUNDS = 3
+MAX_WAIT_S = 90
+LONG_DELAY_S = 300
+
+
+def is_trueup_message(m: dict) -> bool:
+    return (m.get("devicexmldatatype") or "") == DATATYPE
+
+
+def _find(messages: list[dict], kind: str) -> dict | None:
+    return next((m for m in messages
+                 if is_trueup_message(m) and m.get("messagetype") == kind and m.get("metadata")),
+                None)
+
+
+def _fetch(client: GarminClient, m: dict) -> bytes | None:
+    meta = m["metadata"]
+    data = client.download_message(meta.get("messageurl") or "", bool(meta.get("absolute")))
+    client.ack_message(m.get("messageid"))
+    return data
+
+
+@dataclass
+class TrueUpResult:
+    written: str | None = None
+    waited_s: float = 0.0
+    note: str = ""
+
+
+def run(
+    device: GarminDevice,
+    storage: Storage,
+    client: GarminClient,
+    messages: list[dict],
+    progress: Callable[[str], None] = lambda s: None,
+    sleep: Callable[[float], None] = time.sleep,
+    now: Callable[[], float] = time.time,
+) -> TrueUpResult:
+    result = TrueUpResult()
+    targets = device.targets(DATATYPE)
+    if not targets:
+        result.note = _("the watch does not support TrueUp")
+        return result
+    for _round in range(MAX_ROUNDS):
+        m = _find(messages, CHECK_BACK)
+        if m is None:
+            break
+        progress(_("TrueUp: waiting for Garmin Connect…"))
+        data = _fetch(client, m)
+        try:
+            when = true_up_time(data or b"")
+        except FitError:
+            when = None
+        delay = 0.0 if when is None else when - now()
+        wait = MAX_WAIT_S if delay >= LONG_DELAY_S else max(0.0, min(delay, MAX_WAIT_S))
+        if wait:
+            sleep(wait)
+            result.waited_s += wait
+        messages = client.device_messages(device.unit_id)
+    m = _find(messages, TRUE_UP)
+    if m is None:
+        result.note = _("Connect has not prepared TrueUp data yet")
+        return result
+    progress(_("TrueUp: writing daily totals to the watch"))
+    data = _fetch(client, m)
+    if not data:
+        result.note = _("empty TrueUp file")
+        return result
+    t = targets[0]
+    name = f"{t.basename + '_' if t.basename else ''}{uuid.uuid4()}.{t.extension or 'FIT'}"
+    result.written = storage.write(posixpath.join(t.path, name), data)
+    return result

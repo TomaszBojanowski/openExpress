@@ -1,0 +1,13 @@
+# Binaria i zdekompilowany kod Garmina - tylko lokalnie, nie publikować
+_extracted/
+__pycache__/
+*.pyc
+.venv/
+testdata/
+*.egg-info/
+build/
+dist/
+
+# Private reverse-engineering notes (never publish)
+docs/analiza/
+docs/ANALIZA.md
