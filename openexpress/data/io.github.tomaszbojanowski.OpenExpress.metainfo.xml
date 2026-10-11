@@ -93,6 +93,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.4" date="2026-10-11">
+      <description>
+        <p>The window remembers its size and whether it was maximized.</p>
+      </description>
+    </release>
     <release version="0.3.3" date="2026-10-11">
       <description>
         <p>Fixes "not authorized (HTTP 401)" when uploading new activities.</p>

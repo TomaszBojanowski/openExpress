@@ -323,3 +323,23 @@ def test_pending_refresh_runs_when_idle():
     win.busy = False
     MainWindow._run_pending_refresh(win)
     assert calls == [1] and not win._refresh_pending
+
+
+def test_window_geometry(xdg):
+    from openexpress.gui.app import (DEFAULT_WINDOW, load_gui_settings, save_gui_settings,
+                                     save_window_geometry, window_geometry)
+
+    assert window_geometry({}) == (*DEFAULT_WINDOW, False)
+    assert window_geometry({"window": "bad"}) == (*DEFAULT_WINDOW, False)
+    assert window_geometry({"window": {"width": 1400, "height": 900, "maximized": True}}) == \
+        (1400, 900, True)
+    # Too small, too large, wrong types, "maximized" must be a real boolean
+    assert window_geometry({"window": {"width": 10, "height": 99999, "maximized": 1}}) == \
+        (360, 10000, False)
+    assert window_geometry({"window": {"width": True, "height": "800"}}) == (*DEFAULT_WINDOW, False)
+
+    save_gui_settings({"background": True})
+    save_window_geometry(1200, 800, False)
+    data = load_gui_settings()
+    assert data["background"] is True  # other options are kept
+    assert window_geometry(data) == (1200, 800, False)

@@ -46,6 +46,35 @@ def save_gui_settings(data: dict) -> None:
     paths.write_private(gui_settings_path(), json.dumps(data, indent=2))
 
 
+DEFAULT_WINDOW = (1000, 740)
+MIN_WINDOW = (360, 480)
+MAX_WINDOW = 10000
+
+
+def window_geometry(settings: dict) -> tuple[int, int, bool]:
+    """Saved window size and maximized state, validated (falls back to the defaults)."""
+    saved = settings.get("window")
+    if not isinstance(saved, dict):
+        return (*DEFAULT_WINDOW, False)
+
+    def size(key: str, default: int, minimum: int) -> int:
+        value = saved.get(key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            return default
+        return max(minimum, min(MAX_WINDOW, value))
+
+    return (size("width", DEFAULT_WINDOW[0], MIN_WINDOW[0]),
+            size("height", DEFAULT_WINDOW[1], MIN_WINDOW[1]),
+            saved.get("maximized") is True)
+
+
+def save_window_geometry(width: int, height: int, maximized: bool) -> None:
+    """Stores the window state, re-reading gui.json so other saved options are kept."""
+    data = load_gui_settings()
+    data["window"] = {"width": int(width), "height": int(height), "maximized": bool(maximized)}
+    save_gui_settings(data)
+
+
 def _settings_json() -> Path:
     return paths.config_dir() / "settings.json"
 
@@ -157,12 +186,15 @@ class Section:
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
-        super().__init__(application=app, title="openExpress", default_width=1000,
-                         default_height=740)
-        self.set_size_request(360, 480)
+        super().__init__(application=app, title="openExpress")
+        self.set_size_request(*MIN_WINDOW)
         self.session: service.DeviceSession | None = None
         self.busy = False
         self.gui_settings = load_gui_settings()
+        width, height, maximized = window_geometry(self.gui_settings)
+        self.set_default_size(width, height)
+        if maximized:
+            self.maximize()
         self.maps_cache = None
         self.apps_cache = None
         self.updates_cache = None
@@ -318,6 +350,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_close_request(self, _win) -> bool:
         if not self.busy:
+            self._remember_geometry()
             return False
         if self._close_dialog is None:
             d = Adw.AlertDialog(
@@ -329,6 +362,15 @@ class MainWindow(Adw.ApplicationWindow):
             self._close_dialog = d
             d.present(self)
         return True
+
+    def _remember_geometry(self) -> None:
+        # The default size follows the user's resizing and keeps the last unmaximized
+        # size while the window is maximized, so both states restore correctly.
+        width, height = self.get_default_size()
+        try:
+            save_window_geometry(width, height, self.is_maximized())
+        except OSError as e:
+            log.warning("Could not save the window size: %s", e)
 
     # --- helpers ----------------------------------------------------------------------
 
