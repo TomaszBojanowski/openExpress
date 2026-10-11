@@ -132,3 +132,23 @@ def install(dry_run: bool) -> tuple[list[Path], list[Path]]:
         for path in removed:
             path.unlink()
     return written, removed
+
+
+def flatpak_installed() -> bool:
+    """True when the Flatpak of openExpress is installed (its launcher would be shadowed)."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("flatpak"):
+        return False
+    res = subprocess.run(["flatpak", "info", DESKTOP_ID], capture_output=True)
+    return res.returncode == 0
+
+
+def uninstall(dry_run: bool) -> list[Path]:
+    """Removes the launcher, icon and service written by install() (and legacy files)."""
+    paths_ = [p for p in files() if p.exists()] + legacy_files()
+    if not dry_run:
+        for p in paths_:
+            p.unlink()
+    return paths_

@@ -830,6 +830,23 @@ def cmd_install_desktop(args) -> int:
                 "background sync in the window: Watch tab, Settings, Sync in the background."))
         return 0
 
+    if args.remove:
+        removed = desktop.uninstall(dry_run=not args.apply)
+        for p in removed:
+            print((_("Removed {path}") if args.apply else _("Would remove {path}")).format(path=p))
+        if not removed:
+            print(_("Nothing to remove."))
+        elif not args.apply:
+            print(_("Dry run. Add --apply."))
+        else:
+            print(_("If background sync was enabled, also run: "
+                    "systemctl --user disable --now {service}").format(service=desktop.SERVICE))
+        return 0
+    if desktop.flatpak_installed() and not args.force:
+        print(_("The Flatpak of openExpress is installed and already provides the menu entry. "
+                "A second entry with the same name would hide it. Use --force to install "
+                "anyway, or turn on background sync in the Flatpak window."), file=sys.stderr)
+        return 1
     written, removed = desktop.install(dry_run=not args.apply)
     for p in written:
         print((_("Wrote {path}") if args.apply else _("Would write {path}")).format(path=p))
@@ -1008,6 +1025,10 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("install-desktop",
                        help=_("add an application menu entry and a background sync service"))
     s.add_argument("--apply", action="store_true")
+    s.add_argument("--remove", action="store_true",
+                   help=_("remove the menu entry, icon and service instead"))
+    s.add_argument("--force", action="store_true",
+                   help=_("install even if the Flatpak of openExpress is installed"))
     s.set_defaults(func=cmd_install_desktop)
     return p
 
