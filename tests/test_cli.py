@@ -32,3 +32,13 @@ def test_backup_keeps_n(device_root, xdg, tmp_path, capsys, monkeypatch):
 def test_sync_requires_setup(device_root, xdg, capsys):
     assert main(["--path", str(device_root), "sync"]) == 1
     assert "openexpress setup" in capsys.readouterr().err
+
+
+def test_no_command_opens_the_window(monkeypatch):
+    import openexpress.cli as cli
+
+    called = []
+    monkeypatch.setattr(cli, "cmd_gui", lambda args: called.append(args) or 0)
+    assert cli.main([]) == 0
+    assert cli.main(["--lang", "en"]) == 0
+    assert len(called) == 2

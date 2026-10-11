@@ -93,6 +93,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.2.1" date="2026-10-11">
+      <description>
+        <p>Running openExpress without a command opens the application window.</p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-11">
       <description>
         <ul>

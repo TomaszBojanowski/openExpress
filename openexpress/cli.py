@@ -897,7 +897,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("directory with device contents instead of MTP (e.g. copy, UMS)"))
     p.add_argument("--device-uri", help=_("MTP device URI, e.g. {example}").format(
         example="mtp://091e_51b4_…/"))
-    sub = p.add_subparsers(dest="cmd", required=True)
+    # Without a command the application window opens (as from the application menu).
+    p.set_defaults(func=cmd_gui)
+    sub = p.add_subparsers(dest="cmd")
 
     s = sub.add_parser("setup", help=_("configuration: OAuth1 key, environment, locale"))
     s.add_argument("--from-installer", metavar="GarminExpress.exe",
