@@ -18,7 +18,7 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 from openexpress import service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
+from openexpress.device.gio_storage import garmin_usb  # noqa: E402
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
@@ -51,7 +51,7 @@ class Watcher(Gio.Application):
         log.info("Waiting for the watch to be connected…")
         # The watch may have been connected before the service started.
         for m in self.monitor.get_mounts():
-            if _is_garmin_uri(m.get_root().get_uri()):
+            if garmin_usb(m, self.monitor):
                 GLib.timeout_add_seconds(self.delay_s, self.start_sync)
 
     def do_activate(self):
@@ -63,7 +63,7 @@ class Watcher(Gio.Application):
         self.send_notification("sync", n)
 
     def on_mount(self, _monitor, mount):
-        if _is_garmin_uri(mount.get_root().get_uri()):
+        if garmin_usb(mount):
             GLib.timeout_add_seconds(self.delay_s, self.start_sync)
 
     def request_quit(self) -> None:

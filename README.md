@@ -74,6 +74,7 @@ they show the plan and do nothing without `--apply`.
 |---|---|
 | fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, Connect IQ app list. **Not yet tested on the watch:** installing a software update, installing Connect IQ apps, copying music |
 | epix (part 006-B3943) | read-only commands and backup tested |
+| Edge 1050 | detected automatically; read-only commands, backup and sync plan tested |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a

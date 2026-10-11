@@ -5,6 +5,7 @@ from openexpress.device.xmldevice import parse
 
 class FakeMtpStorage(LocalStorage):
     label = "mtp://091e_51b4_0000abcdef12/Internal%20Storage"
+    usb_id = "091e:51b4"
 
 
 def test_report_has_no_identifiers(device_root):
@@ -20,6 +21,17 @@ def test_report_has_no_identifiers(device_root):
     assert "- [x] Activities" in text and "- [ ] Music" in text
 
 
-def test_usb_product_id():
-    assert report.usb_product_id("mtp://091E_4F42_ABC/x") == "091e:4f42"
-    assert report.usb_product_id("/tmp/dir") == "unknown"
+def test_usb_id_comes_from_the_storage_not_from_the_address(device_root):
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    assert "- USB ID: unknown" in report.build(dev, st)  # e.g. --path
+
+    # An address made of the USB strings carries no IDs, only the serial number.
+    st.label = "mtp://Garmin_Edge_1050_0000abcdef12/Internal%20Storage"
+    assert "- USB ID: unknown" in report.build(dev, st)
+    st.usb_id = "091e:5158"
+    text = report.build(dev, st)
+    assert "- USB ID: 091e:5158" in text
+    assert "0000abcdef12" not in text and "mtp://" not in text and "Garmin_Edge" not in text
+    st.usb_id = "091e:unknown"
+    assert "- USB ID: 091e:unknown" in report.build(dev, st)

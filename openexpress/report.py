@@ -53,12 +53,6 @@ def _install_type() -> str:
     return "pip" if "site-packages" in here.parts or "dist-packages" in here.parts else "source"
 
 
-def usb_product_id(storage_label: str) -> str:
-    """'mtp://091e_51b4_<serial>/…' -> '091e:51b4' (model ID only, never the serial)."""
-    m = re.search(r"mtp://([0-9a-fA-F]{4})_([0-9a-fA-F]{4})", storage_label or "")
-    return f"{m.group(1).lower()}:{m.group(2).lower()}" if m else "unknown"
-
-
 def _size(n: int | None) -> str:
     return "unknown" if not n else f"{n / 1024 ** 3:.1f} GB"
 
@@ -74,7 +68,8 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None)
         f"- Model: {device.description or 'unknown'}",
         f"- Part number: {device.part_number or 'unknown'}",
         f"- Software: {device.software_version_str}",
-        f"- USB ID: {usb_product_id(getattr(storage, 'label', ''))}",
+        # Vendor and product ID of the USB device; never taken from the MTP address.
+        f"- USB ID: {getattr(storage, 'usb_id', None) or 'unknown'}",
         f"- Storage: {_size(storage.capacity())} total, {_size(storage.free_space())} free",
         f"- Data types: {len(datatypes)}, components: {len(device.update_files)}",
         "",

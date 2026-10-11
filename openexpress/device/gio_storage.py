@@ -7,6 +7,7 @@ conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -23,6 +24,7 @@ from openexpress.device.storage import DeviceError, Entry, Storage  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
 GARMIN_VID = "091e"
+SYSFS_USB = Path("/sys/bus/usb/devices")
 _ATTRS = "standard::name,standard::type,standard::size,time::modified"
 
 
@@ -76,6 +78,8 @@ class GioStorage(Storage):
     def __init__(self, root_uri: str):
         self.root = Gio.File.new_for_uri(root_uri.rstrip("/") + "/")
         self.label = root_uri
+        # "vendor:product" of the USB device (never the serial number), when known.
+        self.usb_id: str | None = None
 
     def _f(self, real: str) -> Gio.File:
         return self.root.resolve_relative_path(real) if real else self.root
@@ -191,30 +195,111 @@ class GioStorage(Storage):
         return self._fs_attr("filesystem::size") or None
 
 
+@dataclass(frozen=True)
+class GarminUsb:
+    """A Garmin device on USB. `product` is the USB product ID, when it is known."""
+
+    product: str | None
+    source: str  # "usb": read from the USB device; "uri": taken from the MTP address
+
+    @property
+    def usb_id(self) -> str:
+        return f"{GARMIN_VID}:{self.product or 'unknown'}"
+
+
 @dataclass
 class FoundDevice:
     uri: str
     name: str
     mounted: bool
     volume: Gio.Volume | None = None
+    usb: GarminUsb | None = None
 
 
-def _is_garmin_uri(uri: str | None) -> bool:
-    return bool(uri) and uri.startswith("mtp://") and GARMIN_VID in uri.lower()
+_UNIX_DEVICE = re.compile(r"/dev/bus/usb/(\d+)/(\d+)")
+_URI_USB_ADDRESS = re.compile(r"mtp://\[usb:(\d+),(\d+)\]", re.I)
+_URI_GARMIN_IDS = re.compile(rf"mtp://{GARMIN_VID}_([0-9a-f]{{4}})_", re.I)
+_URI_GARMIN_NAME = "mtp://garmin_"
+
+
+def _sysfs_ids(bus: int, devnum: int) -> tuple[str, str] | None:
+    """(idVendor, idProduct) of the USB device with this bus and device number.
+
+    Only these four sysfs attributes are read; the device node itself is not needed
+    (a Flatpak sandbox has /sys but no /dev/bus/usb).
+    """
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return None
+    for base in entries:
+        try:
+            if (int((base / "busnum").read_text()) == bus
+                    and int((base / "devnum").read_text()) == devnum):
+                return ((base / "idVendor").read_text().strip().lower(),
+                        (base / "idProduct").read_text().strip().lower())
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def _volume_for(uri: str, monitor) -> Gio.Volume | None:
+    """A mounted MTP device has no volume of its own; the MTP volume shares its address."""
+    for vol in (monitor or Gio.VolumeMonitor.get()).get_volumes():
+        root = vol.get_activation_root()
+        if root is not None and root.get_uri().rstrip("/") == uri.rstrip("/"):
+            return vol
+    return None
+
+
+def _identify(uri: str | None, volume, monitor=None) -> GarminUsb | None:
+    if not uri or not uri.lower().startswith("mtp://"):
+        return None
+    # gvfs names the address after the USB strings ("Garmin_Edge_1050_<serial>") or, when
+    # the device has none, after the IDs ("091e_51b4_<serial>"); so ask the USB device.
+    address = _URI_USB_ADDRESS.match(uri)
+    if address is None:
+        if volume is None:
+            volume = _volume_for(uri, monitor)
+        device = volume.get_identifier("unix-device") if volume is not None else None
+        address = _UNIX_DEVICE.fullmatch(device or "")
+    # An address of the older form mtp://[usb:BBB,DDD]/ carries the numbers itself.
+    # That branch is covered by tests only: it was not tried on a device.
+    ids = _sysfs_ids(int(address.group(1)), int(address.group(2))) if address else None
+    if ids is not None:
+        return GarminUsb(ids[1], "usb") if ids[0] == GARMIN_VID else None
+    # The USB properties are not available: fall back to the start of the host name.
+    by_ids = _URI_GARMIN_IDS.match(uri)
+    if by_ids:
+        return GarminUsb(by_ids.group(1).lower(), "uri")
+    if uri.lower().startswith(_URI_GARMIN_NAME):
+        return GarminUsb(None, "uri")
+    return None
+
+
+def garmin_usb(obj, monitor=None) -> GarminUsb | None:
+    """Whether a Gio mount or volume is a Garmin device (USB vendor 091e); None if not."""
+    if hasattr(obj, "get_activation_root"):
+        root, volume = obj.get_activation_root(), obj
+    else:
+        root, volume = obj.get_root(), None
+    return _identify(root.get_uri() if root is not None else None, volume, monitor)
 
 
 def find_devices() -> list[FoundDevice]:
     monitor = Gio.VolumeMonitor.get()
     found: dict[str, FoundDevice] = {}
     for mount in monitor.get_mounts():
-        uri = mount.get_root().get_uri()
-        if _is_garmin_uri(uri):
-            found[uri.rstrip("/")] = FoundDevice(uri, mount.get_name(), True)
+        usb = garmin_usb(mount, monitor)
+        if usb is not None:
+            uri = mount.get_root().get_uri()
+            found[uri.rstrip("/")] = FoundDevice(uri, mount.get_name(), True, usb=usb)
     for vol in monitor.get_volumes():
-        root = vol.get_activation_root()
-        uri = root.get_uri() if root else None
-        if _is_garmin_uri(uri) and uri.rstrip("/") not in found:
-            found[uri.rstrip("/")] = FoundDevice(uri, vol.get_name(), False, vol)
+        usb = garmin_usb(vol, monitor)
+        if usb is not None:
+            uri = vol.get_activation_root().get_uri()
+            if uri.rstrip("/") not in found:
+                found[uri.rstrip("/")] = FoundDevice(uri, vol.get_name(), False, vol, usb)
     return list(found.values())
 
 
@@ -253,6 +338,7 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
 
 def open_device_storage(uri: str | None = None) -> GioStorage:
     """Return the device storage that contains GARMIN/GarminDevice.xml."""
+    usb = None
     if uri is None:
         devices = find_devices()
         if not devices:
@@ -265,13 +351,13 @@ def open_device_storage(uri: str | None = None) -> GioStorage:
             raise DeviceError(_("Several devices connected, choose one with --device-uri: {names}")
                               .format(names=names))
         mount(devices[0])
-        uri = devices[0].uri
+        uri, usb = devices[0].uri, devices[0].usb
+    else:
+        usb = _identify(uri, None)
     top = GioStorage(uri)
     candidates = [e.name for e in top._list("") if e.is_dir]
-    for name in candidates:
-        st = GioStorage(top._f(name).get_uri())
+    for st in [GioStorage(top._f(name).get_uri()) for name in candidates] + [top]:
         if st.exists("GARMIN/GarminDevice.xml"):
+            st.usb_id = usb.usb_id if usb is not None else None
             return st
-    if top.exists("GARMIN/GarminDevice.xml"):
-        return top
     raise DeviceError(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))

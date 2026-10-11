@@ -21,7 +21,7 @@ from openexpress import i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import RESTART_STEPS, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
+from openexpress.device.gio_storage import garmin_usb  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings, extract_consumer_from_dll, extract_url_salt_from_dll, save_consumer,
@@ -504,11 +504,15 @@ class MainWindow(Adw.ApplicationWindow):
     # --- device ----------------------------------------------------------------------
 
     def _on_mount_added(self, _mon, mount):
-        if _is_garmin_uri(mount.get_root().get_uri()):
+        if garmin_usb(mount):
             GLib.timeout_add(1500, lambda: (self.refresh_device(), False)[1])
 
     def _on_mount_removed(self, _mon, mount):
-        if _is_garmin_uri(mount.get_root().get_uri()):
+        # The USB device is already gone, so compare with the device that is open.
+        uri = mount.get_root().get_uri().rstrip("/") + "/"
+        s = self.session
+        ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
+        if ours or garmin_usb(mount):
             self.session = None
             self.show_device()
 
