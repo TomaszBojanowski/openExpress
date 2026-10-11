@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Git pre-push hook: refuses to publish private branches and runs the secret check
+# on everything that is about to be pushed.
+# Install once per clone:  ln -sf ../../tools/pre-push .git/hooks/pre-push
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref _remote_sha; do
+    case "$local_ref $remote_ref" in
+        *private*)
+            echo "STOP: '$local_ref' is a private branch and must never be pushed." >&2
+            exit 1 ;;
+    esac
+    [[ $local_sha == "$zero" ]] && continue   # deleting a remote ref
+    "$root/tools/check-secrets.sh" "$local_sha"
+done

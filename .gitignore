@@ -21,3 +21,6 @@ AGENTS.md
 
 # Local list of secret patterns used by tools/check-secrets.sh
 tools/secret-patterns.txt
+
+# Local pointer for Claude Code (imports AGENTS.md)
+CLAUDE.md

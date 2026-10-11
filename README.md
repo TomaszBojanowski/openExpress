@@ -70,7 +70,7 @@ they show the plan and do nothing without `--apply`.
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | tested by the developer: sync, updates, maps, Connect IQ |
+| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, Connect IQ app list. **Not yet tested on the watch:** installing a software update, installing Connect IQ apps, copying music |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a
