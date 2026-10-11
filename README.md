@@ -21,8 +21,10 @@
 </p>
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
-re-implementation written from scratch, so Linux users can manage their watch without a
-virtual machine. It contains no Garmin code or data: the few values it needs to talk to
+implementation with its own code, so Linux users can manage their watch without a
+virtual machine. How the Garmin services and the watch's file layout work was learned by
+analysing the official application, solely to make openExpress interoperate with them.
+It contains no Garmin code or data: the few values it needs to talk to
 Garmin's servers are read from **your own copy** of the official installer during setup.
 
 **Status:** alpha. Developed and tested with a **fēnix 8 Solar** on Fedora/GNOME. Other
