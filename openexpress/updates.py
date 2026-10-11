@@ -136,7 +136,7 @@ def install(
 ) -> InstallReport:
     need, free = check_space(storage, updates)
     if free is not None and need + SPACE_MARGIN > free:
-        raise UpdateError(_("Not enough space on the watch: {need} B needed, {free} B free")
+        raise UpdateError(_("Not enough space on the device: {need} B needed, {free} B free")
                           .format(need=need, free=free))
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
@@ -157,7 +157,7 @@ def install(
         local_files[u.key] = local
     for u in sort_for_install(updates):
         local = local_files[u.key]
-        progress(_("Copying to the watch: {path}").format(path=u.device_path))
+        progress(_("Copying to the device: {path}").format(path=u.device_path))
         try:
             real = storage.write_file(u.device_path, local)
             ok = storage.size(real) == local.stat().st_size

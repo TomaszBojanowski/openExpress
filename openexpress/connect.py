@@ -131,7 +131,7 @@ class GarminClient:
         """
         if self.verified_unit_id is None or unit_id not in (None, self.verified_unit_id):
             raise DeviceNotVerified(
-                _("Internal error: this watch was not checked against your Garmin account. "
+                _("Internal error: this device was not checked against your Garmin account. "
                   "Nothing was sent."))
 
     @staticmethod

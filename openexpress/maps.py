@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 # TRANSLATORS: map installation states
 STATE_NAMES = {0: N_("not installed"), 1: N_("installed"), 2: N_("partial"),
-               3: N_("newer on watch")}
+               3: N_("newer on device")}
 SPACE_MARGIN = 50 * 1024 * 1024
 
 
@@ -203,7 +203,7 @@ def install(
     need = space_needed(storage, m, removing)
     free = storage.free_space()
     if free is not None and need + SPACE_MARGIN > free:
-        raise MapError(_("Not enough space on the watch: {need} B needed, {free} B free")
+        raise MapError(_("Not enough space on the device: {need} B needed, {free} B free")
                        .format(need=need, free=free))
 
     local: dict[str, Path] = {}
@@ -226,7 +226,7 @@ def install(
         storage.delete(p)
         report.removed.append(p)
     for f in m.files:
-        progress(_("Copying to the watch: {path}").format(path=f.device_path))
+        progress(_("Copying to the device: {path}").format(path=f.device_path))
         try:
             real = storage.write_file(f.device_path, local[f.device_path], transfer_progress)
             ok = storage.size(real) == f.size

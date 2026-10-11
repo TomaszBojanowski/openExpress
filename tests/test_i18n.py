@@ -22,7 +22,7 @@ def polish():
 def test_polish_catalog(polish):
     assert i18n.current_language() == "pl"
     assert i18n._("Install") == "Zainstaluj"
-    assert i18n.pgettext("tab", "Watch") == "Zegarek"
+    assert i18n.pgettext("tab", "Device") == "Urządzenie"
     assert i18n.ngettext("{count} file", "{count} files", 5).format(count=5).startswith("5 ")
     assert "pl" in i18n.available_languages()
 

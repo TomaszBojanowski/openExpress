@@ -24,7 +24,7 @@ FEATURES = [
     ("Activities", lambda d: "FIT_TYPE_4" in d),
     ("Monitoring / sleep", lambda d: bool({"FIT_TYPE_32", "FIT_TYPE_49"} & d)),
     ("TrueUp", lambda d: "FIT_TYPE_39" in d),
-    ("Courses / workouts to the watch", lambda d: bool({"FIT_TYPE_5", "FIT_TYPE_6"} & d)),
+    ("Courses / workouts to the device", lambda d: bool({"FIT_TYPE_5", "FIT_TYPE_6"} & d)),
     ("Connect IQ", lambda d: "IQAppsConfiguration" in d),
     ("Music", lambda d: "MEDIA_TRACK" in d),
     ("Maps", lambda d: bool({"PreProgrammedNamedMaps", "BaseMaps", "NMaps"} & d)),
@@ -64,7 +64,7 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None)
     desktop = os.environ.get("XDG_CURRENT_DESKTOP") or "unknown"
     session = os.environ.get("XDG_SESSION_TYPE") or "unknown"
     lines = [
-        "### Watch",
+        "### Device",
         f"- Model: {device.description or 'unknown'}",
         f"- Part number: {device.part_number or 'unknown'}",
         f"- Software: {device.software_version_str}",
@@ -73,7 +73,7 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None)
         f"- Storage: {_size(storage.capacity())} total, {_size(storage.free_space())} free",
         f"- Data types: {len(datatypes)}, components: {len(device.update_files)}",
         "",
-        "### Features declared by the watch",
+        "### Features declared by the device",
         features,
         "",
         "### System",

@@ -24,7 +24,7 @@ UNIT = 1234567890
 OTHER = 4222333444
 DEVICES_PATH = "device-service/deviceregistration/devices"
 NOT_REGISTERED = "not registered to your Garmin account"
-COULD_NOT_CHECK = "Could not check whether this watch belongs"
+COULD_NOT_CHECK = "Could not check whether this device belongs"
 
 
 def response(status=200, body=b"[]"):
@@ -413,7 +413,7 @@ def test_watcher_other_watch_gets_one_notification(device_root, xdg, device, wat
     watcher._sync()
     assert len(watcher.notes) == 1
     title, body = watcher.notes[0]
-    assert title == "Garmin: this watch was not synced" and NOT_REGISTERED in body
+    assert title == "Garmin: this device was not synced" and NOT_REGISTERED in body
     assert watcher.synced == [] and client.http.paths() == [DEVICES_PATH]
     assert tree(device_root) == before and not sync.SyncState(UNIT).dir.exists()
 
@@ -423,7 +423,7 @@ def test_watcher_unavailable_list_gets_one_notification(device_root, xdg, device
     client = make_client(**{DEVICES_PATH: requests.ConnectionError("offline")})
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     watcher._sync()
-    assert [t for t, _b in watcher.notes] == ["Garmin: this watch was not synced"]
+    assert [t for t, _b in watcher.notes] == ["Garmin: this device was not synced"]
     assert COULD_NOT_CHECK in watcher.notes[0][1] and watcher.synced == []
 
 
@@ -444,7 +444,7 @@ def test_watcher_other_watch_with_old_state_is_not_synced(device_root, xdg, devi
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     before = tree(device_root)
     watcher._sync()
-    assert [t for t, _b in watcher.notes] == ["Garmin: this watch was not synced"]
+    assert [t for t, _b in watcher.notes] == ["Garmin: this device was not synced"]
     assert watcher.synced == []
     assert client.http.paths() == [DEVICES_PATH] and tree(device_root) == before
 
@@ -492,7 +492,7 @@ def test_window_banner_for_each_outcome(device_root, device):
     assert banner_for(checked()) == {"revealed": False, "kind": None}
 
     s = checked(**{DEVICES_PATH: response(body=[{"unitid": OTHER}])})
-    assert banner_for(s) == {"title": "This watch is not registered to your Garmin account",
+    assert banner_for(s) == {"title": "This device is not registered to your Garmin account",
                              "button": None, "revealed": True, "kind": "recheck"}
 
     s = checked(**{DEVICES_PATH: requests.ConnectionError("offline")})

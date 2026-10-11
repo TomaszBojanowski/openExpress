@@ -128,7 +128,7 @@ class Watcher(Gio.Application):
             service.require_account_device(s.client, s.device.unit_id)
             if s.first_sync:
                 GLib.idle_add(self.notify, _("Garmin: first sync required"),
-                              _("Open openExpress and choose how to sync the watch."))
+                              _("Open openExpress and choose how to sync the device."))
                 return
             GLib.idle_add(self.notify,
                           _("Syncing {device}").format(device=s.device.description),
@@ -143,7 +143,7 @@ class Watcher(Gio.Application):
             log.info("A sync is running in another process")
         except OwnershipError as e:
             log.info("Not syncing: %s", e)
-            GLib.idle_add(self.notify, _("Garmin: this watch was not synced"), str(e))
+            GLib.idle_add(self.notify, _("Garmin: this device was not synced"), str(e))
         except Exception as e:  # noqa: BLE001
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("Sync failed"), str(e))

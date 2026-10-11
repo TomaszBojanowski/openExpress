@@ -29,7 +29,7 @@ body:
       label: What did you try, and what worked?
       description: Tick only what you tried and that worked; describe problems below.
       options:
-        - label: The watch is detected and the Watch page shows it
+        - label: The device is detected and the Device page shows it
         - label: Logging in to Garmin Connect
         - label: Sync – a new activity appeared in Garmin Connect
         - label: Sync – a course or workout from Garmin Connect arrived on the watch

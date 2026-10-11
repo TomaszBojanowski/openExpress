@@ -66,7 +66,7 @@ def run(
     result = TrueUpResult()
     targets = device.targets(DATATYPE)
     if not targets:
-        result.note = _("the watch does not support TrueUp")
+        result.note = _("the device does not support TrueUp")
         return result
     for _round in range(MAX_ROUNDS):
         m = _find(messages, CHECK_BACK)
@@ -88,7 +88,7 @@ def run(
     if m is None:
         result.note = _("Connect has not prepared TrueUp data yet")
         return result
-    progress(_("TrueUp: writing daily totals to the watch"))
+    progress(_("TrueUp: writing daily totals to the device"))
     data = _fetch(client, m)
     if not data:
         result.note = _("empty TrueUp file")

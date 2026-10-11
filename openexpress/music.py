@@ -64,10 +64,10 @@ def media_dir(device: GarminDevice, kind: str) -> str:
     files = device.targets(KINDS[kind])
     if not files:
         raise MusicError({
-            "track": _("This watch does not accept music"),
-            "podcast": _("This watch does not accept podcasts"),
-            "audiobook": _("This watch does not accept audiobooks"),
-        }.get(kind) or _("This watch does not accept {kind}").format(kind=kind))
+            "track": _("This device does not accept music"),
+            "podcast": _("This device does not accept podcasts"),
+            "audiobook": _("This device does not accept audiobooks"),
+        }.get(kind) or _("This device does not accept {kind}").format(kind=kind))
     return files[0].path.strip("/")
 
 
@@ -227,7 +227,7 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
          transfer_progress=None) -> list[str]:
     free = storage.free_space()
     if free is not None and plan.size + SPACE_MARGIN > free:
-        raise MusicError(_("Not enough space on the watch: need {need} B, free {free} B")
+        raise MusicError(_("Not enough space on the device: need {need} B, free {free} B")
                          .format(need=plan.size, free=free))
     written = []
     for t, dest in plan.to_copy:
@@ -240,7 +240,7 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
 def write_playlist(device: GarminDevice, storage: Storage, name: str, device_paths: list[str]) -> str:
     files = device.targets(PLAYLIST)
     if not files:
-        raise MusicError(_("This watch does not support playlists"))
+        raise MusicError(_("This device does not support playlists"))
     path = posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
     body = "".join(p + "\n" for p in device_paths).encode("utf-8")
     return storage.write(path, body)

@@ -322,7 +322,7 @@ def cmd_sync(args) -> int:
         messages = client.device_messages(dev.unit_id)
         dl_items = sync.plan_downloads(dev, messages)
         n_dl = sum(1 for i in dl_items if not i.unsupported)
-        print("\n" + _("To download from Connect to the watch: {count}").format(count=n_dl))
+        print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))
         for it in dl_items:
             note = ("  [" + _("skipped: {reason}").format(reason=it.unsupported) + "]"
                     if it.unsupported
@@ -331,14 +331,14 @@ def cmd_sync(args) -> int:
             print(f"  {it.datatype:22} {it.message_name or it.message_id} -> {target}{note}")
 
     if not args.apply:
-        print("\n" + _("Dry run: nothing was uploaded or written to the watch. "
+        print("\n" + _("Dry run: nothing was uploaded or written to the device. "
                        "Add --apply to run the sync."))
         return 0
 
     first_run = not state.file.exists()
     if first_run and not args.all and not args.download_only:
         print(
-            "\n" + _("This is the first sync with this program. If the watch also syncs "
+            "\n" + _("This is the first sync with this program. If the device also syncs "
                      "via your phone, most files are already in Connect.\n"
                      "  openexpress baseline --apply   marks current files as uploaded "
                      "(recommended)\n"
@@ -385,7 +385,7 @@ def cmd_sync(args) -> int:
             # Not for --download-only: the first-sync choice must stay pending until uploads run.
             state.save()
         if any(not i.unsupported and not i.handled_by for i in dl_items):
-            print("\n" + _("Downloading to the watch…"))
+            print("\n" + _("Downloading to the device…"))
             drep = sync.run_downloads(dl_items, st, client, progress, state=state)
             line = _("Written: {written}, empty: {empty}, errors: {errors}").format(
                 written=len(drep.written), empty=len(drep.empty), errors=len(drep.failed))
@@ -487,9 +487,9 @@ class _Bar:
 # Untranslated constant (also used by the GUI); show it with _(RESTART_STEPS).
 RESTART_STEPS = N_("""
 To finish the installation:
-  1. Disconnect the watch from the computer.
-  2. The watch installs the update by itself (it may ask for confirmation
-     and restart). Wait for the watch face.
+  1. Disconnect the device from the computer.
+  2. The device installs the update by itself (it may ask for confirmation
+     and restart). Wait until the device has restarted.
   3. Reconnect it and run `openexpress updates`: the installed update
      should no longer be listed.
 """)
@@ -538,7 +538,7 @@ def cmd_updates(args) -> int:
     for e in eulas:
         print(_("License (EULA): {url}").format(url=e))
     if any(u.is_primary or u.restart_required for u in chosen):
-        print(_("Warning: this is a watch system update. Charge the watch and do not disconnect "
+        print(_("Warning: this is a device system update. Charge the device and do not disconnect "
                 "it while copying."))
     if not args.apply:
         print("\n" + _("Dry run: nothing was downloaded or written. Add --apply "
@@ -583,7 +583,7 @@ def cmd_maps(args) -> int:
             print("\n" + ngettext("{count} more map is available (openexpress maps --all).",
                                   "{count} more maps are available (openexpress maps --all).",
                                   n).format(count=n))
-        print(_("Free space on the watch: {size}").format(size=_human(st.free_space())))
+        print(_("Free space on the device: {size}").format(size=_human(st.free_space())))
         return 0
 
     if args.maps_cmd == "update":
@@ -617,14 +617,14 @@ def cmd_maps(args) -> int:
         need = mp.space_needed(st, m, removing)
         if m.installed:
             msg = ngettext("Updating map {name} {version}: {count} file, download {size}, "
-                           "space on the watch {needed} ({free} free)",
+                           "space on the device {needed} ({free} free)",
                            "Updating map {name} {version}: {count} files, download {size}, "
-                           "space on the watch {needed} ({free} free)", len(m.files))
+                           "space on the device {needed} ({free} free)", len(m.files))
         else:
             msg = ngettext("Installing map {name} {version}: {count} file, download {size}, "
-                           "space on the watch {needed} ({free} free)",
+                           "space on the device {needed} ({free} free)",
                            "Installing map {name} {version}: {count} files, download {size}, "
-                           "space on the watch {needed} ({free} free)", len(m.files))
+                           "space on the device {needed} ({free} free)", len(m.files))
         print(msg.format(name=m.name, version=m.version, count=len(m.files),
                          size=_human(m.size), needed=_human(need),
                          free=_human(st.free_space())))
@@ -703,7 +703,7 @@ def cmd_apps(args) -> int:
                   f"{_app_status(a.disabled):9}{note}")
         missing = [a for a in account if a.app_id not in installed_ids]
         if missing:
-            print("\n" + _("In your Garmin account but not on the watch:"))
+            print("\n" + _("In your Garmin account but not on the device:"))
             for a in missing:
                 print(f"  {a.name:36} {a.store_type:11} {a.version_name:10} {_human(a.size)}")
         if args.builtin:
@@ -748,7 +748,7 @@ def cmd_apps(args) -> int:
     app = _find_app(state.apps, args.name)
     if cmd == "remove":
         paths_ = [p for p in (ciq.app_file_path(dev, app), ciq.settings_file_path(dev, app)) if p]
-        print(_("Remove {name} from the watch: {files}").format(
+        print(_("Remove {name} from the device: {files}").format(
             name=app.name, files=", ".join(paths_) or "-"))
         if not args.apply:
             print(_("Dry run. Add --apply."))
@@ -770,7 +770,7 @@ def cmd_apps(args) -> int:
         print(_("Dry run. Add --apply."))
         return 0
     ciq.set_enabled(dev, st, app.app_id, enable)
-    print(_("Saved. The watch applies the change after you disconnect it."))
+    print(_("Saved. The device applies the change after you disconnect it."))
     return 0
 
 
@@ -841,9 +841,9 @@ def cmd_music(args) -> int:
         tracks = music.scan([Path(p) for p in args.paths], dev, forced_kind=args.kind)
         plan = music.plan_copy(tracks, dev, st)
         print(ngettext("Found {count} playable file; {to_copy} to copy ({size}), "
-                       "{already} already on the watch.",
+                       "{already} already on the device.",
                        "Found {count} playable files; {to_copy} to copy ({size}), "
-                       "{already} already on the watch.", len(tracks)).format(
+                       "{already} already on the device.", len(tracks)).format(
             count=len(tracks), to_copy=len(plan.to_copy), size=_human(plan.size),
             already=len(plan.already)))
         for t, dest in plan.to_copy[: (None if args.verbose else 15)]:
@@ -1008,11 +1008,11 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
     s.set_defaults(func=cmd_report)
 
-    s = sub.add_parser("info", help=_("information about the connected watch"))
+    s = sub.add_parser("info", help=_("information about the connected device"))
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_info)
 
-    s = sub.add_parser("files", help=_("files on the watch by data type"))
+    s = sub.add_parser("files", help=_("files on the device by data type"))
     s.add_argument("--type", help=_("e.g. {example} (activities)").format(example="FIT_TYPE_4"))
     s.add_argument("--limit", type=int, default=0, help=_("show only the last N files"))
     s.set_defaults(func=cmd_files)
@@ -1042,21 +1042,21 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--include-consent", action="store_true",
                    help=_("also upload to locations that require specific GDPR consents"))
     s.add_argument("--include-diagnostics", action="store_true",
-                   help=_("also upload watch diagnostics and telemetry to Garmin"))
+                   help=_("also upload device diagnostics and telemetry to Garmin"))
     s.set_defaults(func=cmd_sync)
 
     s = sub.add_parser("baseline", help=_("mark current files as already uploaded"))
     s.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_baseline)
 
-    s = sub.add_parser("backup", help=_("local backup of watch data"))
+    s = sub.add_parser("backup", help=_("local backup of device data"))
     s.add_argument("--dest", help=_("destination directory (default: {path})").format(
         path="~/Documents/Garmin/Backups"))
     s.add_argument("--keep", type=int, default=3, help=_("how many most recent backups to keep"))
     s.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_backup)
 
-    s = sub.add_parser("updates", help=_("watch software updates"))
+    s = sub.add_parser("updates", help=_("device software updates"))
     s.add_argument("--reinstalls", action="store_true",
                    help=_("also show items available for reinstall"))
     s.add_argument("--install", nargs="+", metavar="PART",
@@ -1064,7 +1064,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_updates)
 
-    s = sub.add_parser("maps", help=_("maps on the watch (TopoActive, base maps, CourseView…)"))
+    s = sub.add_parser("maps", help=_("maps on the device (TopoActive, base maps, CourseView…)"))
     s.add_argument("--all", action="store_true", help=_("also show maps available for download"))
     msub = s.add_subparsers(dest="maps_cmd")
     m = msub.add_parser("install", help=_("install a map"))
@@ -1072,7 +1072,7 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--apply", action="store_true")
     m = msub.add_parser("update", help=_("update installed maps"))
     m.add_argument("--apply", action="store_true")
-    m = msub.add_parser("remove", help=_("remove a map from the watch"))
+    m = msub.add_parser("remove", help=_("remove a map from the device"))
     m.add_argument("name")
     m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_maps)
@@ -1081,7 +1081,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--builtin", action="store_true", help=_("also list built-in activities"))
     asub = s.add_subparsers(dest="apps_cmd")
     for name, helptext in (("install", _("install an app from your Garmin account")),
-                           ("remove", _("remove an app from the watch")),
+                           ("remove", _("remove an app from the device")),
                            ("enable", _("enable an app or built-in activity")),
                            ("disable", _("disable an app or built-in activity"))):
         a = asub.add_parser(name, help=helptext)
@@ -1094,9 +1094,9 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_apps)
 
-    s = sub.add_parser("music", help=_("music, podcasts and audiobooks on the watch"))
+    s = sub.add_parser("music", help=_("music, podcasts and audiobooks on the device"))
     msub = s.add_subparsers(dest="music_cmd")
-    m = msub.add_parser("add", help=_("copy audio files or folders to the watch"))
+    m = msub.add_parser("add", help=_("copy audio files or folders to the device"))
     m.add_argument("paths", nargs="+")
     m.add_argument("--as", dest="kind", choices=["track", "podcast", "audiobook"],
                    help=_("treat all files as this kind (default: detect from genre tag)"))
@@ -1115,7 +1115,7 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("gui", help=_("application window"))
     s.set_defaults(func=cmd_gui)
 
-    s = sub.add_parser("watch", help=_("background service: sync when the watch is connected"))
+    s = sub.add_parser("watch", help=_("background service: sync when the device is connected"))
     s.set_defaults(func=cmd_watch)
 
     s = sub.add_parser("install-desktop",

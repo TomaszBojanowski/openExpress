@@ -397,7 +397,7 @@ def install_queued(
             try:
                 if (existing is None and max_apps
                         and len(state.store_apps) + len(new_entries) >= max_apps):
-                    raise CiqError(_("no free app slots on the watch"))
+                    raise CiqError(_("no free app slots on the device"))
                 progress(_("Downloading {name}").format(name=name))
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
@@ -406,10 +406,10 @@ def install_queued(
                     continue
                 if (state.available_space is not None and existing is None
                         and new_size + len(data) > state.available_space):
-                    raise CiqError(_("not enough Connect IQ space on the watch"))
+                    raise CiqError(_("not enough Connect IQ space on the device"))
                 targets = device.targets(dt)
                 if not targets:
-                    raise CiqError(_("the watch does not accept {datatype}").format(datatype=dt))
+                    raise CiqError(_("the device does not accept {datatype}").format(datatype=dt))
                 # Updates overwrite the existing file; new apps get 8 random hex characters.
                 filename = (existing.filename if existing and existing.filename
                             else uuid.uuid4().hex[:8].upper())
@@ -447,7 +447,7 @@ def install_queued(
                 for p in new_paths:
                     _delete_quietly(storage, p)
                 report.failed += [(name, str(e)) for _m, name in to_ack]
-                raise CiqError(_("Cannot register the apps on the watch: {error}")
+                raise CiqError(_("Cannot register the apps on the device: {error}")
                                .format(error=e)) from e
         for m, name in to_ack:
             try:
@@ -469,7 +469,7 @@ def _delete_quietly(storage: Storage, path: str) -> None:
 
 def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[str]:
     if not app.removable:
-        raise CiqError(_("{name} is part of the watch software and cannot be removed")
+        raise CiqError(_("{name} is part of the device software and cannot be removed")
                        .format(name=app.name))
     removed = []
     for p in (app_file_path(device, app), settings_file_path(device, app)):
@@ -484,6 +484,6 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
     state = read_installed(device, storage)
     app = state.find(app_id)
     if app is None:
-        raise CiqError(_("App not found on the watch"))
+        raise CiqError(_("App not found on the device"))
     app.disabled = not enabled
     storage.write(_config_path(device, True), build_in_bin(state.apps))

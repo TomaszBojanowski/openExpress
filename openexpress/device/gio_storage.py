@@ -70,7 +70,7 @@ def host_copy(local: Path, target_uri: str, what: str) -> None:
     if res.returncode != 0:
         detail = res.stderr.strip() or res.stdout.strip()
         if "org.freedesktop.Flatpak" in detail or "Portal call failed" in detail:
-            detail = _("the Flatpak is missing the permission to copy files to the watch")
+            detail = _("the Flatpak is missing the permission to copy files to the device")
         raise DeviceError(f"{what}: {detail}")
 
 
@@ -330,7 +330,7 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
     if not timed_out:
         GLib.source_remove(source)
     if not finished:
-        raise DeviceError(_("Mounting the watch timed out"))
+        raise DeviceError(_("Mounting the device timed out"))
     if error:
         raise _err(error[0], _("Cannot mount the device"))
     dev.mounted = True
@@ -343,7 +343,7 @@ def open_device_storage(uri: str | None = None) -> GioStorage:
         devices = find_devices()
         if not devices:
             raise DeviceError(_(
-                "No Garmin device (MTP) found. Connect the watch with a USB cable "
+                "No Garmin device (MTP) found. Connect the device with a USB cable "
                 "and unlock it if it asks to allow the connection."
             ))
         if len(devices) > 1:

@@ -97,13 +97,13 @@ def require_account_device(client: GarminClient, unit_id: int) -> None:
             raise
         except ApiError as e:
             raise OwnershipUnknown(
-                _("Could not check whether this watch belongs to your Garmin account "
+                _("Could not check whether this device belongs to your Garmin account "
                   "({error}). Nothing was synced.").format(error=e)) from e
         if unit_id not in {_unit_id(d.get("unitid")) for d in devices}:
             raise NotAccountDevice(
-                _("This watch is not registered to your Garmin account. To use it with "
+                _("This device is not registered to your Garmin account. To use it with "
                   "Garmin Connect here, sign in to the account it belongs to or add the "
-                  "watch to your account in Garmin Connect."))
+                  "device to your account in Garmin Connect."))
         verified = unit_id
     finally:
         client.verified_unit_id = verified
@@ -221,7 +221,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         elif first_run != "all":
             raise FirstSyncChoiceNeeded()
         state = s.state
-    progress(_("Looking for new files on the watch…"))
+    progress(_("Looking for new files on the device…"))
     plan = sync.plan_uploads(s.device, s.storage, cfg, state,
                              include_diagnostics=include_diagnostics)
     counts = collections.Counter(c.datatype for c in plan.candidates)
@@ -254,8 +254,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         out.errors += [f"{label}: {err}" for label, err in drep.failed]
         out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
                        .format(name=label) for label in drep.ack_failed]
-        out.lines.append(ngettext("Wrote {count} file from Connect to the watch.",
-                                  "Wrote {count} files from Connect to the watch.",
+        out.lines.append(ngettext("Wrote {count} file from Connect to the device.",
+                                  "Wrote {count} files from Connect to the device.",
                                   out.downloaded).format(count=out.downloaded))
     if any(i.handled_by == "Connect IQ" for i in items):
         out.lines += _install_queued_apps(s, messages, progress, out.errors)
@@ -264,8 +264,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     skipped = [i for i in items if i.unsupported]
     if skipped:
         out.lines.append(ngettext(
-            "Skipped {count} item from Connect (not accepted by the watch).",
-            "Skipped {count} items from Connect (not accepted by the watch).",
+            "Skipped {count} item from Connect (not accepted by the device).",
+            "Skipped {count} items from Connect (not accepted by the device).",
             len(skipped)).format(count=len(skipped)))
     state.save()
     return out

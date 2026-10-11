@@ -76,7 +76,7 @@ def _portal_request(autostart: bool, parent: str, done: Callable[[bool, str], No
                                     None, Gio.DBusSignalFlags.NO_MATCH_RULE, on_response))
     options = {
         "handle_token": GLib.Variant("s", token),
-        "reason": GLib.Variant("s", _("Sync the watch with Garmin Connect when it is connected.")),
+        "reason": GLib.Variant("s", _("Sync the device with Garmin Connect when it is connected.")),
         "autostart": GLib.Variant("b", autostart),
         "commandline": GLib.Variant("as", ["openexpress", "watch"]),
         "dbus-activatable": GLib.Variant("b", False),

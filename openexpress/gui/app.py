@@ -158,8 +158,8 @@ class Section:
         self.loaded = False
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.empty = Adw.StatusPage(
-            icon_name=APP_ID, title=_("Connect your watch"),
-            description=_("Connect your Garmin watch with a USB cable. "
+            icon_name=APP_ID, title=_("Connect your device"),
+            description=_("Connect your Garmin device with a USB cable. "
                           "It will be detected automatically."))
         self.loading = Adw.StatusPage(title=loading_text)
         if hasattr(Adw, "SpinnerPaintable"):
@@ -221,8 +221,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
-            Section("watch", pgettext("tab", "Watch"), "preferences-system-time-symbolic",
-                    _("Detecting the watch…")),
+            Section("watch", pgettext("tab", "Device"), "preferences-system-time-symbolic",
+                    _("Detecting the device…")),
             # TRANSLATORS: tab title
             Section("updates", pgettext("tab", "Updates"), "software-update-available-symbolic",
                     _("Checking for updates…")),
@@ -234,7 +234,7 @@ class MainWindow(Adw.ApplicationWindow):
                     _("Loading Connect IQ apps…")),
             # TRANSLATORS: tab title
             Section("music", pgettext("tab", "Music"), "audio-x-generic-symbolic",
-                    _("Reading music on the watch…")),
+                    _("Reading music on the device…")),
         )}
         for sec in self.sections.values():
             sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
@@ -369,7 +369,7 @@ class MainWindow(Adw.ApplicationWindow):
             d = Adw.AlertDialog(
                 heading=_("An operation is in progress"),
                 body=_("Wait until it finishes before closing openExpress, so that no files "
-                       "on the watch are left half-written."))
+                       "on the device are left half-written."))
             d.add_response("ok", _("OK"))
             d.connect("response", lambda *_a: setattr(self, "_close_dialog", None))
             self._close_dialog = d
@@ -534,7 +534,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         if self.session is None:
             self.sections["watch"].show("loading")
-        self.run_task(_("Detecting the watch…"),
+        self.run_task(_("Detecting the device…"),
                       lambda: service.check_session(service.open_session()), done, failed)
 
     def show_device(self) -> None:
@@ -566,8 +566,8 @@ class MainWindow(Adw.ApplicationWindow):
         elif s is not None and s.ownership_error is not None:
             unknown = not isinstance(s.ownership_error, NotAccountDevice)
             self.banner.set_title(
-                _("Could not check whether this watch belongs to your Garmin account") if unknown
-                else _("This watch is not registered to your Garmin account"))
+                _("Could not check whether this device belongs to your Garmin account") if unknown
+                else _("This device is not registered to your Garmin account"))
             self.banner.set_button_label(_("Try Again") if unknown else None)
             self._banner_kind = "recheck"
             self.banner.set_revealed(True)
@@ -662,7 +662,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         free, total = s.storage.free_space(), s.storage.capacity()
         g = sec.group(_("Storage"))
-        row = Adw.ActionRow(title=_("Watch storage"))
+        row = Adw.ActionRow(title=_("Device storage"))
         if free is not None and total:
             row.set_subtitle(_("{free} free of {total}").format(free=_human(free),
                                                                  total=_human(total)))
@@ -678,7 +678,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         g = sec.group(_("Sync with Garmin Connect"))
         if s.ownership_error is not None:
-            g.add(Adw.ActionRow(title=_("Sync is not available for this watch"),
+            g.add(Adw.ActionRow(title=_("Sync is not available for this device"),
                                 subtitle=GLib.markup_escape_text(str(s.ownership_error))))
         else:
             self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
@@ -687,13 +687,13 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_last_sync()
         if s.ownership_error is None and not self._background_enabled():
             row = Adw.ActionRow(title=_("Automatic sync is off"),
-                                subtitle=_("Turn it on to sync whenever the watch is connected"))
+                                subtitle=_("Turn it on to sync whenever the device is connected"))
             # TRANSLATORS: button that turns on automatic sync
             row.add_suffix(self._button(_("Turn On"), lambda: self.set_background(True)))
             g.add(row)
 
         g = sec.group(pgettext("tab", "Updates"))
-        self.update_row = Adw.ActionRow(title=_("Watch software"), activatable=True)
+        self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
         self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
         g.add(self.update_row)
@@ -893,7 +893,7 @@ class MainWindow(Adw.ApplicationWindow):
         g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
         sw = Adw.SwitchRow(
             title=_("Sync in the background"),
-            subtitle=_("Starts at login and syncs whenever the watch is connected, "
+            subtitle=_("Starts at login and syncs whenever the device is connected, "
                        "also when this window is closed"),
             active=self._background_enabled())
 
@@ -1086,7 +1086,7 @@ class MainWindow(Adw.ApplicationWindow):
     def ask_first_sync(self) -> None:
         d = Adw.AlertDialog(
             heading=_("First sync"),
-            body=_("If the watch also syncs via your phone, most data is already "
+            body=_("If the device also syncs via your phone, most data is already "
                    "in Garmin Connect. You can mark the current files as uploaded "
                    "and upload only new ones, or upload everything (Connect skips duplicates)."),
         )
@@ -1145,9 +1145,9 @@ class MainWindow(Adw.ApplicationWindow):
             g = sec.group(_("Advanced"))
             exp = Adw.ExpanderRow(
                 title=_("Reinstall components"),
-                subtitle=ngettext("{count} component already on the watch; useful for "
+                subtitle=ngettext("{count} component already on the device; useful for "
                                   "troubleshooting",
-                                  "{count} components already on the watch; useful for "
+                                  "{count} components already on the device; useful for "
                                   "troubleshooting", len(re)).format(count=len(re)))
             g.add(exp)
             for u in sorted(re, key=lambda x: x.name):
@@ -1174,11 +1174,11 @@ class MainWindow(Adw.ApplicationWindow):
         chosen = upd.select(self.updates_cache, [u.part_number])
         body = (f"{u.name} {u.version}\n"
                 + _("Size: {size}").format(size=_human(u.size)) + "\n"
-                + _("On the watch: {path}").format(path=u.device_path)
+                + _("On the device: {path}").format(path=u.device_path)
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
                 + ("\n\n" + _("License: {url}").format(url=u.eula_url) if u.eula_url else "")
-                + ("\n\n" + _("Do not disconnect the watch while copying.")
+                + ("\n\n" + _("Do not disconnect the device while copying.")
                    if u.is_primary else ""))
         d = Adw.AlertDialog(heading=_("Install update?"), body=body)
         d.add_response("cancel", _("Cancel"))
@@ -1192,7 +1192,7 @@ class MainWindow(Adw.ApplicationWindow):
                 _("Installing update…"),
                 lambda: upd.install(chosen, s.storage, session=s.client.http,
                                     progress=self.progress),
-                lambda rep: self.error(_("Done"), _("Files copied to the watch.")
+                lambda rep: self.error(_("Done"), _("Files copied to the device.")
                                        + (_(RESTART_STEPS) if rep.restart_required else "")),
             )
 
@@ -1217,7 +1217,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         free, total = s.storage.free_space(), s.storage.capacity()
         installed = sorted((m for m in all_maps if m.installed), key=lambda m: (m.map_type, m.name))
-        g = sec.group(_("On the watch"))
+        g = sec.group(_("On the device"))
         if free is not None and total:
             used_by_maps = sum(m.size for m in installed)
             row = Adw.ActionRow(
@@ -1244,7 +1244,7 @@ class MainWindow(Adw.ApplicationWindow):
         if not available:
             return
         # TRANSLATORS: group title: maps that can be installed
-        g = sec.group(_("Available"), _("Free maps available for this watch"))
+        g = sec.group(_("Available"), _("Free maps available for this device"))
         search = Gtk.SearchEntry(placeholder_text=_("Search maps or regions"), margin_bottom=12)
         g.add(search)
         rows = []
@@ -1272,7 +1272,7 @@ class MainWindow(Adw.ApplicationWindow):
         removing = mp.removal_list(self.maps_cache, m, rewriting=True)
         need = mp.space_needed(s.storage, m, removing)
         body = (_("Download: {size}").format(size=_human(m.size)) + "\n"
-                + _("Space on the watch: {needed} ({free} free)").format(
+                + _("Space on the device: {needed} ({free} free)").format(
                     needed=_human(need), free=_human(s.storage.free_space())) + "\n"
                 + _("Files: {count}").format(count=len(m.files))
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
@@ -1310,7 +1310,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         files = mp.removal_list(self.maps_cache, m, rewriting=False)
         d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=m.name),
-                            body=_("These files will be removed from the watch:") + "\n"
+                            body=_("These files will be removed from the device:") + "\n"
                             + "\n".join(files))
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", _("Remove"))
@@ -1327,7 +1327,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         s = self.session
         if s is None:
-            text = _("Connect the watch first, so that the report can describe it.")
+            text = _("Connect the device first, so that the report can describe it.")
             body_text = ""
         else:
             body_text = report.build(s.device, s.storage, s.logged_in)
@@ -1421,7 +1421,7 @@ class MainWindow(Adw.ApplicationWindow):
         sec = self.sections["apps"]
         upd = {u.app_id: u for u in updates}
         icons: dict = {}
-        g = sec.group(_("On the watch"), self._apps_space(state))
+        g = sec.group(_("On the device"), self._apps_space(state))
         if updates:
             b = self._button(_("Update all"), lambda: self.install_apps(updates),
                              "suggested-action")
@@ -1463,7 +1463,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         builtin = sorted((a for a in state.apps if a.preloaded), key=lambda a: a.name)
         g = sec.group(_("Built-in activities and apps"),
-                      _("Changes take effect after you disconnect the watch."))
+                      _("Changes take effect after you disconnect the device."))
         search = Gtk.SearchEntry(placeholder_text=_("Search activities"), margin_bottom=12)
         g.add(search)
         exp = Adw.ExpanderRow(title=ngettext("Show {count} item", "Show {count} items",
@@ -1558,7 +1558,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         s = self.session
         d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=app.name),
-                            body=_("The app and its settings will be deleted from the watch."))
+                            body=_("The app and its settings will be deleted from the device."))
         d.add_response("cancel", _("Cancel"))
         d.add_response("forget", _("Remove and forget"))
         d.add_response("ok", _("Remove"))
@@ -1621,7 +1621,7 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import music
 
         s = self.session
-        self._load("music", _("Reading music on the watch…"),
+        self._load("music", _("Reading music on the device…"),
                    lambda: (music.list_device(s.device, s.storage),
                             music.list_playlists(s.device, s.storage)),
                    self.show_music)
@@ -1634,14 +1634,14 @@ class MainWindow(Adw.ApplicationWindow):
         items, playlists = result
         sec = self.sections["music"]
         free = self.session.storage.free_space()
-        g = sec.group(_("Add to the watch"), _("Free space: {size}").format(size=_human(free)))
+        g = sec.group(_("Add to the device"), _("Free space: {size}").format(size=_human(free)))
         for kind, label in music.KIND_NAMES.items():
             row = Adw.ActionRow(title=_(label))
             row.add_suffix(self._button(_("Folders…"), lambda k=kind: self.choose_music(k, True)))
             row.add_suffix(self._button(_("Files…"), lambda k=kind: self.choose_music(k, False)))
             g.add(row)
-        on_watch = {"track": _("Music on the watch"), "podcast": _("Podcasts on the watch"),
-                    "audiobook": _("Audiobooks on the watch")}
+        on_watch = {"track": _("Music on the device"), "podcast": _("Podcasts on the device"),
+                    "audiobook": _("Audiobooks on the device")}
         for kind in music.KIND_NAMES:
             files = [i for i in items if i.kind == kind]
             n = len(files)
@@ -1666,7 +1666,7 @@ class MainWindow(Adw.ApplicationWindow):
                 g.add(row)
 
     def choose_music(self, kind: str, folders: bool) -> None:
-        dialog = Gtk.FileDialog(title=_("Choose music to copy to the watch"))
+        dialog = Gtk.FileDialog(title=_("Choose music to copy to the device"))
 
         def chosen(dlg, res):
             try:
@@ -1701,8 +1701,8 @@ class MainWindow(Adw.ApplicationWindow):
             n = len(p.to_copy)
             d = Adw.AlertDialog(
                 heading=ngettext("Copy {count} file?", "Copy {count} files?", n).format(count=n),
-                body=ngettext("{size} will be copied to the watch ({count} file already there).",
-                              "{size} will be copied to the watch ({count} files already there).",
+                body=ngettext("{size} will be copied to the device ({count} file already there).",
+                              "{size} will be copied to the device ({count} files already there).",
                               len(p.already)).format(size=_human(p.size), count=len(p.already)))
             d.add_response("cancel", _("Cancel"))
             # TRANSLATORS: button
