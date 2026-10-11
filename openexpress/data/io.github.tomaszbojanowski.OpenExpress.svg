@@ -1,50 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="strap" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#2e3436"/>
-      <stop offset="0.5" stop-color="#555b5e"/>
-      <stop offset="1" stop-color="#2e3436"/>
-    </linearGradient>
-    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eeeeec"/>
-      <stop offset="0.5" stop-color="#9a9996"/>
-      <stop offset="1" stop-color="#5e5c64"/>
-    </linearGradient>
-    <radialGradient id="dial" cx="0.42" cy="0.35" r="0.75">
-      <stop offset="0" stop-color="#1c71d8"/>
-      <stop offset="0.6" stop-color="#1a4f9c"/>
-      <stop offset="1" stop-color="#0b2a55"/>
-    </radialGradient>
-    <linearGradient id="arrow" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8ff0a4"/>
-      <stop offset="1" stop-color="#33d17a"/>
-    </linearGradient>
-  </defs>
-  <!-- straps -->
-  <path d="M44 4h40l-4 26H48z" fill="url(#strap)"/>
-  <path d="M48 98h32l4 26H44z" fill="url(#strap)"/>
-  <rect x="50" y="9" width="28" height="3" rx="1.5" fill="#000" opacity="0.25"/>
-  <rect x="50" y="116" width="28" height="3" rx="1.5" fill="#000" opacity="0.25"/>
-  <!-- buttons -->
-  <rect x="104" y="44" width="8" height="12" rx="3" fill="#77767b"/>
-  <rect x="104" y="72" width="8" height="12" rx="3" fill="#77767b"/>
-  <rect x="16" y="46" width="8" height="10" rx="3" fill="#77767b"/>
-  <rect x="16" y="72" width="8" height="10" rx="3" fill="#77767b"/>
-  <!-- case and bezel -->
-  <circle cx="64" cy="64" r="44" fill="url(#case)"/>
-  <circle cx="64" cy="64" r="39" fill="#241f31"/>
-  <g stroke="#9a9996" stroke-width="2" stroke-linecap="round">
-    <path d="M64 27v4M64 97v4M27 64h4M97 64h4"/>
-  </g>
-  <!-- dial -->
-  <circle cx="64" cy="64" r="33" fill="url(#dial)"/>
-  <!-- sync arrows -->
-  <g fill="none" stroke="url(#arrow)" stroke-width="6" stroke-linecap="round">
-    <path d="M44.5 58A20 20 0 0 1 79 50.5"/>
-    <path d="M83.5 70A20 20 0 0 1 49 77.5"/>
-  </g>
-  <path d="M84.5 41.5l-1 15.5-14-7z" fill="#57e389"/>
-  <path d="M43.5 86.5l1-15.5 14 7z" fill="#57e389"/>
-  <!-- highlight -->
-  <path d="M33 52a33 33 0 0 1 52-21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.18"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><linearGradient id="strap" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ff965b"/><stop offset="1" stop-color="#ed6133"/></linearGradient><linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#727983"/><stop offset="1" stop-color="#363b44"/></linearGradient><linearGradient id="side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#4c515b"/><stop offset="1" stop-color="#242930"/></linearGradient><linearGradient id="guard" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffa96b"/><stop offset="1" stop-color="#ed743d"/></linearGradient><linearGradient id="buttons" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9ba1aa"/><stop offset="1" stop-color="#484e58"/></linearGradient><radialGradient id="glass" cx=".35" cy=".25" r=".85"><stop stop-color="#294754"/><stop offset="1" stop-color="#12212c"/></radialGradient></defs><g transform="rotate(-16 64 63)">
+<!-- Two-tone silicone strap, recessed channels, QuickFit-style lugs. -->
+<rect x="46" y="12" width="36" height="102" rx="10" fill="#ad4829"/>
+<rect x="46" y="8" width="36" height="102" rx="10" fill="url(#strap)"/>
+<path d="M46 19v80a10 10 0 0 0 4 8V11a10 10 0 0 0-4 8ZM82 19v80a10 10 0 0 1-4 8V11a10 10 0 0 1 4 8Z" fill="#333740"/>
+<path d="M54 15h20M54 20h20M54 99h20M54 104h20" stroke="#be4e2d" stroke-width="2" stroke-linecap="round"/>
+<path d="M53 26h22M53 94h22" stroke="#ffb47c" stroke-width="3" stroke-linecap="round"/>
+<path d="M42 27V19h7v9ZM79 28V19h7v8ZM42 92v9h7v-9ZM79 92v9h7v-9Z" fill="#424852"/>
+<!-- Three left buttons; two right buttons and an orange sensor guard. -->
+<rect x="25" y="35" width="6" height="7" rx="2" fill="url(#buttons)" transform="rotate(30 28 38)"/>
+<rect x="19" y="56" width="6" height="8" rx="2" fill="url(#buttons)"/>
+<rect x="25" y="78" width="6" height="7" rx="2" fill="url(#buttons)" transform="rotate(-30 28 81)"/>
+<rect x="97" y="35" width="7" height="7" rx="2" fill="url(#buttons)" transform="rotate(-30 100 38)"/>
+<rect x="97" y="78" width="7" height="7" rx="2" fill="url(#buttons)" transform="rotate(30 100 81)"/>
+<path d="M102 52h3q4 0 4 4v10q0 4-4 4h-3Z" fill="#aa4a24"/>
+<path d="M102 49h3q4 0 4 4v10q0 4-4 4h-3Z" fill="url(#guard)"/>
+<path d="M106 55v6" stroke="#be5428" stroke-width="1.5" stroke-linecap="round"/>
+<!-- Raised metal bezel and visible case depth. -->
+<circle cx="64" cy="64" r="41" fill="#20252d"/>
+<circle cx="64" cy="62" r="41" fill="url(#side)"/>
+<circle cx="64" cy="59" r="41" fill="url(#bezel)"/>
+<circle cx="64" cy="59" r="38" fill="none" stroke="#c6cbd1" stroke-opacity=".23" stroke-width="1"/>
+<circle cx="64" cy="59" r="33" fill="#171e25"/>
+<!-- Restrained warm ring, recessed dial, readable sync symbol. -->
+<circle cx="64" cy="59" r="30" fill="#b98d61"/>
+<circle cx="64" cy="59" r="28" fill="url(#glass)"/>
+<g stroke="#d5dce1" stroke-width="2" stroke-linecap="round" opacity=".7">
+<path d="M64 33v3M64 82v3M38 59h3M87 59h3"/>
+</g>
+<g stroke="#bdc6cf" stroke-width="1.5" stroke-linecap="round" opacity=".35">
+<path d="m45 40 2 2m34-2-2 2M45 78l2-2m34 2-2-2"/>
+</g>
+<g transform="translate(64 59) scale(.79)" fill="#f6f5f4">
+<path d="M-23-3A23 23 0 0 1 15-17L21-23v18H3l7-7A16 16 0 0 0-16-3Z"/>
+<path d="M23 3A23 23 0 0 1-15 17L-21 23V5h18l-7 7A16 16 0 0 0 16 3Z"/>
+</g>
+<!-- Four inset bezel screws, with simple slots. -->
+<g fill="#242a33" stroke="#a0a7b0" stroke-width="1">
+<circle cx="38" cy="33" r="2.5"/><circle cx="90" cy="33" r="2.5"/>
+<circle cx="38" cy="85" r="2.5"/><circle cx="90" cy="85" r="2.5"/>
+</g>
+<g stroke="#929aa4" stroke-width="1" stroke-linecap="round"><path d="m37 32 2 2m50-2 2 2M37 84l2 2m50-2 2 2"/></g>
+<path d="M33 32a41 41 0 0 1 46-10" fill="none" stroke="#e0e5ea" stroke-opacity=".6" stroke-width="1.5" stroke-linecap="round"/>
+</g></svg>

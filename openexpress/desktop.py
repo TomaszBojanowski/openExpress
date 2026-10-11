@@ -123,12 +123,17 @@ RestartSec=10
 [Install]
 WantedBy=graphical-session.target
 """
-    return {
+    result = {
         data / "applications" / f"{DESKTOP_ID}.desktop": desktop,
         data / "applications" / f"{DESKTOP_ID}.Watch.desktop": desktop_watch,
         config / "systemd" / "user" / SERVICE: service,
         data / "icons" / "hicolor" / "scalable" / "apps" / f"{DESKTOP_ID}.svg": ICON.read_text(),
     }
+    symbolic = ICON.with_name(f"{DESKTOP_ID}-symbolic.svg")
+    if symbolic.is_file():
+        result[data / "icons" / "hicolor" / "symbolic" / "apps" /
+               f"{DESKTOP_ID}-symbolic.svg"] = symbolic.read_text()
+    return result
 
 
 def legacy_files() -> list[Path]:

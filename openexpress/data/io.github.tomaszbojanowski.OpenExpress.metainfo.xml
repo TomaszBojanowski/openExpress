@@ -97,6 +97,7 @@
       <description>
         <p>Sync and Connect IQ now refuse a watch that is not registered to the signed-in
         Garmin account.</p>
+        <p>New application icon.</p>
       </description>
     </release>
     <release version="0.3.6" date="2026-10-11">
