@@ -93,6 +93,18 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.1" date="2026-10-11">
+      <description>
+        <p>Reliability release with about 50 fixes from a code review, among others:</p>
+        <ul>
+          <li>A damaged activity file no longer stops every sync</li>
+          <li>Temporary server or network errors no longer lose data; files are retried</li>
+          <li>Failed writes of software, maps or apps are removed from the watch</li>
+          <li>Backups never delete the newest backup or unrelated folders</li>
+          <li>The window cannot be closed while files are being written to the watch</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-11">
       <description>
         <ul>
