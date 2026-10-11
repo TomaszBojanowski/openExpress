@@ -186,7 +186,8 @@ def cmd_files(args) -> int:
         {f.datatype for f in dev.files if f.readable},
         key=lambda s: (not s.startswith("FIT_TYPE_"), int(s[9:]) if s[9:].isdigit() else 0, s),
     )
-    total = 0
+    # Several data types can point at the same folder: the total counts every file once.
+    seen: set[str] = set()
     for dt in types:
         files: dict[str, int] = {}
         for src in dev.sources(dt):
@@ -195,7 +196,7 @@ def cmd_files(args) -> int:
                     files[path] = e.size
         if not files and not args.type:
             continue
-        total += len(files)
+        seen.update(p.casefold() for p in files)
         paths_ = ", ".join(sorted({s.path for s in dev.sources(dt)}))
         count = ngettext("{count} file", "{count} files", len(files)).format(
             count=f"{len(files):5}")
@@ -203,6 +204,7 @@ def cmd_files(args) -> int:
         if args.type or args.verbose:
             for p in sorted(files)[-args.limit:] if args.limit else sorted(files):
                 print(f"    {p}  {_human(files[p])}")
+    total = len(seen)
     print(ngettext("Total: {count} file", "Total: {count} files", total).format(count=total))
     return 0
 

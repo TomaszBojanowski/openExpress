@@ -10,6 +10,29 @@ def test_info_and_files(device_root, xdg, capsys):
     assert "2026-10-02-10-00-00.fit" in out and "notes.txt" not in out
 
 
+def test_files_total_counts_every_file_once(device_root, capsys):
+    # Like maps on a real device: two more data types that share folders with others.
+    xml = device_root / "GARMIN" / "GarminDevice.xml"
+    extra = """<DataType><Name>EverythingFit</Name>
+   <File><Location><Path>Garmin</Path><FileExtension>FIT</FileExtension></Location>
+    <TransferDirection>OutputFromUnit</TransferDirection></File></DataType>
+  <DataType><Name>ActivitiesAgain</Name>
+   <File><Location><Path>GARMIN/ACTIVITY</Path><FileExtension>FIT</FileExtension></Location>
+    <TransferDirection>OutputFromUnit</TransferDirection></File></DataType>
+  <UpdateFile>"""
+    xml.write_text(xml.read_text().replace("<UpdateFile>", extra, 1))
+    assert main(["--path", str(device_root), "files"]) == 0
+    out = capsys.readouterr().out
+    rows = {line.split()[0]: int(line.split()[1]) for line in out.splitlines()
+            if line and not line.startswith("Total")}
+    assert rows["FIT_TYPE_4"] == 2 and rows["ActivitiesAgain"] == 2 and rows["EverythingFit"] == 4
+    assert sum(rows.values()) > 4  # the rows overlap…
+    assert out.splitlines()[-1] == "Total: 4 files"  # …the total does not
+
+    assert main(["--path", str(device_root), "files", "--type", "FIT_TYPE_4"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == "Total: 2 files"
+
+
 def test_backup_keeps_n(device_root, xdg, tmp_path, capsys, monkeypatch):
     import openexpress.backup as b
     from datetime import datetime as real_dt
