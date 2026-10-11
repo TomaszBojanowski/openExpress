@@ -96,6 +96,13 @@ the Watch page (or in Preferences) to sync whenever the watch is connected.
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
 
+**About the Flatpak's permissions:** besides network, USB storage access through GNOME's
+gvfs and your Downloads/Music folders, the Flatpak can run commands on the host
+(`org.freedesktop.Flatpak`). It uses this only to copy files to the watch with `gio copy`,
+because gvfs does not let sandboxed apps write to MTP devices. This weakens the sandbox; if
+you prefer not to grant it, use the version from source (writing to the watch then works
+without it).
+
 Build the Flatpak yourself:
 
 ```bash

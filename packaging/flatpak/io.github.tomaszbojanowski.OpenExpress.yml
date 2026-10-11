@@ -12,6 +12,9 @@ finish-args:
   # The watch is mounted by the host's gvfs (MTP); talk to it over D-Bus.
   - --talk-name=org.gtk.vfs.*
   - --filesystem=xdg-run/gvfsd
+  # gvfs refuses to copy local files for sandboxed apps and gvfs-mtp offers no other way
+  # to write to the watch, so files are copied with the host's `gio copy` via flatpak-spawn.
+  - --talk-name=org.freedesktop.Flatpak
   # Command-line convenience: the installer in Downloads, music in Music,
   # backups in Documents/Garmin. The window uses portals for everything else.
   - --filesystem=xdg-download:ro

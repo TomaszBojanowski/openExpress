@@ -7,8 +7,11 @@ conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 
 import gi
 
@@ -25,6 +28,48 @@ _ATTRS = "standard::name,standard::type,standard::size,time::modified"
 
 def _err(e: GLib.Error, what: str) -> DeviceError:
     return DeviceError(f"{what}: {e.message}")
+
+
+def in_flatpak() -> bool:
+    return Path("/.flatpak-info").exists()
+
+
+def _host_visible(path: Path) -> bool:
+    """Whether the host sees the file under the same path (Flatpak shares these locations)."""
+    p = str(Path(path).resolve())
+    home = str(Path.home())
+    run_user = f"/run/user/{os.getuid()}/"
+    return p.startswith(home + "/") or p.startswith(run_user)
+
+
+def _staging_dir() -> Path:
+    """Directory for temporary files that the host's gvfs can read (in Flatpak: ~/.var/app/…)."""
+    from openexpress import paths
+
+    d = paths.cache_dir() / "transfer"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def host_copy(local: Path, target_uri: str, what: str) -> None:
+    """Copies a local file to the watch with the host's `gio copy`.
+
+    gvfs refuses to copy local files for sandboxed (Flatpak) apps, and gvfs-mtp supports no
+    other way of writing; so in the Flatpak the copy runs on the host (needs the
+    --talk-name=org.freedesktop.Flatpak permission).
+    """
+    if not shutil.which("flatpak-spawn"):
+        raise DeviceError(f"{what}: " + _("flatpak-spawn is not available"))
+    try:
+        res = subprocess.run(["flatpak-spawn", "--host", "gio", "copy", str(local), target_uri],
+                             capture_output=True, text=True, timeout=6 * 3600)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise DeviceError(f"{what}: {e}") from e
+    if res.returncode != 0:
+        detail = res.stderr.strip() or res.stdout.strip()
+        if "org.freedesktop.Flatpak" in detail or "Portal call failed" in detail:
+            detail = _("the Flatpak is missing the permission to copy files to the watch")
+        raise DeviceError(f"{what}: {detail}")
 
 
 class GioStorage(Storage):
@@ -74,31 +119,48 @@ class GioStorage(Storage):
         return bytes(data)
 
     def _write(self, real_path: str, data: bytes) -> None:
-        # Not all gvfs-mtp versions support overwriting via streamed writes,
-        # whereas copying a local file always works.
-        fd, tmp = tempfile.mkstemp(prefix="openexpress-")
+        # gvfs-mtp can't write streams; it can only copy a whole local file.
+        what = _("Cannot write {path}").format(path=real_path)
+        fd, tmp = tempfile.mkstemp(prefix="openexpress-",
+                                   dir=_staging_dir() if in_flatpak() else None)
         try:
             with os.fdopen(fd, "wb") as f:
                 f.write(data)
-            Gio.File.new_for_path(tmp).copy(
-                self._f(real_path), Gio.FileCopyFlags.OVERWRITE, None, None, None
-            )
-        except GLib.Error as e:
-            raise _err(e, _("Cannot write {path}").format(path=real_path)) from e
+            self._copy_local(Path(tmp), real_path, None, what)
         except OSError as e:
-            what = _("Cannot write {path}").format(path=real_path)
             raise DeviceError(f"{what}: {e}") from e
         finally:
             os.unlink(tmp)
 
     def _write_file(self, real_path: str, local, progress=None) -> None:
+        what = _("Cannot write {path}").format(path=real_path)
+        local = Path(local)
+        if in_flatpak() and not _host_visible(local):
+            # E.g. a file in the sandbox's private /tmp: stage it where the host can read it.
+            fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
+            os.close(fd)
+            try:
+                shutil.copyfile(local, tmp)
+                self._copy_local(Path(tmp), real_path, progress, what)
+            finally:
+                os.unlink(tmp)
+            return
+        self._copy_local(local, real_path, progress, what)
+
+    def _copy_local(self, local: Path, real_path: str, progress, what: str) -> None:
+        target = self._f(real_path)
+        if in_flatpak():
+            host_copy(local, target.get_uri(), what)
+            if progress:
+                size = local.stat().st_size
+                progress(size, size)
+            return
         cb = (lambda cur, total, _d=None: progress(cur, total)) if progress else None
         try:
-            Gio.File.new_for_path(str(local)).copy(
-                self._f(real_path), Gio.FileCopyFlags.OVERWRITE, None, cb, None
-            )
+            Gio.File.new_for_path(str(local)).copy(target, Gio.FileCopyFlags.OVERWRITE,
+                                                   None, cb, None)
         except GLib.Error as e:
-            raise _err(e, _("Cannot write {path}").format(path=real_path)) from e
+            raise _err(e, what) from e
 
     def _delete(self, real_path: str) -> None:
         try:
