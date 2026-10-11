@@ -121,6 +121,15 @@ def cached_download(http, url: str, name: str) -> Path | None:
     return target
 
 
+DEVICE_PICTURE_SIZE = 180
+
+
+def device_picture_path(part_number: str) -> Path:
+    """Cached product picture of a watch model (the picture never changes for a model)."""
+    safe = "".join(c for c in part_number if c.isalnum() or c in "-_") or "unknown"
+    return paths.cache_dir() / "images" / f"device-{safe}.png"
+
+
 def load_texture(path: Path, size: int):
     """Picture as a texture scaled to `size`; handles formats GTK cannot load (e.g. GIF)."""
     gi.require_version("GdkPixbuf", "2.0")
@@ -162,6 +171,8 @@ class Section:
         for name, widget in (("empty", self.empty), ("loading", self.loading),
                              ("error", self.error), ("content", self.page)):
             self.stack.add_named(widget, name)
+        # Until the first detection finishes we don't know yet whether a watch is connected.
+        self.stack.set_visible_child_name("loading")
         self.groups: list[Adw.PreferencesGroup] = []
 
     def show(self, name: str) -> None:
@@ -614,10 +625,11 @@ class MainWindow(Adw.ApplicationWindow):
         hero = sec.group()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER,
                       margin_bottom=12)
-        self.device_image = Gtk.Image(icon_name=APP_ID, pixel_size=128)
+        self.device_image = Gtk.Image(icon_name=APP_ID, pixel_size=128,
+                                      height_request=DEVICE_PICTURE_SIZE)
         self.device_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, can_shrink=True,
                                           visible=False)
-        self.device_picture.set_size_request(180, 180)
+        self.device_picture.set_size_request(DEVICE_PICTURE_SIZE, DEVICE_PICTURE_SIZE)
         box.append(self.device_image)
         box.append(self.device_picture)
         title = Gtk.Label(label=d.description, wrap=True, justify=Gtk.Justification.CENTER)
@@ -628,7 +640,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.software_label.add_css_class("dim-label")
         box.append(self.software_label)
         hero.add(box)
-        self._load_device_picture()
+        self._show_device_picture()
 
         free, total = s.storage.free_space(), s.storage.capacity()
         g = sec.group(_("Storage"))
@@ -685,22 +697,44 @@ class MainWindow(Adw.ApplicationWindow):
         sec.loaded = True
         sec.show("content")
 
-    def _load_device_picture(self) -> None:
+    def _set_device_texture(self, texture) -> None:
+        self.device_picture.set_paintable(texture)
+        self.device_picture.set_visible(True)
+        self.device_image.set_visible(False)
+
+    def _show_device_picture(self) -> None:
+        """Shows the watch picture at once from memory or disk; downloads it only once."""
         s = self.session
+        part = s.device.part_number
+        cache = getattr(self, "_device_textures", None)
+        if cache is None:
+            cache = self._device_textures = {}
+        if part not in cache:
+            path = device_picture_path(part)
+            if path.exists():
+                cache[part] = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
+        if cache.get(part) is not None:
+            self._set_device_texture(cache[part])
+            return
+        self.device_image.set_visible(True)
+        self.device_picture.set_visible(False)
         if not s.logged_in:
             return
 
         def work():
             url = s.client.device_image_url(s.device.unit_id)
-            return cached_download(s.client.http, url, f"device-{s.device.part_number}.png") \
-                if url else None
+            if not url:
+                return None
+            path = device_picture_path(part)
+            return cached_download(s.client.http, url, path.name)
 
         def done(path):
-            texture = load_texture(path, 360) if path else None
-            if texture and self.session is s:
-                self.device_picture.set_paintable(texture)
-                self.device_picture.set_visible(True)
-                self.device_image.set_visible(False)
+            texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE) if path else None
+            if texture is None:
+                return
+            cache[part] = texture
+            if self.session is s:
+                self._set_device_texture(texture)
 
         self.in_background(work, done)
 
