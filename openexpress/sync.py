@@ -21,10 +21,10 @@ from pathlib import Path
 from typing import Callable
 
 from openexpress import paths
-from openexpress.connect import ApiError, GarminClient, Unauthorized
+from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
-from openexpress.fit import FitError, parse_file_id
+from openexpress.fit import parse_file_id
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -59,6 +59,11 @@ DIAGNOSTIC_URL_MARKERS = ("era2-intake", "/kpi/", "/ulf/", "user-behavior-log", 
 
 ALREADY_EXISTS_CODES = {202, 408}
 REJECTED_HTTP = {400, 406, 413, 415}
+# "Active tracker conflict": another device is the active activity tracker. Express
+# reports it only for wellness devices; the file is not retried.
+TRACKER_CONFLICT = 419
+# Errors after which a file must be retried, even for consent-flagged locations.
+RETRYABLE_CLIENT_HTTP = {408, 429}
 
 
 def md5(data: bytes) -> str:
@@ -75,6 +80,7 @@ class SyncState:
         self.dir = (base or paths.device_dir(unit_id)) / "sync"
         self.file = self.dir / "state.json"
         self.pending_dir = self.dir / "pending"
+        self.unacked_file = self.dir / "unacked.json"
         data = json.loads(self.file.read_text()) if self.file.exists() else {}
         self.completed: dict[str, set[str]] = {
             k: set(v) for k, v in data.get("completed", {}).items()
@@ -99,6 +105,22 @@ class SyncState:
     def pending_files(self, datatype: str) -> list[Path]:
         d = self.pending_dir / datatype
         return sorted(p for p in d.iterdir() if p.is_file()) if d.is_dir() else []
+
+    def unacked(self) -> set[str]:
+        """Queue messages already written to the watch whose acknowledgement failed."""
+        try:
+            return {str(i) for i in json.loads(self.unacked_file.read_text())}
+        except (OSError, ValueError, TypeError):
+            return set()
+
+    def save_unacked(self, ids: set[str]) -> None:
+        if not ids:
+            self.unacked_file.unlink(missing_ok=True)
+            return
+        self.dir.mkdir(parents=True, exist_ok=True)
+        tmp = self.unacked_file.with_suffix(".tmp")
+        tmp.write_text(json.dumps(sorted(ids)))
+        tmp.replace(self.unacked_file)
 
     def save(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -246,7 +268,7 @@ def plan_uploads(
                 if p.name.casefold() not in on_device and not state.is_completed(name, p.name):
                     plan.candidates.append(
                         UploadCandidate(name, p.name, p.stat().st_size, None, locations,
-                                        p.name.lower().endswith(".zip"), p.read_bytes())
+                                        p.name.lower().endswith(".zip"))
                     )
     plan.candidates.sort(key=_upload_order)
     return plan
@@ -265,6 +287,19 @@ class UploadReport:
     rejected: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     not_confirmed: list[str] = field(default_factory=list)
+    tracker_conflict: list[str] = field(default_factory=list)
+
+
+def _label(c: UploadCandidate) -> str:
+    return f"{c.datatype}/{c.name}"
+
+
+def _read_candidate(c: UploadCandidate, storage: Storage, state: SyncState) -> bytes:
+    if c.data is not None:
+        return c.data
+    if c.device_path is None:
+        return state.pending_path(c.datatype, c.name).read_bytes()
+    return storage.read(c.device_path)
 
 
 def run_uploads(
@@ -278,32 +313,40 @@ def run_uploads(
 ) -> UploadReport:
     report = UploadReport()
     cands = plan.candidates
-
-    for c in cands:
-        if c.data is None:
-            c.data = storage.read(c.device_path)  # type: ignore[arg-type]
+    unreadable: set[int] = set()
 
     # Activities that Connect already has (e.g. from the phone) are marked without uploading.
+    # Files are read one at a time and not kept in memory.
     acts = [c for c in cands if c.datatype == ACTIVITY_TYPE]
     for c in acts:
         try:
-            fid = parse_file_id(c.data or b"")
+            data = _read_candidate(c, storage, state)
+        except Exception as e:  # noqa: BLE001 - one unreadable file must not stop the sync
+            report.failed.append((_label(c), str(e)))
+            unreadable.add(id(c))
+            continue
+        try:
+            fid = parse_file_id(data)
             if fid.time_created is not None:
                 c.external_id = str(fid.time_created)
-        except FitError:
+        except Exception:  # noqa: BLE001 - not a valid FIT file: just upload it
             pass
+        c.data = None
     ids = [c.external_id for c in acts if c.external_id]
     matched: dict[str, bool] = {}
     if ids:
         try:
             for i in range(0, len(ids), 50):
                 matched.update(client.activity_matches(device.unit_id, ids[i : i + 50]))
-        except Unauthorized:
+        except (Unauthorized, ClockSkew):
             raise
-        except ApiError as e:
+        except Exception as e:  # noqa: BLE001
             log.warning("Duplicate check failed (%s); uploading everything", e)
+            matched = {}
     remaining = []
     for c in cands:
+        if id(c) in unreadable:
+            continue
         if c.external_id and matched.get(c.external_id):
             state.mark_completed(c.datatype, c.name)
             report.already_in_connect.append(c.name)
@@ -313,70 +356,94 @@ def run_uploads(
 
     stop_types: set[str] = set()
     for idx, c in enumerate(remaining):
-        label = f"{c.datatype}/{c.name}"
+        label = _label(c)
         if c.datatype in stop_types:
             continue
-        last = idx == len(remaining) - 1 and (
-            c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES
-        )
-        progress(_("Uploading {name} ({size} B)").format(name=label, size=c.size))
-        ok = True
-        error = ""
-        outcome = "uploaded"
-        for loc in c.locations:
-            try:
-                res = client.upload_file(
-                    loc.url, c.data or b"", is_zip=c.is_zip, last_file=last,
-                    authenticated=loc.requires_auth,
-                )
-            except Unauthorized:
-                raise
-            except Exception as e:  # network
-                ok, error = False, str(e)
-                break
-            if res.status == 409:
-                outcome = "duplicate"
-            elif res.status == 412:
-                raise ApiError(_("Upload consent was revoked in Garmin Connect"), 412)
-            elif res.status in REJECTED_HTTP:
-                outcome = "rejected"
-            elif 200 <= res.status < 300:
-                codes = _failure_codes(res.body)
-                if codes and codes <= ALREADY_EXISTS_CODES:
-                    outcome = "duplicate"
-                elif codes - ALREADY_EXISTS_CODES:
-                    ok, error = False, _("server rejected the file (codes {codes})").format(
-                        codes=sorted(codes))
-                    break
-                elif wait_for_processing and res.location and "activity-service" in res.location:
-                    st = client.poll_location(res.location, res.poll_delay_ms)
-                    if st != 201:
-                        report.not_confirmed.append(label)
-            elif loc.requires_consent:
-                continue
-            else:
-                ok, error = False, f"HTTP {res.status}"
-                break
-        if ok:
-            if c.multi:
-                state.mark_completed(c.datatype, c.name)
-                pending = state.pending_path(c.datatype, c.name)
-                if pending.exists():
-                    pending.unlink()
-            elif c.device_path:
-                state.mark_singleton(c.datatype, c.device_path, md5(c.data or b""))
-            {"uploaded": report.uploaded, "duplicate": report.duplicates,
-             "rejected": report.rejected}[outcome].append(label)
-        else:
-            report.failed.append((label, error))
-            if c.multi:
-                p = state.pending_path(c.datatype, c.name)
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_bytes(c.data or b"")
-                if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
-                    stop_types.add(c.datatype)
+        ordered = c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES
+        try:
+            data = _read_candidate(c, storage, state)
+        except Exception as e:  # noqa: BLE001
+            report.failed.append((label, str(e)))
+            if ordered:
+                stop_types.add(c.datatype)
+            continue
+        try:
+            _upload_one(c, data, label, idx == len(remaining) - 1 and ordered, client, state,
+                        report, progress, wait_for_processing, stop_types)
+        finally:
+            c.data = None
         state.save()
     return report
+
+
+def _upload_one(c, data, label, last, client, state, report, progress,
+                wait_for_processing, stop_types) -> None:
+    progress(_("Uploading {name} ({size} B)").format(name=label, size=c.size))
+    ok = True
+    error = ""
+    outcome = "uploaded"
+    for loc in c.locations:
+        try:
+            res = client.upload_file(
+                loc.url, data, is_zip=c.is_zip, last_file=last,
+                authenticated=loc.requires_auth,
+            )
+        except (Unauthorized, ClockSkew):
+            raise
+        except Exception as e:  # network
+            ok, error = False, str(e)
+            break
+        codes = _failure_codes(res.body) if 200 <= res.status < 300 else set()
+        if res.status == 409:
+            outcome = "duplicate"
+        elif res.status == 412:
+            raise ApiError(_("Upload consent was revoked in Garmin Connect"), 412)
+        elif res.status == TRACKER_CONFLICT or TRACKER_CONFLICT in codes:
+            outcome = "tracker_conflict"
+        elif res.status in REJECTED_HTTP:
+            outcome = "rejected"
+        elif 200 <= res.status < 300:
+            if codes and codes <= ALREADY_EXISTS_CODES:
+                outcome = "duplicate"
+            elif codes - ALREADY_EXISTS_CODES:
+                ok, error = False, _("server rejected the file (codes {codes})").format(
+                    codes=sorted(codes))
+                break
+            elif wait_for_processing and res.location and "activity-service" in res.location:
+                try:
+                    st = client.poll_location(res.location, res.poll_delay_ms)
+                except Exception as e:  # noqa: BLE001 - the file itself was accepted
+                    log.warning("Could not confirm processing of %s: %s", label, e)
+                    st = None
+                if st != 201:
+                    report.not_confirmed.append(label)
+        elif (loc.requires_consent and 400 <= res.status < 500
+              and res.status not in RETRYABLE_CLIENT_HTTP):
+            # Optional location (e.g. HRV, skin temperature) refused by the server.
+            continue
+        else:
+            ok, error = False, f"HTTP {res.status}"
+            break
+    if ok:
+        if c.multi:
+            state.mark_completed(c.datatype, c.name)
+            pending = state.pending_path(c.datatype, c.name)
+            if pending.exists():
+                pending.unlink()
+        elif c.device_path:
+            state.mark_singleton(c.datatype, c.device_path, md5(data))
+        {"uploaded": report.uploaded, "duplicate": report.duplicates,
+         "rejected": report.rejected,
+         "tracker_conflict": report.tracker_conflict}[outcome].append(label)
+    else:
+        report.failed.append((label, error))
+        if c.multi:
+            p = state.pending_path(c.datatype, c.name)
+            if c.device_path is not None:
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_bytes(data)
+            if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
+                stop_types.add(c.datatype)
 
 
 def _failure_codes(body) -> set[int]:
@@ -427,6 +494,9 @@ class DownloadItem:
     def device_name(self) -> str:
         assert self.target is not None
         ext = self.target.extension or "FIT"
+        if "userprofile" in self.datatype.casefold():
+            # A single profile file, replaced on every download (as in Express).
+            return f"{self.target.basename or 'UserProfile'}.{ext}"
         prefix = DOWNLOAD_NAME_PREFIX.get(self.datatype)
         guid = str(uuid.uuid4())
         if prefix:
@@ -467,6 +537,8 @@ class DownloadReport:
     written: list[str] = field(default_factory=list)
     empty: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
+    # Written to the watch, but Connect was not told; acknowledged on the next sync.
+    ack_failed: list[str] = field(default_factory=list)
 
 
 def run_downloads(
@@ -474,29 +546,62 @@ def run_downloads(
     storage: Storage,
     client: GarminClient,
     progress: Callable[[str], None] = lambda s: None,
+    state: SyncState | None = None,
 ) -> DownloadReport:
+    """Download queued files to the watch.
+
+    With `state`, messages whose acknowledgement failed after the file was written are
+    remembered and only acknowledged next time (no duplicate file on the watch).
+    """
     report = DownloadReport()
-    for it in items:
-        if it.unsupported or it.handled_by:
-            continue
-        label = f"{it.datatype}: {it.message_name or it.message_id}"
-        try:
-            progress(_("Downloading {name}").format(name=label))
-            data = client.download_message(it.url, it.absolute)
-            if data is None:
-                client.ack_message(it.message_id)
-                report.empty.append(label)
+    unacked = state.unacked() if state is not None else set()
+    initial = set(unacked)
+    try:
+        for it in items:
+            if it.unsupported or it.handled_by:
                 continue
-            free = storage.free_space()
-            if free is not None and free < len(data) + 1024 * 1024:
-                raise ApiError(_("not enough space on the device"))
-            target = posixpath.join(it.target.path, it.device_name())  # type: ignore[union-attr]
-            real = storage.write(target, data)
+            label = f"{it.datatype}: {it.message_name or it.message_id}"
+            mid = str(it.message_id)
+            if mid in unacked:
+                try:
+                    client.ack_message(it.message_id)
+                except Unauthorized:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    log.warning("Acknowledgement of %s failed again: %s", label, e)
+                    report.ack_failed.append(label)
+                else:
+                    unacked.discard(mid)
+                continue
+            try:
+                progress(_("Downloading {name}").format(name=label))
+                data = client.download_message(it.url, it.absolute)
+                if data is None:
+                    client.ack_message(it.message_id)
+                    report.empty.append(label)
+                    continue
+                free = storage.free_space()
+                if free is not None and free < len(data) + 1024 * 1024:
+                    raise ApiError(_("not enough space on the device"))
+                target = posixpath.join(it.target.path, it.device_name())  # type: ignore[union-attr]
+                real = storage.write(target, data)
+            except Unauthorized:
+                raise
+            except Exception as e:  # noqa: BLE001
+                report.failed.append((label, str(e)))
+                continue
             progress(_("Wrote {path}").format(path=real))
-            client.ack_message(it.message_id)
             report.written.append(f"{label} -> {real}")
-        except Unauthorized:
-            raise
-        except Exception as e:
-            report.failed.append((label, str(e)))
+            try:
+                client.ack_message(it.message_id)
+            except Unauthorized:
+                unacked.add(mid)
+                raise
+            except Exception as e:  # noqa: BLE001
+                log.warning("Acknowledgement of %s failed: %s", label, e)
+                unacked.add(mid)
+                report.ack_failed.append(label)
+    finally:
+        if state is not None and unacked != initial:
+            state.save_unacked(unacked)
     return report

@@ -20,6 +20,7 @@ from openexpress.device.xmldevice import OUTPUT, GarminDevice
 SKIP_PREFIXES = ("MEDIA_", "IQ")
 SKIP_TYPES = {"ErrorShutdownReports", "ULFLogs", "ExpressRequest", "WiFiConfiguration"}
 STAMP = "%Y-%m-%d (%H.%M.%S)"
+PARTIAL_PREFIX = ".partial-"
 
 
 @dataclass
@@ -39,16 +40,18 @@ def backup_files(device: GarminDevice) -> list:
     ]
 
 
-def run_backup(
-    device: GarminDevice,
-    storage: Storage,
-    dest_root: Path,
-    keep: int = 3,
-    progress: Callable[[str], None] = lambda s: None,
-) -> BackupResult:
-    unit_dir = dest_root / str(device.unit_id)
-    target = unit_dir / datetime.now().strftime(STAMP)
-    target.mkdir(parents=True, exist_ok=False)
+def _is_backup_dir(p: Path) -> bool:
+    if not p.is_dir():
+        return False
+    try:
+        datetime.strptime(p.name, STAMP)
+    except ValueError:
+        return False
+    return True
+
+
+def _copy_files(device: GarminDevice, storage: Storage, target: Path,
+                progress: Callable[[str], None]) -> tuple[int, int]:
     (target / "GarminDevice.xml").write_bytes(device.raw)
     count, total = 1, len(device.raw)
     seen: set[str] = set()
@@ -64,10 +67,41 @@ def run_backup(
             out.write_bytes(storage.read(path))
             count += 1
             total += entry.size
+    return count, total
+
+
+def run_backup(
+    device: GarminDevice,
+    storage: Storage,
+    dest_root: Path,
+    keep: int = 3,
+    progress: Callable[[str], None] = lambda s: None,
+) -> BackupResult:
+    unit_dir = dest_root / str(device.unit_id)
+    stamp = datetime.now().strftime(STAMP)
+    target = unit_dir / stamp
+    if target.exists():
+        raise FileExistsError(target)
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    # Leftovers of interrupted backups.
+    for p in unit_dir.glob(PARTIAL_PREFIX + "*"):
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+    partial = unit_dir / (PARTIAL_PREFIX + stamp)
+    partial.mkdir()
+    try:
+        count, total = _copy_files(device, storage, partial, progress)
+        partial.rename(target)
+    except BaseException:
+        shutil.rmtree(partial, ignore_errors=True)
+        raise
     removed = []
     if keep > 0:
-        old = sorted((p for p in unit_dir.iterdir() if p.is_dir()), key=lambda p: p.name)
+        old = sorted((p for p in unit_dir.iterdir() if _is_backup_dir(p)),
+                     key=lambda p: datetime.strptime(p.name, STAMP))
         for p in old[:-keep]:
+            if p == target:
+                continue
             shutil.rmtree(p)
             removed.append(p)
     return BackupResult(target, count, total, removed)

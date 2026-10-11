@@ -11,6 +11,7 @@ from __future__ import annotations
 import posixpath
 import shutil
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -107,28 +108,26 @@ class Storage(ABC):
             raise DeviceError(_("File not found on the device: {path}").format(path=path))
         return self._read(real)
 
-    def write(self, path: str, data: bytes) -> str:
-        """Write a file, creating missing directories. Returns the real path."""
-        parent, name = posixpath.split(path.strip("/"))
+    def _target(self, path: str) -> str:
+        parent, name = _split_file_path(path)
         real_parent = self._ensure_dir(parent)
         existing = next(
-            (e.name for e in self._list(real_parent) if e.name.casefold() == name.casefold()),
-            None,
+            (e for e in self._list(real_parent) if e.name.casefold() == name.casefold()), None
         )
-        target_name = existing or name
-        real = posixpath.join(real_parent, target_name) if real_parent else target_name
+        if existing is not None and existing.is_dir:
+            raise DeviceError(_("Cannot write {path}: it is a directory").format(path=path))
+        target_name = existing.name if existing else name
+        return posixpath.join(real_parent, target_name) if real_parent else target_name
+
+    def write(self, path: str, data: bytes) -> str:
+        """Write a file, creating missing directories. Returns the real path."""
+        real = self._target(path)
         self._write(real, data)
         return real
 
     def write_file(self, path: str, local: Path, progress=None) -> str:
         """Stream a local file to the device (large map/firmware files)."""
-        parent, name = posixpath.split(path.strip("/"))
-        real_parent = self._ensure_dir(parent)
-        existing = next(
-            (e.name for e in self._list(real_parent) if e.name.casefold() == name.casefold()),
-            None,
-        )
-        real = posixpath.join(real_parent, existing or name) if real_parent else (existing or name)
+        real = self._target(path)
         self._write_file(real, Path(local), progress)
         return real
 
@@ -144,6 +143,8 @@ class Storage(ABC):
 
     def delete(self, path: str) -> None:
         real = self.resolve(path)
+        if real == "":
+            raise DeviceError(_("Refusing to delete the root of the device storage"))
         if real is not None:
             self._delete(real)
 
@@ -157,6 +158,21 @@ class Storage(ABC):
                 self._mkdir(nxt)
             real = nxt
         return real
+
+
+def _split_file_path(path: str) -> tuple[str, str]:
+    parent, name = posixpath.split(path.strip("/"))
+    if not name.strip():
+        raise DeviceError(_("Invalid file name: '{path}'").format(path=path))
+    return parent, name
+
+
+@contextmanager
+def _os_errors(what: str):
+    try:
+        yield
+    except OSError as e:
+        raise DeviceError(f"{what}: {e.strerror or e}") from e
 
 
 class LocalStorage(Storage):
@@ -176,25 +192,31 @@ class LocalStorage(Storage):
         if not p.is_dir():
             raise DeviceError(_("Not a directory: {path}").format(path=real_path))
         out = []
-        for child in p.iterdir():
-            st = child.stat()
-            out.append(Entry(child.name, child.is_dir(), st.st_size, st.st_mtime))
+        with _os_errors(_("Cannot list {path}").format(path=real_path or "/")):
+            for child in p.iterdir():
+                st = child.stat()
+                out.append(Entry(child.name, child.is_dir(), st.st_size, st.st_mtime))
         return out
 
     def _read(self, real_path: str) -> bytes:
-        return self._p(real_path).read_bytes()
+        with _os_errors(_("Cannot read {path}").format(path=real_path)):
+            return self._p(real_path).read_bytes()
 
     def _write(self, real_path: str, data: bytes) -> None:
-        self._p(real_path).write_bytes(data)
+        with _os_errors(_("Cannot write {path}").format(path=real_path)):
+            self._p(real_path).write_bytes(data)
 
     def _write_file(self, real_path: str, local: Path, progress=None) -> None:
-        shutil.copyfile(local, self._p(real_path))
+        with _os_errors(_("Cannot write {path}").format(path=real_path)):
+            shutil.copyfile(local, self._p(real_path))
 
     def _delete(self, real_path: str) -> None:
-        self._p(real_path).unlink()
+        with _os_errors(_("Cannot delete {path}").format(path=real_path)):
+            self._p(real_path).unlink()
 
     def _mkdir(self, real_path: str) -> None:
-        self._p(real_path).mkdir()
+        with _os_errors(_("Cannot create directory {path}").format(path=real_path)):
+            self._p(real_path).mkdir()
 
     def free_space(self) -> int | None:
         return shutil.disk_usage(self.root).free

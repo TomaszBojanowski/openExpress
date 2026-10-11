@@ -43,17 +43,27 @@ class GioStorage(Storage):
         except GLib.Error as e:
             raise _err(e, _("Cannot list {path}").format(path=real_path or "/")) from e
         out = []
-        for info in enum:
-            mtime = info.get_modification_date_time()
-            out.append(
-                Entry(
-                    info.get_name(),
-                    info.get_file_type() == Gio.FileType.DIRECTORY,
-                    info.get_size(),
-                    mtime.to_unix() if mtime else 0.0,
+        try:
+            while True:
+                info = enum.next_file(None)
+                if info is None:
+                    break
+                mtime = info.get_modification_date_time()
+                out.append(
+                    Entry(
+                        info.get_name(),
+                        info.get_file_type() == Gio.FileType.DIRECTORY,
+                        info.get_size(),
+                        mtime.to_unix() if mtime else 0.0,
+                    )
                 )
-            )
-        enum.close(None)
+        except GLib.Error as e:
+            raise _err(e, _("Cannot list {path}").format(path=real_path or "/")) from e
+        finally:
+            try:
+                enum.close(None)
+            except GLib.Error:
+                pass
         return out
 
     def _read(self, real_path: str) -> bytes:
@@ -75,6 +85,9 @@ class GioStorage(Storage):
             )
         except GLib.Error as e:
             raise _err(e, _("Cannot write {path}").format(path=real_path)) from e
+        except OSError as e:
+            what = _("Cannot write {path}").format(path=real_path)
+            raise DeviceError(f"{what}: {e}") from e
         finally:
             os.unlink(tmp)
 
@@ -99,20 +112,21 @@ class GioStorage(Storage):
         except GLib.Error as e:
             raise _err(e, _("Cannot create directory {path}").format(path=real_path)) from e
 
-    def free_space(self) -> int | None:
+    def _fs_attr(self, attr: str) -> int | None:
         try:
-            info = self.root.query_filesystem_info("filesystem::free", None)
+            info = self.root.query_filesystem_info(attr, None)
         except GLib.Error:
             return None
-        free = info.get_attribute_uint64("filesystem::free")
-        return free or None
+        if not info.has_attribute(attr):
+            return None
+        return info.get_attribute_uint64(attr)
+
+    def free_space(self) -> int | None:
+        return self._fs_attr("filesystem::free")
 
     def capacity(self) -> int | None:
-        try:
-            info = self.root.query_filesystem_info("filesystem::size", None)
-        except GLib.Error:
-            return None
-        return info.get_attribute_uint64("filesystem::size") or None
+        # A size of 0 means "unknown" (a real storage is never empty-sized).
+        return self._fs_attr("filesystem::size") or None
 
 
 @dataclass
@@ -147,17 +161,29 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
         return
     loop = GLib.MainLoop()
     error: list[GLib.Error] = []
+    finished: list[bool] = []
+    timed_out: list[bool] = []
 
     def done(vol, res):
+        finished.append(True)
         try:
             vol.mount_finish(res)
         except GLib.Error as e:
             error.append(e)
         loop.quit()
 
+    def on_timeout():
+        timed_out.append(True)
+        loop.quit()
+        return False
+
     dev.volume.mount(Gio.MountMountFlags.NONE, None, None, done)
-    GLib.timeout_add_seconds(timeout_s, loop.quit)
+    source = GLib.timeout_add_seconds(timeout_s, on_timeout)
     loop.run()
+    if not timed_out:
+        GLib.source_remove(source)
+    if not finished:
+        raise DeviceError(_("Mounting the watch timed out"))
     if error:
         raise _err(error[0], _("Cannot mount the device"))
     dev.mounted = True

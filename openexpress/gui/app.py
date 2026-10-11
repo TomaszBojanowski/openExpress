@@ -23,7 +23,7 @@ from openexpress.cli import RESTART_STEPS, _human  # noqa: E402
 from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
-    SetupError, Settings, extract_consumer_from_dll, extract_url_salt_from_dll, save_consumer,
+    Settings, extract_consumer_from_dll, extract_url_salt_from_dll, save_consumer,
 )
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
@@ -167,7 +167,13 @@ class MainWindow(Adw.ApplicationWindow):
         self.apps_cache = None
         self.updates_cache = None
         self.update_state: str | None = None  # None = unknown, "current", "available"
+        self.update_count = 0
+        self._update_check_session = None
         self._action_buttons: list[Gtk.Widget] = []
+        self._retry_sources: dict[str, int] = {}
+        self._refresh_pending = False
+        self._last_sync_children: list[Gtk.Widget] = []
+        self._close_dialog = None
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
@@ -192,6 +198,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_layout()
         self._install_actions()
 
+        self.connect("close-request", self._on_close_request)
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
@@ -308,6 +315,20 @@ class MainWindow(Adw.ApplicationWindow):
                 self.nav.select_row(self.nav.get_row_at_index(i))
         self.split.set_show_content(True)
 
+    def _on_close_request(self, _win) -> bool:
+        if not self.busy:
+            return False
+        if self._close_dialog is None:
+            d = Adw.AlertDialog(
+                heading=_("An operation is in progress"),
+                body=_("Wait until it finishes before closing openExpress, so that no files "
+                       "on the watch are left half-written."))
+            d.add_response("ok", _("OK"))
+            d.connect("response", lambda *_a: setattr(self, "_close_dialog", None))
+            self._close_dialog = d
+            d.present(self)
+        return True
+
     # --- helpers ----------------------------------------------------------------------
 
     def toast(self, text: str) -> None:
@@ -326,6 +347,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._action_buttons = [b for b in self._action_buttons if b.get_root() is not None]
         for b in self._action_buttons:
             b.set_sensitive(not busy)
+        self.banner.set_sensitive(not busy)
         self._update_actions()
 
     def progress(self, text: str) -> None:
@@ -354,27 +376,40 @@ class MainWindow(Adw.ApplicationWindow):
 
         def finish_ok(result):
             self.set_busy(False)
-            if on_done:
-                on_done(result)
+            try:
+                if on_done:
+                    on_done(result)
+            finally:
+                self._run_pending_refresh()
             return False
 
         def finish_error(e):
             self.set_busy(False)
-            if on_error and on_error(e):
-                return False
-            self.error(title, str(e) or e.__class__.__name__)
+            try:
+                if not (on_error and on_error(e)):
+                    self.error(title, str(e) or e.__class__.__name__)
+            finally:
+                self._run_pending_refresh()
             return False
 
-        threading.Thread(target=worker, daemon=True).start()
+        # Not a daemon thread: the process must not exit while the watch is being written.
+        threading.Thread(target=worker, daemon=False).start()
+
+    def _run_pending_refresh(self) -> None:
+        if self._refresh_pending and not self.busy:
+            self._refresh_pending = False
+            self.refresh_device()
 
     @staticmethod
-    def in_background(fn, on_done) -> None:
+    def in_background(fn, on_done, on_error=None) -> None:
         """Run optional work (pictures, status checks) without blocking the window."""
         def worker():
             try:
                 result = fn()
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 log.debug("%s", traceback.format_exc())
+                if on_error is not None:
+                    GLib.idle_add(lambda err=e: (on_error(err), False)[1])
                 return
             GLib.idle_add(lambda: (on_done(result), False)[1])
 
@@ -423,7 +458,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def refresh_device(self) -> None:
         if self.busy:
+            # E.g. the watch was replugged during a task: detect it once the task ends.
+            self._refresh_pending = True
             return
+        self._refresh_pending = False
 
         def done(sess):
             self.session = sess
@@ -451,7 +489,6 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self.show_overview()
         self.load_section(self.pages.get_visible_child_name())
-        self._check_updates_quietly()
 
     def _update_banner(self) -> None:
         s = self.session
@@ -469,6 +506,9 @@ class MainWindow(Adw.ApplicationWindow):
             self.banner.set_revealed(False)
 
     def _banner_action(self) -> None:
+        if self.busy:
+            self.toast(_("Another operation is in progress"))
+            return
         if getattr(self, "_banner_kind", "") == "setup":
             self.choose_dll()
         else:
@@ -487,21 +527,36 @@ class MainWindow(Adw.ApplicationWindow):
     def _load(self, key: str, title: str, work, show) -> None:
         """Common pattern: spinner in the section, work in a thread, then `show(result)`."""
         sec = self.sections[key]
+        sess = self.session
+        source = self._retry_sources.pop(key, None)
+        if source is not None:
+            GLib.source_remove(source)
+        if sess is None:
+            return
         sec.show("loading")
 
         def done(result):
+            if self.session is not sess:
+                return  # the watch was disconnected or replaced meanwhile
             sec.loaded = True
             sec.clear()
             show(result)
             sec.show("content")
 
         def failed(e):
-            sec.show_error(str(e) or e.__class__.__name__)
+            if self.session is sess:
+                sec.show_error(str(e) or e.__class__.__name__)
             return True
 
         if self.busy:
             # Another task runs; try again shortly so the page does not stay empty.
-            GLib.timeout_add(700, lambda: (self._load(key, title, work, show), False)[1])
+            def retry():
+                self._retry_sources.pop(key, None)
+                if self.session is sess:
+                    self._load(key, title, work, show)
+                return False
+
+            self._retry_sources[key] = GLib.timeout_add(700, retry)
             return
         self.run_task(title, work, done, failed)
 
@@ -550,6 +605,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         g = sec.group(_("Sync with Garmin Connect"))
         self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
+        self._last_sync_children = []
         g.add(self.last_sync_row)
         self._show_last_sync()
         if not self._background_enabled():
@@ -560,11 +616,13 @@ class MainWindow(Adw.ApplicationWindow):
             g.add(row)
 
         g = sec.group(pgettext("tab", "Updates"))
-        self.update_row = Adw.ActionRow(title=_("Watch software"), activatable=True,
-                                        subtitle=_("Checking…"))
+        self.update_row = Adw.ActionRow(title=_("Watch software"), activatable=True)
         self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
         g.add(self.update_row)
+        self._render_update_state()
+        if self.update_state is None:
+            self._check_updates_quietly()
 
         if s.logged_in:
             g = sec.group(_("Garmin Connect account"))
@@ -603,36 +661,66 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.in_background(work, done)
 
+    def _render_update_state(self) -> None:
+        """Shows self.update_state in the overview ("Watch software" row, software label)."""
+        if self.session is None or not hasattr(self, "update_row"):
+            return
+        version = _("Software {version}").format(
+            version=self.session.device.software_version_str)
+        if self.update_state == "available":
+            self.update_row.set_subtitle(ngettext(
+                "{count} update available", "{count} updates available",
+                self.update_count).format(count=self.update_count))
+            self.software_label.set_label(version + " · " + _("update available"))
+        elif self.update_state == "current":
+            self.update_row.set_subtitle(_("Software is up to date."))
+            self.software_label.set_label(version)
+        elif self.update_state == "failed":
+            self.update_row.set_subtitle(_("Could not check for updates"))
+            self.software_label.set_label(version)
+        else:
+            self.update_row.set_subtitle(_("Checking…"))
+            self.software_label.set_label(version)
+
+    def _set_update_state(self, new_updates: list) -> None:
+        self.update_count = len(new_updates)
+        self.update_state = "available" if new_updates else "current"
+        self._render_update_state()
+
     def _check_updates_quietly(self) -> None:
         from openexpress import updates as upd
 
         s = self.session
+        if s is None or self._update_check_session is s:
+            return  # no watch, or a check for this watch is already running
+        self._update_check_session = s
 
         def work():
             return [u for u in upd.parse_updates(s.client.software_updates(s.device.raw))
                     if not u.is_reinstall and not u.is_metadata]
 
         def done(new):
-            if self.session is not s or not hasattr(self, "update_row"):
+            if self._update_check_session is s:
+                self._update_check_session = None
+            if self.session is not s:
                 return
-            if new:
-                self.update_state = "available"
-                self.update_row.set_subtitle(ngettext(
-                    "{count} update available", "{count} updates available",
-                    len(new)).format(count=len(new)))
-                self.software_label.set_label(self.software_label.get_label() + " · "
-                                              + _("update available"))
-            else:
-                self.update_state = "current"
-                self.update_row.set_subtitle(_("Software is up to date."))
+            self._set_update_state(new)
 
-        self.in_background(work, done)
+        def failed(_e):
+            if self._update_check_session is s:
+                self._update_check_session = None
+            if self.session is not s or self.update_state is not None:
+                return
+            self.update_state = "failed"
+            self._render_update_state()
+
+        self.in_background(work, done, failed)
 
     def _show_last_sync(self) -> None:
         if not hasattr(self, "last_sync_row") or self.session is None:
             return
         row = self.last_sync_row
-        for child in getattr(self, "_last_sync_children", []):
+        for child in self._last_sync_children:
             row.remove(child)
         self._last_sync_children = []
         data = service.load_last_sync(self.session.device.unit_id)
@@ -670,8 +758,12 @@ class MainWindow(Adw.ApplicationWindow):
     def _background_enabled(self) -> bool:
         from openexpress import background
 
-        state = background.is_enabled()
-        return bool(self.gui_settings.get("background")) if state is None else state
+        try:
+            state = background.is_enabled()
+        except Exception:  # noqa: BLE001 - e.g. no systemctl: treat as unknown
+            log.debug("%s", traceback.format_exc())
+            state = None
+        return bool(self.gui_settings.get("background")) if state is None else bool(state)
 
     def set_background(self, enabled: bool, on_result=None) -> None:
         from openexpress import background
@@ -689,7 +781,11 @@ class MainWindow(Adw.ApplicationWindow):
             if on_result:
                 on_result(ok)
 
-        background.set_enabled(enabled, done)
+        try:
+            background.set_enabled(enabled, done)
+        except Exception as e:  # noqa: BLE001
+            log.debug("%s", traceback.format_exc())
+            done(False, str(e))
 
     def show_preferences(self) -> None:
         dialog = Adw.PreferencesDialog()
@@ -780,6 +876,9 @@ class MainWindow(Adw.ApplicationWindow):
                 f = dlg.open_finish(res)
             except GLib.Error:
                 return
+            if f.get_path() is None:
+                self.toast(_("Choose a file stored on this computer"))
+                return
             path = Path(f.get_path())
 
             def saved(consumer):
@@ -804,18 +903,36 @@ class MainWindow(Adw.ApplicationWindow):
                 token, secret = client.exchange_ticket(st.ticket, st.service)
                 auth = store.ConnectAuth(token, secret, settings.environment)
                 client.auth = auth
-                prof = client.user_profile()
-                auth.account = {k: prof.get(k) for k in
-                                ("userprofilepk", "username", "emailaddress", "garminguid")}
+                profile_ok = True
+                try:
+                    prof = client.user_profile()
+                    auth.account = {k: prof.get(k) for k in
+                                    ("userprofilepk", "username", "emailaddress", "garminguid")}
+                except Exception:  # noqa: BLE001 - the token works without the profile
+                    log.debug("%s", traceback.format_exc())
+                    profile_ok = False
                 store.save(auth)
-                return auth
+                return auth, profile_ok
 
-            def done(auth):
-                self.toast(_("Logged in as {account}").format(account=auth.display))
+            def done(result):
+                auth, profile_ok = result
+                self.toast(_("Logged in as {account}").format(account=auth.display) if profile_ok
+                           else _("Logged in, but the account details could not be loaded"))
                 self.session = None
                 self.refresh_device()
 
-            GLib.idle_add(lambda: (self.run_task(_("Logging in…"), work, done), False)[1])
+            def start():
+                if self.busy:
+                    return True  # the ticket expires only after minutes: wait for the task
+                self.run_task(_("Logging in…"), work, done)
+                return False
+
+            def first():
+                if start():
+                    GLib.timeout_add(500, start)
+                return False
+
+            GLib.idle_add(first)
 
         sso.create_login_window(settings, on_ticket, application=self.get_application(),
                                 parent=self).present()
@@ -889,10 +1006,13 @@ class MainWindow(Adw.ApplicationWindow):
                    self.show_updates)
 
     def show_updates(self, items) -> None:
+        if self.session is None:
+            return
         self.updates_cache = items
         sec = self.sections["updates"]
         d = self.session.device
         new = [u for u in items if not u.is_reinstall and not u.is_metadata]
+        self._set_update_state(new)
         if not new:
             g = sec.group()
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
@@ -986,6 +1106,8 @@ class MainWindow(Adw.ApplicationWindow):
                    self.show_maps)
 
     def show_maps(self, all_maps) -> None:
+        if self.session is None:
+            return
         self.maps_cache = all_maps
         sec = self.sections["maps"]
         s = self.session
@@ -1144,6 +1266,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._load("apps", _("Loading Connect IQ apps…"), work, self.show_apps)
 
     def show_apps(self, result) -> None:
+        if self.session is None:
+            return
         state, account, updates = result
         self.apps_cache = result
         sec = self.sections["apps"]
@@ -1204,8 +1328,11 @@ class MainWindow(Adw.ApplicationWindow):
         for a in builtin:
             sw = Adw.SwitchRow(title=GLib.markup_escape_text(a.name),
                                subtitle=GLib.markup_escape_text(a.type_name),
-                               active=not a.disabled)
-            sw.connect("notify::active", lambda row, _p, a=a: self.toggle_app(a, row.get_active()))
+                               active=not a.disabled, sensitive=not self.busy)
+            handler: list[int] = []
+            handler.append(sw.connect("notify::active",
+                                      lambda row, _p, a=a, h=handler: self.toggle_app(a, row, h[0])))
+            self._action_buttons.append(sw)
             exp.add_row(sw)
             rows.append((sw, a.name.casefold()))
         self._search_filter(search, rows, exp)
@@ -1305,17 +1432,37 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", response)
         d.present(self)
 
-    def toggle_app(self, app, enabled: bool) -> None:
+    def toggle_app(self, app, row, handler_id: int) -> None:
         from openexpress import ciq
 
+        enabled = row.get_active()
         if (not app.disabled) == enabled:
             return
+
+        def revert():
+            row.handler_block(handler_id)
+            row.set_active(not app.disabled)
+            row.handler_unblock(handler_id)
+
         s = self.session
-        app.disabled = not enabled
+        if self.busy or s is None:
+            revert()
+            if self.busy:
+                self.toast(_("Another operation is in progress"))
+            return
         msg = _("{name} enabled") if enabled else _("{name} disabled")
+
+        def done(_r):
+            app.disabled = not enabled
+            self.toast(msg.format(name=app.name))
+
+        def failed(_e):
+            revert()
+            return False
+
         self.run_task(_("Saving…"),
                       lambda: ciq.set_enabled(s.device, s.storage, app.app_id, enabled),
-                      lambda _r: self.toast(msg.format(name=app.name)))
+                      done, failed)
 
     # --- music ------------------------------------------------------------------------
 
@@ -1331,6 +1478,8 @@ class MainWindow(Adw.ApplicationWindow):
     def show_music(self, result) -> None:
         from openexpress import music
 
+        if self.session is None:
+            return
         items, playlists = result
         sec = self.sections["music"]
         free = self.session.storage.free_space()
@@ -1374,8 +1523,11 @@ class MainWindow(Adw.ApplicationWindow):
                          else dlg.open_multiple_finish(res))
             except GLib.Error:
                 return
-            paths_ = [Path(files.get_item(i).get_path()) for i in range(files.get_n_items())]
-            self.add_music(paths_, kind)
+            local = [files.get_item(i).get_path() for i in range(files.get_n_items())]
+            if not local or None in local:
+                self.toast(_("Choose files stored on this computer"))
+                return
+            self.add_music([Path(p) for p in local], kind)
 
         if folders:
             dialog.select_multiple_folders(self, None, chosen)
@@ -1439,11 +1591,11 @@ class App(Adw.Application):
         Gtk.Window.set_default_icon_name(APP_ID)
 
         def window_call(name):
-            return lambda *_a: getattr(self.get_active_window(), name)()
+            return lambda *_a: getattr(self.main_window(), name)()
 
         actions = {"preferences": window_call("show_preferences"),
                    "about": window_call("show_about"),
-                   "quit": lambda *_a: self.quit()}
+                   "quit": lambda *_a: self.request_quit()}
         if hasattr(Adw, "ShortcutsDialog"):
             actions["shortcuts"] = window_call("show_shortcuts")
         for name, cb in actions.items():
@@ -1457,9 +1609,21 @@ class App(Adw.Application):
                                ("win.sync", ["<Control>s"])):
             self.set_accels_for_action(action, accels)
 
+    def main_window(self, create: bool = True) -> MainWindow | None:
+        wins = [w for w in self.get_windows() if isinstance(w, MainWindow)]
+        if wins:
+            return wins[0]
+        return MainWindow(self) if create else None
+
+    def request_quit(self) -> None:
+        win = self.main_window(create=False)
+        if win is not None and win.busy:
+            win.close()  # refused by close-request, which explains why
+            return
+        self.quit()
+
     def do_activate(self):
-        win = self.get_active_window() or MainWindow(self)
-        win.present()
+        self.main_window().present()
 
 
 def main(argv=None) -> int:

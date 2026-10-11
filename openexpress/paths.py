@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 APP_NAME = "openexpress"
@@ -22,7 +23,10 @@ def _app_dir(var: str, default: str) -> Path:
         try:
             old.rename(new)
         except OSError:
-            return old
+            # Another process may have migrated it in the meantime.
+            if new.is_dir():
+                return new
+            return old if old.is_dir() else new
     return new
 
 
@@ -60,8 +64,21 @@ def default_backup_dir() -> Path:
 def write_private(path: Path, data: str) -> None:
     """Atomically write a file readable only by its owner (0600)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(data)
-    os.replace(tmp, path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            fd = -1
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        tmp = None
+    finally:
+        if fd != -1:
+            os.close(fd)
+        if tmp is not None:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass

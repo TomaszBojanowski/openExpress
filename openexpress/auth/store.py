@@ -34,7 +34,15 @@ def load() -> ConnectAuth:
     p = _path()
     if not p.exists():
         raise NotLoggedIn(_("Not logged in. Run: openexpress login"))
-    return ConnectAuth(**json.loads(p.read_text()))
+    try:
+        data = json.loads(p.read_text())
+        auth = ConnectAuth(**data)
+    except (OSError, ValueError, TypeError) as e:
+        raise NotLoggedIn(_("The saved login is damaged; please log in again.")) from e
+    if not (isinstance(auth.token, str) and isinstance(auth.token_secret, str)
+            and isinstance(auth.account, dict)):
+        raise NotLoggedIn(_("The saved login is damaged; please log in again."))
+    return auth
 
 
 def save(auth: ConnectAuth) -> None:

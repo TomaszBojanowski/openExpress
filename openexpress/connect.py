@@ -106,6 +106,30 @@ class GarminClient:
             method, url, self.consumer.key, self.consumer.secret, token, secret, form
         )
 
+    @staticmethod
+    def _prepared_url(method: str, url: str) -> str:
+        """The URL exactly as requests will send it (signatures must cover this form)."""
+        return requests.Request(method, url).prepare().url
+
+    def _request(self, method: str, url: str, what: str, **kw) -> requests.Response:
+        """Send a request; network failures become ApiError."""
+        kw.setdefault("timeout", TIMEOUT)
+        try:
+            return self.http.request(method, url, **kw)
+        except requests.RequestException as e:
+            raise ApiError(_("{what}: network error ({error})").format(what=what, error=e)) from e
+
+    @staticmethod
+    def _json(resp: requests.Response, what: str) -> Any:
+        try:
+            return resp.json()
+        except ValueError as e:  # includes requests' JSONDecodeError
+            raise ApiError(
+                _("{what}: unexpected response from the server").format(what=what),
+                resp.status_code,
+                resp.text[:500],
+            ) from e
+
     def _check(self, resp: requests.Response, what: str) -> requests.Response:
         if resp.status_code in (401, 403):
             date = resp.headers.get("Date")
@@ -146,13 +170,14 @@ class GarminClient:
         url = self.connect_url(path)
         if params:
             url += ("&" if "?" in url else "?") + urlencode(params, doseq=True)
+        url = self._prepared_url(method, url)
         h = self._client_headers()
         h.update(headers or {})
         h["Authorization"] = self._sign(method, url, form)
         data = urlencode(form) if form is not None else kw.pop("data", None)
         if form is not None:
             h["Content-Type"] = "application/x-www-form-urlencoded"
-        resp = self.http.request(method, url, headers=h, data=data, timeout=TIMEOUT, **kw)
+        resp = self._request(method, url, what, headers=h, data=data, **kw)
         return self._check(resp, what)
 
     # --- authentication -------------------------------------------------------------
@@ -162,19 +187,21 @@ class GarminClient:
         url = self.connect_url("oauth-service/oauth/preauthorized") + "?" + urlencode(
             {"ticket": ticket, "login-url": service}
         )
+        url = self._prepared_url("GET", url)
+        what = _("Ticket exchange")
         h = self._client_headers()
         h["Authorization"] = self._sign("GET", url, with_token=False)
-        resp = self._check(self.http.get(url, headers=h, timeout=TIMEOUT), _("Ticket exchange"))
+        resp = self._check(self._request("GET", url, what, headers=h), what)
         data = dict(parse_qsl(resp.text))
-        if "oauth_token" not in data:
+        if not data.get("oauth_token") or not data.get("oauth_token_secret"):
             raise ApiError(_("Ticket exchange: no oauth_token in the response"), resp.status_code)
         return data["oauth_token"], data["oauth_token_secret"]
 
     def user_profile(self) -> dict:
-        r = self._connect("GET", "userprofile-service/userprofile/userProfileBase",
-                          # TRANSLATORS: name of a server request, shown before an error
-                          _("Profile"))
-        return lower_keys(r.json())
+        # TRANSLATORS: name of a server request, shown before an error
+        what = _("Profile")
+        r = self._connect("GET", "userprofile-service/userprofile/userProfileBase", what)
+        return lower_keys(self._json(r, what))
 
     # --- upload ---------------------------------------------------------------------
 
@@ -189,13 +216,15 @@ class GarminClient:
         h["Accept-Language"] = self.settings.locale.replace("_", "-")
         h["Garmin-Client-Guid"] = self.settings.client_guid
         h["Accept"] = "application/json"
-        resp = self.http.get(
+        what = _("Upload configuration")
+        resp = self._request(
+            "GET",
             url,
+            what,
             params={"clientId": UPLOAD_CONFIG_CLIENT_ID, "enforceConsent": "False"},
             headers=h,
-            timeout=TIMEOUT,
         )
-        return lower_keys(self._check(resp, _("Upload configuration")).json())
+        return lower_keys(self._json(self._check(resp, what), what))
 
     def activity_matches(self, unit_id: int, external_ids: list[str]) -> dict[str, bool]:
         """Which activities (by time_created) Connect already has. Returns {id: in_connect}."""
@@ -204,14 +233,18 @@ class GarminClient:
         ids = sorted(external_ids)
         pairs = [("externalIds", i) for i in ids]
         params = [("deviceId", str(unit_id))] + pairs
+        what = _("Duplicate check")
         r = self._connect(
             "POST",
             "activity-search-service-1.2/json/matchesByDeviceId",
-            _("Duplicate check"),
+            what,
             params=params,
             form=pairs,
         )
-        matches = lower_keys(r.json()).get("matches") or {}
+        body = lower_keys(self._json(r, what))
+        matches = (body.get("matches") if isinstance(body, dict) else None) or {}
+        if not isinstance(matches, dict):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
         out = {}
         for i in ids:
             m = matches.get(i.lower()) or {}
@@ -237,33 +270,52 @@ class GarminClient:
             headers["Content-Type"] = "application/octet-stream"
         if last_file:
             headers["lastFile"] = "true"
+        # TRANSLATORS: name of a server request (file upload), shown before an error
+        what = _("Upload")
+        url = self._prepared_url("POST", url)
         if authenticated:
             headers["Authorization"] = self._sign("POST", url)
-        resp = self.http.post(url, data=body, files=files, headers=headers, timeout=TIMEOUT)
+        resp = self._request("POST", url, what, data=body, files=files, headers=headers)
         if resp.status_code in (401, 403):
-            # TRANSLATORS: name of a server request (file upload), shown before an error
-            self._check(resp, _("Upload"))
+            self._check(resp, what)
         try:
             parsed = lower_keys(resp.json())
         except ValueError:
             parsed = resp.text[:500]
         delay = resp.headers.get("location-in-milliseconds")
+        location = resp.headers.get("Location")
         return UploadResult(
             resp.status_code,
             parsed,
-            resp.headers.get("Location"),
+            urljoin(url, location) if location else None,
             int(delay) if delay and delay.isdigit() else None,
         )
 
-    def poll_location(self, url: str, delay_ms: int | None, timeout_s: float = 30) -> int:
-        """Wait for the activity to be processed (201 Created). Returns the last HTTP status."""
+    def poll_location(
+        self, url: str, delay_ms: int | None, timeout_s: float = 30, base: str | None = None
+    ) -> int:
+        """Wait for the activity to be processed (201 Created). Returns the last HTTP status.
+
+        0 means the status could not be checked (network error). A relative `url` is
+        resolved against `base` (the upload URL).
+        """
+        if base:
+            url = urljoin(base, url)
+        url = self._prepared_url("GET", url)
         deadline = time.monotonic() + timeout_s
         delay = (delay_ms or 1000) / 1000
         status = 0
-        while time.monotonic() < deadline:
-            time.sleep(delay)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(max(0.0, min(delay, remaining)))
             h = {"Authorization": self._sign("GET", url)}
-            resp = self.http.get(url, headers=h, timeout=TIMEOUT)
+            try:
+                resp = self.http.get(url, headers=h, timeout=TIMEOUT)
+            except requests.RequestException as e:
+                log.warning("Upload status check failed (%s)", e)
+                return 0
             status = resp.status_code
             if status != 202:
                 return status
@@ -280,9 +332,9 @@ class GarminClient:
         h["Garmin-Client-LocaleCode"] = self.settings.locale.replace("_", "-")
         h["Accept-Language"] = self.settings.locale.replace("_", "-")
         h["Accept"] = "application/json"
-        resp = self.http.request(method, url, headers=h, timeout=TIMEOUT, **kw)
+        resp = self._request(method, url, what, headers=h, **kw)
         self._check(resp, what)
-        return lower_keys(resp.json()) if resp.content else {}
+        return lower_keys(self._json(resp, what)) if resp.content else {}
 
     def unit_info(self, unit_id: int, part_number: str) -> dict:
         return self._omt(
@@ -328,29 +380,36 @@ class GarminClient:
 
     def device_image_url(self, unit_id: int) -> str | None:
         """Product picture of the watch, from the device registered in Garmin Connect."""
-        r = self._connect("GET", f"device-service/deviceservice/device-info/{unit_id}",
-                          "Device info")
-        return lower_keys(r.json()).get("imageurl") or None
+        what = _("Device info")
+        r = self._connect("GET", f"device-service/deviceservice/device-info/{unit_id}", what)
+        body = lower_keys(self._json(r, what))
+        return (body.get("imageurl") if isinstance(body, dict) else None) or None
 
     def device_messages(self, unit_id: int) -> list[dict]:
+        what = _("Connect file queue")
         r = self._connect(
             "GET",
             "device-service/devicemessage/messages",
-            _("Connect file queue"),
+            what,
             params={"device_id": str(unit_id)},
         )
-        return lower_keys(r.json()).get("messages") or []
+        body = lower_keys(self._json(r, what))
+        if not isinstance(body, dict):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+        return body.get("messages") or []
 
     def download_message(self, message_url: str, absolute: bool) -> bytes | None:
         """Download a file from the queue. None means no content (404/204): just acknowledge it."""
         url = message_url if absolute else self.connect_url(message_url)
+        url = self._prepared_url("GET", url)
+        what = _("Downloading file from Connect")
         h = self._client_headers()
         h["Accept"] = "application/octet-stream, application/json, */*"
         h["Authorization"] = self._sign("GET", url)
-        resp = self.http.get(url, headers=h, timeout=TIMEOUT)
+        resp = self._request("GET", url, what, headers=h)
         if resp.status_code in (204, 404):
             return None
-        self._check(resp, _("Downloading file from Connect"))
+        self._check(resp, what)
         return resp.content
 
     def ack_message(self, message_id: int | str) -> None:

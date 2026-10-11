@@ -126,6 +126,14 @@ def save_last_sync(unit_id: int, summary: "SyncSummary") -> None:
     tmp.replace(path)
 
 
+def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int,
+                errors: list[str], lines: list[str]) -> None:
+    """Store a sync result made outside run_sync (e.g. by the CLI) as the last sync."""
+    save_last_sync(unit_id, SyncSummary(uploaded=uploaded, skipped_known=skipped_known,
+                                        downloaded=downloaded, errors=list(errors),
+                                        lines=list(lines)))
+
+
 def load_last_sync(unit_id: int | None = None) -> dict | None:
     try:
         data = json.loads(last_sync_path().read_text())
@@ -167,6 +175,12 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
                            "rejected {rejected}, errors {errors}.").format(
             uploaded=out.uploaded, known=out.skipped_known,
             rejected=len(rep.rejected), errors=len(rep.failed)))
+        if rep.tracker_conflict:
+            n = len(rep.tracker_conflict)
+            out.lines.append(ngettext(
+                "Skipped {count} file: another device is your active tracker in Garmin Connect.",
+                "Skipped {count} files: another device is your active tracker in Garmin Connect.",
+                n).format(count=n))
     else:
         out.lines.append(_("No new data to upload."))
     progress(_("Checking for files from Garmin Connect…"))
@@ -174,9 +188,11 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     items = sync.plan_downloads(s.device, messages)
     todo = [i for i in items if not i.unsupported and not i.handled_by]
     if todo:
-        drep = sync.run_downloads(todo, s.storage, s.client, progress)
+        drep = sync.run_downloads(todo, s.storage, s.client, progress, state=state)
         out.downloaded = len(drep.written)
         out.errors += [f"{label}: {err}" for label, err in drep.failed]
+        out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
+                       .format(name=label) for label in drep.ack_failed]
         out.lines.append(ngettext("Wrote {count} file from Connect to the watch.",
                                   "Wrote {count} files from Connect to the watch.",
                                   out.downloaded).format(count=out.downloaded))

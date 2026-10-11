@@ -48,22 +48,51 @@ def _configured_language() -> str | None:
 
         path = paths.config_dir() / "settings.json"
         if path.exists():
-            return json.loads(path.read_text()).get("ui_language") or None
+            data = json.loads(path.read_text())
+            if isinstance(data, dict):
+                value = data.get("ui_language")
+                return value if isinstance(value, str) and value else None
     except (OSError, ValueError):
         pass
     return None
+
+
+def _system_languages() -> list[str]:
+    """The user's language preference list, read like gettext does."""
+    for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+        value = os.environ.get(var)
+        if value:
+            return [v for v in value.split(":") if v] if var == "LANGUAGE" else [value]
+    return []
+
+
+def _system_translation() -> gettext.NullTranslations:
+    """First entry of the preference list that is English or has a catalog wins."""
+    for entry in _system_languages():
+        code = entry.split(".")[0].split("@")[0]
+        base = code.split("_")[0]
+        if base in (SOURCE_LANGUAGE, "C", "POSIX"):
+            return gettext.NullTranslations()
+        for candidate in dict.fromkeys((code, base)):
+            try:
+                return gettext.translation(DOMAIN, LOCALE_DIR, languages=[candidate])
+            except OSError:
+                continue
+    return gettext.NullTranslations()
 
 
 def setup(language: str | None = None) -> str:
     """Activates a language (None: configured or system language). Returns the language used."""
     global _translation, _language
     lang = language or _configured_language()
-    languages = [lang] if lang else None  # None: gettext reads the system locale variables
     if lang == SOURCE_LANGUAGE:
         _translation = gettext.NullTranslations()
         _language = SOURCE_LANGUAGE
         return _language
-    _translation = gettext.translation(DOMAIN, LOCALE_DIR, languages=languages, fallback=True)
+    if lang:
+        _translation = gettext.translation(DOMAIN, LOCALE_DIR, languages=[lang], fallback=True)
+    else:
+        _translation = _system_translation()
     if isinstance(_translation, gettext.GNUTranslations):
         _language = _translation.info().get("language") or lang or SOURCE_LANGUAGE
     else:

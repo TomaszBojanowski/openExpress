@@ -65,7 +65,16 @@ class Settings:
     @classmethod
     def load(cls) -> "Settings":
         path = paths.config_dir() / "settings.json"
-        data = json.loads(path.read_text()) if path.exists() else {}
+        data: object = {}
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+            except (OSError, ValueError) as e:
+                raise SetupError(_("The settings file {path} is damaged ({error}); "
+                                   "fix or delete it.").format(path=path, error=e)) from e
+            if not isinstance(data, dict):
+                raise SetupError(_("The settings file {path} is damaged; fix or delete it.")
+                                 .format(path=path))
         known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
         s = cls(**known)
         # Keys owned by other parts of the program (e.g. "ui_language") survive save().
@@ -105,8 +114,14 @@ def load_consumer() -> Consumer:
             "openExpress is not set up yet. First run: "
             "openexpress setup --from-installer /path/to/GarminExpress.exe"
         ))
-    data = json.loads(path.read_text())
-    return Consumer(data["key"], data["secret"], data.get("url_salt"))
+    try:
+        data = json.loads(path.read_text())
+        return Consumer(str(data["key"]), str(data["secret"]), data.get("url_salt"))
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise SetupError(_(
+            "The saved client key in {path} is damaged. Run again: "
+            "openexpress setup --from-installer /path/to/GarminExpress.exe"
+        ).format(path=path)) from e
 
 
 def save_consumer(consumer: Consumer) -> None:

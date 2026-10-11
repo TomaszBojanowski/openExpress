@@ -10,6 +10,7 @@ Flow as in Garmin Express (docs/analiza/04, sections 3-5):
 
 from __future__ import annotations
 
+import logging
 import posixpath
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,8 @@ from typing import Callable
 from openexpress import download, paths
 from openexpress.device.storage import Storage
 from openexpress.i18n import _
+
+log = logging.getLogger(__name__)
 
 SEVERITY_ORDER = {"critical": 0, "recommended": 1, "optional": 2, "unspecified": 3}
 RGN_MAGIC = b"KpGr"
@@ -155,9 +158,23 @@ def install(
     for u in sort_for_install(updates):
         local = local_files[u.key]
         progress(_("Copying to the watch: {path}").format(path=u.device_path))
-        real = storage.write_file(u.device_path, local)
-        if storage.size(real) != local.stat().st_size:
+        try:
+            real = storage.write_file(u.device_path, local)
+            ok = storage.size(real) == local.stat().st_size
+        except Exception:
+            _delete_quietly(storage, u.device_path)
+            raise
+        if not ok:
+            # A truncated firmware file must not stay where the watch would install it.
+            _delete_quietly(storage, real)
             raise UpdateError(_("Write verification of {path} failed").format(path=real))
         report.installed.append(f"{u.name} {u.version} -> {real}")
         report.restart_required |= u.restart_required or u.is_primary
     return report
+
+
+def _delete_quietly(storage: Storage, path: str) -> None:
+    try:
+        storage.delete(path)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Cannot delete %s: %s", path, e)

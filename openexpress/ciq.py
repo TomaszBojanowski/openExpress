@@ -12,6 +12,7 @@ Mirrors Garmin Express (docs/analiza/05, section 3):
 
 from __future__ import annotations
 
+import logging
 import posixpath
 import uuid
 from dataclasses import dataclass, field
@@ -24,6 +25,8 @@ from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import N_, _
+
+log = logging.getLogger(__name__)
 
 PRELOADED_PREFIX = "c0ffee15-600d"
 # The Connect IQ Store app ships with the watch firmware and must stay.
@@ -60,6 +63,8 @@ class InstalledApp:
     size: int | None = None
     native_id: int | None = None
     favorite: bool = False
+    # Only listed in IN.BIN: written to the watch but not yet confirmed in OUT.BIN.
+    pending: bool = False
 
     @property
     def preloaded(self) -> bool:
@@ -109,51 +114,93 @@ class StoreApp:
 # --- device files --------------------------------------------------------------------
 
 
+def _int(fields: list[proto.Field], number: int, default=None):
+    return next((f.value for f in fields if f.number == number and f.wire_type == proto.VARINT),
+                default)
+
+
+def _bytes(fields: list[proto.Field], number: int, default=None):
+    return next((f.value for f in fields if f.number == number and f.wire_type == proto.LEN),
+                default)
+
+
+def _all_bytes(fields: list[proto.Field], number: int) -> list[bytes]:
+    return [f.value for f in fields if f.number == number and f.wire_type == proto.LEN]
+
+
+def _app_id(fields: list[proto.Field]) -> uuid.UUID | None:
+    raw = _bytes(fields, 1)
+    if raw is None or len(raw) != 16:
+        return None
+    return uuid.UUID(bytes=raw)
+
+
 def _get_service(data: bytes) -> list[proto.Field]:
-    smart = proto.decode(data)
-    svc = proto.first(smart, 3)
+    svc = _bytes(proto.decode(data), 3)
     if svc is None:
         raise CiqError(_("Not a Connect IQ configuration file"))
     return proto.decode(svc)
 
 
 def parse_out_bin(data: bytes) -> InstalledState:
-    resp = proto.first(_get_service(data), 2)
-    if resp is None:
-        raise CiqError(_("OUT.BIN does not contain an installed-apps response"))
-    fields = proto.decode(resp)
+    try:
+        resp = _bytes(_get_service(data), 2)
+        if resp is None:
+            raise CiqError(_("OUT.BIN does not contain an installed-apps response"))
+        fields = proto.decode(resp)
+    except proto.ProtoError as e:
+        raise CiqError(_("The Connect IQ app list (OUT.BIN) is damaged: {error}")
+                       .format(error=e)) from e
     state = InstalledState(
-        available_space=proto.first(fields, 1),
-        available_slots=proto.first(fields, 2),
+        available_space=_int(fields, 1),
+        available_slots=_int(fields, 2),
     )
-    for raw in proto.all_of(fields, 3):
-        a = proto.decode(raw)
-        app_id = proto.first(a, 1, b"")
-        if len(app_id) != 16:
+    for raw in _all_bytes(fields, 3):
+        try:
+            a = proto.decode(raw)
+        except proto.ProtoError:
+            continue
+        app_id = _app_id(a)
+        if app_id is None:
             continue
         state.apps.append(InstalledApp(
-            app_id=uuid.UUID(bytes=app_id),
-            app_type=proto.first(a, 2, 0),
-            name=proto.first(a, 3, b"").decode("utf-8", "replace"),
-            disabled=bool(proto.first(a, 4, 0)),
-            version=proto.first(a, 5),
-            filename=proto.first(a, 6, b"").decode("utf-8", "replace"),
-            size=proto.first(a, 7),
-            native_id=proto.first(a, 8),
-            favorite=bool(proto.first(a, 9, 0)),
+            app_id=app_id,
+            app_type=_int(a, 2, 0),
+            name=_bytes(a, 3, b"").decode("utf-8", "replace"),
+            disabled=bool(_int(a, 4, 0)),
+            version=_int(a, 5),
+            filename=_bytes(a, 6, b"").decode("utf-8", "replace"),
+            size=_int(a, 7),
+            native_id=_int(a, 8),
+            favorite=bool(_int(a, 9, 0)),
         ))
     return state
 
 
 def parse_in_bin(data: bytes) -> list[tuple[uuid.UUID, int, bool, bool]]:
-    req = proto.first(_get_service(data), 5)
+    """Pending app list; a damaged file is treated as empty (the watch rewrites it)."""
+    try:
+        req = _bytes(_get_service(data), 5)
+    except (proto.ProtoError, CiqError) as e:
+        log.warning("Ignoring damaged IN.BIN: %s", e)
+        return []
     if req is None:
         return []
+    try:
+        entries = _all_bytes(proto.decode(req), 1)
+    except proto.ProtoError as e:
+        log.warning("Ignoring damaged IN.BIN: %s", e)
+        return []
     out = []
-    for raw in proto.all_of(proto.decode(req), 1):
-        a = proto.decode(raw)
-        out.append((uuid.UUID(bytes=proto.first(a, 1)), proto.first(a, 2, 0),
-                    bool(proto.first(a, 3, 0)), bool(proto.first(a, 4, 0))))
+    for raw in entries:
+        try:
+            a = proto.decode(raw)
+        except proto.ProtoError:
+            continue
+        app_id = _app_id(a)
+        if app_id is None:
+            continue
+        out.append((app_id, _int(a, 2, 0), bool(_int(a, 3, 0)), bool(_int(a, 4, 0))))
     return out
 
 
@@ -183,7 +230,14 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
         pending = {a[0]: a for a in parse_in_bin(storage.read(in_path))}
         for app in state.apps:
             if app.app_id in pending:
-                _, _, app.disabled, app.favorite = pending[app.app_id]
+                app.disabled, app.favorite = pending.pop(app.app_id)[2:]
+        # Apps registered in IN.BIN but not yet reported by the watch must be kept,
+        # otherwise the next IN.BIN rewrite would unregister them.
+        for app_id, app_type, disabled, favorite in pending.values():
+            state.apps.append(InstalledApp(
+                app_id=app_id, app_type=app_type, name=str(app_id),
+                disabled=disabled, favorite=favorite, pending=True,
+            ))
     return state
 
 
@@ -314,57 +368,100 @@ def install_queued(
     only: set[uuid.UUID] | None = None,
     progress: Callable[[str], None] = lambda s: None,
 ) -> IqInstallReport:
-    """Writes queued Connect IQ apps to the watch and registers them in IN.BIN."""
+    """Writes queued Connect IQ apps to the watch and registers them in IN.BIN.
+
+    Messages are acknowledged only after the app is written and registered, so
+    an interrupted install is retried on the next sync.
+    """
     report = IqInstallReport()
     state = read_installed(device, storage)
     max_apps = device.iq_max_apps or 0
     new_entries: list[InstalledApp] = []
-    for m in messages:
-        if not is_iq_message(m):
-            continue
-        app_id = message_app_id(m)
-        if app_id is None or (only is not None and app_id not in only):
-            continue
-        meta = m.get("metadata") or {}
-        name = meta.get("messagename") or (known.get(app_id).name if app_id in known else str(app_id))
-        dt = m["devicexmldatatype"]
-        existing = state.find(app_id)
-        try:
-            if existing is None and max_apps and len(state.store_apps) + len(new_entries) >= max_apps:
-                raise CiqError(_("no free app slots on the watch"))
-            progress(_("Downloading {name}").format(name=name))
-            data = client.download_message(meta.get("messageurl") or "", bool(meta.get("absolute")))
-            if not data:
-                client.ack_message(m.get("messageid"))
+    new_paths: list[str] = []
+    to_ack: list[tuple[dict, str]] = []
+    new_size = 0
+    try:
+        for m in messages:
+            if not is_iq_message(m):
                 continue
-            if state.available_space is not None and existing is None and len(data) > state.available_space:
-                raise CiqError(_("not enough Connect IQ space on the watch"))
-            targets = device.targets(dt)
-            if not targets:
-                raise CiqError(_("the watch does not accept {datatype}").format(datatype=dt))
-            # Updates overwrite the existing file; new apps get 8 random hex characters.
-            filename = existing.filename if existing and existing.filename else uuid.uuid4().hex[:8].upper()
-            path = posixpath.join(targets[0].path, f"{filename}.{targets[0].extension or 'PRG'}")
-            progress(_("Writing {path}").format(path=path))
-            storage.write(path, data)
-            client.ack_message(m.get("messageid"))
-            store = known.get(app_id)
-            app_type = DATATYPE_TO_APPTYPE[dt]
-            if existing is None:
-                new_entries.append(InstalledApp(
-                    app_id=app_id, app_type=app_type, name=name,
-                    # Like Express: a new watch face is installed but not activated.
-                    disabled=app_type == 3, version=store.latest_version if store else None,
-                    filename=filename, size=len(data),
-                ))
+            app_id = message_app_id(m)
+            if app_id is None or (only is not None and app_id not in only):
+                continue
+            meta = m.get("metadata") or {}
+            name = meta.get("messagename") or (known[app_id].name if app_id in known else str(app_id))
+            dt = m["devicexmldatatype"]
+            existing = state.find(app_id)
+            try:
+                if (existing is None and max_apps
+                        and len(state.store_apps) + len(new_entries) >= max_apps):
+                    raise CiqError(_("no free app slots on the watch"))
+                progress(_("Downloading {name}").format(name=name))
+                data = client.download_message(meta.get("messageurl") or "",
+                                               bool(meta.get("absolute")))
+                if not data:
+                    client.ack_message(m.get("messageid"))
+                    continue
+                if (state.available_space is not None and existing is None
+                        and new_size + len(data) > state.available_space):
+                    raise CiqError(_("not enough Connect IQ space on the watch"))
+                targets = device.targets(dt)
+                if not targets:
+                    raise CiqError(_("the watch does not accept {datatype}").format(datatype=dt))
+                # Updates overwrite the existing file; new apps get 8 random hex characters.
+                filename = (existing.filename if existing and existing.filename
+                            else uuid.uuid4().hex[:8].upper())
+                path = posixpath.join(targets[0].path, f"{filename}.{targets[0].extension or 'PRG'}")
+                progress(_("Writing {path}").format(path=path))
+                try:
+                    real = storage.write(path, data)
+                    if storage.size(real) != len(data):
+                        raise CiqError(_("Write verification of {path} failed").format(path=real))
+                except Exception:
+                    if existing is None:
+                        _delete_quietly(storage, path)
+                    raise
+                if existing is None:
+                    store = known.get(app_id)
+                    app_type = DATATYPE_TO_APPTYPE[dt]
+                    new_entries.append(InstalledApp(
+                        app_id=app_id, app_type=app_type, name=name,
+                        # Like Express: a new watch face is installed but not activated.
+                        disabled=app_type == 3, version=store.latest_version if store else None,
+                        filename=filename, size=len(data),
+                    ))
+                    new_paths.append(real)
+                    new_size += len(data)
+                to_ack.append((m, name))
+            except ApiError:
+                raise
+            except Exception as e:  # noqa: BLE001
+                report.failed.append((name, str(e)))
+    finally:
+        if new_entries:
+            try:
+                storage.write(_config_path(device, True), build_in_bin(state.apps + new_entries))
+            except Exception as e:
+                for p in new_paths:
+                    _delete_quietly(storage, p)
+                report.failed += [(name, str(e)) for _m, name in to_ack]
+                raise CiqError(_("Cannot register the apps on the watch: {error}")
+                               .format(error=e)) from e
+        for m, name in to_ack:
+            try:
+                client.ack_message(m.get("messageid"))
+            except Exception as e:  # noqa: BLE001
+                # The app is installed; the server will offer it again and it will be overwritten.
+                report.failed.append((name, str(e)))
+                continue
             report.installed.append(name)
-        except ApiError:
-            raise
-        except Exception as e:  # noqa: BLE001
-            report.failed.append((name, str(e)))
-    if new_entries:
-        storage.write(_config_path(device, True), build_in_bin(state.apps + new_entries))
     return report
+
+
+def _delete_quietly(storage: Storage, path: str) -> None:
+    try:
+        storage.delete(path)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Cannot delete %s: %s", path, e)
 
 
 def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[str]:

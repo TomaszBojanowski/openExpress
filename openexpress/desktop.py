@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import gettext
 import os
-import shlex
 import sys
 from pathlib import Path
 
@@ -46,17 +45,36 @@ def _localized(key: str, message: str) -> str:
     return "\n".join(lines)
 
 
-def _python_cmd(module_args: str) -> str:
-    return f"{shlex.quote(sys.executable)} -m openexpress {module_args}"
+# Characters that make the desktop-entry spec require quoting an Exec argument.
+_DESKTOP_RESERVED = set(" \t\n\"'\\><~|&;$*?#()`")
 
 
-def _env_prefix() -> str:
-    """If openExpress runs from a source checkout, point to it via PYTHONPATH."""
+def desktop_exec_quote(arg: str) -> str:
+    """One argument of a .desktop Exec= value (quoting rules plus string escaping)."""
+    if arg and not (set(arg) & _DESKTOP_RESERVED):
+        quoted = arg
+    else:
+        quoted = '"' + "".join("\\" + c if c in '"`$\\' else c for c in arg) + '"'
+    # The general string escape (backslash) applies before the Exec quoting rule, and "%"
+    # starts a field code.
+    return quoted.replace("\\", "\\\\").replace("%", "%%")
+
+
+def systemd_quote(arg: str, exec_line: bool = False) -> str:
+    """One double-quoted word for a systemd unit file (specifiers and, in Exec*, $ escaped)."""
+    out = arg.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("%", "%%")
+    if exec_line:
+        out = out.replace("$", "$$")
+    return f'"{out}"'
+
+
+def _source_root() -> Path | None:
+    """If openExpress runs from a source checkout, the directory to put on PYTHONPATH."""
     import site
 
     root = Path(__file__).resolve().parent.parent
     installed = {Path(p).resolve() for p in site.getsitepackages() + [site.getusersitepackages()]}
-    return "" if root in installed else f"PYTHONPATH={root}"
+    return None if root in installed else root
 
 
 def desktop_entry(exec_gui: str, background: bool = False) -> str:
@@ -81,8 +99,12 @@ def files() -> dict[Path, str]:
     home = Path.home()
     data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share"))
     config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
-    env = _env_prefix()
-    exec_gui = (f"env {env} " if env else "") + _python_cmd("gui")
+    root = _source_root()
+    env = f"PYTHONPATH={root}" if root else ""
+    args = (["env", env] if env else []) + [sys.executable, "-m", "openexpress", "gui"]
+    exec_gui = " ".join(desktop_exec_quote(a) for a in args)
+    exec_watch = " ".join([systemd_quote(sys.executable, exec_line=True), "-m", "openexpress",
+                           "watch"])
     desktop = desktop_entry(exec_gui)
     desktop_watch = desktop_entry(exec_gui, background=True)
     # systemd unit files have no localized keys: Description stays in English.
@@ -93,8 +115,8 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-{('Environment=' + env) if env else ''}
-ExecStart={_python_cmd("watch")}
+{('Environment=' + systemd_quote(env)) if env else ''}
+ExecStart={exec_watch}
 Restart=on-failure
 RestartSec=10
 
@@ -145,10 +167,29 @@ def flatpak_installed() -> bool:
     return res.returncode == 0
 
 
+def _service_wants_link() -> Path:
+    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    return config / "systemd" / "user" / "graphical-session.target.wants" / SERVICE
+
+
 def uninstall(dry_run: bool) -> list[Path]:
-    """Removes the launcher, icon and service written by install() (and legacy files)."""
-    paths_ = [p for p in files() if p.exists()] + legacy_files()
+    """Disables the service, then removes the launcher, icon and service written by install()
+    (and legacy files)."""
+    import shutil
+    import subprocess
+
+    link = _service_wants_link()
+    paths_ = [p for p in files() if p.exists()]
+    if link.exists() or link.is_symlink():
+        paths_.append(link)
+    paths_ += legacy_files()
     if not dry_run:
+        if shutil.which("systemctl"):
+            try:
+                subprocess.run(["systemctl", "--user", "disable", "--now", SERVICE],
+                               capture_output=True, timeout=30)
+            except (OSError, subprocess.SubprocessError):
+                pass
         for p in paths_:
-            p.unlink()
+            p.unlink(missing_ok=True)
     return paths_

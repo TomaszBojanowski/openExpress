@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Callable
 
@@ -105,13 +106,22 @@ def set_enabled(enabled: bool, done: Callable[[bool, str], None], parent: str = 
 
         _portal_request(enabled, parent, finished)
         return
-    if enabled:
-        desktop.install(dry_run=False)
-        ok, err = _systemctl("daemon-reload")
-        if ok:
-            ok, err = _systemctl("enable", "--now", desktop.SERVICE)
-    else:
-        ok, err = _systemctl("disable", "--now", desktop.SERVICE)
+    threading.Thread(target=_set_enabled_systemd, args=(enabled, done), daemon=True).start()
+
+
+def _set_enabled_systemd(enabled: bool, done: Callable[[bool, str], None]) -> None:
+    try:
+        if enabled:
+            desktop.install(dry_run=False)
+            ok, err = _systemctl("daemon-reload")
+            if ok:
+                ok, err = _systemctl("enable", "--now", desktop.SERVICE)
+        else:
+            ok, err = _systemctl("disable", "--now", desktop.SERVICE)
+    except FileNotFoundError:
+        ok, err = False, _("systemctl was not found; background sync needs systemd.")
+    except Exception as e:  # noqa: BLE001
+        ok, err = False, str(e)
     GLib.idle_add(lambda: (done(ok, err), False)[1])
 
 
@@ -119,6 +129,9 @@ def is_enabled() -> bool | None:
     """True/False outside Flatpak; None when unknown (Flatpak keeps no queryable state)."""
     if in_flatpak():
         return None
-    res = subprocess.run(["systemctl", "--user", "is-enabled", desktop.SERVICE],
-                         capture_output=True, text=True)
+    try:
+        res = subprocess.run(["systemctl", "--user", "is-enabled", desktop.SERVICE],
+                             capture_output=True, text=True)
+    except OSError:
+        return False
     return res.stdout.strip() == "enabled"

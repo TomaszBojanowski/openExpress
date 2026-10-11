@@ -10,6 +10,7 @@ device is installed.
 from __future__ import annotations
 
 import base64
+import logging
 import posixpath
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,8 @@ from typing import Callable
 from openexpress import download, paths
 from openexpress.device.storage import Storage
 from openexpress.i18n import N_, _
+
+log = logging.getLogger(__name__)
 
 # TRANSLATORS: map installation states
 STATE_NAMES = {0: N_("not installed"), 1: N_("installed"), 2: N_("partial"),
@@ -52,6 +55,8 @@ class UniversalMap:
     files_to_remove: list[str]
     hosts: list[str]
     eula_urls: list[str] = field(default_factory=list)
+    # False when the server did not provide a usable download for every file.
+    installable: bool = True
 
     @property
     def installed(self) -> bool:
@@ -97,12 +102,13 @@ def parse_maps(response: dict) -> list[UniversalMap]:
         if opt is None:
             continue
         files = []
-        for f in opt.get("files") or []:
+        listed = opt.get("files") or []
+        for f in listed:
             deliv = next(
                 (d for d in f.get("deliverableoptions") or [] if d.get("type") in (1, None)),
                 None,
             )
-            if not deliv or not f.get("filename"):
+            if not deliv or not f.get("filename") or not (deliv.get("url") or ""):
                 continue
             files.append(MapFile(
                 device_path=f["filename"].replace("\\", "/"),
@@ -127,6 +133,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
                              for f in m.get("filestoremove") or [] if f.get("filename")],
             hosts=_hosts(m.get("downloadhosts")),
             eula_urls=list(m.get("eulaurls") or []),
+            installable=bool(files) and len(files) == len(listed),
         ))
     return out
 
@@ -189,6 +196,9 @@ def install(
     transfer_progress: Callable[[int, int], None] | None = None,
     url_salt: str | None = None,
 ) -> MapReport:
+    if not m.installable or not m.files:
+        raise MapError(_("Map '{name}' cannot be installed: the server did not provide "
+                         "all of its files").format(name=m.name))
     removing = removal_list(all_maps, m, rewriting=True)
     need = space_needed(storage, m, removing)
     free = storage.free_space()
@@ -217,8 +227,14 @@ def install(
         report.removed.append(p)
     for f in m.files:
         progress(_("Copying to the watch: {path}").format(path=f.device_path))
-        real = storage.write_file(f.device_path, local[f.device_path], transfer_progress)
-        if storage.size(real) != f.size:
+        try:
+            real = storage.write_file(f.device_path, local[f.device_path], transfer_progress)
+            ok = storage.size(real) == f.size
+        except Exception:
+            _delete_quietly(storage, f.device_path)
+            raise
+        if not ok:
+            _delete_quietly(storage, real)
             raise MapError(_("Write verification of {path} failed").format(path=real))
         report.written.append(real)
     for fname, gma in unlocks:
@@ -239,3 +255,10 @@ def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
             storage.delete(p)
             removed.append(p)
     return removed
+
+
+def _delete_quietly(storage: Storage, path: str) -> None:
+    try:
+        storage.delete(path)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Cannot delete %s: %s", path, e)

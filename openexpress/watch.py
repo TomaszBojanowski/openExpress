@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 
 import gi
 
@@ -17,9 +18,12 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 from openexpress import service  # noqa: E402
 from openexpress.device.gio_storage import _is_garmin_uri  # noqa: E402
+from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
 log = logging.getLogger(__name__)
+OPEN_RETRIES = 3
+OPEN_RETRY_DELAY_S = 5
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 
 
@@ -31,12 +35,15 @@ class Watcher(Gio.Application):
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.delay_s = delay_s
         self.running = False
+        self.pending = False
+        self.quit_requested = False
+        self._lock = threading.Lock()
 
     def do_startup(self):
         Gio.Application.do_startup(self)
         self.hold()
         quit_action = Gio.SimpleAction.new("quit", None)
-        quit_action.connect("activate", lambda *_a: self.release())
+        quit_action.connect("activate", lambda *_a: self.request_quit())
         self.add_action(quit_action)
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self.on_mount)
@@ -58,15 +65,61 @@ class Watcher(Gio.Application):
         if _is_garmin_uri(mount.get_root().get_uri()):
             GLib.timeout_add_seconds(self.delay_s, self.start_sync)
 
+    def request_quit(self) -> None:
+        """Quit now, or after the running sync (never interrupt writes to the watch)."""
+        with self._lock:
+            if self.quit_requested:
+                return
+            self.quit_requested = True
+            busy = self.running
+        if busy:
+            log.info("Quitting after the current sync finishes")
+        else:
+            self.release()
+
     def start_sync(self):
-        if not self.running:
+        with self._lock:
+            if self.quit_requested:
+                return False
+            if self.running:
+                # Re-plugged during a sync: run once more afterwards.
+                self.pending = True
+                return False
             self.running = True
-            threading.Thread(target=self._sync, daemon=True).start()
+        # Non-daemon: the process waits for a sync to finish instead of killing it mid-write.
+        threading.Thread(target=self._worker, daemon=False).start()
         return False
+
+    def _worker(self):
+        try:
+            while True:
+                self._sync()
+                with self._lock:
+                    if not self.pending or self.quit_requested:
+                        break
+                    self.pending = False
+        finally:
+            with self._lock:
+                self.running = False
+                self.pending = False
+                quit_now = self.quit_requested
+            if quit_now:
+                GLib.idle_add(lambda: (self.release(), False)[1])
+
+    def _open_session(self, sleep=time.sleep):
+        for attempt in range(OPEN_RETRIES + 1):
+            try:
+                return service.open_session()
+            except DeviceError:
+                # Right after mounting, gvfs may not be ready yet.
+                if attempt == OPEN_RETRIES or self.quit_requested:
+                    raise
+                log.info("Watch not ready, retrying in %d s", OPEN_RETRY_DELAY_S)
+                sleep(OPEN_RETRY_DELAY_S)
 
     def _sync(self):
         try:
-            s = service.open_session()
+            s = self._open_session()
             if not s.logged_in:
                 log.info("Not logged in: skipping sync")
                 return
@@ -88,8 +141,6 @@ class Watcher(Gio.Application):
         except Exception as e:  # noqa: BLE001
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("Sync failed"), str(e))
-        finally:
-            self.running = False
 
 
 def main() -> int:

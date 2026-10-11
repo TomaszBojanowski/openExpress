@@ -207,9 +207,9 @@ def cmd_login(args) -> int:
         prof = client.user_profile()
         auth.account = {k: prof.get(k) for k in
                         ("userprofilepk", "username", "emailaddress", "garminguid")}
-    except ApiError as e:
-        print(_("Warning: could not fetch the profile ({error})").format(error=e),
-              file=sys.stderr)
+    except Exception as e:  # noqa: BLE001 - the token is valid even without the profile
+        print(_("Warning: could not fetch the profile ({error})").format(
+            error=str(e) or e.__class__.__name__), file=sys.stderr)
     store.save(auth)
     print(_("Logged in as {account}.").format(account=auth.display))
     return 0
@@ -315,7 +315,7 @@ def cmd_sync(args) -> int:
         return 0
 
     first_run = not state.file.exists()
-    if first_run and up_plan and up_plan.candidates and not args.all:
+    if first_run and not args.all and not args.download_only:
         print(
             "\n" + _("This is the first sync with this program. If the watch also syncs "
                      "via your phone, most files are already in Connect.\n"
@@ -327,45 +327,73 @@ def cmd_sync(args) -> int:
         )
         return 2
 
+    from openexpress import service
+
     def progress(msg: str) -> None:
         print("  " + msg)
 
-    if up_plan and up_plan.candidates:
-        print("\n" + _("Uploading…"))
-        rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
-        print(_("Uploaded: {uploaded}, duplicates: {duplicates}, already in Connect: "
-                "{already}, rejected: {rejected}, errors: {errors}").format(
-            uploaded=len(rep.uploaded), duplicates=len(rep.duplicates),
-            already=len(rep.already_in_connect), rejected=len(rep.rejected),
-            errors=len(rep.failed)))
-        for label, err in rep.failed:
-            print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
-        for label in rep.not_confirmed:
-            print("  " + _("Warning: Connect did not confirm processing of {item}").format(
-                item=label))
-    if any(not i.unsupported and not i.handled_by for i in dl_items):
-        print("\n" + _("Downloading to the watch…"))
-        drep = sync.run_downloads(dl_items, st, client, progress)
-        print(_("Written: {written}, empty: {empty}, errors: {errors}").format(
-            written=len(drep.written), empty=len(drep.empty), errors=len(drep.failed)))
-        for label, err in drep.failed:
-            print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
-    special = {i.handled_by for i in dl_items if i.handled_by}
-    if special:
-        from openexpress import service
-
-        session = service.DeviceSession(st, dev, settings, client)
-        errors: list[str] = []
-        lines = []
-        if "Connect IQ" in special:
-            lines += service._install_queued_apps(session, messages, progress, errors)
-        if "TrueUp" in special:
-            lines += service._trueup(session, messages, progress, errors)
-        for line in lines:
+    summary = service.SyncSummary()
+    with service.sync_lock():
+        if up_plan is not None:
+            # Another process may have synced since the plan was shown: plan again under the lock.
+            state = sync.SyncState(dev.unit_id)
+            up_plan = sync.plan_uploads(
+                dev, st, cfg, state, include_consent_locations=args.include_consent,
+                only_types=set(args.type) if args.type else None,
+                include_diagnostics=args.include_diagnostics,
+            )
+        if up_plan and up_plan.candidates:
+            print("\n" + _("Uploading…"))
+            rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
+            line = _("Uploaded: {uploaded}, duplicates: {duplicates}, already in Connect: "
+                     "{already}, rejected: {rejected}, errors: {errors}").format(
+                uploaded=len(rep.uploaded), duplicates=len(rep.duplicates),
+                already=len(rep.already_in_connect), rejected=len(rep.rejected),
+                errors=len(rep.failed))
             print(line)
-        for err in errors:
-            print("  " + _("ERROR {error}").format(error=err))
-    state.save()
+            summary.lines.append(line)
+            summary.uploaded = len(rep.uploaded)
+            summary.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
+            summary.errors += [f"{label}: {err}" for label, err in rep.failed]
+            for label, err in rep.failed:
+                print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
+            for label in rep.not_confirmed:
+                print("  " + _("Warning: Connect did not confirm processing of {item}").format(
+                    item=label))
+        if up_plan is not None:
+            # Not for --download-only: the first-sync choice must stay pending until uploads run.
+            state.save()
+        if any(not i.unsupported and not i.handled_by for i in dl_items):
+            print("\n" + _("Downloading to the watch…"))
+            drep = sync.run_downloads(dl_items, st, client, progress, state=state)
+            line = _("Written: {written}, empty: {empty}, errors: {errors}").format(
+                written=len(drep.written), empty=len(drep.empty), errors=len(drep.failed))
+            print(line)
+            summary.lines.append(line)
+            summary.downloaded = len(drep.written)
+            summary.errors += [f"{label}: {err}" for label, err in drep.failed]
+            for label, err in drep.failed:
+                print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
+        special = {i.handled_by for i in dl_items if i.handled_by}
+        if special:
+            session = service.DeviceSession(st, dev, settings, client)
+            errors: list[str] = []
+            lines = []
+            if "Connect IQ" in special:
+                lines += service._install_queued_apps(session, messages, progress, errors)
+            if "TrueUp" in special:
+                lines += service._trueup(session, messages, progress, errors)
+            for line in lines:
+                print(line)
+            for err in errors:
+                print("  " + _("ERROR {error}").format(error=err))
+            summary.lines += lines
+            summary.errors += errors
+    service.save_last_sync(dev.unit_id, summary)
+    if summary.errors:
+        print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
+                              len(summary.errors)).format(count=len(summary.errors)))
+        return 1
     print("\n" + _("Done."))
     return 0
 
@@ -382,7 +410,10 @@ def cmd_baseline(args) -> int:
                        "Dry run: {count} files would be marked as already uploaded. Add --apply.",
                        n).format(count=n))
         return 0
-    n = sync.mark_baseline(dev, st, cfg, state)
+    from openexpress import service
+
+    with service.sync_lock():
+        n = sync.mark_baseline(dev, st, cfg, sync.SyncState(dev.unit_id))
     print(ngettext("Marked {count} file as already uploaded. "
                    "The next `sync` will upload only new data.",
                    "Marked {count} files as already uploaded. "
@@ -726,6 +757,37 @@ MUSIC_KIND_LINES = {
 }
 
 
+MIN_MUSIC_PATTERN = 3
+
+
+def match_music_paths(device_paths: list[str], roots: list[str], patterns: list[str]) -> list[str]:
+    """Device paths selected by `music remove` patterns (case-insensitive).
+
+    A pattern matches the full device path, a part of the file name, or a part of an
+    Artist/Album folder name; the top media folders (`roots`, e.g. "Music") never match.
+    """
+    wanted = [p.strip().casefold() for p in patterns if p.strip()]
+    tops = sorted({r.strip("/").casefold() for r in roots if r.strip("/")}, key=len, reverse=True)
+    out: dict[str, None] = {}
+    for path in device_paths:
+        norm = path.strip("/")
+        low = norm.casefold()
+        rel = low
+        for top in tops:
+            if low.startswith(top + "/"):
+                rel = low[len(top) + 1:]
+                break
+        else:
+            rel = low.split("/", 1)[1] if "/" in low else low
+        parts = rel.split("/")
+        name, folders = parts[-1], parts[:-1]
+        for w in wanted:
+            if w.strip("/") == low or w in name or any(w in folder for folder in folders):
+                out[path] = None
+                break
+    return list(out)
+
+
 def cmd_music(args) -> int:
     from openexpress import music
 
@@ -794,11 +856,16 @@ def cmd_music(args) -> int:
         return 0
 
     # remove
+    bad = [p for p in args.paths if len(p.strip()) < MIN_MUSIC_PATTERN]
+    if bad:
+        print(_("Error: each TEXT must have at least {count} characters: {texts}").format(
+            count=MIN_MUSIC_PATTERN, texts=", ".join(repr(p) for p in bad)), file=sys.stderr)
+        return 1
     items = music.list_device(dev, st)
     pls = music.list_playlists(dev, st)
-    wanted = [p.casefold() for p in args.paths]
-    matches = [i.path for i in items if any(w in i.path.casefold() for w in wanted)]
-    matches += [p for p in pls if any(w in p.casefold() for w in wanted)]
+    roots = [f.path for kind in (*music.KINDS.values(), music.PLAYLIST)
+             for f in dev.targets(kind)[:1]]
+    matches = match_music_paths([i.path for i in items] + pls, roots, args.paths)
     print(_("Files to remove: {count}").format(count=len(matches)))
     for m in matches:
         print(f"  - {m}")
@@ -838,9 +905,8 @@ def cmd_install_desktop(args) -> int:
             print(_("Nothing to remove."))
         elif not args.apply:
             print(_("Dry run. Add --apply."))
-        else:
-            print(_("If background sync was enabled, also run: "
-                    "systemctl --user disable --now {service}").format(service=desktop.SERVICE))
+        elif any(p.name == desktop.SERVICE for p in removed):
+            print(_("The background sync service was stopped and disabled."))
         return 0
     if desktop.flatpak_installed() and not args.force:
         print(_("The Flatpak of openExpress is installed and already provides the menu entry. "
@@ -913,7 +979,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--locale", help=_("e.g. {example}").format(example="pl_PL"))
     s.add_argument("--ui-language", choices=i18n.available_languages() + ["system"],
                    help=_("language of this program (\"system\": follow the system locale)"))
-    s.set_defaults(func=cmd_setup)
+    s.set_defaults(func=cmd_setup, _parser=s)
 
     s = sub.add_parser("info", help=_("information about the connected watch"))
     s.add_argument("--json", action="store_true")
@@ -1013,7 +1079,8 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("m3u")
     m.add_argument("--name")
     m.add_argument("--apply", action="store_true")
-    m = msub.add_parser("remove", help=_("remove files or playlists whose path contains TEXT"))
+    m = msub.add_parser("remove", help=_("remove files or playlists whose name, artist or "
+                                         "album folder contains TEXT"))
     m.add_argument("paths", nargs="+", metavar="TEXT")
     m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_music)
@@ -1063,14 +1130,20 @@ def main(argv: list[str] | None = None) -> int:
     if lang:
         i18n.setup(lang)
     args = build_parser().parse_args(argv)
+    if args.cmd == "setup" and bool(args.key) != bool(args.secret):
+        args._parser.error(_("--key and --secret must be given together"))
     if args.lang:
         i18n.setup(args.lang)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
         format="%(levelname)s %(name)s: %(message)s",
     )
+    import requests
+
+    from openexpress import service
+
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew,
-                   Unauthorized) + _domain_errors()
+                   Unauthorized, service.SyncBusy) + _domain_errors()
     try:
         return args.func(args)
     except user_errors as e:
@@ -1080,6 +1153,11 @@ def main(argv: list[str] | None = None) -> int:
         print(_("Server error: {error}").format(error=e), file=sys.stderr)
         if args.verbose and e.body:
             print(e.body, file=sys.stderr)
+        return 1
+    except requests.RequestException as e:
+        print(_("Network error: could not reach the Garmin server ({error})").format(
+            error=e), file=sys.stderr)
+        logging.getLogger(__name__).debug("network error", exc_info=True)
         return 1
     except KeyboardInterrupt:
         print(_("Interrupted."), file=sys.stderr)

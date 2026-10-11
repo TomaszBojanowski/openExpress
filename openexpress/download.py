@@ -6,6 +6,7 @@ import base64
 import binascii
 import hashlib
 import logging
+import re
 import struct
 import time
 from pathlib import Path
@@ -90,7 +91,15 @@ def fetch(
 
     A finished file with the correct size and MD5 is not downloaded again.
     """
-    md5 = normalize_md5(md5) if md5 else None
+    if md5:
+        given, md5 = md5, normalize_md5(md5)
+        if md5 is None:
+            raise DownloadError(_("Invalid MD5 checksum from the server: {value}")
+                                .format(value=given))
+    else:
+        md5 = None
+    if not size:
+        size = None  # 0 or missing: unknown
     if _valid(dest, size, md5):
         return dest
     http = session or requests.Session()
@@ -111,11 +120,11 @@ def fetch(
             if size is not None and got != size:
                 errors.append(_("{url}: size {got} instead of {size}")
                               .format(url=url, got=got, size=size))
-                part.unlink()
+                part.unlink(missing_ok=True)
                 continue
             if md5 is not None and file_md5(part) != md5:
                 errors.append(_("{url}: MD5 checksum mismatch").format(url=url))
-                part.unlink()
+                part.unlink(missing_ok=True)
                 continue
             part.replace(dest)
             return dest
@@ -126,17 +135,48 @@ def _short(url: str) -> str:
     return url.split("?")[0]
 
 
-def _get(http, url, part: Path, size, progress) -> None:
+def _content_range(value: str | None) -> tuple[int | None, int | None]:
+    """Parses "bytes START-END/TOTAL" or "bytes */TOTAL"; returns (start, total)."""
+    if not value:
+        return None, None
+    m = re.fullmatch(r"\s*bytes\s+(?:(\d+)-\d+|\*)/(\d+|\*)\s*", value)
+    if not m:
+        return None, None
+    start = int(m.group(1)) if m.group(1) is not None else None
+    total = int(m.group(2)) if m.group(2) != "*" else None
+    return start, total
+
+
+def _get(http, url, part: Path, size, progress, retry_416: bool = True) -> None:
     have = part.stat().st_size if part.exists() else 0
-    if size is not None and have >= size:
+    if size and have >= size:
         have = 0
-        part.unlink()
+        part.unlink(missing_ok=True)
     headers = {"Accept": "*/*", "User-Agent": f"openexpress/{__version__}"}
     if have:
         headers["Range"] = f"bytes={have}-"
     with http.get(url, headers=headers, stream=True, timeout=(30, 300)) as resp:
-        if resp.status_code == 206:
-            mode = "ab"
+        if resp.status_code == 416 and have:
+            total = _content_range(resp.headers.get("Content-Range"))[1]
+            if total is not None and total == have:
+                return  # the .part is already complete
+            part.unlink(missing_ok=True)
+            if retry_416:
+                resp.close()
+                _get(http, url, part, size, progress, retry_416=False)
+                return
+            raise DownloadError(f"HTTP {resp.status_code}", resp.status_code)
+        if resp.status_code == 206 and have:
+            start = _content_range(resp.headers.get("Content-Range"))[0]
+            if start == have:
+                mode = "ab"
+            elif start == 0:
+                mode, have = "wb", 0
+            else:  # unexpected or missing range: start over without Range
+                resp.close()
+                part.unlink(missing_ok=True)
+                _get(http, url, part, size, progress, retry_416)
+                return
         elif resp.ok:
             mode, have = "wb", 0
         else:

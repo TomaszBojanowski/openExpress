@@ -41,6 +41,8 @@ def decode(data: bytes) -> list[Field]:
     while pos < len(data):
         key, pos = _read_varint(data, pos)
         number, wt = key >> 3, key & 7
+        if number == 0:
+            raise ProtoError(_("Invalid field number 0"))
         if wt == VARINT:
             value, pos = _read_varint(data, pos)
         elif wt == LEN:
@@ -48,10 +50,11 @@ def decode(data: bytes) -> list[Field]:
             if pos + n > len(data):
                 raise ProtoError(_("Truncated length-delimited field"))
             value, pos = data[pos : pos + n], pos + n
-        elif wt == I32:
-            value, pos = data[pos : pos + 4], pos + 4
-        elif wt == I64:
-            value, pos = data[pos : pos + 8], pos + 8
+        elif wt in (I32, I64):
+            n = 4 if wt == I32 else 8
+            if pos + n > len(data):
+                raise ProtoError(_("Truncated fixed-size field"))
+            value, pos = data[pos : pos + n], pos + n
         else:
             raise ProtoError(_("Unsupported wire type {type}").format(type=wt))
         out.append(Field(number, wt, value))

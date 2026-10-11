@@ -56,7 +56,17 @@ def _read_uint(raw: bytes, big_endian: bool) -> int | None:
 
 
 def iter_messages(data: bytes):
-    """Yields (global message number, {field number: unsigned value}) for each data message."""
+    """Yields (global message number, {field number: unsigned value}) for each data message.
+
+    Malformed or truncated input raises FitError (never IndexError/struct.error).
+    """
+    try:
+        yield from _iter_messages(data)
+    except (IndexError, struct.error) as e:
+        raise FitError(_("Damaged FIT file ({error})").format(error=e)) from e
+
+
+def _iter_messages(data: bytes):
     if len(data) < 12:
         raise FitError(_("File too short"))
     header_size = data[0]
@@ -84,14 +94,20 @@ def iter_messages(data: bytes):
             global_num = struct.unpack_from(">H" if big_endian else "<H", data, pos + 2)[0]
             nfields = data[pos + 4]
             pos += 5
+            if pos + 3 * nfields > end:
+                raise FitError(_("Truncated FIT definition message"))
             fields = []
             for _field in range(nfields):
                 fields.append((data[pos], data[pos + 1]))
                 pos += 3
             dev_size = 0
             if has_dev:
+                if pos + 1 > end:
+                    raise FitError(_("Truncated FIT definition message"))
                 ndev = data[pos]
                 pos += 1
+                if pos + 3 * ndev > end:
+                    raise FitError(_("Truncated FIT definition message"))
                 for _dev in range(ndev):
                     dev_size += data[pos + 1]
                     pos += 3

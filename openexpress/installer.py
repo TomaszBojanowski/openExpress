@@ -7,6 +7,7 @@ inside it. Requires the `7z` tool (p7zip) for the cabinet and MSI containers.
 
 from __future__ import annotations
 
+import mmap
 import shutil
 import struct
 import subprocess
@@ -20,6 +21,7 @@ from openexpress.settings import (
 
 CAB_MAGIC = b"MSCF\0\0\0\0"
 MIN_CONTAINER = 10 * 1024 * 1024
+COPY_CHUNK = 1024 * 1024
 # Stream names of the DLLs inside ExpressInstaller.msi
 MSI_STREAMS = {"NetworkingDLL": "Networking.dll", "UtilitiesDLL": "Utilities.dll"}
 
@@ -41,18 +43,35 @@ def _run_7z(archive: Path, out: Path, *members: str) -> None:
 
 def _attached_container(exe: Path, dest: Path) -> Path:
     """Copies the largest cabinet attached to the WiX Burn bootstrapper (the package payload)."""
-    data = exe.read_bytes()
     best = None
-    pos = data.find(CAB_MAGIC)
-    while pos != -1:
-        size = struct.unpack_from("<I", data, pos + 8)[0]
-        if size >= MIN_CONTAINER and pos + size <= len(data) and (best is None or size > best[1]):
-            best = (pos, size)
-        pos = data.find(CAB_MAGIC, pos + 1)
-    if best is None:
-        raise SetupError(_("{file} does not look like a Garmin Express installer.").format(
-            file=exe.name))
-    dest.write_bytes(data[best[0]: best[0] + best[1]])
+    with open(exe, "rb") as f:
+        try:
+            data = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        except ValueError:  # empty file
+            data = None
+        if data is not None:
+            with data:
+                end = len(data)
+                pos = data.find(CAB_MAGIC)
+                while pos != -1:
+                    if pos + 12 <= end:
+                        size = struct.unpack_from("<I", data, pos + 8)[0]
+                        if (size >= MIN_CONTAINER and pos + size <= end
+                                and (best is None or size > best[1])):
+                            best = (pos, size)
+                    pos = data.find(CAB_MAGIC, pos + 1)
+        if best is None:
+            raise SetupError(_("{file} does not look like a Garmin Express installer.").format(
+                file=exe.name))
+        f.seek(best[0])
+        remaining = best[1]
+        with open(dest, "wb") as out:
+            while remaining:
+                chunk = f.read(min(COPY_CHUNK, remaining))
+                if not chunk:
+                    break
+                out.write(chunk)
+                remaining -= len(chunk)
     return dest
 
 
@@ -60,7 +79,10 @@ def _find_msi(folder: Path) -> Path:
     """The application MSI is the largest file in the payload container."""
     files = [p for p in folder.iterdir() if p.is_file()]
     msi = max(files, key=lambda p: p.stat().st_size, default=None)
-    if msi is None or msi.read_bytes()[:8] != bytes.fromhex("d0cf11e0a1b11ae1"):
+    if msi is not None:
+        with open(msi, "rb") as f:
+            header = f.read(8)
+    if msi is None or header != bytes.fromhex("d0cf11e0a1b11ae1"):
         raise SetupError(_("The installer does not contain the expected MSI package."))
     return msi
 
