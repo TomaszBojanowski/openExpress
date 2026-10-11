@@ -11,3 +11,7 @@ dist/
 # Private reverse-engineering notes (never publish)
 docs/analiza/
 docs/ANALIZA.md
+.flatpak-builder/
+flatpak-build/
+flatpak-repo/
+*.flatpak

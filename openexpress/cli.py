@@ -823,7 +823,12 @@ def cmd_watch(args) -> int:
 
 
 def cmd_install_desktop(args) -> int:
-    from openexpress import desktop
+    from openexpress import background, desktop
+
+    if background.in_flatpak():
+        print(_("In the Flatpak version, the menu entry is installed by Flatpak. Turn on "
+                "background sync in the window: Watch tab, Settings, Sync in the background."))
+        return 0
 
     written, removed = desktop.install(dry_run=not args.apply)
     for p in written:

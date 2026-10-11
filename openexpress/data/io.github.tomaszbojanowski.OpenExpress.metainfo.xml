@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.tomaszbojanowski.OpenExpress</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>openExpress</name>
+  <summary>Manage your Garmin watch on Linux</summary>
+  <summary xml:lang="pl">Zarządzaj zegarkiem Garmin na Linuksie</summary>
+  <developer id="io.github.tomaszbojanowski">
+    <name>Tomasz Bojanowski</name>
+  </developer>
+  <description>
+    <p>
+      openExpress is an unofficial Linux app for Garmin watches connected with a USB cable.
+      It syncs the watch with Garmin Connect and installs software updates, maps,
+      Connect IQ apps and music.
+    </p>
+    <p xml:lang="pl">
+      openExpress to nieoficjalna aplikacja dla Linuksa do zegarków Garmin podłączonych
+      kablem USB. Synchronizuje zegarek z Garmin Connect oraz instaluje aktualizacje
+      oprogramowania, mapy, aplikacje Connect IQ i muzykę.
+    </p>
+    <ul>
+      <li>Upload activities, sleep, HRV and other health data to Garmin Connect</li>
+      <li xml:lang="pl">Wysyłanie aktywności, snu, HRV i innych danych zdrowotnych do Garmin Connect</li>
+      <li>Send courses, workouts and apps queued in Garmin Connect to the watch</li>
+      <li xml:lang="pl">Przesyłanie na zegarek kursów, treningów i aplikacji z kolejki Garmin Connect</li>
+      <li>Install watch software updates and free maps such as TopoActive</li>
+      <li xml:lang="pl">Instalacja aktualizacji oprogramowania i darmowych map, np. TopoActive</li>
+      <li>Install, update and remove Connect IQ apps and watch faces</li>
+      <li xml:lang="pl">Instalacja, aktualizacja i usuwanie aplikacji oraz tarcz Connect IQ</li>
+      <li>Copy music, podcasts, audiobooks and playlists</li>
+      <li xml:lang="pl">Kopiowanie muzyki, podcastów, audiobooków i playlist</li>
+      <li>Sync automatically in the background when the watch is connected</li>
+      <li xml:lang="pl">Automatyczna synchronizacja w tle po podłączeniu zegarka</li>
+      <li>No telemetry</li>
+      <li xml:lang="pl">Bez telemetrii</li>
+    </ul>
+    <p>
+      The one-time setup reads the data needed to talk to Garmin's servers from your own copy
+      of the official Garmin Express installer for Windows. openExpress is not affiliated with,
+      endorsed by or supported by Garmin Ltd. Garmin, fēnix, Garmin Connect and Garmin Express
+      are trademarks of Garmin Ltd. or its subsidiaries.
+    </p>
+    <p xml:lang="pl">
+      Jednorazowa konfiguracja odczytuje dane potrzebne do komunikacji z serwerami Garmina
+      z Twojej kopii oficjalnego instalatora Garmin Express dla Windows. openExpress nie jest
+      powiązany z Garmin Ltd., nie jest przez nią zatwierdzony ani wspierany. Garmin, fēnix,
+      Garmin Connect i Garmin Express są znakami towarowymi Garmin Ltd. lub jej spółek
+      zależnych.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.tomaszbojanowski.OpenExpress.desktop</launchable>
+  <provides>
+    <binary>openexpress</binary>
+  </provides>
+  <url type="homepage">https://github.com/TomaszBojanowski/openExpress</url>
+  <url type="bugtracker">https://github.com/TomaszBojanowski/openExpress/issues</url>
+  <url type="vcs-browser">https://github.com/TomaszBojanowski/openExpress</url>
+  <url type="translate">https://github.com/TomaszBojanowski/openExpress#adding-a-translation</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Maps on the watch and free maps to install</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/maps.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Connect IQ apps</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/apps.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Music, podcasts and audiobooks</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/music.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>Garmin</keyword>
+    <keyword>fenix</keyword>
+    <keyword>Garmin Connect</keyword>
+    <keyword>watch</keyword>
+    <keyword>sync</keyword>
+    <keyword>maps</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.2.0" date="2026-10-11">
+      <description>
+        <ul>
+          <li>Flatpak package</li>
+          <li>Background sync can be turned on in the window</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-10-11">
+      <description>
+        <p>First public release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

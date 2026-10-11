@@ -26,14 +26,18 @@ APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 class Watcher(Gio.Application):
     def __init__(self, delay_s: int = 5):
         # Same ID as the GUI: notifications get the app icon and name.
+        # Unique: a second start (autostart + GUI switch) just exits.
         super().__init__(application_id=APP_ID + ".Watch",
-                         flags=Gio.ApplicationFlags.NON_UNIQUE)
+                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.delay_s = delay_s
         self.running = False
 
     def do_startup(self):
         Gio.Application.do_startup(self)
         self.hold()
+        quit_action = Gio.SimpleAction.new("quit", None)
+        quit_action.connect("activate", lambda *_a: self.release())
+        self.add_action(quit_action)
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self.on_mount)
         log.info("Waiting for the watch to be connected…")

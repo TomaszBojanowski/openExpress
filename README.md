@@ -65,6 +65,32 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 All commands that change anything run **in dry-run mode by default**:
 they show the plan and do nothing without `--apply`.
 
+## Install
+
+### Flatpak (recommended)
+
+Download `openexpress-<version>.flatpak` from the
+[latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest) and run:
+
+```bash
+flatpak install --user openexpress-*.flatpak   # needs the Flathub remote for the GNOME runtime
+flatpak run io.github.tomaszbojanowski.OpenExpress
+```
+
+openExpress then appears in your application menu. On the **Watch** tab select the
+Garmin Express installer, sign in, and optionally turn on **Sync in the background**.
+The command-line tool is available as
+`flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
+
+Build the Flatpak yourself:
+
+```bash
+flatpak install --user flathub org.gnome.Sdk//50
+flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.tomaszbojanowski.OpenExpress.yml
+```
+
+### From source
+
 ## Requirements
 
 - Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0

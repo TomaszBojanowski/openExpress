@@ -59,30 +59,32 @@ def _env_prefix() -> str:
     return "" if root in installed else f"PYTHONPATH={root}"
 
 
+def desktop_entry(exec_gui: str, background: bool = False) -> str:
+    """The .desktop launcher, with translated keys for every available language."""
+    name = _localized("Name", NAME_BACKGROUND) if background else f"Name={NAME}"
+    text = f"""[Desktop Entry]
+Type=Application
+{name}
+{_localized("GenericName", GENERIC_NAME)}
+{_localized("Comment", COMMENT)}
+Exec={exec_gui}
+Icon={DESKTOP_ID}
+Terminal=false
+Categories=Utility;GTK;
+{_localized("Keywords", KEYWORDS)}
+StartupNotify=true
+"""
+    return text + ("NoDisplay=true\n" if background else "")
+
+
 def files() -> dict[Path, str]:
     home = Path.home()
     data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share"))
     config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
     env = _env_prefix()
     exec_gui = (f"env {env} " if env else "") + _python_cmd("gui")
-    entry = """[Desktop Entry]
-Type=Application
-{name}
-{generic_name}
-{comment}
-Exec={exec_gui}
-Icon={icon}
-Terminal=false
-Categories=Utility;GTK;
-{keywords}
-StartupNotify=true
-"""
-    common = dict(generic_name=_localized("GenericName", GENERIC_NAME),
-                  comment=_localized("Comment", COMMENT),
-                  keywords=_localized("Keywords", KEYWORDS), exec_gui=exec_gui,
-                  icon=DESKTOP_ID)
-    desktop = entry.format(name=f"Name={NAME}", **common)
-    desktop_watch = entry.format(name=_localized("Name", NAME_BACKGROUND), **common)
+    desktop = desktop_entry(exec_gui)
+    desktop_watch = desktop_entry(exec_gui, background=True)
     # systemd unit files have no localized keys: Description stays in English.
     service = f"""[Unit]
 Description={SERVICE_DESCRIPTION}
@@ -101,7 +103,7 @@ WantedBy=graphical-session.target
 """
     return {
         data / "applications" / f"{DESKTOP_ID}.desktop": desktop,
-        data / "applications" / f"{DESKTOP_ID}.Watch.desktop": desktop_watch + "NoDisplay=true\n",
+        data / "applications" / f"{DESKTOP_ID}.Watch.desktop": desktop_watch,
         config / "systemd" / "user" / SERVICE: service,
         data / "icons" / "hicolor" / "scalable" / "apps" / f"{DESKTOP_ID}.svg": ICON.read_text(),
     }

@@ -62,7 +62,7 @@ def save_ui_language(code: str) -> None:
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
-        super().__init__(application=app, title="openExpress", default_width=1080,
+        super().__init__(application=app, title="openExpress", default_width=1160,
                          default_height=720)
         self.session: service.DeviceSession | None = None
         self.busy = False
@@ -306,6 +306,7 @@ class MainWindow(Adw.ApplicationWindow):
                            active=bool(self.gui_settings.get("auto_sync")))
         sw.connect("notify::active", self._on_auto_sync)
         g.add(sw)
+        g.add(self._background_row())
         row = Adw.ActionRow(title=_("Backup"),
                             subtitle=GLib.markup_escape_text(str(paths.default_backup_dir())))
         # TRANSLATORS: button that creates a backup
@@ -317,6 +318,41 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_auto_sync(self, row, _pspec):
         self.gui_settings["auto_sync"] = row.get_active()
         save_gui_settings(self.gui_settings)
+
+    def _background_row(self) -> Adw.SwitchRow:
+        from openexpress import background
+
+        state = background.is_enabled()
+        if state is None:
+            state = bool(self.gui_settings.get("background"))
+        row = Adw.SwitchRow(
+            title=_("Sync in the background"),
+            subtitle=_("Starts at login and syncs whenever the watch is connected, "
+                       "also when this window is closed"),
+            active=state)
+        row.connect("notify::active", self._on_background)
+        return row
+
+    def _on_background(self, row, _pspec):
+        from openexpress import background
+
+        enabled = row.get_active()
+        if enabled == bool(self.gui_settings.get("background")) and background.in_flatpak():
+            return
+
+        def done(ok: bool, error: str) -> None:
+            if not ok:
+                row.handler_block_by_func(self._on_background)
+                row.set_active(not enabled)
+                row.handler_unblock_by_func(self._on_background)
+                self.error(_("Background sync"), error or _("The change failed."))
+                return
+            self.gui_settings["background"] = enabled
+            save_gui_settings(self.gui_settings)
+            self.toast(_("Background sync enabled") if enabled
+                       else _("Background sync disabled"))
+
+        background.set_enabled(enabled, done)
 
     def _language_row(self) -> Adw.ComboRow:
         codes = [""] + i18n.available_languages()
