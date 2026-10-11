@@ -215,6 +215,7 @@ class MainWindow(Adw.ApplicationWindow):
         section.append(_("Preferences"), "app.preferences")
         if hasattr(Adw, "ShortcutsDialog"):
             section.append(_("Keyboard Shortcuts"), "app.shortcuts")
+        section.append(_("Report a Device or Problem…"), "app.report")
         section.append(_("About openExpress"), "app.about")
         menu.append_section(None, section)
         menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
@@ -1218,6 +1219,44 @@ class MainWindow(Adw.ApplicationWindow):
                              self.load_section("maps", force=True))))
         d.present(self)
 
+    def show_report(self) -> None:
+        from openexpress import report
+
+        s = self.session
+        if s is None:
+            text = _("Connect the watch first, so that the report can describe it.")
+            body_text = ""
+        else:
+            body_text = report.build(s.device, s.storage, s.logged_in)
+            text = _("Copy this report and paste it into a new issue on GitHub. "
+                     "It contains no serial number, unit ID or e-mail.")
+        d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
+        if body_text:
+            view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
+                                top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
+            view.get_buffer().set_text(body_text)
+            scroller = Gtk.ScrolledWindow(child=view, min_content_height=260,
+                                          min_content_width=420)
+            scroller.add_css_class("card")
+            d.set_extra_child(scroller)
+            d.add_response("copy", _("Copy"))
+        d.add_response("close", _("Close"))
+        d.add_response("open", _("Copy and Open GitHub"))
+        d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
+        d.set_close_response("close")
+
+        def response(_d, r):
+            if r == "copy":
+                self.get_clipboard().set(body_text)
+                self.toast(_("Report copied"))
+            elif r == "open":
+                if body_text:
+                    self.get_clipboard().set(body_text)
+                Gtk.UriLauncher.new(report.ISSUE_URL).launch(self, None, None, None)
+
+        d.connect("response", response)
+        d.present(self)
+
     def show_about(self) -> None:
         from openexpress import __version__
 
@@ -1594,6 +1633,7 @@ class App(Adw.Application):
             return lambda *_a: getattr(self.main_window(), name)()
 
         actions = {"preferences": window_call("show_preferences"),
+                   "report": window_call("show_report"),
                    "about": window_call("show_about"),
                    "quit": lambda *_a: self.request_quit()}
         if hasattr(Adw, "ShortcutsDialog"):

@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work as expected
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy:** never paste `openexpress info` output, `GarminDevice.xml`, files from
+        `~/.config/openexpress` or your e-mail address – use the device report instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Maps page
+        2. Click Install next to …
+        3. …
+  - type: textarea
+    id: output
+    attributes:
+      label: Error message or command output
+      description: |
+        For details run the command with `-v`, e.g. `openexpress -v sync`. Check the output
+        for personal data before pasting.
+      render: text
+  - type: textarea
+    id: report
+    attributes:
+      label: Device report
+      description: Main menu (☰) → Report a Device or Problem… → Copy, or `openexpress report`.
+      render: markdown
+    validations:
+      required: true

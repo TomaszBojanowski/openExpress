@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest an improvement or a missing Garmin Express feature
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like openExpress to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it useful?
+      description: For example, which watch you use and how you would use the feature.

@@ -1,0 +1,61 @@
+name: Device report
+description: Tell us how openExpress works with your Garmin watch (also when everything works!)
+title: "[Device] "
+labels: ["device report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing openExpress! Reports for watches other than the fēnix 8 are the
+        most valuable help right now – **also when everything works**.
+
+        **Privacy:** don't paste `openexpress info` output, your `GarminDevice.xml` or files
+        from `~/.config/openexpress` – they contain your watch's serial number, unit ID,
+        map unlock codes or login token. The report below contains none of these.
+  - type: textarea
+    id: report
+    attributes:
+      label: Device report
+      description: |
+        In the window: main menu (☰) → **Report a Device or Problem…** → Copy.
+        Or in a terminal: `openexpress report`
+        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report`).
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What did you try, and what worked?
+      description: Tick only what you tried and that worked; describe problems below.
+      options:
+        - label: The watch is detected and the Watch page shows it
+        - label: Logging in to Garmin Connect
+        - label: Sync – a new activity appeared in Garmin Connect
+        - label: Sync – a course or workout from Garmin Connect arrived on the watch
+        - label: Checking for software updates
+        - label: Installing a software update
+        - label: Installing or removing a map
+        - label: Installing or removing a Connect IQ app or watch face
+        - label: Copying music, podcasts or audiobooks
+        - label: Background sync when the watch is connected
+  - type: textarea
+    id: problems
+    attributes:
+      label: What didn't work?
+      description: |
+        What you did, what you expected and what happened. Error messages help a lot.
+        For details run the command with `-v`, e.g. `openexpress -v sync` (check the output
+        for personal data before pasting).
+    validations:
+      required: false
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install openExpress?
+      options:
+        - Flatpak bundle from GitHub releases
+        - pip / wheel
+        - From source (git clone)
+    validations:
+      required: true

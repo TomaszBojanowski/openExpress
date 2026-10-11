@@ -163,6 +163,21 @@ def cmd_info(args) -> int:
     return 0
 
 
+def cmd_report(args) -> int:
+    from openexpress import report
+
+    st, dev = open_device(args)
+    try:
+        logged_in = store.load() is not None
+    except Exception:  # noqa: BLE001 - only reported as yes/no
+        logged_in = False
+    print(report.build(dev, st, logged_in), end="")
+    print("\n" + _("This report contains no serial number, unit ID or e-mail. "
+                   "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
+          file=sys.stderr)
+    return 0
+
+
 def cmd_files(args) -> int:
     st, dev = open_device(args)
     types = [args.type] if args.type else sorted(
@@ -980,6 +995,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--ui-language", choices=i18n.available_languages() + ["system"],
                    help=_("language of this program (\"system\": follow the system locale)"))
     s.set_defaults(func=cmd_setup, _parser=s)
+
+    s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
+    s.set_defaults(func=cmd_report)
 
     s = sub.add_parser("info", help=_("information about the connected watch"))
     s.add_argument("--json", action="store_true")

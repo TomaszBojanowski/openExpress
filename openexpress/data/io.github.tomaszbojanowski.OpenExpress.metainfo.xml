@@ -93,6 +93,12 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.2" date="2026-10-11">
+      <description>
+        <p>New "Report a Device or Problem" window and openexpress report command: a report
+        for GitHub without serial numbers or other identifiers.</p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-10-11">
       <description>
         <p>Reliability release with about 50 fixes from a code review, among others:</p>

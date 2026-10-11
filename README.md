@@ -66,6 +66,18 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 All commands that change anything run **in dry-run mode by default**:
 they show the plan and do nothing without `--apply`.
 
+## Supported devices
+
+| Device | Status |
+|---|---|
+| fēnix 8 (47 mm, Solar) | tested by the developer: sync, updates, maps, Connect IQ |
+| Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
+
+Tried openExpress with another device? Please send a
+[device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) –
+also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**,
+or run `openexpress report`. The report contains no serial number, unit ID or e-mail.
+
 ## Install
 
 ### Flatpak (recommended)
