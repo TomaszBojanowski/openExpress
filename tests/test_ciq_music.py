@@ -2043,3 +2043,102 @@ def test_app_list_that_cannot_be_read_stops_the_change(iq_device, backups, monke
     assert str(error.value).endswith("Nothing was changed.")
     assert watched == [] and not backups.exists()
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+# --- the window: restoring the order from a copy ------------------------------------------
+
+
+def test_order_choices_are_newest_first_with_their_differences(old_copies):
+    from openexpress.gui.app import MainWindow
+
+    st, dev, backups, stamps = old_copies
+    state = ciq.read_installed(dev, st)
+    choices = ciq.order_choices(dev, state, backups)
+    assert [c.name for c, _plan in choices] == [
+        f"GARMIN-APPS 2026-10-12 ({s})" for s in reversed(stamps)]
+    rows = MainWindow._order_rows(choices)
+    assert rows[0] == ("2026-10-12 (21.19.41)", "2 positions differ from now", True)
+    assert rows[-1] == ("2026-10-12 (17.37.37)", "5 positions differ from now", True)
+    assert not any(str(dev.unit_id) in text for row in rows for text in row[:2])
+    # A copy made by the program carries the model after the time; one in the order the
+    # device has now cannot be chosen.
+    ciq.save_app_list_copy(dev, st, backups, now=datetime.datetime(2026, 10, 12, 22, 0, 0))
+    rows = MainWindow._order_rows(ciq.order_choices(dev, state, backups))
+    assert rows[0] == ("2026-10-12 (22.00.00) Test watch", "The same order as now", False)
+    assert len(rows) == 10
+
+
+def test_order_summary_shows_the_first_ten_changes(order_device):
+    from openexpress.gui.app import MainWindow
+
+    st, dev, backups = order_device
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
+    text = MainWindow._order_summary(plan, ciq.app_list_copy_note(dev, st))
+    assert text.splitlines() == [
+        "5 positions would change (widget: 5):",
+        "  3: Calendar (now: Music)", "  4: Maps (now: Calendar)", "  5: Music (now: Maps)",
+        "  6: Tides (now: Moon)", "  7: Moon (now: Tides)",
+        "",
+        "The same apps with the same flags; only the order changes.",
+        "Before any change, a copy of the app list of the device is made."]
+    many = ciq.OrderPlan(entries=plan.entries, moved=plan.moved * 5, only_in_copy=[],
+                         only_on_device=[plan.entries[0]])
+    lines = MainWindow._order_summary(many, "note").splitlines()
+    assert lines[0].startswith("25 positions would change")
+    assert len([line for line in lines if line.startswith("  ")]) == 11
+    assert "  … and 15 more" in lines and "Not in the copy, left where they are: Store" in lines
+
+
+def test_order_is_blocked_while_changes_wait_or_entries_are_unreadable(order_device, device_root):
+    from openexpress.gui.app import MainWindow
+
+    st, dev, backups = order_device
+    assert MainWindow._order_blocked(ciq.read_installed(dev, st)) == ""
+    ciq.set_enabled(dev, st, W2, True)  # an app list now waits on the device
+    waiting = ciq.read_installed(dev, st)
+    assert waiting.waiting and MainWindow._order_blocked(waiting).startswith(
+        "The device has not applied earlier changes yet.")
+    (device_root / "GARMIN/APPS/IN.BIN").unlink()
+    damaged_out_bin(device_root, "truncated")
+    assert "cannot be read" in MainWindow._order_blocked(ciq.read_installed(dev, st))
+
+
+def test_window_restores_the_order_through_the_shared_function(order_device):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev, backups = order_device
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    toasts, loads, tasks = [], [], []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
+        load_section=lambda key, force=False: loads.append((key, force)),
+        run_task=lambda title, fn, done=None, failed=None: (tasks.append(title), done(fn())))
+    MainWindow.restore_order(win, copy)
+    assert tasks == ["Restoring the order…"] and loads == [("apps", True)]
+    assert toasts == ["Wrote the new order to the device; it takes effect after the device is "
+                      "unplugged."]
+    written = ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))
+    assert [(e[0], e[1]) for e in written] == [(a.app_id, a.app_type) for a in copy.state.apps]
+    assert len(ciq.app_list_copies(dev, backups)) == 2  # the copy before the change
+    # Now the change waits: the row is blocked until the device is unplugged.
+    assert MainWindow._order_blocked(ciq.read_installed(dev, st)) != ""
+
+
+def test_window_says_so_when_the_order_is_already_the_same(order_device):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev, backups = order_device
+    same = ciq.AppListCopy(path=None, name="GARMIN-APPS x", state=ciq.read_installed(dev, st))
+    toasts = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
+        load_section=lambda key, force=False: None,
+        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+    MainWindow.restore_order(win, same)
+    assert toasts == ["The apps on the device are already in this order."]
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()

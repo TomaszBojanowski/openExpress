@@ -1528,6 +1528,17 @@ class MainWindow(Adw.ApplicationWindow):
                 row.add_suffix(self._trash(_("Remove {name}").format(name=a.name),
                                            lambda a=a: self.confirm_remove_app(a)))
             g.add(row)
+        g = sec.group(_("Order"))
+        blocked = self._order_blocked(state)
+        row = Adw.ActionRow(
+            title=_("Restore the order from a copy"),
+            subtitle=GLib.markup_escape_text(
+                blocked or _("A copy of the app list is made before every change")))
+        row.add_suffix(self._button(_("Restore…"), self.choose_order))
+        if blocked:
+            row.set_tooltip_text(blocked)
+            row.set_sensitive(False)
+        g.add(row)
         installed = {a.app_id for a in state.apps}
         missing = [a for a in account if a.app_id not in installed]
         g = sec.group(
@@ -1620,6 +1631,120 @@ class MainWindow(Adw.ApplicationWindow):
         if app.pending_removal:
             return _("Will be removed after the device is unplugged")
         return ""
+
+    # --- the order of the apps -------------------------------------------------------
+
+    @staticmethod
+    def _order_blocked(state) -> str:
+        """Why the order cannot be changed now; empty when it can."""
+        if state.unreadable:
+            return _("The app list on the device has entries that cannot be read.")
+        if state.waiting:
+            return _("The device has not applied earlier changes yet. Unplug it, wait until "
+                     "it is ready and try again.")
+        return ""
+
+    @staticmethod
+    def _order_rows(choices) -> list[tuple[str, str, bool]]:
+        """(title, subtitle, can be chosen) for each copy, newest first. Only the name of
+        a copy is shown, never its path."""
+        from openexpress import ciq
+
+        rows = []
+        for copy, plan in choices:
+            n = len(plan.moved)
+            rows.append((ciq.copy_title(copy),
+                         ngettext("{count} position differs from now",
+                                  "{count} positions differ from now", n).format(count=n)
+                         if n else _("The same order as now"), bool(n)))
+        return rows
+
+    @staticmethod
+    def _order_summary(plan, copy_note: str) -> str:
+        from openexpress import ciq
+
+        lines = [("  " if indented else "") + text
+                 for text, indented in ciq.describe_order(plan, 10)]
+        lines += ["", _("The same apps with the same flags; only the order changes."), copy_note]
+        return "\n".join(lines)
+
+    def choose_order(self) -> None:
+        """Pick one of the saved copies of the app list to take the order from."""
+        from openexpress import ciq
+
+        s = self.session
+
+        def work():
+            state = ciq.read_installed(s.device, s.storage)
+            return state, ciq.order_choices(s.device, state)
+
+        def show(result):
+            state, choices = result
+            blocked = self._order_blocked(state)
+            if blocked:
+                self.error(_("Restore the order from a copy"), blocked)
+                return
+            if not choices:
+                self.error(_("Restore the order from a copy"),
+                           _("There are no copies of the app list yet. A copy is made before "
+                             "every change of the apps on the device."))
+                return
+            d = Adw.AlertDialog(
+                heading=_("Restore the order from a copy"),
+                body=_("Choose the copy of the app list to take the order from."))
+            box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+            box.add_css_class("boxed-list")
+            for (title, subtitle, usable), choice in zip(self._order_rows(choices), choices):
+                row = Adw.ActionRow(title=GLib.markup_escape_text(title),
+                                    subtitle=GLib.markup_escape_text(subtitle))
+                row.set_sensitive(usable)
+                row.set_selectable(usable)
+                row.choice = choice
+                box.append(row)
+            scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER,
+                                          propagate_natural_height=True, max_content_height=360)
+            scroller.set_child(box)
+            d.set_extra_child(scroller)
+            d.add_response("cancel", _("Cancel"))
+            # TRANSLATORS: button that leads to the summary of the change
+            d.add_response("next", _("Next"))
+            d.set_response_enabled("next", False)
+            box.connect("row-selected",
+                        lambda _b, row: d.set_response_enabled("next", row is not None))
+            d.connect("response", lambda _d, r: r == "next" and box.get_selected_row()
+                      and self.confirm_order(*box.get_selected_row().choice))
+            d.present(self)
+
+        self.run_task(_("Reading the copies of the app list…"), work, show)
+
+    def confirm_order(self, copy, plan) -> None:
+        from openexpress import ciq
+
+        s = self.session
+        d = Adw.AlertDialog(
+            heading=_("Restore this order?"),
+            body=ciq.copy_title(copy) + "\n\n" + self._order_summary(
+                plan, ciq.app_list_copy_note(s.device, s.storage)))
+        d.add_response("cancel", _("Cancel"))
+        d.add_response("ok", _("Restore the Order"))
+        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
+        d.connect("response", lambda _d, r: r == "ok" and self.restore_order(copy))
+        d.present(self)
+
+    def restore_order(self, copy) -> None:
+        from openexpress import ciq
+
+        s = self.session
+
+        def done(result):
+            plan, _saved = result
+            self.toast(_("Wrote the new order to the device; it takes effect after the device "
+                         "is unplugged.") if plan.moved
+                       else _("The apps on the device are already in this order."))
+            self.load_section("apps", force=True)
+
+        self.run_task(_("Restoring the order…"),
+                      lambda: ciq.restore_order(s.device, s.storage, copy.state), done)
 
     def install_apps(self, apps) -> None:
         from openexpress import ciq

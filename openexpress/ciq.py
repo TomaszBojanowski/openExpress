@@ -99,6 +99,8 @@ class InstalledState:
     # Entries of OUT.BIN that could not be read. They are missing from `apps`, so a
     # rewritten app list (IN.BIN) would leave them out: nothing may be written then.
     unreadable: int = 0
+    # An app list (IN.BIN) is on the device that it has not applied yet.
+    waiting: bool = False
 
     @property
     def store_apps(self) -> list[InstalledApp]:
@@ -251,6 +253,7 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
     state = parse_out_bin(storage.read(_config_path(device, False)))
     in_path = _config_path(device, True)
     if storage.exists(in_path):
+        state.waiting = True
         # Keyed by ID and type: a built-in item can be listed as an app and as a widget
         # under the same ID, each with its own flags.
         pending = {(a[0], a[1]): a for a in parse_in_bin(storage.read(in_path))}
@@ -1188,6 +1191,45 @@ def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
                if key(now) != key(then)],
         only_in_copy=[a for a in copy.apps if key(a) not in on_device],
         only_on_device=[a for a in current if key(a) not in rank])
+
+
+def order_choices(device: GarminDevice, state: InstalledState,
+                  backup_dir: Path | None = None) -> list[tuple[AppListCopy, OrderPlan]]:
+    """The copies of the device's app list, newest first, each with what its order would
+    change."""
+    return [(c, plan_order(state, c.state))
+            for c in reversed(app_list_copies(device, backup_dir))]
+
+
+def copy_title(copy: AppListCopy) -> str:
+    """A copy as shown to the user: when it was made and for which model."""
+    name = copy.name
+    return name[len(APP_LIST_COPY_PREFIX):] if name.startswith(APP_LIST_COPY_PREFIX) else name
+
+
+def describe_order(plan: OrderPlan, limit: int | None = 10) -> list[tuple[str, bool]]:
+    """What a change of order does, as lines for a dry run or a confirmation; the flag
+    marks the lines that list single positions."""
+    kinds: dict[str, int] = {}
+    for _position, _now, then in plan.moved:
+        kinds[then.type_name] = kinds.get(then.type_name, 0) + 1
+    lines = [(ngettext("{count} position would change ({kinds}):",
+                       "{count} positions would change ({kinds}):", len(plan.moved)).format(
+        count=len(plan.moved),
+        kinds=", ".join(f"{kind}: {n}" for kind, n in sorted(kinds.items()))), False)]
+    shown = plan.moved if limit is None else plan.moved[:limit]
+    lines += [(_("{position}: {new} (now: {old})").format(
+        position=position, new=then.name, old=now.name), True)
+        for position, now, then in shown]
+    more = len(plan.moved) - len(shown)
+    if more:
+        lines.append((ngettext("… and {count} more", "… and {count} more", more).format(
+            count=more), True))
+    for label, apps in ((_("Not in the copy, left where they are: {names}"), plan.only_on_device),
+                        (_("Only in the copy, ignored: {names}"), plan.only_in_copy)):
+        if apps:
+            lines.append((label.format(names=", ".join(a.name for a in apps)), False))
+    return lines
 
 
 def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,

@@ -721,25 +721,8 @@ def _apps_order(args, dev, st, state) -> int:
     if not plan.moved:
         print(_("The apps on the device are already in this order."))
         return 0
-    kinds: dict[str, int] = {}
-    for _position, _now, then in plan.moved:
-        kinds[then.type_name] = kinds.get(then.type_name, 0) + 1
-    print(ngettext("{count} position would change ({kinds}):",
-                   "{count} positions would change ({kinds}):", len(plan.moved)).format(
-        count=len(plan.moved),
-        kinds=", ".join(f"{kind}: {n}" for kind, n in sorted(kinds.items()))))
-    shown = plan.moved if args.all else plan.moved[:10]
-    for position, now, then in shown:
-        print("  " + _("{position}: {new} (now: {old})").format(
-            position=position, new=then.name, old=now.name))
-    if len(shown) < len(plan.moved):
-        more = len(plan.moved) - len(shown)
-        print("  " + ngettext("… and {count} more", "… and {count} more", more).format(
-            count=more))
-    for label, apps in ((_("Not in the copy, left where they are: {names}"), plan.only_on_device),
-                        (_("Only in the copy, ignored: {names}"), plan.only_in_copy)):
-        if apps:
-            print(label.format(names=", ".join(a.name for a in apps)))
+    for line, indented in ciq.describe_order(plan, None if args.all else 10):
+        print(("  " if indented else "") + line)
     print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
             "(OUT.BIN)").format(entries=len(plan.entries),
                                 count=sum(1 for a in state.apps if not a.pending)))
