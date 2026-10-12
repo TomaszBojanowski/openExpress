@@ -271,6 +271,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
         self._watch_last_sync()
+        # Apps whose update was written over PTP and waits for the device to be unplugged.
+        # Kept in memory only; forgotten when the device goes away.
+        self._updated_apps: set = set()
         # A device that was just plugged in is on USB for a while before gvfs offers it.
         self._usb_state, self._usb_since = ABSENT, 0.0
         GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
@@ -545,6 +548,7 @@ class MainWindow(Adw.ApplicationWindow):
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
         if ours or garmin_usb(mount):
             self.session = None
+            self._updated_apps = set()  # unplugged: the device applies what was waiting
             self.show_device()
 
     @staticmethod
@@ -1559,6 +1563,10 @@ class MainWindow(Adw.ApplicationWindow):
         state, account, updates = result
         self.apps_cache = result
         sec = self.sections["apps"]
+        if not state.waiting:
+            # No app list waits on the device any more, so no update can be waiting either.
+            self._updated_apps = set()
+        updates = self._updates_to_offer(updates, self._updated_apps)
         upd = {u.app_id: u for u in updates}
         icons: dict = {}
         g = sec.group(_("On the device"), self._apps_space(state))
@@ -1571,7 +1579,7 @@ class MainWindow(Adw.ApplicationWindow):
             if a.disabled:
                 # TRANSLATORS: state of a Connect IQ app
                 sub += " · " + _("disabled")
-            waiting = self._waiting_note(a)
+            waiting = self._waiting_note(a, a.app_id in self._updated_apps)
             if waiting:
                 # Written or deleted already; the device applies it once it is unplugged.
                 row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
@@ -1690,13 +1698,21 @@ class MainWindow(Adw.ApplicationWindow):
                         slots).format(count=slots, size=space)
 
     @staticmethod
-    def _waiting_note(app) -> str:
-        """For an app whose install or removal waits for the device to be unplugged."""
+    def _waiting_note(app, updated: bool = False) -> str:
+        """For an app whose install, removal or update waits for the device to be
+        unplugged. `updated`: a new version was written in this run of the program."""
         if app.pending:
             return _("Will be installed after the device is unplugged")
         if app.pending_removal:
             return _("Will be removed after the device is unplugged")
+        if updated:
+            return _("Will be updated after the device is unplugged")
         return ""
+
+    @staticmethod
+    def _updates_to_offer(updates, updated_ids) -> list:
+        """The available updates without those already written to the device."""
+        return [u for u in updates if u.app_id not in updated_ids]
 
     # --- the order of the apps -------------------------------------------------------
 
@@ -1823,6 +1839,7 @@ class MainWindow(Adw.ApplicationWindow):
                                     apps, progress=self.progress)
 
         def done(rep):
+            self._updated_apps = set(getattr(self, "_updated_apps", ())) | set(rep.updated_ids)
             if rep.failed:
                 self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
             elif rep.for_phone and not rep.installed:

@@ -2350,3 +2350,75 @@ def test_cli_update_of_a_hidden_app(hidden_update, apps_cli, monkeypatch, capsys
     assert ("Wrote the update of Face It to the device; it will be installed after the device "
             "is unplugged.") in out
     assert "Installed:" not in out and apps_cli.acks == [7]
+
+
+# --- the window remembers updates written over PTP until the device is unplugged -----------
+
+
+def test_report_names_the_updated_apps_by_id(hidden_update):
+    st, dev, _fake, _app = hidden_update
+    other = uuid.UUID("11111111-2222-4333-8444-555555555555")
+    second = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+              "metadata": {"messageurl": "y", "messagename": "Other",
+                           "appdetails": {"id": str(other)}}}
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE, second], known={},
+                             direct=True)
+    assert rep.updated_ids == [FACE]  # the new app is not an update
+
+
+def test_window_notes_an_update_that_waits(hidden_update):
+    from openexpress.gui.app import MainWindow
+
+    app = ciq.InstalledApp(app_id=FACE, app_type=3, name="Face It", disabled=False)
+    assert MainWindow._waiting_note(app, updated=True) == (
+        "Will be updated after the device is unplugged")
+    assert MainWindow._waiting_note(app, updated=False) == ""
+    app.pending_removal = True  # a removal says more than an update
+    assert MainWindow._waiting_note(app, updated=True) == (
+        "Will be removed after the device is unplugged")
+    offered = MainWindow._updates_to_offer(
+        [store_app(FACE, "Face It"), store_app(STORE_ID, "Connect IQ Store")], {FACE})
+    assert [u.name for u in offered] == ["Connect IQ Store"]  # "Update all" skips Face It
+    assert MainWindow._updates_to_offer([store_app(FACE, "Face It")], {FACE}) == []
+
+
+def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, monkeypatch):
+    import types
+
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+
+    st, dev, _fake, _app = hidden_update
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(ciq, "StoreApi", FakeStore)
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    toasts, shown = [], []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        _updated_apps=set(), toast=toasts.append, progress=lambda text: None,
+        error=lambda title, text: pytest.fail(text),
+        load_section=lambda key, force=False: None, show_device=lambda: shown.append(1),
+        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+    MainWindow.install_apps(win, [store_app(FACE, "Face It")])
+    assert win._updated_apps == {FACE}
+    assert toasts == ["Wrote the update of Face It to the device; it will be installed after "
+                      "the device is unplugged."]
+
+    # Our own unmount and mount for a PTP session is not an unplug.
+    mounted_at = str(st.label).rsplit("/", 1)[0]  # the storage is a folder of the mount
+
+    class Mount:
+        def get_root(self):
+            return types.SimpleNamespace(get_uri=lambda: mounted_at)
+
+    from openexpress.device import gio_storage
+
+    monkeypatch.setattr(gio_storage, "_quiet_until", {gio_storage._key(mounted_at): float("inf")})
+    MainWindow._on_mount_removed(win, None, Mount())
+    assert win._updated_apps == {FACE} and win.session is not None
+    # A real unplug forgets them.
+    monkeypatch.setattr(gio_storage, "_quiet_until", {})
+    MainWindow._on_mount_removed(win, None, Mount())
+    assert win._updated_apps == set() and win.session is None and shown == [1]

@@ -462,6 +462,7 @@ class IqInstallReport:
     direct: list[str] = field(default_factory=list)
     # Those of `direct` that are new versions of apps already on the device.
     updated: list[str] = field(default_factory=list)
+    updated_ids: list[uuid.UUID] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Left in Garmin's queue: openExpress cannot write them to this device over USB yet.
     for_phone: list[str] = field(default_factory=list)
@@ -641,6 +642,7 @@ def install_queued(
         report.installed += again.installed
         report.direct += again.direct
         report.updated += again.updated
+        report.updated_ids += again.updated_ids
         report.failed += again.failed
         report.for_phone += again.for_phone
     return report
@@ -882,6 +884,8 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
         to_ack += [(h.message, h.name) for h in sent]
         report.direct += [h.name for h in sent]
         report.updated += [h.name for h in sent if h.entry is None]
+        report.updated_ids += [app_id for app_id in (
+            message_app_id(h.message) for h in sent if h.entry is None) if app_id is not None]
     return registered
 
 
