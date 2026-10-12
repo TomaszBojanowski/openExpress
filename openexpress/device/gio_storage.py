@@ -6,6 +6,7 @@ conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -25,6 +26,8 @@ from gi.repository import Gio, GLib  # noqa: E402
 from openexpress.device import ptp  # noqa: E402
 from openexpress.device.storage import DeviceError, Entry, RemountFailed, Storage  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
+
+log = logging.getLogger(__name__)
 
 GARMIN_VID = "091e"
 SYSFS_USB = Path("/sys/bus/usb/devices")
@@ -430,16 +433,27 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
     Garmin device on USB there is nothing to wait for. A device that was seen and then
     leaves the bus is given USB_GAP_S to come back before it counts as unplugged.
     """
-    deadline = clock() + WAIT_FOR_DEVICE_S
+    started = clock()
+    deadline = started + WAIT_FOR_DEVICE_S
     told = False
     gone_since = None  # when a device we were waiting for left the bus
+    seen = None  # the last USB state written to the log
     while True:
         try:
-            return _open_device_storage(uri)
+            st = _open_device_storage(uri)
+            log.info("device: opened over MTP after %.1f s (USB %s)", clock() - started,
+                     st.usb_id or "?")
+            return st
         except SeveralDevices:
             raise
         except DeviceError as e:
             state = usb_state()
+            if state != seen:
+                # ABSENT: no Garmin on USB; STARTING: 091e:0003; PRESENT: on USB, not mounted.
+                log.info("device: not available after %.1f s, USB state: %s (%s), waiting: %s",
+                         clock() - started, state,
+                         ", ".join(f"091e:{p}" for p in garmin_products_on_usb()) or "-", wait)
+                seen = state
             if state == ABSENT:
                 if not (wait and told):
                     raise
@@ -575,13 +589,21 @@ def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
 @contextmanager
 def _exclusive(uri: str, bus: int, address: int, storage: Storage):
     _quiet_until[_key(uri)] = float("inf")
+    started = time.monotonic()
     try:
+        log.info("PTP: unmounting the device from gvfs")
         _unmount(uri)
         try:
             with ptp.Session(ptp.LibusbTransport.open(bus, address)) as session:
+                log.info("PTP: session open after %.1f s", time.monotonic() - started)
                 yield session
+        except Exception as e:
+            log.warning("PTP: session ended with %s: %s", type(e).__name__, e)
+            raise
         finally:
             _remount(uri, storage)
+            log.info("PTP: session closed, device mounted again after %.1f s",
+                     time.monotonic() - started)
     finally:
         # The signals of the last mount arrive a moment later.
         _quiet_until[_key(uri)] = time.monotonic() + REMOUNT_QUIET_S

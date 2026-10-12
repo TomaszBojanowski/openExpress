@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urljoin
+from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 
 import requests
 
@@ -144,10 +144,18 @@ class GarminClient:
     def _request(self, method: str, url: str, what: str, **kw) -> requests.Response:
         """Send a request; network failures become ApiError."""
         kw.setdefault("timeout", TIMEOUT)
+        started = time.monotonic()
+        # Only the host and the path go to the log: no query, no headers, no body.
+        where = urlsplit(url)._replace(query="", fragment="").geturl()
         try:
-            return self.http.request(method, url, **kw)
+            resp = self.http.request(method, url, **kw)
         except requests.RequestException as e:
+            log.warning("HTTP %s %s failed after %.1f s: %s", method, where,
+                        time.monotonic() - started, type(e).__name__)
             raise ApiError(_("{what}: network error ({error})").format(what=what, error=e)) from e
+        log.info("HTTP %s %s -> %s in %.1f s", method, where, resp.status_code,
+                 time.monotonic() - started)
+        return resp
 
     @staticmethod
     def _json(resp: requests.Response, what: str) -> Any:
@@ -352,6 +360,7 @@ class GarminClient:
                 log.warning("Upload status check failed (%s)", e)
                 return 0
             status = resp.status_code
+            log.debug("upload status check -> %s", status)
             if status != 202:
                 return status
             d = resp.headers.get("location-in-milliseconds")

@@ -69,6 +69,7 @@ def log_file(tmp_path, monkeypatch) -> Path:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.delenv(applog.ENV, raising=False)
     monkeypatch.setattr(applog, "_hidden", {})
+    monkeypatch.setattr(applog, "_media", {})
     yield tmp_path / "state" / "openexpress" / applog.LOG_NAME
     applog.close()
 

@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from openexpress import paths
+from openexpress import applog, paths
 from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
@@ -279,6 +279,9 @@ def plan_uploads(
                                         p.name.lower().endswith(".zip"))
                     )
     plan.candidates.sort(key=_upload_order)
+    log.info("upload plan: %d new (%s), %d already uploaded, %d types skipped",
+             len(plan.candidates), applog.counts(c.datatype for c in plan.candidates),
+             plan.already_done, len(plan.skipped_types))
     return plan
 
 
@@ -381,6 +384,13 @@ def run_uploads(
         finally:
             c.data = None
         state.save()
+    log.info("uploads: %d uploaded, %d duplicates, %d already in Connect, %d rejected, "
+             "%d failed, %d not confirmed, %d for another tracker",
+             len(report.uploaded), len(report.duplicates), len(report.already_in_connect),
+             len(report.rejected), len(report.failed), len(report.not_confirmed),
+             len(report.tracker_conflict))
+    for label, error in report.failed:
+        log.warning("upload of %s failed: %s", label.split("/")[0], error)
     return report
 
 
@@ -542,6 +552,10 @@ def plan_downloads(device: GarminDevice, messages: list[dict]) -> list[DownloadI
         elif special:
             item.handled_by = special
         items.append(item)
+    log.info("queue from Garmin Connect: %d items (%s); %d not accepted by the device, "
+             "handled elsewhere: %s", len(items), applog.counts(i.datatype for i in items),
+             sum(1 for i in items if i.unsupported),
+             applog.counts(i.handled_by for i in items if i.handled_by))
     return items
 
 
@@ -617,4 +631,9 @@ def run_downloads(
     finally:
         if state is not None and unacked != initial:
             state.save_unacked(unacked)
+    log.info("downloads: %d written, %d empty, %d failed, %d not acknowledged",
+             len(report.written), len(report.empty), len(report.failed),
+             len(report.ack_failed))
+    for _label, error in report.failed:
+        log.warning("download failed: %s", error)
     return report

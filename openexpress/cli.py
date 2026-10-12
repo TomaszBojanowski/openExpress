@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from openexpress import __version__, i18n, paths
+from openexpress import __version__, applog, i18n, paths
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError, ClockSkew, GarminClient, OwnershipError, Unauthorized,
@@ -62,7 +62,7 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
 
     st = open_storage(args)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    applog.hide(dev.unit_id, "unit")
+    applog.hide_device(dev)
     return st, dev
 
 
@@ -750,6 +750,8 @@ def _apps_order(args, dev, st, state) -> int:
         raise ciq.CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
                              "until it is ready and try again"))
     plan = ciq.plan_order(state, copy.state)
+    log.info("apps order: plan with %d entries, %d would move; apply: %s", len(plan.entries),
+             len(plan.moved), args.apply)
     print(_("Order of the apps from the copy {name}").format(name=copy.name))
     if not plan.moved:
         print(_("The apps on the device are already in this order."))
@@ -935,6 +937,9 @@ def cmd_apps(args) -> int:
                                "app is only queued in Garmin Connect and installed by the phone "
                                "or Garmin Express.").format(name=a.name, path=folder))
         over_usb = [a for a in targets if dirs[a.app_id] not in (ciq.REFUSED, ciq.SANDBOXED)]
+        log.info("apps %s: %s; app folder: %s; already queued: %d; apply: %s", cmd,
+                 ", ".join(a.name for a in targets), applog.counts(dirs.values()),
+                 sum(1 for a in targets if a.app_id in waiting), args.apply)
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
@@ -1524,9 +1529,11 @@ def _run(args, service, requests) -> int:
     try:
         return args.func(args)
     except user_errors as e:
+        log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
         print(_("Error: {error}").format(error=e), file=sys.stderr)
         return 1
     except ApiError as e:
+        log.info("server error: %s: %s", type(e).__name__, e)
         print(_("Server error: {error}").format(error=e), file=sys.stderr)
         if args.verbose and e.body:
             print(e.body, file=sys.stderr)
@@ -1534,7 +1541,8 @@ def _run(args, service, requests) -> int:
     except requests.RequestException as e:
         print(_("Network error: could not reach the Garmin server ({error})").format(
             error=e), file=sys.stderr)
-        logging.getLogger(__name__).debug("network error", exc_info=True)
+        log.info("network error: %s", type(e).__name__)
+        log.debug("network error", exc_info=True)
         return 1
     except KeyboardInterrupt:
         print(_("Interrupted."), file=sys.stderr)

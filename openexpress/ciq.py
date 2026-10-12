@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import posixpath
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -23,7 +24,7 @@ from typing import Callable
 
 from urllib.parse import urlencode
 
-from openexpress import paths, proto
+from openexpress import applog, paths, proto
 from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
 from openexpress.device.storage import DeviceError, RemountFailed, Storage
@@ -372,7 +373,10 @@ class StoreApi:
         h = self.client._client_headers()
         h["Accept"] = "application/json"
         h["Authorization"] = self.client._sign(method, url)
+        started = time.monotonic()
         resp = self.client.http.request(method, url, headers=h, json=json_body, timeout=60)
+        log.info("HTTP %s %s -> %s in %.1f s", method, self.base + path, resp.status_code,
+                 time.monotonic() - started)
         self.client._check(resp, what)
         return lower_keys(resp.json()) if resp.content else None
 
@@ -629,7 +633,19 @@ def install_apps(
                          and t.name not in report.sandboxed]
     report.sandboxed_updates = [t.name for t in targets
                                 if states[t.app_id] == SANDBOXED and t.app_id in have]
+    log.info("apps install: %s; app folder: %s; requested in Garmin Connect: %d",
+             ", ".join(t.name for t in targets) or "-", applog.counts(states.values()),
+             len(to_queue))
+    _log_install(report)
     return report
+
+
+def _log_install(report: IqInstallReport) -> None:
+    log.info("apps written: %d (over PTP %d, updates %d); left in the queue %d (sandbox %d); "
+             "failed %d", len(report.installed), len(report.direct), len(report.updated),
+             len(report.for_phone), len(report.sandboxed), len(report.failed))
+    for name, error in report.failed:
+        log.warning("app %s failed: %s", name, error)
 
 
 def sandbox_text(update: bool = False, queued: bool = False) -> str:
@@ -706,6 +722,8 @@ def install_queued(
         report.failed += again.failed
         report.for_phone += again.for_phone
         report.sandboxed += again.sandboxed
+    if not direct:
+        _log_install(report)  # a sync; an install the user asked for is logged by its caller
     return report
 
 
@@ -1043,6 +1061,8 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
         storage.delete(p)
         removed.append(p)
     # Only the files are deleted here; the device updates its app list itself.
+    log.info("apps remove: %s, %d files deleted through the mounted storage", app.name,
+             len(removed))
     return removed
 
 
@@ -1114,6 +1134,8 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
                 "update the list.").format(name=app.name, error=problem))
         raise CiqError(_("The app list on the device could not be updated: {error}")
                        .format(error=problem))
+    log.info("apps remove over PTP: %s, %d files deleted, app list written", app.name,
+             len(removed))
     return removed
 
 
@@ -1352,6 +1374,7 @@ def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
     if storage.read(real) != data:
         _delete_quietly(storage, real)
         raise CiqError(_("Write verification of {path} failed").format(path=real))
+    log.info("apps order: wrote %d entries, %d moved", len(plan.entries), len(plan.moved))
     return plan, saved
 
 
@@ -1365,5 +1388,7 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
     if app is None:
         raise CiqError(_("App not found on the device"))
     app.disabled = not enabled
+    log.info("apps %s: %s (type %s)", "enable" if enabled else "disable", app.name,
+             app.app_type)
     save_app_list_copy(device, storage)
     storage.write(_config_path(device, True), build_in_bin(state.listed))

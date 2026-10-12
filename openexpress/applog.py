@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 from openexpress import paths
+from openexpress.i18n import _
 
 LOG_NAME = "openexpress.log"
 MAX_BYTES = 1_000_000
@@ -37,19 +38,31 @@ _PATTERNS = [
     # An MTP address carries the serial number of the device.
     (re.compile(r"mtp://[^\s/'\"]+"), "mtp://<device>"),
     (re.compile(r"mtp:host=[^\s/'\"]+"), "mtp:host=<device>"),
+    # Media files are named by the user: only the folder is kept. These names are the
+    # fallback; the folders the connected device declares are added by `hide_device()`.
+    (re.compile(r"(?i)\b(music|podcasts?|audiobooks?|playlists?)/[^\n'\":]*"), r"\1/<file>"),
+    # Local paths (error messages carry them), up to a quote or the ": " that follows a path.
+    # The program's own files and system folders stay readable in tracebacks.
+    (re.compile(r"(?<![\w.:/<>~-])(?:~/|/(?!usr/|app/|lib(?:64)?/|sys/|dev/|proc/))"
+                r"[^\n'\":]*(?::(?! )[^\n'\":]*)*"), "<path>"),
     (re.compile(r"(?i)\b(authorization|cookie|set-cookie)\b(\"?\s*[:=]\s*).*"), r"\1\2<hidden>"),
     (re.compile(rf"(?i)\b({_KEYS})\b(\"?\s*[=:]\s*\"?)[^\s&\"',;]+"), r"\1\2<hidden>"),
     (re.compile(r"\bST-[\w-]+"), "<ticket>"),
     (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+"), "<email>"),
     (re.compile(r"\b[0-9A-Fa-f]{16,}\b"), "<hex>"),
-    # Long mixed strings of letters and digits: keys and tokens.
-    (re.compile(r"(?<![\w+/-])(?=[\w+/-]*\d)(?=[\w+/-]*[a-z])(?=[\w+/-]*[A-Z])[\w+/-]{24,}={0,2}"),
+    # Long mixed strings of letters and digits: keys and tokens. Without "/" (a path on the
+    # device is not a key), except in a string long enough to be base64.
+    (re.compile(r"(?<![\w+-])(?=[\w+-]*\d)(?=[\w+-]*[a-z])(?=[\w+-]*[A-Z])[\w+-]{24,}={0,2}"),
      "<hidden>"),
+    (re.compile(r"(?<![A-Za-z0-9+/])(?=[A-Za-z0-9+/]*\d)(?=[A-Za-z0-9+/]*[a-z])"
+                r"(?=[A-Za-z0-9+/]*[A-Z])[A-Za-z0-9+/]{40,}={0,2}"), "<hidden>"),
     # Unit IDs, serial numbers, profile numbers, activity IDs…
     (re.compile(r"\d{7,}"), "<number>"),
 ]
 
+_PACKAGE_PARENT = str(Path(__file__).resolve().parent.parent) + os.sep
 _hidden: dict[str, str] = {}
+_media: dict[str, re.Pattern] = {}  # media folders declared by the devices seen
 _handlers: list[logging.Handler] = []
 
 
@@ -60,10 +73,24 @@ def hide(value, label: str) -> None:
         _hidden[text] = f"<{label}>"
 
 
+def hide_device(device) -> None:
+    """Never write what is private about this device: its unit ID, and the names of the
+    files in the folders it declares for music, podcasts, audiobooks and playlists."""
+    hide(device.unit_id, "unit")
+    for f in device.files:
+        folder = (f.path or "").strip("/")
+        if f.datatype.startswith("MEDIA_") and folder:
+            _media[folder.casefold()] = re.compile(
+                r"(?i)(?<![\w])(" + re.escape(folder) + r")/[^\n'\":]*")
+
+
 def redact(text: str) -> str:
     """`text` without anything that identifies the user, the account or a device."""
     for value, label in sorted(_hidden.items(), key=lambda item: -len(item[0])):
         text = text.replace(value, label)
+    for folder in sorted(_media, key=len, reverse=True):
+        text = _media[folder].sub(r"\1/<file>", text)
+    text = text.replace(_PACKAGE_PARENT, "")  # tracebacks: "openexpress/ciq.py"
     home = str(Path.home())
     if len(home) > 1:
         text = text.replace(home, "~")
@@ -119,6 +146,21 @@ def rotate(path: Path) -> None:
                 os.replace(newer, older)
 
 
+def size(n: int | None) -> str:
+    """A size for the log: short, so that it is not taken for an identifier."""
+    if n is None:
+        return "?"
+    return f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB" if n < 1024 ** 2 else f"{n / 1024 ** 2:.1f} MB"
+
+
+def counts(names) -> str:
+    """`names` counted, e.g. "FIT_TYPE_4×2, FIT_TYPE_32×1"; "-" when there are none."""
+    seen: dict[str, int] = {}
+    for name in names:
+        seen[str(name)] = seen.get(str(name), 0) + 1
+    return ", ".join(f"{k}×{v}" for k, v in sorted(seen.items())) or "-"
+
+
 def log_path() -> Path:
     return paths.state_dir() / LOG_NAME
 
@@ -163,7 +205,7 @@ def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
             handlers.append(file)
         except OSError as e:
             # The program works without its log file.
-            print(f"openexpress: no log file ({e})", file=sys.stderr)
+            print(_("No log file: {error}").format(error=e.strerror or e), file=sys.stderr)
             path = None
     for handler in handlers:
         root.addHandler(handler)

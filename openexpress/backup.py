@@ -7,6 +7,7 @@ skipped. The `keep` most recent backups are retained.
 
 from __future__ import annotations
 
+import logging
 import posixpath
 import shutil
 from dataclasses import dataclass
@@ -14,8 +15,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from openexpress import applog
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import OUTPUT, GarminDevice
+
+log = logging.getLogger(__name__)
 
 SKIP_PREFIXES = ("MEDIA_", "IQ")
 SKIP_TYPES = {"ErrorShutdownReports", "ULFLogs", "ExpressRequest", "WiFiConfiguration"}
@@ -104,4 +108,6 @@ def run_backup(
                 continue
             shutil.rmtree(p)
             removed.append(p)
+    log.info("backup: %d files (%s), %d old backups removed", count, applog.size(total),
+             len(removed))
     return BackupResult(target, count, total, removed)

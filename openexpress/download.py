@@ -15,7 +15,7 @@ from typing import Callable
 
 import requests
 
-from openexpress import __version__
+from openexpress import __version__, applog
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -101,6 +101,7 @@ def fetch(
     if not size:
         size = None  # 0 or missing: unknown
     if _valid(dest, size, md5):
+        log.info("download: already in the cache (%s)", applog.size(size))
         return dest
     http = session or requests.Session()
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -117,6 +118,8 @@ def fetch(
                     break  # retrying the same request will not help
                 continue
             got = part.stat().st_size
+            # The address is signed and names the product: only the host goes to the log.
+            log.info("download: %s from %s", applog.size(got), urlsplit(url).netloc)
             if size is not None and got != size:
                 errors.append(_("{url}: size {got} instead of {size}")
                               .format(url=url, got=got, size=size))

@@ -71,7 +71,7 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None) 
 
         storage = open_device_storage(device_uri)
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
-    applog.hide(device.unit_id, "unit")
+    applog.hide_device(device)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 
@@ -196,6 +196,12 @@ class UploadGate:
 
 
 def check_upload_allowed(client) -> UploadGate:
+    gate = _check_upload_allowed(client)
+    log.info("uploads allowed: %s%s", gate.allowed, f" ({gate.reason})" if gate.reason else "")
+    return gate
+
+
+def _check_upload_allowed(client) -> UploadGate:
     """Ask Garmin Connect whether data may be uploaded. Never assumes "yes": a missing,
     empty or unreadable answer and a failed request all block uploads. An expired login
     or a wrong clock is raised as such."""
@@ -342,9 +348,22 @@ def run_sync(
     include_diagnostics: bool = False,
 ) -> SyncSummary:
     """Full sync. `first_run`: 'baseline' or 'all' for the first time."""
-    with sync_lock():
-        summary = _run_sync(s, first_run, progress, include_diagnostics)
+    started = time.monotonic()
+    log.info("sync: start (first run: %s, diagnostics: %s)", first_run or "-",
+             include_diagnostics)
+    try:
+        with sync_lock():
+            summary = _run_sync(s, first_run, progress, include_diagnostics)
+    except Exception as e:
+        log.warning("sync: stopped after %.1f s: %s: %s", time.monotonic() - started,
+                    type(e).__name__, e)
+        raise
     save_last_sync(s.device.unit_id, summary)
+    log.info("sync: end after %.1f s: %d uploaded, %d already known, %d downloaded, %d errors",
+             time.monotonic() - started, summary.uploaded, summary.skipped_known,
+             summary.downloaded, len(summary.errors))
+    for error in summary.errors:
+        log.warning("sync error: %s", error)
     return summary
 
 
@@ -494,6 +513,7 @@ def _trueup(s, messages, progress, errors) -> list[str]:
     try:
         res = trueup.run(s.device, s.storage, s.client, messages, progress)
     except Exception as e:  # noqa: BLE001
+        log.warning("TrueUp failed: %s: %s", type(e).__name__, e)
         errors.append(f"TrueUp: {e}")
         return []
     if res.written:

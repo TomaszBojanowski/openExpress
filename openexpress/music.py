@@ -10,15 +10,19 @@ Layout follows Garmin Express (docs/analiza/05, section 4):
 from __future__ import annotations
 
 import os
+import logging
 import posixpath
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from openexpress import applog
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import N_, _
+
+log = logging.getLogger(__name__)
 
 KINDS = {"track": "MEDIA_TRACK", "podcast": "MEDIA_PODCAST", "audiobook": "MEDIA_AUDIOBOOK"}
 KIND_NAMES = {"track": N_("Music"), "podcast": N_("Podcasts"), "audiobook": N_("Audiobooks")}
@@ -247,6 +251,8 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
         progress(_("Copying {path}").format(path=dest))
         real = storage.write_file(dest, t.local, transfer_progress)
         written.append(real)
+    # Counts and sizes only: file names are the user's own.
+    log.info("music: %d files copied (%s)", len(written), applog.size(plan.size))
     return written
 
 
@@ -333,6 +339,7 @@ def remove(storage: Storage, device_paths: list[str]) -> list[str]:
         if storage.exists(p):
             storage.delete(p)
             removed.append(p)
+    log.info("music: %d of %d files removed", len(removed), len(device_paths))
     return removed
 
 

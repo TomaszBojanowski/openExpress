@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from openexpress import download, paths
+from openexpress import applog, download, paths
 from openexpress.device.storage import Storage
 from openexpress.i18n import _
 
@@ -170,6 +170,8 @@ def install(
             raise UpdateError(_("Write verification of {path} failed").format(path=real))
         report.installed.append(f"{u.name} {u.version} -> {real}")
         report.restart_required |= u.restart_required or u.is_primary
+        log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
+                 applog.size(local.stat().st_size), posixpath.dirname(real))
     return report
 
 

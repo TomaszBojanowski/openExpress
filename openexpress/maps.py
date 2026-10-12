@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from openexpress import download, paths
+from openexpress import applog, download, paths
 from openexpress.device.storage import Storage
 from openexpress.i18n import N_, _
 
@@ -241,6 +241,9 @@ def install(
         data = base64.b64decode(gma)
         real = storage.write(fname.replace("\\", "/"), data)
         report.unlocks.append(real)
+    log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files",
+             m.name, m.version, len(report.written), applog.size(m.size), len(report.removed),
+             len(report.unlocks))
     return report
 
 
@@ -254,6 +257,7 @@ def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
             progress(_("Removing {path}").format(path=p))
             storage.delete(p)
             removed.append(p)
+    log.info("map removal: %s, %d files removed", m.name, len(removed))
     return removed
 
 

@@ -20,12 +20,15 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.util
+import logging
 import struct
 from dataclasses import dataclass
 from typing import Protocol
 
 from openexpress.device.storage import DeviceError
 from openexpress.i18n import _
+
+log = logging.getLogger(__name__)
 
 # Operations. The 0x9xxx one is Garmin's extension.
 OPEN_SESSION = 0x1002
@@ -466,6 +469,18 @@ class Session:
     def transact(self, operation: int, *params: int,
                  data_out: bytes | None = None) -> tuple[int, bytes, list[int]]:
         """One transaction: (response code, data received, response parameters)."""
+        try:
+            code, data, answer = self._transact(operation, *params, data_out=data_out)
+        except PtpError as e:
+            log.warning("PTP 0x%04X failed: %s", operation, type(e).__name__)
+            raise
+        # Only codes and sizes: parameters are handles, the data may be a file.
+        log.debug("PTP 0x%04X -> 0x%04X (sent %d B, received %d B)", operation, code,
+                  len(data_out or b""), len(data))
+        return code, data, answer
+
+    def _transact(self, operation: int, *params: int,
+                  data_out: bytes | None = None) -> tuple[int, bytes, list[int]]:
         if self._broken:
             raise PtpError(_("The connection to the device is out of step."))
         if data_out is not None and len(data_out) > MAX_OBJECT_SIZE:

@@ -10,17 +10,21 @@ Flow as in Garmin Express (SyncTrueUpOperation, docs/analiza/03 section 3.4):
 
 from __future__ import annotations
 
+import logging
 import posixpath
 import time
 import uuid
 from dataclasses import dataclass
 from typing import Callable
 
+from openexpress import applog
 from openexpress.connect import GarminClient
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.fit import FitError, true_up_time
 from openexpress.i18n import _
+
+log = logging.getLogger(__name__)
 
 DATATYPE = "FIT_TYPE_39"
 CHECK_BACK = "check_back"
@@ -67,6 +71,7 @@ def run(
     targets = device.targets(DATATYPE)
     if not targets:
         result.note = _("the device does not support TrueUp")
+        log.info("TrueUp: not supported by the device")
         return result
     for _round in range(MAX_ROUNDS):
         m = _find(messages, CHECK_BACK)
@@ -80,6 +85,7 @@ def run(
             when = None
         delay = 0.0 if when is None else when - now()
         wait = MAX_WAIT_S if delay >= LONG_DELAY_S else max(0.0, min(delay, MAX_WAIT_S))
+        log.info("TrueUp: check back, waiting %.0f s", wait)
         if wait:
             sleep(wait)
             result.waited_s += wait
@@ -87,13 +93,17 @@ def run(
     m = _find(messages, TRUE_UP)
     if m is None:
         result.note = _("Connect has not prepared TrueUp data yet")
+        log.info("TrueUp: nothing prepared yet (waited %.0f s)", result.waited_s)
         return result
     progress(_("TrueUp: writing daily totals to the device"))
     data = _fetch(client, m)
     if not data:
         result.note = _("empty TrueUp file")
+        log.info("TrueUp: empty file")
         return result
     t = targets[0]
     name = f"{t.basename + '_' if t.basename else ''}{uuid.uuid4()}.{t.extension or 'FIT'}"
     result.written = storage.write(posixpath.join(t.path, name), data)
+    log.info("TrueUp: wrote %s to %s (waited %.0f s)", applog.size(len(data)), t.path,
+             result.waited_s)
     return result

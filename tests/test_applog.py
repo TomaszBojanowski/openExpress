@@ -30,9 +30,19 @@ SECRETS = [
     ("long key", "consumer fc3e99d2-118c-44b8-8ae3-03370dde24c0 key Xy7Kq2Lm9Pw4Rt6Vb8Nc1Zd3Fg5Hj",
      "Xy7Kq2Lm9Pw4Rt6Vb8Nc1Zd3Fg5Hj"),
     ("long hex", "md5 of the key 0123456789abcdef0123456789abcdef", "0123456789abcdef"),
+    ("base64 secret", "body Zm9vL2Jhci9iYXovcXV4L3F1dXgvY29yZ2UvZ3JhdWx0LzEyMzQ1Ng== sent",
+     "Zm9vL2Jhci9iYXovcXV4"),
     ("profile number", "user profile 12345678 loaded", "12345678"),
     ("activity id", "activity 20123456789 already in Connect", "20123456789"),
     ("home folder", f"reading {os.path.expanduser('~')}/Music/x", os.path.expanduser("~")),
+    ("local file", "File not found: /srv/media/Anna Jantar/Tyle słońca.mp3", "Jantar"),
+    ("local file in the home folder", "cannot read ~/Muzyka/Moja Lista/01 Utwór.flac: denied",
+     "Utwór"),
+    ("media file on the device",
+     "Cannot write mtp://091e_51b4_X/Internal Storage/Music/Anna Jantar/Album/01.mp3: refused",
+     "Jantar"),
+    ("playlist on the device", "wrote Music/Playlists/Bieganie rano.m3u8", "Bieganie"),
+    ("folder given with --path", "Cannot read /tmp/kopia zegarka/GARMIN/GarminDevice.xml", "kopia"),
 ]
 
 
@@ -50,6 +60,11 @@ def test_redact_keeps_what_is_useful():
             "part 006-B4532-00, software 23.39, HTTP 204, 265.5 KB, FIT_TYPE_39")
     assert applog.redact(text) == text
     assert applog.redact("mtp://091e_51b4_X/Internal/GARMIN/Apps") == "mtp://<device>/Internal/GARMIN/Apps"
+    assert applog.redact("cannot read ~/x y/z.fit: denied") == "cannot read <path>: denied"
+    assert applog.redact("HTTP GET https://example.org/device-service/a/b -> 200 in 0.4 s") == (
+        "HTTP GET https://example.org/device-service/a/b -> 200 in 0.4 s")
+    assert applog.redact("wrote 1.2 KB to Garmin/NewFiles, 3/5 done, /sys/bus/usb/devices") == (
+        "wrote 1.2 KB to Garmin/NewFiles, 3/5 done, /sys/bus/usb/devices")
 
 
 def test_known_values_are_hidden_even_when_they_look_harmless():
@@ -72,6 +87,7 @@ def test_every_line_of_the_file_is_redacted(log_file):
         "https://example.org:443 GET /device/%s?oauth_token=zzz999 200", UNIT)
     text = log_file.read_text()
     assert "Traceback" in text and "RuntimeError" in text  # the traceback is there…
+    assert 'File "tests/test_applog.py", line ' in text  # …and still says where
     for secret in (UNIT, SERIAL, "anna@example.org", "abc123def", "zzz999"):
         assert secret not in text  # …and nothing private is
     assert "device <unit> at mtp://<device>/" in text
@@ -136,7 +152,7 @@ def test_program_works_without_a_log_file(tmp_path, monkeypatch, capsys):
     blocked.write_text("")
     monkeypatch.setenv("XDG_STATE_HOME", str(blocked))
     assert applog.setup("cli") is None
-    assert "no log file" in capsys.readouterr().err
+    assert capsys.readouterr().err.startswith("No log file: ")
     logging.getLogger("openexpress.test").warning("still running")
     assert "still running" in capsys.readouterr().err
 
@@ -196,3 +212,182 @@ def test_subcommand_is_logged(log_file, device_root):
     main(["--path", str(device_root), "maps", "remove", "Some Private Name"])
     start = next(line for line in lines(log_file) if " start: " in line)
     assert "start: maps remove --path (" in start and "Private" not in start
+
+
+# --- what the program writes about its work ---------------------------------------------------
+
+from test_ciq_music import (  # noqa: E402, F401 - the fixtures
+    FACE, CountingClient, FakeStore, hidden_apps, iq_device, queue_once_requested, store_app,
+)
+from test_upload_consent import QUEUED, Account  # noqa: E402
+
+DEVICE_UNIT = "1234567890"  # the unit ID of the test device (tests/conftest.py)
+
+
+def test_sync_is_logged_step_by_step_without_identifiers(log_file, device_root, xdg, monkeypatch):
+    from openexpress import service, sync
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    monkeypatch.setenv("OPENEXPRESS_LOG", "debug")
+    applog.setup("watch")
+    st = LocalStorage(device_root)
+    s = service.open_session(storage=st)  # hides the unit ID, like the window and the watcher
+    s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(),
+                              Account(messages=QUEUED))
+    state = sync.SyncState(int(DEVICE_UNIT))
+    if state.file.exists():
+        state.file.unlink()
+    summary = service.run_sync(s, first_run="all")
+    assert summary.uploaded == 2 and summary.downloaded == 1
+
+    text = log_file.read_text()
+    steps = [line.split(": ", 1)[1] for line in text.splitlines() if " INFO " in line]
+    assert steps[0] == "sync: start (first run: all, diagnostics: False)"
+    assert "uploads allowed: True" in steps
+    assert any(s.startswith("upload plan: 2 new (") for s in steps)
+    assert any(s.startswith("uploads: 2 uploaded, 0 duplicates") for s in steps)
+    assert any(s.startswith("queue from Garmin Connect: 1 items (FIT_TYPE_6×1)") for s in steps)
+    assert "downloads: 1 written, 0 empty, 0 failed, 0 not acknowledged" in steps
+    assert steps[-1].startswith("sync: end after ") and steps[-1].endswith(
+        "2 uploaded, 0 already known, 1 downloaded, 0 errors")
+    assert DEVICE_UNIT not in text and str(device_root) not in text
+
+
+def test_blocked_uploads_and_sync_errors_are_logged(log_file, device_root, xdg):
+    from openexpress import service
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    applog.setup("gui")
+    st = LocalStorage(device_root)
+    s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(),
+                              Account(messages=QUEUED, preference="false"))
+    service.run_sync(s, first_run="all")
+    text = log_file.read_text()
+    assert "uploads allowed: False (" in text and "upload plan: " in text
+    assert "uploads: " not in text  # nothing was sent, so no upload result
+
+    s.client.device_messages = lambda unit_id: (_ for _ in ()).throw(RuntimeError("no network"))
+    with pytest.raises(RuntimeError):
+        service.run_sync(s, first_run="all")
+    assert "WARNING openexpress.service: sync: stopped after " in log_file.read_text()
+    assert "RuntimeError: no network" in log_file.read_text()
+
+
+def test_app_install_over_ptp_is_logged(log_file, hidden_apps, monkeypatch):
+    from openexpress import ciq
+
+    monkeypatch.setenv("OPENEXPRESS_LOG", "debug")
+    applog.setup("cli")
+    st, dev, _fake = hidden_apps
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = queue_once_requested
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert rep.installed == ["Face It"]
+    text = log_file.read_text()
+    assert "apps install: Face It; app folder: direct×1; requested in Garmin Connect: 1" in text
+    assert "apps written: 1 (over PTP 1, updates 0); left in the queue 0 (sandbox 0); failed 0" in text
+    assert "DEBUG openexpress.device.ptp: PTP 0x1002 -> 0x2001 (sent 0 B, received 0 B)" in text
+    assert "PTP 0x100D -> 0x2001" in text  # SendObject: only its size is logged
+    assert DEVICE_UNIT not in text
+
+
+def test_waiting_for_a_starting_device_is_logged(log_file, monkeypatch):
+    from openexpress.device import gio_storage
+
+    applog.setup("cli")
+    answers = [gio_storage.NotThereYet("x"), gio_storage.NotThereYet("x"), "storage"]
+    states = iter([("starting", ["0003"]), ("absent", []), ("present", ["51b4"])])
+
+    class Opened:
+        usb_id = "091e:51b4"
+
+    def open_now(uri):
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            current.update(zip(("state", "products"), next(states)))
+            raise answer
+        return Opened()
+
+    current = {}
+    monkeypatch.setattr(gio_storage, "_open_device_storage", open_now)
+    monkeypatch.setattr(gio_storage, "usb_state", lambda: current["state"])
+    monkeypatch.setattr(gio_storage, "garmin_products_on_usb", lambda: current["products"])
+    ticks = iter(range(100))
+    gio_storage.open_device_storage(wait=True, notify=lambda line: None, sleep=lambda s: None,
+                                    clock=lambda: float(next(ticks)))
+    lines_ = [line.split("gio_storage: ")[1] for line in lines(log_file)]
+    assert lines_[0].startswith("device: not available after ")
+    assert "USB state: starting (091e:0003), waiting: True" in lines_[0]
+    assert "USB state: absent (-), waiting: True" in lines_[1]  # the gap before MTP
+    assert lines_[2].startswith("device: opened over MTP after ") and lines_[2].endswith(
+        "(USB 091e:51b4)")
+
+
+def test_http_is_logged_without_query_headers_or_body(log_file, monkeypatch):
+    import types
+
+    from openexpress.connect import GarminClient
+
+    applog.setup("cli")
+    sent = {}
+
+    def request(method, url, **kw):
+        sent.update(kw, url=url)
+        return types.SimpleNamespace(status_code=204)
+
+    client = types.SimpleNamespace(http=types.SimpleNamespace(request=request))
+    GarminClient._request(client, "PUT", "https://example.org/a/b?unitId=3987654321&x=y", "what",
+                          headers={"Authorization": "OAuth secret-part"}, json={"name": "Anna"})
+    line = lines(log_file)[-1]
+    assert line.split("connect: ")[1].startswith("HTTP PUT https://example.org/a/b -> 204 in ")
+    assert "3987654321" not in line and "secret-part" not in line and "Anna" not in line
+    assert sent["url"].endswith("?unitId=3987654321&x=y")  # the request itself is unchanged
+
+
+def test_cli_logs_the_error_shown_to_the_user(log_file, tmp_path, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(tmp_path / "Moja kopia"), "info"]) == 1
+    assert "Moja kopia" in capsys.readouterr().err  # the user sees the path…
+    text = log_file.read_text()
+    assert " INFO openexpress.cli: error: DeviceError: " in text
+    assert "Moja kopia" not in text and "<path>" in text  # …the log does not keep it
+
+
+def test_media_folders_come_from_the_device(log_file):
+    """A made-up device that keeps music in folders with names that are not English."""
+    from conftest import DEVICE_XML
+
+    from openexpress.device.xmldevice import parse
+
+    def datatype(name, path):
+        return (f"<DataType><Name>{name}</Name><File><Location><Path>{path}</Path>"
+                "<FileExtension>MP3</FileExtension></Location>"
+                "<TransferDirection>InputOutput</TransferDirection></File></DataType>")
+
+    xml = DEVICE_XML.replace("</MassStorageMode>", (
+        datatype("MEDIA_TRACK", "Muzyka") + datatype("MEDIA_AUDIOBOOK", "Media/Hörbücher")
+        + datatype("MEDIA_PLAYLIST", "Muzyka/Listy") + "</MassStorageMode>"))
+    device = parse(xml.encode())
+    before = "Cannot write Muzyka/Anna Jantar/Tyle słońca.mp3: refused"
+    assert "Jantar" in applog.redact(before)  # not known to be a media folder yet
+
+    applog.hide_device(device)
+    assert applog.redact(before) == "Cannot write Muzyka/<file>: refused"
+    assert applog.redact("copied to mtp://091e_51b4_X/Internal Storage/MUZYKA/ANNA/01.MP3") == (
+        "copied to mtp://<device>/Internal Storage/MUZYKA/<file>")
+    assert applog.redact("wrote Media/Hörbücher/Lem/Solaris 01.mp3") == "wrote Media/Hörbücher/<file>"
+    assert applog.redact("wrote Muzyka/Listy/Bieganie rano.m3u8") == "wrote Muzyka/<file>"
+    assert applog.redact("wrote Music/Anna/01.mp3") == "wrote Music/<file>"  # the fallback stays
+    assert applog.redact("read Garmin/Activity/2026-10-12-18-00-00.fit, 2 files in Garmin/NewFiles"
+                         ) == "read Garmin/Activity/2026-10-12-18-00-00.fit, 2 files in Garmin/NewFiles"
+    assert applog.redact(f"device {device.unit_id}") == "device <unit>"
+
+    applog.setup("cli")
+    logging.getLogger("openexpress.test").warning("Cannot write Muzyka/Anna Jantar/01.mp3: refused")
+    assert "Jantar" not in log_file.read_text()

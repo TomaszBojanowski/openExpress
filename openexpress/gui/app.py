@@ -460,6 +460,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.toast(_("Another operation is in progress"))
             return
         self.set_busy(True, title, device=device and self.session is not None)
+        log.info("task: %s", fn.__qualname__.split(".<locals>")[0] if hasattr(fn, "__qualname__")
+                 else "?")
 
         def worker():
             try:
@@ -480,6 +482,7 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         def finish_error(e):
+            log.warning("task failed: %s: %s", type(e).__name__, e)
             self.set_busy(False)
             try:
                 if not (on_error and on_error(e)):
