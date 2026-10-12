@@ -39,7 +39,10 @@ def open_storage(args) -> Storage:
         return LocalStorage(Path(args.path))
     from openexpress.device.gio_storage import open_device_storage
 
-    return open_device_storage(args.device_uri)
+    # A device that was just plugged in needs a while before its files can be seen.
+    return open_device_storage(
+        args.device_uri, wait=not getattr(args, "no_wait", False),
+        notify=lambda line: print(line, file=sys.stderr, flush=True))
 
 
 def open_device(args) -> tuple[Storage, GarminDevice]:
@@ -1266,6 +1269,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("directory with device contents instead of MTP (e.g. copy, UMS)"))
     p.add_argument("--device-uri", help=_("MTP device URI, e.g. {example}").format(
         example="mtp://091e_51b4_…/"))
+    p.add_argument("--no-wait", action="store_true",
+                   help=_("do not wait for a device that was just plugged in and is still "
+                          "starting"))
     # Without a command the application window opens (as from the application menu).
     p.set_defaults(func=cmd_gui)
     sub = p.add_subparsers(dest="cmd")

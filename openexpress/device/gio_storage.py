@@ -358,20 +358,120 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
     dev.mounted = True
 
 
-def open_device_storage(uri: str | None = None) -> GioStorage:
-    """Return the device storage that contains GARMIN/GarminDevice.xml."""
+# --- a device that is plugged in but not there yet ---------------------------------------
+#
+# Right after the cable goes in, a Garmin watch is on USB under a transitional product ID
+# for a while (about 19 s on the fēnix 8), then comes back as an MTP device, and gvfs needs
+# a few more seconds to offer its files. Only /sys is read to tell these states apart: the
+# device is not opened and nothing is sent to it.
+
+STARTING_PRODUCT = "0003"
+ABSENT, STARTING, PRESENT = "absent", "starting", "present"
+WAIT_FOR_DEVICE_S = 45
+# Between its transitional mode and MTP the device is off the bus for a moment (about
+# 0.3 s on the fēnix 8). Only a longer absence means that it was unplugged.
+USB_GAP_S = 5
+
+
+class NotThereYet(DeviceError):
+    """gvfs does not offer a Garmin device, or its files cannot be seen yet."""
+
+
+class SeveralDevices(DeviceError):
+    pass
+
+
+def garmin_products_on_usb() -> list[str]:
+    """USB product IDs of the Garmin devices plugged in, whatever state they are in."""
+    found = []
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return found
+    for base in entries:
+        try:
+            if (base / "idVendor").read_text().strip().lower() == GARMIN_VID:
+                found.append((base / "idProduct").read_text().strip().lower())
+        except OSError:
+            continue
+    return found
+
+
+def usb_state() -> str:
+    """ABSENT: no Garmin device on USB; STARTING: one is there in its transitional mode;
+    PRESENT: one is there in its normal mode (which says nothing about gvfs yet)."""
+    products = garmin_products_on_usb()
+    if not products:
+        return ABSENT
+    return PRESENT if any(p != STARTING_PRODUCT for p in products) else STARTING
+
+
+def not_ready_text(state: str) -> str:
+    """What to tell the user when the wait for a plugged-in device ran out."""
+    if state == STARTING:
+        return _("The device is still starting. Wait until it shows its usual screen, or "
+                 "unplug it and plug it in again.")
+    if state == PRESENT:
+        return _("The Garmin device is connected, but it does not offer its files. Check its "
+                 "screen: if it is locked with a PIN or asks something, unlock it or confirm.")
+    return _("No Garmin device (MTP) found. Connect the device with a USB cable "
+             "and unlock it if it asks to allow the connection.")
+
+
+def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
+                        sleep=time.sleep, clock=time.monotonic) -> GioStorage:
+    """Return the device storage that contains GARMIN/GarminDevice.xml.
+
+    With `wait`, a Garmin device that is on USB but not offered by gvfs yet is waited for,
+    up to WAIT_FOR_DEVICE_S; `notify` is called once with a line saying so. Without a
+    Garmin device on USB there is nothing to wait for. A device that was seen and then
+    leaves the bus is given USB_GAP_S to come back before it counts as unplugged.
+    """
+    deadline = clock() + WAIT_FOR_DEVICE_S
+    told = False
+    gone_since = None  # when a device we were waiting for left the bus
+    while True:
+        try:
+            return _open_device_storage(uri)
+        except SeveralDevices:
+            raise
+        except DeviceError as e:
+            state = usb_state()
+            if state == ABSENT:
+                if not (wait and told):
+                    raise
+                if gone_since is None:
+                    gone_since = clock()
+                if clock() - gone_since >= USB_GAP_S or clock() >= deadline:
+                    raise
+                sleep(1)
+                continue
+            gone_since = None
+            if not wait:
+                if isinstance(e, NotThereYet) and state == STARTING:
+                    raise NotThereYet(_("The device is starting. Try again in a moment.")) from e
+                raise
+            if clock() >= deadline:
+                if isinstance(e, NotThereYet):
+                    raise NotThereYet(not_ready_text(state)) from e
+                raise
+            if not told and notify is not None:
+                notify(_("The device is starting…"))
+            told = True
+            sleep(1)
+
+
+def _open_device_storage(uri: str | None) -> GioStorage:
     usb = None
     if uri is None:
         devices = find_devices()
         if not devices:
-            raise DeviceError(_(
-                "No Garmin device (MTP) found. Connect the device with a USB cable "
-                "and unlock it if it asks to allow the connection."
-            ))
+            raise NotThereYet(not_ready_text(ABSENT))
         if len(devices) > 1:
             names = ", ".join(d.uri for d in devices)
-            raise DeviceError(_("Several devices connected, choose one with --device-uri: {names}")
-                              .format(names=names))
+            raise SeveralDevices(
+                _("Several devices connected, choose one with --device-uri: {names}")
+                .format(names=names))
         mount(devices[0])
         uri, usb = devices[0].uri, devices[0].usb
     else:
@@ -383,7 +483,7 @@ def open_device_storage(uri: str | None = None) -> GioStorage:
             st.usb_id = usb.usb_id if usb is not None else None
             st.usb, st.device_uri = usb, uri
             return st
-    raise DeviceError(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))
+    raise NotThereYet(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))
 
 
 # --- the device to ourselves, for PTP ----------------------------------------------------

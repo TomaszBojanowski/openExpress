@@ -21,13 +21,23 @@ from openexpress import i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import RESTART_STEPS, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import garmin_usb, own_remount  # noqa: E402
+from openexpress.device.gio_storage import (  # noqa: E402
+    ABSENT,
+    PRESENT,
+    USB_GAP_S,
+    WAIT_FOR_DEVICE_S,
+    garmin_usb,
+    not_ready_text,
+    own_remount,
+    usb_state,
+)
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings, extract_consumer_from_dll, extract_url_salt_from_dll, save_consumer,
 )
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
+USB_POLL_S = 2
 log = logging.getLogger(__name__)
 
 
@@ -161,6 +171,7 @@ class Section:
             icon_name=APP_ID, title=_("Connect your device"),
             description=_("Connect your Garmin device with a USB cable. "
                           "It will be detected automatically."))
+        self._empty_notice = None
         self.loading = Adw.StatusPage(title=loading_text)
         if hasattr(Adw, "SpinnerPaintable"):
             self.loading.set_paintable(Adw.SpinnerPaintable.new(self.loading))
@@ -175,6 +186,19 @@ class Section:
         # Until the first detection finishes we don't know yet whether a watch is connected.
         self.stack.set_visible_child_name("loading")
         self.groups: list[Adw.PreferencesGroup] = []
+
+    def set_empty(self, title: str, description: str, busy: bool) -> None:
+        """What the placeholder says while no device is open."""
+        if self._empty_notice == (title, description, busy):
+            return
+        self._empty_notice = (title, description, busy)
+        self.empty.set_title(title)
+        self.empty.set_description(description)
+        if busy and hasattr(Adw, "SpinnerPaintable"):
+            self.empty.set_paintable(Adw.SpinnerPaintable.new(self.empty))
+        else:
+            self.empty.set_paintable(None)
+            self.empty.set_icon_name(APP_ID)
 
     def show(self, name: str) -> None:
         self.stack.set_visible_child_name(name)
@@ -247,6 +271,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
         self._watch_last_sync()
+        # A device that was just plugged in is on USB for a while before gvfs offers it.
+        self._usb_state, self._usb_since = ABSENT, 0.0
+        GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
         self.refresh_device()
 
     # --- layout -----------------------------------------------------------------------
@@ -519,6 +546,45 @@ class MainWindow(Adw.ApplicationWindow):
         if ours or garmin_usb(mount):
             self.session = None
             self.show_device()
+
+    @staticmethod
+    def _usb_notice(state: str, waited_s: float) -> tuple[str, str, bool]:
+        """(title, description, busy) of the placeholder while no device is open."""
+        if state == ABSENT:
+            return (_("Connect your device"),
+                    _("Connect your Garmin device with a USB cable. "
+                      "It will be detected automatically."), False)
+        if waited_s < WAIT_FOR_DEVICE_S:
+            return (_("The device is starting…"),
+                    _("This takes a moment after the cable is plugged in."), True)
+        return _("The device is not ready"), not_ready_text(state), False
+
+    def _poll_usb(self, clock=time.monotonic) -> bool:
+        """Every few seconds while no device is open: is a Garmin device on USB that gvfs
+        does not offer yet? Only /sys is read; nothing is sent to the device."""
+        if self.session is not None or self.busy:
+            self._usb_state = ABSENT
+            return True
+        state = usb_state()
+        if state == ABSENT and self._usb_state != ABSENT:
+            # Off the bus for a moment between its two modes, or unplugged? Wait and see.
+            gone = getattr(self, "_usb_gone", None)
+            if gone is None:
+                self._usb_gone = clock()
+                return True
+            if clock() - gone < USB_GAP_S:
+                return True
+        self._usb_gone = None
+        if state != ABSENT and self._usb_state == ABSENT:
+            self._usb_since = clock()
+        if state == PRESENT and self._usb_state != PRESENT:
+            # It left its transitional mode: look for it once gvfs had a moment.
+            GLib.timeout_add(2500, lambda: (self.refresh_device(), False)[1])
+        self._usb_state = state
+        notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
+        for sec in self.sections.values():
+            sec.set_empty(*notice)
+        return True
 
     def refresh_device(self) -> None:
         if self.busy:

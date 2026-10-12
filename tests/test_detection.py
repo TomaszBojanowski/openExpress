@@ -396,3 +396,309 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     w.on_mount(None, FakeMount(NUMERIC))
     assert win.session is session and shown == [] and started == []  # the device stays open
+
+
+# --- a device that is plugged in but not there yet ----------------------------------------
+
+
+class Clock:
+    """Time that only moves when the code sleeps."""
+
+    def __init__(self):
+        self.now, self.slept = 0.0, 0
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+        self.slept += 1
+
+
+@pytest.fixture
+def plugged(tmp_path, monkeypatch):
+    """A made-up USB tree and a list of what gvfs offers, both changeable over time."""
+    root = tmp_path / "usb"
+    root.mkdir()
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", root)
+    usb_device(root, "usb1", 1, 1, "1d6b", "0002")  # a hub, not a Garmin device
+    world = types.SimpleNamespace(root=root, clock=Clock(), offered=[], steps={}, notices=[],
+                                  opened=[])
+
+    def find():
+        for at, change in sorted(world.steps.items()):
+            if world.clock.now >= at:
+                change()
+                del world.steps[at]
+        return list(world.offered)
+
+    monkeypatch.setattr(gio_storage, "find_devices", find)
+    monkeypatch.setattr(gio_storage, "mount", lambda dev, timeout_s=30: None)
+
+    class Storage:
+        def __init__(self, uri):
+            self.uri, self.usb_id, self.usb, self.device_uri = uri, None, None, None
+            world.opened.append(uri)
+
+        def _list(self, real):
+            return []
+
+        def _f(self, name):
+            raise AssertionError("no sub-folders here")
+
+        def exists(self, path):
+            return world.files
+
+    world.files = True
+    monkeypatch.setattr(gio_storage, "GioStorage", Storage)
+
+    def plug(product):
+        for d in root.glob("garmin*"):
+            for f in d.iterdir():
+                f.unlink()
+            d.rmdir()
+        if product:
+            usb_device(root, "garmin" + product, 1, 9, "091e", product)
+
+    def offer():
+        world.offered[:] = [gio_storage.FoundDevice(NUMERIC, "mtp", True,
+                                                   usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+
+    world.plug, world.offer = plug, offer
+    world.open = lambda wait=True: gio_storage.open_device_storage(
+        wait=wait, notify=world.notices.append, sleep=world.clock.sleep, clock=world.clock)
+    return world
+
+
+def test_usb_states(plugged):
+    assert gio_storage.usb_state() == gio_storage.ABSENT
+    plugged.plug("0003")
+    assert gio_storage.usb_state() == gio_storage.STARTING
+    assert gio_storage.garmin_products_on_usb() == ["0003"]
+    plugged.plug("51b4")
+    assert gio_storage.usb_state() == gio_storage.PRESENT
+
+
+def test_starting_device_is_waited_for(plugged):
+    plugged.plug("0003")
+    plugged.steps[19] = lambda: plugged.plug("51b4")   # it comes back as an MTP device
+    plugged.steps[22] = plugged.offer                 # and gvfs offers it a little later
+    st = plugged.open()
+    assert st.uri == NUMERIC and 22 <= plugged.clock.now < 24
+    assert plugged.notices == ["The device is starting…"]  # said once
+
+
+def test_device_gvfs_has_not_offered_yet_is_waited_for(plugged):
+    plugged.plug("51b4")
+    plugged.steps[3] = plugged.offer
+    assert plugged.open().uri == NUMERIC
+    assert plugged.notices == ["The device is starting…"] and plugged.clock.now < 5
+
+
+def test_files_that_appear_a_moment_after_mounting_are_waited_for(plugged):
+    plugged.plug("51b4")
+    plugged.offer()
+    plugged.files = False
+    plugged.steps[4] = lambda: setattr(plugged, "files", True)
+    assert plugged.open().uri == NUMERIC and 4 <= plugged.clock.now < 6
+
+
+def test_nothing_on_usb_is_an_error_at_once(plugged):
+    with pytest.raises(gio_storage.DeviceError, match="No Garmin device"):
+        plugged.open()
+    assert plugged.clock.slept == 0 and plugged.notices == []
+
+
+def test_another_usb_device_changes_nothing(plugged):
+    usb_device(plugged.root, "phone", 1, 5, "18d1", "0003")  # same product ID, other vendor
+    with pytest.raises(gio_storage.DeviceError, match="No Garmin device"):
+        plugged.open()
+    assert plugged.clock.slept == 0
+
+
+def test_no_wait_fails_at_once_and_says_why(plugged):
+    plugged.plug("0003")
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open(wait=False)
+    assert str(error.value) == "The device is starting. Try again in a moment."
+    assert plugged.clock.slept == 0 and plugged.notices == []
+    plugged.plug("51b4")
+    with pytest.raises(gio_storage.DeviceError, match="No Garmin device"):
+        plugged.open(wait=False)
+    assert plugged.clock.slept == 0
+
+
+def test_device_that_stays_in_its_transitional_mode(plugged):
+    plugged.plug("0003")
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open()
+    assert str(error.value) == ("The device is still starting. Wait until it shows its usual "
+                                "screen, or unplug it and plug it in again.")
+    assert gio_storage.WAIT_FOR_DEVICE_S == 45 and 45 <= plugged.clock.now <= 46
+
+
+def test_device_that_never_offers_its_files(plugged):
+    plugged.plug("51b4")
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open()
+    assert str(error.value) == (
+        "The Garmin device is connected, but it does not offer its files. Check its screen: "
+        "if it is locked with a PIN or asks something, unlock it or confirm.")
+    assert 45 <= plugged.clock.now <= 46 and plugged.opened == []
+
+
+def test_device_unplugged_while_waiting(plugged):
+    """Really unplugged: off the bus for longer than the short gap between its modes."""
+    plugged.plug("0003")
+    plugged.steps[5] = lambda: plugged.plug(None)
+    with pytest.raises(gio_storage.DeviceError, match="No Garmin device"):
+        plugged.open()
+    assert gio_storage.USB_GAP_S == 5
+    assert 5 + gio_storage.USB_GAP_S <= plugged.clock.now <= 5 + gio_storage.USB_GAP_S + 2
+
+
+@pytest.mark.parametrize("gap", [1, 2, 4])
+def test_short_absence_between_the_two_modes_is_not_an_unplug(plugged, gap):
+    """0003 -> off the bus for a moment -> MTP: what the fēnix 8 does."""
+    plugged.plug("0003")
+    plugged.steps[17] = lambda: plugged.plug(None)
+    plugged.steps[17 + gap] = lambda: plugged.plug("51b4")
+    plugged.steps[17 + gap + 2] = plugged.offer
+    st = plugged.open()
+    assert st.uri == NUMERIC and plugged.notices == ["The device is starting…"]
+    assert 17 + gap + 2 <= plugged.clock.now < 17 + gap + 4
+
+
+def test_gap_measured_on_the_fenix_8(plugged):
+    """Measured: transitional mode for about 18.5 s, off the bus for about 1.5 s, then MTP."""
+    plugged.plug("0003")
+    plugged.steps[18.5] = lambda: plugged.plug(None)
+    plugged.steps[20.0] = lambda: plugged.plug("51b4")
+    plugged.steps[22.0] = plugged.offer
+    st = plugged.open()
+    assert st.uri == NUMERIC and plugged.notices == ["The device is starting…"]
+    assert 22 <= plugged.clock.now < 24
+
+
+def test_absence_does_not_extend_the_overall_limit(plugged):
+    plugged.plug("0003")
+    plugged.steps[43] = lambda: plugged.plug(None)
+    with pytest.raises(gio_storage.DeviceError, match="No Garmin device"):
+        plugged.open()
+    assert 45 <= plugged.clock.now <= 46
+
+
+def test_second_short_absence_is_tolerated_too(plugged):
+    plugged.plug("0003")
+    plugged.steps[5] = lambda: plugged.plug(None)
+    plugged.steps[7] = lambda: plugged.plug("0003")
+    plugged.steps[12] = lambda: plugged.plug(None)
+    plugged.steps[14] = lambda: plugged.plug("51b4")
+    plugged.steps[15] = plugged.offer
+    assert plugged.open().uri == NUMERIC
+
+
+def test_several_devices_are_not_waited_for(plugged):
+    plugged.plug("51b4")
+    plugged.offer()
+    plugged.offered.append(gio_storage.FoundDevice(NAMED, "mtp", True))
+    with pytest.raises(gio_storage.DeviceError, match="Several devices"):
+        plugged.open()
+    assert plugged.clock.slept == 0
+
+
+def test_cli_waits_by_default_and_has_no_wait(plugged, monkeypatch, capsys):
+    from openexpress import cli
+
+    calls = []
+    monkeypatch.setattr(gio_storage, "open_device_storage",
+                        lambda uri=None, wait=False, notify=None: calls.append((uri, wait))
+                        or notify("The device is starting…") or "storage")
+    parser_args = types.SimpleNamespace(path=None, device_uri=None, no_wait=False)
+    assert cli.open_storage(parser_args) == "storage"
+    parser_args.no_wait = True
+    cli.open_storage(parser_args)
+    assert calls == [(None, True), (None, False)]
+    captured = capsys.readouterr()
+    assert captured.out == "" and "The device is starting…" in captured.err  # not in the data
+
+
+def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkeypatch):
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown, refreshed = [], []
+    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
+                                _usb_state=gio_storage.ABSENT, _usb_since=0.0,
+                                _usb_notice=MainWindow._usb_notice,
+                                refresh_device=lambda: refreshed.append(1))
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    clock = plugged.clock
+    poll = lambda: MainWindow._poll_usb(win, clock=clock)  # noqa: E731
+
+    assert poll() is True and shown[-1][0] == "Connect your device" and shown[-1][2] is False
+    plugged.plug("0003")
+    clock.now = 10
+    poll()
+    assert shown[-1] == ("The device is starting…",
+                         "This takes a moment after the cable is plugged in.", True)
+    assert refreshed == []
+    clock.now = 29
+    plugged.plug("51b4")
+    poll()
+    assert refreshed == [1] and shown[-1][2] is True  # looked for once it left that mode
+    poll()
+    assert refreshed == [1]
+    clock.now = 10 + 46
+    poll()
+    assert shown[-1] == ("The device is not ready", gio_storage.not_ready_text("present"), False)
+    # Off the bus for a moment: the page stays; only a longer absence is an unplug.
+    plugged.plug(None)
+    poll()
+    assert shown[-1][0] == "The device is not ready"
+    clock.now += 2
+    poll()
+    assert shown[-1][0] == "The device is not ready"
+    plugged.plug("51b4")
+    poll()
+    assert shown[-1][0] == "The device is not ready" and refreshed == [1]
+    plugged.plug(None)
+    poll()
+    clock.now += gio_storage.USB_GAP_S + 1
+    poll()
+    assert shown[-1][0] == "Connect your device"
+    # With a device open, or while a task runs, the page is left alone.
+    count = len(shown)
+    win.session = object()
+    plugged.plug("0003")
+    poll()
+    assert len(shown) == count
+
+
+def test_sync_is_only_enabled_with_an_open_device():
+    """No device, a starting device, a device of another account, a running task: no Sync."""
+    from openexpress.gui.app import MainWindow
+
+    enabled = {}
+    action = lambda name: types.SimpleNamespace(  # noqa: E731
+        set_enabled=lambda value: enabled.__setitem__(name, value))
+    win = types.SimpleNamespace(session=None, busy=False, lookup_action=action)
+    session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+
+    MainWindow._update_actions(win)          # "connect your device" and "the device is starting"
+    assert enabled == {"sync": False, "refresh": True}
+    win.session = session
+    MainWindow._update_actions(win)
+    assert enabled["sync"] is True
+    win.busy = True                          # a task is running
+    MainWindow._update_actions(win)
+    assert enabled == {"sync": False, "refresh": False}
+    win.busy = False
+    for change in ({"logged_in": False}, {"ownership_error": "not your device"}):
+        win.session = types.SimpleNamespace(**{**vars(session), **change})
+        MainWindow._update_actions(win)
+        assert enabled["sync"] is False
+    win.session = None                       # unplugged again
+    MainWindow._update_actions(win)
+    assert enabled["sync"] is False
