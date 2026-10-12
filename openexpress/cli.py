@@ -689,6 +689,70 @@ def _app_status(disabled: bool) -> str:
     return _("disabled") if disabled else _("enabled")
 
 
+def _apps_order(args, dev, st, state) -> int:
+    """`apps order`: the saved copies of the app list, or the order of one of them put back."""
+    from openexpress import ciq
+
+    backups = paths.default_backup_dir()
+    if not args.source:
+        copies = ciq.app_list_copies(dev, backups)
+        if not copies:
+            print(_("No copies of the app list in {path}.").format(path=backups / str(dev.unit_id)))
+            return 0
+        print(_("Copies of the app list (OUT.BIN); the device lists {count} apps now:").format(
+            count=len(state.listed)))
+        for c in copies:
+            plan = ciq.plan_order(state, c.state)
+            print("  " + ngettext(
+                "{name}: {entries} entries, {count} position differs from now",
+                "{name}: {entries} entries, {count} positions differ from now",
+                len(plan.moved)).format(name=c.name, entries=len(c.state.apps),
+                                        count=len(plan.moved)))
+        print(_("Show what a copy would change: openexpress apps order --from NAME"))
+        return 0
+
+    copy = ciq.load_app_list_copy(dev, backups, args.source)
+    if ciq.changes_waiting(dev, st):
+        raise ciq.CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
+                             "until it is ready and try again"))
+    plan = ciq.plan_order(state, copy.state)
+    print(_("Order of the apps from {name} ({path})").format(name=copy.name, path=copy.path))
+    if not plan.moved:
+        print(_("The apps on the device are already in this order."))
+        return 0
+    kinds: dict[str, int] = {}
+    for _position, _now, then in plan.moved:
+        kinds[then.type_name] = kinds.get(then.type_name, 0) + 1
+    print(ngettext("{count} position would change ({kinds}):",
+                   "{count} positions would change ({kinds}):", len(plan.moved)).format(
+        count=len(plan.moved),
+        kinds=", ".join(f"{kind}: {n}" for kind, n in sorted(kinds.items()))))
+    shown = plan.moved if args.all else plan.moved[:10]
+    for position, now, then in shown:
+        print("  " + _("{position}: {new} (now: {old})").format(
+            position=position, new=then.name, old=now.name))
+    if len(shown) < len(plan.moved):
+        more = len(plan.moved) - len(shown)
+        print("  " + ngettext("… and {count} more", "… and {count} more", more).format(
+            count=more))
+    for label, apps in ((_("Not in the copy, left where they are: {names}"), plan.only_on_device),
+                        (_("Only in the copy, ignored: {names}"), plan.only_in_copy)):
+        if apps:
+            print(label.format(names=", ".join(a.name for a in apps)))
+    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+            "(OUT.BIN)").format(entries=len(plan.entries),
+                                count=sum(1 for a in state.apps if not a.pending)))
+    print("  " + _("the same apps with the same flags; only the order changes"))
+    if not args.apply:
+        print(_("Dry run. Add --apply."))
+        return 0
+    _plan, saved = ciq.restore_order(dev, st, copy.state, backups)
+    print(_("Saved the current app list to {path}").format(path=saved))
+    print(_("Wrote the new order to the device; it takes effect after the device is "
+            "unplugged."))
+    return 0
+
+
 def _remove_app_directly(args, dev, st, state, app, api) -> int:
     """`apps remove` on a device that hides its app folder: over a PTP session."""
     from openexpress import ciq
@@ -808,6 +872,9 @@ def cmd_apps(args) -> int:
     if cmd != "list":
         # Before anything is queued or written: the device's app list must be complete.
         ciq.require_complete(state)
+
+    if cmd == "order":
+        return _apps_order(args, dev, st, state)
 
     if cmd in ("install", "update"):
         if cmd == "install":
@@ -1310,6 +1377,12 @@ def build_parser() -> argparse.ArgumentParser:
             a.add_argument("--type", choices=sorted(APP_TYPE_OPTIONS),
                            help=_("which entry, when an app and a widget share a name"))
     a = asub.add_parser("update", help=_("update installed apps"))
+    a.add_argument("--apply", action="store_true")
+    a = asub.add_parser("order", help=_("put the apps back in the order of a saved app list"))
+    a.add_argument("--from", dest="source", metavar="COPY",
+                   help=_("a copy of the app list: part of its folder name, or a path"))
+    a.add_argument("--all", action="store_true",
+                   help=_("list every position that would change"))
     a.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_apps)
 

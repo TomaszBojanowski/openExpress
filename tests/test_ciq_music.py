@@ -1544,3 +1544,163 @@ def test_window_notes_for_apps_that_wait():
     assert MainWindow._waiting_note(app) == "Will be installed after the device is unplugged"
     app.pending, app.pending_removal = False, True
     assert MainWindow._waiting_note(app) == "Will be removed after the device is unplugged"
+
+
+# --- putting the apps back in the order of a saved app list -------------------------------
+
+W1, W2, W3, W4 = (uuid.UUID(f"c0ffee15-600d-540c-0000-00000000000{n}") for n in "1234")
+A1 = uuid.UUID("c0ffee15-600d-540c-0000-0000000000a1")
+
+
+def order_entries(*names):
+    """Made-up entries: 'a…' apps (type 1), 'w…' widgets (type 2), 's' the store app."""
+    table = {"s": (STORE_ID, 1, "Store", False, "DADE7E4"), "a1": (A1, 1, "Maps", False, ""),
+             "w1": (W1, 2, "Calendar", False, ""), "w2": (W2, 2, "Music", True, ""),
+             "w3": (W3, 2, "Tides", False, ""), "w4": (W4, 2, "Moon", False, ""),
+             "a1w": (A1, 2, "Maps", True, ""), "f": (FACE, 3, "Face It", True, "0A1B2C3D")}
+    return out_bin([table[n] for n in names])
+
+
+@pytest.fixture
+def order_device(iq_device, device_root, tmp_path):
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(
+        order_entries("s", "a1", "w2", "w1", "a1w", "w4", "w3"))
+    backups = tmp_path / "Backups"
+    copy = backups / str(dev.unit_id) / "GARMIN-APPS 2026-01-02 (03.04.05)" / "GARMIN/Apps/OUT.BIN"
+    copy.parent.mkdir(parents=True)
+    copy.write_bytes(order_entries("s", "a1", "w1", "a1w", "w2", "w3", "w4"))
+    return st, dev, backups
+
+
+def names(apps):
+    return [f"{a.name}/{a.app_type}" for a in apps]
+
+
+def test_plan_puts_each_type_in_the_order_of_the_copy(order_device):
+    st, dev, backups = order_device
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
+    assert names(plan.entries) == ["Store/1", "Maps/1", "Calendar/2", "Maps/2", "Music/2",
+                                   "Tides/2", "Moon/2"]
+    assert [(pos, now.name, then.name) for pos, now, then in plan.moved] == [
+        (3, "Music", "Calendar"), (4, "Calendar", "Maps"), (5, "Maps", "Music"),
+        (6, "Moon", "Tides"), (7, "Tides", "Moon")]
+    assert plan.only_in_copy == [] and plan.only_on_device == []
+
+
+def test_plan_keeps_apps_the_copy_does_not_have_and_ignores_the_rest(order_device, device_root):
+    st, dev, backups = order_device
+    # A watch face installed after the copy was made sits between the widgets on the device.
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(
+        order_entries("s", "a1", "w2", "f", "w1", "w4"))
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
+    assert names(plan.entries) == ["Store/1", "Maps/1", "Calendar/2", "Face It/3", "Music/2",
+                                   "Moon/2"]
+    assert names(plan.only_on_device) == ["Face It/3"]
+    assert names(plan.only_in_copy) == ["Maps/2", "Tides/2"]
+
+
+def test_types_are_ordered_on_their_own(order_device, device_root):
+    """A copy that lists widgets before apps, like the list Garmin Express writes."""
+    st, dev, backups = order_device
+    foreign = ciq.parse_out_bin(order_entries("w1", "a1w", "w2", "w3", "w4", "s", "a1"))
+    plan = ciq.plan_order(ciq.read_installed(dev, st), foreign)
+    assert [a.app_type for a in plan.entries] == [1, 1, 2, 2, 2, 2, 2]
+
+
+def test_restore_order_writes_the_same_apps_and_flags(order_device):
+    st, dev, backups = order_device
+    before = st.read("GARMIN/APPS/OUT.BIN")
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    plan, saved = ciq.restore_order(dev, st, copy.state, backups)
+    written = ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))
+    assert [(e[0], e[1]) for e in written] == [(a.app_id, a.app_type) for a in plan.entries]
+    # Flags are the device's own: Music stays disabled, the Maps widget too.
+    assert [e[2] for e in written] == [False, False, False, True, True, False, False]
+    assert saved.read_bytes() == before and saved.name == "OUT.BIN"
+    assert saved.parent.parent.parent.name.startswith("GARMIN-APPS ")
+    assert st.read("GARMIN/APPS/OUT.BIN") == before  # the device's own list is never written
+    # The copy just saved is listed with the others and matches the device.
+    copies = ciq.app_list_copies(dev, backups)
+    assert len(copies) == 2
+
+
+def test_restore_order_changes_nothing_when_the_order_is_the_same(order_device):
+    st, dev, backups = order_device
+    same = ciq.read_installed(dev, st)
+    plan, saved = ciq.restore_order(dev, st, same, backups)
+    assert plan.moved == [] and saved is None
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+    assert len(ciq.app_list_copies(dev, backups)) == 1
+
+
+def test_restore_order_is_refused_while_changes_wait(order_device):
+    st, dev, backups = order_device
+    ciq.set_enabled(dev, st, W2, True)
+    waiting = st.read("GARMIN/APPS/IN.BIN")
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    with pytest.raises(ciq.CiqError, match="has not applied earlier changes"):
+        ciq.restore_order(dev, st, copy.state, backups)
+    assert st.read("GARMIN/APPS/IN.BIN") == waiting and len(ciq.app_list_copies(dev, backups)) == 1
+
+
+def test_restore_order_is_refused_with_unreadable_entries(order_device, device_root):
+    st, dev, backups = order_device
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    damaged_out_bin(device_root, "truncated")
+    with pytest.raises(ciq.CiqError, match="cannot be read"):
+        ciq.restore_order(dev, st, copy.state, backups)
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_copy_is_found_by_name_or_path(order_device, tmp_path):
+    st, dev, backups = order_device
+    by_name = ciq.load_app_list_copy(dev, backups, "2026-01-02")
+    assert ciq.load_app_list_copy(dev, backups, str(by_name.path)).path == by_name.path
+    assert ciq.load_app_list_copy(dev, backups, str(by_name.path.parents[2])).path == by_name.path
+    with pytest.raises(ciq.CiqError, match="No copy of the app list matches"):
+        ciq.load_app_list_copy(dev, backups, "1999")
+    second = by_name.path.parents[3] / "GARMIN-APPS 2026-01-02 (09.00.00)" / "OUT.BIN"
+    second.parent.mkdir()
+    second.write_bytes(by_name.path.read_bytes())
+    with pytest.raises(ciq.CiqError, match="Several copies"):
+        ciq.load_app_list_copy(dev, backups, "2026-01-02")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    with pytest.raises(ciq.CiqError, match="No OUT.BIN"):
+        ciq.load_app_list_copy(dev, backups, str(empty))
+
+
+def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
+    from openexpress import paths
+    from openexpress.cli import main
+
+    st, dev, backups = order_device
+    monkeypatch.setattr(paths, "default_backup_dir", lambda: backups)
+    root = str(st.root)
+    assert main(["--path", root, "apps", "order"]) == 0
+    out = capsys.readouterr().out
+    assert "GARMIN-APPS 2026-01-02 (03.04.05): 7 entries, 5 positions differ from now" in out
+
+    assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1] == "5 positions would change (widget: 5):"
+    assert out[2] == "  3: Calendar (now: Music)"
+    assert out[-3:] == [
+        "App list to be written (IN.BIN): 7 entries; the device lists 7 (OUT.BIN)",
+        "  the same apps with the same flags; only the order changes",
+        "Dry run. Add --apply."]
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+    assert len(ciq.app_list_copies(dev, backups)) == 1  # a dry run saves nothing
+
+    assert main(["--path", root, "apps", "order", "--from", "03.04.05", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert "Saved the current app list to" in out
+    assert "takes effect after the device is unplugged" in out
+    assert (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+    # The new order waits on the device: a second run is refused.
+    assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 1
+    assert "has not applied earlier changes" in capsys.readouterr().err
