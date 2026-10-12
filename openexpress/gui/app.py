@@ -1481,6 +1481,7 @@ class MainWindow(Adw.ApplicationWindow):
                 app.direct_removal = (not app.has_files and ciq.removable_directly(
                     s.device, s.storage, app))
             account = api.account_apps(s.device, locale)
+            ciq.name_pending(state, account)
             updates = api.updates(s.device, state.store_apps, locale)
             return state, account, updates
 
@@ -1504,6 +1505,16 @@ class MainWindow(Adw.ApplicationWindow):
             if a.disabled:
                 # TRANSLATORS: state of a Connect IQ app
                 sub += " · " + _("disabled")
+            waiting = self._waiting_note(a)
+            if waiting:
+                # Written or deleted already; the device applies it once it is unplugged.
+                row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
+                                    subtitle=GLib.markup_escape_text(f"{sub}\n{waiting}"),
+                                    subtitle_lines=2)
+                icons[a.app_id] = self._app_icon(row)
+                row.set_sensitive(not a.pending_removal)
+                g.add(row)
+                continue
             if a.app_id in upd:
                 sub += " · " + _("update {version}").format(version=upd[a.app_id].version_name)
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
@@ -1601,6 +1612,15 @@ class MainWindow(Adw.ApplicationWindow):
         return ngettext("{count} free slot · {size} free", "{count} free slots · {size} free",
                         slots).format(count=slots, size=space)
 
+    @staticmethod
+    def _waiting_note(app) -> str:
+        """For an app whose install or removal waits for the device to be unplugged."""
+        if app.pending:
+            return _("Will be installed after the device is unplugged")
+        if app.pending_removal:
+            return _("Will be removed after the device is unplugged")
+        return ""
+
     def install_apps(self, apps) -> None:
         from openexpress import ciq
 
@@ -1616,6 +1636,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
             elif rep.for_phone and not rep.installed:
                 self.error(_("Queued in Garmin Connect"), self._for_phone_text(rep.for_phone))
+            elif rep.installed and all(n in rep.direct for n in rep.installed):
+                self.toast(ciq.written_text(rep.installed))
             elif rep.installed:
                 self.toast(_("Installed {names}").format(names=", ".join(rep.installed)))
             else:
@@ -1684,9 +1706,14 @@ class MainWindow(Adw.ApplicationWindow):
                     ciq.StoreApi(s.client).forget(s.device, [app.app_id])
                 return removed
 
-            self.run_task(_("Removing {name}…").format(name=app.name), work,
-                          lambda removed: (self.toast(_("Removed {name}").format(name=app.name)),
-                                           self.load_section("apps", force=True)))
+            def done(_removed):
+                text = _("Removed {name}").format(name=app.name)
+                if direct:
+                    text += ". " + _("The device finishes the removal after it is unplugged.")
+                self.toast(text)
+                self.load_section("apps", force=True)
+
+            self.run_task(_("Removing {name}…").format(name=app.name), work, done)
 
         d.connect("response", response)
         d.present(self)

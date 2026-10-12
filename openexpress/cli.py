@@ -763,6 +763,7 @@ def cmd_apps(args) -> int:
     locale = settings.locale.replace("_", "-")
     state = ciq.read_installed(dev, st)
     account = api.account_apps(dev, locale)
+    ciq.name_pending(state, account)
     installed_ids = {a.app_id for a in state.apps}
     cmd = args.apps_cmd or "list"
 
@@ -784,6 +785,10 @@ def cmd_apps(args) -> int:
             upd = updates.get(a.app_id)
             note = ("  " + _("update available: {version}").format(version=upd.version_name)
                     if upd else "")
+            if a.pending:
+                note = "  " + _("will be installed after the device is unplugged")
+            elif a.pending_removal:
+                note = "  " + _("will be removed after the device is unplugged")
             print(f"  {a.name:36} {a.type_name:11} v{a.version or '?':<5} "
                   f"{_app_status(a.disabled):9}{note}")
         missing = [a for a in account if a.app_id not in installed_ids]
@@ -853,10 +858,14 @@ def cmd_apps(args) -> int:
             return 0
         rep = ciq.install_apps(dev, st, client, api, targets,
                                progress=lambda s: print("  " + s))
-        if rep.installed or rep.failed or not rep.for_phone:
+        written = [n for n in rep.installed if n in rep.direct]
+        installed = [n for n in rep.installed if n not in rep.direct]
+        if written:
+            print(ciq.written_text(written))
+        if installed or (not written and (rep.failed or not rep.for_phone)):
             # TRANSLATORS: shown after "Installed:" when no app was installed
             none = _("none")
-            print(_("Installed: {names}").format(names=", ".join(rep.installed) or none))
+            print(_("Installed: {names}").format(names=", ".join(installed) or none))
         for name, err in rep.failed:
             print("  " + _("ERROR {item}: {error}").format(item=name, error=err))
         if rep.for_phone:
@@ -873,6 +882,8 @@ def cmd_apps(args) -> int:
         if not app.removable:
             raise ciq.CiqError(_("{name} is part of the device software and cannot be removed")
                                .format(name=app.name))
+        if app.pending or app.pending_removal:
+            raise ciq.CiqError(ciq.waiting_text(app))
         paths_ = ciq.files_on_device(dev, st, app)
         if not paths_ and ciq.removable_directly(dev, st, app):
             return _remove_app_directly(args, dev, st, state, app, api)

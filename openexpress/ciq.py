@@ -72,6 +72,9 @@ class InstalledApp:
     has_files: bool | None = None
     # No visible files, but the file can be reached and deleted over a PTP session.
     direct_removal: bool = False
+    # Still in OUT.BIN, but left out of the IN.BIN the device has not applied yet: it goes
+    # once the device is unplugged.
+    pending_removal: bool = False
 
     @property
     def preloaded(self) -> bool:
@@ -99,6 +102,11 @@ class InstalledState:
     @property
     def store_apps(self) -> list[InstalledApp]:
         return [a for a in self.apps if not a.preloaded]
+
+    @property
+    def listed(self) -> list[InstalledApp]:
+        """The apps a new app list (IN.BIN) has to name: all but those being removed."""
+        return [a for a in self.apps if not a.pending_removal]
 
     def find(self, app_id: uuid.UUID, app_type: int | None = None) -> InstalledApp | None:
         """The entry with this ID; built-in items can share one ID as an app and as a widget,
@@ -248,6 +256,9 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
         for app in state.apps:
             if (app.app_id, app.app_type) in pending:
                 app.disabled, app.favorite = pending.pop((app.app_id, app.app_type))[2:]
+            elif app.removable:
+                # A store app the waiting list no longer names: it was removed.
+                app.pending_removal = True
         # Apps registered in IN.BIN but not yet reported by the watch must be kept,
         # otherwise the next IN.BIN rewrite would unregister them.
         for app_id, app_type, disabled, favorite in pending.values():
@@ -256,6 +267,24 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
                 disabled=disabled, favorite=favorite, pending=True,
             ))
     return state
+
+
+def name_pending(state: InstalledState, known: list[StoreApp]) -> None:
+    """IN.BIN carries no names: give the apps that wait for the device the name and version
+    the account knows them by."""
+    by_id = {k.app_id: k for k in known}
+    for app in state.apps:
+        store = by_id.get(app.app_id) if app.pending else None
+        if store is not None:
+            app.name, app.version = store.name, store.latest_version
+
+
+def written_text(names: list[str]) -> str:
+    """For apps written over a PTP session: the device installs them once unplugged."""
+    return ngettext(
+        "Wrote {names} to the device; it will be installed after the device is unplugged.",
+        "Wrote {names} to the device; they will be installed after the device is unplugged.",
+        len(names)).format(names=", ".join(names))
 
 
 def require_complete(state: InstalledState) -> None:
@@ -286,8 +315,8 @@ def preview_in_bin(state: InstalledState, targets: list[StoreApp]) -> InBinPrevi
     new = [InstalledApp(app_id=t.app_id, app_type=t.app_type, name=t.name,
                         disabled=t.app_type == 3)
            for t in targets if state.find(t.app_id) is None]
-    written = parse_in_bin(build_in_bin(state.apps + new))
-    current = [(a.app_id, a.app_type, a.disabled, a.favorite) for a in state.apps]
+    written = parse_in_bin(build_in_bin(state.listed + new))
+    current = [(a.app_id, a.app_type, a.disabled, a.favorite) for a in state.listed]
     added = [(a.app_id, a.app_type, a.disabled, a.favorite) for a in new]
     pending = sum(1 for a in state.apps if a.pending)
     return InBinPreview(
@@ -414,6 +443,9 @@ def message_app_id(m: dict) -> uuid.UUID | None:
 @dataclass
 class IqInstallReport:
     installed: list[str] = field(default_factory=list)
+    # Those of `installed` that were written over a PTP session: the device installs them
+    # only once it is unplugged.
+    direct: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Left in Garmin's queue: openExpress cannot write them to this device over USB yet.
     for_phone: list[str] = field(default_factory=list)
@@ -583,6 +615,7 @@ def install_queued(
         again, _none = _install_pass(device, storage, client, leftover, known, only, progress,
                                      direct=False)
         report.installed += again.installed
+        report.direct += again.direct
         report.failed += again.failed
         report.for_phone += again.for_phone
     return report
@@ -616,6 +649,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if (existing is None and max_apps
                         and len(state.store_apps) + len(new_entries) + len(hidden) >= max_apps):
                     raise CiqError(_("no free app slots on the device"))
+                if existing is not None and existing.pending_removal:
+                    raise CiqError(_("the device has not applied earlier changes yet; unplug "
+                                     "it, wait until it is ready and try again"))
                 over_ptp = direct and usb_dir_state(device, storage, dt) == DIRECT
                 if over_ptp and existing is not None:
                     # Replacing a file the device has taken over is not known to work yet.
@@ -684,7 +720,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                                          to_ack, leftover, report, progress)
         if new_entries and not registered:
             try:
-                storage.write(_config_path(device, True), build_in_bin(state.apps + new_entries))
+                storage.write(_config_path(device, True),
+                              build_in_bin(state.listed + new_entries))
             except Exception as e:
                 for p in new_paths:
                     _delete_quietly(storage, p)
@@ -761,7 +798,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
                 except (DeviceError, CiqError) as e:
                     fail(h, e)
             if sent:
-                entries = state.apps + new_entries + [h.entry for h in sent if h.entry]
+                entries = state.listed + new_entries + [h.entry for h in sent if h.entry]
                 try:
                     parent = session.lookup(store, posixpath.dirname(in_path))
                     if parent is None:
@@ -801,6 +838,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
                        .format(error=register_error)) from register_error
     if registered:
         to_ack += [(h.message, h.name) for h in sent]
+        report.direct += [h.name for h in sent]
     return registered
 
 
@@ -842,10 +880,19 @@ def _delete_quietly(storage: Storage, path: str) -> None:
         log.warning("Cannot delete %s: %s", path, e)
 
 
+def waiting_text(app: InstalledApp) -> str:
+    """Why an app that waits for the device cannot be changed now."""
+    if app.pending_removal:
+        return _("{name} is already being removed; the device finishes it after it is "
+                 "unplugged.").format(name=app.name)
+    return _("{name} is not installed yet; the device installs it after it is unplugged. "
+             "Unplug the device first.").format(name=app.name)
+
+
 def removable_directly(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
     """Whether the app's file is in a folder the device hides and a PTP session can reach."""
     dt = APPTYPE_TO_DATATYPE.get(app.app_type)
-    return bool(dt and app.filename and not app.pending
+    return bool(dt and app.filename and not app.pending and not app.pending_removal
                 and usb_dir_state(device, storage, dt) == DIRECT)
 
 
@@ -855,12 +902,12 @@ def _without(apps: list[InstalledApp], app: InstalledApp) -> list[InstalledApp]:
 
 def preview_removal(state: InstalledState, app: InstalledApp) -> InBinPreview:
     """The app list a removal over PTP would write. Nothing is written."""
-    rest = _without(state.apps, app)
+    rest = _without(state.listed, app)
     written = parse_in_bin(build_in_bin(rest))
     pending = sum(1 for a in state.apps if a.pending)
     return InBinPreview(
         on_device=len(state.apps) - pending, pending=pending, entries=len(written),
-        kept=(len(rest) == len(state.apps) - 1
+        kept=(len(rest) == len(state.listed) - 1
               and written == [(a.app_id, a.app_type, a.disabled, a.favorite) for a in rest]),
         new=[])
 
@@ -872,6 +919,10 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
                        .format(name=app.name))
     state = read_installed(device, storage)
     require_complete(state)
+    current = state.find(app.app_id, app.app_type)
+    if current is not None and (current.pending or current.pending_removal):
+        current.name = app.name  # IN.BIN has no names; the caller may know it
+        raise CiqError(waiting_text(current))
     paths_ = files_on_device(device, storage, app)
     if not paths_ and removable_directly(device, storage, app):
         return _remove_hidden(device, storage, state, app)
@@ -894,7 +945,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
     if listed is None:
         raise CiqError(_("App not found on the device"))
     path = app_file_path(device, listed)
-    in_bin = build_in_bin(_without(state.apps, listed))
+    in_bin = build_in_bin(_without(state.listed, listed))
     removed: list[str] = []
     problem: str | None = None
     finished = False
@@ -963,4 +1014,4 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
     if app is None:
         raise CiqError(_("App not found on the device"))
     app.disabled = not enabled
-    storage.write(_config_path(device, True), build_in_bin(state.apps))
+    storage.write(_config_path(device, True), build_in_bin(state.listed))

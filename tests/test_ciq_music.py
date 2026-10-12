@@ -1429,3 +1429,118 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Removed 1 file." in out and "finishes the removal after it is unplugged" in out
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []
+
+
+# --- apps that wait for the device to be unplugged ----------------------------------------
+
+
+def test_app_left_out_of_the_waiting_list_is_marked_as_being_removed(hidden_spot):
+    st, dev, _fake, app = hidden_spot
+    ciq.remove(dev, st, app)
+    # What the device shows once it is mounted again: OUT.BIN unchanged, IN.BIN without the app.
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(
+        ciq.build_in_bin([a for a in ciq.read_installed(dev, st).apps if a.app_id != FACE]))
+    state = ciq.read_installed(dev, st)
+    assert state.find(FACE).pending_removal and not state.find(STORE_ID).pending_removal
+    assert not state.find(PRELOADED).pending_removal
+    assert [a.app_id for a in state.listed] == [STORE_ID, PRELOADED]
+    with pytest.raises(ciq.CiqError, match="Face It is already being removed"):
+        ciq.remove(dev, st, state.find(FACE))
+
+
+def test_built_in_items_missing_from_a_partial_list_are_not_marked(iq_device):
+    st, dev = iq_device
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(
+        ciq.build_in_bin([a for a in ciq.read_installed(dev, st).apps if a.app_id == STORE_ID]))
+    state = ciq.read_installed(dev, st)
+    assert not any(a.pending_removal for a in state.apps) and len(state.listed) == 2
+
+
+def test_new_app_list_does_not_bring_a_removed_app_back(iq_device, device_root):
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (FACE, 3, "Face It", True, "0A1B2C3D"),
+        (PRELOADED, 8, "Softball", True, ""),
+    ]))
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(
+        ciq.build_in_bin([a for a in ciq.read_installed(dev, st).apps if a.app_id != FACE]))
+    ciq.set_enabled(dev, st, PRELOADED, True)  # rewrites the waiting list
+    assert [p[0] for p in ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))] == [STORE_ID, PRELOADED]
+    assert ciq.read_installed(dev, st).find(FACE).pending_removal
+
+
+def test_waiting_new_app_gets_its_name_from_the_account(iq_device):
+    st, dev = iq_device
+    ciq.install_queued(dev, st, FakeClient(), [FACE_MESSAGE], known={})
+    state = ciq.read_installed(dev, st)
+    waiting = state.find(FACE)
+    assert waiting.pending and waiting.name == str(FACE) and waiting.version is None
+    ciq.name_pending(state, [store_app(FACE, "Face It")])
+    assert (waiting.name, waiting.version) == ("Face It", 5)
+    with pytest.raises(ciq.CiqError, match="Face It is not installed yet"):
+        ciq.remove(dev, st, waiting)
+
+
+def test_report_tells_apps_written_over_ptp_apart(hidden_apps, iq_device):
+    st, dev, _fake = hidden_apps
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == ["Face It"] and rep.direct == ["Face It"]
+    assert ciq.written_text(rep.direct) == (
+        "Wrote Face It to the device; it will be installed after the device is unplugged.")
+    assert ciq.written_text(["A", "B"]).startswith("Wrote A, B to the device; they will be")
+
+
+def test_visible_folder_install_is_not_reported_as_written_over_ptp(iq_device):
+    st, dev = iq_device
+    rep = ciq.install_queued(dev, st, FakeClient(), [FACE_MESSAGE], known={})
+    assert rep.installed == ["Face It"] and rep.direct == []
+
+
+def test_cli_install_over_ptp_says_written_not_installed(hidden_apps, apps_cli, monkeypatch,
+                                                         capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, _fake = hidden_apps
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert main(["--path", str(st.root), "apps", "install", "Face It", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert ("Wrote Face It to the device; it will be installed after the device is "
+            "unplugged.") in out
+    assert "Installed:" not in out
+
+
+def test_cli_list_marks_apps_that_wait_for_the_device(hidden_spot, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, _fake, _app = hidden_spot
+    other = uuid.UUID("11111111-2222-4333-8444-555555555555")
+    listed = [a for a in ciq.read_installed(dev, st).apps if a.app_id != FACE]
+    listed.append(ciq.InstalledApp(app_id=other, app_type=1, name="x", disabled=False))
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(ciq.build_in_bin(listed))
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(FakeStore, "account_apps", lambda self, device, locale: [
+        store_app(FACE, "Face It"), store_app(other, "Other", "watch-app")])
+    assert main(["--path", str(st.root), "apps"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    face = next(line for line in lines if "Face It" in line)
+    new = next(line for line in lines if "Other" in line)
+    assert face.endswith("will be removed after the device is unplugged")
+    assert new.endswith("will be installed after the device is unplugged") and "v5" in new
+    assert str(other) not in "\n".join(lines)
+
+    assert main(["--path", str(st.root), "apps", "remove", "Other", "--apply"]) == 1
+    assert "Other is not installed yet" in capsys.readouterr().err
+
+
+def test_window_notes_for_apps_that_wait():
+    from openexpress.gui.app import MainWindow
+
+    app = ciq.InstalledApp(app_id=FACE, app_type=3, name="Face It", disabled=False)
+    assert MainWindow._waiting_note(app) == ""
+    app.pending = True
+    assert MainWindow._waiting_note(app) == "Will be installed after the device is unplugged"
+    app.pending, app.pending_removal = False, True
+    assert MainWindow._waiting_note(app) == "Will be removed after the device is unplugged"
