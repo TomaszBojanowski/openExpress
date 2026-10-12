@@ -202,9 +202,7 @@ msgstr "Nie można zarejestrować aplikacji na urządzeniu: {error}"
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
 "ready and try again"
-msgstr ""
-"urządzenie nie zastosowało jeszcze wcześniejszych zmian; odłącz je, "
-"poczekaj, aż będzie gotowe, i spróbuj ponownie"
+msgstr "urządzenie nie zastosowało jeszcze wcześniejszych zmian; odłącz je, poczekaj, aż będzie gotowe, i spróbuj ponownie"
 
 #: openexpress/ciq.py:739
 msgid "not enough free space on the device"
@@ -212,7 +210,7 @@ msgstr "za mało wolnego miejsca na urządzeniu"
 
 #: openexpress/ciq.py:752
 msgid "the app list folder was not found"
-msgstr "nie znaleziono folderu z listą aplikacji"
+msgstr "nie odnaleziono katalogu z listą aplikacji"
 
 #: openexpress/ciq.py:768
 msgid "USB connection"
@@ -225,7 +223,7 @@ msgstr "{error} Odłącz urządzenie i podłącz je ponownie."
 
 #: openexpress/ciq.py:797
 msgid "the GARMIN folder was not found on the device"
-msgstr "na urządzeniu nie znaleziono folderu GARMIN"
+msgstr "nie odnaleziono katalogu GARMIN na urządzeniu"
 
 #: openexpress/ciq.py:817
 #, python-brace-format
@@ -915,10 +913,7 @@ msgid ""
 "{name}: openExpress cannot update apps on this device over USB yet. The "
 "update will be queued in Garmin Connect and installed by the phone or Garmin "
 "Express."
-msgstr ""
-"{name}: openExpress nie umie jeszcze aktualizować aplikacji na tym "
-"urządzeniu przez USB. Aktualizacja trafi do kolejki w Garmin Connect i "
-"zainstaluje ją telefon albo Garmin Express."
+msgstr "{name}: nie można jeszcze aktualizować aplikacji na tym urządzeniu przez USB. Aktualizacja trafi do kolejki w Garmin Connect i zainstaluje ją telefon albo Garmin Express."
 
 #: openexpress/cli.py:795
 #, python-brace-format
@@ -926,10 +921,7 @@ msgid ""
 "{name}: the device does not show the app folder {path} to ordinary file "
 "access. openExpress will write the app over a direct USB connection; the "
 "device disappears from the file manager for a moment."
-msgstr ""
-"{name}: urządzenie nie pokazuje folderu aplikacji {path} przy zwykłym "
-"dostępie do plików. openExpress zapisze aplikację przez bezpośrednie "
-"połączenie USB; urządzenie na chwilę zniknie z menedżera plików."
+msgstr "{name}: urządzenie nie pokazuje katalogu aplikacji {path} przy zwykłym dostępie do plików. openExpress zapisze aplikację przez bezpośrednie połączenie USB; urządzenie na chwilę zniknie z menedżera plików."
 
 #: openexpress/cli.py:800
 #, python-brace-format
@@ -1770,11 +1762,11 @@ msgstr "Biblioteka libusb jest niedostępna: {error}"
 
 #: openexpress/device/ptp.py:320
 msgid "The USB device was not found."
-msgstr "Nie znaleziono urządzenia USB."
+msgstr "Nie odnaleziono urządzenia USB."
 
 #: openexpress/device/ptp.py:335
 msgid "This libusb cannot use a device opened by the system."
-msgstr "Ta wersja libusb nie umie użyć urządzenia otwartego przez system."
+msgstr "Tą wersją libusb nie można użyć urządzenia otwartego przez system."
 
 #: openexpress/device/ptp.py:353
 #, python-brace-format
@@ -1788,7 +1780,7 @@ msgstr "Urządzenie USB nie ma interfejsu przesyłania plików."
 #: openexpress/device/ptp.py:377
 #, python-brace-format
 msgid "Sending to the device failed: {error}"
-msgstr "Wysyłanie do urządzenia nie powiodło się: {error}"
+msgstr "Nie udało się wysłać danych do urządzenia: {error}"
 
 #: openexpress/device/ptp.py:386 openexpress/device/ptp.py:512
 msgid "The device did not answer in time."
@@ -1797,15 +1789,15 @@ msgstr "Urządzenie nie odpowiedziało na czas."
 #: openexpress/device/ptp.py:388
 #, python-brace-format
 msgid "Reading from the device failed: {error}"
-msgstr "Odczyt z urządzenia nie powiódł się: {error}"
+msgstr "Nie udało się odczytać danych z urządzenia: {error}"
 
 #: openexpress/device/ptp.py:470
 msgid "The connection to the device is out of step."
-msgstr "Połączenie z urządzeniem się rozsynchronizowało."
+msgstr "Nie można kontynuować: połączenie z urządzeniem utraciło synchronizację."
 
 #: openexpress/device/ptp.py:472
 msgid "The file is too large to send."
-msgstr "Plik jest za duży, żeby go wysłać."
+msgstr "Nie można wysłać pliku: jest za duży."
 
 #: openexpress/device/ptp.py:487 openexpress/device/ptp.py:501
 msgid "The device answered out of step."
@@ -1813,7 +1805,7 @@ msgstr "Urządzenie odpowiedziało nie na to polecenie."
 
 #: openexpress/device/ptp.py:585
 msgid "Refusing to write into the top folder of the device."
-msgstr "Odmowa zapisu do głównego folderu urządzenia."
+msgstr "Odmowa zapisu do głównego katalogu urządzenia."
 
 #: openexpress/device/ptp.py:587
 #, python-brace-format
@@ -1828,7 +1820,7 @@ msgstr "Urządzenie nie podało, gdzie zapisało „{name}”."
 #: openexpress/device/ptp.py:600 openexpress/device/ptp.py:602
 #, python-brace-format
 msgid "“{name}” was not written correctly."
-msgstr "„{name}” nie zapisano poprawnie."
+msgstr "Nie udało się poprawnie zapisać „{name}”."
 
 #: openexpress/device/storage.py:118
 #, python-brace-format
