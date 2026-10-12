@@ -7,6 +7,7 @@ import collections
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 from openexpress import __version__, i18n, paths
@@ -21,6 +22,8 @@ from openexpress.settings import (
     ENVIRONMENTS, Consumer, SetupError, Settings, extract_consumer_from_dll,
     extract_url_salt_from_dll, load_consumer, save_consumer,
 )
+
+log = logging.getLogger(__name__)
 
 
 def _human(n: int | None) -> str:
@@ -55,8 +58,12 @@ def open_storage(args) -> Storage:
 
 
 def open_device(args) -> tuple[Storage, GarminDevice]:
+    from openexpress import applog
+
     st = open_storage(args)
-    return st, parse(st.read("GARMIN/GarminDevice.xml"))
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    applog.hide(dev.unit_id, "unit")
+    return st, dev
 
 
 def make_client(settings: Settings, need_auth: bool) -> GarminClient:
@@ -1482,13 +1489,34 @@ def main(argv: list[str] | None = None) -> int:
         args._parser.error(_("--key and --secret must be given together"))
     if args.lang:
         i18n.setup(args.lang)
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.WARNING,
-        format="%(levelname)s %(name)s: %(message)s",
-    )
     import requests
 
-    from openexpress import service
+    from openexpress import applog, service
+
+    applog.setup(args.cmd if args.cmd in ("gui", "watch") else "cli", args.verbose)
+    started = time.monotonic()
+    log.info("start: %s (openExpress %s)", _command_line(args, argv), __version__)
+    code: int | str = "error"
+    try:
+        code = _run(args, service, requests)
+        return code
+    finally:
+        log.info("end: %s, exit code %s, %.1f s", args.cmd or "-", code,
+                 time.monotonic() - started)
+
+
+def _command_line(args, argv) -> str:
+    """The command as it goes to the log: its name, its subcommand and the names of the
+    options given, never their values or other arguments (names, paths, addresses)."""
+    words = [args.cmd or "-"]
+    words += [str(getattr(args, name)) for name in sorted(vars(args))
+              if name.endswith("_cmd") and getattr(args, name)]
+    given = sys.argv[1:] if argv is None else argv
+    words += [a.split("=", 1)[0] for a in given if a.startswith("-")]
+    return " ".join(words)
+
+
+def _run(args, service, requests) -> int:
 
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
                    Unauthorized, service.SyncBusy,

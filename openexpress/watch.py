@@ -152,5 +152,7 @@ class Watcher(Gio.Application):
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
+    from openexpress import applog
+
+    applog.setup("watch", stderr_level=logging.INFO, stderr_format="%(message)s")
     return Watcher().run([])

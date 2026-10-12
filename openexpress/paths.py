@@ -42,6 +42,11 @@ def cache_dir() -> Path:
     return _app_dir("XDG_CACHE_HOME", ".cache")
 
 
+def state_dir() -> Path:
+    """Where the log file is kept (in the Flatpak: under ~/.var/app/…/.local/state)."""
+    return _app_dir("XDG_STATE_HOME", ".local/state")
+
+
 def device_dir(unit_id: int) -> Path:
     return data_dir() / "devices" / str(unit_id)
 

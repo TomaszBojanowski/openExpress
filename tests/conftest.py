@@ -62,6 +62,18 @@ def xdg(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def log_file(tmp_path, monkeypatch) -> Path:
+    """No test writes to the real log file; the log set up by a test is closed after it."""
+    from openexpress import applog
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.delenv(applog.ENV, raising=False)
+    monkeypatch.setattr(applog, "_hidden", {})
+    yield tmp_path / "state" / "openexpress" / applog.LOG_NAME
+    applog.close()
+
+
+@pytest.fixture(autouse=True)
 def backups(tmp_path, monkeypatch) -> Path:
     """No test writes to the real backup folder: copies of the app list go here."""
     from openexpress import paths

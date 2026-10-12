@@ -1,0 +1,172 @@
+"""The program's own log file.
+
+One file in the state directory (`~/.local/state/openexpress/openexpress.log`; in the
+Flatpak under `~/.var/app/…/.local/state`), shared by the command-line tool, the window and
+the background watcher, kept to three files of about 1 MB each.
+
+Nothing personal may end up in it. Every line, including tracebacks and messages of other
+libraries, goes through `redact()` before it is written: values the program knows to be
+private (`hide()`) are replaced, and so is everything that looks like an identifier, an
+address of an MTP device, an e-mail address or a credential. Code that logs must still not
+pass file names, activity names, locations or file contents.
+
+`OPENEXPRESS_LOG=debug` writes more to the file, `OPENEXPRESS_LOG=off` writes no file.
+"""
+
+from __future__ import annotations
+
+import fcntl
+import logging
+import logging.handlers
+import os
+import re
+import sys
+from pathlib import Path
+
+from openexpress import paths
+
+LOG_NAME = "openexpress.log"
+MAX_BYTES = 1_000_000
+OLD_FILES = 2  # besides the current one
+ENV = "OPENEXPRESS_LOG"
+FORMAT = "%(asctime)s %(role)s[%(process)d] %(levelname)s %(name)s: %(message)s"
+
+_KEYS = (r"oauth_\w+|ticket|\w*token\w*|password|passwd|\w*secret\w*|signature|consumer_key|"
+         r"session\w*")
+_PATTERNS = [
+    # An MTP address carries the serial number of the device.
+    (re.compile(r"mtp://[^\s/'\"]+"), "mtp://<device>"),
+    (re.compile(r"mtp:host=[^\s/'\"]+"), "mtp:host=<device>"),
+    (re.compile(r"(?i)\b(authorization|cookie|set-cookie)\b(\"?\s*[:=]\s*).*"), r"\1\2<hidden>"),
+    (re.compile(rf"(?i)\b({_KEYS})\b(\"?\s*[=:]\s*\"?)[^\s&\"',;]+"), r"\1\2<hidden>"),
+    (re.compile(r"\bST-[\w-]+"), "<ticket>"),
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+"), "<email>"),
+    (re.compile(r"\b[0-9A-Fa-f]{16,}\b"), "<hex>"),
+    # Long mixed strings of letters and digits: keys and tokens.
+    (re.compile(r"(?<![\w+/-])(?=[\w+/-]*\d)(?=[\w+/-]*[a-z])(?=[\w+/-]*[A-Z])[\w+/-]{24,}={0,2}"),
+     "<hidden>"),
+    # Unit IDs, serial numbers, profile numbers, activity IDs…
+    (re.compile(r"\d{7,}"), "<number>"),
+]
+
+_hidden: dict[str, str] = {}
+_handlers: list[logging.Handler] = []
+
+
+def hide(value, label: str) -> None:
+    """Never write `value` (e.g. the unit ID of the connected device) to the log."""
+    text = str(value) if value is not None else ""
+    if len(text) >= 4:
+        _hidden[text] = f"<{label}>"
+
+
+def redact(text: str) -> str:
+    """`text` without anything that identifies the user, the account or a device."""
+    for value, label in sorted(_hidden.items(), key=lambda item: -len(item[0])):
+        text = text.replace(value, label)
+    home = str(Path.home())
+    if len(home) > 1:
+        text = text.replace(home, "~")
+    for pattern, replacement in _PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+class _Formatter(logging.Formatter):
+    """Formats the whole record (message, traceback, stack) and redacts the result."""
+
+    def __init__(self, fmt: str, role: str):
+        super().__init__(fmt)
+        self.role = role
+
+    def format(self, record: logging.LogRecord) -> str:
+        record.role = self.role
+        return redact(super().format(record))
+
+
+class _LogFile(logging.handlers.WatchedFileHandler):
+    """Appends to the log file, which several processes share.
+
+    The file is rotated by whichever process finds it too large, under a lock; the others
+    notice that the file was replaced and open the new one (`WatchedFileHandler`)."""
+
+    def _open(self):
+        fd = os.open(self.baseFilename, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        return os.fdopen(fd, "a", encoding="utf-8", errors="replace")
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            if self.stream is not None and self.stream.tell() >= MAX_BYTES:
+                rotate(Path(self.baseFilename))
+        except (OSError, ValueError):
+            pass
+        super().emit(record)
+
+
+def rotate(path: Path) -> None:
+    """Start a new log file when the current one is full, keeping `OLD_FILES` old ones."""
+    with open(path.with_name(path.name + ".lock"), "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            if path.stat().st_size < MAX_BYTES:
+                return  # another process has just done it
+        except OSError:
+            return
+        for n in range(OLD_FILES, 0, -1):
+            older = path.with_name(f"{path.name}.{n}")
+            newer = path.with_name(f"{path.name}.{n - 1}") if n > 1 else path
+            if newer.exists():
+                os.replace(newer, older)
+
+
+def log_path() -> Path:
+    return paths.state_dir() / LOG_NAME
+
+
+def file_level(verbose: bool = False) -> int | None:
+    """The level of the log file; None when the user turned the file off."""
+    choice = os.environ.get(ENV, "").strip().lower()
+    if choice in ("off", "0", "no", "none"):
+        return None
+    return logging.DEBUG if verbose or choice == "debug" else logging.INFO
+
+
+def close() -> None:
+    root = logging.getLogger()
+    for handler in _handlers:
+        root.removeHandler(handler)
+        handler.close()
+    _handlers.clear()
+
+
+def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
+          stderr_format: str = "%(levelname)s %(name)s: %(message)s") -> Path | None:
+    """Send log records to stderr (as before) and to the log file. `role` names the part of
+    the program in every line: cli, gui or watch. Returns the log file, if there is one."""
+    close()
+    root = logging.getLogger()
+    if stderr_level is None:
+        stderr_level = logging.DEBUG if verbose else logging.WARNING
+    err = logging.StreamHandler(sys.stderr)
+    err.setLevel(stderr_level)
+    err.setFormatter(logging.Formatter(stderr_format))
+    handlers: list[logging.Handler] = [err]
+    path = None
+    level = file_level(verbose)
+    if level is not None:
+        try:
+            path = log_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            file = _LogFile(path, encoding="utf-8")
+            file.setLevel(level)
+            file.setFormatter(_Formatter(FORMAT, role))
+            handlers.append(file)
+        except OSError as e:
+            # The program works without its log file.
+            print(f"openexpress: no log file ({e})", file=sys.stderr)
+            path = None
+    for handler in handlers:
+        root.addHandler(handler)
+    _handlers.extend(handlers)
+    root.setLevel(min(h.level for h in handlers))
+    return path

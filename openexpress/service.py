@@ -11,7 +11,7 @@ import fcntl
 from dataclasses import dataclass, field
 from typing import Callable
 
-from openexpress import paths, sync
+from openexpress import applog, paths, sync
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError, ClockSkew, GarminClient, NotAccountDevice, OwnershipError, OwnershipUnknown,
@@ -71,6 +71,7 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None) 
 
         storage = open_device_storage(device_uri)
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
+    applog.hide(device.unit_id, "unit")
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 
