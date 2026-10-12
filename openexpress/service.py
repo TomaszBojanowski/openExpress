@@ -475,6 +475,11 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
     if rep.for_phone:
         n = len(rep.for_phone)
         lines.append(ngettext(
+            "The Flatpak version cannot install apps on this device over USB yet; {count} "
+            "Connect IQ app waits in the queue.",
+            "The Flatpak version cannot install apps on this device over USB yet; {count} "
+            "Connect IQ apps wait in the queue.", n).format(count=n)
+            if all(name in rep.sandboxed for name in rep.for_phone) else ngettext(
             "{count} Connect IQ app waits in the queue: openExpress cannot install apps on "
             "this device over USB yet.",
             "{count} Connect IQ apps wait in the queue: openExpress cannot install apps on "

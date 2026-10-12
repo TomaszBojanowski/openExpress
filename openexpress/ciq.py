@@ -466,6 +466,10 @@ class IqInstallReport:
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Left in Garmin's queue: openExpress cannot write them to this device over USB yet.
     for_phone: list[str] = field(default_factory=list)
+    # Those of `for_phone` that only the Flatpak sandbox keeps from the device, and those
+    # of them that are new versions of apps already on the device.
+    sandboxed: list[str] = field(default_factory=list)
+    sandboxed_updates: list[str] = field(default_factory=list)
 
 
 # --- devices that hide the app folder ------------------------------------------------------
@@ -476,12 +480,15 @@ class IqInstallReport:
 # direct PTP session is possible (`Storage.exclusive_ptp`) the app file and the app list
 # are written through it. Where it is not (e.g. in a Flatpak sandbox) such apps are left
 # in the queue in Garmin Connect, from which the phone or Garmin Express installs them.
+# In a sandbox nothing is tried on the device at all (SANDBOXED): the folder is there,
+# creating it can only be refused.
 #
 # A new version of an app is written the same way, under a new file name next to the old
 # file, and the app list is written unchanged; the device replaces the app after it is
 # unplugged (it keeps the old file name). Nothing of the old version is deleted by us.
 
 READY, MISSING, REFUSED, DIRECT = "ready", "missing", "refused", "direct"
+SANDBOXED = "sandboxed"
 # Room left on the storage besides the app file itself.
 PTP_FREE_MARGIN = 1024 * 1024
 
@@ -520,14 +527,28 @@ def _remember_refusal(device: GarminDevice, path: str) -> None:
         log.warning("Cannot remember that %s cannot be created: %s", path, e)
 
 
+def _hides_app_files(device: GarminDevice, storage: Storage) -> bool:
+    """Whether the device lists an app with a file of its own that the storage does not
+    show: its app folder exists and is only hidden."""
+    try:
+        apps = parse_out_bin(storage.read(_config_path(device, False))).apps
+    except (DeviceError, CiqError):
+        return False
+    paths_ = [app_file_path(device, a) for a in apps]
+    return any(p and not storage.exists(p) for p in paths_)
+
+
 def usb_dir_state(device: GarminDevice, storage: Storage, datatype: str) -> str:
-    """READY (visible), DIRECT (not visible; will be looked for over PTP), MISSING (not on
-    the device; creating it was not tried) or REFUSED."""
+    """READY (visible), DIRECT (not visible; will be looked for over PTP), SANDBOXED (hidden
+    by the device and out of reach in a sandbox; nothing is tried), MISSING (not on the
+    device; creating it was not tried) or REFUSED."""
     path = app_dir(device, datatype)
     if path is None or storage.resolve(path) is not None:
         return READY
     if storage.exclusive_ptp() is not None:
         return DIRECT
+    if storage.usb_blocked() and _hides_app_files(device, storage):
+        return SANDBOXED
     if _refusals(device).get(path.casefold()) == device.software_version_str:
         return REFUSED
     return MISSING
@@ -541,6 +562,8 @@ def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str) -> bo
         return True
     if _refusals(device).get(path.casefold()) == device.software_version_str:
         return False
+    if usb_dir_state(device, storage, datatype) == SANDBOXED:
+        return False  # the folder is there; asking the device to create it is pointless
     save_app_list_copy(device, storage)  # creating the folder is a change too
     try:
         storage.make_dir(path)
@@ -577,8 +600,10 @@ def install_apps(
     Apps whose folder the device does not offer are only queued (`for_phone`): nothing is
     downloaded or written for them, and they are not failures.
     """
-    require_complete(read_installed(device, storage))
-    if any(usb_dir_state(device, storage, store_datatype(t)) != REFUSED for t in targets):
+    state = read_installed(device, storage)
+    require_complete(state)
+    states = {t.app_id: usb_dir_state(device, storage, store_datatype(t)) for t in targets}
+    if any(s not in (REFUSED, SANDBOXED) for s in states.values()):
         # Something may be written: the copy comes first, before Garmin is asked for anything.
         save_app_list_copy(device, storage)
     usb = [t for t in targets
@@ -599,7 +624,42 @@ def install_apps(
                                 {t.app_id: t for t in targets},
                                 only={t.app_id for t in usb}, progress=progress, direct=True)
     report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]
+    have = {a.app_id for a in state.store_apps}
+    report.sandboxed += [t.name for t in targets if states[t.app_id] == SANDBOXED
+                         and t.name not in report.sandboxed]
+    report.sandboxed_updates = [t.name for t in targets
+                                if states[t.app_id] == SANDBOXED and t.app_id in have]
     return report
+
+
+def sandbox_text(update: bool = False, queued: bool = False) -> str:
+    """Why an app is only queued in the Flatpak version, before (`queued` False) or after
+    it was queued."""
+    if update:
+        return " ".join((
+            _("The Flatpak version cannot update apps on this device over USB yet."),
+            _("The update waits in the queue in Garmin Connect and will be installed by the "
+              "phone or Garmin Express.") if queued else
+            _("The update will be queued in Garmin Connect and installed by the phone or "
+              "Garmin Express.")))
+    return " ".join((
+        _("The Flatpak version cannot install apps on this device over USB yet."),
+        _("The app waits in the queue in Garmin Connect and will be installed by the phone "
+          "or Garmin Express.") if queued else
+        _("The app will be queued in Garmin Connect and installed by the phone or Garmin "
+          "Express.")))
+
+
+def sandbox_removal_text() -> str:
+    return " ".join((
+        _("The Flatpak version cannot remove apps from this device over USB yet."),
+        _("Remove it on the phone, in the Connect IQ or Garmin Connect app.")))
+
+
+def removal_sandboxed(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
+    """Whether only the Flatpak sandbox keeps the app's file out of reach."""
+    dt = APPTYPE_TO_DATATYPE.get(app.app_type)
+    return bool(dt and app.filename and usb_dir_state(device, storage, dt) == SANDBOXED)
 
 
 @dataclass
@@ -645,6 +705,7 @@ def install_queued(
         report.updated_ids += again.updated_ids
         report.failed += again.failed
         report.for_phone += again.for_phone
+        report.sandboxed += again.sandboxed
     return report
 
 
@@ -692,6 +753,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if not over_ptp and not prepare_app_dir(device, storage, dt):
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
+                    if usb_dir_state(device, storage, dt) == SANDBOXED:
+                        report.sandboxed.append(name)
                     continue
                 copy_first()
                 progress(_("Downloading {name}").format(name=name))

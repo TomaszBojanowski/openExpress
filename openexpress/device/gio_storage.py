@@ -199,6 +199,9 @@ class GioStorage(Storage):
         # A size of 0 means "unknown" (a real storage is never empty-sized).
         return self._fs_attr("filesystem::size") or None
 
+    def usb_blocked(self) -> bool:
+        return in_flatpak()
+
     def exclusive_ptp(self):
         # A Flatpak sandbox has no USB device nodes; there the app is only queued.
         usb = self.usb

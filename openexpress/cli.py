@@ -902,7 +902,9 @@ def cmd_apps(args) -> int:
         dirs = {a.app_id: ciq.usb_dir_state(dev, st, ciq.store_datatype(a)) for a in targets}
         for a in targets:
             folder = ciq.app_dir(dev, ciq.store_datatype(a))
-            if dirs[a.app_id] == ciq.REFUSED:
+            if dirs[a.app_id] == ciq.SANDBOXED:
+                print("  " + f"{a.name}: " + ciq.sandbox_text(a.app_id in installed_ids))
+            elif dirs[a.app_id] == ciq.REFUSED:
                 print("  " + _("{name}: openExpress cannot install apps on this device over USB "
                                "yet. The app will be queued in Garmin Connect and installed by "
                                "the phone or Garmin Express.").format(name=a.name))
@@ -916,7 +918,7 @@ def cmd_apps(args) -> int:
                                "openExpress will try to create it; if the device refuses, the "
                                "app is only queued in Garmin Connect and installed by the phone "
                                "or Garmin Express.").format(name=a.name, path=folder))
-        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED]
+        over_usb = [a for a in targets if dirs[a.app_id] not in (ciq.REFUSED, ciq.SANDBOXED)]
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
@@ -940,11 +942,16 @@ def cmd_apps(args) -> int:
             print(_("Installed: {names}").format(names=", ".join(installed) or none))
         for name, err in rep.failed:
             print("  " + _("ERROR {item}: {error}").format(item=name, error=err))
-        if rep.for_phone:
+        sandboxed = [n for n in rep.for_phone if n in rep.sandboxed]
+        if sandboxed:
+            print(", ".join(sandboxed) + ": " + ciq.sandbox_text(
+                all(n in rep.sandboxed_updates for n in sandboxed), queued=True))
+        for_phone = [n for n in rep.for_phone if n not in sandboxed]
+        if for_phone:
             print(_("Queued in Garmin Connect: {names}. openExpress cannot install apps on "
                     "this device over USB yet; they will be installed by the phone or Garmin "
                     "Express.").format(
-                names=", ".join(rep.for_phone)))
+                names=", ".join(for_phone)))
         if not rep.installed and not rep.failed and not rep.for_phone:
             print(_("The server has not queued the app yet; run `openexpress sync` in a moment."))
         return 0 if not rep.failed else 1
@@ -961,9 +968,14 @@ def cmd_apps(args) -> int:
             return _remove_app_directly(args, dev, st, state, app, api)
         if not paths_:
             # E.g. the fēnix 8: no app files are visible over USB, so there is nothing to delete.
-            print(_("{name} cannot be removed over USB: this device shows no app files. "
-                    "Remove it on the device itself or in Garmin Connect on the phone.").format(
-                name=app.name))
+            if ciq.removal_sandboxed(dev, st, app):
+                print(f"{app.name}: " + ciq.sandbox_removal_text())
+                if not args.forget:
+                    print(_("To remove it only from your account list, use --forget."))
+            else:
+                print(_("{name} cannot be removed over USB: this device shows no app files. "
+                        "Remove it on the device itself or in Garmin Connect on the "
+                        "phone.").format(name=app.name))
             if not args.forget:
                 return 1
             if not args.apply:

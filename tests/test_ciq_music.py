@@ -2427,3 +2427,204 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
     monkeypatch.setattr(gio_storage, "_quiet_until", {})
     MainWindow._on_mount_removed(win, None, Mount())
     assert win._updated_apps == set() and win.session is None and shown == [1]
+
+
+# --- the Flatpak version: no USB access, so a hidden app folder is out of reach ------------
+
+
+@pytest.fixture
+def flatpak_spot(hidden_spot, monkeypatch):
+    """The device of `hidden_spot` seen from a Flatpak sandbox: no PTP session, and any
+    attempt to create a folder on the device is recorded (and refused, as the device does)."""
+    from openexpress.device.storage import DeviceError
+
+    st, dev, fake, app = hidden_spot
+    st.fake = None
+    st.usb_blocked = lambda: True
+    attempts = []
+
+    def refuse(self, real_path):
+        attempts.append(real_path)
+        raise DeviceError("Could not send object info.")
+
+    monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
+    return st, dev, fake, app, attempts
+
+
+def untouched(st, dev, fake, attempts, backups, before):
+    return (attempts == [] and fake.operations == [] and st.sessions == 0
+            and apps_files(st) == before and not (st.root / "GARMIN/APPS/IN.BIN").exists()
+            and not ciq._refusals(dev) and not list(backups.rglob("OUT.BIN")))
+
+
+def test_flatpak_never_tries_to_create_a_hidden_app_folder(flatpak_spot, backups):
+    st, dev, fake, _app, attempts = flatpak_spot
+    before = apps_files(st)
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.SANDBOXED
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
+
+    new = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: []
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(new, "New Face")])
+    assert FakeStore.queued == [["New Face"]]  # requested in Garmin Connect right away
+    assert rep.for_phone == rep.sandboxed == ["New Face"] and rep.sandboxed_updates == []
+    assert rep.installed == [] and rep.failed == [] and client.downloads == 0
+
+    # A sync that finds the app in the queue leaves the device alone as well.
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert rep.for_phone == rep.sandboxed == ["Face It"]
+    assert client.downloads == 0 and client.acks == []
+    assert untouched(st, dev, fake, attempts, backups, before)
+
+
+def test_flatpak_still_creates_a_folder_that_is_really_missing(no_usb_apps, device_root):
+    """No app file is hidden on this device, so its folder is not there: tried as before."""
+    st, dev, attempts = no_usb_apps
+    st.usb_blocked = lambda: True
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([(PRELOADED, 8, "Softball", True, "")]))
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False and len(attempts) == 1
+
+
+def test_flatpak_leaves_an_update_of_a_hidden_app_in_the_queue(flatpak_spot, backups):
+    st, dev, fake, _app, attempts = flatpak_spot
+    before, tree = apps_files(st), fake_tree(fake)
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]  # the update already waits
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert FakeStore.queued == []  # not requested twice
+    assert rep.for_phone == rep.sandboxed == rep.sandboxed_updates == ["Face It"]
+    assert (rep.installed, rep.updated, rep.failed) == ([], [], [])
+    assert client.downloads == 0 and client.acks == []  # stays in Garmin's queue
+    assert fake_tree(fake) == tree  # the old file and the app list are as they were
+    assert untouched(st, dev, fake, attempts, backups, before)
+
+
+def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, monkeypatch,
+                                                      capsys, backups):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app, attempts = flatpak_spot
+    new = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(FakeStore, "account_apps",
+                        lambda self, device, locale: [store_app(new, "New Face")])
+    apps_cli.device_messages = lambda unit_id: []
+    before = apps_files(st)
+
+    assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Install New Face 1.0 (1000 B)",
+        "  New Face: The Flatpak version cannot install apps on this device over USB yet. "
+        "The app will be queued in Garmin Connect and installed by the phone or Garmin Express.",
+        "Dry run. Add --apply.",
+    ]
+    assert FakeStore.queued == []
+
+    assert main(["--path", str(st.root), "apps", "install", "New Face", "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines()[2:] == [
+        "New Face: The Flatpak version cannot install apps on this device over USB yet. "
+        "The app waits in the queue in Garmin Connect and will be installed by the phone or "
+        "Garmin Express.",
+    ]
+    assert FakeStore.queued == [["New Face"]] and apps_cli.downloads == 0
+    assert untouched(st, dev, fake, attempts, backups, before)
+
+
+def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, monkeypatch,
+                                                     capsys, backups):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app, attempts = flatpak_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(FakeStore, "updates",
+                        lambda self, device, installed, locale: [store_app(FACE, "Face It")])
+    before = apps_files(st)
+
+    assert main(["--path", str(st.root), "apps", "update"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Update Face It 1.0 (1000 B)",
+        "  Face It: The Flatpak version cannot update apps on this device over USB yet. "
+        "The update will be queued in Garmin Connect and installed by the phone or Garmin "
+        "Express.",
+        "Dry run. Add --apply.",
+    ]
+    assert main(["--path", str(st.root), "apps", "update", "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines()[2:] == [
+        "Face It: The Flatpak version cannot update apps on this device over USB yet. "
+        "The update waits in the queue in Garmin Connect and will be installed by the phone "
+        "or Garmin Express.",
+    ]
+    assert FakeStore.queued == [["Face It"]] and apps_cli.downloads == 0
+    assert untouched(st, dev, fake, attempts, backups, before)
+
+
+def test_flatpak_cli_remove_changes_nothing_and_says_why(flatpak_spot, apps_cli, monkeypatch,
+                                                         capsys, backups):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app, attempts = flatpak_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    before, tree = apps_files(st), fake_tree(fake)
+    told = ("Face It: The Flatpak version cannot remove apps from this device over USB yet. "
+            "Remove it on the phone, in the Connect IQ or Garmin Connect app.")
+
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 1
+    assert capsys.readouterr().out.splitlines() == [
+        told, "To remove it only from your account list, use --forget."]
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--forget"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        told, "Would remove it from your account list. Add --apply."]
+    assert FakeStore.forgotten == [] and fake_tree(fake) == tree
+    assert untouched(st, dev, fake, attempts, backups, before)
+
+
+def test_flatpak_window_texts(flatpak_spot):
+    from openexpress.gui.app import MainWindow
+
+    st, dev, _fake, app, _attempts = flatpak_spot
+    assert ciq.removal_sandboxed(dev, st, app) and not ciq.removable_directly(dev, st, app)
+    app.sandboxed = True
+    assert MainWindow._forget_text(app) == (
+        "The Flatpak version cannot remove apps from this device over USB yet. Remove it on "
+        "the phone, in the Connect IQ or Garmin Connect app.\n\n"
+        "Here you can only remove it from your account list.")
+    app.sandboxed = False
+    assert MainWindow._forget_text(app).startswith("Face It cannot be removed over USB: ")
+    text = MainWindow._for_phone_text(["Face It"], ["Face It"], ["Face It"])
+    assert text == ("Face It: The Flatpak version cannot update apps on this device over USB "
+                    "yet. The update waits in the queue in Garmin Connect and will be installed "
+                    "by the phone or Garmin Express.")
+    assert MainWindow._for_phone_text(["Face It"], ["Face It"]).startswith(
+        "Face It: The Flatpak version cannot install apps on this device over USB yet. The app "
+        "waits in the queue")
+    # Outside the sandbox the wording is the old one.
+    assert MainWindow._for_phone_text(["Face It"]).startswith("Face It: openExpress cannot")
+
+
+def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups):
+    import types
+
+    from openexpress import service
+
+    st, dev, fake, _app, attempts = flatpak_spot
+    before = apps_files(st)
+
+    class Client(CountingClient):
+        def require_verified(self, unit_id=None):
+            raise RuntimeError("names are cosmetic")
+
+    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+                              settings=types.SimpleNamespace(locale="en_US"))
+    errors = []
+    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    assert errors == [] and lines == [
+        "The Flatpak version cannot install apps on this device over USB yet; 1 Connect IQ "
+        "app waits in the queue."]
+    assert untouched(st, dev, fake, attempts, backups, before)

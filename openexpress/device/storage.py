@@ -63,6 +63,11 @@ class Storage(ABC):
         possible here. The storage itself cannot be used inside the block."""
         return None
 
+    def usb_blocked(self) -> bool:
+        """Whether a sandbox keeps the program away from the USB device itself (Flatpak),
+        so that a PTP session is out of reach here whatever the device offers."""
+        return False
+
     def capacity(self) -> int | None:
         """Total size of the storage in bytes, when known."""
         return None

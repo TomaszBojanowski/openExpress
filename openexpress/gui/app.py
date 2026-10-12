@@ -1550,6 +1550,8 @@ class MainWindow(Adw.ApplicationWindow):
                 app.has_files = bool(ciq.files_on_device(s.device, s.storage, app))
                 app.direct_removal = (not app.has_files and ciq.removable_directly(
                     s.device, s.storage, app))
+                app.sandboxed = (not app.has_files and ciq.removal_sandboxed(
+                    s.device, s.storage, app))
             account = api.account_apps(s.device, locale)
             ciq.name_pending(state, account)
             updates = api.updates(s.device, state.store_apps, locale)
@@ -1843,7 +1845,8 @@ class MainWindow(Adw.ApplicationWindow):
             if rep.failed:
                 self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
             elif rep.for_phone and not rep.installed:
-                self.error(_("Queued in Garmin Connect"), self._for_phone_text(rep.for_phone))
+                self.error(_("Queued in Garmin Connect"), self._for_phone_text(
+                    rep.for_phone, rep.sandboxed, rep.sandboxed_updates))
             elif rep.installed and all(n in rep.updated for n in rep.installed):
                 self.toast(ciq.update_written_text(rep.installed))
             elif rep.installed and all(n in rep.direct for n in rep.installed):
@@ -1857,11 +1860,27 @@ class MainWindow(Adw.ApplicationWindow):
         self.run_task(_("Installing apps…"), work, done)
 
     @staticmethod
-    def _for_phone_text(names) -> str:
+    def _for_phone_text(names, sandboxed=(), updates=()) -> str:
+        from openexpress import ciq
+
+        if names and all(n in sandboxed for n in names):
+            return ", ".join(names) + ": " + ciq.sandbox_text(
+                all(n in updates for n in names), queued=True)
         return _("{names}: openExpress cannot install apps on this device over USB yet. The "
                  "app waits in the queue in Garmin Connect and will be installed by the phone "
                  "or Garmin Express.").format(
             names=", ".join(names))
+
+    @staticmethod
+    def _forget_text(app) -> str:
+        from openexpress import ciq
+
+        if getattr(app, "sandboxed", False):
+            return (ciq.sandbox_removal_text() + "\n\n"
+                    + _("Here you can only remove it from your account list."))
+        return _("{name} cannot be removed over USB: this device shows no app files. Remove "
+                 "it on the device itself or in Garmin Connect on the phone.\n\nHere you can "
+                 "only remove it from your account list.").format(name=app.name)
 
     def confirm_forget_app(self, app) -> None:
         """For apps that cannot be removed over USB: only the account list can be changed."""
@@ -1870,9 +1889,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         d = Adw.AlertDialog(
             heading=_("Remove {name}?").format(name=app.name),
-            body=_("{name} cannot be removed over USB: this device shows no app files. Remove "
-                   "it on the device itself or in Garmin Connect on the phone.\n\nHere you can "
-                   "only remove it from your account list.").format(name=app.name))
+            body=self._forget_text(app))
         d.add_response("cancel", _("Cancel"))
         d.add_response("forget", _("Remove from Account"))
 
