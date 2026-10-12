@@ -430,6 +430,45 @@ class GarminClient:
             raise ApiError(_("{what}: unexpected response from the server").format(what=what))
         return body
 
+    # --- consents and account settings that decide whether data may be uploaded ---------
+
+    def consent(self, consent_type: str) -> dict | None:
+        """The state of one consent of the account (e.g. DI_CONNECT_UPLOAD); None when the
+        server has nothing to say about it. Read-only."""
+        self.require_verified()
+        what = _("Upload consent")
+        r = self._connect("GET", f"gdprconsent-service/feature/consent/{consent_type}", what)
+        if r.status_code == 204 or not r.content.strip():
+            return None
+        body = lower_keys(self._json(r, what))
+        if not isinstance(body, dict):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+        return body
+
+    def device_sync_preference(self) -> dict | None:
+        """The account's "device sync" preference: {"key": ..., "value": "true"|"false"}.
+        Read-only."""
+        self.require_verified()
+        what = _("Device sync setting")
+        r = self._connect("GET", "userpreference-service/account.deviceSync", what)
+        if r.status_code == 204 or not r.content.strip():
+            return None
+        body = lower_keys(self._json(r, what))
+        if not isinstance(body, dict):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+        return body
+
+    def profile_country(self) -> str | None:
+        """The country code of the account's location, when the profile has one. Read-only."""
+        self.require_verified()
+        what = _("Account location")
+        r = self._connect("GET", "userprofile-service/userprofile/location", what)
+        if r.status_code == 204 or not r.content.strip():
+            return None
+        body = lower_keys(self._json(r, what))
+        code = body.get("countrycode") if isinstance(body, dict) else None
+        return code.upper() if isinstance(code, str) and code.strip() else None
+
     def primary_training_device(self) -> dict:
         """The account's primary training device setting: {"deviceid": unit ID}; {} if unset.
 

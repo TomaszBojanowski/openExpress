@@ -171,12 +171,16 @@ def is_diagnostic(datatype: str, url: str) -> bool:
     return datatype in DIAGNOSTIC_TYPES or any(m in url for m in DIAGNOSTIC_URL_MARKERS)
 
 
-def parse_locations(dt: dict, include_consent: bool) -> tuple[list[UploadLocation], list[UploadLocation]]:
+def parse_locations(dt: dict, include_consent: bool,
+                    consent_granted: Callable[[str], bool] | None = None,
+                    ) -> tuple[list[UploadLocation], list[UploadLocation]]:
     """Return (used, skipped) upload locations for an OMT data type.
 
     As in Express, the requiresUserConsent flag alone does not exclude a location
-    (it applies to e.g. HRV and skin temperature). Locations with specific
-    required consents are skipped, since this version does not check their state.
+    (it applies to e.g. HRV and skin temperature). A location that names specific
+    required consents is used only when `consent_granted` says each of them is given;
+    without that function such locations are skipped. `include_consent` takes them
+    all, for marking files only (nothing is uploaded then).
     """
     used, skipped = [], []
     for loc in dt.get("uploadlocations") or []:
@@ -184,11 +188,14 @@ def parse_locations(dt: dict, include_consent: bool) -> tuple[list[UploadLocatio
             url=loc.get("url") or "",
             requires_auth=bool(loc.get("requiresauthentication")),
             requires_consent=bool(loc.get("requiresuserconsent")),
-            consent_types=[c.get("name", "") for c in loc.get("requiredconsenttypes") or []],
+            consent_types=[c.get("name") or c.get("consenttype") or "?"
+                           for c in loc.get("requiredconsenttypes") or [] if isinstance(c, dict)],
         )
         if not ul.url:
             continue
-        (used if include_consent or not ul.consent_types else skipped).append(ul)
+        ok = (include_consent or not ul.consent_types
+              or (consent_granted is not None and all(consent_granted(c) for c in ul.consent_types)))
+        (used if ok else skipped).append(ul)
     return used, skipped
 
 
@@ -219,13 +226,14 @@ def plan_uploads(
     include_consent_locations: bool = False,
     only_types: set[str] | None = None,
     include_diagnostics: bool = False,
+    consent_granted: Callable[[str], bool] | None = None,
 ) -> UploadPlan:
     plan = UploadPlan()
     for dt in upload_config.get("datatypes") or []:
         name = dt.get("datatypename") or ""
         if only_types and name not in only_types:
             continue
-        locations, skipped = parse_locations(dt, include_consent_locations)
+        locations, skipped = parse_locations(dt, include_consent_locations, consent_granted)
         if not include_diagnostics:
             diag = [loc for loc in locations if is_diagnostic(name, loc.url)]
             locations = [loc for loc in locations if loc not in diag]
@@ -237,7 +245,7 @@ def plan_uploads(
             if skipped and _sources_for(device, dt):
                 consents = ", ".join(
                     sorted({c for s in skipped for c in s.consent_types}) or ["?"])
-                plan.skipped_types[name] = _("requires consent ({consents})").format(
+                plan.skipped_types[name] = _("consent not given ({consents})").format(
                     consents=consents)
             continue
         sources = _sources_for(device, dt)

@@ -294,16 +294,20 @@ def cmd_sync(args) -> int:
         logged_in = False
         client = make_client(settings, need_auth=False)
         print(_("(not logged in: showing the upload plan only)"))
+    gate = None
     if logged_in:
         from openexpress import service
 
         service.require_account_device(client, dev.unit_id)
+        if not args.download_only:
+            # Asked once, before anything could be uploaded.
+            gate = service.check_upload_allowed(client)
 
     up_plan = None
     if not args.download_only:
         cfg = client.upload_settings(dev.unit_id)
         up_plan = sync.plan_uploads(
-            dev, st, cfg, state, include_consent_locations=args.include_consent,
+            dev, st, cfg, state, consent_granted=gate.granted if gate else None,
             only_types=set(args.type) if args.type else None,
             include_diagnostics=args.include_diagnostics,
         )
@@ -317,6 +321,10 @@ def cmd_sync(args) -> int:
             print(f"  {dt:22} {n:5}  {_human(size)}")
         for dt, why in sorted(up_plan.skipped_types.items()):
             print(f"  {dt:22} " + _("skipped: {reason}").format(reason=why))
+        if gate is not None and not args.apply:
+            print(gate.message(done=False) if not gate.allowed else _(
+                "Uploads are allowed: the Garmin account has the upload consent and device "
+                "sync is on."))
 
     dl_items = []
     messages: list[dict] = []
@@ -361,11 +369,17 @@ def cmd_sync(args) -> int:
             # Another process may have synced since the plan was shown: plan again under the lock.
             state = sync.SyncState(dev.unit_id)
             up_plan = sync.plan_uploads(
-                dev, st, cfg, state, include_consent_locations=args.include_consent,
+                dev, st, cfg, state, consent_granted=gate.granted if gate else None,
                 only_types=set(args.type) if args.type else None,
                 include_diagnostics=args.include_diagnostics,
             )
-        if up_plan and up_plan.candidates:
+        if up_plan is not None and (gate is None or not gate.allowed):
+            # No consent, device sync turned off, or the check failed: nothing is uploaded.
+            # Files from Connect are still written to the device below.
+            line = (gate or service.UploadGate(service.NOT_CHECKED)).message()
+            print("\n" + line)
+            summary.lines.append(line)
+        elif up_plan and up_plan.candidates:
             print("\n" + _("Uploading…"))
             rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
             line = _("Uploaded: {uploaded}, duplicates: {duplicates}, already in Connect: "
@@ -1304,8 +1318,6 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--upload-only", action="store_true")
     s.add_argument("--download-only", action="store_true")
     s.add_argument("--type", action="append", help=_("only the given data type (repeatable)"))
-    s.add_argument("--include-consent", action="store_true",
-                   help=_("also upload to locations that require specific GDPR consents"))
     s.add_argument("--include-diagnostics", action="store_true",
                    help=_("also upload device diagnostics and telemetry to Garmin"))
     s.set_defaults(func=cmd_sync)

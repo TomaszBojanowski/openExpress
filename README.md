@@ -184,13 +184,17 @@ account only gets a notification.
   (older devices) is rejected.
 - Upload works as in Express: activities that Connect already has (e.g. from the phone) are
   detected and skipped; duplicates are rejected by the server.
+- Nothing is uploaded unless the Garmin account has given the consent to upload data from
+  devices and has device sync turned on; both are checked before every sync. Files from
+  Garmin Connect are still written to the device. Upload locations that need a further
+  consent are used only when that consent is given.
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 
 ## Not yet available (next stages)
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
-- Checking the state of GDPR consents (locations with required consents are skipped).
+- Checking the privacy-policy consents before a sync (the upload consent is checked, see below).
 
 ## Sync details
 

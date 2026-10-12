@@ -34,6 +34,17 @@ class FakeClient:
     def require_verified(self, unit_id=None):
         assert self.verified_unit_id is not None
 
+    # The account allows uploads, as a normal account does.
+    def consent(self, consent_type):
+        return {"useroption": "opt-in", "sourcetype": "CUSTOMER",
+                "consentenforcementstate": "HARD", "consenttypeid": consent_type}
+
+    def device_sync_preference(self):
+        return {"key": "account.deviceSync", "value": "true"}
+
+    def profile_country(self):
+        return "PL"
+
     def upload_settings(self, unit_id):
         if self.fail_config:
             raise self.fail_config

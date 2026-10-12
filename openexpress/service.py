@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import json
+import logging
 import time
 import contextlib
 import fcntl
@@ -20,6 +21,8 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import _, ngettext
 from openexpress.settings import Settings, SetupError, load_consumer
+
+log = logging.getLogger(__name__)
 
 Progress = Callable[[str], None]
 
@@ -112,6 +115,106 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
         return devices
     finally:
         client.verified_unit_id = verified
+
+
+# --- may data be uploaded? ---------------------------------------------------------------
+#
+# Like Garmin Express, nothing is uploaded unless the account has given the upload consent
+# (DI_CONNECT_UPLOAD) and has device sync turned on (the preference account.deviceSync).
+# Files from Garmin Connect are still written to the device. Whatever cannot be read or
+# understood counts as "no".
+
+UPLOAD_CONSENT = "DI_CONNECT_UPLOAD"
+NO_CONSENT, SYNC_OFF, NOT_CHECKED = "no-consent", "sync-off", "not-checked"
+
+
+def consent_granted(body: dict | None, consent_type: str, country=lambda: None) -> bool:
+    """Whether an answer of the consent service means "granted".
+
+    Granted when the server does not enforce the consent at all, or when the user opted
+    in and the consent has not expired. An opt-out is never granted. An upload consent
+    that only comes from the account's defaults counts when the account's country is
+    known and is not China, where a default is not enough; `country` returns that code.
+    """
+    if not isinstance(body, dict):
+        return False
+    option = str(body.get("useroption") or "").lower()
+    source = str(body.get("sourcetype") or "").upper()
+    enforcement = str(body.get("consentenforcementstate") or "").upper()
+    if option == "opt-out":
+        return False
+    if enforcement == "NONE":
+        return True
+    if enforcement not in ("SOFT", "HARD") or option != "opt-in" or source == "EXPIRED":
+        return False
+    if consent_type == UPLOAD_CONSENT and source == "DEFAULT":
+        code = country()
+        return bool(code) and code != "CN"
+    return source in ("CUSTOMER", "SYSTEM", "DEFAULT", "CONNECT_PRIVACY")
+
+
+@dataclass
+class UploadGate:
+    """The answer to "may this sync upload data?", asked once per sync."""
+
+    reason: str = ""  # "", NO_CONSENT, SYNC_OFF or NOT_CHECKED
+    client: object = None
+    _consents: dict = field(default_factory=dict)
+
+    @property
+    def allowed(self) -> bool:
+        return not self.reason
+
+    def why(self) -> str:
+        return {
+            NO_CONSENT: _("the Garmin account has no consent to upload data from devices."),
+            SYNC_OFF: _("device sync is turned off in the Garmin account."),
+            NOT_CHECKED: _("the upload consent could not be checked. Try again later."),
+        }.get(self.reason, "")
+
+    def message(self, done: bool = True) -> str:
+        """`done`: after a sync; otherwise for a plan (dry run)."""
+        frame = (_("Nothing was uploaded: {reason}") if done
+                 else _("Nothing would be uploaded: {reason}"))
+        return frame.format(reason=self.why())
+
+    def granted(self, consent_type: str) -> bool:
+        """Whether a consent that one upload location requires is given (asked once)."""
+        if not self.allowed or self.client is None:
+            return False
+        if consent_type not in self._consents:
+            try:
+                self._consents[consent_type] = consent_granted(
+                    self.client.consent(consent_type), consent_type, self.client.profile_country)
+            except (Unauthorized, ClockSkew):
+                raise
+            except Exception as e:  # noqa: BLE001 - anything unclear means "no"
+                log.warning("Cannot check the consent %s: %s", consent_type, e)
+                self._consents[consent_type] = False
+        return self._consents[consent_type]
+
+
+def check_upload_allowed(client) -> UploadGate:
+    """Ask Garmin Connect whether data may be uploaded. Never assumes "yes": a missing,
+    empty or unreadable answer and a failed request all block uploads. An expired login
+    or a wrong clock is raised as such."""
+    try:
+        if not consent_granted(client.consent(UPLOAD_CONSENT), UPLOAD_CONSENT,
+                               client.profile_country):
+            return UploadGate(NO_CONSENT)
+        preference = client.device_sync_preference()
+    except (Unauthorized, ClockSkew):
+        raise
+    except Exception as e:  # noqa: BLE001 - network, HTTP or an unexpected answer
+        log.warning("Cannot check whether uploads are allowed: %s", e)
+        return UploadGate(NOT_CHECKED)
+    if not isinstance(preference, dict) or preference.get("value") is None:
+        return UploadGate(NOT_CHECKED)
+    if str(preference.get("value")).lower() != "true":
+        return UploadGate(SYNC_OFF)
+    gate = UploadGate("", client)
+    gate._consents[UPLOAD_CONSENT] = True
+    return gate
 
 
 @dataclass
@@ -295,10 +398,15 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
             raise FirstSyncChoiceNeeded()
         state = s.state
     progress(_("Looking for new files on the device…"))
+    gate = check_upload_allowed(s.client)
     plan = sync.plan_uploads(s.device, s.storage, cfg, state,
-                             include_diagnostics=include_diagnostics)
+                             include_diagnostics=include_diagnostics,
+                             consent_granted=gate.granted)
     counts = collections.Counter(c.datatype for c in plan.candidates)
-    if plan.candidates:
+    if not gate.allowed:
+        # Files from Connect are still written to the device below.
+        out.lines.append(gate.message())
+    elif plan.candidates:
         types = ", ".join(f"{k}×{v}" for k, v in sorted(counts.items()))
         out.lines.append(_("New files: {types}").format(types=types))
         rep = sync.run_uploads(plan, s.device, s.storage, s.client, state, progress)
