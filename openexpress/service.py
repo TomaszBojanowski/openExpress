@@ -32,6 +32,8 @@ class DeviceSession:
     client: GarminClient
     # Set by check_session(): why account features are unavailable for this watch.
     ownership_error: Exception | None = None
+    # The account's device list from that check (model names for the window).
+    account_devices: list[dict] | None = None
 
     @property
     def logged_in(self) -> bool:
@@ -77,8 +79,10 @@ def _unit_id(value) -> int | None:
     return value if type(value) is int and value > 0 else None
 
 
-def require_account_device(client: GarminClient, unit_id: int) -> None:
+def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
     """Allow account operations on this watch only if the account lists it.
+
+    Returns the account's device list that was fetched for the check.
 
     Asks Garmin Connect every time (no cache, no override). Raises NotAccountDevice
     when the watch is not on the list and OwnershipUnknown when the list cannot be
@@ -105,8 +109,42 @@ def require_account_device(client: GarminClient, unit_id: int) -> None:
                   "Garmin Connect here, sign in to the account it belongs to or add the "
                   "device to your account in Garmin Connect."))
         verified = unit_id
+        return devices
     finally:
         client.verified_unit_id = verified
+
+
+@dataclass
+class PrimaryTraining:
+    """The account's primary training device, seen from the connected device."""
+
+    unit_id: int | None  # None: the account has none set
+    name: str  # its model name from the account's device list; "" when it is not listed
+    is_this_device: bool
+    capable: bool | None  # whether the connected device can be one; None when unknown
+
+
+def primary_training_status(client: GarminClient, device: GarminDevice,
+                            devices: list[dict] | None = None) -> PrimaryTraining:
+    """Read which device is the primary training device. Changes nothing on the account.
+
+    Without `devices` (the account's device list from an ownership check that was just
+    made) the ownership check is run here.
+    """
+    if devices is None:
+        devices = require_account_device(client, device.unit_id)
+    raw = client.primary_training_device().get("deviceid")
+    unit_id = _unit_id(raw)
+    if unit_id is None and raw not in (None, 0, "0", ""):
+        raise ApiError(_("{what}: unexpected response from the server").format(
+            what=_("Primary training device")))
+    by_id = {_unit_id(d.get("unitid")): d for d in devices}
+    entry = by_id.get(unit_id) if unit_id is not None else None
+    name = (entry.get("productdisplayname") or entry.get("displayname") or "") if entry else ""
+    capable = by_id.get(device.unit_id, {}).get("primarytrainingcapable")
+    return PrimaryTraining(unit_id, name if isinstance(name, str) else "",
+                           unit_id is not None and unit_id == device.unit_id,
+                           capable if isinstance(capable, bool) else None)
 
 
 def check_session(s: DeviceSession) -> DeviceSession:
@@ -115,9 +153,10 @@ def check_session(s: DeviceSession) -> DeviceSession:
     A rejected login makes the session logged out, so the window asks to log in again.
     """
     s.ownership_error = None
+    s.account_devices = None
     if s.logged_in:
         try:
-            require_account_device(s.client, s.device.unit_id)
+            s.account_devices = require_account_device(s.client, s.device.unit_id)
         except Unauthorized:
             s.client.auth = None
         except (OwnershipError, ClockSkew) as e:

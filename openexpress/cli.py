@@ -776,6 +776,27 @@ def cmd_apps(args) -> int:
     return 0
 
 
+def cmd_primary(args) -> int:
+    from openexpress import service
+
+    st, dev = open_device(args)
+    client = make_client(Settings.load(), need_auth=True)
+    status = service.primary_training_status(client, dev)
+    if status.unit_id is None:
+        print(_("No primary training device is set for this Garmin account."))
+    elif status.is_this_device:
+        print(_("Primary training device: {name} (this device)").format(
+            name=status.name or dev.description))
+    else:
+        print(_("Primary training device: {name}").format(
+            name=status.name or _("a device that is not on the account's list")))
+        print(_("The connected device ({device}) is not the primary training device.").format(
+            device=dev.description))
+    if status.capable is False:
+        print(_("The connected device cannot be a primary training device."))
+    return 0
+
+
 MUSIC_KIND_LINES = {
     "track": N_("Tracks: {count} ({size})"),
     "podcast": N_("Podcasts: {count} ({size})"),
@@ -1085,6 +1106,10 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("name")
     m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_maps)
+
+    s = sub.add_parser("primary",
+                       help=_("show the primary training device of the Garmin account"))
+    s.set_defaults(func=cmd_primary)
 
     s = sub.add_parser("apps", help=_("Connect IQ apps, watch faces and data fields"))
     s.add_argument("--builtin", action="store_true", help=_("also list built-in activities"))

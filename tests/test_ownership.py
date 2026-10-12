@@ -14,7 +14,8 @@ from openexpress.auth import store
 from openexpress.auth.store import ConnectAuth
 from openexpress.cli import main
 from openexpress.connect import (
-    ClockSkew, DeviceNotVerified, GarminClient, NotAccountDevice, OwnershipUnknown, Unauthorized,
+    ApiError, ClockSkew, DeviceNotVerified, GarminClient, NotAccountDevice, OwnershipUnknown,
+    Unauthorized,
 )
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -229,6 +230,7 @@ def account_calls(client, device):
     api = ciq.StoreApi(client)
     return {
         "device_messages": lambda: client.device_messages(device.unit_id),
+        "primary_training_device": lambda: client.primary_training_device(),
         "activity_matches": lambda: client.activity_matches(device.unit_id, ["1"]),
         "activity_matches_empty": lambda: client.activity_matches(device.unit_id, []),
         "device_image_url": lambda: client.device_image_url(device.unit_id),
@@ -538,3 +540,158 @@ def test_window_shows_the_refusal_instead_of_account_features(device_root, devic
     assert started == []
     assert shown == [str(s.ownership_error), "error"] and NOT_REGISTERED in shown[0]
     assert client.http.paths() == [DEVICES_PATH]
+
+
+# --- primary training device (read-only) -----------------------------------------------------
+
+PTD_PATH = "userprofile-service/userprofile/user-settings/primary-training-device"
+ACCOUNT = [{"unitid": UNIT, "productdisplayname": "Test watch", "primarytrainingcapable": True},
+           {"unitid": OTHER, "productdisplayname": "Bike computer", "primarytrainingcapable": False}]
+
+
+def ptd_client(answer, devices=ACCOUNT):
+    return make_client(devices, **{PTD_PATH: answer})
+
+
+def test_primary_training_is_this_device(device):
+    client = ptd_client(response(body={"deviceId": UNIT}))
+    status = service.primary_training_status(client, device)
+    assert status == service.PrimaryTraining(UNIT, "Test watch", True, True)
+    http = client.http
+    assert http.paths() == [DEVICES_PATH, PTD_PATH]  # ownership first, then one read
+    assert [r["method"] for r in http.sent] == ["GET", "GET"]
+    assert "ignoreCache=false" in http.sent[1]["url"] and "Authorization" in http.sent[1]["headers"]
+    assert http.signed_for(UNIT) == []  # the request does not name the device
+
+
+def test_primary_training_is_another_device(device):
+    status = service.primary_training_status(ptd_client(response(body={"deviceId": str(OTHER)})),
+                                             device)
+    assert status == service.PrimaryTraining(OTHER, "Bike computer", False, True)
+
+
+def test_primary_training_device_not_on_the_account_list(device):
+    status = service.primary_training_status(ptd_client(response(body={"deviceId": 777000111})),
+                                             device)
+    assert (status.unit_id, status.name, status.is_this_device) == (777000111, "", False)
+
+
+@pytest.mark.parametrize("answer", [
+    response(body={}), response(body={"deviceId": None}), response(body={"deviceId": 0}),
+    response(200, b"null"), response(200, b""), response(204, b""), response(200, b"  "),
+], ids=["no-field", "null-field", "zero", "null", "empty", "http204", "blank"])
+def test_primary_training_not_set(device, answer):
+    status = service.primary_training_status(ptd_client(answer), device)
+    assert status == service.PrimaryTraining(None, "", False, True)
+
+
+@pytest.mark.parametrize("answer", [
+    response(body=[UNIT]), response(body={"deviceId": "abc"}), response(body={"deviceId": True}),
+    response(body={"deviceId": {"id": UNIT}}), response(200, b"<html>"), response(500, b"oops"),
+    response(404, b""), requests.ConnectionError("offline"),
+], ids=["list", "text-id", "bool-id", "object-id", "not-json", "http500", "http404", "network"])
+def test_primary_training_unreadable_answer_is_an_error(device, answer):
+    with pytest.raises(ApiError):
+        service.primary_training_status(ptd_client(answer), device)
+
+
+@pytest.mark.parametrize("flag, expected", [(True, True), (False, False), ("yes", None),
+                                            (None, None)])
+def test_primary_training_capable_flag(device, flag, expected):
+    devices = [{"unitid": UNIT, "primarytrainingcapable": flag}]
+    client = ptd_client(response(body={"deviceId": OTHER}), devices)
+    assert service.primary_training_status(client, device).capable is expected
+
+
+def test_primary_training_refuses_other_device(device):
+    client = ptd_client(response(body={"deviceId": UNIT}), [{"unitid": OTHER}])
+    with pytest.raises(NotAccountDevice):
+        service.primary_training_status(client, device)
+    assert client.http.paths() == [DEVICES_PATH]  # the setting is not even read
+
+
+def test_primary_training_with_a_list_from_the_window_still_needs_the_check(device):
+    client = ptd_client(response(body={"deviceId": UNIT}))
+    with pytest.raises(DeviceNotVerified):
+        service.primary_training_status(client, device, ACCOUNT)
+    assert client.http.sent == []
+    service.require_account_device(client, UNIT)
+    assert service.primary_training_status(client, device, ACCOUNT).is_this_device
+    assert client.http.paths() == [DEVICES_PATH, PTD_PATH]
+
+
+@pytest.mark.parametrize("answer, lines", [
+    ({"deviceId": UNIT}, ["Primary training device: Test watch (this device)"]),
+    ({"deviceId": OTHER}, ["Primary training device: Bike computer",
+                           "The connected device (Test watch) is not the primary training device."]),
+    ({"deviceId": 777000111}, ["Primary training device: a device that is not on the account's list",
+                               "The connected device (Test watch) is not the primary training device."]),
+    ({}, ["No primary training device is set for this Garmin account."]),
+], ids=["this", "other", "unlisted", "unset"])
+def test_cli_primary(device_root, xdg, cli_client, capsys, answer, lines):
+    cli_client["client"] = ptd_client(response(body=answer))
+    before = tree(device_root)
+    assert main(["--path", str(device_root), "primary"]) == 0
+    assert capsys.readouterr().out.splitlines() == lines
+    http = cli_client["client"].http
+    assert http.paths() == [DEVICES_PATH, PTD_PATH]
+    assert {r["method"] for r in http.sent} == {"GET"}  # nothing is changed on the account
+    assert tree(device_root) == before
+
+
+def test_cli_primary_says_when_the_device_cannot_be_one(device_root, xdg, cli_client, capsys):
+    devices = [{"unitid": UNIT, "productdisplayname": "Test watch", "primarytrainingcapable": False}]
+    cli_client["client"] = ptd_client(response(body={}), devices)
+    assert main(["--path", str(device_root), "primary"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == \
+        "The connected device cannot be a primary training device."
+
+
+def test_cli_primary_refuses_other_device(device_root, xdg, cli_client, capsys):
+    cli_client["client"] = ptd_client(response(body={"deviceId": OTHER}), [{"unitid": OTHER}])
+    assert main(["--path", str(device_root), "primary"]) == 1
+    assert NOT_REGISTERED in capsys.readouterr().err
+    assert cli_client["client"].http.paths() == [DEVICES_PATH]
+
+
+def test_window_primary_training_row(device_root, device):
+    from openexpress.gui.app import MainWindow
+
+    text = MainWindow._primary_training_text
+    assert text(service.PrimaryTraining(None, "", False, None)) == "Not set"
+    assert text(service.PrimaryTraining(UNIT, "Test watch", True, True)) == "This device"
+    assert text(service.PrimaryTraining(OTHER, "Bike computer", False, True)) == "Bike computer"
+    assert text(service.PrimaryTraining(OTHER, "", False, True)) == "Another device"
+
+    def window(client):
+        s = service.check_session(session(device_root, device, client))
+        assert s.account_devices == ACCOUNT
+        win = types.SimpleNamespace(session=s, _primary_training_text=text)
+
+        def run_now(fn, on_done, on_error=None):
+            try:
+                result = fn()
+            except Exception as e:  # noqa: BLE001
+                on_error(e)
+            else:
+                on_done(result)
+
+        win.in_background = run_now
+        return win
+
+    shown = []
+    row = types.SimpleNamespace(set_subtitle=shown.append)
+    client = ptd_client(response(body={"deviceId": OTHER}))
+    MainWindow._show_primary_training(window(client), row)
+    assert shown == ["Bike computer"]
+    # One ownership check when the device was detected, then one read: no second list request.
+    assert client.http.paths() == [DEVICES_PATH, PTD_PATH]
+    assert {r["method"] for r in client.http.sent} == {"GET"}
+
+    MainWindow._show_primary_training(window(ptd_client(requests.ConnectionError("offline"))), row)
+    assert shown[-1] == "Could not check"
+
+
+def test_check_session_forgets_the_list_on_refusal(device_root, device):
+    s = service.check_session(session(device_root, device, make_client([{"unitid": OTHER}])))
+    assert s.ownership_error is not None and s.account_devices is None

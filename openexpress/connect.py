@@ -428,6 +428,28 @@ class GarminClient:
             raise ApiError(_("{what}: unexpected response from the server").format(what=what))
         return body
 
+    def primary_training_device(self) -> dict:
+        """The account's primary training device setting: {"deviceid": unit ID}; {} if unset.
+
+        Read-only. The request names no device, so any verified device is enough.
+        """
+        self.require_verified()
+        what = _("Primary training device")
+        r = self._connect(
+            "GET",
+            "userprofile-service/userprofile/user-settings/primary-training-device",
+            what,
+            params={"ignoreCache": "false"},
+        )
+        if r.status_code == 204 or not r.content.strip():
+            return {}
+        body = lower_keys(self._json(r, what))
+        if body is None:
+            return {}
+        if not isinstance(body, dict):
+            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+        return body
+
     def device_messages(self, unit_id: int) -> list[dict]:
         self.require_verified(unit_id)
         what = _("Connect file queue")

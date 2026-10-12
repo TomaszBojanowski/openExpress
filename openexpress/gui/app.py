@@ -706,6 +706,11 @@ class MainWindow(Adw.ApplicationWindow):
             row = Adw.ActionRow(title=GLib.markup_escape_text(s.client.auth.display))
             row.add_suffix(self._button(_("Log out"), self.logout))
             g.add(row)
+            if s.ownership_error is None and s.account_devices is not None:
+                self.primary_row = Adw.ActionRow(title=_("Primary training device"),
+                                                 subtitle=_("Checking…"))
+                g.add(self.primary_row)
+                self._show_primary_training(self.primary_row)
 
         g = sec.group(_("Tools"))
         row = Adw.ActionRow(title=_("Backup"),
@@ -718,6 +723,30 @@ class MainWindow(Adw.ApplicationWindow):
         g.add(row)
         sec.loaded = True
         sec.show("content")
+
+    @staticmethod
+    def _primary_training_text(status) -> str:
+        if status.unit_id is None:
+            return _("Not set")
+        if status.is_this_device:
+            return _("This device")
+        return status.name or _("Another device")
+
+    def _show_primary_training(self, row) -> None:
+        """Read-only: which device the account uses as its primary training device."""
+        s = self.session
+
+        def done(status):
+            if self.session is s:
+                row.set_subtitle(GLib.markup_escape_text(self._primary_training_text(status)))
+
+        def failed(_e):
+            if self.session is s:
+                row.set_subtitle(_("Could not check"))
+
+        self.in_background(
+            lambda: service.primary_training_status(s.client, s.device, s.account_devices),
+            done, failed)
 
     def _set_device_texture(self, texture) -> None:
         self.device_picture.set_paintable(texture)
