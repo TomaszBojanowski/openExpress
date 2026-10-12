@@ -35,7 +35,8 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 - Garmin Connect sync: new activities, sleep, HRV, metrics… are uploaded; courses, workouts
   and Connect IQ apps queued in Connect are written to the watch; TrueUp for multiple devices.
 - Watch software updates and free maps (TopoActive, CourseView, Ski…), with MD5 verification.
-- Connect IQ apps: install, update, remove, enable/disable built-in activities.
+- Connect IQ apps: install, update, remove, enable/disable built-in activities – also on
+  watches that hide their app folder (e.g. the fēnix 8), without reordering your widgets.
 - Music, podcasts and audiobooks with playlists.
 - GTK 4 / libadwaita window, command-line tool and background sync with notifications.
 - No telemetry. English and Polish, translatable with gettext.
@@ -59,7 +60,9 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 | `openexpress maps install NAME [--apply]` | install a map assigned to the watch (download, activation, write) |
 | `openexpress maps update [--apply]`, `maps remove NAME [--apply]` | update and remove maps |
 | `openexpress apps [--builtin]` | Connect IQ apps on the watch and in your Garmin account, available updates |
-| `openexpress apps install/update/remove/enable/disable … [--apply]` | install (via the Connect queue), update, remove, enable or disable apps and built-in activities |
+| `openexpress apps install/update/remove/enable/disable … [--apply]` | install, update, remove, enable or disable apps and built-in activities |
+| `openexpress apps order [--from COPY] [--apply]` | put apps and widgets back in the order of a saved copy of the app list |
+| `openexpress primary [set --apply]` | show the account's primary training device, or make the connected device the primary one |
 | `openexpress music [add PATH… \| playlist FILE.m3u \| remove TEXT…] [--apply]` | music, podcasts and audiobooks (Artist/Album layout, `.m3u8` playlists) |
 | `openexpress gui` | application window (GTK 4 + libadwaita): watch, sync, updates, maps, apps, music |
 | `openexpress watch` | background service: sync when the watch is connected, with a notification |
@@ -68,11 +71,15 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 All commands that change anything run **in dry-run mode by default**:
 they show the plan and do nothing without `--apply`.
 
+A Garmin device needs a moment to start after it is plugged in. Commands wait for it
+(up to 45 seconds) and the window shows that the device is starting; `--no-wait` makes a
+command fail at once instead.
+
 ## Supported devices
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, Connect IQ app list, copying music and playlists. **Not yet tested on the watch:** installing Connect IQ apps, installing a software update |
+| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
 | Edge 1050 | detected automatically; read-only commands, backup and sync plan tested |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
@@ -107,6 +114,12 @@ because gvfs does not let sandboxed apps write to MTP devices. This weakens the 
 you prefer not to grant it, use the version from source (writing to the watch then works
 without it).
 
+**Limitation of the Flatpak:** it has no direct access to USB devices. On devices that hide
+their app folder (e.g. the fēnix 8) it therefore cannot install, update or remove Connect IQ
+apps itself: installs and updates are only queued in Garmin Connect, from where the phone or
+Garmin Express installs them, and apps are removed on the phone. Nothing is written to the
+device in that case. The version from source has no such limit.
+
 Build the Flatpak yourself:
 
 ```bash
@@ -119,9 +132,10 @@ flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.gi
 ## Requirements
 
 - Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0
-  (login window) and GIO/gvfs (MTP). Optional: `mutagen` (music tags), `7z` (setup).
-  - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins`
-  - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip`
+  (login window) and GIO/gvfs (MTP). Optional: `mutagen` (music tags), `7z` (setup),
+  `libusb-1.0` (Connect IQ apps on devices that hide their app folder; usually installed).
+  - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1`
+  - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0`
 - Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
   openexpress uses the same connection, so the file manager can stay open.
 - The official Garmin Express installer for Windows (`GarminExpress.exe`, free download from
@@ -168,6 +182,25 @@ It does nothing until you log in and perform the first sync
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
 
+## Connect IQ apps
+
+- Some watches (e.g. the fēnix 8) keep their app folder out of the ordinary file listing.
+  On such a device `apps install`, `apps update`, `apps remove` and the buttons in the window
+  talk to it over a direct USB connection; the device disappears from the file manager for a
+  moment and is mounted again afterwards. The device finishes the change after it is
+  unplugged; until then the app is shown as waiting. A sync never does this: it leaves such
+  apps in the queue. Not available in the Flatpak (see above).
+- The apps already on the device keep their order and their on/off state: the app list is
+  written back exactly as the device reported it, with only the requested change.
+- Before every change to the apps (install, update, remove, enable/disable, order) a copy of
+  the device's app list is saved next to the backups, in a folder named `GARMIN-APPS <date>`.
+  Nothing is changed if the copy cannot be made.
+- `openexpress apps order` (in the window: **Restore the order from a copy** on the Apps
+  page) lists these copies and puts the apps and widgets back in the order of the chosen
+  one, for example after another program rearranged the widgets. It only reorders: the same
+  apps, the same settings.
+- An app that already waits in Garmin's queue for the device is not requested a second time.
+
 ## Privacy and security
 
 - The password is entered only on Garmin's page. An OAuth1 token is stored locally
@@ -194,7 +227,14 @@ account only gets a notification.
 ## Not yet available (next stages)
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
-- Checking the privacy-policy consents before a sync (the upload consent is checked, see below).
+- Checking the privacy-policy consents before a sync (the upload consent is checked, see above).
+- Connect IQ apps over a direct USB connection in the Flatpak.
+
+## Upgrading from 0.3.x
+
+- `sync --include-consent` was removed. Whether data may be uploaded is now read from the
+  Garmin account before every sync (see *Privacy and security*); upload locations that need
+  a consent are used exactly when the account has given it.
 
 ## Sync details
 
@@ -207,8 +247,9 @@ account only gets a notification.
   check back after a short delay (at most 90 s) and then sends adjusted daily totals, which
   are written to the watch.
 - **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
-  installed during sync. New watch faces are installed but not activated, like in Garmin
-  Express.
+  installed during sync, except on devices that hide their app folder: there they stay
+  queued until you run `apps install` or use the window (see *Connect IQ apps*). New watch
+  faces are installed but not activated, like in Garmin Express.
 
 ## Languages
 

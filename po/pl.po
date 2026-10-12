@@ -348,7 +348,7 @@ msgstr ""
 #: openexpress/ciq.py:1028 openexpress/cli.py:962
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
-msgstr "{name} jest częścią oprogramowania urządzenia i nie można tego usunąć"
+msgstr "{name} jest częścią oprogramowania urządzenia i nie można go usunąć"
 
 #: openexpress/ciq.py:1058 openexpress/ciq.py:1366
 msgid "App not found on the device"
