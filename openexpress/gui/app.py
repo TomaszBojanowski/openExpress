@@ -950,8 +950,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_check_session = s
 
         def work():
-            return [u for u in upd.parse_updates(s.client.software_updates(s.device.raw))
-                    if not u.is_reinstall and not u.is_metadata]
+            return upd.pending(upd.mark_present(
+                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw))))
 
         def done(new):
             if self._update_check_session is s:
@@ -1259,10 +1259,11 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         s = self.session
+        # Asks Garmin's server, then compares the offered files with those on the device.
         self._load("updates", _("Checking for updates…"),
-                   lambda: upd.parse_updates(s.client.software_updates(
-                       s.device.raw, include_reinstalls=True)),
-                   self.show_updates, device=False)  # only asks Garmin's server
+                   lambda: upd.mark_present(s.storage, upd.parse_updates(
+                       s.client.software_updates(s.device.raw, include_reinstalls=True))),
+                   self.show_updates)
 
     def show_updates(self, items) -> None:
         if self.session is None:
@@ -1270,7 +1271,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.updates_cache = items
         sec = self.sections["updates"]
         d = self.session.device
-        new = [u for u in items if not u.is_reinstall and not u.is_metadata]
+        from openexpress import updates as upd
+
+        new = upd.pending(items)
         self._set_update_state(new)
         if not new:
             g = sec.group()
@@ -1295,7 +1298,8 @@ class MainWindow(Adw.ApplicationWindow):
             g = sec.group(_("Available updates"))
             for u in new:
                 self._update_row(g, u)
-        re = [u for u in items if u.is_reinstall and not u.is_metadata]
+        # A file the device already has is a reinstall, whatever the server calls it.
+        re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata]
         if re:
             g = sec.group(_("Advanced"))
             exp = Adw.ExpanderRow(
@@ -1305,16 +1309,17 @@ class MainWindow(Adw.ApplicationWindow):
                                   "{count} components already on the device; useful for "
                                   "troubleshooting", len(re)).format(count=len(re)))
             g.add(exp)
-            for u in sorted(re, key=lambda x: x.name):
+            for u in sorted(re, key=lambda x: x.title):
                 self._update_row(exp, u, reinstall=True)
 
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
         row = Adw.ActionRow(
-            title=GLib.markup_escape_text(u.name),
+            title=GLib.markup_escape_text(u.title),
             subtitle=GLib.markup_escape_text(
-                f"{u.version} · {_human(u.size)} · {u.severity}"
+                f"{u.version} · {_human(u.size)} · {u.severity_text}"
                 # TRANSLATORS: marks the main firmware in an update list
-                + (" · " + _("system") if u.is_primary else "")),
+                + (" · " + _("system") if u.is_primary else "")
+                + (f" · {u.filename}" if u.filename else "")),
         )
         # TRANSLATORS: button
         row.add_suffix(self._button(_("Reinstall") if reinstall else _("Install"),
@@ -1327,7 +1332,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         s = self.session
         chosen = upd.select(self.updates_cache, [u.part_number])
-        body = (f"{u.name} {u.version}\n"
+        body = (f"{u.title} {u.version}\n"
                 + _("Size: {size}").format(size=_human(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])

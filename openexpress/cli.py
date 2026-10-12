@@ -539,35 +539,57 @@ To finish the installation:
 """)
 
 
+def _update_line(u) -> str:
+    """One update in a list. The file name is added when the server gives no real name."""
+    name = u.title if u.title == u.name else f"{u.title} ({u.filename})"
+    return (f"{u.part_number:18} {u.version:>7}  {u.severity_text:<12} {_human(u.size):>9}  "
+            f"{name}")
+
+
+def _print_present(present, verbose: bool) -> None:
+    if not present:
+        return
+    print(_("Already on the device: {count}").format(count=len(present)))
+    if verbose:
+        for u in present:
+            print("  " + _update_line(u))
+            print(f"      -> {u.device_path}")
+
+
 def cmd_updates(args) -> int:
     from openexpress import updates as upd
 
     st, dev = open_device(args)
     client = GarminClient(Settings.load())
     resp = client.software_updates(dev.raw, include_reinstalls=args.reinstalls)
-    items = upd.parse_updates(resp)
+    items = upd.mark_present(st, upd.parse_updates(resp))  # only reads the device
     if not args.reinstalls:
         items = [u for u in items if not u.is_reinstall]
+    # Offered by the server although the device has the very same file: not an update.
+    present = [u for u in items if u.on_device]
     print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
     if not args.install:
-        if not items:
+        listed = items if args.reinstalls else [u for u in items if not u.on_device]
+        if not listed:
             print(_("Software is up to date.") if not args.reinstalls
                   else _("The server returned no items."))
+            _print_present(present, args.verbose)
             return 0
-        visible = [u for u in items if not u.is_metadata or args.verbose]
+        visible = [u for u in listed if not u.is_metadata or args.verbose]
         print((_("Reinstalls: {count}") if args.reinstalls
                else _("Available updates: {count}")).format(count=len(visible)))
         for u in sorted(visible, key=lambda x: (not x.is_primary, x.severity.lower() != "critical",
                                                 x.name)):
             # TRANSLATORS: marks the main watch firmware in the list of updates
             flag = " [" + _("PRIMARY") + "]" if u.is_primary else ""
-            print(f"  {u.part_number:18} {u.version:>7}  {u.severity:<11} {_human(u.size):>9}  "
-                  f"{u.name}{flag}")
+            print("  " + _update_line(u) + flag)
             if args.verbose:
                 print(f"      -> {u.device_path}")
             for c in u.changes[: (20 if args.verbose else 5)]:
                 print(f"      • {c}")
+        if not args.reinstalls:
+            _print_present(present, args.verbose)
         print("\n" + _("Install: {command}").format(
             command="openexpress updates --install PART_NUMBER [--reinstalls] --apply"))
         return 0
@@ -576,7 +598,7 @@ def cmd_updates(args) -> int:
     need, free = upd.check_space(st, chosen)
     print(_("To install:"))
     for u in upd.sort_for_install(chosen):
-        print(f"  {u.part_number} {u.version}  {u.name}  ({_human(u.size)}) -> {u.device_path}")
+        print(f"  {u.part_number} {u.version}  {u.title}  ({_human(u.size)}) -> {u.device_path}")
     print(_("Space: {needed} needed, {free} free").format(needed=_human(need), free=_human(free)))
     eulas = sorted({u.eula_url for u in chosen if u.eula_url})
     for e in eulas:

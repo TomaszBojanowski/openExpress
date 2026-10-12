@@ -10,6 +10,7 @@ Flow as in Garmin Express (docs/analiza/04, sections 3-5):
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import posixpath
 from dataclasses import dataclass, field
@@ -17,8 +18,8 @@ from pathlib import Path
 from typing import Callable
 
 from openexpress import applog, download, paths
-from openexpress.device.storage import Storage
-from openexpress.i18n import _
+from openexpress.device.storage import DeviceError, Storage
+from openexpress.i18n import N_, _
 
 log = logging.getLogger(__name__)
 
@@ -48,14 +49,89 @@ class SoftwareUpdate:
     eula_url: str = ""
     locale: str | None = None
     changes: list[str] = field(default_factory=list)
+    datatype: str = ""
+    # The file is on the device already, with the same size and MD5 (`mark_present`).
+    on_device: bool = False
 
     @property
     def key(self) -> str:
         return f"{self.part_number}.{self.version}"
 
     @property
+    def title(self) -> str:
+        """The name to show: the product name, or a readable name of the type when the
+        server only repeats the type (e.g. "Etyp") or gives no name."""
+        if self.name and self.name != self.datatype:
+            return self.name
+        known = TYPE_NAMES.get(self.datatype.casefold())
+        return _(known) if known else self.name or self.datatype
+
+    @property
+    def filename(self) -> str:
+        return posixpath.basename(self.device_path)
+
+    @property
+    def severity_text(self) -> str:
+        known = SEVERITY_NAMES.get(self.severity.casefold())
+        return _(known) if known else self.severity
+
+    @property
     def is_metadata(self) -> bool:
         return self.part_number.endswith("-META")
+
+
+# Types of updates as the server names them ("datatype"), seen for a fēnix 8 and in the
+# answers Garmin Express logs. An unknown type is shown as the server sent it.
+TYPE_NAMES = {
+    # TRANSLATORS: kind of update: a file that belongs to a map (Garmin/SID/*.sid)
+    "etyp": N_("Map support file"),
+    # TRANSLATORS: kind of update
+    "firmware": N_("Software"),
+    # TRANSLATORS: kind of update
+    "config": N_("Configuration"),
+    # TRANSLATORS: kind of update: a file that describes other updates
+    "updatemetadata": N_("Update information"),
+}
+SEVERITY_NAMES = {
+    # TRANSLATORS: importance of an update
+    "critical": N_("Critical"),
+    # TRANSLATORS: importance of an update
+    "recommended": N_("Recommended"),
+    # TRANSLATORS: importance of an update, when the server does not say
+    "unspecified": N_("Unspecified"),
+}
+
+
+def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
+    """Whether the file of this update is on the device already: same size and same MD5.
+    Only reads. Without a size and an MD5 from the server nothing can be said."""
+    md5 = download.normalize_md5(u.md5) if u.md5 else None
+    if not u.device_path or not u.size or md5 is None:
+        return False
+    try:
+        real = storage.resolve(u.device_path)
+        if real is None or storage.size(real) != u.size:
+            return False
+        return hashlib.md5(storage.read(real)).hexdigest() == md5
+    except DeviceError as e:
+        log.info("updates: cannot compare %s with the device: %s", u.part_number, e)
+        return False
+
+
+def mark_present(storage: Storage, updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """Find the offered updates whose file the device already has (e.g. map support files
+    it briefly does not list right after it is plugged in). They are not updates."""
+    offered = [u for u in updates if not u.is_reinstall and not u.is_metadata]
+    for u in offered:
+        u.on_device = is_on_device(storage, u)
+    log.info("updates: %d offered, %d of them already on the device", len(offered),
+             sum(1 for u in offered if u.on_device))
+    return updates
+
+
+def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """The real updates: not reinstalls, not metadata, not on the device already."""
+    return [u for u in updates if not u.is_reinstall and not u.is_metadata and not u.on_device]
 
 
 def parse_updates(response: dict) -> list[SoftwareUpdate]:
@@ -85,6 +161,7 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
                 eula_url=u.get("eulaurl") or "",
                 locale=u.get("locale"),
                 changes=changes,
+                datatype=u.get("datatype") or "",
             )
         )
     return out
@@ -146,7 +223,7 @@ def install(
             raise UpdateError(_("{part}: the server did not provide a download URL")
                               .format(part=u.part_number))
         progress(_("Downloading {name} {version} ({size} B)")
-                 .format(name=u.name, version=u.version, size=u.size or "?"))
+                 .format(name=u.title, version=u.version, size=u.size or "?"))
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session)
         with open(local, "rb") as f:
             if f.read(4) == RGN_MAGIC:
@@ -168,7 +245,7 @@ def install(
             # A truncated firmware file must not stay where the watch would install it.
             _delete_quietly(storage, real)
             raise UpdateError(_("Write verification of {path} failed").format(path=real))
-        report.installed.append(f"{u.name} {u.version} -> {real}")
+        report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.restart_required or u.is_primary
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(local.stat().st_size), posixpath.dirname(real))

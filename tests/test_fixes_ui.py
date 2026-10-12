@@ -570,15 +570,20 @@ def test_updates_page_with_several_updates(monkeypatch):
 
     _gtk()
 
-    def update(part, name, version, reinstall=False, changes=()):
-        return SoftwareUpdate(part, name, version, "Recommended", False, reinstall, False,
+    def update(part, name, version, reinstall=False, changes=(), datatype="Firmware",
+               severity="Recommended"):
+        return SoftwareUpdate(part, name, version, severity, False, reinstall, False,
                               f"Garmin/SID/{part}.sid", "https://example.org/x", None, 2048, 0,
-                              changes=list(changes))
+                              changes=list(changes), datatype=datatype)
 
-    items = [update("006-D0001-00", "Etyp", "2.70", changes=["Better <maps> & more", "Fixes"]),
-             update("006-D0002-00", "Etyp", "2.40"), update("006-D0003-00", "Etyp", "2.60"),
+    items = [update("006-D0001-00", "Etyp", "2.70", changes=["Better <maps> & more", "Fixes"],
+                    datatype="Etyp"),
+             update("006-D0002-00", "Voice <pack>", "2.40", severity="Critical"),
+             update("006-D0003-00", "Thing", "2.60", datatype="NewKind", severity="Optional"),
              update("006-D0004-00", "Sensor Hub", "9.10", reinstall=True),
-             update("006-D0005-META", "Metadata", "1.00")]
+             update("006-D0005-META", "Metadata", "1.00"),
+             update("006-D0006-00", "Etyp", "1.10", datatype="Etyp")]
+    items[-1].on_device = True  # offered by the server, but the device has this very file
 
     class Group:
         def __init__(self, title):
@@ -609,8 +614,158 @@ def test_updates_page_with_several_updates(monkeypatch):
     assert states == [3] and win.updates_cache == items
     assert available.title == "Available updates"
     assert [(r.get_title(), r.get_subtitle()) for r in available.rows] == [
-        ("Etyp", "2.70 · 2.0 KB · Recommended"), ("Etyp", "2.40 · 2.0 KB · Recommended"),
-        ("Etyp", "2.60 · 2.0 KB · Recommended")]
+        # The server only repeats the type: a readable name, the file name tells them apart.
+        ("Map support file", "2.70 · 2.0 KB · Recommended · 006-D0001-00.sid"),
+        ("Voice &lt;pack&gt;", "2.40 · 2.0 KB · Critical · 006-D0002-00.sid"),
+        ("Thing", "2.60 · 2.0 KB · Optional · 006-D0003-00.sid")]  # unknown values stay raw
     assert advanced.title == "Advanced" and isinstance(advanced.rows[0], Adw.ExpanderRow)
-    assert advanced.rows[0].get_subtitle().startswith("1 component already on the device")
-    assert len(win._action_buttons) == 4  # three "Install" and one "Reinstall"
+    # The file that is already on the device is listed with the reinstalls, not as an update.
+    assert advanced.rows[0].get_subtitle().startswith("2 components already on the device")
+    assert len(win._action_buttons) == 5  # three "Install" and two "Reinstall"
+
+
+# --- files the device already has are not updates ---------------------------------------------
+
+
+def _answer(*entries):
+    """An answer of the update server; `entries`: (part, name, datatype, file, data, severity)."""
+    import hashlib
+
+    return {"updates": [{
+        "partnumber": part, "productname": name, "datatype": datatype, "version": "2.70",
+        "severity": severity,
+        "installation": {"path": "Garmin\\SID", "filename": file, "isreinstall": False},
+        "deliverable": {"downloadurl": "https://example.org/" + file,
+                        "md5": hashlib.md5(data).hexdigest().upper(), "sizeinbytes": len(data)},
+    } for part, name, datatype, file, data, severity in entries]}
+
+
+@pytest.fixture
+def offered(device_root, monkeypatch):
+    """The server offers three map support files and a real update. The device has the first
+    file as offered, the second with other content of the same size, and not the third."""
+    from openexpress.connect import GarminClient
+
+    (device_root / "GARMIN/SID").mkdir()
+    (device_root / "GARMIN/SID/da00100.sid").write_bytes(b"same file")  # other letter case
+    (device_root / "GARMIN/SID/DA00200.sid").write_bytes(b"other txt")
+    answer = _answer(
+        ("006-DA001-00", "Etyp", "Etyp", "DA00100.sid", b"same file", "Recommended"),
+        ("006-DA002-00", "Etyp", "Etyp", "DA00200.sid", b"new bytes", "Recommended"),
+        ("006-DA003-00", "Etyp", "Etyp", "DA00300.sid", b"missing", "Recommended"),
+        ("006-B0000-00", "Test watch System Software", "Firmware", "GUPDATE.GCD", b"fw", "Critical"))
+    monkeypatch.setattr(GarminClient, "software_updates",
+                        lambda self, raw, include_reinstalls=False: answer)
+    return device_root, answer
+
+
+def test_file_with_the_same_size_and_md5_is_not_an_update(offered):
+    from openexpress import updates as upd
+    from openexpress.device.storage import LocalStorage
+
+    root, answer = offered
+    before = sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir())
+    items = upd.mark_present(LocalStorage(root), upd.parse_updates(answer))
+    assert [(u.part_number, u.on_device) for u in items] == [
+        ("006-DA001-00", True),    # same size, same MD5
+        ("006-DA002-00", False),   # same size, other content
+        ("006-DA003-00", False),   # not on the device
+        ("006-B0000-00", False)]
+    assert [u.part_number for u in upd.pending(items)] == [
+        "006-DA002-00", "006-DA003-00", "006-B0000-00"]
+    # Only read: nothing on the device changed.
+    assert sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir()) == before
+
+
+def test_nothing_can_be_said_without_a_size_or_an_md5(offered):
+    from openexpress import updates as upd
+    from openexpress.device.storage import DeviceError, LocalStorage
+
+    root, answer = offered
+    st = LocalStorage(root)
+    u = upd.parse_updates(answer)[0]
+    assert upd.is_on_device(st, u)
+    for change in ({"md5": None}, {"md5": "not-an-md5"}, {"size": None}, {"size": 0}):
+        other = upd.parse_updates(answer)[0]
+        for name, value in change.items():
+            setattr(other, name, value)
+        assert not upd.is_on_device(st, other), change
+
+    def broken(path):
+        raise DeviceError("the device went away")
+
+    st.read = broken
+    assert not upd.is_on_device(st, u)  # not known to be there: offered as before
+
+
+def test_readable_names_of_types_and_severities(offered):
+    from openexpress import updates as upd
+
+    _root, answer = offered
+    etyp, _two, _three, firmware = upd.parse_updates(answer)
+    assert (etyp.title, etyp.filename, etyp.severity_text) == (
+        "Map support file", "DA00100.sid", "Recommended")
+    assert firmware.title == "Test watch System Software"  # a real name is kept
+    assert firmware.severity_text == "Critical"
+    etyp.datatype = etyp.name = "SomethingNew"
+    etyp.severity = "Optional"
+    assert (etyp.title, etyp.severity_text) == ("SomethingNew", "Optional")  # unknown: as sent
+    etyp.name, etyp.datatype = "", "CONFIG"
+    assert etyp.title == "Configuration"
+
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        pl = upd.parse_updates(answer)
+        assert (pl[0].title, pl[0].severity_text, pl[3].severity_text) == (
+            "Plik dodatkowy mapy", "Zalecana", "Krytyczna")
+    finally:
+        i18n.setup("en")
+
+
+def test_cli_updates_counts_only_real_updates(offered, capsys):
+    root, _answer_ = offered
+    assert main(["--path", str(root), "updates"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1] == "Available updates: 3"
+    assert out[2:5] == [
+        "  006-B0000-00          2.70  Critical           2 B  Test watch System Software",
+        "  006-DA002-00          2.70  Recommended        9 B  Map support file (DA00200.sid)",
+        "  006-DA003-00          2.70  Recommended        7 B  Map support file (DA00300.sid)"]
+    assert "Already on the device: 1" in out and not any("DA00100" in line for line in out)
+
+    assert main(["--path", str(root), "-v", "updates"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    at = out.index("Already on the device: 1")
+    assert out[at + 1:at + 3] == [
+        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)",
+        "      -> Garmin/SID/DA00100.sid"]
+
+
+def test_cli_says_up_to_date_when_everything_offered_is_on_the_device(offered, capsys):
+    root, answer = offered
+    del answer["updates"][1:]
+    assert main(["--path", str(root), "updates"]) == 0
+    assert capsys.readouterr().out.splitlines()[1:] == [
+        "Software is up to date.", "Already on the device: 1"]
+
+
+def test_window_does_not_count_files_already_on_the_device(offered):
+    from openexpress import updates as upd
+    from openexpress.device.storage import LocalStorage
+    from openexpress.gui.app import MainWindow
+
+    root, answer = offered
+    del answer["updates"][1:]  # only the file the device already has
+    client = types.SimpleNamespace(software_updates=lambda raw, include_reinstalls=False: answer)
+    s = types.SimpleNamespace(client=client, storage=LocalStorage(root),
+                              device=types.SimpleNamespace(raw=b""))
+    states = []
+    win = types.SimpleNamespace(session=s, _update_check_session=None, update_state=None,
+                                _set_update_state=states.append,
+                                _render_update_state=lambda: None,
+                                in_background=lambda work, done, failed: done(work()))
+    MainWindow._check_updates_quietly(win)
+    assert states == [[]]  # "Software is up to date", no "update available"
+    assert upd.pending(upd.mark_present(s.storage, upd.parse_updates(answer))) == []
