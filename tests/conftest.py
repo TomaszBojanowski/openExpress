@@ -61,6 +61,16 @@ def xdg(tmp_path, monkeypatch):
     return tmp_path
 
 
+@pytest.fixture(autouse=True)
+def backups(tmp_path, monkeypatch) -> Path:
+    """No test writes to the real backup folder: copies of the app list go here."""
+    from openexpress import paths
+
+    folder = tmp_path / "Backups"
+    monkeypatch.setattr(paths, "default_backup_dir", lambda: folder)
+    return folder
+
+
 @pytest.fixture
 def device_root(tmp_path) -> Path:
     root = tmp_path / "device"

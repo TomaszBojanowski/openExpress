@@ -697,7 +697,8 @@ def _apps_order(args, dev, st, state) -> int:
     if not args.source:
         copies = ciq.app_list_copies(dev, backups)
         if not copies:
-            print(_("No copies of the app list in {path}.").format(path=backups / str(dev.unit_id)))
+            # The folder of this device is named after its unit ID: only the one above it.
+            print(_("No copies of the app list in {path}.").format(path=backups))
             return 0
         print(_("Copies of the app list (OUT.BIN); the device lists {count} apps now:").format(
             count=len(state.listed)))
@@ -716,7 +717,7 @@ def _apps_order(args, dev, st, state) -> int:
         raise ciq.CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
                              "until it is ready and try again"))
     plan = ciq.plan_order(state, copy.state)
-    print(_("Order of the apps from {name} ({path})").format(name=copy.name, path=copy.path))
+    print(_("Order of the apps from the copy {name}").format(name=copy.name))
     if not plan.moved:
         print(_("The apps on the device are already in this order."))
         return 0
@@ -744,10 +745,11 @@ def _apps_order(args, dev, st, state) -> int:
                                 count=sum(1 for a in state.apps if not a.pending)))
     print("  " + _("the same apps with the same flags; only the order changes"))
     if not args.apply:
+        print(ciq.app_list_copy_note(dev, st))
         print(_("Dry run. Add --apply."))
         return 0
     _plan, saved = ciq.restore_order(dev, st, copy.state, backups)
-    print(_("Saved the current app list to {path}").format(path=saved))
+    print(_("Copy of the current app list: {name}").format(name=saved))
     print(_("Wrote the new order to the device; it takes effect after the device is "
             "unplugged."))
     return 0
@@ -774,6 +776,7 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     print("  " + _("removed: {name} ({type})").format(
         name=app.name, type=_(kind) if kind else app.app_type))
     if not args.apply:
+        print(ciq.app_list_copy_note(dev, st))
         print(_("Dry run. Add --apply."))
         return 0
     removed = ciq.remove(dev, st, app)
@@ -921,6 +924,8 @@ def cmd_apps(args) -> int:
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
+            if over_usb:
+                print(ciq.app_list_copy_note(dev, st))
             print(_("Dry run. Add --apply."))
             return 0
         rep = ciq.install_apps(dev, st, client, api, targets,
@@ -970,6 +975,7 @@ def cmd_apps(args) -> int:
         print(_("Remove {name} from the device: {files}").format(
             name=app.name, files=", ".join(paths_) or "-"))
         if not args.apply:
+            print(ciq.app_list_copy_note(dev, st))
             print(_("Dry run. Add --apply."))
             return 0
         removed = ciq.remove(dev, st, app)
@@ -986,6 +992,7 @@ def cmd_apps(args) -> int:
     enable = cmd == "enable"
     print((_("Enable {name}") if enable else _("Disable {name}")).format(name=app.name))
     if not args.apply:
+        print(ciq.app_list_copy_note(dev, st))
         print(_("Dry run. Add --apply."))
         return 0
     ciq.set_enabled(dev, st, app.app_id, enable, app.app_type)

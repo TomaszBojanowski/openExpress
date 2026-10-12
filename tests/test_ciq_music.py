@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import uuid
 
 import pytest
@@ -540,6 +541,7 @@ def test_cli_install_dry_run_shows_the_app_list(iq_device, device_root, apps_cli
         "App list to be written (IN.BIN): 3 entries; the device lists 2 (OUT.BIN)",
         "  every app on the device is kept, in the same order and with the same flags",
         "  new: Face It (watch face), added as inactive",
+        "Before any change, a copy of the app list of the device is made.",
         "Dry run. Add --apply.",
     ]
     assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_files(st) == before
@@ -1421,6 +1423,7 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
         "App list to be written (IN.BIN): 2 entries; the device lists 3 (OUT.BIN)",
         "  every other app on the device is kept, in the same order and with the same flags",
         "  removed: Face It (watch face)",
+        "Before any change, a copy of the app list of the device is made.",
         "Dry run. Add --apply.",
     ]
     assert fake.operations == [] and st.sessions == 0
@@ -1619,12 +1622,12 @@ def test_restore_order_writes_the_same_apps_and_flags(order_device):
     assert [(e[0], e[1]) for e in written] == [(a.app_id, a.app_type) for a in plan.entries]
     # Flags are the device's own: Music stays disabled, the Maps widget too.
     assert [e[2] for e in written] == [False, False, False, True, True, False, False]
-    assert saved.read_bytes() == before and saved.name == "OUT.BIN"
-    assert saved.parent.parent.parent.name.startswith("GARMIN-APPS ")
+    assert saved.startswith("GARMIN-APPS ") and saved.endswith(" Test watch")
+    assert (backups / str(dev.unit_id) / saved / "OUT.BIN").read_bytes() == before
     assert st.read("GARMIN/APPS/OUT.BIN") == before  # the device's own list is never written
-    # The copy just saved is listed with the others and matches the device.
-    copies = ciq.app_list_copies(dev, backups)
-    assert len(copies) == 2
+    # The copy just saved is listed with the others, after the older one.
+    assert [c.name for c in ciq.app_list_copies(dev, backups)] == [
+        "GARMIN-APPS 2026-01-02 (03.04.05)", saved]
 
 
 def test_restore_order_changes_nothing_when_the_order_is_the_same(order_device):
@@ -1641,9 +1644,11 @@ def test_restore_order_is_refused_while_changes_wait(order_device):
     ciq.set_enabled(dev, st, W2, True)
     waiting = st.read("GARMIN/APPS/IN.BIN")
     copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    copies = len(ciq.app_list_copies(dev, backups))
     with pytest.raises(ciq.CiqError, match="has not applied earlier changes"):
         ciq.restore_order(dev, st, copy.state, backups)
-    assert st.read("GARMIN/APPS/IN.BIN") == waiting and len(ciq.app_list_copies(dev, backups)) == 1
+    assert st.read("GARMIN/APPS/IN.BIN") == waiting
+    assert len(ciq.app_list_copies(dev, backups)) == copies  # a refusal saves nothing
 
 
 def test_restore_order_is_refused_with_unreadable_entries(order_device, device_root):
@@ -1688,19 +1693,353 @@ def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
     out = capsys.readouterr().out.splitlines()
     assert out[1] == "5 positions would change (widget: 5):"
     assert out[2] == "  3: Calendar (now: Music)"
-    assert out[-3:] == [
+    assert out[0] == "Order of the apps from the copy GARMIN-APPS 2026-01-02 (03.04.05)"
+    assert out[-4:] == [
         "App list to be written (IN.BIN): 7 entries; the device lists 7 (OUT.BIN)",
         "  the same apps with the same flags; only the order changes",
+        "Before any change, a copy of the app list of the device is made.",
         "Dry run. Add --apply."]
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
     assert len(ciq.app_list_copies(dev, backups)) == 1  # a dry run saves nothing
 
     assert main(["--path", root, "apps", "order", "--from", "03.04.05", "--apply"]) == 0
     out = capsys.readouterr().out
-    assert "Saved the current app list to" in out
+    assert "Copy of the current app list: GARMIN-APPS " in out
     assert "takes effect after the device is unplugged" in out
+    assert str(dev.unit_id) not in out  # no path into the folder named after the unit ID
     assert (st.root / "GARMIN/APPS/IN.BIN").exists()
 
     # The new order waits on the device: a second run is refused.
     assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 1
     assert "has not applied earlier changes" in capsys.readouterr().err
+
+
+# --- a copy of the app list is saved before anything is written to the device -------------
+
+
+def copy_names(dev, backups):
+    return [c.name for c in ciq.app_list_copies(dev, backups)]
+
+
+@pytest.fixture
+def watched(monkeypatch, backups):
+    """Records, for every write to a storage, whether a copy of the app list existed then."""
+    seen = []
+
+    def wrap(name):
+        original = getattr(LocalStorage, name)
+
+        def recorded(self, real_path, *args):
+            seen.append((name, real_path, any(backups.rglob("OUT.BIN"))))
+            return original(self, real_path, *args)
+
+        monkeypatch.setattr(LocalStorage, name, recorded)
+
+    for method in ("_write", "_delete", "_mkdir"):
+        wrap(method)
+    return seen
+
+
+def test_copy_is_saved_before_an_install_through_the_mounted_storage(iq_device, backups, watched):
+    st, dev = iq_device
+    before = st.read("GARMIN/APPS/OUT.BIN")
+    rep = ciq.install_queued(dev, st, FakeClient(), [FACE_MESSAGE], known={})
+    assert rep.installed == ["Face It"]
+    assert len(watched) == 2 and all(copied for _op, _path, copied in watched)
+    (name,) = copy_names(dev, backups)
+    assert (backups / str(dev.unit_id) / name / "OUT.BIN").read_bytes() == before
+
+
+def test_copy_is_saved_before_the_ptp_session_of_an_install(hidden_apps, backups):
+    st, dev, fake = hidden_apps
+    at_session = []
+    block = st._block
+
+    @contextlib.contextmanager
+    def recorded():
+        at_session.append(copy_names(dev, backups))  # the moment the session opens
+        with block() as session:
+            yield session
+
+    st._block = recorded
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == ["Face It"]
+    assert len(at_session) == 1 and len(at_session[0]) == 1  # while still mounted
+
+
+def test_copy_is_saved_before_a_removal(iq_device, device_root, backups, watched):
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (FACE, 3, "Face It", True, "0A1B2C3D")]))
+    (device_root / "GARMIN/APPS/MEDIA/0A1B2C3D.PRG").write_bytes(b"face")
+    app = ciq.read_installed(dev, st).find(FACE)
+    assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG"]
+    assert [(op, copied) for op, _path, copied in watched] == [("_delete", True)]
+
+
+def test_copy_is_saved_before_the_ptp_session_of_a_removal(hidden_spot, backups):
+    st, dev, fake, app = hidden_spot
+    at_session = []
+    block = st._block
+
+    @contextlib.contextmanager
+    def recorded():
+        at_session.append(copy_names(dev, backups))  # the moment the session opens
+        with block() as session:
+            yield session
+
+    st._block = recorded
+    ciq.remove(dev, st, app)
+    assert len(at_session) == 1 and len(at_session[0]) == 1
+
+
+def test_copy_is_saved_before_enabling_and_before_a_new_folder(iq_device, device_root, backups,
+                                                               watched, xdg):
+    st, dev = iq_device
+    ciq.set_enabled(dev, st, PRELOADED, True)
+    assert [(op, copied) for op, _path, copied in watched] == [("_write", True)]
+    del watched[:]
+    (device_root / "GARMIN/APPS/IN.BIN").unlink()
+    (device_root / "GARMIN/APPS/MEDIA").rmdir()
+    for folder in backups.rglob("GARMIN-APPS*"):
+        (folder / "OUT.BIN").unlink()
+        folder.rmdir()
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is True
+    assert [(op, copied) for op, _path, copied in watched] == [("_mkdir", True)]
+
+
+@pytest.fixture
+def no_copies(backups):
+    """The backup folder cannot be created: a file is in its place."""
+    backups.write_text("not a folder")
+    return backups
+
+
+def test_failed_copy_stops_an_install_before_garmin_is_asked(iq_device, no_copies, watched):
+    st, dev = iq_device
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: pytest.fail("the queue is not read")
+    with pytest.raises(ciq.AppListCopyError) as error:
+        ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert "Nothing was changed." in str(error.value)
+    assert str(dev.unit_id) not in str(error.value) and str(no_copies) not in str(error.value)
+    assert FakeStore.queued == [] and client.downloads == 0 and client.acks == []
+    assert watched == []
+
+
+def test_failed_copy_stops_a_ptp_install_and_removal(hidden_spot, no_copies):
+    st, dev, fake, app = hidden_spot
+    client = CountingClient()
+    with pytest.raises(ciq.AppListCopyError):
+        ciq.install_queued(dev, st, client, [{**FACE_MESSAGE, "metadata": {
+            "messageurl": "x", "messagename": "Other",
+            "appdetails": {"id": "11111111-2222-4333-8444-555555555555"}}}], known={},
+            direct=True)
+    with pytest.raises(ciq.AppListCopyError):
+        ciq.remove(dev, st, app)
+    assert st.sessions == 0 and fake.operations == [] and client.downloads == 0
+    assert fake.names("GARMIN/Apps/Media") == ["0A1B2C3D.PRG", "DADE7E4.PRG"]
+
+
+def test_failed_copy_stops_every_other_change(order_device, watched, monkeypatch):
+    st, dev, backups = order_device
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+
+    def refuse(*args, **kwargs):
+        raise ciq.AppListCopyError("no copy")
+
+    monkeypatch.setattr(ciq, "save_app_list_copy", refuse)
+    with pytest.raises(ciq.AppListCopyError):
+        ciq.restore_order(dev, st, copy.state, backups)
+    with pytest.raises(ciq.AppListCopyError):
+        ciq.set_enabled(dev, st, W2, True)
+    assert watched == [] and not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_failed_copy_in_a_sync_is_an_error_and_writes_nothing(iq_device, no_copies, watched):
+    import types
+
+    from openexpress import service
+
+    st, dev = iq_device
+
+    class Client(CountingClient):
+        def require_verified(self, unit_id=None):
+            raise RuntimeError("names are cosmetic")
+
+    client = Client()
+    s = types.SimpleNamespace(storage=st, device=dev, client=client,
+                              settings=types.SimpleNamespace(locale="en_US"))
+    errors = []
+    assert service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors) == []
+    assert len(errors) == 1 and "Cannot make a copy of the app list" in errors[0]
+    assert watched == [] and client.downloads == 0 and client.acks == []
+
+
+def test_no_second_copy_while_the_app_list_is_unchanged(iq_device, device_root, backups):
+    st, dev = iq_device
+    stamps = iter(datetime.datetime(2026, 1, 2, 3, 4, n) for n in range(5, 60))
+    first = ciq.save_app_list_copy(dev, st, now=next(stamps))
+    assert ciq.save_app_list_copy(dev, st, now=next(stamps)) == first
+    ciq.set_enabled(dev, st, PRELOADED, True)  # OUT.BIN itself is not written by us
+    assert copy_names(dev, backups) == [first]
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4")]))
+    second = ciq.save_app_list_copy(dev, st, now=next(stamps))
+    assert copy_names(dev, backups) == [first, second]
+    # Only the newest counts: the first state coming back is copied again.
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(
+        (backups / str(dev.unit_id) / first / "OUT.BIN").read_bytes())
+    third = ciq.save_app_list_copy(dev, st, now=next(stamps))
+    assert copy_names(dev, backups) == [first, second, third]
+
+
+def test_copy_name_has_the_time_before_the_model_and_no_identifier(iq_device, backups, caplog):
+    import logging
+
+    st, dev = iq_device
+    dev.description = 'fenix 8 - 47mm, Solar / "X": <test>*?'
+    with caplog.at_level(logging.INFO):
+        name = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 3, 4, 5, 6, 7))
+    assert name == "GARMIN-APPS 2026-03-04 (05.06.07) fenix 8 - 47mm, Solar X test"
+    assert (backups / str(dev.unit_id) / name / "OUT.BIN").is_file()
+    assert str(dev.unit_id) not in name
+    assert str(dev.unit_id) not in caplog.text and str(backups) not in caplog.text
+    assert name in caplog.text
+
+
+def test_two_copies_in_the_same_second_do_not_overwrite_each_other(iq_device, device_root,
+                                                                   backups):
+    st, dev = iq_device
+    now = datetime.datetime(2026, 3, 4, 5, 6, 7)
+    first = ciq.save_app_list_copy(dev, st, now=now)
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4")]))
+    second = ciq.save_app_list_copy(dev, st, now=now)
+    assert second == first + " (2)" and len(copy_names(dev, backups)) == 2
+
+
+@pytest.fixture
+def old_copies(order_device):
+    """Nine copies named and laid out like the ones made by hand before copies had the
+    model in their name: two with OUT.BIN at the top, the rest under GARMIN/Apps."""
+    st, dev, backups = order_device
+    unit = backups / str(dev.unit_id)
+    for folder in unit.iterdir():
+        for f in sorted(folder.rglob("*"), reverse=True):
+            f.unlink() if f.is_file() else f.rmdir()
+        folder.rmdir()
+    stamps = ["17.37.37", "19.24.05", "20.10.54", "20.41.30", "20.45.33", "20.51.10",
+              "20.56.38", "21.07.08", "21.19.41"]
+    orders = [("s", "a1", "w1", "a1w", "w2", "w3", "w4"), ("s", "a1", "w2", "w1", "a1w", "w3", "w4")]
+    for n, stamp in enumerate(stamps):
+        folder = unit / f"GARMIN-APPS 2026-10-12 ({stamp})"
+        target = folder / "OUT.BIN" if n < 2 else folder / "GARMIN/Apps/OUT.BIN"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(order_entries(*orders[min(n, 1)]))
+    return st, dev, backups, stamps
+
+
+def test_copies_in_the_old_format_are_still_found(old_copies):
+    st, dev, backups, stamps = old_copies
+    assert copy_names(dev, backups) == [f"GARMIN-APPS 2026-10-12 ({s})" for s in stamps]
+    first = ciq.load_app_list_copy(dev, backups, "17.37.37")
+    assert first.name == "GARMIN-APPS 2026-10-12 (17.37.37)" and len(first.state.apps) == 7
+    assert ciq.load_app_list_copy(dev, backups, "21.19.41").path.parts[-3:] == (
+        "GARMIN", "Apps", "OUT.BIN")
+    # A new copy sorts after them and is found the same way.
+    new = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 22, 0, 0))
+    assert copy_names(dev, backups)[-1] == new == "GARMIN-APPS 2026-10-12 (22.00.00) Test watch"
+    assert ciq.load_app_list_copy(dev, backups, "22.00.00").name == new
+    assert len(ciq.plan_order(ciq.read_installed(dev, st), first.state).moved) == 5
+
+
+def test_newest_old_format_copy_counts_for_the_no_duplicate_rule(old_copies, device_root):
+    st, dev, backups, stamps = old_copies
+    newest = backups / str(dev.unit_id) / "GARMIN-APPS 2026-10-12 (21.19.41)/GARMIN/Apps/OUT.BIN"
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(newest.read_bytes())
+    assert ciq.save_app_list_copy(dev, st) == "GARMIN-APPS 2026-10-12 (21.19.41)"
+    assert len(copy_names(dev, backups)) == 9
+
+
+def test_cli_order_from_an_old_copy(old_copies, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, dev, backups, _stamps = old_copies
+    assert main(["--path", str(st.root), "apps", "order", "--from", "17.37.37"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[0] == "Order of the apps from the copy GARMIN-APPS 2026-10-12 (17.37.37)"
+    assert "5 positions would change" in out and str(dev.unit_id) not in out
+    assert len(copy_names(dev, backups)) == 9  # a dry run saves nothing
+
+
+def test_dry_runs_save_no_copy(hidden_spot, apps_cli, monkeypatch, backups, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(FakeStore, "account_apps", lambda self, device, locale: [
+        store_app(uuid.UUID("11111111-2222-4333-8444-555555555555"), "Other")])
+    root = str(st.root)
+    note = "Before any change, a copy of the app list of the device is made."
+    for argv in (["apps", "install", "Other"], ["apps", "remove", "Face It"],
+                 ["apps", "disable", "Connect IQ Store"]):
+        assert main(["--path", root, *argv]) == 0
+        assert note in capsys.readouterr().out
+    assert not backups.exists() and fake.operations == []
+
+
+def test_nothing_to_write_saves_no_copy(no_usb_apps, backups):
+    st, dev, _attempts = no_usb_apps
+    ciq._remember_refusal(dev, "GARMIN/APPS/MEDIA")  # known: the folder cannot be created
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: []
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert rep.for_phone == ["Face It"] and FakeStore.queued == [["Face It"]]
+    assert not backups.exists()
+
+
+def test_device_without_an_app_list_has_nothing_to_copy(iq_device, device_root, backups,
+                                                        monkeypatch, watched):
+    """E.g. after a reset: there is no OUT.BIN, so no copy is made and the change goes on."""
+    st, dev = iq_device
+    state = ciq.read_installed(dev, st)
+    (device_root / "GARMIN/APPS/OUT.BIN").unlink()
+    assert not ciq.has_app_list(dev, st)
+    assert ciq.save_app_list_copy(dev, st) is None and not backups.exists()
+    assert ciq.app_list_copy_note(dev, st) == "No copy will be made: the device has no app list."
+    # A change that gets this far is not stopped by the missing copy.
+    monkeypatch.setattr(ciq, "read_installed", lambda device, storage: state)
+    ciq.set_enabled(dev, st, PRELOADED, True)
+    assert [op for op, _path, _copied in watched] == ["_write"] and not backups.exists()
+    assert (device_root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_app_list_that_cannot_be_read_stops_the_change(iq_device, backups, monkeypatch, watched):
+    """There is an OUT.BIN, but reading it for the copy fails: nothing is written."""
+    from openexpress.device.storage import DeviceError
+
+    st, dev = iq_device
+    assert ciq.app_list_copy_note(dev, st) == (
+        "Before any change, a copy of the app list of the device is made.")
+    reads = []
+    read = LocalStorage._read
+
+    def fails_the_second_time(self, real_path):
+        if real_path.upper().endswith("OUT.BIN"):
+            reads.append(real_path)
+            if len(reads) > 1:
+                raise DeviceError("Cannot read " + real_path + ": Input/output error")
+        return read(self, real_path)
+
+    monkeypatch.setattr(LocalStorage, "_read", fails_the_second_time)
+    with pytest.raises(ciq.AppListCopyError) as error:
+        ciq.set_enabled(dev, st, PRELOADED, True)
+    assert "Cannot read the app list of the device to make a copy of it" in str(error.value)
+    assert str(error.value).endswith("Nothing was changed.")
+    assert watched == [] and not backups.exists()
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()

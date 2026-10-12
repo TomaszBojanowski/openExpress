@@ -521,6 +521,7 @@ def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str) -> bo
         return True
     if _refusals(device).get(path.casefold()) == device.software_version_str:
         return False
+    save_app_list_copy(device, storage)  # creating the folder is a change too
     try:
         storage.make_dir(path)
     except DeviceError as e:
@@ -557,6 +558,9 @@ def install_apps(
     downloaded or written for them, and they are not failures.
     """
     require_complete(read_installed(device, storage))
+    if any(usb_dir_state(device, storage, store_datatype(t)) != REFUSED for t in targets):
+        # Something may be written: the copy comes first, before Garmin is asked for anything.
+        save_app_list_copy(device, storage)
     usb = [t for t in targets
            if usb_dir_state(device, storage, store_datatype(t)) in (READY, DIRECT)
            or prepare_app_dir(device, storage, store_datatype(t))]
@@ -635,6 +639,15 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     to_ack: list[tuple[dict, str]] = []
     new_size = 0
     interrupted = False
+    copied = False
+
+    def copy_first() -> None:
+        """Before the first thing this pass writes to the device."""
+        nonlocal copied
+        if not copied:
+            save_app_list_copy(device, storage)
+            copied = True
+
     try:
         for m in messages:
             if not is_iq_message(m):
@@ -662,6 +675,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
                     continue
+                copy_first()
                 progress(_("Downloading {name}").format(name=name))
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
@@ -706,7 +720,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     new_entries.append(entry)
                     new_paths.append(real)
                 to_ack.append((m, name))
-            except ApiError:
+            except (ApiError, AppListCopyError):
                 raise
             except Exception as e:  # noqa: BLE001
                 report.failed.append((name, str(e)))
@@ -928,6 +942,8 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
     if not paths_ and removable_directly(device, storage, app):
         return _remove_hidden(device, storage, state, app)
     removed = []
+    if paths_:
+        save_app_list_copy(device, storage)
     for p in paths_:
         storage.delete(p)
         removed.append(p)
@@ -950,6 +966,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
     removed: list[str] = []
     problem: str | None = None
     finished = False
+    save_app_list_copy(device, storage)  # while the device is still mounted
     try:
         with storage.exclusive_ptp() as session:
             store = _ptp_store(session)
@@ -1035,9 +1052,10 @@ def _find_out_bin(folder: Path) -> Path | None:
                  if p.is_file() and p.name.upper() == "OUT.BIN"), None)
 
 
-def app_list_copies(device: GarminDevice, backup_dir: Path) -> list[AppListCopy]:
-    """The copies of the device's app list (OUT.BIN) in its backup folder, oldest first."""
-    unit_dir = Path(backup_dir) / str(device.unit_id)
+def app_list_copies(device: GarminDevice, backup_dir: Path | None = None) -> list[AppListCopy]:
+    """The copies of the device's app list (OUT.BIN) in its backup folder, oldest first.
+    Their folders are named after the time they were made, so the names sort by age."""
+    unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
     found = []
     if unit_dir.is_dir():
         for folder in sorted(unit_dir.iterdir()):
@@ -1047,22 +1065,25 @@ def app_list_copies(device: GarminDevice, backup_dir: Path) -> list[AppListCopy]
             try:
                 found.append(AppListCopy(path, folder.name, parse_out_bin(path.read_bytes())))
             except (OSError, ValueError, CiqError) as e:
-                log.warning("Cannot read %s: %s", path, e)
+                # Never the path: the folder above is named after the unit ID.
+                log.warning("Cannot read the copy of the app list %s: %s", folder.name,
+                            getattr(e, "strerror", None) or type(e).__name__)
     return found
 
 
-def load_app_list_copy(device: GarminDevice, backup_dir: Path, source: str) -> AppListCopy:
+def load_app_list_copy(device: GarminDevice, backup_dir: Path | None, source: str) -> AppListCopy:
     """A copy named by a path (file or folder) or by part of its folder name."""
     given = Path(source).expanduser()
     if given.exists():
         path = given if given.is_file() else _find_out_bin(given)
+        name = given.parent.name if given.is_file() else given.name
         if path is None:
-            raise CiqError(_("No OUT.BIN in {path}").format(path=given))
+            raise CiqError(_("No OUT.BIN in {name}").format(name=name))
         try:
-            return AppListCopy(path, path.parent.name if given.is_file() else given.name,
-                               parse_out_bin(path.read_bytes()))
+            return AppListCopy(path, name, parse_out_bin(path.read_bytes()))
         except (OSError, ValueError) as e:
-            raise CiqError(_("Cannot read {path}: {error}").format(path=path, error=e)) from e
+            raise CiqError(_("Cannot read the copy of the app list {name}: {error}").format(
+                name=name, error=getattr(e, "strerror", None) or type(e).__name__)) from e
     matches = [c for c in app_list_copies(device, backup_dir) if source in c.name]
     if len(matches) != 1:
         raise CiqError(
@@ -1072,19 +1093,72 @@ def load_app_list_copy(device: GarminDevice, backup_dir: Path, source: str) -> A
     return matches[0]
 
 
-def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path,
-                       now: datetime | None = None) -> Path:
-    """Keep the device's current app list (OUT.BIN), so that its order can be put back."""
-    out_path = _config_path(device, False)
-    stamp = (now or datetime.now()).strftime("%Y-%m-%d (%H.%M.%S)")
-    target = Path(backup_dir) / str(device.unit_id) / (APP_LIST_COPY_PREFIX + stamp) / out_path
+class AppListCopyError(CiqError):
+    """The copy of the app list could not be made: nothing may be written to the device."""
+
+
+def _model_for_name(device: GarminDevice) -> str:
+    """The model name as part of a folder name: no path separators or odd characters."""
+    text = "".join(c if c.isalnum() or c in " -_,.()+" else " " for c in device.description or "")
+    return " ".join(text.split()).strip(" .")[:60]
+
+
+def has_app_list(device: GarminDevice, storage: Storage) -> bool:
+    """Whether the device has an app list (OUT.BIN) at all; one without apps may not."""
+    return storage.exists(_config_path(device, False))
+
+
+def app_list_copy_note(device: GarminDevice, storage: Storage) -> str:
+    """For dry runs of everything that changes the apps: what happens before the change."""
+    if has_app_list(device, storage):
+        return _("Before any change, a copy of the app list of the device is made.")
+    return _("No copy will be made: the device has no app list.")
+
+
+def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path | None = None,
+                       now: datetime | None = None) -> str | None:
+    """Keep the device's current app list (OUT.BIN) before it is changed, so that the apps
+    and their order can be looked up and put back. Returns the name of the copy; when the
+    newest copy of this device is the same byte for byte, that one is named and no new
+    copy is made. A device without an app list has nothing to copy: None, and the change
+    may go on. Raises `AppListCopyError` when there is a list but the copy cannot be made.
+
+    The copies live next to the backups, in a folder named after the unit ID. Messages
+    and logs therefore name a copy by its own folder only, never by its path."""
+    if not has_app_list(device, storage):
+        log.info("The device has no app list: no copy made")
+        return None
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(storage.read(out_path))
+        data = storage.read(_config_path(device, False))
+    except DeviceError as e:
+        raise AppListCopyError(_("Cannot read the app list of the device to make a copy of "
+                                 "it: {error}. Nothing was changed.").format(error=e)) from e
+    unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
+    stamp = (now or datetime.now()).strftime("%Y-%m-%d (%H.%M.%S)")
+    name = " ".join((APP_LIST_COPY_PREFIX + stamp, _model_for_name(device))).strip()
+    try:
+        newest = None
+        if unit_dir.is_dir():
+            for folder in sorted(unit_dir.iterdir(), reverse=True):
+                newest = _find_out_bin(folder) if folder.is_dir() else None
+                if newest is not None:
+                    break
+        if newest is not None and newest.read_bytes() == data:
+            return newest.relative_to(unit_dir).parts[0]
+        folder, n = unit_dir / name, 1
+        while folder.exists():
+            n += 1
+            folder = unit_dir / f"{name} ({n})"
+        folder.mkdir(parents=True)
+        (folder / "OUT.BIN").write_bytes(data)
+        if (folder / "OUT.BIN").read_bytes() != data:
+            raise OSError(0, "the copy differs from the app list")
     except OSError as e:
-        raise CiqError(_("Cannot save a copy of the app list to {path}: {error}").format(
-            path=target, error=e)) from e
-    return target
+        raise AppListCopyError(_("Cannot make a copy of the app list ({name}): {error}. "
+                                 "Nothing was changed.").format(
+            name=name, error=e.strerror or type(e).__name__)) from e
+    log.info("Saved a copy of the app list: %s", folder.name)
+    return folder.name
 
 
 def changes_waiting(device: GarminDevice, storage: Storage) -> bool:
@@ -1117,9 +1191,10 @@ def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
 
 
 def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
-                  backup_dir: Path) -> tuple[OrderPlan, Path | None]:
-    """Write the app list in the order of `copy`. The current OUT.BIN is copied to the
-    backup folder first. Returns the plan and that copy (None when nothing had to change)."""
+                  backup_dir: Path | None = None) -> tuple[OrderPlan, str | None]:
+    """Write the app list in the order of `copy`. A copy of the current OUT.BIN is made
+    in the backup folder first. Returns the plan and the name of that copy (None when
+    nothing had to change)."""
     state = read_installed(device, storage)
     require_complete(state)
     in_path = _config_path(device, True)
@@ -1156,4 +1231,5 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
     if app is None:
         raise CiqError(_("App not found on the device"))
     app.disabled = not enabled
+    save_app_list_copy(device, storage)
     storage.write(_config_path(device, True), build_in_bin(state.listed))
