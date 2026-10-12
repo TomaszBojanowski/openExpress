@@ -93,6 +93,18 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.1" date="2026-10-13">
+      <description>
+        <ul>
+          <li>The window and the command-line tool warn not to unplug the device while it is
+          in use.</li>
+          <li>The app keeps a log file of what it does, with rotation. Serial numbers, unit
+          IDs, addresses, tokens, e-mail addresses and file names are filtered out before
+          anything is written.</li>
+          <li>The device report says where the log is and can attach its filtered end.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-12">
       <description>
         <ul>
