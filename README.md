@@ -75,6 +75,9 @@ A Garmin device needs a moment to start after it is plugged in. Commands wait fo
 (up to 45 seconds) and the window shows that the device is starting; `--no-wait` makes a
 command fail at once instead.
 
+While a sync, a backup or a write is running, the window shows **Do not unplug the device**
+and the command-line tool prints the same warning when it starts such an operation.
+
 ## Supported devices
 
 | Device | Status |
@@ -200,6 +203,29 @@ account only gets a notification.
   one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
+
+## Log file
+
+openExpress keeps a log of what it does, to make problems easier to find:
+
+- **Where:** `~/.local/state/openexpress/openexpress.log`; in the Flatpak
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/.local/state/openexpress/openexpress.log`.
+  The command-line tool, the window and the background sync write to the same file. At most
+  three files of about 1 MB are kept; the file is readable only by you.
+- **What it contains:** which command or sync ran and how it ended, the steps of a sync
+  (numbers of files by type, not their contents), app installs and removals, how the device
+  was detected, requests to Garmin's servers as method, address without parameters, status
+  and duration, and error messages.
+- **What it never contains:** serial numbers, unit IDs, MTP addresses, tokens, passwords,
+  cookies, e-mail addresses, local paths, names of your music files, or file contents.
+  Every line passes a filter that replaces such values before it is written. The log
+  stays on your computer; nothing is sent anywhere.
+- **More or less:** `OPENEXPRESS_LOG=debug` (or `-v`) writes more detail,
+  `OPENEXPRESS_LOG=off` writes no file.
+- **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
+  appends its last 200 lines, filtered once more. In the window, tick **Attach the last log**
+  in *Report a Device or Problem…*; the preview shows exactly what will be copied. Read it
+  before you send it.
 
 ## Privacy and security
 
