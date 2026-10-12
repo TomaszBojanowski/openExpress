@@ -733,12 +733,16 @@ class MainWindow(Adw.ApplicationWindow):
         return status.name or _("Another device")
 
     def _show_primary_training(self, row) -> None:
-        """Read-only: which device the account uses as its primary training device."""
+        """Which device the account uses as its primary training device; offers this one."""
         s = self.session
 
         def done(status):
-            if self.session is s:
-                row.set_subtitle(GLib.markup_escape_text(self._primary_training_text(status)))
+            if self.session is not s:
+                return
+            row.set_subtitle(GLib.markup_escape_text(self._primary_training_text(status)))
+            if not status.is_this_device and status.capable is True:
+                row.add_suffix(self._button(
+                    _("Set as Primary"), lambda: self.confirm_primary_training(status)))
 
         def failed(_e):
             if self.session is s:
@@ -747,6 +751,37 @@ class MainWindow(Adw.ApplicationWindow):
         self.in_background(
             lambda: service.primary_training_status(s.client, s.device, s.account_devices),
             done, failed)
+
+    def confirm_primary_training(self, status) -> None:
+        s = self.session
+        if s is None:
+            return
+        current = self._primary_training_text(status)
+        d = Adw.AlertDialog(
+            heading=_("Change the primary training device?"),
+            body=_("The primary training device is the main source of performance and "
+                   "training data in Garmin Connect.\n\nCurrent: {old}\nNew: {new}").format(
+                old=current, new=s.device.description))
+        d.add_response("cancel", _("Cancel"))
+        # TRANSLATORS: button that makes this device the primary training device
+        d.add_response("set", _("Set"))
+        d.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
+        d.set_default_response("cancel")
+        d.connect("response", lambda _d, r: r == "set" and self.set_primary_training())
+        d.present(self)
+
+    def set_primary_training(self) -> None:
+        s = self.session
+        if not s or not s.logged_in or s.ownership_error is not None:
+            return
+
+        def done(_before):
+            self.toast(_("Primary training device changed"))
+            if self.session is s:
+                self.show_overview()
+
+        self.run_task(_("Changing the primary training device…"),
+                      lambda: service.set_primary_training(s.client, s.device, apply=True), done)
 
     def _set_device_texture(self, texture) -> None:
         self.device_picture.set_paintable(texture)

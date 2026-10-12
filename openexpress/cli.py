@@ -781,6 +781,8 @@ def cmd_primary(args) -> int:
 
     st, dev = open_device(args)
     client = make_client(Settings.load(), need_auth=True)
+    if args.primary_cmd == "set":
+        return _primary_set(client, dev, args.apply)
     status = service.primary_training_status(client, dev)
     if status.unit_id is None:
         print(_("No primary training device is set for this Garmin account."))
@@ -794,6 +796,33 @@ def cmd_primary(args) -> int:
             device=dev.description))
     if status.capable is False:
         print(_("The connected device cannot be a primary training device."))
+    return 0
+
+
+def _primary_set(client, dev, apply: bool) -> int:
+    from openexpress import service
+
+    before = service.set_primary_training(client, dev, apply=apply)
+    old = before.name or _("a device that is not on the account's list")
+    if before.is_this_device:
+        print(_("{device} is already the primary training device.").format(
+            device=dev.description))
+        return 0
+    if not apply:
+        if before.unit_id is None:
+            print(_("No primary training device is set for this Garmin account."))
+        else:
+            print(_("Primary training device: {name}").format(name=old))
+        print(_("Would change it to: {device}").format(device=dev.description))
+        print(_("Dry run. Add --apply."))
+        return 0
+    if before.unit_id is None:
+        print(_("Primary training device set to {device}.").format(device=dev.description))
+        return 0
+    print(_("Primary training device changed from {old} to {new}.").format(
+        old=old, new=dev.description))
+    print(_("To change it back, connect {old} and run `openexpress primary set --apply`, "
+            "or change it in Garmin Connect.").format(old=old))
     return 0
 
 
@@ -1109,6 +1138,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("primary",
                        help=_("show the primary training device of the Garmin account"))
+    psub = s.add_subparsers(dest="primary_cmd")
+    m = psub.add_parser("set", help=_("make the connected device the primary training device"))
+    m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_primary)
 
     s = sub.add_parser("apps", help=_("Connect IQ apps, watch faces and data fields"))
@@ -1204,7 +1236,8 @@ def main(argv: list[str] | None = None) -> int:
     from openexpress import service
 
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
-                   Unauthorized, service.SyncBusy) + _domain_errors()
+                   Unauthorized, service.SyncBusy,
+                   service.PrimaryTrainingError) + _domain_errors()
     try:
         return args.func(args)
     except user_errors as e:

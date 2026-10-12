@@ -5,6 +5,7 @@ The scope and semantics of the calls follow docs/analiza/01 and 03.
 
 from __future__ import annotations
 
+import json
 import logging
 import platform
 import time
@@ -25,6 +26,7 @@ from openexpress.settings import UPLOAD_CONFIG_CLIENT_ID, Consumer, Settings
 log = logging.getLogger(__name__)
 
 TIMEOUT = 60
+PRIMARY_TRAINING_PATH = "userprofile-service/userprofile/user-settings/primary-training-device"
 MAX_CLOCK_SKEW_S = 59 * 60
 
 
@@ -435,12 +437,7 @@ class GarminClient:
         """
         self.require_verified()
         what = _("Primary training device")
-        r = self._connect(
-            "GET",
-            "userprofile-service/userprofile/user-settings/primary-training-device",
-            what,
-            params={"ignoreCache": "false"},
-        )
+        r = self._connect("GET", PRIMARY_TRAINING_PATH, what, params={"ignoreCache": "false"})
         if r.status_code == 204 or not r.content.strip():
             return {}
         body = lower_keys(self._json(r, what))
@@ -449,6 +446,16 @@ class GarminClient:
         if not isinstance(body, dict):
             raise ApiError(_("{what}: unexpected response from the server").format(what=what))
         return body
+
+    def set_primary_training_device(self, unit_id: int) -> None:
+        """Make this device the account's primary training device. Changes the account.
+
+        Any 2xx answer counts as accepted; callers read the setting back to confirm.
+        """
+        self.require_verified(unit_id)
+        self._connect("PUT", PRIMARY_TRAINING_PATH, _("Primary training device"),
+                      data=json.dumps({"deviceId": unit_id}),
+                      headers={"Content-Type": "application/json"})
 
     def device_messages(self, unit_id: int) -> list[dict]:
         self.require_verified(unit_id)

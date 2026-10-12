@@ -124,6 +124,10 @@ class PrimaryTraining:
     capable: bool | None  # whether the connected device can be one; None when unknown
 
 
+class PrimaryTrainingError(Exception):
+    """The primary training device cannot be changed to the connected device."""
+
+
 def primary_training_status(client: GarminClient, device: GarminDevice,
                             devices: list[dict] | None = None) -> PrimaryTraining:
     """Read which device is the primary training device. Changes nothing on the account.
@@ -145,6 +149,36 @@ def primary_training_status(client: GarminClient, device: GarminDevice,
     return PrimaryTraining(unit_id, name if isinstance(name, str) else "",
                            unit_id is not None and unit_id == device.unit_id,
                            capable if isinstance(capable, bool) else None)
+
+
+def set_primary_training(client: GarminClient, device: GarminDevice,
+                         apply: bool = False) -> PrimaryTraining:
+    """Make the connected device the account's primary training device.
+
+    Returns the setting as it was before. Without `apply` nothing is changed, but the same
+    refusals are raised. The ownership check is always made anew, and after the change the
+    setting is read back: an accepted request that changed nothing is reported as an error.
+    """
+    devices = require_account_device(client, device.unit_id)
+    before = primary_training_status(client, device, devices)
+    if before.is_this_device:
+        return before
+    if before.capable is False:
+        raise PrimaryTrainingError(
+            _("{device} cannot be a primary training device.").format(device=device.description))
+    if before.capable is None:
+        # Like the ownership check: never assume in favour of a change.
+        raise PrimaryTrainingError(
+            _("Could not tell whether {device} can be a primary training device. "
+              "Nothing was changed.").format(device=device.description))
+    if apply:
+        client.set_primary_training_device(device.unit_id)
+        after = primary_training_status(client, device, devices)
+        if not after.is_this_device:
+            raise PrimaryTrainingError(
+                _("Garmin Connect accepted the request, but the primary training device "
+                  "did not change."))
+    return before
 
 
 def check_session(s: DeviceSession) -> DeviceSession:

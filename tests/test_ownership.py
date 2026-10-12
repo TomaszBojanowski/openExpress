@@ -41,11 +41,15 @@ class RecordingSession:
     def __init__(self, devices=None, **routes):
         self.routes = {DEVICES_PATH: response(body=devices if devices is not None else [])}
         self.routes.update(routes)
+        self.handlers = {}  # url part -> function(method, request kwargs) -> response
         self.sent = []
 
     def request(self, method, url, **kw):
         self.sent.append({"method": method, "url": url, "headers": kw.get("headers") or {},
                           "body": repr((kw.get("data"), kw.get("json"), kw.get("files")))})
+        for part, handler in self.handlers.items():
+            if part in url:
+                return handler(method, kw)
         for part, answer in self.routes.items():
             if part in url:
                 if isinstance(answer, Exception):
@@ -231,6 +235,7 @@ def account_calls(client, device):
     return {
         "device_messages": lambda: client.device_messages(device.unit_id),
         "primary_training_device": lambda: client.primary_training_device(),
+        "set_primary_training_device": lambda: client.set_primary_training_device(device.unit_id),
         "activity_matches": lambda: client.activity_matches(device.unit_id, ["1"]),
         "activity_matches_empty": lambda: client.activity_matches(device.unit_id, []),
         "device_image_url": lambda: client.device_image_url(device.unit_id),
@@ -250,7 +255,7 @@ def account_calls(client, device):
 
 
 CALL_NAMES = sorted(account_calls(None, types.SimpleNamespace(unit_id=0)))
-NEEDS_THIS_WATCH = {"device_messages", "activity_matches", "activity_matches_empty",
+NEEDS_THIS_WATCH = {"set_primary_training_device", "device_messages", "activity_matches", "activity_matches_empty",
                     "device_image_url", "store_account_apps", "store_updates",
                     "store_queue_install", "store_forget"}
 
@@ -665,7 +670,7 @@ def test_window_primary_training_row(device_root, device):
 
     def window(client):
         s = service.check_session(session(device_root, device, client))
-        assert s.account_devices == ACCOUNT
+        assert s.account_devices is not None
         win = types.SimpleNamespace(session=s, _primary_training_text=text)
 
         def run_now(fn, on_done, on_error=None):
@@ -679,11 +684,22 @@ def test_window_primary_training_row(device_root, device):
         win.in_background = run_now
         return win
 
-    shown = []
-    row = types.SimpleNamespace(set_subtitle=shown.append)
+    shown, buttons = [], []
+    row = types.SimpleNamespace(set_subtitle=shown.append, add_suffix=buttons.append)
+
+    plain_window = window
+
+    def window_with_button(client):
+        win = plain_window(client)
+        win._button = lambda label, cb: label
+        return win
+
+    window = window_with_button
+
     client = ptd_client(response(body={"deviceId": OTHER}))
     MainWindow._show_primary_training(window(client), row)
     assert shown == ["Bike computer"]
+    assert buttons == ["Set as Primary"]  # another device is set and this one is capable
     # One ownership check when the device was detected, then one read: no second list request.
     assert client.http.paths() == [DEVICES_PATH, PTD_PATH]
     assert {r["method"] for r in client.http.sent} == {"GET"}
@@ -691,7 +707,206 @@ def test_window_primary_training_row(device_root, device):
     MainWindow._show_primary_training(window(ptd_client(requests.ConnectionError("offline"))), row)
     assert shown[-1] == "Could not check"
 
+    # No button when this device is already set, or when it cannot (or may not) be one.
+    buttons.clear()
+    MainWindow._show_primary_training(window(ptd_client(response(body={"deviceId": UNIT}))), row)
+    for flag in (False, None):
+        devices = [{"unitid": UNIT, "primarytrainingcapable": flag}, ACCOUNT[1]]
+        win = window(ptd_client(response(body={"deviceId": OTHER}), devices))
+        win.session.account_devices = devices
+        MainWindow._show_primary_training(win, row)
+    assert buttons == []
+
 
 def test_check_session_forgets_the_list_on_refusal(device_root, device):
     s = service.check_session(session(device_root, device, make_client([{"unitid": OTHER}])))
     assert s.ownership_error is not None and s.account_devices is None
+
+
+# --- primary training device: changing it -----------------------------------------------------
+
+
+class FakeAccount:
+    """Garmin's side of the setting: answers GET with the current value, applies PUT."""
+
+    def __init__(self, current, devices=ACCOUNT, put_status=200, applies=True):
+        self.current, self.put_status, self.applies = current, put_status, applies
+        self.puts = []
+        self.client = make_client(devices)
+        self.client.http.handlers[PTD_PATH] = self.handle
+
+    def handle(self, method, kw):
+        if method == "GET":
+            return response(body={"deviceId": self.current} if self.current else {})
+        assert method == "PUT"
+        self.puts.append((kw["data"], kw["headers"].get("Content-Type"),
+                          "Authorization" in kw["headers"]))
+        if isinstance(self.put_status, Exception):
+            raise self.put_status
+        if self.put_status == 200 and self.applies:
+            self.current = json.loads(kw["data"])["deviceId"]
+        return response(self.put_status, b"")
+
+    @property
+    def methods(self):
+        return [r["method"] for r in self.client.http.sent]
+
+
+def test_set_primary_training_dry_run_changes_nothing(device):
+    account = FakeAccount(OTHER)
+    before = service.set_primary_training(account.client, device)
+    assert before == service.PrimaryTraining(OTHER, "Bike computer", False, True)
+    assert account.puts == [] and account.current == OTHER
+    assert account.methods == ["GET", "GET"]  # device list, current setting
+
+
+def test_set_primary_training_apply(device):
+    account = FakeAccount(OTHER)
+    before = service.set_primary_training(account.client, device, apply=True)
+    assert before.unit_id == OTHER and account.current == UNIT
+    # One PUT: a JSON number, signed; nothing in the URL.
+    assert account.puts == [(json.dumps({"deviceId": UNIT}), "application/json", True)]
+    assert account.methods == ["GET", "GET", "PUT", "GET"]  # …then the setting is read back
+    put = account.client.http.sent[2]
+    assert put["url"].endswith(PTD_PATH) and "ignoreCache" not in put["url"]
+
+
+def test_set_primary_training_when_none_was_set(device):
+    account = FakeAccount(None)
+    before = service.set_primary_training(account.client, device, apply=True)
+    assert before.unit_id is None and account.current == UNIT
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_set_primary_training_already_this_device(device, apply):
+    account = FakeAccount(UNIT)
+    assert service.set_primary_training(account.client, device, apply=apply).is_this_device
+    assert account.puts == [] and account.methods == ["GET", "GET"]
+
+
+@pytest.mark.parametrize("flag, message", [
+    (False, "cannot be a primary training device"),
+    (None, "Could not tell whether"), ("true", "Could not tell whether"), (1, "Could not tell"),
+])
+@pytest.mark.parametrize("apply", [False, True])
+def test_set_primary_training_refuses_without_the_capability(device, flag, message, apply):
+    devices = [{"unitid": UNIT, "productdisplayname": "Test watch", "primarytrainingcapable": flag},
+               ACCOUNT[1]]
+    account = FakeAccount(OTHER, devices)
+    with pytest.raises(service.PrimaryTrainingError, match=message):
+        service.set_primary_training(account.client, device, apply=apply)
+    assert account.puts == [] and account.current == OTHER
+
+
+def test_set_primary_training_refuses_a_device_without_the_flag_entry(device):
+    account = FakeAccount(OTHER, [{"unitid": UNIT}, ACCOUNT[1]])
+    with pytest.raises(service.PrimaryTrainingError, match="Could not tell"):
+        service.set_primary_training(account.client, device, apply=True)
+    assert account.puts == []
+
+
+def test_set_primary_training_refuses_other_account(device):
+    account = FakeAccount(OTHER, [{"unitid": OTHER, "primarytrainingcapable": True}])
+    with pytest.raises(NotAccountDevice):
+        service.set_primary_training(account.client, device, apply=True)
+    assert account.methods == ["GET"] and account.puts == []  # only the device list
+
+
+@pytest.mark.parametrize("failure", [500, 403, 404, requests.ConnectionError("offline")],
+                         ids=["http500", "http403", "http404", "network"])
+def test_set_primary_training_failed_request_is_an_error(device, failure):
+    account = FakeAccount(OTHER, put_status=failure)
+    with pytest.raises(ApiError):
+        service.set_primary_training(account.client, device, apply=True)
+    assert account.current == OTHER and len(account.puts) == 1
+
+
+def test_set_primary_training_accepted_but_not_applied_is_an_error(device):
+    account = FakeAccount(OTHER, applies=False)
+    with pytest.raises(service.PrimaryTrainingError, match="did not change"):
+        service.set_primary_training(account.client, device, apply=True)
+    assert account.methods == ["GET", "GET", "PUT", "GET"]
+
+
+def test_set_primary_training_checks_ownership_anew(device):
+    account = FakeAccount(OTHER)
+    service.require_account_device(account.client, UNIT)  # e.g. when the device was detected
+    account.client.http.routes[DEVICES_PATH] = response(body=[ACCOUNT[1]])  # removed since
+    with pytest.raises(NotAccountDevice):
+        service.set_primary_training(account.client, device, apply=True)
+    assert account.puts == [] and account.client.verified_unit_id is None
+
+
+@pytest.mark.parametrize("argv, current, lines, puts", [
+    (["primary", "set"], OTHER,
+     ["Primary training device: Bike computer", "Would change it to: Test watch",
+      "Dry run. Add --apply."], 0),
+    (["primary", "set"], None,
+     ["No primary training device is set for this Garmin account.",
+      "Would change it to: Test watch", "Dry run. Add --apply."], 0),
+    (["primary", "set", "--apply"], OTHER,
+     ["Primary training device changed from Bike computer to Test watch.",
+      "To change it back, connect Bike computer and run `openexpress primary set --apply`, "
+      "or change it in Garmin Connect."], 1),
+    (["primary", "set", "--apply"], None, ["Primary training device set to Test watch."], 1),
+    (["primary", "set", "--apply"], UNIT,
+     ["Test watch is already the primary training device."], 0),
+    (["primary", "set"], UNIT, ["Test watch is already the primary training device."], 0),
+], ids=["dry", "dry-unset", "apply", "apply-unset", "apply-already", "dry-already"])
+def test_cli_primary_set(device_root, xdg, cli_client, capsys, argv, current, lines, puts):
+    account = FakeAccount(current)
+    cli_client["client"] = account.client
+    before = tree(device_root)
+    assert main(["--path", str(device_root), *argv]) == 0
+    assert capsys.readouterr().out.splitlines() == lines
+    assert len(account.puts) == puts
+    assert tree(device_root) == before  # nothing is ever written to the device
+
+
+@pytest.mark.parametrize("argv", [["primary", "set"], ["primary", "set", "--apply"]], ids=" ".join)
+def test_cli_primary_set_refusals(device_root, xdg, cli_client, capsys, argv):
+    devices = [{"unitid": UNIT, "primarytrainingcapable": False}, ACCOUNT[1]]
+    account = FakeAccount(OTHER, devices)
+    cli_client["client"] = account.client
+    assert main(["--path", str(device_root), *argv]) == 1
+    err = capsys.readouterr().err
+    assert "Test watch cannot be a primary training device." in err and "Traceback" not in err
+
+    account = FakeAccount(OTHER, [ACCOUNT[1]])  # a device of another account
+    cli_client["client"] = account.client
+    assert main(["--path", str(device_root), *argv]) == 1
+    assert NOT_REGISTERED in capsys.readouterr().err and account.puts == []
+
+
+def test_cli_primary_without_set_never_writes(device_root, xdg, cli_client, capsys):
+    account = FakeAccount(OTHER)
+    cli_client["client"] = account.client
+    assert main(["--path", str(device_root), "primary"]) == 0
+    assert account.puts == [] and set(account.methods) == {"GET"}
+
+
+def test_window_set_primary_training(device_root, device):
+    from openexpress.gui.app import MainWindow
+
+    account = FakeAccount(OTHER)
+    s = service.check_session(session(device_root, device, account.client))
+    events = []
+
+    def run_task(title, fn, on_done=None, on_error=None):
+        events.append(title)
+        on_done(fn())
+
+    win = types.SimpleNamespace(session=s, run_task=run_task, toast=events.append,
+                                show_overview=lambda: events.append("overview"))
+    MainWindow.set_primary_training(win)
+    assert account.current == UNIT and len(account.puts) == 1
+    assert events == ["Changing the primary training device…",
+                      "Primary training device changed", "overview"]
+    # The window checks ownership anew for the change: list at detection, list again, …
+    assert account.client.http.paths()[:2] == [DEVICES_PATH, DEVICES_PATH]
+
+    refused = service.check_session(session(device_root, device, make_client([ACCOUNT[1]])))
+    events.clear()
+    win.session = refused
+    MainWindow.set_primary_training(win)
+    assert events == []  # a device of another account: nothing is even started
