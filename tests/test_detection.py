@@ -272,3 +272,127 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
     assert started == []
     w.on_mount(None, FakeMount(NAMED))
     assert started == [w.start_sync]
+
+
+# --- the device to ourselves for a PTP session ----------------------------------------------
+
+
+@pytest.fixture
+def exclusive(monkeypatch):
+    """A storage of a mounted Garmin device; unmounting, mounting and USB are recorded."""
+    from ptp_fake import FakeDevice
+
+    from openexpress.device import ptp
+
+    events = []
+    fake = FakeDevice()
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: False)
+    monkeypatch.setattr(ptp, "load_libusb", lambda: object())
+    monkeypatch.setattr(gio_storage, "_unmount", lambda uri: events.append(("unmount", uri)))
+    monkeypatch.setattr(gio_storage, "_remount",
+                        lambda uri, storage: events.append(("mount", uri, fake.session_open)))
+    monkeypatch.setattr(ptp.LibusbTransport, "open",
+                        classmethod(lambda cls, bus, address: events.append(("usb", bus, address))
+                                    or fake))
+    gio_storage._quiet_until.clear()
+    st = gio_storage.GioStorage(NUMERIC + "Internal")
+    st.usb, st.device_uri = gio_storage.GarminUsb("51b4", "usb", 3, 14), NUMERIC
+    yield st, fake, events
+    gio_storage._quiet_until.clear()
+
+
+def test_usb_position_does_not_change_what_the_device_is():
+    assert gio_storage.GarminUsb("51b4", "usb", 3, 14) == gio_storage.GarminUsb("51b4", "usb")
+
+
+def test_ptp_session_unmounts_and_mounts_again(exclusive):
+    st, fake, events = exclusive
+    with st.exclusive_ptp() as session:
+        assert events == [("unmount", NUMERIC), ("usb", 3, 14)] and fake.session_open
+        assert session.storages()
+        assert gio_storage.own_remount(FakeMount(NUMERIC))
+    # The session is closed and the USB device released before the device is mounted again.
+    assert events[-1] == ("mount", NUMERIC, False) and fake.closed
+    assert gio_storage.own_remount(FakeMount(NUMERIC))  # its signals arrive a moment later
+    assert not gio_storage.own_remount(FakeMount(NAMED))
+
+
+def test_device_is_mounted_again_after_an_error(exclusive):
+    st, fake, events = exclusive
+    with pytest.raises(RuntimeError), st.exclusive_ptp():
+        raise RuntimeError("boom")
+    assert [e[0] for e in events] == ["unmount", "usb", "mount"] and not fake.session_open
+
+
+def test_device_is_mounted_again_when_usb_cannot_be_opened(exclusive, monkeypatch):
+    from openexpress.device import ptp
+
+    st, _fake, events = exclusive
+
+    def no_access(cls, bus, address):
+        raise ptp.UsbUnavailable("no access")
+
+    monkeypatch.setattr(ptp.LibusbTransport, "open", classmethod(no_access))
+    with pytest.raises(ptp.UsbUnavailable), st.exclusive_ptp():
+        pytest.fail("the block must not run")
+    assert [e[0] for e in events] == ["unmount", "mount"]
+
+
+def test_failed_unmount_opens_nothing(exclusive, monkeypatch):
+    from openexpress.device.storage import DeviceError
+
+    st, _fake, events = exclusive
+
+    def busy(uri):
+        raise DeviceError("busy")
+
+    monkeypatch.setattr(gio_storage, "_unmount", busy)
+    with pytest.raises(DeviceError, match="busy"), st.exclusive_ptp():
+        pytest.fail("the block must not run")
+    assert events == []  # still mounted: no USB access and no second mount
+
+
+def test_quiet_time_ends(exclusive, monkeypatch):
+    st, _fake, _events = exclusive
+    with st.exclusive_ptp():
+        pass
+    now = gio_storage.time.monotonic()
+    monkeypatch.setattr(gio_storage.time, "monotonic",
+                        lambda: now + gio_storage.REMOUNT_QUIET_S + 1)
+    assert not gio_storage.own_remount(FakeMount(NUMERIC))  # a real replug is seen again
+
+
+@pytest.mark.parametrize("change", ["flatpak", "no-address", "no-libusb"])
+def test_no_ptp_session_where_it_cannot_work(exclusive, monkeypatch, change):
+    from openexpress.device import ptp
+
+    st, _fake, _events = exclusive
+    if change == "flatpak":
+        monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    elif change == "no-address":
+        st.usb = gio_storage.GarminUsb("51b4", "uri")
+
+    def missing():
+        raise ptp.UsbUnavailable("no libusb")
+
+    if change == "no-libusb":
+        monkeypatch.setattr(ptp, "load_libusb", missing)
+    assert st.exclusive_ptp() is None
+
+
+def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
+    from openexpress import watch
+    from openexpress.gui.app import MainWindow
+
+    st, _fake, _events = exclusive
+    shown, started = [], []
+    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    win = types.SimpleNamespace(session=session, show_device=lambda: shown.append(1),
+                                refresh_device=lambda: shown.append(2))
+    monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
+    w = watch.Watcher()
+    with st.exclusive_ptp():
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    w.on_mount(None, FakeMount(NUMERIC))
+    assert win.session is session and shown == [] and started == []  # the device stays open

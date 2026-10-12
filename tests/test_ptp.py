@@ -362,7 +362,7 @@ def test_install_sequence_and_take_over(device):
 def test_libusb_loads():
     """Only loads the library; no USB device is listed or opened."""
     try:
-        lib = ptp._load_libusb()
+        lib = ptp.load_libusb()
     except ptp.UsbUnavailable:
         pytest.skip("libusb-1.0 is not installed")
     assert lib.libusb_error_name(-7) == b"LIBUSB_ERROR_TIMEOUT"

@@ -18,7 +18,7 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 from openexpress import service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import garmin_usb  # noqa: E402
+from openexpress.device.gio_storage import garmin_usb, own_remount  # noqa: E402
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
@@ -63,6 +63,8 @@ class Watcher(Gio.Application):
         self.send_notification("sync", n)
 
     def on_mount(self, _monitor, mount):
+        if own_remount(mount):
+            return  # mounted again by our own install, not plugged in
         if garmin_usb(mount):
             GLib.timeout_add_seconds(self.delay_s, self.start_sync)
 

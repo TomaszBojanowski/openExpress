@@ -11,7 +11,9 @@ import re
 import shutil
 import subprocess
 import tempfile
-from dataclasses import dataclass
+import time
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import gi
@@ -20,7 +22,8 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
-from openexpress.device.storage import DeviceError, Entry, Storage  # noqa: E402
+from openexpress.device import ptp  # noqa: E402
+from openexpress.device.storage import DeviceError, Entry, RemountFailed, Storage  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
 GARMIN_VID = "091e"
@@ -80,6 +83,8 @@ class GioStorage(Storage):
         self.label = root_uri
         # "vendor:product" of the USB device (never the serial number), when known.
         self.usb_id: str | None = None
+        self.usb: GarminUsb | None = None
+        self.device_uri: str | None = None  # the address gvfs mounts, above the storage
 
     def _f(self, real: str) -> Gio.File:
         return self.root.resolve_relative_path(real) if real else self.root
@@ -194,6 +199,18 @@ class GioStorage(Storage):
         # A size of 0 means "unknown" (a real storage is never empty-sized).
         return self._fs_attr("filesystem::size") or None
 
+    def exclusive_ptp(self):
+        # A Flatpak sandbox has no USB device nodes; there the app is only queued.
+        usb = self.usb
+        if (in_flatpak() or usb is None or usb.bus is None or usb.address is None
+                or not self.device_uri):
+            return None
+        try:
+            ptp.load_libusb()
+        except ptp.UsbUnavailable:
+            return None
+        return _exclusive(self.device_uri, usb.bus, usb.address, self)
+
 
 @dataclass(frozen=True)
 class GarminUsb:
@@ -201,6 +218,9 @@ class GarminUsb:
 
     product: str | None
     source: str  # "usb": read from the USB device; "uri": taken from the MTP address
+    # Where the device is on USB, when known; not part of what the device is.
+    bus: int | None = field(default=None, compare=False)
+    address: int | None = field(default=None, compare=False)
 
     @property
     def usb_id(self) -> str:
@@ -267,7 +287,9 @@ def _identify(uri: str | None, volume, monitor=None) -> GarminUsb | None:
     # That branch is covered by tests only: it was not tried on a device.
     ids = _sysfs_ids(int(address.group(1)), int(address.group(2))) if address else None
     if ids is not None:
-        return GarminUsb(ids[1], "usb") if ids[0] == GARMIN_VID else None
+        if ids[0] != GARMIN_VID:
+            return None
+        return GarminUsb(ids[1], "usb", int(address.group(1)), int(address.group(2)))
     # The USB properties are not available: fall back to the start of the host name.
     by_ids = _URI_GARMIN_IDS.match(uri)
     if by_ids:
@@ -359,5 +381,104 @@ def open_device_storage(uri: str | None = None) -> GioStorage:
     for st in [GioStorage(top._f(name).get_uri()) for name in candidates] + [top]:
         if st.exists("GARMIN/GarminDevice.xml"):
             st.usb_id = usb.usb_id if usb is not None else None
+            st.usb, st.device_uri = usb, uri
             return st
     raise DeviceError(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))
+
+
+# --- the device to ourselves, for PTP ----------------------------------------------------
+#
+# gvfs holds the USB interface while the device is mounted, so for a PTP session it is
+# unmounted and mounted again afterwards, also after an error. Our own window and
+# background service see both events; `own_remount` lets them ignore these.
+
+REMOUNT_QUIET_S = 15
+REMOUNT_READY_S = 20
+_quiet_until: dict[str, float] = {}
+
+
+def _key(uri: str) -> str:
+    return uri.rstrip("/").lower()
+
+
+def own_remount(mount) -> bool:
+    """Whether this mount appearing or disappearing is our own doing."""
+    root = mount.get_root()
+    until = _quiet_until.get(_key(root.get_uri())) if root is not None else None
+    return until is not None and time.monotonic() < until
+
+
+def _wait(start, timeout_s: int, what: str) -> None:
+    """Run one asynchronous Gio operation to its end. `start(done)` begins it and
+    `done(finish)` is called with a function that raises GLib.Error on failure."""
+    loop = GLib.MainLoop()
+    result: list = []
+
+    def done(finish):
+        try:
+            finish()
+            result.append(None)
+        except GLib.Error as e:
+            result.append(e)
+        loop.quit()
+
+    def on_timeout():
+        result.append(TimeoutError())
+        loop.quit()
+        return False
+
+    start(done)
+    source = GLib.timeout_add_seconds(timeout_s, on_timeout)
+    loop.run()
+    if not isinstance(result[0], TimeoutError):
+        GLib.source_remove(source)
+    if isinstance(result[0], TimeoutError):
+        raise DeviceError(_("{action}: the device did not answer in time").format(action=what))
+    if result[0] is not None:
+        raise _err(result[0], what)
+
+
+def _unmount(uri: str) -> None:
+    found = next((m for m in Gio.VolumeMonitor.get().get_mounts()
+                  if _key(m.get_root().get_uri()) == _key(uri)), None)
+    if found is None:
+        raise DeviceError(_("The device is not mounted."))
+    _wait(lambda done: found.unmount_with_operation(
+        Gio.MountUnmountFlags.NONE, None, None,
+        lambda m, res: done(lambda: m.unmount_with_operation_finish(res))),
+        30, _("Cannot unmount the device"))
+
+
+def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
+    location = Gio.File.new_for_uri(uri)
+    try:
+        _wait(lambda done: location.mount_enclosing_volume(
+            Gio.MountMountFlags.NONE, None, None,
+            lambda f, res: done(lambda: f.mount_enclosing_volume_finish(res))),
+            30, _("Cannot mount the device"))
+    except DeviceError as e:
+        raise RemountFailed(str(e)) from e
+    # Right after mounting gvfs may not list the files yet.
+    for _attempt in range(REMOUNT_READY_S):
+        try:
+            if storage.exists("GARMIN/GarminDevice.xml"):
+                return
+        except DeviceError:
+            pass
+        sleep(1)
+    raise RemountFailed(_("The device was mounted again but its files are not visible."))
+
+
+@contextmanager
+def _exclusive(uri: str, bus: int, address: int, storage: Storage):
+    _quiet_until[_key(uri)] = float("inf")
+    try:
+        _unmount(uri)
+        try:
+            with ptp.Session(ptp.LibusbTransport.open(bus, address)) as session:
+                yield session
+        finally:
+            _remount(uri, storage)
+    finally:
+        # The signals of the last mount arrive a moment later.
+        _quiet_until[_key(uri)] = time.monotonic() + REMOUNT_QUIET_S

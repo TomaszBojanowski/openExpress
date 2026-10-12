@@ -1,3 +1,4 @@
+import contextlib
 import uuid
 
 import pytest
@@ -855,3 +856,365 @@ def test_window_toggle_passes_the_type(twin_device):
     MainWindow.toggle_app(win, widget, row, 0)
     assert in_bin_flags(st)[1] == ("aa", 1, True) and in_bin_flags(st)[3] == ("aa", 2, True)
     assert widget.disabled is True and toasts == ["Weather disabled"]
+
+
+# --- devices that hide the app folder: installing through a PTP session --------------------
+
+
+class HidingStorage(LocalStorage):
+    """A storage whose app folder only a PTP session shows. While the session is open the
+    storage is "unmounted": any use of it is an error."""
+
+    def __init__(self, root, fake):
+        super().__init__(root)
+        self.fake = fake
+        self.unmounted = False
+        self.sessions = 0
+        self.open_error = None
+        self.remount_error = None
+
+    def _guard(self):
+        from openexpress.device.storage import DeviceError
+
+        if self.unmounted:
+            raise DeviceError("the storage was used while unmounted")
+
+    def _list(self, real_path):
+        self._guard()
+        return super()._list(real_path)
+
+    def _read(self, real_path):
+        self._guard()
+        return super()._read(real_path)
+
+    def _write(self, real_path, data):
+        self._guard()
+        return super()._write(real_path, data)
+
+    def exclusive_ptp(self):
+        return self._block() if self.fake is not None else None
+
+    @contextlib.contextmanager
+    def _block(self):
+        from openexpress.device import ptp
+
+        self.unmounted = True
+        try:
+            if self.open_error is not None:
+                raise self.open_error
+            self.fake.reconnect()
+            with ptp.Session(self.fake) as session:
+                yield session
+        finally:
+            self.unmounted = False
+            self.sessions += 1
+            if self.remount_error is not None:
+                raise self.remount_error
+
+
+@pytest.fixture
+def hidden_apps(iq_device, device_root, xdg):
+    """Like the fēnix 8: GARMIN/APPS/MEDIA is not in the ordinary listing."""
+    from ptp_fake import FakeDevice
+
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/MEDIA").rmdir()
+    fake = FakeDevice()
+    fake.add("GARMIN/Apps/OUT.BIN", (device_root / "GARMIN/APPS/OUT.BIN").read_bytes())
+    fake.add("GARMIN/Apps/Media", hidden=True)
+    fake.add("GARMIN/Apps/Media/DADE7E4.PRG", b"store app", hidden=True)
+    return HidingStorage(device_root, fake), dev, fake
+
+
+def fake_in_bin(fake):
+    handle = fake.handle("GARMIN/Apps/IN.BIN")
+    return None if handle is None else ciq.parse_in_bin(fake.objects[handle].data)
+
+
+def test_hidden_folder_is_installed_over_ptp(hidden_apps):
+    st, dev, fake = hidden_apps
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    client = CountingClient()
+    lines = []
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, progress=lines.append,
+                             direct=True)
+    assert (rep.installed, rep.failed, rep.for_phone) == (["Face It"], [], [])
+    new = [n for n in fake.names("GARMIN/Apps/Media", hidden=False)]
+    assert len(new) == 1 and new[0].endswith(".PRG") and len(new[0]) == 12
+    assert fake.objects[fake.handle("GARMIN/Apps/Media/" + new[0])].data == b"PRG-DATA"
+    assert fake.names("GARMIN/Apps/Media", hidden=True) == ["DADE7E4.PRG"]
+    # The app list: everything the device has, in its order, and the new face last, inactive.
+    assert [(p[0], p[2]) for p in fake_in_bin(fake)] == [
+        (STORE_ID, False), (PRELOADED, True), (FACE, True)]
+    assert client.acks == [7] and st.sessions == 1
+    assert not fake.session_open and fake.closed  # closed before the device is mounted again
+    # Nothing was created or written through the mounted storage.
+    assert not (st.root / "GARMIN/APPS/MEDIA").exists()
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+    assert any(line.startswith("Writing GARMIN/APPS/MEDIA/") for line in lines)
+
+
+def test_install_apps_uses_ptp_without_trying_to_create_the_folder(hidden_apps, monkeypatch):
+    st, dev, fake = hidden_apps
+    monkeypatch.setattr(LocalStorage, "_mkdir", lambda self, p: pytest.fail("mkdir was tried"))
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert rep.installed == ["Face It"] and rep.for_phone == [] and rep.failed == []
+    assert FakeStore.queued == [["Face It"]]
+
+
+def test_no_ptp_session_keeps_the_old_behaviour(hidden_apps, monkeypatch):
+    """E.g. in a Flatpak sandbox: the folder is tried, refused, and the app only queued."""
+    from openexpress.device.storage import DeviceError
+
+    st, dev, fake = hidden_apps
+    st.fake = None
+
+    def refuse(self, real_path):
+        raise DeviceError("refused")
+
+    monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.for_phone == ["Face It"] and client.downloads == 0 and client.acks == []
+    assert fake.operations == []
+
+
+def test_usb_device_cannot_be_opened(hidden_apps):
+    from openexpress.device import ptp
+
+    st, dev, fake = hidden_apps
+    st.open_error = ptp.UsbUnavailable("no access")
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert (rep.installed, rep.failed, rep.for_phone) == ([], [], ["Face It"])
+    assert client.acks == [] and st.sessions == 1 and not st.unmounted  # mounted again
+    assert fake.operations == []
+
+
+def test_update_of_a_hidden_app_is_left_for_the_phone(hidden_apps):
+    st, dev, fake = hidden_apps
+    message = {"messageid": 9, "devicexmldatatype": "IQWatchFaces",
+               "metadata": {"messageurl": "x", "messagename": "Connect IQ Store",
+                            "appdetails": {"id": str(STORE_ID)}}}
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [message], known={}, direct=True)
+    assert rep.for_phone == ["Connect IQ Store"] and rep.installed == [] and rep.failed == []
+    assert client.downloads == 0 and st.sessions == 0 and fake.operations == []
+
+
+def test_pending_app_list_blocks_a_ptp_install(hidden_apps):
+    st, dev, fake = hidden_apps
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(ciq.build_in_bin(ciq.read_installed(dev, st).apps))
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and "has not applied earlier changes" in rep.failed[0][1]
+    assert client.acks == [] and st.sessions == 0 and fake.operations == []
+
+
+def test_refused_app_file_writes_no_app_list(hidden_apps):
+    from openexpress.device import ptp
+
+    st, dev, fake = hidden_apps
+    fake.refuse[ptp.SEND_OBJECT_INFO] = ptp.ACCESS_DENIED
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and rep.failed == [
+        ("Face It", "The device refused SendObjectInfo (AccessDenied).")]
+    assert fake_in_bin(fake) is None and client.acks == []
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+    assert not fake.session_open and not st.unmounted
+
+
+def test_unfinished_app_file_is_removed(hidden_apps):
+    from openexpress.device import ptp
+
+    st, dev, fake = hidden_apps
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and "GeneralError" in rep.failed[0][1]
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and fake_in_bin(fake) is None
+
+
+def test_refused_app_list_removes_the_new_app_file(hidden_apps):
+    st, dev, fake = hidden_apps
+    fake.refuse_names["IN.BIN"] = 0x200F
+    client = CountingClient()
+    with pytest.raises(ciq.CiqError, match="Cannot register the apps"):
+        ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+    assert client.acks == [] and not fake.session_open and not st.unmounted
+
+
+def test_one_refused_app_does_not_stop_the_other(hidden_apps):
+    st, dev, fake = hidden_apps
+    other = uuid.UUID("11111111-2222-4333-8444-555555555555")
+    second = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+              "metadata": {"messageurl": "y", "messagename": "Other",
+                           "appdetails": {"id": str(other)}}}
+    real_handle = fake._send_object_info
+    calls = []
+
+    def first_refused(params, data):
+        calls.append(1)
+        return (0x2002,) if len(calls) == 1 else real_handle(params, data)
+
+    fake._send_object_info = first_refused
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE, second], known={}, direct=True)
+    assert rep.installed == ["Other"] and [n for n, _e in rep.failed] == ["Face It"]
+    assert [p[0] for p in fake_in_bin(fake)] == [STORE_ID, PRELOADED, other]
+    assert client.acks == [8]
+
+
+def test_broken_session_reports_every_app(hidden_apps):
+    st, dev, fake = hidden_apps
+    fake.wrong_transaction = True
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and [n for n, _e in rep.failed] == ["Face It"]
+    assert client.acks == [] and not st.unmounted
+
+
+def test_device_without_garmins_listing_falls_back(hidden_apps, device_root):
+    """No hidden folder is found: the folder is created the old way, if the device lets us."""
+    st, dev, fake = hidden_apps
+    fake.supports_hidden = False
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == ["Face It"] and rep.failed == []
+    assert len(list((device_root / "GARMIN/APPS/MEDIA").glob("*.PRG"))) == 1
+    assert (device_root / "GARMIN/APPS/IN.BIN").exists() and fake_in_bin(fake) is None
+    assert fake.sent(0x100C) == 0 and client.acks == [7]
+
+
+def test_failed_remount_is_reported_but_the_install_counts(hidden_apps):
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake = hidden_apps
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == ["Face It"] and client.acks == [7]
+    assert rep.failed == [("USB connection",
+                           "Cannot mount the device. Unplug the device and plug it in again.")]
+    assert fake_in_bin(fake) is not None
+
+
+def test_interrupted_sync_writes_nothing_over_ptp(hidden_apps):
+    from openexpress.connect import ApiError
+
+    st, dev, fake = hidden_apps
+
+    class Client(CountingClient):
+        def download_message(self, url, absolute):
+            if url == "boom":
+                raise ApiError("server error")
+            return super().download_message(url, absolute)
+
+    bad = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+           "metadata": {"messageurl": "boom", "messagename": "Other",
+                        "appdetails": {"id": "11111111-2222-4333-8444-555555555555"}}}
+    client = Client()
+    with pytest.raises(ApiError):
+        ciq.install_queued(dev, st, client, [FACE_MESSAGE, bad], known={}, direct=True)
+    assert st.sessions == 0 and fake.operations == [] and client.acks == []
+
+
+class GoneClient(CountingClient):
+    """Acknowledging fails; `queue` is what Garmin still lists afterwards."""
+
+    def __init__(self, queue):
+        super().__init__()
+        self.queue = queue
+
+    def ack_message(self, mid):
+        raise RuntimeError("HTTP 404")
+
+    def device_messages(self, unit_id):
+        return self.queue
+
+
+def test_message_already_gone_from_the_queue_is_not_an_error(hidden_apps):
+    st, dev, _fake = hidden_apps
+    rep = ciq.install_queued(dev, st, GoneClient([]), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == ["Face It"] and rep.failed == []
+
+
+def test_failed_acknowledgement_of_a_queued_message_is_reported(hidden_apps):
+    st, dev, _fake = hidden_apps
+    rep = ciq.install_queued(dev, st, GoneClient([FACE_MESSAGE]), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and rep.failed == [("Face It", "HTTP 404")]
+
+
+def test_cli_dry_run_announces_the_direct_connection(hidden_apps, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, _dev, fake = hidden_apps
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, _dev))
+    assert main(["--path", str(st.root), "apps", "install", "Face It"]) == 0
+    out = capsys.readouterr().out
+    assert "does not show the app folder GARMIN/APPS/MEDIA" in out
+    assert "direct USB connection" in out and "Dry run" in out
+    assert fake.operations == [] and st.sessions == 0 and FakeStore.queued == []
+
+
+def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
+    """Only an install the user asked for unmounts the device; a sync leaves the app queued."""
+    import types
+
+    from openexpress import service
+    from openexpress.device.storage import DeviceError
+
+    st, dev, fake = hidden_apps
+
+    def refuse(self, real_path):
+        raise DeviceError("refused")
+
+    monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
+
+    class Client(CountingClient):
+        def require_verified(self, unit_id=None):
+            raise RuntimeError("names are cosmetic")
+
+    client = Client()
+    s = types.SimpleNamespace(storage=st, device=dev, client=client,
+                              settings=types.SimpleNamespace(locale="en_US"))
+    errors = []
+    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    assert errors == [] and lines == [
+        "1 Connect IQ app waits in the queue: openExpress cannot install apps on "
+        "this device over USB yet."]
+    assert st.sessions == 0 and fake.operations == [] and client.acks == []
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})  # the default
+    assert rep.for_phone == ["Face It"] and st.sessions == 0
+
+
+def test_user_is_told_about_an_unfinished_file_that_stays(hidden_apps):
+    from openexpress.device import ptp
+
+    st, dev, fake = hidden_apps
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    fake.refuse[ptp.DELETE_OBJECT] = ptp.ACCESS_DENIED
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    name, error = rep.failed[0]
+    left = fake.names("GARMIN/Apps/Media", hidden=False)
+    assert name == "Face It" and len(left) == 1
+    assert error.endswith("An unfinished file may have been left on the device: "
+                          f"GARMIN/APPS/MEDIA/{left[0]}.")
+
+
+def test_user_is_told_when_the_app_file_stays_after_a_refused_app_list(hidden_apps):
+    from openexpress.device import ptp
+
+    st, dev, fake = hidden_apps
+    fake.refuse_names["IN.BIN"] = ptp.ACCESS_DENIED
+    fake.refuse[ptp.DELETE_OBJECT] = ptp.ACCESS_DENIED
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    left = fake.names("GARMIN/Apps/Media", hidden=False)
+    assert f"may have been left on the device: GARMIN/APPS/MEDIA/{left[0]}." in str(error.value)

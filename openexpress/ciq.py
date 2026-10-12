@@ -24,7 +24,8 @@ from urllib.parse import urlencode
 
 from openexpress import paths, proto
 from openexpress.connect import ApiError, GarminClient, lower_keys
-from openexpress.device.storage import DeviceError, Storage
+from openexpress.device import ptp
+from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import N_, _, ngettext
 
@@ -416,15 +417,18 @@ class IqInstallReport:
     for_phone: list[str] = field(default_factory=list)
 
 
-# --- devices where openExpress cannot install apps over USB yet ---------------------------
+# --- devices that hide the app folder ------------------------------------------------------
 #
-# Some watches (e.g. the fēnix 8) declare an app folder in GarminDevice.xml that does not
-# exist on the device; gvfs/libmtp is refused when it tries to create it, and no .PRG files
-# are visible over MTP at all. Garmin Express on Windows does install over USB there, so
-# this is a limit of openExpress, not of the device. Until it is solved such apps are left
+# Some watches (e.g. the fēnix 8) keep the app folder declared in GarminDevice.xml out of
+# the ordinary MTP listing: gvfs does not see it, is refused when it tries to create it,
+# and shows no .PRG files at all. Garmin's own listing returns the folder, so where a
+# direct PTP session is possible (`Storage.exclusive_ptp`) the app file and the app list
+# are written through it. Where it is not (e.g. in a Flatpak sandbox) such apps are left
 # in the queue in Garmin Connect, from which the phone or Garmin Express installs them.
 
-READY, MISSING, REFUSED = "ready", "missing", "refused"
+READY, MISSING, REFUSED, DIRECT = "ready", "missing", "refused", "direct"
+# Room left on the storage besides the app file itself.
+PTP_FREE_MARGIN = 1024 * 1024
 
 
 def app_dir(device: GarminDevice, datatype: str) -> str | None:
@@ -462,21 +466,26 @@ def _remember_refusal(device: GarminDevice, path: str) -> None:
 
 
 def usb_dir_state(device: GarminDevice, storage: Storage, datatype: str) -> str:
-    """READY, MISSING (not on the device; creating it was not tried) or REFUSED."""
+    """READY (visible), DIRECT (not visible; will be looked for over PTP), MISSING (not on
+    the device; creating it was not tried) or REFUSED."""
     path = app_dir(device, datatype)
     if path is None or storage.resolve(path) is not None:
         return READY
+    if storage.exclusive_ptp() is not None:
+        return DIRECT
     if _refusals(device).get(path.casefold()) == device.software_version_str:
         return REFUSED
     return MISSING
 
 
 def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str) -> bool:
-    """Whether app files of this type can be written; creates a missing folder if allowed."""
-    state = usb_dir_state(device, storage, datatype)
-    if state != MISSING:
-        return state == READY
+    """Whether app files of this type can be written through the mounted storage; creates
+    a missing folder if the device allows it."""
     path = app_dir(device, datatype)
+    if path is None or storage.resolve(path) is not None:
+        return True
+    if _refusals(device).get(path.casefold()) == device.software_version_str:
+        return False
     try:
         storage.make_dir(path)
     except DeviceError as e:
@@ -506,16 +515,31 @@ def install_apps(
     downloaded or written for them, and they are not failures.
     """
     require_complete(read_installed(device, storage))
-    usb = [t for t in targets if prepare_app_dir(device, storage, store_datatype(t))]
+    usb = [t for t in targets
+           if usb_dir_state(device, storage, store_datatype(t)) in (READY, DIRECT)
+           or prepare_app_dir(device, storage, store_datatype(t))]
     for_phone = [t.name for t in targets if t not in usb]
     api.queue_install(device, targets)
     report = IqInstallReport()
     if usb:
         report = install_queued(device, storage, client, client.device_messages(device.unit_id),
                                 {t.app_id: t for t in targets},
-                                only={t.app_id for t in usb}, progress=progress)
+                                only={t.app_id for t in usb}, progress=progress, direct=True)
     report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]
     return report
+
+
+@dataclass
+class _Hidden:
+    """An app waiting to be written into a folder only PTP shows."""
+
+    message: dict
+    name: str
+    datatype: str
+    path: str
+    data: bytes
+    entry: InstalledApp
+    handle: int | None = None
 
 
 def install_queued(
@@ -526,20 +550,41 @@ def install_queued(
     known: dict[uuid.UUID, StoreApp],
     only: set[uuid.UUID] | None = None,
     progress: Callable[[str], None] = lambda s: None,
+    direct: bool = False,
 ) -> IqInstallReport:
     """Writes queued Connect IQ apps to the watch and registers them in IN.BIN.
 
     Messages are acknowledged only after the app is written and registered, so
     an interrupted install is retried on the next sync.
+
+    `direct` allows a PTP session for a folder the device hides, which unmounts the
+    device for a moment: only for an install the user asked for, never for a sync.
     """
+    report, leftover = _install_pass(device, storage, client, messages, known, only, progress,
+                                     direct=direct)
+    if leftover:
+        # The PTP session did not find their folder either: the old way, creating it.
+        again, _none = _install_pass(device, storage, client, leftover, known, only, progress,
+                                     direct=False)
+        report.installed += again.installed
+        report.failed += again.failed
+        report.for_phone += again.for_phone
+    return report
+
+
+def _install_pass(device, storage, client, messages, known, only, progress,
+                  direct: bool) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
     state = read_installed(device, storage)
     require_complete(state)
     max_apps = device.iq_max_apps or 0
     new_entries: list[InstalledApp] = []
     new_paths: list[str] = []
+    hidden: list[_Hidden] = []
+    leftover: list[dict] = []
     to_ack: list[tuple[dict, str]] = []
     new_size = 0
+    interrupted = False
     try:
         for m in messages:
             if not is_iq_message(m):
@@ -553,9 +598,14 @@ def install_queued(
             existing = state.find(app_id)
             try:
                 if (existing is None and max_apps
-                        and len(state.store_apps) + len(new_entries) >= max_apps):
+                        and len(state.store_apps) + len(new_entries) + len(hidden) >= max_apps):
                     raise CiqError(_("no free app slots on the device"))
-                if not prepare_app_dir(device, storage, dt):
+                over_ptp = direct and usb_dir_state(device, storage, dt) == DIRECT
+                if over_ptp and existing is not None:
+                    # Replacing a file the device has taken over is not known to work yet.
+                    report.for_phone.append(name)
+                    continue
+                if not over_ptp and not prepare_app_dir(device, storage, dt):
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
                     continue
@@ -563,7 +613,7 @@ def install_queued(
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
                 if not data:
-                    client.ack_message(m.get("messageid"))
+                    _acknowledge(client, device, m)
                     continue
                 if (state.available_space is not None and existing is None
                         and new_size + len(data) > state.available_space):
@@ -575,6 +625,20 @@ def install_queued(
                 filename = (existing.filename if existing and existing.filename
                             else uuid.uuid4().hex[:8].upper())
                 path = posixpath.join(targets[0].path, f"{filename}.{targets[0].extension or 'PRG'}")
+                entry = None
+                if existing is None:
+                    store = known.get(app_id)
+                    app_type = DATATYPE_TO_APPTYPE[dt]
+                    entry = InstalledApp(
+                        app_id=app_id, app_type=app_type, name=name,
+                        # Like Express: a new watch face is installed but not activated.
+                        disabled=app_type == 3, version=store.latest_version if store else None,
+                        filename=filename, size=len(data),
+                    )
+                    new_size += len(data)
+                if over_ptp:
+                    hidden.append(_Hidden(m, name, dt, path, data, entry))
+                    continue
                 progress(_("Writing {path}").format(path=path))
                 try:
                     real = storage.write(path, data)
@@ -583,25 +647,26 @@ def install_queued(
                 except Exception:
                     if existing is None:
                         _delete_quietly(storage, path)
+                        new_size -= len(data)
                     raise
-                if existing is None:
-                    store = known.get(app_id)
-                    app_type = DATATYPE_TO_APPTYPE[dt]
-                    new_entries.append(InstalledApp(
-                        app_id=app_id, app_type=app_type, name=name,
-                        # Like Express: a new watch face is installed but not activated.
-                        disabled=app_type == 3, version=store.latest_version if store else None,
-                        filename=filename, size=len(data),
-                    ))
+                if entry is not None:
+                    new_entries.append(entry)
                     new_paths.append(real)
-                    new_size += len(data)
                 to_ack.append((m, name))
             except ApiError:
                 raise
             except Exception as e:  # noqa: BLE001
                 report.failed.append((name, str(e)))
+    except BaseException:
+        # Nothing was written for the apps meant for PTP; they stay in the queue.
+        interrupted = True
+        raise
     finally:
-        if new_entries:
+        registered = False
+        if hidden and not interrupted:
+            registered = _install_hidden(device, storage, state, hidden, new_entries, new_paths,
+                                         to_ack, leftover, report, progress)
+        if new_entries and not registered:
             try:
                 storage.write(_config_path(device, True), build_in_bin(state.apps + new_entries))
             except Exception as e:
@@ -612,13 +677,146 @@ def install_queued(
                                .format(error=e)) from e
         for m, name in to_ack:
             try:
-                client.ack_message(m.get("messageid"))
+                _acknowledge(client, device, m)
             except Exception as e:  # noqa: BLE001
                 # The app is installed; the server will offer it again and it will be overwritten.
                 report.failed.append((name, str(e)))
                 continue
             report.installed.append(name)
-    return report
+    return report, leftover
+
+
+def _acknowledge(client: GarminClient, device: GarminDevice, message: dict) -> None:
+    """Tell Garmin the message was delivered. Garmin may have dropped it from the queue
+    already (it does once the app is on the device): that is not an error."""
+    try:
+        client.ack_message(message.get("messageid"))
+    except Exception:
+        try:
+            queued = {m.get("messageid") for m in client.device_messages(device.unit_id)}
+        except Exception:  # noqa: BLE001 - report the first error, not this one
+            queued = {message.get("messageid")}
+        if message.get("messageid") in queued:
+            raise
+        log.info("Message %s was no longer in the queue", message.get("messageid"))
+
+
+def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, new_paths,
+                    to_ack, leftover, report, progress) -> bool:
+    """Write the apps of `hidden` and the app list through a PTP session. Returns whether
+    the app list (IN.BIN) was written there, with `new_entries` in it."""
+    in_path = _config_path(device, True)
+    if storage.exists(in_path):
+        # Not replaced over PTP; the device consumes it once it is unplugged.
+        report.failed += [(h.name, _("the device has not applied earlier changes yet; unplug "
+                                     "it, wait until it is ready and try again"))
+                          for h in hidden]
+        return False
+    opener = storage.exclusive_ptp()
+    sent: list[_Hidden] = []
+    settled: set[int] = set()  # id() of the entries of `hidden` already reported
+    opened = registered = False
+    register_error: Exception | None = None
+
+    def fail(h: _Hidden, error) -> None:
+        settled.add(id(h))
+        report.failed.append((h.name, str(error)))
+
+    try:
+        with opener as session:
+            opened = True
+            store = _ptp_store(session)
+            for h in hidden:
+                folder = session.lookup(store, posixpath.dirname(h.path))
+                if folder is None or not folder.is_dir:
+                    settled.add(id(h))
+                    leftover.append(h.message)
+                    continue
+                progress(_("Writing {path}").format(path=h.path))
+                try:
+                    free = session.free_space(store)
+                    if free is not None and free < len(h.data) + PTP_FREE_MARGIN:
+                        raise CiqError(_("not enough free space on the device"))
+                    h.handle = session.send_file(store, folder.handle,
+                                                 posixpath.basename(h.path), h.data).handle
+                    sent.append(h)
+                except ptp.PtpWriteError as e:
+                    fail(h, _with_leftovers(e, _ptp_delete(session, e.handle, h.path)))
+                except (DeviceError, CiqError) as e:
+                    fail(h, e)
+            if sent:
+                entries = state.apps + new_entries + [h.entry for h in sent if h.entry]
+                try:
+                    parent = session.lookup(store, posixpath.dirname(in_path))
+                    if parent is None:
+                        raise CiqError(_("the app list folder was not found"))
+                    session.send_file(store, parent.handle, posixpath.basename(in_path),
+                                      build_in_bin(entries), verify_content=True)
+                    registered = True
+                except (DeviceError, CiqError) as e:
+                    left = (_ptp_delete(session, e.handle, in_path)
+                            if isinstance(e, ptp.PtpWriteError) else [])
+                    for h in sent:
+                        left += _ptp_delete(session, h.handle, h.path)
+                    register_error = CiqError(_with_leftovers(e, left))
+    except ptp.UsbUnavailable as e:
+        # No access to the USB device: as on a device without a PTP session.
+        log.info("Cannot open the device over USB: %s", e)
+        report.for_phone += [h.name for h in hidden]
+        return False
+    except RemountFailed as e:
+        report.failed.append((_("USB connection"), _(
+            "{error} Unplug the device and plug it in again.").format(error=e)))
+        if not opened:
+            report.for_phone += [h.name for h in hidden]
+    except DeviceError as e:
+        # The session broke: what was sent is not registered, the rest was not sent.
+        for h in hidden:
+            if id(h) not in settled:
+                fail(h, e)
+        return False
+    if register_error is not None:
+        for p in new_paths:
+            _delete_quietly(storage, p)
+        report.failed += [(name, str(register_error)) for _m, name in to_ack]
+        report.failed += [(h.name, str(register_error)) for h in sent]
+        to_ack.clear()
+        raise CiqError(_("Cannot register the apps on the device: {error}")
+                       .format(error=register_error)) from register_error
+    if registered:
+        to_ack += [(h.message, h.name) for h in sent]
+    return registered
+
+
+def _ptp_store(session) -> int:
+    """The storage that holds the GARMIN folder."""
+    stores = session.storages()
+    for store in stores:
+        if session.lookup(store, "GARMIN") is not None:
+            return store
+    raise CiqError(_("the GARMIN folder was not found on the device"))
+
+
+def _ptp_delete(session, handle: int | None, path: str) -> list[str]:
+    """Delete a file that was not finished. Returns the path when it could not be
+    deleted, for the user to be told."""
+    if handle is None:
+        return []
+    try:
+        session.delete(handle)
+    except DeviceError as e:
+        log.warning("Cannot delete the unfinished file %s on the device: %s", path, e)
+        return [path]
+    return []
+
+
+def _with_leftovers(error, paths: list[str]) -> str:
+    if not paths:
+        return str(error)
+    return str(error) + " " + ngettext(
+        "An unfinished file may have been left on the device: {paths}.",
+        "Unfinished files may have been left on the device: {paths}.",
+        len(paths)).format(paths=", ".join(paths))
 
 
 def _delete_quietly(storage: Storage, path: str) -> None:

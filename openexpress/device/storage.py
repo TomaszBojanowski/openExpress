@@ -22,6 +22,10 @@ class DeviceError(Exception):
     pass
 
 
+class RemountFailed(DeviceError):
+    """The device was not mounted again after a PTP session."""
+
+
 @dataclass(frozen=True)
 class Entry:
     name: str
@@ -51,6 +55,12 @@ class Storage(ABC):
     def _mkdir(self, real_path: str) -> None: ...
 
     def free_space(self) -> int | None:
+        return None
+
+    def exclusive_ptp(self):
+        """A context manager that gives a PTP session (`openexpress.device.ptp.Session`)
+        to the device, for files ordinary MTP does not show; None when that is not
+        possible here. The storage itself cannot be used inside the block."""
         return None
 
     def capacity(self) -> int | None:

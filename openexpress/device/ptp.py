@@ -250,7 +250,7 @@ _LIBUSB_OPTION_NO_DEVICE_DISCOVERY = 2
 _libusb = None
 
 
-def _load_libusb():
+def load_libusb():
     global _libusb
     if _libusb is not None:
         return _libusb
@@ -301,7 +301,7 @@ class LibusbTransport:
     @classmethod
     def open(cls, bus: int, address: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
         """Open the device at this bus and device number (as in /sys/bus/usb/devices)."""
-        lib = _load_libusb()
+        lib = load_libusb()
         context = ctypes.c_void_p()
         cls._check(lib, lib.libusb_init(ctypes.byref(context)))
         handle = ctypes.c_void_p()
@@ -330,7 +330,7 @@ class LibusbTransport:
     @classmethod
     def from_fd(cls, fd: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
         """Use a device file descriptor opened by someone else (the USB portal)."""
-        lib = _load_libusb()
+        lib = load_libusb()
         if not hasattr(lib, "libusb_set_option") or not hasattr(lib, "libusb_wrap_sys_device"):
             raise UsbUnavailable(_("This libusb cannot use a device opened by the system."))
         # Without this libusb would scan the USB tree, which a sandbox does not show.

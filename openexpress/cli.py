@@ -787,12 +787,22 @@ def cmd_apps(args) -> int:
                 print("  " + _("{name}: openExpress cannot install apps on this device over USB "
                                "yet. The app will be queued in Garmin Connect and installed by "
                                "the phone or Garmin Express.").format(name=a.name))
+            elif dirs[a.app_id] == ciq.DIRECT and a.app_id in installed_ids:
+                print("  " + _("{name}: openExpress cannot update apps on this device over USB "
+                               "yet. The update will be queued in Garmin Connect and installed "
+                               "by the phone or Garmin Express.").format(name=a.name))
+            elif dirs[a.app_id] == ciq.DIRECT:
+                print("  " + _("{name}: the device does not show the app folder {path} to "
+                               "ordinary file access. openExpress will write the app over a "
+                               "direct USB connection; the device disappears from the file "
+                               "manager for a moment.").format(name=a.name, path=folder))
             elif dirs[a.app_id] == ciq.MISSING:
                 print("  " + _("{name}: the app folder {path} does not exist on the device. "
                                "openExpress will try to create it; if the device refuses, the "
                                "app is only queued in Garmin Connect and installed by the phone "
                                "or Garmin Express.").format(name=a.name, path=folder))
-        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED]
+        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED
+                    and not (dirs[a.app_id] == ciq.DIRECT and a.app_id in installed_ids)]
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
