@@ -654,18 +654,34 @@ def cmd_maps(args) -> int:
     return 0
 
 
-def _find_app(items, query: str):
+APP_TYPE_OPTIONS = {"app": 1, "widget": 2, "watch-face": 3, "data-field": 4, "music-app": 7,
+                    "activity": 8}
+
+
+def _find_app(items, query: str, app_type: int | None = None):
+    """One app by name, part of the name or ID; `app_type` picks between entries that share
+    a name and ID (built-in items listed both as an app and as a widget)."""
+    from openexpress import ciq
+
+    if app_type is not None:
+        items = [a for a in items if a.app_type == app_type]
     q = query.casefold()
     exact = [a for a in items if a.name.casefold() == q or str(a.app_id) == q]
-    if exact:
-        return exact[0]
-    partial = [a for a in items if q in a.name.casefold()]
+    partial = exact or [a for a in items if q in a.name.casefold()]
     if len(partial) == 1:
         return partial[0]
     if not partial:
         raise SetupError(_("No app matches '{query}'").format(query=query))
-    raise SetupError(_("Ambiguous name, matches: {names}").format(
-        names="; ".join(a.name for a in partial)))
+
+    def label(a):
+        kind = ciq.APP_TYPES.get(a.app_type)
+        return f"{a.name} ({_(kind) if kind else a.app_type})"
+
+    names = "; ".join(label(a) for a in partial)
+    if len({a.name.casefold() for a in partial}) == 1:
+        raise SetupError(_("Several entries match: {names}. Choose one with --type.").format(
+            names=names))
+    raise SetupError(_("Ambiguous name, matches: {names}").format(names=names))
 
 
 def _app_status(disabled: bool) -> str:
@@ -799,7 +815,7 @@ def cmd_apps(args) -> int:
             print(_("The server has not queued the app yet; run `openexpress sync` in a moment."))
         return 0 if not rep.failed else 1
 
-    app = _find_app(state.apps, args.name)
+    app = _find_app(state.apps, args.name, APP_TYPE_OPTIONS.get(getattr(args, "type", None)))
     if cmd == "remove":
         if not app.removable:
             raise ciq.CiqError(_("{name} is part of the device software and cannot be removed")
@@ -839,7 +855,7 @@ def cmd_apps(args) -> int:
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
-    ciq.set_enabled(dev, st, app.app_id, enable)
+    ciq.set_enabled(dev, st, app.app_id, enable, app.app_type)
     print(_("Saved. The device applies the change after you disconnect it."))
     return 0
 
@@ -1224,6 +1240,9 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "remove":
             a.add_argument("--forget", action="store_true",
                            help=_("also remove it from the app list in your Garmin account"))
+        if name in ("enable", "disable"):
+            a.add_argument("--type", choices=sorted(APP_TYPE_OPTIONS),
+                           help=_("which entry, when an app and a widget share a name"))
     a = asub.add_parser("update", help=_("update installed apps"))
     a.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_apps)

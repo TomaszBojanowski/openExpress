@@ -752,3 +752,106 @@ def test_window_offers_only_forget_for_apps_without_files(iq_device):
     text = MainWindow._for_phone_text(["Face It"])
     assert text.startswith("Face It: openExpress cannot install apps on this device over USB yet.")
     assert text.endswith("installed by the phone or Garmin Express.")
+
+
+# --- built-in items listed twice under one ID (as an app and as a widget) ----------------------
+
+WEATHER = uuid.UUID("c0ffee15-600d-540c-0000-0000000000aa")
+
+
+@pytest.fixture
+def twin_device(iq_device, device_root):
+    """Like a real watch: "Weather" is on the list as an app (off) and as a widget (on)."""
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (WEATHER, 1, "Weather", True, ""),
+        (PRELOADED, 8, "Softball", True, ""),
+        (WEATHER, 2, "Weather", False, ""),
+    ]))
+    return iq_device
+
+
+def in_bin_flags(st):
+    return [(str(i)[-2:], t, disabled) for i, t, disabled, _fav in
+            ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))]
+
+
+def test_find_with_type(twin_device):
+    st, dev = twin_device
+    state = ciq.read_installed(dev, st)
+    assert state.find(WEATHER, 1).disabled is True and state.find(WEATHER, 2).disabled is False
+    assert state.find(WEATHER, 3) is None
+
+
+def test_toggle_changes_only_the_entry_of_that_type(twin_device):
+    st, dev = twin_device
+    ciq.set_enabled(dev, st, WEATHER, False, app_type=2)  # switch the widget off
+    assert in_bin_flags(st) == [("af", 1, False), ("aa", 1, True), ("00", 8, True),
+                                ("aa", 2, True)]  # same order; only the widget changed
+    state = ciq.read_installed(dev, st)
+    assert state.find(WEATHER, 1).disabled is True and state.find(WEATHER, 2).disabled is True
+
+    ciq.set_enabled(dev, st, WEATHER, True, app_type=1)  # now switch the app on
+    assert in_bin_flags(st) == [("af", 1, False), ("aa", 1, False), ("00", 8, True),
+                                ("aa", 2, True)]
+    # Reading back the pending list keeps the two entries apart.
+    state = ciq.read_installed(dev, st)
+    assert state.find(WEATHER, 1).disabled is False and state.find(WEATHER, 2).disabled is True
+    assert len(state.apps) == 4 and not any(a.pending for a in state.apps)
+
+
+def test_pending_list_is_merged_by_id_and_type(twin_device):
+    st, dev = twin_device
+    apps = ciq.read_installed(dev, st).apps
+    apps[1].favorite, apps[3].disabled = True, True  # app: favourite; widget: off
+    st.write("GARMIN/APPS/IN.BIN", ciq.build_in_bin(apps))
+    state = ciq.read_installed(dev, st)
+    app, widget = state.find(WEATHER, 1), state.find(WEATHER, 2)
+    assert (app.disabled, app.favorite) == (True, True)
+    assert (widget.disabled, widget.favorite) == (True, False)
+    assert ciq.preview_in_bin(state, []).kept  # and the list written next keeps both as they are
+
+
+def test_toggle_without_type_refuses_a_shared_id(twin_device):
+    st, dev = twin_device
+    with pytest.raises(ciq.CiqError, match="share this ID"):
+        ciq.set_enabled(dev, st, WEATHER, True)
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+    ciq.set_enabled(dev, st, PRELOADED, False)  # an ID used once needs no type
+    assert (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_cli_toggle_asks_for_the_type(twin_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev = twin_device
+    assert main(["--path", str(device_root), "apps", "disable", "Weather", "--apply"]) == 1
+    err = capsys.readouterr().err
+    assert "Several entries match: Weather (app); Weather (widget). Choose one with --type." in err
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+    assert main(["--path", str(device_root), "apps", "disable", "Weather", "--type", "widget",
+                 "--apply"]) == 0
+    assert in_bin_flags(st)[1] == ("aa", 1, True) and in_bin_flags(st)[3] == ("aa", 2, True)
+    assert main(["--path", str(device_root), "apps", "enable", "Weather", "--type", "app",
+                 "--apply"]) == 0
+    assert in_bin_flags(st)[1] == ("aa", 1, False) and in_bin_flags(st)[3] == ("aa", 2, True)
+    # A name used once still needs no --type.
+    assert main(["--path", str(device_root), "apps", "enable", "Softball"]) == 0
+
+
+def test_window_toggle_passes_the_type(twin_device):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev = twin_device
+    widget = ciq.read_installed(dev, st).find(WEATHER, 2)
+    toasts = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st), busy=False, toast=toasts.append,
+        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+    row = types.SimpleNamespace(get_active=lambda: False)  # the switch was turned off
+    MainWindow.toggle_app(win, widget, row, 0)
+    assert in_bin_flags(st)[1] == ("aa", 1, True) and in_bin_flags(st)[3] == ("aa", 2, True)
+    assert widget.disabled is True and toasts == ["Weather disabled"]

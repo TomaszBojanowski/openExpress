@@ -1710,7 +1710,8 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         self.run_task(_("Saving…"),
-                      lambda: ciq.set_enabled(s.device, s.storage, app.app_id, enabled),
+                      lambda: ciq.set_enabled(s.device, s.storage, app.app_id, enabled,
+                                              app.app_type),
                       done, failed)
 
     # --- music ------------------------------------------------------------------------

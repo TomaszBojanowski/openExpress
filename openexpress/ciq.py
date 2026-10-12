@@ -97,8 +97,11 @@ class InstalledState:
     def store_apps(self) -> list[InstalledApp]:
         return [a for a in self.apps if not a.preloaded]
 
-    def find(self, app_id: uuid.UUID) -> InstalledApp | None:
-        return next((a for a in self.apps if a.app_id == app_id), None)
+    def find(self, app_id: uuid.UUID, app_type: int | None = None) -> InstalledApp | None:
+        """The entry with this ID; built-in items can share one ID as an app and as a widget,
+        so give the type whenever one of several entries is meant."""
+        return next((a for a in self.apps if a.app_id == app_id
+                     and (app_type is None or a.app_type == app_type)), None)
 
 
 @dataclass
@@ -236,10 +239,12 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
     state = parse_out_bin(storage.read(_config_path(device, False)))
     in_path = _config_path(device, True)
     if storage.exists(in_path):
-        pending = {a[0]: a for a in parse_in_bin(storage.read(in_path))}
+        # Keyed by ID and type: a built-in item can be listed as an app and as a widget
+        # under the same ID, each with its own flags.
+        pending = {(a[0], a[1]): a for a in parse_in_bin(storage.read(in_path))}
         for app in state.apps:
-            if app.app_id in pending:
-                app.disabled, app.favorite = pending.pop(app.app_id)[2:]
+            if (app.app_id, app.app_type) in pending:
+                app.disabled, app.favorite = pending.pop((app.app_id, app.app_type))[2:]
         # Apps registered in IN.BIN but not yet reported by the watch must be kept,
         # otherwise the next IN.BIN rewrite would unregister them.
         for app_id, app_type, disabled, favorite in pending.values():
@@ -636,10 +641,13 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
     return removed
 
 
-def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabled: bool) -> None:
+def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabled: bool,
+                app_type: int | None = None) -> None:
     state = read_installed(device, storage)
     require_complete(state)
-    app = state.find(app_id)
+    if app_type is None and sum(1 for a in state.apps if a.app_id == app_id) > 1:
+        raise CiqError(_("Several entries on the device share this ID; the type is needed"))
+    app = state.find(app_id, app_type)
     if app is None:
         raise CiqError(_("App not found on the device"))
     app.disabled = not enabled
