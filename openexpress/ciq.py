@@ -70,6 +70,8 @@ class InstalledApp:
     pending: bool = False
     # Whether its files are visible on the device; None when not checked.
     has_files: bool | None = None
+    # No visible files, but the file can be reached and deleted over a PTP session.
+    direct_removal: bool = False
 
     @property
     def preloaded(self) -> bool:
@@ -840,16 +842,114 @@ def _delete_quietly(storage: Storage, path: str) -> None:
         log.warning("Cannot delete %s: %s", path, e)
 
 
+def removable_directly(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
+    """Whether the app's file is in a folder the device hides and a PTP session can reach."""
+    dt = APPTYPE_TO_DATATYPE.get(app.app_type)
+    return bool(dt and app.filename and not app.pending
+                and usb_dir_state(device, storage, dt) == DIRECT)
+
+
+def _without(apps: list[InstalledApp], app: InstalledApp) -> list[InstalledApp]:
+    return [a for a in apps if (a.app_id, a.app_type) != (app.app_id, app.app_type)]
+
+
+def preview_removal(state: InstalledState, app: InstalledApp) -> InBinPreview:
+    """The app list a removal over PTP would write. Nothing is written."""
+    rest = _without(state.apps, app)
+    written = parse_in_bin(build_in_bin(rest))
+    pending = sum(1 for a in state.apps if a.pending)
+    return InBinPreview(
+        on_device=len(state.apps) - pending, pending=pending, entries=len(written),
+        kept=(len(rest) == len(state.apps) - 1
+              and written == [(a.app_id, a.app_type, a.disabled, a.favorite) for a in rest]),
+        new=[])
+
+
 def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[str]:
+    """Remove an app from the device. Returns the deleted files."""
     if not app.removable:
         raise CiqError(_("{name} is part of the device software and cannot be removed")
                        .format(name=app.name))
-    require_complete(read_installed(device, storage))
+    state = read_installed(device, storage)
+    require_complete(state)
+    paths_ = files_on_device(device, storage, app)
+    if not paths_ and removable_directly(device, storage, app):
+        return _remove_hidden(device, storage, state, app)
     removed = []
-    for p in files_on_device(device, storage, app):
+    for p in paths_:
         storage.delete(p)
         removed.append(p)
-    # Like Express, only the files are deleted; the watch updates its app list itself.
+    # Only the files are deleted here; the device updates its app list itself.
+    return removed
+
+
+def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) -> list[str]:
+    """Like Garmin Express: delete the app file the device hides, then write the app list
+    without the app; every other entry keeps its place and its flags."""
+    in_path = _config_path(device, True)
+    if storage.exists(in_path):
+        raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
+                         "until it is ready and try again"))
+    listed = state.find(app.app_id, app.app_type)
+    if listed is None:
+        raise CiqError(_("App not found on the device"))
+    path = app_file_path(device, listed)
+    in_bin = build_in_bin(_without(state.apps, listed))
+    removed: list[str] = []
+    problem: str | None = None
+    finished = False
+    try:
+        with storage.exclusive_ptp() as session:
+            store = _ptp_store(session)
+            # Everything is looked up before anything is deleted.
+            folder = session.lookup(store, posixpath.dirname(path))
+            parent = session.lookup(store, posixpath.dirname(in_path))
+            if folder is None or not folder.is_dir or parent is None:
+                raise CiqError(_("the app folder was not found on the device"))
+            if session.lookup(store, in_path) is not None:
+                raise CiqError(_("the device has not applied earlier changes yet; unplug it, "
+                                 "wait until it is ready and try again"))
+            file = session.lookup(store, path)
+            if file is not None:
+                if file.is_dir or (listed.size is not None and file.size != listed.size):
+                    raise CiqError(_("{path} on the device is not the file the app list "
+                                     "describes; nothing was deleted").format(path=path))
+                try:
+                    session.delete(file.handle)
+                except ptp.PtpRefused as e:
+                    raise CiqError(_("The device refused to delete {path} ({reason}); nothing "
+                                     "was changed.").format(
+                        path=path, reason=ptp.response_name(e.code))) from e
+                if session.lookup(store, path) is not None:
+                    raise CiqError(_("the device did not delete {path}").format(path=path))
+                removed.append(path)
+            # A file that is already gone (e.g. an earlier attempt stopped half-way) leaves
+            # only the app list to put right.
+            try:
+                session.send_file(store, parent.handle, posixpath.basename(in_path), in_bin,
+                                  verify_content=True)
+                finished = True
+            except DeviceError as e:
+                left = (_ptp_delete(session, e.handle, in_path)
+                        if isinstance(e, ptp.PtpWriteError) else [])
+                problem = _with_leftovers(e, left)
+    except RemountFailed as e:
+        if finished:
+            raise CiqError(_("{name} was removed, but the device could not be mounted again: "
+                             "{error} Unplug the device and plug it in again.").format(
+                name=app.name, error=e)) from e
+        if problem is None:
+            raise CiqError(_("{error} Unplug the device and plug it in again.")
+                           .format(error=e)) from e
+    if problem is not None:
+        if removed:
+            raise CiqError(_(
+                "The file of {name} was deleted, but the app list on the device could not be "
+                "updated: {error} The device may still list the app. Unplug it and check; if "
+                "{name} is still listed, connect the device and remove the app again to "
+                "update the list.").format(name=app.name, error=problem))
+        raise CiqError(_("The app list on the device could not be updated: {error}")
+                       .format(error=problem))
     return removed
 
 

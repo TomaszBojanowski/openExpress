@@ -1277,3 +1277,155 @@ def test_cli_dry_run_says_the_app_already_waits(iq_device, device_root, apps_cli
     assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
     assert "Installed: Face It" in capsys.readouterr().out
     assert FakeStore.queued == [] and apps_cli.acks == [7]
+
+
+# --- removing an app from a folder the device hides ---------------------------------------
+
+
+@pytest.fixture
+def hidden_spot(hidden_apps, device_root):
+    """A store app the device took over: listed in OUT.BIN, its file only visible over PTP."""
+    st, dev, fake = hidden_apps
+    data = out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (FACE, 3, "Face It", True, "0A1B2C3D"),
+        (PRELOADED, 8, "Softball", True, ""),
+    ])
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(data)
+    fake.objects[fake.handle("GARMIN/Apps/OUT.BIN")].data = data
+    fake.add("GARMIN/Apps/Media/0A1B2C3D.PRG", b"face app", hidden=True)
+    return st, dev, fake, ciq.read_installed(dev, st).find(FACE)
+
+
+def test_hidden_app_is_removed_like_express_does(hidden_spot):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    assert ciq.files_on_device(dev, st, app) == [] and ciq.removable_directly(dev, st, app)
+    assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG"]
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+    # The app list: the same entries in the same order with the same flags, minus the app.
+    assert [(p[0], p[1], p[2]) for p in fake_in_bin(fake)] == [
+        (STORE_ID, 1, False), (PRELOADED, 8, True)]
+    # The file is deleted first, the list written after it; then the device is mounted again.
+    writes = [op for op in fake.operations if op in (ptp.DELETE_OBJECT, ptp.SEND_OBJECT_INFO)]
+    assert writes == [ptp.DELETE_OBJECT, ptp.SEND_OBJECT_INFO]
+    assert st.sessions == 1 and not st.unmounted and not fake.session_open
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()  # nothing through the mounted storage
+
+
+def test_removal_preview_keeps_every_other_app(hidden_spot):
+    st, dev, fake, app = hidden_spot
+    p = ciq.preview_removal(ciq.read_installed(dev, st), app)
+    assert (p.on_device, p.pending, p.entries, p.kept) == (3, 0, 2, True)
+    assert fake.operations == [] and st.sessions == 0
+
+
+def test_removal_is_refused_while_an_app_list_waits(hidden_spot):
+    st, dev, fake, app = hidden_spot
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(ciq.build_in_bin(ciq.read_installed(dev, st).apps))
+    with pytest.raises(ciq.CiqError, match="has not applied earlier changes"):
+        ciq.remove(dev, st, app)
+    assert st.sessions == 0 and fake.operations == []
+
+
+def test_refused_delete_changes_nothing(hidden_spot):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.delete_protected = ptp.OBJECT_WRITE_PROTECTED
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value) == ("The device refused to delete GARMIN/APPS/MEDIA/0A1B2C3D.PRG "
+                                "(ObjectWriteProtected); nothing was changed.")
+    assert fake.names("GARMIN/Apps/Media") == ["0A1B2C3D.PRG", "DADE7E4.PRG"]
+    assert fake_in_bin(fake) is None and not st.unmounted
+
+
+def test_file_of_another_size_is_not_deleted(hidden_spot):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    app.size = 12345  # the app list describes another file
+    listed = ciq.read_installed(dev, st)
+    listed.find(FACE).size = 12345
+    import unittest.mock
+
+    with unittest.mock.patch.object(ciq, "read_installed", return_value=listed), \
+            pytest.raises(ciq.CiqError, match="is not the file the app list describes"):
+        ciq.remove(dev, st, app)
+    assert fake.sent(ptp.DELETE_OBJECT) == 0 and fake_in_bin(fake) is None
+
+
+def test_deleted_file_but_refused_app_list_is_explained(hidden_spot):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.refuse_names["IN.BIN"] = ptp.ACCESS_DENIED
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    text = str(error.value)
+    assert text.startswith("The file of Face It was deleted, but the app list on the device "
+                           "could not be updated: The device refused SendObjectInfo")
+    assert "remove the app again to update the list" in text
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and not st.unmounted
+
+    # The second attempt finds no file and only puts the list right.
+    del fake.refuse_names["IN.BIN"]
+    assert ciq.remove(dev, st, app) == []
+    assert [p[0] for p in fake_in_bin(fake)] == [STORE_ID, PRELOADED]
+    assert fake.sent(ptp.DELETE_OBJECT) == 1
+
+
+def test_unfinished_app_list_is_removed_again(hidden_spot):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    with pytest.raises(ciq.CiqError, match="could not be updated"):
+        ciq.remove(dev, st, app)
+    assert fake.handle("GARMIN/Apps/IN.BIN") is None  # no half-written list is left behind
+
+
+def test_failed_remount_after_a_removal(hidden_spot):
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake, app = hidden_spot
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value) == ("Face It was removed, but the device could not be mounted again: "
+                                "Cannot mount the device. Unplug the device and plug it in again.")
+    assert fake_in_bin(fake) is not None
+
+
+def test_built_in_and_fileless_apps_are_not_removed_directly(hidden_spot):
+    st, dev, fake, _app = hidden_spot
+    state = ciq.read_installed(dev, st)
+    assert not ciq.removable_directly(dev, st, state.find(PRELOADED))  # no file of its own
+    with pytest.raises(ciq.CiqError, match="part of the device software"):
+        ciq.remove(dev, st, state.find(PRELOADED))
+    assert fake.operations == []
+
+
+def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert main(["--path", str(st.root), "apps", "remove", "Face It"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == "Remove Face It from the device: GARMIN/APPS/MEDIA/0A1B2C3D.PRG"
+    assert out[2:] == [
+        "App list to be written (IN.BIN): 2 entries; the device lists 3 (OUT.BIN)",
+        "  every other app on the device is kept, in the same order and with the same flags",
+        "  removed: Face It (watch face)",
+        "Dry run. Add --apply.",
+    ]
+    assert fake.operations == [] and st.sessions == 0
+
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert "Removed 1 file." in out and "finishes the removal after it is unplugged" in out
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []

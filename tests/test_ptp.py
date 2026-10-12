@@ -323,9 +323,15 @@ def test_delete_a_fresh_file(device):
     assert device.transfers[-2][12:] == struct.pack("<II", written.handle, 0)
 
 
+def test_protected_app_file_can_be_deleted(device):
+    """Like the fēnix 8: a file the device took over is deleted by the ordinary operation."""
+    with ptp.Session(device) as session:
+        session.delete(device.handle("GARMIN/Apps/Media/A1B2C3D4.PRG"))
+    assert device.names("GARMIN/Apps/Media") == []
+
+
 def test_refused_delete_is_reported(device):
-    """Whether the real device deletes a protected app file is not known; the layer must
-    report a refusal either way."""
+    device.delete_protected = ptp.OBJECT_WRITE_PROTECTED
     with ptp.Session(device) as session, pytest.raises(ptp.PtpRefused) as error:
         session.delete(device.handle("GARMIN/Apps/Media/A1B2C3D4.PRG"))
     assert error.value.code == ptp.OBJECT_WRITE_PROTECTED

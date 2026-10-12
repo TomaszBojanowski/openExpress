@@ -8,8 +8,10 @@ It answers the way the fēnix 8 was seen to answer:
 * reading an app file (.PRG) returns other bytes than were written,
 * SendObjectInfo takes storage and parent as parameters and returns the new handle.
 
-What the real device does when asked to delete a protected file is not known yet, so
-`delete_protected` decides it here. Everything in the tree is made up.
+* DeleteObject removes a protected app file too (seen when Garmin Express removed an
+  app); `delete_protected` can make the fake refuse instead.
+
+Everything in the tree is made up.
 """
 
 from __future__ import annotations
@@ -45,7 +47,7 @@ class FakeDevice:
         self.refuse: dict[int, int] = {}  # operation -> response code
         self.refuse_names: dict[str, int] = {}  # file name -> code, at SendObjectInfo
         self.supports_hidden = True
-        self.delete_protected = ptp.OBJECT_WRITE_PROTECTED  # or ptp.OK
+        self.delete_protected = ptp.OK  # or a refusal such as ptp.OBJECT_WRITE_PROTECTED
         self.session_open = False
         self.wrong_transaction = False
         self.silent = False

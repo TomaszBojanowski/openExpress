@@ -689,6 +689,44 @@ def _app_status(disabled: bool) -> str:
     return _("disabled") if disabled else _("enabled")
 
 
+def _remove_app_directly(args, dev, st, state, app, api) -> int:
+    """`apps remove` on a device that hides its app folder: over a PTP session."""
+    from openexpress import ciq
+
+    print(_("Remove {name} from the device: {files}").format(
+        name=app.name, files=ciq.app_file_path(dev, app)))
+    print("  " + _("The device does not show this file to ordinary file access. openExpress "
+                   "will delete it over a direct USB connection; the device disappears from "
+                   "the file manager for a moment."))
+    preview = ciq.preview_removal(state, app)
+    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+            "(OUT.BIN)").format(entries=preview.entries, count=preview.on_device))
+    if preview.pending or not preview.kept:
+        raise ciq.CiqError(_("The app list that would be written does not match the device. "
+                             "Nothing was changed."))
+    print("  " + _("every other app on the device is kept, in the same order and with the "
+                   "same flags"))
+    kind = ciq.APP_TYPES.get(app.app_type)
+    print("  " + _("removed: {name} ({type})").format(
+        name=app.name, type=_(kind) if kind else app.app_type))
+    if not args.apply:
+        print(_("Dry run. Add --apply."))
+        return 0
+    removed = ciq.remove(dev, st, app)
+    if not removed:
+        print(_("The app file was already gone; only the app list was updated."))
+    if args.forget:
+        api.forget(dev, [app.app_id])
+        msg = ngettext("Removed {count} file. Also removed from your account list.",
+                       "Removed {count} files. Also removed from your account list.",
+                       len(removed))
+    else:
+        msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
+    print(msg.format(count=len(removed)))
+    print(_("The device finishes the removal after it is unplugged."))
+    return 0
+
+
 def _print_in_bin_preview(preview) -> None:
     """The app list (IN.BIN) that an install would write to the device."""
     from openexpress import ciq
@@ -836,6 +874,8 @@ def cmd_apps(args) -> int:
             raise ciq.CiqError(_("{name} is part of the device software and cannot be removed")
                                .format(name=app.name))
         paths_ = ciq.files_on_device(dev, st, app)
+        if not paths_ and ciq.removable_directly(dev, st, app):
+            return _remove_app_directly(args, dev, st, state, app, api)
         if not paths_:
             # E.g. the fēnix 8: no app files are visible over USB, so there is nothing to delete.
             print(_("{name} cannot be removed over USB: this device shows no app files. "
