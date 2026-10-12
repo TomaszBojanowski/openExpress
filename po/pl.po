@@ -131,12 +131,9 @@ msgid ""
 msgid_plural ""
 "Wrote {names} to the device; they will be installed after the device is "
 "unplugged."
-msgstr[0] ""
-"Zapisano {names} na urządzeniu; zostanie zainstalowana po odłączeniu."
-msgstr[1] ""
-"Zapisano {names} na urządzeniu; zostaną zainstalowane po odłączeniu."
-msgstr[2] ""
-"Zapisano {names} na urządzeniu; zostaną zainstalowane po odłączeniu."
+msgstr[0] "Zapisano aplikację {names} na urządzeniu; zostanie zainstalowana po odłączeniu."
+msgstr[1] "Zapisano aplikacje {names} na urządzeniu; zostaną zainstalowane po odłączeniu."
+msgstr[2] "Zapisano aplikacje {names} na urządzeniu; zostaną zainstalowane po odłączeniu."
 
 #: openexpress/ciq.py:295
 #, python-brace-format
