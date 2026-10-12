@@ -54,7 +54,7 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 | `openexpress sync [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch |
 | `openexpress baseline [--apply]` | marks current files as already uploaded (first run) |
 | `openexpress backup [--apply]` | local backup of watch data (default `~/Documents/Garmin/Backups`, last 3 kept) |
-| `openexpress updates [--reinstalls]` | watch software updates (no login needed) |
+| `openexpress updates [--reinstalls]` | watch software updates (no login needed); a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
 | `openexpress updates --install PART… [--apply]` | download with MD5 check and copy to the watch; then restart the watch |
 | `openexpress maps [--all]` | installed and available maps (TopoActive, base maps, CourseView, Ski) |
 | `openexpress maps install NAME [--apply]` | install a map assigned to the watch (download, activation, write) |
