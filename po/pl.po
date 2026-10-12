@@ -291,13 +291,12 @@ msgstr ""
 #: openexpress/ciq.py:971
 #, python-brace-format
 msgid "The device refused to delete {path} ({reason}); nothing was changed."
-msgstr ""
-"Urządzenie odmówiło usunięcia {path} ({reason}); niczego nie zmieniono."
+msgstr "Urządzenie odmówiło usunięcia pliku {path} ({reason}); niczego nie zmieniono."
 
 #: openexpress/ciq.py:975
 #, python-brace-format
 msgid "the device did not delete {path}"
-msgstr "urządzenie nie usunęło {path}"
+msgstr "urządzenie nie usunęło pliku {path}"
 
 #: openexpress/ciq.py:989
 #, python-brace-format
