@@ -34,15 +34,24 @@ def _human(n: int | None) -> str:
     return str(n)
 
 
+# Commands that read or write many files on the device when they are not a dry run.
+WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music"})
+
+
 def open_storage(args) -> Storage:
     if args.path:
         return LocalStorage(Path(args.path))
     from openexpress.device.gio_storage import open_device_storage
 
     # A device that was just plugged in needs a while before its files can be seen.
-    return open_device_storage(
+    st = open_device_storage(
         args.device_uri, wait=not getattr(args, "no_wait", False),
         notify=lambda line: print(line, file=sys.stderr, flush=True))
+    if getattr(args, "apply", False) and getattr(args, "cmd", None) in WORKS_ON_DEVICE:
+        # On stderr, so that it does not mix with the result.
+        print(_("Do not unplug the device until the operation is finished."),
+              file=sys.stderr, flush=True)
+    return st
 
 
 def open_device(args) -> tuple[Storage, GarminDevice]:

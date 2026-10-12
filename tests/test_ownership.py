@@ -892,8 +892,9 @@ def test_window_set_primary_training(device_root, device):
     s = service.check_session(session(device_root, device, account.client))
     events = []
 
-    def run_task(title, fn, on_done=None, on_error=None):
+    def run_task(title, fn, on_done=None, on_error=None, device=True):
         events.append(title)
+        assert device is False  # an account setting: the device may be unplugged
         on_done(fn())
 
     win = types.SimpleNamespace(session=s, run_task=run_task, toast=events.append,

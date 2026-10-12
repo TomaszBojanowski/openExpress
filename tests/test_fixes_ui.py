@@ -296,7 +296,7 @@ def _fake_window(session):
 
     win = types.SimpleNamespace(session=session, busy=False, sections={"maps": _Sec()},
                                 _retry_sources={}, tasks=[])
-    win.run_task = lambda title, work, done, failed: win.tasks.append((done, failed))
+    win.run_task = lambda title, work, done, failed, device=True: win.tasks.append((done, failed))
     win._load = types.MethodType(MainWindow._load, win)
     return win
 
@@ -361,3 +361,117 @@ def test_window_geometry(xdg):
     data = load_gui_settings()
     assert data["background"] is True  # other options are kept
     assert window_geometry(data) == (1200, 800, False)
+
+
+# --- "Do not unplug the device" while a task works with the device ----------------------------
+
+
+class _Widget:
+    def __init__(self):
+        self.visible, self.text = None, None
+
+    def set_visible(self, visible):
+        self.visible = visible
+
+    def set_text(self, text):
+        self.text = text
+
+    def set_revealed(self, revealed):
+        self.visible = revealed
+
+    def set_fraction(self, fraction):
+        pass
+
+    def set_sensitive(self, sensitive):
+        pass
+
+
+def _busy_window(session):
+    from openexpress.gui.app import MainWindow
+
+    win = types.SimpleNamespace(
+        session=session, busy=False, action_bar=_Widget(), progress_label=_Widget(),
+        progress_bar=_Widget(), unplug_label=_Widget(), banner=_Widget(), _action_buttons=[],
+        _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[])
+    win.toast = win.toasts.append
+    win.set_busy = types.MethodType(MainWindow.set_busy, win)
+    win.run_task = types.MethodType(MainWindow.run_task, win)
+    return win
+
+
+def _run_now(monkeypatch):
+    """Tasks run at once instead of in a thread; what the label showed meanwhile is kept."""
+    import threading
+
+    from gi.repository import GLib
+
+    class Now:
+        def __init__(self, target, daemon=None):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    monkeypatch.setattr(threading, "Thread", Now)
+    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
+
+
+def test_window_says_not_to_unplug_while_a_task_works_with_the_device(monkeypatch):
+    _run_now(monkeypatch)
+    win = _busy_window(session="watch")
+    during = []
+    win.run_task("Syncing…", lambda: during.append((win.busy, win.unplug_label.visible,
+                                                    win.action_bar.visible)))
+    assert during == [(True, True, True)]  # shown for as long as the task runs
+    assert (win.busy, win.unplug_label.visible, win.action_bar.visible) == (False, False, False)
+
+
+def test_warning_goes_away_after_a_failed_task_too(monkeypatch):
+    _run_now(monkeypatch)
+    win = _busy_window(session="watch")
+    seen = []
+
+    def fail():
+        seen.append(win.unplug_label.visible)
+        raise RuntimeError("the device went away")
+
+    win.run_task("Copying music…", fail, on_error=lambda e: True)
+    assert seen == [True] and win.unplug_label.visible is False and win.busy is False
+
+
+@pytest.mark.parametrize("session, device", [("watch", False), (None, True)])
+def test_no_warning_for_a_task_that_does_not_touch_a_device(monkeypatch, session, device):
+    _run_now(monkeypatch)
+    win = _busy_window(session=session)  # e.g. logging in, or no device is open
+    during = []
+    win.run_task("Logging in…", lambda: during.append(win.unplug_label.visible), device=device)
+    assert during == [False] and win.action_bar.visible is False
+
+
+@pytest.mark.parametrize("argv, expected", [
+    (["sync", "--apply"], True), (["backup", "--apply"], True),
+    (["apps", "install", "X", "--apply"], True), (["music", "add", "x.mp3", "--apply"], True),
+    (["maps", "update", "--apply"], True), (["updates", "--install", "P", "--apply"], True),
+    (["sync"], False), (["apps", "install", "X"], False),      # dry runs
+    (["primary", "set", "--apply"], False), (["info"], False),  # account only / read in a moment
+])
+def test_cli_says_not_to_unplug_only_when_it_really_works_on_the_device(monkeypatch, capsys,
+                                                                       argv, expected):
+    from openexpress import cli
+    from openexpress.device import gio_storage
+
+    monkeypatch.setattr(gio_storage, "open_device_storage",
+                        lambda uri=None, wait=False, notify=None: "storage")
+    args = cli.build_parser().parse_args(argv)
+    assert cli.open_storage(args) == "storage"
+    out = capsys.readouterr()
+    line = "Do not unplug the device until the operation is finished.\n"
+    assert out.out == "" and out.err == (line if expected else "")
+
+
+def test_cli_does_not_warn_for_a_folder_instead_of_a_device(tmp_path, capsys):
+    from openexpress import cli
+
+    args = cli.build_parser().parse_args(["--path", str(tmp_path), "sync", "--apply"])
+    cli.open_storage(args)
+    assert capsys.readouterr().err == ""

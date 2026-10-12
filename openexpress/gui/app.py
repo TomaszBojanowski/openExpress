@@ -344,6 +344,12 @@ class MainWindow(Adw.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
         box.append(self.progress_label)
         box.append(self.progress_bar)
+        # Shown for as long as a task works with the device.
+        self.unplug_label = Gtk.Label(label=_("Do not unplug the device"), xalign=0,
+                                      visible=False)
+        self.unplug_label.add_css_class("caption-heading")
+        self.unplug_label.add_css_class("warning")
+        box.append(self.unplug_label)
         self.action_bar = Gtk.ActionBar(revealed=False)
         self.action_bar.pack_start(spinner)
         self.action_bar.set_center_widget(box)
@@ -425,10 +431,11 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("ok", _("OK"))
         d.present(self)
 
-    def set_busy(self, busy: bool, text: str = "") -> None:
+    def set_busy(self, busy: bool, text: str = "", device: bool = False) -> None:
         self.busy = busy
         self.action_bar.set_revealed(busy)
         self.progress_label.set_text(text)
+        self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)
         self._action_buttons = [b for b in self._action_buttons if b.get_root() is not None]
         for b in self._action_buttons:
@@ -444,12 +451,15 @@ class MainWindow(Adw.ApplicationWindow):
         if total:
             GLib.idle_add(self.progress_bar.set_fraction, min(1.0, done / total))
 
-    def run_task(self, title: str, fn, on_done=None, on_error=None) -> None:
-        """Run `fn()` in a thread; the result is passed back to the GUI thread."""
+    def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True) -> None:
+        """Run `fn()` in a thread; the result is passed back to the GUI thread.
+
+        `device` is False for a task that does not touch the connected device: the user is
+        then not told to keep it plugged in."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
-        self.set_busy(True, title)
+        self.set_busy(True, title, device=device and self.session is not None)
 
         def worker():
             try:
@@ -670,7 +680,7 @@ class MainWindow(Adw.ApplicationWindow):
                   "apps": self.load_apps, "music": self.load_music}[key]
         loader()
 
-    def _load(self, key: str, title: str, work, show) -> None:
+    def _load(self, key: str, title: str, work, show, device: bool = True) -> None:
         """Common pattern: spinner in the section, work in a thread, then `show(result)`."""
         sec = self.sections[key]
         sess = self.session
@@ -699,12 +709,12 @@ class MainWindow(Adw.ApplicationWindow):
             def retry():
                 self._retry_sources.pop(key, None)
                 if self.session is sess:
-                    self._load(key, title, work, show)
+                    self._load(key, title, work, show, device)
                 return False
 
             self._retry_sources[key] = GLib.timeout_add(700, retry)
             return
-        self.run_task(title, work, done, failed)
+        self.run_task(title, work, done, failed, device=device)
 
     # --- overview ---------------------------------------------------------------------
 
@@ -855,7 +865,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.show_overview()
 
         self.run_task(_("Changing the primary training device…"),
-                      lambda: service.set_primary_training(s.client, s.device, apply=True), done)
+                      lambda: service.set_primary_training(s.client, s.device, apply=True), done,
+                      device=False)
 
     def _set_device_texture(self, texture) -> None:
         self.device_picture.set_paintable(texture)
@@ -1125,7 +1136,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self.session = None
                 self.refresh_device()
 
-            self.run_task(_("Reading the installer…"), lambda: read(path), saved)
+            self.run_task(_("Reading the installer…"), lambda: read(path), saved, device=False)
 
         dialog.open(self, None, chosen)
 
@@ -1162,7 +1173,7 @@ class MainWindow(Adw.ApplicationWindow):
             def start():
                 if self.busy:
                     return True  # the ticket expires only after minutes: wait for the task
-                self.run_task(_("Logging in…"), work, done)
+                self.run_task(_("Logging in…"), work, done, device=False)
                 return False
 
             def first():
@@ -1245,7 +1256,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._load("updates", _("Checking for updates…"),
                    lambda: upd.parse_updates(s.client.software_updates(
                        s.device.raw, include_reinstalls=True)),
-                   self.show_updates)
+                   self.show_updates, device=False)  # only asks Garmin's server
 
     def show_updates(self, items) -> None:
         if self.session is None:
@@ -1345,7 +1356,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         self._load("maps", _("Checking maps…"),
                    lambda: mp.parse_maps(s.client.universal_maps(s.device.raw)),
-                   self.show_maps)
+                   self.show_maps, device=False)  # only asks Garmin's server
 
     def show_maps(self, all_maps) -> None:
         if self.session is None:
@@ -1900,7 +1911,7 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", lambda _d, r: r == "forget" and self.run_task(
             _("Removing {name}…").format(name=app.name), work,
             lambda _r: (self.toast(_("Removed {name} from your account list.").format(
-                name=app.name)), self.load_section("apps", force=True))))
+                name=app.name)), self.load_section("apps", force=True)), device=False))
         d.present(self)
 
     def confirm_remove_app(self, app) -> None:
