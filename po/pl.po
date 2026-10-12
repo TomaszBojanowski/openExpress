@@ -341,7 +341,7 @@ msgstr "Nie odnaleziono pliku OUT.BIN w {path}"
 #: openexpress/ciq.py:1065
 #, python-brace-format
 msgid "Cannot read {path}: {error}"
-msgstr "Nie można odczytać {path}: {error}"
+msgstr "Nie można odczytać pliku {path}: {error}"
 
 #: openexpress/ciq.py:1069
 #, python-brace-format
@@ -904,14 +904,12 @@ msgstr "włączona"
 #: openexpress/cli.py:700
 #, python-brace-format
 msgid "No copies of the app list in {path}."
-msgstr "Nie ma kopii listy aplikacji w {path}."
+msgstr "Nie odnaleziono kopii listy aplikacji w katalogu {path}."
 
 #: openexpress/cli.py:702
 #, python-brace-format
 msgid "Copies of the app list (OUT.BIN); the device lists {count} apps now:"
-msgstr ""
-"Kopie listy aplikacji (OUT.BIN); urządzenie ma teraz na liście {count} "
-"pozycji:"
+msgstr "Kopie listy aplikacji (OUT.BIN); liczba pozycji na urządzeniu: {count}:"
 
 #: openexpress/cli.py:707
 #, python-brace-format
@@ -923,7 +921,7 @@ msgstr[2] "{name}: wpisów: {entries}, różni się {count} pozycji"
 
 #: openexpress/cli.py:711
 msgid "Show what a copy would change: openexpress apps order --from NAME"
-msgstr "Co zmieniłaby wybrana kopia: openexpress apps order --from NAZWA"
+msgstr "Podgląd zmian dla wybranej kopii: openexpress apps order --from NAZWA"
 
 #: openexpress/cli.py:719
 #, python-brace-format
@@ -958,12 +956,12 @@ msgstr[2] "… i {count} więcej"
 #: openexpress/cli.py:738
 #, python-brace-format
 msgid "Not in the copy, left where they are: {names}"
-msgstr "Nie ma ich w kopii, zostają na swoim miejscu: {names}"
+msgstr "Brak w kopii, pozostają na swoich miejscach: {names}"
 
 #: openexpress/cli.py:739
 #, python-brace-format
 msgid "Only in the copy, ignored: {names}"
-msgstr "Są tylko w kopii, pominięte: {names}"
+msgstr "Tylko w kopii, pominięto: {names}"
 
 #: openexpress/cli.py:742 openexpress/cli.py:766 openexpress/cli.py:798
 #, python-brace-format
