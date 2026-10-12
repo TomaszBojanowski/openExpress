@@ -1731,8 +1731,9 @@ class MainWindow(Adw.ApplicationWindow):
                                     subtitle=GLib.markup_escape_text(f.path))
                 row.add_suffix(self._trash(_("Remove"), lambda p=f.path: self.remove_music([p])))
                 exp.add_row(row)
-        if playlists:
+        if music.supports_playlists(self.session.device):
             g = sec.group(_("Playlists"))
+            g.set_header_suffix(self._button(_("Add Playlist…"), self.choose_playlist))
             for p in playlists:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(p.split("/")[-1]))
                 row.add_suffix(self._trash(_("Remove"), lambda p=p: self.remove_music([p])))
@@ -1791,6 +1792,85 @@ class MainWindow(Adw.ApplicationWindow):
             d.present(self)
 
         self.run_task(_("Scanning files…"), plan, confirm)
+
+    def choose_playlist(self) -> None:
+        dialog = Gtk.FileDialog(title=_("Choose a playlist to add to the device"))
+        only = Gtk.FileFilter()
+        only.set_name(_("Playlists (.m3u, .m3u8)"))
+        for pattern in ("*.m3u", "*.m3u8", "*.M3U", "*.M3U8"):
+            only.add_pattern(pattern)
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(only)
+        dialog.set_filters(filters)
+
+        def chosen(dlg, res):
+            try:
+                path = dlg.open_finish(res).get_path()
+            except GLib.Error:
+                return
+            if not path:
+                self.toast(_("Choose files stored on this computer"))
+                return
+            self.add_playlist(Path(path))
+
+        dialog.open(self, None, chosen)
+
+    @staticmethod
+    def _playlist_summary(plan, in_flatpak: bool = False) -> str:
+        """Text of the confirmation: what is copied, what is already there, what is left out."""
+        tracks = len(plan.device_paths)
+        lines = [ngettext("{count} track", "{count} tracks", tracks).format(count=tracks)]
+        n = len(plan.copy.to_copy)
+        lines.append(ngettext("{count} file to copy ({size}), {already} already on the device",
+                              "{count} files to copy ({size}), {already} already on the device",
+                              n).format(count=n, size=_human(plan.copy.size),
+                                        already=len(plan.copy.already)))
+        if plan.replaces:
+            lines.append(_("A playlist with this name is already on the device and "
+                           "will be replaced."))
+        if plan.skipped:
+            lines.append("")
+            lines.append(ngettext("{count} track cannot be added:",
+                                  "{count} tracks cannot be added:",
+                                  len(plan.skipped)).format(count=len(plan.skipped)))
+            lines += [f"• {name} ({reason})" for name, reason in plan.skipped[:10]]
+            if len(plan.skipped) > 10:
+                more = len(plan.skipped) - 10
+                lines.append(ngettext("… and {count} more", "… and {count} more",
+                                      more).format(count=more))
+            if in_flatpak:
+                lines.append(_("openExpress installed as a Flatpak can read music only from "
+                               "the Music and Downloads folders."))
+        return "\n".join(lines)
+
+    def add_playlist(self, path) -> None:
+        from openexpress import music
+        from openexpress.device.gio_storage import in_flatpak
+
+        s = self.session
+
+        def confirm(plan):
+            summary = self._playlist_summary(plan, in_flatpak())
+            if not plan.device_paths:
+                self.error(_("The playlist has no tracks that can be added."), summary)
+                return
+            d = Adw.AlertDialog(
+                heading=_("Add the playlist “{name}”?").format(name=plan.name),
+                body=summary)
+            d.add_response("cancel", _("Cancel"))
+            # TRANSLATORS: button that adds the playlist to the device
+            d.add_response("ok", _("Add"))
+            d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
+            d.connect("response", lambda _d, r: r == "ok" and self.run_task(
+                _("Copying music…"),
+                lambda: music.add_playlist(plan, s.device, s.storage, progress=self.progress,
+                                           transfer_progress=self.fraction),
+                lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
+                               self.load_section("music", force=True))))
+            d.present(self)
+
+        self.run_task(_("Reading the playlist…"),
+                      lambda: music.plan_playlist(path, s.device, s.storage), confirm)
 
     def remove_music(self, device_paths) -> None:
         from openexpress import music

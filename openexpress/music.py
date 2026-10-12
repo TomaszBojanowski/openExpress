@@ -271,6 +271,62 @@ def read_m3u(path: Path) -> list[Path]:
     return out
 
 
+@dataclass
+class PlaylistPlan:
+    """What adding a local playlist would do."""
+
+    name: str
+    target: str  # device path of the playlist file
+    replaces: bool  # a playlist with this name is already on the device
+    copy: CopyPlan
+    skipped: list[tuple[str, str]] = field(default_factory=list)  # (entry, reason)
+    # Device paths in the order of the playlist (a track listed twice appears twice).
+    device_paths: list[str] = field(default_factory=list)
+
+
+def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
+                  name: str | None = None) -> PlaylistPlan:
+    """Plan adding a local .m3u/.m3u8 playlist: which tracks to copy, which cannot be added.
+
+    Entries that are missing or in a format the device does not play are skipped with a
+    reason instead of stopping the whole playlist. Nothing is written.
+    """
+    files = device.targets(PLAYLIST)
+    if not files:
+        raise MusicError(_("This device does not support playlists"))
+    m3u = Path(m3u)
+    name = name or m3u.stem
+    tracks: dict[Path, Track] = {}  # one copy per local file, however often it is listed
+    order: list[Path] = []
+    skipped: list[tuple[str, str]] = []
+    for entry in read_m3u(m3u):
+        if not entry.is_file():
+            skipped.append((entry.name, _("file not found")))
+            continue
+        key = entry.resolve()
+        if key not in tracks:
+            found = scan([entry], device)
+            if not found:
+                skipped.append((entry.name, _("format not supported by the device")))
+                continue
+            tracks[key] = found[0]
+        order.append(key)
+    copy_plan = plan_copy(list(tracks.values()), device, storage)
+    dest = {t.local.resolve(): d for t, d in copy_plan.to_copy + copy_plan.already}
+    target = posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
+    return PlaylistPlan(name, target, storage.resolve(target) is not None, copy_plan, skipped,
+                        [dest[key] for key in order])
+
+
+def add_playlist(plan: PlaylistPlan, device: GarminDevice, storage: Storage,
+                 progress: Callable[[str], None] = lambda s: None, transfer_progress=None) -> str:
+    """Copy the missing tracks, then write the playlist. Returns its device path."""
+    if not plan.device_paths:
+        raise MusicError(_("The playlist has no tracks that can be added."))
+    copy(plan.copy, storage, progress, transfer_progress)
+    return write_playlist(device, storage, plan.name, plan.device_paths)
+
+
 def remove(storage: Storage, device_paths: list[str]) -> list[str]:
     removed = []
     for p in device_paths:

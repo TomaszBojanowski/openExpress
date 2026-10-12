@@ -222,3 +222,123 @@ def test_music_page_reads_the_device_when_it_has_media(iq_device):
                                 show_music=None)
     MainWindow.load_music(win)
     assert started == ["music"]
+
+
+# --- adding a playlist (the window's "Add Playlist…") -----------------------------------------
+
+
+@pytest.fixture
+def library(tmp_path):
+    """A made-up local library with a playlist that has good, missing and unsupported entries."""
+    lib = tmp_path / "lib"
+    (lib / "sub").mkdir(parents=True)
+    (lib / "one.mp3").write_bytes(b"ID3" + b"\x00" * 100)
+    (lib / "sub" / "two.mp3").write_bytes(b"ID3" + b"\x00" * 200)
+    (lib / "lossless.flac").write_bytes(b"fLaC" + b"\x00" * 50)
+    m3u = lib / "Morning run.m3u8"
+    m3u.write_text("#EXTM3U\n#EXTINF:30,One\none.mp3\n\nsub/two.mp3\nlossless.flac\n"
+                   "gone.mp3\n" + str(lib / "one.mp3") + "\n", encoding="utf-8")
+    return m3u
+
+
+def test_plan_playlist_lists_what_cannot_be_added(iq_device, library):
+    st, dev = iq_device
+    plan = music.plan_playlist(library, dev, st)
+    assert plan.name == "Morning run" and plan.target == "Music/Morning run.m3u8"
+    assert not plan.replaces
+    assert plan.skipped == [("lossless.flac", "format not supported by the device"),
+                            ("gone.mp3", "file not found")]
+    # The same file listed twice (relative and absolute) is copied once and listed twice.
+    assert [t.local.name for t, _d in plan.copy.to_copy] == ["one.mp3", "two.mp3"]
+    assert plan.copy.already == [] and plan.copy.size == 103 + 203
+    assert plan.device_paths == ["Music/Unknown/Unknown/one.mp3", "Music/Unknown/Unknown/two.mp3",
+                                 "Music/Unknown/Unknown/one.mp3"]
+    # Planning writes nothing.
+    assert music.list_device(dev, st) == [] and music.list_playlists(dev, st) == []
+
+
+def test_add_playlist_copies_missing_tracks_and_writes_the_list(iq_device, library):
+    st, dev = iq_device
+    library.write_text("one.mp3\nsub/two.mp3\nlossless.flac\n", encoding="utf-8")
+    plan = music.plan_playlist(library, dev, st)
+    path = music.add_playlist(plan, dev, st)
+    assert path == "Music/Morning run.m3u8"
+    assert sorted(i.path for i in music.list_device(dev, st)) == [
+        "Music/Unknown/Unknown/one.mp3", "Music/Unknown/Unknown/two.mp3"]
+    assert st.read(path).decode() == "Music/Unknown/Unknown/one.mp3\nMusic/Unknown/Unknown/two.mp3\n"
+
+    # Again: nothing to copy, and the existing playlist is announced as replaced.
+    again = music.plan_playlist(library, dev, st)
+    assert again.replaces and again.copy.to_copy == [] and len(again.copy.already) == 2
+    assert music.add_playlist(again, dev, st) == path
+
+
+def test_playlist_without_usable_tracks_is_not_written(iq_device, library):
+    st, dev = iq_device
+    library.write_text("gone.mp3\nlossless.flac\n", encoding="utf-8")
+    plan = music.plan_playlist(library, dev, st)
+    assert plan.device_paths == [] and len(plan.skipped) == 2
+    with pytest.raises(music.MusicError, match="no tracks that can be added"):
+        music.add_playlist(plan, dev, st)
+    assert music.list_playlists(dev, st) == []
+
+
+def test_plan_playlist_needs_a_device_with_playlists(device_root, library):
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    with pytest.raises(music.MusicError, match="does not support playlists"):
+        music.plan_playlist(library, dev, st)
+
+
+def test_window_playlist_summary(iq_device, library):
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    plan = music.plan_playlist(library, dev, st)
+    text = MainWindow._playlist_summary(plan)
+    assert text.splitlines() == [
+        "3 tracks",
+        "2 files to copy (306 B), 0 already on the device",
+        "",
+        "2 tracks cannot be added:",
+        "• lossless.flac (format not supported by the device)",
+        "• gone.mp3 (file not found)",
+    ]
+    assert "Flatpak" in MainWindow._playlist_summary(plan, in_flatpak=True).splitlines()[-1]
+
+    library.write_text("one.mp3\n", encoding="utf-8")
+    music.add_playlist(music.plan_playlist(library, dev, st), dev, st)
+    again = MainWindow._playlist_summary(music.plan_playlist(library, dev, st), in_flatpak=True)
+    assert again.splitlines() == [
+        "1 track", "0 files to copy (0 B), 1 already on the device",
+        "A playlist with this name is already on the device and will be replaced."]
+
+    many = music.PlaylistPlan("x", "Music/x.m3u8", False, music.CopyPlan(),
+                              [(f"t{i}.mp3", "file not found") for i in range(13)], [])
+    lines = MainWindow._playlist_summary(many).splitlines()
+    assert lines[3] == "13 tracks cannot be added:" and lines[-1] == "… and 3 more"
+    assert len([line for line in lines if line.startswith("•")]) == 10
+
+
+def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, library):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    library.write_text("gone.mp3\n", encoding="utf-8")
+    events = []
+
+    def run_task(title, fn, on_done=None, on_error=None):
+        events.append(title)
+        on_done(fn())
+
+    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
+                                run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
+                                error=lambda title, text: events.append((title, text)))
+    MainWindow.add_playlist(win, library)
+    assert events[0] == "Reading the playlist…" and len(events) == 2
+    title, text = events[1]
+    assert title == "The playlist has no tracks that can be added."
+    assert "• gone.mp3 (file not found)" in text
+    assert music.list_playlists(dev, st) == [] and music.list_device(dev, st) == []

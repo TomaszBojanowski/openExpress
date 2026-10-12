@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-12 15:50+0200\n"
+"POT-Creation-Date: 2026-10-12 16:26+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -865,7 +865,10 @@ msgstr "Zmieniono podstawowe urządzenie treningowe z {old} na {new}."
 msgid ""
 "To change it back, connect {old} and run `openexpress primary set --apply`, "
 "or change it in Garmin Connect."
-msgstr "Aby wrócić do poprzedniego ustawienia, podłącz {old} i uruchom `openexpress primary set --apply` albo zmień je w Garmin Connect: Ustawienia → Priorytet urządzenia."
+msgstr ""
+"Aby wrócić do poprzedniego ustawienia, podłącz {old} i uruchom `openexpress "
+"primary set --apply` albo zmień je w Garmin Connect: Ustawienia → Priorytet "
+"urządzenia."
 
 #: openexpress/cli.py:830
 #, python-brace-format
@@ -920,7 +923,7 @@ msgstr[2] ""
 "Znaleziono {count} plików do odtwarzania; do skopiowania: {to_copy} "
 "({size}), już na urządzeniu: {already}."
 
-#: openexpress/cli.py:917
+#: openexpress/cli.py:917 openexpress/gui/app.py:1839
 #, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
@@ -1874,7 +1877,7 @@ msgstr ""
 #: openexpress/gui/app.py:765 openexpress/gui/app.py:1157
 #: openexpress/gui/app.py:1248 openexpress/gui/app.py:1349
 #: openexpress/gui/app.py:1379 openexpress/gui/app.py:1626
-#: openexpress/gui/app.py:1780
+#: openexpress/gui/app.py:1781 openexpress/gui/app.py:1860
 msgid "Cancel"
 msgstr "Anuluj"
 
@@ -2275,7 +2278,7 @@ msgid "These files will be removed from the device:"
 msgstr "Z urządzenia zostaną usunięte te pliki:"
 
 #: openexpress/gui/app.py:1380 openexpress/gui/app.py:1628
-#: openexpress/gui/app.py:1732 openexpress/gui/app.py:1738
+#: openexpress/gui/app.py:1732 openexpress/gui/app.py:1739
 msgid "Remove"
 msgstr "Usuń"
 
@@ -2301,7 +2304,7 @@ msgid "Report a Device or Problem"
 msgstr "Zgłoś urządzenie lub problem"
 
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:1409 openexpress/gui/app.py:1782
+#: openexpress/gui/app.py:1409 openexpress/gui/app.py:1783
 msgid "Copy"
 msgstr "Skopiuj"
 
@@ -2480,19 +2483,23 @@ msgstr[2] "Pokaż {count} plików"
 msgid "Playlists"
 msgstr "Listy odtwarzania"
 
-#: openexpress/gui/app.py:1742
+#: openexpress/gui/app.py:1736
+msgid "Add Playlist…"
+msgstr "Dodaj listę…"
+
+#: openexpress/gui/app.py:1743
 msgid "Choose music to copy to the device"
 msgstr "Wybierz muzykę do skopiowania na urządzenie"
 
-#: openexpress/gui/app.py:1752
+#: openexpress/gui/app.py:1753 openexpress/gui/app.py:1812
 msgid "Choose files stored on this computer"
 msgstr "Wybierz pliki zapisane na tym komputerze"
 
-#: openexpress/gui/app.py:1772
+#: openexpress/gui/app.py:1773
 msgid "Nothing new to copy"
 msgstr "Brak nowych plików do skopiowania"
 
-#: openexpress/gui/app.py:1776
+#: openexpress/gui/app.py:1777
 #, python-brace-format
 msgid "Copy {count} file?"
 msgid_plural "Copy {count} files?"
@@ -2500,7 +2507,7 @@ msgstr[0] "Skopiować {count} plik?"
 msgstr[1] "Skopiować {count} pliki?"
 msgstr[2] "Skopiować {count} plików?"
 
-#: openexpress/gui/app.py:1777
+#: openexpress/gui/app.py:1778
 #, python-brace-format
 msgid "{size} will be copied to the device ({count} file already there)."
 msgid_plural ""
@@ -2515,11 +2522,11 @@ msgstr[2] ""
 "Na urządzenie zostanie skopiowane {size} ({count} plików jest już na "
 "urządzeniu)."
 
-#: openexpress/gui/app.py:1785
+#: openexpress/gui/app.py:1786 openexpress/gui/app.py:1865
 msgid "Copying music…"
 msgstr "Kopiowanie muzyki…"
 
-#: openexpress/gui/app.py:1788
+#: openexpress/gui/app.py:1789
 #, python-brace-format
 msgid "Copied {count} file"
 msgid_plural "Copied {count} files"
@@ -2527,11 +2534,82 @@ msgstr[0] "Skopiowano {count} plik"
 msgstr[1] "Skopiowano {count} pliki"
 msgstr[2] "Skopiowano {count} plików"
 
-#: openexpress/gui/app.py:1793
+#: openexpress/gui/app.py:1794
 msgid "Scanning files…"
 msgstr "Skanowanie plików…"
 
+#: openexpress/gui/app.py:1797
+msgid "Choose a playlist to add to the device"
+msgstr "Wybierz listę odtwarzania do dodania na urządzenie"
+
 #: openexpress/gui/app.py:1799
+msgid "Playlists (.m3u, .m3u8)"
+msgstr "Listy odtwarzania (.m3u, .m3u8)"
+
+#: openexpress/gui/app.py:1822
+#, python-brace-format
+msgid "{count} track"
+msgid_plural "{count} tracks"
+msgstr[0] "{count} utwór"
+msgstr[1] "{count} utwory"
+msgstr[2] "{count} utworów"
+
+#: openexpress/gui/app.py:1824
+#, python-brace-format
+msgid "{count} file to copy ({size}), {already} already on the device"
+msgid_plural "{count} files to copy ({size}), {already} already on the device"
+msgstr[0] "Do skopiowania: {count} plik ({size}), już na urządzeniu: {already}"
+msgstr[1] ""
+"Do skopiowania: {count} pliki ({size}), już na urządzeniu: {already}"
+msgstr[2] ""
+"Do skopiowania: {count} plików ({size}), już na urządzeniu: {already}"
+
+#: openexpress/gui/app.py:1829
+msgid ""
+"A playlist with this name is already on the device and will be replaced."
+msgstr ""
+"Lista odtwarzania o tej nazwie jest już na urządzeniu i zostanie zastąpiona."
+
+#: openexpress/gui/app.py:1833
+#, python-brace-format
+msgid "{count} track cannot be added:"
+msgid_plural "{count} tracks cannot be added:"
+msgstr[0] "Nie można dodać {count} utworu:"
+msgstr[1] "Nie można dodać {count} utworów:"
+msgstr[2] "Nie można dodać {count} utworów:"
+
+#: openexpress/gui/app.py:1842
+msgid ""
+"openExpress installed as a Flatpak can read music only from the Music and "
+"Downloads folders."
+msgstr ""
+"openExpress zainstalowany jako Flatpak może odczytywać muzykę tylko z "
+"katalogów Muzyka i Pobrane."
+
+#: openexpress/gui/app.py:1855 openexpress/music.py:325
+msgid "The playlist has no tracks that can be added."
+msgstr "Lista odtwarzania nie zawiera utworów, które można dodać."
+
+#: openexpress/gui/app.py:1858
+#, python-brace-format
+msgid "Add the playlist “{name}”?"
+msgstr "Dodać listę odtwarzania „{name}”?"
+
+#. TRANSLATORS: button that adds the playlist to the device
+#: openexpress/gui/app.py:1862
+msgid "Add"
+msgstr "Dodaj"
+
+#: openexpress/gui/app.py:1868
+#, python-brace-format
+msgid "Playlist “{name}” added"
+msgstr "Dodano listę odtwarzania „{name}”"
+
+#: openexpress/gui/app.py:1872
+msgid "Reading the playlist…"
+msgstr "Odczytywanie listy odtwarzania…"
+
+#: openexpress/gui/app.py:1879
 msgid "Removing…"
 msgstr "Usuwanie…"
 
@@ -2684,15 +2762,23 @@ msgstr "Za mało miejsca na urządzeniu: potrzeba {need} B, wolne {free} B"
 msgid "Copying {path}"
 msgstr "Kopiowanie {path}"
 
-#: openexpress/music.py:256
+#: openexpress/music.py:256 openexpress/music.py:296
 msgid "This device does not support playlists"
 msgstr "To urządzenie nie obsługuje list odtwarzania"
 
-#: openexpress/music.py:300
+#: openexpress/music.py:304
+msgid "file not found"
+msgstr "nie znaleziono pliku"
+
+#: openexpress/music.py:310
+msgid "format not supported by the device"
+msgstr "format nieobsługiwany przez urządzenie"
+
+#: openexpress/music.py:356
 msgid "Empty pattern: give part of a file, artist or album name"
 msgstr "Pusty wzorzec: podaj fragment nazwy pliku, wykonawcy lub albumu"
 
-#: openexpress/music.py:302
+#: openexpress/music.py:358
 #, python-brace-format
 msgid "Pattern '{pattern}' is too short: use at least {count} characters"
 msgstr "Wzorzec „{pattern}” jest za krótki: użyj co najmniej {count} znaków"

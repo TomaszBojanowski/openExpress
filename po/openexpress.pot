@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.3.8\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-12 15:51+0200\n"
+"POT-Creation-Date: 2026-10-12 16:26+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -826,7 +826,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/cli.py:917
+#: openexpress/cli.py:917 openexpress/gui/app.py:1839
 #, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
@@ -1751,7 +1751,7 @@ msgstr ""
 #: openexpress/gui/app.py:765 openexpress/gui/app.py:1157
 #: openexpress/gui/app.py:1248 openexpress/gui/app.py:1349
 #: openexpress/gui/app.py:1379 openexpress/gui/app.py:1626
-#: openexpress/gui/app.py:1780
+#: openexpress/gui/app.py:1781 openexpress/gui/app.py:1860
 msgid "Cancel"
 msgstr ""
 
@@ -2133,7 +2133,7 @@ msgid "These files will be removed from the device:"
 msgstr ""
 
 #: openexpress/gui/app.py:1380 openexpress/gui/app.py:1628
-#: openexpress/gui/app.py:1732 openexpress/gui/app.py:1738
+#: openexpress/gui/app.py:1732 openexpress/gui/app.py:1739
 msgid "Remove"
 msgstr ""
 
@@ -2157,7 +2157,7 @@ msgid "Report a Device or Problem"
 msgstr ""
 
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:1409 openexpress/gui/app.py:1782
+#: openexpress/gui/app.py:1409 openexpress/gui/app.py:1783
 msgid "Copy"
 msgstr ""
 
@@ -2322,26 +2322,30 @@ msgstr[1] ""
 msgid "Playlists"
 msgstr ""
 
-#: openexpress/gui/app.py:1742
+#: openexpress/gui/app.py:1736
+msgid "Add Playlist…"
+msgstr ""
+
+#: openexpress/gui/app.py:1743
 msgid "Choose music to copy to the device"
 msgstr ""
 
-#: openexpress/gui/app.py:1752
+#: openexpress/gui/app.py:1753 openexpress/gui/app.py:1812
 msgid "Choose files stored on this computer"
 msgstr ""
 
-#: openexpress/gui/app.py:1772
+#: openexpress/gui/app.py:1773
 msgid "Nothing new to copy"
 msgstr ""
 
-#: openexpress/gui/app.py:1776
+#: openexpress/gui/app.py:1777
 #, python-brace-format
 msgid "Copy {count} file?"
 msgid_plural "Copy {count} files?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:1777
+#: openexpress/gui/app.py:1778
 #, python-brace-format
 msgid "{size} will be copied to the device ({count} file already there)."
 msgid_plural ""
@@ -2349,22 +2353,85 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:1785
+#: openexpress/gui/app.py:1786 openexpress/gui/app.py:1865
 msgid "Copying music…"
 msgstr ""
 
-#: openexpress/gui/app.py:1788
+#: openexpress/gui/app.py:1789
 #, python-brace-format
 msgid "Copied {count} file"
 msgid_plural "Copied {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:1793
+#: openexpress/gui/app.py:1794
 msgid "Scanning files…"
 msgstr ""
 
+#: openexpress/gui/app.py:1797
+msgid "Choose a playlist to add to the device"
+msgstr ""
+
 #: openexpress/gui/app.py:1799
+msgid "Playlists (.m3u, .m3u8)"
+msgstr ""
+
+#: openexpress/gui/app.py:1822
+#, python-brace-format
+msgid "{count} track"
+msgid_plural "{count} tracks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:1824
+#, python-brace-format
+msgid "{count} file to copy ({size}), {already} already on the device"
+msgid_plural "{count} files to copy ({size}), {already} already on the device"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:1829
+msgid ""
+"A playlist with this name is already on the device and will be replaced."
+msgstr ""
+
+#: openexpress/gui/app.py:1833
+#, python-brace-format
+msgid "{count} track cannot be added:"
+msgid_plural "{count} tracks cannot be added:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/app.py:1842
+msgid ""
+"openExpress installed as a Flatpak can read music only from the Music and "
+"Downloads folders."
+msgstr ""
+
+#: openexpress/gui/app.py:1855 openexpress/music.py:325
+msgid "The playlist has no tracks that can be added."
+msgstr ""
+
+#: openexpress/gui/app.py:1858
+#, python-brace-format
+msgid "Add the playlist “{name}”?"
+msgstr ""
+
+#. TRANSLATORS: button that adds the playlist to the device
+#: openexpress/gui/app.py:1862
+msgid "Add"
+msgstr ""
+
+#: openexpress/gui/app.py:1868
+#, python-brace-format
+msgid "Playlist “{name}” added"
+msgstr ""
+
+#: openexpress/gui/app.py:1872
+msgid "Reading the playlist…"
+msgstr ""
+
+#: openexpress/gui/app.py:1879
 msgid "Removing…"
 msgstr ""
 
@@ -2516,15 +2583,23 @@ msgstr ""
 msgid "Copying {path}"
 msgstr ""
 
-#: openexpress/music.py:256
+#: openexpress/music.py:256 openexpress/music.py:296
 msgid "This device does not support playlists"
 msgstr ""
 
-#: openexpress/music.py:300
+#: openexpress/music.py:304
+msgid "file not found"
+msgstr ""
+
+#: openexpress/music.py:310
+msgid "format not supported by the device"
+msgstr ""
+
+#: openexpress/music.py:356
 msgid "Empty pattern: give part of a file, artist or album name"
 msgstr ""
 
-#: openexpress/music.py:302
+#: openexpress/music.py:358
 #, python-brace-format
 msgid "Pattern '{pattern}' is too short: use at least {count} characters"
 msgstr ""
