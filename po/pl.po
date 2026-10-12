@@ -902,7 +902,7 @@ msgid ""
 "{name}: openExpress cannot install apps on this device over USB yet. The app "
 "will be queued in Garmin Connect and installed by the phone or Garmin "
 "Express."
-msgstr "{name}: nie można jeszcze instalować aplikacji na tym urządzeniu przez USB. Aplikacja trafi do kolejki w Garmin Connect i zainstaluje ją telefon albo Garmin Express."
+msgstr "{name}: nie można jeszcze instalować aplikacji na tym urządzeniu przez USB. Aplikacja trafi do kolejki w Garmin Connect, a zainstaluje ją telefon albo Garmin Express."
 
 #: openexpress/cli.py:791
 #, python-brace-format
@@ -910,7 +910,7 @@ msgid ""
 "{name}: openExpress cannot update apps on this device over USB yet. The "
 "update will be queued in Garmin Connect and installed by the phone or Garmin "
 "Express."
-msgstr "{name}: nie można jeszcze aktualizować aplikacji na tym urządzeniu przez USB. Aktualizacja trafi do kolejki w Garmin Connect i zainstaluje ją telefon albo Garmin Express."
+msgstr "{name}: nie można jeszcze aktualizować aplikacji na tym urządzeniu przez USB. Aktualizacja trafi do kolejki w Garmin Connect, a zainstaluje ją telefon albo Garmin Express."
 
 #: openexpress/cli.py:795
 #, python-brace-format
@@ -1795,16 +1795,16 @@ msgstr "Nie można wysłać pliku: jest za duży."
 
 #: openexpress/device/ptp.py:487 openexpress/device/ptp.py:501
 msgid "The device answered out of step."
-msgstr "Urządzenie odpowiedziało nie na to polecenie."
+msgstr "Odpowiedź urządzenia nie pasuje do wysłanego polecenia."
 
 #: openexpress/device/ptp.py:585
 msgid "Refusing to write into the top folder of the device."
-msgstr "Odmowa zapisu do głównego katalogu urządzenia."
+msgstr "Nie można zapisywać w głównym katalogu urządzenia."
 
 #: openexpress/device/ptp.py:587
 #, python-brace-format
 msgid "“{name}” already exists on the device."
-msgstr "„{name}” już istnieje na urządzeniu."
+msgstr "Na urządzeniu już istnieje „{name}”."
 
 #: openexpress/device/ptp.py:591
 #, python-brace-format
@@ -2720,7 +2720,7 @@ msgid ""
 "{names}: openExpress cannot install apps on this device over USB yet. The "
 "app waits in the queue in Garmin Connect and will be installed by the phone "
 "or Garmin Express."
-msgstr "{names}: nie można jeszcze instalować aplikacji na tym urządzeniu przez USB. Aplikacja czeka w kolejce w Garmin Connect i zainstaluje ją telefon albo Garmin Express."
+msgstr "{names}: nie można jeszcze instalować aplikacji na tym urządzeniu przez USB. Aplikacja czeka w kolejce w Garmin Connect, a zainstaluje ją telefon albo Garmin Express."
 
 #: openexpress/gui/app.py:1639
 #, python-brace-format
