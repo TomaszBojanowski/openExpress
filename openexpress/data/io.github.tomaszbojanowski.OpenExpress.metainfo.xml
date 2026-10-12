@@ -93,6 +93,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.2" date="2026-10-13">
+      <description>
+        <ul>
+          <li>Fixed: the report dialog added in 0.4.1 stayed in memory after it was closed,
+          and the window could occasionally crash afterwards.</li>
+          <li>Fixed: files that are already on the device (same size and MD5) are no longer
+          offered as updates, e.g. map support files the device briefly does not list right
+          after it is plugged in.</li>
+          <li>Update types and their importance are shown with readable, translated
+          names.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-10-13">
       <description>
         <ul>
