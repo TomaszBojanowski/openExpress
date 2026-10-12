@@ -253,9 +253,7 @@ msgstr "nie odnaleziono katalogu aplikacji na urządzeniu"
 msgid ""
 "{path} on the device is not the file the app list describes; nothing was "
 "deleted"
-msgstr ""
-"{path} na urządzeniu to nie ten plik, który opisuje lista aplikacji; niczego "
-"nie usunięto"
+msgstr "Plik {path} na urządzeniu nie zgadza się z listą aplikacji; niczego nie usunięto"
 
 #: openexpress/ciq.py:920
 #, python-brace-format
@@ -273,9 +271,7 @@ msgstr "urządzenie nie usunęło {path}"
 msgid ""
 "{name} was removed, but the device could not be mounted again: {error} "
 "Unplug the device and plug it in again."
-msgstr ""
-"Usunięto {name}, ale nie można było ponownie zamontować urządzenia: {error} "
-"Odłącz urządzenie i podłącz je ponownie."
+msgstr "Usunięto aplikację {name}, ale nie udało się ponownie zamontować urządzenia: {error} Odłącz urządzenie i podłącz je ponownie."
 
 #: openexpress/ciq.py:947
 #, python-brace-format
@@ -284,16 +280,12 @@ msgid ""
 "updated: {error} The device may still list the app. Unplug it and check; if "
 "{name} is still listed, connect the device and remove the app again to "
 "update the list."
-msgstr ""
-"Plik aplikacji {name} został usunięty, ale nie można było zaktualizować "
-"listy aplikacji na urządzeniu: {error} Urządzenie może nadal pokazywać tę "
-"aplikację. Odłącz je i sprawdź; jeśli {name} nadal jest na liście, podłącz "
-"urządzenie i usuń aplikację jeszcze raz, żeby zaktualizować listę."
+msgstr "Plik aplikacji {name} został usunięty, ale nie udało się zaktualizować listy aplikacji na urządzeniu: {error} Urządzenie może nadal pokazywać tę aplikację. Odłącz je i sprawdź; jeśli {name} nadal jest na liście, podłącz urządzenie i usuń aplikację jeszcze raz, żeby zaktualizować listę."
 
 #: openexpress/ciq.py:951
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
-msgstr "Nie można było zaktualizować listy aplikacji na urządzeniu: {error}"
+msgstr "Nie udało się zaktualizować listy aplikacji na urządzeniu: {error}"
 
 #: openexpress/ciq.py:961
 msgid "Several entries on the device share this ID; the type is needed"
@@ -873,7 +865,7 @@ msgstr ""
 #: openexpress/cli.py:710
 #, python-brace-format
 msgid "removed: {name} ({type})"
-msgstr "usuwana: {name} ({type})"
+msgstr "do usunięcia: {name} ({type})"
 
 #: openexpress/cli.py:717
 msgid "The app file was already gone; only the app list was updated."
