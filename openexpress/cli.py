@@ -779,6 +779,11 @@ def cmd_apps(args) -> int:
             msg = (_("Update {name} {version} ({size})") if a.app_id in installed_ids
                    else _("Install {name} {version} ({size})"))
             print(msg.format(name=a.name, version=a.version_name, size=_human(a.size)) + flag)
+        waiting = ciq.queued_app_ids(client.device_messages(dev.unit_id))
+        for a in targets:
+            if a.app_id in waiting:
+                print("  " + _("{name}: already waits in the queue in Garmin Connect; no new "
+                               "request will be sent.").format(name=a.name))
         # On some devices openExpress cannot install over USB yet: say so before queueing.
         dirs = {a.app_id: ciq.usb_dir_state(dev, st, ciq.store_datatype(a)) for a in targets}
         for a in targets:

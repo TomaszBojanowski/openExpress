@@ -501,6 +501,12 @@ def files_on_device(device: GarminDevice, storage: Storage, app: InstalledApp) -
             if p and storage.exists(p)]
 
 
+def queued_app_ids(messages: list[dict]) -> set[uuid.UUID]:
+    """The Connect IQ apps waiting in Garmin's queue for the device."""
+    return {app_id for app_id in (message_app_id(m) for m in messages if is_iq_message(m))
+            if app_id is not None}
+
+
 def install_apps(
     device: GarminDevice,
     storage: Storage,
@@ -509,7 +515,8 @@ def install_apps(
     targets: list[StoreApp],
     progress: Callable[[str], None] = lambda s: None,
 ) -> IqInstallReport:
-    """Queue the apps in Garmin Connect and install over USB those the device accepts.
+    """Queue the apps in Garmin Connect (unless they already wait there) and install over
+    USB those the device accepts.
 
     Apps whose folder the device does not offer are only queued (`for_phone`): nothing is
     downloaded or written for them, and they are not failures.
@@ -519,10 +526,17 @@ def install_apps(
            if usb_dir_state(device, storage, store_datatype(t)) in (READY, DIRECT)
            or prepare_app_dir(device, storage, store_datatype(t))]
     for_phone = [t.name for t in targets if t not in usb]
-    api.queue_install(device, targets)
+    # An app that already waits in Garmin's queue for this device is not requested again.
+    messages = client.device_messages(device.unit_id)
+    waiting = queued_app_ids(messages)
+    to_queue = [t for t in targets if t.app_id not in waiting]
+    if to_queue:
+        api.queue_install(device, to_queue)
+        if usb:
+            messages = client.device_messages(device.unit_id)
     report = IqInstallReport()
     if usb:
-        report = install_queued(device, storage, client, client.device_messages(device.unit_id),
+        report = install_queued(device, storage, client, messages,
                                 {t.app_id: t for t in targets},
                                 only={t.app_id for t in usb}, progress=progress, direct=True)
     report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]

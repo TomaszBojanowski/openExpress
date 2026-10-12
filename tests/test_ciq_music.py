@@ -510,12 +510,17 @@ class FakeStore:
         FakeStore.forgotten.append(list(app_ids))
 
 
+def queue_once_requested(unit_id):
+    """Garmin's queue: the app is in it once the install was requested."""
+    return [FACE_MESSAGE] if FakeStore.queued else []
+
+
 @pytest.fixture
 def apps_cli(monkeypatch, xdg):
     from openexpress import cli, service
 
     client = CountingClient()
-    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    client.device_messages = queue_once_requested
     FakeStore.queued = []
     FakeStore.forgotten = []
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: client)
@@ -638,9 +643,11 @@ def test_install_apps_only_queues_on_such_a_device(no_usb_apps):
     st, dev, _attempts = no_usb_apps
     FakeStore.queued = []
     client = CountingClient()
-    client.device_messages = lambda unit_id: pytest.fail("the queue is not even read")
+    reads = []
+    client.device_messages = lambda unit_id: reads.append(1) or []
     rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
     assert FakeStore.queued == [["Face It"]]  # queued at Garmin, for the phone
+    assert len(reads) == 1  # read once, to see whether it already waits there
     assert rep.for_phone == ["Face It"] and rep.installed == [] and rep.failed == []
     assert client.downloads == 0
 
@@ -959,7 +966,7 @@ def test_install_apps_uses_ptp_without_trying_to_create_the_folder(hidden_apps, 
     monkeypatch.setattr(LocalStorage, "_mkdir", lambda self, p: pytest.fail("mkdir was tried"))
     FakeStore.queued = []
     client = CountingClient()
-    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    client.device_messages = queue_once_requested
     rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
     assert rep.installed == ["Face It"] and rep.for_phone == [] and rep.failed == []
     assert FakeStore.queued == [["Face It"]]
@@ -1218,3 +1225,55 @@ def test_user_is_told_when_the_app_file_stays_after_a_refused_app_list(hidden_ap
         ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
     left = fake.names("GARMIN/Apps/Media", hidden=False)
     assert f"may have been left on the device: GARMIN/APPS/MEDIA/{left[0]}." in str(error.value)
+
+
+# --- an app that already waits in Garmin's queue is not requested again ---------------------
+
+
+def test_install_uses_the_message_already_in_the_queue(iq_device):
+    st, dev = iq_device
+    FakeStore.queued = []
+    client = CountingClient()
+    reads = []
+    client.device_messages = lambda unit_id: reads.append(1) or [FACE_MESSAGE]
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert FakeStore.queued == []  # no second request to Garmin
+    assert rep.installed == ["Face It"] and client.acks == [7] and len(reads) == 1
+
+
+def test_only_the_apps_not_yet_queued_are_requested(iq_device):
+    st, dev = iq_device
+    other = uuid.UUID("11111111-2222-4333-8444-555555555555")
+    second = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+              "metadata": {"messageurl": "y", "messagename": "Other",
+                           "appdetails": {"id": str(other)}}}
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: ([FACE_MESSAGE, second] if FakeStore.queued
+                                              else [FACE_MESSAGE])
+    rep = ciq.install_apps(dev, st, client, FakeStore(client),
+                           [store_app(FACE, "Face It"), store_app(other, "Other")])
+    assert FakeStore.queued == [["Other"]]
+    assert sorted(rep.installed) == ["Face It", "Other"] and sorted(client.acks) == [7, 8]
+
+
+def test_queued_app_for_the_phone_is_not_requested_again(no_usb_apps):
+    st, dev, _attempts = no_usb_apps
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert FakeStore.queued == [] and rep.for_phone == ["Face It"] and client.downloads == 0
+
+
+def test_cli_dry_run_says_the_app_already_waits(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    apps_cli.device_messages = lambda unit_id: [FACE_MESSAGE]
+    assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 0
+    out = capsys.readouterr().out
+    assert ("  Face It: already waits in the queue in Garmin Connect; no new request will be "
+            "sent.") in out
+    assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
+    assert "Installed: Face It" in capsys.readouterr().out
+    assert FakeStore.queued == [] and apps_cli.acks == [7]
