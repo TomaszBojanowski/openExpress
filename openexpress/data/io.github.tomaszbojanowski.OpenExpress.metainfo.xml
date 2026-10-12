@@ -93,6 +93,22 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.0" date="2026-10-12">
+      <description>
+        <ul>
+          <li>Connect IQ apps can be installed, updated and removed on devices that hide their
+          app folder (e.g. fēnix 8) over a direct USB connection; the order of widgets is kept.
+          Version from source only; the Flatpak queues such apps in Garmin Connect.</li>
+          <li>The order of apps and widgets can be restored from a copy of the app list, which
+          is saved before every change.</li>
+          <li>Primary training device: shown and set from the window and the command line.</li>
+          <li>Playlists can be added on the Music page.</li>
+          <li>Sync checks the upload consent of the Garmin account before uploading; the
+          --include-consent option was removed.</li>
+          <li>The app waits for a device that is still starting after it is plugged in.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.8" date="2026-10-12">
       <description>
         <ul>
