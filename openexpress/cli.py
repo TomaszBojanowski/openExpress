@@ -717,7 +717,7 @@ def _apps_order(args, dev, st, state) -> int:
             # The folder of this device is named after its unit ID: only the one above it.
             print(_("No copies of the app list in {path}.").format(path=backups))
             return 0
-        print(_("Copies of the app list (OUT.BIN); the device lists {count} apps now:").format(
+        print(_("Copies of the app list (OUT.BIN); entries on the device now: {count}").format(
             count=len(state.listed)))
         for c in copies:
             plan = ciq.plan_order(state, c.state)
@@ -773,8 +773,8 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     print("  " + _("every other app on the device is kept, in the same order and with the "
                    "same flags"))
     kind = ciq.APP_TYPES.get(app.app_type)
-    print("  " + _("removed: {name} ({type})").format(
-        name=app.name, type=_(kind) if kind else app.app_type))
+    kind = _(kind) if kind else app.app_type
+    print("  " + _("to be removed: {name} ({type})").format(name=app.name, type=kind))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))
         print(_("Dry run. Add --apply."))
@@ -790,6 +790,7 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     else:
         msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
     print(msg.format(count=len(removed)))
+    print("  " + _("removed: {name} ({type})").format(name=app.name, type=kind))
     print(_("The device finishes the removal after it is unplugged."))
     return 0
 

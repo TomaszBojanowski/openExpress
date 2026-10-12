@@ -1411,15 +1411,20 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
     assert out[2:] == [
         "App list to be written (IN.BIN): 2 entries; the device lists 3 (OUT.BIN)",
         "  every other app on the device is kept, in the same order and with the same flags",
-        "  removed: Face It (watch face)",
+        "  to be removed: Face It (watch face)",
         "Before any change, a copy of the app list of the device is made.",
         "Dry run. Add --apply.",
     ]
     assert fake.operations == [] and st.sessions == 0
 
     assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 0
-    out = capsys.readouterr().out
-    assert "Removed 1 file." in out and "finishes the removal after it is unplugged" in out
+    out = capsys.readouterr().out.splitlines()
+    assert "  to be removed: Face It (watch face)" in out  # the plan, before the write
+    assert out[-3:] == [
+        "Removed 1 file.",
+        "  removed: Face It (watch face)",
+        "The device finishes the removal after it is unplugged.",
+    ]
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []
 
 
