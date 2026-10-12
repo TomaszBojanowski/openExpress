@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import threading
@@ -473,6 +474,7 @@ class MainWindow(Adw.ApplicationWindow):
                 GLib.idle_add(finish_ok, result)
 
         def finish_ok(result):
+            collect_garbage()
             self.set_busy(False)
             try:
                 if on_done:
@@ -483,6 +485,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         def finish_error(e):
             log.warning("task failed: %s: %s", type(e).__name__, e)
+            collect_garbage()
             self.set_busy(False)
             try:
                 if not (on_error and on_error(e)):
@@ -1483,6 +1486,28 @@ class MainWindow(Adw.ApplicationWindow):
             return report_text
         return report.with_log(report_text, applog.tail(report.LOG_LINES))
 
+    @staticmethod
+    def _report_view(report_text: str):
+        """The preview of the report with the "attach the log" switch: (widget, text buffer).
+
+        No handler here may refer to a widget of the preview: a widget that keeps itself
+        alive through its own handler outlives the dialog, and Python frees it whenever it
+        next collects reference cycles. The switch therefore only knows the text buffer."""
+        view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
+                            top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
+        buffer = view.get_buffer()
+        buffer.set_text(report_text)
+        scroller = Gtk.ScrolledWindow(child=view, min_content_height=260, min_content_width=420)
+        scroller.add_css_class("card")
+        attach = Gtk.CheckButton(label=_("Attach the last log"))
+        attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
+        attach.connect("toggled", lambda button: buffer.set_text(
+            MainWindow._report_text(report_text, button.get_active())))
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.append(scroller)
+        box.append(attach)
+        return box, buffer
+
     def show_report(self) -> None:
         from openexpress import report
 
@@ -1494,25 +1519,11 @@ class MainWindow(Adw.ApplicationWindow):
             body_text = report.build(s.device, s.storage, s.logged_in)
             text = _("Copy this report and paste it into a new issue on GitHub. "
                      "It contains no serial number, unit ID or e-mail.")
+        log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
-        attach = Gtk.CheckButton(label=_("Attach the last log"))
-
-        def current() -> str:
-            """Exactly what is shown and what will be copied."""
-            return self._report_text(body_text, attach.get_active())
-
+        buffer = None
         if body_text:
-            view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
-                                top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
-            view.get_buffer().set_text(body_text)
-            scroller = Gtk.ScrolledWindow(child=view, min_content_height=260,
-                                          min_content_width=420)
-            scroller.add_css_class("card")
-            attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
-            attach.connect("toggled", lambda _b: view.get_buffer().set_text(current()))
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-            box.append(scroller)
-            box.append(attach)
+            box, buffer = self._report_view(body_text)
             d.set_extra_child(box)
             d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))
@@ -1520,13 +1531,17 @@ class MainWindow(Adw.ApplicationWindow):
         d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
         d.set_close_response("close")
 
+        def shown() -> str:
+            """Exactly what the preview shows."""
+            return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+
         def response(_d, r):
             if r == "copy":
-                self.get_clipboard().set(current())
+                self.get_clipboard().set(shown())
                 self.toast(_("Report copied"))
             elif r == "open":
-                if body_text:
-                    self.get_clipboard().set(current())
+                if buffer is not None:
+                    self.get_clipboard().set(shown())
                 Gtk.UriLauncher.new(report.ISSUE_URL).launch(self, None, None, None)
 
         d.connect("response", response)
@@ -2214,12 +2229,31 @@ class MainWindow(Adw.ApplicationWindow):
                                        self.load_section("music", force=True)))
 
 
+GC_INTERVAL_S = 30
+
+
+def collect_garbage() -> bool:
+    """Free reference cycles now. Always called on the GTK thread; True keeps a timer going."""
+    gc.collect()
+    return True
+
+
+def collect_garbage_on_the_gtk_thread() -> None:
+    """Python frees reference cycles whenever enough objects were created, in whichever
+    thread happens to run then. A cycle may hold GTK widgets, and those must not be destroyed
+    in a worker thread. So the automatic collection is turned off for the window and done
+    here instead: after every task and every GC_INTERVAL_S seconds, from the main loop."""
+    gc.disable()
+    GLib.timeout_add_seconds(GC_INTERVAL_S, collect_garbage)
+
+
 class App(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+        collect_garbage_on_the_gtk_thread()
         # Lets the icon work also when running from the source tree (not installed).
         from gi.repository import Gdk
 
