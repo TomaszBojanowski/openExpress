@@ -34,6 +34,16 @@ FEATURES = [
 ]
 
 
+LOG_LINES = 200
+
+
+def with_log(text: str, lines: list[str]) -> str:
+    """The report followed by the end of the program's log (already redacted)."""
+    body = "\n".join(lines) if lines else "(no log file)"
+    return (f"{text}\n### Log (last {len(lines)} lines)\n```\n{body}\n```\n" if lines
+            else f"{text}\n### Log\n{body}\n")
+
+
 def _os_name() -> str:
     for path in ("/run/host/os-release", "/etc/os-release"):
         try:

@@ -1474,6 +1474,15 @@ class MainWindow(Adw.ApplicationWindow):
                              self.load_section("maps", force=True))))
         d.present(self)
 
+    @staticmethod
+    def _report_text(report_text: str, attach_log: bool) -> str:
+        """The report, with the end of the log when the user asked for it."""
+        from openexpress import applog, report
+
+        if not attach_log:
+            return report_text
+        return report.with_log(report_text, applog.tail(report.LOG_LINES))
+
     def show_report(self) -> None:
         from openexpress import report
 
@@ -1486,6 +1495,12 @@ class MainWindow(Adw.ApplicationWindow):
             text = _("Copy this report and paste it into a new issue on GitHub. "
                      "It contains no serial number, unit ID or e-mail.")
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
+        attach = Gtk.CheckButton(label=_("Attach the last log"))
+
+        def current() -> str:
+            """Exactly what is shown and what will be copied."""
+            return self._report_text(body_text, attach.get_active())
+
         if body_text:
             view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
                                 top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
@@ -1493,7 +1508,12 @@ class MainWindow(Adw.ApplicationWindow):
             scroller = Gtk.ScrolledWindow(child=view, min_content_height=260,
                                           min_content_width=420)
             scroller.add_css_class("card")
-            d.set_extra_child(scroller)
+            attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
+            attach.connect("toggled", lambda _b: view.get_buffer().set_text(current()))
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            box.append(scroller)
+            box.append(attach)
+            d.set_extra_child(box)
             d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))
         d.add_response("open", _("Copy and Open GitHub"))
@@ -1502,11 +1522,11 @@ class MainWindow(Adw.ApplicationWindow):
 
         def response(_d, r):
             if r == "copy":
-                self.get_clipboard().set(body_text)
+                self.get_clipboard().set(current())
                 self.toast(_("Report copied"))
             elif r == "open":
                 if body_text:
-                    self.get_clipboard().set(body_text)
+                    self.get_clipboard().set(current())
                 Gtk.UriLauncher.new(report.ISSUE_URL).launch(self, None, None, None)
 
         d.connect("response", response)

@@ -192,10 +192,19 @@ def cmd_report(args) -> int:
         logged_in = store.load() is not None
     except Exception:  # noqa: BLE001 - only reported as yes/no
         logged_in = False
-    print(report.build(dev, st, logged_in), end="")
+    text = report.build(dev, st, logged_in)
+    if args.log:
+        text = report.with_log(text, applog.tail(report.LOG_LINES))
+    print(text, end="")
     print("\n" + _("This report contains no serial number, unit ID or e-mail. "
                    "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
           file=sys.stderr)
+    if args.log:
+        print(_("The end of the log is attached. It is filtered, but read it before you "
+                "send it."), file=sys.stderr)
+    else:
+        print(_("Log file: {path} (add --log to attach its last lines to the report)").format(
+            path=applog.shown_path()), file=sys.stderr)
     return 0
 
 
@@ -1325,6 +1334,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_setup, _parser=s)
 
     s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
+    s.add_argument("--log", action="store_true",
+                   help=_("attach the last lines of the log file (filtered)"))
     s.set_defaults(func=cmd_report)
 
     s = sub.add_parser("info", help=_("information about the connected device"))

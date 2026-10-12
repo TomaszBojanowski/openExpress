@@ -35,3 +35,74 @@ def test_usb_id_comes_from_the_storage_not_from_the_address(device_root):
     assert "0000abcdef12" not in text and "mtp://" not in text and "Garmin_Edge" not in text
     st.usb_id = "091e:unknown"
     assert "- USB ID: 091e:unknown" in report.build(dev, st)
+
+
+# --- the end of the log in a report: only when asked for ---------------------------------------
+
+
+def _write_log(log_file, lines):
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+
+
+def test_cli_report_says_where_the_log_is_and_leaves_it_out(device_root, xdg, log_file, capsys,
+                                                            monkeypatch, tmp_path):
+    from openexpress.cli import main
+
+    monkeypatch.setenv("HOME", str(tmp_path))  # the state folder is inside the home folder
+    monkeypatch.delenv("XDG_STATE_HOME")
+    assert main(["--path", str(device_root), "report"]) == 0
+    out = capsys.readouterr()
+    assert "### Log" not in out.out and out.out.rstrip().endswith("Logged in to Garmin Connect: no")
+    assert out.err.rstrip().endswith(
+        "Log file: ~/.local/state/openexpress/openexpress.log (add --log to attach its last "
+        "lines to the report)")
+    assert str(tmp_path) not in out.err
+
+
+def test_cli_report_with_log_appends_the_filtered_end(device_root, xdg, log_file, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(device_root), "info"]) == 0  # something to show
+    capsys.readouterr()
+    with open(log_file, "a", encoding="utf-8") as f:
+        # As if written before a rule existed: the report filters again.
+        f.write("old line: device 3987654321 at mtp://091e_51b4_0000abcdef12/ for a@example.org\n")
+    assert main(["--path", str(device_root), "report", "--log"]) == 0
+    out = capsys.readouterr()
+    report_text, log_part = out.out.split("\n### Log (last ")
+    assert "### System" in report_text
+    assert log_part.startswith("4 lines)\n```\n") and log_part.endswith("\n```\n")
+    assert "start: info --path" in log_part and "start: report --path --log" in log_part
+    assert "old line: device <number> at mtp://<device>/ for <email>" in log_part
+    for secret in ("3987654321", "0000abcdef12", "a@example.org", str(device_root), "1234567890"):
+        assert secret not in out.out
+    assert "read it before you send it" in out.err
+
+
+def test_only_the_last_200_lines_are_attached(log_file):
+    from openexpress import applog
+
+    _write_log(log_file.with_name(log_file.name + ".1"), [f"older {n}" for n in range(150)])
+    _write_log(log_file, [f"line {n}" for n in range(120)])
+    tail = applog.tail(report.LOG_LINES)
+    assert len(tail) == 200 and tail[0] == "older 70" and tail[-1] == "line 119"
+    assert applog.tail(3) == ["line 117", "line 118", "line 119"]
+    text = report.with_log("### System\n", tail)
+    assert text.startswith("### System\n\n### Log (last 200 lines)\n```\nolder 70\n")
+
+
+def test_report_without_a_log_file_says_so(log_file):
+    from openexpress import applog
+
+    assert applog.tail() == []
+    assert report.with_log("### System\n", []) == "### System\n\n### Log\n(no log file)\n"
+
+
+def test_window_copies_exactly_what_it_shows(log_file):
+    from openexpress.gui.app import MainWindow
+
+    _write_log(log_file, ["one", "device 3987654321"])
+    assert MainWindow._report_text("### Device\n", False) == "### Device\n"  # the default
+    assert MainWindow._report_text("### Device\n", True) == (
+        "### Device\n\n### Log (last 2 lines)\n```\none\ndevice <number>\n```\n")

@@ -165,6 +165,28 @@ def log_path() -> Path:
     return paths.state_dir() / LOG_NAME
 
 
+def shown_path() -> str:
+    """The log file as it is shown to the user: with ~ for the home folder."""
+    path, home = str(log_path()), str(Path.home())
+    return "~" + path[len(home):] if len(home) > 1 and path.startswith(home + os.sep) else path
+
+
+def tail(count: int = 200) -> list[str]:
+    """The last `count` lines of the log, redacted once more (the rules may have become
+    stricter since a line was written). Empty when there is no log."""
+    lines: list[str] = []
+    path = log_path()
+    for file in (path, path.with_name(path.name + ".1")):  # the current file, then the one before
+        if len(lines) >= count:
+            break
+        try:
+            text = file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = text.splitlines() + lines
+    return [redact(line) for line in lines[-count:]]
+
+
 def file_level(verbose: bool = False) -> int | None:
     """The level of the log file; None when the user turned the file off."""
     choice = os.environ.get(ENV, "").strip().lower()
