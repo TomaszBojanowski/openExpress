@@ -342,3 +342,231 @@ def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, libra
     assert title == "The playlist has no tracks that can be added."
     assert "• gone.mp3 (file not found)" in text
     assert music.list_playlists(dev, st) == [] and music.list_device(dev, st) == []
+
+
+# --- an incomplete app list blocks every change -----------------------------------------------
+
+
+def damaged_out_bin(device_root, kind):
+    """OUT.BIN with two good apps and one entry that cannot be read."""
+    good = out_bin([(STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+                    (PRELOADED, 8, "Softball", True, "")])
+    resp = proto.first(proto.decode(proto.first(proto.decode(good), 3)), 2)
+    bad = {"truncated": b"\x0a\x10short",  # says 16 bytes of ID, has 5
+           "no-id": proto.enc_varint(2, 1) + proto.enc_str(3, "Nameless")}[kind]
+    damaged = proto.enc_bytes(3, proto.enc_bytes(2, resp + proto.enc_bytes(3, bad)))
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(damaged)
+
+
+FACE_MESSAGE = {"messageid": 7, "devicexmldatatype": "IQWatchFaces",
+                "metadata": {"messageurl": "x", "messagename": "Face It",
+                             "appdetails": {"id": str(FACE)}}}
+
+
+class CountingClient(FakeClient):
+    def __init__(self):
+        super().__init__()
+        self.downloads = 0
+
+    def download_message(self, url, absolute):
+        self.downloads += 1
+        return super().download_message(url, absolute)
+
+
+def apps_files(st):
+    return sorted(str(p.relative_to(st.root)) for p in (st.root / "GARMIN/APPS").rglob("*")
+                  if p.is_file())
+
+
+@pytest.mark.parametrize("kind", ["truncated", "no-id"])
+def test_unreadable_entry_is_counted_not_dropped_silently(iq_device, device_root, kind):
+    st, dev = iq_device
+    damaged_out_bin(device_root, kind)
+    state = ciq.read_installed(dev, st)
+    assert state.unreadable == 1 and len(state.apps) == 2  # the readable ones are still listed
+    with pytest.raises(ciq.CiqError, match="1 entry that cannot be read"):
+        ciq.require_complete(state)
+
+
+@pytest.mark.parametrize("kind", ["truncated", "no-id"])
+def test_unreadable_entry_blocks_install_remove_and_toggle(iq_device, device_root, kind):
+    st, dev = iq_device
+    (st.root / "GARMIN/APPS/MEDIA").mkdir(exist_ok=True)
+    (st.root / "GARMIN/APPS/MEDIA/DADE7E4.PRG").write_bytes(b"x")
+    damaged_out_bin(device_root, kind)
+    before = apps_files(st)
+    client = CountingClient()
+    with pytest.raises(ciq.CiqError, match="cannot be read"):
+        ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert client.downloads == 0 and client.acks == []  # nothing fetched, nothing acknowledged
+    with pytest.raises(ciq.CiqError, match="cannot be read"):
+        ciq.set_enabled(dev, st, PRELOADED, True)
+    app = ciq.read_installed(dev, st).find(STORE_ID)
+    app.app_id = FACE  # pretend it is a regular store app
+    with pytest.raises(ciq.CiqError, match="cannot be read"):
+        ciq.remove(dev, st, app)
+    assert apps_files(st) == before  # no IN.BIN, no new .PRG, nothing deleted
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_complete_list_still_allows_changes(iq_device):
+    st, dev = iq_device
+    ciq.require_complete(ciq.read_installed(dev, st))
+    assert ciq.read_installed(dev, st).unreadable == 0
+
+
+def test_sync_reports_an_unreadable_app_list_without_failing(iq_device, device_root):
+    import types
+
+    from openexpress import service
+
+    st, dev = iq_device
+    damaged_out_bin(device_root, "no-id")
+
+    class Client(CountingClient):
+        def require_verified(self, unit_id=None):
+            raise RuntimeError("no store request expected")
+
+    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+                              settings=types.SimpleNamespace(locale="en_US"))
+    errors = []
+    assert service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors) == []
+    assert len(errors) == 1 and errors[0].startswith("Connect IQ: ") and "cannot be read" in errors[0]
+
+
+# --- preview of the app list an install would write ---------------------------------------------
+
+
+def store_app(app_id, name, store_type="watchface"):
+    return ciq.StoreApp(app_id, name, "dev", store_type, 1000, 5, "1.0", False, False)
+
+
+def test_preview_in_bin_for_a_new_watch_face(iq_device):
+    st, dev = iq_device
+    state = ciq.read_installed(dev, st)
+    p = ciq.preview_in_bin(state, [store_app(FACE, "Face It")])
+    assert (p.on_device, p.pending, p.entries, p.kept) == (2, 0, 3, True)
+    assert p.new == [("Face It", 3, True)]  # a watch face is added as inactive
+    assert not (st.root / "GARMIN/APPS/IN.BIN").exists()  # nothing is written
+
+    widget = ciq.preview_in_bin(state, [store_app(FACE, "Glance", "widget")])
+    assert widget.new == [("Glance", 2, False)]
+
+
+def test_preview_matches_what_install_writes(iq_device):
+    st, dev = iq_device
+    preview = ciq.preview_in_bin(ciq.read_installed(dev, st), [store_app(FACE, "Face It")])
+    ciq.install_queued(dev, st, FakeClient(), [FACE_MESSAGE], known={})
+    written = ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))
+    assert len(written) == preview.entries
+    assert written[-1][1:3] == preview.new[0][1:3]
+
+
+def test_preview_for_an_update_and_with_pending_apps(iq_device):
+    st, dev = iq_device
+    state = ciq.read_installed(dev, st)
+    update = ciq.preview_in_bin(state, [store_app(STORE_ID, "Connect IQ Store", "watch-app")])
+    assert (update.entries, update.kept, update.new) == (2, True, [])
+
+    ciq.install_queued(dev, st, FakeClient(), [FACE_MESSAGE], known={})  # IN.BIN, not applied yet
+    state = ciq.read_installed(dev, st)
+    again = ciq.preview_in_bin(state, [store_app(FACE, "Face It")])
+    assert (again.on_device, again.pending, again.entries, again.kept, again.new) == (2, 1, 3, True, [])
+
+
+def test_preview_notices_a_list_that_would_lose_an_app(iq_device, monkeypatch):
+    st, dev = iq_device
+    state = ciq.read_installed(dev, st)
+    real = ciq.build_in_bin
+    monkeypatch.setattr(ciq, "build_in_bin", lambda apps: real(apps[1:]))
+    assert ciq.preview_in_bin(state, [store_app(FACE, "Face It")]).kept is False
+    monkeypatch.setattr(ciq, "build_in_bin",
+                        lambda apps: real([ciq.InstalledApp(a.app_id, a.app_type, a.name,
+                                                            not a.disabled) for a in apps]))
+    assert ciq.preview_in_bin(state, []).kept is False  # flags changed
+
+
+class FakeStore:
+    """Stands in for ciq.StoreApi in CLI tests; records what would change the account."""
+
+    queued = []
+
+    def __init__(self, client):
+        pass
+
+    def account_apps(self, device, locale):
+        return [store_app(FACE, "Face It")]
+
+    def updates(self, device, installed, locale):
+        return []
+
+    def queue_install(self, device, apps):
+        FakeStore.queued.append([a.name for a in apps])
+
+
+@pytest.fixture
+def apps_cli(monkeypatch, xdg):
+    from openexpress import cli, service
+
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    FakeStore.queued = []
+    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: client)
+    monkeypatch.setattr(service, "require_account_device", lambda c, unit_id: [])
+    monkeypatch.setattr(ciq, "StoreApi", FakeStore)
+    return client
+
+
+def test_cli_install_dry_run_shows_the_app_list(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    before = apps_files(st)
+    assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1:] == [
+        "App list to be written (IN.BIN): 3 entries; the device lists 2 (OUT.BIN)",
+        "  every app on the device is kept, in the same order and with the same flags",
+        "  new: Face It (watch face), added as inactive",
+        "Dry run. Add --apply.",
+    ]
+    assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_files(st) == before
+
+
+def test_cli_install_apply_writes_what_the_preview_said(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
+    assert "Installed: Face It" in capsys.readouterr().out
+    assert FakeStore.queued == [["Face It"]] and apps_cli.acks == [7]
+    assert len(ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))) == 3
+
+
+@pytest.mark.parametrize("argv", [
+    ["apps", "install", "Face It"], ["apps", "install", "Face It", "--apply"],
+    ["apps", "update", "--apply"], ["apps", "remove", "Connect IQ Store", "--apply"],
+    ["apps", "disable", "Connect IQ Store", "--apply"], ["apps", "enable", "Softball"],
+], ids=" ".join)
+def test_cli_refuses_changes_with_an_unreadable_app_list(iq_device, device_root, apps_cli,
+                                                         capsys, argv):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    damaged_out_bin(device_root, "truncated")
+    before = apps_files(st)
+    assert main(["--path", str(device_root), *argv]) == 1
+    err = capsys.readouterr().err
+    assert "1 entry that cannot be read" in err and "Traceback" not in err
+    assert FakeStore.queued == [] and apps_cli.downloads == 0  # nothing was queued at Garmin
+    assert apps_files(st) == before
+
+
+def test_cli_list_warns_about_an_unreadable_app_list(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    damaged_out_bin(device_root, "no-id")
+    assert main(["--path", str(device_root), "apps"]) == 0
+    out = capsys.readouterr().out
+    assert "WARNING: 1 entry of the app list on the device cannot be read" in out
+    assert "Connect IQ Store" in out  # the readable apps are still shown

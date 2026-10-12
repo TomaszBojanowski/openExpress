@@ -673,6 +673,29 @@ def _app_status(disabled: bool) -> str:
     return _("disabled") if disabled else _("enabled")
 
 
+def _print_in_bin_preview(preview) -> None:
+    """The app list (IN.BIN) that an install would write to the device."""
+    from openexpress import ciq
+
+    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+            "(OUT.BIN)").format(entries=preview.entries, count=preview.on_device))
+    if preview.pending:
+        print("  " + ngettext("{count} more app is registered and waits for the device",
+                              "{count} more apps are registered and wait for the device",
+                              preview.pending).format(count=preview.pending))
+    print("  " + (_("every app on the device is kept, in the same order and with the same flags")
+                  if preview.kept else
+                  _("WARNING: the new list does NOT match the apps on the device")))
+    for name, app_type, disabled in preview.new:
+        kind = ciq.APP_TYPES.get(app_type)
+        print("  " + (_("new: {name} ({type}), added as inactive") if disabled
+                      else _("new: {name} ({type}), added as active")).format(
+            name=name, type=_(kind) if kind else app_type))
+    if not preview.kept:
+        raise ciq.CiqError(_("The app list that would be written does not match the device. "
+                             "Nothing was changed."))
+
+
 def cmd_apps(args) -> int:
     from openexpress import ciq
 
@@ -697,6 +720,12 @@ def cmd_apps(args) -> int:
                        "{size} free", len(state.store_apps)).format(
             device=dev.description, count=len(state.store_apps),
             slots=state.available_slots, size=_human(state.available_space)))
+        if state.unreadable:
+            print(ngettext("WARNING: {count} entry of the app list on the device cannot be read; "
+                           "apps cannot be installed, updated or removed.",
+                           "WARNING: {count} entries of the app list on the device cannot be "
+                           "read; apps cannot be installed, updated or removed.",
+                           state.unreadable).format(count=state.unreadable))
         for a in state.store_apps:
             upd = updates.get(a.app_id)
             note = ("  " + _("update available: {version}").format(version=upd.version_name)
@@ -717,6 +746,10 @@ def cmd_apps(args) -> int:
                        "they then appear in the list above."))
         return 0
 
+    if cmd != "list":
+        # Before anything is queued or written: the device's app list must be complete.
+        ciq.require_complete(state)
+
     if cmd in ("install", "update"):
         if cmd == "install":
             targets = [_find_app(account, args.name)]
@@ -730,6 +763,7 @@ def cmd_apps(args) -> int:
             msg = (_("Update {name} {version} ({size})") if a.app_id in installed_ids
                    else _("Install {name} {version} ({size})"))
             print(msg.format(name=a.name, version=a.version_name, size=_human(a.size)) + flag)
+        _print_in_bin_preview(ciq.preview_in_bin(state, targets))
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0

@@ -1599,6 +1599,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         def work():
             service.require_account_device(s.client, s.device.unit_id)
+            # Before anything is queued: the device's app list must be complete.
+            ciq.require_complete(ciq.read_installed(s.device, s.storage))
             api = ciq.StoreApi(s.client)
             api.queue_install(s.device, apps)
             return ciq.install_queued(s.device, s.storage, s.client,

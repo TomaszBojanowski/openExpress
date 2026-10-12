@@ -352,7 +352,13 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
             s.device, s.settings.locale.replace("_", "-"))}
     except Exception:  # noqa: BLE001 - names are only cosmetic
         known = {}
-    rep = ciq.install_queued(s.device, s.storage, s.client, messages, known, progress=progress)
+    try:
+        rep = ciq.install_queued(s.device, s.storage, s.client, messages, known,
+                                 progress=progress)
+    except ciq.CiqError as e:
+        # E.g. an unreadable app list: the rest of the sync is not affected.
+        errors.append(f"Connect IQ: {e}")
+        return []
     errors += [f"Connect IQ {name}: {err}" for name, err in rep.failed]
     if not rep.installed:
         return []

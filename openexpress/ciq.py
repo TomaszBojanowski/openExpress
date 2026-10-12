@@ -24,7 +24,7 @@ from openexpress import proto
 from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import N_, _
+from openexpress.i18n import N_, _, ngettext
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +85,9 @@ class InstalledState:
     apps: list[InstalledApp] = field(default_factory=list)
     available_space: int | None = None
     available_slots: int | None = None
+    # Entries of OUT.BIN that could not be read. They are missing from `apps`, so a
+    # rewritten app list (IN.BIN) would leave them out: nothing may be written then.
+    unreadable: int = 0
 
     @property
     def store_apps(self) -> list[InstalledApp]:
@@ -159,9 +162,11 @@ def parse_out_bin(data: bytes) -> InstalledState:
         try:
             a = proto.decode(raw)
         except proto.ProtoError:
+            state.unreadable += 1
             continue
         app_id = _app_id(a)
         if app_id is None:
+            state.unreadable += 1
             continue
         state.apps.append(InstalledApp(
             app_id=app_id,
@@ -239,6 +244,44 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
                 disabled=disabled, favorite=favorite, pending=True,
             ))
     return state
+
+
+def require_complete(state: InstalledState) -> None:
+    """Refuse to change apps when the app list read from the device is incomplete."""
+    if state.unreadable:
+        n = state.unreadable
+        raise CiqError(ngettext(
+            "The Connect IQ app list on the device (OUT.BIN) has {count} entry that cannot be "
+            "read. Nothing was changed, so that no app is dropped from the list.",
+            "The Connect IQ app list on the device (OUT.BIN) has {count} entries that cannot be "
+            "read. Nothing was changed, so that no app is dropped from the list.",
+            n).format(count=n))
+
+
+@dataclass
+class InBinPreview:
+    """The app list (IN.BIN) an install would write, checked against the device's list."""
+
+    on_device: int  # apps in OUT.BIN
+    pending: int  # apps registered by an earlier IN.BIN that the device has not applied yet
+    entries: int  # entries in the new IN.BIN
+    kept: bool  # every app is in the new list, in the same order, with its current flags
+    new: list[tuple[str, int, bool]]  # (name, app type, disabled) of the appended apps
+
+
+def preview_in_bin(state: InstalledState, targets: list[StoreApp]) -> InBinPreview:
+    """What install_queued() would write for these store apps. Nothing is written."""
+    new = [InstalledApp(app_id=t.app_id, app_type=t.app_type, name=t.name,
+                        disabled=t.app_type == 3)
+           for t in targets if state.find(t.app_id) is None]
+    written = parse_in_bin(build_in_bin(state.apps + new))
+    current = [(a.app_id, a.app_type, a.disabled, a.favorite) for a in state.apps]
+    added = [(a.app_id, a.app_type, a.disabled, a.favorite) for a in new]
+    pending = sum(1 for a in state.apps if a.pending)
+    return InBinPreview(
+        on_device=len(state.apps) - pending, pending=pending, entries=len(written),
+        kept=written[:len(current)] == current and written[len(current):] == added,
+        new=[(a.name, a.app_type, a.disabled) for a in new])
 
 
 def app_file_path(device: GarminDevice, app: InstalledApp) -> str | None:
@@ -378,6 +421,7 @@ def install_queued(
     """
     report = IqInstallReport()
     state = read_installed(device, storage)
+    require_complete(state)
     max_apps = device.iq_max_apps or 0
     new_entries: list[InstalledApp] = []
     new_paths: list[str] = []
@@ -471,6 +515,7 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
     if not app.removable:
         raise CiqError(_("{name} is part of the device software and cannot be removed")
                        .format(name=app.name))
+    require_complete(read_installed(device, storage))
     removed = []
     for p in (app_file_path(device, app), settings_file_path(device, app)):
         if p and storage.exists(p):
@@ -482,6 +527,7 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
 
 def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabled: bool) -> None:
     state = read_installed(device, storage)
+    require_complete(state)
     app = state.find(app_id)
     if app is None:
         raise CiqError(_("App not found on the device"))
