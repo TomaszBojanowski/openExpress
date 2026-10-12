@@ -1471,6 +1471,9 @@ class MainWindow(Adw.ApplicationWindow):
             api = ciq.StoreApi(s.client)
             locale = s.settings.locale.replace("_", "-")
             state = ciq.read_installed(s.device, s.storage)
+            # Apps without visible files cannot be removed over USB (e.g. on the fēnix 8).
+            for app in state.store_apps:
+                app.has_files = bool(ciq.files_on_device(s.device, s.storage, app))
             account = api.account_apps(s.device, locale)
             updates = api.updates(s.device, state.store_apps, locale)
             return state, account, updates
@@ -1599,18 +1602,14 @@ class MainWindow(Adw.ApplicationWindow):
 
         def work():
             service.require_account_device(s.client, s.device.unit_id)
-            # Before anything is queued: the device's app list must be complete.
-            ciq.require_complete(ciq.read_installed(s.device, s.storage))
-            api = ciq.StoreApi(s.client)
-            api.queue_install(s.device, apps)
-            return ciq.install_queued(s.device, s.storage, s.client,
-                                      s.client.device_messages(s.device.unit_id),
-                                      {a.app_id: a for a in apps},
-                                      only={a.app_id for a in apps}, progress=self.progress)
+            return ciq.install_apps(s.device, s.storage, s.client, ciq.StoreApi(s.client),
+                                    apps, progress=self.progress)
 
         def done(rep):
             if rep.failed:
                 self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
+            elif rep.for_phone and not rep.installed:
+                self.error(_("Queued in Garmin Connect"), self._for_phone_text(rep.for_phone))
             elif rep.installed:
                 self.toast(_("Installed {names}").format(names=", ".join(rep.installed)))
             else:
@@ -1619,10 +1618,43 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.run_task(_("Installing apps…"), work, done)
 
+    @staticmethod
+    def _for_phone_text(names) -> str:
+        return _("{names}: openExpress cannot install apps on this device over USB yet. The "
+                 "app waits in the queue in Garmin Connect and will be installed by the phone "
+                 "or Garmin Express.").format(
+            names=", ".join(names))
+
+    def confirm_forget_app(self, app) -> None:
+        """For apps that cannot be removed over USB: only the account list can be changed."""
+        from openexpress import ciq
+
+        s = self.session
+        d = Adw.AlertDialog(
+            heading=_("Remove {name}?").format(name=app.name),
+            body=_("{name} cannot be removed over USB: this device shows no app files. Remove "
+                   "it on the device itself or in Garmin Connect on the phone.\n\nHere you can "
+                   "only remove it from your account list.").format(name=app.name))
+        d.add_response("cancel", _("Cancel"))
+        d.add_response("forget", _("Remove from Account"))
+
+        def work():
+            service.require_account_device(s.client, s.device.unit_id)
+            ciq.StoreApi(s.client).forget(s.device, [app.app_id])
+
+        d.connect("response", lambda _d, r: r == "forget" and self.run_task(
+            _("Removing {name}…").format(name=app.name), work,
+            lambda _r: (self.toast(_("Removed {name} from your account list.").format(
+                name=app.name)), self.load_section("apps", force=True))))
+        d.present(self)
+
     def confirm_remove_app(self, app) -> None:
         from openexpress import ciq
 
         s = self.session
+        if app.has_files is False:
+            self.confirm_forget_app(app)
+            return
         d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=app.name),
                             body=_("The app and its settings will be deleted from the device."))
         d.add_response("cancel", _("Cancel"))

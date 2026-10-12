@@ -134,6 +134,10 @@ class Storage(ABC):
     def _write_file(self, real_path: str, local: Path, progress=None) -> None:
         self._write(real_path, local.read_bytes())
 
+    def make_dir(self, path: str) -> str:
+        """Create a directory with its missing parents. Returns the real path."""
+        return self._ensure_dir(path)
+
     def size(self, path: str) -> int | None:
         real = self.resolve(path)
         if real is None:

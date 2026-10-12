@@ -360,9 +360,18 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
         errors.append(f"Connect IQ: {e}")
         return []
     errors += [f"Connect IQ {name}: {err}" for name, err in rep.failed]
-    if not rep.installed:
-        return []
-    return [_("Installed Connect IQ apps: {names}.").format(names=", ".join(rep.installed))]
+    lines = []
+    if rep.installed:
+        lines.append(_("Installed Connect IQ apps: {names}.").format(
+            names=", ".join(rep.installed)))
+    if rep.for_phone:
+        n = len(rep.for_phone)
+        lines.append(ngettext(
+            "{count} Connect IQ app waits in the queue: openExpress cannot install apps on "
+            "this device over USB yet.",
+            "{count} Connect IQ apps wait in the queue: openExpress cannot install apps on "
+            "this device over USB yet.", n).format(count=n))
+    return lines
 
 
 def _trueup(s, messages, progress, errors) -> list[str]:

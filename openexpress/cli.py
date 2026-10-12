@@ -763,27 +763,61 @@ def cmd_apps(args) -> int:
             msg = (_("Update {name} {version} ({size})") if a.app_id in installed_ids
                    else _("Install {name} {version} ({size})"))
             print(msg.format(name=a.name, version=a.version_name, size=_human(a.size)) + flag)
-        _print_in_bin_preview(ciq.preview_in_bin(state, targets))
+        # On some devices openExpress cannot install over USB yet: say so before queueing.
+        dirs = {a.app_id: ciq.usb_dir_state(dev, st, ciq.store_datatype(a)) for a in targets}
+        for a in targets:
+            folder = ciq.app_dir(dev, ciq.store_datatype(a))
+            if dirs[a.app_id] == ciq.REFUSED:
+                print("  " + _("{name}: openExpress cannot install apps on this device over USB "
+                               "yet. The app will be queued in Garmin Connect and installed by "
+                               "the phone or Garmin Express.").format(name=a.name))
+            elif dirs[a.app_id] == ciq.MISSING:
+                print("  " + _("{name}: the app folder {path} does not exist on the device. "
+                               "openExpress will try to create it; if the device refuses, the "
+                               "app is only queued in Garmin Connect and installed by the phone "
+                               "or Garmin Express.").format(name=a.name, path=folder))
+        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED]
+        if over_usb:
+            _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0
-        api.queue_install(dev, targets)
-        rep = ciq.install_queued(dev, st, client, client.device_messages(dev.unit_id),
-                                 {a.app_id: a for a in targets},
-                                 only={a.app_id for a in targets},
-                                 progress=lambda s: print("  " + s))
-        # TRANSLATORS: shown after "Installed:" when no app was installed
-        none = _("none")
-        print(_("Installed: {names}").format(names=", ".join(rep.installed) or none))
+        rep = ciq.install_apps(dev, st, client, api, targets,
+                               progress=lambda s: print("  " + s))
+        if rep.installed or rep.failed or not rep.for_phone:
+            # TRANSLATORS: shown after "Installed:" when no app was installed
+            none = _("none")
+            print(_("Installed: {names}").format(names=", ".join(rep.installed) or none))
         for name, err in rep.failed:
             print("  " + _("ERROR {item}: {error}").format(item=name, error=err))
-        if not rep.installed and not rep.failed:
+        if rep.for_phone:
+            print(_("Queued in Garmin Connect: {names}. openExpress cannot install apps on "
+                    "this device over USB yet; they will be installed by the phone or Garmin "
+                    "Express.").format(
+                names=", ".join(rep.for_phone)))
+        if not rep.installed and not rep.failed and not rep.for_phone:
             print(_("The server has not queued the app yet; run `openexpress sync` in a moment."))
         return 0 if not rep.failed else 1
 
     app = _find_app(state.apps, args.name)
     if cmd == "remove":
-        paths_ = [p for p in (ciq.app_file_path(dev, app), ciq.settings_file_path(dev, app)) if p]
+        if not app.removable:
+            raise ciq.CiqError(_("{name} is part of the device software and cannot be removed")
+                               .format(name=app.name))
+        paths_ = ciq.files_on_device(dev, st, app)
+        if not paths_:
+            # E.g. the fēnix 8: no app files are visible over USB, so there is nothing to delete.
+            print(_("{name} cannot be removed over USB: this device shows no app files. "
+                    "Remove it on the device itself or in Garmin Connect on the phone.").format(
+                name=app.name))
+            if not args.forget:
+                return 1
+            if not args.apply:
+                print(_("Would remove it from your account list. Add --apply."))
+                return 0
+            api.forget(dev, [app.app_id])
+            print(_("Removed {name} from your account list.").format(name=app.name))
+            return 0
         print(_("Remove {name} from the device: {files}").format(
             name=app.name, files=", ".join(paths_) or "-"))
         if not args.apply:

@@ -12,17 +12,19 @@ Mirrors Garmin Express (docs/analiza/05, section 3):
 
 from __future__ import annotations
 
+import json
 import logging
 import posixpath
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
 
 from urllib.parse import urlencode
 
-from openexpress import proto
+from openexpress import paths, proto
 from openexpress.connect import ApiError, GarminClient, lower_keys
-from openexpress.device.storage import Storage
+from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import N_, _, ngettext
 
@@ -65,6 +67,8 @@ class InstalledApp:
     favorite: bool = False
     # Only listed in IN.BIN: written to the watch but not yet confirmed in OUT.BIN.
     pending: bool = False
+    # Whether its files are visible on the device; None when not checked.
+    has_files: bool | None = None
 
     @property
     def preloaded(self) -> bool:
@@ -403,6 +407,110 @@ def message_app_id(m: dict) -> uuid.UUID | None:
 class IqInstallReport:
     installed: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
+    # Left in Garmin's queue: openExpress cannot write them to this device over USB yet.
+    for_phone: list[str] = field(default_factory=list)
+
+
+# --- devices where openExpress cannot install apps over USB yet ---------------------------
+#
+# Some watches (e.g. the fēnix 8) declare an app folder in GarminDevice.xml that does not
+# exist on the device; gvfs/libmtp is refused when it tries to create it, and no .PRG files
+# are visible over MTP at all. Garmin Express on Windows does install over USB there, so
+# this is a limit of openExpress, not of the device. Until it is solved such apps are left
+# in the queue in Garmin Connect, from which the phone or Garmin Express installs them.
+
+READY, MISSING, REFUSED = "ready", "missing", "refused"
+
+
+def app_dir(device: GarminDevice, datatype: str) -> str | None:
+    targets = device.targets(datatype)
+    return targets[0].path.strip("/") if targets else None
+
+
+def store_datatype(app: StoreApp) -> str:
+    return APPTYPE_TO_DATATYPE.get(app.app_type, "IQWatchApps")
+
+
+def _refusals_file(device: GarminDevice) -> Path:
+    return paths.device_dir(device.unit_id) / "ciq.json"
+
+
+def _refusals(device: GarminDevice) -> dict:
+    try:
+        data = json.loads(_refusals_file(device).read_text())
+    except (OSError, ValueError):
+        return {}
+    refused = data.get("refused_dirs") if isinstance(data, dict) else None
+    return refused if isinstance(refused, dict) else {}
+
+
+def _remember_refusal(device: GarminDevice, path: str) -> None:
+    """Remembered per software version, so the device is not asked again on every sync."""
+    refused = _refusals(device)
+    refused[path.casefold()] = device.software_version_str
+    try:
+        f = _refusals_file(device)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({"refused_dirs": refused}, indent=1))
+    except OSError as e:
+        log.warning("Cannot remember that %s cannot be created: %s", path, e)
+
+
+def usb_dir_state(device: GarminDevice, storage: Storage, datatype: str) -> str:
+    """READY, MISSING (not on the device; creating it was not tried) or REFUSED."""
+    path = app_dir(device, datatype)
+    if path is None or storage.resolve(path) is not None:
+        return READY
+    if _refusals(device).get(path.casefold()) == device.software_version_str:
+        return REFUSED
+    return MISSING
+
+
+def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str) -> bool:
+    """Whether app files of this type can be written; creates a missing folder if allowed."""
+    state = usb_dir_state(device, storage, datatype)
+    if state != MISSING:
+        return state == READY
+    path = app_dir(device, datatype)
+    try:
+        storage.make_dir(path)
+    except DeviceError as e:
+        log.info("Cannot install apps on this device over USB (%s): %s", path, e)
+        _remember_refusal(device, path)
+        return False
+    return True
+
+
+def files_on_device(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[str]:
+    """The app's files that are visible on the device (none on devices like the fēnix 8)."""
+    return [p for p in (app_file_path(device, app), settings_file_path(device, app))
+            if p and storage.exists(p)]
+
+
+def install_apps(
+    device: GarminDevice,
+    storage: Storage,
+    client: GarminClient,
+    api: "StoreApi",
+    targets: list[StoreApp],
+    progress: Callable[[str], None] = lambda s: None,
+) -> IqInstallReport:
+    """Queue the apps in Garmin Connect and install over USB those the device accepts.
+
+    Apps whose folder the device does not offer are only queued (`for_phone`): nothing is
+    downloaded or written for them, and they are not failures.
+    """
+    require_complete(read_installed(device, storage))
+    usb = [t for t in targets if prepare_app_dir(device, storage, store_datatype(t))]
+    for_phone = [t.name for t in targets if t not in usb]
+    api.queue_install(device, targets)
+    report = IqInstallReport()
+    if usb:
+        report = install_queued(device, storage, client, client.device_messages(device.unit_id),
+                                {t.app_id: t for t in targets},
+                                only={t.app_id for t in usb}, progress=progress)
+    report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]
+    return report
 
 
 def install_queued(
@@ -442,6 +550,10 @@ def install_queued(
                 if (existing is None and max_apps
                         and len(state.store_apps) + len(new_entries) >= max_apps):
                     raise CiqError(_("no free app slots on the device"))
+                if not prepare_app_dir(device, storage, dt):
+                    # Not an error: the app stays queued and the phone installs it.
+                    report.for_phone.append(name)
+                    continue
                 progress(_("Downloading {name}").format(name=name))
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
@@ -517,10 +629,9 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
                        .format(name=app.name))
     require_complete(read_installed(device, storage))
     removed = []
-    for p in (app_file_path(device, app), settings_file_path(device, app)):
-        if p and storage.exists(p):
-            storage.delete(p)
-            removed.append(p)
+    for p in files_on_device(device, storage, app):
+        storage.delete(p)
+        removed.append(p)
     # Like Express, only the files are deleted; the watch updates its app list itself.
     return removed
 

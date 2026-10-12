@@ -503,6 +503,11 @@ class FakeStore:
     def queue_install(self, device, apps):
         FakeStore.queued.append([a.name for a in apps])
 
+    forgotten = []
+
+    def forget(self, device, app_ids):
+        FakeStore.forgotten.append(list(app_ids))
+
 
 @pytest.fixture
 def apps_cli(monkeypatch, xdg):
@@ -511,6 +516,7 @@ def apps_cli(monkeypatch, xdg):
     client = CountingClient()
     client.device_messages = lambda unit_id: [FACE_MESSAGE]
     FakeStore.queued = []
+    FakeStore.forgotten = []
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: client)
     monkeypatch.setattr(service, "require_account_device", lambda c, unit_id: [])
     monkeypatch.setattr(ciq, "StoreApi", FakeStore)
@@ -570,3 +576,179 @@ def test_cli_list_warns_about_an_unreadable_app_list(iq_device, device_root, app
     out = capsys.readouterr().out
     assert "WARNING: 1 entry of the app list on the device cannot be read" in out
     assert "Connect IQ Store" in out  # the readable apps are still shown
+
+
+# --- devices where openExpress cannot install over USB yet (e.g. the fenix 8) -------------------
+
+
+@pytest.fixture
+def no_usb_apps(iq_device, device_root, xdg, monkeypatch):
+    """The declared app folder is missing and the device refuses to create it."""
+    from openexpress.device.storage import DeviceError
+
+    (device_root / "GARMIN/APPS/MEDIA").rmdir()
+    attempts = []
+
+    def refuse(self, real_path):
+        attempts.append(real_path)
+        raise DeviceError("Cannot create directory " + real_path + ": Could not send object info.")
+
+    monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
+    st, dev = iq_device
+    return st, dev, attempts
+
+
+def test_app_folder_states(iq_device, device_root, xdg):
+    st, dev = iq_device
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+    (device_root / "GARMIN/APPS/MEDIA").rmdir()
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    # A device that lets the folder be created is used as before.
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is True
+    assert (device_root / "GARMIN/APPS/MEDIA").is_dir()
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+
+
+def test_refusal_is_remembered_per_software_version(no_usb_apps, device_root):
+    st, dev, attempts = no_usb_apps
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.REFUSED
+    assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
+    assert len(attempts) == 1  # the device is not asked again on every sync
+    dev.software_version = dev.software_version + 1  # after a firmware update: try again
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    (device_root / "GARMIN/APPS/MEDIA").mkdir()  # the folder exists: the old refusal is moot
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+
+
+def test_queued_app_is_left_for_the_phone(no_usb_apps):
+    st, dev, attempts = no_usb_apps
+    before = apps_files(st)
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert rep.for_phone == ["Face It"] and rep.installed == [] and rep.failed == []
+    assert client.downloads == 0 and client.acks == []  # stays in Garmin's queue
+    assert apps_files(st) == before and not (st.root / "GARMIN/APPS/IN.BIN").exists()
+    ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert len(attempts) == 1
+
+
+def test_install_apps_only_queues_on_such_a_device(no_usb_apps):
+    st, dev, _attempts = no_usb_apps
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: pytest.fail("the queue is not even read")
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(FACE, "Face It")])
+    assert FakeStore.queued == [["Face It"]]  # queued at Garmin, for the phone
+    assert rep.for_phone == ["Face It"] and rep.installed == [] and rep.failed == []
+    assert client.downloads == 0
+
+
+def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
+    import types
+
+    from openexpress import service
+
+    st, dev, _attempts = no_usb_apps
+
+    class Client(CountingClient):
+        def require_verified(self, unit_id=None):
+            raise RuntimeError("names are cosmetic")
+
+    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+                              settings=types.SimpleNamespace(locale="en_US"))
+    errors = []
+    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    assert errors == []  # not an error
+    assert lines == ["1 Connect IQ app waits in the queue: openExpress cannot install apps on "
+                     "this device over USB yet."]
+
+
+def test_cli_install_on_a_device_without_usb_apps(no_usb_apps, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev, attempts = no_usb_apps
+    before = apps_files(st)
+    # First dry run: the folder is missing, whether it can be created is not known yet.
+    assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 0
+    out = capsys.readouterr().out
+    assert "the app folder GARMIN/APPS/MEDIA does not exist on the device" in out
+    assert "if the device refuses, the app is only queued in Garmin Connect" in out
+    assert "Dry run. Add --apply." in out and FakeStore.queued == [] and attempts == []
+
+    assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[-1] == (
+        "Queued in Garmin Connect: Face It. openExpress cannot install apps on this device "
+        "over USB yet; they will be installed by the phone or Garmin Express.")
+    assert "ERROR" not in out and "Installed:" not in out
+    assert FakeStore.queued == [["Face It"]] and apps_cli.downloads == 0 and apps_cli.acks == []
+    assert apps_files(st) == before
+
+    # From now on the dry run says it up front, before anything is queued.
+    FakeStore.queued = []
+    assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 0
+    out = capsys.readouterr().out
+    assert "Face It: openExpress cannot install apps on this device over USB yet." in out
+    assert "IN.BIN" not in out  # nothing would be written, so there is no list to preview
+    assert FakeStore.queued == [] and len(attempts) == 1
+
+
+def with_phone_installed_face(device_root):
+    """OUT.BIN as after a phone install: the watch face is listed, but no file is visible."""
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (FACE, 3, "FaceIt2", True, "GACF4619"),
+        (PRELOADED, 8, "Softball", True, ""),
+    ]))
+
+
+def test_cli_remove_without_visible_files(no_usb_apps, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev, _attempts = no_usb_apps
+    with_phone_installed_face(device_root)
+    before = apps_files(st)
+    told = "FaceIt2 cannot be removed over USB: this device shows no app files."
+
+    assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--apply"]) == 1
+    out = capsys.readouterr().out
+    assert told in out and "on the device itself or in Garmin Connect on the phone" in out
+    assert "Removed" not in out and FakeStore.forgotten == []
+
+    assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--forget"]) == 0
+    assert "Would remove it from your account list." in capsys.readouterr().out
+    assert FakeStore.forgotten == []
+
+    assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--forget", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert told in out and out.splitlines()[-1] == "Removed FaceIt2 from your account list."
+    assert FakeStore.forgotten == [[FACE]] and apps_files(st) == before  # no file was touched
+
+
+def test_cli_remove_with_files_still_deletes_them(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    with_phone_installed_face(device_root)
+    (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").write_bytes(b"x")
+    assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--apply"]) == 0
+    assert "Removed 1 file." in capsys.readouterr().out
+    assert not (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").exists()
+
+
+def test_window_offers_only_forget_for_apps_without_files(iq_device):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    app = ciq.InstalledApp(FACE, 3, "FaceIt2", True, filename="GACF4619", has_files=False)
+    asked = []
+    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
+                                confirm_forget_app=asked.append)
+    MainWindow.confirm_remove_app(win, app)
+    assert asked == [app]  # the usual "delete from the device" dialog is not shown
+    text = MainWindow._for_phone_text(["Face It"])
+    assert text.startswith("Face It: openExpress cannot install apps on this device over USB yet.")
+    assert text.endswith("installed by the phone or Garmin Express.")
