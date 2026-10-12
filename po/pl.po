@@ -2916,7 +2916,7 @@ msgstr "Usuń i zapomnij"
 #: openexpress/gui/app.py:1710
 #, python-brace-format
 msgid "Removed {name}"
-msgstr "Usunięto {name}"
+msgstr "Usunięto aplikację {name}"
 
 #: openexpress/gui/app.py:1739
 #, python-brace-format
