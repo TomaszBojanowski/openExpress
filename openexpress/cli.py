@@ -888,10 +888,6 @@ def cmd_apps(args) -> int:
                 print("  " + _("{name}: openExpress cannot install apps on this device over USB "
                                "yet. The app will be queued in Garmin Connect and installed by "
                                "the phone or Garmin Express.").format(name=a.name))
-            elif dirs[a.app_id] == ciq.DIRECT and a.app_id in installed_ids:
-                print("  " + _("{name}: openExpress cannot update apps on this device over USB "
-                               "yet. The update will be queued in Garmin Connect and installed "
-                               "by the phone or Garmin Express.").format(name=a.name))
             elif dirs[a.app_id] == ciq.DIRECT:
                 print("  " + _("{name}: the device does not show the app folder {path} to "
                                "ordinary file access. openExpress will write the app over a "
@@ -902,8 +898,7 @@ def cmd_apps(args) -> int:
                                "openExpress will try to create it; if the device refuses, the "
                                "app is only queued in Garmin Connect and installed by the phone "
                                "or Garmin Express.").format(name=a.name, path=folder))
-        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED
-                    and not (dirs[a.app_id] == ciq.DIRECT and a.app_id in installed_ids)]
+        over_usb = [a for a in targets if dirs[a.app_id] != ciq.REFUSED]
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
@@ -913,10 +908,14 @@ def cmd_apps(args) -> int:
             return 0
         rep = ciq.install_apps(dev, st, client, api, targets,
                                progress=lambda s: print("  " + s))
-        written = [n for n in rep.installed if n in rep.direct]
+        written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
+        updated = [n for n in rep.installed if n in rep.updated]
         installed = [n for n in rep.installed if n not in rep.direct]
         if written:
             print(ciq.written_text(written))
+        if updated:
+            print(ciq.update_written_text(updated))
+            written += updated
         if installed or (not written and (rep.failed or not rep.for_phone)):
             # TRANSLATORS: shown after "Installed:" when no app was installed
             none = _("none")

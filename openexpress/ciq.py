@@ -291,6 +291,16 @@ def written_text(names: list[str]) -> str:
         len(names)).format(names=", ".join(names))
 
 
+def update_written_text(names: list[str]) -> str:
+    """For new versions written over a PTP session: the device replaces the apps itself."""
+    return ngettext(
+        "Wrote the update of {names} to the device; it will be installed after the device "
+        "is unplugged.",
+        "Wrote the updates of {names} to the device; they will be installed after the device "
+        "is unplugged.",
+        len(names)).format(names=", ".join(names))
+
+
 def require_complete(state: InstalledState) -> None:
     """Refuse to change apps when the app list read from the device is incomplete."""
     if state.unreadable:
@@ -450,6 +460,8 @@ class IqInstallReport:
     # Those of `installed` that were written over a PTP session: the device installs them
     # only once it is unplugged.
     direct: list[str] = field(default_factory=list)
+    # Those of `direct` that are new versions of apps already on the device.
+    updated: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Left in Garmin's queue: openExpress cannot write them to this device over USB yet.
     for_phone: list[str] = field(default_factory=list)
@@ -463,6 +475,10 @@ class IqInstallReport:
 # direct PTP session is possible (`Storage.exclusive_ptp`) the app file and the app list
 # are written through it. Where it is not (e.g. in a Flatpak sandbox) such apps are left
 # in the queue in Garmin Connect, from which the phone or Garmin Express installs them.
+#
+# A new version of an app is written the same way, under a new file name next to the old
+# file, and the app list is written unchanged; the device replaces the app after it is
+# unplugged (it keeps the old file name). Nothing of the old version is deleted by us.
 
 READY, MISSING, REFUSED, DIRECT = "ready", "missing", "refused", "direct"
 # Room left on the storage besides the app file itself.
@@ -624,6 +640,7 @@ def install_queued(
                                      direct=False)
         report.installed += again.installed
         report.direct += again.direct
+        report.updated += again.updated
         report.failed += again.failed
         report.for_phone += again.for_phone
     return report
@@ -670,10 +687,6 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     raise CiqError(_("the device has not applied earlier changes yet; unplug "
                                      "it, wait until it is ready and try again"))
                 over_ptp = direct and usb_dir_state(device, storage, dt) == DIRECT
-                if over_ptp and existing is not None:
-                    # Replacing a file the device has taken over is not known to work yet.
-                    report.for_phone.append(name)
-                    continue
                 if not over_ptp and not prepare_app_dir(device, storage, dt):
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
@@ -685,15 +698,23 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if not data:
                     _acknowledge(client, device, m)
                     continue
-                if (state.available_space is not None and existing is None
+                # An update over PTP is written next to the old file, which the device
+                # replaces only later: it needs room of its own, like a new app.
+                if (state.available_space is not None and (existing is None or over_ptp)
                         and new_size + len(data) > state.available_space):
                     raise CiqError(_("not enough Connect IQ space on the device"))
                 targets = device.targets(dt)
                 if not targets:
                     raise CiqError(_("the device does not accept {datatype}").format(datatype=dt))
-                # Updates overwrite the existing file; new apps get 8 random hex characters.
-                filename = (existing.filename if existing and existing.filename
-                            else uuid.uuid4().hex[:8].upper())
+                # New apps get 8 random hex characters. An update through the mounted storage
+                # overwrites the existing file; over PTP it gets a new name too, like Garmin
+                # Express does: the old file is the device's own and is left alone, and the
+                # device replaces the app itself once it is unplugged.
+                filename = uuid.uuid4().hex[:8].upper()
+                while existing is not None and filename == existing.filename:
+                    filename = uuid.uuid4().hex[:8].upper()
+                if existing is not None and existing.filename and not over_ptp:
+                    filename = existing.filename
                 path = posixpath.join(targets[0].path, f"{filename}.{targets[0].extension or 'PRG'}")
                 entry = None
                 if existing is None:
@@ -707,6 +728,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     )
                     new_size += len(data)
                 if over_ptp:
+                    if existing is not None:
+                        new_size += len(data)
                     hidden.append(_Hidden(m, name, dt, path, data, entry))
                     continue
                 progress(_("Writing {path}").format(path=path))
@@ -841,10 +864,11 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
         if not opened:
             report.for_phone += [h.name for h in hidden]
     except DeviceError as e:
-        # The session broke: what was sent is not registered, the rest was not sent.
+        # The session broke: what was sent is not registered and cannot be removed any
+        # more, the rest was not sent.
         for h in hidden:
             if id(h) not in settled:
-                fail(h, e)
+                fail(h, _with_leftovers(e, [h.path] if h in sent else []))
         return False
     if register_error is not None:
         for p in new_paths:
@@ -857,6 +881,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
     if registered:
         to_ack += [(h.message, h.name) for h in sent]
         report.direct += [h.name for h in sent]
+        report.updated += [h.name for h in sent if h.entry is None]
     return registered
 
 

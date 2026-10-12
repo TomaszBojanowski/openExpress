@@ -1761,6 +1761,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
             elif rep.for_phone and not rep.installed:
                 self.error(_("Queued in Garmin Connect"), self._for_phone_text(rep.for_phone))
+            elif rep.installed and all(n in rep.updated for n in rep.installed):
+                self.toast(ciq.update_written_text(rep.installed))
             elif rep.installed and all(n in rep.direct for n in rep.installed):
                 self.toast(ciq.written_text(rep.installed))
             elif rep.installed:

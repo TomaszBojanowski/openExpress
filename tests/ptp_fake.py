@@ -93,10 +93,14 @@ class FakeDevice:
         return sorted(o.name for o in self.objects.values()
                       if o.parent == parent and hidden in (None, o.hidden))
 
-    def take_over(self, folder: str) -> None:
+    def take_over(self, folder: str, replaces: dict[str, str] | None = None) -> None:
         """What the device does after it is unplugged: the files in an app folder
-        become its own."""
+        become its own. `replaces` maps a new file to the old file of the same app: the
+        device keeps the old name with the new content (seen with an update)."""
         parent = self.handle(folder)
+        for new, old in (replaces or {}).items():
+            new_handle, old_handle = self.handle(f"{folder}/{new}"), self.handle(f"{folder}/{old}")
+            self.objects[old_handle].data = self.objects.pop(new_handle).data
         for o in self.objects.values():
             if o.parent == parent:
                 o.hidden = True

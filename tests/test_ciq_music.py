@@ -1004,17 +1004,6 @@ def test_usb_device_cannot_be_opened(hidden_apps):
     assert fake.operations == []
 
 
-def test_update_of_a_hidden_app_is_left_for_the_phone(hidden_apps):
-    st, dev, fake = hidden_apps
-    message = {"messageid": 9, "devicexmldatatype": "IQWatchFaces",
-               "metadata": {"messageurl": "x", "messagename": "Connect IQ Store",
-                            "appdetails": {"id": str(STORE_ID)}}}
-    client = CountingClient()
-    rep = ciq.install_queued(dev, st, client, [message], known={}, direct=True)
-    assert rep.for_phone == ["Connect IQ Store"] and rep.installed == [] and rep.failed == []
-    assert client.downloads == 0 and st.sessions == 0 and fake.operations == []
-
-
 def test_pending_app_list_blocks_a_ptp_install(hidden_apps):
     st, dev, fake = hidden_apps
     (st.root / "GARMIN/APPS/IN.BIN").write_bytes(ciq.build_in_bin(ciq.read_installed(dev, st).apps))
@@ -2142,3 +2131,222 @@ def test_window_says_so_when_the_order_is_already_the_same(order_device):
     MainWindow.restore_order(win, same)
     assert toasts == ["The apps on the device are already in this order."]
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+# --- a new version of an app in a folder the device hides ---------------------------------
+
+
+@pytest.fixture
+def hidden_update(hidden_spot):
+    """Face It is installed (its file is the device's own) and a new version is queued."""
+    st, dev, fake, app = hidden_spot
+    fake.add("GARMIN/Apps/DATA/0A1B2C3D.DAT", b"app data")
+    fake.add("GARMIN/Apps/SETTINGS/0A1B2C3D.SET", b"app settings")
+    return st, dev, fake, app
+
+
+def fake_tree(fake):
+    """Every object of the fake device: path, content, whether the device owns it."""
+    def path(handle):
+        parts = []
+        while handle in fake.objects:
+            parts.append(fake.objects[handle].name)
+            handle = fake.objects[handle].parent
+        return "/".join(reversed(parts))
+
+    return {path(h): (o.data, o.hidden) for h, o in fake.objects.items()}
+
+
+def test_update_is_written_next_to_the_old_file_like_express_does(hidden_update, backups):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    out_before = st.read("GARMIN/APPS/OUT.BIN")
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert (rep.installed, rep.direct, rep.updated, rep.failed) == (
+        ["Face It"], ["Face It"], ["Face It"], [])
+    after = fake_tree(fake)
+    added = sorted(set(after) - set(before))
+    # One new app file under a new name, and the app list; nothing else changed.
+    assert len(added) == 2 and added[0] == "GARMIN/Apps/IN.BIN"
+    new_file = added[1]
+    assert new_file.startswith("GARMIN/Apps/Media/") and new_file.endswith(".PRG")
+    assert new_file != "GARMIN/Apps/Media/0A1B2C3D.PRG"
+    assert after[new_file] == (b"PRG-DATA", False)
+    assert all(after[path] == before[path] for path in before)  # old file, data, settings
+    assert fake.sent(ptp.DELETE_OBJECT) == 0
+    # The app list is what the device has: the same entries, order and flags, nothing added.
+    state = ciq.parse_out_bin(out_before)
+    assert [tuple(e) for e in fake_in_bin(fake)] == [
+        (a.app_id, a.app_type, a.disabled, a.favorite) for a in state.apps]
+    assert client.acks == [7] and len(copy_names(dev, backups)) == 1
+    assert ciq.update_written_text(rep.updated) == (
+        "Wrote the update of Face It to the device; it will be installed after the device is "
+        "unplugged.")
+
+
+def test_device_replaces_the_app_after_it_is_unplugged(hidden_update):
+    """The fake does what the fēnix 8 was seen to do: new content under the old name."""
+    st, dev, fake, app = hidden_update
+    ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    new = next(n for n in fake.names("GARMIN/Apps/Media", hidden=False))
+    fake.take_over("GARMIN/Apps/Media", replaces={new: "0A1B2C3D.PRG"})
+    assert fake.names("GARMIN/Apps/Media") == ["0A1B2C3D.PRG", "DADE7E4.PRG"]
+    assert fake.objects[fake.handle("GARMIN/Apps/Media/0A1B2C3D.PRG")].data == b"PRG-DATA"
+    assert fake.names("GARMIN/Apps/DATA") == ["0A1B2C3D.DAT"]
+
+
+def test_sync_leaves_an_update_of_a_hidden_app_in_the_queue(hidden_update, monkeypatch):
+    from openexpress.device.storage import DeviceError
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+
+    def refuse(self, real_path):
+        raise DeviceError("refused")
+
+    monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})  # as a sync does
+    assert rep.for_phone == ["Face It"] and rep.installed == [] and rep.updated == []
+    assert client.downloads == 0 and client.acks == [] and st.sessions == 0
+    assert fake_tree(fake) == before
+
+
+def test_update_is_refused_while_an_app_list_waits(hidden_update):
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    client = CountingClient()
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(ciq.build_in_bin(ciq.read_installed(dev, st).apps))
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and "has not applied earlier changes" in rep.failed[0][1]
+    assert st.sessions == 0 and client.acks == [] and fake_tree(fake) == before
+
+
+def test_update_needs_connect_iq_space_next_to_the_old_file(hidden_update, monkeypatch):
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    state = ciq.read_installed(dev, st)
+    state.available_space = 4  # less than the new file
+    monkeypatch.setattr(ciq, "read_installed", lambda device, storage: state)
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.failed == [("Face It", "not enough Connect IQ space on the device")]
+    assert st.sessions == 0 and client.acks == [] and fake_tree(fake) == before
+
+
+def test_update_without_room_on_the_storage(hidden_update):
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    fake.free = 100  # less than the file and the margin
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.failed == [("Face It", "not enough free space on the device")]
+    assert fake_tree(fake) == before and not st.unmounted
+
+
+def test_update_interrupted_while_the_app_file_is_sent(hidden_update):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and "GeneralError" in rep.failed[0][1]
+    # The unfinished file we wrote is removed; the old version and its data are as before.
+    assert fake_tree(fake) == before and client.acks == []
+    assert fake.sent(ptp.DELETE_OBJECT) == 1
+
+
+def test_update_names_the_unfinished_file_it_could_not_remove(hidden_update):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    fake.refuse[ptp.DELETE_OBJECT] = ptp.ACCESS_DENIED
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    (left,) = sorted(set(fake_tree(fake)) - set(before))
+    assert rep.failed[0][1].endswith(
+        "An unfinished file may have been left on the device: "
+        + left.replace("GARMIN/Apps/Media", "GARMIN/APPS/MEDIA") + ".")
+    assert all(fake_tree(fake)[path] == before[path] for path in before)
+
+
+def test_update_interrupted_between_the_app_file_and_the_app_list(hidden_update):
+    """The cable is pulled, or the session breaks: the new file stays, the list is not
+    written, the old version is untouched and the user is told which file was left."""
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    send_object = fake._send_object
+
+    def breaks_after_the_file(data):
+        result = send_object(data)
+        fake.wrong_transaction = True  # everything after this is out of step
+        return result
+
+    fake._send_object = breaks_after_the_file
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert rep.installed == [] and client.acks == []
+    (left,) = sorted(set(fake_tree(fake)) - set(before))
+    assert left.endswith(".PRG") and "may have been left on the device" in rep.failed[0][1]
+    assert left.rsplit("/", 1)[1] in rep.failed[0][1]
+    assert all(fake_tree(fake)[path] == before[path] for path in before)
+    assert fake.sent(ptp.DELETE_OBJECT) == 0 and not st.unmounted
+
+
+def test_update_with_a_refused_app_list_removes_only_its_own_file(hidden_update):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_update
+    before = fake_tree(fake)
+    fake.refuse_names["IN.BIN"] = ptp.ACCESS_DENIED
+    client = CountingClient()
+    with pytest.raises(ciq.CiqError, match="Cannot register the apps"):
+        ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
+    assert fake_tree(fake) == before and client.acks == []
+    assert fake.sent(ptp.DELETE_OBJECT) == 1  # the file of this session, nothing else
+
+
+def test_update_and_new_app_in_one_session(hidden_update):
+    st, dev, fake, app = hidden_update
+    other = uuid.UUID("11111111-2222-4333-8444-555555555555")
+    second = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+              "metadata": {"messageurl": "y", "messagename": "Other",
+                           "appdetails": {"id": str(other)}}}
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE, second], known={},
+                             direct=True)
+    assert rep.installed == ["Face It", "Other"] and rep.updated == ["Face It"]
+    assert [e[0] for e in fake_in_bin(fake)] == [STORE_ID, FACE, PRELOADED, other]
+    assert len(fake.names("GARMIN/Apps/Media", hidden=False)) == 2
+
+
+def test_cli_update_of_a_hidden_app(hidden_update, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_update
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(FakeStore, "updates",
+                        lambda self, device, installed, locale: [store_app(FACE, "Face It")])
+    apps_cli.device_messages = lambda unit_id: [FACE_MESSAGE]
+    root = str(st.root)
+    assert main(["--path", root, "apps", "update"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[0].startswith("Update Face It")
+    assert "direct USB connection" in out and "cannot update" not in out
+    assert "App list to be written (IN.BIN): 3 entries; the device lists 3 (OUT.BIN)" in out
+    assert "every app on the device is kept, in the same order and with the same flags" in out
+    assert "Before any change, a copy of the app list of the device is made." in out
+    assert fake.operations == [] and st.sessions == 0
+
+    assert main(["--path", root, "apps", "update", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert ("Wrote the update of Face It to the device; it will be installed after the device "
+            "is unplugged.") in out
+    assert "Installed:" not in out and apps_cli.acks == [7]
