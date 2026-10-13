@@ -27,8 +27,18 @@ analysing the official application, solely to make openExpress interoperate with
 It contains no Garmin code or data: the few values it needs to talk to
 Garmin's servers are read from **your own copy** of the official installer during setup.
 
-**Status:** alpha. Developed and tested with a **fēnix 8 Solar** on Fedora/GNOME. Other
-Garmin watches that connect over USB (MTP) should work, but are untested; reports are welcome.
+**Status:** alpha. Developed on Fedora/GNOME and tested with these Garmin devices:
+
+- **fēnix 8 Solar**, on the developer's Garmin account: sync, Connect IQ apps, maps and
+  music are tested; software updates are checked and downloaded, but not yet installed on
+  this device.
+- **Edge 1050**, on the same account: only reading is tested; nothing was written to it yet.
+- **Venu 2**, not on the account: reading is tested, and it was the first device to get
+  software updates installed with openExpress (Time Zone Map and Exercise to muscle
+  mapping, 13 October 2026).
+
+Details are in [Supported devices](#supported-devices). Other Garmin devices that connect
+over USB (MTP) should work, but are untested; reports are welcome.
 
 **Highlights**
 
