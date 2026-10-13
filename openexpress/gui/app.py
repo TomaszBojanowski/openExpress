@@ -1521,8 +1521,7 @@ class MainWindow(Adw.ApplicationWindow):
             g.add(row)
         for m in installed:
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
-                                subtitle=GLib.markup_escape_text(
-                                    f"{m.map_type} · {m.version} · {_human(m.size)} · {m.status}"))
+                                subtitle=GLib.markup_escape_text(self._map_subtitle(m)))
             if m.update_available:
                 # TRANSLATORS: button
                 row.add_suffix(self._button(_("Update"), lambda m=m: self.confirm_map(m),
@@ -1552,6 +1551,15 @@ class MainWindow(Adw.ApplicationWindow):
             rows.append((row, f"{m.name} {m.region} {m.map_type}".casefold()))
         g.add(listbox)
         self._search_filter(search, rows)
+
+    @staticmethod
+    def _map_subtitle(m) -> str:
+        """Type, version, size and status of an installed map; without the type when the map
+        is named like its type ("Base maps")."""
+        kind = m.map_type.strip()
+        parts = [kind if kind.casefold() != m.name.strip().casefold() else "",
+                 m.version, _human(m.size), m.status]
+        return " · ".join(part for part in parts if part)
 
     def confirm_map(self, m) -> None:
         from openexpress import maps as mp

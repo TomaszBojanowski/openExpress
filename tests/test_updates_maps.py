@@ -335,6 +335,7 @@ def _maps_window(storage):
         load_section=lambda key, force=False: reloads.append((key, force)))
     win._button = types.MethodType(MainWindow._button, win)
     win._trash = types.MethodType(MainWindow._trash, win)
+    win._map_subtitle = MainWindow._map_subtitle
     return win, reloads
 
 
@@ -371,3 +372,23 @@ def test_maps_page_with_maps_keeps_the_groups(server, device_root):
     assert on_device.title == "On the device" and available.title == "Available"
     titles = [row.get_title() for row in on_device.rows]
     assert titles[-2:] == ["TopoActive East", "TopoActive West"]
+
+
+@pytest.mark.parametrize("name,map_type,subtitle", [
+    ("Base maps", "Base maps", "2026.11 · 9.0 kB · up to date"),
+    ("Base Maps", " base maps ", "2026.11 · 9.0 kB · up to date"),  # case and outer spaces
+    ("TopoActive Western Europe", "TopoActive", "TopoActive · 2026.11 · 9.0 kB · up to date"),
+    ("Something", "", "2026.11 · 9.0 kB · up to date"),  # no type from the server
+])
+def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle, server,
+                                                        device_root):
+    from openexpress.gui.app import MainWindow
+
+    answer = maps_response(server)
+    answer["maps"] = answer["maps"][:1]  # the installed, up-to-date map
+    answer["maps"][0].update(displayname=name, maptype=map_type)
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(answer))
+    (on_device,) = win.sections["maps"].groups
+    row = on_device.rows[-1]
+    assert (row.get_title(), row.get_subtitle()) == (name, subtitle)
