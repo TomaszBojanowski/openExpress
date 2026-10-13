@@ -303,6 +303,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.update_state: str | None = None  # None = unknown, "current", "available"
         self.update_count = 0
         self._update_check_session = None
+        # None = unknown, "none" (no maps for the device), "empty" (none installed),
+        # "current", "available", "failed"
+        self.map_state: str | None = None
+        self.map_update_count = 0
+        self._map_check_session = None
         self._action_buttons: list[Gtk.Widget] = []
         self._retry_sources: dict[str, int] = {}
         self._refresh_pending = False
@@ -727,6 +732,7 @@ class MainWindow(Adw.ApplicationWindow):
     def show_device(self) -> None:
         self.maps_cache = self.updates_cache = self.apps_cache = None
         self.update_state = None
+        self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False
             sec.clear()
@@ -885,6 +891,13 @@ class MainWindow(Adw.ApplicationWindow):
         self._render_update_state()
         if self.update_state is None:
             self._check_updates_quietly()
+        self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), activatable=True)
+        self.map_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        self.map_row.connect("activated", lambda *_a: self.select_section("maps"))
+        g.add(self.map_row)
+        self._render_map_state()
+        if self.map_state is None:
+            self._check_maps_quietly()
 
         if s.logged_in:
             g = sec.group(_("Garmin Connect account"))
@@ -1080,6 +1093,71 @@ class MainWindow(Adw.ApplicationWindow):
             self._render_update_state()
 
         self.in_background(work, done, failed)
+
+    def _render_map_state(self) -> None:
+        """Shows self.map_state in the overview (the "Maps" row)."""
+        if self.session is None or not hasattr(self, "map_row"):
+            return
+        from openexpress import maps as mp
+
+        if self.map_state == "available":
+            text = ngettext("{count} update available", "{count} updates available",
+                            self.map_update_count).format(count=self.map_update_count)
+        elif self.map_state == "current":
+            text = _("All installed maps are up to date.")
+        elif self.map_state == "empty":
+            text = _("No maps are installed.")
+        elif self.map_state == "none":
+            text = mp.no_maps_message()
+        elif self.map_state == "failed":
+            text = _("Could not check for updates")
+        else:
+            text = _("Checking…")
+        self.map_row.set_subtitle(text)
+
+    def _set_map_state(self, result) -> None:
+        """From an answer of the map check: the maps read, and how many the server listed.
+        Also called by the Maps page, whose answer is the newer one."""
+        all_maps, listed = result
+        self._map_check_session = None  # a quiet check that is still running is out of date
+        self.map_update_count = sum(1 for m in all_maps if m.update_available)
+        if not listed:
+            self.map_state = "none"
+        elif self.map_update_count:
+            self.map_state = "available"
+        elif any(m.installed for m in all_maps):
+            self.map_state = "current"
+        else:
+            self.map_state = "empty"
+        self._render_map_state()
+
+    def _check_maps_quietly(self) -> None:
+        """Ask Garmin's server once for the maps of the device that was just opened, for the
+        "Maps" row only: the Maps page asks for itself. Nothing is written anywhere."""
+        from openexpress import maps as mp
+
+        s = self.session
+        if s is None or self._map_check_session is s:
+            return  # no device, or a check for this device is already running
+        self._map_check_session = s
+
+        def done(result):
+            if self._map_check_session is not s:
+                return  # another device, or the Maps page has a newer answer
+            if self.session is s:
+                self._set_map_state(result)
+            self._map_check_session = None
+
+        def failed(_e):
+            if self._map_check_session is not s:
+                return
+            self._map_check_session = None
+            if self.session is s and self.map_state is None:
+                self.map_state = "failed"
+                self._render_map_state()
+
+        self.in_background(lambda: mp.read_maps(s.client.universal_maps(s.device.raw)),
+                           done, failed)
 
     def _show_last_sync(self) -> None:
         if (not hasattr(self, "last_sync_row") or self.session is None
@@ -1493,6 +1571,7 @@ class MainWindow(Adw.ApplicationWindow):
             return
         all_maps, listed = result  # the maps read, and how many the server listed
         self.maps_cache = all_maps
+        self._set_map_state(result)  # the "Maps" row of the device page
         sec = self.sections["maps"]
         if not listed:
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,

@@ -332,7 +332,8 @@ def _maps_window(storage):
         session=types.SimpleNamespace(storage=storage), sections={"maps": Section()},
         busy=False, _action_buttons=[], confirm_map=lambda m: None,
         confirm_remove=lambda m: None, _search_filter=lambda search, rows: None,
-        load_section=lambda key, force=False: reloads.append((key, force)))
+        load_section=lambda key, force=False: reloads.append((key, force)),
+        _set_map_state=lambda result: None)
     win._button = types.MethodType(MainWindow._button, win)
     win._trash = types.MethodType(MainWindow._trash, win)
     win._map_subtitle = MainWindow._map_subtitle
@@ -438,3 +439,151 @@ def test_maps_remove_still_lists_and_removes_a_map_that_can_be_removed(
     # The file shared with another map stays.
     assert [name for name, _size in device_files(device_root) if name.startswith("Garmin/")] == [
         "Garmin/DEM.img"]
+
+
+# --- the "Maps" row of the device page ------------------------------------------------------
+
+
+def map_answer(server, installed_updates=0, installed_current=0, available=0):
+    """An answer of the map check with this many maps of each kind."""
+    one = maps_response(server)["maps"][0]
+    out = []
+    for kind, count in (("update", installed_updates), ("current", installed_current),
+                        ("new", available)):
+        for n in range(count):
+            m = json.loads(json.dumps(one))
+            m.update(displayname=f"{kind} {n}", installationstate=0 if kind == "new" else 1,
+                     isreinstall=kind == "current")
+            out.append(m)
+    return {"maps": out}
+
+
+class Row:
+    subtitle = None
+
+    def set_subtitle(self, text):
+        self.subtitle = text
+
+
+def _overview_window(answers, device_root=None):
+    """A window with the "Maps" row; the server gives `answers` in turn (an exception is
+    raised). Background work runs at once unless `later` collects it."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    asked, later = [], []
+
+    def universal_maps(raw):
+        asked.append(raw)
+        answer = answers[len(asked) - 1]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    def in_background(work, done, failed):
+        def run():
+            try:
+                result = work()
+            except Exception as e:  # noqa: BLE001 - like the window: any failure of the check
+                failed(e)
+            else:
+                done(result)
+        (later.append(run) if win.hold else run())
+
+    session = types.SimpleNamespace(
+        client=types.SimpleNamespace(universal_maps=universal_maps),
+        device=types.SimpleNamespace(raw=b"xml"),
+        storage=LocalStorage(device_root) if device_root else None)
+    win = types.SimpleNamespace(session=session, map_state=None, map_update_count=0,
+                                _map_check_session=None, map_row=Row(), hold=False,
+                                in_background=in_background)
+    for name in ("_render_map_state", "_set_map_state", "_check_maps_quietly"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win, asked, later
+
+
+@pytest.mark.parametrize("counts,state,text", [
+    ((1, 2, 3), "available", "1 update available"),
+    ((2, 0, 0), "available", "2 updates available"),
+    ((5, 1, 0), "available", "5 updates available"),
+    ((0, 2, 3), "current", "All installed maps are up to date."),
+    ((0, 0, 3), "empty", "No maps are installed."),
+])
+def test_maps_row_says_what_the_check_found(counts, state, text, server):
+    win, asked, _later = _overview_window([map_answer(server, *counts)])
+    assert win.map_row.subtitle is None
+    win._render_map_state()
+    assert win.map_row.subtitle == "Checking…"
+    win._check_maps_quietly()
+    assert (win.map_state, win.map_row.subtitle) == (state, text)
+    assert asked == [b"xml"] and win._map_check_session is None  # one request
+
+
+def test_maps_row_for_a_device_without_maps():
+    win, _asked, _later = _overview_window([lower_keys(NO_MAPS)])
+    win._check_maps_quietly()
+    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_TEXT)
+
+
+@pytest.mark.parametrize("answer", [ApiError("Map check: HTTP 500", 500),
+                                    requests.ConnectionError("down"), {}])
+def test_maps_row_when_the_check_fails(answer):
+    win, _asked, _later = _overview_window([answer])
+    win._check_maps_quietly()
+    assert (win.map_state, win.map_row.subtitle) == ("failed", "Could not check for updates")
+    assert win._map_check_session is None
+
+
+def test_maps_row_asks_once_while_a_check_runs(server):
+    win, asked, later = _overview_window([map_answer(server, 1)])
+    win.hold = True
+    win._check_maps_quietly()
+    win._check_maps_quietly()  # the device page is drawn again meanwhile
+    assert len(later) == 1 and asked == []
+    later.pop()()
+    assert asked == [b"xml"] and win.map_state == "available"
+
+
+def test_maps_row_drops_the_answer_for_another_device(server):
+    import types
+
+    win, _asked, later = _overview_window([map_answer(server, 1)])
+    win.hold = True
+    win._check_maps_quietly()
+    win.session = types.SimpleNamespace()  # the device was replaced meanwhile
+    later.pop()()
+    assert win.map_state is None and win.map_row.subtitle is None
+
+
+def test_maps_page_updates_the_row_of_the_device_page(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    # The quiet check found one update; the Maps page asks later and finds none.
+    win, asked, _later = _overview_window([map_answer(server, 1, 1)], device_root)
+    win._check_maps_quietly()
+    assert win.map_row.subtitle == "1 update available"
+    page, _reloads = _maps_window(LocalStorage(device_root))
+    page._set_map_state = win._set_map_state
+    MainWindow.show_maps(page, maps.read_maps(map_answer(server, 0, 2)))
+    assert (win.map_state, win.map_row.subtitle) == (
+        "current", "All installed maps are up to date.")
+    assert asked == [b"xml"]  # the row itself asked only once
+
+
+def test_maps_page_answer_wins_over_a_quiet_check_that_ends_later(server, device_root):
+    win, _asked, later = _overview_window([map_answer(server, 3)], device_root)
+    win.hold = True
+    win._check_maps_quietly()  # still running …
+    win._set_map_state(maps.read_maps(lower_keys(NO_MAPS)))  # … when the Maps page answers
+    later.pop()()
+    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_TEXT)
+
+
+def test_a_failed_quiet_check_does_not_hide_what_the_maps_page_found(server):
+    win, _asked, later = _overview_window([ApiError("Map check: HTTP 500", 500)])
+    win.hold = True
+    win._check_maps_quietly()
+    win._set_map_state(maps.read_maps(map_answer(server, 0, 1)))
+    later.pop()()
+    assert win.map_state == "current"
