@@ -1666,20 +1666,23 @@ class MainWindow(Adw.ApplicationWindow):
         elif not overview.maps:
             g.add(Adw.ActionRow(title=_("No maps of your own on the device")))
         for m in overview.maps:
-            removable = m.filename in overview.removable
+            ours, foreign = m.filename in overview.removable, m.filename in overview.foreign
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.title or m.filename),
                                 subtitle=GLib.markup_escape_text(
-                                    self._own_map_subtitle(m, removable)))
-            if removable:
-                row.add_suffix(self._trash(_("Remove {name}").format(name=m.filename),
-                                           lambda m=m: self.confirm_remove_own(m)))
+                                    self._own_map_subtitle(m, ours, foreign)))
+            if ours or foreign:
+                row.add_suffix(self._trash(
+                    _("Remove {name}").format(name=m.filename),
+                    lambda m=m, foreign=foreign: self.confirm_remove_own(m, foreign)))
             g.add(row)
 
     @staticmethod
-    def _own_map_subtitle(m, removable: bool) -> str:
+    def _own_map_subtitle(m, ours: bool, foreign: bool) -> str:
         parts = [m.filename, _human(m.size)]
-        if not removable:
-            parts.append(_("not copied by this installation; remove it in the file manager"))
+        if foreign:
+            parts.append(_("not copied by this installation"))
+        elif not ours:  # not a map by its header: it has no remove button
+            parts.append(_("not recognised as a map; remove it in the file manager"))
         return " · ".join(parts)
 
     def _ask(self, heading: str, body: str, label: str, on_ok, destructive: bool = False) -> None:
@@ -1766,16 +1769,27 @@ class MainWindow(Adw.ApplicationWindow):
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
                       confirm, refused)
 
-    def confirm_remove_own(self, m) -> None:
+    def confirm_remove_own(self, m, foreign: bool = False) -> None:
+        """`foreign`: a map this installation did not copy; asked about more strongly, and
+        checked in ownmaps.py against what this page showed (`m`)."""
         from openexpress import ownmaps
 
         s = self.session
         garmin_maps = self.maps_cache or []
 
         def work():
-            plan = ownmaps.plan_remove(s.device, s.storage, garmin_maps, m.filename)
+            if foreign:
+                plan = ownmaps.plan_remove_foreign(s.device, s.storage, garmin_maps, m)
+            else:
+                plan = ownmaps.plan_remove(s.device, s.storage, garmin_maps, m.filename)
             ownmaps.remove(plan, s.device, s.storage)
             return plan
+
+        def refused(e):
+            shown = self._own_map_refused(e, _("Cannot remove the map"))
+            if shown and foreign:
+                self.load_section("maps", force=True)  # the page is out of date
+            return shown
 
         def removed(plan):
             if plan.on_device:
@@ -1786,13 +1800,16 @@ class MainWindow(Adw.ApplicationWindow):
                              "device.").format(name=plan.name))
             self.load_section("maps", force=True)
 
-        self._ask(_("Remove {name}?").format(name=m.title or m.filename),
-                  _("{path} ({size}) will be removed from the device.").format(
-                      path=m.path, size=_human(m.size)),
-                  _("Remove"),
+        body = _("{path} ({size}) will be removed from the device.").format(
+            path=m.path, size=_human(m.size))
+        if foreign:
+            body = _("openExpress did not copy this map to the device. Remove it anyway?"
+                     ) + "\n\n" + body
+        self._ask(_("Remove {name}?").format(name=m.title or m.filename), body,
+                  _("Remove Anyway") if foreign else _("Remove"),
                   lambda: self.run_task(
                       _("Removing {name}…").format(name=m.title or m.filename), work, removed,
-                      lambda e: self._own_map_refused(e, _("Cannot remove the map"))),
+                      refused),
                   destructive=True)
 
     @staticmethod

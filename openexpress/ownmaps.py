@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -69,6 +69,10 @@ class Overview:
     maps: list[OwnMap]
     removable: set[str]  # file names this installation copied: they can be removed
     unreadable: bool = False  # the folder could not be listed
+    # Maps by their header that this installation did not copy (by hand, or by another
+    # installation): they can be removed after a stronger question. A file without the
+    # header of a map is in neither set: nobody knows what it is.
+    foreign: set[str] = field(default_factory=set)
 
 
 def read_title(data: bytes) -> str | None:
@@ -154,7 +158,9 @@ def overview(device: GarminDevice, storage: Storage, garmin_maps: list) -> Overv
         log.info("own maps: the map folder could not be read (%s)", type(e).__name__)
         return Overview(folder, [], set(), unreadable=True)
     ours = {str(m.get("filename", "")).casefold() for m in recorded(device)}
-    return Overview(folder, maps, {m.filename for m in maps if m.filename.casefold() in ours})
+    removable = {m.filename for m in maps if m.filename.casefold() in ours}
+    foreign = {m.filename for m in maps if m.filename not in removable and m.title is not None}
+    return Overview(folder, maps, removable, foreign=foreign)
 
 
 # --- copying a map of the user's to the device ------------------------------------------------
@@ -317,6 +323,9 @@ class RemovePlan:
     size: int
     free: int | None  # on the device, before
     on_device: bool  # False: only the note on the list is left
+    # False for a map this installation did not copy: nothing is on the list for it, and
+    # instead of the size that was written, what the page showed is checked (`title`, `size`).
+    listed: bool = True
 
 
 def _size_differs_text(name: str, actual: int | None, expected: int) -> str:
@@ -359,9 +368,53 @@ def plan_remove(device: GarminDevice, storage: Storage, garmin_maps: list,
     return RemovePlan(filename, real, title, size, storage.free_space(), on_device=True)
 
 
+def _still_there_text(path: str) -> str:
+    return _("{path} is still on the device.").format(path=path)
+
+
+def _check_as_shown(storage: Storage, path: str, name: str, size: int, title: str) -> None:
+    """A map that is not on the list is only removed while it is the file the page showed:
+    the same size, and still a map with the same name inside."""
+    if storage.resolve(path) is None:
+        raise MapError(_("{name} is no longer on the device.").format(name=name))
+    if (storage.size(path) != size
+            or read_title(storage.read_start(path, HEADER_SIZE)) != title):
+        raise MapError(_("{name} has changed since the list was shown (another size or "
+                         "another map name inside), so it is not removed.").format(name=name))
+
+
+def plan_remove_foreign(device: GarminDevice, storage: Storage, garmin_maps: list,
+                        shown: OwnMap) -> RemovePlan:
+    """The plan for removing a map this installation did not copy, as the page showed it
+    (`shown`). Nothing is deleted. Never one of Garmin's files, and only a file that is a map
+    by its header and has not changed since it was shown."""
+    applog.hide(shown.filename, "file")
+    applog.hide(shown.title, "map")
+    folder = device_map_dir(device, storage)
+    if folder is None:
+        raise MapError(_("This device has no folder for maps."))
+    path = f"{folder}/{shown.filename}"
+    if is_garmin_name(shown.filename) or path.casefold() in garmin_paths(garmin_maps):
+        raise MapError(_("{name} is named like one of Garmin's own maps, so it is not removed.")
+                       .format(name=shown.filename))
+    if shown.title is None:  # not a map by its header: nobody knows what it is
+        raise MapError(_("{file} is not a Garmin map file (.img).").format(file=shown.filename))
+    _check_as_shown(storage, path, shown.filename, shown.size, shown.title)
+    return RemovePlan(shown.filename, storage.resolve(path) or path, shown.title, shown.size,
+                      storage.free_space(), on_device=True, listed=False)
+
+
 def remove(plan: RemovePlan, device: GarminDevice, storage: Storage) -> None:
     """Delete the file, make sure it is gone, and only then take it off the list. A plan for
-    a file that is no longer on the device only takes the note off the list."""
+    a file that is no longer on the device only takes the note off the list. A map that is
+    not on the list is checked once more against what the page showed, right before."""
+    if not plan.listed:
+        _check_as_shown(storage, plan.path, plan.name, plan.size, plan.title)
+        storage.delete(plan.path)
+        if storage.resolve(plan.path) is not None:
+            raise MapError(_still_there_text(plan.path))
+        log.info("own map removed (not on the list): %s", applog.size(plan.size))  # no names
+        return  # nothing on the list to take off
     if plan.on_device:
         if storage.resolve(plan.path) is not None:
             actual = storage.size(plan.path)

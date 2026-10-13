@@ -798,7 +798,8 @@ def test_remove_own_in_polish(added, capsys):
 # --- the Maps page of the window ------------------------------------------------------------------
 
 WINDOW_HINT = "Rename the file on your computer and add it again."
-NOT_OURS_NOTE = "not copied by this installation; remove it in the file manager"
+NOT_OURS_NOTE = "not copied by this installation"
+NOT_A_MAP_NOTE = "not recognised as a map; remove it in the file manager"
 
 
 def numbered(dev, unit_id):
@@ -916,25 +917,30 @@ def rows_of(group):
     return found
 
 
-def view_of(*own, removable=(), folder="Garmin", unreadable=False):
+def view_of(*own, removable=(), foreign=(), folder="Garmin", unreadable=False):
     maps = [ownmaps.OwnMap(name, size, title, f"Garmin/{name}") for name, size, title in own]
-    return ownmaps.Overview(folder, maps, set(removable), unreadable)
+    return ownmaps.Overview(folder, maps, set(removable), unreadable, set(foreign))
 
 
 def test_own_maps_group_shows_names_sizes_and_who_copied_them():
     win, section = own_maps_window()
     win.session = types.SimpleNamespace()
     win.show_own_maps(view_of(("ours.img", 51_001_344, "Sometown <cyclemap>"),
-                              ("by-hand.img", 2000, None), removable=["ours.img"]))
+                              ("by-hand.img", 2000, "Copied by hand"),
+                              ("what.img", 9, None),
+                              removable=["ours.img"], foreign=["by-hand.img"]))
     (group,) = section.groups
     assert group.get_title() == "Own maps"
     assert group.get_description().startswith("Maps that are not from Garmin")
     assert rows_of(group) == [
-        ("Sometown &lt;cyclemap&gt;", "ours.img · 51.0 MB", True),      # ours: a remove button
-        ("by-hand.img", f"by-hand.img · 2.0 kB · {NOT_OURS_NOTE}", False),  # not ours: none
+        ("Sometown &lt;cyclemap&gt;", "ours.img · 51.0 MB", True),  # ours: a remove button
+        # A map someone else copied: a button too (the question is stronger).
+        ("Copied by hand", f"by-hand.img · 2.0 kB · {NOT_OURS_NOTE}", True),
+        # Not a map by its header: nobody knows what it is, so no button.
+        ("what.img", f"what.img · 9 B · {NOT_A_MAP_NOTE}", False),
     ]
     labels = sorted(b.get_label() or b.get_tooltip_text() for b in win._action_buttons)
-    assert labels == ["Add Map…", "Remove ours.img"]
+    assert labels == ["Add Map…", "Remove by-hand.img", "Remove ours.img"]
 
 
 @pytest.mark.parametrize("view, rows", [
@@ -1147,7 +1153,7 @@ def test_own_maps_in_the_window_in_polish(window_device, my_map):
         i18n.setup("en")
     (group,) = win.sections["maps"].groups
     assert group.get_title() == "Własne mapy"
-    note = "nieskopiowana przez tę instalację; usuń ją w menedżerze plików"
+    note = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"  # it has no header
     assert rows_of(group) == [("by-hand.img", f"by-hand.img · 2,0 kB · {note}", False)]
     refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
                "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
@@ -1276,3 +1282,217 @@ def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
     assert win.shown[-1][:2] == ("error", "Nie można usunąć mapy")
     assert not any(title in ("Own maps", "Własne mapy") for _kind, title, *_r in win.shown
                    if _kind == "error")
+
+
+# --- removing a map that this installation did not copy ------------------------------------------
+
+ANYWAY = "openExpress did not copy this map to the device. Remove it anyway?"
+CHANGED = ("{} has changed since the list was shown (another size or another map name inside), "
+           "so it is not removed.")
+
+
+def shown_on_the_page(win, name):
+    """The row of `name` as the Maps page would show it now."""
+    view = ownmaps.overview(win.session.device, win.session.storage, win.maps_cache)
+    (own,) = [m for m in view.maps if m.filename == name]
+    return own, view
+
+
+def test_overview_tells_ours_from_foreign_maps_and_from_other_files(map_folder, my_map, xdg):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000009)
+    ownmaps.add(ownmaps.plan_add(dev, st, [], my_map, "ours.img"), dev, st)
+    view = ownmaps.overview(dev, st, [garmin_map("Garmin/Listed.img", remove=["Garmin/Old.img"])])
+    assert view.removable == {"ours.img"}
+    assert view.foreign == {"osm-test.img"}  # a map by its header, copied by hand
+    # "broken.img" has no header of a map: in neither set.
+    assert [m.filename for m in view.maps] == ["broken.img", "osm-test.img", "ours.img"]
+
+
+def test_window_asks_more_strongly_before_removing_a_foreign_map(window_device):
+    win, dev, root = window_device
+    own, view = shown_on_the_page(win, "osm-test.img")
+    assert "osm-test.img" in view.foreign
+    win.confirm_remove_own(own, foreign=True)
+    assert win.shown == [
+        ("ask", "Remove Sometown cyclemap?",
+         f"{ANYWAY}\n\nGarmin/osm-test.img (1.5 kB) will be removed from the device.",
+         "Remove Anyway", True),
+        ("task", "Removing Sometown cyclemap…"),
+        ("toast", "Removed Garmin/osm-test.img (1.5 kB)."),
+    ]
+    assert not (root / "Garmin" / "osm-test.img").exists()
+    assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]
+
+
+def test_the_question_for_a_map_of_ours_stays_as_it_was(window_device, my_map):
+    win, dev, _root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    own, view = shown_on_the_page(win, "ours.img")
+    assert "ours.img" in view.removable and "ours.img" not in view.foreign
+    win.answer = "cancel"
+    win.confirm_remove_own(own)
+    (asked,) = win.shown
+    assert asked[2] == "Garmin/ours.img (2.0 kB) will be removed from the device."
+    assert asked[3:] == ("Remove", True) and ANYWAY not in asked[2]
+
+
+def test_removing_a_foreign_map_leaves_the_list_of_ours_alone(window_device, my_map):
+    win, dev, root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    own, _view = shown_on_the_page(win, "osm-test.img")
+    win.confirm_remove_own(own, foreign=True)
+    assert [m["filename"] for m in ownmaps.recorded(dev)] == ["ours.img"]
+    assert (root / "Garmin" / "ours.img").exists()
+
+
+def test_cancelling_keeps_the_foreign_map(window_device):
+    win, _dev, root = window_device
+    own, _view = shown_on_the_page(win, "osm-test.img")
+    win.answer = "cancel"
+    win.confirm_remove_own(own, foreign=True)
+    assert [kind for kind, *_r in win.shown] == ["ask"]
+    assert (root / "Garmin" / "osm-test.img").exists() and win.reloads == []
+
+
+@pytest.mark.parametrize("now_on_the_device", [
+    img_header(b"Sometown cyclemap") + b"\0" * 2000,  # another size
+    img_header(b"Othertown cyclemap") + b"\0" * 1000,  # the same size, another map inside
+    b"\x00" * 1512,                                    # the same size, no longer a map
+])
+def test_a_foreign_map_that_changed_since_it_was_shown_is_not_removed(window_device,
+                                                                      now_on_the_device):
+    win, _dev, root = window_device
+    own, _view = shown_on_the_page(win, "osm-test.img")
+    (root / "Garmin" / "osm-test.img").write_bytes(now_on_the_device)
+    win.confirm_remove_own(own, foreign=True)
+    assert win.shown[-1] == ("error", "Cannot remove the map", CHANGED.format("osm-test.img"))
+    assert (root / "Garmin" / "osm-test.img").read_bytes() == now_on_the_device
+    assert win.reloads == [("maps", True)]  # the page is drawn again: it was out of date
+
+
+def test_a_foreign_map_that_is_gone_is_only_reported(window_device):
+    win, _dev, root = window_device
+    own, _view = shown_on_the_page(win, "osm-test.img")
+    (root / "Garmin" / "osm-test.img").unlink()
+    win.confirm_remove_own(own, foreign=True)
+    assert win.shown[-1] == ("error", "Cannot remove the map",
+                             "osm-test.img is no longer on the device.")
+    assert win.reloads == [("maps", True)]
+
+
+def test_a_change_between_the_plan_and_the_removal_is_caught(map_folder, xdg):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000010)
+    (own,) = [m for m in ownmaps.list_own(dev, st, []) if m.filename == "osm-test.img"]
+    plan = ownmaps.plan_remove_foreign(dev, st, [], own)
+    assert not plan.listed and plan.on_device
+    replaced = img_header(b"Othertown cyclemap") + b"\0" * 1000
+    (map_folder / "Garmin" / "osm-test.img").write_bytes(replaced)  # after the plan
+    with pytest.raises(ownmaps.MapError) as error:
+        ownmaps.remove(plan, dev, st)
+    assert str(error.value) == CHANGED.format("osm-test.img")
+    assert (map_folder / "Garmin" / "osm-test.img").read_bytes() == replaced
+
+
+@pytest.mark.parametrize("name, listed", [
+    ("D1234567A.img", []), ("gmaptz.img", []),
+    ("Listed.img", [("Garmin/Listed.img",)]), ("Old.img", [("Garmin/other.img", "Garmin/Old.img")]),
+])
+def test_a_file_of_garmins_is_never_removed_this_way(map_folder, xdg, name, listed):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000011)
+    garmin = [garmin_map(files[0], remove=list(files[1:])) for files in listed]
+    data = (map_folder / "Garmin" / name).read_bytes()
+    shown = ownmaps.OwnMap(name, len(data), ownmaps.read_title(data), f"Garmin/{name}")
+    with pytest.raises(ownmaps.MapError) as error:
+        ownmaps.plan_remove_foreign(dev, st, garmin, shown)
+    assert str(error.value) == f"{name} is named like one of Garmin's own maps, so it is not removed."
+    assert (map_folder / "Garmin" / name).read_bytes() == data
+
+
+def test_a_file_that_is_not_a_map_is_never_removed_this_way(map_folder, xdg):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000012)
+    shown = ownmaps.OwnMap("broken.img", 9, None, "Garmin/broken.img")
+    with pytest.raises(ownmaps.MapError) as error:
+        ownmaps.plan_remove_foreign(dev, st, [], shown)
+    assert "is not a Garmin map file" in str(error.value)
+    assert (map_folder / "Garmin" / "broken.img").exists()
+
+
+@pytest.mark.parametrize("refuse, message", [
+    (False, "Garmin/osm-test.img is still on the device."),
+    (True, "Cannot delete: refused"),
+])
+def test_a_foreign_map_the_device_does_not_delete_stays(map_folder, xdg, refuse, message):
+    KeepsFiles.refuse = refuse
+    st, dev = KeepsFiles(map_folder), numbered(device(), 4000000013)
+    (own,) = [m for m in ownmaps.list_own(dev, st, []) if m.filename == "osm-test.img"]
+    plan = ownmaps.plan_remove_foreign(dev, st, [], own)
+    with pytest.raises((ownmaps.MapError, DeviceError)) as error:
+        ownmaps.remove(plan, dev, st)
+    assert str(error.value) == message
+    assert (map_folder / "Garmin" / "osm-test.img").exists()
+
+
+def test_cli_still_refuses_a_map_this_installation_did_not_copy(added, capsys):
+    (added / "GARMIN" / "by-hand.img").write_bytes(img_header(b"Copied in the file manager"))
+    remove_refused(capsys, added, "by-hand.img", NOT_OURS.format("by-hand.img"))
+
+
+def test_removing_a_foreign_map_logs_only_the_size(window_device, log_file):
+    from openexpress import applog
+
+    win, _dev, _root = window_device
+    applog.setup("gui")
+    own, _view = shown_on_the_page(win, "osm-test.img")
+    win.confirm_remove_own(own, foreign=True)
+    log = log_file.read_text(encoding="utf-8")
+    assert "own map removed (not on the list): 1_512 B" in log
+    for private in ("osm-test", "Sometown"):
+        assert private not in log
+
+
+def test_foreign_map_rows_do_not_keep_themselves_alive():
+    import gc
+    import weakref
+
+    from openexpress.gui.app import still_in_window
+
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace()
+    gc.collect()
+    gc.disable()
+    try:
+        win.show_own_maps(view_of(("by-hand.img", 2000, "By hand"), foreign=["by-hand.img"]))
+        (group,) = section.groups
+        alive = [weakref.ref(group)] + [weakref.ref(b) for b in win._action_buttons]
+        assert len(alive) == 3  # the group, "Add Map…" and the remove button
+        section.clear()
+        win._action_buttons = still_in_window(win._action_buttons)
+        del group
+        assert [ref() for ref in alive] == [None, None, None]
+    finally:
+        gc.enable()
+
+
+def test_foreign_maps_in_the_window_in_polish(window_device):
+    from openexpress import i18n
+
+    win, _dev, _root = window_device
+    own, view = shown_on_the_page(win, "osm-test.img")
+    win.answer = "cancel"
+    i18n.setup("pl")
+    try:
+        win.show_own_maps(view)
+        win.confirm_remove_own(own, foreign=True)
+    finally:
+        i18n.setup("en")
+    rows = rows_of(win.sections["maps"].groups[0])
+    assert ("Sometown cyclemap", "osm-test.img · 1,5 kB · nieskopiowana przez tę instalację",
+            True) in rows
+    unknown = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"
+    assert ("broken.img", f"broken.img · 9 B · {unknown}", False) in rows
+    asked = win.shown[-1]
+    assert asked[0] == "ask" and asked[2].startswith(
+        "Tej mapy nie wgrał openExpress. Usunąć ją mimo to?\n\n")
+    assert asked[3:] == ("Usuń mimo to", True)
