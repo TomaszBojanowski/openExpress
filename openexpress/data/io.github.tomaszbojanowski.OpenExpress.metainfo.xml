@@ -93,6 +93,18 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.6" date="2026-10-14">
+      <description>
+        <ul>
+          <li>Flatpak: the progress bar now moves while a file is copied to the device (maps,
+          maps of your own, music). Until now it stood still and jumped to the end.</li>
+          <li>Software updates: a progress bar while an update file is copied to the device,
+          in the window and on the command line.</li>
+          <li>The project is now described as beta, the README says what is stored on the
+          computer after signing in, and the screenshots are new.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.5" date="2026-10-13">
       <description>
         <ul>
