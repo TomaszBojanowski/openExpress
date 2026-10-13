@@ -1729,8 +1729,8 @@ class MainWindow(Adw.ApplicationWindow):
                  _("{file} ({size}) will be written to {path}").format(
                      file=plan.local.name, size=_human(plan.size), path=plan.path)]
         if plan.free is not None:
-            lines.append(_("Free space on the device: {before} now, {after} after").format(
-                before=_human(plan.free), after=_human(plan.free - plan.size)))
+            lines.append(_("Free space on the device: {free} (the map takes {size})").format(
+                free=_human(plan.free), size=_human(plan.size)))
         return "\n".join(lines)
 
     def add_own_map(self, path) -> None:

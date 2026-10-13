@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.4.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 22:14+0200\n"
+"POT-Creation-Date: 2026-10-13 22:25+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -848,9 +848,9 @@ msgstr ""
 msgid "{file} ({size}) will be written to {path}"
 msgstr ""
 
-#: openexpress/cli.py:693 openexpress/cli.py:721 openexpress/gui/app.py:1732
+#: openexpress/cli.py:693 openexpress/gui/app.py:1732
 #, python-brace-format
-msgid "Free space on the device: {before} now, {after} after"
+msgid "Free space on the device: {free} (the map takes {size})"
 msgstr ""
 
 #: openexpress/cli.py:696 openexpress/cli.py:724 openexpress/cli.py:791
@@ -881,6 +881,11 @@ msgstr ""
 #: openexpress/cli.py:718
 #, python-brace-format
 msgid "Removing own map: {title}"
+msgstr ""
+
+#: openexpress/cli.py:721
+#, python-brace-format
+msgid "Free space on the device: {free} (removing it frees {size})"
 msgstr ""
 
 #: openexpress/cli.py:727 openexpress/gui/app.py:1771
@@ -3411,7 +3416,7 @@ msgid ""
 "Map '{name}' cannot be installed: the server did not provide all of its files"
 msgstr ""
 
-#: openexpress/maps.py:228 openexpress/music.py:273 openexpress/ownmaps.py:221
+#: openexpress/maps.py:228 openexpress/music.py:273 openexpress/ownmaps.py:230
 #: openexpress/updates.py:230
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
@@ -3479,7 +3484,7 @@ msgstr ""
 msgid "This device does not play music, podcasts or audiobooks."
 msgstr ""
 
-#: openexpress/music.py:156 openexpress/ownmaps.py:185
+#: openexpress/music.py:156 openexpress/ownmaps.py:194
 #, python-brace-format
 msgid "Not found: {path}"
 msgstr ""
@@ -3534,62 +3539,62 @@ msgstr ""
 msgid "Choose another one with --name."
 msgstr ""
 
-#: openexpress/ownmaps.py:188
+#: openexpress/ownmaps.py:197
 #, python-brace-format
 msgid "{file} is not a Garmin map file (.img)."
 msgstr ""
 
-#: openexpress/ownmaps.py:192
+#: openexpress/ownmaps.py:201
 #, python-brace-format
 msgid ""
 "The name {name} cannot be used: only letters, digits, spaces and . _ - ( ) "
 "are allowed, and it must end with .img."
 msgstr ""
 
-#: openexpress/ownmaps.py:199
+#: openexpress/ownmaps.py:208
 #, python-brace-format
 msgid "A file named {name} is already on the device; nothing is overwritten."
 msgstr ""
 
-#: openexpress/ownmaps.py:210 openexpress/ownmaps.py:327
+#: openexpress/ownmaps.py:219 openexpress/ownmaps.py:336
 msgid "This device has no folder for maps."
 msgstr ""
 
-#: openexpress/ownmaps.py:215
+#: openexpress/ownmaps.py:224
 #, python-brace-format
 msgid "The name {name} is reserved for Garmin's own maps."
 msgstr ""
 
-#: openexpress/ownmaps.py:236
+#: openexpress/ownmaps.py:245
 #, python-brace-format
 msgid "the file on the device has {actual} instead of {expected}"
 msgstr ""
 
-#: openexpress/ownmaps.py:251
+#: openexpress/ownmaps.py:260
 #, python-brace-format
 msgid "Writing {path} failed."
 msgstr ""
 
-#: openexpress/ownmaps.py:255
+#: openexpress/ownmaps.py:264
 #, python-brace-format
 msgid ""
 "Writing {path} failed and the incomplete file could not be removed; delete "
 "{path} from the device yourself."
 msgstr ""
 
-#: openexpress/ownmaps.py:257
+#: openexpress/ownmaps.py:266
 #, python-brace-format
 msgid "Writing {path} failed; the incomplete file was removed from the device."
 msgstr ""
 
-#: openexpress/ownmaps.py:314
+#: openexpress/ownmaps.py:323
 #, python-brace-format
 msgid ""
 "{name} on the device has {actual}, but the map that was copied had "
 "{expected}: it is not the same file, so it is not removed."
 msgstr ""
 
-#: openexpress/ownmaps.py:332
+#: openexpress/ownmaps.py:341
 #, python-brace-format
 msgid ""
 "{name} was not copied to the device by this installation of openExpress (it "
@@ -3597,12 +3602,12 @@ msgid ""
 "removed. Delete it in the file manager if you want it gone."
 msgstr ""
 
-#: openexpress/ownmaps.py:342
+#: openexpress/ownmaps.py:351
 #, python-brace-format
 msgid "{name} is named like one of Garmin's own maps, so it is not removed."
 msgstr ""
 
-#: openexpress/ownmaps.py:363
+#: openexpress/ownmaps.py:372
 #, python-brace-format
 msgid "{path} is still on the device; nothing was taken off the list."
 msgstr ""

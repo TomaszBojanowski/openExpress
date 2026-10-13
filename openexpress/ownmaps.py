@@ -98,6 +98,15 @@ def map_dir(device: GarminDevice) -> str | None:
     return None
 
 
+def device_map_dir(device: GarminDevice, storage: Storage) -> str | None:
+    """The map folder as the device itself spells it ("GARMIN" where its description says
+    "Garmin"), so that every message names it the same way; None for a device without maps."""
+    folder = map_dir(device)
+    if folder is None:
+        return None
+    return storage.resolve(folder) or folder
+
+
 def garmin_paths(garmin_maps: list) -> set[str]:
     """Every file Garmin's server names for the device's maps, installed or not (casefolded):
     the files of a map and those a newer version of it removes."""
@@ -112,7 +121,7 @@ def list_own(device: GarminDevice, storage: Storage, garmin_maps: list) -> list[
     """The .img files in the map folder that Garmin's server does not list (for any map,
     installed or not) and that are not named like Garmin's files. Reads the folder and the
     first bytes of each such file; nothing is written."""
-    folder = map_dir(device)
+    folder = device_map_dir(device, storage)
     if folder is None:
         return []
     listed = garmin_paths(garmin_maps)
@@ -205,7 +214,7 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
     """Everything that is checked before a map is copied; nothing is written. Raises
     MapError with the reason when the map cannot be added."""
     name, title, size = check_local(local, name)
-    folder = map_dir(device)
+    folder = device_map_dir(device, storage)
     if folder is None:
         raise MapError(_("This device has no folder for maps."))
     path = f"{folder}/{name}"
@@ -322,7 +331,7 @@ def plan_remove(device: GarminDevice, storage: Storage, garmin_maps: list,
     that this installation copied (it is on the list in the device's state) can be removed,
     and only while its size on the device is the one that was written."""
     applog.hide(name, "file")
-    folder = map_dir(device)
+    folder = device_map_dir(device, storage)
     if folder is None:
         raise MapError(_("This device has no folder for maps."))
     entry = next((m for m in recorded(device)

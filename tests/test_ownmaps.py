@@ -456,8 +456,8 @@ def test_add_dry_run_says_what_would_be_written(maps_cli, my_map, monkeypatch, c
     captured = capsys.readouterr()
     assert captured.out.splitlines() == [
         "Map: Sometown cyclemap/latin1 Example.org",
-        "  osm-test.img (2.0 kB) will be written to Garmin/osm-test.img",
-        "Free space on the device: 12.4 GB now, 12.4 GB after",
+        "  osm-test.img (2.0 kB) will be written to GARMIN/osm-test.img",  # the device's spelling
+        "Free space on the device: 12.4 GB (the map takes 2.0 kB)",
         "Dry run. Add --apply.",
     ]
     assert captured.err == "" and tree(maps_cli) == before and state_of(maps_cli) == []
@@ -530,7 +530,7 @@ def test_a_failed_copy_removes_its_own_incomplete_file(maps_cli, my_map, monkeyp
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
     captured = capsys.readouterr()
     assert captured.err.splitlines()[-1] == (
-        "Error: Writing Garmin/osm-test.img failed; the incomplete file was removed from the "
+        "Error: Writing GARMIN/osm-test.img failed; the incomplete file was removed from the "
         f"device. ({reason})")
     assert "Wrote" not in captured.out
     assert tree(maps_cli) == before and state_of(maps_cli) == []
@@ -539,8 +539,8 @@ def test_a_failed_copy_removes_its_own_incomplete_file(maps_cli, my_map, monkeyp
 def test_a_failed_copy_that_cannot_be_cleaned_up_says_so(maps_cli, my_map, monkeypatch, capsys):
     failing(monkeypatch, keep_the_rest=True)
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
-    assert ("Error: Writing Garmin/osm-test.img failed and the incomplete file could not be "
-            "removed; delete Garmin/osm-test.img from the device yourself."
+    assert ("Error: Writing GARMIN/osm-test.img failed and the incomplete file could not be "
+            "removed; delete GARMIN/osm-test.img from the device yourself."
             ) in capsys.readouterr().err
     assert state_of(maps_cli) == []
 
@@ -555,7 +555,7 @@ def test_a_copy_that_left_nothing_behind(maps_cli, my_map, monkeypatch, capsys):
     monkeypatch.setattr(cli, "LocalStorage", Nothing)
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
     assert capsys.readouterr().err.splitlines()[-1] == (
-        "Error: Writing Garmin/osm-test.img failed. (Cannot write: refused)")
+        "Error: Writing GARMIN/osm-test.img failed. (Cannot write: refused)")
 
 
 def test_a_file_that_appeared_meanwhile_is_not_touched(map_folder, my_map):
@@ -607,8 +607,9 @@ def test_add_in_polish(maps_cli, my_map, capsys):
     finally:
         i18n.setup("en")
     assert out[0] == "Mapa: Sometown cyclemap/latin1 Example.org"
-    assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako Garmin/osm-test.img"
-    assert out[2].startswith("Wolne miejsce na urządzeniu: teraz ") and ", potem " in out[2]
+    assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako GARMIN/osm-test.img"
+    assert out[2].startswith("Wolne miejsce na urządzeniu: ")
+    assert out[2].endswith(" (mapa zajmie 2,0 kB)")
     assert "Plik o nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err
 
 
@@ -683,7 +684,7 @@ def test_remove_own_dry_run_says_what_would_go(added, monkeypatch, capsys):
     assert captured.out.splitlines() == [
         "Removing own map: Sometown cyclemap/latin1 Example.org",
         "  - GARMIN/osm-test.img  (2.0 kB)",
-        "Free space on the device: 12.4 GB now, 12.4 GB after",
+        "Free space on the device: 12.4 GB (removing it frees 2.0 kB)",
         "Dry run. Add --apply.",
     ]
     assert captured.err == "" and tree(added) == before and state_of(added) == listed
@@ -1015,7 +1016,7 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
         ("ask", "Copy this map to the device?",
          ("Sometown cyclemap/latin1 Example.org\n"
           "new-map.img (2.0 kB) will be written to Garmin/new-map.img\n"
-          "Free space on the device: 12.4 GB now, 12.4 GB after"), "Copy", False),
+          "Free space on the device: 12.4 GB (the map takes 2.0 kB)"), "Copy", False),
         ("task", "Copying the map…"),
         ("toast", "Wrote Garmin/new-map.img (2.0 kB)."),
     ]
@@ -1146,3 +1147,53 @@ def test_own_maps_in_the_window_in_polish(window_device, my_map):
     refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
                "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
     assert win.shown[-1] == ("error", "Własne mapy", refusal)
+
+
+# --- one spelling of the map folder, and the free space ------------------------------------------
+
+
+def test_every_message_names_the_folder_as_the_device_does(maps_cli, my_map, capsys):
+    # This made-up device calls the folder "GARMIN"; its description says "Garmin".
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map)]) == 0
+    planned = capsys.readouterr().out
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
+    written = capsys.readouterr().out
+    assert main(["--path", str(maps_cli), "maps", "remove", "--own", "osm-test.img"]) == 0
+    removing = capsys.readouterr().out
+    assert main(["--path", str(maps_cli), "maps", "remove", "--own", "osm-test.img", "--apply"]) == 0
+    removed = capsys.readouterr().out
+    for text in (planned, written, removing, removed):
+        assert "GARMIN/osm-test.img" in text and "Garmin/" not in text
+
+
+def test_own_maps_are_listed_with_the_devices_spelling_of_the_folder(tmp_path, xdg):
+    (tmp_path / "GARMIN").mkdir()
+    (tmp_path / "GARMIN" / "mine.img").write_bytes(img_header(b"Mine"))
+    st, dev = LocalStorage(tmp_path), numbered(device("Garmin"), 4000000008)
+    assert ownmaps.device_map_dir(dev, st) == "GARMIN"
+    assert [m.path for m in ownmaps.list_own(dev, st, [])] == ["GARMIN/mine.img"]
+    assert [m.path for m in ownmaps.overview(dev, st, []).maps] == ["GARMIN/mine.img"]
+    # A map of Garmin's is recognised whatever the spelling of the folder in the server's list.
+    assert ownmaps.list_own(dev, st, [garmin_map("Garmin/mine.img")]) == []
+
+
+def test_a_map_folder_that_cannot_be_found_keeps_the_described_spelling(tmp_path):
+    st = LocalStorage(tmp_path)  # no map folder on it
+    assert ownmaps.device_map_dir(device("Garmin/Maps"), st) == "Garmin/Maps"
+    assert ownmaps.device_map_dir(device(None), st) is None
+
+
+def test_free_space_is_said_once_with_what_the_map_takes(maps_cli, my_map, monkeypatch, capsys):
+    from openexpress import i18n
+
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
+    assert "Free space on the device: 12.4 GB (the map takes 2.0 kB)" in capsys.readouterr().out
+    i18n.setup("pl")
+    try:
+        assert main(["--path", str(maps_cli), "maps", "remove", "--own", "osm-test.img"]) == 0
+        out = capsys.readouterr().out
+    finally:
+        i18n.setup("en")
+    assert "Wolne miejsce na urządzeniu: 12,4 GB (usunięcie zwolni 2,0 kB)" in out
+    assert "teraz" not in out and "potem" not in out

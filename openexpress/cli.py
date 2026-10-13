@@ -690,8 +690,8 @@ def _maps_add(args, dev, st, all_maps) -> int:
     print("  " + _("{file} ({size}) will be written to {path}").format(
         file=plan.local.name, size=_human(plan.size), path=plan.path))
     if plan.free is not None:
-        print(_("Free space on the device: {before} now, {after} after").format(
-            before=_human(plan.free), after=_human(plan.free - plan.size)))
+        print(_("Free space on the device: {free} (the map takes {size})").format(
+            free=_human(plan.free), size=_human(plan.size)))
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
@@ -718,8 +718,8 @@ def _maps_remove_own(args, dev, st, all_maps) -> int:
     print(_("Removing own map: {title}").format(title=plan.title or plan.name))
     print(f"  - {plan.path}  ({_human(plan.size)})")
     if plan.free is not None:
-        print(_("Free space on the device: {before} now, {after} after").format(
-            before=_human(plan.free), after=_human(plan.free + plan.size)))
+        print(_("Free space on the device: {free} (removing it frees {size})").format(
+            free=_human(plan.free), size=_human(plan.size)))
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
