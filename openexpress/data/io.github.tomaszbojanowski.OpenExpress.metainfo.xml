@@ -93,6 +93,29 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.4" date="2026-10-13">
+      <description>
+        <ul>
+          <li>Installing a Connect IQ app no longer leaves a request in your Garmin account
+          when the device has no room for it: the free app slots and the app memory are
+          checked before anything is requested, and a dry run reports the same refusal.</li>
+          <li>The number of free app slots is the one the device reports, so a slot taken by
+          something the app list does not show is counted (e.g. Venu 2).</li>
+          <li>A device without maps gets one clear message on the Maps page and from the maps
+          command. A map check that fails is reported as an error and no longer looks like
+          an empty list.</li>
+          <li>Removing a map the device requires is refused at once, before any file is
+          listed.</li>
+          <li>Sizes are shown in readable units (kB, MB, GB) in all messages and in the
+          device report, counted like GNOME Files (1 kB = 1000 bytes), so they can look
+          slightly larger than in earlier versions.</li>
+          <li>Smaller fixes: a map named like its type no longer repeats the name, the Sync
+          button says why it is unavailable while a device is starting, and error messages
+          of the command-line tool come after the output printed before them when the output
+          is redirected.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-10-13">
       <description>
         <ul>
