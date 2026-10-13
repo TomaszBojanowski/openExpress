@@ -69,6 +69,8 @@ over USB (MTP) should work, but are untested; reports are welcome.
 | `openexpress maps [--all]` | installed and available maps (TopoActive, base maps, CourseView, Ski) |
 | `openexpress maps install NAME [--apply]` | install a map assigned to the watch (download, activation, write) |
 | `openexpress maps update [--apply]`, `maps remove NAME [--apply]` | update and remove maps |
+| `openexpress maps add FILE.img [--name NAME] [--apply]` | copy a map of your own (e.g. made from OpenStreetMap data) to the device; never overwrites a file |
+| `openexpress maps remove --own NAME [--apply]` | remove a map of your own that was copied with `maps add` |
 | `openexpress apps [--builtin]` | Connect IQ apps on the watch and in your Garmin account, available updates |
 | `openexpress apps install/update/remove/enable/disable … [--apply]` | install, update, remove, enable or disable apps and built-in activities |
 | `openexpress apps order [--from COPY] [--apply]` | put apps and widgets back in the order of a saved copy of the app list |
@@ -92,7 +94,7 @@ and the command-line tool prints the same warning when it starts such an operati
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
+| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
 | Edge 1050 | detected automatically; read-only commands, backup and sync plan tested |
 | Venu 2 (part 006-B3703) | read-only commands tested; installing software updates tested (two components, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
@@ -195,6 +197,27 @@ It does nothing until you log in and perform the first sync
 (in the application window or with `openexpress baseline`/`sync`). The window and the service
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
+
+## Maps of your own
+
+Besides the maps Garmin offers, a device with maps also takes map files made by others, for
+example from OpenStreetMap data (such as the Garmin `.img` downloads of BBBike.org).
+openExpress lists these files on the Maps page and in `openexpress maps`, with the name that
+is stored in the file.
+
+- **Adding:** *Add Map…* on the Maps page, or `openexpress maps add FILE.img --apply`. The
+  file keeps its name on the device; `--name` gives it another one (letters, digits, spaces
+  and `. _ - ( )`, ending in `.img`).
+- **Nothing is overwritten:** a file that is already on the device is never replaced, and
+  names that Garmin's own maps use are refused. Garmin's maps cannot be replaced or removed
+  this way.
+- **Removing:** the remove button on the Maps page, or
+  `openexpress maps remove --own NAME --apply` for a map this installation copied. A map
+  that was copied by hand or by another installation (the Flatpak and the version from
+  source keep separate lists) can be removed in the window after an extra question.
+- **Where it works:** on devices that have a folder for maps (e.g. the fēnix 8); a Venu 2
+  has none. Tested on a fēnix 8 with a map from BBBike.org. openExpress checks that the file
+  is a Garmin map file, not what is in the map.
 
 ## Connect IQ apps
 
