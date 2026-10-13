@@ -1595,6 +1595,13 @@ def _command_line(args, argv) -> str:
     return " ".join(words)
 
 
+def _error(text: str) -> None:
+    """An error message for the user. What was printed so far comes first, also when the
+    output goes to a pipe or a file (stdout is buffered then, stderr is not)."""
+    sys.stdout.flush()
+    print(text, file=sys.stderr)
+
+
 def _run(args, service, requests) -> int:
 
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
@@ -1604,20 +1611,20 @@ def _run(args, service, requests) -> int:
         return args.func(args)
     except user_errors as e:
         log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
-        print(_("Error: {error}").format(error=e), file=sys.stderr)
+        _error(_("Error: {error}").format(error=e))
         return 1
     except ApiError as e:
         log.info("server error: %s: %s", type(e).__name__, e)
-        print(_("Server error: {error}").format(error=e), file=sys.stderr)
+        _error(_("Server error: {error}").format(error=e))
         if args.verbose and e.body:
             print(e.body, file=sys.stderr)
         return 1
     except requests.RequestException as e:
-        print(_("Network error: could not reach the Garmin server ({error})").format(
-            error=e), file=sys.stderr)
+        _error(_("Network error: could not reach the Garmin server ({error})").format(
+            error=e))
         log.info("network error: %s", type(e).__name__)
         log.debug("network error", exc_info=True)
         return 1
     except KeyboardInterrupt:
-        print(_("Interrupted."), file=sys.stderr)
+        _error(_("Interrupted."))
         return 130

@@ -320,6 +320,56 @@ def test_cli_refuses_other_watch(device_root, xdg, cli_client, capsys, argv):
     assert not service.last_sync_path().exists()
 
 
+class PipedOutput:
+    """stdout and stderr as they behave in a pipe: stdout keeps its text until it is flushed
+    (or the program ends), stderr writes at once. `lines` is what the reader sees."""
+
+    def __init__(self, monkeypatch):
+        self.seen, held = [], []  # text in the order it reaches the reader
+
+        def flush():
+            self.seen.extend(held)
+            held.clear()
+
+        self.end = flush  # the end of the program
+        monkeypatch.setattr("sys.stdout", types.SimpleNamespace(write=held.append, flush=flush))
+        monkeypatch.setattr("sys.stderr", types.SimpleNamespace(write=self.seen.append,
+                                                                flush=lambda: None))
+
+    @property
+    def lines(self):
+        return "".join(self.seen).splitlines()
+
+
+def test_cli_refusal_comes_after_the_device_line_also_in_a_pipe(device_root, xdg, cli_client,
+                                                                monkeypatch):
+    piped = PipedOutput(monkeypatch)
+    assert main(["--path", str(device_root), "sync"]) == 1
+    piped.end()
+    assert len(piped.lines) == 2
+    assert piped.lines[0].startswith("Test watch (software ")
+    assert piped.lines[1].startswith("Error: ") and NOT_REGISTERED in piped.lines[1]
+
+
+@pytest.mark.parametrize("error,line,code", [
+    (store.NotLoggedIn("Not logged in."), "Error: Not logged in.", 1),
+    (ApiError("Map check: HTTP 500", 500), "Server error: Map check: HTTP 500", 1),
+    (requests.ConnectionError("down"),
+     "Network error: could not reach the Garmin server (down)", 1),
+    (KeyboardInterrupt(), "Interrupted.", 130),
+])
+def test_cli_errors_come_after_what_was_printed(error, line, code, monkeypatch):
+    def command(args):
+        print("first line")
+        raise error
+
+    piped = PipedOutput(monkeypatch)
+    args = types.SimpleNamespace(func=command, verbose=False)
+    assert cli._run(args, service, requests) == code
+    piped.end()
+    assert piped.lines == ["first line", line]
+
+
 @pytest.mark.parametrize("argv", [["sync", "--apply", "--all"], ["baseline", "--apply"], ["apps"]],
                          ids=" ".join)
 def test_cli_refuses_when_the_list_is_unavailable(device_root, xdg, cli_client, capsys, argv):
