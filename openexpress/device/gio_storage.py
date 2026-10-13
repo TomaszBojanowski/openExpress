@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -126,6 +126,27 @@ class GioStorage(Storage):
         except GLib.Error as e:
             raise _err(e, _("Cannot read {path}").format(path=real_path)) from e
         return bytes(data)
+
+    def _read_start(self, real_path: str, count: int) -> bytes:
+        # A stream opened for reading; gvfs fetches only what is asked for.
+        what = _("Cannot read {path}").format(path=real_path)
+        try:
+            stream = self._f(real_path).read(None)
+        except GLib.Error as e:
+            raise _err(e, what) from e
+        try:
+            data = b""
+            while len(data) < count:
+                chunk = stream.read_bytes(count - len(data), None).get_data()
+                if not chunk:
+                    break  # the file is shorter
+                data += chunk
+            return data
+        except GLib.Error as e:
+            raise _err(e, what) from e
+        finally:
+            with suppress(GLib.Error):
+                stream.close(None)
 
     def _write(self, real_path: str, data: bytes) -> None:
         # gvfs-mtp can't write streams; it can only copy a whole local file.

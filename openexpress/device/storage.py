@@ -123,6 +123,17 @@ class Storage(ABC):
             raise DeviceError(_("File not found on the device: {path}").format(path=path))
         return self._read(real)
 
+    def read_start(self, path: str, count: int) -> bytes:
+        """The first `count` bytes of a file (fewer when it is shorter), without reading the
+        rest: for the header of a large file."""
+        real = self.resolve(path)
+        if real is None:
+            raise DeviceError(_("File not found on the device: {path}").format(path=path))
+        return self._read_start(real, count)
+
+    def _read_start(self, real_path: str, count: int) -> bytes:
+        return self._read(real_path)[:count]
+
     def _target(self, path: str) -> str:
         parent, name = _split_file_path(path)
         real_parent = self._ensure_dir(parent)
@@ -220,6 +231,11 @@ class LocalStorage(Storage):
     def _read(self, real_path: str) -> bytes:
         with _os_errors(_("Cannot read {path}").format(path=real_path)):
             return self._p(real_path).read_bytes()
+
+    def _read_start(self, real_path: str, count: int) -> bytes:
+        with _os_errors(_("Cannot read {path}").format(path=real_path)), \
+                open(self._p(real_path), "rb") as f:
+            return f.read(count)
 
     def _write(self, real_path: str, data: bytes) -> None:
         with _os_errors(_("Cannot write {path}").format(path=real_path)):

@@ -670,6 +670,7 @@ def _url_salt() -> str | None:
 
 def cmd_maps(args) -> int:
     from openexpress import maps as mp
+    from openexpress import ownmaps
 
     client = GarminClient(Settings.load())
     st, dev, all_maps, listed = _load_maps(args, client)
@@ -691,6 +692,12 @@ def cmd_maps(args) -> int:
                                   "{count} more maps are available (openexpress maps --all).",
                                   n).format(count=n))
         print(_("Free space on the device: {size}").format(size=_human(st.free_space())))
+        own = ownmaps.list_own(dev, st, all_maps)
+        if own:
+            print("\n" + _("Own maps (not from Garmin):"))
+            for o in own:
+                title = o.title or _("(name not read)")
+                print(f"  {o.filename:48} {_human(o.size):>9}  {title}")
         return 0
 
     if args.maps_cmd == "update":
