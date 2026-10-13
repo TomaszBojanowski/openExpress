@@ -26,6 +26,7 @@ from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.requi
 from openexpress.device import ptp  # noqa: E402
 from openexpress.device.storage import DeviceError, Entry, RemountFailed, Storage  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
+from openexpress.paths import in_flatpak  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -36,10 +37,6 @@ _ATTRS = "standard::name,standard::type,standard::size,time::modified"
 
 def _err(e: GLib.Error, what: str) -> DeviceError:
     return DeviceError(f"{what}: {e.message}")
-
-
-def in_flatpak() -> bool:
-    return Path("/.flatpak-info").exists()
 
 
 def _host_visible(path: Path) -> bool:

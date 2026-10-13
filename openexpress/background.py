@@ -23,13 +23,10 @@ from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.requi
 
 from openexpress import desktop  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
+from openexpress.paths import in_flatpak  # noqa: E402
 
 WATCH_ID = desktop.DESKTOP_ID + ".Watch"
 WATCH_PATH = "/" + WATCH_ID.replace(".", "/")
-
-
-def in_flatpak() -> bool:
-    return Path("/.flatpak-info").exists()
 
 
 def watcher_command() -> list[str]:
