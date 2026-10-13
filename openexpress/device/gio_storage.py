@@ -6,12 +6,14 @@ conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 
 from __future__ import annotations
 
+import codecs
 import logging
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
@@ -56,25 +58,113 @@ def _staging_dir() -> Path:
     return d
 
 
-def host_copy(local: Path, target_uri: str, what: str) -> None:
+HOST_COPY_TIMEOUT_S = 6 * 3600
+# A size as `gio copy -p` prints it: a number, then a unit ("1,0 MB", "56 bytes"). The words
+# around it and the decimal separator follow the language of the system, so only these are read.
+_QUANTITY = re.compile(r"(\d+(?:[.,]\d+)?)[ \u00a0\u202f]?([^\W\d_]+)(/?)")
+_PREFIXES = {"k": 1e3, "K": 1e3, "M": 1e6, "G": 1e9, "T": 1e12}
+
+
+def _bytes_of(number: str, unit: str) -> float | None:
+    value = float(number.replace(",", "."))
+    if unit[0] in _PREFIXES:
+        return value * _PREFIXES[unit[0]]
+    # Bytes are printed as a whole number ("56 bytes"); anything else is a unit that is not
+    # known here (e.g. in another alphabet).
+    return value if number.isdigit() else None
+
+
+def copy_fraction(update: str) -> float | None:
+    """How far a copy is, from one update of `gio copy -p` ("Copied 1.0 MB out of 2.0 GB
+    (…)" in any language): the first size over the second. None when the update does not have
+    two sizes (the last one names only the total) or they cannot be read."""
+    sizes = [(number, unit) for number, unit, rate in _QUANTITY.findall(update.split("(")[0])
+             if not rate]  # "…/s" is a speed
+    if len(sizes) < 2:
+        return None
+    (done, done_unit), (total, total_unit) = sizes[:2]
+    if done_unit == total_unit:
+        a, b = float(done.replace(",", ".")), float(total.replace(",", "."))
+    else:
+        a, b = _bytes_of(done, done_unit), _bytes_of(total, total_unit)
+    if a is None or b is None or b <= 0 or a < 0 or a > b * 1.1:
+        return None
+    return min(1.0, a / b)
+
+
+def _detail(stderr: str, stdout: str) -> str:
+    detail = stderr.strip() or stdout.strip()
+    if "org.freedesktop.Flatpak" in detail or "Portal call failed" in detail:
+        detail = _("the Flatpak is missing the permission to copy files to the device")
+    return detail
+
+
+def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
     """Copies a local file to the watch with the host's `gio copy`.
 
     gvfs refuses to copy local files for sandboxed (Flatpak) apps, and gvfs-mtp supports no
     other way of writing; so in the Flatpak the copy runs on the host (needs the
     --talk-name=org.freedesktop.Flatpak permission).
+
+    With `progress(done, total)` the copy runs with `-p` and what it prints is read while it
+    runs. When that cannot be read, `progress` is simply not called: the result of the copy
+    depends on the exit code alone.
     """
     if not shutil.which("flatpak-spawn"):
         raise DeviceError(f"{what}: " + _("flatpak-spawn is not available"))
+    command = ["flatpak-spawn", "--host", "gio", "copy"]
+    if progress is None:
+        try:
+            res = subprocess.run([*command, str(local), target_uri],
+                                 capture_output=True, text=True, timeout=HOST_COPY_TIMEOUT_S,
+                                 check=False)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise DeviceError(f"{what}: {e}") from e
+        if res.returncode != 0:
+            raise DeviceError(f"{what}: {_detail(res.stderr, res.stdout)}")
+        return
     try:
-        res = subprocess.run(["flatpak-spawn", "--host", "gio", "copy", str(local), target_uri],
-                             capture_output=True, text=True, timeout=6 * 3600, check=False)
-    except (OSError, subprocess.TimeoutExpired) as e:
+        size = Path(local).stat().st_size
+        proc = subprocess.Popen([*command, "-p", str(local), target_uri],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as e:
         raise DeviceError(f"{what}: {e}") from e
-    if res.returncode != 0:
-        detail = res.stderr.strip() or res.stdout.strip()
-        if "org.freedesktop.Flatpak" in detail or "Portal call failed" in detail:
-            detail = _("the Flatpak is missing the permission to copy files to the device")
-        raise DeviceError(f"{what}: {detail}")
+    errors: list[bytes] = []
+    reader = threading.Thread(target=lambda: errors.append(proc.stderr.read()), daemon=True)
+    reader.start()  # so that a lot of error output cannot block the copy
+    timed_out = threading.Event()
+    watchdog = threading.Timer(HOST_COPY_TIMEOUT_S, lambda: (timed_out.set(), proc.kill()))
+    watchdog.daemon = True
+    watchdog.start()
+    shown, said, pending = 0.0, [], ""
+    decode = codecs.getincrementaldecoder("utf-8")("replace")
+    try:
+        while True:
+            data = os.read(proc.stdout.fileno(), 65536)
+            if not data:
+                break
+            text = decode.decode(data)
+            said.append(text)
+            # Updates begin with a carriage return and are cut anywhere by the pipe: the
+            # newest one is read as far as it has come, and again when the rest arrives.
+            *complete, pending = re.split(r"[\r\n]", pending + text)
+            for update in (*complete, pending):
+                fraction = copy_fraction(update)
+                if fraction is not None and fraction > shown:
+                    shown = fraction
+                    progress(int(fraction * size), size)
+        code = proc.wait()
+    except OSError as e:
+        proc.kill()
+        raise DeviceError(f"{what}: {e}") from e
+    finally:
+        watchdog.cancel()
+    reader.join(5)
+    if timed_out.is_set():
+        raise DeviceError(f"{what}: timed out after {HOST_COPY_TIMEOUT_S} seconds")
+    if code != 0:
+        stderr = b"".join(errors).decode("utf-8", "replace")
+        raise DeviceError(f"{what}: {_detail(stderr, ''.join(said))}")
 
 
 class GioStorage(Storage):
@@ -180,7 +270,7 @@ class GioStorage(Storage):
     def _copy_local(self, local: Path, real_path: str, progress, what: str) -> None:
         target = self._f(real_path)
         if in_flatpak():
-            host_copy(local, target.get_uri(), what)
+            host_copy(local, target.get_uri(), what, progress)
             if progress:
                 size = local.stat().st_size
                 progress(size, size)
