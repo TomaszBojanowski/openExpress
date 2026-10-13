@@ -1095,8 +1095,9 @@ class MainWindow(Adw.ApplicationWindow):
         page.add(g)
 
         g = Adw.PreferencesGroup(title=_("Setup"))
-        row = Adw.ActionRow(title=_("Garmin Express installer"),
-                            subtitle=_("Read the application key again from the official installer"))
+        row = Adw.ActionRow(
+            title=_("Garmin Express installer"),
+            subtitle=_("Read the application key again from the official installer"))
         row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
         g.add(row)
         page.add(g)
@@ -1706,8 +1707,9 @@ class MainWindow(Adw.ApplicationWindow):
                                subtitle=GLib.markup_escape_text(a.type_name),
                                active=not a.disabled, sensitive=not self.busy)
             handler: list[int] = []
-            handler.append(sw.connect("notify::active",
-                                      lambda row, _p, a=a, h=handler: self.toggle_app(a, row, h[0])))
+            handler.append(sw.connect(
+                "notify::active",
+                lambda row, _p, a=a, h=handler: self.toggle_app(a, row, h[0])))
             self._action_buttons.append(sw)
             exp.add_row(sw)
             rows.append((sw, a.name.casefold()))

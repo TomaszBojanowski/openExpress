@@ -202,7 +202,8 @@ def list_playlists(device: GarminDevice, storage: Storage) -> list[str]:
     if not files:
         return []
     return [p for p, _ in storage.walk_files(files[0].path)
-            if p.lower().endswith((".m3u8", ".m3u")) and "/" not in p[len(files[0].path.strip("/")) + 1:]]
+            if p.lower().endswith((".m3u8", ".m3u"))
+            and "/" not in p[len(files[0].path.strip("/")) + 1:]]
 
 
 @dataclass
@@ -256,7 +257,8 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
     return written
 
 
-def write_playlist(device: GarminDevice, storage: Storage, name: str, device_paths: list[str]) -> str:
+def write_playlist(device: GarminDevice, storage: Storage, name: str,
+                   device_paths: list[str]) -> str:
     files = device.targets(PLAYLIST)
     if not files:
         raise MusicError(_("This device does not support playlists"))

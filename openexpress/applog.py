@@ -150,7 +150,8 @@ def size(n: int | None) -> str:
     """A size for the log: short, so that it is not taken for an identifier."""
     if n is None:
         return "?"
-    return f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB" if n < 1024 ** 2 else f"{n / 1024 ** 2:.1f} MB"
+    return (f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB" if n < 1024 ** 2
+            else f"{n / 1024 ** 2:.1f} MB")
 
 
 def counts(names) -> str:

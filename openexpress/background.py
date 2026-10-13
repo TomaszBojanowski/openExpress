@@ -56,7 +56,7 @@ def stop_watcher() -> None:
 
 def _portal_request(autostart: bool, parent: str, done: Callable[[bool, str], None]) -> None:
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-    token = "openexpress%d" % GLib.random_int_range(0, 1 << 30)
+    token = f"openexpress{GLib.random_int_range(0, 1 << 30):d}"
     sender = bus.get_unique_name()[1:].replace(".", "_")
     handle = f"/org/freedesktop/portal/desktop/request/{sender}/{token}"
     sub: list[int] = []

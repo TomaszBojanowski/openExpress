@@ -119,6 +119,7 @@ class Watcher(Gio.Application):
                     raise
                 log.info("Watch not ready, retrying in %d s", OPEN_RETRY_DELAY_S)
                 sleep(OPEN_RETRY_DELAY_S)
+        return None
 
     def _sync(self):
         try:

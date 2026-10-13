@@ -108,7 +108,7 @@ def fetch(
     part = dest.with_name(dest.name + ".part")
     errors = []
     for url in urls:
-        for attempt in range(2):
+        for _attempt in range(2):
             try:
                 _get(http, url, part, size, progress)
             except (requests.RequestException, DownloadError, OSError) as e:

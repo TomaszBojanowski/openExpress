@@ -47,7 +47,7 @@ def _host_visible(path: Path) -> bool:
     p = str(Path(path).resolve())
     home = str(Path.home())
     run_user = f"/run/user/{os.getuid()}/"
-    return p.startswith(home + "/") or p.startswith(run_user)
+    return p.startswith((home + "/", run_user))
 
 
 def _staging_dir() -> Path:
@@ -125,7 +125,7 @@ class GioStorage(Storage):
 
     def _read(self, real_path: str) -> bytes:
         try:
-            ok, data, _etag = self._f(real_path).load_contents(None)
+            _ok, data, _etag = self._f(real_path).load_contents(None)
         except GLib.Error as e:
             raise _err(e, _("Cannot read {path}").format(path=real_path)) from e
         return bytes(data)

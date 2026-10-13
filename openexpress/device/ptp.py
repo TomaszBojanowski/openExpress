@@ -274,7 +274,8 @@ def load_libusb():
         "libusb_wrap_sys_device": (c_int, [p, ctypes.c_ssize_t, pp]),
         "libusb_get_device": (p, [p]),
         "libusb_close": (None, [p]),
-        "libusb_get_active_config_descriptor": (c_int, [p, ctypes.POINTER(ctypes.POINTER(_Config))]),
+        "libusb_get_active_config_descriptor": (
+            c_int, [p, ctypes.POINTER(ctypes.POINTER(_Config))]),
         "libusb_free_config_descriptor": (None, [ctypes.POINTER(_Config)]),
         "libusb_set_auto_detach_kernel_driver": (c_int, [p, c_int]),
         "libusb_claim_interface": (c_int, [p, c_int]),
@@ -378,7 +379,8 @@ class LibusbTransport:
                                                 ctypes.byref(done), self.timeout_ms)
         if result < 0 or done.value != len(data):
             raise PtpError(_("Sending to the device failed: {error}").format(
-                error=self._lib.libusb_error_name(result).decode() if result < 0 else "short write"))
+                error=(self._lib.libusb_error_name(result).decode() if result < 0
+                       else "short write")))
 
     def read(self, size: int) -> bytes:
         buffer = ctypes.create_string_buffer(size)
@@ -603,7 +605,8 @@ class Session:
         _data, answer = self._ok(SEND_OBJECT_INFO, storage, parent,
                                  data_out=object_info_dataset(name, len(data)))
         if len(answer) < 3:
-            raise PtpWriteError(_("The device did not say where it put “{name}”.").format(name=name))
+            raise PtpWriteError(
+                _("The device did not say where it put “{name}”.").format(name=name))
         handle = answer[2]
         try:
             self._ok(SEND_OBJECT, data_out=data)

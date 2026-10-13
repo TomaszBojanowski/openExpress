@@ -88,10 +88,9 @@ def create_login_window(settings: Settings, on_ticket, application=None, parent=
         if decision_type in (
             WebKit.PolicyDecisionType.NAVIGATION_ACTION,
             WebKit.PolicyDecisionType.NEW_WINDOW_ACTION,
-        ):
-            if inspect(decision.get_navigation_action().get_request().get_uri()):
-                decision.ignore()
-                return True
+        ) and inspect(decision.get_navigation_action().get_request().get_uri()):
+            decision.ignore()
+            return True
         return False
 
     view.connect("decide-policy", on_policy)

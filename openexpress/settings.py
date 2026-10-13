@@ -151,9 +151,9 @@ def extract_consumer_from_dll(dll: Path) -> Consumer:
     """
     strings = _utf16_strings(dll.read_bytes())
     for i, s in enumerate(strings[:-1]):
-        if _UUID_RE.match(s) and _SECRET_RE.match(strings[i + 1]):
-            if i > 0 and strings[i - 1].startswith("https://"):
-                return Consumer(s, strings[i + 1])
+        if (_UUID_RE.match(s) and _SECRET_RE.match(strings[i + 1])
+                and i > 0 and strings[i - 1].startswith("https://")):
+            return Consumer(s, strings[i + 1])
     raise SetupError(_("Consumer key not found in {path}").format(path=dll))
 
 

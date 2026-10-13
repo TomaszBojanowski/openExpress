@@ -194,7 +194,8 @@ def parse_locations(dt: dict, include_consent: bool,
         if not ul.url:
             continue
         ok = (include_consent or not ul.consent_types
-              or (consent_granted is not None and all(consent_granted(c) for c in ul.consent_types)))
+              or (consent_granted is not None
+                  and all(consent_granted(c) for c in ul.consent_types)))
         (used if ok else skipped).append(ul)
     return used, skipped
 

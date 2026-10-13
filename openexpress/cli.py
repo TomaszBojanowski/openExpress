@@ -104,7 +104,8 @@ def _read_ui_language() -> str | None:
 
 
 def _write_ui_language(value: str) -> None:
-    """Stores "ui_language" in settings.json, keeping the other keys (it is not a Settings field)."""
+    """Stores "ui_language" in settings.json, keeping the other keys (it is not a Settings
+    field)."""
     path = _settings_json_path()
     data = json.loads(path.read_text()) if path.exists() else {}
     data["ui_language"] = value
@@ -303,7 +304,8 @@ def cmd_upload_config(args) -> int:
         for loc in dt.get("uploadlocations") or []:
             consents = ", ".join(c.get("name", "") for c in loc.get("requiredconsenttypes") or [])
             print(f"    {loc.get('url')}  auth={loc.get('requiresauthentication')} "
-                  f"consent={loc.get('requiresuserconsent')}{' [' + consents + ']' if consents else ''}")
+                  f"consent={loc.get('requiresuserconsent')}"
+                  f"{' [' + consents + ']' if consents else ''}")
     return 0
 
 
@@ -1077,7 +1079,7 @@ def cmd_apps(args) -> int:
 def cmd_primary(args) -> int:
     from openexpress import service
 
-    st, dev = open_device(args)
+    _st, dev = open_device(args)
     client = make_client(Settings.load(), need_auth=True)
     if args.primary_cmd == "set":
         return _primary_set(client, dev, args.apply)
@@ -1208,7 +1210,7 @@ def cmd_music(args) -> int:
                        "{already} already on the device.", len(tracks)).format(
             count=len(tracks), to_copy=len(plan.to_copy), size=_human(plan.size),
             already=len(plan.already)))
-        for t, dest in plan.to_copy[: (None if args.verbose else 15)]:
+        for _t, dest in plan.to_copy[: (None if args.verbose else 15)]:
             print(f"  + {dest}")
         if len(plan.to_copy) > 15 and not args.verbose:
             more = len(plan.to_copy) - 15

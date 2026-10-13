@@ -148,7 +148,8 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
             SoftwareUpdate(
                 part_number=u.get("partnumber") or "",
                 name=u.get("productname") or u.get("description") or "",
-                version=u.get("displayversion") or u.get("semanticversion") or u.get("version") or "",
+                version=(u.get("displayversion") or u.get("semanticversion")
+                         or u.get("version") or ""),
                 severity=(u.get("severity") or "Unspecified"),
                 is_primary=bool(u.get("isprimaryfirmware")),
                 is_reinstall=bool(inst.get("isreinstall")),
@@ -169,7 +170,8 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
 
 def sort_for_install(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """Files requiring a restart go last; otherwise in server order."""
-    return sorted(updates, key=lambda u: (u.restart_required or u.is_primary, u.order, u.part_number))
+    return sorted(updates,
+                  key=lambda u: (u.restart_required or u.is_primary, u.order, u.part_number))
 
 
 def select(updates: list[SoftwareUpdate], wanted: list[str]) -> list[SoftwareUpdate]:

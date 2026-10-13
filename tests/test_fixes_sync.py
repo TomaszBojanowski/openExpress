@@ -209,7 +209,7 @@ def test_read_error_fails_only_that_file_and_data_is_freed(device_root, tmp_path
 
     def read(path):
         reads.append(path)
-        if path.endswith("2026-10-01-10-00-00.fit") or path.endswith("M1.FIT"):
+        if path.endswith(("2026-10-01-10-00-00.fit", "M1.FIT")):
             raise DeviceError("I/O error")
         return real_read(path)
 

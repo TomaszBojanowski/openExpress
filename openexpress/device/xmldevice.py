@@ -48,7 +48,8 @@ class DeviceFile:
             stem, ext = ext, ""
         if self.extension and ext != self.extension.casefold():
             return False
-        if self.basename and stem != self.basename.casefold():
+        # Two separate checks read more clearly than one combined return.
+        if self.basename and stem != self.basename.casefold():  # noqa: SIM103
             return False
         return True
 

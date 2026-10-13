@@ -386,7 +386,8 @@ class StoreApi:
                                      "sku": device.part_number}, unit_id=device.unit_id)
         return [_store_app(a) for a in data or []]
 
-    def updates(self, device: GarminDevice, installed: list[InstalledApp], locale: str) -> list[StoreApp]:
+    def updates(self, device: GarminDevice, installed: list[InstalledApp],
+                locale: str) -> list[StoreApp]:
         body = {"apps": [{"appId": str(a.app_id), "internalVersionNumber": a.version or 0}
                          for a in installed],
                 "deviceSKU": device.part_number, "locale": locale}
@@ -756,7 +757,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
             if app_id is None or (only is not None and app_id not in only):
                 continue
             meta = m.get("metadata") or {}
-            name = meta.get("messagename") or (known[app_id].name if app_id in known else str(app_id))
+            name = meta.get("messagename") or (
+                known[app_id].name if app_id in known else str(app_id))
             dt = m["devicexmldatatype"]
             existing = state.find(app_id)
             try:
@@ -797,7 +799,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     filename = uuid.uuid4().hex[:8].upper()
                 if existing is not None and existing.filename and not over_ptp:
                     filename = existing.filename
-                path = posixpath.join(targets[0].path, f"{filename}.{targets[0].extension or 'PRG'}")
+                path = posixpath.join(targets[0].path,
+                                      f"{filename}.{targets[0].extension or 'PRG'}")
                 entry = None
                 if existing is None:
                     store = known.get(app_id)
