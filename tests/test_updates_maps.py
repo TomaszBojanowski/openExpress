@@ -392,3 +392,49 @@ def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle
     (on_device,) = win.sections["maps"].groups
     row = on_device.rows[-1]
     assert (row.get_title(), row.get_subtitle()) == (name, subtitle)
+
+
+# --- a map that cannot be removed -----------------------------------------------------------
+
+
+def west_files(device_root):
+    g = device_root / "Garmin"
+    g.mkdir()
+    for n in ("W.img", "DEM.img", "W.gma"):
+        (g / n).write_bytes(b"old")
+
+
+@pytest.mark.parametrize("apply", [[], ["--apply"]])
+def test_maps_remove_refuses_at_once_a_map_that_cannot_be_removed(
+        apply, server, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer = maps_response(server)
+    answer["maps"][0]["canuninstall"] = False  # TopoActive West
+    answer_with(monkeypatch, body=json.dumps(answer).encode())
+    west_files(device_root)
+    before = device_files(device_root)
+    assert main(["--path", str(device_root), "maps", "remove", "West", *apply]) == 1
+    captured = capsys.readouterr()
+    # An error, and nothing before it: no "Removing map …", no list of files.
+    assert captured.out == ""
+    assert captured.err.strip() == "Error: Map 'TopoActive West' cannot be removed"
+    assert device_files(device_root) == before
+
+
+def test_maps_remove_still_lists_and_removes_a_map_that_can_be_removed(
+        server, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer_with(monkeypatch, body=json.dumps(maps_response(server)).encode())
+    west_files(device_root)
+    before = device_files(device_root)
+    assert main(["--path", str(device_root), "maps", "remove", "West"]) == 0
+    out = capsys.readouterr().out
+    assert "Removing map TopoActive West: 2 files" in out and "  - Garmin/W.img" in out
+    assert "Dry run. Add --apply." in out and device_files(device_root) == before
+    assert main(["--path", str(device_root), "maps", "remove", "West", "--apply"]) == 0
+    assert "Removed 2 files." in capsys.readouterr().out
+    # The file shared with another map stays.
+    assert [name for name, _size in device_files(device_root) if name.startswith("Garmin/")] == [
+        "Garmin/DEM.img"]

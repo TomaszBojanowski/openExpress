@@ -703,15 +703,15 @@ def cmd_maps(args) -> int:
 
     for m in targets:
         if args.maps_cmd == "remove":
+            if not m.can_uninstall:
+                # Refused before anything is listed: the files are not going to be removed.
+                raise mp.MapError(mp.cannot_remove_message(m))
             files = mp.removal_list(all_maps, m, rewriting=False)
             print(ngettext("Removing map {name}: {count} file",
                            "Removing map {name}: {count} files", len(files)).format(
                 name=m.name, count=len(files)))
             for p in files:
                 print(f"  - {p}  ({_human(st.size(p))})")
-            if not m.can_uninstall:
-                print(_("This map cannot be removed."))
-                return 1
             if not args.apply:
                 print(_("Dry run. Add --apply."))
                 continue

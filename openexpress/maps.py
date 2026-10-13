@@ -269,10 +269,14 @@ def install(
     return report
 
 
+def cannot_remove_message(m: UniversalMap) -> str:
+    return _("Map '{name}' cannot be removed").format(name=m.name)
+
+
 def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
               progress: Callable[[str], None] = lambda s: None) -> list[str]:
     if not m.can_uninstall:
-        raise MapError(_("Map '{name}' cannot be removed").format(name=m.name))
+        raise MapError(cannot_remove_message(m))
     removed = []
     for p in removal_list(all_maps, m, rewriting=False):
         if storage.exists(p):
