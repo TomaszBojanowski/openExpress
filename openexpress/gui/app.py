@@ -289,6 +289,8 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(application=app, title="openExpress")
         self.set_size_request(*MIN_WINDOW)
         self.session: service.DeviceSession | None = None
+        # What the pages show while no device is open; the Sync button says the same.
+        self._usb_title = ""
         self.busy = False
         self.gui_settings = load_gui_settings()
         width, height, maximized = window_geometry(self.gui_settings)
@@ -452,7 +454,9 @@ class MainWindow(Adw.ApplicationWindow):
         """Why a sync cannot be started now, in words the window already uses; "" if it can."""
         s = self.session
         if s is None:
-            return _("Connect your device")
+            # The words the pages show now: no device, a device that is starting, or one
+            # that is not ready.
+            return self._usb_title or _("Connect your device")
         if not s.logged_in:
             return _("Not logged in to Garmin Connect")
         if s.ownership_error is not None:
@@ -694,6 +698,9 @@ class MainWindow(Adw.ApplicationWindow):
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
         for sec in self.sections.values():
             sec.set_empty(*notice)
+        if notice[0] != self._usb_title:
+            self._usb_title = notice[0]
+            self._update_actions()  # the Sync button says the same as the pages
         return True
 
     def refresh_device(self) -> None:

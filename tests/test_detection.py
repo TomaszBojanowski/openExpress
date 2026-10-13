@@ -627,32 +627,39 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
-    shown, refreshed = [], []
+    shown, refreshed, updates = [], [], []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
     win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
-                                _usb_state=gio_storage.ABSENT, _usb_since=0.0,
+                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                                 _usb_notice=MainWindow._usb_notice,
                                 refresh_device=lambda: refreshed.append(1))
+    # The Sync button is told whenever the words on the pages change, and only then.
+    win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
     clock = plugged.clock
     poll = lambda: MainWindow._poll_usb(win, clock=clock)  # noqa: E731
 
     assert poll() is True and shown[-1][0] == "Connect your device" and shown[-1][2] is False
+    assert updates == ["Connect your device"]
+    poll()
+    assert updates == ["Connect your device"]  # nothing changed: the button is left alone
     plugged.plug("0003")
     clock.now = 10
     poll()
     assert shown[-1] == ("The device is starting…",
                          "This takes a moment after the cable is plugged in.", True)
     assert refreshed == []
+    assert updates[-1] == win._usb_title == "The device is starting…" and len(updates) == 2
     clock.now = 29
     plugged.plug("51b4")
     poll()
     assert refreshed == [1] and shown[-1][2] is True  # looked for once it left that mode
     poll()
-    assert refreshed == [1]
+    assert refreshed == [1] and len(updates) == 2  # still starting: the same words
     clock.now = 10 + 46
     poll()
     assert shown[-1] == ("The device is not ready", gio_storage.not_ready_text("present"), False)
+    assert updates[-1] == "The device is not ready" and len(updates) == 3
     # Off the bus for a moment: the page stays; only a longer absence is an unplug.
     plugged.plug(None)
     poll()
@@ -668,12 +675,14 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     clock.now += gio_storage.USB_GAP_S + 1
     poll()
     assert shown[-1][0] == "Connect your device"
+    assert updates == ["Connect your device", "The device is starting…",
+                       "The device is not ready", "Connect your device"]
     # With a device open, or while a task runs, the page is left alone.
     count = len(shown)
     win.session = object()
     plugged.plug("0003")
     poll()
-    assert len(shown) == count
+    assert len(shown) == count and len(updates) == 4
 
 
 class _SyncButton:
@@ -699,7 +708,7 @@ def _sync_window(session=None, busy=False):
     action = lambda name: types.SimpleNamespace(  # noqa: E731
         set_enabled=lambda value: enabled.__setitem__(name, value))
     win = types.SimpleNamespace(session=session, busy=busy, lookup_action=action,
-                                enabled=enabled, sync_button=_SyncButton(),
+                                _usb_title="", enabled=enabled, sync_button=_SyncButton(),
                                 sync_icon_button=_SyncButton(),
                                 _ownership_title=MainWindow._ownership_title)
     win._sync_blocked = types.MethodType(MainWindow._sync_blocked, win)
@@ -782,3 +791,33 @@ def test_sync_tooltip_uses_the_words_of_the_banner():
         win = _sync_window(session=s)
         win.update()
         assert banner_title(s) == [win.sync_button.tooltip]
+
+
+def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
+    """No device, a device that is starting, a device that is not ready: the button has the
+    title the pages show, not always "Connect your device"."""
+    from openexpress.gui.app import MainWindow
+
+    win = _sync_window()
+    win.update()
+    assert _looks(win) == (False, False, "Connect your device", "Connect your device")
+
+    for state, waited in ((gio_storage.STARTING, 5), (gio_storage.PRESENT, 5),
+                          (gio_storage.PRESENT, gio_storage.WAIT_FOR_DEVICE_S + 1),
+                          (gio_storage.ABSENT, 0)):
+        title = MainWindow._usb_notice(state, waited)[0]  # what the middle of the window says
+        win._usb_title = title
+        win.update()
+        assert _looks(win) == (False, False, title, title)
+    assert {MainWindow._usb_notice(s, w)[0] for s, w in (
+        (gio_storage.STARTING, 5), (gio_storage.PRESENT, 99), (gio_storage.ABSENT, 0))} == {
+        "The device is starting…", "The device is not ready", "Connect your device"}
+
+    # With a device open the words kept from before do not matter.
+    win._usb_title = "The device is starting…"
+    win.session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+    win.update()
+    assert _looks(win) == (True, True, None, "Sync")
+    win.session = types.SimpleNamespace(logged_in=False, ownership_error=None)
+    win.update()
+    assert _looks(win)[2] == "Not logged in to Garmin Connect"
