@@ -19,7 +19,7 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gio", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
+from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import desktop  # noqa: E402
 from openexpress.i18n import _  # noqa: E402

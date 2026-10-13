@@ -341,7 +341,7 @@ def run_uploads(
             fid = parse_file_id(data)
             if fid.time_created is not None:
                 c.external_id = str(fid.time_created)
-        except Exception:  # noqa: BLE001 - not a valid FIT file: just upload it
+        except Exception:  # noqa: BLE001, S110 - unreadable FIT header: the file is uploaded anyway
             pass
         c.data = None
     ids = [c.external_id for c in acts if c.external_id]
@@ -409,7 +409,10 @@ def _upload_one(c, data, label, last, client, state, report, progress,
             )
         except (Unauthorized, ClockSkew):
             raise
-        except Exception as e:  # network
+        # A failure with one file (network or anything else) goes to the report and the upload
+        # goes on with the other files (monitoring and sleep data: with the other types, as
+        # those must arrive in order). An expired login and a wrong clock are raised above.
+        except Exception as e:  # noqa: BLE001
             ok, error = False, str(e)
             break
         codes = _failure_codes(res.body) if 200 <= res.status < 300 else set()

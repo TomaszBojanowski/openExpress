@@ -14,7 +14,7 @@ import time
 import gi
 
 gi.require_version("Gio", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
+from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402

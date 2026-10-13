@@ -21,7 +21,7 @@ import gi
 
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
+from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress.device import ptp  # noqa: E402
 from openexpress.device.storage import DeviceError, Entry, RemountFailed, Storage  # noqa: E402
