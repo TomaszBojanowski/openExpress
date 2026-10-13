@@ -1,6 +1,7 @@
 # Binaria i zdekompilowany kod Garmina - tylko lokalnie, nie publikować
 _extracted/
 __pycache__/
+.ruff_cache/
 *.pyc
 .venv/
 testdata/
