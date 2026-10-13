@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from openexpress import applog, download, paths
+from openexpress.connect import ApiError
 from openexpress.device.storage import Storage
 from openexpress.i18n import N_, _, human_size
 
@@ -94,9 +95,30 @@ def _hosts(dh: dict | None) -> list[str]:
     return sorted(out, key=lambda h: not h.startswith("https://"))
 
 
+def no_maps_message() -> str:
+    return _("No maps are available for this device.")
+
+
+def _listed(response) -> list:
+    """The maps as the server lists them. An answer without a list of maps (an empty body,
+    another object) is an error, so that a failure is never taken for "no maps"."""
+    listed = response.get("maps") if isinstance(response, dict) else None
+    if not isinstance(listed, list):
+        raise ApiError(_("{what}: unexpected response from the server").format(
+            what=_("Map check")))
+    return listed
+
+
+def read_maps(response: dict) -> tuple[list[UniversalMap], int]:
+    """The maps in the server's answer, and how many maps the answer listed: a map without
+    anything to install is listed, but not read. Zero means the server has no maps for the
+    device."""
+    return parse_maps(response), len(_listed(response))
+
+
 def parse_maps(response: dict) -> list[UniversalMap]:
     out = []
-    for m in response.get("maps") or []:
+    for m in _listed(response):
         options = m.get("installoptions") or []
         opt = next((o for o in options if o.get("ispreferred")), options[0] if options else None)
         if opt is None:

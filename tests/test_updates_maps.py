@@ -1,11 +1,14 @@
 import base64
 import hashlib
 import http.server
+import json
 import threading
 
 import pytest
+import requests
 
 from openexpress import download, maps, updates
+from openexpress.connect import ApiError, lower_keys
 from openexpress.device.storage import LocalStorage
 
 FILES = {
@@ -187,3 +190,184 @@ def test_maps_install_update_and_shared_files(server, device_root, xdg):
     removed = maps.uninstall(west, all_maps, st)
     assert sorted(removed) == ["Garmin/W.gma", "Garmin/W.img"]
     assert (g / "DEM.img").exists()
+
+
+# --- a device without maps ----------------------------------------------------------------
+
+# The shape of a real answer for a device without maps: every list is there and empty.
+NO_MAPS = {"maps": [], "filesToRemove": [], "details": {}, "bundledMaps": [],
+           "directoriesToRemove": [], "subregions": []}
+NO_MAPS_TEXT = "No maps are available for this device."
+
+
+def answer_with(monkeypatch, status=200, body=b"", error=None):
+    """Garmin's server gives this one answer to every request; returns the requests made."""
+    asked = []
+
+    def request(self, method, url, **kw):
+        asked.append((method, url))
+        if error is not None:
+            raise error
+        resp = requests.Response()
+        resp.status_code, resp._content = status, body
+        return resp
+
+    monkeypatch.setattr(requests.Session, "request", request)
+    return asked
+
+
+def device_files(root):
+    return sorted((str(p.relative_to(root)), p.stat().st_size) for p in root.rglob("*")
+                  if p.is_file())
+
+
+def test_an_empty_list_of_maps_is_an_answer():
+    assert maps.read_maps(lower_keys(NO_MAPS)) == ([], 0)
+
+
+@pytest.mark.parametrize("answer", [{}, {"maps": None}, {"maps": "none"}, {"maps": {}}, [],
+                                    None, {"error": "try later"}])
+def test_an_answer_without_a_list_of_maps_is_an_error(answer):
+    with pytest.raises(ApiError) as error:
+        maps.read_maps(answer)
+    with pytest.raises(ApiError):
+        maps.parse_maps(answer)
+    assert str(error.value) == "Map check: unexpected response from the server"
+
+
+def test_maps_that_cannot_be_read_are_not_no_maps(device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    # The server lists a map, but without anything to install: the list stays as it was.
+    body = json.dumps({"maps": [{"displayName": "TopoActive Nowhere", "installOptions": []}]})
+    answer_with(monkeypatch, body=body.encode())
+    assert main(["--path", str(device_root), "maps"]) == 0
+    out = capsys.readouterr().out
+    assert NO_MAPS_TEXT not in out and "(installed):" in out
+    assert maps.read_maps(json.loads(body.lower())) == ([], 1)  # listed, but not read
+
+
+def test_maps_page_with_maps_that_cannot_be_read(device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps({"maps": [{"displayname": "X"}]}))
+    assert [g.title for g in win.sections["maps"].groups] == ["On the device"]
+
+
+def test_maps_command_on_a_device_without_maps(device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    asked = answer_with(monkeypatch, body=json.dumps(NO_MAPS).encode())
+    before = device_files(device_root)
+    for argv in (["maps"], ["maps", "--all"], ["maps", "update"], ["maps", "update", "--apply"]):
+        assert main(["--path", str(device_root), *argv]) == 0, argv
+        captured = capsys.readouterr()
+        # One message: no empty heading, no "0 more maps", no "up to date".
+        assert captured.out.strip() == NO_MAPS_TEXT, argv
+    for argv in (["install", "Japan"], ["install", "Japan", "--apply"],
+                 ["remove", "Japan"], ["remove", "Japan", "--apply"]):
+        assert main(["--path", str(device_root), "maps", *argv]) == 1, argv
+        captured = capsys.readouterr()
+        assert captured.err.strip() == "Error: " + NO_MAPS_TEXT and captured.out == ""
+    # Only the map check was asked for, and nothing was written to the device.
+    assert len(asked) == 8 and all(url.endswith("api/maps/universal/update")
+                                   for _method, url in asked)
+    assert device_files(device_root) == before
+
+
+def test_maps_command_with_maps_keeps_the_list(server, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer_with(monkeypatch, body=json.dumps(maps_response(server)).encode())
+    assert main(["--path", str(device_root), "maps"]) == 0
+    out = capsys.readouterr().out
+    assert "(installed):" in out and "TopoActive West" in out and "TopoActive Japan" not in out
+    assert "1 more map is available (openexpress maps --all)." in out
+    assert "Free space on the device:" in out and NO_MAPS_TEXT not in out
+    assert main(["--path", str(device_root), "maps", "--all"]) == 0
+    out = capsys.readouterr().out
+    assert "(all):" in out and "TopoActive Japan" in out and NO_MAPS_TEXT not in out
+
+
+@pytest.mark.parametrize("status,body,error", [
+    (500, b"oops", None),                   # the server fails
+    (503, json.dumps(NO_MAPS).encode(), None),  # … even with a well-formed body
+    (200, b"", None),                       # an empty answer
+    (200, b"{}", None),                     # an object without a list of maps
+    (200, b'{"maps": null}', None),
+    (200, b"[]", None),
+    (200, b"<html>", None),                 # not JSON
+    (200, b"", requests.ConnectionError("no route")),  # no network
+])
+def test_maps_command_does_not_say_no_maps_when_the_check_fails(
+        status, body, error, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer_with(monkeypatch, status, body, error)
+    for argv in (["maps"], ["maps", "update"], ["maps", "install", "Japan", "--apply"]):
+        assert main(["--path", str(device_root), *argv]) == 1, argv
+        captured = capsys.readouterr()
+        assert NO_MAPS_TEXT not in captured.out + captured.err
+        assert captured.out == "" and "up to date" not in captured.err
+        assert "Server error: Map check" in captured.err and "Traceback" not in captured.err
+
+
+def _maps_window(storage):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    class Section:
+        def __init__(self):
+            self.groups = []
+
+        def group(self, title="", description=""):
+            self.groups.append(types.SimpleNamespace(title=title, rows=[]))
+            self.groups[-1].add = self.groups[-1].rows.append
+            return self.groups[-1]
+
+    reloads = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(storage=storage), sections={"maps": Section()},
+        busy=False, _action_buttons=[], confirm_map=lambda m: None,
+        confirm_remove=lambda m: None, _search_filter=lambda search, rows: None,
+        load_section=lambda key, force=False: reloads.append((key, force)))
+    win._button = types.MethodType(MainWindow._button, win)
+    win._trash = types.MethodType(MainWindow._trash, win)
+    return win, reloads
+
+
+def _children(widget):
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        child = child.get_next_sibling()
+
+
+def test_maps_page_without_maps(device_root):
+    from openexpress.gui.app import Gtk, MainWindow
+
+    win, reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(lower_keys(NO_MAPS)))
+    assert win.maps_cache == []
+    (group,) = win.sections["maps"].groups  # no "On the device", no storage bar
+    assert group.title == ""
+    (box,) = group.rows
+    labels = [c.get_label() for c in _children(box) if isinstance(c, Gtk.Label)]
+    assert labels == [NO_MAPS_TEXT]
+    (button,) = [c for c in _children(box) if isinstance(c, Gtk.Button)]
+    assert button.get_label() == "Check Again"
+    button.emit("clicked")
+    assert reloads == [("maps", True)]
+
+
+def test_maps_page_with_maps_keeps_the_groups(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
+    on_device, available = win.sections["maps"].groups
+    assert on_device.title == "On the device" and available.title == "Available"
+    titles = [row.get_title() for row in on_device.rows]
+    assert titles[-2:] == ["TopoActive East", "TopoActive West"]

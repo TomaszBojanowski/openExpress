@@ -656,7 +656,8 @@ def _load_maps(args, client):
     from openexpress import maps as mp
 
     st, dev = open_device(args)
-    return st, dev, mp.parse_maps(client.universal_maps(dev.raw))
+    all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
+    return st, dev, all_maps, listed
 
 
 def _url_salt() -> str | None:
@@ -671,7 +672,13 @@ def cmd_maps(args) -> int:
     from openexpress import maps as mp
 
     client = GarminClient(Settings.load())
-    st, dev, all_maps = _load_maps(args, client)
+    st, dev, all_maps, listed = _load_maps(args, client)
+    if not listed:
+        # One message instead of an empty list, as for a device without media.
+        if args.maps_cmd in ("install", "remove"):
+            raise mp.MapError(mp.no_maps_message())
+        print(mp.no_maps_message())
+        return 0
     if args.maps_cmd in (None, "list"):
         shown = all_maps if args.all else [m for m in all_maps if m.installed]
         print((_("Maps for {device} (all):") if args.all

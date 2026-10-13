@@ -379,7 +379,8 @@ def test_commands_without_the_account_do_not_check(device_root, xdg, monkeypatch
     client = make_client(
         [{"unitid": OTHER}], auth=False,
         UnitUploadSettings=response(body={"unittypename": "fitness", "datatypes": []}),
-        **{"api/": response(body={})})
+        # Before "api/": the first route that matches the address answers.
+        **{"api/maps/": response(body={"maps": []}), "api/": response(body={})})
 
     def no_login(settings, need_auth):
         if need_auth:

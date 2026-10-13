@@ -1483,14 +1483,30 @@ class MainWindow(Adw.ApplicationWindow):
 
         s = self.session
         self._load("maps", _("Checking maps…"),
-                   lambda: mp.parse_maps(s.client.universal_maps(s.device.raw)),
+                   lambda: mp.read_maps(s.client.universal_maps(s.device.raw)),
                    self.show_maps, device=False)  # only asks Garmin's server
 
-    def show_maps(self, all_maps) -> None:
+    def show_maps(self, result) -> None:
+        from openexpress import maps as mp
+
         if self.session is None:
             return
+        all_maps, listed = result  # the maps read, and how many the server listed
         self.maps_cache = all_maps
         sec = self.sections["maps"]
+        if not listed:
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                          halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
+            box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
+            title = Gtk.Label(label=mp.no_maps_message())
+            title.add_css_class("title-2")
+            box.append(title)
+            check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
+            check.add_css_class("pill")
+            check.connect("clicked", lambda *_a: self.load_section("maps", force=True))
+            box.append(check)
+            sec.group().add(box)
+            return
         s = self.session
         free, total = s.storage.free_space(), s.storage.capacity()
         installed = sorted((m for m in all_maps if m.installed), key=lambda m: (m.map_type, m.name))
