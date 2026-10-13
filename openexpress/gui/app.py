@@ -1598,6 +1598,10 @@ class MainWindow(Adw.ApplicationWindow):
         free, total = s.storage.free_space(), s.storage.capacity()
         installed = sorted((m for m in all_maps if m.installed), key=lambda m: (m.map_type, m.name))
         g = sec.group(_("On the device"))
+        # The list is what Garmin's server said when the page was opened; a device that has
+        # just been plugged in may not have named all its map files yet.
+        g.set_header_suffix(self._button(
+            _("Check Again"), lambda: self.load_section("maps", force=True)))
         if free is not None and total:
             used_by_maps = sum(m.size for m in installed)
             row = Adw.ActionRow(

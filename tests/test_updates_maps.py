@@ -323,9 +323,11 @@ def _maps_window(storage):
             self.groups = []
 
         def group(self, title="", description=""):
-            self.groups.append(types.SimpleNamespace(title=title, rows=[]))
-            self.groups[-1].add = self.groups[-1].rows.append
-            return self.groups[-1]
+            group = types.SimpleNamespace(title=title, rows=[], header=None)
+            group.add = group.rows.append
+            group.set_header_suffix = lambda widget: setattr(group, "header", widget)
+            self.groups.append(group)
+            return group
 
     reloads = []
     win = types.SimpleNamespace(
@@ -587,3 +589,95 @@ def test_a_failed_quiet_check_does_not_hide_what_the_maps_page_found(server):
     win._set_map_state(maps.read_maps(map_answer(server, 0, 1)))
     later.pop()()
     assert win.map_state == "current"
+
+
+# --- "Check Again" on a Maps page that has maps -----------------------------------------------
+
+
+def test_maps_page_with_maps_can_check_again(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
+    on_device, _available = win.sections["maps"].groups
+    button = on_device.header
+    assert on_device.title == "On the device" and button.get_label() == "Check Again"
+    assert not button.has_css_class("suggested-action")  # "Update" of a map stays the one
+    assert button in win._action_buttons and button.get_sensitive()
+    button.emit("clicked")
+    assert reloads == [("maps", True)]
+
+
+def test_check_again_is_greyed_while_another_task_runs(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    win.busy = True
+    MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
+    assert not win.sections["maps"].groups[0].header.get_sensitive()
+
+
+def test_maps_page_without_maps_has_one_check_again(device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(lower_keys(NO_MAPS)))
+    (group,) = win.sections["maps"].groups
+    assert group.header is None  # only the button under the message
+
+
+def _real_maps_page(answers, device_root):
+    """The Maps page of the real kind in a window that is never shown, loaded the way
+    MainWindow loads it; Garmin's server gives `answers` in turn."""
+    import types
+
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow
+
+    win, section = page_window("maps")
+    asked = []
+
+    def universal_maps(raw):
+        asked.append(raw)
+        return answers[min(len(asked), len(answers)) - 1]
+
+    win.session = types.SimpleNamespace(
+        client=types.SimpleNamespace(universal_maps=universal_maps),
+        device=types.SimpleNamespace(raw=b"xml"), storage=LocalStorage(device_root))
+    win.map_state, win.map_update_count, win._map_check_session = None, 0, None
+    win.map_row = Row()
+    win.confirm_map = win.confirm_remove = lambda m: None
+    win.load_updates = win.load_apps = win.load_music = None  # other pages: not loaded here
+    for name in ("load_maps", "show_maps", "load_section", "_set_map_state",
+                 "_render_map_state"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    win._map_subtitle, win._search_filter = MainWindow._map_subtitle, MainWindow._search_filter
+    return win, section, asked
+
+
+def check_again_buttons(win):
+    return [b for b in win._action_buttons if b.get_label() == "Check Again"]
+
+
+def test_three_check_agains_leave_one_button_in_the_list(server, device_root):
+    win, section, asked = _real_maps_page([maps_response(server)], device_root)
+    win.load_section("maps")
+    for clicks in range(1, 4):
+        (button,) = check_again_buttons(win)  # one, not one per rebuild
+        assert button.get_root() is win.toplevel
+        button.emit("clicked")
+        assert len(asked) == 1 + clicks  # each click asks the server once
+    (button,) = check_again_buttons(win)
+    assert all(b.get_root() is win.toplevel for b in win._action_buttons)
+    assert len(section.groups) == 2
+
+
+def test_check_again_updates_the_row_of_the_device_page(server, device_root):
+    # First one update, then none: the "Maps" row of the device page follows.
+    win, _section, asked = _real_maps_page(
+        [map_answer(server, 1, 1), map_answer(server, 0, 2)], device_root)
+    win.load_section("maps")
+    assert win.map_row.subtitle == "1 update available"
+    check_again_buttons(win)[0].emit("clicked")
+    assert win.map_row.subtitle == "All installed maps are up to date." and len(asked) == 2
