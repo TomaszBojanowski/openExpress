@@ -1286,7 +1286,7 @@ def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
 
 # --- removing a map that this installation did not copy ------------------------------------------
 
-ANYWAY = "openExpress did not copy this map to the device. Remove it anyway?"
+ANYWAY = "openExpress did not copy this map to the device."  # the heading asks, this states
 CHANGED = ("{} has changed since the list was shown (another size or another map name inside), "
            "so it is not removed.")
 
@@ -1494,5 +1494,6 @@ def test_foreign_maps_in_the_window_in_polish(window_device):
     assert ("broken.img", f"broken.img · 9 B · {unknown}", False) in rows
     asked = win.shown[-1]
     assert asked[0] == "ask" and asked[2].startswith(
-        "Tej mapy nie wgrał openExpress. Usunąć ją mimo to?\n\n")
+        "Tej mapy nie wgrał openExpress.\n\n")
+    assert "?" not in asked[2]  # one question only, in the heading
     assert asked[3:] == ("Usuń mimo to", True)

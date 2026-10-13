@@ -1803,8 +1803,8 @@ class MainWindow(Adw.ApplicationWindow):
         body = _("{path} ({size}) will be removed from the device.").format(
             path=m.path, size=_human(m.size))
         if foreign:
-            body = _("openExpress did not copy this map to the device. Remove it anyway?"
-                     ) + "\n\n" + body
+            # A statement: the heading already asks.
+            body = _("openExpress did not copy this map to the device.") + "\n\n" + body
         self._ask(_("Remove {name}?").format(name=m.title or m.filename), body,
                   _("Remove Anyway") if foreign else _("Remove"),
                   lambda: self.run_task(

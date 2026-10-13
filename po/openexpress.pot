@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.4.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 22:46+0200\n"
+"POT-Creation-Date: 2026-10-13 22:53+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2862,8 +2862,8 @@ msgstr ""
 msgid "{path} ({size}) will be removed from the device."
 msgstr ""
 
-#: openexpress/gui/app.py:1806
-msgid "openExpress did not copy this map to the device. Remove it anyway?"
+#: openexpress/gui/app.py:1807
+msgid "openExpress did not copy this map to the device."
 msgstr ""
 
 #: openexpress/gui/app.py:1808 openexpress/gui/app.py:1873

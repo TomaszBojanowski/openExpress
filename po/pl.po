@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 22:46+0200\n"
+"POT-Creation-Date: 2026-10-13 22:53+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -3132,9 +3132,9 @@ msgstr "Nie można usunąć mapy"
 msgid "{path} ({size}) will be removed from the device."
 msgstr "Plik {path} ({size}) zostanie usunięty z urządzenia."
 
-#: openexpress/gui/app.py:1806
-msgid "openExpress did not copy this map to the device. Remove it anyway?"
-msgstr "Tej mapy nie wgrał openExpress. Usunąć ją mimo to?"
+#: openexpress/gui/app.py:1807
+msgid "openExpress did not copy this map to the device."
+msgstr "Tej mapy nie wgrał openExpress."
 
 #: openexpress/gui/app.py:1808 openexpress/gui/app.py:1873
 #: openexpress/gui/app.py:2347 openexpress/gui/app.py:2374
@@ -4475,3 +4475,6 @@ msgstr "Synchronizacja się nie powiodła"
 
 #~ msgid "Select Networking.dll from Garmin Express"
 #~ msgstr "Wybierz Networking.dll z Garmin Express"
+
+#~ msgid "openExpress did not copy this map to the device. Remove it anyway?"
+#~ msgstr "Tej mapy nie wgrał openExpress. Usunąć ją mimo to?"
