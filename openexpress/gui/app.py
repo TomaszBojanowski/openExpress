@@ -441,10 +441,37 @@ class MainWindow(Adw.ApplicationWindow):
             self.add_action(action)
         self._update_actions()
 
-    def _update_actions(self) -> None:
+    @staticmethod
+    def _ownership_title(error) -> str:
+        """The banner's words for a device that cannot be used with the account."""
+        if isinstance(error, NotAccountDevice):
+            return _("This device is not registered to your Garmin account")
+        return _("Could not check whether this device belongs to your Garmin account")
+
+    def _sync_blocked(self) -> str:
+        """Why a sync cannot be started now, in words the window already uses; "" if it can."""
         s = self.session
-        self.lookup_action("sync").set_enabled(
-            bool(s and s.logged_in and s.ownership_error is None) and not self.busy)
+        if s is None:
+            return _("Connect your device")
+        if not s.logged_in:
+            return _("Not logged in to Garmin Connect")
+        if s.ownership_error is not None:
+            return self._ownership_title(s.ownership_error)
+        if self.busy:
+            return _("Another operation is in progress")
+        return ""
+
+    def _update_actions(self) -> None:
+        reason = self._sync_blocked()
+        self.lookup_action("sync").set_enabled(not reason)
+        # A blue button looks ready even when it is not: without a sync to start it is plain
+        # grey and says why.
+        for button, usual in ((self.sync_button, None), (self.sync_icon_button, _("Sync"))):
+            if reason:
+                button.remove_css_class("suggested-action")
+            else:
+                button.add_css_class("suggested-action")
+            button.set_tooltip_text(reason or usual)
         self.lookup_action("refresh").set_enabled(not self.busy)
 
     def _on_nav_selected(self, _box, row) -> None:
@@ -718,9 +745,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.banner.set_revealed(True)
         elif s is not None and s.ownership_error is not None:
             unknown = not isinstance(s.ownership_error, NotAccountDevice)
-            self.banner.set_title(
-                _("Could not check whether this device belongs to your Garmin account") if unknown
-                else _("This device is not registered to your Garmin account"))
+            self.banner.set_title(self._ownership_title(s.ownership_error))
             self.banner.set_button_label(_("Try Again") if unknown else None)
             self._banner_kind = "recheck"
             self.banner.set_revealed(True)

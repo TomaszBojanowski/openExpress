@@ -487,7 +487,8 @@ def banner_for(s):
     from openexpress.gui.app import MainWindow
 
     seen = {}
-    win = types.SimpleNamespace(session=s, banner=types.SimpleNamespace(
+    win = types.SimpleNamespace(session=s, _ownership_title=MainWindow._ownership_title,
+                                banner=types.SimpleNamespace(
         set_title=lambda t: seen.update(title=t),
         set_button_label=lambda b: seen.update(button=b),
         set_revealed=lambda r: seen.update(revealed=r)))

@@ -676,29 +676,109 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     assert len(shown) == count
 
 
-def test_sync_is_only_enabled_with_an_open_device():
-    """No device, a starting device, a device of another account, a running task: no Sync."""
+class _SyncButton:
+    """Stands in for a Sync button: its style classes and its tooltip."""
+
+    def __init__(self):
+        self.classes, self.tooltip = {"suggested-action"}, "unset"
+
+    def add_css_class(self, name):
+        self.classes.add(name)
+
+    def remove_css_class(self, name):
+        self.classes.discard(name)
+
+    def set_tooltip_text(self, text):
+        self.tooltip = text
+
+
+def _sync_window(session=None, busy=False):
     from openexpress.gui.app import MainWindow
 
     enabled = {}
     action = lambda name: types.SimpleNamespace(  # noqa: E731
         set_enabled=lambda value: enabled.__setitem__(name, value))
-    win = types.SimpleNamespace(session=None, busy=False, lookup_action=action)
-    session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+    win = types.SimpleNamespace(session=session, busy=busy, lookup_action=action,
+                                enabled=enabled, sync_button=_SyncButton(),
+                                sync_icon_button=_SyncButton(),
+                                _ownership_title=MainWindow._ownership_title)
+    win._sync_blocked = types.MethodType(MainWindow._sync_blocked, win)
+    win.update = types.MethodType(MainWindow._update_actions, win)
+    return win
 
-    MainWindow._update_actions(win)          # "connect your device" and "the device is starting"
-    assert enabled == {"sync": False, "refresh": True}
+
+def _looks(win):
+    """(sync action enabled, blue, tooltip of the button with a label, tooltip of the icon)."""
+    blue = ["suggested-action" in b.classes for b in (win.sync_button, win.sync_icon_button)]
+    assert blue[0] == blue[1]
+    return win.enabled["sync"], blue[0], win.sync_button.tooltip, win.sync_icon_button.tooltip
+
+
+def test_sync_is_only_enabled_with_an_open_device():
+    """No device, a starting device, a device of another account, a running task: no Sync,
+    and the button is plain grey and says why."""
+    from openexpress.connect import NotAccountDevice, OwnershipError
+
+    session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+    win = _sync_window()
+
+    win.update()                             # "connect your device" and "the device is starting"
+    assert win.enabled == {"sync": False, "refresh": True}
+    assert _looks(win) == (False, False, "Connect your device", "Connect your device")
+
     win.session = session
-    MainWindow._update_actions(win)
-    assert enabled["sync"] is True
+    win.update()
+    assert _looks(win) == (True, True, None, "Sync")  # ready: blue again, the usual tooltip
+
     win.busy = True                          # a task is running
-    MainWindow._update_actions(win)
-    assert enabled == {"sync": False, "refresh": False}
+    win.update()
+    assert win.enabled == {"sync": False, "refresh": False}
+    assert _looks(win)[1:] == (False, "Another operation is in progress",
+                               "Another operation is in progress")
     win.busy = False
-    for change in ({"logged_in": False}, {"ownership_error": "not your device"}):
+    win.update()
+    assert _looks(win) == (True, True, None, "Sync")
+
+    for change, why in (
+            ({"logged_in": False}, "Not logged in to Garmin Connect"),
+            ({"ownership_error": NotAccountDevice("x")},
+             "This device is not registered to your Garmin account"),
+            ({"ownership_error": OwnershipError("x")},
+             "Could not check whether this device belongs to your Garmin account")):
         win.session = types.SimpleNamespace(**{**vars(session), **change})
-        MainWindow._update_actions(win)
-        assert enabled["sync"] is False
+        win.update()
+        assert _looks(win) == (False, False, why, why)
+
+    win.busy = True                          # the device comes first: that is what to fix
+    win.update()
+    assert _looks(win)[2].startswith("Could not check")
+    win.busy = False
+
+    win.session = session                    # another device, on the account
+    win.update()
+    assert _looks(win) == (True, True, None, "Sync")
     win.session = None                       # unplugged again
-    MainWindow._update_actions(win)
-    assert enabled["sync"] is False
+    win.update()
+    assert _looks(win) == (False, False, "Connect your device", "Connect your device")
+
+
+def test_sync_tooltip_uses_the_words_of_the_banner():
+    """The reason on the button and the banner above the page cannot drift apart."""
+    from openexpress.connect import NotAccountDevice, OwnershipError
+    from openexpress.gui.app import MainWindow
+
+    def banner_title(s):
+        titles = []
+        banner = types.SimpleNamespace(set_title=titles.append, set_button_label=lambda b: None,
+                                       set_revealed=lambda r: None)
+        MainWindow._update_banner(types.SimpleNamespace(
+            session=s, banner=banner, _ownership_title=MainWindow._ownership_title))
+        return titles
+
+    client = types.SimpleNamespace(consumer=object())
+    for logged_in, error in ((True, NotAccountDevice("x")), (True, OwnershipError("x")),
+                             (False, None)):
+        s = types.SimpleNamespace(logged_in=logged_in, ownership_error=error, client=client)
+        win = _sync_window(session=s)
+        win.update()
+        assert banner_title(s) == [win.sync_button.tooltip]
