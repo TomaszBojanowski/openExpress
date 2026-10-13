@@ -545,9 +545,12 @@ def test_window_shows_the_refusal_instead_of_account_features(device_root, devic
         _device_textures={})
     MainWindow.load_apps(win)
     MainWindow.start_sync(win)
-    MainWindow._show_device_picture(win)
     MainWindow._load_app_icons(win, {"x": object()})
     assert started == []
+    # The picture is the one thing still looked for, in the background and not on the account
+    # (tests/test_fixes_ui.py: the device picture).
+    MainWindow._show_device_picture(win)
+    assert started == ["background"]
     assert shown == [str(s.ownership_error), "error"] and NOT_REGISTERED in shown[0]
     assert client.http.paths() == [DEVICES_PATH]
 

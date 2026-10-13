@@ -139,6 +139,66 @@ def cached_download(http, url: str, name: str) -> Path | None:
 DEVICE_PICTURE_SIZE = 180
 
 
+# The picture of a device that the Garmin account cannot give (the device is not on the
+# account, or nobody is logged in) comes from Garmin's update server instead. Only a PNG from
+# this host is taken, small and quickly, or the generic icon stays.
+PICTURE_HOST = "https://res.garmin.com/"
+PICTURE_MAX_BYTES = 2 * 1024 * 1024
+PICTURE_TIMEOUT_S = 15
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def picture_from_unit_info(client, device) -> str | None:
+    """The address of the device's picture according to Garmin's update server. The rest of
+    the answer (unit ID, serial number…) is dropped here and goes nowhere."""
+    try:
+        info = client.unit_info(device.unit_id, device.part_number)
+    except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
+        log.info("device picture: unit-info failed (%s)", type(e).__name__)
+        return None
+    url = info.get("graphicurl") if isinstance(info, dict) else None
+    return url if isinstance(url, str) and url else None
+
+
+def download_picture(http, url: str, name: str,
+                     clock=time.monotonic) -> tuple[Path | None, str]:
+    """Download a device picture into the cache: (file, "") or (None, why not)."""
+    if not url.startswith(PICTURE_HOST):
+        return None, "not res.garmin.com"
+    deadline = clock() + PICTURE_TIMEOUT_S
+    data = bytearray()
+    try:
+        with http.get(url, timeout=PICTURE_TIMEOUT_S, stream=True,
+                      allow_redirects=False) as resp:
+            if resp.status_code != 200:
+                return None, f"HTTP {resp.status_code}"
+            kind = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+            if kind != "image/png":
+                return None, "not a PNG"
+            length = resp.headers.get("Content-Length") or ""
+            if length.isdigit() and int(length) > PICTURE_MAX_BYTES:
+                return None, "too large"
+            for chunk in resp.iter_content(64 * 1024):
+                data += chunk
+                if len(data) > PICTURE_MAX_BYTES:
+                    return None, "too large"
+                if clock() > deadline:
+                    return None, "timeout"
+    except Exception as e:  # noqa: BLE001 - pictures are optional
+        return None, "timeout" if "Timeout" in type(e).__name__ else "network error"
+    if not bytes(data).startswith(PNG_SIGNATURE):
+        return None, "not a PNG"
+    target = paths.cache_dir() / "images" / name
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_name(target.name + ".part")
+        partial.write_bytes(data)
+        partial.replace(target)  # never a half-written picture in the cache
+    except OSError:
+        return None, "cannot write the cache"
+    return target, ""
+
+
 def device_picture_path(part_number: str) -> Path:
     """Cached product picture of a watch model (the picture never changes for a model)."""
     safe = "".join(c for c in part_number if c.isalnum() or c in "-_") or "unknown"
@@ -893,25 +953,41 @@ class MainWindow(Adw.ApplicationWindow):
             path = device_picture_path(part)
             if path.exists():
                 cache[part] = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
+                log.info("device picture: from the cache")
         if cache.get(part) is not None:
             self._set_device_texture(cache[part])
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
-        if not s.logged_in or s.ownership_error is not None:
-            return
+        # The account is asked only about a device that is on it.
+        on_account = s.logged_in and s.ownership_error is None
+        name = device_picture_path(part).name
 
         def work():
-            url = s.client.device_image_url(s.device.unit_id)
+            """(file, where it came from) or (None, why there is no picture)."""
+            if on_account:
+                try:
+                    url = s.client.device_image_url(s.device.unit_id)
+                except Exception as e:  # noqa: BLE001 - optional; the other source is tried
+                    log.info("device picture: the account failed (%s)", type(e).__name__)
+                    url = None
+                path = cached_download(s.client.http, url, name) if url else None
+                if path:
+                    return path, "the account"
+            url = picture_from_unit_info(s.client, s.device)
             if not url:
-                return None
-            path = device_picture_path(part)
-            return cached_download(s.client.http, url, path.name)
+                return None, "unit-info gave no address"
+            path, why = download_picture(s.client.http, url, name)
+            return (path, "unit-info") if path else (None, f"download refused: {why}")
 
-        def done(path):
+        def done(result):
+            path, source = result
             texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE) if path else None
             if texture is None:
+                log.info("device picture: none (%s)", source if path is None
+                         else "the file is not a picture")
                 return
+            log.info("device picture: from %s", source)
             cache[part] = texture
             if self.session is s:
                 self._set_device_texture(texture)

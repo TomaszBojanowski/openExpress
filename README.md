@@ -248,6 +248,9 @@ openExpress keeps a log of what it does, to make problems easier to find:
   devices and has device sync turned on; both are checked before every sync. Files from
   Garmin Connect are still written to the device. Upload locations that need a further
   consent are used only when that consent is given.
+- The picture of a device that is not on the signed-in account (or when nobody is signed
+  in) is looked up on Garmin's update server; like the update check, that request names the
+  device (unit ID). The answer is not stored or logged, only the picture is cached.
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 

@@ -141,12 +141,15 @@ class GarminClient:
         """The URL exactly as requests will send it (signatures must cover this form)."""
         return requests.Request(method, url).prepare().url
 
-    def _request(self, method: str, url: str, what: str, **kw) -> requests.Response:
-        """Send a request; network failures become ApiError."""
+    def _request(self, method: str, url: str, what: str, quiet: bool = False,
+                 **kw) -> requests.Response:
+        """Send a request; network failures become ApiError. `quiet` keeps the address out
+        of the log, for a path that names the device."""
         kw.setdefault("timeout", TIMEOUT)
         started = time.monotonic()
         # Only the host and the path go to the log: no query, no headers, no body.
-        where = urlsplit(url)._replace(query="", fragment="").geturl()
+        where = (urlsplit(url).netloc if quiet
+                 else urlsplit(url)._replace(query="", fragment="").geturl())
         try:
             resp = self.http.request(method, url, **kw)
         except requests.RequestException as e:
@@ -370,21 +373,24 @@ class GarminClient:
 
     # --- OMT: device info, software, maps (no login needed) --------------------------
 
-    def _omt(self, method: str, path: str, what: str, **kw) -> Any:
+    def _omt(self, method: str, path: str, what: str, quiet: bool = False, **kw) -> Any:
         url = urljoin(self.settings.hosts["omt"], path)
         h = self._client_headers()
         h["Garmin-Client-LocaleCode"] = self.settings.locale.replace("_", "-")
         h["Accept-Language"] = self.settings.locale.replace("_", "-")
         h["Accept"] = "application/json"
-        resp = self._request(method, url, what, headers=h, **kw)
+        resp = self._request(method, url, what, quiet=quiet, headers=h, **kw)
         self._check(resp, what)
         return lower_keys(self._json(resp, what)) if resp.content else {}
 
     def unit_info(self, unit_id: int, part_number: str) -> dict:
+        """What Garmin's update server knows about the device; needs no login. The answer
+        carries the unit ID and the serial number: never log or store it."""
         return self._omt(
             "GET",
             f"api/unit-info/manufacturers/Taiwan/unitids/{unit_id}",
             _("Device info"),
+            quiet=True,  # the path names the device
             params={"primaryFirmwarePartNumber": part_number},
         )
 

@@ -778,3 +778,271 @@ def test_window_does_not_count_files_already_on_the_device(offered):
     MainWindow._check_updates_quietly(win)
     assert states == [[]]  # "Software is up to date", no "update available"
     assert upd.pending(upd.mark_present(s.storage, upd.parse_updates(answer))) == []
+
+
+# --- the picture of a device the account cannot give -------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"picture bytes"
+PICTURE_URL = "https://res.garmin.com/en/products/010-00000-00/v/cf-lg-1234.png"
+SECRET_UNIT, SECRET_SERIAL = 3987654321, "7ZQ123456"
+
+
+class PictureResponse:
+    def __init__(self, status=200, kind="image/png", body=PNG, length=None, error=None):
+        self.status_code, self.body, self.error = status, body, error
+        self.headers = {"Content-Type": kind}
+        if length is not None:
+            self.headers["Content-Length"] = str(length)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def iter_content(self, size):
+        if self.error is not None:
+            raise self.error
+        for i in range(0, len(self.body), size):
+            yield self.body[i:i + size]
+
+
+class PictureHttp:
+    def __init__(self, response=None, error=None):
+        self.response, self.error, self.calls = response or PictureResponse(), error, []
+
+    def get(self, url, **kw):
+        self.calls.append((url, kw))
+        if self.error is not None:
+            raise self.error
+        return self.response
+
+
+class PictureClient:
+    """Stands in for GarminClient: the account answer, the unit-info answer, the downloads."""
+
+    def __init__(self, account_url=None, unit_info=None, http=None):
+        self.account_url, self.info, self.http = account_url, unit_info, http or PictureHttp()
+        self.asked = []
+
+    def device_image_url(self, unit_id):
+        self.asked.append("account")
+        if isinstance(self.account_url, Exception):
+            raise self.account_url
+        return self.account_url
+
+    def unit_info(self, unit_id, part_number):
+        self.asked.append("unit-info")
+        if isinstance(self.info, Exception):
+            raise self.info
+        return self.info
+
+
+def _unit_info(url=PICTURE_URL):
+    return {"unitid": SECRET_UNIT, "serialnumber": SECRET_SERIAL, "devicemodel": "Test watch",
+            "graphicurl": url}
+
+
+def _picture_window(client, logged_in=False, ownership_error=None, monkeypatch=None):
+    """A window that shows a picture as a (file, size) pair instead of a GTK texture."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    if monkeypatch is not None:
+        monkeypatch.setattr(app, "load_texture",
+                            lambda path, size: ("texture", path.read_bytes())
+                            if path.read_bytes().startswith(PNG[:8]) else None)
+    device = types.SimpleNamespace(unit_id=SECRET_UNIT, part_number="006-B0000-00")
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=device, client=client, logged_in=logged_in,
+                                      ownership_error=ownership_error),
+        device_image=_Widget(), device_picture=_Widget(), shown=[], jobs=[])
+    win._set_device_texture = win.shown.append
+    win.in_background = lambda work, done, on_error=None: win.jobs.append((work, done))
+    win.show = lambda: MainWindow._show_device_picture(win)
+    return win
+
+
+def _finish(win):
+    work, done = win.jobs.pop()
+    done(work())
+
+
+def _cache(xdg):
+    folder = xdg / "cache" / "openexpress" / "images"
+    return sorted(p.name for p in folder.iterdir()) if folder.is_dir() else []
+
+
+@pytest.fixture
+def pictures(xdg, monkeypatch, log_file):
+    from openexpress import applog
+
+    monkeypatch.setenv("XDG_CACHE_HOME", str(xdg / "cache"))
+    monkeypatch.setenv("OPENEXPRESS_LOG", "debug")
+    applog.setup("gui")
+    return xdg, log_file, monkeypatch
+
+
+def test_device_outside_the_account_gets_its_picture_from_unit_info(pictures):
+    xdg, log_file, monkeypatch = pictures
+    client = PictureClient(unit_info=_unit_info())
+    win = _picture_window(client, logged_in=True, ownership_error="not yours",
+                          monkeypatch=monkeypatch)
+    win.show()
+    assert win.shown == [] and len(win.jobs) == 1  # only handed to the background: no waiting
+    assert client.asked == [] and client.http.calls == []
+    _finish(win)
+    assert client.asked == ["unit-info"]  # the account is not asked about a foreign device
+    url, options = client.http.calls[0]
+    assert url == PICTURE_URL and options == {
+        "timeout": 15, "stream": True, "allow_redirects": False}
+    assert _cache(xdg) == ["device-006-B0000-00.png"] and win.shown == [("texture", PNG)]
+
+    # The answer of unit-info went nowhere: not into the log, not into any file.
+    log = log_file.read_text()
+    assert "device picture: from unit-info" in log
+    for secret in (str(SECRET_UNIT), SECRET_SERIAL, "unitids", "res.garmin.com", "cf-lg-1234"):
+        assert secret not in log
+    for path in xdg.rglob("*"):
+        if path.is_file() and path.suffix != ".png":
+            assert str(SECRET_UNIT) not in path.read_text(errors="replace")
+            assert SECRET_SERIAL not in path.read_text(errors="replace")
+
+
+def test_picture_in_the_cache_needs_no_request(pictures):
+    xdg, log_file, monkeypatch = pictures
+    folder = xdg / "cache" / "openexpress" / "images"
+    folder.mkdir(parents=True)
+    (folder / "device-006-B0000-00.png").write_bytes(PNG)
+    client = PictureClient(unit_info=_unit_info())
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    win.show()  # the second time from memory
+    assert win.jobs == [] and client.asked == [] and client.http.calls == []
+    assert win.shown == [("texture", PNG)] * 2
+    assert log_file.read_text().count("device picture: from the cache") == 1
+
+
+def test_account_is_the_first_source_and_unit_info_the_fallback(pictures, monkeypatch):
+    xdg, log_file, monkeypatch = pictures
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app, "cached_download", lambda http, url, name: _save(xdg, name))
+    client = PictureClient(account_url="https://connect.example/picture.png",
+                           unit_info=_unit_info())
+    win = _picture_window(client, logged_in=True, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)
+    assert client.asked == ["account"] and client.http.calls == []  # unit-info not needed
+    assert "device picture: from the account" in log_file.read_text()
+
+    for account_url in (None, RuntimeError("no network")):  # no picture there, or an error
+        (xdg / "cache" / "openexpress" / "images" / "device-006-B0000-00.png").unlink()
+        client = PictureClient(account_url=account_url, unit_info=_unit_info())
+        win = _picture_window(client, logged_in=True, monkeypatch=monkeypatch)
+        win.show()
+        _finish(win)
+        assert client.asked == ["account", "unit-info"] and win.shown == [("texture", PNG)]
+
+
+def _save(xdg, name):
+    path = xdg / "cache" / "openexpress" / "images" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(PNG)
+    return path
+
+
+def test_without_a_login_the_fallback_is_used_too(pictures):
+    xdg, _log, monkeypatch = pictures
+    client = PictureClient(unit_info=_unit_info())
+    win = _picture_window(client, logged_in=False, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)
+    assert client.asked == ["unit-info"] and win.shown == [("texture", PNG)]
+
+
+@pytest.mark.parametrize("url, response, error, why", [
+    ("https://example.org/x.png", None, None, "not res.garmin.com"),
+    ("http://res.garmin.com/x.png", None, None, "not res.garmin.com"),
+    ("https://res.garmin.com.example.org/x.png", None, None, "not res.garmin.com"),
+    (PICTURE_URL, PictureResponse(status=302), None, "HTTP 302"),  # redirects are not followed
+    (PICTURE_URL, PictureResponse(status=404), None, "HTTP 404"),
+    (PICTURE_URL, PictureResponse(kind="text/html"), None, "not a PNG"),
+    (PICTURE_URL, PictureResponse(kind="image/jpeg"), None, "not a PNG"),
+    (PICTURE_URL, PictureResponse(body=b"<html>not a picture</html>"), None, "not a PNG"),
+    (PICTURE_URL, PictureResponse(length=5_000_000), None, "too large"),
+    (PICTURE_URL, PictureResponse(body=PNG + b"x" * (2 * 1024 * 1024)), None, "too large"),
+    (PICTURE_URL, None, requests.ConnectionError("down"), "network error"),
+    (PICTURE_URL, None, requests.ReadTimeout("slow"), "timeout"),
+    (PICTURE_URL, PictureResponse(error=requests.ReadTimeout("slow")), None, "timeout"),
+])
+def test_anything_unexpected_leaves_the_generic_icon(pictures, url, response, error, why):
+    xdg, log_file, monkeypatch = pictures
+    client = PictureClient(unit_info=_unit_info(url), http=PictureHttp(response, error))
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)  # no exception: the picture is optional
+    assert win.shown == [] and _cache(xdg) == []  # nothing shown, nothing left in the cache
+    assert win.device_image.visible is True and win.device_picture.visible is False
+    assert f"device picture: none (download refused: {why})" in log_file.read_text()
+    if not url.startswith("https://res.garmin.com/"):
+        assert client.http.calls == []  # another host is not even asked
+
+
+def test_a_download_that_takes_too_long_is_given_up(pictures):
+    xdg, _log, _monkeypatch = pictures
+    from openexpress.gui import app
+
+    ticks = iter([0.0, 5.0, 20.0, 40.0])
+    http = PictureHttp(PictureResponse(body=PNG + b"x" * 200_000))
+    assert app.download_picture(http, PICTURE_URL, "device-x.png",
+                                clock=lambda: next(ticks)) == (None, "timeout")
+    assert _cache(xdg) == []
+
+
+@pytest.mark.parametrize("info", [{}, {"graphicurl": ""}, {"graphicurl": None}, [], None,
+                                  RuntimeError(f"HTTP 500: serial {SECRET_SERIAL}")])
+def test_no_address_from_unit_info_leaves_the_icon(pictures, info):
+    xdg, log_file, monkeypatch = pictures
+    client = PictureClient(unit_info=info)
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)
+    assert win.shown == [] and client.http.calls == [] and _cache(xdg) == []
+    log = log_file.read_text()
+    assert "device picture: none (unit-info gave no address)" in log
+    assert SECRET_SERIAL not in log  # an error that quotes the answer is not written down
+
+
+def test_result_for_a_device_that_is_gone_is_not_shown(pictures):
+    _xdg, _log, monkeypatch = pictures
+    client = PictureClient(unit_info=_unit_info())
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    win.session = None  # unplugged while the picture was on its way
+    _finish(win)
+    assert win.shown == []
+
+
+def test_unit_info_request_keeps_the_device_out_of_the_log(log_file):
+    from openexpress import applog
+    from openexpress.connect import GarminClient
+    from openexpress.settings import Settings
+
+    applog.setup("gui")
+    sent = []
+
+    class Http:
+        def request(self, method, url, **kw):
+            sent.append(url)
+            return types.SimpleNamespace(status_code=200, ok=True, content=b"{}",
+                                         json=lambda: {"GraphicUrl": PICTURE_URL},
+                                         headers={}, text="{}")
+
+    client = GarminClient(Settings(), None, None)
+    client.http = Http()
+    assert client.unit_info(SECRET_UNIT, "006-B0000-00") == {"graphicurl": PICTURE_URL}
+    assert sent[0].endswith(f"/unitids/{SECRET_UNIT}")  # the request itself is as before
+    line = log_file.read_text().splitlines()[-1]
+    assert "HTTP GET omt.garmin.com -> 200 in " in line
+    assert "unitids" not in line and str(SECRET_UNIT) not in line and "<unit>" not in line
