@@ -1,5 +1,6 @@
 import os
 import shutil
+import types
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -88,6 +89,77 @@ def test_pending_apps_count_in_slot_check(iq_device):
     other = uuid.uuid4()
     rep = ciq.install_queued(dev, st, FakeClient(), [iq_message(1, other, "X")], known={})
     assert rep.installed == [] and rep.failed[0][0] == "X"
+
+
+def app_list(slots, apps, pending=()):
+    """What `read_installed` gives: the device reports `slots` free slots and lists `apps`;
+    `pending` wait in IN.BIN and are not in OUT.BIN yet."""
+    state = ciq.InstalledState(available_slots=slots, available_space=66_000_000)
+    state.apps = [ciq.InstalledApp(app_id, 1, "app", False) for app_id in apps]
+    state.apps += [ciq.InstalledApp(app_id, 1, "app", False, pending=True) for app_id in pending]
+    return state
+
+
+def limit(max_apps):
+    return types.SimpleNamespace(iq_max_apps=max_apps)
+
+
+def test_free_slots_come_from_the_device():
+    # Like a Venu 2: one slot is taken by something the app list does not name.
+    assert ciq._free_slots(limit(32), app_list(31, [PRELOADED])) == 31
+    assert ciq._free_slots(limit(32), app_list(0, [PRELOADED])) == 0
+    # No number in the app list: the declared limit less the store apps listed.
+    assert ciq._free_slots(limit(32), app_list(None, [STORE_ID, PRELOADED])) == 31
+    assert ciq._free_slots(limit(None), app_list(None, [STORE_ID])) is None
+    assert ciq._free_slots(limit(None), app_list(5, [STORE_ID])) == 5
+
+
+def test_free_slots_count_a_waiting_app_once():
+    # Written earlier, not yet in OUT.BIN: the device's number does not count it.
+    assert ciq._free_slots(limit(32), app_list(31, [PRELOADED], pending=[FACE])) == 30
+    # The device took it: it is in OUT.BIN and in the device's number, not counted again.
+    assert ciq._free_slots(limit(32), app_list(30, [PRELOADED, FACE])) == 30
+    # Never below zero.
+    assert ciq._free_slots(limit(32), app_list(0, [PRELOADED], pending=[FACE])) == 0
+
+
+@pytest.mark.parametrize("waiting", range(4))
+def test_free_slots_on_a_device_that_lists_all_its_store_apps(waiting):
+    # Like a fēnix 8: 31 free slots of 32, the one taken is the store app in the list. The
+    # result is what the count of listed store apps gave before.
+    pending = [uuid.uuid4() for _ in range(waiting)]
+    state = app_list(31, [STORE_ID, PRELOADED], pending)
+    assert ciq._free_slots(limit(32), state) == 32 - len(state.store_apps) == 31 - waiting
+
+
+def install_with(monkeypatch, iq_device, state, names):
+    st, dev = iq_device
+    monkeypatch.setattr(ciq, "read_installed", lambda device, storage: state)
+    messages = [iq_message(n, uuid.uuid4(), name) for n, name in enumerate(names, 1)]
+    return ciq.install_queued(dev, st, FakeClient(), messages, known={})
+
+
+def test_install_refuses_when_the_device_reports_no_free_slot(iq_device, monkeypatch):
+    st, _dev = iq_device
+    before = sorted(p.name for p in st.root.rglob("*"))
+    # No store app in the list, and still full.
+    rep = install_with(monkeypatch, iq_device, app_list(0, [PRELOADED]), ["X"])
+    assert rep.installed == [] and rep.failed == [("X", "no free app slots on the device")]
+    assert sorted(p.name for p in st.root.rglob("*")) == before
+
+
+def test_install_stops_at_the_last_free_slot(iq_device, monkeypatch):
+    rep = install_with(monkeypatch, iq_device, app_list(1, [PRELOADED]), ["A", "B"])
+    assert rep.installed == ["A"]
+    assert rep.failed == [("B", "no free app slots on the device")]
+
+
+def test_install_counts_an_app_that_waits_for_the_device(iq_device, monkeypatch):
+    rep = install_with(monkeypatch, iq_device, app_list(1, [PRELOADED], pending=[FACE]), ["A"])
+    assert rep.installed == [] and rep.failed == [("A", "no free app slots on the device")]
+    # The same app, taken by the device: its slot is in the device's number already.
+    rep = install_with(monkeypatch, iq_device, app_list(1, [PRELOADED, FACE]), ["A"])
+    assert rep.installed == ["A"] and rep.failed == []
 
 
 class FailingAckClient(FakeClient):

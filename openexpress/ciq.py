@@ -727,12 +727,31 @@ def install_queued(
     return report
 
 
+def _free_slots(device: GarminDevice, state: InstalledState) -> int | None:
+    """How many more apps the device takes; None when nothing is known.
+
+    The device reports its free slots in its app list (OUT.BIN), and that number counts
+    what the list does not name (a Venu 2 reports 31 of 32 with no store app listed). It
+    does not count the apps that wait for the device: written earlier and registered in
+    the app list for the device (IN.BIN), but not yet in OUT.BIN. `read_installed` marks
+    those `pending`; an app that is in OUT.BIN is already counted by the device.
+
+    The declared limit less the store apps listed is the other bound; the smaller wins."""
+    bounds = []
+    if state.available_slots is not None:
+        waiting = sum(1 for a in state.store_apps if a.pending)
+        bounds.append(state.available_slots - waiting)
+    if device.iq_max_apps:
+        bounds.append(device.iq_max_apps - len(state.store_apps))
+    return max(0, min(bounds)) if bounds else None
+
+
 def _install_pass(device, storage, client, messages, known, only, progress,
                   direct: bool) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
     state = read_installed(device, storage)
     require_complete(state)
-    max_apps = device.iq_max_apps or 0
+    free_slots = _free_slots(device, state)
     new_entries: list[InstalledApp] = []
     new_paths: list[str] = []
     hidden: list[_Hidden] = []
@@ -762,8 +781,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
             dt = m["devicexmldatatype"]
             existing = state.find(app_id)
             try:
-                if (existing is None and max_apps
-                        and len(state.store_apps) + len(new_entries) + len(hidden) >= max_apps):
+                if (existing is None and free_slots is not None
+                        and len(new_entries) + len(hidden) >= free_slots):
                     raise CiqError(_("no free app slots on the device"))
                 if existing is not None and existing.pending_removal:
                     raise CiqError(_("the device has not applied earlier changes yet; unplug "
