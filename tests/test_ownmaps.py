@@ -1014,8 +1014,8 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
     assert win.shown == [
         ("task", "Checking maps…"),
         ("ask", "Copy this map to the device?",
-         ("Sometown cyclemap/latin1 Example.org\n"
-          "new-map.img (2.0 kB) will be written to Garmin/new-map.img\n"
+         ("Sometown cyclemap/latin1 Example.org\n\n"  # the name of the map on its own
+          "new-map.img · 2.0 kB\n"
           "Free space on the device: 12.4 GB (the map takes 2.0 kB)"), "Copy", False),
         ("task", "Copying the map…"),
         ("toast", "Wrote Garmin/new-map.img (2.0 kB)."),
@@ -1047,7 +1047,7 @@ def test_window_shows_a_refusal_with_its_own_hint(window_device, my_map, name, m
     win, dev, root = window_device
     before = tree(root / "Garmin")
     win.add_own_map(my_map.rename(my_map.with_name(name)))
-    assert win.shown == [("task", "Checking maps…"), ("error", "Own maps", message)]
+    assert win.shown == [("task", "Checking maps…"), ("error", "Cannot add the map", message)]
     assert "--" not in message
     assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
 
@@ -1057,7 +1057,8 @@ def test_window_says_when_the_file_is_not_a_map(window_device, tmp_path):
     photo = tmp_path / "photo.img"
     photo.write_bytes(b"\xff\xd8\xff" + b"\0" * 2000)
     win.add_own_map(photo)
-    assert win.shown[-1] == ("error", "Own maps", "photo.img is not a Garmin map file (.img).")
+    assert win.shown[-1] == (
+        "error", "Cannot add the map", "photo.img is not a Garmin map file (.img).")
 
 
 def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
@@ -1090,7 +1091,7 @@ def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
     (root / "Garmin" / "ours.img").write_bytes(b"another file")
     win.confirm_remove_own(ours)
     kind, title, text = win.shown[-1]
-    assert (kind, title) == ("error", "Own maps") and "not the same file" in text
+    assert (kind, title) == ("error", "Cannot remove the map") and "not the same file" in text
     assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
     assert win.reloads == []
 
@@ -1115,11 +1116,15 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
         client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []}),
         device=numbered(device(), 4000000007), storage=LocalStorage(map_folder))
     win.session.device.raw = b"xml"
-    win.show_maps = lambda result: drawn.append(("maps", result))
-    win.load_maps = types.MethodType(MainWindow.load_maps, win)
     real = win.show_own_maps
-    win.show_own_maps = lambda view: (drawn.append(("own", [m.filename for m in view.maps])),
-                                      real(view))
+
+    def show_maps(result, own):  # stands in for the page of Garmin's maps
+        drawn.append(("maps", result))
+        drawn.append(("own", [m.filename for m in own.maps]))
+        real(own)
+
+    win.show_maps = show_maps
+    win.load_maps = types.MethodType(MainWindow.load_maps, win)
     win.load_maps()
     assert asked == [b"xml"]  # one request to Garmin's server
     # The server lists no map here, so every file not named like Garmin's counts as own.
@@ -1146,7 +1151,7 @@ def test_own_maps_in_the_window_in_polish(window_device, my_map):
     assert rows_of(group) == [("by-hand.img", f"by-hand.img · 2,0 kB · {note}", False)]
     refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
                "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
-    assert win.shown[-1] == ("error", "Własne mapy", refusal)
+    assert win.shown[-1] == ("error", "Nie można dodać mapy", refusal)
 
 
 # --- one spelling of the map folder, and the free space ------------------------------------------
@@ -1197,3 +1202,77 @@ def test_free_space_is_said_once_with_what_the_map_takes(maps_cli, my_map, monke
         i18n.setup("en")
     assert "Wolne miejsce na urządzeniu: 12,4 GB (usunięcie zwolni 2,0 kB)" in out
     assert "teraz" not in out and "potem" not in out
+
+
+# --- the look of the window: where the group is, the confirmation, the refusals -----------------
+
+
+def page_with_garmins_and_own_maps(view, answer):
+    """The whole Maps page of the real kind for an answer of Garmin's server and an overview
+    of own maps; returns the titles of its groups, in order."""
+    from openexpress import maps as mp
+    from openexpress.gui.app import MainWindow
+
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace(storage=types.SimpleNamespace(
+        free_space=lambda: 12_400_000_000, capacity=lambda: 31_100_000_000))
+    win.confirm_map = win.confirm_remove = lambda m: None
+    win._set_map_state = lambda result: None
+    win._map_subtitle, win._search_filter = MainWindow._map_subtitle, MainWindow._search_filter
+    MainWindow.show_maps(win, mp.read_maps(answer), view)
+    return [g.get_title() for g in section.groups]
+
+
+def test_own_maps_come_right_under_the_installed_maps():
+    answer = json.loads(json.dumps(ANSWER))
+    other = json.loads(json.dumps(ANSWER["maps"][0]))
+    other.update(displayname="TopoActive Elsewhere", installationstate=0, isreinstall=False)
+    answer["maps"].append(other)  # one installed, one to download
+    view = view_of(("mine.img", 2000, "Mine"), removable=["mine.img"])
+    assert page_with_garmins_and_own_maps(view, answer) == ["On the device", "Own maps", "Available"]
+    # Without a map folder there is no such group, and nothing else moves.
+    assert page_with_garmins_and_own_maps(view_of(folder=None), answer) == [
+        "On the device", "Available"]
+
+
+def test_own_maps_show_under_the_message_of_a_device_without_garmins_maps():
+    titles = page_with_garmins_and_own_maps(view_of(("mine.img", 2000, "Mine")), {"maps": []})
+    assert titles == ["", "Own maps"]  # the message "No maps are available…", then the group
+
+
+def test_confirmation_keeps_a_date_in_the_name_together(tmp_path):
+    from openexpress.gui.app import MainWindow
+
+    plan = ownmaps.AddPlan(tmp_path / "osm-test.img", "osm-test.img", "GARMIN/osm-test.img",
+                           "Gdynia openfietslite/latin1 BBBike.org 13-Oct-202", 51_001_344,
+                           12_400_000_000)
+    text = MainWindow._add_map_text(plan)
+    assert text.splitlines() == [
+        "Gdynia openfietslite/latin1 BBBike.org 13\u2011Oct\u2011202",  # no break at the hyphens
+        "",
+        "osm-test.img · 51.0 MB",
+        "Free space on the device: 12.4 GB (the map takes 51.0 MB)",
+    ]
+    assert plan.title.count("-") == 2  # the plan itself keeps the name as it is in the file
+    plan.free = None  # a device that does not report its free space
+    assert MainWindow._add_map_text(plan).splitlines()[-1] == "osm-test.img · 51.0 MB"
+
+
+def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
+    from openexpress import i18n
+
+    win, dev, root = window_device
+    st = win.session.storage
+    win.add_own_map(my_map)  # osm-test.img is on the made-up device already
+    assert win.shown[-1][:2] == ("error", "Cannot add the map")
+
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    (root / "Garmin" / "ours.img").write_bytes(b"another file")
+    i18n.setup("pl")
+    try:
+        win.confirm_remove_own(ownmaps.OwnMap("ours.img", 2000, "Mine", "Garmin/ours.img"))
+    finally:
+        i18n.setup("en")
+    assert win.shown[-1][:2] == ("error", "Nie można usunąć mapy")
+    assert not any(title in ("Own maps", "Własne mapy") for _kind, title, *_r in win.shown
+                   if _kind == "error")

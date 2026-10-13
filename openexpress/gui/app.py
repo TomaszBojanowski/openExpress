@@ -1576,10 +1576,9 @@ class MainWindow(Adw.ApplicationWindow):
             result = mp.read_maps(s.client.universal_maps(s.device.raw))
             return result, ownmaps.overview(s.device, s.storage, result[0])
 
-        self._load("maps", _("Checking maps…"), work,
-                   lambda r: (self.show_maps(r[0]), self.show_own_maps(r[1])))
+        self._load("maps", _("Checking maps…"), work, lambda r: self.show_maps(r[0], r[1]))
 
-    def show_maps(self, result) -> None:
+    def show_maps(self, result, own=None) -> None:
         from openexpress import maps as mp
 
         if self.session is None:
@@ -1600,6 +1599,8 @@ class MainWindow(Adw.ApplicationWindow):
             check.connect("clicked", lambda *_a: self.load_section("maps", force=True))
             box.append(check)
             sec.group().add(box)
+            if own is not None:
+                self.show_own_maps(own)
             return
         s = self.session
         free, total = s.storage.free_space(), s.storage.capacity()
@@ -1629,6 +1630,8 @@ class MainWindow(Adw.ApplicationWindow):
                                            lambda m=m: self.confirm_remove(m)))
             g.add(row)
 
+        if own is not None:
+            self.show_own_maps(own)  # right under the installed maps, before those to download
         available = sorted((m for m in all_maps if not m.installed),
                            key=lambda m: (m.region, m.name))
         if not available:
@@ -1682,6 +1685,8 @@ class MainWindow(Adw.ApplicationWindow):
     def _ask(self, heading: str, body: str, label: str, on_ok, destructive: bool = False) -> None:
         """A confirmation with Cancel and one other button; `on_ok` runs when that is chosen."""
         d = Adw.AlertDialog(heading=heading, body=body)
+        if hasattr(d, "set_prefer_wide_layout"):
+            d.set_prefer_wide_layout(True)  # room for the name of a map on one line
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", label)
         d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE if destructive
@@ -1689,15 +1694,16 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", lambda _d, r: r == "ok" and on_ok())
         d.present(self)
 
-    def _own_map_refused(self, e) -> bool:
-        """Show a refusal of ownmaps.py, with the hint for the window; True when it was one."""
+    def _own_map_refused(self, e, what: str) -> bool:
+        """Show a refusal of ownmaps.py under the title `what` (what could not be done), with
+        the hint for the window; True when it was one."""
         from openexpress import maps as mp
         from openexpress import ownmaps
 
         if isinstance(e, ownmaps.OwnMapError):
-            self.error(_("Own maps"), e.text(window=True))
+            self.error(what, e.text(window=True))
         elif isinstance(e, mp.MapError):
-            self.error(_("Own maps"), str(e))
+            self.error(what, str(e))
         else:
             return False
         return True
@@ -1725,9 +1731,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     @staticmethod
     def _add_map_text(plan) -> str:
-        lines = [plan.title or plan.name,
-                 _("{file} ({size}) will be written to {path}").format(
-                     file=plan.local.name, size=_human(plan.size), path=plan.path)]
+        """The body of the confirmation: the name of the map on a line of its own, then the
+        file and the space. Hyphens in the name do not break ("13-Oct-2026" stays together);
+        only what is shown changes, not the name."""
+        lines = [(plan.title or plan.name).replace("-", "\u2011"), "",
+                 f"{plan.name} · {_human(plan.size)}"]
         if plan.free is not None:
             lines.append(_("Free space on the device: {free} (the map takes {size})").format(
                 free=_human(plan.free), size=_human(plan.size)))
@@ -1739,6 +1747,9 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         garmin_maps = self.maps_cache or []
 
+        def refused(e):
+            return self._own_map_refused(e, _("Cannot add the map"))
+
         def written(real, plan):
             self.toast(_("Wrote {path} ({size}).").format(path=real, size=_human(plan.size)))
             self.load_section("maps", force=True)
@@ -1749,11 +1760,11 @@ class MainWindow(Adw.ApplicationWindow):
                           _("Copying the map…"),
                           lambda: ownmaps.add(plan, s.device, s.storage,
                                               transfer_progress=self.fraction),
-                          lambda real: written(real, plan), self._own_map_refused))
+                          lambda real: written(real, plan), refused))
 
         self.run_task(_("Checking maps…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
-                      confirm, self._own_map_refused)
+                      confirm, refused)
 
     def confirm_remove_own(self, m) -> None:
         from openexpress import ownmaps
@@ -1779,8 +1790,9 @@ class MainWindow(Adw.ApplicationWindow):
                   _("{path} ({size}) will be removed from the device.").format(
                       path=m.path, size=_human(m.size)),
                   _("Remove"),
-                  lambda: self.run_task(_("Removing {name}…").format(name=m.title or m.filename),
-                                        work, removed, self._own_map_refused),
+                  lambda: self.run_task(
+                      _("Removing {name}…").format(name=m.title or m.filename), work, removed,
+                      lambda e: self._own_map_refused(e, _("Cannot remove the map"))),
                   destructive=True)
 
     @staticmethod
