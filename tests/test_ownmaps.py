@@ -319,3 +319,294 @@ def test_own_maps_in_polish(maps_cli, capsys):
         i18n.setup("en")
     out = capsys.readouterr().out
     assert "Własne mapy (nie od Garmina):" in out and "(nazwa nieodczytana)" in out
+
+
+# --- "maps add": copying a map of the user's to the device --------------------------------------
+
+NOT_A_MAP = "Error: {} is not a Garmin map file (.img)."
+BAD_NAME = ("Error: The name {} cannot be used: only letters, digits, spaces and . _ - ( ) are "
+            "allowed, and it must end with .img.")
+RESERVED = "Error: The name {} is reserved for Garmin's own maps. Choose another one with --name."
+EXISTS = ("Error: A file named {} is already on the device; nothing is overwritten. Choose "
+          "another name with --name.")
+NO_FOLDER = "Error: This device has no folder for maps."
+
+
+@pytest.fixture
+def my_map(tmp_path):
+    """A made-up map file of 2000 bytes on the computer."""
+    path = tmp_path / "local" / "osm-test.img"
+    path.parent.mkdir()
+    path.write_bytes(img_header(b"Sometown cyclemap/latin1 Example.org") + b"\x07" * 1488)
+    return path
+
+
+def tree(root):
+    return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def state_of(device_root):
+    from openexpress.device.xmldevice import parse
+
+    return ownmaps.recorded(parse((device_root / "GARMIN/GarminDevice.xml").read_bytes()))
+
+
+def refused(capsys, device_root, argv, message):
+    """The command fails with exactly this message, in a dry run and with --apply, and
+    neither the device nor the list of own maps changes."""
+    before = tree(device_root)
+    for extra in ([], ["--apply"]):
+        assert main(["--path", str(device_root), "maps", "add", *argv, *extra]) == 1
+        captured = capsys.readouterr()
+        lines = [line for line in captured.err.splitlines() if not line.startswith("Do not unplug")]
+        assert lines == [message] and captured.out == ""
+        assert tree(device_root) == before and state_of(device_root) == []
+
+
+@pytest.mark.parametrize("name", ["osm-test.img", "My map (v2).img", "a.img", "A-b_c.1.img",
+                                  "x" * 60 + ".img"])
+def test_names_a_map_of_the_user_may_have(name):
+    assert ownmaps.valid_name(name)
+
+
+@pytest.mark.parametrize("name", [
+    "osm-test", "osm-test.IMG", "osm-test.img ", " osm.img", ".hidden.img", "a/b.img", "a\\b.img",
+    "Gdańsk.img", "a:b.img", "a*.img", "tab\t.img", "", ".img", "x" * 61 + ".img", "a.img.txt",
+])
+def test_names_that_are_refused(name):
+    assert not ownmaps.valid_name(name)
+
+
+def test_add_refuses_a_file_that_is_not_a_map(maps_cli, tmp_path, capsys):
+    song = tmp_path / "song.img"
+    song.write_bytes(b"ID3" + b"\0" * 2000)
+    refused(capsys, maps_cli, [str(song)], NOT_A_MAP.format("song.img"))
+    refused(capsys, maps_cli, [str(tmp_path / "none.img")],
+            f"Error: Not found: {tmp_path / 'none.img'}")
+
+
+@pytest.mark.parametrize("name", ["Gdańsk.img", "map", "a/b.img", "x" * 61 + ".img"])
+def test_add_refuses_a_name_it_would_have_to_change(maps_cli, my_map, capsys, name):
+    refused(capsys, maps_cli, [str(my_map), "--name", name], BAD_NAME.format(name))
+
+
+def test_add_refuses_the_local_name_too(maps_cli, my_map, capsys):
+    odd = my_map.with_name("moja mapa żółw.img")
+    my_map.rename(odd)
+    refused(capsys, maps_cli, [str(odd)], BAD_NAME.format(odd.name))
+
+
+def test_local_checks_come_before_the_device_and_the_server(maps_cli, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(requests.Session, "request",
+                        lambda *a, **k: pytest.fail("the server was asked"))
+    song = tmp_path / "song.img"
+    song.write_bytes(b"not a map")
+    assert main(["--path", str(tmp_path / "no-device"), "maps", "add", str(song)]) == 1
+    assert capsys.readouterr().err.strip() == NOT_A_MAP.format("song.img")
+
+
+def test_add_on_a_device_without_a_map_folder(device_root, xdg, my_map, monkeypatch, capsys):
+    def request(self, method, url, **kw):  # the answer for a device without maps
+        resp = requests.Response()
+        resp.status_code, resp._content = 200, b'{"maps": []}'
+        return resp
+
+    monkeypatch.setattr(requests.Session, "request", request)
+    refused(capsys, device_root, [str(my_map)], NO_FOLDER)
+
+
+@pytest.mark.parametrize("name", [
+    "D1234567A.img", "gmapsupp.img", "gmaptz.img",  # named like Garmin's files
+    "Listed.img", "LISTED.img",                     # a file of a map the server lists
+    "Old.img",                                      # a file a newer version removes
+])
+def test_add_refuses_names_of_garmins_maps(maps_cli, my_map, capsys, name):
+    refused(capsys, maps_cli, [str(my_map), "--name", name], RESERVED.format(name))
+
+
+def test_add_refuses_a_map_garmin_lists_but_has_not_installed(maps_cli, my_map, monkeypatch,
+                                                              capsys):
+    answer = json.loads(json.dumps(ANSWER))
+    answer["maps"][0]["installationstate"] = 0
+    resp = requests.Response()
+    resp.status_code, resp._content = 200, json.dumps(answer).encode()
+    monkeypatch.setattr(requests.Session, "request", lambda self, method, url, **kw: resp)
+    refused(capsys, maps_cli, [str(my_map), "--name", "Listed.img"], RESERVED.format("Listed.img"))
+
+
+@pytest.mark.parametrize("on_device", ["osm-test.img", "OSM-Test.IMG"])
+def test_add_never_overwrites(maps_cli, my_map, capsys, on_device):
+    (maps_cli / "GARMIN" / on_device).write_bytes(b"something else entirely")
+    refused(capsys, maps_cli, [str(my_map)], EXISTS.format("osm-test.img"))
+
+
+def test_add_refuses_when_there_is_not_enough_room(maps_cli, my_map, monkeypatch, capsys):
+    from openexpress import maps as mp
+
+    # The file fits, but not with the margin kept for maps.
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 2000 + mp.SPACE_MARGIN - 1)
+    refused(capsys, maps_cli, [str(my_map)],
+            "Error: Not enough space on the device: 2.0 kB needed, 52.4 MB free")
+
+
+def test_add_dry_run_says_what_would_be_written(maps_cli, my_map, monkeypatch, capsys):
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
+    before = tree(maps_cli)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map)]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
+        "Map: Sometown cyclemap/latin1 Example.org",
+        "  osm-test.img (2.0 kB) will be written to Garmin/osm-test.img",
+        "Free space on the device: 12.4 GB now, 12.4 GB after",
+        "Dry run. Add --apply.",
+    ]
+    assert captured.err == "" and tree(maps_cli) == before and state_of(maps_cli) == []
+
+
+def test_add_apply_writes_the_map_and_puts_it_on_the_list(maps_cli, my_map, capsys):
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
+    out = capsys.readouterr().out
+    # The path as the device spells it (this made-up device calls the folder "GARMIN").
+    assert "Wrote GARMIN/osm-test.img (2.0 kB)." in out and "Dry run" not in out
+    written = next(p for p in maps_cli.rglob("osm-test.img"))
+    assert written.read_bytes() == my_map.read_bytes()
+    (entry,) = state_of(maps_cli)
+    assert sorted(entry) == ["added", "filename", "size", "title"]
+    assert (entry["filename"], entry["size"], entry["title"]) == (
+        "osm-test.img", 2000, "Sometown cyclemap/latin1 Example.org")
+    assert entry["added"].startswith("20") and len(entry["added"]) == 19
+
+    assert main(["--path", str(maps_cli), "maps"]) == 0  # and "maps" shows it
+    assert capsys.readouterr().out.splitlines()[-2:] == [
+        "Own maps (not from Garmin):",
+        f"  {'osm-test.img':48} {'2.0 kB':>9}  Sometown cyclemap/latin1 Example.org"]
+
+    # Again: the file is there now.
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
+    assert EXISTS.format("osm-test.img") in capsys.readouterr().err
+    assert len(state_of(maps_cli)) == 1
+
+
+def test_add_with_another_name(maps_cli, my_map, capsys):
+    argv = ["--path", str(maps_cli), "maps", "add", str(my_map), "--name", "Gdynia (bike).img"]
+    assert main([*argv, "--apply"]) == 0
+    assert "Wrote GARMIN/Gdynia (bike).img" in capsys.readouterr().out
+    assert [m["filename"] for m in state_of(maps_cli)] == ["Gdynia (bike).img"]
+    assert not list(maps_cli.rglob("osm-test.img"))
+
+
+class FailingWrite(LocalStorage):
+    """The copy breaks off: half of the file is on the device, then an error."""
+
+    keep_the_rest = False  # the device refuses to delete, too
+
+    def _write_file(self, real_path, local, progress=None):
+        self._p(real_path).write_bytes(local.read_bytes()[:1000])
+        if type(self).short_only:
+            return
+        raise DeviceError("Cannot write: device gone")
+
+    def _delete(self, real_path):
+        if type(self).keep_the_rest:
+            raise DeviceError("Cannot delete")
+        super()._delete(real_path)
+
+
+def failing(monkeypatch, short_only=False, keep_the_rest=False):
+    from openexpress import cli
+
+    FailingWrite.short_only, FailingWrite.keep_the_rest = short_only, keep_the_rest
+    monkeypatch.setattr(cli, "LocalStorage", FailingWrite)
+
+
+@pytest.mark.parametrize("short_only, reason", [
+    (False, "Cannot write: device gone"),
+    (True, "the file on the device has 1000 B instead of 2000 B"),  # written, but cut short
+])
+def test_a_failed_copy_removes_its_own_incomplete_file(maps_cli, my_map, monkeypatch, capsys,
+                                                       short_only, reason):
+    failing(monkeypatch, short_only)
+    before = tree(maps_cli)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err.splitlines()[-1] == (
+        "Error: Writing Garmin/osm-test.img failed; the incomplete file was removed from the "
+        f"device. ({reason})")
+    assert "Wrote" not in captured.out
+    assert tree(maps_cli) == before and state_of(maps_cli) == []
+
+
+def test_a_failed_copy_that_cannot_be_cleaned_up_says_so(maps_cli, my_map, monkeypatch, capsys):
+    failing(monkeypatch, keep_the_rest=True)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
+    assert ("Error: Writing Garmin/osm-test.img failed and the incomplete file could not be "
+            "removed; delete Garmin/osm-test.img from the device yourself."
+            ) in capsys.readouterr().err
+    assert state_of(maps_cli) == []
+
+
+def test_a_copy_that_left_nothing_behind(maps_cli, my_map, monkeypatch, capsys):
+    from openexpress import cli
+
+    class Nothing(LocalStorage):
+        def _write_file(self, real_path, local, progress=None):
+            raise DeviceError("Cannot write: refused")
+
+    monkeypatch.setattr(cli, "LocalStorage", Nothing)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        "Error: Writing Garmin/osm-test.img failed. (Cannot write: refused)")
+
+
+def test_a_file_that_appeared_meanwhile_is_not_touched(map_folder, my_map):
+    st = LocalStorage(map_folder)
+    dev = device()
+    dev.unit_id = 4000000001  # made up
+    plan = ownmaps.plan_add(dev, st, [], my_map, "new.img")
+    (map_folder / "Garmin" / "new.img").write_bytes(b"someone else's file")  # after the plan
+    with pytest.raises(ownmaps.MapError) as error:
+        ownmaps.add(plan, dev, st)
+    assert "already on the device" in str(error.value)
+    assert (map_folder / "Garmin" / "new.img").read_bytes() == b"someone else's file"
+
+
+def test_the_list_of_own_maps_stays_out_of_the_log(maps_cli, my_map, log_file, capsys):
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
+    capsys.readouterr()
+    log = log_file.read_text(encoding="utf-8")
+    assert "own map added: 2_000 B" in log
+    for private in ("osm-test", "Sometown", "ownmaps.json", str(my_map)):
+        assert private not in log
+
+
+def test_refusals_keep_the_names_out_of_the_log_too(maps_cli, my_map, tmp_path, log_file, capsys):
+    (maps_cli / "GARMIN" / "osm-test.img").write_bytes(b"taken")
+    song = tmp_path / "holiday-song.img"
+    song.write_bytes(b"not a map")
+    for argv in ([str(my_map)], [str(my_map), "--name", "D1234567A.img"],
+                 [str(my_map), "--name", "private name.txt"], [str(song)]):
+        assert main(["--path", str(maps_cli), "maps", "add", *argv]) == 1
+    shown = capsys.readouterr().err
+    assert "osm-test.img" in shown and "holiday-song.img" in shown  # the user sees them
+    log = log_file.read_text(encoding="utf-8")
+    assert log.count("error: MapError:") == 4
+    for private in ("osm-test", "holiday-song", "private name", "Sometown", str(tmp_path)):
+        assert private not in log
+
+
+def test_add_in_polish(maps_cli, my_map, capsys):
+    from openexpress import i18n
+
+    (maps_cli / "GARMIN" / "taken.img").write_bytes(b"x")
+    i18n.setup("pl")
+    try:
+        assert main(["--path", str(maps_cli), "maps", "add", str(my_map)]) == 0
+        out = capsys.readouterr().out.splitlines()
+        assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--name", "taken.img"]) == 1
+        err = capsys.readouterr().err
+    finally:
+        i18n.setup("en")
+    assert out[0] == "Mapa: Sometown cyclemap/latin1 Example.org"
+    assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako Garmin/osm-test.img"
+    assert out[2].startswith("Wolne miejsce na urządzeniu: teraz ") and ", potem " in out[2]
+    assert "Plik o nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err

@@ -668,12 +668,35 @@ def _url_salt() -> str | None:
     return salt
 
 
+def _maps_add(args, dev, st, all_maps) -> int:
+    from openexpress import ownmaps
+
+    plan = ownmaps.plan_add(dev, st, all_maps, Path(args.file), args.name)
+    print(_("Map: {title}").format(title=plan.title or plan.name))
+    print("  " + _("{file} ({size}) will be written to {path}").format(
+        file=plan.local.name, size=_human(plan.size), path=plan.path))
+    if plan.free is not None:
+        print(_("Free space on the device: {before} now, {after} after").format(
+            before=_human(plan.free), after=_human(plan.free - plan.size)))
+    if not args.apply:
+        print(_("Dry run. Add --apply."))
+        return 0
+    path = ownmaps.add(plan, dev, st, transfer_progress=_Bar())
+    print(_("Wrote {path} ({size}).").format(path=path, size=_human(plan.size)))
+    return 0
+
+
 def cmd_maps(args) -> int:
     from openexpress import maps as mp
     from openexpress import ownmaps
 
+    if args.maps_cmd == "add":
+        # Before the device is opened: is it a map at all, and may it have that name?
+        ownmaps.check_local(Path(args.file), args.name)
     client = GarminClient(Settings.load())
     st, dev, all_maps, listed = _load_maps(args, client)
+    if args.maps_cmd == "add":
+        return _maps_add(args, dev, st, all_maps)
     if not listed:
         # One message instead of an empty list, as for a device without media.
         if args.maps_cmd in ("install", "remove"):
@@ -1486,6 +1509,10 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--apply", action="store_true")
     m = msub.add_parser("remove", help=_("remove a map from the device"))
     m.add_argument("name")
+    m.add_argument("--apply", action="store_true")
+    m = msub.add_parser("add", help=_("copy a map of your own (.img) to the device"))
+    m.add_argument("file")
+    m.add_argument("--name")
     m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_maps)
 
