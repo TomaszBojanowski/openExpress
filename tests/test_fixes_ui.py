@@ -1257,3 +1257,60 @@ def test_next_steps_in_polish():
         assert text.startswith("\nAby dokończyć instalację:\n  1. ") and text.endswith(".\n")
     assert "`openexpress updates`" in cli_text and "openexpress" not in window_text
     assert "sprawdź aktualizacje jeszcze raz" in window_text
+
+
+# --- the list of action buttons after a page is rebuilt -----------------------------------------
+
+
+def page_window(key):
+    """A page of the real kind in a window that is never shown, and a stand-in for the main
+    window that loads it the way MainWindow does. A task runs at once, in the order run_task
+    keeps: busy on, the work, busy off, then the page is rebuilt."""
+    from openexpress.gui.app import Gtk, MainWindow, Section, still_in_window
+
+    section = Section(key, key.title(), "x-symbolic", "Loading…")
+    toplevel = Gtk.Window()
+    toplevel.set_child(section.stack)
+
+    def run_task(title, work, done, failed, device=True):
+        win.set_busy(True)
+        result = work()
+        win.set_busy(False)
+        done(result)
+
+    def set_busy(busy):
+        win.busy = busy
+        win._action_buttons = still_in_window(win._action_buttons)
+
+    win = types.SimpleNamespace(session=types.SimpleNamespace(), sections={key: section},
+                                busy=False, _action_buttons=[], _retry_sources={},
+                                run_task=run_task, set_busy=set_busy, toplevel=toplevel)
+    for name in ("_load", "_button", "_trash"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win, section
+
+
+@pytest.mark.parametrize("key", ["maps", "updates", "apps"])
+def test_a_rebuilt_page_leaves_no_removed_buttons_in_the_list(key):
+    win, section = page_window(key)
+
+    def show(result):
+        group = section.group("On the device")
+        group.set_header_suffix(win._button("Check Again", lambda: None))
+        group.add(win._trash("Remove", lambda: None))
+
+    for built in range(1, 4):
+        win._load(key, "Loading…", lambda: None, show)
+        # Only the buttons of the page as it is now: none of an earlier build.
+        assert len(win._action_buttons) == 2, built
+        assert all(b.get_root() is win.toplevel for b in win._action_buttons)
+
+
+def test_buttons_of_other_pages_stay_in_the_list():
+    win, section = page_window("maps")
+    elsewhere = win._button("Sync", lambda: None)  # e.g. on the device page
+    win.toplevel.set_titlebar(elsewhere)
+    show = lambda result: section.group().add(win._button("Check Again", lambda: None))  # noqa: E731 - a one-line page
+    win._load("maps", "Loading…", lambda: None, show)
+    win._load("maps", "Loading…", lambda: None, show)
+    assert elsewhere in win._action_buttons and len(win._action_buttons) == 2

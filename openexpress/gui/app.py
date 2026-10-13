@@ -224,6 +224,12 @@ def trash_button(tooltip: str, cb) -> Gtk.Button:
     return b
 
 
+def still_in_window(buttons: list) -> list:
+    """The action buttons that are still in a window: a page that is rebuilt leaves its old
+    buttons behind, and the list must not keep them and what they hold."""
+    return [b for b in buttons if b.get_root() is not None]
+
+
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -537,7 +543,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.progress_label.set_text(text)
         self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)
-        self._action_buttons = [b for b in self._action_buttons if b.get_root() is not None]
+        self._action_buttons = still_in_window(self._action_buttons)
         for b in self._action_buttons:
             b.set_sensitive(not busy)
         self.banner.set_sensitive(not busy)
@@ -803,6 +809,8 @@ class MainWindow(Adw.ApplicationWindow):
                 return  # the watch was disconnected or replaced meanwhile
             sec.loaded = True
             sec.clear()
+            # Without the buttons of the page that was just cleared.
+            self._action_buttons = still_in_window(self._action_buttons)
             show(result)
             sec.show("content")
 
