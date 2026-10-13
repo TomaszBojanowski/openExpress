@@ -15,6 +15,7 @@ from pathlib import Path
 from openexpress import __version__
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
+from openexpress.i18n import human_size
 
 ISSUE_URL = ("https://github.com/TomaszBojanowski/openExpress/issues/new"
              "?template=device_report.yml")
@@ -64,7 +65,8 @@ def _install_type() -> str:
 
 
 def _size(n: int | None) -> str:
-    return "unknown" if not n else f"{n / 1024 ** 3:.1f} GB"
+    # The same numbers as in the window, but always with a point: the report is in English.
+    return "unknown" if not n else human_size(n, localize=False)
 
 
 def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None) -> str:

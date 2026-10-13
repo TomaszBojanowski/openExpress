@@ -131,17 +131,21 @@ def decimal(number: str) -> str:
     return number.replace(".", separator)
 
 
-def human_size(n: int | None) -> str:
+def human_size(n: int | None, localize: bool = True) -> str:
     """A size as the user reads it, like GNOME Files writes it: powers of 1000, the units
     B, kB, MB and GB, one decimal ("699.4 kB"), with the decimal separator of the program's
-    language; "?" when the size is not known."""
+    language; "?" when the size is not known.
+
+    Without `localize` the decimal point stays, for text that is always in English (the
+    device report)."""
     if n is None:
         return "?"
     value = float(n)
     for unit in ("B", "kB", "MB", "GB"):
         # Compare what would be printed: 999.96 kB is "1.0 MB", not "1000.0 kB".
         if unit == "GB" or round(value, 0 if unit == "B" else 1) < 1000:
-            return f"{value:.0f} B" if unit == "B" else decimal(f"{value:.1f} {unit}")
+            text = f"{value:.0f} B" if unit == "B" else f"{value:.1f} {unit}"
+            return decimal(text) if localize else text
         value /= 1000
     return str(n)
 

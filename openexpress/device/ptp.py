@@ -25,6 +25,7 @@ import struct
 from dataclasses import dataclass
 from typing import Protocol
 
+from openexpress import applog
 from openexpress.device.storage import DeviceError
 from openexpress.i18n import _
 
@@ -477,8 +478,8 @@ class Session:
             log.warning("PTP 0x%04X failed: %s", operation, type(e).__name__)
             raise
         # Only codes and sizes: parameters are handles, the data may be a file.
-        log.debug("PTP 0x%04X -> 0x%04X (sent %d B, received %d B)", operation, code,
-                  len(data_out or b""), len(data))
+        log.debug("PTP 0x%04X -> 0x%04X (sent %s, received %s)", operation, code,
+                  applog.size(len(data_out or b"")), applog.size(len(data)))
         return code, data, answer
 
     def _transact(self, operation: int, *params: int,

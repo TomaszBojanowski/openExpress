@@ -121,3 +121,92 @@ def test_not_enough_space_in_polish(polish, server, device_root, xdg, tmp_path,
     said = not_enough_space(server, device_root, tmp_path, monkeypatch)
     assert said[2] == "Za mało miejsca na urządzeniu: potrzeba 2,5 MB, wolne 1,2 MB"
     assert all(text.endswith(", wolne 1,2 MB") for text in said)
+
+
+# --- the device report and the log -------------------------------------------------------------
+
+
+def test_report_sizes_match_the_window_but_keep_the_point(polish, device_root, monkeypatch):
+    from openexpress import report
+    from openexpress.device.xmldevice import parse
+
+    assert human_size(6_657_199_308) == "6,7 GB"  # the window, in Polish
+    assert human_size(6_657_199_308, localize=False) == "6.7 GB"
+    assert human_size(512, localize=False) == "512 B" and human_size(None, localize=False) == "?"
+
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 6_657_199_308)
+    monkeypatch.setattr(LocalStorage, "capacity", lambda self: 7_623_566_950)
+    st = LocalStorage(device_root)
+    text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st)
+    assert "- Storage: 7.6 GB total, 6.7 GB free" in text  # English, also in a Polish session
+
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: None)
+    monkeypatch.setattr(LocalStorage, "capacity", lambda self: 0)
+    assert "- Storage: unknown total, unknown free" in report.build(
+        parse(st.read("GARMIN/GarminDevice.xml")), st)
+
+
+@pytest.mark.parametrize("n, text", [
+    (None, "?"), (0, "0 B"), (999, "999 B"), (1000, "1_000 B"), (699_392, "699_392 B"),
+    (6_657_384_448, "6_657_384_448 B"), (2_500_000_000_000, "2_500_000_000_000 B")])
+def test_log_sizes_are_exact_bytes(n, text):
+    from openexpress import applog
+
+    assert applog.size(n) == text
+    if n is not None:
+        assert int(text.removesuffix(" B")) == n  # exact, and still a number for a program
+
+
+def test_log_sizes_pass_the_filter_and_identifiers_do_not(log_file):
+    import logging
+
+    from openexpress import applog
+
+    unit, profile = 3987654321, 12345678  # made up
+    assert applog.redact(f"download: {applog.size(6_657_384_448)} from example.org") == (
+        "download: 6_657_384_448 B from example.org")  # not "<number>"
+    # The filter itself is unchanged: a long number is hidden, with or without " B" after it.
+    assert applog.redact(f"device {unit}") == "device <number>"
+    assert applog.redact(f"device {unit} B") == "device <number> B"
+    assert applog.redact(f"profile {profile} wrote {applog.size(1_234_567)}") == (
+        "profile <number> wrote 1_234_567 B")
+
+    applog.setup("cli")
+    applog.hide(unit, "unit")
+    logging.getLogger("openexpress.test").info(
+        "backup: 97 files (%s) for unit %s, profile %s", applog.size(3_254_879), unit, profile)
+    line = log_file.read_text().splitlines()[-1]
+    assert line.endswith("backup: 97 files (3_254_879 B) for unit <unit>, profile <number>")
+
+
+def test_ptp_debug_line_keeps_the_size_of_a_large_file(log_file, monkeypatch):
+    import logging
+
+    from ptp_fake import FakeDevice
+
+    from openexpress import applog
+    from openexpress.device import ptp
+
+    monkeypatch.setenv("OPENEXPRESS_LOG", "debug")
+    applog.setup("cli")
+    fake = FakeDevice()
+    fake.add("GARMIN/Apps/big.bin", b"x" * 1_500_000)
+    with ptp.Session(fake) as session:
+        storage = session.storages()[0]
+        handle = session.lookup(storage, "GARMIN/Apps/big.bin").handle
+        assert len(session.read_file(handle)) == 1_500_000
+    logging.shutdown()
+    text = log_file.read_text()
+    assert "received 1_500_000 B)" in text and "<number>" not in text
+    assert "(sent 0 B, received 0 B)" in text  # small numbers look as before
+
+
+def test_log_size_in_a_report_survives_the_second_filter(log_file):
+    from openexpress import applog, report
+
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file.write_text(f"download: {applog.size(6_657_384_448)} from example.org\n"
+                        "device 3987654321\n")
+    text = report.with_log("### System\n", applog.tail(report.LOG_LINES))
+    assert "download: 6_657_384_448 B from example.org" in text
+    assert "3987654321" not in text and "device <number>" in text

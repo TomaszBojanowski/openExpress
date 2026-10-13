@@ -147,11 +147,12 @@ def rotate(path: Path) -> None:
 
 
 def size(n: int | None) -> str:
-    """A size for the log: short, so that it is not taken for an identifier."""
+    """A size for the log: the exact number of bytes, with the digits in groups of three
+    ("6_657_384_448 B"). Written like that the filter does not take it for an identifier
+    (it replaces every run of seven or more digits), and `int()` still reads it."""
     if n is None:
         return "?"
-    return (f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB" if n < 1024 ** 2
-            else f"{n / 1024 ** 2:.1f} MB")
+    return f"{n:_} B"
 
 
 def counts(names) -> str:

@@ -139,8 +139,8 @@ def test_what_programs_read_keeps_the_point_in_polish(polish, device_root, capsy
     from openexpress import applog, report
     from openexpress.cli import main
 
-    assert applog.size(699392) == "683.0 KB" and applog.size(5 * 1024 ** 2 + 1) == "5.0 MB"
-    assert report._size(6657199308) == "6.2 GB"
+    assert applog.size(699392) == "699_392 B"  # exact bytes, no decimal separator at all
+    assert report._size(6657199308) == "6.7 GB"  # the window says "6,7 GB" in Polish
 
     assert main(["--path", str(device_root), "info", "--json"]) == 0
     data = json.loads(capsys.readouterr().out)  # still valid JSON with plain numbers
