@@ -397,3 +397,79 @@ def test_media_folders_come_from_the_device(log_file):
     applog.setup("cli")
     logging.getLogger("openexpress.test").warning("Cannot write Muzyka/Anna Jantar/01.mp3: refused")
     assert "Jantar" not in log_file.read_text()
+
+
+# --- the run marker and the start line ----------------------------------------------------------
+
+
+def markers(path):
+    """The part between the brackets of every line: "cli[a3f1]" -> "a3f1"."""
+    return [line.split()[2].split("[")[1].rstrip("]") for line in lines(path)]
+
+
+def test_every_line_of_a_run_carries_the_same_marker(log_file):
+    import re
+
+    applog.setup("cli")
+    log = logging.getLogger("openexpress.test")
+    log.info("one")
+    log.warning("two")
+    applog.setup("watch")  # set up again in the same process, as the watcher does
+    log.info("three")
+    assert re.fullmatch(r"[0-9a-f]{4}", applog.RUN)
+    assert markers(log_file) == [applog.RUN] * 3
+    assert [line.split()[2] for line in lines(log_file)] == [
+        f"cli[{applog.RUN}]", f"cli[{applog.RUN}]", f"watch[{applog.RUN}]"]
+
+
+def test_two_runs_of_the_same_role_can_be_told_apart(log_file, monkeypatch):
+    # As in the Flatpak, where both processes have PID 2.
+    monkeypatch.setattr(os, "getpid", lambda: 2)
+    for run in ("a3f1", "0042"):
+        monkeypatch.setattr(applog, "RUN", run)
+        applog.setup("cli")
+        logging.getLogger("openexpress.test").info("hello")
+        applog.close()
+    assert markers(log_file) == ["a3f1", "0042"]
+    assert all(" cli[2]" not in line for line in lines(log_file))
+
+
+def test_the_filter_leaves_every_marker_alone():
+    applog.hide(3987654321, "unit")  # a made-up unit ID is hidden meanwhile
+    for n in range(0x10000):
+        text = f"2026-10-13 20:20:56,433 cli[{n:04x}] INFO openexpress.cli: end: apps"
+        assert applog.redact(text) == text
+
+
+@pytest.mark.parametrize("flatpak, packaging", [(True, "Flatpak"), (False, "source")])
+def test_start_line_says_what_runs_and_nothing_about_the_user(flatpak, packaging, log_file,
+                                                              device_root, monkeypatch):
+    import getpass
+    import platform
+    import socket
+    from pathlib import Path
+
+    from openexpress import __version__
+    from openexpress.cli import main
+
+    monkeypatch.setattr(paths, "in_flatpak", lambda: flatpak)
+    assert main(["--path", str(device_root), "files"]) == 0
+    start = next(line for line in lines(log_file) if " start: " in line)
+    said = start.split(" start: ", 1)[1]
+    assert said == (f"files --path (openExpress {__version__}, {packaging}, "
+                    f"Python {platform.python_version()}, language en, pid {os.getpid()})")
+    assert applog.redact(start) == start  # the filter changes nothing in it
+    for private in (str(Path.home()), getpass.getuser(), socket.gethostname(),
+                    str(device_root)):
+        assert private not in start
+    assert f" cli[{applog.RUN}] " in start
+
+
+def test_report_log_keeps_the_markers(log_file, device_root, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(device_root), "info"]) == 0
+    capsys.readouterr()
+    assert main(["--path", str(device_root), "report", "--log"]) == 0
+    log_part = capsys.readouterr().out.split("### Log", 1)[1]
+    assert f" cli[{applog.RUN}] INFO openexpress.cli: start: info --path (" in log_part

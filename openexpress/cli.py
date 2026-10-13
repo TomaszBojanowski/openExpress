@@ -1582,7 +1582,7 @@ def main(argv: list[str] | None = None) -> int:
 
     applog.setup(args.cmd if args.cmd in ("gui", "watch") else "cli", args.verbose)
     started = time.monotonic()
-    log.info("start: %s (openExpress %s)", _command_line(args, argv), __version__)
+    log.info("start: %s (%s)", _command_line(args, argv), applog.environment())
     code: int | str = "error"
     try:
         code = _run(args, service, requests)

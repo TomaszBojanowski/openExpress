@@ -223,6 +223,10 @@ openExpress keeps a log of what it does, to make problems easier to find:
   `~/.var/app/io.github.tomaszbojanowski.OpenExpress/.local/state/openexpress/openexpress.log`.
   The command-line tool, the window and the background sync write to the same file. At most
   three files of about 1 MB are kept; the file is readable only by you.
+- **Telling runs apart:** every line carries a short random marker (e.g. `cli[a3f1]`) that is
+  the same for one run of the program and means nothing else. The first line of a run says
+  the version, whether it is the Flatpak or runs from source, the Python version, the
+  language of the app and the process ID; nothing about you or your computer.
 - **What it contains:** which command or sync ran and how it ended, the steps of a sync
   (numbers of files by type, not their contents), app installs and removals, how the device
   was detected, requests to Garmin's servers as method, address without parameters, status

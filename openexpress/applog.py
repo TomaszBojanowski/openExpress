@@ -19,18 +19,23 @@ import fcntl
 import logging
 import logging.handlers
 import os
+import platform
 import re
+import secrets
 import sys
 from pathlib import Path
 
-from openexpress import paths
+from openexpress import __version__, i18n, paths
 from openexpress.i18n import _
 
 LOG_NAME = "openexpress.log"
 MAX_BYTES = 1_000_000
 OLD_FILES = 2  # besides the current one
 ENV = "OPENEXPRESS_LOG"
-FORMAT = "%(asctime)s %(role)s[%(process)d] %(levelname)s %(name)s: %(message)s"
+FORMAT = "%(asctime)s %(role)s[%(run)s] %(levelname)s %(name)s: %(message)s"
+# Tells the runs apart in the shared file, where a PID cannot: in the Flatpak every process
+# has PID 2. Random, made anew for every process and written nowhere else.
+RUN = secrets.token_hex(2)
 
 _KEYS = (r"oauth_\w+|ticket|\w*token\w*|password|passwd|\w*secret\w*|signature|consumer_key|"
          r"session\w*")
@@ -108,6 +113,7 @@ class _Formatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         record.role = self.role
+        record.run = RUN
         return redact(super().format(record))
 
 
@@ -161,6 +167,15 @@ def counts(names) -> str:
     for name in names:
         seen[str(name)] = seen.get(str(name), 0) + 1
     return ", ".join(f"{k}×{v}" for k, v in sorted(seen.items())) or "-"
+
+
+def environment() -> str:
+    """What the start line says about the program: its version, how it is packaged, the
+    Python version, the language it runs in and the PID. Nothing about the user or the
+    computer."""
+    return (f"openExpress {__version__}, {'Flatpak' if paths.in_flatpak() else 'source'}, "
+            f"Python {platform.python_version()}, language {i18n.current_language()}, "
+            f"pid {os.getpid()}")
 
 
 def log_path() -> Path:
