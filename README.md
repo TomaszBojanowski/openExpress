@@ -55,7 +55,7 @@ Garmin watches that connect over USB (MTP) should work, but are untested; report
 | `openexpress baseline [--apply]` | marks current files as already uploaded (first run) |
 | `openexpress backup [--apply]` | local backup of watch data (default `~/Documents/Garmin/Backups`, last 3 kept) |
 | `openexpress updates [--reinstalls]` | watch software updates (no login needed); a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
-| `openexpress updates --install PART… [--apply]` | download with MD5 check and copy to the watch; then restart the watch |
+| `openexpress updates --install PART… [--apply]` | download with MD5 check and copy to the watch; after it is unplugged the watch may ask whether to install the update now or later, then restart |
 | `openexpress maps [--all]` | installed and available maps (TopoActive, base maps, CourseView, Ski) |
 | `openexpress maps install NAME [--apply]` | install a map assigned to the watch (download, activation, write) |
 | `openexpress maps update [--apply]`, `maps remove NAME [--apply]` | update and remove maps |
@@ -85,6 +85,7 @@ and the command-line tool prints the same warning when it starts such an operati
 | fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
 | Edge 1050 | detected automatically; read-only commands, backup and sync plan tested |
+| Venu 2 (part 006-B3703) | read-only commands tested; installing software updates tested (two components, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a
