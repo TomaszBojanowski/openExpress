@@ -120,7 +120,7 @@ flatpak run io.github.tomaszbojanowski.OpenExpress
 
 openExpress then appears in your application menu. Click **Choose Installer…** in the banner
 at the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
-the Watch page (or in Preferences) to sync whenever the watch is connected.
+the Device page (or in Preferences) to sync whenever the watch is connected.
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
 
@@ -268,8 +268,12 @@ openExpress keeps a log of what it does, to make problems easier to find:
 
 ## Privacy and security
 
-- The password is entered only on Garmin's page. An OAuth1 token is stored locally
-  (`~/.config/openexpress/connect_auth.json`, permissions 0600).
+- The password is entered only on Garmin's page; openExpress never sees or stores it. What
+  is stored locally after signing in is an OAuth1 token and, next to it, your user name,
+  e-mail address, profile number and account identifier, in one file readable only by you
+  (permissions 0600): `~/.config/openexpress/connect_auth.json`, or in the Flatpak
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/connect_auth.json`.
+  `openexpress logout` removes that file.
 - **No telemetry.** Unlike Garmin Express, the program sends nothing to
   Microsoft Application Insights. Watch diagnostics (error logs, KPIs, memory
   dumps, behaviour log) are not uploaded without `--include-diagnostics`.
