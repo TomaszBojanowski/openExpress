@@ -117,6 +117,20 @@ def pgettext(context: str, message: str) -> str:
     return _translation.pgettext(context, message)
 
 
+def decimal(number: str) -> str:
+    """A number written with a decimal point (e.g. "6.2 GB") as the language of the program
+    writes it ("6,2 GB" in Polish). The separator comes from the translation, not from the
+    system locale, so it always matches the language of the messages.
+
+    Only for what the user reads: the log, the device report, JSON output and anything a
+    program may read keep the point."""
+    # TRANSLATORS: the decimal separator of your language, one character: "." or ","
+    separator = pgettext("decimal separator", ".")
+    if len(separator) != 1 or separator == "." or separator.isalnum() or separator.isspace():
+        return number
+    return number.replace(".", separator)
+
+
 def N_(message: str) -> str:
     return message
 

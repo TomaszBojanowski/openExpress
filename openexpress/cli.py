@@ -21,7 +21,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
-from openexpress.i18n import N_, _, ngettext
+from openexpress.i18n import N_, _, decimal, ngettext
 from openexpress.settings import (
     ENVIRONMENTS,
     Consumer,
@@ -37,12 +37,13 @@ log = logging.getLogger(__name__)
 
 
 def _human(n: int | None) -> str:
+    """A size as the user reads it, with the decimal separator of the program's language."""
     if n is None:
         return "?"
     size = float(n)
     for unit in ("B", "KB", "MB", "GB"):
         if size < 1024 or unit == "GB":
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+            return f"{size:.0f} {unit}" if unit == "B" else decimal(f"{size:.1f} {unit}")
         size /= 1024
     return str(n)
 
