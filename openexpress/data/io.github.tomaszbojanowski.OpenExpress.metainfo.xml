@@ -93,6 +93,24 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.5" date="2026-10-13">
+      <description>
+        <ul>
+          <li>Maps of your own: map files that are not from Garmin (.img, e.g. made from
+          OpenStreetMap data) are listed on the Maps page with the name stored in the file.
+          "Add Map…" in the window and "maps add" on the command line copy one to the device,
+          and it can be removed again. Nothing on the device is ever overwritten, and
+          Garmin's own maps cannot be replaced or removed this way.</li>
+          <li>The device page has a "Maps" row that says whether maps have updates.</li>
+          <li>The Maps page has a "Check Again" button.</li>
+          <li>Music: before copying, the app says which files on the device will be
+          replaced.</li>
+          <li>The log marks every run of the app, so that runs can be told apart, and its
+          first line says the version and whether it is the Flatpak.</li>
+          <li>Smaller fixes.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.4" date="2026-10-13">
       <description>
         <ul>
