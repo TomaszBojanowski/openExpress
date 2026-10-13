@@ -610,3 +610,185 @@ def test_add_in_polish(maps_cli, my_map, capsys):
     assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako Garmin/osm-test.img"
     assert out[2].startswith("Wolne miejsce na urządzeniu: teraz ") and ", potem " in out[2]
     assert "Plik o nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err
+
+
+# --- "maps remove --own": removing a map this installation copied -------------------------------
+
+NOT_OURS = ("Error: {} was not copied to the device by this installation of openExpress (it may "
+            "have been copied by hand or by another installation), so it is not removed. Delete "
+            "it in the file manager if you want it gone.")
+OTHER_SIZE = ("Error: {} on the device has {} B, but the map that was copied had {} B: it is not "
+              "the same file, so it is not removed.")
+LIKE_GARMINS = "Error: {} is named like one of Garmin's own maps, so it is not removed."
+GONE = ("Error: {} is no longer on the device. Run the command with --apply to take it off the "
+        "list of own maps.")
+
+
+@pytest.fixture
+def added(maps_cli, my_map, capsys):
+    """The made-up device after `maps add --apply`: the map is on it and on the list."""
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
+    capsys.readouterr()
+    return maps_cli
+
+
+def state_file(device_root):
+    from openexpress.device.xmldevice import parse
+
+    return ownmaps._state_file(parse((device_root / "GARMIN/GarminDevice.xml").read_bytes()))
+
+
+def remove_refused(capsys, device_root, name, message, modes=([], ["--apply"]), quiet=True):
+    """The command fails with this message and neither the device nor the list changes.
+    `quiet`: it is refused before anything is printed."""
+    before, listed = tree(device_root), state_of(device_root)
+    for extra in modes:
+        assert main(["--path", str(device_root), "maps", "remove", "--own", name, *extra]) == 1
+        captured = capsys.readouterr()
+        lines = [line for line in captured.err.splitlines() if not line.startswith("Do not unplug")]
+        assert lines == [message] and (captured.out == "" or not quiet)
+        assert "Removed" not in captured.out
+        assert tree(device_root) == before and state_of(device_root) == listed
+
+
+def test_remove_own_refuses_a_map_this_installation_did_not_copy(added, capsys):
+    (added / "GARMIN" / "by-hand.img").write_bytes(img_header(b"Copied in the file manager"))
+    remove_refused(capsys, added, "by-hand.img", NOT_OURS.format("by-hand.img"))
+    remove_refused(capsys, added, "nothing.img", NOT_OURS.format("nothing.img"))
+    # A map of Garmin's is not on the list either.
+    (added / "GARMIN" / "Listed.img").write_bytes(img_header(b"Of Garmin"))
+    remove_refused(capsys, added, "Listed.img", NOT_OURS.format("Listed.img"))
+
+
+def test_remove_own_refuses_a_file_of_another_size(added, capsys):
+    (added / "GARMIN" / "osm-test.img").write_bytes(b"someone put another file here")
+    remove_refused(capsys, added, "osm-test.img", OTHER_SIZE.format("osm-test.img", 29, 2000))
+
+
+@pytest.mark.parametrize("name", ["D1234567A.img", "gmaptz.img", "Listed.img", "Old.img"])
+def test_remove_own_never_touches_a_name_of_garmins(added, capsys, name):
+    # Such a name cannot get onto the list through `maps add`; here it is put there by hand.
+    f = state_file(added)
+    f.write_text(json.dumps({"maps": [{"filename": name, "size": 512, "title": "x",
+                                      "added": "2026-10-13T00:00:00"}]}))
+    (added / "GARMIN" / name).write_bytes(img_header(b"Of Garmin"))
+    remove_refused(capsys, added, name, LIKE_GARMINS.format(name))
+
+
+def test_remove_own_dry_run_says_what_would_go(added, monkeypatch, capsys):
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
+    before, listed = tree(added), state_of(added)
+    assert main(["--path", str(added), "maps", "remove", "--own", "OSM-TEST.IMG"]) == 0  # any case
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
+        "Removing own map: Sometown cyclemap/latin1 Example.org",
+        "  - GARMIN/osm-test.img  (2.0 kB)",
+        "Free space on the device: 12.4 GB now, 12.4 GB after",
+        "Dry run. Add --apply.",
+    ]
+    assert captured.err == "" and tree(added) == before and state_of(added) == listed
+
+
+def test_remove_own_apply_deletes_the_file_and_then_the_entry(added, my_map, capsys):
+    # A second map of ours stays, on the device and on the list.
+    assert main(["--path", str(added), "maps", "add", str(my_map), "--name", "second.img",
+                 "--apply"]) == 0
+    capsys.readouterr()
+    assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img", "--apply"]) == 0
+    assert "Removed GARMIN/osm-test.img (2.0 kB)." in capsys.readouterr().out
+    assert not list(added.rglob("osm-test.img")) and list(added.rglob("second.img"))
+    assert [m["filename"] for m in state_of(added)] == ["second.img"]
+
+    assert main(["--path", str(added), "maps", "remove", "--own", "second.img", "--apply"]) == 0
+    capsys.readouterr()
+    assert state_of(added) == []
+    assert main(["--path", str(added), "maps"]) == 0
+    assert "Own maps" not in capsys.readouterr().out  # the section is gone
+
+
+class KeepsFiles(LocalStorage):
+    """A device that answers a delete without deleting, or refuses it."""
+
+    refuse = False
+
+    def _delete(self, real_path):
+        if type(self).refuse:
+            raise DeviceError("Cannot delete: refused")
+
+
+@pytest.mark.parametrize("refuse, message", [
+    (False, "Error: GARMIN/osm-test.img is still on the device; nothing was taken off the list."),
+    (True, "Error: Cannot delete: refused"),
+])
+def test_the_entry_stays_while_the_file_is_on_the_device(added, monkeypatch, capsys, refuse,
+                                                         message):
+    from openexpress import cli
+
+    KeepsFiles.refuse = refuse
+    monkeypatch.setattr(cli, "LocalStorage", KeepsFiles)
+    # The plan was printed; then the removal failed.
+    remove_refused(capsys, added, "osm-test.img", message, modes=(["--apply"],), quiet=False)
+
+
+def test_a_map_that_is_gone_only_leaves_the_list(added, capsys):
+    next(added.rglob("osm-test.img")).unlink()  # deleted in the file manager
+    remove_refused(capsys, added, "osm-test.img", GONE.format("osm-test.img"), modes=([],))
+    assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img", "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Took osm-test.img off the list of own maps; the file was not on the device."]
+    assert state_of(added) == []
+
+
+def test_a_file_that_changed_after_the_plan_is_not_deleted(map_folder, my_map):
+    st = LocalStorage(map_folder)
+    dev = device()
+    dev.unit_id = 4000000002  # made up
+    ownmaps.add(ownmaps.plan_add(dev, st, [], my_map, "mine.img"), dev, st)
+    plan = ownmaps.plan_remove(dev, st, [], "mine.img")
+    (map_folder / "Garmin" / "mine.img").write_bytes(b"replaced meanwhile")
+    with pytest.raises(ownmaps.MapError) as error:
+        ownmaps.remove(plan, dev, st)
+    assert "not the same file" in str(error.value)
+    assert (map_folder / "Garmin" / "mine.img").read_bytes() == b"replaced meanwhile"
+    assert [m["filename"] for m in ownmaps.recorded(dev)] == ["mine.img"]
+
+
+def test_remove_without_own_works_on_garmins_maps_as_before(added, capsys):
+    (added / "GARMIN" / "Listed.img").write_bytes(img_header(b"Of Garmin"))
+    assert main(["--path", str(added), "maps", "remove", "Somewhere"]) == 0
+    out = capsys.readouterr().out
+    assert "Removing map TopoActive Somewhere" in out and "Dry run. Add --apply." in out
+    # And a map of the user's is not found among Garmin's.
+    assert main(["--path", str(added), "maps", "remove", "osm-test.img"]) == 1
+    assert "No map named 'osm-test.img'" in capsys.readouterr().err
+    assert state_of(added) and list(added.rglob("osm-test.img"))
+
+
+def test_removal_leaves_only_the_size_in_the_log(added, log_file, capsys):
+    (added / "GARMIN" / "by-hand.img").write_bytes(img_header(b"Copied by hand"))
+    assert main(["--path", str(added), "maps", "remove", "--own", "by-hand.img"]) == 1
+    assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img", "--apply"]) == 0
+    capsys.readouterr()
+    log = log_file.read_text(encoding="utf-8")
+    assert "own map removed: 2_000 B" in log and log.count("error: MapError:") == 1
+    for private in ("osm-test", "by-hand", "Sometown", "ownmaps.json"):
+        assert private not in log
+
+
+def test_remove_own_in_polish(added, capsys):
+    from openexpress import i18n
+
+    (added / "GARMIN" / "by-hand.img").write_bytes(b"x")
+    i18n.setup("pl")
+    try:
+        assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img"]) == 0
+        out = capsys.readouterr().out.splitlines()
+        assert main(["--path", str(added), "maps", "remove", "--own", "by-hand.img"]) == 1
+        err = capsys.readouterr().err.strip()
+    finally:
+        i18n.setup("en")
+    assert out[0] == "Usuwanie własnej mapy: Sometown cyclemap/latin1 Example.org"
+    assert out[1] == "  - GARMIN/osm-test.img  (2,0 kB)"
+    assert err == ("Błąd: Plik by-hand.img nie został skopiowany przez tę instalację openExpress "
+                   "(mógł zostać skopiowany ręcznie albo przez inną instalację), więc nie "
+                   "zostanie usunięty. Jeśli chcesz go usunąć, zrób to w menedżerze plików.")

@@ -686,6 +686,33 @@ def _maps_add(args, dev, st, all_maps) -> int:
     return 0
 
 
+def _maps_remove_own(args, dev, st, all_maps) -> int:
+    from openexpress import maps as mp
+    from openexpress import ownmaps
+
+    plan = ownmaps.plan_remove(dev, st, all_maps, args.name)
+    if not plan.on_device:
+        if not args.apply:
+            raise mp.MapError(_("{name} is no longer on the device. Run the command with "
+                                "--apply to take it off the list of own maps.").format(
+                name=plan.name))
+        ownmaps.remove(plan, dev, st)
+        print(_("Took {name} off the list of own maps; the file was not on the device.").format(
+            name=plan.name))
+        return 0
+    print(_("Removing own map: {title}").format(title=plan.title or plan.name))
+    print(f"  - {plan.path}  ({_human(plan.size)})")
+    if plan.free is not None:
+        print(_("Free space on the device: {before} now, {after} after").format(
+            before=_human(plan.free), after=_human(plan.free + plan.size)))
+    if not args.apply:
+        print(_("Dry run. Add --apply."))
+        return 0
+    ownmaps.remove(plan, dev, st)
+    print(_("Removed {path} ({size}).").format(path=plan.path, size=_human(plan.size)))
+    return 0
+
+
 def cmd_maps(args) -> int:
     from openexpress import maps as mp
     from openexpress import ownmaps
@@ -697,6 +724,8 @@ def cmd_maps(args) -> int:
     st, dev, all_maps, listed = _load_maps(args, client)
     if args.maps_cmd == "add":
         return _maps_add(args, dev, st, all_maps)
+    if args.maps_cmd == "remove" and args.own:
+        return _maps_remove_own(args, dev, st, all_maps)
     if not listed:
         # One message instead of an empty list, as for a device without media.
         if args.maps_cmd in ("install", "remove"):
@@ -1509,6 +1538,8 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--apply", action="store_true")
     m = msub.add_parser("remove", help=_("remove a map from the device"))
     m.add_argument("name")
+    m.add_argument("--own", action="store_true",
+                   help=_("remove a map of your own that was copied with 'maps add'"))
     m.add_argument("--apply", action="store_true")
     m = msub.add_parser("add", help=_("copy a map of your own (.img) to the device"))
     m.add_argument("file")

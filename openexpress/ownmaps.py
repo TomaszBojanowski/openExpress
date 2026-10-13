@@ -240,3 +240,83 @@ def _record(device: GarminDevice, entry: dict) -> None:
     except OSError as e:
         # The map is on the device; only the note about it is missing.
         log.warning("own map: the list of own maps could not be saved (%s)", type(e).__name__)
+
+
+def _forget(device: GarminDevice, name: str) -> None:
+    maps = [m for m in recorded(device)
+            if str(m.get("filename", "")).casefold() != name.casefold()]
+    try:
+        _state_file(device).write_text(
+            json.dumps({"maps": maps}, indent=1, ensure_ascii=False), encoding="utf-8")
+    except OSError as e:
+        # The file is gone from the device; the next removal finds only the stale note.
+        log.warning("own map: the list of own maps could not be saved (%s)", type(e).__name__)
+
+
+# --- removing a map this installation copied -----------------------------------------------------
+
+
+@dataclass
+class RemovePlan:
+    name: str  # the file name, as it is on the list
+    path: str  # on the device, as the device spells it
+    title: str
+    size: int
+    free: int | None  # on the device, before
+    on_device: bool  # False: only the note on the list is left
+
+
+def _size_differs_text(name: str, actual: int | None, expected: int) -> str:
+    return _("{name} on the device has {actual}, but the map that was copied had {expected}: "
+             "it is not the same file, so it is not removed.").format(
+        name=name, actual="?" if actual is None else f"{actual} B", expected=f"{expected} B")
+
+
+def plan_remove(device: GarminDevice, storage: Storage, garmin_maps: list,
+                name: str) -> RemovePlan:
+    """What is checked before a map of the user's is removed; nothing is deleted. Only a file
+    that this installation copied (it is on the list in the device's state) can be removed,
+    and only while its size on the device is the one that was written."""
+    applog.hide(name, "file")
+    folder = map_dir(device)
+    if folder is None:
+        raise MapError(_("This device has no folder for maps."))
+    entry = next((m for m in recorded(device)
+                  if str(m.get("filename", "")).casefold() == name.casefold()), None)
+    if entry is None:
+        raise MapError(_(
+            "{name} was not copied to the device by this installation of openExpress (it may "
+            "have been copied by hand or by another installation), so it is not removed. "
+            "Delete it in the file manager if you want it gone.").format(name=name))
+    filename, title = str(entry["filename"]), str(entry.get("title") or "")
+    size = int(entry.get("size") or 0)
+    applog.hide(filename, "file")
+    applog.hide(title, "map")
+    path = f"{folder}/{filename}"
+    # Never one of Garmin's files, even if such a name got onto the list.
+    if is_garmin_name(filename) or path.casefold() in garmin_paths(garmin_maps):
+        raise MapError(_("{name} is named like one of Garmin's own maps, so it is not removed.")
+                       .format(name=filename))
+    real = storage.resolve(path)
+    if real is None:
+        return RemovePlan(filename, path, title, size, storage.free_space(), on_device=False)
+    actual = storage.size(path)
+    if actual != size:
+        raise MapError(_size_differs_text(filename, actual, size))
+    return RemovePlan(filename, real, title, size, storage.free_space(), on_device=True)
+
+
+def remove(plan: RemovePlan, device: GarminDevice, storage: Storage) -> None:
+    """Delete the file, make sure it is gone, and only then take it off the list. A plan for
+    a file that is no longer on the device only takes the note off the list."""
+    if plan.on_device:
+        if storage.resolve(plan.path) is not None:
+            actual = storage.size(plan.path)
+            if actual != plan.size:  # it changed since the plan was made
+                raise MapError(_size_differs_text(plan.name, actual, plan.size))
+            storage.delete(plan.path)
+            if storage.resolve(plan.path) is not None:
+                raise MapError(_("{path} is still on the device; nothing was taken off the "
+                                 "list.").format(path=plan.path))
+        log.info("own map removed: %s", applog.size(plan.size))  # no names
+    _forget(device, plan.name)
