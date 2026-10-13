@@ -1012,13 +1012,21 @@ def cmd_apps(args) -> int:
         log.info("apps %s: %s; app folder: %s; already queued: %d; apply: %s", cmd,
                  ", ".join(a.name for a in targets), applog.counts(dirs.values()),
                  sum(1 for a in targets if a.app_id in waiting), args.apply)
+        # What --apply would refuse before it asks Garmin for anything, by app ID.
+        refused = ciq.install_refusals(dev, st, state, over_usb)
+        over_usb = [a for a in over_usb if a.app_id not in refused]
         if over_usb:
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
-            if over_usb:
-                print(ciq.app_list_copy_note(dev, st))
-            print(_("Dry run. Add --apply."))
-            return 0
+            for a in targets:
+                if a.app_id in refused:
+                    print("  " + _("ERROR {item}: {error}").format(
+                        item=a.name, error=refused[a.app_id]))
+            if len(refused) < len(targets):
+                if over_usb:
+                    print(ciq.app_list_copy_note(dev, st))
+                print(_("Dry run. Add --apply."))
+            return 1 if refused else 0
         rep = ciq.install_apps(dev, st, client, api, targets,
                                progress=lambda s: print("  " + s))
         written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]

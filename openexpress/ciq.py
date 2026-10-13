@@ -590,6 +590,67 @@ def queued_app_ids(messages: list[dict]) -> set[uuid.UUID]:
             if app_id is not None}
 
 
+# What stands in the way of installing an app. Each check raises CiqError with the reason;
+# `install_refusals` asks them before anything is requested or written, `_install_pass`
+# again while it writes (a sync does not ask first, and the file may differ in size).
+
+
+def _check_slot(free_slots: int | None, taken: int) -> None:
+    """`taken`: the new apps already counted in this run."""
+    if free_slots is not None and taken >= free_slots:
+        raise CiqError(_("no free app slots on the device"))
+
+
+def _check_not_leaving(existing: InstalledApp | None) -> None:
+    if existing is not None and existing.pending_removal:
+        raise CiqError(_("the device has not applied earlier changes yet; unplug "
+                         "it, wait until it is ready and try again"))
+
+
+def _check_space(state: InstalledState, used: int, size: int) -> None:
+    """`used`: the bytes already counted in this run."""
+    if state.available_space is not None and used + size > state.available_space:
+        raise CiqError(_("not enough Connect IQ space on the device"))
+
+
+def _check_accepted(device: GarminDevice, datatype: str) -> list:
+    targets = device.targets(datatype)
+    if not targets:
+        raise CiqError(_("the device does not accept {datatype}").format(datatype=datatype))
+    return targets
+
+
+def install_refusals(device: GarminDevice, storage: Storage, state: InstalledState,
+                     targets: list[StoreApp]) -> dict[uuid.UUID, str]:
+    """Why some of these store apps cannot be installed over USB: app ID -> reason. Asked
+    before anything is requested in Garmin Connect, downloaded or written; it reads nothing
+    new. The apps are taken in order: one that fits uses up its slot and its space.
+
+    The size is the one the account lists; the file that is downloaded later can differ a
+    little, so the space is checked again when it is written."""
+    refused: dict[uuid.UUID, str] = {}
+    free_slots = _free_slots(device, state)
+    new = used = 0
+    for t in targets:
+        existing = state.find(t.app_id)
+        datatype = store_datatype(t)
+        # An update over PTP is written next to the old file: it needs room of its own.
+        needs_room = existing is None or usb_dir_state(device, storage, datatype) == DIRECT
+        try:
+            if existing is None:
+                _check_slot(free_slots, new)
+            _check_not_leaving(existing)
+            _check_accepted(device, datatype)
+            if needs_room:
+                _check_space(state, used, t.size)
+        except CiqError as e:
+            refused[t.app_id] = str(e)
+            continue
+        new += existing is None
+        used += t.size if needs_room else 0
+    return refused
+
+
 def install_apps(
     device: GarminDevice,
     storage: Storage,
@@ -607,6 +668,17 @@ def install_apps(
     state = read_installed(device, storage)
     require_complete(state)
     states = {t.app_id: usb_dir_state(device, storage, store_datatype(t)) for t in targets}
+    # Before the copy and before Garmin is asked for anything: an app the device has no
+    # room for is not requested, so that it does not stay in the account's queue.
+    refused = install_refusals(device, storage, state, [
+        t for t in targets if states[t.app_id] not in (REFUSED, SANDBOXED)])
+    failed = [(t.name, refused[t.app_id]) for t in targets if t.app_id in refused]
+    targets = [t for t in targets if t.app_id not in refused]
+    if not targets:
+        report = IqInstallReport(failed=failed)
+        _log_install(report)
+        return report
+    states = {t.app_id: states[t.app_id] for t in targets}
     if any(s not in (REFUSED, SANDBOXED) for s in states.values()):
         # Something may be written: the copy comes first, before Garmin is asked for anything.
         save_app_list_copy(device, storage)
@@ -627,6 +699,7 @@ def install_apps(
         report = install_queued(device, storage, client, messages,
                                 {t.app_id: t for t in targets},
                                 only={t.app_id for t in usb}, progress=progress, direct=True)
+    report.failed = failed + report.failed
     report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]
     have = {a.app_id for a in state.store_apps}
     report.sandboxed += [t.name for t in targets if states[t.app_id] == SANDBOXED
@@ -781,12 +854,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
             dt = m["devicexmldatatype"]
             existing = state.find(app_id)
             try:
-                if (existing is None and free_slots is not None
-                        and len(new_entries) + len(hidden) >= free_slots):
-                    raise CiqError(_("no free app slots on the device"))
-                if existing is not None and existing.pending_removal:
-                    raise CiqError(_("the device has not applied earlier changes yet; unplug "
-                                     "it, wait until it is ready and try again"))
+                if existing is None:
+                    _check_slot(free_slots, len(new_entries) + len(hidden))
+                _check_not_leaving(existing)
                 over_ptp = direct and usb_dir_state(device, storage, dt) == DIRECT
                 if not over_ptp and not prepare_app_dir(device, storage, dt):
                     # Not an error: the app stays queued and the phone installs it.
@@ -803,12 +873,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     continue
                 # An update over PTP is written next to the old file, which the device
                 # replaces only later: it needs room of its own, like a new app.
-                if (state.available_space is not None and (existing is None or over_ptp)
-                        and new_size + len(data) > state.available_space):
-                    raise CiqError(_("not enough Connect IQ space on the device"))
-                targets = device.targets(dt)
-                if not targets:
-                    raise CiqError(_("the device does not accept {datatype}").format(datatype=dt))
+                if existing is None or over_ptp:
+                    _check_space(state, new_size, len(data))
+                targets = _check_accepted(device, dt)
                 # New apps get 8 random hex characters. An update through the mounted storage
                 # overwrites the existing file; over PTP it gets a new name too, like Garmin
                 # Express does: the old file is the device's own and is left alone, and the

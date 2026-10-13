@@ -2628,3 +2628,180 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
         ("The Flatpak version cannot install apps on this device over USB yet; 1 Connect IQ "
          "app waits in the queue.")]
     assert untouched(st, dev, fake, attempts, backups, before)
+
+
+# --- an install is refused before anything is requested ---------------------------------------
+
+
+NO_SLOT = "no free app slots on the device"
+NO_SPACE = "not enough Connect IQ space on the device"
+TWIN_A = uuid.UUID("aaaaaaaa-1111-4222-8333-444444444444")
+TWIN_B = uuid.UUID("bbbbbbbb-1111-4222-8333-444444444444")
+
+
+def device_reports(monkeypatch, slots=None, space=None):
+    """The app list of the device gives these numbers in its header."""
+    real = ciq.read_installed
+
+    def read(device, storage):
+        state = real(device, storage)
+        if slots is not None:
+            state.available_slots = slots
+        if space is not None:
+            state.available_space = space
+        return state
+
+    monkeypatch.setattr(ciq, "read_installed", read)
+
+
+class RecordingStore:
+    """Like FakeStore, for calls of ciq.install_apps: records the IDs that were requested."""
+
+    def __init__(self):
+        self.requested = []
+
+    def queue_install(self, device, apps):
+        self.requested += [a.app_id for a in apps]
+
+
+def queue_client(store, apps):
+    """Garmin's queue holds what was requested."""
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [
+        {"messageid": n, "devicexmldatatype": "IQWatchFaces",
+         "metadata": {"messageurl": "x", "messagename": a.name,
+                      "appdetails": {"id": str(a.app_id)}}}
+        for n, a in enumerate(apps, 1) if a.app_id in store.requested]
+    return client
+
+
+def copies_made(monkeypatch):
+    made = []
+    real = ciq.save_app_list_copy
+    monkeypatch.setattr(ciq, "save_app_list_copy",
+                        lambda *a, **k: made.append(1) or real(*a, **k))
+    return made
+
+
+@pytest.mark.parametrize("slots,space,reason", [(0, None, NO_SLOT), (None, 999, NO_SPACE)])
+def test_cli_install_dry_run_says_what_apply_would_refuse(slots, space, reason, iq_device,
+                                                          device_root, apps_cli, monkeypatch,
+                                                          capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    device_reports(monkeypatch, slots, space)
+    before = apps_files(st)
+    assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 1
+    out = capsys.readouterr().out.splitlines()
+    # The refusal, and no promise: no app list to be written, no "Dry run".
+    assert out[1:] == [f"  ERROR Face It: {reason}"]
+    assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_cli.acks == []
+    assert apps_files(st) == before
+
+
+@pytest.mark.parametrize("slots,space,reason", [(0, None, NO_SLOT), (None, 999, NO_SPACE)])
+def test_cli_install_apply_refuses_before_asking_garmin(slots, space, reason, iq_device,
+                                                        device_root, apps_cli, monkeypatch,
+                                                        capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    device_reports(monkeypatch, slots, space)
+    made = copies_made(monkeypatch)
+    before = apps_files(st)
+    assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 1
+    out = capsys.readouterr().out
+    assert f"  ERROR Face It: {reason}" in out and "App list to be written" not in out
+    # Not requested in Garmin Connect, so it does not stay in the account's queue.
+    assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_cli.acks == []
+    assert made == [] and apps_files(st) == before
+
+
+def test_install_refusals_are_keyed_by_app_id(iq_device, monkeypatch):
+    st, dev = iq_device
+    device_reports(monkeypatch, slots=1)
+    state = ciq.read_installed(dev, st)
+    twins = [store_app(TWIN_A, "Twin"), store_app(TWIN_B, "Twin")]  # the same name
+    assert ciq.install_refusals(dev, st, state, twins) == {TWIN_B: NO_SLOT}
+    assert ciq.install_refusals(dev, st, state, twins[::-1]) == {TWIN_A: NO_SLOT}
+    # An app that is on the device takes no new slot.
+    listed = store_app(STORE_ID, "Connect IQ Store", "watch-app")
+    assert ciq.install_refusals(dev, st, state, [listed, twins[0], twins[1]]) == {TWIN_B: NO_SLOT}
+    device_reports(monkeypatch, slots=5)
+    assert ciq.install_refusals(dev, st, ciq.read_installed(dev, st), twins) == {}
+
+
+def test_install_refusals_add_up_the_space(iq_device, monkeypatch):
+    st, dev = iq_device
+    device_reports(monkeypatch, space=1500)  # each app is 1000 bytes
+    state = ciq.read_installed(dev, st)
+    twins = [store_app(TWIN_A, "One"), store_app(TWIN_B, "Two")]
+    assert ciq.install_refusals(dev, st, state, twins) == {TWIN_B: NO_SPACE}
+
+
+def test_install_with_one_free_slot_takes_the_first_of_two_apps_with_one_name(iq_device,
+                                                                               monkeypatch):
+    st, dev = iq_device
+    device_reports(monkeypatch, slots=1)
+    twins = [store_app(TWIN_A, "Twin"), store_app(TWIN_B, "Twin")]
+    store = RecordingStore()
+    client = queue_client(store, twins)
+    rep = ciq.install_apps(dev, st, client, store, twins)
+    assert store.requested == [TWIN_A]  # the second one is never requested
+    assert rep.installed == ["Twin"] and rep.failed == [("Twin", NO_SLOT)]
+    assert client.downloads == 1
+    written = [entry[0] for entry in ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))]
+    assert TWIN_A in written and TWIN_B not in written
+
+
+def test_install_with_no_free_slot_requests_nothing(iq_device, monkeypatch):
+    st, dev = iq_device
+    device_reports(monkeypatch, slots=0)
+    made = copies_made(monkeypatch)
+    before = apps_files(st)
+    store = RecordingStore()
+    asked = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: asked.append(1) or []
+    rep = ciq.install_apps(dev, st, client, store, [store_app(FACE, "Face It")])
+    assert rep.failed == [("Face It", NO_SLOT)] and rep.installed == rep.for_phone == []
+    assert store.requested == [] and asked == [] and made == [] and apps_files(st) == before
+
+
+def test_an_app_that_is_only_queued_is_not_refused_for_slots(flatpak_spot, monkeypatch):
+    # The Flatpak cannot write it anyway: it is requested for the phone, as before.
+    st, dev, _fake, _app, _attempts = flatpak_spot
+    device_reports(monkeypatch, slots=0)
+    new = uuid.UUID("11111111-2222-3333-4444-555555555555")
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: []
+    rep = ciq.install_apps(dev, st, client, FakeStore(client), [store_app(new, "New Face")])
+    assert FakeStore.queued == [["New Face"]]
+    assert rep.for_phone == rep.sandboxed == ["New Face"] and rep.failed == []
+
+
+def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
+    import types
+
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    device_reports(monkeypatch, slots=0)
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    store = RecordingStore()
+    monkeypatch.setattr(ciq, "StoreApi", lambda client: store)
+    client = CountingClient()
+    client.device_messages = lambda unit_id: []
+    errors = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
+        error=lambda title, text: errors.append((title, text)),
+        load_section=lambda key, force=False: None,
+        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+    MainWindow.install_apps(win, [store_app(FACE, "Face It")])
+    assert errors == [("Connect IQ", f"Face It: {NO_SLOT}")]
+    assert store.requested == [] and client.downloads == 0
