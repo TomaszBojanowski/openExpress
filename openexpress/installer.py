@@ -39,7 +39,7 @@ def _seven_zip() -> str:
 
 def _run_7z(archive: Path, out: Path, *members: str) -> None:
     cmd = [_seven_zip(), "x", "-y", f"-o{out}", str(archive), *members]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if res.returncode not in (0, 1):  # 1 = warnings, e.g. extra data after the archive
         raise SetupError(_("Extraction failed: {error}").format(error=res.stderr.strip()[-300:]))
 

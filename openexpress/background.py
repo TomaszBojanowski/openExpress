@@ -92,7 +92,8 @@ def _portal_request(autostart: bool, parent: str, done: Callable[[bool, str], No
 
 
 def _systemctl(*args: str) -> tuple[bool, str]:
-    res = subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True)
+    res = subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True,
+                         check=False)
     return res.returncode == 0, res.stderr.strip()
 
 
@@ -131,7 +132,7 @@ def is_enabled() -> bool | None:
         return None
     try:
         res = subprocess.run(["systemctl", "--user", "is-enabled", desktop.SERVICE],
-                             capture_output=True, text=True)
+                             capture_output=True, text=True, check=False)
     except OSError:
         return False
     return res.stdout.strip() == "enabled"

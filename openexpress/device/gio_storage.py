@@ -70,7 +70,7 @@ def host_copy(local: Path, target_uri: str, what: str) -> None:
         raise DeviceError(f"{what}: " + _("flatpak-spawn is not available"))
     try:
         res = subprocess.run(["flatpak-spawn", "--host", "gio", "copy", str(local), target_uri],
-                             capture_output=True, text=True, timeout=6 * 3600)
+                             capture_output=True, text=True, timeout=6 * 3600, check=False)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise DeviceError(f"{what}: {e}") from e
     if res.returncode != 0:

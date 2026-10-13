@@ -168,7 +168,7 @@ def flatpak_installed() -> bool:
 
     if not shutil.which("flatpak"):
         return False
-    res = subprocess.run(["flatpak", "info", DESKTOP_ID], capture_output=True)
+    res = subprocess.run(["flatpak", "info", DESKTOP_ID], capture_output=True, check=False)
     return res.returncode == 0
 
 
@@ -192,7 +192,7 @@ def uninstall(dry_run: bool) -> list[Path]:
         if shutil.which("systemctl"):
             try:
                 subprocess.run(["systemctl", "--user", "disable", "--now", SERVICE],
-                               capture_output=True, timeout=30)
+                               capture_output=True, timeout=30, check=False)
             except (OSError, subprocess.SubprocessError):
                 pass
         for p in paths_:
