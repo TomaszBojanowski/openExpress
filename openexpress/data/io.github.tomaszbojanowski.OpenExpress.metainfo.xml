@@ -93,6 +93,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.3" date="2026-10-13">
+      <description>
+        <ul>
+          <li>A device that is not on the signed-in Garmin account now gets its picture
+          too.</li>
+          <li>Installing "all" updates skips files the device already has, and after every
+          install the app says what to do on the device (it may ask whether to install the
+          update and restart).</li>
+          <li>A Sync button that cannot be used is grey and says why.</li>
+          <li>Sizes use the decimal separator of the language of the app.</li>
+          <li>Tested with a Venu 2, including the installation of software updates.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.2" date="2026-10-13">
       <description>
         <ul>
