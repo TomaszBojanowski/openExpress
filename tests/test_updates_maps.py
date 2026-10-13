@@ -683,3 +683,41 @@ def test_check_again_updates_the_row_of_the_device_page(server, device_root):
     assert win.map_row.subtitle == "1 update available"
     check_again_buttons(win)[0].emit("clicked")
     assert win.map_row.subtitle == "All installed maps are up to date." and len(asked) == 2
+
+
+# --- progress while an update file is copied ----------------------------------------------------
+
+
+class ReportingStorage(LocalStorage):
+    """Copies like the real ones do: tells the progress function how far it is."""
+
+    seen: list = []
+
+    def _write_file(self, real_path, local, progress=None):
+        type(self).seen.append((real_path.split("/")[-1], progress))
+        super()._write_file(real_path, local)
+        if progress:
+            size = local.stat().st_size
+            progress(size // 2, size)
+            progress(size, size)
+
+
+def test_update_files_report_their_progress(server, device_root, xdg):
+    ReportingStorage.seen = []
+    steps = []
+    items = updates.select(updates.parse_updates(sw_response(server)), ["all"])
+    rep = updates.install(items, ReportingStorage(device_root),
+                          transfer_progress=lambda done, total: steps.append((done, total)))
+    assert len(rep.installed) == 2
+    # Every file of the update gets the function, and the copy calls it.
+    assert [name for name, _p in ReportingStorage.seen] == ["aux.gcd", "GUPDATE.GSP"]
+    assert all(p is not None for _name, p in ReportingStorage.seen)
+    assert steps == [(150, 300), (300, 300), (2500, 5000), (5000, 5000)]
+    assert (device_root / "GARMIN/GUPDATE.GSP").read_bytes() == FILES["/fw/GUPDATE.GSP"]
+
+
+def test_update_install_without_a_progress_function_works_as_before(server, device_root, xdg):
+    ReportingStorage.seen = []
+    items = updates.select(updates.parse_updates(sw_response(server)), ["all"])
+    updates.install(items, ReportingStorage(device_root))
+    assert [p for _name, p in ReportingStorage.seen] == [None, None]

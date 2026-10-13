@@ -1555,7 +1555,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.run_task(
                 _("Installing update…"),
                 lambda: upd.install(chosen, s.storage, session=s.client.http,
-                                    progress=self.progress),
+                                    progress=self.progress, transfer_progress=self.fraction),
                 lambda rep: self.error(_("Done"), self._update_done_text(rep)),
             )
 

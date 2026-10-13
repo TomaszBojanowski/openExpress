@@ -645,7 +645,8 @@ def cmd_updates(args) -> int:
         print("\n" + _("Dry run: nothing was downloaded or written. Add --apply "
                        "(this means you accept the licenses above)."))
         return 0
-    rep = upd.install(chosen, st, session=client.http, progress=lambda s: print("  " + s))
+    rep = upd.install(chosen, st, session=client.http, progress=lambda s: print("  " + s),
+                      transfer_progress=_Bar())
     n = len(rep.installed)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
     if n:

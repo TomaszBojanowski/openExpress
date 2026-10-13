@@ -224,6 +224,7 @@ def install(
     storage: Storage,
     session=None,
     progress: Callable[[str], None] = lambda s: None,
+    transfer_progress=None,
 ) -> InstallReport:
     need, free = check_space(storage, updates)
     if free is not None and need + SPACE_MARGIN > free:
@@ -250,7 +251,7 @@ def install(
         local = local_files[u.key]
         progress(_("Copying to the device: {path}").format(path=u.device_path))
         try:
-            real = storage.write_file(u.device_path, local)
+            real = storage.write_file(u.device_path, local, transfer_progress)
             ok = storage.size(real) == local.stat().st_size
         except Exception:
             _delete_quietly(storage, u.device_path)

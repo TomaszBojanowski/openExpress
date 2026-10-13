@@ -1314,3 +1314,21 @@ def test_buttons_of_other_pages_stay_in_the_list():
     win._load("maps", "Loading…", lambda: None, show)
     win._load("maps", "Loading…", lambda: None, show)
     assert elsewhere in win._action_buttons and len(win._action_buttons) == 2
+
+
+def test_cli_update_install_shows_a_bar_while_copying(offered, monkeypatch, capsys):
+    from openexpress import updates as upd
+
+    root, _answer_ = offered
+    asked = {}
+
+    def install(chosen, storage, session=None, progress=lambda s: None, transfer_progress=None):
+        asked["bar"] = transfer_progress
+        transfer_progress(1, 2)  # half of a file
+        return upd.InstallReport(installed=["x"])
+
+    monkeypatch.setattr(upd, "install", install)
+    assert main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"]) == 0
+    assert isinstance(asked["bar"], cli._Bar)
+    captured = capsys.readouterr()
+    assert " 50%" in captured.out + captured.err  # the bar of the command line
