@@ -670,8 +670,8 @@ def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
     errors = []
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == []  # not an error
-    assert lines == ["1 Connect IQ app waits in the queue: openExpress cannot install apps on "
-                     "this device over USB yet."]
+    assert lines == [("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
+                      "this device over USB yet.")]
 
 
 def test_cli_install_on_a_device_without_usb_apps(no_usb_apps, device_root, apps_cli, capsys):
@@ -1185,8 +1185,8 @@ def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
     errors = []
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == [] and lines == [
-        "1 Connect IQ app waits in the queue: openExpress cannot install apps on "
-        "this device over USB yet."]
+        ("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
+         "this device over USB yet.")]
     assert st.sessions == 0 and fake.operations == [] and client.acks == []
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})  # the default
     assert rep.for_phone == ["Face It"] and st.sessions == 0
@@ -2112,8 +2112,8 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
         run_task=lambda title, fn, done=None, failed=None: (tasks.append(title), done(fn())))
     MainWindow.restore_order(win, copy)
     assert tasks == ["Restoring the order…"] and loads == [("apps", True)]
-    assert toasts == ["Wrote the new order to the device; it takes effect after the device is "
-                      "unplugged."]
+    assert toasts == [("Wrote the new order to the device; it takes effect after the device is "
+                       "unplugged.")]
     written = ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))
     assert [(e[0], e[1]) for e in written] == [(a.app_id, a.app_type) for a in copy.state.apps]
     assert len(ciq.app_list_copies(dev, backups)) == 2  # the copy before the change
@@ -2408,8 +2408,8 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
         run_task=lambda title, fn, done=None, failed=None: done(fn()))
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert win._updated_apps == {FACE}
-    assert toasts == ["Wrote the update of Face It to the device; it will be installed after "
-                      "the device is unplugged."]
+    assert toasts == [("Wrote the update of Face It to the device; it will be installed after "
+                       "the device is unplugged.")]
 
     # Our own unmount and mount for a PTP session is not an unplug.
     mounted_at = str(st.label).rsplit("/", 1)[0]  # the storage is a folder of the mount
@@ -2519,17 +2519,17 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
     assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Install New Face 1.0 (1000 B)",
-        "  New Face: The Flatpak version cannot install apps on this device over USB yet. "
-        "The app will be queued in Garmin Connect and installed by the phone or Garmin Express.",
+        ("  New Face: The Flatpak version cannot install apps on this device over USB yet. "
+         "The app will be queued in Garmin Connect and installed by the phone or Garmin Express."),
         "Dry run. Add --apply.",
     ]
     assert FakeStore.queued == []
 
     assert main(["--path", str(st.root), "apps", "install", "New Face", "--apply"]) == 0
     assert capsys.readouterr().out.splitlines()[2:] == [
-        "New Face: The Flatpak version cannot install apps on this device over USB yet. "
-        "The app waits in the queue in Garmin Connect and will be installed by the phone or "
-        "Garmin Express.",
+        ("New Face: The Flatpak version cannot install apps on this device over USB yet. "
+         "The app waits in the queue in Garmin Connect and will be installed by the phone or "
+         "Garmin Express."),
     ]
     assert FakeStore.queued == [["New Face"]] and apps_cli.downloads == 0
     assert untouched(st, dev, fake, attempts, backups, before)
@@ -2549,16 +2549,16 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
     assert main(["--path", str(st.root), "apps", "update"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Update Face It 1.0 (1000 B)",
-        "  Face It: The Flatpak version cannot update apps on this device over USB yet. "
-        "The update will be queued in Garmin Connect and installed by the phone or Garmin "
-        "Express.",
+        ("  Face It: The Flatpak version cannot update apps on this device over USB yet. "
+         "The update will be queued in Garmin Connect and installed by the phone or Garmin "
+         "Express."),
         "Dry run. Add --apply.",
     ]
     assert main(["--path", str(st.root), "apps", "update", "--apply"]) == 0
     assert capsys.readouterr().out.splitlines()[2:] == [
-        "Face It: The Flatpak version cannot update apps on this device over USB yet. "
-        "The update waits in the queue in Garmin Connect and will be installed by the phone "
-        "or Garmin Express.",
+        ("Face It: The Flatpak version cannot update apps on this device over USB yet. "
+         "The update waits in the queue in Garmin Connect and will be installed by the phone "
+         "or Garmin Express."),
     ]
     assert FakeStore.queued == [["Face It"]] and apps_cli.downloads == 0
     assert untouched(st, dev, fake, attempts, backups, before)
@@ -2625,6 +2625,6 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
     errors = []
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == [] and lines == [
-        "The Flatpak version cannot install apps on this device over USB yet; 1 Connect IQ "
-        "app waits in the queue."]
+        ("The Flatpak version cannot install apps on this device over USB yet; 1 Connect IQ "
+         "app waits in the queue.")]
     assert untouched(st, dev, fake, attempts, backups, before)

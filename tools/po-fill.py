@@ -27,16 +27,17 @@ def main(po_path, json_path):
     for i, block in enumerate(blocks):
         lines = block.split("\n")
         try:
-            a = next(k for k, l in enumerate(lines) if l.startswith("msgid "))
-            p = next((k for k, l in enumerate(lines) if l.startswith("msgid_plural")), None)
-            z = next(k for k, l in enumerate(lines) if l.startswith("msgstr"))
+            a = next(k for k, line in enumerate(lines) if line.startswith("msgid "))
+            p = next((k for k, line in enumerate(lines)
+                      if line.startswith("msgid_plural")), None)
+            z = next(k for k, line in enumerate(lines) if line.startswith("msgstr"))
         except StopIteration:
             continue
         msgid = unquote(lines[a:(p if p is not None else z)])
         if msgid not in table:
             continue
-        head = [l.replace("#, fuzzy, ", "#, ") for l in lines[:a]
-                if not l.startswith("#, fuzzy") and not l.startswith("#| ")]
+        head = [line.replace("#, fuzzy, ", "#, ") for line in lines[:a]
+                if not line.startswith("#, fuzzy") and not line.startswith("#| ")]
         value = table[msgid]
         if isinstance(value, list):
             body = [f"msgstr[{n}] " + quote(v) for n, v in enumerate(value)]

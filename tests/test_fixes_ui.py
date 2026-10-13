@@ -509,6 +509,10 @@ def _find(widget, kind):
     return None
 
 
+def _text(buffer) -> str:
+    return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+
+
 def test_report_preview_does_not_keep_itself_alive(log_file):
     """In 0.4.1 the "attach the log" switch referred to itself through its own handler, so
     the preview outlived the dialog until Python next collected reference cycles."""
@@ -525,15 +529,15 @@ def test_report_preview_does_not_keep_itself_alive(log_file):
     try:
         box, buffer = MainWindow._report_view("### Device\n")
         switch, view = _find(box, Gtk.CheckButton), _find(box, Gtk.TextView)
-        text = lambda: buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)  # noqa: E731
-        assert text() == "### Device\n" and not switch.get_active()  # off by default
+        assert _text(buffer) == "### Device\n" and not switch.get_active()  # off by default
         switch.set_active(True)
-        assert text() == "### Device\n\n### Log (last 1 lines)\n```\na line of the log\n```\n"
+        assert _text(buffer) == (
+            "### Device\n\n### Log (last 1 lines)\n```\na line of the log\n```\n")
         switch.set_active(False)
-        assert text() == "### Device\n"
+        assert _text(buffer) == "### Device\n"
 
         alive = [weakref.ref(switch), weakref.ref(view), weakref.ref(box)]
-        del box, buffer, switch, view, text
+        del box, buffer, switch, view
         # Freed at once, by reference counting alone: nothing is left for a later collection.
         assert [ref() for ref in alive] == [None, None, None]
     finally:

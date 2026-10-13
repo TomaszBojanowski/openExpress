@@ -27,12 +27,23 @@ def device():
 def test_command_bytes():
     assert ptp.command(ptp.OPEN_SESSION, 0, (1,)).hex() == "10000000010002100000000001000000"
     assert ptp.command(ptp.GARMIN_GET_OBJECT_IDS, 5, (0x00010001, 0x2A)).hex() == (
-        "140000000100029005000000010001002a000000")
+        "14000000"   # length
+        "0100"       # a command
+        "0290"       # the operation
+        "05000000"   # transaction
+        "01000100"   # storage
+        "2a000000"   # parent
+    )
     assert ptp.command(ptp.CLOSE_SESSION, 9).hex() == "0c0000000100031009000000"
 
 
 def test_data_header_bytes():
-    assert ptp.data_header(ptp.SEND_OBJECT, 7, 768).hex() == "0c03000002000d1007000000"
+    assert ptp.data_header(ptp.SEND_OBJECT, 7, 768).hex() == (
+        "0c030000"   # length
+        "0200"       # data
+        "0d10"       # the operation
+        "07000000"   # transaction
+    )
 
 
 def test_strings():
@@ -49,11 +60,23 @@ def test_object_info_dataset_bytes():
     """Format and thumbnail format "undefined", size and name; the rest zero or empty."""
     data = ptp.object_info_dataset("AB.PRG", 0x0102)
     assert data.hex() == (
-        "000000000030000002010000"  # storage, format, protection, size
+        "00000000"                           # storage
+        "0030"                               # format
+        "0000"                               # protection
+        "02010000"                           # size
         "0030" + "00000000" * 7              # thumbnail format, six sizes, parent
-        + "00000000000000000000"       # association type and description, sequence
+        + (
+            "0000"                           # association type
+            "00000000"                       # association description
+            "00000000"                       # sequence number
+        )
         + "07" + "AB.PRG\0".encode("utf-16-le").hex()
-        + "000000")                    # no dates, no keywords
+        + (
+            "00"                             # no capture date
+            "00"                             # no modification date
+            "00"                             # no keywords
+        )
+    )
     assert len(data) == 52 + 1 + 14 + 3
 
 

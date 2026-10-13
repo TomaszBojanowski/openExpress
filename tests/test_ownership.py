@@ -851,8 +851,8 @@ def test_set_primary_training_checks_ownership_anew(device):
       "Would change it to: Test watch", "Dry run. Add --apply."], 0),
     (["primary", "set", "--apply"], OTHER,
      ["Primary training device changed from Bike computer to Test watch.",
-      "To change it back, connect Bike computer and run `openexpress primary set --apply`, "
-      "or change it in Garmin Connect."], 1),
+      ("To change it back, connect Bike computer and run `openexpress primary set --apply`, "
+       "or change it in Garmin Connect.")], 1),
     (["primary", "set", "--apply"], None, ["Primary training device set to Test watch."], 1),
     (["primary", "set", "--apply"], UNIT,
      ["Test watch is already the primary training device."], 0),
