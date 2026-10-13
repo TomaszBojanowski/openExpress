@@ -20,7 +20,7 @@ from pathlib import Path
 from openexpress import applog
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import N_, _
+from openexpress.i18n import N_, _, human_size
 
 log = logging.getLogger(__name__)
 
@@ -245,8 +245,8 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
          transfer_progress=None) -> list[str]:
     free = storage.free_space()
     if free is not None and plan.size + SPACE_MARGIN > free:
-        raise MusicError(_("Not enough space on the device: need {need} B, free {free} B")
-                         .format(need=plan.size, free=free))
+        raise MusicError(_("Not enough space on the device: {need} needed, {free} free")
+                         .format(need=human_size(plan.size), free=human_size(free)))
     written = []
     for t, dest in plan.to_copy:
         progress(_("Copying {path}").format(path=dest))

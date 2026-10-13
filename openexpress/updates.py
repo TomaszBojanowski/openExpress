@@ -19,7 +19,7 @@ from pathlib import Path
 
 from openexpress import applog, download, paths
 from openexpress.device.storage import DeviceError, Storage
-from openexpress.i18n import N_, _
+from openexpress.i18n import N_, _, human_size
 
 log = logging.getLogger(__name__)
 
@@ -227,8 +227,8 @@ def install(
 ) -> InstallReport:
     need, free = check_space(storage, updates)
     if free is not None and need + SPACE_MARGIN > free:
-        raise UpdateError(_("Not enough space on the device: {need} B needed, {free} B free")
-                          .format(need=need, free=free))
+        raise UpdateError(_("Not enough space on the device: {need} needed, {free} free")
+                          .format(need=human_size(need), free=human_size(free)))
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
@@ -236,8 +236,8 @@ def install(
         if not u.url:
             raise UpdateError(_("{part}: the server did not provide a download URL")
                               .format(part=u.part_number))
-        progress(_("Downloading {name} {version} ({size} B)")
-                 .format(name=u.title, version=u.version, size=u.size or "?"))
+        progress(_("Downloading {name} {version} ({size})")
+                 .format(name=u.title, version=u.version, size=human_size(u.size or None)))
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session)
         with open(local, "rb") as f:
             if f.read(4) == RGN_MAGIC:

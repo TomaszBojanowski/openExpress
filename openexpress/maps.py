@@ -18,7 +18,7 @@ from pathlib import Path
 
 from openexpress import applog, download, paths
 from openexpress.device.storage import Storage
-from openexpress.i18n import N_, _
+from openexpress.i18n import N_, _, human_size
 
 log = logging.getLogger(__name__)
 
@@ -203,13 +203,13 @@ def install(
     need = space_needed(storage, m, removing)
     free = storage.free_space()
     if free is not None and need + SPACE_MARGIN > free:
-        raise MapError(_("Not enough space on the device: {need} B needed, {free} B free")
-                       .format(need=need, free=free))
+        raise MapError(_("Not enough space on the device: {need} needed, {free} free")
+                       .format(need=human_size(need), free=human_size(free)))
 
     local: dict[str, Path] = {}
     for f in m.files:
-        progress(_("Downloading {path} ({size} MB)")
-                 .format(path=f.device_path, size=f"{f.size / 1e6:.0f}"))
+        progress(_("Downloading {path} ({size})")
+                 .format(path=f.device_path, size=human_size(f.size)))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
         if url_salt:
             urls = [download.tokenize(u, url_salt) for u in urls]

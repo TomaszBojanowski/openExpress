@@ -25,7 +25,7 @@ from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
 from openexpress.fit import parse_file_id
-from openexpress.i18n import _
+from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
 
@@ -397,7 +397,7 @@ def run_uploads(
 
 def _upload_one(c, data, label, last, client, state, report, progress,
                 wait_for_processing, stop_types) -> None:
-    progress(_("Uploading {name} ({size} B)").format(name=label, size=c.size))
+    progress(_("Uploading {name} ({size})").format(name=label, size=human_size(c.size)))
     ok = True
     error = ""
     outcome = "uploaded"

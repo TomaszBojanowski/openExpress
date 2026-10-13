@@ -274,7 +274,7 @@ def test_gui_helpers():
     assert MainWindow._removed_files(1) == "Removed 1 file"
     assert MainWindow._removed_files(3) == "Removed 3 files"
     state = types.SimpleNamespace(available_slots=2, available_space=2048)
-    assert MainWindow._apps_space(state) == "2 free slots · 2.0 KB free"
+    assert MainWindow._apps_space(state) == "2 free slots · 2.0 kB free"
 
 
 class _Sec:
@@ -624,9 +624,9 @@ def test_updates_page_with_several_updates(monkeypatch):
     assert available.title == "Available updates"
     assert [(r.get_title(), r.get_subtitle()) for r in available.rows] == [
         # The server only repeats the type: a readable name, the file name tells them apart.
-        ("Map support file", "2.70 · 2.0 KB · Recommended · 006-D0001-00.sid"),
-        ("Voice &lt;pack&gt;", "2.40 · 2.0 KB · Critical · 006-D0002-00.sid"),
-        ("Thing", "2.60 · 2.0 KB · Optional · 006-D0003-00.sid")]  # unknown values stay raw
+        ("Map support file", "2.70 · 2.0 kB · Recommended · 006-D0001-00.sid"),
+        ("Voice &lt;pack&gt;", "2.40 · 2.0 kB · Critical · 006-D0002-00.sid"),
+        ("Thing", "2.60 · 2.0 kB · Optional · 006-D0003-00.sid")]  # unknown values stay raw
     assert advanced.title == "Advanced" and isinstance(advanced.rows[0], Adw.ExpanderRow)
     # The file that is already on the device is listed with the reinstalls, not as an update.
     assert advanced.rows[0].get_subtitle().startswith("2 components already on the device")

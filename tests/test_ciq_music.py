@@ -2518,7 +2518,7 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
 
     assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Install New Face 1.0 (1000 B)",
+        "Install New Face 1.0 (1.0 kB)",
         ("  New Face: The Flatpak version cannot install apps on this device over USB yet. "
          "The app will be queued in Garmin Connect and installed by the phone or Garmin Express."),
         "Dry run. Add --apply.",
@@ -2548,7 +2548,7 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
 
     assert main(["--path", str(st.root), "apps", "update"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Update Face It 1.0 (1000 B)",
+        "Update Face It 1.0 (1.0 kB)",
         ("  Face It: The Flatpak version cannot update apps on this device over USB yet. "
          "The update will be queued in Garmin Connect and installed by the phone or Garmin "
          "Express."),
