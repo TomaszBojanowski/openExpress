@@ -1131,12 +1131,32 @@ def test_cli_install_all_with_reinstalls_and_by_name_still_take_the_file(offered
         assert "Skipped" not in out and "006-DA001-00 2.70  Map support file" in out
 
 
-def test_cli_install_all_without_any_offer_is_as_before(offered, capsys):
+def test_cli_install_all_with_nothing_offered_says_up_to_date(offered, capsys, monkeypatch):
+    from openexpress import download
+
     root, answer = offered
     answer["updates"].clear()
-    assert main(["--path", str(root), "updates", "--install", "all"]) == 0
-    out = capsys.readouterr().out
-    assert "Skipped" not in out and "Nothing to install" not in out and "To install:" in out
+    monkeypatch.setattr(download, "fetch", lambda *a, **kw: pytest.fail("a download was started"))
+    before = sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir())
+    for apply in ([], ["--apply"]):
+        assert main(["--path", str(root), "updates", "--install", "all", *apply]) == 0
+        assert capsys.readouterr().out.splitlines() == [
+            "Test watch, software 23.39", "Software is up to date."]  # no empty plan
+    assert sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir()) == before
+
+    assert main(["--path", str(root), "updates", "--reinstalls", "--install", "all"]) == 0
+    assert capsys.readouterr().out.splitlines()[1:] == ["The server returned no items."]
+
+
+def test_part_number_that_is_not_offered_is_still_an_error(offered, capsys):
+    root, answer = offered
+    for offer in ("some", "none"):
+        if offer == "none":
+            answer["updates"].clear()
+        assert main(["--path", str(root), "updates", "--install", "006-NOPE-00"]) == 1
+        out = capsys.readouterr()
+        assert "Not in the list: 006-NOPE-00" in out.err
+        assert "up to date" not in out.out and "To install" not in out.out
 
 
 def test_skipped_files_message_in_polish():

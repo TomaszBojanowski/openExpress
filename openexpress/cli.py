@@ -632,6 +632,11 @@ def cmd_updates(args) -> int:
         if not chosen:
             print(_("Nothing to install: every offered file is already on the device."))
             return 0
+    if not chosen:
+        # "all" with nothing offered (a part number that is not offered is an error in select).
+        print(_("Software is up to date.") if not args.reinstalls
+              else _("The server returned no items."))
+        return 0
     need, free = upd.check_space(st, chosen)
     print(_("To install:"))
     for u in upd.sort_for_install(chosen):
