@@ -1046,3 +1046,110 @@ def test_unit_info_request_keeps_the_device_out_of_the_log(log_file):
     line = log_file.read_text().splitlines()[-1]
     assert "HTTP GET omt.garmin.com -> 200 in " in line
     assert "unitids" not in line and str(SECRET_UNIT) not in line and "<unit>" not in line
+
+
+# --- "updates --install all" leaves out what the device already has -----------------------------
+
+
+def _marked(root, answer):
+    from openexpress import updates as upd
+    from openexpress.device.storage import LocalStorage
+
+    return upd.mark_present(LocalStorage(root), upd.parse_updates(answer))
+
+
+def _with_metadata(answer, *parts):
+    """Add the -META entry the server sends along with these parts."""
+    for part in parts:
+        answer["updates"] += _answer((part + "-META", "Update information", "UpdateMetadata",
+                                      part + ".json", b"{}", "Critical"))["updates"]
+    return answer
+
+
+def test_all_leaves_out_the_files_already_on_the_device(offered):
+    from openexpress import updates as upd
+
+    root, answer = offered
+    items = _marked(root, _with_metadata(answer, "006-DA001-00", "006-DA002-00"))
+    chosen = [u.part_number for u in upd.select(items, ["all"])]
+    assert chosen == ["006-DA002-00", "006-DA003-00", "006-B0000-00", "006-DA002-00-META"]
+    # Neither the file nor the entry that only describes it.
+    assert [u.part_number for u in upd.present_with_metadata(items)] == [
+        "006-DA001-00", "006-DA001-00-META"]
+    # With the reinstalls nothing is left out, as before.
+    assert len(upd.select(items, ["all"], keep_present=True)) == len(items) == 6
+
+
+def test_part_number_given_by_name_is_always_taken(offered):
+    from openexpress import updates as upd
+
+    root, answer = offered
+    items = _marked(root, _with_metadata(answer, "006-DA001-00"))
+    assert items[0].on_device
+    assert [u.part_number for u in upd.select(items, ["006-da001-00"])] == [
+        "006-DA001-00", "006-DA001-00-META"]
+
+
+def test_cli_install_all_says_what_it_skips(offered, capsys):
+    root, _a = offered
+    assert main(["--path", str(root), "updates", "--install", "all"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1] == "Skipped 1 file that is already on the device."
+    assert out[2] == "To install:"
+    listed = [line.split()[0] for line in out[3:6]]
+    assert sorted(listed) == ["006-B0000-00", "006-DA002-00", "006-DA003-00"]
+    assert not any("DA00100" in line for line in out)
+
+    assert main(["--path", str(root), "-v", "updates", "--install", "all"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1:3] == [
+        "Skipped 1 file that is already on the device.",
+        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)"]
+
+
+def test_cli_install_all_with_nothing_left_writes_nothing(offered, capsys, monkeypatch):
+    from openexpress import download
+
+    root, answer = offered
+    del answer["updates"][1:]  # the server offers only the file the device already has
+    monkeypatch.setattr(download, "fetch", lambda *a, **kw: pytest.fail("a download was started"))
+    before = sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir())
+    for argv in (["updates", "--install", "all"], ["updates", "--install", "all", "--apply"]):
+        assert main(["--path", str(root), *argv]) == 0
+        assert capsys.readouterr().out.splitlines()[1:] == [
+            "Skipped 1 file that is already on the device.",
+            "Nothing to install: every offered file is already on the device."]
+    assert sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir()) == before
+
+
+def test_cli_install_all_with_reinstalls_and_by_name_still_take_the_file(offered, capsys):
+    root, _a = offered
+    for argv in (["updates", "--reinstalls", "--install", "all"],
+                 ["updates", "--install", "006-DA001-00"]):
+        assert main(["--path", str(root), *argv]) == 0
+        out = capsys.readouterr().out
+        assert "Skipped" not in out and "006-DA001-00 2.70  Map support file" in out
+
+
+def test_cli_install_all_without_any_offer_is_as_before(offered, capsys):
+    root, answer = offered
+    answer["updates"].clear()
+    assert main(["--path", str(root), "updates", "--install", "all"]) == 0
+    out = capsys.readouterr().out
+    assert "Skipped" not in out and "Nothing to install" not in out and "To install:" in out
+
+
+def test_skipped_files_message_in_polish():
+    from openexpress import i18n
+    from openexpress.i18n import ngettext
+
+    i18n.setup("pl")
+    try:
+        said = [ngettext("Skipped {count} file that is already on the device.",
+                         "Skipped {count} files that are already on the device.",
+                         n).format(count=n) for n in (1, 3, 5)]
+    finally:
+        i18n.setup("en")
+    assert said == ["Pominięto 1 plik, który już jest na urządzeniu.",
+                    "Pominięto 3 pliki, które już są na urządzeniu.",
+                    "Pominięto 5 plików, które już są na urządzeniu."]

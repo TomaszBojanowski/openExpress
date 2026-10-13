@@ -174,10 +174,22 @@ def sort_for_install(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
                   key=lambda u: (u.restart_required or u.is_primary, u.order, u.part_number))
 
 
-def select(updates: list[SoftwareUpdate], wanted: list[str]) -> list[SoftwareUpdate]:
-    """Select by part number (together with its -META entry) or 'all'."""
+def present_with_metadata(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """The offered files the device already has, each with its -META entry: what 'all' skips."""
+    parts = {u.part_number.upper() for u in updates if u.on_device}
+    return [u for u in updates if u.part_number.upper().removesuffix("-META") in parts]
+
+
+def select(updates: list[SoftwareUpdate], wanted: list[str],
+           keep_present: bool = False) -> list[SoftwareUpdate]:
+    """Select by part number (together with its -META entry) or 'all'.
+
+    'all' leaves out the files the device already has (`present_with_metadata`), unless
+    `keep_present`: writing the same file again is a reinstall, and that is asked for by
+    its part number or together with the reinstalls."""
     if wanted == ["all"]:
-        return list(updates)
+        skipped = [] if keep_present else present_with_metadata(updates)
+        return [u for u in updates if not any(u is s for s in skipped)]
     keys = {w.upper() for w in wanted}
     chosen = [u for u in updates if u.part_number.upper() in keys
               or u.part_number.upper().removesuffix("-META") in keys]

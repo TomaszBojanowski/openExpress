@@ -606,7 +606,21 @@ def cmd_updates(args) -> int:
             command="openexpress updates --install PART_NUMBER [--reinstalls] --apply"))
         return 0
 
-    chosen = upd.select(items, args.install)
+    # "all" means the updates: a file the device already has is not written again, unless
+    # the reinstalls were asked for. A part number given by name is always taken.
+    chosen = upd.select(items, args.install, keep_present=args.reinstalls)
+    skipped = [u for u in upd.present_with_metadata(items) if not u.is_metadata
+               and not any(u is c for c in chosen)] if args.install == ["all"] else []
+    if skipped:
+        print(ngettext("Skipped {count} file that is already on the device.",
+                       "Skipped {count} files that are already on the device.",
+                       len(skipped)).format(count=len(skipped)))
+        if args.verbose:
+            for u in skipped:
+                print("  " + _update_line(u))
+        if not chosen:
+            print(_("Nothing to install: every offered file is already on the device."))
+            return 0
     need, free = upd.check_space(st, chosen)
     print(_("To install:"))
     for u in upd.sort_for_install(chosen):
