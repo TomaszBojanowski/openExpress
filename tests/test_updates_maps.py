@@ -644,12 +644,14 @@ def _real_maps_page(answers, device_root):
 
     win.session = types.SimpleNamespace(
         client=types.SimpleNamespace(universal_maps=universal_maps),
-        device=types.SimpleNamespace(raw=b"xml"), storage=LocalStorage(device_root))
+        # A device that declares no folder for maps: the page has no group of own maps.
+        device=types.SimpleNamespace(raw=b"xml", targets=lambda datatype: []),
+        storage=LocalStorage(device_root))
     win.map_state, win.map_update_count, win._map_check_session = None, 0, None
     win.map_row = Row()
     win.confirm_map = win.confirm_remove = lambda m: None
     win.load_updates = win.load_apps = win.load_music = None  # other pages: not loaded here
-    for name in ("load_maps", "show_maps", "load_section", "_set_map_state",
+    for name in ("load_maps", "show_maps", "show_own_maps", "load_section", "_set_map_state",
                  "_render_map_state"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     win._map_subtitle, win._search_filter = MainWindow._map_subtitle, MainWindow._search_filter

@@ -1566,11 +1566,18 @@ class MainWindow(Adw.ApplicationWindow):
 
     def load_maps(self) -> None:
         from openexpress import maps as mp
+        from openexpress import ownmaps
 
         s = self.session
-        self._load("maps", _("Checking maps…"),
-                   lambda: mp.read_maps(s.client.universal_maps(s.device.raw)),
-                   self.show_maps, device=False)  # only asks Garmin's server
+
+        def work():
+            # Garmin's server, then the map folder of the device for the maps that are not
+            # Garmin's (the folder and the first bytes of each such file).
+            result = mp.read_maps(s.client.universal_maps(s.device.raw))
+            return result, ownmaps.overview(s.device, s.storage, result[0])
+
+        self._load("maps", _("Checking maps…"), work,
+                   lambda r: (self.show_maps(r[0]), self.show_own_maps(r[1])))
 
     def show_maps(self, result) -> None:
         from openexpress import maps as mp
@@ -1642,6 +1649,139 @@ class MainWindow(Adw.ApplicationWindow):
             rows.append((row, f"{m.name} {m.region} {m.map_type}".casefold()))
         g.add(listbox)
         self._search_filter(search, rows)
+
+    # --- maps that are not from Garmin: everything is decided in ownmaps.py -------------
+
+    def show_own_maps(self, overview) -> None:
+        if self.session is None or overview.folder is None:
+            return  # no device, or one without a folder for maps
+        g = self.sections["maps"].group(
+            _("Own maps"), _("Maps that are not from Garmin, e.g. made from OpenStreetMap data"))
+        g.set_header_suffix(self._button(_("Add Map…"), self.choose_map))
+        if overview.unreadable:
+            g.add(Adw.ActionRow(title=_("The map folder could not be read")))
+        elif not overview.maps:
+            g.add(Adw.ActionRow(title=_("No maps of your own on the device")))
+        for m in overview.maps:
+            removable = m.filename in overview.removable
+            row = Adw.ActionRow(title=GLib.markup_escape_text(m.title or m.filename),
+                                subtitle=GLib.markup_escape_text(
+                                    self._own_map_subtitle(m, removable)))
+            if removable:
+                row.add_suffix(self._trash(_("Remove {name}").format(name=m.filename),
+                                           lambda m=m: self.confirm_remove_own(m)))
+            g.add(row)
+
+    @staticmethod
+    def _own_map_subtitle(m, removable: bool) -> str:
+        parts = [m.filename, _human(m.size)]
+        if not removable:
+            parts.append(_("not copied by this installation; remove it in the file manager"))
+        return " · ".join(parts)
+
+    def _ask(self, heading: str, body: str, label: str, on_ok, destructive: bool = False) -> None:
+        """A confirmation with Cancel and one other button; `on_ok` runs when that is chosen."""
+        d = Adw.AlertDialog(heading=heading, body=body)
+        d.add_response("cancel", _("Cancel"))
+        d.add_response("ok", label)
+        d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE if destructive
+                                  else Adw.ResponseAppearance.SUGGESTED)
+        d.connect("response", lambda _d, r: r == "ok" and on_ok())
+        d.present(self)
+
+    def _own_map_refused(self, e) -> bool:
+        """Show a refusal of ownmaps.py, with the hint for the window; True when it was one."""
+        from openexpress import maps as mp
+        from openexpress import ownmaps
+
+        if isinstance(e, ownmaps.OwnMapError):
+            self.error(_("Own maps"), e.text(window=True))
+        elif isinstance(e, mp.MapError):
+            self.error(_("Own maps"), str(e))
+        else:
+            return False
+        return True
+
+    def choose_map(self) -> None:
+        dialog = Gtk.FileDialog(title=_("Choose a map file (.img)"))
+        only_maps = Gtk.FileFilter(name=_("Garmin map files (*.img)"))
+        only_maps.add_pattern("*.img")
+        only_maps.add_pattern("*.IMG")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(only_maps)
+        dialog.set_filters(filters)
+
+        def chosen(dlg, res):
+            try:
+                path = dlg.open_finish(res).get_path()
+            except GLib.Error:
+                return  # cancelled
+            if path is None:
+                self.toast(_("Choose files stored on this computer"))
+                return
+            self.add_own_map(Path(path))
+
+        dialog.open(self, None, chosen)
+
+    @staticmethod
+    def _add_map_text(plan) -> str:
+        lines = [plan.title or plan.name,
+                 _("{file} ({size}) will be written to {path}").format(
+                     file=plan.local.name, size=_human(plan.size), path=plan.path)]
+        if plan.free is not None:
+            lines.append(_("Free space on the device: {before} now, {after} after").format(
+                before=_human(plan.free), after=_human(plan.free - plan.size)))
+        return "\n".join(lines)
+
+    def add_own_map(self, path) -> None:
+        from openexpress import ownmaps
+
+        s = self.session
+        garmin_maps = self.maps_cache or []
+
+        def written(real, plan):
+            self.toast(_("Wrote {path} ({size}).").format(path=real, size=_human(plan.size)))
+            self.load_section("maps", force=True)
+
+        def confirm(plan):
+            self._ask(_("Copy this map to the device?"), self._add_map_text(plan), _("Copy"),
+                      lambda: self.run_task(
+                          _("Copying the map…"),
+                          lambda: ownmaps.add(plan, s.device, s.storage,
+                                              transfer_progress=self.fraction),
+                          lambda real: written(real, plan), self._own_map_refused))
+
+        self.run_task(_("Checking maps…"),
+                      lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
+                      confirm, self._own_map_refused)
+
+    def confirm_remove_own(self, m) -> None:
+        from openexpress import ownmaps
+
+        s = self.session
+        garmin_maps = self.maps_cache or []
+
+        def work():
+            plan = ownmaps.plan_remove(s.device, s.storage, garmin_maps, m.filename)
+            ownmaps.remove(plan, s.device, s.storage)
+            return plan
+
+        def removed(plan):
+            if plan.on_device:
+                self.toast(_("Removed {path} ({size}).").format(
+                    path=plan.path, size=_human(plan.size)))
+            else:
+                self.toast(_("Took {name} off the list of own maps; the file was not on the "
+                             "device.").format(name=plan.name))
+            self.load_section("maps", force=True)
+
+        self._ask(_("Remove {name}?").format(name=m.title or m.filename),
+                  _("{path} ({size}) will be removed from the device.").format(
+                      path=m.path, size=_human(m.size)),
+                  _("Remove"),
+                  lambda: self.run_task(_("Removing {name}…").format(name=m.title or m.filename),
+                                        work, removed, self._own_map_refused),
+                  destructive=True)
 
     @staticmethod
     def _map_subtitle(m) -> str:

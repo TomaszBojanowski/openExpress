@@ -42,6 +42,33 @@ class OwnMap:
     filename: str
     size: int
     title: str | None  # from the header; None when it could not be read
+    path: str = ""  # folder and name on the device
+
+
+class OwnMapError(MapError):
+    """A refusal the user can do something about. What to do depends on where they are: the
+    message is the same for the command line and the window, the hint that follows is not."""
+
+    def __init__(self, message: str, kind: str):
+        super().__init__(message)
+        self.kind = kind  # "taken", "reserved" or "name"
+
+    def text(self, window: bool) -> str:
+        if window:
+            hint = _("Rename the file on your computer and add it again.")
+        else:
+            hint = {"taken": _("Choose another name with --name."),
+                    "reserved": _("Choose another one with --name.")}.get(self.kind, "")
+        return f"{self} {hint}".strip()
+
+
+@dataclass
+class Overview:
+    """What the Maps page shows about the maps that are not from Garmin."""
+    folder: str | None  # None: the device has no folder for maps
+    maps: list[OwnMap]
+    removable: set[str]  # file names this installation copied: they can be removed
+    unreadable: bool = False  # the folder could not be listed
 
 
 def read_title(data: bytes) -> str | None:
@@ -100,9 +127,25 @@ def list_own(device: GarminDevice, storage: Storage, garmin_maps: list) -> list[
         except DeviceError as e:
             log.info("own maps: the start of a file could not be read (%s)", type(e).__name__)
             title = None
-        own.append(OwnMap(entry.name, entry.size, title))
+        own.append(OwnMap(entry.name, entry.size, title, path))
     log.info("own maps: %d", len(own))  # counts only: the file names are the user's own
     return own
+
+
+def overview(device: GarminDevice, storage: Storage, garmin_maps: list) -> Overview:
+    """The own maps on the device and which of them this installation may remove. Reads
+    the map folder and the start of each own map; a folder that cannot be read is reported,
+    not raised, so that the rest of the page still shows."""
+    folder = map_dir(device)
+    if folder is None:
+        return Overview(None, [], set())
+    try:
+        maps = list_own(device, storage, garmin_maps)
+    except DeviceError as e:
+        log.info("own maps: the map folder could not be read (%s)", type(e).__name__)
+        return Overview(folder, [], set(), unreadable=True)
+    ours = {str(m.get("filename", "")).casefold() for m in recorded(device)}
+    return Overview(folder, maps, {m.filename for m in maps if m.filename.casefold() in ours})
 
 
 # --- copying a map of the user's to the device ------------------------------------------------
@@ -146,14 +189,15 @@ def check_local(local: Path, name: str | None) -> tuple[str, str, int]:
     applog.hide(title, "map")
     name = name if name is not None else local.name
     if not valid_name(name):
-        raise MapError(_("The name {name} cannot be used: only letters, digits, spaces and "
-                         ". _ - ( ) are allowed, and it must end with .img.").format(name=name))
+        raise OwnMapError(_("The name {name} cannot be used: only letters, digits, spaces and "
+                            ". _ - ( ) are allowed, and it must end with .img.").format(
+            name=name), "name")
     return name, title, local.stat().st_size
 
 
-def _exists_text(name: str) -> str:
-    return _("A file named {name} is already on the device; nothing is overwritten. Choose "
-             "another name with --name.").format(name=name)
+def _taken(name: str) -> OwnMapError:
+    return OwnMapError(_("A file named {name} is already on the device; nothing is "
+                         "overwritten.").format(name=name), "taken")
 
 
 def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: Path,
@@ -168,10 +212,10 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
     # A file with one of Garmin's names would be overwritten or deleted by a later install
     # or removal of that map.
     if is_garmin_name(name) or path.casefold() in garmin_paths(garmin_maps):
-        raise MapError(_("The name {name} is reserved for Garmin's own maps. Choose another "
-                         "one with --name.").format(name=name))
+        raise OwnMapError(_("The name {name} is reserved for Garmin's own maps.").format(
+            name=name), "reserved")
     if storage.resolve(path) is not None:  # whatever it is, and whatever its case
-        raise MapError(_exists_text(name))
+        raise _taken(name)
     free = storage.free_space()
     if free is not None and size + SPACE_MARGIN > free:
         raise MapError(_("Not enough space on the device: {need} needed, {free} free")
@@ -184,7 +228,7 @@ def add(plan: AddPlan, device: GarminDevice, storage: Storage, transfer_progress
     Returns the path written. When the copy fails, the incomplete file is removed: it can
     only be this run's, because no file of that name was there a moment before."""
     if storage.resolve(plan.path) is not None:
-        raise MapError(_exists_text(plan.name))  # it appeared since the plan was made
+        raise _taken(plan.name)  # it appeared since the plan was made
     try:
         real = storage.write_file(plan.path, plan.local, transfer_progress)
         written = storage.size(plan.path)

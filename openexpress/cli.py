@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import contextlib
 import json
 import logging
 import sys
@@ -668,10 +669,23 @@ def _url_salt() -> str | None:
     return salt
 
 
+@contextlib.contextmanager
+def _own_map_hints():
+    """A refusal of ownmaps.py, with what to do about it on the command line."""
+    from openexpress import maps as mp
+    from openexpress import ownmaps
+
+    try:
+        yield
+    except ownmaps.OwnMapError as e:
+        raise mp.MapError(e.text(window=False)) from e
+
+
 def _maps_add(args, dev, st, all_maps) -> int:
     from openexpress import ownmaps
 
-    plan = ownmaps.plan_add(dev, st, all_maps, Path(args.file), args.name)
+    with _own_map_hints():
+        plan = ownmaps.plan_add(dev, st, all_maps, Path(args.file), args.name)
     print(_("Map: {title}").format(title=plan.title or plan.name))
     print("  " + _("{file} ({size}) will be written to {path}").format(
         file=plan.local.name, size=_human(plan.size), path=plan.path))
@@ -681,7 +695,8 @@ def _maps_add(args, dev, st, all_maps) -> int:
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
-    path = ownmaps.add(plan, dev, st, transfer_progress=_Bar())
+    with _own_map_hints():
+        path = ownmaps.add(plan, dev, st, transfer_progress=_Bar())
     print(_("Wrote {path} ({size}).").format(path=path, size=_human(plan.size)))
     return 0
 
@@ -719,7 +734,8 @@ def cmd_maps(args) -> int:
 
     if args.maps_cmd == "add":
         # Before the device is opened: is it a map at all, and may it have that name?
-        ownmaps.check_local(Path(args.file), args.name)
+        with _own_map_hints():
+            ownmaps.check_local(Path(args.file), args.name)
     client = GarminClient(Settings.load())
     st, dev, all_maps, listed = _load_maps(args, client)
     if args.maps_cmd == "add":

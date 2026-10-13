@@ -792,3 +792,357 @@ def test_remove_own_in_polish(added, capsys):
     assert err == ("Błąd: Plik by-hand.img nie został skopiowany przez tę instalację openExpress "
                    "(mógł zostać skopiowany ręcznie albo przez inną instalację), więc nie "
                    "zostanie usunięty. Jeśli chcesz go usunąć, zrób to w menedżerze plików.")
+
+
+# --- the Maps page of the window ------------------------------------------------------------------
+
+WINDOW_HINT = "Rename the file on your computer and add it again."
+NOT_OURS_NOTE = "not copied by this installation; remove it in the file manager"
+
+
+def numbered(dev, unit_id):
+    dev.unit_id = unit_id  # made up; names the folder of the device's state
+    return dev
+
+
+def test_overview_says_which_maps_can_be_removed(map_folder, my_map, xdg):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000003)
+    ownmaps.add(ownmaps.plan_add(dev, st, [], my_map, "ours.img"), dev, st)
+    listed = [garmin_map("Garmin/Listed.img", remove=["Garmin/Old.img"])]
+    view = ownmaps.overview(dev, st, listed)
+    assert view.folder == "Garmin" and not view.unreadable
+    assert [(m.filename, m.path) for m in view.maps] == [
+        ("broken.img", "Garmin/broken.img"), ("osm-test.img", "Garmin/osm-test.img"),
+        ("ours.img", "Garmin/ours.img")]
+    assert view.removable == {"ours.img"}  # the others were copied by hand
+
+
+def test_overview_of_a_device_without_maps_and_of_a_folder_that_cannot_be_read(map_folder, xdg,
+                                                                               monkeypatch):
+    st = LocalStorage(map_folder)
+    nothing = ownmaps.overview(numbered(device(None), 4000000004), st, [])
+    assert (nothing.folder, nothing.maps, nothing.removable) == (None, [], set())
+
+    def fail(path):
+        raise DeviceError("Cannot list")
+
+    monkeypatch.setattr(st, "listdir", fail)
+    broken = ownmaps.overview(numbered(device(), 4000000004), st, [])
+    assert broken.folder == "Garmin" and broken.unreadable and broken.maps == []
+
+
+def test_refusals_carry_a_hint_for_the_place_they_are_shown_in(map_folder, my_map, xdg):
+    st, dev = LocalStorage(map_folder), numbered(device(), 4000000005)
+    cases = [("osm-test.img", "taken", "Choose another name with --name."),
+             ("gmapsupp.img", "reserved", "Choose another one with --name."),
+             ("bad nameł.img", "name", "")]
+    for name, kind, cli_hint in cases:
+        with pytest.raises(ownmaps.OwnMapError) as error:
+            ownmaps.plan_add(dev, st, [], my_map, name)
+        e = error.value
+        assert e.kind == kind and "--name" not in str(e)
+        assert e.text(window=False) == f"{e} {cli_hint}".strip()
+        assert e.text(window=True) == f"{e} {WINDOW_HINT}" and "--" not in e.text(window=True)
+
+
+def own_maps_window(key="maps"):
+    """The Maps page of the real kind in a window that is never shown, with the window's own
+    code for own maps; what it would show the user is recorded instead."""
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow
+
+    win, section = page_window(key)
+    win.shown = []  # ("error" | "toast" | "ask" | "task", …)
+    win.error = lambda title, text: win.shown.append(("error", title, text))
+    win.toast = lambda text: win.shown.append(("toast", text))
+    win.fraction = lambda done, total: None
+    win.maps_cache = []
+    win.answer = "ok"  # what the user picks in a confirmation
+
+    def ask(heading, body, label, on_ok, destructive=False):
+        win.shown.append(("ask", heading, body, label, destructive))
+        if win.answer == "ok":
+            on_ok()
+
+    def run_task(title, work, done=None, failed=None, device=True):
+        win.shown.append(("task", title))
+        try:
+            result = work()
+        except Exception as e:
+            if not (failed and failed(e)):
+                raise
+            return
+        if done:
+            done(result)
+
+    win._ask, win.run_task = ask, run_task
+    win.reloads = []
+    win.load_section = lambda key, force=False: win.reloads.append((key, force))
+    for name in ("show_own_maps", "add_own_map", "confirm_remove_own", "_own_map_refused",
+                 "choose_map"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    win._own_map_subtitle, win._add_map_text = MainWindow._own_map_subtitle, MainWindow._add_map_text
+    return win, section
+
+
+def rows_of(group):
+    """(title, subtitle, has a button) of the rows of a preferences group, as it was built."""
+    from openexpress.gui.app import Adw, Gtk
+
+    found = []
+
+    def walk(widget):
+        child = widget.get_first_child()
+        while child is not None:
+            if isinstance(child, Adw.ActionRow):
+                buttons = []
+                collect(child, Gtk.Button, buttons)
+                found.append((child.get_title(), child.get_subtitle(), bool(buttons)))
+            else:
+                walk(child)
+            child = child.get_next_sibling()
+
+    def collect(widget, kind, into):
+        child = widget.get_first_child()
+        while child is not None:
+            if isinstance(child, kind):
+                into.append(child)
+            collect(child, kind, into)
+            child = child.get_next_sibling()
+
+    walk(group)
+    return found
+
+
+def view_of(*own, removable=(), folder="Garmin", unreadable=False):
+    maps = [ownmaps.OwnMap(name, size, title, f"Garmin/{name}") for name, size, title in own]
+    return ownmaps.Overview(folder, maps, set(removable), unreadable)
+
+
+def test_own_maps_group_shows_names_sizes_and_who_copied_them():
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace()
+    win.show_own_maps(view_of(("ours.img", 51_001_344, "Sometown <cyclemap>"),
+                              ("by-hand.img", 2000, None), removable=["ours.img"]))
+    (group,) = section.groups
+    assert group.get_title() == "Own maps"
+    assert group.get_description().startswith("Maps that are not from Garmin")
+    assert rows_of(group) == [
+        ("Sometown &lt;cyclemap&gt;", "ours.img · 51.0 MB", True),      # ours: a remove button
+        ("by-hand.img", f"by-hand.img · 2.0 kB · {NOT_OURS_NOTE}", False),  # not ours: none
+    ]
+    labels = sorted(b.get_label() or b.get_tooltip_text() for b in win._action_buttons)
+    assert labels == ["Add Map…", "Remove ours.img"]
+
+
+@pytest.mark.parametrize("view, rows", [
+    (view_of(), [("No maps of your own on the device", "", False)]),
+    (view_of(unreadable=True), [("The map folder could not be read", "", False)]),
+])
+def test_own_maps_group_without_maps_still_offers_to_add_one(view, rows):
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace()
+    win.show_own_maps(view)
+    (group,) = section.groups
+    assert rows_of(group) == rows
+    assert [b.get_label() for b in win._action_buttons] == ["Add Map…"]
+
+
+def test_no_own_maps_group_for_a_device_without_a_map_folder():
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace()
+    win.show_own_maps(view_of(folder=None))
+    assert section.groups == [] and win._action_buttons == []
+
+
+def test_reloading_the_page_keeps_one_add_button_and_greys_it_while_busy():
+    win, section = own_maps_window()
+    view = view_of(("ours.img", 2000, "Mine"), removable=["ours.img"])
+    for _n in range(3):
+        win._load("maps", "Checking maps…", lambda: view, win.show_own_maps)
+        assert sorted(b.get_label() or "trash" for b in win._action_buttons) == ["Add Map…", "trash"]
+        assert all(b.get_root() is win.toplevel and b.get_sensitive() for b in win._action_buttons)
+    win.busy = True  # another task runs while the page is drawn again
+    section.clear()
+    win.show_own_maps(view)
+    assert not any(b.get_sensitive() for b in win._action_buttons if b.get_root() is not None)
+
+
+def test_own_map_rows_do_not_keep_themselves_alive():
+    """The rule since 0.4.2: a handler of a widget must not hold the widget or its siblings."""
+    import gc
+    import weakref
+
+    from openexpress.gui.app import still_in_window
+
+    win, section = own_maps_window()
+    win.session = types.SimpleNamespace()
+    gc.collect()
+    gc.disable()
+    try:
+        win.show_own_maps(view_of(("ours.img", 2000, "Mine"), removable=["ours.img"]))
+        (group,) = section.groups
+        alive = [weakref.ref(group)] + [weakref.ref(b) for b in win._action_buttons]
+        assert len(alive) == 3
+        section.clear()
+        win._action_buttons = still_in_window(win._action_buttons)
+        del group
+        # Freed by reference counting alone: nothing waits for a later collection.
+        assert [ref() for ref in alive] == [None, None, None]
+    finally:
+        gc.enable()
+
+
+@pytest.fixture
+def window_device(map_folder, xdg):
+    """The window's session on the made-up map folder."""
+    win, section = own_maps_window()
+    dev = numbered(device(), 4000000006)
+    win.session = types.SimpleNamespace(device=dev, storage=LocalStorage(map_folder))
+    win.maps_cache = [garmin_map("Garmin/Listed.img", remove=["Garmin/Old.img"])]
+    return win, dev, map_folder
+
+
+def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypatch):
+    win, dev, root = window_device
+    monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
+    target = my_map.with_name("new-map.img")
+    my_map.rename(target)
+    win.add_own_map(target)
+    assert win.shown == [
+        ("task", "Checking maps…"),
+        ("ask", "Copy this map to the device?",
+         ("Sometown cyclemap/latin1 Example.org\n"
+          "new-map.img (2.0 kB) will be written to Garmin/new-map.img\n"
+          "Free space on the device: 12.4 GB now, 12.4 GB after"), "Copy", False),
+        ("task", "Copying the map…"),
+        ("toast", "Wrote Garmin/new-map.img (2.0 kB)."),
+    ]
+    assert win.reloads == [("maps", True)]
+    assert (root / "Garmin" / "new-map.img").read_bytes() == target.read_bytes()
+    assert [m["filename"] for m in ownmaps.recorded(dev)] == ["new-map.img"]
+
+
+def test_window_copies_nothing_when_the_user_cancels(window_device, my_map):
+    win, dev, root = window_device
+    win.answer = "cancel"
+    before = tree(root / "Garmin")
+    win.add_own_map(my_map.rename(my_map.with_name("new-map.img")))
+    assert [kind for kind, *_rest in win.shown] == ["task", "ask"]
+    assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
+
+
+@pytest.mark.parametrize("name, message", [
+    ("osm-test.img", "A file named osm-test.img is already on the device; nothing is overwritten. "
+                     + WINDOW_HINT),
+    ("Listed.img", "The name Listed.img is reserved for Garmin's own maps. " + WINDOW_HINT),
+    ("gmaptz.img", "The name gmaptz.img is reserved for Garmin's own maps. " + WINDOW_HINT),
+    ("moja mapa ż.img", "The name moja mapa ż.img cannot be used: only letters, digits, "
+                             "spaces and . _ - ( ) are allowed, and it must end with .img. "
+                             + WINDOW_HINT),
+])
+def test_window_shows_a_refusal_with_its_own_hint(window_device, my_map, name, message):
+    win, dev, root = window_device
+    before = tree(root / "Garmin")
+    win.add_own_map(my_map.rename(my_map.with_name(name)))
+    assert win.shown == [("task", "Checking maps…"), ("error", "Own maps", message)]
+    assert "--" not in message
+    assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
+
+
+def test_window_says_when_the_file_is_not_a_map(window_device, tmp_path):
+    win, _dev, _root = window_device
+    photo = tmp_path / "photo.img"
+    photo.write_bytes(b"\xff\xd8\xff" + b"\0" * 2000)
+    win.add_own_map(photo)
+    assert win.shown[-1] == ("error", "Own maps", "photo.img is not a Garmin map file (.img).")
+
+
+def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
+    win, dev, root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    (ours,) = [m for m in ownmaps.overview(dev, st, win.maps_cache).maps if m.filename == "ours.img"]
+    win.confirm_remove_own(ours)
+    assert win.shown == [
+        ("ask", "Remove Sometown cyclemap/latin1 Example.org?",
+         "Garmin/ours.img (2.0 kB) will be removed from the device.", "Remove", True),
+        ("task", "Removing Sometown cyclemap/latin1 Example.org…"),
+        ("toast", "Removed Garmin/ours.img (2.0 kB)."),
+    ]
+    assert not (root / "Garmin" / "ours.img").exists() and ownmaps.recorded(dev) == []
+    assert win.reloads == [("maps", True)]
+
+
+def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
+    win, dev, root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    ours = ownmaps.OwnMap("ours.img", 2000, "Mine", "Garmin/ours.img")
+    win.answer = "cancel"
+    win.confirm_remove_own(ours)
+    assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
+
+    # The file was replaced meanwhile: refused, shown, nothing removed.
+    win.answer, win.shown = "ok", []
+    (root / "Garmin" / "ours.img").write_bytes(b"another file")
+    win.confirm_remove_own(ours)
+    kind, title, text = win.shown[-1]
+    assert (kind, title) == ("error", "Own maps") and "not the same file" in text
+    assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
+    assert win.reloads == []
+
+
+def test_window_takes_a_map_that_is_gone_off_the_list(window_device, my_map):
+    win, dev, root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    (root / "Garmin" / "ours.img").unlink()  # deleted in the file manager meanwhile
+    win.confirm_remove_own(ownmaps.OwnMap("ours.img", 2000, "Mine", "Garmin/ours.img"))
+    assert win.shown[-1] == (
+        "toast", "Took ours.img off the list of own maps; the file was not on the device.")
+    assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]
+
+
+def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
+    from openexpress.gui.app import MainWindow
+
+    win, section = own_maps_window()
+    asked, drawn = [], []
+    win.session = types.SimpleNamespace(
+        client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []}),
+        device=numbered(device(), 4000000007), storage=LocalStorage(map_folder))
+    win.session.device.raw = b"xml"
+    win.show_maps = lambda result: drawn.append(("maps", result))
+    win.load_maps = types.MethodType(MainWindow.load_maps, win)
+    real = win.show_own_maps
+    win.show_own_maps = lambda view: (drawn.append(("own", [m.filename for m in view.maps])),
+                                      real(view))
+    win.load_maps()
+    assert asked == [b"xml"]  # one request to Garmin's server
+    # The server lists no map here, so every file not named like Garmin's counts as own.
+    assert drawn == [("maps", ([], 0)),
+                     ("own", ["broken.img", "Listed.img", "Old.img", "osm-test.img"])]
+    assert win.shown == [("task", "Checking maps…")]  # one task for both, nothing asked
+    (group,) = section.groups
+    assert group.get_title() == "Own maps" and len(rows_of(group)) == 4
+
+
+def test_own_maps_in_the_window_in_polish(window_device, my_map):
+    from openexpress import i18n
+
+    win, _dev, _root = window_device
+    i18n.setup("pl")
+    try:
+        win.show_own_maps(view_of(("by-hand.img", 2000, None)))
+        win.add_own_map(my_map)  # osm-test.img is on the made-up device already
+    finally:
+        i18n.setup("en")
+    (group,) = win.sections["maps"].groups
+    assert group.get_title() == "Własne mapy"
+    note = "nieskopiowana przez tę instalację; usuń ją w menedżerze plików"
+    assert rows_of(group) == [("by-hand.img", f"by-hand.img · 2,0 kB · {note}", False)]
+    refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
+               "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
+    assert win.shown[-1] == ("error", "Własne mapy", refusal)
