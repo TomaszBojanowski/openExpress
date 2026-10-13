@@ -2805,3 +2805,145 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert errors == [("Connect IQ", f"Face It: {NO_SLOT}")]
     assert store.requested == [] and client.downloads == 0
+
+
+# --- a file on the device that copying music would replace ------------------------------------
+
+ONE, TWO = "Music/Unknown/Unknown/one.mp3", "Music/Unknown/Unknown/two.mp3"
+
+
+@pytest.fixture
+def songs(library):
+    """The two playable files of the made-up library: 103 and 203 bytes."""
+    return [library.parent / "one.mp3", library.parent / "sub" / "two.mp3"]
+
+
+def on_device(st, path, size):
+    target = st.root / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"\x01" * size)
+
+
+def test_copy_plan_tells_a_new_file_from_one_it_replaces(iq_device, songs):
+    st, dev = iq_device
+    asked = []
+    real = st.size
+    st.size = lambda path: asked.append(path) or real(path)
+    tracks = music.scan(songs, dev)
+
+    plan = music.plan_copy(tracks, dev, st)  # neither file is on the device
+    assert [d for _t, d in plan.to_copy] == [ONE, TWO] and plan.replaced == {}
+    assert music.replaced_text(plan) == ""
+
+    on_device(st, ONE, 103)  # the same size: not copied
+    on_device(st, TWO, 150)  # another size: copied over
+    asked.clear()
+    plan = music.plan_copy(tracks, dev, st)
+    assert [d for _t, d in plan.already] == [ONE] and [d for _t, d in plan.to_copy] == [TWO]
+    assert plan.replaced == {TWO: 150}
+    assert asked == [ONE, TWO]  # one question per file, as before
+    track = plan.to_copy[0][0]
+    assert music.replaced_note(plan, track, TWO) == (
+        "(replaces the file on the device: 150 B → 203 B)")
+    assert music.replaced_note(plan, track, ONE) == ""
+    assert music.replaced_text(plan) == "1 file on the device will be replaced."
+
+
+def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_root, songs, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    on_device(st, TWO, 150)
+    before = (st.root / TWO).read_bytes()
+    argv = ["--path", str(device_root), "music", "add", *map(str, songs)]
+    assert main(argv) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
+        f"  + {ONE}",
+        f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)",
+        "1 file on the device will be replaced.",
+        "Dry run. Add --apply.",
+    ]
+    assert (st.root / TWO).read_bytes() == before and not (st.root / ONE).exists()
+
+    assert main([*argv, "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)" in out
+    assert "1 file on the device will be replaced." in out
+    assert (st.root / TWO).read_bytes() == songs[1].read_bytes()  # the new content
+
+
+def test_music_add_without_a_replaced_file_reads_as_before(iq_device, device_root, songs, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(device_root), "music", "add", *map(str, songs)]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
+        f"  + {ONE}", f"  + {TWO}", "Dry run. Add --apply."]
+
+
+def test_replaced_files_are_counted_also_when_the_list_is_cut(iq_device, device_root, tmp_path,
+                                                              capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    many = tmp_path / "many"
+    many.mkdir()
+    for n in range(20):
+        (many / f"{n:02}.mp3").write_bytes(b"ID3" + b"\x00" * 10)
+    on_device(st, "Music/Unknown/Unknown/19.mp3", 5)  # the last one: below the cut
+    assert main(["--path", str(device_root), "music", "add", str(many)]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "  … and 5 more" in out and not any(line.startswith("  ~ ") for line in out)
+    assert out[-2:] == ["1 file on the device will be replaced.", "Dry run. Add --apply."]
+
+
+def test_music_playlist_dry_run_counts_the_replaced_files(iq_device, device_root, songs, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    on_device(st, ONE, 7)
+    on_device(st, TWO, 7)
+    m3u = songs[0].parent / "Both.m3u8"  # only entries that exist: this command stops at others
+    m3u.write_text("one.mp3\nsub/two.mp3\n", encoding="utf-8")
+    assert main(["--path", str(device_root), "music", "playlist", str(m3u)]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[-2:] == ["2 files on the device will be replaced.", "Dry run. Add --apply."]
+
+
+def test_window_says_before_copying_that_files_are_replaced(iq_device, songs, library):
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    tracks = music.scan(songs, dev)
+    plain = "306 B will be copied to the device (0 files already there)."
+    assert MainWindow._copy_summary(music.plan_copy(tracks, dev, st)) == plain
+    assert "replaced" not in MainWindow._playlist_summary(music.plan_playlist(library, dev, st))
+
+    on_device(st, TWO, 150)
+    assert MainWindow._copy_summary(music.plan_copy(tracks, dev, st)) == (
+        plain + "\n\n1 file on the device will be replaced.")
+    lines = MainWindow._playlist_summary(music.plan_playlist(library, dev, st)).splitlines()
+    assert lines[:3] == ["3 tracks", "2 files to copy (306 B), 0 already on the device",
+                         "1 file on the device will be replaced."]
+
+
+def test_replaced_files_in_polish(iq_device, songs):
+    from openexpress import i18n
+
+    st, dev = iq_device
+    on_device(st, TWO, 1500)
+    i18n.setup("pl")
+    try:
+        plan = music.plan_copy(music.scan(songs, dev), dev, st)
+        note = music.replaced_note(plan, plan.to_copy[1][0], TWO)
+        counts = []
+        for n in (1, 2, 5):
+            plan.replaced = {str(k): 1 for k in range(n)}
+            counts.append(music.replaced_text(plan))
+    finally:
+        i18n.setup("en")
+    assert note == "(zastąpi plik na urządzeniu: 1,5 kB → 203 B)"
+    assert counts == ["1 plik na urządzeniu zostanie zastąpiony.",
+                      "2 pliki na urządzeniu zostaną zastąpione.",
+                      "5 plików na urządzeniu zostanie zastąpionych."]

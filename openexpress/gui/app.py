@@ -2361,9 +2361,7 @@ class MainWindow(Adw.ApplicationWindow):
             n = len(p.to_copy)
             d = Adw.AlertDialog(
                 heading=ngettext("Copy {count} file?", "Copy {count} files?", n).format(count=n),
-                body=ngettext("{size} will be copied to the device ({count} file already there).",
-                              "{size} will be copied to the device ({count} files already there).",
-                              len(p.already)).format(size=_human(p.size), count=len(p.already)))
+                body=self._copy_summary(p))
             d.add_response("cancel", _("Cancel"))
             # TRANSLATORS: button
             d.add_response("ok", _("Copy"))
@@ -2402,6 +2400,18 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.open(self, None, chosen)
 
     @staticmethod
+    def _copy_summary(plan) -> str:
+        """Text of the confirmation before music is copied."""
+        from openexpress import music
+
+        text = ngettext("{size} will be copied to the device ({count} file already there).",
+                        "{size} will be copied to the device ({count} files already there).",
+                        len(plan.already)).format(size=_human(plan.size),
+                                                  count=len(plan.already))
+        replaced = music.replaced_text(plan)
+        return f"{text}\n\n{replaced}" if replaced else text
+
+    @staticmethod
     def _playlist_summary(plan, in_flatpak: bool = False) -> str:
         """Text of the confirmation: what is copied, what is already there, what is left out."""
         tracks = len(plan.device_paths)
@@ -2411,6 +2421,10 @@ class MainWindow(Adw.ApplicationWindow):
                               "{count} files to copy ({size}), {already} already on the device",
                               n).format(count=n, size=_human(plan.copy.size),
                                         already=len(plan.copy.already)))
+        if plan.copy.replaced:
+            from openexpress import music
+
+            lines.append(music.replaced_text(plan.copy))
         if plan.replaces:
             lines.append(_("A playlist with this name is already on the device and "
                            "will be replaced."))

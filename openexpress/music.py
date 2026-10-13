@@ -20,7 +20,7 @@ from pathlib import Path
 from openexpress import applog
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import N_, _, human_size
+from openexpress.i18n import N_, _, human_size, ngettext
 
 log = logging.getLogger(__name__)
 
@@ -210,10 +210,29 @@ def list_playlists(device: GarminDevice, storage: Storage) -> list[str]:
 class CopyPlan:
     to_copy: list[tuple[Track, str]] = field(default_factory=list)
     already: list[tuple[Track, str]] = field(default_factory=list)
+    # Of `to_copy`: the files that are on the device with another size, and that size.
+    replaced: dict[str, int] = field(default_factory=dict)
 
     @property
     def size(self) -> int:
         return sum(t.size for t, _ in self.to_copy)
+
+
+def replaced_note(plan: CopyPlan, track: Track, dest: str) -> str:
+    """For a file of the plan that takes the place of one on the device; "" for a new one."""
+    if dest not in plan.replaced:
+        return ""
+    return _("(replaces the file on the device: {old} → {new})").format(
+        old=human_size(plan.replaced[dest]), new=human_size(track.size))
+
+
+def replaced_text(plan: CopyPlan) -> str:
+    """How many files on the device the plan replaces; "" when none."""
+    n = len(plan.replaced)
+    if not n:
+        return ""
+    return ngettext("{count} file on the device will be replaced.",
+                    "{count} files on the device will be replaced.", n).format(count=n)
 
 
 def _with_name(dest: str, name: str) -> str:
@@ -237,7 +256,13 @@ def plan_copy(tracks: list[Track], device: GarminDevice, storage: Storage) -> Co
                 dest = _with_name(dest, f"{stem} ({n}){ext}")
                 n += 1
         used.add(dest.casefold())
-        (plan.already if storage.size(dest) == t.size else plan.to_copy).append((t, dest))
+        on_device = storage.size(dest)
+        if on_device == t.size:
+            plan.already.append((t, dest))
+            continue
+        plan.to_copy.append((t, dest))
+        if on_device is not None:
+            plan.replaced[dest] = on_device  # copying writes over it
     return plan
 
 

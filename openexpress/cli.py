@@ -1247,12 +1247,16 @@ def cmd_music(args) -> int:
                        "{already} already on the device.", len(tracks)).format(
             count=len(tracks), to_copy=len(plan.to_copy), size=_human(plan.size),
             already=len(plan.already)))
-        for _t, dest in plan.to_copy[: (None if args.verbose else 15)]:
-            print(f"  + {dest}")
+        for t, dest in plan.to_copy[: (None if args.verbose else 15)]:
+            note = music.replaced_note(plan, t, dest)
+            print(f"  ~ {dest}  {note}" if note else f"  + {dest}")
         if len(plan.to_copy) > 15 and not args.verbose:
             more = len(plan.to_copy) - 15
             print("  " + ngettext("… and {count} more", "… and {count} more", more).format(
                 count=more))
+        if plan.replaced:
+            # Also when the list above is cut short.
+            print(music.replaced_text(plan))
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0
@@ -1272,6 +1276,8 @@ def cmd_music(args) -> int:
                        "Playlist '{name}': {count} tracks, {to_copy} to copy ({size})",
                        len(tracks)).format(name=name, count=len(tracks),
                                            to_copy=len(plan.to_copy), size=_human(plan.size)))
+        if plan.replaced:
+            print(music.replaced_text(plan))
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0
