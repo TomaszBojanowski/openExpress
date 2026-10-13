@@ -540,13 +540,24 @@ class _Bar:
                 print(file=sys.stderr)
 
 
-# Untranslated constant (also used by the GUI); show it with _(RESTART_STEPS).
-RESTART_STEPS = N_("""
+# What to do after an update was copied to the device: shown after every install, because
+# the device may ask and restart also when the server does not call the update one that
+# needs a restart. Untranslated constants; show them with _(FINISH_STEPS).
+FINISH_STEPS = N_("""
 To finish the installation:
   1. Disconnect the device from the computer.
-  2. The device installs the update by itself (it may ask for confirmation
-     and restart). Wait until the device has restarted.
+  2. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart; wait until it is ready again.
   3. Reconnect it and run `openexpress updates`: the installed update
+     should no longer be listed.
+""")
+# The same for the window, which has no commands.
+FINISH_STEPS_WINDOW = N_("""
+To finish the installation:
+  1. Disconnect the device from the computer.
+  2. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart; wait until it is ready again.
+  3. Reconnect it and check for updates again: the installed update
      should no longer be listed.
 """)
 
@@ -639,8 +650,8 @@ def cmd_updates(args) -> int:
     rep = upd.install(chosen, st, session=client.http, progress=lambda s: print("  " + s))
     n = len(rep.installed)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
-    if rep.restart_required:
-        print(_(RESTART_STEPS))
+    if n:
+        print(_(FINISH_STEPS))
     return 0
 
 

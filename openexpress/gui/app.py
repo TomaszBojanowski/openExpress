@@ -20,7 +20,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 
 from openexpress import i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.cli import RESTART_STEPS, _human  # noqa: E402
+from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
@@ -1407,6 +1407,12 @@ class MainWindow(Adw.ApplicationWindow):
                                     None if reinstall else "suggested-action"))
         parent.add_row(row) if isinstance(parent, Adw.ExpanderRow) else parent.add(row)
 
+    @staticmethod
+    def _update_done_text(rep) -> str:
+        """What the window says after an update was copied, with what to do next."""
+        return _("Files copied to the device.") + (_(FINISH_STEPS_WINDOW) if rep.installed
+                                                    else "")
+
     def confirm_update(self, u) -> None:
         from openexpress import updates as upd
 
@@ -1432,8 +1438,7 @@ class MainWindow(Adw.ApplicationWindow):
                 _("Installing update…"),
                 lambda: upd.install(chosen, s.storage, session=s.client.http,
                                     progress=self.progress),
-                lambda rep: self.error(_("Done"), _("Files copied to the device.")
-                                       + (_(RESTART_STEPS) if rep.restart_required else "")),
+                lambda rep: self.error(_("Done"), self._update_done_text(rep)),
             )
 
         d.connect("response", response)

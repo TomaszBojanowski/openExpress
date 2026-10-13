@@ -1153,3 +1153,87 @@ def test_skipped_files_message_in_polish():
     assert said == ["Pominięto 1 plik, który już jest na urządzeniu.",
                     "Pominięto 3 pliki, które już są na urządzeniu.",
                     "Pominięto 5 plików, które już są na urządzeniu."]
+
+
+# --- after an update is installed: what to do next ----------------------------------------------
+
+NEXT_STEP = "choose to install now"
+
+
+@pytest.fixture
+def downloads(monkeypatch):
+    """Downloads without the network: a file of the announced size."""
+    from openexpress import download
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"x" * size)
+        return dest
+
+    monkeypatch.setattr(download, "fetch", fetch)
+
+
+def test_cli_says_what_to_do_after_every_install(offered, downloads, xdg, capsys, monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(xdg / "cache"))
+    root, answer = offered
+    assert not answer["updates"][2]["installation"].get("isrestartrequired")  # no restart flag
+
+    assert main(["--path", str(root), "updates", "--install", "006-DA003-00"]) == 0
+    out = capsys.readouterr().out
+    assert "Dry run" in out and "To finish the installation" not in out  # nothing was copied
+
+    assert main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert (root / "GARMIN/SID/DA00300.sid").read_bytes() == b"x" * 7
+    lines = out.rstrip().splitlines()
+    assert lines[lines.index("Copied 1 file."):] == [
+        "Copied 1 file.",
+        "",
+        "To finish the installation:",
+        "  1. Disconnect the device from the computer.",
+        "  2. The device installs the update by itself. It may ask whether to install it:",
+        "     choose to install now. It may also restart; wait until it is ready again.",
+        "  3. Reconnect it and run `openexpress updates`: the installed update",
+        "     should no longer be listed.",
+    ]
+
+
+def test_steps_are_shown_once_also_for_an_update_that_needs_a_restart(offered, downloads, xdg,
+                                                                      capsys, monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(xdg / "cache"))
+    root, answer = offered
+    answer["updates"][2]["installation"]["isrestartrequired"] = True
+    assert main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert out.count("To finish the installation") == 1 and out.count(NEXT_STEP) == 1
+
+
+def test_window_says_what_to_do_next_without_naming_a_command():
+    from openexpress.gui.app import MainWindow
+    from openexpress.updates import InstallReport
+
+    text = MainWindow._update_done_text(InstallReport(installed=["Etyp 2.70 -> x"]))
+    assert text.startswith("Files copied to the device.\nTo finish the installation:")
+    assert NEXT_STEP in text and "check for updates again" in text
+    assert "openexpress updates" not in text
+    # Whether the server says a restart is needed makes no difference.
+    assert MainWindow._update_done_text(
+        InstallReport(installed=["x"], restart_required=True)) == text
+    assert MainWindow._update_done_text(InstallReport()) == "Files copied to the device."
+
+
+def test_next_steps_in_polish():
+    from openexpress import i18n
+    from openexpress.cli import FINISH_STEPS, FINISH_STEPS_WINDOW
+    from openexpress.i18n import _
+
+    i18n.setup("pl")
+    try:
+        cli_text, window_text = _(FINISH_STEPS), _(FINISH_STEPS_WINDOW)
+    finally:
+        i18n.setup("en")
+    for text in (cli_text, window_text):
+        assert "wybierz instalację teraz" in text and "Może też uruchomić się ponownie" in text
+        assert text.startswith("\nAby dokończyć instalację:\n  1. ") and text.endswith(".\n")
+    assert "`openexpress updates`" in cli_text and "openexpress" not in window_text
+    assert "sprawdź aktualizacje jeszcze raz" in window_text
