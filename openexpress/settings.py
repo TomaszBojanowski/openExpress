@@ -63,7 +63,7 @@ class Settings:
         return ENVIRONMENTS[self.environment]
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls) -> Settings:
         path = paths.config_dir() / "settings.json"
         data: object = {}
         if path.exists():

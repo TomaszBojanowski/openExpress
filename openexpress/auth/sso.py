@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlsplit
 
-from openexpress.settings import SSO_CLIENT_ID, Settings
 from openexpress.i18n import _
+from openexpress.settings import SSO_CLIENT_ID, Settings
 
 
 @dataclass(frozen=True)

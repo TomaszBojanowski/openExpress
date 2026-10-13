@@ -13,9 +13,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import posixpath
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from openexpress import applog, download, paths
 from openexpress.device.storage import DeviceError, Storage

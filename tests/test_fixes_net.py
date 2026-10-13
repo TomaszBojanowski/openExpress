@@ -11,7 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from openexpress import download, i18n, paths, settings as settings_mod
+from openexpress import download, i18n, paths
+from openexpress import settings as settings_mod
 from openexpress.auth import store
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.connect import ApiError, GarminClient

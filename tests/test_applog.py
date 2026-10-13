@@ -217,7 +217,13 @@ def test_subcommand_is_logged(log_file, device_root):
 # --- what the program writes about its work ---------------------------------------------------
 
 from test_ciq_music import (  # noqa: E402, F401 - the fixtures
-    FACE, CountingClient, FakeStore, hidden_apps, iq_device, queue_once_requested, store_app,
+    FACE,
+    CountingClient,
+    FakeStore,
+    hidden_apps,
+    iq_device,
+    queue_once_requested,
+    store_app,
 )
 from test_upload_consent import QUEUED, Account  # noqa: E402
 

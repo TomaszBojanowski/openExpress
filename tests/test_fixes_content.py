@@ -5,13 +5,12 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from test_ciq_music import FACE, IQ_XML_TYPES, PRELOADED, STORE_ID, FakeClient, out_bin
+from test_updates_maps import FILES, maps_response, server, sw_response  # noqa: F401
 
 from openexpress import backup, ciq, maps, music, proto, updates
 from openexpress.device.storage import DeviceError, LocalStorage
 from openexpress.device.xmldevice import parse
-
-from test_ciq_music import FACE, IQ_XML_TYPES, PRELOADED, STORE_ID, FakeClient, out_bin
-from test_updates_maps import FILES, maps_response, server, sw_response  # noqa: F401
 
 
 @pytest.fixture
@@ -40,7 +39,7 @@ def test_backup_retention_ignores_foreign_dirs_and_cleans_partial(device_root, t
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     unit = tmp_path / "bk" / str(dev.unit_id)
     unit.mkdir(parents=True)
-    old = [unit / "2020-01-0{} (10.00.00)".format(i) for i in (1, 2, 3)]
+    old = [unit / f"2020-01-0{i} (10.00.00)" for i in (1, 2, 3)]
     for p in old:
         p.mkdir()
     (unit / "zzz notes").mkdir()
@@ -207,7 +206,7 @@ class CrashingStorage(LocalStorage):
 
 @pytest.mark.parametrize("cls,exc", [(TruncatingStorage, updates.UpdateError),
                                      (CrashingStorage, DeviceError)])
-def test_update_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):  # noqa: F811
+def test_update_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):
     items = updates.parse_updates(sw_response(server))
     st = cls(device_root)
     with pytest.raises(exc):
@@ -218,7 +217,7 @@ def test_update_write_failure_leaves_no_file(server, device_root, xdg, cls, exc)
 
 @pytest.mark.parametrize("cls,exc", [(TruncatingStorage, maps.MapError),
                                      (CrashingStorage, DeviceError)])
-def test_map_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):  # noqa: F811
+def test_map_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):
     all_maps = maps.parse_maps(maps_response(server))
     japan = all_maps[2]
     with pytest.raises(exc):
@@ -229,7 +228,7 @@ def test_map_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):  
 # --- 11. maps without deliverables -----------------------------------------------------
 
 
-def test_map_with_missing_deliverable_not_installable(server, device_root, xdg):  # noqa: F811
+def test_map_with_missing_deliverable_not_installable(server, device_root, xdg):
     resp = maps_response(server)
     east = resp["maps"][1]
     east["installoptions"][0]["files"][1]["deliverableoptions"] = []

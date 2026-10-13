@@ -17,11 +17,10 @@ import logging
 import posixpath
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
-
 from urllib.parse import urlencode
 
 from openexpress import applog, paths, proto
@@ -594,7 +593,7 @@ def install_apps(
     device: GarminDevice,
     storage: Storage,
     client: GarminClient,
-    api: "StoreApi",
+    api: StoreApi,
     targets: list[StoreApp],
     progress: Callable[[str], None] = lambda s: None,
 ) -> IqInstallReport:
@@ -1318,7 +1317,7 @@ def order_choices(device: GarminDevice, state: InstalledState,
 def copy_title(copy: AppListCopy) -> str:
     """A copy as shown to the user: when it was made and for which model."""
     name = copy.name
-    return name[len(APP_LIST_COPY_PREFIX):] if name.startswith(APP_LIST_COPY_PREFIX) else name
+    return name.removeprefix(APP_LIST_COPY_PREFIX)
 
 
 def describe_order(plan: OrderPlan, limit: int | None = 10) -> list[tuple[str, bool]]:

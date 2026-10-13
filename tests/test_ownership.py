@@ -14,7 +14,12 @@ from openexpress.auth import store
 from openexpress.auth.store import ConnectAuth
 from openexpress.cli import main
 from openexpress.connect import (
-    ApiError, ClockSkew, DeviceNotVerified, GarminClient, NotAccountDevice, OwnershipUnknown,
+    ApiError,
+    ClockSkew,
+    DeviceNotVerified,
+    GarminClient,
+    NotAccountDevice,
+    OwnershipUnknown,
     Unauthorized,
 )
 from openexpress.device.storage import LocalStorage

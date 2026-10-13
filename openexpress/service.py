@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 import collections
+import contextlib
+import fcntl
 import json
 import logging
 import time
-import contextlib
-import fcntl
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from openexpress import applog, paths, sync
 from openexpress.auth import store
 from openexpress.connect import (
-    ApiError, ClockSkew, GarminClient, NotAccountDevice, OwnershipError, OwnershipUnknown,
+    ApiError,
+    ClockSkew,
+    GarminClient,
+    NotAccountDevice,
+    OwnershipError,
+    OwnershipUnknown,
     Unauthorized,
 )
 from openexpress.device.storage import Storage
@@ -371,7 +376,7 @@ def last_sync_path():
     return paths.data_dir() / "last_sync.json"
 
 
-def save_last_sync(unit_id: int, summary: "SyncSummary") -> None:
+def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
     data = {"time": time.time(), "unit_id": unit_id, "uploaded": summary.uploaded,
             "downloaded": summary.downloaded, "skipped_known": summary.skipped_known,
             "errors": summary.errors, "lines": summary.lines}

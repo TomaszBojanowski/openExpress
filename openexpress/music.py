@@ -9,13 +9,13 @@ Layout follows Garmin Express (docs/analiza/05, section 4):
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import posixpath
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from openexpress import applog
 from openexpress.device.storage import Storage

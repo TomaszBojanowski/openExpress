@@ -16,7 +16,10 @@ from pathlib import Path
 
 from openexpress.i18n import _
 from openexpress.settings import (
-    Consumer, SetupError, extract_consumer_from_dll, extract_url_salt_from_dll,
+    Consumer,
+    SetupError,
+    extract_consumer_from_dll,
+    extract_url_salt_from_dll,
 )
 
 CAB_MAGIC = b"MSCF\0\0\0\0"

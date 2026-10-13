@@ -61,7 +61,7 @@ class Storage(ABC):
         """A context manager that gives a PTP session (`openexpress.device.ptp.Session`)
         to the device, for files ordinary MTP does not show; None when that is not
         possible here. The storage itself cannot be used inside the block."""
-        return None
+        return
 
     def usb_blocked(self) -> bool:
         """Whether a sandbox keeps the program away from the USB device itself (Flatpak),

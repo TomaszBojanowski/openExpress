@@ -9,9 +9,9 @@ import logging
 import re
 import struct
 import time
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from typing import Callable
 
 import requests
 

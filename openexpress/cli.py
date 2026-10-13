@@ -13,14 +13,24 @@ from pathlib import Path
 from openexpress import __version__, applog, i18n, paths
 from openexpress.auth import store
 from openexpress.connect import (
-    ApiError, ClockSkew, GarminClient, OwnershipError, Unauthorized,
+    ApiError,
+    ClockSkew,
+    GarminClient,
+    OwnershipError,
+    Unauthorized,
 )
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, ngettext
 from openexpress.settings import (
-    ENVIRONMENTS, Consumer, SetupError, Settings, extract_consumer_from_dll,
-    extract_url_salt_from_dll, load_consumer, save_consumer,
+    ENVIRONMENTS,
+    Consumer,
+    Settings,
+    SetupError,
+    extract_consumer_from_dll,
+    extract_url_salt_from_dll,
+    load_consumer,
+    save_consumer,
 )
 
 log = logging.getLogger(__name__)

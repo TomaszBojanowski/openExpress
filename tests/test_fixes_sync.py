@@ -1,15 +1,14 @@
 import struct
 
 import pytest
+from conftest import make_fit
+from test_sync import UPLOAD_CONFIG, FakeClient
 
 from openexpress import sync
 from openexpress.connect import ApiError, ClockSkew, UploadResult
 from openexpress.device.storage import DeviceError, LocalStorage
 from openexpress.device.xmldevice import DeviceFile, parse
 from openexpress.fit import FitError, iter_messages, parse_file_id
-
-from conftest import make_fit
-from test_sync import UPLOAD_CONFIG, FakeClient
 
 ACT = "https://up.example/activity"
 MON = "https://up.example/monitor"

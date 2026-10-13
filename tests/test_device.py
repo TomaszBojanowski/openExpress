@@ -1,10 +1,9 @@
+import pytest
+from conftest import DEVICE_XML, make_fit
+
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import DeviceFile, parse
 from openexpress.fit import FIT_EPOCH_OFFSET, FitError, parse_file_id
-
-import pytest
-
-from conftest import DEVICE_XML, make_fit
 
 
 def test_parse_device_xml():

@@ -34,7 +34,10 @@ from openexpress.device.gio_storage import (  # noqa: E402
 )
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
-    Settings, extract_consumer_from_dll, extract_url_salt_from_dll, save_consumer,
+    Settings,
+    extract_consumer_from_dll,
+    extract_url_salt_from_dll,
+    save_consumer,
 )
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"

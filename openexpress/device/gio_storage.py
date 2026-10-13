@@ -243,8 +243,8 @@ class FoundDevice:
 
 
 _UNIX_DEVICE = re.compile(r"/dev/bus/usb/(\d+)/(\d+)")
-_URI_USB_ADDRESS = re.compile(r"mtp://\[usb:(\d+),(\d+)\]", re.I)
-_URI_GARMIN_IDS = re.compile(rf"mtp://{GARMIN_VID}_([0-9a-f]{{4}})_", re.I)
+_URI_USB_ADDRESS = re.compile(r"mtp://\[usb:(\d+),(\d+)\]", re.IGNORECASE)
+_URI_GARMIN_IDS = re.compile(rf"mtp://{GARMIN_VID}_([0-9a-f]{{4}})_", re.IGNORECASE)
 _URI_GARMIN_NAME = "mtp://garmin_"
 
 

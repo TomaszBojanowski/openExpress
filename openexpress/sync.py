@@ -16,9 +16,9 @@ import json
 import logging
 import posixpath
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from openexpress import applog, paths
 from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized

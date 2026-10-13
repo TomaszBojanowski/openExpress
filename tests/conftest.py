@@ -6,7 +6,7 @@ import pytest
 
 # Tests check English messages regardless of the system language.
 os.environ["OPENEXPRESS_LANG"] = "en"
-from openexpress import i18n  # noqa: E402
+from openexpress import i18n
 
 i18n.setup("en")
 

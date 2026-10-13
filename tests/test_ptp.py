@@ -27,12 +27,12 @@ def device():
 def test_command_bytes():
     assert ptp.command(ptp.OPEN_SESSION, 0, (1,)).hex() == "10000000010002100000000001000000"
     assert ptp.command(ptp.GARMIN_GET_OBJECT_IDS, 5, (0x00010001, 0x2A)).hex() == (
-        "14000000" "0100" "0290" "05000000" "01000100" "2a000000")
+        "140000000100029005000000010001002a000000")
     assert ptp.command(ptp.CLOSE_SESSION, 9).hex() == "0c0000000100031009000000"
 
 
 def test_data_header_bytes():
-    assert ptp.data_header(ptp.SEND_OBJECT, 7, 768).hex() == "0c030000" "0200" "0d10" "07000000"
+    assert ptp.data_header(ptp.SEND_OBJECT, 7, 768).hex() == "0c03000002000d1007000000"
 
 
 def test_strings():
@@ -49,11 +49,11 @@ def test_object_info_dataset_bytes():
     """Format and thumbnail format "undefined", size and name; the rest zero or empty."""
     data = ptp.object_info_dataset("AB.PRG", 0x0102)
     assert data.hex() == (
-        "00000000" "0030" "0000" "02010000"  # storage, format, protection, size
+        "000000000030000002010000"  # storage, format, protection, size
         "0030" + "00000000" * 7              # thumbnail format, six sizes, parent
-        + "0000" "00000000" "00000000"       # association type and description, sequence
+        + "00000000000000000000"       # association type and description, sequence
         + "07" + "AB.PRG\0".encode("utf-16-le").hex()
-        + "00" "00" "00")                    # no dates, no keywords
+        + "000000")                    # no dates, no keywords
     assert len(data) == 52 + 1 + 14 + 3
 
 

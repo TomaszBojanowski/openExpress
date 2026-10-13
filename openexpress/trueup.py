@@ -14,8 +14,8 @@ import logging
 import posixpath
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from openexpress import applog
 from openexpress.connect import GarminClient

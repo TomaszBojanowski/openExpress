@@ -344,8 +344,13 @@ def test_pending_refresh_runs_when_idle():
 
 
 def test_window_geometry(xdg):
-    from openexpress.gui.app import (DEFAULT_WINDOW, load_gui_settings, save_gui_settings,
-                                     save_window_geometry, window_geometry)
+    from openexpress.gui.app import (
+        DEFAULT_WINDOW,
+        load_gui_settings,
+        save_gui_settings,
+        save_window_geometry,
+        window_geometry,
+    )
 
     assert window_geometry({}) == (*DEFAULT_WINDOW, False)
     assert window_geometry({"window": "bad"}) == (*DEFAULT_WINDOW, False)

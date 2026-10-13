@@ -34,8 +34,9 @@ def test_files_total_counts_every_file_once(device_root, capsys):
 
 
 def test_backup_keeps_n(device_root, xdg, tmp_path, capsys, monkeypatch):
-    import openexpress.backup as b
     from datetime import datetime as real_dt
+
+    import openexpress.backup as b
 
     dest = tmp_path / "backups"
     for i in range(4):

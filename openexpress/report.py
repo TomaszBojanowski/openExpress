@@ -50,7 +50,7 @@ def _os_name() -> str:
             text = Path(path).read_text()
         except OSError:
             continue
-        m = re.search(r'^PRETTY_NAME="?([^"\n]*)"?', text, re.M)
+        m = re.search(r'^PRETTY_NAME="?([^"\n]*)"?', text, re.MULTILINE)
         if m:
             return m.group(1)
     return platform.system()

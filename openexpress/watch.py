@@ -146,7 +146,7 @@ class Watcher(Gio.Application):
         except OwnershipError as e:
             log.info("Not syncing: %s", e)
             GLib.idle_add(self.notify, _("Garmin: this device was not synced"), str(e))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("Sync failed"), str(e))
 
