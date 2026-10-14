@@ -1468,33 +1468,17 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self.updates_cache = items
         sec = self.sections["updates"]
-        d = self.session.device
         from openexpress import updates as upd
 
         new = upd.pending(items)
         self._set_update_state(new)
-        if not new:
-            g = sec.group()
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
-                          halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
-            icon = Gtk.Image(icon_name="object-select-symbolic", pixel_size=64)
-            icon.add_css_class("success")
-            box.append(icon)
-            title = Gtk.Label(label=_("Software is up to date."))
-            title.add_css_class("title-2")
-            box.append(title)
-            sub = Gtk.Label(label=_("{model} · software {version}").format(
-                model=d.description, version=d.software_version_str))
-            sub.add_css_class("dim-label")
-            box.append(sub)
-            check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
-            check.add_css_class("pill")
-            check.connect("clicked", lambda *_a: self.load_section("updates", force=True))
-            box.append(check)
-            g.add(box)
-        else:
+        # A system update is told at the top of the page; a second one (rare) is listed.
+        system = next((u for u in new if u.is_system), None)
+        self._updates_status(sec, system, len(new))
+        rest = [u for u in new if u is not system]
+        if rest:
             g = sec.group(_("Available updates"))
-            for u in new:
+            for u in rest:
                 self._update_row(g, u)
         # A file the device already has is a reinstall, whatever the server calls it.
         re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata]
@@ -1510,14 +1494,60 @@ class MainWindow(Adw.ApplicationWindow):
             for u in sorted(re, key=lambda x: x.title):
                 self._update_row(exp, u, reinstall=True)
 
+    def _updates_status(self, sec, system, count: int) -> None:
+        """The top of the Updates page: the system update when there is one, how many other
+        updates there are, or that the software is up to date."""
+        d = self.session.device
+        installed = _("{model} · version {version}").format(model=d.description,
+                                                            version=d.software_version_str)
+        detail = None
+        buttons = []
+        if system is not None:
+            icon, title = "software-update-available-symbolic", _("Software update available")
+            subtitle = f"{d.software_version_str} → {system.version} · {_human(system.size)}"
+            detail = f"{system.title} · {system.severity_text} · {system.filename}"
+            # TRANSLATORS: button
+            buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
+                                        "suggested-action"))
+        elif count:
+            icon, subtitle = "software-update-available-symbolic", installed
+            title = ngettext("{count} update available", "{count} updates available",
+                             count).format(count=count)
+        else:
+            icon, subtitle = "object-select-symbolic", installed
+            # TRANSLATORS: title at the top of the Updates page, without a full stop
+            title = _("Software is up to date")
+        buttons.append(self._button(_("Check Again"),
+                                    lambda: self.load_section("updates", force=True)))
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                      halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
+        image = Gtk.Image(icon_name=icon, pixel_size=96)
+        if system is None and not count:
+            image.add_css_class("success")
+        box.append(image)
+        for text, styles in ((title, ["title-1"]), (subtitle, ["dim-label"]),
+                             (detail, ["caption", "dim-label"])):
+            if text:
+                label = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER,
+                                  max_width_chars=50)
+                for style in styles:
+                    label.add_css_class(style)
+                box.append(label)
+        row = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER, margin_top=8)
+        for b in buttons:
+            b.add_css_class("pill")
+            row.append(b)
+        box.append(row)
+        sec.group().add(box)
+
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
+        details = (f"{u.version} · {_human(u.size)} · {u.severity_text}"
+                   + (f" · {u.filename}" if u.filename else ""))
+        # A system update says so in its title; the name the server gives it goes first.
         row = Adw.ActionRow(
-            title=GLib.markup_escape_text(u.title),
-            subtitle=GLib.markup_escape_text(
-                f"{u.version} · {_human(u.size)} · {u.severity_text}"
-                # TRANSLATORS: marks the main firmware in an update list
-                + (" · " + _("system") if u.is_primary else "")
-                + (f" · {u.filename}" if u.filename else "")),
+            title=GLib.markup_escape_text(_("System software") if u.is_system else u.title),
+            subtitle=GLib.markup_escape_text(f"{u.title} · {details}" if u.is_system
+                                             else details),
         )
         # TRANSLATORS: button
         row.add_suffix(self._button(_("Reinstall") if reinstall else _("Install"),

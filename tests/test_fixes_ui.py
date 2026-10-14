@@ -616,10 +616,11 @@ def test_updates_page_with_several_updates(monkeypatch):
         _set_update_state=lambda new: states.append(len(new)), confirm_update=lambda u: None,
         load_section=lambda *a, **kw: None)
     win._update_row = types.MethodType(MainWindow._update_row, win)
+    win._updates_status = types.MethodType(MainWindow._updates_status, win)
     win._button = types.MethodType(MainWindow._button, win)
     MainWindow.show_updates(win, items)
 
-    available, advanced = win.sections["updates"].groups
+    status, available, advanced = win.sections["updates"].groups  # the status on top
     assert states == [3] and win.updates_cache == items
     assert available.title == "Available updates"
     assert [(r.get_title(), r.get_subtitle()) for r in available.rows] == [
@@ -630,7 +631,8 @@ def test_updates_page_with_several_updates(monkeypatch):
     assert advanced.title == "Advanced" and isinstance(advanced.rows[0], Adw.ExpanderRow)
     # The file that is already on the device is listed with the reinstalls, not as an update.
     assert advanced.rows[0].get_subtitle().startswith("2 components already on the device")
-    assert len(win._action_buttons) == 5  # three "Install" and two "Reinstall"
+    # Three "Install", two "Reinstall" and "Check Again" in the status.
+    assert len(win._action_buttons) == 6
 
 
 # --- files the device already has are not updates ---------------------------------------------
