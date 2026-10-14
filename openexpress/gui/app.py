@@ -1510,10 +1510,13 @@ class MainWindow(Adw.ApplicationWindow):
         buttons = []
         if system is not None:
             icon, title = "software-update-available-symbolic", _("Software update available")
-            subtitle = " · ".join([f"{d.software_version_str} → {system.version}"]
-                                  # TRANSLATORS: marks a beta version of the device software
-                                  + ([_("Beta")] if system.is_beta else [])
-                                  + [_human(system.size)])
+            versions, size = f"{d.software_version_str} → {system.version}", _human(system.size)
+            subtitle = f"{versions} · {size}"
+            if system.is_beta:
+                # Three parts, so that "Beta" can have the warning colour of the theme (light
+                # and dark); Pango markup knows no colours of the theme.
+                # TRANSLATORS: marks a beta version of the device software
+                subtitle = (f"{versions} · ", _("Beta"), f" · {size}")
             detail = f"{system.title} · {system.severity_text} · {system.filename}"
             # TRANSLATORS: button
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
@@ -1534,15 +1537,24 @@ class MainWindow(Adw.ApplicationWindow):
         if system is None and not count:
             image.add_css_class("success")
         box.append(image)
+
+        def label(text, styles, **props):
+            widget = Gtk.Label(label=text, **props)
+            for style in styles:
+                widget.add_css_class(style)
+            return widget
+
         for text, styles in ((title, ["title-1"]), (subtitle, ["dim-label"]),
                              (detail, ["caption", "dim-label"]),
                              (_(upd.BETA_OFFERED) if beta else None, ["caption", "dim-label"])):
-            if text:
-                label = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER,
-                                  max_width_chars=50)
-                for style in styles:
-                    label.add_css_class(style)
-                box.append(label)
+            if isinstance(text, tuple):  # a beta version: "Beta" stands out
+                line = Gtk.Box(halign=Gtk.Align.CENTER)
+                for part, part_styles in zip(text, (styles, ["warning", "heading"], styles)):
+                    line.append(label(part, part_styles))
+                box.append(line)
+            elif text:
+                box.append(label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
+                                 max_width_chars=50))
         row = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER, margin_top=8)
         for b in buttons:
             b.add_css_class("pill")

@@ -227,6 +227,15 @@ def _children(widget):
         child = child.get_next_sibling()
 
 
+def _text(widget):
+    """A line of the status and its styles; a line made of parts (a beta version) as one text,
+    with the styles of each part."""
+    parts = list(_children(widget)) if not hasattr(widget, "get_label") else []
+    if not parts:
+        return widget.get_label(), sorted(widget.get_css_classes())
+    return "".join(p.get_label() for p in parts), [sorted(p.get_css_classes()) for p in parts]
+
+
 def _updates_page(items, beta=False):
     """The Updates page of a window that is never shown; returns the window, the status at the
     top (icon, its styles, the texts with their styles, the buttons) and the other groups."""
@@ -255,7 +264,7 @@ def _updates_page(items, beta=False):
     image, *labels, row = _children(box)
     status = {
         "icon": (image.get_icon_name(), image.get_pixel_size(), image.has_css_class("success")),
-        "texts": [(w.get_label(), sorted(w.get_css_classes())) for w in labels],
+        "texts": [_text(w) for w in labels],
         "buttons": [(b.get_label(), b.has_css_class("suggested-action")) for b in _children(row)],
     }
     return win, status, groups, list(_children(row))
@@ -424,7 +433,8 @@ def test_status_with_a_beta_system_update():
     _win, status, _groups, _buttons = _updates_page(items, beta=True)
     assert status["texts"] == [
         ("Software update available", ["title-1"]),
-        ("23.39 → 23.40 · Beta · 12 B", ["dim-label"]),
+        # "Beta" in the warning colour, not dimmed like the rest of the line.
+        ("23.39 → 23.40 · Beta · 12 B", [["dim-label"], ["heading", "warning"], ["dim-label"]]),
         ("Test Bundle · Recommended · GUPDATE.GSP", ["caption", "dim-label"]),
         ("Garmin offers beta software for this device.", ["caption", "dim-label"])]
 
@@ -529,3 +539,23 @@ def test_cli_marks_a_beta_version_in_what_will_be_installed_in_polish(offered_be
     out = capsys.readouterr().out.splitlines()
     assert "Do zainstalowania:" in out
     assert "  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP" in out
+
+
+def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
+    from gi.repository import Gtk
+
+    for state, beta in ((BETA, True), ("live", False)):
+        _win, status, _groups, _buttons = _updates_page(
+            updates.parse_updates(lower_keys(beta_answer(state))))
+        text, styles = status["texts"][1]
+        if beta:
+            assert text == "23.39 → 23.40 · Beta · 12 B"
+            assert styles[1] == ["heading", "warning"] and "dim-label" not in styles[1]
+        else:  # one label, as before
+            assert (text, styles) == ("23.39 → 23.40 · 12 B", ["dim-label"])
+    # The line of parts is centred like the labels around it.
+    win, _status, _groups, _buttons = _updates_page(
+        updates.parse_updates(lower_keys(beta_answer())))
+    (box,) = win.sections["updates"].groups[0].rows
+    line = list(_children(box))[2]
+    assert isinstance(line, Gtk.Box) and line.get_halign() == Gtk.Align.CENTER
