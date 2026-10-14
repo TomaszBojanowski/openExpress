@@ -97,6 +97,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.8" date="2026-10-14">
+      <description>
+        <ul>
+          <li>Reporting a device: "Open on GitHub" in "Report a Device or Problem" opens the
+          GitHub form with the report filled in and a title with the name of the device. An
+          attached log goes to the clipboard, never into the address. On the command line,
+          "openexpress report" prints an address that does the same.</li>
+          <li>What -v and the background sync print on the terminal passes the same filter as
+          the log file.</li>
+          <li>The server's answer shown with -v and an unexpected error are filtered too. An
+          unexpected error is one line; the details are in the log.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.7" date="2026-10-14">
       <description>
         <ul>
