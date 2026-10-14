@@ -158,8 +158,9 @@ WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urzą
               "go podczas kopiowania.")
 
 
-def _question(monkeypatch, part):
-    """The text of the window's question before `part` is installed; nothing is shown."""
+def _question(monkeypatch, part, answer=None):
+    """The window's question before `part` is installed, nothing shown: its text, and the
+    warning below it (its text and styles) or None."""
     import gi
 
     gi.require_version("Gtk", "4.0")
@@ -170,22 +171,29 @@ def _question(monkeypatch, part):
 
     if not Gtk.init_check():
         pytest.skip("no display")
-    items = updates.parse_updates(lower_keys(server_answer()))
+    items = updates.parse_updates(lower_keys(answer or server_answer()))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(), updates_cache=items)
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39")),
+        updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
     (dialog,) = asked
-    return dialog.get_body()
+    extra = dialog.get_extra_child()
+    return dialog.get_body(), (None if extra is None
+                               else (extra.get_label(), sorted(extra.get_css_classes())))
 
 
 def test_the_window_warns_before_a_system_update(monkeypatch):
-    body = _question(monkeypatch, "006-V0000-00")
-    assert body.endswith("\n\n" + WARNING_EN)  # the same words as on the command line
+    body, warning = _question(monkeypatch, "006-V0000-00")
+    # The same words as on the command line, below the text: in the warning colour, bold.
+    assert warning == (WARNING_EN, ["heading", "warning"])
+    assert "Warning" not in body
 
 
 def test_the_window_does_not_warn_before_a_plain_file(monkeypatch):
-    body = _question(monkeypatch, "006-D0000-00")
+    body, warning = _question(monkeypatch, "006-D0000-00")
+    assert warning is None
     assert "Warning" not in body and "disconnect" not in body
 
 
@@ -194,10 +202,18 @@ def test_the_warning_in_polish(monkeypatch):
 
     i18n.setup("pl")
     try:
-        body = _question(monkeypatch, "006-V0000-00")
+        body, warning = _question(monkeypatch, "006-V0000-00")
     finally:
         i18n.setup("en")
-    assert body.endswith("\n\n" + WARNING_PL)
+    assert warning == (WARNING_PL, ["heading", "warning"])
+    assert body.startswith("Test Bundle 23.39 → 23.40\nRozmiar: 12 B\n")
+
+
+def test_the_question_names_both_versions_of_a_system_update(monkeypatch):
+    body, _warning = _question(monkeypatch, "006-V0000-00")
+    assert body.splitlines()[0] == "Test Bundle 23.39 → 23.40"
+    body, _warning = _question(monkeypatch, "006-D0000-00")
+    assert body.splitlines()[0] == "Test Font 23.40"  # not the device software: as before
 
 
 # --- the status at the top of the Updates page ---------------------------------------------------
@@ -474,29 +490,15 @@ def test_the_page_learns_from_the_answer_whether_beta_versions_are_offered(devic
 
 
 def _beta_question(monkeypatch, bundle_state):
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Adw", "1")
-    from gi.repository import Adw, Gtk
-
-    from openexpress.gui.app import MainWindow
-
-    if not Gtk.init_check():
-        pytest.skip("no display")
-    items = updates.parse_updates(lower_keys(beta_answer(bundle_state)))
-    asked = []
-    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(), updates_cache=items)
-    MainWindow.confirm_update(win, items[1])
-    (dialog,) = asked
-    return dialog.get_body()
+    return _question(monkeypatch, "006-V0000-00", beta_answer(bundle_state))
 
 
 def test_the_window_says_it_is_a_beta_before_installing(monkeypatch):
-    body = _beta_question(monkeypatch, BETA)
-    assert body.endswith("\n\nThis is a beta version.\n\n" + WARNING_EN)
-    assert "beta" not in _beta_question(monkeypatch, "live").casefold()
+    body, warning = _beta_question(monkeypatch, BETA)
+    assert body.endswith("\n\nThis is a beta version.")  # the warning follows, below the text
+    assert warning == (WARNING_EN, ["heading", "warning"])
+    body, _warning = _beta_question(monkeypatch, "live")
+    assert "beta" not in body.casefold()
 
 
 def test_beta_in_the_window_in_polish(monkeypatch):
@@ -504,12 +506,13 @@ def test_beta_in_the_window_in_polish(monkeypatch):
 
     i18n.setup("pl")
     try:
-        body = _beta_question(monkeypatch, BETA)
+        body, warning = _beta_question(monkeypatch, BETA)
         items = updates.parse_updates(lower_keys(beta_answer()))
         _w, status, _g, _b = _updates_page(items, beta=True)
     finally:
         i18n.setup("en")
-    assert body.endswith("\n\nTo jest wersja beta.\n\n" + WARNING_PL)
+    assert body.endswith("\n\nTo jest wersja beta.")
+    assert warning == (WARNING_PL, ["heading", "warning"])
     assert [t for t, _c in status["texts"]] == [
         "Dostępna aktualizacja oprogramowania", "23.39 → 23.40 · Beta · 12 B",
         "Test Bundle · Zalecana · GUPDATE.GSP",

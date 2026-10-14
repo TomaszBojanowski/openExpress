@@ -1588,15 +1588,24 @@ class MainWindow(Adw.ApplicationWindow):
 
         s = self.session
         chosen = upd.select(self.updates_cache, [u.part_number])
-        body = (f"{u.title} {u.version}\n"
+        # A system update: from which version of the device software to which.
+        version = (f"{s.device.software_version_str} → {u.version}" if u.is_system
+                   else u.version)
+        body = (f"{u.title} {version}\n"
                 + _("Size: {size}").format(size=_human(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
                 + ("\n\n" + _("License: {url}").format(url=u.eula_url) if u.eula_url else "")
-                + ("\n\n" + _("This is a beta version.") if u.is_beta else "")
-                + ("\n\n" + _(upd.SYSTEM_UPDATE_WARNING) if u.is_system else ""))
+                + ("\n\n" + _("This is a beta version.") if u.is_beta else ""))
         d = Adw.AlertDialog(heading=_("Install update?"), body=body)
+        if u.is_system:
+            # Below the text, in the warning colour of the theme and in bold.
+            warning = Gtk.Label(label=_(upd.SYSTEM_UPDATE_WARNING), wrap=True,
+                                justify=Gtk.Justification.CENTER)
+            warning.add_css_class("warning")
+            warning.add_css_class("heading")
+            d.set_extra_child(warning)
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", _("Accept and install"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
