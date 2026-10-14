@@ -11,7 +11,8 @@ body:
 
         **Privacy:** don't paste `openexpress info` output, your `GarminDevice.xml` or files
         from `~/.config/openexpress` – they contain your device's serial number, unit ID,
-        map unlock codes or login token. The report below contains none of these.
+        map unlock codes or login token. The report below contains none of these, and the
+        log at its end is already filtered.
   - type: textarea
     id: report
     attributes:
@@ -55,11 +56,15 @@ body:
   - type: textarea
     id: problems
     attributes:
-      label: What didn't work?
+      label: What did not work? Error messages
       description: |
-        What you did, what you expected and what happened. Error messages help a lot.
-        For details run the command with `-v`, e.g. `openexpress -v sync` (check the output
-        for personal data before pasting).
+        What you did, what you expected and what happened, with the exact error message.
+        For details run the command with `-v`, e.g. `openexpress -v sync`.
+
+        **Before pasting:** the log at the end of the device report is already filtered.
+        Anything else you paste (output of `-v`, `journalctl`, screenshots) is not: remove the
+        serial number (it is also part of `mtp://…` addresses), the unit ID, your e-mail
+        address and the names of your files first.
     validations:
       required: false
   - type: dropdown
