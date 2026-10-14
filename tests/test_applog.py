@@ -147,6 +147,55 @@ def test_stderr_is_as_before(log_file, capsys):
     assert capsys.readouterr().err == "for the journal\n"
 
 
+PRIVATE_LINE = ("device at mtp://091e_51b4_0000abcdef12/Internal%20Storage, unit 3987654321, "
+                "for a@example.org, map Holiday Map, file ~/Music/Someone/song.mp3")
+
+
+def test_terminal_lines_are_redacted_like_the_file(log_file, capsys):
+    applog.setup("cli", verbose=True)  # -v
+    applog.hide("Holiday Map", "map")
+    logging.getLogger("openexpress.test").debug(PRIVATE_LINE)
+    err = capsys.readouterr().err
+    assert err == ("DEBUG openexpress.test: device at mtp://<device>/Internal%20Storage, unit "
+                   "<number>, for <email>, map <map>, file <path>\n")  # the same line format
+    assert lines(log_file)[-1].endswith(err.split(": ", 1)[1].rstrip("\n"))  # as in the file
+
+
+def test_the_journal_of_the_watcher_is_redacted(log_file, capsys):
+    applog.setup("watch", stderr_level=logging.INFO, stderr_format="%(message)s")
+    logging.getLogger("openexpress.watch").info("synced %s", "mtp://091e_51b4_0000abcdef12/")
+    assert capsys.readouterr().err == "synced mtp://<device>/\n"  # no prefix, as before
+
+
+def test_a_traceback_on_the_terminal_is_redacted(log_file, capsys):
+    applog.setup("cli", verbose=True)
+    try:
+        raise OSError("cannot read mtp://091e_51b4_0000abcdef12/GARMIN for 3987654321")
+    except OSError:
+        logging.getLogger("openexpress.test").debug("failed", exc_info=True)
+    err = capsys.readouterr().err
+    assert "Traceback" in err and "OSError: cannot read mtp://<device>/GARMIN for <number>" in err
+    assert "0000abcdef12" not in err and "3987654321" not in err
+
+
+def test_messages_for_the_user_keep_the_addresses(log_file, monkeypatch, capsys):
+    """The addresses to choose one from with --device-uri are printed as they are; only the
+    log line about the error, shown with -v, is filtered."""
+    from openexpress.cli import main
+    from openexpress.device import gio_storage
+
+    found = [gio_storage.FoundDevice("mtp://091e_51b4_0000abcdef12/", "fenix", True),
+             gio_storage.FoundDevice("mtp://Garmin_Edge_1050_0000fedcba98/", "Edge", True)]
+    monkeypatch.setattr(gio_storage, "find_devices", lambda: found)
+    assert main(["-v", "info"]) == 1
+    err = capsys.readouterr().err
+    assert ("Error: Several devices connected, choose one with --device-uri: "
+            "mtp://091e_51b4_0000abcdef12/, mtp://Garmin_Edge_1050_0000fedcba98/") in err
+    log_lines = [line for line in err.splitlines() if line.startswith(("INFO ", "DEBUG "))]
+    assert log_lines and not any("0000abcdef12" in line or "0000fedcba98" in line
+                                 for line in log_lines)
+
+
 def test_program_works_without_a_log_file(tmp_path, monkeypatch, capsys):
     blocked = tmp_path / "state-is-a-file"
     blocked.write_text("")

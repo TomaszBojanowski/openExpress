@@ -8,7 +8,9 @@ Nothing personal may end up in it. Every line, including tracebacks and messages
 libraries, goes through `redact()` before it is written: values the program knows to be
 private (`hide()`) are replaced, and so is everything that looks like an identifier, an
 address of an MTP device, an e-mail address or a credential. Code that logs must still not
-pass file names, activity names, locations or file contents.
+pass file names, activity names, locations or file contents. What the log records print on
+the terminal (`-v`, the journal of the watcher) goes through the same filter; messages the
+program prints for the user (e.g. the addresses to choose from with `--device-uri`) do not.
 
 `OPENEXPRESS_LOG=debug` writes more to the file, `OPENEXPRESS_LOG=off` writes no file.
 """
@@ -104,8 +106,16 @@ def redact(text: str) -> str:
     return text
 
 
-class _Formatter(logging.Formatter):
-    """Formats the whole record (message, traceback, stack) and redacts the result."""
+class _Redacting(logging.Formatter):
+    """Formats the whole record (message, traceback, stack) and redacts the result: for the
+    log file and for the terminal alike (e.g. `-v`, or the journal of the watcher)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        return redact(super().format(record))
+
+
+class _Formatter(_Redacting):
+    """The log file: every line names the part of the program and the run."""
 
     def __init__(self, fmt: str, role: str):
         super().__init__(fmt)
@@ -114,7 +124,7 @@ class _Formatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         record.role = self.role
         record.run = RUN
-        return redact(super().format(record))
+        return super().format(record)
 
 
 class _LogFile(logging.handlers.WatchedFileHandler):
@@ -230,7 +240,7 @@ def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
         stderr_level = logging.DEBUG if verbose else logging.WARNING
     err = logging.StreamHandler(sys.stderr)
     err.setLevel(stderr_level)
-    err.setFormatter(logging.Formatter(stderr_format))
+    err.setFormatter(_Redacting(stderr_format))  # the same filter as the log file
     handlers: list[logging.Handler] = [err]
     path = None
     level = file_level(verbose)
