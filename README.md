@@ -15,9 +15,8 @@
 > app; Garmin may change them at any time. Use at your own risk.
 
 <p align="center">
-  <img src="docs/screenshots/maps.png" width="32%" alt="Maps">
-  <img src="docs/screenshots/apps.png" width="32%" alt="Connect IQ apps">
-  <img src="docs/screenshots/music.png" width="32%" alt="Music">
+  <img src="docs/screenshots/updates.png" width="800"
+       alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
@@ -34,7 +33,8 @@ welcome. Developed on Fedora/GNOME and tested with these Garmin devices:
 - **fēnix 8 Solar**, on the developer's Garmin account: sync, Connect IQ apps, maps and
   music are tested; software updates are checked and downloaded, but not yet installed on
   this device.
-- **Edge 1050**, on the same account: only reading is tested; nothing was written to it yet.
+- **Edge 1050**, on the same account: mostly reading is tested; one system software update
+  was installed with openExpress (beta 33.12, 14 October 2026).
 - **Venu 2**, not on the account: reading is tested, and it was the first device to get
   software updates installed with openExpress (Time Zone Map and Exercise to muscle
   mapping, 13 October 2026).
@@ -97,7 +97,7 @@ and the command-line tool prints the same warning when it starts such an operati
 |---|---|
 | fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
-| Edge 1050 | detected automatically; read-only commands, backup and sync plan tested |
+| Edge 1050 | detected automatically; read-only commands, backup and sync plan tested; one system software update installed in the window (beta 33.12, 14 October 2026) |
 | Venu 2 (part 006-B3703) | read-only commands tested; installing software updates tested (two components, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
@@ -199,6 +199,37 @@ It does nothing until you log in and perform the first sync
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
 
+<p align="center">
+  <img src="docs/screenshots/device.png" width="700"
+       alt="The device page: sync, updates, Garmin Connect account and tools">
+</p>
+
+## Software updates
+
+The Updates page (and `openexpress updates`) asks Garmin's update server what is new for the
+connected device; no login is needed.
+
+- **Status:** the top of the page says whether a system software update is available (with
+  the installed and the new version), how many other updates there are, or that the software
+  is up to date.
+- **System updates are recognised by their file** (`GUPDATE.GSP`, `GUPDATE.GCD`) as well as
+  by what the server says: the server does not always mark them.
+- **Beta versions** that Garmin offers to a device in its beta program are marked *Beta* in
+  the window and `[BETA]` on the command line.
+- **Before a system update** is copied, the window and `openexpress updates --install` warn
+  to charge the device and not to disconnect it while copying. The question in the window
+  shows both versions and links to the license (EULA).
+- **After the file is copied** the device installs it when it is disconnected. Until then
+  the page says *Update ready to install* and `openexpress updates` says that the update
+  waits for the device.
+
+Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026).
+
+<p align="center">
+  <img src="docs/screenshots/update-confirm.png" width="700"
+       alt="The question before a system update: versions, license link and warning">
+</p>
+
 ## Maps of your own
 
 Besides the maps Garmin offers, a device with maps also takes map files made by others, for
@@ -220,6 +251,10 @@ is stored in the file.
   has none. Tested on a fēnix 8 with a map from BBBike.org. openExpress checks that the file
   is a Garmin map file, not what is in the map.
 
+<p align="center">
+  <img src="docs/screenshots/maps.png" width="700" alt="Maps, with a map of your own">
+</p>
+
 ## Connect IQ apps
 
 - Some watches (e.g. the fēnix 8) keep their app folder out of the ordinary file listing.
@@ -238,6 +273,21 @@ is stored in the file.
   one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
+
+<p align="center">
+  <img src="docs/screenshots/apps.png" width="700" alt="Connect IQ apps">
+</p>
+
+## Music
+
+The Music page (*Files…*, *Folders…*, *Add Playlist…*) and `openexpress music` copy music,
+podcasts and audiobooks to the folders the device declares, as Artist/Album, and write
+playlists as `.m3u8`. Before copying, openExpress says which files on the device will be
+replaced. Tested on a fēnix 8.
+
+<p align="center">
+  <img src="docs/screenshots/music.png" width="700" alt="Music">
+</p>
 
 ## Log file
 
