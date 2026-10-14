@@ -11,14 +11,18 @@ import platform
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote, urlencode
 
 from openexpress import __version__
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import human_size
 
-ISSUE_URL = ("https://github.com/TomaszBojanowski/openExpress/issues/new"
-             "?template=device_report.yml")
+ISSUE_FORM = "https://github.com/TomaszBojanowski/openExpress/issues/new"
+ISSUE_TEMPLATE = "device_report.yml"
+ISSUE_URL = f"{ISSUE_FORM}?template={ISSUE_TEMPLATE}"
+# Longer addresses are refused by web servers (GitHub answers 414 somewhere above 8 kB).
+MAX_URL = 6000
 
 # (label, test on the set of data type names)
 FEATURES = [
@@ -43,6 +47,19 @@ def with_log(text: str, lines: list[str]) -> str:
     body = "\n".join(lines) if lines else "(no log file)"
     return (f"{text}\n### Log (last {len(lines)} lines)\n```\n{body}\n```\n" if lines
             else f"{text}\n### Log\n{body}\n")
+
+
+def issue_url(text: str, model: str | None) -> str | None:
+    """The address of a new device report on GitHub with the title and the "Device report"
+    field filled in (`report` is the id of that field in the issue form). None when the
+    address, encoded, would be longer than MAX_URL characters.
+
+    Opening it sends the text to GitHub with the request, so it gets only the report, never
+    the log; nothing is published until the issue is submitted."""
+    query = urlencode({"template": ISSUE_TEMPLATE, "title": f"[Device] {model or 'unknown'}",
+                       "report": text}, quote_via=quote)
+    url = f"{ISSUE_FORM}?{query}"
+    return url if len(url) <= MAX_URL else None
 
 
 def _os_name() -> str:

@@ -37,6 +37,50 @@ def test_usb_id_comes_from_the_storage_not_from_the_address(device_root):
     assert "- USB ID: 091e:unknown" in report.build(dev, st)
 
 
+# --- an address that opens the GitHub form filled in -------------------------------------------
+
+
+def _query(url):
+    from urllib.parse import parse_qs, urlsplit
+
+    parts = urlsplit(url)
+    assert f"{parts.scheme}://{parts.netloc}{parts.path}" == report.ISSUE_FORM
+    return {key: values for key, values in parse_qs(parts.query, keep_blank_values=True).items()}
+
+
+def test_issue_address_fills_in_the_title_and_the_report():
+    text = "### Device\n- Model: fēnix 8\na & b # c + d = 100% ? / ;\n\n[x] ok\n"
+    url = report.issue_url(text, "fēnix 8")
+    assert _query(url) == {"template": ["device_report.yml"], "title": ["[Device] fēnix 8"],
+                           "report": [text]}  # exactly as given, special characters too
+    assert "\n" not in url and " " not in url and "#" not in url.split("?", 1)[1]
+    assert report.issue_url("x", None).endswith("&report=x")
+    assert _query(report.issue_url("x", None))["title"] == ["[Device] unknown"]
+    # The address of the empty form is the same as before.
+    assert report.ISSUE_URL == ("https://github.com/TomaszBojanowski/openExpress/issues/new"
+                                "?template=device_report.yml")
+
+
+def test_issue_address_has_a_length_limit():
+    fits = report.issue_url("x", "M")
+    room = report.MAX_URL - len(fits)
+    assert len(report.issue_url("x" * (1 + room), "M")) == report.MAX_URL  # just fits
+    assert report.issue_url("x" * (2 + room), "M") is None
+    assert report.issue_url("ę" * 1500, "M") is None  # 6 characters each once encoded
+
+
+def test_issue_address_of_a_real_report_has_no_identifiers(device_root):
+    st = FakeMtpStorage(device_root)
+    st.label = FakeMtpStorage.label
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    text = report.build(dev, st, logged_in=True)
+    url = report.issue_url(text, dev.description)
+    assert url is not None and len(url) < report.MAX_URL / 2  # the report fits with room
+    assert _query(url)["report"] == [text] and _query(url)["title"] == ["[Device] Test watch"]
+    for private in (str(dev.unit_id), "0000abcdef12", "mtp"):
+        assert private not in url
+
+
 # --- the end of the log in a report: only when asked for ---------------------------------------
 
 
