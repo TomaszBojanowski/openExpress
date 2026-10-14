@@ -103,8 +103,10 @@ and the command-line tool prints the same warning when it starts such an operati
 
 Tried openExpress with another device? Please send a
 [device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) –
-also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**,
-or run `openexpress report`. The report contains no serial number, unit ID or e-mail.
+also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**
+→ **Open on GitHub** opens the form with the report and a title filled in; or run
+`openexpress report`, which prints the report and an address that does the same. The report
+contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
 
 ## Install
 
@@ -310,11 +312,14 @@ openExpress keeps a log of what it does, to make problems easier to find:
   Every line passes a filter that replaces such values before it is written. The log
   stays on your computer; nothing is sent anywhere.
 - **More or less:** `OPENEXPRESS_LOG=debug` (or `-v`) writes more detail,
-  `OPENEXPRESS_LOG=off` writes no file.
+  `OPENEXPRESS_LOG=off` writes no file. What `-v` and the background sync print on the
+  terminal passes the same filter; messages meant for you (e.g. the addresses to choose
+  from with `--device-uri`) and the output of commands such as `openexpress info` do not.
 - **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
   appends its last 200 lines, filtered once more. In the window, tick **Attach the last log**
-  in *Report a Device or Problem…*; the preview shows exactly what will be copied. Read it
-  before you send it.
+  in *Report a Device or Problem…*; the preview shows exactly what will be copied. **Open on
+  GitHub** puts only the report into the form and the log into the clipboard, to paste into
+  the issue: the log never goes into the address. Read it before you send it.
 
 ## Privacy and security
 
