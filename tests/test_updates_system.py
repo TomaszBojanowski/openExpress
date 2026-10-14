@@ -246,6 +246,9 @@ class _Section:
         self.groups.append(_Group(title))
         return self.groups[-1]
 
+    def clear(self):
+        self.groups = []
+
 
 def _children(widget):
     child = widget.get_first_child()
@@ -280,12 +283,17 @@ def _updates_page(items, beta=False):
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39")),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
-        _set_update_state=lambda new: None)
+        _set_update_state=lambda new, staged=(): None)
     win.confirm_update = win.asked.append
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
     for name in ("_updates_status", "_update_row", "_button"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     MainWindow.show_updates(win, items, beta)
+    return (win, *_read_page(win))
+
+
+def _read_page(win):
+    """The status at the top of the Updates page, the other groups and the status buttons."""
     top, *groups = win.sections["updates"].groups
     (box,) = top.rows
     image, *labels, row = _children(box)
@@ -294,7 +302,7 @@ def _updates_page(items, beta=False):
         "texts": [_text(w) for w in labels],
         "buttons": [(b.get_label(), b.has_css_class("suggested-action")) for b in _children(row)],
     }
-    return win, status, groups, list(_children(row))
+    return status, groups, list(_children(row))
 
 
 def _items(*answer_entries):
@@ -734,3 +742,154 @@ def test_cli_copied_update_in_polish(offered, no_download, capsys):
         "  006-V0000-00         23.40  Zalecana          12 B  Test Bundle [GŁÓWNE]",
         "Odłącz urządzenie, aby ją zainstalować."]
     assert out_all[-1] == "Odłącz urządzenie, aby ją zainstalować."
+
+
+# --- the window: an update that is copied already is ready to install -----------------------------
+
+
+def _staged_items(bundle_state="live", font_on_device=True):
+    """The bundle copied already (on the device, still offered); the font on the device too, or
+    still to be installed."""
+    items = updates.parse_updates(lower_keys(beta_answer(bundle_state)))
+    font, bundle = items
+    bundle.on_device, font.on_device = True, font_on_device
+    return items
+
+
+def test_status_of_an_update_that_waits_for_the_device():
+    _win, status, groups, _buttons = _updates_page(_staged_items())
+    assert status == {
+        "icon": ("software-update-available-symbolic", 96, False),
+        "texts": [("Update ready to install", ["title-1"]),
+                  ("23.39 → 23.40 · disconnect the device to install it", ["dim-label"]),
+                  ("Test Bundle · Recommended · GUPDATE.GSP", ["caption", "dim-label"])],
+        "buttons": [("Check Again", False)]}  # nothing to install: no "Install"
+    # Not a component to reinstall: only the font is there.
+    (advanced,) = groups
+    assert advanced.title == "Advanced"
+    assert advanced.rows[0].get_subtitle().startswith("1 component already on the device")
+
+
+def test_status_of_a_beta_that_waits_for_the_device():
+    _win, status, _groups, _buttons = _updates_page(_staged_items(BETA), beta=True)
+    assert status["texts"][1] == (
+        "23.39 → 23.40 · Beta · disconnect the device to install it",
+        [["dim-label"], ["heading", "warning"], ["dim-label"]])
+    assert status["texts"][3][0] == "Garmin offers beta software for this device."
+
+
+def test_status_of_a_waiting_update_lists_what_is_still_to_install():
+    _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
+    assert status["texts"][0][0] == "Update ready to install"
+    (available,) = groups  # the font, to install before the device is disconnected
+    assert [r.get_title() for r in available.rows] == ["Test Font"]
+
+
+def _overview(items=None):
+    """The "Device software" row and the software label of the device page."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.app import MainWindow
+
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39")),
+        update_row=Adw.ActionRow(), software_label=Gtk.Label())
+    win._render_update_state = types.MethodType(MainWindow._render_update_state, win)
+    return win, MainWindow
+
+
+def test_device_page_says_the_update_waits_for_the_device():
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gtk
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    items = _staged_items()
+    win, MainWindow = _overview()
+    MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
+    assert win.update_state == "ready"
+    assert win.update_row.get_subtitle() == "Update ready: disconnect the device to install it"
+    assert win.software_label.get_label() == "Software 23.39 · update ready to install"
+    # Something else to install first: that is said, as before.
+    items = _staged_items(font_on_device=False)
+    MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
+    assert (win.update_state, win.update_row.get_subtitle()) == ("available",
+                                                                 "1 update available")
+
+
+def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
+    from openexpress.gui.app import MainWindow
+
+    _copied(offered, "006-V0000-00")
+    s = types.SimpleNamespace(
+        client=types.SimpleNamespace(software_updates=lambda raw: lower_keys(server_answer())),
+        storage=LocalStorage(offered), device=types.SimpleNamespace(raw=b""))
+    states = []
+    win = types.SimpleNamespace(
+        session=s, _update_check_session=None, update_state=None,
+        _set_update_state=lambda new, staged=(): states.append(
+            ([u.part_number for u in new], [u.part_number for u in staged])),
+        in_background=lambda work, done, failed: done(work()))
+    MainWindow._check_updates_quietly(win)
+    assert states == [(["006-D0000-00"], ["006-V0000-00"])]
+
+
+def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.updates import InstallReport
+
+    items = updates.parse_updates(lower_keys(server_answer()))
+    win, status, _groups, _buttons = _updates_page(items)
+    assert status["texts"][0][0] == "Software update available"
+
+    def nothing(*_a, **_kw):
+        raise AssertionError("neither the server nor the device may be asked again")
+
+    copied = []
+    monkeypatch.setattr(updates, "install",
+                        lambda chosen, storage, **kw: copied.append(chosen) or InstallReport(
+                            installed=["Test Bundle 23.40 -> Garmin/GUPDATE.GSP"]))
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    win.session.client = types.SimpleNamespace(http=None, software_updates=nothing)
+    win.session.storage = types.SimpleNamespace(read=nothing, size=nothing)
+    win.updates_beta, win.shown = False, []
+    win.run_task = lambda title, work, done: done(work())
+    win.error = lambda title, text: win.shown.append(title)
+    win.progress = win.fraction = None
+    win._update_done_text = MainWindow._update_done_text
+    for name in ("show_updates", "_show_installed"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    MainWindow.confirm_update(win, items[1])
+    (dialog,) = asked
+    dialog.emit("response", "ok")  # as if "Accept and install" was pressed
+    assert [u.part_number for u in copied[0]] == ["006-V0000-00"] and win.shown == ["Done"]
+    status, groups, _buttons = _read_page(win)
+    assert status["texts"][0][0] == "Update ready to install"
+    assert status["buttons"] == [("Check Again", False)]
+    assert [r.get_title() for r in groups[0].rows] == ["Test Font"]  # still to install
+
+
+def test_ready_in_polish():
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        _w, status, _g, _b = _updates_page(_staged_items(BETA), beta=True)
+        win, MainWindow = _overview()
+        items = _staged_items()
+        MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
+    finally:
+        i18n.setup("en")
+    assert [t for t, _c in status["texts"]][:2] == [
+        "Aktualizacja gotowa do instalacji",
+        "23.39 → 23.40 · Beta · odłącz urządzenie, aby ją zainstalować"]
+    assert status["buttons"] == [("Sprawdź ponownie", False)]
+    assert win.update_row.get_subtitle() == (
+        "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować")
+    assert win.software_label.get_label() == (
+        "Oprogramowanie 23.39 · aktualizacja gotowa do instalacji")

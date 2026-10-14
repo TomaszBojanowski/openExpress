@@ -306,7 +306,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.maps_cache = None
         self.apps_cache = None
         self.updates_cache = None
-        self.update_state: str | None = None  # None = unknown, "current", "available"
+        self.updates_beta = False  # whether Garmin offers beta versions to the open device
+        # None = unknown, "current", "available", "ready" (copied, waits for the device), "failed"
+        self.update_state: str | None = None
         self.update_count = 0
         self._update_check_session = None
         # None = unknown, "none" (no maps for the device), "empty" (none installed),
@@ -1058,6 +1060,9 @@ class MainWindow(Adw.ApplicationWindow):
                 "{count} update available", "{count} updates available",
                 self.update_count).format(count=self.update_count))
             self.software_label.set_label(version + " · " + _("update available"))
+        elif self.update_state == "ready":
+            self.update_row.set_subtitle(_("Update ready: disconnect the device to install it"))
+            self.software_label.set_label(version + " · " + _("update ready to install"))
         elif self.update_state == "current":
             self.update_row.set_subtitle(_("Software is up to date."))
             self.software_label.set_label(version)
@@ -1068,9 +1073,11 @@ class MainWindow(Adw.ApplicationWindow):
             self.update_row.set_subtitle(_("Checking…"))
             self.software_label.set_label(version)
 
-    def _set_update_state(self, new_updates: list) -> None:
+    def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
+        """`staged`: system updates copied already, waiting for the device to install them
+        when it is disconnected; told only when nothing else is to be installed first."""
         self.update_count = len(new_updates)
-        self.update_state = "available" if new_updates else "current"
+        self.update_state = ("available" if new_updates else "ready" if staged else "current")
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:
@@ -1082,15 +1089,16 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_check_session = s
 
         def work():
-            return upd.pending(upd.mark_present(
-                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw))))
+            items = upd.mark_present(
+                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw)))
+            return upd.pending(items), upd.staged(items)
 
-        def done(new):
+        def done(result):
             if self._update_check_session is s:
                 self._update_check_session = None
             if self.session is not s:
                 return
-            self._set_update_state(new)
+            self._set_update_state(*result)
 
         def failed(_e):
             if self._update_check_session is s:
@@ -1469,22 +1477,26 @@ class MainWindow(Adw.ApplicationWindow):
     def show_updates(self, items, beta: bool = False) -> None:
         if self.session is None:
             return
-        self.updates_cache = items
+        self.updates_cache, self.updates_beta = items, beta
         sec = self.sections["updates"]
         from openexpress import updates as upd
 
         new = upd.pending(items)
-        self._set_update_state(new)
+        staged = upd.staged(items)
+        self._set_update_state(new, staged)
         # A system update is told at the top of the page; a second one (rare) is listed.
         system = next((u for u in new if u.is_system), None)
-        self._updates_status(sec, system, len(new), beta)
+        self._updates_status(sec, system, len(new), beta,
+                             ready=staged[0] if staged and system is None else None)
         rest = [u for u in new if u is not system]
         if rest:
             g = sec.group(_("Available updates"))
             for u in rest:
                 self._update_row(g, u)
-        # A file the device already has is a reinstall, whatever the server calls it.
-        re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata]
+        # A file the device already has is a reinstall, whatever the server calls it; but not
+        # a system update that is waiting for the device to install it.
+        re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata
+              and not any(u is w for w in staged)]
         if re:
             g = sec.group(_("Advanced"))
             exp = Adw.ExpanderRow(
@@ -1497,10 +1509,11 @@ class MainWindow(Adw.ApplicationWindow):
             for u in sorted(re, key=lambda x: x.title):
                 self._update_row(exp, u, reinstall=True)
 
-    def _updates_status(self, sec, system, count: int, beta: bool = False) -> None:
-        """The top of the Updates page: the system update when there is one, how many other
-        updates there are, or that the software is up to date; and whether Garmin offers beta
-        versions to the device."""
+    def _updates_status(self, sec, system, count: int, beta: bool = False, ready=None) -> None:
+        """The top of the Updates page: the system update when there is one, the system update
+        that is copied already (`ready`) and waits for the device to be disconnected, how many
+        other updates there are, or that the software is up to date; and whether Garmin offers
+        beta versions to the device."""
         from openexpress import updates as upd
 
         d = self.session.device
@@ -1521,6 +1534,15 @@ class MainWindow(Adw.ApplicationWindow):
             # TRANSLATORS: button
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
                                         "suggested-action"))
+        elif ready is not None:
+            icon, title = "software-update-available-symbolic", _("Update ready to install")
+            versions = f"{d.software_version_str} → {ready.version}"
+            # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
+            disconnect = _("disconnect the device to install it")
+            subtitle = f"{versions} · {disconnect}"
+            if ready.is_beta:
+                subtitle = (f"{versions} · ", _("Beta"), f" · {disconnect}")
+            detail = f"{ready.title} · {ready.severity_text} · {ready.filename}"
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
             title = ngettext("{count} update available", "{count} updates available",
@@ -1534,8 +1556,8 @@ class MainWindow(Adw.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                       halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
         image = Gtk.Image(icon_name=icon, pixel_size=96)
-        if system is None and not count:
-            image.add_css_class("success")
+        if system is None and ready is None and not count:
+            image.add_css_class("success")  # up to date only
         box.append(image)
 
         def label(text, styles, **props):
@@ -1620,6 +1642,10 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("ok", _("Accept and install"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
 
+        def installed(rep):
+            self._show_installed(s, chosen)
+            self.error(_("Done"), self._update_done_text(rep))
+
         def response(_d, r):
             if r != "ok":
                 return
@@ -1627,11 +1653,26 @@ class MainWindow(Adw.ApplicationWindow):
                 _("Installing update…"),
                 lambda: upd.install(chosen, s.storage, session=s.client.http,
                                     progress=self.progress, transfer_progress=self.fraction),
-                lambda rep: self.error(_("Done"), self._update_done_text(rep)),
+                installed,
             )
 
         d.connect("response", response)
         d.present(self)
+
+    def _show_installed(self, session, chosen) -> None:
+        """After an update was copied: the files are on the device now. The page shows that
+        without asking the server or reading the device again (a system update is then ready
+        to install, the others are no updates any more)."""
+        cache = self.updates_cache
+        if (self.session is not session or cache is None
+                or not all(any(c is u for u in cache) for c in chosen)):
+            return  # another device, or the page was checked again meanwhile
+        for u in chosen:
+            u.on_device = True
+        sec = self.sections["updates"]
+        sec.clear()
+        self._action_buttons = still_in_window(self._action_buttons)
+        self.show_updates(self.updates_cache, self.updates_beta)
 
     # --- maps -------------------------------------------------------------------------
 
