@@ -1659,7 +1659,7 @@ class MainWindow(Adw.ApplicationWindow):
         if self.session is None or overview.folder is None:
             return  # no device, or one without a folder for maps
         g = self.sections["maps"].group(
-            _("Own maps"), _("Maps that are not from Garmin, e.g. made from OpenStreetMap data"))
+            _("Own maps"), _("Maps not from Garmin, e.g. from OpenStreetMap"))
         g.set_header_suffix(self._button(_("Add Map…"), self.choose_map))
         if overview.unreadable:
             g.add(Adw.ActionRow(title=_("The map folder could not be read")))

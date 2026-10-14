@@ -931,7 +931,7 @@ def test_own_maps_group_shows_names_sizes_and_who_copied_them():
                               removable=["ours.img"], foreign=["by-hand.img"]))
     (group,) = section.groups
     assert group.get_title() == "Own maps"
-    assert group.get_description().startswith("Maps that are not from Garmin")
+    assert group.get_description().startswith("Maps not from Garmin")
     assert rows_of(group) == [
         ("Sometown &lt;cyclemap&gt;", "ours.img · 51.0 MB", True),  # ours: a remove button
         # A map someone else copied: a button too (the question is stronger).
