@@ -2035,8 +2035,9 @@ class MainWindow(Adw.ApplicationWindow):
             body_text = ""
         else:
             body_text = report.build(s.device, s.storage, s.logged_in)
-            text = _("Copy this report and paste it into a new issue on GitHub. "
-                     "It contains no serial number, unit ID or e-mail.")
+            text = _("Open on GitHub starts a new issue with this report filled in; nothing is "
+                     "published until you submit it. The report contains no serial number, "
+                     "unit ID or e-mail.")
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
         buffer = None
@@ -2045,7 +2046,7 @@ class MainWindow(Adw.ApplicationWindow):
             d.set_extra_child(box)
             d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))
-        d.add_response("open", _("Copy and Open GitHub"))
+        d.add_response("open", _("Open on GitHub"))
         d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
         d.set_close_response("close")
 
@@ -2058,12 +2059,27 @@ class MainWindow(Adw.ApplicationWindow):
                 self.get_clipboard().set(shown())
                 self.toast(_("Report copied"))
             elif r == "open":
-                if buffer is not None:
-                    self.get_clipboard().set(shown())
-                Gtk.UriLauncher.new(report.ISSUE_URL).launch(self, None, None, None)
+                self._open_report_form(body_text, shown() if buffer is not None else "",
+                                       s.device.description if s is not None else None)
 
         d.connect("response", response)
         d.present(self)
+
+    def _open_report_form(self, report_text: str, shown: str, model: str | None) -> None:
+        """Open a new device report on GitHub with the report filled in. The log never goes
+        into the address (too long, and the address is sent to GitHub when the page opens):
+        when it is attached it goes to the clipboard. A report too long for an address goes
+        to the clipboard whole, with the empty form, as before."""
+        from openexpress import report
+
+        url = report.issue_url(report_text, model) if report_text else None
+        if report_text and url is None:
+            self.get_clipboard().set(shown)
+            self.toast(_("Report copied: paste it into the form"))
+        elif report_text and shown != report_text:  # the log is attached below the report
+            self.get_clipboard().set(shown[len(report_text):].lstrip("\n"))
+            self.toast(_("The log is in the clipboard: paste it into the issue"))
+        Gtk.UriLauncher.new(url or report.ISSUE_URL).launch(self, None, None, None)
 
     def show_about(self) -> None:
         from openexpress import __version__

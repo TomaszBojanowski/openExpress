@@ -1,3 +1,5 @@
+import pytest
+
 from openexpress import report
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -150,3 +152,125 @@ def test_window_copies_exactly_what_it_shows(log_file):
     assert MainWindow._report_text("### Device\n", False) == "### Device\n"  # the default
     assert MainWindow._report_text("### Device\n", True) == (
         "### Device\n\n### Log (last 2 lines)\n```\none\ndevice <number>\n```\n")
+
+
+# --- the window: Open on GitHub fills in the form ----------------------------------------------
+
+
+def _report_dialog(monkeypatch, device_root, connected=True):
+    """The report question of a window that is never shown, with what it would open, copy
+    and say recorded."""
+    import types
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.app import MainWindow
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    st = LocalStorage(device_root)
+    session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")),
+                                    storage=st, logged_in=True)
+    opened, copied, said, asked = [], [], [], []
+
+    class Launcher:
+        def __init__(self, uri):
+            self.uri = uri
+
+        def launch(self, *_a):
+            opened.append(self.uri)
+
+    monkeypatch.setattr(Gtk, "UriLauncher", types.SimpleNamespace(new=Launcher))
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    win = types.SimpleNamespace(
+        session=session if connected else None, toast=said.append,
+        get_clipboard=lambda: types.SimpleNamespace(set=copied.append),
+        _report_view=MainWindow._report_view)
+    win._open_report_form = types.MethodType(MainWindow._open_report_form, win)
+    MainWindow.show_report(win)
+    (dialog,) = asked
+    text = report.build(session.device, st, True)
+    return dialog, text, opened, copied, said
+
+
+def _attach_log(dialog):
+    from gi.repository import Gtk
+
+    def find(widget):
+        if isinstance(widget, Gtk.CheckButton):
+            return widget
+        child = widget.get_first_child()
+        while child is not None:
+            found = find(child)
+            if found is not None:
+                return found
+            child = child.get_next_sibling()
+        return None
+
+    find(dialog.get_extra_child()).set_active(True)
+
+
+def test_open_on_github_fills_in_the_report(monkeypatch, device_root, log_file):
+    dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    assert "nothing is published until you submit it" in dialog.get_body()
+    assert "no serial number, unit ID or e-mail" in dialog.get_body()
+    assert dialog.get_response_label("open") == "Open on GitHub"
+    assert dialog.get_response_label("copy") == "Copy"  # still there
+    dialog.emit("response", "open")
+    assert opened == [report.issue_url(text, "Test watch")]
+    assert copied == [] and said == []
+
+
+def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
+    _write_log(log_file, ["one", "device 3987654321"])
+    dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    _attach_log(dialog)
+    dialog.emit("response", "open")
+    assert opened == [report.issue_url(text, "Test watch")]  # the report only, never the log
+    assert copied == ["### Log (last 2 lines)\n```\none\ndevice <number>\n```\n"]
+    assert said == ["The log is in the clipboard: paste it into the issue"]
+
+
+def test_open_on_github_with_a_report_too_long_copies_it(monkeypatch, device_root, log_file):
+    monkeypatch.setattr(report, "MAX_URL", 100)
+    _write_log(log_file, ["one"])
+    dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    _attach_log(dialog)
+    dialog.emit("response", "open")
+    assert opened == [report.ISSUE_URL]  # the empty form, as before
+    assert copied == [report.with_log(text, ["one"])]  # everything that is shown
+    assert said == ["Report copied: paste it into the form"]
+
+
+def test_open_on_github_without_a_device_opens_the_empty_form(monkeypatch, device_root):
+    dialog, _text, opened, copied, said = _report_dialog(monkeypatch, device_root,
+                                                         connected=False)
+    dialog.emit("response", "open")
+    assert opened == [report.ISSUE_URL] and copied == [] and said == []
+
+
+def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
+    from openexpress import i18n
+
+    _write_log(log_file, ["one"])
+    i18n.setup("pl")
+    try:
+        dialog, _text, _opened, _copied, said = _report_dialog(monkeypatch, device_root)
+        _attach_log(dialog)
+        dialog.emit("response", "open")
+        monkeypatch.setattr(report, "MAX_URL", 100)
+        too_long, _t, _o, _c, said_too_long = _report_dialog(monkeypatch, device_root)
+        too_long.emit("response", "open")
+    finally:
+        i18n.setup("en")
+    assert dialog.get_response_label("open") == "Otwórz na GitHubie"
+    assert dialog.get_body() == (
+        "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z wypełnionym raportem; nic nie zostanie "
+        "opublikowane, dopóki go nie wyślesz. Raport nie zawiera numeru seryjnego, "
+        "identyfikatora urządzenia ani adresu e-mail.")  # the same words as on the command line
+    assert said == ["Log jest w schowku: wklej go w zgłoszeniu"]
+    assert said_too_long == ["Raport skopiowany: wklej go w formularzu"]
