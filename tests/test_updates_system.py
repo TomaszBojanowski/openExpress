@@ -639,3 +639,98 @@ def test_the_license_in_polish(monkeypatch):
     assert link.get_label() == "Umowa licencyjna (EULA)"
     assert warning.get_label() == WARNING_PL
     assert text.get_label() == "Licencja: file:///etc/passwd"
+
+
+# --- a system update copied already, waiting for the device to install it -------------------------
+
+
+def _copied(device_root, *parts):
+    """The device has the very file of these offered updates (as after `updates --install`)."""
+    files = {"006-V0000-00": ("GUPDATE.GSP", BUNDLE), "006-D0000-00": ("Font/006-D0000-00.fnt", FONT)}
+    for part in parts:
+        name, data = files[part]
+        (device_root / "GARMIN" / name).parent.mkdir(parents=True, exist_ok=True)
+        (device_root / "GARMIN" / name).write_bytes(data)
+
+
+def test_only_a_system_update_on_the_device_is_staged(device_root):
+    _copied(device_root, "006-V0000-00", "006-D0000-00")
+    answer = server_answer()
+    answer["updates"].append(_entry("006-B0000-00", "Old Software", "Firmware", "Garmin",
+                                    "GUPDATE.GCD", b"old"))
+    answer["updates"][-1]["installation"]["isReinstall"] = True
+    answer["updates"].append(_entry("006-V0000-00-META", "Update information", "UpdateMetadata",
+                                    "Garmin", "GUPDATE.GSP", BUNDLE))
+    items = updates.mark_present(LocalStorage(device_root),
+                                 updates.parse_updates(lower_keys(answer)))
+    # The bundle: offered as an update, and the same file is on the device. The font is there
+    # too but is no system update; a reinstall and a -META entry are never waiting.
+    assert [u.part_number for u in updates.staged(items)] == ["006-V0000-00"]
+    assert updates.pending(items) == []
+
+
+def test_nothing_is_staged_before_the_file_is_copied(device_root):
+    items = updates.mark_present(LocalStorage(device_root),
+                                 updates.parse_updates(lower_keys(server_answer())))
+    assert updates.staged(items) == []
+
+
+def test_cli_says_a_copied_update_waits_for_the_device(offered, no_download, capsys):
+    _copied(offered, "006-V0000-00")
+    assert main(["--path", str(offered), "updates"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Test watch, software 23.39",
+        "Available updates: 1",
+        "  006-D0000-00         23.40  Recommended        4 B  Test Font",
+        "Update copied, waiting for the device to install it:",
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
+        "Disconnect the device to install it.",
+        "",
+        "Install: openexpress updates --install PART_NUMBER [--reinstalls] --apply"]
+
+
+def test_cli_is_not_up_to_date_while_a_copied_update_waits(offered, no_download, capsys):
+    _copied(offered, "006-V0000-00", "006-D0000-00")
+    assert main(["--path", str(offered), "updates"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "Software is up to date." not in out
+    assert out == [
+        "Test watch, software 23.39",
+        "Update copied, waiting for the device to install it:",
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
+        "Disconnect the device to install it.",
+        "Already on the device: 1"]  # the font: no update, and not waiting for anything
+
+
+def test_cli_install_all_says_what_is_left_to_do(offered, no_download, capsys):
+    _copied(offered, "006-V0000-00", "006-D0000-00")
+    assert main(["--path", str(offered), "updates", "--install", "all"]) == 0
+    assert capsys.readouterr().out.splitlines()[1:] == [
+        "Skipped 2 files that are already on the device.",
+        "Nothing to install: every offered file is already on the device.",
+        "Disconnect the device to install it."]
+
+
+def test_cli_install_all_without_a_copied_system_update_says_nothing_more(offered, no_download,
+                                                                         capsys):
+    _copied(offered, "006-D0000-00")  # only the font is there
+    assert main(["--path", str(offered), "updates", "--install", "all"]) == 0
+    assert "Disconnect the device" not in capsys.readouterr().out
+
+
+def test_cli_copied_update_in_polish(offered, no_download, capsys):
+    from openexpress import i18n
+
+    _copied(offered, "006-V0000-00", "006-D0000-00")
+    try:
+        assert main(["--path", str(offered), "--lang", "pl", "updates"]) == 0
+        out = capsys.readouterr().out.splitlines()
+        assert main(["--path", str(offered), "--lang", "pl", "updates", "--install", "all"]) == 0
+        out_all = capsys.readouterr().out.splitlines()
+    finally:
+        i18n.setup("en")
+    assert out[1:4] == [
+        "Aktualizacja skopiowana, czeka na instalację przez urządzenie:",
+        "  006-V0000-00         23.40  Zalecana          12 B  Test Bundle [GŁÓWNE]",
+        "Odłącz urządzenie, aby ją zainstalować."]
+    assert out_all[-1] == "Odłącz urządzenie, aby ją zainstalować."

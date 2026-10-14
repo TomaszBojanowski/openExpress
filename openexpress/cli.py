@@ -568,6 +568,22 @@ def _update_line(u) -> str:
             f"{name}")
 
 
+def _flags(u) -> str:
+    """" [PRIMARY]" after a system update and " [BETA]" after a beta version."""
+    # TRANSLATORS: marks the main watch firmware in the list of updates
+    return (" [" + _("PRIMARY") + "]" if u.is_system else "") + _beta_mark(u)
+
+
+def _print_staged(staged) -> None:
+    """System updates on the device already, waiting for it to install them."""
+    if not staged:
+        return
+    print(_("Update copied, waiting for the device to install it:"))
+    for u in staged:
+        print("  " + _update_line(u) + _flags(u))
+    print(_("Disconnect the device to install it."))
+
+
 def _print_present(present, verbose: bool) -> None:
     if not present:
         return
@@ -587,8 +603,10 @@ def cmd_updates(args) -> int:
     items = upd.mark_present(st, upd.parse_updates(resp))  # only reads the device
     if not args.reinstalls:
         items = [u for u in items if not u.is_reinstall]
+    # A system update that is on the device already waits for the device to install it.
+    staged = [] if args.reinstalls else upd.staged(items)
     # Offered by the server although the device has the very same file: not an update.
-    present = [u for u in items if u.on_device]
+    present = [u for u in items if u.on_device and not any(u is s for s in staged)]
     print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
     if upd.beta_offered(resp):
@@ -596,8 +614,11 @@ def cmd_updates(args) -> int:
     if not args.install:
         listed = items if args.reinstalls else [u for u in items if not u.on_device]
         if not listed:
-            print(_("Software is up to date.") if not args.reinstalls
-                  else _("The server returned no items."))
+            if staged:
+                _print_staged(staged)  # not up to date: the update waits for the device
+            else:
+                print(_("Software is up to date.") if not args.reinstalls
+                      else _("The server returned no items."))
             _print_present(present, args.verbose)
             return 0
         visible = [u for u in listed if not u.is_metadata or args.verbose]
@@ -605,16 +626,14 @@ def cmd_updates(args) -> int:
                else _("Available updates: {count}")).format(count=len(visible)))
         for u in sorted(visible, key=lambda x: (not x.is_system, x.severity.lower() != "critical",
                                                 x.name)):
-            # TRANSLATORS: marks the main watch firmware in the list of updates
-            flag = " [" + _("PRIMARY") + "]" if u.is_system else ""
-            flag += _beta_mark(u)
-            print("  " + _update_line(u) + flag)
+            print("  " + _update_line(u) + _flags(u))
             if args.verbose:
                 print(f"      -> {u.device_path}")
             for c in u.changes[: (20 if args.verbose else 5)]:
                 print(f"      • {c}")
         if not args.reinstalls:
             _print_present(present, args.verbose)
+            _print_staged(staged)
         print("\n" + _("Install: {command}").format(
             command="openexpress updates --install PART_NUMBER [--reinstalls] --apply"))
         return 0
@@ -633,6 +652,8 @@ def cmd_updates(args) -> int:
                 print("  " + _update_line(u))
         if not chosen:
             print(_("Nothing to install: every offered file is already on the device."))
+            if any(any(u is s for s in staged) for u in skipped):
+                print(_("Disconnect the device to install it."))  # what is left to do
             return 0
     if not chosen:
         # "all" with nothing offered (a part number that is not offered is an error in select).

@@ -153,6 +153,15 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate]) -> list[Softwa
     return updates
 
 
+def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """System updates that are copied already and wait for the device to install them, which
+    it does when it is disconnected. Two facts, no guess: the server still offers the update
+    (not as a reinstall), so the device has not installed it, and the very same file (size
+    and MD5) is on the device."""
+    return [u for u in updates
+            if u.is_system and u.on_device and not u.is_reinstall and not u.is_metadata]
+
+
 def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """The real updates: not reinstalls, not metadata, not on the device already."""
     return [u for u in updates if not u.is_reinstall and not u.is_metadata and not u.on_device]
