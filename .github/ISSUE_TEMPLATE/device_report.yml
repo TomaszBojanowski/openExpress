@@ -1,5 +1,5 @@
 name: Device report
-description: Tell us how openExpress works with your Garmin watch (also when everything works!)
+description: Tell us how openExpress works with your Garmin device (also when everything works!)
 title: "[Device] "
 labels: ["device report"]
 body:
@@ -10,7 +10,7 @@ body:
         the most valuable help right now – **also when everything works**.
 
         **Privacy:** don't paste `openexpress info` output, your `GarminDevice.xml` or files
-        from `~/.config/openexpress` – they contain your watch's serial number, unit ID,
+        from `~/.config/openexpress` – they contain your device's serial number, unit ID,
         map unlock codes or login token. The report below contains none of these.
   - type: textarea
     id: report
@@ -32,13 +32,26 @@ body:
         - label: The device is detected and the Device page shows it
         - label: Logging in to Garmin Connect
         - label: Sync – a new activity appeared in Garmin Connect
-        - label: Sync – a course or workout from Garmin Connect arrived on the watch
+        - label: Sync – a course or workout from Garmin Connect arrived on the device
         - label: Checking for software updates
-        - label: Installing a software update
-        - label: Installing or removing a map
+        - label: Installing a system software update (GUPDATE file; the device installs it after it is disconnected)
+        - label: Installing other software components (e.g. time zone map, sensor or map support files)
+        - label: Installing, updating or removing a Garmin map
+        - label: Adding or removing a map of your own (.img)
         - label: Installing or removing a Connect IQ app or watch face
         - label: Copying music, podcasts or audiobooks
-        - label: Background sync when the watch is connected
+        - label: Making a backup
+        - label: Background sync when the device is connected
+  - type: dropdown
+    id: beta
+    attributes:
+      label: Is the device in Garmin's beta program?
+      options:
+        - "Yes"
+        - "No"
+        - Don't know
+    validations:
+      required: false
   - type: textarea
     id: problems
     attributes:
