@@ -60,6 +60,10 @@
   <url type="translate">https://github.com/TomaszBojanowski/openExpress#adding-a-translation</url>
   <screenshots>
     <screenshot type="default">
+      <caption>Software updates, with a beta version offered for the device</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/updates.png</image>
+    </screenshot>
+    <screenshot>
       <caption>Maps on the device and free maps to install</caption>
       <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/maps.png</image>
     </screenshot>
@@ -93,6 +97,25 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.7" date="2026-10-14">
+      <description>
+        <ul>
+          <li>Software updates: a system update is recognised by its file as well as by what
+          the server says, which does not always mark it. The Updates page starts with a
+          status: the system update with the installed and the new version, how many other
+          updates there are, or that the software is up to date.</li>
+          <li>Before a system update is copied, the window and the command line warn to charge
+          the device and not to disconnect it. The question in the window shows both versions
+          and links to the license.</li>
+          <li>Beta versions that Garmin offers to a device are marked as beta.</li>
+          <li>After a system update is copied, the Updates page and the command line say that
+          it waits for the device to install it when it is disconnected, instead of saying
+          that the software is up to date.</li>
+          <li>Installing a system update was tested on an Edge 1050 (beta 33.12).</li>
+          <li>A shorter description of the "Own maps" group, and new screenshots.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.6" date="2026-10-14">
       <description>
         <ul>
