@@ -1457,13 +1457,16 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         s = self.session
-        # Asks Garmin's server, then compares the offered files with those on the device.
-        self._load("updates", _("Checking for updates…"),
-                   lambda: upd.mark_present(s.storage, upd.parse_updates(
-                       s.client.software_updates(s.device.raw, include_reinstalls=True))),
-                   self.show_updates)
 
-    def show_updates(self, items) -> None:
+        def work():
+            # Asks Garmin's server, then compares the offered files with those on the device.
+            answer = s.client.software_updates(s.device.raw, include_reinstalls=True)
+            return upd.mark_present(s.storage, upd.parse_updates(answer)), upd.beta_offered(answer)
+
+        self._load("updates", _("Checking for updates…"), work,
+                   lambda result: self.show_updates(*result))
+
+    def show_updates(self, items, beta: bool = False) -> None:
         if self.session is None:
             return
         self.updates_cache = items
@@ -1474,7 +1477,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._set_update_state(new)
         # A system update is told at the top of the page; a second one (rare) is listed.
         system = next((u for u in new if u.is_system), None)
-        self._updates_status(sec, system, len(new))
+        self._updates_status(sec, system, len(new), beta)
         rest = [u for u in new if u is not system]
         if rest:
             g = sec.group(_("Available updates"))
@@ -1494,9 +1497,12 @@ class MainWindow(Adw.ApplicationWindow):
             for u in sorted(re, key=lambda x: x.title):
                 self._update_row(exp, u, reinstall=True)
 
-    def _updates_status(self, sec, system, count: int) -> None:
+    def _updates_status(self, sec, system, count: int, beta: bool = False) -> None:
         """The top of the Updates page: the system update when there is one, how many other
-        updates there are, or that the software is up to date."""
+        updates there are, or that the software is up to date; and whether Garmin offers beta
+        versions to the device."""
+        from openexpress import updates as upd
+
         d = self.session.device
         installed = _("{model} · version {version}").format(model=d.description,
                                                             version=d.software_version_str)
@@ -1504,7 +1510,10 @@ class MainWindow(Adw.ApplicationWindow):
         buttons = []
         if system is not None:
             icon, title = "software-update-available-symbolic", _("Software update available")
-            subtitle = f"{d.software_version_str} → {system.version} · {_human(system.size)}"
+            subtitle = " · ".join([f"{d.software_version_str} → {system.version}"]
+                                  # TRANSLATORS: marks a beta version of the device software
+                                  + ([_("Beta")] if system.is_beta else [])
+                                  + [_human(system.size)])
             detail = f"{system.title} · {system.severity_text} · {system.filename}"
             # TRANSLATORS: button
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
@@ -1526,7 +1535,8 @@ class MainWindow(Adw.ApplicationWindow):
             image.add_css_class("success")
         box.append(image)
         for text, styles in ((title, ["title-1"]), (subtitle, ["dim-label"]),
-                             (detail, ["caption", "dim-label"])):
+                             (detail, ["caption", "dim-label"]),
+                             (_(upd.BETA_OFFERED) if beta else None, ["caption", "dim-label"])):
             if text:
                 label = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER,
                                   max_width_chars=50)
@@ -1572,6 +1582,7 @@ class MainWindow(Adw.ApplicationWindow):
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
                 + ("\n\n" + _("License: {url}").format(url=u.eula_url) if u.eula_url else "")
+                + ("\n\n" + _("This is a beta version.") if u.is_beta else "")
                 + ("\n\n" + _(upd.SYSTEM_UPDATE_WARNING) if u.is_system else ""))
         d = Adw.AlertDialog(heading=_("Install update?"), body=body)
         d.add_response("cancel", _("Cancel"))

@@ -34,6 +34,9 @@ SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
 # Said before a system update is installed, on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
                            "not disconnect it while copying.")
+# Said when the server offers beta versions to the device ("accesslevel" of the answer, e.g.
+# "public_beta"), on the command line and in the window.
+BETA_OFFERED = N_("Garmin offers beta software for this device.")
 
 
 class UpdateError(Exception):
@@ -60,6 +63,8 @@ class SoftwareUpdate:
     datatype: str = ""
     # The file is on the device already, with the same size and MD5 (`mark_present`).
     on_device: bool = False
+    # "live", "archived", or for a beta version e.g. "public_beta_phased_rollout".
+    release_state: str = ""
 
     @property
     def key(self) -> str:
@@ -86,6 +91,10 @@ class SoftwareUpdate:
     @property
     def is_metadata(self) -> bool:
         return self.part_number.endswith("-META")
+
+    @property
+    def is_beta(self) -> bool:
+        return "beta" in self.release_state.casefold()
 
     @property
     def is_system(self) -> bool:
@@ -178,9 +187,16 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
                 locale=u.get("locale"),
                 changes=changes,
                 datatype=u.get("datatype") or "",
+                release_state=str(u.get("releasestate") or ""),
             )
         )
     return out
+
+
+def beta_offered(response: dict) -> bool:
+    """Whether the server offers beta versions to this device: said for the device in the
+    answer ("accesslevel"), not for each update (a reinstall of a plain file stays "live")."""
+    return "beta" in str(response.get("accesslevel") or "").casefold()
 
 
 def sort_for_install(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:

@@ -585,6 +585,8 @@ def cmd_updates(args) -> int:
     present = [u for u in items if u.on_device]
     print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
+    if upd.beta_offered(resp):
+        print(_(upd.BETA_OFFERED))
     if not args.install:
         listed = items if args.reinstalls else [u for u in items if not u.on_device]
         if not listed:
@@ -599,6 +601,8 @@ def cmd_updates(args) -> int:
                                                 x.name)):
             # TRANSLATORS: marks the main watch firmware in the list of updates
             flag = " [" + _("PRIMARY") + "]" if u.is_system else ""
+            # TRANSLATORS: marks a beta version in the list of updates
+            flag += " [" + _("BETA") + "]" if u.is_beta else ""
             print("  " + _update_line(u) + flag)
             if args.verbose:
                 print(f"      -> {u.device_path}")
