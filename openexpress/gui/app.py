@@ -1596,16 +1596,26 @@ class MainWindow(Adw.ApplicationWindow):
                 + _("On the device: {path}").format(path=u.device_path)
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
-                + ("\n\n" + _("License: {url}").format(url=u.eula_url) if u.eula_url else "")
                 + ("\n\n" + _("This is a beta version.") if u.is_beta else ""))
         d = Adw.AlertDialog(heading=_("Install update?"), body=body)
+        # Below the text: the license, then the warning, right above the buttons.
+        below = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        if u.eula_url.casefold().startswith("https://"):
+            # GTK opens it (in the Flatpak through the portal); only a web address is a link.
+            below.append(Gtk.LinkButton(uri=u.eula_url, label=_("License agreement (EULA)"),
+                                        halign=Gtk.Align.CENTER))
+        elif u.eula_url:
+            below.append(Gtk.Label(label=_("License: {url}").format(url=u.eula_url), wrap=True,
+                                   justify=Gtk.Justification.CENTER))
         if u.is_system:
-            # Below the text, in the warning colour of the theme and in bold.
+            # In the warning colour of the theme and in bold.
             warning = Gtk.Label(label=_(upd.SYSTEM_UPDATE_WARNING), wrap=True,
                                 justify=Gtk.Justification.CENTER)
             warning.add_css_class("warning")
             warning.add_css_class("heading")
-            d.set_extra_child(warning)
+            below.append(warning)
+        if below.get_first_child() is not None:
+            d.set_extra_child(below)
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", _("Accept and install"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)

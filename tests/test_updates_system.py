@@ -158,9 +158,8 @@ WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urzą
               "go podczas kopiowania.")
 
 
-def _question(monkeypatch, part, answer=None):
-    """The window's question before `part` is installed, nothing shown: its text, and the
-    warning below it (its text and styles) or None."""
+def _dialog(monkeypatch, part, answer=None):
+    """The window's question before `part` is installed; nothing is shown."""
     import gi
 
     gi.require_version("Gtk", "4.0")
@@ -179,9 +178,21 @@ def _question(monkeypatch, part, answer=None):
         updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
     (dialog,) = asked
+    return dialog
+
+
+def _below(dialog):
+    """What the question shows below its text, in order."""
     extra = dialog.get_extra_child()
-    return dialog.get_body(), (None if extra is None
-                               else (extra.get_label(), sorted(extra.get_css_classes())))
+    return [] if extra is None else list(_children(extra))
+
+
+def _question(monkeypatch, part, answer=None):
+    """The text of the question, and the warning below it (its text and styles) or None."""
+    dialog = _dialog(monkeypatch, part, answer)
+    warnings = [(w.get_label(), sorted(w.get_css_classes())) for w in _below(dialog)
+                if w.has_css_class("warning")]
+    return dialog.get_body(), (warnings[0] if warnings else None)
 
 
 def test_the_window_warns_before_a_system_update(monkeypatch):
@@ -562,3 +573,69 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
     (box,) = win.sections["updates"].groups[0].rows
     line = list(_children(box))[2]
     assert isinstance(line, Gtk.Box) and line.get_halign() == Gtk.Align.CENTER
+
+
+# --- the license in the question before an update ----------------------------------------------
+
+
+def _with_license(url, part="006-V0000-00"):
+    answer = server_answer()
+    for entry in answer["updates"]:
+        if entry["partNumber"] == part:
+            entry["eulaUrl"] = url
+    return answer
+
+
+def test_the_license_is_a_link_above_the_warning(monkeypatch):
+    from gi.repository import Gtk
+
+    url = "https://example.org/license.txt"
+    dialog = _dialog(monkeypatch, "006-V0000-00", _with_license(url))
+    link, warning = _below(dialog)  # the warning last, right above the buttons
+    assert isinstance(link, Gtk.LinkButton)
+    assert (link.get_uri(), link.get_label()) == (url, "License agreement (EULA)")
+    assert warning.get_label() == WARNING_EN
+    assert "License" not in dialog.get_body() and url not in dialog.get_body()
+
+
+def test_the_license_link_takes_any_letter_case_of_https(monkeypatch):
+    from gi.repository import Gtk
+
+    url = "HTTPS://example.org/license.txt"
+    (link,) = _below(_dialog(monkeypatch, "006-D0000-00", _with_license(url, "006-D0000-00")))
+    assert isinstance(link, Gtk.LinkButton) and link.get_uri() == url  # no warning: a plain file
+
+
+def test_no_license_no_link(monkeypatch):
+    from gi.repository import Gtk
+
+    (warning,) = _below(_dialog(monkeypatch, "006-V0000-00"))
+    assert not isinstance(warning, Gtk.LinkButton) and warning.get_label() == WARNING_EN
+    assert _dialog(monkeypatch, "006-D0000-00").get_extra_child() is None  # nothing below
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "http://example.org/license.txt",
+                                 "javascript:alert(1)"])
+def test_a_license_that_is_not_a_web_address_is_only_text(monkeypatch, url):
+    from gi.repository import Gtk
+
+    text, _warning = _below(_dialog(monkeypatch, "006-V0000-00", _with_license(url)))
+    assert not isinstance(text, Gtk.LinkButton)
+    assert isinstance(text, Gtk.Label) and text.get_label() == f"License: {url}"
+    assert not text.get_use_markup()
+
+
+def test_the_license_in_polish(monkeypatch):
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        link, warning = _below(_dialog(monkeypatch, "006-V0000-00",
+                                       _with_license("https://example.org/license.txt")))
+        text, _warning = _below(_dialog(monkeypatch, "006-V0000-00",
+                                        _with_license("file:///etc/passwd")))
+    finally:
+        i18n.setup("en")
+    assert link.get_label() == "Umowa licencyjna (EULA)"
+    assert warning.get_label() == WARNING_PL
+    assert text.get_label() == "Licencja: file:///etc/passwd"
