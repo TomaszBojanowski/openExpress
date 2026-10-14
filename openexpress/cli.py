@@ -1752,7 +1752,7 @@ def _run(args, service, requests) -> int:
         log.info("server error: %s: %s", type(e).__name__, e)
         _error(_("Server error: {error}").format(error=e))
         if args.verbose and e.body:
-            print(e.body, file=sys.stderr)
+            print(applog.redact(e.body), file=sys.stderr)  # the server's own words: filtered
         return 1
     except requests.RequestException as e:
         _error(_("Network error: could not reach the Garmin server ({error})").format(
@@ -1763,3 +1763,10 @@ def _run(args, service, requests) -> int:
     except KeyboardInterrupt:
         _error(_("Interrupted."))
         return 130
+    except Exception as e:  # not foreseen: told briefly, the rest in the log
+        # Logged with its traceback at INFO: always in the log file, on the terminal only with
+        # -v; both filtered. Its text may carry a device address or a path, so the message for
+        # the user is filtered as well.
+        log.info("unexpected error: %s", type(e).__name__, exc_info=True)
+        _error(applog.redact(_("Error: {error}").format(error=str(e) or type(e).__name__)))
+        return 1

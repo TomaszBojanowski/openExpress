@@ -196,6 +196,53 @@ def test_messages_for_the_user_keep_the_addresses(log_file, monkeypatch, capsys)
                                  for line in log_lines)
 
 
+SECRET_ADDRESS = "mtp://091e_51b4_0000abcdef12/GARMIN/Activity/x.fit"
+
+
+def test_a_server_answer_shown_with_v_is_redacted(log_file, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.connect import ApiError
+
+    def refused(args):
+        raise ApiError("Upload: HTTP 500", 500,
+                       '{"unitId": 3987654321, "owner": "a@example.org", "at": "' + SECRET_ADDRESS + '"}')
+
+    monkeypatch.setattr(cli, "cmd_info", refused)
+    assert cli.main(["info"]) == 1
+    err = capsys.readouterr().err
+    assert "Server error: Upload: HTTP 500" in err and "unitId" not in err  # no body without -v
+    assert cli.main(["-v", "info"]) == 1
+    err = capsys.readouterr().err
+    assert '{"unitId": <number>, "owner": "<email>", "at": "mtp://<device>/' in err
+    for secret in ("3987654321", "a@example.org", "0000abcdef12"):
+        assert secret not in err
+
+
+def test_an_unexpected_error_is_told_briefly_and_redacted(log_file, monkeypatch, capsys):
+    from openexpress import cli
+
+    def broken(args):
+        raise RuntimeError(f"cannot read {SECRET_ADDRESS} of unit 3987654321")
+
+    monkeypatch.setattr(cli, "cmd_info", broken)
+    assert cli.main(["info"]) == 1
+    err = capsys.readouterr().err
+    # The user gets one line, filtered; no traceback without -v.
+    assert err == "Error: cannot read mtp://<device>/GARMIN/Activity/x.fit of unit <number>\n"
+    # The log file has it all, filtered.
+    text = "\n".join(lines(log_file))
+    assert "INFO openexpress.cli: unexpected error: RuntimeError" in text and "Traceback" in text
+    assert "0000abcdef12" not in text and "3987654321" not in text
+    assert "end: info, exit code 1" in text
+
+    assert cli.main(["-v", "info"]) == 1
+    err = capsys.readouterr().err
+    assert "Traceback" in err and "RuntimeError: cannot read mtp://<device>/" in err
+    assert ("Error: cannot read mtp://<device>/GARMIN/Activity/x.fit of unit <number>"
+            in err.splitlines())  # the "end" line of the log follows it with -v
+    assert "0000abcdef12" not in err and "3987654321" not in err
+
+
 def test_program_works_without_a_log_file(tmp_path, monkeypatch, capsys):
     blocked = tmp_path / "state-is-a-file"
     blocked.write_text("")
