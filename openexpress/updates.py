@@ -31,6 +31,9 @@ SPACE_MARGIN = 2 * 1024 * 1024
 # come without "isprimaryfirmware" and without "isrestartrequired". The data type does not
 # tell either: fonts and databases are "Firmware" too.
 SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
+# Said before a system update is installed, on the command line and in the window.
+SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
+                           "not disconnect it while copying.")
 
 
 class UpdateError(Exception):

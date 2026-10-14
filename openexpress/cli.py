@@ -639,8 +639,7 @@ def cmd_updates(args) -> int:
     for e in eulas:
         print(_("License (EULA): {url}").format(url=e))
     if any(u.is_system for u in chosen):
-        print(_("Warning: this is a device system update. Charge the device and do not disconnect "
-                "it while copying."))
+        print(_(upd.SYSTEM_UPDATE_WARNING))
     if not args.apply:
         print("\n" + _("Dry run: nothing was downloaded or written. Add --apply "
                        "(this means you accept the licenses above)."))

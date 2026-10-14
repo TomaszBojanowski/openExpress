@@ -6,6 +6,7 @@ without "isrestartrequired", and its data type, "Firmware", is also that of plai
 as fonts. All values are made up."""
 
 import hashlib
+import types
 
 import pytest
 
@@ -146,3 +147,53 @@ def test_cli_does_not_warn_before_a_plain_file(offered, no_download, capsys):
     out = capsys.readouterr().out
     assert "Warning: this is a device system update" not in out
     assert "Dry run: nothing was downloaded or written." in out
+
+
+# --- the window asks before it installs ---------------------------------------------------------
+
+WARNING_EN = ("Warning: this is a device system update. Charge the device and do not disconnect "
+              "it while copying.")
+WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urządzenie i nie odłączaj "
+              "go podczas kopiowania.")
+
+
+def _question(monkeypatch, part):
+    """The text of the window's question before `part` is installed; nothing is shown."""
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.app import MainWindow
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    items = updates.parse_updates(lower_keys(server_answer()))
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    win = types.SimpleNamespace(session=types.SimpleNamespace(), updates_cache=items)
+    MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
+    (dialog,) = asked
+    return dialog.get_body()
+
+
+def test_the_window_warns_before_a_system_update(monkeypatch):
+    body = _question(monkeypatch, "006-V0000-00")
+    assert body.endswith("\n\n" + WARNING_EN)  # the same words as on the command line
+
+
+def test_the_window_does_not_warn_before_a_plain_file(monkeypatch):
+    body = _question(monkeypatch, "006-D0000-00")
+    assert "Warning" not in body and "disconnect" not in body
+
+
+def test_the_warning_in_polish(monkeypatch):
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        body = _question(monkeypatch, "006-V0000-00")
+    finally:
+        i18n.setup("en")
+    assert body.endswith("\n\n" + WARNING_PL)
