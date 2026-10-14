@@ -196,16 +196,25 @@ def cmd_report(args) -> int:
         logged_in = store.load() is not None
     except Exception:  # noqa: BLE001 - only reported as yes/no
         logged_in = False
-    text = report.build(dev, st, logged_in)
+    report_text = text = report.build(dev, st, logged_in)
     if args.log:
         text = report.with_log(text, applog.tail(report.LOG_LINES))
     print(text, end="")
-    print("\n" + _("This report contains no serial number, unit ID or e-mail. "
-                   "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
-          file=sys.stderr)
+    # An address that opens the form with the report filled in; never with the log.
+    url = report.issue_url(report_text, dev.description)
+    if url:
+        print("\n" + _("This report contains no serial number, unit ID or e-mail. Open this "
+                       "address to start a device report with it filled in: {url}").format(
+            url=url), file=sys.stderr)
+    else:  # too long for an address: the empty form
+        print("\n" + _("This report contains no serial number, unit ID or e-mail. "
+                       "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
+              file=sys.stderr)
     if args.log:
         print(_("The end of the log is attached. It is filtered, but read it before you "
                 "send it."), file=sys.stderr)
+        if url:
+            print(_("The log is not in the address: paste it into the issue."), file=sys.stderr)
     else:
         print(_("Log file: {path} (add --log to attach its last lines to the report)").format(
             path=applog.shown_path()), file=sys.stderr)

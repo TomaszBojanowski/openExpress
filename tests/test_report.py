@@ -274,3 +274,59 @@ def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
         "identyfikatora urządzenia ani adresu e-mail.")  # the same words as on the command line
     assert said == ["Log jest w schowku: wklej go w zgłoszeniu"]
     assert said_too_long == ["Raport skopiowany: wklej go w formularzu"]
+
+
+# --- the command line: an address that fills in the form --------------------------------------
+
+
+def test_cli_report_prints_an_address_with_the_report(device_root, xdg, log_file, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(device_root), "report"]) == 0
+    out = capsys.readouterr()
+    url = report.issue_url(out.out, "Test watch")
+    assert url and url in out.err  # the report on stdout is the one in the address
+    assert ("This report contains no serial number, unit ID or e-mail. Open this address to "
+            f"start a device report with it filled in: {url}") in out.err
+    assert "1234567890" not in out.err and "mtp" not in out.err
+    assert "The log is not in the address" not in out.err
+
+
+def test_cli_report_with_log_keeps_the_log_out_of_the_address(device_root, xdg, log_file,
+                                                              capsys):
+    from openexpress.cli import main
+
+    _write_log(log_file, ["a line of the log"])
+    assert main(["--path", str(device_root), "report", "--log"]) == 0
+    out = capsys.readouterr()
+    report_text = out.out.split("\n### Log (last ")[0]
+    assert report.issue_url(report_text, "Test watch") in out.err
+    assert "a line of the log" in out.out and "a%20line%20of%20the%20log" not in out.err
+    assert "The log is not in the address: paste it into the issue." in out.err
+    assert "read it before you send it" in out.err
+
+
+def test_cli_report_too_long_for_an_address_gives_the_empty_form(device_root, xdg, log_file,
+                                                                 capsys, monkeypatch):
+    from openexpress.cli import main
+
+    monkeypatch.setattr(report, "MAX_URL", 100)
+    assert main(["--path", str(device_root), "report", "--log"]) == 0
+    err = capsys.readouterr().err
+    assert (f"Paste it into a device report: {report.ISSUE_URL}\n") in err
+    assert "Open this address" not in err and "not in the address" not in err
+
+
+def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
+    from openexpress import i18n
+    from openexpress.cli import main
+
+    try:
+        assert main(["--path", str(device_root), "--lang", "pl", "report", "--log"]) == 0
+    finally:
+        i18n.setup("en")
+    err = capsys.readouterr().err
+    assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
+            "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
+            "https://github.com/") in err
+    assert "Logu nie ma w adresie: wklej go w zgłoszeniu." in err
