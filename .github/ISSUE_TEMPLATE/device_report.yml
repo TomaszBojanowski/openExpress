@@ -61,10 +61,12 @@ body:
         What you did, what you expected and what happened, with the exact error message.
         For details run the command with `-v`, e.g. `openexpress -v sync`.
 
-        **Before pasting:** the log at the end of the device report is already filtered.
-        Anything else you paste (output of `-v`, `journalctl`, screenshots) is not: remove the
-        serial number (it is also part of `mtp://…` addresses), the unit ID, your e-mail
-        address and the names of your files first.
+        **Before pasting:** the log at the end of the device report is already filtered, and
+        so are the log lines that `-v` prints (openExpress 0.4.8 and newer). Error messages
+        and the output of commands such as `openexpress info` are not, nor is anything else
+        you paste (`journalctl`, screenshots): remove the serial number (it is also part of
+        `mtp://…` addresses), the unit ID, your e-mail address and the names of your files
+        first.
     validations:
       required: false
   - type: dropdown
