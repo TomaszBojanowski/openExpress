@@ -595,10 +595,10 @@ def cmd_updates(args) -> int:
         visible = [u for u in listed if not u.is_metadata or args.verbose]
         print((_("Reinstalls: {count}") if args.reinstalls
                else _("Available updates: {count}")).format(count=len(visible)))
-        for u in sorted(visible, key=lambda x: (not x.is_primary, x.severity.lower() != "critical",
+        for u in sorted(visible, key=lambda x: (not x.is_system, x.severity.lower() != "critical",
                                                 x.name)):
             # TRANSLATORS: marks the main watch firmware in the list of updates
-            flag = " [" + _("PRIMARY") + "]" if u.is_primary else ""
+            flag = " [" + _("PRIMARY") + "]" if u.is_system else ""
             print("  " + _update_line(u) + flag)
             if args.verbose:
                 print(f"      -> {u.device_path}")
@@ -638,7 +638,7 @@ def cmd_updates(args) -> int:
     eulas = sorted({u.eula_url for u in chosen if u.eula_url})
     for e in eulas:
         print(_("License (EULA): {url}").format(url=e))
-    if any(u.is_primary or u.restart_required for u in chosen):
+    if any(u.is_system for u in chosen):
         print(_("Warning: this is a device system update. Charge the device and do not disconnect "
                 "it while copying."))
     if not args.apply:

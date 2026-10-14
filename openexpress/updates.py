@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 SEVERITY_ORDER = {"critical": 0, "recommended": 1, "optional": 2, "unspecified": 3}
 RGN_MAGIC = b"KpGr"
 SPACE_MARGIN = 2 * 1024 * 1024
+# The files of a device system update. The server does not always say so: the system
+# updates of a fēnix 8 and an Edge 1050 (GUPDATE.GSP, a bundle with the device software)
+# come without "isprimaryfirmware" and without "isrestartrequired". The data type does not
+# tell either: fonts and databases are "Firmware" too.
+SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
 
 
 class UpdateError(Exception):
@@ -78,6 +83,13 @@ class SoftwareUpdate:
     @property
     def is_metadata(self) -> bool:
         return self.part_number.endswith("-META")
+
+    @property
+    def is_system(self) -> bool:
+        """An update of the device system: copied last, and the device must stay connected
+        and charged while it is copied."""
+        return (self.is_primary or self.restart_required
+                or self.filename.upper() in SYSTEM_FILES)
 
 
 # Types of updates as the server names them ("datatype"), seen for a fēnix 8 and in the
@@ -169,9 +181,8 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
 
 
 def sort_for_install(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
-    """Files requiring a restart go last; otherwise in server order."""
-    return sorted(updates,
-                  key=lambda u: (u.restart_required or u.is_primary, u.order, u.part_number))
+    """System updates go last; otherwise in server order."""
+    return sorted(updates, key=lambda u: (u.is_system, u.order, u.part_number))
 
 
 def present_with_metadata(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
@@ -261,7 +272,7 @@ def install(
             _delete_quietly(storage, real)
             raise UpdateError(_("Write verification of {path} failed").format(path=real))
         report.installed.append(f"{u.title} {u.version} -> {real}")
-        report.restart_required |= u.restart_required or u.is_primary
+        report.restart_required |= u.is_system
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(local.stat().st_size), posixpath.dirname(real))
     return report
