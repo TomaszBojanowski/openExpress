@@ -504,3 +504,28 @@ def test_beta_in_the_window_in_polish(monkeypatch):
         "Dostępna aktualizacja oprogramowania", "23.39 → 23.40 · Beta · 12 B",
         "Test Bundle · Zalecana · GUPDATE.GSP",
         "Garmin oferuje dla tego urządzenia oprogramowanie w wersji beta."]
+
+
+def test_cli_marks_a_beta_version_in_what_will_be_installed(offered_beta, no_download, capsys):
+    root = offered_beta()
+    assert main(["--path", str(root), "updates", "--install", "006-V0000-00"]) == 0
+    assert ("  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP"
+            in capsys.readouterr().out.splitlines())
+    # Not a beta: no mark.
+    assert main(["--path", str(root), "updates", "--install", "006-D0000-00"]) == 0
+    assert ("  006-D0000-00 23.40  Test Font  (4 B) -> Garmin/Font/006-D0000-00.fnt"
+            in capsys.readouterr().out.splitlines())
+
+
+def test_cli_marks_a_beta_version_in_what_will_be_installed_in_polish(offered_beta, no_download,
+                                                                      capsys):
+    from openexpress import i18n
+
+    try:
+        assert main(["--path", str(offered_beta()), "--lang", "pl", "updates", "--install",
+                     "006-V0000-00"]) == 0
+    finally:
+        i18n.setup("en")
+    out = capsys.readouterr().out.splitlines()
+    assert "Do zainstalowania:" in out
+    assert "  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP" in out

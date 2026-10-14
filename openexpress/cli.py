@@ -555,6 +555,12 @@ To finish the installation:
 """)
 
 
+def _beta_mark(u) -> str:
+    """" [BETA]" after a beta version, in the list of updates and in what will be installed."""
+    # TRANSLATORS: marks a beta version in the list of updates
+    return " [" + _("BETA") + "]" if u.is_beta else ""
+
+
 def _update_line(u) -> str:
     """One update in a list. The file name is added when the server gives no real name."""
     name = u.title if u.title == u.name else f"{u.title} ({u.filename})"
@@ -601,8 +607,7 @@ def cmd_updates(args) -> int:
                                                 x.name)):
             # TRANSLATORS: marks the main watch firmware in the list of updates
             flag = " [" + _("PRIMARY") + "]" if u.is_system else ""
-            # TRANSLATORS: marks a beta version in the list of updates
-            flag += " [" + _("BETA") + "]" if u.is_beta else ""
+            flag += _beta_mark(u)
             print("  " + _update_line(u) + flag)
             if args.verbose:
                 print(f"      -> {u.device_path}")
@@ -637,7 +642,8 @@ def cmd_updates(args) -> int:
     need, free = upd.check_space(st, chosen)
     print(_("To install:"))
     for u in upd.sort_for_install(chosen):
-        print(f"  {u.part_number} {u.version}  {u.title}  ({_human(u.size)}) -> {u.device_path}")
+        print(f"  {u.part_number} {u.version}  {u.title}{_beta_mark(u)}  ({_human(u.size)}) "
+              f"-> {u.device_path}")
     print(_("Space: {needed} needed, {free} free").format(needed=_human(need), free=_human(free)))
     eulas = sorted({u.eula_url for u in chosen if u.eula_url})
     for e in eulas:
