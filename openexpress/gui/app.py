@@ -43,6 +43,8 @@ from openexpress.settings import (  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
+# Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
+ARROW = "\u00a0→\u00a0"
 log = logging.getLogger(__name__)
 
 
@@ -1634,7 +1636,7 @@ class MainWindow(Adw.ApplicationWindow):
         buttons = []
         if system is not None:
             icon, title = "software-update-available-symbolic", _("Software update available")
-            versions, size = f"{d.software_version_str} → {system.version}", _human(system.size)
+            versions, size = f"{d.software_version_str}{ARROW}{system.version}", _human(system.size)
             subtitle = f"{versions} · {size}"
             if system.is_beta:
                 # Three parts, so that "Beta" can have the warning colour of the theme (light
@@ -1647,7 +1649,7 @@ class MainWindow(Adw.ApplicationWindow):
                                         "suggested-action"))
         elif ready is not None:
             icon, title = "software-update-available-symbolic", _("Update ready to install")
-            versions = f"{d.software_version_str} → {ready.version}"
+            versions = f"{d.software_version_str}{ARROW}{ready.version}"
             # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
             disconnect = _("disconnect the device to install it")
             subtitle = f"{versions} · {disconnect}"
@@ -1722,7 +1724,7 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         chosen = upd.select(self.updates_cache, [u.part_number])
         # A system update: from which version of the device software to which.
-        version = (f"{s.device.software_version_str} → {u.version}" if u.is_system
+        version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system
                    else u.version)
         body = (f"{u.title} {version}\n"
                 + _("Size: {size}").format(size=_human(u.size)) + "\n"
