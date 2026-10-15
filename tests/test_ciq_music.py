@@ -2519,17 +2519,18 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
     assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Install New Face 1.0 (1.0 kB)",
-        ("  New Face: The Flatpak version cannot install apps on this device over USB yet. "
-         "The app will be queued in Garmin Connect and installed by the phone or Garmin Express."),
+        ("  New Face: The Flatpak has no access to USB devices, so it cannot install apps on "
+         "this device. The app will be queued in Garmin Connect and installed by the phone or "
+         "Garmin Express."),
         "Dry run. Add --apply.",
     ]
     assert FakeStore.queued == []
 
     assert main(["--path", str(st.root), "apps", "install", "New Face", "--apply"]) == 0
     assert capsys.readouterr().out.splitlines()[2:] == [
-        ("New Face: The Flatpak version cannot install apps on this device over USB yet. "
-         "The app waits in the queue in Garmin Connect and will be installed by the phone or "
-         "Garmin Express."),
+        ("New Face: The Flatpak has no access to USB devices, so it cannot install apps on "
+         "this device. The app waits in the queue in Garmin Connect and will be installed by "
+         "the phone or Garmin Express."),
     ]
     assert FakeStore.queued == [["New Face"]] and apps_cli.downloads == 0
     assert untouched(st, dev, fake, attempts, backups, before)
@@ -2549,16 +2550,16 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
     assert main(["--path", str(st.root), "apps", "update"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Update Face It 1.0 (1.0 kB)",
-        ("  Face It: The Flatpak version cannot update apps on this device over USB yet. "
-         "The update will be queued in Garmin Connect and installed by the phone or Garmin "
-         "Express."),
+        ("  Face It: The Flatpak has no access to USB devices, so it cannot update apps on "
+         "this device. The update will be queued in Garmin Connect and installed by the "
+         "phone or Garmin Express."),
         "Dry run. Add --apply.",
     ]
     assert main(["--path", str(st.root), "apps", "update", "--apply"]) == 0
     assert capsys.readouterr().out.splitlines()[2:] == [
-        ("Face It: The Flatpak version cannot update apps on this device over USB yet. "
-         "The update waits in the queue in Garmin Connect and will be installed by the phone "
-         "or Garmin Express."),
+        ("Face It: The Flatpak has no access to USB devices, so it cannot update apps on "
+         "this device. The update waits in the queue in Garmin Connect and will be installed "
+         "by the phone or Garmin Express."),
     ]
     assert FakeStore.queued == [["Face It"]] and apps_cli.downloads == 0
     assert untouched(st, dev, fake, attempts, backups, before)
@@ -2572,8 +2573,9 @@ def test_flatpak_cli_remove_changes_nothing_and_says_why(flatpak_spot, apps_cli,
     st, dev, fake, _app, attempts = flatpak_spot
     monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
     before, tree = apps_files(st), fake_tree(fake)
-    told = ("Face It: The Flatpak version cannot remove apps from this device over USB yet. "
-            "Remove it on the phone, in the Connect IQ or Garmin Connect app.")
+    told = ("Face It: The Flatpak has no access to USB devices, so it cannot remove apps "
+            "from this device. Remove it on the phone, in the Connect IQ or Garmin Connect "
+            "app.")
 
     assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 1
     assert capsys.readouterr().out.splitlines() == [
@@ -2592,18 +2594,18 @@ def test_flatpak_window_texts(flatpak_spot):
     assert ciq.removal_sandboxed(dev, st, app) and not ciq.removable_directly(dev, st, app)
     app.sandboxed = True
     assert MainWindow._forget_text(app) == (
-        "The Flatpak version cannot remove apps from this device over USB yet. Remove it on "
-        "the phone, in the Connect IQ or Garmin Connect app.\n\n"
+        "The Flatpak has no access to USB devices, so it cannot remove apps from this "
+        "device. Remove it on the phone, in the Connect IQ or Garmin Connect app.\n\n"
         "Here you can only remove it from your account list.")
     app.sandboxed = False
     assert MainWindow._forget_text(app).startswith("Face It cannot be removed over USB: ")
     text = MainWindow._for_phone_text(["Face It"], ["Face It"], ["Face It"])
-    assert text == ("Face It: The Flatpak version cannot update apps on this device over USB "
-                    "yet. The update waits in the queue in Garmin Connect and will be installed "
-                    "by the phone or Garmin Express.")
+    assert text == ("Face It: The Flatpak has no access to USB devices, so it cannot update "
+                    "apps on this device. The update waits in the queue in Garmin Connect and "
+                    "will be installed by the phone or Garmin Express.")
     assert MainWindow._for_phone_text(["Face It"], ["Face It"]).startswith(
-        "Face It: The Flatpak version cannot install apps on this device over USB yet. The app "
-        "waits in the queue")
+        "Face It: The Flatpak has no access to USB devices, so it cannot install apps on this "
+        "device. The app waits in the queue")
     # Outside the sandbox the wording is the old one.
     assert MainWindow._for_phone_text(["Face It"]).startswith("Face It: openExpress cannot")
 
@@ -2625,8 +2627,7 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
     errors = []
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == [] and lines == [
-        ("The Flatpak version cannot install apps on this device over USB yet; 1 Connect IQ "
-         "app waits in the queue.")]
+        "The Flatpak has no access to USB devices; 1 Connect IQ app waits in the queue."]
     assert untouched(st, dev, fake, attempts, backups, before)
 
 

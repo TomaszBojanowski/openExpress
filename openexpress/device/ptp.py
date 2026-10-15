@@ -21,6 +21,7 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import logging
+import os
 import struct
 from dataclasses import dataclass
 from typing import Protocol
@@ -302,6 +303,7 @@ class LibusbTransport:
         self._lib, self._context, self._handle = lib, context, handle
         self._interface, self._ep_out, self._ep_in = interface, ep_out, ep_in
         self.packet_size, self.timeout_ms = packet_size, timeout_ms
+        self._fd: int | None = None  # the device node opened by `open_node`, closed with us
 
     @classmethod
     def open(cls, bus: int, address: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
@@ -352,6 +354,23 @@ class LibusbTransport:
             lib.libusb_exit(context)
             raise
 
+    @classmethod
+    def open_node(cls, path, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
+        """Open the device through its node in /dev/bus/usb: in a Flatpak with the
+        --device=usb permission the node is there, but no USB tree that libusb could scan."""
+        try:
+            fd = os.open(path, os.O_RDWR | os.O_CLOEXEC)
+        except OSError as e:
+            raise UsbUnavailable(_("The USB device cannot be opened: {error}").format(
+                error=e.strerror or type(e).__name__)) from e
+        try:
+            transport = cls.from_fd(fd, timeout_ms)
+        except BaseException:
+            os.close(fd)
+            raise
+        transport._fd = fd
+        return transport
+
     @staticmethod
     def _check(lib, result: int) -> None:
         if result < 0:
@@ -401,6 +420,9 @@ class LibusbTransport:
             self._lib.libusb_close(self._handle)
             self._lib.libusb_exit(self._context)
             self._handle = None
+        if self._fd is not None:  # libusb does not close a descriptor it was given
+            os.close(self._fd)
+            self._fd = None
 
 
 def _bulk_interface(config: _Config) -> tuple[int, int, int, int] | None:

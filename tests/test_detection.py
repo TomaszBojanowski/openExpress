@@ -4,6 +4,7 @@ All serial numbers and USB trees here are made up.
 """
 
 import logging
+import os
 import types
 
 import pytest
@@ -608,6 +609,67 @@ def test_no_ptp_session_where_it_cannot_work(exclusive, monkeypatch, change):
     if change == "no-libusb":
         monkeypatch.setattr(ptp, "load_libusb", missing)
     assert st.exclusive_ptp() is None
+
+
+# --- a Flatpak with the --device=usb permission ------------------------------------------
+
+
+def node(usb_nodes, bus=3, address=14, mode=0o600):
+    path = usb_nodes / f"{bus:03d}" / f"{address:03d}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"")
+    path.chmod(mode)
+    return path
+
+
+def test_the_usb_node_of_a_device(usb_nodes):
+    usb = gio_storage.GarminUsb("51b4", "usb", 3, 14)
+    assert gio_storage.usb_node(usb) is None  # not there: no access
+    path = node(usb_nodes)
+    assert gio_storage.usb_node(usb) == path and path.name == "014" and path.parent.name == "003"
+    assert gio_storage.usb_node(gio_storage.GarminUsb("51b4", "uri")) is None
+    assert gio_storage.usb_node(None) is None
+
+
+def test_flatpak_without_access_to_usb_stays_as_before(exclusive, monkeypatch):
+    st, _fake, events = exclusive
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    assert st.usb_blocked() and st.exclusive_ptp() is None
+    assert events == []  # nothing unmounted
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root may write any file")
+def test_flatpak_with_a_node_it_may_not_write_stays_as_before(exclusive, usb_nodes,
+                                                               monkeypatch):
+    st, _fake, events = exclusive
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    node(usb_nodes, mode=0o400)
+    assert st.usb_blocked() and st.exclusive_ptp() is None and events == []
+
+
+def test_flatpak_with_access_to_usb_opens_the_device_through_its_node(exclusive, usb_nodes,
+                                                                     monkeypatch):
+    from openexpress.device import ptp
+
+    st, fake, events = exclusive
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    path = node(usb_nodes)
+    monkeypatch.setattr(ptp.LibusbTransport, "open_node",
+                        classmethod(lambda cls, p: events.append(("node", p)) or fake))
+    assert not st.usb_blocked()
+    with st.exclusive_ptp() as session:
+        assert session is not None and fake.session_open
+        assert events == [("unmount", NUMERIC), ("node", path)]  # not by scanning USB
+    assert events[-1] == ("mount", NUMERIC, False)
+
+
+def test_the_version_from_source_still_opens_the_device_by_its_place_on_usb(exclusive,
+                                                                           usb_nodes):
+    st, _fake, events = exclusive
+    node(usb_nodes)
+    assert not st.usb_blocked()
+    with st.exclusive_ptp():
+        assert events == [("unmount", NUMERIC), ("usb", 3, 14)]
 
 
 def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):

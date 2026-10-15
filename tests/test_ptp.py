@@ -1,5 +1,6 @@
 """The PTP layer, against a fake device. No USB device is touched and all data is made up."""
 
+import os
 import struct
 
 import pytest
@@ -411,3 +412,51 @@ def test_bulk_interface_is_found_in_a_descriptor():
     config = ptp._Config(bNumInterfaces=2, interface=interfaces)
     assert ptp._bulk_interface(config) == (1, 0x02, 0x81, 512)
     assert ptp._bulk_interface(ptp._Config(bNumInterfaces=1, interface=interfaces)) is None
+
+
+# --- a device opened through its node (a Flatpak with --device=usb) -----------------------
+
+
+class FakeLibusb:
+    def __init__(self):
+        self.calls = []
+
+    def __getattr__(self, name):
+        return lambda *args: self.calls.append(name) or 0
+
+
+def test_a_device_opened_through_its_node_closes_the_descriptor(tmp_path, monkeypatch):
+    path = tmp_path / "014"
+    path.write_bytes(b"")
+    given = []
+
+    def from_fd(cls, fd, timeout_ms=ptp.TIMEOUT_MS):
+        given.append(fd)
+        return cls(FakeLibusb(), None, 1, 0, 1, 0x81, 512)
+
+    monkeypatch.setattr(ptp.LibusbTransport, "from_fd", classmethod(from_fd))
+    transport = ptp.LibusbTransport.open_node(path)
+    os.fstat(given[0])  # open while the transport is
+    transport.close()
+    assert transport._lib.calls == ["libusb_release_interface", "libusb_close", "libusb_exit"]
+    with pytest.raises(OSError):
+        os.fstat(given[0])
+    transport.close()  # a second close does nothing
+
+
+def test_a_node_that_cannot_be_used_leaves_no_descriptor_open(tmp_path, monkeypatch):
+    path = tmp_path / "014"
+    path.write_bytes(b"")
+    given = []
+
+    def refused(cls, fd, timeout_ms=ptp.TIMEOUT_MS):
+        given.append(fd)
+        raise ptp.UsbUnavailable("busy")
+
+    monkeypatch.setattr(ptp.LibusbTransport, "from_fd", classmethod(refused))
+    with pytest.raises(ptp.UsbUnavailable, match="busy"):
+        ptp.LibusbTransport.open_node(path)
+    with pytest.raises(OSError):
+        os.fstat(given[0])
+    with pytest.raises(ptp.UsbUnavailable, match="cannot be opened"):
+        ptp.LibusbTransport.open_node(tmp_path / "missing")

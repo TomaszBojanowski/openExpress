@@ -84,6 +84,18 @@ def backups(tmp_path, monkeypatch) -> Path:
     return folder
 
 
+@pytest.fixture(autouse=True)
+def usb_nodes(tmp_path, monkeypatch) -> Path:
+    """No test looks at the real USB device nodes: /dev/bus/usb is an empty folder here."""
+    folder = tmp_path / "dev-bus-usb"
+    try:
+        from openexpress.device import gio_storage
+    except ImportError:  # without GObject nothing opens a USB device anyway
+        return folder
+    monkeypatch.setattr(gio_storage, "USB_NODES", folder)
+    return folder
+
+
 @pytest.fixture
 def device_root(tmp_path) -> Path:
     root = tmp_path / "device"

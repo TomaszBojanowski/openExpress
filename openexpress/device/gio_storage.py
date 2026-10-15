@@ -34,6 +34,8 @@ log = logging.getLogger(__name__)
 
 GARMIN_VID = "091e"
 SYSFS_USB = Path("/sys/bus/usb/devices")
+# The device nodes libusb opens. A Flatpak has them only with the --device=usb permission.
+USB_NODES = Path("/dev/bus/usb")
 _ATTRS = "standard::name,standard::type,standard::size,time::modified"
 
 
@@ -311,19 +313,22 @@ class GioStorage(Storage):
         return self._fs_attr("filesystem::size") or None
 
     def usb_blocked(self) -> bool:
-        return in_flatpak()
+        return in_flatpak() and usb_node(self.usb) is None
 
     def exclusive_ptp(self):
-        # A Flatpak sandbox has no USB device nodes; there the app is only queued.
         usb = self.usb
-        if (in_flatpak() or usb is None or usb.bus is None or usb.address is None
-                or not self.device_uri):
+        if usb is None or usb.bus is None or usb.address is None or not self.device_uri:
+            return None
+        # A Flatpak reaches the device only through its node, which it has with the
+        # --device=usb permission; without it the app is only queued.
+        node = usb_node(usb) if in_flatpak() else None
+        if in_flatpak() and node is None:
             return None
         try:
             ptp.load_libusb()
         except ptp.UsbUnavailable:
             return None
-        return _exclusive(self.device_uri, usb.bus, usb.address, self)
+        return _exclusive(self.device_uri, usb.bus, usb.address, self, node)
 
 
 @dataclass(frozen=True)
@@ -626,6 +631,15 @@ def _key(uri: str) -> str:
     return uri.rstrip("/").lower()
 
 
+def usb_node(usb: GarminUsb | None) -> Path | None:
+    """The node of this USB device in /dev/bus/usb, when this process may read and write
+    it; None otherwise (in a Flatpak without the --device=usb permission there is none)."""
+    if usb is None or usb.bus is None or usb.address is None:
+        return None
+    node = USB_NODES / f"{usb.bus:03d}" / f"{usb.address:03d}"
+    return node if os.access(node, os.R_OK | os.W_OK) else None
+
+
 def own_remount(mount) -> bool:
     """Whether this mount appearing or disappearing is our own doing."""
     root = mount.get_root()
@@ -695,15 +709,18 @@ def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
 
 
 @contextmanager
-def _exclusive(uri: str, bus: int, address: int, storage: Storage):
+def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | None = None):
     _quiet_until[_key(uri)] = float("inf")
     started = time.monotonic()
     try:
         log.info("PTP: unmounting the device from gvfs")
         _unmount(uri)
         try:
-            with ptp.Session(ptp.LibusbTransport.open(bus, address)) as session:
-                log.info("PTP: session open after %.1f s", time.monotonic() - started)
+            transport = (ptp.LibusbTransport.open_node(node) if node is not None
+                         else ptp.LibusbTransport.open(bus, address))
+            with ptp.Session(transport) as session:
+                log.info("PTP: session open after %.1f s%s", time.monotonic() - started,
+                         " (through the device node)" if node is not None else "")
                 yield session
         except Exception as e:
             log.warning("PTP: session ended with %s: %s", type(e).__name__, e)

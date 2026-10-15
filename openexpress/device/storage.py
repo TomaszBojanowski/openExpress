@@ -64,8 +64,9 @@ class Storage(ABC):
         return
 
     def usb_blocked(self) -> bool:
-        """Whether a sandbox keeps the program away from the USB device itself (Flatpak),
-        so that a PTP session is out of reach here whatever the device offers."""
+        """Whether a sandbox keeps the program away from the USB device itself (a Flatpak
+        without the --device=usb permission), so that a PTP session is out of reach here
+        whatever the device offers."""
         return False
 
     def capacity(self) -> int | None:

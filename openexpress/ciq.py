@@ -482,10 +482,10 @@ class IqInstallReport:
 # the ordinary MTP listing: gvfs does not see it, is refused when it tries to create it,
 # and shows no .PRG files at all. Garmin's own listing returns the folder, so where a
 # direct PTP session is possible (`Storage.exclusive_ptp`) the app file and the app list
-# are written through it. Where it is not (e.g. in a Flatpak sandbox) such apps are left
-# in the queue in Garmin Connect, from which the phone or Garmin Express installs them.
-# In a sandbox nothing is tried on the device at all (SANDBOXED): the folder is there,
-# creating it can only be refused.
+# are written through it. Where it is not (e.g. in a Flatpak without access to USB) such
+# apps are left in the queue in Garmin Connect, from which the phone or Garmin Express
+# installs them. There nothing is tried on the device at all (SANDBOXED): the folder is
+# there, creating it can only be refused.
 #
 # A new version of an app is written the same way, under a new file name next to the old
 # file, and the app list is written unchanged; the device replaces the app after it is
@@ -722,17 +722,19 @@ def _log_install(report: IqInstallReport) -> None:
 
 
 def sandbox_text(update: bool = False, queued: bool = False) -> str:
-    """Why an app is only queued in the Flatpak version, before (`queued` False) or after
-    it was queued."""
+    """Why an app is only queued in a Flatpak without access to USB, before (`queued`
+    False) or after it was queued."""
     if update:
         return " ".join((
-            _("The Flatpak version cannot update apps on this device over USB yet."),
+            _("The Flatpak has no access to USB devices, so it cannot update apps on this "
+              "device."),
             _("The update waits in the queue in Garmin Connect and will be installed by the "
               "phone or Garmin Express.") if queued else
             _("The update will be queued in Garmin Connect and installed by the phone or "
               "Garmin Express.")))
     return " ".join((
-        _("The Flatpak version cannot install apps on this device over USB yet."),
+        _("The Flatpak has no access to USB devices, so it cannot install apps on this "
+          "device."),
         _("The app waits in the queue in Garmin Connect and will be installed by the phone "
           "or Garmin Express.") if queued else
         _("The app will be queued in Garmin Connect and installed by the phone or Garmin "
@@ -741,12 +743,13 @@ def sandbox_text(update: bool = False, queued: bool = False) -> str:
 
 def sandbox_removal_text() -> str:
     return " ".join((
-        _("The Flatpak version cannot remove apps from this device over USB yet."),
+        _("The Flatpak has no access to USB devices, so it cannot remove apps from this "
+          "device."),
         _("Remove it on the phone, in the Connect IQ or Garmin Connect app.")))
 
 
 def removal_sandboxed(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
-    """Whether only the Flatpak sandbox keeps the app's file out of reach."""
+    """Whether only a Flatpak without access to USB keeps the app's file out of reach."""
     dt = APPTYPE_TO_DATATYPE.get(app.app_type)
     return bool(dt and app.filename and usb_dir_state(device, storage, dt) == SANDBOXED)
 
