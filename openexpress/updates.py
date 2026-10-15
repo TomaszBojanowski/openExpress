@@ -283,6 +283,7 @@ def install(
     session=None,
     progress: Callable[[str], None] = lambda s: None,
     transfer_progress=None,
+    download_progress: Callable[[int, int | None], None] | None = None,
 ) -> InstallReport:
     need, free = check_space(storage, updates)
     if free is not None and need + SPACE_MARGIN > free:
@@ -291,13 +292,19 @@ def install(
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
+    # One bar for all the files.
+    overall = (download.Overall(sum(u.size or 0 for u in updates), download_progress)
+               if download_progress else None)
     for u in updates:
         if not u.url:
             raise UpdateError(_("{part}: the server did not provide a download URL")
                               .format(part=u.part_number))
         progress(_("Downloading {name} {version} ({size})")
                  .format(name=u.title, version=u.version, size=human_size(u.size or None)))
-        local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session)
+        local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session,
+                               progress=overall.file() if overall else None)
+        if overall:
+            overall.finished(u.size)
         with open(local, "rb") as f:
             if f.read(4) == RGN_MAGIC:
                 raise UpdateError(

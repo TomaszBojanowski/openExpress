@@ -974,3 +974,115 @@ def test_ready_in_polish():
         "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować")
     assert win.software_label.get_label() == (
         "Oprogramowanie 23.39 · aktualizacja gotowa do instalacji")
+
+
+# --- the progress bar moves while downloading ------------------------------------------------
+
+
+def _fetch_in_steps(cached=()):
+    """A download without the network, in four steps; a file named in `cached` is in the
+    cache already and reports nothing. Records the `progress` each call was given."""
+    given = []
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        given.append(progress)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"x" * size)
+        if progress and dest.name not in cached:
+            for part in (1, 2, 3, 4):
+                progress(size * part // 4, size)
+        return dest
+
+    return fetch, given
+
+
+def _map(*sizes):
+    from openexpress import maps
+
+    files = [maps.MapFile(device_path=f"Garmin/Map{n}.img", datatype="Map",
+                          url=f"https://example.org/map{n}.img", md5=None, size=size)
+             for n, size in enumerate(sizes)]
+    return maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0,
+                             is_reinstall=False, can_uninstall=True, version="2026.11",
+                             region="Test", identifier={}, files=files, files_to_remove=[],
+                             hosts=[])
+
+
+def test_a_map_download_moves_one_bar_over_all_its_files(device_root, monkeypatch):
+    from openexpress import maps
+
+    fetch, _given = _fetch_in_steps(cached={"Map0.img"})
+    monkeypatch.setattr(download, "fetch", fetch)
+    m = _map(400, 800)
+    bar = []
+    maps.install(m, [m], LocalStorage(device_root), lambda ident: {},
+                 download_progress=lambda done, total: bar.append((done, total)))
+    # The first file came from the cache: counted at once; the second in four steps.
+    assert bar == [(400, 1200), (600, 1200), (800, 1200), (1000, 1200), (1200, 1200),
+                   (1200, 1200)]
+
+
+def test_an_update_download_moves_one_bar_over_all_its_files(device_root, tmp_path,
+                                                             monkeypatch):
+    fetch, _given = _fetch_in_steps()
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    items = updates.parse_updates(lower_keys(server_answer()))
+    total = len(FONT) + len(BUNDLE)
+    bar = []
+    updates.install(items, LocalStorage(device_root),
+                    download_progress=lambda done, size: bar.append((done, size)))
+    assert all(size == total for _done, size in bar)
+    assert [done for done, _size in bar] == sorted(done for done, _size in bar)  # never back
+    assert bar[-1] == (total, total)
+
+
+def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypatch):
+    from openexpress import maps
+
+    fetch, given = _fetch_in_steps()
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    m = _map(10)
+    maps.install(m, [m], LocalStorage(device_root), lambda ident: {})
+    updates.install(updates.parse_updates(lower_keys(server_answer())), LocalStorage(device_root))
+    assert given == [None, None, None]  # as before
+
+
+def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, Gtk
+
+    from openexpress import maps
+    from openexpress.gui.app import MainWindow
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    asked, tasks, calls = [], [], {}
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+
+    def install(*args, **kwargs):
+        calls.setdefault("kw", []).append(kwargs)
+
+    monkeypatch.setattr(updates, "install", install)
+    monkeypatch.setattr(maps, "install", install)
+    m = _map(10)
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(
+            device=types.SimpleNamespace(software_version_str="23.39", raw=b""),
+            storage=LocalStorage(device_root),
+            client=types.SimpleNamespace(http=None, consumer=types.SimpleNamespace(url_salt="s"))),
+        updates_cache=updates.parse_updates(lower_keys(server_answer())), maps_cache=[m],
+        progress=lambda text: None, fraction=lambda done, total: None,
+        run_task=lambda title, fn, done=None, failed=None: tasks.append(fn))
+    MainWindow.confirm_update(win, win.updates_cache[0])
+    MainWindow.confirm_map(win, m)
+    for dialog in asked:
+        dialog.emit("response", "ok")
+    for fn in tasks:
+        fn()
+    assert len(calls["kw"]) == 2
+    assert all(kw["download_progress"] is win.fraction for kw in calls["kw"])

@@ -79,6 +79,24 @@ def _valid(path: Path, size: int | None, md5: str | None) -> bool:
     return md5 is None or file_md5(path) == md5
 
 
+class Overall:
+    """The progress of several downloads told as one: `report(done, total)` counts the bytes
+    of the files before the current one too. `total` is the sum of the announced sizes."""
+
+    def __init__(self, total: int | None, report: Callable[[int, int | None], None]):
+        self.total, self.report, self.done = total or None, report, 0
+
+    def file(self) -> Callable[[int, int | None], None]:
+        """The progress of the next file, for `fetch`."""
+        start = self.done
+        return lambda done, _size: self.report(start + done, self.total)
+
+    def finished(self, size: int | None) -> None:
+        """The file is there (also when it came from the cache)."""
+        self.done += size or 0
+        self.report(self.done, self.total)
+
+
 def fetch(
     urls: list[str],
     dest: Path,

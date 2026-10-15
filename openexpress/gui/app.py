@@ -1765,7 +1765,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.run_task(
                 _("Installing update…"),
                 lambda: upd.install(chosen, s.storage, session=s.client.http,
-                                    progress=self.progress, transfer_progress=self.fraction),
+                                    progress=self.progress, transfer_progress=self.fraction,
+                                    download_progress=self.fraction),
                 installed,
             )
 
@@ -2082,6 +2083,7 @@ class MainWindow(Adw.ApplicationWindow):
                                        s.device.raw, [ident]),
                                    session=s.client.http, progress=self.progress,
                                    transfer_progress=self.fraction,
+                                   download_progress=self.fraction,
                                    url_salt=s.client.consumer.url_salt),
                 lambda rep: (self.toast(_("Installed {name}").format(name=m.name)),
                              self.load_section("maps", force=True)),

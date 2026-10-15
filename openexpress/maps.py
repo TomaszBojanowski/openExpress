@@ -216,6 +216,7 @@ def install(
     session=None,
     progress: Callable[[str], None] = lambda s: None,
     transfer_progress: Callable[[int, int], None] | None = None,
+    download_progress: Callable[[int, int | None], None] | None = None,
     url_salt: str | None = None,
 ) -> MapReport:
     if not m.installable or not m.files:
@@ -229,13 +230,18 @@ def install(
                        .format(need=human_size(need), free=human_size(free)))
 
     local: dict[str, Path] = {}
+    # One bar for all the files of the map.
+    overall = download.Overall(m.size, download_progress) if download_progress else None
     for f in m.files:
         progress(_("Downloading {path} ({size})")
                  .format(path=f.device_path, size=human_size(f.size)))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
         if url_salt:
             urls = [download.tokenize(u, url_salt) for u in urls]
-        local[f.device_path] = download.fetch(urls, cache_file(f), f.size, f.md5, session=session)
+        local[f.device_path] = download.fetch(urls, cache_file(f), f.size, f.md5, session=session,
+                                              progress=overall.file() if overall else None)
+        if overall:
+            overall.finished(f.size)
 
     progress(_("Activating the map on the Garmin server"))
     act = activate(m.identifier)
