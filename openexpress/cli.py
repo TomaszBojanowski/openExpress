@@ -1507,9 +1507,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-wait", action="store_true",
                    help=_("do not wait for a device that was just plugged in and is still "
                           "starting"))
-    # Without a command the application window opens (as from the application menu).
-    p.set_defaults(func=cmd_gui)
     sub = p.add_subparsers(dest="cmd")
+    # Without a command the application window opens (as from the application menu), and
+    # it is logged as the window. After add_subparsers: it would set "cmd" to None.
+    p.set_defaults(func=cmd_gui, cmd="gui")
 
     s = sub.add_parser("setup", help=_("configuration: OAuth1 key, environment, locale"))
     s.add_argument("--from-installer", metavar="GarminExpress.exe",

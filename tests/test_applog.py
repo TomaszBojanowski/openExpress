@@ -396,6 +396,21 @@ def test_subcommand_is_logged(log_file, device_root):
     assert "start: maps remove --path (" in start and "Private" not in start
 
 
+@pytest.mark.parametrize("argv", [[], ["gui"]], ids=["no command", "gui"])
+def test_the_window_is_logged_as_the_window(log_file, device_root, monkeypatch, argv):
+    from openexpress import cli
+
+    monkeypatch.setattr(cli, "cmd_gui", lambda args: 0)  # no window here
+    assert cli.main(argv) == 0
+    assert cli.main(["--path", str(device_root), "files"]) == 0
+    text = lines(log_file)
+    window = [line for line in text if " gui[" in line]
+    assert any(" start: gui (" in line for line in window)
+    assert any(" end: gui, exit code 0, " in line for line in window)
+    assert any(" cli[" in line and " start: files --path (" in line for line in text)
+    assert not any(" start: - " in line or " end: -," in line for line in text)
+
+
 # --- what the program writes about its work ---------------------------------------------------
 
 from test_ciq_music import (  # noqa: E402, F401 - the fixtures
