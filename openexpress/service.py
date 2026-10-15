@@ -24,7 +24,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice, parse
-from openexpress.i18n import _, ngettext
+from openexpress.i18n import N_, _, ngettext
 from openexpress.settings import Settings, SetupError, load_consumer
 
 log = logging.getLogger(__name__)
@@ -329,14 +329,57 @@ class SyncSummary:
         return "\n".join(describe_lines(self.lines))
 
 
+# Readable names of the data types of new files. A name is given only where it is plain from
+# the FIT SDK (the file type by its number), the upload address the server gives for the type
+# (e.g. ".../upload/hrvstatus"), or the folder the device declares for it in GarminDevice.xml
+# (e.g. "Garmin/Sleep"); any other type is shown as "other data (NAME)". Types with the same
+# name are counted together.
+TYPE_NAMES = {
+    "FIT_TYPE_4": N_("activities"),             # FIT SDK: activity; upload: activity
+    "FIT_TYPE_9": N_("weight"),                 # FIT SDK: weight; upload: weight
+    "FIT_TYPE_28": N_("daily monitoring"),      # FIT SDK: monitoring_daily
+    "FIT_TYPE_32": N_("monitoring"),            # FIT SDK: monitoring_b
+    "FIT_TYPE_35": N_("segment list"),          # FIT SDK: segment_list; upload: segment-list
+    "FIT_TYPE_38": N_("golf scorecards"),       # folder: SCORCRDS
+    "FIT_TYPE_41": N_("change log"),            # upload: changelog
+    "FIT_TYPE_44": N_("metrics"),               # upload: metrics
+    "FIT_TYPE_49": N_("sleep"),                 # folder: Sleep
+    "FIT_TYPE_58": N_("device monitoring"),     # upload: device-monitoring
+    "FIT_TYPE_61": N_("ECG"),                   # folder: ECG
+    "FIT_TYPE_68": N_("HRV status"),            # upload: hrvstatus
+    "FIT_TYPE_73": N_("skin temperature"),      # upload: skintemp
+    "FIT_TYPE_79": N_("sleep disruptions"),     # upload: sleep-disruptions
+    "FIT_TYPE_88": N_("multi-day activities"),  # upload: multi-day-activity
+    "BACKUP_PRIMARY": N_("device backup"),      # upload: backup
+    "BACKUP_SUPPLEMENTARY": N_("device backup"),
+    "ACTIVITY_GCPD": N_("raw GPS data of activities"),  # upload: rawgnssactivity
+}
+
+
+def type_name(datatype: str) -> str:
+    """The readable name of a data type of new files, in the language of the moment."""
+    known = TYPE_NAMES.get(datatype)
+    return _(known) if known else _("other data ({type})").format(type=datatype)
+
+
+def _describe_types(types: dict) -> str:
+    """ "activities ×2, monitoring ×3, other data (FIT_TYPE_70) ×1": the named types in the
+    order of TYPE_NAMES, then the others by name."""
+    order = {name: i for i, name in enumerate(TYPE_NAMES)}
+    counted: dict[str, int] = {}
+    for datatype in sorted(types, key=lambda t: (order.get(t, len(order)), t)):
+        name = type_name(datatype)
+        counted[name] = counted.get(name, 0) + types[datatype]
+    return ", ".join(f"{name} ×{count}" for name, count in counted.items())
+
+
 def _describe_line(line) -> str | None:
     """A line of a sync summary in words; None for a step this version does not know."""
     if isinstance(line, str):
         return line  # written in words already (also every line of an older version)
     kind = line.get("kind") if isinstance(line, dict) else None
     if kind == "new_files":
-        types = ", ".join(f"{k}×{v}" for k, v in sorted((line.get("types") or {}).items()))
-        return _("New files: {types}").format(types=types)
+        return _("New files: {types}").format(types=_describe_types(line.get("types") or {}))
     if kind == "uploads":
         numbers = {"uploaded": line.get("uploaded", 0), "known": line.get("known", 0),
                    "checked": line.get("known_checked", 0),

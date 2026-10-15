@@ -77,7 +77,7 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
     steps = [line for line in data["lines"] if isinstance(line, dict)]
     assert [step["kind"] for step in steps] == ["new_files", "uploads"]
     words = service.describe_lines(steps)
-    assert words == ["New files: FIT_TYPE_4×2",
+    assert words == ["New files: activities ×2",
                      ("New files uploaded: 2 · already in Connect: 0 · rejected by Garmin: 0 · "
                       "upload errors: 0")]
     assert all(line in printed for line in words)  # printed exactly as the window shows it
@@ -88,3 +88,34 @@ def test_the_notification_says_what_the_window_shows():
     summary = service.SyncSummary(uploaded=1, lines=[
         "First sync.", service.new_files_step([]), service.uploads_step(_report(uploaded=1))])
     assert summary.text.splitlines() == service.describe_lines(summary.lines)  # watch.py uses .text
+
+
+# --- the types of new files ------------------------------------------------------------------
+
+
+def test_new_files_are_named_by_their_type():
+    step = {"kind": "new_files", "types": {
+        "FIT_TYPE_70": 1, "BACKUP_SUPPLEMENTARY": 1, "FIT_TYPE_32": 3, "WELLNESS_TYPE_1": 2,
+        "FIT_TYPE_4": 2, "BACKUP_PRIMARY": 1, "FIT_TYPE_68": 1}}
+    # The named types in a fixed order, the two backups counted together, then the others.
+    assert service.describe_lines([step]) == [
+        ("New files: activities ×2, monitoring ×3, HRV status ×1, device backup ×2, "
+         "other data (FIT_TYPE_70) ×1, other data (WELLNESS_TYPE_1) ×2")]
+
+
+@pytest.mark.parametrize(("datatype", "name"), sorted(service.TYPE_NAMES.items()))
+def test_every_named_type_has_a_readable_name(datatype, name):
+    assert service.type_name(datatype) == name and "_" not in name
+
+
+def test_new_files_in_polish():
+    step = {"kind": "new_files", "types": {"FIT_TYPE_4": 1, "FIT_TYPE_49": 1, "FIT_TYPE_61": 1,
+                                           "FIT_TYPE_79": 1, "BACKUP_PRIMARY": 1,
+                                           "FIT_TYPE_70": 1}}
+    i18n.setup("pl")
+    try:
+        (line,) = service.describe_lines([step])
+    finally:
+        i18n.setup("en")
+    assert line == ("Nowe pliki: aktywności ×1, sen ×1, EKG ×1, zaburzenia snu ×1, kopia zapasowa "
+                    "urządzenia ×1, inne dane (FIT_TYPE_70) ×1")
