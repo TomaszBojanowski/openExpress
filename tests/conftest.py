@@ -54,6 +54,15 @@ def make_fit(time_created: int, file_type: int = 4) -> bytes:
     return header + body + b"\x00\x00"
 
 
+@pytest.fixture(autouse=True)
+def private_dirs(tmp_path, monkeypatch):
+    """No test reads or writes the real data, settings or cache of openExpress: every test
+    has its own (the log: `log_file`). The same folders as `xdg` gives by name."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+
 @pytest.fixture
 def xdg(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))

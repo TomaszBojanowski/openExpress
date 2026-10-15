@@ -19,6 +19,9 @@ class FakeTarget:
 
 @pytest.fixture
 def flatpak(monkeypatch, xdg):
+    # The cache of the test (its own, see conftest) is in the home folder, as the real one:
+    # the host sees what is staged there.
+    monkeypatch.setenv("HOME", str(xdg))
     calls = []
 
     def run(cmd, **kw):
