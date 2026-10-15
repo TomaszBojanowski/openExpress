@@ -97,6 +97,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.10" date="2026-10-15">
+      <description>
+        <ul>
+          <li>The device page no longer reloads a moment after the window opens: a mount
+          event of the device that is open already is ignored, so every request to Garmin is
+          sent once at start instead of twice.</li>
+          <li>The log, the terminal output of -v and the log attached to a report also hide
+          addresses other than device and web ones (of local files and network shares, e.g.
+          a USB stick in an error of gio copy) and the name of the system user.</li>
+          <li>The log records the mount events of the device and what the window decides.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.9" date="2026-10-15">
       <description>
         <ul>
