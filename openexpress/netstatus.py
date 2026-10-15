@@ -219,12 +219,32 @@ def at(ts: float, now: float | None = None) -> str:
     return _("at {date} {time}").format(date=date, time=hour)
 
 
-def describe(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, str],
-             now: float | None = None) -> tuple[str, str]:
-    """(short text, tooltip) of the state: the tooltip names each service, its host and
-    when it last answered."""
-    state = state_of(last, answered)
-    lines = [_(STATE_TEXT[state])]
+# TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well
+CONNECTED_HEADING = N_("Connected to Garmin's servers")
+# TRANSLATORS: at the bottom of the window with the state of Garmin's servers
+NOTE = N_("The state comes from the program's last requests; openExpress does not ask the "
+          "servers separately.")
+
+
+@dataclass(frozen=True)
+class Row:
+    """One service, as the window shows it."""
+    service: str
+    name: str
+    host: str
+    kind: str | None  # None: the program has not needed the service yet
+    detail: str
+    last_answer: str  # "last answer at …" after a failure; "" otherwise
+
+
+def heading(state: str) -> str:
+    return _(CONNECTED_HEADING) if state == ONLINE else _(STATE_TEXT[state])
+
+
+def rows(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, str],
+         now: float | None = None) -> list[Row]:
+    """Each service: its name, its host and how it last answered, with the time."""
+    out = []
     for s in SERVICES:
         r = last.get(s)
         host = r.host if r else urlsplit(hosts.get(_HOST_KEY[s], "")).netloc
@@ -243,8 +263,21 @@ def describe(last: dict[str, Result], answered: dict[str, float], hosts: dict[st
         else:
             detail = _("computer clock off by {minutes} min at {time}").format(
                 minutes=r.minutes, time=when(r.at, now))
-        if r is not None and r.kind != OK and s in answered:
-            detail += "; " + _("last answer {at}").format(at=at(answered[s], now))
+        last_answer = (_("last answer {at}").format(at=at(answered[s], now))
+                       if r is not None and r.kind != OK and s in answered else "")
+        out.append(Row(s, _(SERVICE_NAME[s]), host or "?", r.kind if r else None, detail,
+                       last_answer))
+    return out
+
+
+def describe(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, str],
+             now: float | None = None) -> tuple[str, str]:
+    """(short text, whole text) of the state, the whole text naming each service, its host
+    and when it last answered: for screen readers (the window shows the same in rows)."""
+    state = state_of(last, answered)
+    lines = [_(STATE_TEXT[state])]
+    for r in rows(last, answered, hosts, now):
+        detail = r.detail + ("; " + r.last_answer if r.last_answer else "")
         lines.append(_("{service} ({host}): {detail}").format(
-            service=_(SERVICE_NAME[s]), host=host or "?", detail=detail))
+            service=r.name, host=r.host, detail=detail))
     return lines[0], "\n".join(lines)

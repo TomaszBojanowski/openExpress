@@ -214,6 +214,30 @@ def test_a_time_of_another_day_has_its_date():
     assert netstatus.when(now - 3 * 86400, now).count("-") == 2
 
 
+def _status_window():
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    win = types.SimpleNamespace(session=None)
+    bar = MainWindow._build_net_status(win)
+    return win, bar, MainWindow
+
+
+def note(state, steps):
+    for service, status in steps:
+        url = CONNECT_URL if service == netstatus.CONNECT else OMT_URL
+        if status is None:
+            state.note_failure(service, url)
+        else:
+            state.note_answer(service, url, status)
+
+
 @pytest.mark.parametrize("steps,state", [
     ((), netstatus.UNKNOWN),
     (((netstatus.CONNECT, 200),), netstatus.ONLINE),
@@ -221,30 +245,108 @@ def test_a_time_of_another_day_has_its_date():
     (((netstatus.CONNECT, 200), (netstatus.OMT, 500)), netstatus.SERVER_PROBLEM),
     (((netstatus.CONNECT, 401),), netstatus.SIGN_IN_EXPIRED),
 ])
-def test_the_window_shows_the_state_in_words_colour_and_tooltip(steps, state, network_state):
-    import gi
+def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_state):
+    from openexpress.gui.app import NET_COLOURS, NET_LOOK
 
-    gi.require_version("Gtk", "4.0")
-    from gi.repository import Gtk
-
-    from openexpress.gui.app import NET_LOOK, MainWindow
-
-    if not Gtk.init_check():
-        pytest.skip("no display")
-    for service, status in steps:
-        url = CONNECT_URL if service == netstatus.CONNECT else OMT_URL
-        if status is None:
-            network_state.note_failure(service, url)
-        else:
-            network_state.note_answer(service, url, status)
-    win = types.SimpleNamespace(session=None, net_icon=Gtk.Image(), net_label=Gtk.Label(),
-                                net_box=Gtk.Box())
-    MainWindow._render_net_status(win)
+    win, _bar, window = _status_window()
+    note(network_state, steps)
+    window._render_net_status(win)
     icon, colour = NET_LOOK[state]
     assert win.net_label.get_label() == netstatus.STATE_TEXT[state]
     assert win.net_icon.get_icon_name() == icon and win.net_icon.has_css_class(colour)
-    assert win.net_box.get_tooltip_text().splitlines()[0] == netstatus.STATE_TEXT[state]
-    assert len({c for _i, c in NET_LOOK.values()} & set(win.net_icon.get_css_classes())) == 1
+    assert len(NET_COLOURS & set(win.net_icon.get_css_classes())) == 1
+    assert win.net_button.get_tooltip_text() is None  # a window instead of a tooltip
+    assert win.net_button.get_popover() is not None
+
+
+def test_the_window_names_each_service_with_its_server_and_time(network_state):
+    from openexpress.gui.app import NET_ROW_LOOK
+
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200), (netstatus.OMT, 200), (netstatus.OMT, 503)])
+    window._render_net_status(win)
+    assert win.net_heading.get_label() == "Garmin server problem"
+    connect, omt, sign_in = (win.net_rows[s] for s in netstatus.SERVICES)
+    row, icon, detail = connect
+    assert (row.get_title(), row.get_subtitle()) == ("Garmin Connect", "connectapi.garmin.com")
+    assert detail.get_label().startswith("answered at ") and row.get_sensitive()
+    assert icon.get_icon_name() == NET_ROW_LOOK[netstatus.OK][0]
+    row, icon, detail = omt
+    assert (row.get_title(), row.get_subtitle()) == ("Updates and maps", "omt.garmin.com")
+    first, second = detail.get_label().splitlines()
+    assert first.startswith("server error (HTTP 503) at ") and second.startswith("last answer at ")
+    assert icon.has_css_class("error")
+    row, icon, detail = sign_in
+    assert (row.get_title(), row.get_subtitle()) == ("Sign-in", "sso.garmin.com")
+    assert detail.get_label() == "not needed yet" and not row.get_sensitive()  # greyed
+
+
+def test_the_window_heading_when_all_is_well_and_its_note(network_state):
+    from gi.repository import Gtk
+
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200)])
+    window._render_net_status(win)
+    assert win.net_heading.get_label() == "Connected to Garmin's servers"
+    box = win.net_button.get_popover().get_child()
+    labels = []
+    child = box.get_first_child()
+    while child is not None:
+        if isinstance(child, Gtk.Label):
+            labels.append(child.get_label())
+        child = child.get_next_sibling()
+    assert labels[-1] == ("The state comes from the program's last requests; openExpress does "
+                          "not ask the servers separately.")
+
+
+def test_an_open_window_follows_new_answers_in_the_same_rows(network_state):
+    win, _bar, window = _status_window()
+    window._render_net_status(win)
+    rows_before = {s: r[0] for s, r in win.net_rows.items()}
+    assert win.net_heading.get_label() == "Status unknown"
+    note(network_state, [(netstatus.OMT, None)])
+    window._render_net_status(win)  # what the listener does on the GTK thread
+    assert win.net_heading.get_label() == "No connection"
+    assert {s: r[0] for s, r in win.net_rows.items()} == rows_before  # the same widgets
+    assert win.net_rows[netstatus.OMT][2].get_label().startswith("no connection at ")
+
+
+def test_the_button_tells_screen_readers_everything(network_state):
+    from gi.repository import Gtk
+
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200)])
+    window._render_net_status(win)
+    seen = {}
+    original = Gtk.Accessible.update_property
+
+    def update_property(self, props, values):
+        seen.update(zip(props, values))
+        return original(self, props, values)
+
+    Gtk.MenuButton.update_property = update_property
+    try:
+        window._render_net_status(win)
+    finally:
+        del Gtk.MenuButton.update_property
+    assert seen[Gtk.AccessibleProperty.LABEL] == "Online"
+    description = seen[Gtk.AccessibleProperty.DESCRIPTION].splitlines()
+    assert description[0] == "Show the state of Garmin's servers"
+    assert description[2].startswith("Garmin Connect (connectapi.garmin.com): answered at ")
+
+
+def test_rows_for_every_kind_of_answer():
+    s = netstatus.Status()
+    s.note_answer(netstatus.CONNECT, CONNECT_URL, 401)
+    s.note_answer(netstatus.OMT, OMT_URL, 200)
+    s.note_failure(netstatus.OMT, OMT_URL)
+    rows = netstatus.rows(*s.snapshot(), PROD)
+    assert [(r.service, r.kind) for r in rows] == [
+        (netstatus.CONNECT, netstatus.AUTH), (netstatus.OMT, netstatus.NETWORK),
+        (netstatus.SIGN_IN, None)]
+    assert rows[0].detail.startswith("sign-in refused (HTTP 401) at ") and not rows[0].last_answer
+    assert rows[1].last_answer.startswith("last answer at ")
+    assert rows[2].detail == "not needed yet" and rows[2].host == "sso.garmin.com"
 
 
 def test_the_window_draws_later_only_while_it_is_there():
@@ -307,7 +409,7 @@ def test_another_day_has_its_date_first_in_polish(polish):
     assert lines[1] == (f"Garmin Connect (connectapi.garmin.com): czas komputera różni się "
                         f"o 120 min ({day} o {hour})")
     assert lines[2] == f"Aktualizacje i mapy (omt.garmin.com): odpowiedź {day} o {hour}"
-    assert lines[3] == "Logowanie (sso.garmin.com): jeszcze nie było potrzeby"
+    assert lines[3] == "Logowanie (sso.garmin.com): nie było potrzeby"
 
 
 def test_today_has_only_the_hour_in_polish(polish):

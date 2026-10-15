@@ -383,6 +383,24 @@ NET_LOOK = {
     netstatus.SIGN_IN_EXPIRED: ("dialog-password-symbolic", "warning"),
     netstatus.CLOCK_OFF: ("document-open-recent-symbolic", "warning"),
 }
+# … and of each service in the window that opens from it (None: not needed yet).
+NET_ROW_LOOK = {
+    None: ("content-loading-symbolic", "dim-label"),
+    netstatus.OK: NET_LOOK[netstatus.ONLINE],
+    netstatus.NETWORK: NET_LOOK[netstatus.OFFLINE],
+    netstatus.SERVER: NET_LOOK[netstatus.SERVER_PROBLEM],
+    netstatus.AUTH: NET_LOOK[netstatus.SIGN_IN_EXPIRED],
+    netstatus.CLOCK: NET_LOOK[netstatus.CLOCK_OFF],
+}
+NET_COLOURS = {c for _i, c in NET_LOOK.values()}
+
+
+def _paint(image, look) -> None:
+    icon, colour = look
+    image.set_from_icon_name(icon)
+    for c in NET_COLOURS:
+        image.remove_css_class(c)
+    image.add_css_class(colour)
 
 
 def _render_net_status_later(ref) -> bool:
@@ -502,16 +520,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.nav.connect("row-activated", lambda *_a: self.split.set_show_content(True))
         sidebar_view.set_content(Gtk.ScrolledWindow(child=self.nav,
                                                     hscrollbar_policy=Gtk.PolicyType.NEVER))
-        # The state of Garmin's servers, from the answers to the program's own requests:
-        # an icon and a word, so that it does not rest on the colour alone.
-        self.net_icon = Gtk.Image()
-        self.net_label = Gtk.Label(xalign=0, hexpand=True)
-        self.net_label.add_css_class("caption")
-        self.net_box = Gtk.Box(spacing=8, margin_top=6, margin_bottom=8, margin_start=14,
-                               margin_end=12)
-        self.net_box.append(self.net_icon)
-        self.net_box.append(self.net_label)
-        sidebar_view.add_bottom_bar(self.net_box)
+        sidebar_view.add_bottom_bar(self._build_net_status())
         self._render_net_status()
         self.split.set_sidebar(Adw.NavigationPage(title="openExpress", child=sidebar_view))
 
@@ -643,25 +652,70 @@ class MainWindow(Adw.ApplicationWindow):
             d.present(self)
         return True
 
+    def _build_net_status(self):
+        """The state of Garmin's servers at the bottom of the side panel: a button with an
+        icon and a word (not the colour alone) that opens a window with each service."""
+        self.net_icon = Gtk.Image()
+        self.net_label = Gtk.Label(xalign=0, hexpand=True)
+        self.net_label.add_css_class("caption")
+        inner = Gtk.Box(spacing=8)
+        inner.append(self.net_icon)
+        inner.append(self.net_label)
+        self.net_button = Gtk.MenuButton(child=inner, direction=Gtk.ArrowType.UP)
+        self.net_button.add_css_class("flat")
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=12,
+                      margin_bottom=12, margin_start=12, margin_end=12, width_request=420)
+        self.net_heading = Gtk.Label(xalign=0, wrap=True)
+        self.net_heading.add_css_class("heading")
+        box.append(self.net_heading)
+        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        listbox.add_css_class("boxed-list")
+        self.net_rows = {}
+        for key in netstatus.SERVICES:
+            row = Adw.ActionRow()
+            icon = Gtk.Image()
+            row.add_prefix(icon)
+            # One line, and the last good answer under it: never broken in between.
+            detail = Gtk.Label(xalign=1, justify=Gtk.Justification.RIGHT)
+            detail.add_css_class("caption")
+            row.add_suffix(detail)
+            listbox.append(row)
+            self.net_rows[key] = (row, icon, detail)
+        box.append(listbox)
+        note = Gtk.Label(label=_(netstatus.NOTE), xalign=0, wrap=True, max_width_chars=48)
+        note.add_css_class("caption")
+        note.add_css_class("dim-label")
+        box.append(note)
+        self.net_button.set_popover(Gtk.Popover(child=box))
+        bar = Gtk.Box(margin_top=4, margin_bottom=6, margin_start=6, margin_end=6)
+        bar.append(self.net_button)
+        return bar
+
     def _render_net_status(self) -> None:
-        """Shows the state of Garmin's servers at the bottom of the side panel."""
+        """Shows the state of Garmin's servers on the button and in its window (open or
+        not: the same widgets get the new texts, so an open window follows at once)."""
         last, answered = netstatus.STATUS.snapshot()
         state = netstatus.state_of(last, answered)
         session = getattr(self, "session", None)
         try:
             hosts = (session.client.settings if session is not None else Settings.load()).hosts
-        except Exception:  # noqa: BLE001 - only for the names in the tooltip
+        except Exception:  # noqa: BLE001 - only for the names of the servers
             hosts = {}
-        text, tooltip = netstatus.describe(last, answered, hosts)
-        icon, colour = NET_LOOK[state]
-        self.net_icon.set_from_icon_name(icon)
-        for c in {c for _i, c in NET_LOOK.values()}:
-            self.net_icon.remove_css_class(c)
-        self.net_icon.add_css_class(colour)
+        text, whole = netstatus.describe(last, answered, hosts)
+        _paint(self.net_icon, NET_LOOK[state])
         self.net_label.set_label(text)
-        self.net_box.set_tooltip_text(tooltip)
-        self.net_box.update_property([Gtk.AccessibleProperty.LABEL,
-                                      Gtk.AccessibleProperty.DESCRIPTION], [text, tooltip])
+        self.net_button.update_property(
+            [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
+            [text, _("Show the state of Garmin's servers") + "\n" + whole])
+        self.net_heading.set_label(netstatus.heading(state))
+        for r in netstatus.rows(last, answered, hosts):
+            row, icon, detail = self.net_rows[r.service]
+            row.set_title(GLib.markup_escape_text(r.name))
+            row.set_subtitle(GLib.markup_escape_text(r.host))
+            _paint(icon, NET_ROW_LOOK[r.kind])
+            detail.set_label(r.detail + ("\n" + r.last_answer if r.last_answer else ""))
+            row.set_sensitive(r.kind is not None)  # not needed yet: greyed
 
     def _remember_geometry(self) -> None:
         # The default size follows the user's resizing and keeps the last unmaximized
