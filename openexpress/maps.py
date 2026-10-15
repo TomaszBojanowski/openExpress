@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 STATE_NAMES = {0: N_("not installed"), 1: N_("installed"), 2: N_("partial"),
                3: N_("newer on device")}
 SPACE_MARGIN = 50 * 1024 * 1024
+WAIT_INSTALL, WAIT_REMOVE = "install", "remove"
 
 
 class MapError(Exception):
@@ -59,6 +60,9 @@ class UniversalMap:
     eula_urls: list[str] = field(default_factory=list)
     # False when the server did not provide a usable download for every file.
     installable: bool = True
+    # WAIT_INSTALL or WAIT_REMOVE: written to or removed from the device, which takes it in
+    # only when it is unplugged (see mark_waiting); None otherwise.
+    waiting: str | None = None
 
     @property
     def installed(self) -> bool:
@@ -66,7 +70,13 @@ class UniversalMap:
 
     @property
     def update_available(self) -> bool:
-        return self.installed and not self.is_reinstall
+        return self.installed and not self.is_reinstall and self.waiting is None
+
+    @property
+    def occupies(self) -> bool:
+        """Its files are on the device for good: installed and not waiting to be removed,
+        or written and waiting to be taken in."""
+        return (self.installed and self.waiting != WAIT_REMOVE) or self.waiting == WAIT_INSTALL
 
     @property
     def size(self) -> int:
@@ -74,6 +84,11 @@ class UniversalMap:
 
     @property
     def status(self) -> str:
+        if self.waiting == WAIT_INSTALL:
+            # TRANSLATORS: map status
+            return _("will be loaded after the device is unplugged")
+        if self.waiting == WAIT_REMOVE:
+            return _("will be removed after the device is unplugged")
         if self.update_available:
             # TRANSLATORS: map status
             return _("update available")
@@ -174,11 +189,59 @@ def find(maps: list[UniversalMap], name: str) -> UniversalMap:
                    .format(names="; ".join(m.name for m in partial)))
 
 
+def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
+    """Marks the maps written to or removed from the device that the device has not taken in
+    yet: it does that when it is unplugged, and only then do GarminDevice.xml and so Garmin's
+    server know. Facts, no memory: the files on the device against the server's list.
+
+    Written: the server does not have the map (or has an older version), yet every file of
+    the map is on the device, at the size the server gives. Removed: the server has the map,
+    yet none of its own files (not used by other maps) is on the device."""
+    for m in maps:
+        m.waiting = None
+    paths = {p for m in maps for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
+    present: dict[str, int] = {}  # casefolded path -> size, one listing per folder
+    try:
+        for folder in {posixpath.dirname(p) for p in paths}:
+            for e in storage.listdir(folder):
+                if not e.is_dir:
+                    present[posixpath.join(folder, e.name).casefold()] = e.size
+    except Exception as e:  # noqa: BLE001 - only shown: the map check goes on without it
+        log.warning("maps: cannot read the map files on the device, none is marked as "
+                    "waiting for unplugging: %s", e)
+        return
+    for m in maps:
+        on_device = [present.get(f.device_path.casefold()) == f.size for f in m.files]
+        # An update with the very names of the files installed now cannot be told apart.
+        new_names = {f.device_path.casefold() for f in m.files} - {
+            p.casefold() for p in m.files_to_remove}
+        if (m.files and all(on_device)
+                and (not m.installed or (not m.is_reinstall and new_names))):
+            m.waiting = WAIT_INSTALL
+    removed = []  # decided on the same state for every map, then marked
+    for m in maps:
+        if not m.installed or m.waiting:
+            continue
+        own = {p.casefold() for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
+        own -= protected_files(maps, m)
+        if own and not any(p in present for p in own):
+            removed.append(m)
+    for m in removed:
+        m.waiting = WAIT_REMOVE
+
+
+def waiting_message(m: UniversalMap) -> str:
+    return _("Map '{name}' is on the device already and will be loaded after the device is "
+             "unplugged. Unplug the device first.").format(name=m.name)
+
+
 def protected_files(maps: list[UniversalMap], target: UniversalMap) -> set[str]:
-    """Files used by other installed maps (e.g. a shared terrain model)."""
+    """Files used by other installed maps (e.g. a shared terrain model), or by maps written
+    and waiting for the device to take them in."""
     keep: set[str] = set()
     for m in maps:
-        if m is target or not m.installed:
+        # A map that looks removed still counts: a shared file is kept rather than lost.
+        if m is target or not (m.installed or m.waiting == WAIT_INSTALL):
             continue
         keep.update(f.device_path.casefold() for f in m.files)
         keep.update(p.casefold() for p in m.files_to_remove)
@@ -220,6 +283,8 @@ def install(
     download_progress: Callable[[int, int | None], None] | None = None,
     url_salt: str | None = None,
 ) -> MapReport:
+    if m.waiting == WAIT_INSTALL:
+        raise MapError(waiting_message(m))
     if not m.installable or not m.files:
         raise MapError(_("Map '{name}' cannot be installed: the server did not provide "
                          "all of its files").format(name=m.name))
@@ -315,7 +380,8 @@ def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
 def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[str]:
     """Names of the other installed maps that list `path` among their files."""
     p = path.casefold()
-    return [m.name for m in maps if m is not target and m.installed
+    return [m.name for m in maps if m is not target
+            and (m.installed or m.waiting == WAIT_INSTALL)
             and p in {x.casefold() for x in [*(f.device_path for f in m.files),
                                              *m.files_to_remove]}]
 

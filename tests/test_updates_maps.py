@@ -804,3 +804,203 @@ def test_update_install_without_a_progress_function_works_as_before(server, devi
     items = updates.select(updates.parse_updates(sw_response(server)), ["all"])
     updates.install(items, ReportingStorage(device_root))
     assert [p for _name, p in ReportingStorage.seen] == [None, None]
+
+
+# --- maps written or removed, waiting for the device to take them in ------------------------
+
+
+def put(root, **files):
+    """Files on the made-up device: name in GARMIN/ -> content."""
+    for name, data in files.items():
+        (root / "GARMIN" / name).write_bytes(data)
+
+
+TOPO, DEM = FILES["/maps/topo.img"], FILES["/maps/dem.img"]
+
+
+def waiting_maps(server, device_root, storage=None):
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(storage or LocalStorage(device_root), all_maps)
+    return {m.name.split()[-1]: m for m in all_maps}
+
+
+def test_a_map_written_but_not_taken_in_waits_for_unplugging(server, device_root, xdg):
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "W.gma": b"u", "E.img": b"old",
+                        "E.gma": b"u", "J.img": TOPO})
+    m = waiting_maps(server, device_root)
+    assert m["Japan"].waiting == maps.WAIT_INSTALL and not m["Japan"].installed
+    assert m["Japan"].status == "will be loaded after the device is unplugged"
+    assert m["West"].waiting is None and m["East"].waiting is None
+    assert m["East"].update_available  # its new file E2.img is not there
+
+
+def test_an_update_written_but_not_taken_in_waits_too(server, device_root, xdg):
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "E.img": b"old", "E2.img": TOPO})
+    east = waiting_maps(server, device_root)["East"]
+    assert east.waiting == maps.WAIT_INSTALL and not east.update_available
+
+
+def test_an_update_with_the_names_installed_now_is_not_told_apart(server, device_root, xdg):
+    put(device_root, **{"E.img": TOPO, "DEM.img": DEM})
+    all_maps = maps.parse_maps(maps_response(server))
+    east = all_maps[1]
+    east.files[0].device_path = "Garmin/E.img"  # the new version keeps the old name
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    assert east.waiting is None and east.update_available
+
+
+@pytest.mark.parametrize("files", [
+    {"J.img": b"half"},             # written only in part
+    {},                             # not written
+])
+def test_a_map_not_wholly_on_the_device_does_not_wait(server, device_root, xdg, files):
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM}, **files)
+    assert waiting_maps(server, device_root)["Japan"].waiting is None
+
+
+def test_a_shared_file_alone_does_not_make_a_map_wait(server, device_root, xdg):
+    resp = maps_response(server)
+    resp["maps"][2]["installoptions"][0]["files"].append(
+        resp["maps"][0]["installoptions"][0]["files"][1])  # Japan uses DEM.img too
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM})
+    all_maps = maps.parse_maps(resp)
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    assert all_maps[2].waiting is None
+
+
+def test_a_map_removed_but_not_taken_in_waits_for_unplugging(server, device_root, xdg):
+    put(device_root, **{"DEM.img": DEM, "E.img": b"old", "E.gma": b"u"})  # W.img, W.gma gone
+    m = waiting_maps(server, device_root)
+    assert m["West"].waiting == maps.WAIT_REMOVE  # the shared DEM.img does not count
+    assert m["West"].status == "will be removed after the device is unplugged"
+    assert m["East"].waiting is None and m["Japan"].waiting is None
+
+
+def test_a_map_that_looks_removed_still_keeps_its_shared_file(server, device_root, xdg):
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "W.gma": b"u"})  # East's own files gone
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    west, east = all_maps[0], all_maps[1]
+    assert east.waiting == maps.WAIT_REMOVE
+    # Removing West keeps DEM.img: East may still be on the device as far as anyone knows.
+    assert maps.removal_list(all_maps, west, rewriting=False) == ["Garmin/W.img", "Garmin/W.gma"]
+
+
+def test_a_device_that_cannot_be_read_marks_nothing(server, device_root, xdg, caplog):
+    class Unreadable(LocalStorage):
+        def listdir(self, path):
+            raise DeviceError("unplugged")
+
+    put(device_root, **{"J.img": TOPO})
+    with caplog.at_level("WARNING", logger="openexpress.maps"):
+        m = waiting_maps(server, device_root, Unreadable(device_root))
+    assert all(x.waiting is None for x in m.values())
+    assert m["East"].update_available and m["Japan"].status == "available"
+    assert any("cannot read the map files" in r.getMessage() for r in caplog.records)
+
+
+def test_a_waiting_map_is_not_installed_again(server, device_root, xdg):
+    put(device_root, **{"J.img": TOPO})
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    with pytest.raises(maps.MapError) as error:
+        maps.install(all_maps[2], all_maps, LocalStorage(device_root), unlock_e2)
+    assert "will be loaded after the device is unplugged" in str(error.value)
+
+
+def test_the_maps_page_shows_waiting_maps_on_the_device(server, device_root):
+    from openexpress.gui.app import Gtk, MainWindow
+
+    put(device_root, **{"DEM.img": DEM, "E.img": b"old", "E.gma": b"u", "J.img": TOPO})
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(LocalStorage(device_root), all_maps)  # Japan written, West removed
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, (all_maps, len(all_maps)))
+    groups = win.sections["maps"].groups
+    on_device = {r.get_title(): r for r in groups[0].rows if hasattr(r, "get_title")}
+    assert set(on_device) >= {"TopoActive East", "TopoActive Japan", "TopoActive West"}
+    for name in ("TopoActive Japan", "TopoActive West"):
+        row = on_device[name]
+        buttons = [c for c in _children(row) if isinstance(c, Gtk.Button)]
+        assert buttons == [] or not any(b.get_mapped() for b in buttons)
+    assert "will be loaded after the device is unplugged" in on_device[
+        "TopoActive Japan"].get_subtitle()
+    assert on_device["TopoActive Japan"].get_sensitive()
+    assert not on_device["TopoActive West"].get_sensitive()
+    assert len(groups) == 1  # nothing left to install: no "Available"
+
+
+def test_the_maps_command_marks_and_refuses_a_waiting_map(server, device_root, xdg,
+                                                           monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer_with(monkeypatch, body=json.dumps(maps_response(server)).encode())
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "W.gma": b"u", "E.img": b"old",
+                        "E.gma": b"u", "J.img": TOPO})
+    assert main(["--path", str(device_root), "maps"]) == 0
+    out = capsys.readouterr().out
+    assert "TopoActive Japan" in out and "will be loaded after the device is unplugged" in out
+    assert "0 more maps are available" in out  # Japan is counted as on the device
+    before = device_files(device_root)
+    assert main(["--path", str(device_root), "maps", "install", "Japan"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "" and "Unplug the device first." in captured.err
+    assert device_files(device_root) == before
+
+
+def test_the_maps_command_says_when_the_map_is_loaded(server, device_root, xdg, monkeypatch,
+                                                      capsys):
+    from openexpress import cli
+
+    answer_with(monkeypatch, body=json.dumps(maps_response(server)).encode())
+    monkeypatch.setattr(cli, "_url_salt", lambda: "salt")
+    monkeypatch.setattr(maps, "install", lambda *a, **kw: maps.MapReport(
+        written=["GARMIN/J.img"], unlocks=["GARMIN/J.gma"]))
+    assert cli.main(["--path", str(device_root), "maps", "install", "Japan", "--apply"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[-2:] == ["Wrote 1 map file and 1 unlock files.",
+                        "The map will be loaded after the device is unplugged."]
+
+
+# --- removal keeps what other maps need --------------------------------------------------
+
+
+def test_a_map_written_and_waiting_keeps_its_shared_file(server, device_root, xdg):
+    resp = maps_response(server)
+    resp["maps"][1]["installationstate"] = 0  # East: not on the server's list of the device …
+    put(device_root, **{"W.img": TOPO, "W.gma": b"u", "E2.img": TOPO, "DEM.img": DEM})
+    all_maps = maps.parse_maps(resp)
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    west, east = all_maps[0], all_maps[1]
+    assert east.waiting == maps.WAIT_INSTALL  # … but written, waiting to be taken in
+    # Only East needs DEM.img now; removing West keeps it.
+    assert maps.removal_list(all_maps, west, rewriting=False) == ["Garmin/W.img", "Garmin/W.gma"]
+
+
+def test_a_device_that_cannot_be_read_still_keeps_shared_files(server, device_root, xdg):
+    class Unreadable(LocalStorage):
+        def listdir(self, path):
+            raise DeviceError("unplugged")
+
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(Unreadable(device_root), all_maps)
+    west = all_maps[0]
+    assert maps.removal_list(all_maps, west, rewriting=False) == ["Garmin/W.img", "Garmin/W.gma"]
+
+
+def test_own_maps_are_never_on_a_removal_list(server, device_root, xdg):
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "W.gma": b"u", "Berlin.img": b"own"})
+    all_maps = maps.parse_maps(maps_response(server))
+    maps.mark_waiting(LocalStorage(device_root), all_maps)
+    for m in all_maps:
+        assert "Garmin/Berlin.img" not in maps.removal_list(all_maps, m, rewriting=False)
+
+
+def test_a_map_the_server_does_not_list_is_unknown_to_the_removal(server, device_root, xdg):
+    """A known limit, as in Garmin Express: only the maps the server lists are known. When
+    the server leaves out an installed map (East), its share of DEM.img is not seen."""
+    resp = maps_response(server)
+    del resp["maps"][1]
+    all_maps = maps.parse_maps(resp)
+    west = all_maps[0]
+    assert "Garmin/DEM.img" in maps.removal_list(all_maps, west, rewriting=False)

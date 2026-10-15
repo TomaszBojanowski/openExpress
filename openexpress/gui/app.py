@@ -1289,8 +1289,12 @@ class MainWindow(Adw.ApplicationWindow):
                 self.map_state = "failed"
                 self._render_map_state()
 
-        self.in_background(lambda: mp.read_maps(s.client.universal_maps(s.device.raw)),
-                           done, failed)
+        def work():
+            result = mp.read_maps(s.client.universal_maps(s.device.raw))
+            mp.mark_waiting(s.storage, result[0])
+            return result
+
+        self.in_background(work, done, failed)
 
     def _show_last_sync(self) -> None:
         if (not hasattr(self, "last_sync_row") or self.session is None
@@ -1800,6 +1804,7 @@ class MainWindow(Adw.ApplicationWindow):
             # Garmin's server, then the map folder of the device for the maps that are not
             # Garmin's (the folder and the first bytes of each such file).
             result = mp.read_maps(s.client.universal_maps(s.device.raw))
+            mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
             return result, ownmaps.overview(s.device, s.storage, result[0])
 
         self._load("maps", _("Checking maps…"), work, lambda r: self.show_maps(r[0], r[1]))
@@ -1830,14 +1835,16 @@ class MainWindow(Adw.ApplicationWindow):
             return
         s = self.session
         free, total = s.storage.free_space(), s.storage.capacity()
-        installed = sorted((m for m in all_maps if m.installed), key=lambda m: (m.map_type, m.name))
+        # Also the maps written or removed that the device takes in when it is unplugged.
+        installed = sorted((m for m in all_maps if m.installed or m.waiting),
+                           key=lambda m: (m.map_type, m.name))
         g = sec.group(_("On the device"))
         # The list is what Garmin's server said when the page was opened; a device that has
         # just been plugged in may not have named all its map files yet.
         g.set_header_suffix(self._button(
             _("Check Again"), lambda: self.load_section("maps", force=True)))
         if free is not None and total:
-            used_by_maps = sum(m.size for m in installed)
+            used_by_maps = sum(m.size for m in installed if m.occupies)
             row = Adw.ActionRow(
                 title=_("{free} free of {total}").format(free=_human(free), total=_human(total)),
                 subtitle=_("Maps use {size}").format(size=_human(used_by_maps)))
@@ -1847,6 +1854,11 @@ class MainWindow(Adw.ApplicationWindow):
         for m in installed:
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(self._map_subtitle(m)))
+            if m.waiting:
+                # Nothing to do until the device is unplugged, as for apps waiting there.
+                row.set_sensitive(m.waiting != mp.WAIT_REMOVE)
+                g.add(row)
+                continue
             if m.update_available:
                 # TRANSLATORS: button
                 row.add_suffix(self._button(_("Update"), lambda m=m: self.confirm_map(m),
@@ -1858,7 +1870,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         if own is not None:
             self.show_own_maps(own)  # right under the installed maps, before those to download
-        available = sorted((m for m in all_maps if not m.installed),
+        available = sorted((m for m in all_maps if not m.installed and not m.waiting),
                            key=lambda m: (m.region, m.name))
         if not available:
             return
@@ -2085,7 +2097,8 @@ class MainWindow(Adw.ApplicationWindow):
                                    transfer_progress=self.fraction,
                                    download_progress=self.fraction,
                                    url_salt=s.client.consumer.url_salt),
-                lambda rep: (self.toast(_("Installed {name}").format(name=m.name)),
+                lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
+                                        .format(name=m.name)),
                              self.load_section("maps", force=True)),
             )
 

@@ -698,6 +698,7 @@ def _load_maps(args, client):
 
     st, dev = open_device(args)
     all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
+    mp.mark_waiting(st, all_maps)
     return st, dev, all_maps, listed
 
 
@@ -789,13 +790,14 @@ def cmd_maps(args) -> int:
         print(mp.no_maps_message())
         return 0
     if args.maps_cmd in (None, "list"):
-        shown = all_maps if args.all else [m for m in all_maps if m.installed]
+        on_device = [m for m in all_maps if m.installed or m.waiting]
+        shown = all_maps if args.all else on_device
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
-        for m in sorted(shown, key=lambda m: (not m.installed, m.map_type, m.name)):
+        for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
             print(f"  {m.name:48} {m.version:>9}  {_human(m.size):>9}  {m.status}")
         if not args.all:
-            n = sum(1 for m in all_maps if not m.installed)
+            n = len(all_maps) - len(on_device)
             print("\n" + ngettext("{count} more map is available (openexpress maps --all).",
                                   "{count} more maps are available (openexpress maps --all).",
                                   n).format(count=n))
@@ -835,6 +837,9 @@ def cmd_maps(args) -> int:
                            len(removed)).format(count=len(removed)))
             continue
 
+        if m.waiting == mp.WAIT_INSTALL:
+            # Refused before anything is listed: it is written already.
+            raise mp.MapError(mp.waiting_message(m))
         removing = mp.removal_list(all_maps, m, rewriting=True)
         need = mp.space_needed(st, m, removing)
         if m.installed:
@@ -871,6 +876,7 @@ def cmd_maps(args) -> int:
                        "Wrote {count} map files and {unlocks} unlock files.",
                        len(rep.written)).format(count=len(rep.written),
                                                 unlocks=len(rep.unlocks)))
+        print(_("The map will be loaded after the device is unplugged."))
     return 0
 
 
