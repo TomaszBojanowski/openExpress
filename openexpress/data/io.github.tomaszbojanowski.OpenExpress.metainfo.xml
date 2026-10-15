@@ -97,6 +97,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.9" date="2026-10-15">
+      <description>
+        <ul>
+          <li>"Last sync": the row and the details count the same way (new files, files
+          already in Connect with how they were recognised, files rejected by Garmin, errors),
+          with correct plural forms.</li>
+          <li>New files are named by their type (activities, sleep, HRV status, device
+          backup…; others as "other data").</li>
+          <li>The command line, the window and the notification of the background sync use
+          the same words.</li>
+          <li>The last sync is saved as numbers, so it is shown in the current language.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.8" date="2026-10-14">
       <description>
         <ul>
