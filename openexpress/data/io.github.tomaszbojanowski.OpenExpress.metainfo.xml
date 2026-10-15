@@ -97,6 +97,14 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.14" date="2026-10-15">
+      <description>
+        <ul>
+          <li>The progress bar now moves while maps and software updates download, not only
+          while they are copied to the device.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.13" date="2026-10-15">
       <description>
         <ul>
