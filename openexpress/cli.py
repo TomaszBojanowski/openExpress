@@ -424,15 +424,14 @@ def cmd_sync(args) -> int:
         elif up_plan and up_plan.candidates:
             print("\n" + _("Uploading…"))
             rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
-            line = _("Uploaded: {uploaded}, duplicates: {duplicates}, already in Connect: "
-                     "{already}, rejected: {rejected}, errors: {errors}").format(
-                uploaded=len(rep.uploaded), duplicates=len(rep.duplicates),
-                already=len(rep.already_in_connect), rejected=len(rep.rejected),
-                errors=len(rep.failed))
-            print(line)
-            summary.lines.append(line)
+            # The same steps and words as a sync in the window or in the background.
+            steps = [service.new_files_step(up_plan.candidates), service.uploads_step(rep)]
+            for text in service.describe_lines(steps):
+                print(text)
+            summary.lines += steps
             summary.uploaded = len(rep.uploaded)
             summary.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
+            summary.rejected = len(rep.rejected)
             summary.errors += [f"{label}: {err}" for label, err in rep.failed]
             for label, err in rep.failed:
                 print("  " + _("ERROR {item}: {error}").format(item=label, error=err))

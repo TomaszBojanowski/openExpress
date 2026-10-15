@@ -318,6 +318,7 @@ class SyncSummary:
     uploaded: int = 0
     skipped_known: int = 0
     downloaded: int = 0
+    rejected: int = 0
     errors: list[str] = field(default_factory=list)
     # What happened, in order: a text, or the numbers of a step as a dict, which is put into
     # words only when it is shown (`describe_lines`): in the language of that moment.
@@ -337,11 +338,52 @@ def _describe_line(line) -> str | None:
         types = ", ".join(f"{k}×{v}" for k, v in sorted((line.get("types") or {}).items()))
         return _("New files: {types}").format(types=types)
     if kind == "uploads":
-        return _("Uploaded {uploaded}, already in Connect {known}, rejected {rejected}, "
-                 "errors {errors}.").format(
-            uploaded=line.get("uploaded", 0), known=line.get("known", 0),
-            rejected=line.get("rejected", 0), errors=line.get("errors", 0))
+        numbers = {"uploaded": line.get("uploaded", 0), "known": line.get("known", 0),
+                   "checked": line.get("known_checked", 0),
+                   "server": line.get("known_server", 0),
+                   "rejected": line.get("rejected", 0), "errors": line.get("errors", 0)}
+        if numbers["known"]:
+            return _("New files uploaded: {uploaded} · already in Connect: {known} ({checked} "
+                     "recognised before sending, {server} by Garmin) · rejected by Garmin: "
+                     "{rejected} · upload errors: {errors}").format(**numbers)
+        return _("New files uploaded: {uploaded} · already in Connect: {known} · rejected by "
+                 "Garmin: {rejected} · upload errors: {errors}").format(**numbers)
     return None
+
+
+def new_files_step(candidates) -> dict:
+    """The new files of a sync, counted by data type: a step of the summary."""
+    return {"kind": "new_files",
+            "types": dict(collections.Counter(c.datatype for c in candidates))}
+
+
+def uploads_step(rep) -> dict:
+    """What became of the uploads of a sync: a step of the summary. "known": already in
+    Connect, recognised before sending or, after it was sent, by Garmin."""
+    return {"kind": "uploads", "uploaded": len(rep.uploaded),
+            "known": len(rep.already_in_connect) + len(rep.duplicates),
+            "known_checked": len(rep.already_in_connect), "known_server": len(rep.duplicates),
+            "rejected": len(rep.rejected), "errors": len(rep.failed)}
+
+
+def describe_counts(data: dict) -> str:
+    """The numbers of the last sync in one line, as the window shows them under "Last sync":
+    the new files always, the rest only when there is any. The same words as the details."""
+    uploaded, known = data.get("uploaded", 0), data.get("skipped_known", 0)
+    rejected, received = data.get("rejected", 0), data.get("downloaded", 0)
+    errors = len(data.get("errors") or [])  # uploads and downloads
+    parts = [ngettext("{count} new file uploaded", "{count} new files uploaded",
+                      uploaded).format(count=uploaded)]
+    if known:
+        parts.append(_("{count} already in Connect").format(count=known))
+    if rejected:
+        parts.append(_("{count} rejected by Garmin").format(count=rejected))
+    if received:
+        parts.append(ngettext("{count} received", "{count} received", received).format(
+            count=received))
+    if errors:
+        parts.append(ngettext("{count} error", "{count} errors", errors).format(count=errors))
+    return " · ".join(parts)
 
 
 def describe_lines(lines) -> list[str]:
@@ -403,7 +445,7 @@ def last_sync_path():
 def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
     data = {"time": time.time(), "unit_id": unit_id, "uploaded": summary.uploaded,
             "downloaded": summary.downloaded, "skipped_known": summary.skipped_known,
-            "errors": summary.errors, "lines": summary.lines}
+            "rejected": summary.rejected, "errors": summary.errors, "lines": summary.lines}
     path = last_sync_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -451,21 +493,17 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     plan = sync.plan_uploads(s.device, s.storage, cfg, state,
                              include_diagnostics=include_diagnostics,
                              consent_granted=gate.granted)
-    counts = collections.Counter(c.datatype for c in plan.candidates)
     if not gate.allowed:
         # Files from Connect are still written to the device below.
         out.lines.append(gate.message())
     elif plan.candidates:
-        out.lines.append({"kind": "new_files", "types": dict(counts)})
+        out.lines.append(new_files_step(plan.candidates))
         rep = sync.run_uploads(plan, s.device, s.storage, s.client, state, progress)
         out.uploaded = len(rep.uploaded)
         out.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
+        out.rejected = len(rep.rejected)
         out.errors += [f"{label}: {err}" for label, err in rep.failed]
-        out.lines.append({
-            "kind": "uploads", "uploaded": out.uploaded, "known": out.skipped_known,
-            # Of those: recognised before sending, and sent but recognised by Garmin.
-            "known_checked": len(rep.already_in_connect), "known_server": len(rep.duplicates),
-            "rejected": len(rep.rejected), "errors": len(rep.failed)})
+        out.lines.append(uploads_step(rep))
         if rep.tracker_conflict:
             n = len(rep.tracker_conflict)
             out.lines.append(ngettext(

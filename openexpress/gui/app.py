@@ -1188,14 +1188,8 @@ class MainWindow(Adw.ApplicationWindow):
             row.set_subtitle(_("Not synced yet with openExpress"))
             row.set_enable_expansion(False)
             return
-        summary = ngettext("{count} file uploaded", "{count} files uploaded",
-                           data.get("uploaded", 0)).format(count=data.get("uploaded", 0)) \
-            + " · " + ngettext("{count} received", "{count} received",
-                               data.get("downloaded", 0)).format(count=data.get("downloaded", 0))
+        summary = service.describe_counts(data)  # the same words as the details below
         errors = data.get("errors") or []
-        if errors:
-            summary += " · " + ngettext("{count} error", "{count} errors",
-                                        len(errors)).format(count=len(errors))
         row.set_subtitle(GLib.markup_escape_text(
             format_when(data.get("time", time.time())) + " · " + summary))
         row.set_enable_expansion(True)
