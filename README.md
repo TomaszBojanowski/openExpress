@@ -127,19 +127,29 @@ The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
 
 **About the Flatpak's permissions:** besides network, USB storage access through GNOME's
-gvfs and your Downloads/Music folders, the Flatpak can run commands on the host
-(`org.freedesktop.Flatpak`). It uses this only to copy files to the watch with `gio copy`,
-because gvfs does not let sandboxed apps write to MTP devices. This weakens the sandbox; if
-you prefer not to grant it, use the version from source (writing to the watch then works
-without it).
+gvfs and your Downloads/Music folders, the Flatpak has two permissions that weaken the
+sandbox:
 
-**Limitation of the Flatpak:** it has no direct access to USB devices. On devices that hide
-their app folder (e.g. the fēnix 8) it therefore cannot install, update or remove Connect IQ
-apps itself: installs and updates are only queued in Garmin Connect, from where the phone or
-Garmin Express installs them, and apps are removed on the phone. Nothing is written to the
-device in that case. The version from source has no such limit.
+- It can run commands on the host (`org.freedesktop.Flatpak`). It uses this only to copy
+  files to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
+  devices.
+- It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of
+  `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
+  (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
+  connection, and the device disappears from the file manager for a moment while it is
+  used. This is not yet tested on a device in the Flatpak.
 
-Build the Flatpak yourself:
+If you prefer not to grant the first one, use the version from source (writing to the watch
+then works without it). The second one can be turned off with
+`flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; Flatpak
+older than 1.16 ignores it. Without it, on devices that hide their app folder, installs and
+updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
+them, apps are removed on the phone, and nothing is written to the device.
+
+openExpress is not on Flathub and will not be: it uses Garmin's unofficial interfaces.
+
+Build the Flatpak yourself (this needs `flatpak-builder` with Flatpak 1.16 or newer; older
+versions refuse `--device=usb` with "Unknown device type usb"):
 
 ```bash
 flatpak install --user flathub org.gnome.Sdk//50
@@ -264,7 +274,7 @@ is stored in the file.
   talk to it over a direct USB connection; the device disappears from the file manager for a
   moment and is mounted again afterwards. The device finishes the change after it is
   unplugged; until then the app is shown as waiting. A sync never does this: it leaves such
-  apps in the queue. Not available in the Flatpak (see above).
+  apps in the queue. In the Flatpak this needs its USB permission (see above).
 - The apps already on the device keep their order and their on/off state: the app list is
   written back exactly as the device reported it, with only the requested change.
 - Before every change to the apps (install, update, remove, enable/disable, order) a copy of

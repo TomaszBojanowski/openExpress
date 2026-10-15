@@ -9,6 +9,11 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
+  # The USB device nodes (/dev/bus/usb) and nothing else of /dev: some watches (e.g. the
+  # fēnix 8) hide their app folder from MTP, and Connect IQ apps are written there over a
+  # direct USB connection (PTP). Without it (or with a Flatpak older than 1.16, which
+  # ignores it) such apps are only queued in Garmin Connect. Never --device=all.
+  - --device=usb
   # The watch is mounted by the host's gvfs (MTP); talk to it over D-Bus.
   - --talk-name=org.gtk.vfs.*
   - --filesystem=xdg-run/gvfsd
