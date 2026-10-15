@@ -35,7 +35,6 @@ class MapError(Exception):
 @dataclass
 class MapFile:
     device_path: str
-    datatype: str
     url: str
     md5: str | None
     size: int
@@ -147,7 +146,6 @@ def parse_maps(response: dict) -> list[UniversalMap]:
                 continue
             files.append(MapFile(
                 device_path=f["filename"].replace("\\", "/"),
-                datatype=f.get("datatype") or "",
                 url=deliv.get("url") or "",
                 md5=download.normalize_md5(deliv.get("md5")),
                 size=int(deliv.get("sizeinbytes") or 0),

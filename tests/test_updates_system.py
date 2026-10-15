@@ -999,7 +999,7 @@ def _fetch_in_steps(cached=()):
 def _map(*sizes):
     from openexpress import maps
 
-    files = [maps.MapFile(device_path=f"Garmin/Map{n}.img", datatype="Map",
+    files = [maps.MapFile(device_path=f"Garmin/Map{n}.img",
                           url=f"https://example.org/map{n}.img", md5=None, size=size)
              for n, size in enumerate(sizes)]
     return maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0,
