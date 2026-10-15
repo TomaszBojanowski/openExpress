@@ -97,6 +97,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.11" date="2026-10-15">
+      <description>
+        <ul>
+          <li>The Flatpak can install, update and remove Connect IQ apps on devices that hide
+          their app folder (e.g. the fēnix 8), over a direct USB connection, with the new
+          --device=usb permission (only the USB device nodes). Installing and removing tested
+          on a fēnix 8.</li>
+          <li>Without the permission, or with Flatpak older than 1.16, such apps are only
+          queued in Garmin Connect, as before. How to turn the permission off is in the
+          README.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.10" date="2026-10-15">
       <description>
         <ul>
