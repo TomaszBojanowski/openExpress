@@ -385,12 +385,15 @@ class Timers:
 
 
 @pytest.fixture
-def detecting(monkeypatch):
+def detecting(tmp_path, monkeypatch):
     """A window with the real detection code. Its tasks wait until the test finishes them;
-    each started task is one `open_session`, and each `show_device` builds every page anew."""
+    each started task is one `open_session`, and each `show_device` builds every page anew.
+    The open device is on USB at bus 1, device 40 (a made-up /sys)."""
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
+    usb_device(tmp_path / "sys", "1-4", 1, 40, "091e", "51b4")
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", tmp_path / "sys")
     timers = Timers()
     monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
     monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
@@ -433,7 +436,8 @@ def opened(win, mount_uri, unit_id=3000000001, answers=True):
             raise gio_storage.DeviceError("gone")
         return b"<Device/>"
 
-    storage = types.SimpleNamespace(label=mount_uri + "Internal%20Storage", read=read)
+    storage = types.SimpleNamespace(label=mount_uri + "Internal%20Storage", read=read,
+                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 40))
     return types.SimpleNamespace(storage=storage,
                                  device=types.SimpleNamespace(unit_id=unit_id))
 
@@ -487,6 +491,38 @@ def test_an_open_device_that_does_not_answer_is_detected_as_before(detecting):
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     win.timers.fire()
     assert win.reads == ["GARMIN/GarminDevice.xml"] and len(win.tasks) == 1
+
+
+def test_the_same_address_at_a_new_place_on_usb_is_detected_again(detecting, tmp_path, caplog):
+    import shutil
+
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    win.session = opened(win, NUMERIC)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    win.timers.fire()
+    assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []  # the same place
+    # Unplugged and plugged in again: the address carries the serial number, so it is the
+    # same, but the device number on USB is new.
+    shutil.rmtree(tmp_path / "sys" / "1-4")
+    usb_device(tmp_path / "sys", "1-4", 1, 41, "091e", "51b4")
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+        win.timers.fire()
+    assert len(win.tasks) == 1 and len(win.reads) == 1  # detected anew, nothing read
+    assert "the same address, but not at the same place on USB" in caplog.text
+
+
+def test_an_open_device_whose_place_on_usb_is_not_known_is_kept_by_its_address(detecting):
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    win.session = opened(win, NUMERIC)
+    win.session.storage.usb = gio_storage.GarminUsb("51b4", "uri")  # told by its address only
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    win.timers.fire()
+    assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []
 
 
 def test_several_triggers_lead_to_one_detection(detecting):

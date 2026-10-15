@@ -31,6 +31,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     not_ready_text,
     own_remount,
     usb_state,
+    usb_still_there,
 )
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
@@ -286,6 +287,14 @@ def detection_due(win) -> None:
     s = win.session
     if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
                                        for r in reasons):
+        win.refresh_device()
+        return
+    usb = getattr(s.storage, "usb", None)
+    if usb is not None and usb.bus is not None and not usb_still_there(usb):
+        # The same address (it carries the serial number), but not the same place on USB:
+        # unplugged and plugged in again, so the device may have changed (it applies what
+        # was waiting when it is unplugged) and the session points to the old place.
+        log.info("device detection: the same address, but not at the same place on USB")
         win.refresh_device()
         return
 
