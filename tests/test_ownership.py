@@ -318,6 +318,7 @@ def test_cli_refuses_other_watch(device_root, xdg, cli_client, capsys, argv):
     assert tree(device_root) == before
     assert not sync.SyncState(UNIT).dir.exists()
     assert not service.last_sync_path().exists()
+    assert not service.device_last_sync_path(UNIT).exists()
 
 
 class PipedOutput:
@@ -420,6 +421,7 @@ def test_run_sync_refuses_other_watch(device_root, xdg, device):
     assert set(client.http.paths()) == {DEVICES_PATH}
     assert tree(device_root) == before
     assert not s.state.dir.exists() and not service.last_sync_path().exists()
+    assert not service.device_last_sync_path(UNIT).exists()
 
 
 # --- features without the account are not affected --------------------------------------------

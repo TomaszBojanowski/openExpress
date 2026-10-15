@@ -482,18 +482,31 @@ def run_sync(
 
 
 def last_sync_path():
+    """The newest sync of any device. The window watches this file to show a sync that the
+    background service has just finished."""
     return paths.data_dir() / "last_sync.json"
+
+
+def device_last_sync_path(unit_id: int):
+    """The last sync of this device."""
+    return paths.device_dir(unit_id) / "last_sync.json"
+
+
+def _write_json(path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
+    tmp.replace(path)
 
 
 def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
     data = {"time": time.time(), "unit_id": unit_id, "uploaded": summary.uploaded,
             "downloaded": summary.downloaded, "skipped_known": summary.skipped_known,
             "rejected": summary.rejected, "errors": summary.errors, "lines": summary.lines}
-    path = last_sync_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
-    tmp.replace(path)
+    # The device's own file first: the shared one only tells which sync was the newest,
+    # and a sync of another device replaces it.
+    _write_json(device_last_sync_path(unit_id), data)
+    _write_json(last_sync_path(), data)
 
 
 def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int,
@@ -504,12 +517,24 @@ def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int
                                         lines=list(lines)))
 
 
-def load_last_sync(unit_id: int | None = None) -> dict | None:
+def _read_json(path) -> dict | None:
     try:
-        data = json.loads(last_sync_path().read_text())
+        data = json.loads(path.read_text())
     except (OSError, ValueError):
         return None
-    if unit_id is not None and data.get("unit_id") != unit_id:
+    return data if isinstance(data, dict) else None
+
+
+def load_last_sync(unit_id: int | None = None) -> dict | None:
+    """The last sync of this device (of any device without `unit_id`). Its own file comes
+    first; the shared file, which earlier versions wrote alone, counts only when it is of
+    this device."""
+    if unit_id is not None:
+        data = _read_json(device_last_sync_path(unit_id))
+        if data is not None and data.get("unit_id") == unit_id:
+            return data
+    data = _read_json(last_sync_path())
+    if data is None or (unit_id is not None and data.get("unit_id") != unit_id):
         return None
     return data
 

@@ -119,3 +119,53 @@ def test_new_files_in_polish():
         i18n.setup("en")
     assert line == ("Nowe pliki: aktywności ×1, sen ×1, EKG ×1, zaburzenia snu ×1, kopia zapasowa "
                     "urządzenia ×1, inne dane (FIT_TYPE_70) ×1")
+
+
+# --- each device keeps its own last sync -----------------------------------------------------
+
+
+A, B = 3000000001, 3000000002  # made up
+
+
+def test_each_device_keeps_its_own_last_sync(xdg):
+    service.save_last_sync(A, service.SyncSummary(uploaded=7))
+    service.save_last_sync(B, service.SyncSummary(uploaded=2))
+    assert service.load_last_sync(A)["uploaded"] == 7  # not replaced by the sync of B
+    assert service.load_last_sync(B)["uploaded"] == 2
+    assert service.load_last_sync()["unit_id"] == B  # the shared file: the newest sync
+
+
+def test_a_last_sync_written_by_an_earlier_version_still_counts(xdg):
+    import json
+
+    service.last_sync_path().parent.mkdir(parents=True, exist_ok=True)
+    service.last_sync_path().write_text(json.dumps({"time": 1, "unit_id": A, "uploaded": 4}))
+    assert service.load_last_sync(A)["uploaded"] == 4
+    assert service.load_last_sync(B) is None
+    assert not service.device_last_sync_path(A).exists()  # read where it is, not moved
+
+
+def test_the_devices_own_file_comes_first(xdg):
+    import json
+
+    service.save_last_sync(A, service.SyncSummary(uploaded=5))
+    service.last_sync_path().write_text(json.dumps({"time": 1, "unit_id": A, "uploaded": 1}))
+    assert service.load_last_sync(A)["uploaded"] == 5
+
+
+def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    service.save_last_sync(A, service.SyncSummary(uploaded=3))
+    service.save_last_sync(B, service.SyncSummary(uploaded=1))
+    said = []
+    row = types.SimpleNamespace(set_subtitle=said.append, set_enable_expansion=lambda on: None,
+                                remove=lambda child: None, add_row=lambda child: None)
+    win = types.SimpleNamespace(
+        last_sync_row=row, _last_sync_children=[],
+        session=types.SimpleNamespace(ownership_error=None,
+                                      device=types.SimpleNamespace(unit_id=A)))
+    MainWindow._show_last_sync(win)
+    assert len(said) == 1 and said[0].endswith("3 new files uploaded")
