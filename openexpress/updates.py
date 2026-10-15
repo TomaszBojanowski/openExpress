@@ -34,6 +34,8 @@ SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
 # Said before a system update is installed, on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
                            "not disconnect it while copying.")
+# The offered updates named one by one in the log, at most.
+LOG_ITEMS = 20
 # Said when the server offers beta versions to the device ("accesslevel" of the answer, e.g.
 # "public_beta"), on the command line and in the window.
 BETA_OFFERED = N_("Garmin offers beta software for this device.")
@@ -142,14 +144,31 @@ def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
         return False
 
 
-def mark_present(storage: Storage, updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+def component_count(device) -> int | None:
+    """How many components the device's GarminDevice.xml lists; None when that is not known.
+    Only for the log, so it never fails."""
+    files = getattr(device, "update_files", None)
+    return len(files) if isinstance(files, list) else None
+
+
+def mark_present(storage: Storage, updates: list[SoftwareUpdate],
+                 components: int | None = None) -> list[SoftwareUpdate]:
     """Find the offered updates whose file the device already has (e.g. map support files
-    it briefly does not list right after it is plugged in). They are not updates."""
+    it briefly does not list right after it is plugged in). They are not updates.
+
+    `components`: how many components the device's GarminDevice.xml lists, for the log."""
     offered = [u for u in updates if not u.is_reinstall and not u.is_metadata]
     for u in offered:
         u.on_device = is_on_device(storage, u)
-    log.info("updates: %d offered, %d of them already on the device", len(offered),
-             sum(1 for u in offered if u.on_device))
+    # Part numbers and versions only: no paths, no addresses (a download address carries
+    # a token).
+    named = ", ".join(f"{u.part_number} {u.version}" + (" on the device" if u.on_device else "")
+                      for u in offered[:LOG_ITEMS])
+    if len(offered) > LOG_ITEMS:
+        named += f", … and {len(offered) - LOG_ITEMS} more"
+    log.info("updates: %d offered%s, %d of them already on the device%s", len(offered),
+             f" ({named})" if named else "", sum(1 for u in offered if u.on_device),
+             f"; {components} components listed" if components is not None else "")
     return updates
 
 

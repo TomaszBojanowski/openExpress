@@ -1204,7 +1204,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         def work():
             items = upd.mark_present(
-                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw)))
+                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw)),
+                upd.component_count(s.device))
             return upd.pending(items), upd.staged(items)
 
         def done(result):
@@ -1577,7 +1578,9 @@ class MainWindow(Adw.ApplicationWindow):
         def work():
             # Asks Garmin's server, then compares the offered files with those on the device.
             answer = s.client.software_updates(s.device.raw, include_reinstalls=True)
-            return upd.mark_present(s.storage, upd.parse_updates(answer)), upd.beta_offered(answer)
+            items = upd.mark_present(s.storage, upd.parse_updates(answer),
+                                     upd.component_count(s.device))
+            return items, upd.beta_offered(answer)
 
         self._load("updates", _("Checking for updates…"), work,
                    lambda result: self.show_updates(*result))

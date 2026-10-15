@@ -608,7 +608,8 @@ def cmd_updates(args) -> int:
     st, dev = open_device(args)
     client = GarminClient(Settings.load())
     resp = client.software_updates(dev.raw, include_reinstalls=args.reinstalls)
-    items = upd.mark_present(st, upd.parse_updates(resp))  # only reads the device
+    # Only reads the device.
+    items = upd.mark_present(st, upd.parse_updates(resp), upd.component_count(dev))
     if not args.reinstalls:
         items = [u for u in items if not u.is_reinstall]
     # A system update that is on the device already waits for the device to install it.

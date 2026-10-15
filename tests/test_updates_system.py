@@ -6,6 +6,7 @@ without "isrestartrequired", and its data type, "Firmware", is also that of plai
 as fonts. All values are made up."""
 
 import hashlib
+import logging
 import types
 
 import pytest
@@ -675,6 +676,71 @@ def test_only_a_system_update_on_the_device_is_staged(device_root):
     # too but is no system update; a reinstall and a -META entry are never waiting.
     assert [u.part_number for u in updates.staged(items)] == ["006-V0000-00"]
     assert updates.pending(items) == []
+
+
+
+# --- the log names the offered updates ------------------------------------------------------
+
+
+def _offered_log(caplog):
+    from openexpress import applog
+
+    return [applog.redact(r.getMessage()) for r in caplog.records
+            if r.getMessage().startswith("updates: ")]
+
+
+def test_the_log_names_the_offered_updates_and_counts_the_components(device_root, caplog):
+    _copied(device_root, "006-V0000-00", "006-D0000-00")
+    answer = server_answer()
+    answer["updates"].append(_entry("006-D1111-00", "Test Map", "Etyp", "Garmin\\SID",
+                                    "new.sid", b"new"))
+    answer["updates"].append(_entry("006-B0000-00", "Old Software", "Firmware", "Garmin",
+                                    "GUPDATE.GCD", b"old"))
+    answer["updates"][-1]["installation"]["isReinstall"] = True
+    answer["updates"].append(_entry("006-V0000-00-META", "Update information", "UpdateMetadata",
+                                    "Garmin", "GUPDATE.GSP", BUNDLE))
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.mark_present(LocalStorage(device_root), updates.parse_updates(lower_keys(answer)),
+                             161)
+    # In the server's order; no reinstall, no -META entry, no path and no address.
+    assert _offered_log(caplog) == [
+        ("updates: 3 offered (006-D0000-00 23.40 on the device, 006-V0000-00 23.40 on the "
+         "device, 006-D1111-00 23.40), 2 of them already on the device; 161 components listed")]
+
+
+def test_the_log_names_twenty_updates_at_most(device_root, caplog):
+    answer = {"updates": [_entry(f"006-D{n:04d}-00", f"Item {n}", "Firmware", "Garmin",
+                                 f"f{n}.bin", b"x") for n in range(1, 26)]}
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.mark_present(LocalStorage(device_root), updates.parse_updates(lower_keys(answer)),
+                             68)
+    line = _offered_log(caplog)[0]
+    assert line.startswith("updates: 25 offered (006-D0001-00 23.40, ")
+    assert "006-D0020-00 23.40, … and 5 more), 0 of them" in line and "006-D0021-00" not in line
+
+
+def test_the_log_without_offers_looks_as_before(device_root, caplog):
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.mark_present(LocalStorage(device_root), [], 168)
+        updates.mark_present(LocalStorage(device_root), [])  # the count not known
+    assert _offered_log(caplog) == [
+        "updates: 0 offered, 0 of them already on the device; 168 components listed",
+        "updates: 0 offered, 0 of them already on the device"]
+
+
+@pytest.mark.parametrize("part, version", [
+    ("006-DA699-00", "2.70"), ("006-B4532-00", "23.39"), ("006-V4440-00", "33.12")])
+def test_part_numbers_and_versions_pass_the_log_filter(part, version):
+    from openexpress import applog
+
+    text = f"{part} {version} on the device"
+    assert applog.redact(text) == text
+
+
+def test_the_component_count_never_fails():
+    assert updates.component_count(types.SimpleNamespace(update_files=[1, 2, 3])) == 3
+    assert updates.component_count(types.SimpleNamespace()) is None
+    assert updates.component_count(None) is None
 
 
 def test_nothing_is_staged_before_the_file_is_copied(device_root):
