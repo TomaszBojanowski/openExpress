@@ -1004,3 +1004,29 @@ def test_a_map_the_server_does_not_list_is_unknown_to_the_removal(server, device
     all_maps = maps.parse_maps(resp)
     west = all_maps[0]
     assert "Garmin/DEM.img" in maps.removal_list(all_maps, west, rewriting=False)
+
+
+def _a_map(name, state, paths, files_to_remove, waiting=None):
+    files = [maps.MapFile(device_path=p, url=f"https://example.org/{n}", md5=None, size=1)
+             for n, p in enumerate(paths)]
+    return maps.UniversalMap(name=name, map_type="TopoActive", state=state, is_reinstall=True,
+                             can_uninstall=True, version="2026.11", region="Test",
+                             identifier={}, files=files, files_to_remove=files_to_remove,
+                             hosts=[], waiting=waiting)
+
+
+@pytest.mark.parametrize("state,waiting", [(1, None), (0, maps.WAIT_INSTALL)],
+                         ids=["installed", "written-and-waiting"])
+def test_a_shared_file_is_kept_whatever_its_spelling(state, waiting):
+    # Written and waiting: not on the server's list of the device yet, so nothing to remove.
+    a = _a_map("Map A", state, ["Garmin/SID/DA69900.sid"],
+               ["Garmin/SID/DA69900.sid"] if state else [], waiting)
+    b = _a_map("Map B", 1, ["GARMIN/SID/da69900.SID", "Garmin/B.img"],
+               ["GARMIN/SID/da69900.SID", "Garmin/B.img"])
+    all_maps = [a, b]
+    keep = maps.protected_files(all_maps, b)
+    assert "Garmin/SID/DA69900.sid".casefold() in keep
+    assert "GARMIN/SID/da69900.SID".casefold() in keep
+    removing = maps.removal_list(all_maps, b, rewriting=False)
+    assert removing == ["Garmin/B.img"]  # only B's own file
+    assert all(p.casefold() != "garmin/sid/da69900.sid" for p in removing)
