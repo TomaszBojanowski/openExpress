@@ -97,6 +97,18 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.13" date="2026-10-15">
+      <description>
+        <ul>
+          <li>The last sync is remembered for each device; syncing a second device no longer
+          hides the first one's.</li>
+          <li>After unplugging the device, the window shows "Connect your device" at once.</li>
+          <li>The two versions of an update ("23.39 → 23.40") stay on one line.</li>
+          <li>The log names the updates Garmin offers, and the window is logged as the
+          window.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.12" date="2026-10-15">
       <description>
         <ul>
