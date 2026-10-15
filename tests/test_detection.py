@@ -527,14 +527,18 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
 
 
 @pytest.fixture
-def exclusive(monkeypatch):
-    """A storage of a mounted Garmin device; unmounting, mounting and USB are recorded."""
+def exclusive(tmp_path, monkeypatch):
+    """A storage of a mounted Garmin device; unmounting, mounting and USB are recorded.
+    The device stays on USB (a made-up /sys) unless a test unplugs it."""
     from ptp_fake import FakeDevice
 
     from openexpress.device import ptp
 
     events = []
     fake = FakeDevice()
+    usb_device(tmp_path / "sys", "3-1", 3, 14, "091e", "51b4")
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", tmp_path / "sys")
+    monkeypatch.setattr(gio_storage, "_quiet_usb", {})
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: False)
     monkeypatch.setattr(ptp, "load_libusb", lambda: object())
     monkeypatch.setattr(gio_storage, "_unmount", lambda uri: events.append(("unmount", uri)))
@@ -706,6 +710,41 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     w.on_mount(None, FakeMount(NUMERIC))
     assert win.session is session and shown == [] and started == []  # the device stays open
+
+
+def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypatch, caplog):
+    import shutil
+
+    from openexpress import watch
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    st, _fake, _events = exclusive
+    with st.exclusive_ptp():
+        pass
+    assert gio_storage.own_remount(FakeMount(NUMERIC))  # still at its place: our own doing
+    sysfs = gio_storage.SYSFS_USB
+    shutil.rmtree(sysfs / "3-1")  # unplugged, as the user is told to after an install
+    shown = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal")),
+        busy=False, show_device=lambda: shown.append(1), _updated_apps={"waiting"})
+    with caplog.at_level(logging.INFO):
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    assert win.session is None and shown == [1] and win._updated_apps == set()
+    assert "device: unplugged after our own PTP session" in caplog.text
+    assert "the open device, showing no device" in caplog.text
+
+    # Plugged in again a moment later, at a new place: the window and the watcher see it.
+    usb_device(sysfs, "3-1", 3, 15, "091e", "51b4")
+    timers, started = [], []
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
+    monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
+    monkeypatch.setattr(watch, "garmin_usb", lambda mount: True)
+    monkeypatch.setattr(app, "garmin_usb", lambda mount: True)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    watch.Watcher().on_mount(None, FakeMount(NUMERIC))
+    assert timers == [1500] and len(started) == 1
 
 
 # --- a device that is plugged in but not there yet ----------------------------------------

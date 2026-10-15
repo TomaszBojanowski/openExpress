@@ -632,11 +632,13 @@ def _open_device_storage(uri: str | None) -> GioStorage:
 #
 # gvfs holds the USB interface while the device is mounted, so for a PTP session it is
 # unmounted and mounted again afterwards, also after an error. Our own window and
-# background service see both events; `own_remount` lets them ignore these.
+# background service see both events; `own_remount` lets them ignore these, as long as the
+# device stays where it was on USB: unplugged right after the session, it is unplugged.
 
 REMOUNT_QUIET_S = 15
 REMOUNT_READY_S = 20
 _quiet_until: dict[str, float] = {}
+_quiet_usb: dict[str, GarminUsb] = {}  # where the device of the session is on USB
 
 
 def _key(uri: str) -> str:
@@ -653,10 +655,22 @@ def usb_node(usb: GarminUsb | None) -> Path | None:
 
 
 def own_remount(mount) -> bool:
-    """Whether this mount appearing or disappearing is our own doing."""
+    """Whether this mount appearing or disappearing is our own doing: during our PTP session
+    and a moment after it, while the device is still at its place on USB."""
     root = mount.get_root()
-    until = _quiet_until.get(_key(root.get_uri())) if root is not None else None
-    return until is not None and time.monotonic() < until
+    key = _key(root.get_uri()) if root is not None else None
+    until = _quiet_until.get(key) if key is not None else None
+    if until is None or time.monotonic() >= until:
+        return False
+    usb = _quiet_usb.get(key)
+    if usb is None or usb_still_there(usb):
+        return True
+    # Gone from its place: the device was unplugged (or restarted), e.g. right after an
+    # install, as the user is told to. Its next events are its own again.
+    log.info("device: unplugged after our own PTP session")
+    _quiet_until.pop(key, None)
+    _quiet_usb.pop(key, None)
+    return False
 
 
 def _wait(start, timeout_s: int, what: str) -> None:
@@ -723,6 +737,8 @@ def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
 @contextmanager
 def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | None = None):
     _quiet_until[_key(uri)] = float("inf")
+    known = getattr(storage, "usb", None)
+    _quiet_usb[_key(uri)] = GarminUsb(known.product if known else None, "usb", bus, address)
     started = time.monotonic()
     try:
         log.info("PTP: unmounting the device from gvfs")
