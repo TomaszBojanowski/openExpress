@@ -340,6 +340,155 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
     assert "3000000001" not in caplog.text  # the unit ID is compared, never written
 
 
+
+# --- one detection for the mount events of the device that is open -----------------------
+
+
+class Timers:
+    """GLib timers that fire only when the test says so."""
+
+    def __init__(self):
+        self.live, self.removed, self.last = {}, [], 0
+
+    def add(self, ms, fn):
+        self.last += 1
+        self.live[self.last] = fn
+        return self.last
+
+    def remove(self, sid):
+        self.removed.append(sid)
+        del self.live[sid]
+
+    def fire(self):
+        for sid, fn in list(self.live.items()):
+            del self.live[sid]
+            fn()
+
+
+@pytest.fixture
+def detecting(monkeypatch):
+    """A window with the real detection code. Its tasks wait until the test finishes them;
+    each started task is one `open_session`, and each `show_device` builds every page anew."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    timers = Timers()
+    monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
+    monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
+    monkeypatch.setattr(app, "garmin_usb", lambda m: True)
+    monkeypatch.setattr(app, "own_remount", lambda m: False)
+    win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, tasks=[],
+                                built=[], reads=[],
+                                sections={"watch": types.SimpleNamespace(show=lambda s: None)})
+
+    def run_task(title, fn, done, failed):
+        win.busy = True
+        win.tasks.append(done)
+
+    def in_background(fn, done, failed):
+        try:
+            result = fn()
+        except Exception as e:  # noqa: BLE001 - as the real one: the error goes to `failed`
+            failed(e)
+        else:
+            done(result)
+
+    def finish(session):
+        win.busy = False
+        win.tasks[-1](session)
+        MainWindow._run_pending_refresh(win)
+
+    win.run_task, win.in_background, win.finish = run_task, in_background, finish
+    win.show_device = lambda: win.built.append(win.session)
+    win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
+    win.timers = timers
+    return win
+
+
+def opened(win, mount_uri, unit_id=3000000001, answers=True):
+    """A session on the storage of this mount, as `open_session` makes it."""
+
+    def read(path):
+        win.reads.append(path)
+        if not answers:
+            raise gio_storage.DeviceError("gone")
+        return b"<Device/>"
+
+    storage = types.SimpleNamespace(label=mount_uri + "Internal%20Storage", read=read)
+    return types.SimpleNamespace(storage=storage,
+                                 device=types.SimpleNamespace(unit_id=unit_id))
+
+
+def test_a_mount_event_during_the_first_detection_does_not_load_the_pages_again(
+        detecting, caplog):
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        win.refresh_device()  # at start
+        # gvfs reports the mount that is being opened; the timer fires before the end.
+        MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+        win.timers.fire()
+        assert len(win.tasks) == 1 and win.built == []  # decided after the running task
+        win.finish(opened(win, NUMERIC))
+        # The timer fires after the end of the first detection: the same.
+        MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+        win.timers.fire()
+    assert len(win.tasks) == 1 and len(win.built) == 1  # one open_session, pages built once
+    assert win.reads == ["GARMIN/GarminDevice.xml"] * 2
+    assert caplog.text.count("the open device is still there, nothing to do") == 2
+
+
+def test_a_mount_with_another_address_is_detected_as_before(detecting):
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    win.session = opened(win, NUMERIC)
+    MainWindow._on_mount_added(win, None, FakeMount(NAMED))
+    win.timers.fire()
+    assert len(win.tasks) == 1 and win.reads == []
+    win.finish(opened(win, NAMED, unit_id=3000000002))
+    assert len(win.built) == 1
+
+
+def test_no_open_device_is_detected_as_before(detecting):
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    win.timers.fire()
+    assert len(win.tasks) == 1 and win.reads == []
+
+
+def test_an_open_device_that_does_not_answer_is_detected_as_before(detecting):
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    win.session = opened(win, NUMERIC, answers=False)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    win.timers.fire()
+    assert win.reads == ["GARMIN/GarminDevice.xml"] and len(win.tasks) == 1
+
+
+def test_several_triggers_lead_to_one_detection(detecting):
+    from openexpress.gui.app import MainWindow, schedule_detection
+
+    win = detecting
+    win.session = opened(win, NUMERIC)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    assert win.timers.removed == [1] and list(win.timers.live) == [2]  # the same one, moved
+    win.timers.fire()
+    assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []
+    # A mount of the open device and the device seen on USB: one detection covers both.
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    schedule_detection(win, 2500)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    assert len(win.timers.live) == 1
+    win.timers.fire()
+    assert len(win.tasks) == 1 and len(win.reads) == 1
+
+
 def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
     from openexpress import watch
 

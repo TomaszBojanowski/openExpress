@@ -253,6 +253,55 @@ def _same_device(old, new) -> str:
     return "another device than the open one"
 
 
+def _on_mount(storage, mount_uri: str) -> bool:
+    """Whether the open storage is on this mount (full addresses, compared in memory)."""
+    return str(getattr(storage, "label", "")).startswith(mount_uri.rstrip("/") + "/")
+
+
+def schedule_detection(win, delay_ms: int, mount_uri: str | None = None) -> None:
+    """Look for the device after `delay_ms`: after a mount of a Garmin device (`mount_uri`)
+    or after it showed up on USB (None). One timer for all of them: another trigger moves it,
+    and what is decided when it fires covers every trigger so far."""
+    if getattr(win, "_detect_timer", None) is not None:
+        GLib.source_remove(win._detect_timer)
+        log.info("device detection: moved by another trigger")
+    win._detect_reasons = [*getattr(win, "_detect_reasons", []), mount_uri]
+
+    def due():
+        win._detect_timer = None
+        detection_due(win)
+        return False
+
+    win._detect_timer = GLib.timeout_add(delay_ms, due)
+
+
+def detection_due(win) -> None:
+    """The scheduled detection: decided now, or after the running task (e.g. the detection
+    at start, during which gvfs reports the mount that is being opened)."""
+    if win.busy:
+        win._detect_after_task = True
+        return
+    win._detect_after_task = False
+    reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
+    s = win.session
+    if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
+                                       for r in reasons):
+        win.refresh_device()
+        return
+
+    def done(_xml):
+        if win.session is s:
+            log.info("device detection: the open device is still there, nothing to do")
+
+    def failed(e):
+        log.info("device detection: the open device does not answer (%s)", type(e).__name__)
+        if win.session is s:
+            win.refresh_device()
+
+    # Its mount was reported, not a new one: if it still answers, the pages stay as they are.
+    win.in_background(lambda: s.storage.read("GARMIN/GarminDevice.xml"), done, failed)
+
+
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -342,6 +391,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._action_buttons: list[Gtk.Widget] = []
         self._retry_sources: dict[str, int] = {}
         self._refresh_pending = False
+        self._detect_timer: int | None = None
+        self._detect_reasons: list[str | None] = []
+        self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
 
@@ -631,6 +683,8 @@ class MainWindow(Adw.ApplicationWindow):
         if self._refresh_pending and not self.busy:
             self._refresh_pending = False
             self.refresh_device()
+        elif getattr(self, "_detect_after_task", False) and not self.busy:
+            detection_due(self)
 
     @staticmethod
     def in_background(fn, on_done, on_error=None) -> None:
@@ -688,7 +742,7 @@ class MainWindow(Adw.ApplicationWindow):
         if garmin_usb(mount):
             log.info("mount added (%s): a Garmin device, detecting in 1.5 s "
                      "(a device is open: %s)", where, self.session is not None)
-            GLib.timeout_add(1500, lambda: (self.refresh_device(), False)[1])
+            schedule_detection(self, 1500, mount.get_root().get_uri())
         else:
             log.info("mount added (%s): not a Garmin device, ignored", where)
 
@@ -744,7 +798,7 @@ class MainWindow(Adw.ApplicationWindow):
         if state == PRESENT and self._usb_state != PRESENT:
             # It left its transitional mode: look for it once gvfs had a moment.
             log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
-            GLib.timeout_add(2500, lambda: (self.refresh_device(), False)[1])
+            schedule_detection(self, 2500)
         self._usb_state = state
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
         for sec in self.sections.values():
