@@ -8,6 +8,7 @@ import logging
 import threading
 import time
 import traceback
+import types
 import weakref
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,7 +18,9 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
-from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
+gi.require_version("Gdk", "4.0")
+gi.require_version("Pango", "1.0")
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import i18n, netstatus, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
@@ -374,33 +377,39 @@ class Section:
         return g
 
 
-# The look of each state of Garmin's servers: a symbolic icon and a colour class.
-NET_LOOK = {
-    netstatus.UNKNOWN: ("content-loading-symbolic", "dim-label"),
-    netstatus.ONLINE: ("object-select-symbolic", "success"),
-    netstatus.OFFLINE: ("network-offline-symbolic", "error"),
-    netstatus.SERVER_PROBLEM: ("dialog-warning-symbolic", "error"),
-    netstatus.SIGN_IN_EXPIRED: ("dialog-password-symbolic", "warning"),
-    netstatus.CLOCK_OFF: ("document-open-recent-symbolic", "warning"),
+# The colour of the dot for each state of Garmin's servers (a word always goes with it).
+NET_COLOUR = {
+    netstatus.UNKNOWN: "dim-label",
+    netstatus.ONLINE: "success",
+    netstatus.OFFLINE: "error",
+    netstatus.SERVER_PROBLEM: "error",
+    netstatus.SIGN_IN_EXPIRED: "warning",
+    netstatus.CLOCK_OFF: "warning",
 }
-# … and of each service in the window that opens from it (None: not needed yet).
-NET_ROW_LOOK = {
-    None: ("content-loading-symbolic", "dim-label"),
-    netstatus.OK: NET_LOOK[netstatus.ONLINE],
-    netstatus.NETWORK: NET_LOOK[netstatus.OFFLINE],
-    netstatus.SERVER: NET_LOOK[netstatus.SERVER_PROBLEM],
-    netstatus.AUTH: NET_LOOK[netstatus.SIGN_IN_EXPIRED],
-    netstatus.CLOCK: NET_LOOK[netstatus.CLOCK_OFF],
+# … and of each service in the popover (None: not needed yet).
+NET_ROW_COLOUR = {
+    None: "dim-label",
+    netstatus.OK: "success",
+    netstatus.NETWORK: "error",
+    netstatus.SERVER: "error",
+    netstatus.AUTH: "warning",
+    netstatus.CLOCK: "warning",
 }
-NET_COLOURS = {c for _i, c in NET_LOOK.values()}
+NET_COLOURS = set(NET_COLOUR.values())
+NET_POPOVER_WIDTH = 320  # opened upwards from the left edge of the button: inside the window
+DOT = "\u25cf"  # ●
 
 
-def _paint(image, look) -> None:
-    icon, colour = look
-    image.set_from_icon_name(icon)
+def _dot() -> Gtk.Label:
+    dot = Gtk.Label(label=DOT)
+    dot.update_property([Gtk.AccessibleProperty.LABEL], [""])  # the word beside it says it
+    return dot
+
+
+def _paint(dot, colour: str) -> None:
     for c in NET_COLOURS:
-        image.remove_css_class(c)
-    image.add_css_class(colour)
+        dot.remove_css_class(c)
+    dot.add_css_class(colour)
 
 
 def _render_net_status_later(ref) -> bool:
@@ -653,42 +662,69 @@ class MainWindow(Adw.ApplicationWindow):
         return True
 
     def _build_net_status(self):
-        """The state of Garmin's servers at the bottom of the side panel: a button with an
-        icon and a word (not the colour alone) that opens a window with each service."""
-        self.net_icon = Gtk.Image()
+        """The state of Garmin's servers at the bottom of the side panel: a button with a
+        coloured dot and a word that opens a popover with each service, upwards and from the
+        left edge of the button, so that it stays inside the window."""
+        self.net_icon = _dot()
         self.net_label = Gtk.Label(xalign=0, hexpand=True)
         self.net_label.add_css_class("caption")
-        inner = Gtk.Box(spacing=8)
+        inner = Gtk.Box(spacing=6)
         inner.append(self.net_icon)
         inner.append(self.net_label)
         self.net_button = Gtk.MenuButton(child=inner, direction=Gtk.ArrowType.UP)
         self.net_button.add_css_class("flat")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=12,
-                      margin_bottom=12, margin_start=12, margin_end=12, width_request=420)
-        self.net_heading = Gtk.Label(xalign=0, wrap=True)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8,
+                      margin_bottom=8, margin_start=8, margin_end=8,
+                      width_request=NET_POPOVER_WIDTH - 16)
+        # Wrapped labels ask for the width of their whole text: a small limit keeps the
+        # popover at its own width.
+        self.net_heading = Gtk.Label(xalign=0, wrap=True, max_width_chars=20)
         self.net_heading.add_css_class("heading")
         box.append(self.net_heading)
-        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        listbox.add_css_class("boxed-list")
+        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, show_separators=True)
         self.net_rows = {}
         for key in netstatus.SERVICES:
-            row = Adw.ActionRow()
-            icon = Gtk.Image()
-            row.add_prefix(icon)
-            # One line, and the last good answer under it: never broken in between.
-            detail = Gtk.Label(xalign=1, justify=Gtk.Justification.RIGHT)
-            detail.add_css_class("caption")
-            row.add_suffix(detail)
+            # ● name        at 00:15
+            #   server       server error (HTTP 503)
+            #                last answer at 23:40      (after a failure only)
+            grid = Gtk.Grid(column_spacing=6, row_spacing=1, margin_top=5, margin_bottom=5,
+                            margin_start=4, margin_end=4)
+            dot = _dot()
+            name = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
+            when = Gtk.Label(xalign=1)
+            when.add_css_class("caption")
+            host = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
+            outcome = Gtk.Label(xalign=1)
+            later = Gtk.Label(xalign=1)
+            for small in (host, outcome, later):
+                small.add_css_class("caption")
+            for grey in (host, later):
+                grey.add_css_class("dim-label")
+            grid.attach(dot, 0, 0, 1, 1)
+            grid.attach(name, 1, 0, 1, 1)
+            grid.attach(when, 2, 0, 1, 1)
+            grid.attach(host, 1, 1, 1, 1)
+            grid.attach(outcome, 2, 1, 1, 1)
+            grid.attach(later, 1, 2, 2, 1)
+            row = Gtk.ListBoxRow(child=grid, activatable=False)
             listbox.append(row)
-            self.net_rows[key] = (row, icon, detail)
+            self.net_rows[key] = types.SimpleNamespace(
+                row=row, dot=dot, name=name, when=when, host=host, outcome=outcome,
+                later=later)
         box.append(listbox)
-        note = Gtk.Label(label=_(netstatus.NOTE), xalign=0, wrap=True, max_width_chars=48)
+        note = Gtk.Label(label=_(netstatus.NOTE), xalign=0, wrap=True, max_width_chars=20)
         note.add_css_class("caption")
         note.add_css_class("dim-label")
         box.append(note)
-        self.net_button.set_popover(Gtk.Popover(child=box))
-        bar = Gtk.Box(margin_top=4, margin_bottom=6, margin_start=6, margin_end=6)
+        popover = Gtk.Popover(child=box, has_arrow=False, position=Gtk.PositionType.TOP)
+        # Centred over a rectangle as wide as the popover that starts at the button's left
+        # edge: the popover goes up and to the right, never out of the side of the window.
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = 0, 0, NET_POPOVER_WIDTH, 1
+        popover.set_pointing_to(rect)
+        self.net_button.set_popover(popover)
+        bar = Gtk.Box(margin_top=2, margin_bottom=4, margin_start=6, margin_end=6)
         bar.append(self.net_button)
         return bar
 
@@ -703,19 +739,22 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception:  # noqa: BLE001 - only for the names of the servers
             hosts = {}
         text, whole = netstatus.describe(last, answered, hosts)
-        _paint(self.net_icon, NET_LOOK[state])
+        _paint(self.net_icon, NET_COLOUR[state])
         self.net_label.set_label(text)
         self.net_button.update_property(
             [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
             [text, _("Show the state of Garmin's servers") + "\n" + whole])
         self.net_heading.set_label(netstatus.heading(state))
         for r in netstatus.rows(last, answered, hosts):
-            row, icon, detail = self.net_rows[r.service]
-            row.set_title(GLib.markup_escape_text(r.name))
-            row.set_subtitle(GLib.markup_escape_text(r.host))
-            _paint(icon, NET_ROW_LOOK[r.kind])
-            detail.set_label(r.detail + ("\n" + r.last_answer if r.last_answer else ""))
-            row.set_sensitive(r.kind is not None)  # not needed yet: greyed
+            w = self.net_rows[r.service]
+            w.name.set_label(r.name)
+            w.when.set_label(r.time)
+            w.host.set_label(r.host)
+            w.outcome.set_label(r.outcome)
+            w.later.set_label(r.last_answer)
+            w.later.set_visible(bool(r.last_answer))
+            _paint(w.dot, NET_ROW_COLOUR[r.kind])
+            w.row.set_sensitive(r.kind is not None)  # not needed yet: greyed
 
     def _remember_geometry(self) -> None:
         # The default size follows the user's resizing and keeps the last unmaximized

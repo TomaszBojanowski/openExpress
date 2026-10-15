@@ -222,8 +222,7 @@ def at(ts: float, now: float | None = None) -> str:
 # TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well
 CONNECTED_HEADING = N_("Connected to Garmin's servers")
 # TRANSLATORS: at the bottom of the window with the state of Garmin's servers
-NOTE = N_("The state comes from the program's last requests; openExpress does not ask the "
-          "servers separately.")
+NOTE = N_("The state comes from the program's last requests.")
 
 
 @dataclass(frozen=True)
@@ -233,8 +232,10 @@ class Row:
     name: str
     host: str
     kind: str | None  # None: the program has not needed the service yet
-    detail: str
+    detail: str  # how it answered, with the time: "server error (HTTP 503) at 00:15"
     last_answer: str  # "last answer at …" after a failure; "" otherwise
+    outcome: str = ""  # the same without the time, short: "server error (HTTP 503)"
+    time: str = ""  # "at 00:15", "at 2026-10-14 00:15"; "" when not needed yet
 
 
 def heading(state: str) -> str:
@@ -249,24 +250,30 @@ def rows(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, s
         r = last.get(s)
         host = r.host if r else urlsplit(hosts.get(_HOST_KEY[s], "")).netloc
         if r is None:
-            detail = _("not needed yet")
+            detail = outcome = _("not needed yet")
         elif r.kind == OK:
             detail = _("answered {at}").format(at=at(r.at, now))
+            # TRANSLATORS: how a service of Garmin last answered, beside the time
+            outcome = _("answered")
         elif r.kind == NETWORK:
             detail = _("no connection {at}").format(at=at(r.at, now))
+            outcome = _("no connection")
         elif r.kind == SERVER:
             detail = _("server error (HTTP {status}) {at}").format(
                 status=r.status, at=at(r.at, now))
+            outcome = _("server error (HTTP {status})").format(status=r.status)
         elif r.kind == AUTH:
             detail = _("sign-in refused (HTTP {status}) {at}").format(
                 status=r.status, at=at(r.at, now))
+            outcome = _("sign-in refused (HTTP {status})").format(status=r.status)
         else:
             detail = _("computer clock off by {minutes} min at {time}").format(
                 minutes=r.minutes, time=when(r.at, now))
+            outcome = _("clock off by {minutes} min").format(minutes=r.minutes)
         last_answer = (_("last answer {at}").format(at=at(answered[s], now))
                        if r is not None and r.kind != OK and s in answered else "")
         out.append(Row(s, _(SERVICE_NAME[s]), host or "?", r.kind if r else None, detail,
-                       last_answer))
+                       last_answer, outcome, at(r.at, now) if r else ""))
     return out
 
 

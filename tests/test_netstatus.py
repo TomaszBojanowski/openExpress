@@ -246,42 +246,40 @@ def note(state, steps):
     (((netstatus.CONNECT, 401),), netstatus.SIGN_IN_EXPIRED),
 ])
 def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_state):
-    from openexpress.gui.app import NET_COLOURS, NET_LOOK
+    from openexpress.gui.app import DOT, NET_COLOUR, NET_COLOURS
 
     win, _bar, window = _status_window()
     note(network_state, steps)
     window._render_net_status(win)
-    icon, colour = NET_LOOK[state]
     assert win.net_label.get_label() == netstatus.STATE_TEXT[state]
-    assert win.net_icon.get_icon_name() == icon and win.net_icon.has_css_class(colour)
+    assert win.net_icon.get_label() == DOT and win.net_icon.has_css_class(NET_COLOUR[state])
     assert len(NET_COLOURS & set(win.net_icon.get_css_classes())) == 1
-    assert win.net_button.get_tooltip_text() is None  # a window instead of a tooltip
+    assert win.net_button.get_tooltip_text() is None  # a popover instead of a tooltip
     assert win.net_button.get_popover() is not None
 
 
-def test_the_window_names_each_service_with_its_server_and_time(network_state):
-    from openexpress.gui.app import NET_ROW_LOOK
+def test_the_popover_names_each_service_with_its_server_and_time(network_state):
+    from openexpress.gui.app import DOT
 
     win, _bar, window = _status_window()
     note(network_state, [(netstatus.CONNECT, 200), (netstatus.OMT, 200), (netstatus.OMT, 503)])
     window._render_net_status(win)
     assert win.net_heading.get_label() == "Garmin server problem"
     connect, omt, sign_in = (win.net_rows[s] for s in netstatus.SERVICES)
-    row, icon, detail = connect
-    assert (row.get_title(), row.get_subtitle()) == ("Garmin Connect", "connectapi.garmin.com")
-    assert detail.get_label().startswith("answered at ") and row.get_sensitive()
-    assert icon.get_icon_name() == NET_ROW_LOOK[netstatus.OK][0]
-    row, icon, detail = omt
-    assert (row.get_title(), row.get_subtitle()) == ("Updates and maps", "omt.garmin.com")
-    first, second = detail.get_label().splitlines()
-    assert first.startswith("server error (HTTP 503) at ") and second.startswith("last answer at ")
-    assert icon.has_css_class("error")
-    row, icon, detail = sign_in
-    assert (row.get_title(), row.get_subtitle()) == ("Sign-in", "sso.garmin.com")
-    assert detail.get_label() == "not needed yet" and not row.get_sensitive()  # greyed
+    assert (connect.name.get_label(), connect.host.get_label()) == ("Garmin Connect",
+                                                                    "connectapi.garmin.com")
+    assert connect.when.get_label().startswith("at ") and connect.outcome.get_label() == "answered"
+    assert connect.dot.get_label() == DOT and connect.dot.has_css_class("success")
+    assert connect.row.get_sensitive() and not connect.later.get_visible()
+    assert (omt.name.get_label(), omt.host.get_label()) == ("Updates and maps", "omt.garmin.com")
+    assert omt.outcome.get_label() == "server error (HTTP 503)" and omt.dot.has_css_class("error")
+    assert omt.later.get_visible() and omt.later.get_label().startswith("last answer at ")
+    assert (sign_in.name.get_label(), sign_in.host.get_label()) == ("Sign-in", "sso.garmin.com")
+    assert sign_in.outcome.get_label() == "not needed yet" and sign_in.when.get_label() == ""
+    assert sign_in.dot.has_css_class("dim-label") and not sign_in.row.get_sensitive()  # greyed
 
 
-def test_the_window_heading_when_all_is_well_and_its_note(network_state):
+def test_the_popover_heading_when_all_is_well_and_its_note(network_state):
     from gi.repository import Gtk
 
     win, _bar, window = _status_window()
@@ -295,20 +293,33 @@ def test_the_window_heading_when_all_is_well_and_its_note(network_state):
         if isinstance(child, Gtk.Label):
             labels.append(child.get_label())
         child = child.get_next_sibling()
-    assert labels[-1] == ("The state comes from the program's last requests; openExpress does "
-                          "not ask the servers separately.")
+    assert labels[-1] == "The state comes from the program's last requests."
 
 
-def test_an_open_window_follows_new_answers_in_the_same_rows(network_state):
+def test_an_open_popover_follows_new_answers_in_the_same_rows(network_state):
     win, _bar, window = _status_window()
     window._render_net_status(win)
-    rows_before = {s: r[0] for s, r in win.net_rows.items()}
+    rows_before = {s: r.row for s, r in win.net_rows.items()}
     assert win.net_heading.get_label() == "Status unknown"
     note(network_state, [(netstatus.OMT, None)])
     window._render_net_status(win)  # what the listener does on the GTK thread
     assert win.net_heading.get_label() == "No connection"
-    assert {s: r[0] for s, r in win.net_rows.items()} == rows_before  # the same widgets
-    assert win.net_rows[netstatus.OMT][2].get_label().startswith("no connection at ")
+    assert {s: r.row for s, r in win.net_rows.items()} == rows_before  # the same widgets
+    assert win.net_rows[netstatus.OMT].outcome.get_label() == "no connection"
+
+
+def test_the_popover_opens_upwards_from_the_left_edge_of_the_button():
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import NET_POPOVER_WIDTH
+
+    win, _bar, _window = _status_window()
+    popover = win.net_button.get_popover()
+    assert popover.get_position() == Gtk.PositionType.TOP and not popover.get_has_arrow()
+    ok, rect = popover.get_pointing_to()
+    # Centred over a rectangle as wide as itself that starts at the button: never to the left.
+    assert ok and (rect.x, rect.width) == (0, NET_POPOVER_WIDTH)
+    assert popover.get_child().get_size_request()[0] == NET_POPOVER_WIDTH - 16
 
 
 def test_the_button_tells_screen_readers_everything(network_state):
