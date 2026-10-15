@@ -7,9 +7,9 @@ import threading
 import pytest
 import requests
 
-from openexpress import download, maps, updates
+from openexpress import applog, download, maps, updates
 from openexpress.connect import ApiError, lower_keys
-from openexpress.device.storage import LocalStorage
+from openexpress.device.storage import DeviceError, LocalStorage
 
 FILES = {
     "/fw/GUPDATE.GSP": b"F" * 5000,
@@ -190,6 +190,89 @@ def test_maps_install_update_and_shared_files(server, device_root, xdg):
     removed = maps.uninstall(west, all_maps, st)
     assert sorted(removed) == ["Garmin/W.gma", "Garmin/W.img"]
     assert (g / "DEM.img").exists()
+
+
+def unlock_e2(ident):
+    return {"unlocks": [{"filename": "Garmin/E2.gma", "gma": base64.b64encode(b"UNLOCK").decode()}]}
+
+
+class RecordingStorage(LocalStorage):
+    """Remembers what was written, in order; can fail writing chosen files."""
+
+    def __init__(self, root, fail=None):
+        super().__init__(root)
+        self.order, self.fail = [], dict(fail or {})
+
+    def _write_file(self, real_path, local, progress=None):
+        self.order.append(real_path)
+        if self.fail.get(real_path, 0) > 0:
+            self.fail[real_path] -= 1
+            self._p(real_path).write_bytes(b"half")
+            raise DeviceError("unplugged")
+        super()._write_file(real_path, local, progress)
+
+    def _write(self, real_path, data):
+        self.order.append(real_path)
+        super()._write(real_path, data)
+
+
+def east_with_shared_dem(server, device_root):
+    g = device_root / "GARMIN"
+    for n in ("W.img", "DEM.img", "W.gma", "E.img", "E.gma"):
+        (g / n).write_bytes(b"old")
+    all_maps = maps.parse_maps(maps_response(server))
+    return all_maps, all_maps[1]
+
+
+def test_map_files_are_written_smallest_first_and_the_unlock_last(server, device_root, xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    assert [f.device_path for f in east.files] == ["Garmin/E2.img", "Garmin/DEM.img"]
+    st = RecordingStorage(device_root)
+    lines = []
+    maps.install(east, all_maps, st, unlock_e2, progress=lines.append)
+    assert st.order == ["GARMIN/DEM.img", "GARMIN/E2.img", "GARMIN/E2.gma"]
+    downloads = [line for line in lines if line.startswith("Downloading ")]
+    assert [line.split()[1] for line in downloads] == ["Garmin/DEM.img", "Garmin/E2.img"]
+
+
+def test_a_shared_file_that_failed_is_written_once_more(server, device_root, xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RecordingStorage(device_root, fail={"GARMIN/DEM.img": 1})
+    rep = maps.install(east, all_maps, st, unlock_e2)
+    assert st.order.count("GARMIN/DEM.img") == 2
+    assert (device_root / "GARMIN/DEM.img").read_bytes() == FILES["/maps/dem.img"]
+    assert "GARMIN/DEM.img" in rep.written
+
+
+def test_a_shared_file_that_fails_twice_is_kept_and_named(server, device_root, xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RecordingStorage(device_root, fail={"GARMIN/DEM.img": 2})
+    with pytest.raises(maps.MapError) as error:
+        maps.install(east, all_maps, st, unlock_e2)
+    assert st.order.count("GARMIN/DEM.img") == 2
+    assert "Garmin/DEM.img" in str(error.value) and "TopoActive West" in str(error.value)
+    # Not deleted: the West map still lists it; installing again writes it whole.
+    assert (device_root / "GARMIN/DEM.img").exists()
+    assert not (device_root / "GARMIN/E2.gma").exists()
+
+
+def test_a_file_of_this_map_alone_is_not_tried_again(server, device_root, xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RecordingStorage(device_root, fail={"GARMIN/E2.img": 1})
+    with pytest.raises(DeviceError):
+        maps.install(east, all_maps, st, unlock_e2)
+    assert st.order.count("GARMIN/E2.img") == 1
+    assert not (device_root / "GARMIN/E2.img").exists()
+
+
+def test_the_log_names_the_start_of_the_unlock_md5(server, device_root, xdg, caplog):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    with caplog.at_level("INFO", logger="openexpress.maps"):
+        maps.install(east, all_maps, LocalStorage(device_root), unlock_e2)
+    h = hashlib.md5(b"UNLOCK").hexdigest()[:8]
+    line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("map install:"))
+    assert line.endswith(f"1 unlock files (md5 {h[:4]}_{h[4:]})")
+    assert applog.redact(line) == line  # the log filter leaves it readable
 
 
 # --- a device without maps ----------------------------------------------------------------

@@ -84,7 +84,7 @@ def test_map_download_progress_shows_a_readable_size(server, device_root, xdg):
                  progress=lines.append)
     downloads = [line for line in lines if line.startswith("Downloading ")]
     assert downloads == [f"Downloading {f.device_path} ({human_size(f.size)})"
-                         for f in east.files]
+                         for f in sorted(east.files, key=lambda f: f.size)]
     assert downloads  # every file, each with its own size
 
 

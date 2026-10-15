@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.4.14\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-15 20:50+0200\n"
+"POT-Creation-Date: 2026-10-15 22:39+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -254,7 +254,7 @@ msgstr ""
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:913 openexpress/ciq.py:1467 openexpress/maps.py:266
+#: openexpress/ciq.py:913 openexpress/ciq.py:1467 openexpress/maps.py:294
 #: openexpress/updates.py:327
 #, python-brace-format
 msgid "Write verification of {path} failed"
@@ -1001,7 +1001,7 @@ msgstr ""
 msgid "Several entries match: {names}. Choose one with --type."
 msgstr ""
 
-#: openexpress/cli.py:904 openexpress/maps.py:172
+#: openexpress/cli.py:904 openexpress/maps.py:173
 #, python-brace-format
 msgid "Ambiguous name, matches: {names}"
 msgstr ""
@@ -1834,7 +1834,7 @@ msgstr ""
 #: openexpress/connect.py:169 openexpress/connect.py:291
 #: openexpress/connect.py:445 openexpress/connect.py:460
 #: openexpress/connect.py:473 openexpress/connect.py:501
-#: openexpress/connect.py:525 openexpress/maps.py:107
+#: openexpress/connect.py:525 openexpress/maps.py:108
 #: openexpress/service.py:258
 #, python-brace-format
 msgid "{what}: unexpected response from the server"
@@ -1884,7 +1884,7 @@ msgstr ""
 msgid "Software update check"
 msgstr ""
 
-#: openexpress/connect.py:414 openexpress/maps.py:108
+#: openexpress/connect.py:414 openexpress/maps.py:109
 msgid "Map check"
 msgstr ""
 
@@ -2517,7 +2517,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: map status
-#: openexpress/gui/app.py:1178 openexpress/maps.py:78
+#: openexpress/gui/app.py:1178 openexpress/maps.py:79
 msgid "update available"
 msgstr ""
 
@@ -3439,78 +3439,85 @@ msgid "{name} was not found in the installer."
 msgstr ""
 
 #. TRANSLATORS: map installation states
-#: openexpress/maps.py:27
+#: openexpress/maps.py:28
 msgid "not installed"
 msgstr ""
 
-#: openexpress/maps.py:27
+#: openexpress/maps.py:28
 msgid "installed"
 msgstr ""
 
-#: openexpress/maps.py:27
+#: openexpress/maps.py:28
 msgid "partial"
 msgstr ""
 
-#: openexpress/maps.py:28
+#: openexpress/maps.py:29
 msgid "newer on device"
 msgstr ""
 
 #. TRANSLATORS: map status
-#: openexpress/maps.py:81
+#: openexpress/maps.py:82
 msgid "up to date"
 msgstr ""
 
 #. TRANSLATORS: map status (can be installed)
-#: openexpress/maps.py:83
+#: openexpress/maps.py:84
 msgid "available"
 msgstr ""
 
-#: openexpress/maps.py:99
+#: openexpress/maps.py:100
 msgid "No maps are available for this device."
 msgstr ""
 
-#: openexpress/maps.py:171
+#: openexpress/maps.py:172
 #, python-brace-format
 msgid "No map named '{name}'"
 msgstr ""
 
-#: openexpress/maps.py:223
+#: openexpress/maps.py:224
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: the server did not provide all of its files"
 msgstr ""
 
-#: openexpress/maps.py:229 openexpress/music.py:273 openexpress/ownmaps.py:236
+#: openexpress/maps.py:230 openexpress/music.py:273 openexpress/ownmaps.py:236
 #: openexpress/updates.py:290
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr ""
 
-#: openexpress/maps.py:236
+#: openexpress/maps.py:240
 #, python-brace-format
 msgid "Downloading {path} ({size})"
 msgstr ""
 
-#: openexpress/maps.py:246
+#: openexpress/maps.py:250
 msgid "Activating the map on the Garmin server"
 msgstr ""
 
-#: openexpress/maps.py:253
+#: openexpress/maps.py:257
 #, python-brace-format
 msgid "Removing old file {path}"
 msgstr ""
 
-#: openexpress/maps.py:257 openexpress/updates.py:317
+#: openexpress/maps.py:262 openexpress/updates.py:317
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr ""
 
-#: openexpress/maps.py:279
+#: openexpress/maps.py:310
+#, python-brace-format
+msgid ""
+"Cannot write {path}, which other maps on the device also use ({maps}). "
+"Install the map again."
+msgstr ""
+
+#: openexpress/maps.py:331
 #, python-brace-format
 msgid "Map '{name}' cannot be removed"
 msgstr ""
 
-#: openexpress/maps.py:289
+#: openexpress/maps.py:341
 #, python-brace-format
 msgid "Removing {path}"
 msgstr ""

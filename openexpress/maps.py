@@ -10,6 +10,7 @@ device is installed.
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import posixpath
 from collections.abc import Callable
@@ -229,10 +230,13 @@ def install(
         raise MapError(_("Not enough space on the device: {need} needed, {free} free")
                        .format(need=human_size(need), free=human_size(free)))
 
+    # Smallest file first, as Garmin Express does: the small type and search files are on
+    # the device before the big map and terrain files.
+    files = sorted(m.files, key=lambda f: f.size)
     local: dict[str, Path] = {}
     # One bar for all the files of the map.
     overall = download.Overall(m.size, download_progress) if download_progress else None
-    for f in m.files:
+    for f in files:
         progress(_("Downloading {path} ({size})")
                  .format(path=f.device_path, size=human_size(f.size)))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
@@ -253,26 +257,74 @@ def install(
         progress(_("Removing old file {path}").format(path=p))
         storage.delete(p)
         report.removed.append(p)
-    for f in m.files:
+    shared = protected_files(all_maps, m)
+    for f in files:
         progress(_("Copying to the device: {path}").format(path=f.device_path))
-        try:
-            real = storage.write_file(f.device_path, local[f.device_path], transfer_progress)
-            ok = storage.size(real) == f.size
-        except Exception:
-            _delete_quietly(storage, f.device_path)
-            raise
-        if not ok:
-            _delete_quietly(storage, real)
-            raise MapError(_("Write verification of {path} failed").format(path=real))
+        if f.device_path.casefold() not in shared:
+            real = _write_checked(storage, f, local[f.device_path], transfer_progress)
+        else:
+            real = _write_shared(storage, f, local[f.device_path], transfer_progress,
+                                 _users(all_maps, m, f.device_path))
         report.written.append(real)
+    gmas = []
     for fname, gma in unlocks:
         data = base64.b64decode(gma)
         real = storage.write(fname.replace("\\", "/"), data)
         report.unlocks.append(real)
-    log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files",
-             m.name, m.version, len(report.written), applog.size(m.size), len(report.removed),
-             len(report.unlocks))
+        gmas.append(_short_md5(data))
+    log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files"
+             " (md5 %s)", m.name, m.version, len(report.written), applog.size(m.size),
+             len(report.removed), len(report.unlocks), ", ".join(gmas) or "-")
     return report
+
+
+def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,
+                   keep: bool = False) -> str:
+    """Writes one file and checks its size. A file that failed is deleted, unless `keep`."""
+    try:
+        real = storage.write_file(f.device_path, local, transfer_progress)
+        ok = storage.size(real) == f.size
+    except Exception:
+        if not keep:
+            _delete_quietly(storage, f.device_path)
+        raise
+    if not ok:
+        if not keep:
+            _delete_quietly(storage, real)
+        raise MapError(_("Write verification of {path} failed").format(path=real))
+    return real
+
+
+def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
+                  users: list[str]) -> str:
+    """A file other installed maps use too: deleting it after a failed write would break
+    them, so the write is tried once more and the file is never deleted."""
+    try:
+        return _write_checked(storage, f, local, transfer_progress, keep=True)
+    except Exception as e:  # noqa: BLE001 - any failure gets the one retry
+        log.warning("map install: writing a file other maps use failed, trying once more: %s",
+                    e)
+    try:
+        return _write_checked(storage, f, local, transfer_progress, keep=True)
+    except Exception as e:
+        raise MapError(_("Cannot write {path}, which other maps on the device also use "
+                         "({maps}). Install the map again.")
+                       .format(path=f.device_path, maps=", ".join(users))) from e
+
+
+def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[str]:
+    """Names of the other installed maps that list `path` among their files."""
+    p = path.casefold()
+    return [m.name for m in maps if m is not target and m.installed
+            and p in {x.casefold() for x in [*(f.device_path for f in m.files),
+                                             *m.files_to_remove]}]
+
+
+def _short_md5(data: bytes) -> str:
+    """Start of the MD5 of an unlock file, enough to tell two apart, as 1234_abcd: the log
+    filter keeps it (no long hex or digit runs), and it does not identify the device."""
+    h = hashlib.md5(data).hexdigest()[:8]
+    return f"{h[:4]}_{h[4:]}"
 
 
 def cannot_remove_message(m: UniversalMap) -> str:
