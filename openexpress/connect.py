@@ -11,13 +11,12 @@ import platform
 import time
 import uuid
 from dataclasses import dataclass
-from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 
 import requests
 
-from openexpress import __version__
+from openexpress import __version__, netstatus
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.i18n import _
@@ -27,7 +26,13 @@ log = logging.getLogger(__name__)
 
 TIMEOUT = 60
 PRIMARY_TRAINING_PATH = "userprofile-service/userprofile/user-settings/primary-training-device"
-MAX_CLOCK_SKEW_S = 59 * 60
+MAX_CLOCK_SKEW_S = netstatus.MAX_CLOCK_SKEW_S
+
+
+def _hosts(client) -> dict[str, str]:
+    """The hosts of the client's environment, for the network state (shown only)."""
+    settings = getattr(client, "settings", None)
+    return settings.hosts if settings is not None else {}
 
 
 class ApiError(Exception):
@@ -155,9 +160,11 @@ class GarminClient:
         except requests.RequestException as e:
             log.warning("HTTP %s %s failed after %.1f s: %s", method, where,
                         time.monotonic() - started, type(e).__name__)
+            netstatus.record_failure(_hosts(self), url)
             raise ApiError(_("{what}: network error ({error})").format(what=what, error=e)) from e
         log.info("HTTP %s %s -> %s in %.1f s", method, where, resp.status_code,
                  time.monotonic() - started)
+        netstatus.record_response(_hosts(self), url, resp)
         return resp
 
     @staticmethod
@@ -173,18 +180,13 @@ class GarminClient:
 
     def _check(self, resp: requests.Response, what: str) -> requests.Response:
         if resp.status_code in (401, 403):
-            date = resp.headers.get("Date")
-            if date:
-                try:
-                    skew = abs(parsedate_to_datetime(date).timestamp() - time.time())
-                except (TypeError, ValueError):
-                    skew = 0
-                if skew > MAX_CLOCK_SKEW_S:
-                    raise ClockSkew(
-                        _("{action}: computer clock is off from the server by {minutes} min")
-                        .format(action=what, minutes=int(skew // 60)),
-                        resp.status_code,
-                    )
+            skew = netstatus.clock_skew(resp)
+            if skew > MAX_CLOCK_SKEW_S:
+                raise ClockSkew(
+                    _("{action}: computer clock is off from the server by {minutes} min")
+                    .format(action=what, minutes=int(skew // 60)),
+                    resp.status_code,
+                )
             raise Unauthorized(
                 _("{action}: unauthorized (HTTP {status}). Please log in again.")
                 .format(action=what, status=resp.status_code),

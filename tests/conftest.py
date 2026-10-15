@@ -84,6 +84,16 @@ def log_file(tmp_path, monkeypatch) -> Path:
 
 
 @pytest.fixture(autouse=True)
+def network_state():
+    """Every test starts with no answers of Garmin's servers noted, and no listeners."""
+    from openexpress import netstatus
+
+    netstatus.STATUS = netstatus.Status()
+    yield netstatus.STATUS
+    netstatus.STATUS = netstatus.Status()
+
+
+@pytest.fixture(autouse=True)
 def backups(tmp_path, monkeypatch) -> Path:
     """No test writes to the real backup folder: copies of the app list go here."""
     from openexpress import paths

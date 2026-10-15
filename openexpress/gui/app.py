@@ -8,6 +8,7 @@ import logging
 import threading
 import time
 import traceback
+import weakref
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -18,7 +19,7 @@ gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import i18n, paths, service  # noqa: E402
+from openexpress import i18n, netstatus, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
@@ -373,6 +374,25 @@ class Section:
         return g
 
 
+# The look of each state of Garmin's servers: a symbolic icon and a colour class.
+NET_LOOK = {
+    netstatus.UNKNOWN: ("content-loading-symbolic", "dim-label"),
+    netstatus.ONLINE: ("object-select-symbolic", "success"),
+    netstatus.OFFLINE: ("network-offline-symbolic", "error"),
+    netstatus.SERVER_PROBLEM: ("dialog-warning-symbolic", "error"),
+    netstatus.SIGN_IN_EXPIRED: ("dialog-password-symbolic", "warning"),
+    netstatus.CLOCK_OFF: ("document-open-recent-symbolic", "warning"),
+}
+
+
+def _render_net_status_later(ref) -> bool:
+    """On the GTK thread: draws the server state, if the window is still there."""
+    win = ref()
+    if win is not None:
+        win._render_net_status()
+    return False
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
@@ -430,6 +450,11 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._build_layout()
         self._install_actions()
+        # The dot follows the answers to the program's own requests; the listener holds the
+        # window only weakly and runs in the request's thread, so it hands over to GTK.
+        ref = weakref.ref(self)
+        self._net_listener = lambda: GLib.idle_add(_render_net_status_later, ref)
+        netstatus.STATUS.add_listener(self._net_listener)
 
         self.connect("close-request", self._on_close_request)
         self.monitor = Gio.VolumeMonitor.get()
@@ -477,6 +502,17 @@ class MainWindow(Adw.ApplicationWindow):
         self.nav.connect("row-activated", lambda *_a: self.split.set_show_content(True))
         sidebar_view.set_content(Gtk.ScrolledWindow(child=self.nav,
                                                     hscrollbar_policy=Gtk.PolicyType.NEVER))
+        # The state of Garmin's servers, from the answers to the program's own requests:
+        # an icon and a word, so that it does not rest on the colour alone.
+        self.net_icon = Gtk.Image()
+        self.net_label = Gtk.Label(xalign=0, hexpand=True)
+        self.net_label.add_css_class("caption")
+        self.net_box = Gtk.Box(spacing=8, margin_top=6, margin_bottom=8, margin_start=14,
+                               margin_end=12)
+        self.net_box.append(self.net_icon)
+        self.net_box.append(self.net_label)
+        sidebar_view.add_bottom_bar(self.net_box)
+        self._render_net_status()
         self.split.set_sidebar(Adw.NavigationPage(title="openExpress", child=sidebar_view))
 
         content_view = Adw.ToolbarView()
@@ -594,6 +630,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_close_request(self, _win) -> bool:
         if not self.busy:
             self._remember_geometry()
+            netstatus.STATUS.remove_listener(self._net_listener)
             return False
         if self._close_dialog is None:
             d = Adw.AlertDialog(
@@ -605,6 +642,26 @@ class MainWindow(Adw.ApplicationWindow):
             self._close_dialog = d
             d.present(self)
         return True
+
+    def _render_net_status(self) -> None:
+        """Shows the state of Garmin's servers at the bottom of the side panel."""
+        last, answered = netstatus.STATUS.snapshot()
+        state = netstatus.state_of(last, answered)
+        session = getattr(self, "session", None)
+        try:
+            hosts = (session.client.settings if session is not None else Settings.load()).hosts
+        except Exception:  # noqa: BLE001 - only for the names in the tooltip
+            hosts = {}
+        text, tooltip = netstatus.describe(last, answered, hosts)
+        icon, colour = NET_LOOK[state]
+        self.net_icon.set_from_icon_name(icon)
+        for c in {c for _i, c in NET_LOOK.values()}:
+            self.net_icon.remove_css_class(c)
+        self.net_icon.add_css_class(colour)
+        self.net_label.set_label(text)
+        self.net_box.set_tooltip_text(tooltip)
+        self.net_box.update_property([Gtk.AccessibleProperty.LABEL,
+                                      Gtk.AccessibleProperty.DESCRIPTION], [text, tooltip])
 
     def _remember_geometry(self) -> None:
         # The default size follows the user's resizing and keeps the last unmaximized

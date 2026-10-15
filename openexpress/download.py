@@ -15,7 +15,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
-from openexpress import __version__, applog
+from openexpress import __version__, applog, netstatus
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -130,11 +130,18 @@ def fetch(
             try:
                 _get(http, url, part, size, progress)
             except (requests.RequestException, DownloadError, OSError) as e:
+                if isinstance(e, requests.RequestException):
+                    netstatus.record(netstatus.OMT, url, None)
+                elif isinstance(e, DownloadError) and e.status:
+                    # The address is signed with the URL salt, not the sign-in: a refusal
+                    # (4xx) is an answer of a working server.
+                    netstatus.record(netstatus.OMT, url, e.status if e.status >= 500 else 200)
                 errors.append(f"{_short(url)}: {e}")
                 log.warning("Download failed (%s)", e)
                 if isinstance(e, DownloadError) and e.status and 400 <= e.status < 500:
                     break  # retrying the same request will not help
                 continue
+            netstatus.record(netstatus.OMT, url, 200)
             got = part.stat().st_size
             # The address is signed and names the product: only the host goes to the log.
             log.info("download: %s from %s", applog.size(got), urlsplit(url).netloc)

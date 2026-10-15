@@ -23,7 +23,9 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
-from openexpress import applog, paths, proto
+import requests
+
+from openexpress import applog, netstatus, paths, proto
 from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
 from openexpress.device.storage import DeviceError, RemountFailed, Storage
@@ -373,9 +375,14 @@ class StoreApi:
         h["Accept"] = "application/json"
         h["Authorization"] = self.client._sign(method, url)
         started = time.monotonic()
-        resp = self.client.http.request(method, url, headers=h, json=json_body, timeout=60)
+        try:
+            resp = self.client.http.request(method, url, headers=h, json=json_body, timeout=60)
+        except requests.RequestException:
+            netstatus.record(netstatus.CONNECT, url, None)
+            raise
         log.info("HTTP %s %s -> %s in %.1f s", method, self.base + path, resp.status_code,
                  time.monotonic() - started)
+        netstatus.record(netstatus.CONNECT, url, resp.status_code)
         self.client._check(resp, what)
         return lower_keys(resp.json()) if resp.content else None
 
