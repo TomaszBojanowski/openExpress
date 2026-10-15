@@ -3,6 +3,11 @@
 Official Garmin Express flow (docs/analiza/04, section 6): the server returns
 the maps assigned to the device, the client downloads the files, activates the map
 on the server (the response contains .gma unlock files) and writes everything to the watch.
+
+As Express does, the files are written smallest first; a file other maps share is tried once
+more after a failed write and never deleted. A map written or removed waits until the device
+is unplugged (mark_waiting): only then does the device take it in.
+
 There is no license circumvention here: only what the server offers for this
 device is installed.
 """
@@ -71,7 +76,8 @@ class UniversalMap:
     @property
     def occupies(self) -> bool:
         """Its files are on the device for good: installed and not waiting to be removed,
-        or written and waiting to be taken in."""
+        or written and waiting to be taken in. Only shown ("Maps use"); which files are
+        kept when a map is removed is decided by protected_files."""
         return (self.installed and self.waiting != WAIT_REMOVE) or self.waiting == WAIT_INSTALL
 
     @property
@@ -96,7 +102,7 @@ class UniversalMap:
 
 
 def _device_path(name: str) -> str:
-    """A path on the device as the server writes it, with "/" instead of "\\"."""
+    """Turn a path from the server into a device path ("\\" becomes "/")."""
     return name.replace("\\", "/")
 
 
@@ -362,8 +368,9 @@ def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,
 
 def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
                   users: list[str]) -> str:
-    """A file other installed maps use too: deleting it after a failed write would break
-    them, so the write is tried once more and the file is never deleted."""
+    """A file other maps use too, installed or written and waiting to be taken in: deleting
+    it after a failed write would break them, so the write is tried once more and the file
+    is never deleted."""
     try:
         return _write_checked(storage, f, local, transfer_progress, keep=True)
     except Exception as e:  # noqa: BLE001 - any failure gets the one retry
@@ -378,7 +385,8 @@ def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
 
 
 def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[str]:
-    """Names of the other installed maps that list `path` among their files."""
+    """Names of the other maps, installed or written and waiting to be taken in, that list
+    `path` among their files."""
     p = path.casefold()
     return [m.name for m in maps if m is not target
             and (m.installed or m.waiting == WAIT_INSTALL)
