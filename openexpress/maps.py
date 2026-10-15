@@ -199,10 +199,10 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
     yet none of its own files (not used by other maps) is on the device."""
     for m in maps:
         m.waiting = None
-    paths = {p for m in maps for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
+    wanted = {p for m in maps for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
     present: dict[str, int] = {}  # casefolded path -> size, one listing per folder
     try:
-        for folder in {posixpath.dirname(p) for p in paths}:
+        for folder in {posixpath.dirname(p) for p in wanted}:
             for e in storage.listdir(folder):
                 if not e.is_dir:
                     present[posixpath.join(folder, e.name).casefold()] = e.size
