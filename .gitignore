@@ -16,6 +16,7 @@ docs/ANALIZA.md
 flatpak-build/
 flatpak-repo/
 *.flatpak
+*.docx
 
 # Local notes for AI coding sessions (contain private paths)
 AGENTS.md
