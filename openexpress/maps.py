@@ -5,8 +5,9 @@ the maps assigned to the device, the client downloads the files, activates the m
 on the server (the response contains .gma unlock files) and writes everything to the watch.
 
 As Express does, the files are written smallest first; a file other maps share is tried once
-more after a failed write and never deleted. A map written or removed waits until the device
-is unplugged (mark_waiting): only then does the device take it in.
+more after a failed write and never deleted; an unlock file is tried up to six times, with a
+pause between. A map written or removed waits until the device is unplugged (mark_waiting):
+only then does the device take it in.
 
 There is no license circumvention here: only what the server offers for this
 device is installed.
@@ -18,19 +19,24 @@ import base64
 import hashlib
 import logging
 import posixpath
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from openexpress import applog, download, paths
 from openexpress.connect import ApiError
-from openexpress.device.storage import Storage
+from openexpress.device.storage import DeviceError, Storage
 from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
 
 SPACE_MARGIN = 50 * 1024 * 1024
 WAIT_INSTALL, WAIT_REMOVE = "install", "remove"
+# Writing an unlock file the device refused is tried again after a pause, as Garmin Express
+# does: one try and five more.
+UNLOCK_TRIES = 6
+UNLOCK_PAUSE_S = 5
 
 
 class MapError(Exception):
@@ -300,6 +306,7 @@ def install(
     transfer_progress: Callable[[int, int], None] | None = None,
     download_progress: Callable[[int, int | None], None] | None = None,
     url_salt: str | None = None,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> MapReport:
     if m.waiting == WAIT_INSTALL:
         raise MapError(waiting_message(m))
@@ -352,7 +359,7 @@ def install(
     gmas = []
     for fname, gma in unlocks:
         data = base64.b64decode(gma)
-        real = storage.write(_device_path(fname), data)
+        real = _write_unlock(storage, _device_path(fname), data, progress, sleep)
         report.unlocks.append(real)
         gmas.append(_short_md5(data))
     log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files"
@@ -394,6 +401,29 @@ def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
         raise MapError(_("Cannot write {path}, which other maps on the device also use "
                          "({maps}). Install the map again.")
                        .format(path=f.device_path, maps=", ".join(users))) from e
+
+
+def _write_unlock(storage: Storage, path: str, data: bytes, progress, sleep) -> str:
+    """Writes an unlock file, tried again after a pause while the device refuses it. The map
+    files are on the device by then and the map may not work without it: the error says so
+    and what to do."""
+    attempt = 1
+    while True:
+        try:
+            return storage.write(path, data)
+        except DeviceError as e:
+            log.warning("map install: writing an unlock file failed (try %d of %d): %s",
+                        attempt, UNLOCK_TRIES, e)
+            if attempt == UNLOCK_TRIES:
+                raise MapError(_(
+                    "The map files were copied, but its unlock file {path} could not be "
+                    "written ({error}). The map may not work on the device. If it does not, "
+                    "unplug the device and install the map again; if it is listed as "
+                    "installed, remove it first.").format(path=path, error=e)) from e
+        attempt += 1
+        progress(_("Writing the unlock file again ({attempt} of {tries})")
+                 .format(attempt=attempt, tries=UNLOCK_TRIES))
+        sleep(UNLOCK_PAUSE_S)
 
 
 def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[str]:

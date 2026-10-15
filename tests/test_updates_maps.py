@@ -275,6 +275,71 @@ def test_the_log_names_the_start_of_the_unlock_md5(server, device_root, xdg, cap
     assert applog.redact(line) == line  # the log filter leaves it readable
 
 
+class RefusingUnlockStorage(LocalStorage):
+    """Refuses to write the unlock file the first `refusals` times; counts the tries."""
+
+    def __init__(self, root, refusals):
+        super().__init__(root)
+        self.refusals, self.tries = refusals, 0
+
+    def _write(self, real_path, data):
+        if real_path.endswith(".gma"):
+            self.tries += 1
+            if self.tries <= self.refusals:
+                raise DeviceError("busy")
+        super()._write(real_path, data)
+
+
+def test_an_unlock_file_refused_is_written_again_after_a_pause(server, device_root, xdg,
+                                                              caplog):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RefusingUnlockStorage(device_root, refusals=2)
+    lines, pauses = [], []
+    with caplog.at_level("WARNING", logger="openexpress.maps"):
+        rep = maps.install(east, all_maps, st, unlock_e2, progress=lines.append,
+                           sleep=pauses.append)
+    assert st.tries == 3 and pauses == [5, 5]
+    assert [line for line in lines if "again" in line] == [
+        "Writing the unlock file again (2 of 6)", "Writing the unlock file again (3 of 6)"]
+    assert len([r for r in caplog.records if r.levelname == "WARNING"]) == 2
+    assert (device_root / "GARMIN/E2.gma").read_bytes() == b"UNLOCK"
+    assert rep.unlocks == ["GARMIN/E2.gma"]
+
+
+def test_an_unlock_file_always_refused_is_named_and_the_map_files_stay(server, device_root,
+                                                                       xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RefusingUnlockStorage(device_root, refusals=99)
+    pauses = []
+    with pytest.raises(maps.MapError) as error:
+        maps.install(east, all_maps, st, unlock_e2, sleep=pauses.append)
+    assert st.tries == 6 and pauses == [5] * 5
+    assert "Garmin/E2.gma" in str(error.value) and "busy" in str(error.value)
+    assert (device_root / "GARMIN/E2.img").read_bytes() == FILES["/maps/topo.img"]
+    assert (device_root / "GARMIN/DEM.img").read_bytes() == FILES["/maps/dem.img"]
+    assert not (device_root / "GARMIN/E2.gma").exists()
+
+
+def test_an_unlock_file_written_at_once_is_not_tried_again(server, device_root, xdg):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    st = RefusingUnlockStorage(device_root, refusals=0)
+    lines, pauses = [], []
+    maps.install(east, all_maps, st, unlock_e2, progress=lines.append, sleep=pauses.append)
+    assert st.tries == 1 and pauses == []
+    assert not any("again" in line for line in lines)
+
+
+def test_a_map_whose_unlock_file_was_refused_still_waits(server, device_root, xdg):
+    """The limit of trying again: every file of the map is on the device, so the map looks
+    written and waiting for unplugging; the error says to install it again if it does not
+    work."""
+    all_maps, east = east_with_shared_dem(server, device_root)
+    with pytest.raises(maps.MapError):
+        maps.install(east, all_maps, RefusingUnlockStorage(device_root, refusals=99), unlock_e2,
+                     sleep=lambda s: None)
+    assert waiting_maps(server, device_root)["East"].waiting == maps.WAIT_INSTALL
+
+
 # --- a device without maps ----------------------------------------------------------------
 
 # The shape of a real answer for a device without maps: every list is there and empty.
