@@ -97,6 +97,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.5.0" date="2026-10-16">
+      <description>
+        <ul>
+          <li>Maps are written to the device smallest first, as Garmin Express does; a file
+          that other maps share is never deleted after a failed write.</li>
+          <li>Removing a map never deletes files that other installed maps still use.</li>
+          <li>A map that has been copied or removed shows as waiting until the device is
+          unplugged, and cannot be installed twice.</li>
+          <li>At the bottom of the side panel, the state of Garmin's servers opens a popover
+          with each service, its server and when it last answered.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.14" date="2026-10-15">
       <description>
         <ul>
