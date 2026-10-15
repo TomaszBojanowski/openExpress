@@ -1030,3 +1030,12 @@ def test_a_shared_file_is_kept_whatever_its_spelling(state, waiting):
     removing = maps.removal_list(all_maps, b, rewriting=False)
     assert removing == ["Garmin/B.img"]  # only B's own file
     assert all(p.casefold() != "garmin/sid/da69900.sid" for p in removing)
+
+
+def test_space_counts_a_file_once_whatever_its_spelling(device_root):
+    """A file on the list to remove that the map also writes, spelt differently: freed once,
+    not freed and replaced too."""
+    put(device_root, **{"D1.img": b"x" * 3000})
+    m = _a_map("Map", 1, ["GARMIN/d1.IMG"], ["Garmin/D1.img"])
+    m.files[0].size = 7000
+    assert maps.space_needed(LocalStorage(device_root), m, ["Garmin/D1.img"]) == 4000

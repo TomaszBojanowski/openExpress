@@ -273,8 +273,9 @@ def removal_list(maps: list[UniversalMap], target: UniversalMap, rewriting: bool
 
 def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
     freed = sum(storage.size(p) or 0 for p in removing)
+    gone = {p.casefold() for p in removing}
     replaced = sum(storage.size(f.device_path) or 0 for f in m.files
-                   if f.device_path not in removing)
+                   if f.device_path.casefold() not in gone)
     return max(0, m.size - freed - replaced)
 
 
