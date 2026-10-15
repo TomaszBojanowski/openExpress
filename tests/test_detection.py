@@ -3,6 +3,7 @@
 All serial numbers and USB trees here are made up.
 """
 
+import logging
 import types
 
 import pytest
@@ -257,6 +258,86 @@ def test_window_notices_the_removal_of_the_open_device(no_sysfs):
     assert win.session is not None and shown == [1]  # someone else's device: nothing happens
     MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
     assert win.session is None and shown == [1, 1]
+
+
+def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog):
+    from openexpress import applog
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    garmin = {NUMERIC}
+    remounted = set()
+    timers = []
+    monkeypatch.setattr(app, "garmin_usb", lambda m: m.uri in garmin)
+    monkeypatch.setattr(app, "own_remount", lambda m: m.uri in remounted)
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
+    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    win = types.SimpleNamespace(session=session, busy=False, show_device=lambda: None)
+    stick = "file:///run/media/someone/STICK/"
+
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+        MainWindow._on_mount_added(win, None, FakeMount(stick))
+        remounted.add(NUMERIC)
+        MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+        remounted.clear()
+        MainWindow._on_mount_removed(win, None, FakeMount(PHONE))
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    assert timers == [1500]  # only the first mount of a Garmin device leads to a detection
+    # As the log file writes them: through the filter.
+    lines = [applog.redact(r.getMessage()) for r in caplog.records]
+    assert lines == [
+        ("mount added (mtp://<device>/): a Garmin device, detecting in 1.5 s "
+         "(a device is open: True)"),
+        "mount added (file:): not a Garmin device, ignored",
+        "mount added (mtp://<device>/): our own remount, ignored",
+        "mount removed (mtp://<device>/): our own remount, ignored",
+        "mount removed (mtp://<device>/): not the open device, ignored",
+        ("mount removed (mtp://<device>/): the open device, showing no device "
+         "(a task is running: False)"),
+    ]
+    # A local path is not written at all: the filter would not hide the user name in it.
+    assert "someone" not in caplog.text and "STICK" not in caplog.text
+    assert win.session is None
+
+
+def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
+    from openexpress import applog
+    from openexpress.gui.app import MainWindow
+
+    def device(unit_id):
+        return types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id))
+
+    tasks, shown = [], []
+    open_one = device(3000000001)
+    win = types.SimpleNamespace(
+        busy=True, _refresh_pending=False, session=open_one,
+        sections={"watch": types.SimpleNamespace(show=lambda state: None)},
+        run_task=lambda title, fn, done, failed: tasks.append(done),
+        show_device=lambda: shown.append(win.session))
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow.refresh_device(win)  # a task is running: later
+        win.busy = False
+        MainWindow.refresh_device(win)
+        tasks.pop()(device(3000000001))
+        MainWindow.refresh_device(win)
+        tasks.pop()(device(3000000002))
+        win.session = None
+        MainWindow.refresh_device(win)
+        tasks.pop()(device(3000000001))
+    assert len(shown) == 3 and win._refresh_pending is False
+    lines = [applog.redact(r.getMessage()) for r in caplog.records]
+    assert lines == [
+        "device detection: after the running task",
+        "device detection: again, a device is open",
+        "device detection: the same device as the open one, all pages are loaded anew",
+        "device detection: again, a device is open",
+        "device detection: another device than the open one, all pages are loaded anew",
+        "device detection: no device is open",
+        "device detection: a device found, all pages are loaded anew",
+    ]
+    assert "3000000001" not in caplog.text  # the unit ID is compared, never written
 
 
 def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):

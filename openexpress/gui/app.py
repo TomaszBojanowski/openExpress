@@ -230,6 +230,29 @@ def still_in_window(buttons: list) -> list:
     return [b for b in buttons if b.get_root() is not None]
 
 
+def _mount_address(mount) -> str:
+    """The address of a mount for the log. An MTP address carries the serial number,
+    which the log filter hides; any other address may carry a local path with the user
+    name, which the filter does not hide, so only its scheme is written."""
+    root = mount.get_root()
+    uri = (root.get_uri() if root is not None else None) or ""
+    if uri.startswith("mtp://"):
+        return uri
+    return uri.split(":", 1)[0] + ":" if ":" in uri else "unknown"
+
+
+def _same_device(old, new) -> str:
+    """For the log: how the detected device relates to the open one. Compared by the
+    unit ID, which is never written."""
+    if old is None:
+        return "a device found"
+    before = getattr(getattr(old, "device", None), "unit_id", None)
+    now = getattr(getattr(new, "device", None), "unit_id", None)
+    if before is not None and before == now:
+        return "the same device as the open one"
+    return "another device than the open one"
+
+
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -657,22 +680,36 @@ class MainWindow(Adw.ApplicationWindow):
     # --- device ----------------------------------------------------------------------
 
     def _on_mount_added(self, _mon, mount):
+        where = _mount_address(mount)
         if own_remount(mount):
-            return  # mounted again by our own install; the open device stays as it is
+            # Mounted again by our own install; the open device stays as it is.
+            log.info("mount added (%s): our own remount, ignored", where)
+            return
         if garmin_usb(mount):
+            log.info("mount added (%s): a Garmin device, detecting in 1.5 s "
+                     "(a device is open: %s)", where, self.session is not None)
             GLib.timeout_add(1500, lambda: (self.refresh_device(), False)[1])
+        else:
+            log.info("mount added (%s): not a Garmin device, ignored", where)
 
     def _on_mount_removed(self, _mon, mount):
+        where = _mount_address(mount)
         if own_remount(mount):
+            log.info("mount removed (%s): our own remount, ignored", where)
             return
         # The USB device is already gone, so compare with the device that is open.
         uri = mount.get_root().get_uri().rstrip("/") + "/"
         s = self.session
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
         if ours or garmin_usb(mount):
+            log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
+                     where, "the open device" if ours else "a Garmin device",
+                     bool(getattr(self, "busy", False)))
             self.session = None
             self._updated_apps = set()  # unplugged: the device applies what was waiting
             self.show_device()
+        else:
+            log.info("mount removed (%s): not the open device, ignored", where)
 
     @staticmethod
     def _usb_notice(state: str, waited_s: float) -> tuple[str, str, bool]:
@@ -706,6 +743,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._usb_since = clock()
         if state == PRESENT and self._usb_state != PRESENT:
             # It left its transitional mode: look for it once gvfs had a moment.
+            log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
             GLib.timeout_add(2500, lambda: (self.refresh_device(), False)[1])
         self._usb_state = state
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
@@ -719,11 +757,16 @@ class MainWindow(Adw.ApplicationWindow):
     def refresh_device(self) -> None:
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
+            log.info("device detection: after the running task")
             self._refresh_pending = True
             return
         self._refresh_pending = False
+        log.info("device detection: %s", "again, a device is open" if self.session is not None
+                 else "no device is open")
 
         def done(sess):
+            log.info("device detection: %s, all pages are loaded anew",
+                     _same_device(self.session, sess))
             self.session = sess
             self.show_device()
 
