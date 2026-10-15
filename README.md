@@ -305,10 +305,12 @@ openExpress keeps a log of what it does, to make problems easier to find:
   language of the app and the process ID; nothing about you or your computer.
 - **What it contains:** which command or sync ran and how it ended, the steps of a sync
   (numbers of files by type, not their contents), app installs and removals, how the device
-  was detected, requests to Garmin's servers as method, address without parameters, status
-  and duration, and error messages.
+  was detected (including when it was mounted or unmounted), requests to Garmin's servers
+  as method, address without parameters, status and duration, and error messages.
 - **What it never contains:** serial numbers, unit IDs, MTP addresses, tokens, passwords,
-  cookies, e-mail addresses, local paths, names of your music files, or file contents.
+  cookies, e-mail addresses, local paths, addresses of local files and network shares
+  (`file://`, `smb://`, `sftp://`…), your user name, names of your music files, or file
+  contents.
   Every line passes a filter that replaces such values before it is written. The log
   stays on your computer; nothing is sent anywhere.
 - **More or less:** `OPENEXPRESS_LOG=debug` (or `-v`) writes more detail,
