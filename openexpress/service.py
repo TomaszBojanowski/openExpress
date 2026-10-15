@@ -319,11 +319,35 @@ class SyncSummary:
     skipped_known: int = 0
     downloaded: int = 0
     errors: list[str] = field(default_factory=list)
-    lines: list[str] = field(default_factory=list)
+    # What happened, in order: a text, or the numbers of a step as a dict, which is put into
+    # words only when it is shown (`describe_lines`): in the language of that moment.
+    lines: list = field(default_factory=list)
 
     @property
     def text(self) -> str:
-        return "\n".join(self.lines)
+        return "\n".join(describe_lines(self.lines))
+
+
+def _describe_line(line) -> str | None:
+    """A line of a sync summary in words; None for a step this version does not know."""
+    if isinstance(line, str):
+        return line  # written in words already (also every line of an older version)
+    kind = line.get("kind") if isinstance(line, dict) else None
+    if kind == "new_files":
+        types = ", ".join(f"{k}×{v}" for k, v in sorted((line.get("types") or {}).items()))
+        return _("New files: {types}").format(types=types)
+    if kind == "uploads":
+        return _("Uploaded {uploaded}, already in Connect {known}, rejected {rejected}, "
+                 "errors {errors}.").format(
+            uploaded=line.get("uploaded", 0), known=line.get("known", 0),
+            rejected=line.get("rejected", 0), errors=line.get("errors", 0))
+    return None
+
+
+def describe_lines(lines) -> list[str]:
+    """The lines of a sync summary in words, for the window, the notification and the
+    command line alike."""
+    return [text for text in map(_describe_line, lines or []) if text]
 
 
 class SyncBusy(Exception):
@@ -432,16 +456,16 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         # Files from Connect are still written to the device below.
         out.lines.append(gate.message())
     elif plan.candidates:
-        types = ", ".join(f"{k}×{v}" for k, v in sorted(counts.items()))
-        out.lines.append(_("New files: {types}").format(types=types))
+        out.lines.append({"kind": "new_files", "types": dict(counts)})
         rep = sync.run_uploads(plan, s.device, s.storage, s.client, state, progress)
         out.uploaded = len(rep.uploaded)
         out.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
         out.errors += [f"{label}: {err}" for label, err in rep.failed]
-        out.lines.append(_("Uploaded {uploaded}, already in Connect {known}, "
-                           "rejected {rejected}, errors {errors}.").format(
-            uploaded=out.uploaded, known=out.skipped_known,
-            rejected=len(rep.rejected), errors=len(rep.failed)))
+        out.lines.append({
+            "kind": "uploads", "uploaded": out.uploaded, "known": out.skipped_known,
+            # Of those: recognised before sending, and sent but recognised by Garmin.
+            "known_checked": len(rep.already_in_connect), "known_server": len(rep.duplicates),
+            "rejected": len(rep.rejected), "errors": len(rep.failed)})
         if rep.tracker_conflict:
             n = len(rep.tracker_conflict)
             out.lines.append(ngettext(

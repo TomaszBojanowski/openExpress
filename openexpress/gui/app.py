@@ -1199,7 +1199,7 @@ class MainWindow(Adw.ApplicationWindow):
         row.set_subtitle(GLib.markup_escape_text(
             format_when(data.get("time", time.time())) + " · " + summary))
         row.set_enable_expansion(True)
-        for line in (data.get("lines") or []) + errors:
+        for line in service.describe_lines(data.get("lines")) + errors:
             child = Adw.ActionRow(title=GLib.markup_escape_text(line), title_lines=3)
             child.add_css_class("property")
             row.add_row(child)

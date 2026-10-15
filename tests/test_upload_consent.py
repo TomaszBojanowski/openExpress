@@ -266,5 +266,66 @@ def test_window_and_background_sync_use_the_same_gate(device_root, xdg):
         summary = service.run_sync(s, first_run="all")
         assert len(client.uploads) == uploads and summary.uploaded == uploads
         assert summary.downloaded == 1
-        blocked = [line for line in summary.lines if line.startswith("Nothing was uploaded")]
+        blocked = [line for line in service.describe_lines(summary.lines)
+                   if line.startswith("Nothing was uploaded")]
         assert len(blocked) == (0 if uploads else 1) and summary.errors == []
+
+
+# --- the last sync: numbers kept, words made when shown -----------------------------------------
+
+
+def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
+    summary = service.run_sync(s, first_run="all")
+    steps = [line for line in summary.lines if isinstance(line, dict)]
+    assert steps == [
+        {"kind": "new_files", "types": {"FIT_TYPE_4": 2}},
+        {"kind": "uploads", "uploaded": 2, "known": 0, "known_checked": 0, "known_server": 0,
+         "rejected": 0, "errors": 0}]
+    # The same words as before, in the summary and from what is stored.
+    assert "New files: FIT_TYPE_4×2" in summary.text.splitlines()
+    assert ("Uploaded 2, already in Connect 0, rejected 0, errors 0."
+            in summary.text.splitlines())
+    stored = service.load_last_sync(UNIT)
+    assert service.describe_lines(stored["lines"]) == summary.text.splitlines()
+
+
+def test_the_last_sync_is_put_into_words_when_shown(xdg):
+    from openexpress import i18n
+
+    summary = service.SyncSummary(uploaded=3, skipped_known=2, lines=[
+        "Written before, in words.",
+        {"kind": "new_files", "types": {"FIT_TYPE_49": 1, "FIT_TYPE_4": 4}},
+        {"kind": "uploads", "uploaded": 3, "known": 2, "known_checked": 1, "known_server": 1,
+         "rejected": 0, "errors": 0},
+        {"kind": "a step of a newer version"}])
+    service.save_last_sync(42, summary)
+    lines = service.load_last_sync(42)["lines"]
+    assert service.describe_lines(lines) == [
+        "Written before, in words.",
+        "New files: FIT_TYPE_4×4, FIT_TYPE_49×1",
+        "Uploaded 3, already in Connect 2, rejected 0, errors 0."]  # the unknown step left out
+    i18n.setup("pl")  # the language of the moment it is shown, not of the sync
+    try:
+        assert service.describe_lines(lines)[1] == "Nowe pliki: FIT_TYPE_4×4, FIT_TYPE_49×1"
+    finally:
+        i18n.setup("en")
+
+
+def test_a_last_sync_of_an_older_version_is_shown_as_it_was(xdg):
+    import json
+
+    service.last_sync_path().parent.mkdir(parents=True, exist_ok=True)
+    service.last_sync_path().write_text(json.dumps({
+        "time": 1, "unit_id": 42, "uploaded": 1, "downloaded": 0, "skipped_known": 0,
+        "errors": [], "lines": ["New files: FIT_TYPE_4×1",
+                                ("Uploaded 1, already in Connect 0, rejected 0, errors 0.")]}))
+    data = service.load_last_sync(42)
+    assert service.describe_lines(data["lines"]) == data["lines"]
+    assert service.describe_lines(None) == []
