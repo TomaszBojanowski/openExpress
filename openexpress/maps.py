@@ -88,6 +88,12 @@ class UniversalMap:
         return self.installed or self.waiting == WAIT_INSTALL
 
     @property
+    def all_paths(self) -> list[str]:
+        """Every file the server names for the map, as it spells them: those of the map and
+        those a newer version of it removes."""
+        return [*(f.device_path for f in self.files), *self.files_to_remove]
+
+    @property
     def size(self) -> int:
         return sum(f.size for f in self.files)
 
@@ -212,7 +218,7 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
     yet none of its own files (not used by other maps) is on the device."""
     for m in maps:
         m.waiting = None
-    wanted = {p for m in maps for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
+    wanted = {p for m in maps for p in m.all_paths}
     present: dict[str, int] = {}  # casefolded path -> size, one listing per folder
     try:
         for folder in {posixpath.dirname(p) for p in wanted}:
@@ -235,7 +241,7 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
     for m in maps:
         if not m.installed or m.waiting:
             continue
-        own = {p.casefold() for p in [*(f.device_path for f in m.files), *m.files_to_remove]}
+        own = {p.casefold() for p in m.all_paths}
         own -= protected_files(maps, m)
         if own and not any(p in present for p in own):
             removed.append(m)
@@ -255,8 +261,7 @@ def protected_files(maps: list[UniversalMap], target: UniversalMap) -> set[str]:
     for m in maps:
         if m is target or not m.keeps_files:
             continue
-        keep.update(f.device_path.casefold() for f in m.files)
-        keep.update(p.casefold() for p in m.files_to_remove)
+        keep.update(p.casefold() for p in m.all_paths)
     return keep
 
 
@@ -395,8 +400,7 @@ def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[st
     `path` among their files."""
     p = path.casefold()
     return [m.name for m in maps if m is not target and m.keeps_files
-            and p in {x.casefold() for x in [*(f.device_path for f in m.files),
-                                             *m.files_to_remove]}]
+            and p in {x.casefold() for x in m.all_paths}]
 
 
 def _short_md5(data: bytes) -> str:
