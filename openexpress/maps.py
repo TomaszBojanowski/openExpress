@@ -95,6 +95,11 @@ class UniversalMap:
         return _("available")
 
 
+def _device_path(name: str) -> str:
+    """A path on the device as the server writes it, with "/" instead of "\\"."""
+    return name.replace("\\", "/")
+
+
 def _hosts(dh: dict | None) -> list[str]:
     dh = dh or {}
     hosts = [dh.get("foregroundprimaryhost"), *(dh.get("failoverhosts") or []),
@@ -145,7 +150,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
             if not deliv or not f.get("filename") or not (deliv.get("url") or ""):
                 continue
             files.append(MapFile(
-                device_path=f["filename"].replace("\\", "/"),
+                device_path=_device_path(f["filename"]),
                 url=deliv.get("url") or "",
                 md5=download.normalize_md5(deliv.get("md5")),
                 size=int(deliv.get("sizeinbytes") or 0),
@@ -162,7 +167,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
             region=region,
             identifier=opt.get("identifier") or {},
             files=files,
-            files_to_remove=[f.get("filename", "").replace("\\", "/")
+            files_to_remove=[_device_path(f.get("filename", ""))
                              for f in m.get("filestoremove") or [] if f.get("filename")],
             hosts=_hosts(m.get("downloadhosts")),
             eula_urls=list(m.get("eulaurls") or []),
@@ -329,7 +334,7 @@ def install(
     gmas = []
     for fname, gma in unlocks:
         data = base64.b64decode(gma)
-        real = storage.write(fname.replace("\\", "/"), data)
+        real = storage.write(_device_path(fname), data)
         report.unlocks.append(real)
         gmas.append(_short_md5(data))
     log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files"
