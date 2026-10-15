@@ -18,6 +18,7 @@ program prints for the user (e.g. the addresses to choose from with `--device-ur
 from __future__ import annotations
 
 import fcntl
+import getpass
 import logging
 import logging.handlers
 import os
@@ -72,7 +73,25 @@ _PATTERNS = [
     (re.compile(r"\d{7,}"), "<number>"),
 ]
 
+
+def _user_rule(name: str | None) -> re.Pattern | None:
+    """The name of the system user as a whole word. Not inside a longer word or a domain
+    (an account "garmin" leaves "connectapi.garmin.com" and "Garmin" alone), and not when
+    it is shorter than 3 characters, which would hide too much."""
+    if not name or len(name) < 3:
+        return None
+    return re.compile(rf"(?<![\w.<-]){re.escape(name)}(?![\w>-]|\.\w)")
+
+
+def _system_user() -> str | None:
+    try:
+        return getpass.getuser()
+    except Exception:  # noqa: BLE001 - no name to hide; the other rules still apply
+        return None
+
+
 _PACKAGE_PARENT = str(Path(__file__).resolve().parent.parent) + os.sep
+_user = _user_rule(_system_user())  # asked once
 _hidden: dict[str, str] = {}
 _media: dict[str, re.Pattern] = {}  # media folders declared by the devices seen
 _handlers: list[logging.Handler] = []
@@ -108,6 +127,8 @@ def redact(text: str) -> str:
         text = text.replace(home, "~")
     for pattern, replacement in _PATTERNS:
         text = pattern.sub(replacement, text)
+    if _user is not None:
+        text = _user.sub("<user>", text)
     return text
 
 

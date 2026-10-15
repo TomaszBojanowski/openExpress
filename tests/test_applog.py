@@ -109,6 +109,50 @@ def test_a_line_written_before_the_rule_is_hidden_when_the_log_is_attached(log_f
         assert private not in applog.tail()[0]
 
 
+def test_the_system_user_name_is_hidden_as_a_whole_word(monkeypatch):
+    monkeypatch.setattr(applog, "_user", applog._user_rule("someone"))
+    assert applog.redact("signed in as someone (someone's session).") == (
+        "signed in as <user> (<user>'s session).")
+    kept = ("io.github.someonebojanowski.OpenExpress, github.com/Someone, someone-else, "
+            "x.someone, nosomeone_1")
+    assert applog.redact(kept) == kept
+
+
+def test_an_account_named_like_a_word_of_the_log_breaks_nothing(monkeypatch):
+    monkeypatch.setattr(applog, "_user", applog._user_rule("garmin"))
+    text = ("HTTP GET https://connectapi.garmin.com/device-service/a -> 200; "
+            "https://garmin.com/x; a Garmin device")
+    assert applog.redact(text) == text
+    assert applog.redact("user garmin logged in") == "user <user> logged in"
+    # The marks of the other rules stay as they are, whatever the name.
+    for name in ("user", "path", "device", "number"):
+        monkeypatch.setattr(applog, "_user", applog._user_rule(name))
+        marks = "<user> <path> mtp://<device>/x <number> file://<path>"
+        assert applog.redact(marks) == marks
+
+
+def test_a_short_or_unknown_user_name_hides_nothing(monkeypatch):
+    assert applog._user_rule("ab") is None and applog._user_rule("") is None
+    monkeypatch.setattr(applog, "_user", applog._user_rule("ab"))
+    assert applog.redact("ab cd ab") == "ab cd ab"
+
+    def no_name():
+        raise OSError("No username set in the environment")
+
+    monkeypatch.setattr(applog.getpass, "getuser", no_name)
+    assert applog._system_user() is None
+    monkeypatch.setattr(applog, "_user", applog._user_rule(applog._system_user()))
+    assert applog.redact(f"device {UNIT}, ~/x.fit") == "device <number>, <path>"
+
+
+def test_a_line_with_the_user_name_stays_the_same_when_it_is_redacted_again(monkeypatch):
+    monkeypatch.setattr(applog, "_user", applog._user_rule("someone"))
+    for text in ("user someone at sftp://someone@nas/x", "someone: file:///home/someone/a b",
+                 "/home/someone/x.fit someone"):
+        once = applog.redact(text)
+        assert "someone" not in once and applog.redact(once) == once
+
+
 def test_known_values_are_hidden_even_when_they_look_harmless():
     applog.hide("K9-42", "serial")
     applog.hide(None, "unit")

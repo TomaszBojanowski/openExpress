@@ -23,6 +23,17 @@ def test_report_has_no_identifiers(device_root):
     assert "- [x] Activities" in text and "- [ ] Music" in text
 
 
+def test_report_has_no_user_name_and_no_home_folder(device_root):
+    from pathlib import Path
+
+    from openexpress import applog
+
+    st = FakeMtpStorage(device_root)
+    text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, logged_in=True)
+    for private in (applog._system_user(), str(Path.home()), str(device_root)):
+        assert not private or private not in text
+
+
 def test_usb_id_comes_from_the_storage_not_from_the_address(device_root):
     st = LocalStorage(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
