@@ -146,6 +146,13 @@ older than 1.16 ignores it. Without it, on devices that hide their app folder, i
 updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
 them, apps are removed on the phone, and nothing is written to the device.
 
+**The Flatpak and the version from source are separate installations:** each keeps its own
+setup (the key from the Garmin Express installer), login, settings and sync state: its own
+last syncs, uploaded files and list of your own maps. After switching from one to the other,
+choose the installer and log in again. The first sync of each device then starts anew: the
+window asks whether to mark the files already on it as uploaded, and on the command line
+`openexpress sync --apply` stops and suggests `openexpress baseline --apply` or `--all`.
+
 openExpress is not on Flathub and will not be: it uses Garmin's unofficial interfaces.
 
 Build the Flatpak yourself (this needs `flatpak-builder` with Flatpak 1.16 or newer; older
