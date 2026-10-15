@@ -20,13 +20,10 @@ from pathlib import Path
 from openexpress import applog, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import Storage
-from openexpress.i18n import N_, _, human_size
+from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
 
-# TRANSLATORS: map installation states
-STATE_NAMES = {0: N_("not installed"), 1: N_("installed"), 2: N_("partial"),
-               3: N_("newer on device")}
 SPACE_MARGIN = 50 * 1024 * 1024
 WAIT_INSTALL, WAIT_REMOVE = "install", "remove"
 

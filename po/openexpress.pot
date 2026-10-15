@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.5.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-16 00:32+0200\n"
+"POT-Creation-Date: 2026-10-16 01:17+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -254,7 +254,7 @@ msgstr ""
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:920 openexpress/ciq.py:1474 openexpress/maps.py:359
+#: openexpress/ciq.py:920 openexpress/ciq.py:1474 openexpress/maps.py:356
 #: openexpress/updates.py:327
 #, python-brace-format
 msgid "Write verification of {path} failed"
@@ -1005,7 +1005,7 @@ msgstr ""
 msgid "Several entries match: {names}. Choose one with --type."
 msgstr ""
 
-#: openexpress/cli.py:910 openexpress/maps.py:188
+#: openexpress/cli.py:910 openexpress/maps.py:185
 #, python-brace-format
 msgid "Ambiguous name, matches: {names}"
 msgstr ""
@@ -1170,7 +1170,7 @@ msgstr ""
 msgid "will be installed after the device is unplugged"
 msgstr ""
 
-#: openexpress/cli.py:1070 openexpress/maps.py:91
+#: openexpress/cli.py:1070 openexpress/maps.py:88
 msgid "will be removed after the device is unplugged"
 msgstr ""
 
@@ -1838,7 +1838,7 @@ msgstr ""
 #: openexpress/connect.py:176 openexpress/connect.py:293
 #: openexpress/connect.py:447 openexpress/connect.py:462
 #: openexpress/connect.py:475 openexpress/connect.py:503
-#: openexpress/connect.py:527 openexpress/maps.py:123
+#: openexpress/connect.py:527 openexpress/maps.py:120
 #: openexpress/service.py:258
 #, python-brace-format
 msgid "{what}: unexpected response from the server"
@@ -1888,7 +1888,7 @@ msgstr ""
 msgid "Software update check"
 msgstr ""
 
-#: openexpress/connect.py:416 openexpress/maps.py:124
+#: openexpress/connect.py:416 openexpress/maps.py:121
 msgid "Map check"
 msgstr ""
 
@@ -2525,7 +2525,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: map status
-#: openexpress/gui/app.py:1328 openexpress/maps.py:94
+#: openexpress/gui/app.py:1328 openexpress/maps.py:91
 msgid "update available"
 msgstr ""
 
@@ -3446,98 +3446,81 @@ msgstr ""
 msgid "{name} was not found in the installer."
 msgstr ""
 
-#. TRANSLATORS: map installation states
-#: openexpress/maps.py:28
-msgid "not installed"
-msgstr ""
-
-#: openexpress/maps.py:28
-msgid "installed"
-msgstr ""
-
-#: openexpress/maps.py:28
-msgid "partial"
-msgstr ""
-
-#: openexpress/maps.py:29
-msgid "newer on device"
-msgstr ""
-
 #. TRANSLATORS: map status
-#: openexpress/maps.py:89
+#: openexpress/maps.py:86
 msgid "will be loaded after the device is unplugged"
 msgstr ""
 
 #. TRANSLATORS: map status
-#: openexpress/maps.py:97
+#: openexpress/maps.py:94
 msgid "up to date"
 msgstr ""
 
 #. TRANSLATORS: map status (can be installed)
-#: openexpress/maps.py:99
+#: openexpress/maps.py:96
 msgid "available"
 msgstr ""
 
-#: openexpress/maps.py:115
+#: openexpress/maps.py:112
 msgid "No maps are available for this device."
 msgstr ""
 
-#: openexpress/maps.py:187
+#: openexpress/maps.py:184
 #, python-brace-format
 msgid "No map named '{name}'"
 msgstr ""
 
-#: openexpress/maps.py:234
+#: openexpress/maps.py:231
 #, python-brace-format
 msgid ""
 "Map '{name}' is on the device already and will be loaded after the device is "
 "unplugged. Unplug the device first."
 msgstr ""
 
-#: openexpress/maps.py:289
+#: openexpress/maps.py:286
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: the server did not provide all of its files"
 msgstr ""
 
-#: openexpress/maps.py:295 openexpress/music.py:273 openexpress/ownmaps.py:236
+#: openexpress/maps.py:292 openexpress/music.py:273 openexpress/ownmaps.py:236
 #: openexpress/updates.py:290
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr ""
 
-#: openexpress/maps.py:305
+#: openexpress/maps.py:302
 #, python-brace-format
 msgid "Downloading {path} ({size})"
 msgstr ""
 
-#: openexpress/maps.py:315
+#: openexpress/maps.py:312
 msgid "Activating the map on the Garmin server"
 msgstr ""
 
-#: openexpress/maps.py:322
+#: openexpress/maps.py:319
 #, python-brace-format
 msgid "Removing old file {path}"
 msgstr ""
 
-#: openexpress/maps.py:327 openexpress/updates.py:317
+#: openexpress/maps.py:324 openexpress/updates.py:317
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr ""
 
-#: openexpress/maps.py:375
+#: openexpress/maps.py:372
 #, python-brace-format
 msgid ""
 "Cannot write {path}, which other maps on the device also use ({maps}). "
 "Install the map again."
 msgstr ""
 
-#: openexpress/maps.py:397
+#: openexpress/maps.py:394
 #, python-brace-format
 msgid "Map '{name}' cannot be removed"
 msgstr ""
 
-#: openexpress/maps.py:407
+#: openexpress/maps.py:404
 #, python-brace-format
 msgid "Removing {path}"
 msgstr ""
