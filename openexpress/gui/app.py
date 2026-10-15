@@ -764,6 +764,11 @@ class MainWindow(Adw.ApplicationWindow):
         uri = mount.get_root().get_uri().rstrip("/") + "/"
         s = self.session
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
+        if not ours and s is None and garmin_usb(mount):
+            # gvfs reports two mounts of one device: the pages are empty after the first.
+            log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
+                     where)
+            return
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
@@ -854,6 +859,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_banner()
         self._update_actions()
         if self.session is None:
+            # The empty pages tell the state on USB now, not the one from before the device
+            # was opened (e.g. "starting" when the window opened with a starting device).
+            self._poll_usb()
             return
         self.show_overview()
         self.load_section(self.pages.get_visible_child_name())

@@ -279,6 +279,87 @@ def test_window_notices_the_removal_of_the_open_device(no_sysfs):
     assert win.session is None and shown == [1, 1]
 
 
+class Page:
+    """A page of the window: what it shows, and the words of its empty placeholder."""
+
+    def __init__(self):
+        self.loaded, self.state, self.notices = True, "content", []
+
+    def clear(self):
+        pass
+
+    def show(self, state):
+        self.state = state
+
+    def set_empty(self, title, description, busy):
+        self.notices.append(title)
+
+
+def unplug_window(monkeypatch, usb):
+    """A window with the real code for an unplug, the pages and the notice from USB.
+    `usb` is what /sys says when it is asked; nothing else of the window is real."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(app, "usb_state", lambda: usb[0])
+    monkeypatch.setattr(app, "own_remount", lambda mount: False)
+    monkeypatch.setattr(app, "garmin_usb", lambda mount: True)
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
+    pages = {"watch": Page(), "apps": Page()}
+    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    win = types.SimpleNamespace(
+        session=session, busy=False, sections=pages, built=[], _updated_apps=set(),
+        _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="", _usb_gone=None,
+        _usb_notice=MainWindow._usb_notice, _update_banner=lambda: None,
+        _update_actions=lambda: None)
+    win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
+    real_show = types.MethodType(MainWindow.show_device, win)
+    win.show_device = lambda: (win.built.append(win.session), real_show())
+    # Opened while the device was starting: the last words the pages were given.
+    for page in pages.values():
+        page.set_empty("The device is starting…", "", True)
+    return win
+
+
+def test_after_an_unplug_the_pages_tell_the_usb_state_at_once(monkeypatch):
+    from openexpress.gui.app import MainWindow
+
+    win = unplug_window(monkeypatch, [gio_storage.ABSENT])
+    connect = MainWindow._usb_notice(gio_storage.ABSENT, 0)[0]  # what no device on USB says
+    assert connect == "Connect your device"
+    MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    assert win.session is None
+    for page in win.sections.values():  # before any later poll of USB
+        assert page.state == "empty"
+        assert page.notices[-1] == connect, "the words from before the device was opened"
+
+
+def test_a_device_still_starting_is_told_at_once_too(monkeypatch):
+    from openexpress.gui.app import MainWindow
+
+    win = unplug_window(monkeypatch, [gio_storage.STARTING])
+    MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    assert all(page.notices[-1] == "The device is starting…"
+               for page in win.sections.values())
+
+
+def test_the_second_mount_of_an_unplugged_device_changes_nothing(monkeypatch, caplog):
+    from openexpress import applog
+    from openexpress.gui.app import MainWindow
+
+    win = unplug_window(monkeypatch, [gio_storage.ABSENT])
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))  # gvfs: the other mount
+    assert len(win.built) == 1 and win.session is None
+    lines = [applog.redact(r.getMessage()) for r in caplog.records]
+    assert lines == [
+        ("mount removed (mtp://<device>/): the open device, showing no device "
+         "(a task is running: False)"),
+        "mount removed (mtp://<device>/): a Garmin device, no device is open, nothing to do",
+    ]
+
+
 def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog):
     from openexpress import applog
     from openexpress.gui import app
