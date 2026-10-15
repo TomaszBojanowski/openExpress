@@ -95,7 +95,7 @@ and the command-line tool prints the same warning when it starts such an operati
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
+| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
 | Edge 1050 | detected automatically; read-only commands, backup and sync plan tested; one system software update installed in the window (beta 33.12, 14 October 2026) |
 | Venu 2 (part 006-B3703) | read-only commands tested; installing software updates tested (two components, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
@@ -137,7 +137,7 @@ sandbox:
   `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
   (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
   connection, and the device disappears from the file manager for a moment while it is
-  used. This is not yet tested on a device in the Flatpak.
+  used.
 
 If you prefer not to grant the first one, use the version from source (writing to the watch
 then works without it). The second one can be turned off with
@@ -367,7 +367,6 @@ openExpress keeps a log of what it does, to make problems easier to find:
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see above).
-- Connect IQ apps over a direct USB connection in the Flatpak.
 
 ## Upgrading from 0.3.x
 
