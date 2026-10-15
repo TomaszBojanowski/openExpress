@@ -377,6 +377,11 @@ openExpress keeps a log of what it does, to make problems easier to find:
   installed during sync, except on devices that hide their app folder: there they stay
   queued until you run `apps install` or use the window (see *Connect IQ apps*). New watch
   faces are installed but not activated, like in Garmin Express.
+- **Last sync** on the Device page, `openexpress sync` and the notification of the
+  background sync use the same words: how many new files were uploaded, how many Connect
+  already had (recognised before sending or, after sending, by Garmin), how many Garmin
+  rejected and how many errors there were; the new files are named by their type
+  (activities, sleep, HRV status…; others as "other data").
 
 ## Languages
 
