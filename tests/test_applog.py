@@ -43,7 +43,18 @@ SECRETS = [
      "Jantar"),
     ("playlist on the device", "wrote Music/Playlists/Bieganie rano.m3u8", "Bieganie"),
     ("folder given with --path", "Cannot read /tmp/kopia zegarka/GARMIN/GarminDevice.xml", "kopia"),
+    ("file address on a USB stick", "copy of file:///run/media/someone/STICK/Bieganie.mp3 failed",
+     "someone"),
+    ("file address in the home folder",
+     f"cannot open file://{os.path.expanduser('~')}/Muzyka/Bieganie%20rano.mp3", "Bieganie"),
+    ("network share", "cannot read smb://nas/someone/maps/Berlin.img", "someone"),
+    ("address with a user name", "cannot read sftp://someone@nas/home/someone/a.img", "someone"),
 ]
+
+# What `gio copy` says when it cannot copy a file (the Flatpak copies with it).
+GIO_COPY_ERROR = ("music: gio: file:///run/media/someone/STICK/Anna%20Jantar/01.mp3: Error "
+                  "when getting information for file „/run/media/someone/STICK/Anna Jantar/01.mp3”: "
+                  "No such file or directory")
 
 
 def lines(path):
@@ -65,6 +76,37 @@ def test_redact_keeps_what_is_useful():
         "HTTP GET https://example.org/device-service/a/b -> 200 in 0.4 s")
     assert applog.redact("wrote 1.2 KB to Garmin/NewFiles, 3/5 done, /sys/bus/usb/devices") == (
         "wrote 1.2 KB to Garmin/NewFiles, 3/5 done, /sys/bus/usb/devices")
+
+
+def test_addresses_other_than_web_and_device_ones_are_hidden():
+    assert applog.redact(GIO_COPY_ERROR) == ("music: gio: file://<path>: Error when getting "
+                                             "information for file „<path>: No such file or "
+                                             "directory")
+    assert applog.redact("copy of file:///run/media/someone/STICK/a.img: refused") == (
+        "copy of file://<path>: refused")  # up to the ": " after it, as a path
+    assert applog.redact(f"file://{os.path.expanduser('~')}/x.fit was read") == (
+        "file://<path> was read")
+    assert applog.redact("from smb://nas/someone/a.img to the device") == (
+        "from smb://<path> to the device")
+    # The addresses of the device and of the servers stay as they were.
+    assert applog.redact("opened mtp://091e_51b4_0000abcdef12/Internal%20Storage/GARMIN") == (
+        "opened mtp://<device>/Internal%20Storage/GARMIN")
+    web = "HTTP GET https://connectapi.garmin.com/device-service/a/b -> 200; http://example.org/x"
+    assert applog.redact(web) == web
+
+
+@pytest.mark.parametrize("text", [GIO_COPY_ERROR, *(s[1] for s in SECRETS)])
+def test_a_redacted_line_stays_the_same_when_it_is_redacted_again(text):
+    once = applog.redact(text)
+    assert applog.redact(once) == once  # `tail()` filters the lines of the file once more
+
+
+def test_a_line_written_before_the_rule_is_hidden_when_the_log_is_attached(log_file):
+    log_file.parent.mkdir(parents=True)
+    log_file.write_text(f"old line: {GIO_COPY_ERROR}\n", encoding="utf-8")
+    assert applog.tail() == [applog.redact(f"old line: {GIO_COPY_ERROR}")]
+    for private in ("someone", "STICK", "Jantar", "01.mp3"):
+        assert private not in applog.tail()[0]
 
 
 def test_known_values_are_hidden_even_when_they_look_harmless():

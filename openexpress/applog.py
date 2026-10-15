@@ -45,6 +45,11 @@ _PATTERNS = [
     # An MTP address carries the serial number of the device.
     (re.compile(r"mtp://[^\s/'\"]+"), "mtp://<device>"),
     (re.compile(r"mtp:host=[^\s/'\"]+"), "mtp:host=<device>"),
+    # Any other address but a web one: "file:///run/media/<user>/<stick>/…" (`gio copy` puts
+    # it in its errors), "smb://", "sftp://<user>@<host>/…". They are percent-encoded, so one
+    # ends at a space, a quote or the ": " that follows it.
+    (re.compile(r"(?<![\w+.-])(?!(?:mtp|https?)://)([A-Za-z][A-Za-z0-9+.-]*)://"
+                r"(?:[^\s'\":]|:(?!\s|$))*"), r"\1://<path>"),
     # Media files are named by the user: only the folder is kept. These names are the
     # fallback; the folders the connected device declares are added by `hide_device()`.
     (re.compile(r"(?i)\b(music|podcasts?|audiobooks?|playlists?)/[^\n'\":]*"), r"\1/<file>"),
