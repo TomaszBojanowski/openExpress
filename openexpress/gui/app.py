@@ -395,7 +395,7 @@ NET_ROW_COLOUR = {
     netstatus.AUTH: "warning",
     netstatus.CLOCK: "warning",
 }
-NET_COLOURS = set(NET_COLOUR.values())
+NET_COLOURS = set(NET_COLOUR.values()) | set(NET_ROW_COLOUR.values())
 NET_POPOVER_WIDTH = 320  # opened upwards from the left edge of the button: inside the window
 DOT = "\u25cf"  # ●
 
