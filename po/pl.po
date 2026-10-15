@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-16 01:47+0200\n"
+"POT-Creation-Date: 2026-10-16 01:58+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -3846,7 +3846,11 @@ msgid ""
 "({error}). The map may not work on the device. If it does not, unplug the "
 "device and install the map again; if it is listed as installed, remove it "
 "first."
-msgstr "Pliki mapy zostały skopiowane, ale nie udało się zapisać pliku odblokowującego {path} ({error}). Mapa może nie działać na urządzeniu. Jeśli nie działa, odłącz urządzenie i zainstaluj mapę ponownie; jeśli jest na liście zainstalowanych, najpierw ją usuń."
+msgstr ""
+"Pliki mapy zostały skopiowane, ale nie udało się zapisać pliku "
+"odblokowującego {path} ({error}). Mapa może nie działać na urządzeniu. Jeśli "
+"nie działa, odłącz urządzenie i zainstaluj mapę ponownie; jeśli jest na "
+"liście zainstalowanych, najpierw ją usuń."
 
 #: openexpress/maps.py:424
 #, python-brace-format
@@ -3941,136 +3945,136 @@ msgid "Pattern '{pattern}' is too short: use at least {count} characters"
 msgstr "Wzorzec „{pattern}” jest za krótki: użyj co najmniej {count} znaków"
 
 #. TRANSLATORS: state of Garmin's servers, at the bottom of the side panel
-#: openexpress/netstatus.py:187
+#: openexpress/netstatus.py:188
 msgid "Status unknown"
 msgstr "Stan nieznany"
 
-#: openexpress/netstatus.py:187
+#: openexpress/netstatus.py:188
 msgid "Online"
 msgstr "Połączono"
 
-#: openexpress/netstatus.py:188
+#: openexpress/netstatus.py:189
 msgid "No connection"
 msgstr "Brak połączenia"
 
-#: openexpress/netstatus.py:188
+#: openexpress/netstatus.py:189
 msgid "Garmin server problem"
 msgstr "Problem z serwerem Garmina"
 
-#: openexpress/netstatus.py:189
+#: openexpress/netstatus.py:190
 msgid "Sign-in expired"
 msgstr "Logowanie wygasło"
 
-#: openexpress/netstatus.py:189
+#: openexpress/netstatus.py:190
 msgid "Computer clock is off"
 msgstr "Nieprawidłowy czas komputera"
 
-#. TRANSLATORS: the parts of Garmin's servers, in the tooltip of the server state
-#: openexpress/netstatus.py:191
+#. TRANSLATORS: the parts of Garmin's servers, in the popover of the server state button
+#: openexpress/netstatus.py:192
 msgid "Garmin Connect"
 msgstr "Garmin Connect"
 
-#: openexpress/netstatus.py:191
+#: openexpress/netstatus.py:192
 msgid "Updates and maps"
 msgstr "Aktualizacje i mapy"
 
-#: openexpress/netstatus.py:192
+#: openexpress/netstatus.py:193
 msgid "Sign-in"
 msgstr "Logowanie"
 
-#. TRANSLATORS: strftime format of a date in the tooltip of the server state
-#: openexpress/netstatus.py:200
+#. TRANSLATORS: strftime format of a date in the popover of the server state button
+#: openexpress/netstatus.py:201
 msgid "%Y-%m-%d"
 msgstr "%d.%m.%Y"
 
 #. TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
-#: openexpress/netstatus.py:209
+#: openexpress/netstatus.py:210
 #, python-brace-format
 msgctxt "date and hour"
 msgid "{date} {time}"
 msgstr "{date} o {time}"
 
 #. TRANSLATORS: the time of an answer today, after a word: "answered at 23:41"
-#: openexpress/netstatus.py:217
+#: openexpress/netstatus.py:218
 #, python-brace-format
 msgid "at {time}"
 msgstr "o {time}"
 
 #. TRANSLATORS: the time of an answer on another day: "answered at 2026-10-14 23:41"
-#: openexpress/netstatus.py:219
+#: openexpress/netstatus.py:220
 #, python-brace-format
 msgid "at {date} {time}"
 msgstr "{date} o {time}"
 
 #. TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well
-#: openexpress/netstatus.py:223
+#: openexpress/netstatus.py:224
 msgid "Connected to Garmin's servers"
 msgstr "Połączono z serwerami Garmina"
 
 #. TRANSLATORS: at the bottom of the window with the state of Garmin's servers
-#: openexpress/netstatus.py:225
+#: openexpress/netstatus.py:226
 msgid "The state comes from the program's last requests."
 msgstr "Stan z ostatnich zapytań programu."
 
-#: openexpress/netstatus.py:253
+#: openexpress/netstatus.py:254
 msgid "not needed yet"
 msgstr "nie było potrzeby"
 
-#: openexpress/netstatus.py:255
+#: openexpress/netstatus.py:256
 #, python-brace-format
 msgid "answered {at}"
 msgstr "odpowiedź {at}"
 
 #. TRANSLATORS: how a service of Garmin last answered, beside the time
-#: openexpress/netstatus.py:257
+#: openexpress/netstatus.py:258
 msgid "answered"
 msgstr "odpowiada"
 
-#: openexpress/netstatus.py:259
+#: openexpress/netstatus.py:260
 #, python-brace-format
 msgid "no connection {at}"
 msgstr "brak połączenia {at}"
 
-#: openexpress/netstatus.py:260
+#: openexpress/netstatus.py:261
 msgid "no connection"
 msgstr "brak połączenia"
 
-#: openexpress/netstatus.py:262
+#: openexpress/netstatus.py:263
 #, python-brace-format
 msgid "server error (HTTP {status}) {at}"
 msgstr "błąd serwera (HTTP {status}) {at}"
 
-#: openexpress/netstatus.py:264
+#: openexpress/netstatus.py:265
 #, python-brace-format
 msgid "server error (HTTP {status})"
 msgstr "błąd serwera (HTTP {status})"
 
-#: openexpress/netstatus.py:266
+#: openexpress/netstatus.py:267
 #, python-brace-format
 msgid "sign-in refused (HTTP {status}) {at}"
 msgstr "logowanie odrzucone (HTTP {status}) {at}"
 
-#: openexpress/netstatus.py:268
+#: openexpress/netstatus.py:269
 #, python-brace-format
 msgid "sign-in refused (HTTP {status})"
 msgstr "logowanie odrzucone (HTTP {status})"
 
-#: openexpress/netstatus.py:270
+#: openexpress/netstatus.py:271
 #, python-brace-format
 msgid "computer clock off by {minutes} min at {time}"
 msgstr "czas komputera różni się o {minutes} min ({time})"
 
-#: openexpress/netstatus.py:272
+#: openexpress/netstatus.py:273
 #, python-brace-format
 msgid "clock off by {minutes} min"
 msgstr "czas różni się o {minutes} min"
 
-#: openexpress/netstatus.py:273
+#: openexpress/netstatus.py:274
 #, python-brace-format
 msgid "last answer {at}"
 msgstr "ostatnia odpowiedź {at}"
 
-#: openexpress/netstatus.py:288
+#: openexpress/netstatus.py:289
 #, python-brace-format
 msgid "{service} ({host}): {detail}"
 msgstr "{service} ({host}): {detail}"

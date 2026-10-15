@@ -1,8 +1,9 @@
 """How Garmin's servers answered the requests the program really made.
 
 Nothing here asks a server: every request of the program reports how it ended, and the
-window shows the state that follows from the last answers (the dot at the bottom of the
-side panel). Kept in memory only, for this process; shown, never acted upon.
+window shows the state that follows from the last answers (the button with a coloured dot at
+the bottom of the side panel, and its popover with each service). Kept in memory only, for
+this process; shown, never acted upon.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from openexpress.i18n import N_, _, pgettext
 
 log = logging.getLogger(__name__)
 
-# The services, in the order the tooltip names them.
+# The services, in the order the popover lists them.
 CONNECT, OMT, SIGN_IN = "connect", "omt", "sign-in"
 SERVICES = (CONNECT, OMT, SIGN_IN)
 
@@ -187,7 +188,7 @@ def record(service: str, url: str, status: int | None) -> None:
 STATE_TEXT = {UNKNOWN: N_("Status unknown"), ONLINE: N_("Online"),
               OFFLINE: N_("No connection"), SERVER_PROBLEM: N_("Garmin server problem"),
               SIGN_IN_EXPIRED: N_("Sign-in expired"), CLOCK_OFF: N_("Computer clock is off")}
-# TRANSLATORS: the parts of Garmin's servers, in the tooltip of the server state
+# TRANSLATORS: the parts of Garmin's servers, in the popover of the server state button
 SERVICE_NAME = {CONNECT: N_("Garmin Connect"), OMT: N_("Updates and maps"),
                 SIGN_IN: N_("Sign-in")}
 _HOST_KEY = {CONNECT: "connectapi", OMT: "omt", SIGN_IN: "sso"}
@@ -196,7 +197,7 @@ _HOST_KEY = {CONNECT: "connectapi", OMT: "omt", SIGN_IN: "sso"}
 def _day(ts: float, now: float | None) -> tuple[bool, str, str]:
     """(today?, date, hour) of a moment, the date in the format of the language."""
     t, today = time.localtime(ts), time.localtime(now if now is not None else time.time())
-    # TRANSLATORS: strftime format of a date in the tooltip of the server state
+    # TRANSLATORS: strftime format of a date in the popover of the server state button
     return t[:3] == today[:3], time.strftime(_("%Y-%m-%d"), t), time.strftime("%H:%M", t)
 
 
