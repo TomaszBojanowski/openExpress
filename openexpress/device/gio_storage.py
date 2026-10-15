@@ -382,6 +382,18 @@ def _sysfs_ids(bus: int, devnum: int) -> tuple[str, str] | None:
     return None
 
 
+def usb_still_there(usb: GarminUsb | None) -> bool:
+    """Whether this Garmin device is still plugged in at the same place on USB: the same bus
+    and device number, and the same product when it is known. A device that was unplugged
+    and plugged in again (or restarted) gets a new device number, so it is not. False when
+    its place is not known. Only /sys is read."""
+    if usb is None or usb.bus is None or usb.address is None:
+        return False
+    ids = _sysfs_ids(usb.bus, usb.address)
+    return (ids is not None and ids[0] == GARMIN_VID
+            and (usb.product is None or ids[1] == usb.product.lower()))
+
+
 def _volume_for(uri: str, monitor) -> Gio.Volume | None:
     """A mounted MTP device has no volume of its own; the MTP volume shares its address."""
     for vol in (monitor or Gio.VolumeMonitor.get()).get_volumes():

@@ -151,6 +151,24 @@ def test_usb_address_form(sysfs):
     assert identify("mtp://[usb:009,099]/") is None  # no such device
 
 
+def test_a_device_still_at_its_place_on_usb(sysfs):
+    still = gio_storage.usb_still_there
+    assert still(gio_storage.GarminUsb("51b4", "usb", 1, 31))
+    assert still(gio_storage.GarminUsb(None, "usb", 1, 31))  # product unknown: the place decides
+    assert not still(gio_storage.GarminUsb("51b4", "usb", 1, 32))  # plugged in again: new number
+    assert not still(gio_storage.GarminUsb("5158", "usb", 1, 31))  # another product there now
+    assert not still(gio_storage.GarminUsb("4ee1", "usb", 2, 7))  # not a Garmin device
+    assert not still(gio_storage.GarminUsb("51b4", "uri"))  # place not known
+    assert not still(None)
+    for name in ("busnum", "devnum", "idVendor", "idProduct"):  # unplugged: gone from /sys
+        (sysfs / "1-8" / name).unlink()
+    assert not still(gio_storage.GarminUsb("51b4", "usb", 1, 31))
+
+
+def test_no_device_is_still_there_without_sysfs(no_sysfs):
+    assert not gio_storage.usb_still_there(gio_storage.GarminUsb("51b4", "usb", 1, 31))
+
+
 def test_usb_address_form_without_sysfs(no_sysfs):
     assert identify("mtp://[usb:001,028]/") is None
 
