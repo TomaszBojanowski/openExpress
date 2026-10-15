@@ -81,6 +81,13 @@ class UniversalMap:
         return (self.installed and self.waiting != WAIT_REMOVE) or self.waiting == WAIT_INSTALL
 
     @property
+    def keeps_files(self) -> bool:
+        """Its files are kept when another map is removed or rewritten: installed as far as
+        the server knows, or written and waiting to be taken in. A map that looks removed
+        still counts: a shared file is kept rather than lost."""
+        return self.installed or self.waiting == WAIT_INSTALL
+
+    @property
     def size(self) -> int:
         return sum(f.size for f in self.files)
 
@@ -246,8 +253,7 @@ def protected_files(maps: list[UniversalMap], target: UniversalMap) -> set[str]:
     and waiting for the device to take them in."""
     keep: set[str] = set()
     for m in maps:
-        # A map that looks removed still counts: a shared file is kept rather than lost.
-        if m is target or not (m.installed or m.waiting == WAIT_INSTALL):
+        if m is target or not m.keeps_files:
             continue
         keep.update(f.device_path.casefold() for f in m.files)
         keep.update(p.casefold() for p in m.files_to_remove)
@@ -388,8 +394,7 @@ def _users(maps: list[UniversalMap], target: UniversalMap, path: str) -> list[st
     """Names of the other maps, installed or written and waiting to be taken in, that list
     `path` among their files."""
     p = path.casefold()
-    return [m.name for m in maps if m is not target
-            and (m.installed or m.waiting == WAIT_INSTALL)
+    return [m.name for m in maps if m is not target and m.keeps_files
             and p in {x.casefold() for x in [*(f.device_path for f in m.files),
                                              *m.files_to_remove]}]
 
