@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-15 23:55+0200\n"
+"POT-Creation-Date: 2026-10-16 00:08+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4002,8 +4002,8 @@ msgid "at {date} {time}"
 msgstr "{date} o {time}"
 
 #: openexpress/netstatus.py:232
-msgid "not asked yet"
-msgstr "jeszcze nie pytano"
+msgid "not needed yet"
+msgstr "jeszcze nie było potrzeby"
 
 #: openexpress/netstatus.py:234
 #, python-brace-format

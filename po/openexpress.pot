@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: openexpress 0.4.14\n"
+"Project-Id-Version: openexpress 0.4.15\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-15 23:55+0200\n"
+"POT-Creation-Date: 2026-10-16 00:08+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3677,7 +3677,7 @@ msgid "at {date} {time}"
 msgstr ""
 
 #: openexpress/netstatus.py:232
-msgid "not asked yet"
+msgid "not needed yet"
 msgstr ""
 
 #: openexpress/netstatus.py:234

@@ -229,7 +229,7 @@ def describe(last: dict[str, Result], answered: dict[str, float], hosts: dict[st
         r = last.get(s)
         host = r.host if r else urlsplit(hosts.get(_HOST_KEY[s], "")).netloc
         if r is None:
-            detail = _("not asked yet")
+            detail = _("not needed yet")
         elif r.kind == OK:
             detail = _("answered {at}").format(at=at(r.at, now))
         elif r.kind == NETWORK:

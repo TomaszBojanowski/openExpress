@@ -193,7 +193,7 @@ def test_the_tooltip_names_each_service_its_host_and_time():
         "Garmin server problem",
         f"Garmin Connect (connectapi.garmin.com): answered at {hhmm}",
         f"Updates and maps (omt.garmin.com): no connection at {hhmm}",
-        "Sign-in (sso.garmin.com): not asked yet",
+        "Sign-in (sso.garmin.com): not needed yet",
     ]
 
 
@@ -307,7 +307,7 @@ def test_another_day_has_its_date_first_in_polish(polish):
     assert lines[1] == (f"Garmin Connect (connectapi.garmin.com): czas komputera różni się "
                         f"o 120 min ({day} o {hour})")
     assert lines[2] == f"Aktualizacje i mapy (omt.garmin.com): odpowiedź {day} o {hour}"
-    assert lines[3] == "Logowanie (sso.garmin.com): jeszcze nie pytano"
+    assert lines[3] == "Logowanie (sso.garmin.com): jeszcze nie było potrzeby"
 
 
 def test_today_has_only_the_hour_in_polish(polish):
