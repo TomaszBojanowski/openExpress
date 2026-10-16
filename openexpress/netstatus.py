@@ -148,8 +148,11 @@ def state_of(last: dict[str, Result], answered: dict[str, float]) -> str:
         return SIGN_IN_EXPIRED
     if any(r.kind == CLOCK for r in last.values()):
         return CLOCK_OFF
-    if all(r.kind == NETWORK for r in last.values()):
-        return OFFLINE  # nothing answers: this computer has no connection
+    # Only what came after the last good answer tells whether the connection is lost.
+    newest_ok = max(answered.values(), default=0.0)
+    since = [r for r in last.values() if r.at > newest_ok]
+    if since and all(r.kind == NETWORK for r in since):
+        return OFFLINE  # nothing answered since: this computer has no connection
     if any(r.kind in (NETWORK, SERVER) for r in last.values()):
         return SERVER_PROBLEM  # a server error, or only some of Garmin's servers answer
     return ONLINE

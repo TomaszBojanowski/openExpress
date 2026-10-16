@@ -64,7 +64,7 @@ def noted(*steps):
     (((netstatus.CONNECT, 200), (netstatus.OMT, 200)), netstatus.ONLINE),
     (((netstatus.CONNECT, None), (netstatus.OMT, None)), netstatus.OFFLINE),
     (((netstatus.CONNECT, None),), netstatus.OFFLINE),
-    (((netstatus.CONNECT, 200), (netstatus.OMT, None)), netstatus.SERVER_PROBLEM),  # a part
+    (((netstatus.CONNECT, 200), (netstatus.OMT, None)), netstatus.OFFLINE),  # nothing answered since
     (((netstatus.OMT, 503),), netstatus.SERVER_PROBLEM),
     (((netstatus.CONNECT, 401), (netstatus.OMT, None)), netstatus.SIGN_IN_EXPIRED),
     (((netstatus.OMT, None), (netstatus.OMT, 200)), netstatus.ONLINE),  # back again
@@ -74,6 +74,51 @@ def noted(*steps):
 ])
 def test_the_state_of_the_dot(steps, state):
     assert noted(*steps) == state
+
+
+TEN = 1_800_000_000.0  # "10:00": only the order of the results counts
+HOST = {netstatus.CONNECT: "connectapi.garmin.com", netstatus.OMT: "omt.garmin.com"}
+
+
+def at_minutes(*steps):
+    """Results noted at given minutes after TEN, in this order: (service, status, minute);
+    status None is no connection."""
+    s = netstatus.Status()
+    for service, status, minute in steps:
+        kind = netstatus.NETWORK if status is None else netstatus.kind_of(status)
+        s.note(service, netstatus.Result(kind, TEN + minute * 60, HOST[service], status))
+    return s
+
+
+CONN, OMT = netstatus.CONNECT, netstatus.OMT
+
+
+@pytest.mark.parametrize("steps,state", [
+    pytest.param([(CONN, 200, 0), (OMT, 200, 1)], netstatus.ONLINE, id="a-all-well"),
+    pytest.param([(CONN, 200, 0), (OMT, None, 5)], netstatus.OFFLINE, id="b-nothing-since"),
+    pytest.param([(CONN, 200, 0), (OMT, 200, 1), (CONN, None, 5), (OMT, None, 6)],
+                 netstatus.OFFLINE, id="c-both-lost"),
+    pytest.param([(CONN, None, 0), (OMT, 200, 5)], netstatus.SERVER_PROBLEM, id="d-back-again"),
+    pytest.param([(OMT, 503, 0), (CONN, 200, 5)], netstatus.SERVER_PROBLEM, id="e1-503-first"),
+    pytest.param([(CONN, 200, 0), (OMT, 503, 5)], netstatus.SERVER_PROBLEM, id="e2-503-last"),
+    pytest.param([(OMT, 503, 0), (CONN, None, 5)], netstatus.SERVER_PROBLEM, id="f-503-then-lost"),
+    pytest.param([(OMT, 200, 0)], netstatus.ONLINE, id="g1-only-omt"),
+    pytest.param([(OMT, None, 0)], netstatus.OFFLINE, id="g2-only-omt-lost"),
+    pytest.param([(OMT, 200, 0), (OMT, None, 5)], netstatus.OFFLINE, id="g3-only-omt-then-lost"),
+    pytest.param([(OMT, 503, 0)], netstatus.SERVER_PROBLEM, id="g4-only-omt-503"),
+    pytest.param([(OMT, 200, 0), (CONN, None, 5), (OMT, 200, 6)], netstatus.SERVER_PROBLEM,
+                 id="h-one-service-lost"),
+])
+def test_no_connection_is_what_came_after_the_last_good_answer(steps, state):
+    assert at_minutes(*steps).state() == state
+
+
+def test_nothing_answered_since_the_last_good_answer_reads_as_no_connection():
+    last, answered = at_minutes((CONN, 200, 0), (OMT, None, 5)).snapshot()
+    assert netstatus.heading(netstatus.state_of(last, answered)) == "No connection"
+    assert netstatus.describe(last, answered, PROD, TEN + 6 * 60)[0] == "No connection"
+    rows = {r.service: r for r in netstatus.rows(last, answered, PROD, TEN + 6 * 60)}
+    assert (rows[CONN].outcome, rows[OMT].outcome) == ("answered", "no connection")
 
 
 def test_a_wrong_clock_is_its_own_state():
@@ -139,7 +184,7 @@ def test_the_client_notes_every_answer_and_failure(monkeypatch, network_state):
     assert last[netstatus.CONNECT].kind == netstatus.OK
     assert last[netstatus.OMT].kind == netstatus.NETWORK
     assert netstatus.OMT not in answered  # the 503 was no good answer
-    assert network_state.state() == netstatus.SERVER_PROBLEM
+    assert network_state.state() == netstatus.OFFLINE
 
 
 def test_a_refused_signature_with_a_wrong_clock_is_noted_as_such(monkeypatch, network_state):
@@ -271,9 +316,9 @@ def test_the_tooltip_names_each_service_its_host_and_time():
     now = last[netstatus.CONNECT].at
     text, tooltip = netstatus.describe(last, answered, PROD, now)
     hhmm = netstatus.when(now, now)
-    assert text == "Garmin server problem"
+    assert text == "No connection"
     assert tooltip.splitlines() == [
-        "Garmin server problem",
+        "No connection",
         f"Garmin Connect (connectapi.garmin.com): answered at {hhmm}",
         f"Updates and maps (omt.garmin.com): no connection at {hhmm}",
         "Sign-in (sso.garmin.com): not needed yet",
