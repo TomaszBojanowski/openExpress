@@ -70,9 +70,35 @@ def default_backup_dir() -> Path:
     return Path.home() / "Documents" / "Garmin" / "Backups"
 
 
+PRIVATE_DIR = 0o700
+
+
+def make_dir(path: Path) -> None:
+    """Makes `path` and the folders above it. The app's own folder for the settings, the data
+    or the log (the login, what came from the device, what was done), when it is made here,
+    is its owner's alone. Folders that exist keep their mode; those above the app's
+    (~/.config, …) get the usual one. The cache and the backups are made as before."""
+    for root in (config_dir(), data_dir(), state_dir()):
+        if path == root or root in path.parents:
+            _make_private(root)
+            break
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _make_private(root: Path) -> None:
+    if root.is_dir():
+        return
+    root.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        root.mkdir(mode=PRIVATE_DIR)
+    except FileExistsError:
+        return  # made by another process in the meantime: left as it is
+    os.chmod(root, PRIVATE_DIR)  # the umask cuts mkdir's mode; this folder was just made
+
+
 def write_private(path: Path, data: str) -> None:
     """Atomically write a file readable only by its owner (0600)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    make_dir(path.parent)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     try:
         os.fchmod(fd, 0o600)

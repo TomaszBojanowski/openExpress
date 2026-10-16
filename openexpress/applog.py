@@ -274,7 +274,7 @@ def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
     if level is not None:
         try:
             path = log_path()
-            path.parent.mkdir(parents=True, exist_ok=True)
+            paths.make_dir(path.parent)
             file = _LogFile(path, encoding="utf-8")
             file.setLevel(level)
             file.setFormatter(_Formatter(FORMAT, role))

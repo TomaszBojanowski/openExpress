@@ -443,7 +443,7 @@ class SyncBusy(Exception):
 def sync_lock():
     """Inter-process lock (the GUI and the background service never sync at the same time)."""
     path = paths.data_dir() / "sync.lock"
-    path.parent.mkdir(parents=True, exist_ok=True)
+    paths.make_dir(path.parent)
     with open(path, "w") as f:
         try:
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -493,7 +493,7 @@ def device_last_sync_path(unit_id: int):
 
 
 def _write_json(path, data: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    paths.make_dir(path.parent)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
     tmp.replace(path)

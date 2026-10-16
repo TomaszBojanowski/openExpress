@@ -294,7 +294,7 @@ def _record(device: GarminDevice, entry: dict) -> None:
     maps.append(entry)
     try:
         f = _state_file(device)
-        f.parent.mkdir(parents=True, exist_ok=True)
+        paths.make_dir(f.parent)
         f.write_text(json.dumps({"maps": maps}, indent=1, ensure_ascii=False), encoding="utf-8")
     except OSError as e:
         # The map is on the device; only the note about it is missing.

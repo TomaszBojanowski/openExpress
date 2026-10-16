@@ -1,10 +1,11 @@
+import os
 import stat
 import types
 from dataclasses import asdict
 
 import pytest
 
-from openexpress import paths
+from openexpress import applog, paths, sync
 from openexpress.auth import store
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.sso import ServiceTicket, ticket_from_url
@@ -101,6 +102,48 @@ def test_logout_in_the_window_removes_the_saved_login():
     with pytest.raises(store.NotLoggedIn):
         store.load()
     assert said == ["Logged out"] and win.session is None and refreshed == [True]
+
+
+@pytest.fixture
+def usual_umask():
+    """The most common umask: a folder made without a mode of its own would be 0755."""
+    old = os.umask(0o022)
+    yield
+    os.umask(old)
+
+
+def mode(path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
+
+
+def test_a_new_folder_for_the_login_is_the_owners_alone(usual_umask, tmp_path, monkeypatch):
+    # ~/.config is there already, as the system made it (here: readable by everyone).
+    config = tmp_path / "home-config"
+    config.mkdir()
+    config.chmod(0o755)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+    saved_login()
+    assert mode(login_file().parent) == 0o700
+    assert mode(config) == 0o755  # left as it was
+    # No ~/.config at all: it gets the usual mode, only the app's own folder is private.
+    config = tmp_path / "no-home" / "config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+    saved_login()
+    assert mode(config) == 0o755 and mode(config.parent) == 0o755
+    assert mode(login_file().parent) == 0o700
+
+
+def test_the_data_and_the_log_get_private_folders_but_old_folders_keep_theirs(usual_umask,
+                                                                             log_file):
+    login_file().parent.mkdir(parents=True)
+    login_file().parent.chmod(0o755)  # made by an older version: never changed
+    saved_login()
+    assert mode(login_file().parent) == 0o755
+    # What came from the device (the folders are named after it) and the log.
+    sync.SyncState(4000000001).save()
+    assert mode(paths.data_dir()) == 0o700
+    assert applog.setup("cli") == log_file
+    assert mode(log_file.parent) == 0o700
 
 
 def test_extract_consumer_from_dll(tmp_path):

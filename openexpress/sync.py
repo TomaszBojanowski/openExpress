@@ -117,13 +117,13 @@ class SyncState:
         if not ids:
             self.unacked_file.unlink(missing_ok=True)
             return
-        self.dir.mkdir(parents=True, exist_ok=True)
+        paths.make_dir(self.dir)
         tmp = self.unacked_file.with_suffix(".tmp")
         tmp.write_text(json.dumps(sorted(ids)))
         tmp.replace(self.unacked_file)
 
     def save(self) -> None:
-        self.dir.mkdir(parents=True, exist_ok=True)
+        paths.make_dir(self.dir)
         data = {
             "completed": {k: sorted(v) for k, v in sorted(self.completed.items())},
             "singleton_md5": dict(sorted(self.singleton_md5.items())),
@@ -462,7 +462,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
         if c.multi:
             p = state.pending_path(c.datatype, c.name)
             if c.device_path is not None:
-                p.parent.mkdir(parents=True, exist_ok=True)
+                paths.make_dir(p.parent)
                 p.write_bytes(data)
             if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
                 stop_types.add(c.datatype)

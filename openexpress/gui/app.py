@@ -1482,7 +1482,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _watch_last_sync(self) -> None:
         """Updates the overview when the background service finishes a sync."""
         path = service.last_sync_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
+        paths.make_dir(path.parent)
         self._last_sync_monitor = Gio.File.new_for_path(str(path)).monitor_file(
             Gio.FileMonitorFlags.WATCH_MOVES, None)
         self._last_sync_monitor.connect("changed", lambda *_a: self._show_last_sync())

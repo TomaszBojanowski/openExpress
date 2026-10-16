@@ -532,7 +532,7 @@ def _remember_refusal(device: GarminDevice, path: str) -> None:
     refused[path.casefold()] = device.software_version_str
     try:
         f = _refusals_file(device)
-        f.parent.mkdir(parents=True, exist_ok=True)
+        paths.make_dir(f.parent)
         f.write_text(json.dumps({"refused_dirs": refused}, indent=1))
     except OSError as e:
         log.warning("Cannot remember that %s cannot be created: %s", path, e)
