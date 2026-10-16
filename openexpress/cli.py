@@ -193,8 +193,9 @@ def cmd_report(args) -> int:
 
     st, dev = open_device(args)
     try:
-        logged_in = store.load() is not None
-    except Exception:  # noqa: BLE001 - only reported as yes/no
+        store.load()  # it returns a login or raises
+        logged_in = True
+    except Exception:  # noqa: BLE001 - only yes/no: a broken login never stops the report
         logged_in = False
     report_text = text = report.build(dev, st, logged_in)
     if args.log:

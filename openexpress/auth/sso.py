@@ -29,7 +29,7 @@ def sign_in_url(settings: Settings) -> str:
     return f"{settings.hosts['sso']}mobile/sso/{settings.locale}/sign-in?clientId={SSO_CLIENT_ID}"
 
 
-def ticket_from_url(url: str, default_service: str | None = None) -> ServiceTicket | None:
+def ticket_from_url(url: str) -> ServiceTicket | None:
     """Extract the ticket from a URL (query or fragment). Returns None if absent."""
     parts = urlsplit(url)
     params = parse_qs(parts.query)
@@ -40,11 +40,11 @@ def ticket_from_url(url: str, default_service: str | None = None) -> ServiceTick
         return None
     service = (params.get("service") or [""])[0]
     if not service:
-        service = default_service or urlunsplit_no_query(url)
+        service = _without_query(url)
     return ServiceTicket(ticket, service)
 
 
-def urlunsplit_no_query(url: str) -> str:
+def _without_query(url: str) -> str:
     p = urlsplit(url)
     return f"{p.scheme}://{p.netloc}{p.path}"
 
