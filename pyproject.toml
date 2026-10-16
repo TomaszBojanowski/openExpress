@@ -41,6 +41,11 @@ include = ["openexpress*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    # Not our code: PyGObject 3.56 warns on its own while loading the GLib overrides, at
+    # `from gi.repository import GLib`. Only this one message is silenced.
+    "ignore:GLib\\.unix_signal_add_full is deprecated:gi.PyGIDeprecationWarning",
+]
 
 [tool.setuptools.package-data]
 openexpress = ["locale/*/LC_MESSAGES/*.mo", "data/*.svg"]
