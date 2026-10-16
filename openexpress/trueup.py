@@ -1,6 +1,6 @@
 """TrueUp: aligning daily totals (steps, calories, …) across several Garmin devices.
 
-Flow as in Garmin Express (SyncTrueUpOperation, docs/analiza/03 section 3.4):
+Flow as in Garmin Express:
   1. Connect queues a FIT_TYPE_39 `check_back` file containing the time at which
      the client should ask again. It is downloaded and acknowledged.
   2. The client waits until that time (at most 90 s), up to 3 rounds.

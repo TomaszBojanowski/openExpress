@@ -1,6 +1,6 @@
 """Connect IQ apps: watch faces, data fields, widgets and apps.
 
-Mirrors Garmin Express (docs/analiza/05, section 3):
+Mirrors Garmin Express:
 - the list of apps on the watch comes from GARMIN/APPS/OUT.BIN (protobuf
   `Smart.connect_iq_installed_apps_service.get_installed_apps_response`);
 - the apps assigned to the account come from services.garmin.com

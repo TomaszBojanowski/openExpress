@@ -1,6 +1,6 @@
 """"Universal" maps (TopoActive, base maps, CourseView, Ski) for watches.
 
-Official Garmin Express flow (docs/analiza/04, section 6): the server returns
+As in Garmin Express: the server returns
 the maps assigned to the device, the client downloads the files, activates the map
 on the server (the response contains .gma unlock files) and writes everything to the watch.
 

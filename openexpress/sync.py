@@ -1,6 +1,6 @@
 """Watch <-> Garmin Connect synchronization.
 
-Flow (see docs/analiza/03-synchronizacja.md):
+Flow, as in Garmin Express:
   upload:   configuration from OMT -> select new files -> check for duplicate
             activities -> POST file -> save state
   download: Connect message queue -> download -> write to device -> ack
@@ -74,7 +74,7 @@ def md5(data: bytes) -> str:
 
 
 class SyncState:
-    """What has already been uploaded. Equivalent of CompletedUploadsV3_*.xml in Express."""
+    """What has already been uploaded; Garmin Express keeps the same record."""
 
     def __init__(self, unit_id: int, base: Path | None = None):
         self.dir = (base or paths.device_dir(unit_id)) / "sync"

@@ -1,6 +1,6 @@
 """HTTP client for Garmin services (Connect API, OMT).
 
-The scope and semantics of the calls follow docs/analiza/01 and 03.
+The calls and their meaning follow what Garmin Express sends.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Device software updates (firmware and auxiliary files).
 
-Flow as in Garmin Express (docs/analiza/04, sections 3-5):
+Flow as in Garmin Express:
   1. POST /api/device-software/v1/updates with GarminDevice.xml
   2. download `secureDownloadUrl`, check size and MD5
   3. copy to `installation.path/fileName` on the device

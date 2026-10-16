@@ -1,6 +1,6 @@
 """Music, podcasts and audiobooks on the watch (MTP).
 
-Layout follows Garmin Express (docs/analiza/05, section 4):
+Layout follows Garmin Express:
   track:     <MEDIA_TRACK path>/<Artist | "Various Artists" | "Unknown">/<Album | "Unknown">/<file>
   podcast:   <MEDIA_PODCAST path>/<Album>/<file>
   audiobook: <MEDIA_AUDIOBOOK path>/<Album>/<file>
