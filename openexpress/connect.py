@@ -16,7 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 
 import requests
 
-from openexpress import __version__, netstatus
+from openexpress import __version__, applog, netstatus
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.i18n import _
@@ -160,7 +160,10 @@ class GarminClient:
             log.warning("HTTP %s %s failed after %.1f s: %s", method, where,
                         time.monotonic() - started, type(e).__name__)
             netstatus.record_failure(_hosts(self), url)
-            raise ApiError(_("{what}: network error ({error})").format(what=what, error=e)) from e
+            # Its text names the whole address, query and all (the sign-in ticket of the ticket
+            # exchange): filtered like the log before the window or the command line shows it.
+            raise ApiError(_("{what}: network error ({error})").format(
+                what=what, error=applog.redact(str(e)))) from e
         log.info("HTTP %s %s -> %s in %.1f s", method, where, resp.status_code,
                  time.monotonic() - started)
         netstatus.record_response(_hosts(self), url, resp)

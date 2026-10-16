@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import pytest
+import requests
 
 from openexpress import download, i18n, paths
 from openexpress import settings as settings_mod
@@ -124,6 +125,29 @@ def test_exchange_ticket_missing_secret(monkeypatch, server):
     server.routes["/oauth-service/oauth/preauthorized"] = (
         200, {}, b"oauth_token=abc&oauth_token_secret=def")
     assert c.exchange_ticket("T", "svc") == ("abc", "def")
+
+
+def test_a_network_error_in_the_ticket_exchange_does_not_show_the_ticket(monkeypatch):
+    ticket = "ST-0123456-AbCdEfGhIjKlMnOp-cas"
+
+    def refused(self, method, url, **kw):
+        # What requests says when the server cannot be reached: the address, query and all.
+        where = url.split("/", 3)[3]
+        raise requests.ConnectionError(
+            f"HTTPSConnectionPool(host='connectapi.garmin.com', port=443): Max retries exceeded "
+            f"with url: /{where} (Caused by NewConnectionError(\"HTTPSConnection(host="
+            f"'connectapi.garmin.com', port=443): Failed to establish a new connection: "
+            f"[Errno 111] Connection refused\"))")
+
+    monkeypatch.setattr(requests.Session, "request", refused)
+    c = GarminClient(Settings(client_guid="g"), Consumer("ckey", "csecret"))
+    with pytest.raises(ApiError) as error:
+        c.exchange_ticket(ticket, "https://sso.garmin.com/sso/embed")
+    text = str(error.value)  # what the window and the command line show
+    assert "ST-" not in text and "AbCdEfGhIjKlMnOp" not in text
+    # It still says what happened, and with which server.
+    assert text.startswith("Ticket exchange: network error (")
+    assert "connectapi.garmin.com" in text and "Connection refused" in text
 
 
 # --- 2. poll_location -------------------------------------------------------------------
