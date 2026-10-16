@@ -1,5 +1,11 @@
+import stat
+import types
 from dataclasses import asdict
 
+import pytest
+
+from openexpress import paths
+from openexpress.auth import store
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.sso import ServiceTicket, ticket_from_url
 from openexpress.auth.store import ConnectAuth
@@ -42,6 +48,59 @@ def test_the_repr_of_a_login_and_a_ticket_shows_no_secret():
     assert auth == ConnectAuth("tok-made-up-1", "sec-made-up-2", "production", {"username": "someone"})
     assert asdict(auth)["token"] == "tok-made-up-1" and asdict(auth)["token_secret"] == "sec-made-up-2"
     assert st == ServiceTicket("ST-0123-AbCdEf-cas", "https://sso.example/embed")
+
+
+# --- the saved login: private on disk, and gone after logging out ------------------------------
+
+
+def saved_login() -> ConnectAuth:
+    auth = ConnectAuth("tok-made-up-1", "sec-made-up-2", "production",
+                       {"username": "someone", "userprofilepk": 1, "garminguid": "g-1"})
+    store.save(auth)
+    return auth
+
+
+def login_file():
+    return paths.config_dir() / "connect_auth.json"
+
+
+def test_the_login_is_saved_for_the_owner_only_and_read_back_whole():
+    assert not login_file().parent.exists()  # a new installation: the folder is made too
+    auth = saved_login()
+    assert login_file().parent.is_dir()
+    assert stat.S_IMODE(login_file().stat().st_mode) == 0o600
+    assert sorted(p.name for p in login_file().parent.iterdir()) == ["connect_auth.json"]  # no .tmp
+    back = store.load()
+    assert (back.token, back.token_secret, back.environment, back.account) == (
+        auth.token, auth.token_secret, auth.environment, auth.account)
+
+
+def test_logout_on_the_command_line_removes_the_saved_login(capsys):
+    from openexpress.cli import main
+
+    saved_login()
+    assert main(["logout"]) == 0
+    assert capsys.readouterr().out == "Logged out (local token removed).\n"
+    assert not login_file().exists()
+    with pytest.raises(store.NotLoggedIn):
+        store.load()
+    # Once more, with nothing saved: no error, and it says so.
+    assert main(["logout"]) == 0
+    assert capsys.readouterr().out == "No saved token found.\n"
+
+
+def test_logout_in_the_window_removes_the_saved_login():
+    from openexpress.gui.app import MainWindow
+
+    saved_login()
+    said, refreshed = [], []
+    win = types.SimpleNamespace(session=object(), toast=said.append,
+                                refresh_device=lambda: refreshed.append(True))
+    MainWindow.logout(win)
+    assert not login_file().exists()
+    with pytest.raises(store.NotLoggedIn):
+        store.load()
+    assert said == ["Logged out"] and win.session is None and refreshed == [True]
 
 
 def test_extract_consumer_from_dll(tmp_path):
