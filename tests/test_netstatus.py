@@ -355,6 +355,46 @@ def test_an_open_popover_follows_new_answers_in_the_same_rows(network_state):
     assert win.net_rows[netstatus.OMT].outcome.get_label() == "no connection"
 
 
+def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monkeypatch,
+                                                                           network_state):
+    import time as real
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import GObject, Gtk
+
+    from openexpress.gui import app
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+
+    class Root(Gtk.Window):  # never shown: a stand-in for the main window
+        session = None
+        _render_net_status = app.MainWindow._render_net_status
+
+    y = real.localtime(real.time() - 86400)
+    yesterday_evening = real.mktime((y.tm_year, y.tm_mon, y.tm_mday, 23, 40, 0, 0, 0, -1))
+    clock = [yesterday_evening + 60]
+    monkeypatch.setattr(netstatus, "time", types.SimpleNamespace(
+        time=lambda: clock[0], localtime=real.localtime, strftime=real.strftime))
+    root = Root()
+    root.set_child(app.MainWindow._build_net_status(root))
+    network_state.note(netstatus.CONNECT, netstatus.Result(
+        netstatus.OK, yesterday_evening, "connectapi.garmin.com", 200))
+    root._render_net_status()  # the answer came yesterday: "at 23:40"
+    when = root.net_rows[netstatus.CONNECT].when
+    assert when.get_label() == "at 23:40"
+
+    clock[0] = real.time()  # today the popover is opened
+    popover = root.net_button.get_popover()
+    show = GObject.signal_lookup("show", Gtk.Widget)
+    assert GObject.signal_has_handler_pending(popover, show, 0, False)  # opening redraws
+    app._render_net_status_on_show(popover)  # what opening it does
+    assert when.get_label() == f"at {real.strftime('%Y-%m-%d', y)} 23:40"
+    root.destroy()
+
+
 def test_the_popover_opens_upwards_from_the_left_edge_of_the_button():
     from gi.repository import Gtk
 

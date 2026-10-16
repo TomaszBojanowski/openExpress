@@ -420,6 +420,14 @@ def _render_net_status_later(ref) -> bool:
     return False
 
 
+def _render_net_status_on_show(popover) -> None:
+    """When the popover opens, its times are told against now: an answer of another day gets
+    its date. The window comes from the popover itself, so the handler holds no widget."""
+    render = getattr(popover.get_root(), "_render_net_status", None)
+    if render is not None:
+        render()
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
@@ -723,6 +731,7 @@ class MainWindow(Adw.ApplicationWindow):
         rect = Gdk.Rectangle()
         rect.x, rect.y, rect.width, rect.height = 0, 0, NET_POPOVER_WIDTH, 1
         popover.set_pointing_to(rect)
+        popover.connect("show", _render_net_status_on_show)
         self.net_button.set_popover(popover)
         bar = Gtk.Box(margin_top=2, margin_bottom=4, margin_start=6, margin_end=6)
         bar.append(self.net_button)
