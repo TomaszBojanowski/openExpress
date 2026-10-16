@@ -345,8 +345,20 @@ def install(
 
     progress(_("Activating the map on the Garmin server"))
     act = activate(m.identifier)
-    unlocks = [(u.get("filename"), u.get("gma")) for u in act.get("unlocks") or []
+    entries = act.get("unlocks") or []
+    unlocks = [(u.get("filename"), u.get("gma")) for u in entries
                if u.get("filename") and u.get("gma")]
+    # Only logged, before anything is written: Garmin Express writes whatever the list holds
+    # and says nothing, and some maps (the base maps, as far as the server's file lists show)
+    # have no unlock file at all, so a missing one is no sure sign of trouble.
+    if not entries:
+        log.warning("map install: the activation of %s %s returned no unlock file (%s)",
+                    m.name, m.version,
+                    "an empty list" if act.get("unlocks") == [] else "no unlocks in the answer")
+    elif len(unlocks) < len(entries):
+        log.warning("map install: %d of %d unlock entries from the activation of %s %s had no "
+                    "file name or data", len(entries) - len(unlocks), len(entries), m.name,
+                    m.version)
 
     report = MapReport()
     for p in removing:

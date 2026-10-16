@@ -285,6 +285,50 @@ def test_the_log_names_the_start_of_the_unlock_md5(server, device_root, xdg, cap
     assert applog.redact(line) == line  # the log filter leaves it readable
 
 
+def warnings_of(caplog):
+    return [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+
+
+@pytest.mark.parametrize("answer,said", [
+    ({}, "returned no unlock file (no unlocks in the answer)"),
+    ({"unlocks": []}, "returned no unlock file (an empty list)"),
+    ({"unlocks": [{"filename": "Garmin/E2.gma"}]}, "1 of 1 unlock entries"),
+])
+def test_an_activation_without_an_unlock_file_is_logged(answer, said, server, device_root, xdg,
+                                                        caplog):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    with caplog.at_level("WARNING", logger="openexpress.maps"):
+        rep = maps.install(east, all_maps, LocalStorage(device_root), lambda ident: answer)
+    # The install goes on: the map files are written, only no unlock file.
+    assert len(rep.written) == 2 and rep.unlocks == []
+    assert (device_root / "GARMIN/E2.img").read_bytes() == FILES["/maps/topo.img"]
+    assert not (device_root / "GARMIN/E2.gma").exists()
+    [warning] = warnings_of(caplog)
+    assert said in warning and "TopoActive East 2026.11" in warning
+    assert "E2" not in warning  # no file names
+    assert applog.redact(warning) == warning
+
+
+def test_unlock_entries_without_a_file_name_or_data_are_logged(server, device_root, xdg, caplog):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    answer = {"unlocks": [{"filename": "Garmin/E2.gma", "gma": base64.b64encode(b"UNLOCK").decode()},
+                          {"gma": base64.b64encode(b"OTHER").decode()}]}
+    with caplog.at_level("WARNING", logger="openexpress.maps"):
+        rep = maps.install(east, all_maps, LocalStorage(device_root), lambda ident: answer)
+    assert rep.unlocks == ["GARMIN/E2.gma"]
+    assert (device_root / "GARMIN/E2.gma").read_bytes() == b"UNLOCK"
+    assert warnings_of(caplog) == [("map install: 1 of 2 unlock entries from the activation of "
+                                    "TopoActive East 2026.11 had no file name or data")]
+
+
+def test_an_activation_with_its_unlock_file_logs_no_warning(server, device_root, xdg, caplog):
+    all_maps, east = east_with_shared_dem(server, device_root)
+    with caplog.at_level("WARNING", logger="openexpress.maps"):
+        rep = maps.install(east, all_maps, LocalStorage(device_root), unlock_e2)
+    assert rep.unlocks == ["GARMIN/E2.gma"]
+    assert warnings_of(caplog) == []
+
+
 class RefusingUnlockStorage(LocalStorage):
     """Refuses to write the unlock file the first `refusals` times; counts the tries."""
 
