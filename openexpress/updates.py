@@ -4,7 +4,7 @@ Flow as in Garmin Express (docs/analiza/04, sections 3-5):
   1. POST /api/device-software/v1/updates with GarminDevice.xml
   2. download `secureDownloadUrl`, check size and MD5
   3. copy to `installation.path/fileName` on the device
-  4. restart the watch: it installs the file itself; the confirmation is that
+  4. disconnect the device: it installs the file itself; the confirmation is that
      the update is no longer returned by the next server query.
 """
 
@@ -23,7 +23,6 @@ from openexpress.i18n import N_, _, human_size
 
 log = logging.getLogger(__name__)
 
-SEVERITY_ORDER = {"critical": 0, "recommended": 1, "optional": 2, "unspecified": 3}
 RGN_MAGIC = b"KpGr"
 SPACE_MARGIN = 2 * 1024 * 1024
 # The files of a device system update. The server does not always say so: the system
@@ -60,7 +59,6 @@ class SoftwareUpdate:
     size: int | None
     order: int
     eula_url: str = ""
-    locale: str | None = None
     changes: list[str] = field(default_factory=list)
     datatype: str = ""
     # The file is on the device already, with the same size and MD5 (`mark_present`).
@@ -202,7 +200,7 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
                 name=u.get("productname") or u.get("description") or "",
                 version=(u.get("displayversion") or u.get("semanticversion")
                          or u.get("version") or ""),
-                severity=(u.get("severity") or "Unspecified"),
+                severity=u.get("severity") or "Unspecified",
                 is_primary=bool(u.get("isprimaryfirmware")),
                 is_reinstall=bool(inst.get("isreinstall")),
                 restart_required=bool(inst.get("isrestartrequired")),
@@ -212,7 +210,6 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
                 size=deliv.get("sizeinbytes"),
                 order=int(inst.get("order") or 0),
                 eula_url=u.get("eulaurl") or "",
-                locale=u.get("locale"),
                 changes=changes,
                 datatype=u.get("datatype") or "",
                 release_state=str(u.get("releasestate") or ""),
@@ -258,8 +255,7 @@ def select(updates: list[SoftwareUpdate], wanted: list[str],
 
 
 def cache_path(u: SoftwareUpdate) -> Path:
-    name = posixpath.basename(u.device_path)
-    return paths.cache_dir() / "software" / u.part_number / u.version / name
+    return paths.cache_dir() / "software" / u.part_number / u.version / u.filename
 
 
 def check_space(storage: Storage, updates: list[SoftwareUpdate]) -> tuple[int, int | None]:
@@ -282,7 +278,7 @@ def install(
     storage: Storage,
     session=None,
     progress: Callable[[str], None] = lambda s: None,
-    transfer_progress=None,
+    transfer_progress: Callable[[int, int], None] | None = None,
     download_progress: Callable[[int, int | None], None] | None = None,
 ) -> InstallReport:
     need, free = check_space(storage, updates)
@@ -308,16 +304,17 @@ def install(
         with open(local, "rb") as f:
             if f.read(4) == RGN_MAGIC:
                 raise UpdateError(
-                    _("{part}: the RGN format is not supported by openexpress")
+                    _("{part}: the RGN format is not supported by openExpress")
                     .format(part=u.part_number)
                 )
         local_files[u.key] = local
     for u in sort_for_install(updates):
         local = local_files[u.key]
+        size = local.stat().st_size
         progress(_("Copying to the device: {path}").format(path=u.device_path))
         try:
             real = storage.write_file(u.device_path, local, transfer_progress)
-            ok = storage.size(real) == local.stat().st_size
+            ok = storage.size(real) == size
         except Exception:
             _delete_quietly(storage, u.device_path)
             raise
@@ -328,12 +325,12 @@ def install(
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
-                 applog.size(local.stat().st_size), posixpath.dirname(real))
+                 applog.size(size), posixpath.dirname(real))
     return report
 
 
 def _delete_quietly(storage: Storage, path: str) -> None:
     try:
         storage.delete(path)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 - cleanup after a failure: that one is reported
         log.warning("Cannot delete %s: %s", path, e)
