@@ -97,6 +97,22 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.5.1" date="2026-10-16">
+      <description>
+        <ul>
+          <li>When the device refuses a map's unlock file, writing it is tried again up to
+          six times, five seconds apart, as Garmin Express does; if it still fails, the
+          message says what to do.</li>
+          <li>The state of Garmin's servers says "No connection" when nothing has answered
+          since the last good answer, instead of blaming Garmin's servers.</li>
+          <li>A refusal from the update and map server, which needs no sign-in, no longer
+          shows as an expired sign-in or a wrong clock; a Connect IQ store refusal caused by
+          the computer's clock shows as a wrong clock.</li>
+          <li>Checking an uploaded activity now counts in the state of Garmin's servers, and
+          the popover shows the date of an answer from another day when it is opened.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-10-16">
       <description>
         <ul>
