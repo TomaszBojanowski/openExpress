@@ -112,8 +112,8 @@
     <release version="0.5.1" date="2026-10-16">
       <description>
         <ul>
-          <li>When the device refuses a map's unlock file, writing it is tried again up to
-          six times, five seconds apart, as Garmin Express does; if it still fails, the
+          <li>When the device refuses a map's unlock file, writing it is tried up to six
+          times in all, five seconds apart, as Garmin Express does; if it still fails, the
           message says what to do.</li>
           <li>The state of Garmin's servers says "No connection" when nothing has answered
           since the last good answer, instead of blaming Garmin's servers.</li>
