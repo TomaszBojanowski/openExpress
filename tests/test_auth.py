@@ -1,16 +1,19 @@
+import gc
 import os
 import stat
+import sys
 import types
+import weakref
 from dataclasses import asdict
 
 import pytest
 
 from openexpress import applog, paths, sync
-from openexpress.auth import store
+from openexpress.auth import sso, store
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.sso import ServiceTicket, ticket_from_url
 from openexpress.auth.store import ConnectAuth
-from openexpress.settings import _utf16_strings, extract_consumer_from_dll
+from openexpress.settings import Settings, _utf16_strings, extract_consumer_from_dll
 
 
 def test_oauth1_known_vector():
@@ -144,6 +147,125 @@ def test_the_data_and_the_log_get_private_folders_but_old_folders_keep_theirs(us
     assert mode(paths.data_dir()) == 0o700
     assert applog.setup("cli") == log_file
     assert mode(log_file.parent) == 0o700
+
+
+# --- the sign-in window: WebKit stands in, nothing is shown or loaded --------------------------
+
+_FAKE_VIEW = []  # a GObject type can be made only once per process
+
+
+def _fake_view_type():
+    if not _FAKE_VIEW:
+        import gi
+
+        gi.require_version("Gtk", "4.0")
+        from gi.repository import GObject, Gtk
+
+        class FakeWebView(Gtk.Widget):
+            """The signals and the address of WebKit.WebView; `load_uri` fetches nothing."""
+
+            __gsignals__ = {
+                "decide-policy": (GObject.SignalFlags.RUN_LAST, bool, (object, int)),
+                "load-changed": (GObject.SignalFlags.RUN_FIRST, None, (int,)),
+            }
+            uri = GObject.Property(type=str, default="")
+
+            def __init__(self, network_session=None):
+                super().__init__()
+                self.loaded = []
+
+            def get_uri(self):
+                return self.uri or None
+
+            def load_uri(self, uri):
+                self.loaded.append(uri)
+
+        _FAKE_VIEW.append(FakeWebView)
+    return _FAKE_VIEW[0]
+
+
+@pytest.fixture
+def fake_webkit(monkeypatch):
+    import gi
+    import gi.repository
+
+    webkit = types.ModuleType("gi.repository.WebKit")
+    webkit.WebView = _fake_view_type()
+    webkit.NetworkSession = types.SimpleNamespace(new_ephemeral=lambda: None)
+    webkit.PolicyDecisionType = types.SimpleNamespace(NAVIGATION_ACTION=0, NEW_WINDOW_ACTION=1,
+                                                      RESPONSE=2)
+    real = gi.require_version
+    monkeypatch.setattr(gi, "require_version",
+                        lambda name, version: None if name == "WebKit" else real(name, version))
+    monkeypatch.setitem(sys.modules, "gi.repository.WebKit", webkit)
+    monkeypatch.setattr(gi.repository, "WebKit", webkit, raising=False)
+    return webkit
+
+
+TICKET_URL = "https://sso.garmin.com/sso/embed?ticket=ST-0123-AbCdEf-cas&service=https%3A%2F%2Fx"
+
+
+def test_the_sign_in_window_does_not_keep_itself_alive(fake_webkit):
+    """A handler of a widget must not hold the widget or its siblings: once the window is closed
+    and nobody holds them, the view and the window go by reference counting alone."""
+    from gi.repository import Gtk
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+    got, closed = [], []
+    gc.collect()
+    gc.disable()
+    try:
+        win = sso.create_login_window(Settings(), got.append)
+        win.realize()  # GTK closes only a realized window; it is still not shown
+        win.connect("close-request", lambda _w: closed.append(True) or False)
+        view = win.get_child()
+        assert view.loaded == [sso.sign_in_url(Settings())]  # the only page asked for
+        view.uri = TICKET_URL  # the browser arrives at the address with the ticket
+        assert got == [ServiceTicket("ST-0123-AbCdEf-cas", "https://x")]  # told once
+        assert closed == [True]  # and the window was closed
+        alive = [weakref.ref(win), weakref.ref(view)]
+        del win, view
+        assert [ref() for ref in alive] == [None, None]
+    finally:
+        gc.enable()
+
+
+def test_the_sign_in_window_takes_the_ticket_from_a_navigation_and_tells_a_cancel(fake_webkit):
+    from gi.repository import Gtk
+
+    if not Gtk.init_check():
+        pytest.skip("no display")
+
+    class Decision:
+        def __init__(self, uri):
+            self.uri, self.ignored = uri, False
+
+        def get_navigation_action(self):
+            return self
+
+        def get_request(self):
+            return self
+
+        def get_uri(self):
+            return self.uri
+
+        def ignore(self):
+            self.ignored = True
+
+    got = []
+    win = sso.create_login_window(Settings(), got.append)
+    page = Decision("https://sso.garmin.com/mobile/sso/en/sign-in")
+    assert win.get_child().emit("decide-policy", page, 0) is False and not page.ignored
+    done = Decision(TICKET_URL)
+    assert win.get_child().emit("decide-policy", done, 0) is True and done.ignored
+    assert got == [ServiceTicket("ST-0123-AbCdEf-cas", "https://x")]
+    # Closed by the user before signing in: told once, with None.
+    got = []
+    win = sso.create_login_window(Settings(), got.append)
+    win.realize()
+    win.close()
+    assert got == [None]
 
 
 def test_extract_consumer_from_dll(tmp_path):

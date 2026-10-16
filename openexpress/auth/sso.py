@@ -76,29 +76,33 @@ def create_login_window(settings: Settings, on_ticket, application=None, parent=
             done.append(True)
             on_ticket(st)
 
-    def inspect(uri: str | None) -> bool:
+    # The handlers take the view from the signal and the window from the view: one that held
+    # either would keep both alive after the window is closed.
+    def inspect(v, uri: str | None) -> bool:
         st = ticket_from_url(uri) if uri else None
         if st and not done:
             finish(st)
-            win.close()
+            root = v.get_root()
+            if root is not None:
+                root.close()
             return True
         return False
 
-    def on_policy(_view, decision, decision_type):
+    def on_policy(v, decision, decision_type):
         if decision_type in (
             WebKit.PolicyDecisionType.NAVIGATION_ACTION,
             WebKit.PolicyDecisionType.NEW_WINDOW_ACTION,
-        ) and inspect(decision.get_navigation_action().get_request().get_uri()):
+        ) and inspect(v, decision.get_navigation_action().get_request().get_uri()):
             decision.ignore()
             return True
         return False
 
     view.connect("decide-policy", on_policy)
-    view.connect("load-changed", lambda *_: inspect(view.get_uri()))
-    view.connect("notify::uri", lambda *_: inspect(view.get_uri()))
+    view.connect("load-changed", lambda v, *_: inspect(v, v.get_uri()))
+    view.connect("notify::uri", lambda v, *_: inspect(v, v.get_uri()))
     win.connect("close-request", lambda *_: (finish(None), False)[1])
+    win.set_child(view)  # before loading: a ticket found at once still has a window to close
     view.load_uri(sign_in_url(settings))
-    win.set_child(view)
     return win
 
 
