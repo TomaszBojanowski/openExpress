@@ -97,6 +97,18 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.5.2" date="2026-10-16">
+      <description>
+        <ul>
+          <li>On the command line, the plan of a map installation (without --apply) lists the
+          files in the order they are written: smallest first.</li>
+          <li>Error messages after a network failure no longer include the sign-in
+          ticket.</li>
+          <li>New folders for settings, data and the log are readable only by their
+          owner.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-10-16">
       <description>
         <ul>
