@@ -1,5 +1,8 @@
+from dataclasses import asdict
+
 from openexpress.auth.oauth1 import authorization_header
-from openexpress.auth.sso import ticket_from_url
+from openexpress.auth.sso import ServiceTicket, ticket_from_url
+from openexpress.auth.store import ConnectAuth
 from openexpress.settings import _utf16_strings, extract_consumer_from_dll
 
 
@@ -26,6 +29,19 @@ def test_ticket_from_url():
     st = ticket_from_url("https://example.com/done?ticket=ST-9")
     assert st.service == "https://example.com/done"
     assert ticket_from_url("https://sso.garmin.com/mobile/sso/pl_PL/sign-in") is None
+
+
+def test_the_repr_of_a_login_and_a_ticket_shows_no_secret():
+    auth = ConnectAuth("tok-made-up-1", "sec-made-up-2", "production", {"username": "someone"})
+    st = ServiceTicket("ST-0123-AbCdEf-cas", "https://sso.example/embed")
+    for text in (repr(auth), str(auth), repr(st), str(st)):
+        assert "tok-made-up-1" not in text and "sec-made-up-2" not in text
+        assert "ST-0123" not in text and "AbCdEf" not in text
+    assert "production" in repr(auth) and "sso.example" in repr(st)  # the rest stays readable
+    # Only the text changes: the fields are still compared and saved as before.
+    assert auth == ConnectAuth("tok-made-up-1", "sec-made-up-2", "production", {"username": "someone"})
+    assert asdict(auth)["token"] == "tok-made-up-1" and asdict(auth)["token_secret"] == "sec-made-up-2"
+    assert st == ServiceTicket("ST-0123-AbCdEf-cas", "https://sso.example/embed")
 
 
 def test_extract_consumer_from_dll(tmp_path):

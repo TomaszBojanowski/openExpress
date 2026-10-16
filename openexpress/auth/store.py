@@ -15,8 +15,9 @@ class NotLoggedIn(Exception):
 
 @dataclass
 class ConnectAuth:
-    token: str
-    token_secret: str
+    # Out of repr(): an object that ends up in a log line or an error shows no secret.
+    token: str = field(repr=False)
+    token_secret: str = field(repr=False)
     environment: str = "production"
     account: dict = field(default_factory=dict)
 

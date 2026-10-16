@@ -59,7 +59,8 @@ _PATTERNS = [
     (re.compile(r"(?<![\w.:/<>~-])(?:~/|/(?!usr/|app/|lib(?:64)?/|sys/|dev/|proc/))"
                 r"[^\n'\":]*(?::(?! )[^\n'\":]*)*"), "<path>"),
     (re.compile(r"(?i)\b(authorization|cookie|set-cookie)\b(\"?\s*[:=]\s*).*"), r"\1\2<hidden>"),
-    (re.compile(rf"(?i)\b({_KEYS})\b(\"?\s*[=:]\s*\"?)[^\s&\"',;]+"), r"\1\2<hidden>"),
+    # JSON ("key": "value") and Python's own repr ('key': 'value', key='value') alike.
+    (re.compile(rf"(?i)\b({_KEYS})\b([\"']?\s*[=:]\s*[\"']?)[^\s&\"',;]+"), r"\1\2<hidden>"),
     (re.compile(r"\bST-[\w-]+"), "<ticket>"),
     (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+"), "<email>"),
     (re.compile(r"\b[0-9A-Fa-f]{16,}\b"), "<hex>"),

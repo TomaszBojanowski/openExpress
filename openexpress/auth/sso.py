@@ -8,7 +8,7 @@ only on Garmin's page; the program never sees it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
 from openexpress.i18n import _
@@ -17,7 +17,7 @@ from openexpress.settings import SSO_CLIENT_ID, Settings
 
 @dataclass(frozen=True)
 class ServiceTicket:
-    ticket: str
+    ticket: str = field(repr=False)  # signs in to the account: kept out of repr()
     service: str
 
 
