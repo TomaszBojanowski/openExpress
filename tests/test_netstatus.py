@@ -84,6 +84,42 @@ def test_a_wrong_clock_is_its_own_state():
     assert last[netstatus.CONNECT].minutes == 180
 
 
+@pytest.mark.parametrize("status,skew", [(401, 0), (403, 0), (401, 2 * 3600)])
+def test_a_refused_unsigned_request_is_an_answer(status, skew):
+    assert netstatus.kind_of(status, skew, signed=False) == netstatus.OK
+
+
+def test_a_refusal_of_the_update_server_is_no_sign_in_and_no_clock():
+    s = netstatus.Status()
+    s.note_answer(netstatus.CONNECT, CONNECT_URL, 200)
+    s.note_answer(netstatus.OMT, OMT_URL, 403)
+    assert s.state() == netstatus.ONLINE  # not netstatus.SIGN_IN_EXPIRED
+    s.note_answer(netstatus.OMT, OMT_URL, 401, skew=3 * 3600)
+    assert s.state() == netstatus.ONLINE  # not netstatus.CLOCK_OFF
+    omt = next(r for r in netstatus.rows(*s.snapshot(), PROD) if r.service == netstatus.OMT)
+    assert (omt.kind, omt.outcome) == (netstatus.OK, "answered")
+
+
+def test_the_client_notes_a_refusal_of_the_update_server_as_an_answer(monkeypatch,
+                                                                      network_state):
+    monkeypatch.setattr(requests.Session, "request", lambda self, m, u, **kw: answer(403))
+    GarminClient(Settings())._request("GET", OMT_URL, "x")
+    assert network_state.state() == netstatus.ONLINE
+
+
+@pytest.mark.parametrize("service,status,skew,state", [
+    (netstatus.CONNECT, 401, 0, netstatus.SIGN_IN_EXPIRED),
+    (netstatus.CONNECT, 403, 0, netstatus.SIGN_IN_EXPIRED),
+    (netstatus.SIGN_IN, 401, 0, netstatus.SIGN_IN_EXPIRED),
+    (netstatus.CONNECT, 401, 3 * 3600, netstatus.CLOCK_OFF),
+])
+def test_a_refusal_of_a_signed_request_still_tells_the_sign_in_or_the_clock(service, status,
+                                                                           skew, state):
+    s = netstatus.Status()
+    s.note_answer(service, CONNECT_URL, status, skew=skew)
+    assert s.state() == state
+
+
 def test_the_client_notes_every_answer_and_failure(monkeypatch, network_state):
     replies = [answer(200), answer(503), requests.ConnectionError("down")]
 

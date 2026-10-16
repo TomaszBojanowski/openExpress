@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 # The services, in the order the popover lists them.
 CONNECT, OMT, SIGN_IN = "connect", "omt", "sign-in"
 SERVICES = (CONNECT, OMT, SIGN_IN)
+SIGNED = (CONNECT, SIGN_IN)  # requests signed with the sign-in; those to OMT are not
 
 # How a request ended.
 OK, NETWORK, SERVER, AUTH, CLOCK = "ok", "network", "server", "auth", "clock"
@@ -74,9 +75,12 @@ def service_of(url: str, hosts: dict[str, str]) -> str | None:
     return None
 
 
-def kind_of(status: int, skew: float = 0.0) -> str:
-    """How an answer with this HTTP status ended."""
+def kind_of(status: int, skew: float = 0.0, signed: bool = True) -> str:
+    """How an answer with this HTTP status ended. A refusal of an unsigned request says
+    nothing of the sign-in or the clock: the server answered."""
     if status in (401, 403):
+        if not signed:
+            return OK
         return CLOCK if skew > MAX_CLOCK_SKEW_S else AUTH
     if status >= 500:
         return SERVER
@@ -105,7 +109,7 @@ class Status:
             fn()
 
     def note_answer(self, service: str | None, url: str, status: int, skew: float = 0.0) -> None:
-        kind = kind_of(status, skew)
+        kind = kind_of(status, skew, signed=service in SIGNED)
         self.note(service, Result(kind, time.time(), urlsplit(url).netloc, status,
                                   int(skew // 60) if kind == CLOCK else None))
 
