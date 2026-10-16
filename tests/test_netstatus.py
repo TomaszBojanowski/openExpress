@@ -346,12 +346,9 @@ def _status_window():
     import gi
 
     gi.require_version("Gtk", "4.0")
-    from gi.repository import Gtk
 
     from openexpress.gui.app import MainWindow
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     win = types.SimpleNamespace(session=None)
     bar = MainWindow._build_net_status(win)
     return win, bar, MainWindow
@@ -366,6 +363,7 @@ def note(state, steps):
             state.note_answer(service, url, status)
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("steps,state", [
     ((), netstatus.UNKNOWN),
     (((netstatus.CONNECT, 200),), netstatus.ONLINE),
@@ -386,6 +384,7 @@ def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_st
     assert win.net_button.get_popover() is not None
 
 
+@pytest.mark.needs_display
 def test_the_popover_names_each_service_with_its_server_and_time(network_state):
     from openexpress.gui.app import DOT
 
@@ -407,6 +406,7 @@ def test_the_popover_names_each_service_with_its_server_and_time(network_state):
     assert sign_in.dot.has_css_class("dim-label") and not sign_in.row.get_sensitive()  # greyed
 
 
+@pytest.mark.needs_display
 def test_the_popover_heading_when_all_is_well_and_its_note(network_state):
     from gi.repository import Gtk
 
@@ -424,6 +424,7 @@ def test_the_popover_heading_when_all_is_well_and_its_note(network_state):
     assert labels[-1] == "The state comes from the program's last requests."
 
 
+@pytest.mark.needs_display
 def test_an_open_popover_follows_new_answers_in_the_same_rows(network_state):
     win, _bar, window = _status_window()
     window._render_net_status(win)
@@ -436,6 +437,7 @@ def test_an_open_popover_follows_new_answers_in_the_same_rows(network_state):
     assert win.net_rows[netstatus.OMT].outcome.get_label() == "no connection"
 
 
+@pytest.mark.needs_display
 def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monkeypatch,
                                                                            network_state):
     import time as real
@@ -446,9 +448,6 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
     from gi.repository import GObject, Gtk
 
     from openexpress.gui import app
-
-    if not Gtk.init_check():
-        pytest.skip("no display")
 
     class Root(Gtk.Window):  # never shown: a stand-in for the main window
         session = None
@@ -476,6 +475,7 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
     root.destroy()
 
 
+@pytest.mark.needs_display
 def test_the_popover_opens_upwards_from_the_left_edge_of_the_button():
     from gi.repository import Gtk
 
@@ -490,6 +490,7 @@ def test_the_popover_opens_upwards_from_the_left_edge_of_the_button():
     assert popover.get_child().get_size_request()[0] == NET_POPOVER_WIDTH - 16
 
 
+@pytest.mark.needs_display
 def test_the_button_tells_screen_readers_everything(network_state):
     from gi.repository import Gtk
 

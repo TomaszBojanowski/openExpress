@@ -181,8 +181,6 @@ def _report_dialog(monkeypatch, device_root, connected=True):
 
     from openexpress.gui.app import MainWindow
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     st = LocalStorage(device_root)
     session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")),
                                     storage=st, logged_in=True)
@@ -225,6 +223,7 @@ def _attach_log(dialog):
     find(dialog.get_extra_child()).set_active(True)
 
 
+@pytest.mark.needs_display
 def test_open_on_github_fills_in_the_report(monkeypatch, device_root, log_file):
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     assert "nothing is published until you submit it" in dialog.get_body()
@@ -236,6 +235,7 @@ def test_open_on_github_fills_in_the_report(monkeypatch, device_root, log_file):
     assert copied == [] and said == []
 
 
+@pytest.mark.needs_display
 def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
     _write_log(log_file, ["one", "device 3987654321"])
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
@@ -246,6 +246,7 @@ def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, 
     assert said == ["The log is in the clipboard: paste it into the issue"]
 
 
+@pytest.mark.needs_display
 def test_open_on_github_with_a_report_too_long_copies_it(monkeypatch, device_root, log_file):
     monkeypatch.setattr(report, "MAX_URL", 100)
     _write_log(log_file, ["one"])
@@ -257,6 +258,7 @@ def test_open_on_github_with_a_report_too_long_copies_it(monkeypatch, device_roo
     assert said == ["Report copied: paste it into the form"]
 
 
+@pytest.mark.needs_display
 def test_open_on_github_without_a_device_opens_the_empty_form(monkeypatch, device_root):
     dialog, _text, opened, copied, said = _report_dialog(monkeypatch, device_root,
                                                          connected=False)
@@ -264,6 +266,7 @@ def test_open_on_github_without_a_device_opens_the_empty_form(monkeypatch, devic
     assert opened == [report.ISSUE_URL] and copied == [] and said == []
 
 
+@pytest.mark.needs_display
 def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
     from openexpress import i18n
 

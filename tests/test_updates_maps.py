@@ -449,6 +449,7 @@ def test_maps_that_cannot_be_read_are_not_no_maps(device_root, xdg, monkeypatch,
     assert maps.read_maps(json.loads(body.lower())) == ([], 1)  # listed, but not read
 
 
+@pytest.mark.needs_display
 def test_maps_page_with_maps_that_cannot_be_read(device_root):
     from openexpress.gui.app import MainWindow
 
@@ -569,6 +570,7 @@ def _children(widget):
         child = child.get_next_sibling()
 
 
+@pytest.mark.needs_display
 def test_maps_page_without_maps(device_root):
     from openexpress.gui.app import Gtk, MainWindow
 
@@ -586,6 +588,7 @@ def test_maps_page_without_maps(device_root):
     assert reloads == [("maps", True)]
 
 
+@pytest.mark.needs_display
 def test_maps_page_with_maps_keeps_the_groups(server, device_root):
     from openexpress.gui.app import MainWindow
 
@@ -597,6 +600,7 @@ def test_maps_page_with_maps_keeps_the_groups(server, device_root):
     assert titles[-2:] == ["TopoActive East", "TopoActive West"]
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("name,map_type,subtitle", [
     ("Base maps", "Base maps", "2026.11 · 9.0 kB · up to date"),
     ("Base Maps", " base maps ", "2026.11 · 9.0 kB · up to date"),  # case and outer spaces
@@ -778,6 +782,7 @@ def test_maps_row_drops_the_answer_for_another_device(server):
     assert win.map_state is None and win.map_row.subtitle is None
 
 
+@pytest.mark.needs_display
 def test_maps_page_updates_the_row_of_the_device_page(server, device_root):
     from openexpress.gui.app import MainWindow
 
@@ -814,6 +819,7 @@ def test_a_failed_quiet_check_does_not_hide_what_the_maps_page_found(server):
 # --- "Check Again" on a Maps page that has maps -----------------------------------------------
 
 
+@pytest.mark.needs_display
 def test_maps_page_with_maps_can_check_again(server, device_root):
     from openexpress.gui.app import MainWindow
 
@@ -828,6 +834,7 @@ def test_maps_page_with_maps_can_check_again(server, device_root):
     assert reloads == [("maps", True)]
 
 
+@pytest.mark.needs_display
 def test_check_again_is_greyed_while_another_task_runs(server, device_root):
     from openexpress.gui.app import MainWindow
 
@@ -837,6 +844,7 @@ def test_check_again_is_greyed_while_another_task_runs(server, device_root):
     assert not win.sections["maps"].groups[0].header.get_sensitive()
 
 
+@pytest.mark.needs_display
 def test_maps_page_without_maps_has_one_check_again(device_root):
     from openexpress.gui.app import MainWindow
 
@@ -882,6 +890,7 @@ def check_again_buttons(win):
     return [b for b in win._action_buttons if b.get_label() == "Check Again"]
 
 
+@pytest.mark.needs_display
 def test_three_check_agains_leave_one_button_in_the_list(server, device_root):
     win, section, asked = _real_maps_page([maps_response(server)], device_root)
     win.load_section("maps")
@@ -895,6 +904,7 @@ def test_three_check_agains_leave_one_button_in_the_list(server, device_root):
     assert len(section.groups) == 2
 
 
+@pytest.mark.needs_display
 def test_check_again_updates_the_row_of_the_device_page(server, device_root):
     # First one update, then none: the "Maps" row of the device page follows.
     win, _section, asked = _real_maps_page(
@@ -1045,6 +1055,7 @@ def test_a_waiting_map_is_not_installed_again(server, device_root, xdg):
     assert "will be loaded after the device is unplugged" in str(error.value)
 
 
+@pytest.mark.needs_display
 def test_the_maps_page_shows_waiting_maps_on_the_device(server, device_root):
     from openexpress.gui.app import Gtk, MainWindow
 

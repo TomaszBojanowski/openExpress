@@ -1,3 +1,4 @@
+import functools
 import os
 import struct
 from pathlib import Path
@@ -9,6 +10,36 @@ os.environ["OPENEXPRESS_LANG"] = "en"
 from openexpress import i18n
 
 i18n.setup("en")
+
+
+# --- tests that make GTK widgets need a display ------------------------------------------------
+
+
+@functools.cache
+def display_available() -> bool:
+    """Whether GTK has a display. Importing Gtk makes PyGObject open it, once; without one a
+    widget then raises or crashes, while a later Gtk.init_check() still answers True."""
+    try:
+        import gi
+
+        gi.require_version("Gtk", "4.0")
+        gi.require_version("Gdk", "4.0")
+        from gi.repository import Gdk, Gtk  # noqa: F401 - importing Gtk opens the display
+    except (ImportError, ValueError):
+        return False
+    return Gdk.Display.get_default() is not None
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "needs_display: makes GTK widgets; skipped when there is no display")
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    # Before any fixture: a fixture (e.g. window_device) may make the widgets.
+    if item.get_closest_marker("needs_display") and not display_available():
+        pytest.skip("no display")
 
 DEVICE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">

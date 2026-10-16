@@ -205,13 +205,10 @@ def fake_webkit(monkeypatch):
 TICKET_URL = "https://sso.garmin.com/sso/embed?ticket=ST-0123-AbCdEf-cas&service=https%3A%2F%2Fx"
 
 
+@pytest.mark.needs_display
 def test_the_sign_in_window_does_not_keep_itself_alive(fake_webkit):
     """A handler of a widget must not hold the widget or its siblings: once the window is closed
     and nobody holds them, the view and the window go by reference counting alone."""
-    from gi.repository import Gtk
-
-    if not Gtk.init_check():
-        pytest.skip("no display")
     got, closed = [], []
     gc.collect()
     gc.disable()
@@ -231,12 +228,8 @@ def test_the_sign_in_window_does_not_keep_itself_alive(fake_webkit):
         gc.enable()
 
 
+@pytest.mark.needs_display
 def test_the_sign_in_window_takes_the_ticket_from_a_navigation_and_tells_a_cancel(fake_webkit):
-    from gi.repository import Gtk
-
-    if not Gtk.init_check():
-        pytest.skip("no display")
-
     class Decision:
         def __init__(self, uri):
             self.uri, self.ignored = uri, False

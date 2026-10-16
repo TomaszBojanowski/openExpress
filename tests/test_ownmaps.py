@@ -922,6 +922,7 @@ def view_of(*own, removable=(), foreign=(), folder="Garmin", unreadable=False):
     return ownmaps.Overview(folder, maps, set(removable), unreadable, set(foreign))
 
 
+@pytest.mark.needs_display
 def test_own_maps_group_shows_names_sizes_and_who_copied_them():
     win, section = own_maps_window()
     win.session = types.SimpleNamespace()
@@ -943,6 +944,7 @@ def test_own_maps_group_shows_names_sizes_and_who_copied_them():
     assert labels == ["Add Map…", "Remove by-hand.img", "Remove ours.img"]
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("view, rows", [
     (view_of(), [("No maps of your own on the device", "", False)]),
     (view_of(unreadable=True), [("The map folder could not be read", "", False)]),
@@ -956,6 +958,7 @@ def test_own_maps_group_without_maps_still_offers_to_add_one(view, rows):
     assert [b.get_label() for b in win._action_buttons] == ["Add Map…"]
 
 
+@pytest.mark.needs_display
 def test_no_own_maps_group_for_a_device_without_a_map_folder():
     win, section = own_maps_window()
     win.session = types.SimpleNamespace()
@@ -963,6 +966,7 @@ def test_no_own_maps_group_for_a_device_without_a_map_folder():
     assert section.groups == [] and win._action_buttons == []
 
 
+@pytest.mark.needs_display
 def test_reloading_the_page_keeps_one_add_button_and_greys_it_while_busy():
     win, section = own_maps_window()
     view = view_of(("ours.img", 2000, "Mine"), removable=["ours.img"])
@@ -976,6 +980,7 @@ def test_reloading_the_page_keeps_one_add_button_and_greys_it_while_busy():
     assert not any(b.get_sensitive() for b in win._action_buttons if b.get_root() is not None)
 
 
+@pytest.mark.needs_display
 def test_own_map_rows_do_not_keep_themselves_alive():
     """The rule since 0.4.2: a handler of a widget must not hold the widget or its siblings."""
     import gc
@@ -1011,6 +1016,7 @@ def window_device(map_folder, xdg):
     return win, dev, map_folder
 
 
+@pytest.mark.needs_display
 def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypatch):
     win, dev, root = window_device
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
@@ -1031,6 +1037,7 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
     assert [m["filename"] for m in ownmaps.recorded(dev)] == ["new-map.img"]
 
 
+@pytest.mark.needs_display
 def test_window_copies_nothing_when_the_user_cancels(window_device, my_map):
     win, dev, root = window_device
     win.answer = "cancel"
@@ -1040,6 +1047,7 @@ def test_window_copies_nothing_when_the_user_cancels(window_device, my_map):
     assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("name, message", [
     ("osm-test.img", "A file named osm-test.img is already on the device; nothing is overwritten. "
                      + WINDOW_HINT),
@@ -1058,6 +1066,7 @@ def test_window_shows_a_refusal_with_its_own_hint(window_device, my_map, name, m
     assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
 
 
+@pytest.mark.needs_display
 def test_window_says_when_the_file_is_not_a_map(window_device, tmp_path):
     win, _dev, _root = window_device
     photo = tmp_path / "photo.img"
@@ -1067,6 +1076,7 @@ def test_window_says_when_the_file_is_not_a_map(window_device, tmp_path):
         "error", "Cannot add the map", "photo.img is not a Garmin map file (.img).")
 
 
+@pytest.mark.needs_display
 def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
     win, dev, root = window_device
     st = win.session.storage
@@ -1083,6 +1093,7 @@ def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
     assert win.reloads == [("maps", True)]
 
 
+@pytest.mark.needs_display
 def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
     win, dev, root = window_device
     st = win.session.storage
@@ -1102,6 +1113,7 @@ def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
     assert win.reloads == []
 
 
+@pytest.mark.needs_display
 def test_window_takes_a_map_that_is_gone_off_the_list(window_device, my_map):
     win, dev, root = window_device
     st = win.session.storage
@@ -1113,6 +1125,7 @@ def test_window_takes_a_map_that_is_gone_off_the_list(window_device, my_map):
     assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]
 
 
+@pytest.mark.needs_display
 def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
     from openexpress.gui.app import MainWindow
 
@@ -1141,6 +1154,7 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
     assert group.get_title() == "Own maps" and len(rows_of(group)) == 4
 
 
+@pytest.mark.needs_display
 def test_own_maps_in_the_window_in_polish(window_device, my_map):
     from openexpress import i18n
 
@@ -1229,6 +1243,7 @@ def page_with_garmins_and_own_maps(view, answer):
     return [g.get_title() for g in section.groups]
 
 
+@pytest.mark.needs_display
 def test_own_maps_come_right_under_the_installed_maps():
     answer = json.loads(json.dumps(ANSWER))
     other = json.loads(json.dumps(ANSWER["maps"][0]))
@@ -1241,6 +1256,7 @@ def test_own_maps_come_right_under_the_installed_maps():
         "On the device", "Available"]
 
 
+@pytest.mark.needs_display
 def test_own_maps_show_under_the_message_of_a_device_without_garmins_maps():
     titles = page_with_garmins_and_own_maps(view_of(("mine.img", 2000, "Mine")), {"maps": []})
     assert titles == ["", "Own maps"]  # the message "No maps are available…", then the group
@@ -1264,6 +1280,7 @@ def test_confirmation_keeps_a_date_in_the_name_together(tmp_path):
     assert MainWindow._add_map_text(plan).splitlines()[-1] == "osm-test.img · 51.0 MB"
 
 
+@pytest.mark.needs_display
 def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
     from openexpress import i18n
 
@@ -1308,6 +1325,7 @@ def test_overview_tells_ours_from_foreign_maps_and_from_other_files(map_folder, 
     assert [m.filename for m in view.maps] == ["broken.img", "osm-test.img", "ours.img"]
 
 
+@pytest.mark.needs_display
 def test_window_asks_more_strongly_before_removing_a_foreign_map(window_device):
     win, dev, root = window_device
     own, view = shown_on_the_page(win, "osm-test.img")
@@ -1324,6 +1342,7 @@ def test_window_asks_more_strongly_before_removing_a_foreign_map(window_device):
     assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]
 
 
+@pytest.mark.needs_display
 def test_the_question_for_a_map_of_ours_stays_as_it_was(window_device, my_map):
     win, dev, _root = window_device
     st = win.session.storage
@@ -1337,6 +1356,7 @@ def test_the_question_for_a_map_of_ours_stays_as_it_was(window_device, my_map):
     assert asked[3:] == ("Remove", True) and ANYWAY not in asked[2]
 
 
+@pytest.mark.needs_display
 def test_removing_a_foreign_map_leaves_the_list_of_ours_alone(window_device, my_map):
     win, dev, root = window_device
     st = win.session.storage
@@ -1347,6 +1367,7 @@ def test_removing_a_foreign_map_leaves_the_list_of_ours_alone(window_device, my_
     assert (root / "Garmin" / "ours.img").exists()
 
 
+@pytest.mark.needs_display
 def test_cancelling_keeps_the_foreign_map(window_device):
     win, _dev, root = window_device
     own, _view = shown_on_the_page(win, "osm-test.img")
@@ -1356,6 +1377,7 @@ def test_cancelling_keeps_the_foreign_map(window_device):
     assert (root / "Garmin" / "osm-test.img").exists() and win.reloads == []
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("now_on_the_device", [
     img_header(b"Sometown cyclemap") + b"\0" * 2000,  # another size
     img_header(b"Othertown cyclemap") + b"\0" * 1000,  # the same size, another map inside
@@ -1372,6 +1394,7 @@ def test_a_foreign_map_that_changed_since_it_was_shown_is_not_removed(window_dev
     assert win.reloads == [("maps", True)]  # the page is drawn again: it was out of date
 
 
+@pytest.mark.needs_display
 def test_a_foreign_map_that_is_gone_is_only_reported(window_device):
     win, _dev, root = window_device
     own, _view = shown_on_the_page(win, "osm-test.img")
@@ -1439,6 +1462,7 @@ def test_cli_still_refuses_a_map_this_installation_did_not_copy(added, capsys):
     remove_refused(capsys, added, "by-hand.img", NOT_OURS.format("by-hand.img"))
 
 
+@pytest.mark.needs_display
 def test_removing_a_foreign_map_logs_only_the_size(window_device, log_file):
     from openexpress import applog
 
@@ -1452,6 +1476,7 @@ def test_removing_a_foreign_map_logs_only_the_size(window_device, log_file):
         assert private not in log
 
 
+@pytest.mark.needs_display
 def test_foreign_map_rows_do_not_keep_themselves_alive():
     import gc
     import weakref
@@ -1475,6 +1500,7 @@ def test_foreign_map_rows_do_not_keep_themselves_alive():
         gc.enable()
 
 
+@pytest.mark.needs_display
 def test_foreign_maps_in_the_window_in_polish(window_device):
     from openexpress import i18n
 

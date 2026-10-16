@@ -487,14 +487,12 @@ def test_cli_does_not_warn_for_a_folder_instead_of_a_device(tmp_path, capsys):
 
 
 def _gtk():
-    """GTK with a display, or the test is skipped (e.g. on a machine without a session)."""
+    """GTK 4; the tests that use it are marked needs_display (skipped without a display)."""
     import gi
 
     gi.require_version("Gtk", "4.0")
     from gi.repository import Gtk
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     return Gtk
 
 
@@ -514,6 +512,7 @@ def _text(buffer) -> str:
     return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
 
 
+@pytest.mark.needs_display
 def test_report_preview_does_not_keep_itself_alive(log_file):
     """In 0.4.1 the "attach the log" switch referred to itself through its own handler, so
     the preview outlived the dialog until Python next collected reference cycles."""
@@ -570,6 +569,7 @@ def test_window_collects_cycles_itself_on_the_gtk_thread(monkeypatch):
     assert where == [threading.main_thread()] * 2
 
 
+@pytest.mark.needs_display
 def test_updates_page_with_several_updates(monkeypatch):
     """The page as it was when the window crashed: three updates, one of them with a list of
     changes, and a component that can be reinstalled."""
@@ -1294,6 +1294,7 @@ def page_window(key):
     return win, section
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("key", ["maps", "updates", "apps"])
 def test_a_rebuilt_page_leaves_no_removed_buttons_in_the_list(key):
     win, section = page_window(key)
@@ -1310,6 +1311,7 @@ def test_a_rebuilt_page_leaves_no_removed_buttons_in_the_list(key):
         assert all(b.get_root() is win.toplevel for b in win._action_buttons)
 
 
+@pytest.mark.needs_display
 def test_buttons_of_other_pages_stay_in_the_list():
     win, section = page_window("maps")
     elsewhere = win._button("Sync", lambda: None)  # e.g. on the device page

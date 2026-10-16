@@ -168,12 +168,10 @@ def _dialog(monkeypatch, part, answer=None):
 
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Adw, Gtk
+    from gi.repository import Adw
 
     from openexpress.gui.app import MainWindow
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     items = updates.parse_updates(lower_keys(answer or server_answer()))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
@@ -211,6 +209,7 @@ def test_two_versions_stay_on_one_line():
     assert not re.search(r"\} → \{", source)
 
 
+@pytest.mark.needs_display
 def test_the_window_warns_before_a_system_update(monkeypatch):
     body, warning = _question(monkeypatch, "006-V0000-00")
     # The same words as on the command line, below the text: in the warning colour, bold.
@@ -218,12 +217,14 @@ def test_the_window_warns_before_a_system_update(monkeypatch):
     assert "Warning" not in body
 
 
+@pytest.mark.needs_display
 def test_the_window_does_not_warn_before_a_plain_file(monkeypatch):
     body, warning = _question(monkeypatch, "006-D0000-00")
     assert warning is None
     assert "Warning" not in body and "disconnect" not in body
 
 
+@pytest.mark.needs_display
 def test_the_warning_in_polish(monkeypatch):
     from openexpress import i18n
 
@@ -236,6 +237,7 @@ def test_the_warning_in_polish(monkeypatch):
     assert body.startswith(f"Test Bundle {VERSIONS}\nRozmiar: 12 B\n")
 
 
+@pytest.mark.needs_display
 def test_the_question_names_both_versions_of_a_system_update(monkeypatch):
     body, _warning = _question(monkeypatch, "006-V0000-00")
     assert body.splitlines()[0] == f"Test Bundle {VERSIONS}"
@@ -289,12 +291,9 @@ def _updates_page(items, beta=False):
 
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Gtk
 
     from openexpress.gui.app import MainWindow
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39")),
@@ -330,6 +329,7 @@ FONT_ENTRY = _entry("006-D0000-00", "Test Font", "Firmware", "Garmin\\Font", "00
                     FONT)
 
 
+@pytest.mark.needs_display
 def test_status_when_the_software_is_up_to_date():
     reinstall = _entry("006-D0001-00", "Old Font", "Firmware", "Garmin\\Font", "old.fnt", FONT)
     reinstall["installation"]["isReinstall"] = True
@@ -344,6 +344,7 @@ def test_status_when_the_software_is_up_to_date():
     assert win.loads == [(("updates",), {"force": True})]
 
 
+@pytest.mark.needs_display
 def test_status_with_a_system_update():
     win, status, groups, (install, check) = _updates_page(_items(FONT_ENTRY, BUNDLE_ENTRY))
     assert status == {
@@ -361,6 +362,7 @@ def test_status_with_a_system_update():
     assert [u.part_number for u in win.asked] == ["006-V0000-00"]  # the question with the warning
 
 
+@pytest.mark.needs_display
 def test_status_with_plain_updates_only():
     other = _entry("006-D0002-00", "Test Map Data", "Etyp", "Garmin\\SID", "DA00200.sid", b"sid")
     _win, status, groups, _buttons = _updates_page(_items(FONT_ENTRY, other))
@@ -373,6 +375,7 @@ def test_status_with_plain_updates_only():
     assert [r.get_title() for r in available.rows] == ["Test Font", "Test Map Data"]
 
 
+@pytest.mark.needs_display
 def test_a_second_system_update_is_listed_as_system_software():
     second = _entry("006-B0000-00", "Test Software", "Firmware", "Garmin", "GUPDATE.GCD", b"fw")
     _win, status, groups, _buttons = _updates_page(_items(BUNDLE_ENTRY, second))
@@ -382,6 +385,7 @@ def test_a_second_system_update_is_listed_as_system_software():
         ("System software", "Test Software · 23.40 · 2 B · Recommended · GUPDATE.GCD")]
 
 
+@pytest.mark.needs_display
 def test_the_status_in_polish():
     from openexpress import i18n
 
@@ -479,6 +483,7 @@ def test_cli_marks_beta_in_polish(offered_beta, no_download, capsys):
     assert out[3].endswith("Test Bundle [GŁÓWNE] [BETA]")
 
 
+@pytest.mark.needs_display
 def test_status_with_a_beta_system_update():
     items = updates.parse_updates(lower_keys(beta_answer()))
     _win, status, _groups, _buttons = _updates_page(items, beta=True)
@@ -490,6 +495,7 @@ def test_status_with_a_beta_system_update():
         ("Garmin offers beta software for this device.", ["caption", "dim-label"])]
 
 
+@pytest.mark.needs_display
 def test_status_says_beta_versions_are_offered_when_none_is_listed():
     # The device is in the beta program, but the system update offered is not a beta.
     items = updates.parse_updates(lower_keys(beta_answer("live")))
@@ -504,6 +510,7 @@ def test_status_says_beta_versions_are_offered_when_none_is_listed():
         "Garmin offers beta software for this device."]
 
 
+@pytest.mark.needs_display
 def test_status_without_beta_has_no_beta_line():
     _win, status, _groups, _buttons = _updates_page([])
     assert not any("beta" in t.casefold() for t, _c in status["texts"])
@@ -528,6 +535,7 @@ def _beta_question(monkeypatch, bundle_state):
     return _question(monkeypatch, "006-V0000-00", beta_answer(bundle_state))
 
 
+@pytest.mark.needs_display
 def test_the_window_says_it_is_a_beta_before_installing(monkeypatch):
     body, warning = _beta_question(monkeypatch, BETA)
     assert body.endswith("\n\nThis is a beta version.")  # the warning follows, below the text
@@ -536,6 +544,7 @@ def test_the_window_says_it_is_a_beta_before_installing(monkeypatch):
     assert "beta" not in body.casefold()
 
 
+@pytest.mark.needs_display
 def test_beta_in_the_window_in_polish(monkeypatch):
     from openexpress import i18n
 
@@ -579,6 +588,7 @@ def test_cli_marks_a_beta_version_in_what_will_be_installed_in_polish(offered_be
     assert "  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP" in out
 
 
+@pytest.mark.needs_display
 def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
     from gi.repository import Gtk
 
@@ -610,6 +620,7 @@ def _with_license(url, part="006-V0000-00"):
     return answer
 
 
+@pytest.mark.needs_display
 def test_the_license_is_a_link_above_the_warning(monkeypatch):
     from gi.repository import Gtk
 
@@ -622,6 +633,7 @@ def test_the_license_is_a_link_above_the_warning(monkeypatch):
     assert "License" not in dialog.get_body() and url not in dialog.get_body()
 
 
+@pytest.mark.needs_display
 def test_the_license_link_takes_any_letter_case_of_https(monkeypatch):
     from gi.repository import Gtk
 
@@ -630,6 +642,7 @@ def test_the_license_link_takes_any_letter_case_of_https(monkeypatch):
     assert isinstance(link, Gtk.LinkButton) and link.get_uri() == url  # no warning: a plain file
 
 
+@pytest.mark.needs_display
 def test_no_license_no_link(monkeypatch):
     from gi.repository import Gtk
 
@@ -638,6 +651,7 @@ def test_no_license_no_link(monkeypatch):
     assert _dialog(monkeypatch, "006-D0000-00").get_extra_child() is None  # nothing below
 
 
+@pytest.mark.needs_display
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "http://example.org/license.txt",
                                  "javascript:alert(1)"])
 def test_a_license_that_is_not_a_web_address_is_only_text(monkeypatch, url):
@@ -649,6 +663,7 @@ def test_a_license_that_is_not_a_web_address_is_only_text(monkeypatch, url):
     assert not text.get_use_markup()
 
 
+@pytest.mark.needs_display
 def test_the_license_in_polish(monkeypatch):
     from openexpress import i18n
 
@@ -837,6 +852,7 @@ def _staged_items(bundle_state="live", font_on_device=True):
     return items
 
 
+@pytest.mark.needs_display
 def test_status_of_an_update_that_waits_for_the_device():
     _win, status, groups, _buttons = _updates_page(_staged_items())
     assert status == {
@@ -851,6 +867,7 @@ def test_status_of_an_update_that_waits_for_the_device():
     assert advanced.rows[0].get_subtitle().startswith("1 component already on the device")
 
 
+@pytest.mark.needs_display
 def test_status_of_a_beta_that_waits_for_the_device():
     _win, status, _groups, _buttons = _updates_page(_staged_items(BETA), beta=True)
     assert status["texts"][1] == (
@@ -859,6 +876,7 @@ def test_status_of_a_beta_that_waits_for_the_device():
     assert status["texts"][3][0] == "Garmin offers beta software for this device."
 
 
+@pytest.mark.needs_display
 def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
     assert status["texts"][0][0] == "Update ready to install"
@@ -879,14 +897,12 @@ def _overview(items=None):
     return win, MainWindow
 
 
+@pytest.mark.needs_display
 def test_device_page_says_the_update_waits_for_the_device():
     import gi
 
     gi.require_version("Gtk", "4.0")
-    from gi.repository import Gtk
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     items = _staged_items()
     win, MainWindow = _overview()
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
@@ -917,6 +933,7 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
     assert states == [(["006-D0000-00"], ["006-V0000-00"])]
 
 
+@pytest.mark.needs_display
 def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     from gi.repository import Adw
 
@@ -955,6 +972,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     assert [r.get_title() for r in groups[0].rows] == ["Test Font"]  # still to install
 
 
+@pytest.mark.needs_display
 def test_ready_in_polish():
     from openexpress import i18n
 
@@ -1049,18 +1067,17 @@ def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypat
     assert given == [None, None, None]  # as before
 
 
+@pytest.mark.needs_display
 def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     import gi
 
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Adw, Gtk
+    from gi.repository import Adw
 
     from openexpress import maps
     from openexpress.gui.app import MainWindow
 
-    if not Gtk.init_check():
-        pytest.skip("no display")
     asked, tasks, calls = [], [], {}
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
 
