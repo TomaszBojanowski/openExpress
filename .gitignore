@@ -1,29 +1,25 @@
-# Binaria i zdekompilowany kod Garmina - tylko lokalnie, nie publikować
-_extracted/
+# Build and cache files
 __pycache__/
 .ruff_cache/
 *.pyc
 .venv/
-testdata/
 *.egg-info/
 build/
 dist/
-
-# Private reverse-engineering notes (never publish)
-docs/analiza/
-docs/ANALIZA.md
 .flatpak-builder/
 flatpak-build/
 flatpak-repo/
 *.flatpak
+
+# Local working files (not published)
+_extracted/
+testdata/
+docs/analiza/
+docs/ANALIZA.md
 *.docx
 
-# Local notes for AI coding sessions (contain private paths)
+# Local notes and tools
 AGENTS.md
 PLAN.md
-
-# Local list of secret patterns used by tools/check-secrets.sh
-tools/secret-patterns.txt
-
-# Local pointer for Claude Code (imports AGENTS.md)
 CLAUDE.md
+tools/secret-patterns.txt
