@@ -26,7 +26,6 @@ log = logging.getLogger(__name__)
 
 TIMEOUT = 60
 PRIMARY_TRAINING_PATH = "userprofile-service/userprofile/user-settings/primary-training-device"
-MAX_CLOCK_SKEW_S = netstatus.MAX_CLOCK_SKEW_S
 
 
 def _hosts(client) -> dict[str, str]:
@@ -181,7 +180,7 @@ class GarminClient:
     def _check(self, resp: requests.Response, what: str) -> requests.Response:
         if resp.status_code in (401, 403):
             skew = netstatus.clock_skew(resp)
-            if skew > MAX_CLOCK_SKEW_S:
+            if netstatus.kind_of(resp.status_code, skew) == netstatus.CLOCK:
                 raise ClockSkew(
                     _("{action}: computer clock is off from the server by {minutes} min")
                     .format(action=what, minutes=int(skew // 60)),
