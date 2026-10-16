@@ -855,7 +855,7 @@ def cmd_maps(args) -> int:
         print(msg.format(name=m.name, version=m.version, count=len(m.files),
                          size=_human(m.size), needed=_human(need),
                          free=_human(st.free_space())))
-        for f in m.files:
+        for f in mp.write_order(m):
             print(f"  + {f.device_path}  {_human(f.size)}")
         for p in removing:
             print(f"  - {p}")

@@ -235,6 +235,16 @@ def test_map_files_are_written_smallest_first_and_the_unlock_last(server, device
     assert [line.split()[1] for line in downloads] == ["Garmin/DEM.img", "Garmin/E2.img"]
 
 
+def test_files_of_the_same_size_keep_the_order_of_the_server():
+    m = maps.parse_maps(maps_response("http://maps.invalid"))[1]
+    m.files = [maps.MapFile(f"Garmin/{name}", name, None, size)
+               for name, size in (("C.img", 30), ("B2.img", 10), ("A.img", 20), ("B1.img", 10))]
+    assert [f.device_path for f in maps.write_order(m)] == [
+        "Garmin/B2.img", "Garmin/B1.img", "Garmin/A.img", "Garmin/C.img"]
+    assert [f.device_path for f in m.files] == [  # the map itself is left as it was
+        "Garmin/C.img", "Garmin/B2.img", "Garmin/A.img", "Garmin/B1.img"]
+
+
 def test_a_shared_file_that_failed_is_written_once_more(server, device_root, xdg):
     all_maps, east = east_with_shared_dem(server, device_root)
     st = RecordingStorage(device_root, fail={"GARMIN/DEM.img": 1})
@@ -436,6 +446,24 @@ def test_maps_command_with_maps_keeps_the_list(server, device_root, xdg, monkeyp
     assert main(["--path", str(device_root), "maps", "--all"]) == 0
     out = capsys.readouterr().out
     assert "(all):" in out and "TopoActive Japan" in out and NO_MAPS_TEXT not in out
+
+
+def test_the_install_plan_lists_the_files_in_the_order_they_are_written(
+        server, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer_with(monkeypatch, body=json.dumps(maps_response(server)).encode())
+    put(device_root, **{"W.img": TOPO, "DEM.img": DEM, "W.gma": b"u", "E.img": b"old",
+                        "E.gma": b"u"})
+    east = maps.parse_maps(maps_response(server))[1]
+    written = [f.device_path for f in maps.write_order(east)]
+    assert written != [f.device_path for f in east.files]  # the server lists them otherwise
+    before = device_files(device_root)
+    assert main(["--path", str(device_root), "maps", "install", "East"]) == 0
+    planned = [line.split()[1] for line in capsys.readouterr().out.splitlines()
+               if line.startswith("  + ")]
+    assert planned == written
+    assert device_files(device_root) == before
 
 
 @pytest.mark.parametrize("status,body,error", [

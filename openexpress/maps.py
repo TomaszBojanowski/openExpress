@@ -285,6 +285,14 @@ def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
     return max(0, m.size - freed - replaced)
 
 
+def write_order(m: UniversalMap) -> list[MapFile]:
+    """The files of a map in the order install downloads and writes them, and the plan lists
+    them: smallest first, as Garmin Express does, so the small type and search files are on
+    the device before the big map and terrain files. Files of the same size keep the order
+    of the server (the sort is stable)."""
+    return sorted(m.files, key=lambda f: f.size)
+
+
 def cache_file(f: MapFile) -> Path:
     return paths.cache_dir() / "maps" / (f.md5 or posixpath.basename(f.device_path))
 
@@ -320,9 +328,7 @@ def install(
         raise MapError(_("Not enough space on the device: {need} needed, {free} free")
                        .format(need=human_size(need), free=human_size(free)))
 
-    # Smallest file first, as Garmin Express does: the small type and search files are on
-    # the device before the big map and terrain files.
-    files = sorted(m.files, key=lambda f: f.size)
+    files = write_order(m)
     local: dict[str, Path] = {}
     # One bar for all the files of the map.
     overall = download.Overall(m.size, download_progress) if download_progress else None
