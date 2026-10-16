@@ -143,6 +143,25 @@ def test_the_connect_iq_store_is_noted_under_garmin_connect(monkeypatch, network
     assert network_state.snapshot()[0][netstatus.CONNECT].kind == netstatus.NETWORK
 
 
+def test_a_store_refusal_with_a_wrong_clock_is_noted_as_such(monkeypatch, network_state):
+    import email.utils
+    import time
+
+    from openexpress import ciq
+    from openexpress.connect import ClockSkew
+
+    client = GarminClient(Settings())
+    client.require_verified = lambda unit_id: None
+    client._sign = lambda method, url, *a, **kw: "OAuth x"
+    two_hours_ago = email.utils.formatdate(time.time() - 2 * 3600, usegmt=True)
+    monkeypatch.setattr(requests.Session, "request",
+                        lambda self, m, u, **kw: answer(401, two_hours_ago))
+    with pytest.raises(ClockSkew):
+        ciq.StoreApi(client)._request("GET", "express/x", "x")
+    assert network_state.state() == netstatus.CLOCK_OFF  # not netstatus.SIGN_IN_EXPIRED
+    assert network_state.snapshot()[0][netstatus.CONNECT].minutes == 120
+
+
 def test_noting_never_breaks_a_request(monkeypatch):
     def broken(*a, **kw):
         raise RuntimeError("bug")

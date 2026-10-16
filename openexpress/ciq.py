@@ -382,7 +382,7 @@ class StoreApi:
             raise
         log.info("HTTP %s %s -> %s in %.1f s", method, self.base + path, resp.status_code,
                  time.monotonic() - started)
-        netstatus.record(netstatus.CONNECT, url, resp.status_code)
+        netstatus.record(netstatus.CONNECT, url, resp.status_code, resp)
         self.client._check(resp, what)
         return lower_keys(resp.json()) if resp.content else None
 

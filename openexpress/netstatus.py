@@ -170,14 +170,14 @@ def record_failure(hosts: dict[str, str], url: str) -> None:
         log.debug("network state not recorded: %s", e)
 
 
-def record(service: str, url: str, status: int | None) -> None:
+def record(service: str, url: str, status: int | None, resp=None) -> None:
     """For requests outside the client (file downloads, the Connect IQ store): the service
-    is known; `status` None means no answer."""
+    is known; `status` None means no answer. `resp`, when given, tells the clock difference."""
     try:
         if status is None:
             STATUS.note_failure(service, url)
         else:
-            STATUS.note_answer(service, url, status)
+            STATUS.note_answer(service, url, status, clock_skew(resp))
     except Exception as e:  # noqa: BLE001 - the state is only shown
         log.debug("network state not recorded: %s", e)
 
