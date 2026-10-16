@@ -162,6 +162,34 @@ def test_a_store_refusal_with_a_wrong_clock_is_noted_as_such(monkeypatch, networ
     assert network_state.snapshot()[0][netstatus.CONNECT].minutes == 120
 
 
+STATUS_URL = "https://connectapi.garmin.com/activity-service/activity/status/1"
+
+
+def _polling_client():
+    client = GarminClient(Settings())
+    client.require_verified = lambda *a: None
+    client._sign = lambda method, url, *a, **kw: "OAuth x"
+    return client
+
+
+def test_a_lost_connection_while_checking_an_upload_is_noted(monkeypatch, network_state):
+    def get(self, url, **kw):
+        raise requests.ConnectionError("down")
+
+    monkeypatch.setattr(requests.Session, "get", get)
+    assert _polling_client().poll_location(STATUS_URL, 1, timeout_s=5) == 0
+    last = network_state.snapshot()[0].get(netstatus.CONNECT)
+    assert last is not None and last.kind == netstatus.NETWORK
+    assert network_state.state() == netstatus.OFFLINE
+
+
+def test_the_answer_to_an_upload_check_is_noted(monkeypatch, network_state):
+    monkeypatch.setattr(requests.Session, "get", lambda self, url, **kw: answer(201))
+    assert _polling_client().poll_location(STATUS_URL, 1, timeout_s=5) == 201
+    last = network_state.snapshot()[0].get(netstatus.CONNECT)
+    assert last is not None and (last.kind, last.status) == (netstatus.OK, 201)
+
+
 def test_noting_never_breaks_a_request(monkeypatch):
     def broken(*a, **kw):
         raise RuntimeError("bug")
