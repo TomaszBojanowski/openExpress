@@ -32,6 +32,7 @@ from openexpress.device.storage import (  # noqa: E402
     LocalStorage,
     RemountFailed,
     Storage,
+    UmsStorage,
 )
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import in_flatpak  # noqa: E402
@@ -535,6 +536,21 @@ def find_ums_devices() -> list[FoundDevice]:
         found.append(FoundDevice(root.get_uri(), mount.get_name(), True, mount.get_volume(),
                                  usb))
     return found
+
+
+def open_ums_storage(dev: FoundDevice) -> UmsStorage:
+    """The storage of a Garmin device in mass storage mode that find_ums_devices found."""
+    path = Gio.File.new_for_uri(dev.uri).get_path()
+    try:
+        if path is None:
+            raise DeviceError("not a local folder")
+        st = UmsStorage(Path(path), dev.uri, dev.usb)
+    except DeviceError:
+        # Unplugged since it was found. The error would name the folder, with the user name.
+        raise NotThereYet(_("The device is not mounted.")) from None
+    log.info("device: opened in mass storage mode (%s:, USB %s)", dev.uri.split(":", 1)[0],
+             st.usb_id or "?")
+    return st
 
 
 def mount(dev: FoundDevice, timeout_s: int = 30) -> None:

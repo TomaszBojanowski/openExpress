@@ -38,6 +38,8 @@ class Storage(ABC):
     """Common interface: a local directory (UMS, tests) or MTP via gvfs."""
 
     label = "storage"
+    # A Garmin device in mass storage mode that the program found itself (UmsStorage).
+    mass_storage = False
 
     @abstractmethod
     def _list(self, real_path: str) -> list[Entry]: ...
@@ -259,3 +261,19 @@ class LocalStorage(Storage):
 
     def capacity(self) -> int | None:
         return shutil.disk_usage(self.root).total
+
+
+class UmsStorage(LocalStorage):
+    """A Garmin device in mass storage mode: the folder where the system mounted the drive.
+    Reads and writes like LocalStorage; it also knows where it is on USB and its address."""
+
+    mass_storage = True
+
+    def __init__(self, root: Path, device_uri: str, usb=None):
+        super().__init__(root)
+        # The address of the mount as Gio gives it. The label ends with "/", like the storage
+        # of an MTP device below its mount: the window tells by it which mount it is on.
+        self.device_uri = device_uri
+        self.label = device_uri.rstrip("/") + "/"
+        self.usb = usb  # gio_storage.GarminUsb, when known
+        self.usb_id: str | None = usb.usb_id if usb is not None else None

@@ -3,8 +3,10 @@
 All serial numbers and USB trees here are made up.
 """
 
+import hashlib
 import logging
 import os
+import shutil
 import types
 from pathlib import Path
 
@@ -660,6 +662,9 @@ RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
 </Device>
 """
 DRIVE_SERIAL = "0000abcdef56"
+MEDIA_USER = "made-up-user"  # the user folder in /run/media/<user>
+TESTDATA_XML = (Path(__file__).resolve().parent.parent / "testdata" / "varia-rtl515"
+                / "GarminDevice.masked.xml")  # private, not in the repository
 
 
 class FakeLocalFile(FakeFile):
@@ -692,12 +697,14 @@ class FakeDriveMount:
 
 @pytest.fixture
 def drives(tmp_path, monkeypatch):
-    """A made-up /sys with /sys/class/block, and a folder for what the system mounts."""
+    """A made-up /sys with /sys/class/block, and a folder for what the system mounts: like
+    /run/media/<user>, with a made-up user name."""
     sys_root = tmp_path / "sys-with-drives"
-    world = types.SimpleNamespace(block=sys_root / "class" / "block", media=tmp_path / "media",
+    world = types.SimpleNamespace(block=sys_root / "class" / "block",
+                                  media=tmp_path / "run" / "media" / MEDIA_USER,
                                   pci=sys_root / "devices" / "pci0000:00" / "0000:00:14.0")
     world.block.mkdir(parents=True)
-    world.media.mkdir()
+    world.media.mkdir(parents=True)
     world.hub = usb_device(world.pci, "usb1", 1, 1, "1d6b", "0002")
     monkeypatch.setattr(gio_storage, "SYSFS_BLOCK", world.block)
     return world
@@ -820,6 +827,157 @@ def test_no_disk_of_the_computer_running_the_tests_is_a_garmin_drive():
     """conftest.py points /sys/class/block to an empty folder for every test."""
     assert list(gio_storage.SYSFS_BLOCK.iterdir()) == []
     assert gio_storage.garmin_ums(FakeDriveMount(Path("/"), "/dev/sda1")) is None
+
+
+def _rtl515(dev):
+    """What a GarminDevice.xml of the RTL515 says, without its unit ID."""
+    return (dev.description, dev.part_number, dev.software_version_str, dev.datatypes(),
+            dev.files, dev.update_files, dev.iq_max_apps)
+
+
+def test_the_hand_made_rtl515_xml():
+    from openexpress.device.xmldevice import UpdateFile, parse
+
+    dev = parse(RTL515_XML.encode())
+    assert dev.unit_id == 3000000003
+    assert _rtl515(dev) == ("Varia RTL515", "006-B3592-03", "3.36", [], [], [
+        UpdateFile("006-B3592-03", "3.36", "GARMIN/", "GUPDATE.GCD"),
+        UpdateFile("006-B3593-06", "3.27", "GARMIN/REMOTESW/", "6B359306.GCD"),
+    ], None)  # no data types: nothing to sync, no Connect IQ
+
+
+@pytest.mark.skipif(not TESTDATA_XML.exists(), reason="private test data")
+def test_the_hand_made_rtl515_xml_matches_the_device_file():
+    from openexpress.device.xmldevice import parse
+
+    # The unit ID is masked there ("MASKED"), which is no number.
+    data = TESTDATA_XML.read_bytes().replace(b"<Id>MASKED</Id>", b"<Id>3000000003</Id>")
+    assert _rtl515(parse(data)) == _rtl515(parse(RTL515_XML.encode()))
+
+
+def opened_drive(drives, monkeypatch, label="GARMIN"):
+    """(the mount, the storage) of a Garmin drive found and opened like the window will."""
+    mount = FakeDriveMount(drive_folder(drives, label=label), usb_drive(drives), name=label)
+    monitor_with(monkeypatch, mount)
+    (found,) = gio_storage.find_ums_devices()
+    return mount, gio_storage.open_ums_storage(found)
+
+
+@pytest.mark.parametrize("label", ["GARMIN", "GARMIN 2"])
+def test_a_garmin_drive_opens_as_mass_storage(drives, monkeypatch, label):
+    from openexpress.device import storage
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui.app import _on_mount
+
+    mount, st = opened_drive(drives, monkeypatch, label)
+    assert isinstance(st, storage.UmsStorage) and isinstance(st, storage.LocalStorage)
+    assert st.mass_storage is True
+    assert st.usb == gio_storage.GarminUsb("20ee", "usb") and st.usb_id == "091e:20ee"
+    assert (st.usb.bus, st.usb.address) == (1, 12)
+    # The address as Gio gives it (" " stays "%20"); the folder is the one it names.
+    uri = mount.root.get_uri()
+    assert st.device_uri == uri and st.label == uri + "/"
+    assert st.root == drives.media / label
+    assert parse(st.read("GARMIN/GarminDevice.xml")).description == "Varia RTL515"
+    # The window tells by the label which mount the open device is on.
+    assert _on_mount(st, uri) and _on_mount(st, uri + "/")
+    assert not _on_mount(st, uri + "1") and not _on_mount(st, (drives.media / "OTHER").as_uri())
+
+
+def test_only_a_garmin_drive_is_mass_storage(tmp_path):
+    """MTP storages and the folder given with --path are not: --path stays as it was."""
+    from openexpress import cli
+    from openexpress.device import storage
+
+    st = cli.open_storage(types.SimpleNamespace(path=str(tmp_path), device_uri=None))
+    assert type(st) is storage.LocalStorage
+    assert st.mass_storage is False and st.label == str(tmp_path)
+    assert not any(hasattr(st, name) for name in ("usb", "usb_id", "device_uri"))
+    assert storage.Storage.mass_storage is False
+    assert gio_storage.GioStorage(NUMERIC).mass_storage is False
+
+
+def _offered(path, filename, data):
+    """One file offered by the update server, with its keys as the server sends them."""
+    return {"partNumber": filename.split(".")[0], "productName": "Varia RTL515",
+            "dataType": "Firmware", "displayVersion": "3.40", "severity": "Recommended",
+            "releaseNotes": [],
+            "deliverable": {"downloadUrl": "https://example.org/" + filename,
+                            "md5": hashlib.md5(data).hexdigest().upper(), "sizeInBytes": len(data)},
+            "installation": {"path": path, "fileName": filename, "isReinstall": False,
+                             "isRestartRequired": False, "order": 0}}
+
+
+class _UpdateServer:
+    """Stands in for the HTTP session of GarminClient: records each request, answers with JSON."""
+
+    def __init__(self, answer):
+        self.answer, self.sent = answer, []
+
+    def request(self, method, url, **kw):
+        import json
+
+        import requests
+
+        self.sent.append((method, url, kw.get("params"), kw.get("json")))
+        resp = requests.Response()
+        resp.status_code, resp.url = 200, url
+        resp._content = json.dumps(self.answer).encode()
+        resp.headers["Content-Type"] = "application/json"
+        return resp
+
+
+def test_updates_of_a_garmin_drive_take_the_path_of_cli_path(drives, monkeypatch):
+    """The same request and the same comparison with the files on the device, whether the
+    folder is opened as a Garmin drive or given with --path."""
+    from openexpress import updates
+    from openexpress.connect import GarminClient
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    mount, ums = opened_drive(drives, monkeypatch)
+    system = b"the RTL515 software that is on it"
+    (ums.root / "GARMIN" / "GUPDATE.GCD").write_bytes(system)
+    answer = {"updates": [_offered("GARMIN", "GUPDATE.GCD", system),
+                          _offered("GARMIN\\REMOTESW", "6B359306.GCD", b"a newer light")]}
+
+    def check(storage):
+        server = _UpdateServer(answer)
+        client = GarminClient(Settings(), None, None, server)
+        device = parse(storage.read("GARMIN/GarminDevice.xml"))
+        items = updates.mark_present(
+            storage, updates.parse_updates(client.software_updates(device.raw, True)),
+            updates.component_count(device))
+        found = [(u.part_number, u.version, u.device_path, u.size, u.on_device) for u in items]
+        return server.sent, found, updates.check_space(storage, items)[0]
+
+    on_drive, with_path = check(ums), check(LocalStorage(ums.root))
+    assert on_drive == with_path
+    sent, found, _need = on_drive
+    assert [(method, params, body["garminDeviceXml"]) for method, _url, params, body in sent] \
+        == [("POST", {"filter": "all"}, RTL515_XML)]
+    assert [(device_path, on_device) for _p, _v, device_path, _s, on_device in found] == [
+        ("GARMIN/GUPDATE.GCD", True), ("GARMIN/REMOTESW/6B359306.GCD", False)]
+
+
+def test_the_log_of_a_garmin_drive_has_no_user_name(drives, monkeypatch, caplog):
+    """Only the scheme of its address goes to the log, never /run/media/<user>, also when
+    it is gone between finding it and opening it."""
+    no_xml = FakeDriveMount(drive_folder(drives, label="CARD", xml_path=None),
+                            usb_drive(drives, port="1-5", devnum=13, disk="sdc", partition="sdc1"))
+    with caplog.at_level(logging.DEBUG):
+        mount, st = opened_drive(drives, monkeypatch)
+        monitor_with(monkeypatch, mount, no_xml)
+        (found,) = gio_storage.find_ums_devices()
+        shutil.rmtree(st.root)  # unplugged
+        with pytest.raises(gio_storage.NotThereYet) as error:
+            gio_storage.open_ums_storage(found)
+    assert "opened in mass storage mode (file:, USB 091e:20ee)" in caplog.text
+    assert "without GARMIN/GarminDevice.xml" in caplog.text
+    assert str(error.value) == "The device is not mounted." and error.value.__cause__ is None
+    for text in (caplog.text, str(error.value)):
+        assert MEDIA_USER not in text and "file://" not in text and str(drives.media) not in text
 
 
 # --- the device to ourselves for a PTP session ----------------------------------------------
