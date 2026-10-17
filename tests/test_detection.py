@@ -645,6 +645,11 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
 
 # --- a Garmin device in mass storage mode: a USB drive -------------------------------------
 
+# What the window says about an open Garmin drive: on its device page and on the pages that
+# do not apply to it.
+MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
+                     "openExpress shows its information and software updates; sync, apps, "
+                     "maps and music do not apply to it.")
 # Made by hand after the Varia RTL515 (17.10.2026); the unit ID is made up.
 RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
@@ -1192,10 +1197,8 @@ def _texts(widget):
     return found
 
 
-@pytest.mark.needs_display
-def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
-    """Name, version, storage, the software check and the part number; no sync and no maps
-    (and so no map check)."""
+def _drive_device_page(drive_window, monkeypatch):
+    """(the texts on the device page of the RTL515 drive, what it started)."""
     from test_fixes_ui import page_window
 
     from openexpress.gui.app import MainWindow
@@ -1211,13 +1214,30 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
         setattr(win, name, lambda *a, **kw: None)
     win._background_enabled = lambda: False
     MainWindow.show_overview(win)
-    texts = _texts(section.page)
+    return _texts(section.page), calls
+
+
+@pytest.mark.needs_display
+def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
+    """Name, version, storage, the software check and the part number; no sync and no maps
+    (and so no map check)."""
+    texts, calls = _drive_device_page(drive_window, monkeypatch)
     for text in ("Varia RTL515", "Software 3.36", "Device storage", "Device software",
                  "Part number", "006-B3592-03"):
         assert text in texts
     for text in ("Sync with Garmin Connect", "Last sync", "Automatic sync is off", "Maps"):
         assert text not in texts
     assert calls == ["_show_device_picture", "_check_updates_quietly"]
+
+
+@pytest.mark.needs_display
+def test_device_page_of_a_garmin_drive_says_what_applies(drive_window, monkeypatch):
+    """D6: no backup. A short description in place of the sync; not the words for a drive the
+    window cannot open (step 1)."""
+    texts, _calls = _drive_device_page(drive_window, monkeypatch)
+    assert "Backup" not in texts
+    assert "Mass storage mode" in texts and MASS_STORAGE_TEXT in texts
+    assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) not in texts
 
 
 def test_window_after_a_garmin_drive_is_unplugged(drive_window, monkeypatch, caplog):
@@ -1250,6 +1270,80 @@ def test_no_update_is_installed_on_a_garmin_drive_yet(drive_window, monkeypatch)
                                 toast=shown.append)
     MainWindow.confirm_update(win, types.SimpleNamespace(part_number="006-B3592-03"))
     assert shown == ["Installing updates on a device in mass storage mode is not available yet."]
+
+
+def _recording_page(key):
+    """Stands in for a Section: records what the page is made to show."""
+    seen = {}
+    error = types.SimpleNamespace(set_title=lambda title: seen.update(title=title),
+                                  set_description=lambda text: seen.update(description=text))
+    return types.SimpleNamespace(key=key, title=key.title(), loaded=False, error=error, seen=seen,
+                                 clear=lambda: seen.update(cleared=True),
+                                 show=lambda name: seen.update(shown=name))
+
+
+@pytest.mark.parametrize("force", [False, True])  # True: "Try Again"
+def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force):
+    """Test 11 (D5): Maps, Apps and Music load nothing for a drive (no request, no "Internal
+    error") and say in one sentence why; the Updates page loads as for any device."""
+    from openexpress.gui.app import MainWindow
+
+    loaded = []
+    keys = ("updates", "maps", "apps", "music")
+    win = types.SimpleNamespace(session=drive_session(drive_window, monkeypatch),
+                                sections={key: _recording_page(key) for key in keys},
+                                refresh_device=lambda: loaded.append("refresh"))
+    for key in keys:
+        setattr(win, f"load_{key}", lambda key=key: loaded.append(key))
+    for key in keys:
+        MainWindow.load_section(win, key, force=force)
+    assert loaded == ["updates"]
+    for key in ("maps", "apps", "music"):
+        seen = win.sections[key].seen
+        assert seen == {"cleared": True, "title": key.title(), "description": MASS_STORAGE_TEXT,
+                        "shown": "error"}
+        assert seen["description"] != gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
+    # Another device: the pages load as before.
+    win.session.storage.mass_storage = False
+    loaded.clear()
+    for key in keys:
+        MainWindow.load_section(win, key, force=force)
+    assert loaded == list(keys)
+
+
+@pytest.mark.parametrize("logged_in", [False, True])
+def test_sync_is_grey_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
+    """With its reason in the tooltip, the words of step 1; and no sync starts anyway."""
+    from openexpress.gui.app import MainWindow
+
+    s = drive_session(drive_window, monkeypatch)
+    if logged_in:
+        s.client.auth = object()
+    win = _sync_window(s)
+    win.update()
+    assert _looks(win) == (False, False, "Mass storage mode", "Mass storage mode")
+    started = []
+    win.run_task = lambda *a, **kw: started.append(a)
+    MainWindow.start_sync(win)
+    assert started == []
+
+
+@pytest.mark.parametrize("logged_in", [False, True])
+def test_no_banner_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
+    """Neither "Not logged in" nor the one-time setup: neither is needed for a drive."""
+    from openexpress.gui.app import MainWindow
+
+    s = drive_session(drive_window, monkeypatch)
+    if logged_in:
+        s.client.auth = object()
+    seen = {}
+    win = types.SimpleNamespace(session=s, _ownership_title=MainWindow._ownership_title,
+                                banner=types.SimpleNamespace(
+        set_title=lambda t: seen.update(title=t),
+        set_button_label=lambda b: seen.update(button=b),
+        set_revealed=lambda r: seen.update(revealed=r)))
+    MainWindow._update_banner(win)
+    assert seen == {"revealed": False}
 
 
 # --- the device to ourselves for a PTP session ----------------------------------------------

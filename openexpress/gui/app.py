@@ -239,6 +239,26 @@ def still_in_window(buttons: list) -> list:
     return [b for b in buttons if b.get_root() is not None]
 
 
+# The pages that do not apply to a Garmin device in mass storage mode.
+NOT_FOR_MASS_STORAGE = ("maps", "apps", "music")
+
+
+def mass_storage_text() -> str:
+    """What an open Garmin device in mass storage mode offers, for its pages."""
+    return _("The device is connected in mass storage mode (as a USB drive): openExpress "
+             "shows its information and software updates; sync, apps, maps and music do "
+             "not apply to it.")
+
+
+def show_not_for_mass_storage(sec) -> None:
+    """A page that does not apply to a Garmin device in mass storage mode: it loads nothing
+    and says why, as the Music page of a device without media does."""
+    sec.clear()
+    sec.error.set_title(sec.title)
+    sec.error.set_description(mass_storage_text())
+    sec.show("error")
+
+
 def _mount_address(mount) -> str:
     """The address of a mount for the log. An MTP address carries the serial number,
     which the log filter hides; any other address may carry a local path with the user
@@ -620,6 +640,8 @@ class MainWindow(Adw.ApplicationWindow):
             # The words the pages show now: no device, a device that is starting, or one
             # that is not ready.
             return self._usb_title or _("Connect your device")
+        if getattr(s, "mass_storage", False):
+            return _("Mass storage mode")  # never synced; the device page says why
         if not s.logged_in:
             return _("Not logged in to Garmin Connect")
         if s.ownership_error is not None:
@@ -1047,7 +1069,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _update_banner(self) -> None:
         s = self.session
-        if s is not None and s.client.consumer is None:
+        if s is not None and getattr(s, "mass_storage", False):
+            # A Garmin device in mass storage mode needs neither the setup nor the account.
+            self.banner.set_revealed(False)
+        elif s is not None and s.client.consumer is None:
             self.banner.set_title(_("openExpress needs a one-time setup"))
             self.banner.set_button_label(_("Choose Installer…"))
             self._banner_kind = "setup"
@@ -1083,6 +1108,9 @@ class MainWindow(Adw.ApplicationWindow):
         if self.session is None or (sec.loaded and not force) or key == "watch":
             if key == "watch" and self.session is not None and force:
                 self.refresh_device()
+            return
+        if getattr(self.session, "mass_storage", False) and key in NOT_FOR_MASS_STORAGE:
+            show_not_for_mass_storage(sec)  # no request, nothing read
             return
         loader = {"updates": self.load_updates, "maps": self.load_maps,
                   "apps": self.load_apps, "music": self.load_music}[key]
@@ -1176,7 +1204,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         # A Garmin device in mass storage mode is never synced and has no maps.
         mass_storage = getattr(s, "mass_storage", False)
-        if not mass_storage:
+        if mass_storage:
+            sec.group(_("Mass storage mode"), mass_storage_text())
+        else:
             g = sec.group(_("Sync with Garmin Connect"))
             if s.ownership_error is not None:
                 g.add(Adw.ActionRow(title=_("Sync is not available for this device"),
@@ -1223,11 +1253,12 @@ class MainWindow(Adw.ApplicationWindow):
                 self._show_primary_training(self.primary_row)
 
         g = sec.group(_("Tools"))
-        row = Adw.ActionRow(title=_("Backup"),
-                            subtitle=GLib.markup_escape_text(str(paths.default_backup_dir())))
-        # TRANSLATORS: button that creates a backup
-        row.add_suffix(self._button(_("Create"), self.backup))
-        g.add(row)
+        if not mass_storage:  # D6: no backup of a device in mass storage mode
+            row = Adw.ActionRow(title=_("Backup"),
+                                subtitle=GLib.markup_escape_text(str(paths.default_backup_dir())))
+            # TRANSLATORS: button that creates a backup
+            row.add_suffix(self._button(_("Create"), self.backup))
+            g.add(row)
         row = Adw.ActionRow(title=_("Part number"), subtitle=d.part_number,
                             subtitle_selectable=True)
         g.add(row)
@@ -1727,7 +1758,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def start_sync(self, first_run: str | None = None) -> None:
         s = self.session
-        if not s or not s.logged_in or s.ownership_error is not None:
+        if (not s or getattr(s, "mass_storage", False) or not s.logged_in
+                or s.ownership_error is not None):
             return
 
         def done(summary: service.SyncSummary):
