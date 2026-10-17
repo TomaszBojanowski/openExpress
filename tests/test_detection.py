@@ -2029,6 +2029,84 @@ def test_the_one_device_left_opens_whatever_its_kind(choosing_window, monkeypatc
     assert s.device.description == ("Varia RTL515" if left == "ums" else "Test watch")
 
 
+def vanishing(monkeypatch, *uris):
+    """MTP devices at these addresses are gone the moment they are read (gvfs still lists
+    them for a moment): their storage cannot be listed."""
+    mtp = gio_storage.GioStorage
+
+    class Vanishing(mtp):
+        def __init__(self, uri):
+            super().__init__(uri)
+            if any(uri.startswith(u) for u in uris):
+                self.root = self.root / "gone"  # listing it fails: "Not a directory"
+
+    monkeypatch.setattr(gio_storage, "GioStorage", Vanishing)
+
+
+def test_a_device_gone_before_it_is_read_is_not_listed(choosing_window, monkeypatch, tmp_path,
+                                                       device_root):
+    """B5: found, then gone from USB before its GarminDevice.xml was read: no row for it;
+    the one device left opens (D7)."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)  # the Edge was never in /sys
+    vanishing(monkeypatch, NAMED)
+    win.refresh_device()
+    assert win.shown_choices == []
+    (s,) = win.built
+    assert s is win.session and s.storage.label.startswith(NUMERIC)
+
+
+def test_all_devices_gone_before_they_are_read(choosing_window, monkeypatch, tmp_path,
+                                              device_root):
+    """B5: both gone before they were read: no list (not even an empty one), no device."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.world.plug(None)  # gone from /sys
+    vanishing(monkeypatch, NUMERIC, NAMED)
+    win.refresh_device()
+    assert win.shown_choices == [] and win.session is None and win.built == [None]
+    assert not win._choices
+
+
+def test_choosing_a_device_that_is_gone(choosing_window, monkeypatch, tmp_path, device_root):
+    """B6: the Edge is chosen just after it was unplugged: a message says that it could not
+    be opened, and the detection runs again (the test watch alone: it opens)."""
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    edge = two_watches(world, monkeypatch, tmp_path, device_root)
+    usb_device(world.root, "1-2", 1, 10, "091e", "5158")
+    win.refresh_device()
+    assert len(win._choices) == 2
+    world.offered.remove(edge)  # unplugged…
+    for f in (world.root / "1-2").iterdir():
+        f.unlink()
+    (world.root / "1-2").rmdir()
+    vanishing(monkeypatch, NAMED)
+    win.open_choice(edge)  # … and chosen before the list followed
+    assert len(win.errors) == 1 and win.errors[0]
+    (s,) = win.built
+    assert s is win.session and s.storage.label.startswith(NUMERIC)
+
+
+def test_a_quick_unplug_and_plug_in_makes_one_detection(choosing_window, monkeypatch):
+    """B7: a drive on the list is unplugged and plugged in again at once: one detection, the
+    same two rows, nothing opened."""
+    from openexpress.gui.app import MainWindow
+
+    win = choosing_window
+    first, second = win.world.drive(), another_drive(win.world, 3000000004)
+    monitor_with(monkeypatch, first, second)
+    win.refresh_device()
+    MainWindow._on_mount_removed(win, None, second)
+    MainWindow._on_mount_added(win, None, second)
+    assert len(win.timers.live) == 1  # one timer, moved by the second event
+    win.timers.fire()
+    assert win.shown_choices == [[("ums", "Varia RTL515"), ("ums", "Varia RTL515")]] * 2
+    assert win.session is None and win.built == []
+
+
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file

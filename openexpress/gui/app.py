@@ -35,6 +35,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     PRESENT,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
+    NotThereYet,
     SeveralDevices,
     distinct_devices,
     find_all_devices,
@@ -327,18 +328,26 @@ def detect_devices(current_uri: str | None = None):
                       and f.uri.rstrip("/") == current_uri.rstrip("/")), None)
         if again is not None:
             return service.check_session(service.open_session(found=again))
-        summaries = distinct_devices([probe(f) for f in found])
-        if len(summaries) > 1:
-            return DeviceChoices(summaries)
+        return _choose(found)
     try:
         return service.check_session(service.open_session(allow_ums=True))
     except SeveralDevices as e:
         if not e.devices:
             raise
-        left = distinct_devices([probe(f) for f in e.devices])
-        if len(left) == 1:  # one device found in two ways: no choice to make
-            return service.check_session(service.open_session(found=left[0].found))
+        return _choose(e.devices)
+
+
+def _choose(found: list):
+    """The list of these devices, one entry each, without those gone since they were found;
+    with one left, that one opened (D7); with none, no device."""
+    left = [s for s in distinct_devices([probe(f) for f in found])
+            if s.ok or s.found.usb is None or s.found.usb.bus is None
+            or usb_still_there(s.found.usb)]  # no details, and no longer on USB: gone
+    if len(left) > 1:
         return DeviceChoices(left)
+    if left:  # also one device found in two ways: no choice to make
+        return service.check_session(service.open_session(found=left[0].found))
+    raise NotThereYet(not_ready_text(ABSENT))
 
 
 def show_not_for_mass_storage(sec) -> None:
