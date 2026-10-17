@@ -282,3 +282,35 @@ def test_forget_a_number_not_on_the_list(store, utc, capsys, number):
     assert capsys.readouterr().err.strip() == (
         f"Error: There is no device number {number} on the list (it has 2).")
     assert set(known_devices.load()) == {FENIX, 3000000003}
+
+
+# --- the kind of a device (T5.1) ---------------------------------------------------------------
+
+
+def test_the_kind_is_kept_and_optional(store, caplog):
+    """The kind is an optional field: a file without it is read as before (no kind), a
+    device without a kind is written without the field; set_category keeps it, a device
+    seen again keeps it, an unknown value counts as none. The log names the part number."""
+    import json
+
+    from openexpress import known_devices
+
+    store.parent.mkdir(parents=True)
+    store.write_text(json.dumps({"version": 1, "devices": {str(EDGE): {
+        "description": "Edge 1050", "part_number": "006-B4440-00", "software_version": "33.11",
+        "kind": "mtp", "first_seen": 1.0, "last_seen": 1.0}}}))
+    assert known_devices.load()[EDGE].category is None
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=2.0)
+    assert "category" not in json.loads(store.read_text())["devices"][str(FENIX)]
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert known_devices.set_category(EDGE, "cycling-computer") is True
+    assert "devices: 006-B4440-00 is a cycling-computer" in caplog.text
+    assert str(EDGE) not in caplog.text
+    assert known_devices.set_category(EDGE, "cycling-computer") is False  # no change
+    assert known_devices.set_category(3000000009, "watch") is False  # not remembered
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.12", "mtp", now=3.0)
+    assert known_devices.load()[EDGE].category == "cycling-computer"
+    data = json.loads(store.read_text())
+    data["devices"][str(EDGE)]["category"] = "toaster"
+    store.write_text(json.dumps(data))
+    assert known_devices.load()[EDGE].category is None

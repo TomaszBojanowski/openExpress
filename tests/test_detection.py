@@ -4380,3 +4380,184 @@ def test_the_picture_goes_into_the_tile_that_is_there():
                 (tile("Venu 2", "006-B3703-00", connected=False), "z"),
                 (tile("fēnix 8 (2)", "006-B4532-00", connected=False), "w")], False)
     assert tile_image(start.tiles()[2]).get_paintable() is texture
+
+
+# --- the kind of a device on its tile (D5, T5.1) -----------------------------------------------
+
+
+def test_unit_info_read_for_the_picture_tells_a_bike_accessory(monkeypatch):
+    """The device view asks unit-info for the picture of a device not on the account (as
+    before); its segmenttype bikeaccessory is kept as the device's kind. One request, the
+    same as before; another segment teaches nothing."""
+    from openexpress import known_devices
+    from openexpress.gui.app import picture_from_unit_info
+
+    known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=1.0)
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
+    asked = []
+
+    class Client:
+        def __init__(self, segment):
+            self.segment = segment
+
+        def unit_info(self, unit_id, part_number):
+            asked.append(part_number)
+            return {"graphicurl": "https://res.garmin.com/x.png", "segmenttype": self.segment}
+
+    varia = types.SimpleNamespace(unit_id=VARIA, part_number="006-B3592-03")
+    venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
+    assert picture_from_unit_info(Client("bikeaccessory"), varia) == (
+        "https://res.garmin.com/x.png")
+    assert picture_from_unit_info(Client("fitness"), venu) == "https://res.garmin.com/x.png"
+    assert asked == ["006-B3592-03", "006-B3703-00"]
+    known = known_devices.load()
+    assert known[VARIA].category == "bike-accessory" and known[VENU].category is None
+
+
+def test_the_account_list_keeps_the_kind_of_a_remembered_device(start_window, monkeypatch):
+    """The account's list read for the start page keeps the kinds it tells of remembered
+    devices (the Edge is a cycling computer), for when there is no account."""
+    from openexpress import known_devices
+    from openexpress.connect import lower_keys
+
+    class WithKinds(FakeAccountClient):
+        def account_devices(self):
+            listed = lower_keys(ACCOUNT_LIST)
+            listed[0]["devicecategories"] = ["FITNESS", "DEDICATED_BIKE_COMPUTER"]
+            return listed
+
+    win = start_window
+    later = defer_background(win)
+    known_devices.remember(3000000002, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    with_account(monkeypatch, WithKinds())
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    run_later(later)
+    assert known_devices.load()[3000000002].category == "cycling-computer"
+
+
+def test_tiles_without_a_picture_ask_nothing(start_window, monkeypatch):
+    """Tiles whose devices have no picture: the icon of their kind, and nothing is asked
+    (no unit-info, no download)."""
+    import time
+
+    from openexpress.gui import app
+
+    def asked(*_a, **_k):
+        raise AssertionError("asked for a tile")
+
+    win = start_window
+    later = defer_background(win)
+    fakes = fake_pictures(monkeypatch)
+    monkeypatch.setattr(app, "picture_from_unit_info", asked)
+    remember_others(time.time())
+    nothing_connected(win, monkeypatch)
+    run_later(later)
+    assert fakes.downloads == [] and win.start.pictures == []
+
+
+@pytest.mark.needs_display
+def test_a_tile_without_a_picture_shows_the_icon_of_its_kind():
+    """The icon of the kind of the device (a watch, a cycling computer, a bike accessory);
+    without a kind a neutral one, never the watch; a picture before both. A kind learnt
+    later changes the icon in the tile that is there."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.app import Gdk, GLib
+    from openexpress.gui.start import DEVICE_ICON, KIND_ICONS, StartPage, tile_image
+
+    def tile(name, part, category, connected=True):
+        return Tile(name, part, "1.00", "mtp", connected, False, False,
+                    None if connected else 1.0, part, None, category)
+
+    start = StartPage()
+    start.show([(tile("Edge 1050", "006-B4440-00", "cycling-computer"), "a"),
+                (tile("fēnix 8", "006-B4532-00", "watch"), "b"),
+                (tile("Varia RTL515", "006-B3592-03", "bike-accessory", False), "c"),
+                (tile("Venu 2", "006-B3703-00", None, False), "d")], False)
+    icons = [tile_image(child).get_icon_name() for child in start.tiles()]
+    assert icons == [KIND_ICONS["cycling-computer"], KIND_ICONS["watch"],
+                     KIND_ICONS["bike-accessory"], DEVICE_ICON]
+    assert len(set(icons)) == 4 and KIND_ICONS["watch"] not in (icons[0], icons[2], icons[3])
+    texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
+                                    12)
+    start.set_picture("006-B4532-00", texture)
+    before = start.tiles()
+    start.show([(tile("Edge 1050", "006-B4440-00", "cycling-computer"), "a"),
+                (tile("fēnix 8", "006-B4532-00", "watch"), "b"),
+                (tile("Varia RTL515", "006-B3592-03", "bike-accessory", False), "c"),
+                (tile("Venu 2", "006-B3703-00", "watch", False), "d")], False)
+    assert start.tiles() == before  # the same widgets
+    assert tile_image(before[1]).get_paintable() is texture  # the picture first
+    assert tile_image(before[3]).get_icon_name() == KIND_ICONS["watch"]  # learnt later
+
+
+def test_the_icons_of_the_kinds_are_there():
+    """The icons are files of the program, symbolic, made of shapes (GTK fills every shape
+    of a symbolic icon: a stroke would come out solid) by tools/symbolic-icons.py from their
+    line drawings in packaging/icons; the Flatpak installs them."""
+    from openexpress.gui.start import DEVICE_ICON, KIND_ICONS
+
+    root = Path(__file__).parent.parent
+    manifest = (root / "packaging" / "flatpak"
+                / "io.github.tomaszbojanowski.OpenExpress.yml").read_text()
+    for kind, name in (*KIND_ICONS.items(), ("device", DEVICE_ICON)):
+        assert name.endswith(f"-{kind}-symbolic")
+        icon = (root / "openexpress" / "data" / f"{name}.svg").read_text()
+        assert "stroke" not in icon and f"packaging/icons/{kind}.svg" in icon
+        assert 'stroke="currentColor"' in (root / "packaging" / "icons" / f"{kind}.svg").read_text()
+        assert f"{name}.svg" in manifest.replace("${FLATPAK_ID}",
+                                                 "io.github.tomaszbojanowski.OpenExpress")
+
+
+@pytest.mark.needs_display
+def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
+    """With the folder of the program on the icon theme's search path (as App.do_startup
+    adds it), each icon is found (no "missing image" in place of a kind) and is drawn in the
+    colour of the theme: readable in the light and the dark one."""
+    from gi.repository import Graphene, Gsk
+
+    from openexpress.gui.app import Gdk, Gtk
+    from openexpress.gui.start import DEVICE_ICON, KIND_ICONS
+
+    display = Gdk.Display.get_default()
+    theme = Gtk.IconTheme.get_for_display(display)
+    theme.add_search_path(str(Path(__file__).parent.parent / "openexpress" / "data"))
+    renderer = Gsk.CairoRenderer()
+    renderer.realize_for_display(display)
+
+    def drawn(name, colour):
+        """The icon at 96 px, drawn as symbolic in this colour: its RGBA bytes."""
+        rgba = Gdk.RGBA()
+        rgba.parse(colour)
+        snapshot = Gtk.Snapshot()
+        theme.lookup_icon(name, None, 96, 1, Gtk.TextDirection.NONE, 0).snapshot_symbolic(
+            snapshot, 96, 96, [rgba])
+        texture = renderer.render_texture(snapshot.to_node(),
+                                          Graphene.Rect().init(0, 0, 96, 96))
+        downloader = Gdk.TextureDownloader.new(texture)
+        downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
+        return downloader.download_bytes()[0].get_data()
+
+    def painted(raw, x, y):
+        """Whether the point (x, y) of the drawing (viewBox -30..30) is painted."""
+        px, py = round((x + 30) / 60 * 96), round((y + 30) / 60 * 96)
+        return raw[(py * 96 + px) * 4 + 3] > 128
+
+    # A point on a line of each drawing, and one inside an outline (empty: a line drawing,
+    # not a solid shape).
+    points = {"watch": ((17, 0), (-8, 5)), "cycling-computer": ((15, 0), (0, -5)),
+              "bike-accessory": ((8, 15), (0, 20)), "device": ((14, 0), (7, 7))}
+    try:
+        for kind, name in (*KIND_ICONS.items(), ("device", DEVICE_ICON)):
+            assert theme.has_icon(name), name
+            light, dark = drawn(name, "#ffffff"), drawn(name, "#202020")
+            # Light on a dark theme, dark on a light one (GTK draws a symbolic icon as a
+            # mask in the colour it is given).
+            assert {light[i] for i in range(0, len(light), 4) if light[i + 3] > 128} == {255}
+            assert max(dark[i] for i in range(0, len(dark), 4) if dark[i + 3] > 128) <= 0x30
+            on_line, inside = points[kind]
+            assert not painted(light, *inside), (name, "drawn solid, not as lines")
+            assert painted(light, *on_line), (name, "the line is missing")
+    finally:
+        renderer.unrealize()

@@ -16,9 +16,19 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 from openexpress import devicelist  # noqa: E402
 from openexpress.devicelist import CONNECTED, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.i18n import _, pgettext  # noqa: E402
+from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
+# The icon of a tile without a picture, by the kind of the device (the files in data/,
+# symbolic: in the colours of the light or dark theme); without a kind a neutral one, so
+# that a device of an unknown kind never looks like a watch.
+KIND_ICONS = {
+    WATCH: f"{APP_ID}-watch-symbolic",
+    CYCLING_COMPUTER: f"{APP_ID}-cycling-computer-symbolic",
+    BIKE_ACCESSORY: f"{APP_ID}-bike-accessory-symbolic",
+}
+DEVICE_ICON = f"{APP_ID}-device-symbolic"
 TILE_WIDTH = 200
 # A longer text wraps instead of widening its tile (so that tiles share a line).
 TEXT_CHARS = 40
@@ -171,6 +181,12 @@ class StartPage:
                 for tile, how in part:
                     grid.append(tile_widget(tile, how,
                                             self._pictures.get(tile.image_part_number)))
+            else:  # the same tiles: a kind learnt since changes the icon there
+                child = grid.get_first_child()
+                for tile, _how in part:
+                    if not child.has_picture:
+                        tile_image(child).set_from_icon_name(kind_icon(tile.category))
+                    child = child.get_next_sibling()
             title.set_visible(bool(part))
             grid.set_visible(bool(part))
         self.stack.set_visible_child_name("content")
@@ -184,6 +200,7 @@ class StartPage:
             while child is not None:
                 if getattr(child, "part_number", None) == part_number:
                     tile_image(child).set_from_paintable(texture)
+                    child.has_picture = True
                 child = child.get_next_sibling()
 
     def tiles(self) -> list:
@@ -273,13 +290,17 @@ def tile_image(child: Gtk.FlowBoxChild) -> Gtk.Image:
     return child.get_child().get_first_child()
 
 
+def kind_icon(category) -> str:
+    return KIND_ICONS.get(category, DEVICE_ICON)
+
+
 def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
-    """One tile: the picture of the device if it is known, else the icon (the picture is
-    put in its place later, in the same size), the name, how it is connected and its
-    version; framed when connected."""
+    """One tile: the picture of the device if it is known, else the icon of its kind (the
+    picture is put in its place later, in the same size), the name, how it is connected and
+    its version; framed when connected."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
-    image = Gtk.Image(icon_name=APP_ID, pixel_size=TILE_ICON_SIZE)
+    image = Gtk.Image(icon_name=kind_icon(tile.category), pixel_size=TILE_ICON_SIZE)
     if picture is not None:
         image.set_from_paintable(picture)
     box.append(image)
@@ -295,6 +316,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, width_request=TILE_WIDTH)
     child.part_number = tile.image_part_number  # which picture goes into it
+    child.has_picture = picture is not None
     child.add_css_class("card")
     child.add_css_class("oe-tile")
     if tile.connected:

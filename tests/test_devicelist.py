@@ -162,7 +162,7 @@ def test_fields_of_a_device_not_connected_come_from_the_memory_first():
     edge = by_name(devicelist.tiles([], remembered(EDGE_SEEN), account(),
                                     logged_in=True))["Edge 1050 (remembered)"]
     assert (edge.software_version, edge.kind, edge.last_seen) == ("33.11", "mtp", NOW - DAY)
-    assert (edge.on_account, edge.primary, edge.category) == (True, False, "bike_computer")
+    assert (edge.on_account, edge.primary, edge.category) == (True, False, "cycling-computer")
     assert edge.image_url.endswith("/010-02890-01/V/c1_01_md.png")
 
 
@@ -177,7 +177,7 @@ def test_a_device_only_on_the_account():
         "kind": None, "connected": False, "on_account": True, "primary": False,
         "last_seen": None, "image_part_number": "006-B4440-00",
         "image_url": "https://res.garmin.com/en/products/010-02890-01/V/c1_01_md.png",
-        "category": "bike_computer"}
+        "category": "cycling-computer"}
 
 
 def test_a_device_not_on_the_account_has_no_account_fields():
@@ -336,3 +336,56 @@ def test_a_tile_only_on_the_account_comes_with_its_entry():
     tile, source = entries[-1]
     assert tile.description == "Forerunner 965" and source is answer[2]
     assert str(FORERUNNER) not in repr(tile)
+
+
+# --- the kind of a device (T5.1) -----------------------------------------------------------------
+
+
+def test_the_kind_of_a_device_comes_from_garmin_only():
+    """T5.1, from what Garmin says only: a cycling computer by the account's category
+    DEDICATED_BIKE_COMPUTER, a watch by the account's hasOpticalHeartRate, a bike accessory as
+    remembered (from unit-info's segmenttype); anything else none (the neutral icon). Never
+    by the name: a remembered "Edge 1050" not on the account stays without a kind."""
+    from openexpress import devicelist
+    from openexpress.known_devices import KnownDevice
+
+    answer = account([{**ACCOUNT_ANSWER[0]}, {**ACCOUNT_ANSWER[1], "hasOpticalHeartRate": True},
+                      {"unitId": FORERUNNER, "productDisplayName": "Index S2",
+                       "partNumber": "006-B0000-01", "hasOpticalHeartRate": False,
+                       "deviceCategories": ["WELLNESS"]}])
+    varia = KnownDevice(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", 1.0, 2.0,
+                        category="bike-accessory")
+    venu = KnownDevice(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", 1.0, 3.0)
+    kinds = {t.description: t.category for t in devicelist.tiles(
+        [], {VARIA: varia, VENU: venu}, answer, logged_in=True)}
+    assert kinds == {"Edge 1050": "cycling-computer", "fenix 8 - 47mm, Solar": "watch",
+                     "Index S2": None, "Varia RTL515": "bike-accessory", "Venu 2": None}
+    edge_by_name = KnownDevice(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", 1.0, 4.0)
+    (tile,) = devicelist.tiles([], {EDGE: edge_by_name}, None, logged_in=False)
+    assert tile.category is None
+
+
+def test_the_account_tells_the_kind_before_what_is_remembered():
+    """The account's word on a device counts first; what is remembered serves without it
+    (offline, logged out)."""
+    from openexpress import devicelist
+    from openexpress.known_devices import KnownDevice
+
+    edge = KnownDevice(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", 1.0, 4.0,
+                       category="watch")
+    (tile, _fenix) = devicelist.tiles([], {EDGE: edge}, account(), logged_in=True)
+    assert tile.category == "cycling-computer"
+    (tile,) = devicelist.tiles([], {EDGE: edge}, None, logged_in=False)
+    assert tile.category == "watch"
+
+
+def test_the_account_list_teaches_the_kind_of_remembered_devices(tmp_path):
+    """The kinds the account tells are kept in devices.json for the devices remembered, so
+    that they are known offline; never for a device that is not remembered."""
+    from openexpress import devicelist, known_devices
+
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    devicelist.remember_kinds(account([{**ACCOUNT_ANSWER[0]},
+                                       {**ACCOUNT_ANSWER[1], "hasOpticalHeartRate": True}]))
+    known = known_devices.load()
+    assert set(known) == {EDGE} and known[EDGE].category == "cycling-computer"

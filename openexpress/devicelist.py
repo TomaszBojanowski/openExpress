@@ -12,7 +12,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from openexpress import known_devices
 from openexpress.device.gio_storage import distinct_devices
+from openexpress.known_devices import CYCLING_COMPUTER, WATCH
 from openexpress.service import _unit_id
 
 log = logging.getLogger(__name__)
@@ -21,10 +23,6 @@ log = logging.getLogger(__name__)
 # only on the Garmin account (never seen here).
 CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
 
-# The kinds of device known without asking a server; None: not known.
-BIKE_COMPUTER = "bike_computer"
-# The account's deviceCategories that tell a kind, the first match wins.
-CATEGORIES = (("DEDICATED_BIKE_COMPUTER", BIKE_COMPUTER),)
 
 
 @dataclass(frozen=True)
@@ -116,7 +114,9 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         last_seen=known.last_seen if known else None,
         image_part_number=part,
         image_url=account["image_url"] if account else None,
-        category=account["category"] if account else None,
+        # The account's word first, else what is remembered (also offline).
+        category=(account["category"] if account else None) or (
+            known.category if known else None),
     )
 
 
@@ -137,11 +137,28 @@ def account_fields(entry: dict) -> dict:
 
     categories = entry.get("devicecategories")
     categories = categories if isinstance(categories, list) else []
+    if "DEDICATED_BIKE_COMPUTER" in categories:
+        category = CYCLING_COMPUTER
+    elif entry.get("hasopticalheartrate") is True:  # worn on the wrist
+        category = WATCH
+    else:
+        category = None
     return {
         "description": text("productdisplayname") or text("displayname"),
         "part_number": text("partnumber"),
         "software_version": text("currentfirmwareversion"),
         "primary": entry.get("primaryactivitytrackerindicator") is True,
         "image_url": text("imageurl") or None,
-        "category": next((kind for name, kind in CATEGORIES if name in categories), None),
+        "category": category,
     }
+
+
+def remember_kinds(account) -> None:
+    """Keep the kinds the account tells of the devices remembered here (devices.json), so
+    that they are known offline; a device that is not remembered gets no entry."""
+    remembered = known_devices.load()
+    for entry in account or []:
+        unit_id = _unit_id(entry.get("unitid"))
+        category = account_fields(entry)["category"]
+        if unit_id in remembered and category is not None:
+            known_devices.set_category(unit_id, category)

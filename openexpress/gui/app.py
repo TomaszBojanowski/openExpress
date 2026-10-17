@@ -188,8 +188,18 @@ def picture_from_unit_info(client, device) -> str | None:
     except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
         log.info("device picture: unit-info failed (%s)", type(e).__name__)
         return None
+    note_segment(device, info)
     url = info.get("graphicurl") if isinstance(info, dict) else None
     return url if isinstance(url, str) and url else None
+
+
+def note_segment(device, info) -> None:
+    """Keep the kind Garmin's update server tells in an answer the window asked for anyway
+    (for a picture, after an update): a bike accessory (e.g. a Varia). Only this field is
+    read; never another request for it."""
+    segment = info.get("segmenttype") if isinstance(info, dict) else None
+    if isinstance(segment, str) and segment.casefold() == "bikeaccessory":
+        known_devices.set_category(device.unit_id, known_devices.BIKE_ACCESSORY)
 
 
 def is_bike_accessory(client, device) -> bool:
@@ -201,6 +211,7 @@ def is_bike_accessory(client, device) -> bool:
     except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
         log.info("software update: unit-info failed (%s)", type(e).__name__)
         return False
+    note_segment(device, info)
     segment = info.get("segmenttype") if isinstance(info, dict) else None
     return isinstance(segment, str) and segment.casefold() == "bikeaccessory"
 
@@ -1478,6 +1489,9 @@ class MainWindow(Adw.ApplicationWindow):
         if devices == self._account:
             return
         self._account = devices
+        if devices:
+            # The kinds it tells of the devices remembered, kept for when it is not there.
+            self.in_background(lambda: devicelist.remember_kinds(devices), lambda _r: None)
         if self._on_start_page():
             self._render_start()
 

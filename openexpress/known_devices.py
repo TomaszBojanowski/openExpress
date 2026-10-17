@@ -26,6 +26,10 @@ FILE_NAME = "devices.json"
 # line and the background service never write over each other's entries.
 LOCK_NAME = "devices.lock"
 FORMAT = 1
+# The kinds of device, as Garmin tells them (never guessed from a name): kept so that the start
+# page knows them offline. An optional field: files without it are read as before.
+WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY = "watch", "cycling-computer", "bike-accessory"
+CATEGORIES = (WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY)
 
 
 @dataclass
@@ -37,6 +41,7 @@ class KnownDevice:
     kind: str  # "mtp", or "ums" for a Garmin device in mass storage mode
     first_seen: float
     last_seen: float
+    category: str | None = None  # one of CATEGORIES; None: not known
 
 
 def path() -> Path:
@@ -62,7 +67,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
         now = time.time() if now is None else now
         old = known.get(unit_id)
         entry = KnownDevice(unit_id, description, part_number, software_version, kind,
-                            old.first_seen if old is not None else now, now)
+                            old.first_seen if old is not None else now, now,
+                            old.category if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -81,6 +87,22 @@ def seen(unit_id: int, description: str, part_number: str, software_version: str
         remember(unit_id, description, part_number, software_version, kind)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: not remembered (%s)", type(e).__name__)
+
+
+def set_category(unit_id: int, category: str) -> bool:
+    """Keep the kind of a device remembered (as Garmin told it); whether it changed. A
+    device that is not remembered gets no entry for it."""
+    if category not in CATEGORIES:
+        return False
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable or entry.category == category:
+            return False
+        entry.category = category
+        _write(known)
+    log.info("devices: %s is a %s", entry.part_number, category)
+    return True
 
 
 def forget(unit_id: int) -> bool:
@@ -124,9 +146,11 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
         data = json.loads(text)
         known = {}
         for key, value in data["devices"].items():
+            category = value.get("category")
             entry = KnownDevice(int(key), str(value["description"]), str(value["part_number"]),
                                 str(value["software_version"]), str(value["kind"]),
-                                float(value["first_seen"]), float(value["last_seen"]))
+                                float(value["first_seen"]), float(value["last_seen"]),
+                                category if category in CATEGORIES else None)
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -140,6 +164,8 @@ def _write(known: dict[int, KnownDevice]) -> None:
     for unit_id, entry in sorted(known.items()):
         fields = asdict(entry)
         del fields["unit_id"]  # it is the key
+        if fields["category"] is None:
+            del fields["category"]  # optional: written only when known
         devices[str(unit_id)] = fields
     paths.write_private(path(), json.dumps({"version": FORMAT, "devices": devices}, indent=1,
                                            ensure_ascii=False))
