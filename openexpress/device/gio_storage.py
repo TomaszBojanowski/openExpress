@@ -544,6 +544,13 @@ def find_ums_devices() -> list[FoundDevice]:
     return found
 
 
+def find_all_devices() -> list[FoundDevice]:
+    """Every Garmin device found, MTP devices first, then Garmin drives (`kind` tells them
+    apart), for a list to choose from. Nothing is opened or mounted and no GarminDevice.xml
+    is read: for a drive only the folder listings on the way to that file."""
+    return [*find_devices(), *find_ums_devices()]
+
+
 def open_ums_storage(dev: FoundDevice) -> UmsStorage:
     """The storage of a Garmin device in mass storage mode that find_ums_devices found."""
     path = Gio.File.new_for_uri(dev.uri).get_path()

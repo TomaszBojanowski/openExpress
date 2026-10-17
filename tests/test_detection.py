@@ -1119,6 +1119,42 @@ def test_several_garmin_drives_come_with_the_drives_found(watch_and_drives, monk
         ("ums", first.root.get_uri(), "091e:20ee"), ("ums", second.root.get_uri(), "091e:20ee")]
 
 
+def found_list():
+    """What find_all_devices gives: kind, address and USB id of each device."""
+    return [(d.kind, d.uri, d.usb.usb_id if d.usb else None)
+            for d in gio_storage.find_all_devices()]
+
+
+def test_all_devices_with_an_mtp_device_alone(watch_and_drives, monkeypatch):
+    """K2: one MTP device, no drive: one entry of kind mtp."""
+    monitor_with(monkeypatch)
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    assert found_list() == [("mtp", NUMERIC, "091e:51b4")]
+
+
+def test_all_devices_with_a_garmin_drive_alone(watch_and_drives, monkeypatch):
+    """K2: one Garmin drive, no MTP device: one entry of kind ums."""
+    drive = watch_and_drives.drive()
+    monitor_with(monkeypatch, drive)
+    assert found_list() == [("ums", drive.root.get_uri(), "091e:20ee")]
+
+
+def test_all_devices_lists_an_mtp_device_and_a_garmin_drive(watch_and_drives, monkeypatch):
+    """K2: both at once are both listed (opening one still puts MTP first, D1); nothing is
+    opened and no GarminDevice.xml is read for the list."""
+    drive = watch_and_drives.drive()
+    monitor_with(monkeypatch, drive)
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    read = []
+    monkeypatch.setattr(gio_storage.LocalStorage, "read",
+                        lambda self, path: read.append(path) or b"")
+    assert found_list() == [("mtp", NUMERIC, "091e:51b4"),
+                            ("ums", drive.root.get_uri(), "091e:20ee")]
+    assert read == [] and watch_and_drives.opened == []
+
+
 def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     """watch.on_mount stays with garmin_usb (MTP): a drive starts no sync."""
     from openexpress import watch
