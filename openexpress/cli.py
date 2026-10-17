@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-from openexpress import __version__, applog, i18n, paths
+from openexpress import __version__, applog, i18n, known_devices, paths
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError,
@@ -66,6 +66,9 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     st = open_storage(args)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(dev)
+    if not args.path:  # a device found now; a folder given with --path may be a copy
+        known_devices.seen(dev.unit_id, dev.description, dev.part_number,
+                           dev.software_version_str, "ums" if st.mass_storage else "mtp")
     return st, dev
 
 

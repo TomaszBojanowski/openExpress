@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from openexpress import applog, paths, sync
+from openexpress import applog, known_devices, paths, sync
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError,
@@ -84,6 +84,7 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
     """A session on the connected device: MTP alone, unless `allow_ums` (the window) also
     lets a Garmin device in mass storage mode be opened. `found`: the device chosen from
     find_all_devices, of whatever kind."""
+    detected = storage is None  # a device found now, not a folder handed in (a copy, a test)
     if storage is None and found is not None:
         storage = _open_found(found)
     if storage is None:
@@ -93,6 +94,9 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
                    else open_device_storage(device_uri))
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(device)
+    if detected:
+        known_devices.seen(device.unit_id, device.description, device.part_number,
+                           device.software_version_str, "ums" if storage.mass_storage else "mtp")
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 

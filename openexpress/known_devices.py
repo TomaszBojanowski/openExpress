@@ -65,6 +65,19 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
     return entry
 
 
+def seen(unit_id: int, description: str, part_number: str, software_version: str,
+         kind: str) -> None:
+    """remember() for the detection: a device without a unit ID (no <Id>) is not remembered,
+    and a failure (e.g. a full disk) is only written to the log: remembering a device never
+    stops it from opening."""
+    if not unit_id:
+        return
+    try:
+        remember(unit_id, description, part_number, software_version, kind)
+    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
+        log.warning("devices: not remembered (%s)", type(e).__name__)
+
+
 def forget(unit_id: int) -> bool:
     """Remove the entry of this device; whether there was one. Nothing else is deleted."""
     with _locked():

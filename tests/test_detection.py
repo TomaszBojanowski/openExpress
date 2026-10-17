@@ -2179,6 +2179,111 @@ def test_devices_on_and_off_the_account_are_both_listed(choosing_window, monkeyp
     assert asked == []
 
 
+# --- the devices seen go to devices.json (start page, D3) -------------------------------------
+
+
+def remembered():
+    """What devices.json holds: unit ID → (kind, name, part number, version)."""
+    from openexpress import known_devices
+
+    return {uid: (d.kind, d.description, d.part_number, d.software_version)
+            for uid, d in known_devices.load().items()}
+
+
+def test_opening_an_mtp_device_remembers_it(watch_and_drives, monkeypatch):
+    """D3: a session on an MTP device (window, background service): its entry is written."""
+    from openexpress import service
+
+    monitor_with(monkeypatch)
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    service.open_session(allow_ums=True)
+    assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39")}
+
+
+def test_opening_a_garmin_drive_remembers_it(watch_and_drives, monkeypatch):
+    """D3: the same for a Garmin drive, of kind ums."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    service.open_session(allow_ums=True)
+    assert remembered() == {3000000003: ("ums", "Varia RTL515", "006-B3592-03", "3.36")}
+
+
+def test_the_command_line_remembers_a_device_but_not_a_folder(watch_and_drives, monkeypatch,
+                                                              device_root):
+    """D3: the command line opens devices without open_session; a device found is
+    remembered, a folder given with --path (e.g. a copy) is not."""
+    import types
+
+    from openexpress import cli
+
+    monitor_with(monkeypatch)
+    args = types.SimpleNamespace(path=str(device_root), device_uri=None, no_wait=True,
+                                 apply=False, cmd="info")
+    cli.open_device(args)
+    assert remembered() == {}
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    cli.open_device(types.SimpleNamespace(**{**vars(args), "path": None}))
+    assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39")}
+
+
+def test_the_list_remembers_each_device_with_details(choosing_window, monkeypatch, tmp_path,
+                                                     device_root):
+    """D3: the list to choose from remembers every entry whose GarminDevice.xml was read,
+    before anything is chosen."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.session is None and len(win._choices) == 2
+    assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39"),
+                            3000000002: ("mtp", "Edge 1050", "006-B4440-00", "33.11")}
+
+
+def test_an_entry_without_details_is_not_remembered(choosing_window, monkeypatch, tmp_path,
+                                                    device_root):
+    """D3: an Edge whose volume is not mounted has no unit ID read: only the test watch is
+    remembered."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    edge.mounted = False
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")
+    win.refresh_device()
+    assert len(win._choices) == 2
+    assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39")}
+
+
+def test_a_failed_remembering_does_not_stop_the_detection(choosing_window, monkeypatch,
+                                                          tmp_path, device_root, caplog):
+    """D3: devices.json cannot be written (e.g. the disk is full): said in the log; the device
+    opens all the same, and the list is shown all the same."""
+    import errno
+
+    from openexpress import paths, service
+    from openexpress.settings import Settings
+
+    def full(path, data):
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    Settings.load()  # writes settings.json on a new profile: before the disk is "full"
+    monkeypatch.setattr(paths, "write_private", full)
+    monitor_with(monkeypatch)
+    watch_and_drives = choosing_window.world
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        s = service.open_session(allow_ums=True)
+        two_watches(watch_and_drives, monkeypatch, tmp_path, device_root)
+        choosing_window.refresh_device()
+    assert s.device.description == "Test watch"
+    assert len(choosing_window._choices) == 2
+    assert "devices: not remembered (OSError)" in caplog.text
+    assert remembered() == {}
+
+
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file

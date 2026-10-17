@@ -23,7 +23,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import cache, i18n, netstatus, paths, service  # noqa: E402
+from openexpress import cache, i18n, known_devices, netstatus, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
@@ -342,7 +342,12 @@ def detect_devices(current_uri: str | None = None):
 def _choose(found: list):
     """The list of these devices, one entry each, without those gone since they were found;
     with one left, that one opened (D7); with none, no device."""
-    left = [s for s in distinct_devices([probe(f) for f in found])
+    summaries = distinct_devices([probe(f) for f in found])
+    for s in summaries:
+        if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
+            known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
+                               s.found.kind)
+    left = [s for s in summaries
             if s.ok or s.found.usb is None or s.found.usb.bus is None
             or usb_still_there(s.found.usb)]  # no details, and no longer on USB: gone
     if len(left) > 1:
