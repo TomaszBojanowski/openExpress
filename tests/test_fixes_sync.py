@@ -359,6 +359,34 @@ def test_watcher_does_nothing_with_several_devices(monkeypatch, caplog):
         "Not syncing: several devices are connected"]
 
 
+def test_watcher_stops_when_a_second_device_comes_while_it_waits(monkeypatch, caplog):
+    """E14 (P4): the first try finds one device that is not ready; by the next one a second
+    device is connected (SeveralDevices): no more tries, nothing synced, no notification,
+    one line in the log."""
+    from openexpress import watch
+    from openexpress.device.gio_storage import SeveralDevices
+
+    opened, shown = [], []
+
+    def open_session():
+        opened.append(1)
+        if len(opened) == 1:
+            raise DeviceError("not ready")  # one device, still on its way
+        raise SeveralDevices("Several devices connected, choose one with --device-uri: …")
+
+    monkeypatch.setattr(watch, "OPEN_RETRY_DELAY_S", 0)
+    monkeypatch.setattr(watch.service, "open_session", open_session)
+    monkeypatch.setattr(watch.service, "run_sync",
+                        lambda *a, **kw: pytest.fail("nothing may be synced"))
+    monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
+    w = watch.Watcher()
+    with caplog.at_level(logging.INFO, logger="openexpress.watch"):
+        w._sync()
+    assert opened == [1, 1] and shown == []
+    assert [r.getMessage() for r in caplog.records] == [
+        "Watch not ready, retrying in 0 s", "Not syncing: several devices are connected"]
+
+
 def test_upload_412_still_raises(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
