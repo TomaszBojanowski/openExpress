@@ -395,6 +395,22 @@ def session_summary(s) -> DeviceSummary:
 OPEN = "open"
 
 
+def resolve_account(win) -> None:
+    """After a detection: the account's devices for the start page from the device just
+    opened (its ownership check read them, also when it is not on the account), else, if
+    they are wanted, asked now."""
+    s = win.session
+    listed = getattr(s, "account_devices", None) if s is not None else None
+    if listed is None and s is not None:
+        listed = getattr(getattr(s, "ownership_error", None), "devices", None)
+    if listed is not None:
+        win._account_wanted = False
+        win._account = listed  # not asked again
+    elif getattr(win, "_account_wanted", False):
+        win._account_wanted = False
+        win._fetch_account()
+
+
 def account_client():
     """The client the start page asks for the account's devices: who is logged in now."""
     return service.make_client(Settings.load())
@@ -690,6 +706,7 @@ class MainWindow(Adw.ApplicationWindow):
         # The devices of the Garmin account (their entries, keys in lower case), read once
         # per start and login; None: not logged in, or not read.
         self._account: list | None = None
+        self._account_wanted = False  # wanted after the detection running now
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
@@ -734,8 +751,13 @@ class MainWindow(Adw.ApplicationWindow):
         self._choices: list | None = None
         self._choices_usb: list[str] | None = None
         GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
+        self._start()
+
+    def _start(self) -> None:
+        """What the window does as it opens: the detection, and the account's devices for
+        the start page, read once (from the device opened, if one is)."""
+        self._want_account()
         self.refresh_device()
-        self._fetch_account()
 
     # --- layout -----------------------------------------------------------------------
 
@@ -1339,6 +1361,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_banner()
         self._update_actions()
         self._connected = list(self._choices or [])
+        resolve_account(self)
         self._show_start()
 
     def open_choice(self, found) -> None:
@@ -1374,11 +1397,12 @@ class MainWindow(Adw.ApplicationWindow):
         again, nothing else (decision A); without one, a detection that stays there also when
         one device is found (decision 7). In the device view, as before."""
         on_start = self._on_start_page()
-        if on_start:
-            self._fetch_account()  # the start page lists the account's devices too
         if on_start and self.session is not None:
+            self._fetch_account()  # the start page lists the account's devices too
             self._reread_connected()
             return
+        if on_start:
+            self._want_account()  # from the device the detection opens, or asked after it
         self._stay_on_start = on_start
         self.refresh_device()
 
@@ -1427,6 +1451,12 @@ class MainWindow(Adw.ApplicationWindow):
             self._set_account(None)
 
         self.in_background(work, done, failed)
+
+    def _want_account(self) -> None:
+        """The account's devices are wanted once the detection that follows is done: the
+        device it opens has read them for its ownership check; with none opened they are
+        asked then (resolve_account). One request, never two at once."""
+        self._account_wanted = True
 
     def _set_account(self, devices) -> None:
         if devices == self._account:
@@ -1578,6 +1608,7 @@ class MainWindow(Adw.ApplicationWindow):
             # was opened (e.g. "starting" when the window opened with a starting device).
             self._poll_usb()
             self._connected = []
+            resolve_account(self)
             self._show_start()
             return
         page = self.pages.get_visible_child_name()
@@ -1591,9 +1622,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.load_section(page)
         if not any(self._is_open(c) for c in self._connected):
             self._connected = []  # the one device (D7): its tile comes from the session
-        account = getattr(self.session, "account_devices", None)
-        if account is not None:
-            self._account = account  # read by check_session: not asked again
+        resolve_account(self)
         self._show_device_view()
 
     def _update_banner(self) -> None:
@@ -2314,8 +2343,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast(_("Logged in as {account}").format(account=auth.display) if profile_ok
                            else _("Logged in, but the account details could not be loaded"))
                 self.session = None
+                self._want_account()
                 self.refresh_device()
-                self._fetch_account()
 
             def start():
                 if self.busy:

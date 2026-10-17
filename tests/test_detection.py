@@ -3328,7 +3328,8 @@ class FakeSection:
 START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
-                 "_set_account", "_show_account", "_last_sync_text", "logout")
+                 "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
+                 "_want_account")
 
 
 def start_stand_in(start, sections, win=None):
@@ -3351,7 +3352,7 @@ def start_stand_in(start, sections, win=None):
     win.toast = win.errors.append
     win._start_targets, win._stay_on_start, win._navigated = [], False, False
     win._connected, win._reopening, win._reread_pending = [], False, False
-    win._account = None
+    win._account, win._account_wanted = None, False
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -4126,3 +4127,101 @@ def test_the_account_section_adds_tiles_without_touching_the_others():
     after = start.tiles()
     assert after[0] is before[0] and after[1] is before[1] and len(after) == 3
     assert after[2].get_parent() is start.account_grid
+
+
+# --- the account's list asked once (after T4) ---------------------------------------------------
+
+
+def logged_in_everywhere(monkeypatch, more=()):
+    """Logged in for every client (the start page's and the one opening a device); each
+    request for the account's devices is counted and answered here, with the test watch on
+    the account. `more`: devices the account lists from the second answer on."""
+    from openexpress.auth import store
+    from openexpress.connect import GarminClient, lower_keys
+
+    asked, saved = [], [store.ConnectAuth("token", "secret")]
+
+    def load():
+        if not saved:
+            raise store.NotLoggedIn("logged out")
+        return saved[0]
+
+    monkeypatch.setattr(store, "load", load)
+    monkeypatch.setattr(store, "delete", saved.clear)  # logging out
+
+    def account_devices(client):
+        asked.append(1)
+        listed = [{"unitId": TEST_WATCH, "productDisplayName": "Test watch",
+                   "partNumber": "006-B0000-00"}, *ACCOUNT_LIST]
+        return lower_keys(listed + (list(more) if len(asked) > 1 else []))
+
+    monkeypatch.setattr(GarminClient, "account_devices", account_devices)
+    return asked
+
+
+def names_on_the_start_page(win):
+    return [name for name, _on in sections(win)[0]]
+
+
+def test_one_device_at_the_start_asks_the_account_once(start_window, monkeypatch):
+    """The window opens with one device connected and an account logged in: the device is
+    opened (D7), whose ownership check reads the account's list; the start page uses that
+    list instead of asking again. One request, and the section "On the account" as before."""
+    win = start_window
+    later = defer_background(win)
+    asked = logged_in_everywhere(monkeypatch)
+    one_watch(win, monkeypatch)
+    win._start()  # what the window does as it opens
+    run_later(later)
+    assert asked == [1]
+    assert win.session.account_devices is not None
+    assert win.navigation.stack == ["start page", "device view"]
+    back(win)
+    assert names_on_the_start_page(win) == ["Test watch", "Edge 1050", "Forerunner 965",
+                                            "Venu 2"]
+    assert [on for _n, on in sections(win)[0]] == [True, False, False, False]
+
+
+def test_refresh_on_the_start_page_opening_a_device_asks_once(start_window, monkeypatch):
+    """Refresh on the start page with no device open, one plugged in meanwhile: the
+    detection opens it (the start page stays, decision 7) and its check reads the account's
+    list: one request, not two."""
+    win = start_window
+    later = defer_background(win)
+    asked = logged_in_everywhere(monkeypatch)
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    assert asked == [1]
+    win.world.plug("51b4")
+    win.world.offer()
+    win._on_refresh()
+    run_later(later)
+    assert asked == [1, 1]
+    assert win.session is not None and win.navigation.stack == ["start page"]
+    assert names_on_the_start_page(win) == ["Test watch", "Edge 1050", "Forerunner 965",
+                                            "Venu 2"]
+
+
+def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeypatch):
+    """Guards T4: with a device open, Refresh on the start page asks the account once more
+    and shows what it says now; logging out removes its devices."""
+    win = start_window
+    later = defer_background(win)
+    asked = logged_in_everywhere(monkeypatch, more=[
+        {"unitId": 3000000007, "productDisplayName": "Instinct 3", "partNumber": ""}])
+    one_watch(win, monkeypatch)
+    win._start()
+    run_later(later)
+    back(win)
+    win._on_refresh()
+    run_later(later)
+    assert asked == [1, 1]
+    assert names_on_the_start_page(win) == ["Test watch", "Edge 1050", "Forerunner 965",
+                                            "Instinct 3", "Venu 2"]
+    win.logout()  # in the device view; the one device is opened again (D7)
+    run_later(later)
+    assert win.navigation.stack == ["start page", "device view"]
+    back(win)
+    assert names_on_the_start_page(win) == ["Test watch"]
+    assert asked == [1, 1]  # logged out: nothing asked

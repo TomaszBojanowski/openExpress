@@ -178,10 +178,12 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
                 _("Could not check whether this device belongs to your Garmin account "
                   "({error}). Nothing was synced.").format(error=e)) from e
         if unit_id not in {_unit_id(d.get("unitid")) for d in devices}:
-            raise NotAccountDevice(
+            refused = NotAccountDevice(
                 _("This device is not registered to your Garmin account. To use it with "
                   "Garmin Connect here, sign in to the account it belongs to or add the "
                   "device to your account in Garmin Connect."))
+            refused.devices = devices  # the account's list all the same (the start page)
+            raise refused
         verified = unit_id
         return devices
     finally:
