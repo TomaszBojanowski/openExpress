@@ -860,8 +860,9 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
     except Exception as e:  # noqa: BLE001 - the error may quote the file; only its kind
         log.debug("device: probe could not read GarminDevice.xml (%s)", type(e).__name__)
         return DeviceSummary(found, reason=UNREADABLE)
+    # Without <Id> the parser gives 0: no unit ID, never one to merge entries by.
     return DeviceSummary(found, device.description, device.part_number,
-                         device.software_version_str, device.unit_id)
+                         device.software_version_str, device.unit_id or None)
 
 
 # --- the device to ourselves, for PTP ----------------------------------------------------

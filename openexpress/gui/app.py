@@ -406,7 +406,13 @@ def detection_due(win) -> None:
     s = win.session
     if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
                                        for r in reasons):
-        win.refresh_device()
+        # Another device mounted or plugged in: with several, the list to choose from, even
+        # while one is open (D7); only Refresh and the like keep the open device. With none
+        # open there is nothing to keep.
+        if s is None:
+            win.refresh_device()
+        else:
+            win.refresh_device(keep_open=False)
         return
     usb = getattr(s.storage, "usb", None)
     if usb is not None and usb.bus is not None and not usb_still_there(usb):
@@ -1127,7 +1133,9 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_actions()  # the Sync button says the same as the pages
         return True
 
-    def refresh_device(self) -> None:
+    def refresh_device(self, keep_open: bool = True) -> None:
+        """Detect the device anew. `keep_open`: with several devices connected, the one open
+        now is opened again (Refresh); False when another device was just plugged in."""
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
             log.info("device detection: after the running task")
@@ -1161,7 +1169,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.sections["watch"].show("loading")
         # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
         # several different devices give a list to choose from.
-        current = getattr(self.session, "storage", None)
+        current = getattr(self.session, "storage", None) if keep_open else None
         current_uri = getattr(current, "device_uri", None)
         self.run_task(_("Detecting the device…"), lambda: detect_devices(current_uri),
                       done, failed)

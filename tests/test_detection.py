@@ -14,6 +14,8 @@ from pathlib import Path
 import pytest
 
 gio_storage = pytest.importorskip("openexpress.device.gio_storage")
+# The real one, before any test puts a stand-in in its place.
+REAL_FIND_DEVICES = gio_storage.find_devices
 
 NUMERIC = "mtp://091e_51b4_0000abcdef12/"
 NAMED = "mtp://Garmin_Edge_1050_0000abcdef34/"
@@ -1711,6 +1713,68 @@ def test_one_device_found_twice_opens_without_a_list(choosing_window, monkeypatc
     assert win.shown_choices == []
     (s,) = win.built
     assert s is win.session and s.mass_storage and s.device.description == "Varia RTL515"
+
+
+def test_a_second_device_plugged_in_while_one_is_open_gives_the_list(choosing_window,
+                                                                    monkeypatch, tmp_path,
+                                                                    device_root):
+    """K5, found on the devices: the Edge is open alone, then the fēnix is mounted. The
+    detection that follows lists both; it does not open the Edge again (keep_open is only
+    for Refresh and the like, not for a device plugged in)."""
+    from openexpress.gui.app import MainWindow
+
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    edge = two_watches(world, monkeypatch, tmp_path, device_root)
+    fenix = world.offered[0]
+    world.offered[:] = [edge]  # the Edge alone first
+    win.refresh_device()
+    (opened,) = win.built
+    assert opened is win.session and opened.storage.label.startswith(NAMED)
+    world.offered[:] = [fenix, edge]  # then gvfs mounts the fēnix
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    win.timers.fire()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
+    assert win.built == [opened] and win.session is None  # the Edge was not opened again
+
+
+def test_two_devices_without_an_id_are_not_merged(choosing_window, monkeypatch, tmp_path,
+                                                  device_root):
+    """K5: GarminDevice.xml without <Id> gives no unit ID (None, not 0): two such devices
+    are two entries, never merged."""
+    import re
+
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    for xml in (device_root / "GARMIN" / "GarminDevice.xml",
+                tmp_path / "edge" / "GARMIN" / "GarminDevice.xml"):
+        xml.write_text(re.sub(r"\s*<Id>\d+</Id>", "", xml.read_text()))
+    win.refresh_device()
+    assert win.session is None
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
+    assert [s.unit_id for s in win._choices] == [None, None]
+
+
+def test_two_mtp_devices_known_by_their_usb_device_are_both_listed(choosing_window, monkeypatch,
+                                                                  tmp_path, device_root):
+    """K5, as on the devices: the Edge's address has its name ("Garmin_…"), the fēnix's only
+    the IDs ("091e_51b4_…", libmtp does not know it); both are Garmin devices by vendor
+    091e in /sys (the real find_devices), so both are on the list."""
+    win, world = choosing_window, choosing_window.world
+    two_watches(world, monkeypatch, tmp_path, device_root)
+    monkeypatch.setattr(gio_storage, "find_devices", REAL_FIND_DEVICES)
+    usb_device(world.root, "1-2", 1, 28, "091e", "5158")
+    usb_device(world.root, "1-8", 1, 31, "091e", "51b4")
+    monitor = FakeMonitor(mounts=[FakeMount(NAMED, "Edge 1050"), FakeMount(NUMERIC, "091e 51b4")],
+                          volumes=[FakeVolume(NAMED, "/dev/bus/usb/001/028", "Edge 1050"),
+                                   FakeVolume(NUMERIC, "/dev/bus/usb/001/031", "091e 51b4")])
+    monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(lambda: monitor))
+    assert [(d.kind, d.uri, d.usb.usb_id, d.usb.source)
+            for d in gio_storage.find_all_devices()] == [
+        ("mtp", NAMED, "091e:5158", "usb"), ("mtp", NUMERIC, "091e:51b4", "usb")]
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Edge 1050"), ("mtp", "Test watch")]]
 
 
 def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch):
