@@ -15,9 +15,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from openexpress import applog
-from openexpress.device.storage import Storage
+from openexpress import applog, paths
+from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import OUTPUT, GarminDevice
+from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -54,8 +55,33 @@ def _is_backup_dir(p: Path) -> bool:
     return True
 
 
+def _not_a_path(name: str) -> DeviceError:
+    return DeviceError(_("Nothing was backed up: the device names a folder or file '{name}' "
+                         "that cannot be used as a path on this computer.").format(name=name))
+
+
+def _out_path(target: Path, datatype: str, rel: str) -> Path:
+    """Where a file of the device goes in the backup: target/<data type>/<path below its
+    folder>. The data type's name (from GarminDevice.xml) and each part of the file's path
+    (as the device lists it) must be plain names, and the result must lie within target;
+    anything else refuses the backup (a crafted XML or listing must not write elsewhere)."""
+    parts = rel.split("/")
+    if not paths.is_safe_component(datatype):
+        raise _not_a_path(datatype)
+    if not all(paths.is_safe_component(p) for p in parts):
+        raise _not_a_path(rel)
+    out = target.joinpath(datatype, *parts)
+    if not paths.is_inside(out, target):
+        raise _not_a_path(rel)
+    return out
+
+
 def _copy_files(device: GarminDevice, storage: Storage, target: Path,
                 progress: Callable[[str], None]) -> tuple[int, int]:
+    # Every data type checked before anything is written.
+    for src in backup_files(device):
+        if not paths.is_safe_component(src.datatype):
+            raise _not_a_path(src.datatype)
     (target / "GarminDevice.xml").write_bytes(device.raw)
     count, total = 1, len(device.raw)
     seen: set[str] = set()
@@ -65,7 +91,7 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
                 continue
             seen.add(path.casefold())
             rel = posixpath.relpath(path, storage.resolve(src.path) or src.path)
-            out = target / src.datatype / rel
+            out = _out_path(target, src.datatype, rel)
             out.parent.mkdir(parents=True, exist_ok=True)
             progress(path)
             out.write_bytes(storage.read(path))

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 18:39+0200\n"
+"POT-Creation-Date: 2026-10-17 18:46+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -81,6 +81,13 @@ msgstr "Synchronizacja urządzenia z Garmin Connect po jego podłączeniu."
 #: openexpress/background.py:120
 msgid "systemctl was not found; background sync needs systemd."
 msgstr "Nie znaleziono systemctl; synchronizacja w tle wymaga systemd."
+
+#: openexpress/backup.py:59
+#, python-brace-format
+msgid ""
+"Nothing was backed up: the device names a folder or file '{name}' that "
+"cannot be used as a path on this computer."
+msgstr "Nie zrobiono kopii zapasowej: urządzenie podaje folder lub plik '{name}', którego nie można użyć jako ścieżki na tym komputerze."
 
 #. TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
 #: openexpress/cache.py:25
@@ -2554,7 +2561,8 @@ msgstr "Nie pobrano {url}: pliki są pobierane tylko przez HTTPS"
 
 #: openexpress/download.py:143
 msgid "The server gave no MD5 checksum for this file, so it was not downloaded"
-msgstr "Serwer nie podał sumy kontrolnej MD5 tego pliku, więc nie został pobrany"
+msgstr ""
+"Serwer nie podał sumy kontrolnej MD5 tego pliku, więc nie został pobrany"
 
 #: openexpress/download.py:148
 #, python-brace-format

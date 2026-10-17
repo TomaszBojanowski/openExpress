@@ -65,6 +65,78 @@ def test_backup_failure_removes_partial(device_root, tmp_path):
     assert list((tmp_path / "bk" / str(dev.unit_id)).iterdir()) == []
 
 
+# --- names from GarminDevice.xml never lead out of the backup (review of 106cd25) ------------
+
+
+def _files_under(root: Path) -> set[Path]:
+    return {p.resolve() for p in root.rglob("*") if p.is_file()}
+
+
+def _with_type(dev, name):
+    """The device with the first data type of the backup renamed (a crafted XML)."""
+    import dataclasses
+
+    first = backup.backup_files(dev)[0]
+    dev.files = [dataclasses.replace(f, datatype=name) if f is first else f for f in dev.files]
+    return dev
+
+
+def _nothing_outside(tmp_path, before, target):
+    """No file came to be anywhere but under the backup folder (resolved paths)."""
+    target = target.resolve()
+    new = _files_under(tmp_path) - before
+    assert [p for p in new if not p.is_relative_to(target)] == []
+
+
+@pytest.mark.parametrize("name", ["../../escape", "ABSOLUTE", "", ".", "..", "a/b"])
+def test_a_crafted_data_type_name_is_refused_and_writes_nothing(device_root, tmp_path, name):
+    """A data type whose name is no folder name (with "..", absolute, empty, with a
+    separator) refuses the whole backup, as other errors of GarminDevice.xml do: nothing is
+    written outside the backup folder, and no partial backup is left."""
+    if name == "ABSOLUTE":
+        name = str(tmp_path / "outside")  # absolute, but inside the test's own folder
+    st = LocalStorage(device_root)
+    dev = _with_type(parse((device_root / "GARMIN/GarminDevice.xml").read_bytes()), name)
+    before = _files_under(tmp_path)
+    with pytest.raises(DeviceError, match="cannot be used as a path"):
+        backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    unit = tmp_path / "bk" / str(dev.unit_id)
+    _nothing_outside(tmp_path, before, unit)
+    assert list(unit.iterdir()) == []
+
+
+def test_a_crafted_file_name_from_the_device_is_refused(device_root, tmp_path):
+    """A file the device lists under a name with ".." (a device may list any name over
+    MTP): refused the same way."""
+    class Crafted(LocalStorage):
+        def walk_files(self, path):
+            files = super().walk_files(path)
+            if not files:
+                return files
+            real, entry = files[0]
+            return [(real.rsplit("/", 1)[0] + "/../../../escape.fit", entry), *files[1:]]
+
+        def read(self, path):
+            return b"x" if path.endswith("escape.fit") else super().read(path)
+
+    st = Crafted(device_root)
+    dev = parse((device_root / "GARMIN/GarminDevice.xml").read_bytes())
+    before = _files_under(tmp_path)
+    with pytest.raises(DeviceError, match="cannot be used as a path"):
+        backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    _nothing_outside(tmp_path, before, tmp_path / "bk" / str(dev.unit_id))
+
+
+def test_a_plain_backup_stays_inside_its_folder(device_root, tmp_path):
+    """Guards: an ordinary backup writes only below its own folder."""
+    st = LocalStorage(device_root)
+    dev = parse((device_root / "GARMIN/GarminDevice.xml").read_bytes())
+    before = _files_under(tmp_path)
+    res = backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    assert res.files > 1
+    _nothing_outside(tmp_path, before, res.path)
+
+
 # --- 2/3/9. Connect IQ ----------------------------------------------------------------
 
 

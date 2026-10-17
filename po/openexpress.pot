@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.5.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 18:39+0200\n"
+"POT-Creation-Date: 2026-10-17 18:46+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -76,6 +76,13 @@ msgstr ""
 
 #: openexpress/background.py:120
 msgid "systemctl was not found; background sync needs systemd."
+msgstr ""
+
+#: openexpress/backup.py:59
+#, python-brace-format
+msgid ""
+"Nothing was backed up: the device names a folder or file '{name}' that "
+"cannot be used as a path on this computer."
 msgstr ""
 
 #. TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them

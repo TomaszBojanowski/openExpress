@@ -73,6 +73,18 @@ def default_backup_dir() -> Path:
 PRIVATE_DIR = 0o700
 
 
+def is_safe_component(name: str) -> bool:
+    """Whether a name from a device or a server can be one component of a path on this
+    computer: not empty, not "." or "..", no separator (so not absolute either), no NUL."""
+    return (bool(name) and name not in (".", "..")
+            and not any(c in name for c in ("/", "\\", "\0")))
+
+
+def is_inside(path: Path, folder: Path) -> bool:
+    """Whether `path`, links and ".." resolved, lies within `folder` (also resolved)."""
+    return path.resolve().is_relative_to(folder.resolve())
+
+
 def make_dir(path: Path) -> None:
     """Makes `path` and the folders above it. The app's own folder for the settings, the data
     or the log (the login, what came from the device, what was done), when it is made here,
