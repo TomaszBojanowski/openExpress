@@ -14,6 +14,8 @@
 > subsidiaries. openExpress talks to the same Garmin services as the official Windows/macOS
 > app; Garmin may change them at any time. Use at your own risk.
 
+Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
+
 ## Install
 
 ```bash
@@ -64,8 +66,6 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
   <img src="docs/screenshots/updates.png" width="800"
        alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
-
-Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
 
 ### Not yet available
 
