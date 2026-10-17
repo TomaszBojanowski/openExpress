@@ -1371,15 +1371,158 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
     assert shown == [("Mass storage mode", FLATPAK_DRIVE_TEXT, False)]
 
 
-def test_no_update_is_installed_on_a_garmin_drive_yet(drive_window, monkeypatch):
-    """D3: copying updates to a drive comes with step 7 (fsync, ejecting)."""
+# --- installing an update on a Garmin drive (step 7) ----------------------------------------
+
+VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
+BIKE_ACCESSORY_TEXT = (
+    "Unplug the device and switch it on: it installs the update by itself, which takes a few "
+    "minutes, and cannot be used meanwhile. Its LEDs flash during the installation and may "
+    "go dark for a moment; when the update is finished, the LED flashes green and the main "
+    "light comes on.")
+
+
+def varia_answer(data=VARIA_UPDATE):
+    """The update server's answer (keys as GarminClient returns them): one update of the
+    RTL515's own software, at the place its GarminDevice.xml names (GARMIN/GUPDATE.GCD)."""
+    return {"updates": [{
+        "partnumber": "006-B3592-03", "productname": "Varia RTL515", "displayversion": "3.40",
+        "severity": "Recommended", "releasenotes": [], "eulaurl": "",
+        "deliverable": {"securedownloadurl": "https://download.example/rtl515.gcd",
+                        "md5": hashlib.md5(data).hexdigest(), "sizeinbytes": len(data)},
+        "installation": {"isreinstall": False, "path": "GARMIN", "filename": "GUPDATE.GCD",
+                         "isrestartrequired": False, "order": 0}}]}
+
+
+def downloaded_from_nowhere(monkeypatch, data=VARIA_UPDATE):
+    """The download writes `data` to the cache, as a finished download would."""
+    from openexpress import updates
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        return dest
+
+    monkeypatch.setattr(updates.download, "fetch", fetch)
+
+
+def drive_tree(root: Path) -> dict[str, int | None]:
+    """Every file (its size) and folder (None) below a drive's folder."""
+    return {p.relative_to(root).as_posix(): (p.stat().st_size if p.is_file() else None)
+            for p in sorted(root.rglob("*"))}
+
+
+def record_fsyncs(monkeypatch) -> list[str]:
+    """What os.fsync is called on, as paths (Linux: /proc/self/fd)."""
+    synced, real = [], os.fsync
+
+    def fsync(fd):
+        synced.append(os.readlink(f"/proc/self/fd/{fd}"))
+        real(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    return synced
+
+
+@pytest.mark.skipif(not Path("/proc/self/fd").is_dir(), reason="needs /proc")
+def test_an_update_written_to_a_drive_is_on_the_disk_before_it_counts(drive_window, monkeypatch,
+                                                                      tmp_path):
+    """Test 1: the file goes where GarminDevice.xml says, with its content, under a temporary
+    name until it is complete; the file and then its folder are synced (a Varia resets its
+    USB when the cable goes out, so only what is on the disk counts). Progress as it goes."""
+    from openexpress.device import storage
+
+    s = drive_session(drive_window, monkeypatch)
+    garmin = s.storage.root / "GARMIN"
+    local = tmp_path / "rtl515.gcd"
+    local.write_bytes(VARIA_UPDATE)
+    monkeypatch.setattr(storage, "COPY_CHUNK", 4096, raising=False)
+    synced, steps = record_fsyncs(monkeypatch), []
+    real = s.storage.write_file("GARMIN/GUPDATE.GCD", local,
+                                lambda done, total: steps.append((done, total)))
+    assert real == "GARMIN/GUPDATE.GCD"
+    assert (garmin / "GUPDATE.GCD").read_bytes() == VARIA_UPDATE
+    # The file (still under its temporary name) first, then the folder with the new name.
+    assert len(synced) == 2 and Path(synced[0]).parent == garmin and synced[1] == str(garmin)
+    assert sorted(p.name for p in garmin.iterdir()) == ["GUPDATE.GCD", "GarminDevice.xml"]
+    size = len(VARIA_UPDATE)
+    assert len(steps) == 3 and steps[-1] == (size, size)  # 10 kB in 4 kB steps
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("segment, notes", [
+    ("bikeaccessory", [("Done", "Update saved. You can unplug the cable."),
+                       ("Finish the update", BIKE_ACCESSORY_TEXT)]),
+    ("fitness", [("Done", "Update saved. You can unplug the cable.")]),
+])
+def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
+    """D3 lifted: the window asks, then copies; exactly one file comes to the drive. It says
+    the cable can be unplugged (a Varia is not worth ejecting), and for a bike accessory, as
+    Garmin Express does, how the device finishes the update."""
+    from gi.repository import Adw
+
+    from openexpress import updates
     from openexpress.gui.app import MainWindow
 
-    shown = []
-    win = types.SimpleNamespace(session=drive_session(drive_window, monkeypatch), updates_cache=[],
-                                toast=shown.append)
-    MainWindow.confirm_update(win, types.SimpleNamespace(part_number="006-B3592-03"))
-    assert shown == ["Installing updates on a device in mass storage mode is not available yet."]
+    s = drive_session(drive_window, monkeypatch)
+    asked = []
+    s.client = types.SimpleNamespace(
+        http=None, unit_info=lambda unit, part: asked.append((unit, part)) or {
+            "segmenttype": segment, "graphicurl": "https://res.garmin.com/rtl515.png"})
+    downloaded_from_nowhere(monkeypatch)
+    items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
+    dialogs, toasts = [], []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+    win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
+                                toast=toasts.append, progress=lambda text: None, fraction=None,
+                                _show_installed=lambda session, chosen: None,
+                                run_task=lambda title, work, done, failed=None, device=True:
+                                done(work()))
+    win.error = types.MethodType(MainWindow.error, win)
+    before = drive_tree(s.storage.root)
+    MainWindow.confirm_update(win, items[0])
+    assert toasts == [] and len(dialogs) == 1  # asked first, as for an MTP device
+    dialogs[0].emit("response", "ok")
+    after = drive_tree(s.storage.root)
+    assert {k: v for k, v in after.items() if before.get(k, -1) != v} == {
+        "GARMIN/GUPDATE.GCD": len(VARIA_UPDATE)}
+    assert set(before) <= set(after)  # nothing went away
+    assert (s.storage.root / "GARMIN" / "GUPDATE.GCD").read_bytes() == VARIA_UPDATE
+    # The second note comes when the first is closed.
+    shown = [(dialogs[1].get_heading(), dialogs[1].get_body())]
+    dialogs[1].emit("response", "ok")
+    shown += [(d.get_heading(), d.get_body()) for d in dialogs[2:]]
+    assert shown == notes
+    assert asked == [(3000000003, "006-B3592-03")]  # one question to the update server
+
+
+def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(drive_window,
+                                                                            monkeypatch):
+    """Test 2: the drive runs out of space in the middle of the copy. The error names the file
+    and the reason; neither half a GUPDATE.GCD nor a temporary file stays on the drive."""
+    import errno
+
+    from openexpress import updates
+    from openexpress.device.storage import DeviceError
+
+    s = drive_session(drive_window, monkeypatch)
+    downloaded_from_nowhere(monkeypatch)
+    items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
+    before = drive_tree(s.storage.root)
+    real_write, writes = os.write, []
+
+    def write(fd, data):
+        if writes:
+            raise OSError(errno.ENOSPC, "No space left on device")
+        writes.append(fd)
+        return real_write(fd, bytes(data[:len(data) // 2]))  # half of it went on the drive
+
+    monkeypatch.setattr(os, "write", write)
+    with pytest.raises(DeviceError) as error:
+        updates.install(items, s.storage)
+    monkeypatch.undo()
+    assert str(error.value) == "Cannot write GARMIN/GUPDATE.GCD: No space left on device"
+    assert writes  # the copy had begun
+    assert drive_tree(s.storage.root) == before
 
 
 def _recording_page(key):

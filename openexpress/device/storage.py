@@ -8,6 +8,9 @@ case-insensitively.
 
 from __future__ import annotations
 
+import errno
+import logging
+import os
 import posixpath
 import shutil
 from abc import ABC, abstractmethod
@@ -16,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress.i18n import _
+
+log = logging.getLogger(__name__)
 
 
 class DeviceError(Exception):
@@ -208,8 +213,31 @@ def _os_errors(what: str):
         raise DeviceError(f"{what}: {e.strerror or e}") from e
 
 
+# Bytes written at a time when a large file is copied to a folder; one progress step each.
+COPY_CHUNK = 1 << 20
+# A file being copied is named ".<name><PART_SUFFIX>" until it is complete.
+PART_SUFFIX = ".openexpress-part"
+
+
+def _sync_folder(folder: Path) -> None:
+    """Put a folder's entries (a new or renamed file) on the disk. A file system that cannot
+    sync a folder says so (EINVAL): then there is nothing more to put there."""
+    fd = os.open(folder, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    except OSError as e:
+        if e.errno not in (errno.EINVAL, errno.ENOTSUP):
+            raise
+    finally:
+        os.close(fd)
+
+
 class LocalStorage(Storage):
-    """Directory on disk: a device in mass storage mode, a copy, or tests."""
+    """Directory on disk: a device in mass storage mode, a copy, or tests.
+
+    A write counts only once it is on the disk (fsync of the file and of its folder): a
+    device in mass storage mode may lose what is still in the system's cache when its cable
+    goes out, and some (the Varia) reset their USB instead of being ejected."""
 
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -241,12 +269,45 @@ class LocalStorage(Storage):
             return f.read(count)
 
     def _write(self, real_path: str, data: bytes) -> None:
+        target = self._p(real_path)
         with _os_errors(_("Cannot write {path}").format(path=real_path)):
-            self._p(real_path).write_bytes(data)
+            with open(target, "wb") as f:
+                f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+            _sync_folder(target.parent)
 
     def _write_file(self, real_path: str, local: Path, progress=None) -> None:
-        with _os_errors(_("Cannot write {path}").format(path=real_path)):
-            shutil.copyfile(local, self._p(real_path))
+        """Copied under a temporary name next to the target, synced, then renamed: the real
+        name never holds half a file, also when the copy fails or the cable goes out.
+        `progress(done, total)` after each COPY_CHUNK bytes."""
+        target = self._p(real_path)
+        part = target.with_name("." + target.name + PART_SUFFIX)
+        try:
+            with _os_errors(_("Cannot write {path}").format(path=real_path)):
+                total = Path(local).stat().st_size
+                with open(local, "rb") as src:
+                    fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o666)
+                    try:
+                        done = 0
+                        while chunk := src.read(COPY_CHUNK):
+                            view = memoryview(chunk)
+                            while view:
+                                view = view[os.write(fd, view):]
+                            done += len(chunk)
+                            if progress:
+                                progress(done, total)
+                        os.fsync(fd)
+                    finally:
+                        os.close(fd)
+                os.replace(part, target)
+                _sync_folder(target.parent)
+        except BaseException:
+            try:
+                part.unlink(missing_ok=True)
+            except OSError as e:
+                log.warning("Cannot delete a partly copied file: %s", e.strerror or e)
+            raise
 
     def _delete(self, real_path: str) -> None:
         with _os_errors(_("Cannot delete {path}").format(path=real_path)):

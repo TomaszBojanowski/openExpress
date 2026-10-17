@@ -169,6 +169,27 @@ def picture_from_unit_info(client, device) -> str | None:
     return url if isinstance(url, str) and url else None
 
 
+def is_bike_accessory(client, device) -> bool:
+    """Whether Garmin's update server files the device as a bike accessory (e.g. a Varia),
+    which finishes an update once it is unplugged and switched on. Only this field of the
+    answer is read; the rest (unit ID, serial number…) goes nowhere."""
+    try:
+        info = client.unit_info(device.unit_id, device.part_number)
+    except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
+        log.info("software update: unit-info failed (%s)", type(e).__name__)
+        return False
+    segment = info.get("segmenttype") if isinstance(info, dict) else None
+    return isinstance(segment, str) and segment.casefold() == "bikeaccessory"
+
+
+def bike_accessory_text() -> str:
+    """After an update was saved on a bike accessory: how the device finishes it."""
+    return _("Unplug the device and switch it on: it installs the update by itself, which "
+             "takes a few minutes, and cannot be used meanwhile. Its LEDs flash during the "
+             "installation and may go dark for a moment; when the update is finished, the "
+             "LED flashes green and the main light comes on.")
+
+
 def download_picture(http, url: str, name: str,
                      clock=time.monotonic) -> tuple[Path | None, str]:
     """Download a device picture into the cache: (file, "") or (None, why not)."""
@@ -1975,11 +1996,9 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         s = self.session
-        if getattr(s, "mass_storage", False):
-            # Copying to a USB drive needs a flush and the eject first (planned).
-            self.toast(_("Installing updates on a device in mass storage mode is not "
-                         "available yet."))
-            return
+        # A drive: the copy counts once it is on the disk (LocalStorage syncs it), so the cable
+        # can go out right after; a Varia is not worth ejecting (it resets its USB).
+        mass_storage = getattr(s, "mass_storage", False)
         chosen = upd.select(self.updates_cache, [u.part_number])
         # A system update: from which version of the device software to which.
         version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system
@@ -2013,20 +2032,30 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("ok", _("Accept and install"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
 
-        def installed(rep):
+        def install():
+            rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress,
+                              transfer_progress=self.fraction, download_progress=self.fraction)
+            return rep, mass_storage and is_bike_accessory(s.client, s.device)
+
+        def installed(result):
+            rep, bike_accessory = result
             self._show_installed(s, chosen)
-            self.error(_("Done"), self._update_done_text(rep))
+            if not mass_storage:
+                self.error(_("Done"), self._update_done_text(rep))
+                return
+            done = Adw.AlertDialog(heading=_("Done"),
+                                   body=_("Update saved. You can unplug the cable."))
+            done.add_response("ok", _("OK"))
+            if bike_accessory:
+                # As Garmin Express does for such a device: how it finishes the update.
+                done.connect("response", lambda *_a: self.error(_("Finish the update"),
+                                                                bike_accessory_text()))
+            done.present(self)
 
         def response(_d, r):
             if r != "ok":
                 return
-            self.run_task(
-                _("Installing update…"),
-                lambda: upd.install(chosen, s.storage, session=s.client.http,
-                                    progress=self.progress, transfer_progress=self.fraction,
-                                    download_progress=self.fraction),
-                installed,
-            )
+            self.run_task(_("Installing update…"), install, installed)
 
         d.connect("response", response)
         d.present(self)
