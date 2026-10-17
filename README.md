@@ -9,6 +9,8 @@
   maps, Connect IQ apps and music over USB.
 </p>
 
+Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
+
 > **openExpress is not affiliated with, endorsed by or supported by Garmin Ltd.**
 > Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin Ltd. or its
 > subsidiaries. openExpress talks to the same Garmin services as the official Windows/macOS
@@ -28,8 +30,6 @@ flatpak install --user openexpress-0.5.2.flatpak
 
 The GNOME runtime comes from Flathub. More in [Install](#install), including the version
 from source.
-
-Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
