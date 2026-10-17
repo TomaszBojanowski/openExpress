@@ -21,15 +21,22 @@ Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/o
        alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
 
-**Install:** download `openexpress-0.6.2.flatpak` from the
+**Install:** add the openExpress Flatpak repository and install the app from it:
+
+```bash
+flatpak remote-add --user --if-not-exists openexpress https://flatpak.bojanowski.me/openexpress.flatpakrepo
+flatpak install --user openexpress io.github.tomaszbojanowski.OpenExpress
+```
+
+Updates then come with `flatpak update`. The GNOME runtime comes from Flathub.
+Alternatively, for example to install offline, download `openexpress-0.6.2.flatpak` from the
 [latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest), then run
 
 ```bash
 flatpak install --user openexpress-0.6.2.flatpak
 ```
 
-The GNOME runtime comes from Flathub. More in [Install](#install), including the version
-from source.
+More in [Install](#install), including the version from source.
 
 **Devices in mass storage mode:** besides devices that connect over USB in MTP mode, such as
 the fēnix 8 and the Edge 1050, openExpress 0.6 supports Garmin devices that connect as a USB
@@ -133,13 +140,25 @@ contains no serial number, unit ID or e-mail. Nothing is published until you sub
 
 ### Flatpak (recommended)
 
-Download `openexpress-<version>.flatpak` from the
-[latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest) and run:
+Install from the openExpress Flatpak repository (signed; updates then come with
+`flatpak update`):
+
+```bash
+flatpak remote-add --user --if-not-exists openexpress https://flatpak.bojanowski.me/openexpress.flatpakrepo
+flatpak install --user openexpress io.github.tomaszbojanowski.OpenExpress   # needs the Flathub remote for the GNOME runtime
+flatpak run io.github.tomaszbojanowski.OpenExpress
+```
+
+Alternatively, for example to install offline, download `openexpress-<version>.flatpak` from
+the [latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest) and run:
 
 ```bash
 flatpak install --user openexpress-*.flatpak   # needs the Flathub remote for the GNOME runtime
-flatpak run io.github.tomaszbojanowski.OpenExpress
 ```
+
+An app installed from such a file is not updated by `flatpak update`. To switch it to the
+repository, keeping your setup, login and settings, add the repository as above and run
+`flatpak install --user --reinstall openexpress io.github.tomaszbojanowski.OpenExpress`.
 
 openExpress then appears in your application menu. Click **Choose Installer…** in the banner
 at the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
