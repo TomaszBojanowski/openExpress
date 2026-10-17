@@ -1221,6 +1221,38 @@ def test_probe_never_writes_the_unit_id(watch_and_drives, monkeypatch, caplog):
         "device: probed ums (USB 091e:20ee): details read"]
 
 
+def test_open_session_opens_the_mtp_device_chosen(watch_and_drives, monkeypatch):
+    """K4: of two MTP devices, the one chosen from the list is opened, not the other; without
+    a choice it is "Several devices" as before."""
+    from openexpress import service
+
+    monitor_with(monkeypatch)
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    edge = gio_storage.FoundDevice(NAMED, "Edge", True,
+                                   usb=gio_storage.GarminUsb("5158", "usb", 1, 10))
+    watch_and_drives.offered.append(edge)
+    with pytest.raises(gio_storage.SeveralDevices):
+        service.open_session(allow_ums=True)
+    s = service.open_session(found=edge)
+    assert s.storage.label.startswith(NAMED) and not s.storage.label.startswith(NUMERIC)
+    assert s.storage.usb_id == "091e:5158" and not s.mass_storage
+    assert s.device.description == "Test watch"
+
+
+def test_open_session_opens_the_garmin_drive_chosen(watch_and_drives, monkeypatch):
+    """K4: of two Garmin drives, the one chosen is opened."""
+    from openexpress import service
+
+    first = watch_and_drives.drive()
+    second = watch_and_drives.drive("GARMIN 2", port="1-5", devnum=13, disk="sdc")
+    monitor_with(monkeypatch, first, second)
+    chosen = gio_storage.find_all_devices()[1]
+    s = service.open_session(found=chosen)
+    assert s.mass_storage and s.storage.device_uri == second.root.get_uri()
+    assert s.device.description == "Varia RTL515" and s.storage.usb_id == "091e:20ee"
+
+
 def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     """watch.on_mount stays with garmin_usb (MTP): a drive starts no sync."""
     from openexpress import watch

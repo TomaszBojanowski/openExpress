@@ -80,9 +80,12 @@ def make_client(settings: Settings) -> GarminClient:
 
 
 def open_session(device_uri: str | None = None, storage: Storage | None = None,
-                 allow_ums: bool = False) -> DeviceSession:
+                 allow_ums: bool = False, found=None) -> DeviceSession:
     """A session on the connected device: MTP alone, unless `allow_ums` (the window) also
-    lets a Garmin device in mass storage mode be opened."""
+    lets a Garmin device in mass storage mode be opened. `found`: the device chosen from
+    find_all_devices, of whatever kind."""
+    if storage is None and found is not None:
+        storage = _open_found(found)
     if storage is None:
         from openexpress.device.gio_storage import open_device_storage
 
@@ -92,6 +95,23 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
     applog.hide_device(device)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
+
+
+def _open_found(found) -> Storage:
+    """The storage of the device chosen from a list: a Garmin drive as it was found; an MTP
+    device by its address, as with --device-uri, mounted first when it is not (the user
+    chose it; a list mounts nothing)."""
+    from openexpress.device import gio_storage
+
+    if found.kind == "ums":
+        return gio_storage.open_ums_storage(found)
+    gio_storage.mount(found)
+    storage = gio_storage.open_device_storage(found.uri)
+    if found.usb is not None:
+        # Read from the USB device when it was found; an address with names (e.g. an Edge)
+        # does not tell the product.
+        storage.usb, storage.usb_id = found.usb, found.usb.usb_id
+    return storage
 
 
 def _open_device_or_drive() -> Storage:
