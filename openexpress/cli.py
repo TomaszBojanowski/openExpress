@@ -294,6 +294,20 @@ def cmd_whoami(args) -> int:
     return 0
 
 
+def cmd_cache(args) -> int:
+    """How big the cache is, folder by folder; nothing is deleted."""
+    from openexpress import cache
+
+    use = cache.usage()
+    print(_("Cache: {path}").format(path=use.root))
+    for name in cache.FOLDERS:
+        print(f"  {_(cache.FOLDER_NAMES[name])}: {human_size(use.sizes[name])}")
+    print("  " + _("Total: {size}").format(size=human_size(use.total)))
+    log.info("cache: %s in all (%s)", applog.size(use.total),
+             ", ".join(f"{name} {applog.size(use.sizes[name])}" for name in cache.FOLDERS))
+    return 0
+
+
 def cmd_upload_config(args) -> int:
     _st, dev = open_device(args)
     settings = Settings.load()
@@ -1553,6 +1567,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("logout", help=_("remove the local token"))
     s.set_defaults(func=cmd_logout)
+
+    s = sub.add_parser("cache", help=_("how big the cache of downloaded maps and updates is"))
+    s.set_defaults(func=cmd_cache)
 
     s = sub.add_parser("whoami", help=_("logged-in account"))
     s.add_argument("--check", action="store_true", help=_("verify the token with the server"))
