@@ -113,7 +113,7 @@ def _open_device_or_drive() -> Storage:
             # Their addresses name the user's folder, and --device-uri takes no drive.
             raise gio_storage.SeveralDevices(
                 _("Several Garmin devices are connected in mass storage mode. Connect only "
-                  "one of them.")) from None
+                  "one of them."), drives) from None
         return gio_storage.open_ums_storage(drives[0])
     skipped = len(gio_storage.find_ums_devices())
     if skipped:

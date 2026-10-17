@@ -362,6 +362,7 @@ class FoundDevice:
     mounted: bool
     volume: Gio.Volume | None = None
     usb: GarminUsb | None = None
+    kind: str = "mtp"  # "mtp", or "ums" for a Garmin device in mass storage mode (a drive)
 
 
 _UNIX_DEVICE = re.compile(r"/dev/bus/usb/(\d+)/(\d+)")
@@ -539,7 +540,7 @@ def find_ums_devices() -> list[FoundDevice]:
                      usb.usb_id)
             continue
         found.append(FoundDevice(root.get_uri(), mount.get_name(), True, mount.get_volume(),
-                                 usb))
+                                 usb, kind="ums"))
     return found
 
 
@@ -615,7 +616,13 @@ class NotThereYet(DeviceError):
 
 
 class SeveralDevices(DeviceError):
-    pass
+    """More than one device where one was to be opened. `devices`: what was found (kind,
+    address, USB id), for a window that lets the user choose; the text is for the command
+    line."""
+
+    def __init__(self, message: str, devices: list[FoundDevice] | None = None):
+        super().__init__(message)
+        self.devices: list[FoundDevice] = list(devices or [])
 
 
 def _mass_storage_only(base: Path) -> bool:
@@ -748,7 +755,7 @@ def _open_device_storage(uri: str | None) -> GioStorage:
             names = ", ".join(d.uri for d in devices)
             raise SeveralDevices(
                 _("Several devices connected, choose one with --device-uri: {names}")
-                .format(names=names))
+                .format(names=names), devices)
         mount(devices[0])
         uri, usb = devices[0].uri, devices[0].usb
     else:

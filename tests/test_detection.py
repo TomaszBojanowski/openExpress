@@ -1086,6 +1086,39 @@ def test_several_garmin_drives(watch_and_drives, monkeypatch):
     assert error.value.__cause__ is None
 
 
+def test_several_mtp_devices_come_with_the_devices_found(watch_and_drives, monkeypatch):
+    """K1: the error carries what was found (kind, address, USB id), for the window to offer
+    a choice; its text is the same as before."""
+    from openexpress import service
+
+    monitor_with(monkeypatch)  # no drive
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    watch_and_drives.offered.append(gio_storage.FoundDevice(
+        NAMED, "Edge", True, usb=gio_storage.GarminUsb("5158", "usb", 1, 10)))
+    with pytest.raises(gio_storage.SeveralDevices) as error:
+        service.open_session(allow_ums=True)
+    assert str(error.value) == ("Several devices connected, choose one with --device-uri: "
+                                f"{NUMERIC}, {NAMED}")
+    assert [(d.kind, d.uri, d.usb.usb_id) for d in error.value.devices] == [
+        ("mtp", NUMERIC, "091e:51b4"), ("mtp", NAMED, "091e:5158")]
+
+
+def test_several_garmin_drives_come_with_the_drives_found(watch_and_drives, monkeypatch):
+    """K1: two drives, the same: kind, address and USB id of each; the text as before."""
+    from openexpress import service
+
+    first = watch_and_drives.drive()
+    second = watch_and_drives.drive("GARMIN 2", port="1-5", devnum=13, disk="sdc")
+    monitor_with(monkeypatch, first, second)
+    with pytest.raises(gio_storage.SeveralDevices) as error:
+        service.open_session(allow_ums=True)
+    assert str(error.value) == ("Several Garmin devices are connected in mass storage mode. "
+                                "Connect only one of them.")
+    assert [(d.kind, d.uri, d.usb.usb_id) for d in error.value.devices] == [
+        ("ums", first.root.get_uri(), "091e:20ee"), ("ums", second.root.get_uri(), "091e:20ee")]
+
+
 def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     """watch.on_mount stays with garmin_usb (MTP): a drive starts no sync."""
     from openexpress import watch
