@@ -146,6 +146,11 @@ older than 1.16 ignores it. Without it, on devices that hide their app folder, i
 updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
 them, apps are removed on the phone, and nothing is written to the device.
 
+**USB modes:** devices that connect over MTP (most watches and bike computers) work in both
+versions; devices that connect as a USB drive (mass storage, e.g. the Varia RTL515) open only
+in the version from source – in its window, or on the command line with `--path` – and the
+Flatpak does not open them yet.
+
 **The Flatpak and the version from source are separate installations:** each keeps its own
 setup (the key from the Garmin Express installer), login, settings and sync state: its own
 last syncs, uploaded files and list of your own maps. After switching from one to the other,

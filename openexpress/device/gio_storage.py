@@ -523,6 +523,11 @@ def find_ums_devices() -> list[FoundDevice]:
             continue
         root = mount.get_root()
         path = root.get_path()
+        if path is not None and in_flatpak() and not os.path.isdir(path):
+            # gvfs tells the sandbox about the mount, but /run/media is not in it (step 6, F1).
+            log.info("device: a Garmin drive (USB %s) is not visible in the Flatpak, skipped",
+                     usb.usb_id)
+            continue
         try:
             has_xml = path is not None and LocalStorage(Path(path)).exists(
                 "GARMIN/GarminDevice.xml")

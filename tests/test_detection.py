@@ -649,6 +649,9 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
 # do not apply to it.
 DRIVE_NOT_MOUNTED_TEXT = ("The Garmin device is connected, but its drive is not mounted. Open "
                           "it in the file manager, or unplug the cable and plug it in again.")
+FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive. This version (Flatpak) "
+                      "does not open drives; use the version from source, or the command line "
+                      "with --path and the folder where the system mounted the device.")
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
                      "openExpress shows its information and software updates; sync, apps, "
                      "maps and music do not apply to it.")
@@ -1338,6 +1341,36 @@ def test_reading_a_garmin_drive_keeps_nothing_open_on_it(drive_window, monkeypat
     assert os.getcwd() == cwd and not cwd.startswith(str(root))
 
 
+def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monkeypatch,
+                                                              caplog):
+    """Test 12 (F1): in the Flatpak the drive of a Garmin device is known from /sys (vendor
+    091e) and from gvfs, but its folder under /run/media is not in the sandbox. No session;
+    the page says that this version does not open drives, and the log says why it was skipped."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    win, drive = drive_window, drive_window.world.drive()
+    shutil.rmtree(drive.root.path)  # /run/media/<user>/GARMIN does not exist in the sandbox
+    monitor_with(monkeypatch, drive)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win.refresh_device()
+    assert win.session is None and win.built == [None]
+    assert ("device: a Garmin drive (USB 091e:20ee) is not visible in the Flatpak, skipped"
+            in caplog.text)
+    assert "without GARMIN/GarminDevice.xml" not in caplog.text
+
+    shown = []
+    page = types.SimpleNamespace(session=None, busy=False, _usb_state=gio_storage.ABSENT,
+                                 _usb_since=0.0, _usb_title="", _usb_notice=MainWindow._usb_notice,
+                                 _update_actions=lambda: None, refresh_device=lambda: None,
+                                 sections={"watch": types.SimpleNamespace(
+                                     set_empty=lambda *notice: shown.append(notice))})
+    MainWindow._poll_usb(page, clock=win.world.clock)
+    assert shown == [("Mass storage mode", FLATPAK_DRIVE_TEXT, False)]
+
+
 def test_no_update_is_installed_on_a_garmin_drive_yet(drive_window, monkeypatch):
     """D3: copying updates to a drive comes with step 7 (fsync, ejecting)."""
     from openexpress.gui.app import MainWindow
@@ -2020,14 +2053,15 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
 
 
 def test_flatpak_window_still_sends_a_garmin_drive_to_the_command_line(plugged, monkeypatch):
-    """The Flatpak window cannot open a drive (step 6): the advice about --path stays there."""
+    """The Flatpak window cannot open a drive (step 6, F1): the only place where the advice
+    about --path stays."""
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
     mass_storage_device(plugged.root)
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
-        "Mass storage mode", gio_storage.not_ready_text(gio_storage.MASS_STORAGE), False)
+        "Mass storage mode", FLATPAK_DRIVE_TEXT, False)
 
 
 class _SyncButton:
