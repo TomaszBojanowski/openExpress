@@ -295,16 +295,29 @@ def cmd_whoami(args) -> int:
 
 
 def cmd_cache(args) -> int:
-    """How big the cache is, folder by folder; nothing is deleted."""
+    """How big the cache is, folder by folder. With --clear it is emptied (with --apply;
+    without it, only said)."""
     from openexpress import cache
 
-    use = cache.usage()
+    if args.clear and args.apply:
+        try:
+            use = cache.clear()
+        except cache.CacheError as e:
+            _error(_("Error: {error}").format(error=e))
+            return 1
+    else:
+        use = cache.usage()
     print(_("Cache: {path}").format(path=use.root))
     for name in cache.FOLDERS:
         print(f"  {_(cache.FOLDER_NAMES[name])}: {human_size(use.sizes[name])}")
     print("  " + _("Total: {size}").format(size=human_size(use.total)))
     log.info("cache: %s in all (%s)", applog.size(use.total),
              ", ".join(f"{name} {applog.size(use.sizes[name])}" for name in cache.FOLDERS))
+    if args.clear and args.apply:
+        print(_("Freed {size}.").format(size=human_size(use.total)))
+        log.info("cache: cleared, %s freed", applog.size(use.total))
+    elif args.clear:
+        print(_("Dry run: nothing was deleted. Add --apply to delete it."))
     return 0
 
 
@@ -1569,6 +1582,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_logout)
 
     s = sub.add_parser("cache", help=_("how big the cache of downloaded maps and updates is"))
+    s.add_argument("--clear", action="store_true",
+                   help=_("delete what is in the cache (downloaded again when needed)"))
+    s.add_argument("--apply", action="store_true", help=_("really delete (with --clear)"))
     s.set_defaults(func=cmd_cache)
 
     s = sub.add_parser("whoami", help=_("logged-in account"))

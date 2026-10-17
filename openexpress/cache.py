@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import os
+import shutil
 import stat
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,7 +32,11 @@ FOLDER_NAMES = {"maps": N_("Maps"), "images": N_("Pictures"),
 LOCK_NAME = "cache.lock"
 
 
-class CacheBusy(Exception):
+class CacheError(Exception):
+    """The cache could not be cleared; the message says why."""
+
+
+class CacheBusy(CacheError):
     """The cache is in use (a download or an install is running): it is not cleared now."""
 
 
@@ -86,6 +91,29 @@ def usage() -> CacheUsage:
     is made or changed."""
     root = paths.cache_dir()
     return CacheUsage(root, {name: _size(root / name) for name in FOLDERS})
+
+
+def clear() -> CacheUsage:
+    """Delete what is in the four folders of the cache, holding it alone (CacheBusy while it
+    is in use). The folders themselves stay, and so do cache.lock and anything else in the
+    cache folder; nothing is deleted through a symbolic link, and a folder that is a link is
+    left alone. Returns what was there: its total is what was freed."""
+    with clearing():
+        before = usage()
+        for name in FOLDERS:
+            folder = before.root / name
+            if folder.is_symlink() or not folder.is_dir():
+                continue
+            for entry in folder.iterdir():
+                try:
+                    if entry.is_dir() and not entry.is_symlink():
+                        shutil.rmtree(entry)  # removes links inside as links
+                    else:
+                        entry.unlink()
+                except OSError as e:
+                    raise CacheError(_("Could not delete {path}: {error}").format(
+                        path=entry, error=e.strerror or e)) from None
+    return before
 
 
 def _size(folder: Path) -> int:

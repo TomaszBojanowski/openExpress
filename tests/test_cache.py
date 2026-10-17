@@ -241,3 +241,84 @@ def test_staging_a_file_for_the_device_holds_the_cache(cache, monkeypatch):
     gio_storage.GioStorage._write(st, "GARMIN/NewFiles/x.fit", b"data")
     assert seen == [(True, True)] and not in_use()
     assert list((cache / "transfer").iterdir()) == []
+
+
+# --- clearing the cache (C2, part 2): `openexpress cache --clear [--apply]` --------------------
+
+
+def filled(cache, tmp_path) -> dict:
+    """A cache with files in each folder, and around it what a clearing must never touch:
+    a file and a folder openExpress does not make, a link in maps to a file outside, and
+    that file. Returns the paths that must stay."""
+    fill(cache, {"maps/aaa": 1000, "maps/bbb.part": 500, "maps/sub/ccc": 250,
+                 "images/device-x.png": 30, "software/006/1/GUPDATE.GCD": 4000,
+                 "transfer/openexpress-staged": 20, "tmp/other": 99, "notes.txt": 7})
+    fill(tmp_path, {"outside/big": 7777})
+    os.symlink(tmp_path / "outside" / "big", cache / "maps" / "link")
+    return {"other": cache / "tmp" / "other", "notes": cache / "notes.txt",
+            "outside": tmp_path / "outside" / "big"}
+
+
+def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
+    """Dry run: the same numbers as `cache`, then one line; every file is still there."""
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    before = sorted(p for p in cache.rglob("*"))
+    assert main(["cache", "--clear"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"Cache: {cache}",
+        "  Maps: 1.8 kB",
+        "  Pictures: 30 B",
+        "  Software updates: 4.0 kB",
+        "  Transfer: 20 B",
+        "  Total: 5.8 kB",
+        "Dry run: nothing was deleted. Add --apply to delete it."]
+    assert sorted(p for p in cache.rglob("*")) == before
+
+
+def test_clear_with_apply_empties_the_four_folders(cache, tmp_path, capsys):
+    """--apply: what is in the four folders goes; the folders themselves, cache.lock and all
+    else stay (a link is removed as a link, the file it points to stays). It says how much
+    was freed."""
+    from openexpress.cli import main
+
+    stay = filled(cache, tmp_path)
+    assert main(["cache", "--clear", "--apply"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[-1] == "Freed 5.8 kB." and "  Total: 5.8 kB" in out
+    for name in ("maps", "images", "software", "transfer"):
+        assert (cache / name).is_dir() and list((cache / name).iterdir()) == []
+    assert (cache / "cache.lock").exists()
+    assert all(p.exists() for p in stay.values())
+
+
+def test_clear_while_the_cache_is_in_use_deletes_nothing(cache, tmp_path, capsys):
+    """A download or an install holds the cache: the clearing is refused, exit code 1,
+    every file is still there."""
+    from openexpress import cache as oe_cache
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    with oe_cache.using():  # makes cache.lock: the files are counted after that
+        before = sorted(p for p in cache.rglob("*"))
+        assert main(["cache", "--clear", "--apply"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err.strip() == ("Error: The cache is in use (a download or an install is "
+                                    "running). Try again later.")
+    assert "Freed" not in captured.out
+    assert sorted(p for p in cache.rglob("*")) == before
+
+
+def test_a_cache_folder_that_is_a_link_is_left_alone(cache, tmp_path):
+    """maps is a link to a folder elsewhere: neither the link nor what it points to is
+    deleted (only what openExpress keeps in its own folder is cleared)."""
+    from openexpress import cache as oe_cache
+
+    fill(tmp_path, {"elsewhere/map": 5000})
+    fill(cache, {"images/p.png": 30})
+    os.symlink(tmp_path / "elsewhere", cache / "maps")
+    freed = oe_cache.clear()
+    assert freed.total == 30
+    assert (cache / "maps").is_symlink() and (tmp_path / "elsewhere" / "map").exists()
+    assert list((cache / "images").iterdir()) == []
