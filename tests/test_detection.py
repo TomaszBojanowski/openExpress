@@ -2107,6 +2107,36 @@ def test_a_quick_unplug_and_plug_in_makes_one_detection(choosing_window, monkeyp
     assert win.session is None and win.built == []
 
 
+def test_two_devices_not_mounted_are_two_rows(choosing_window, monkeypatch, tmp_path,
+                                             device_root):
+    """C8 (P3): two MTP devices whose volumes are not mounted, both on USB: two rows to
+    click, "not mounted", without details; never merged (no unit ID is no match)."""
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    edge = two_watches(world, monkeypatch, tmp_path, device_root)
+    usb_device(world.root, "1-2", 1, 10, "091e", "5158")
+    for found in world.offered:
+        found.mounted = False
+    win.refresh_device()
+    assert win.session is None and win.built == []
+    assert rows_of(win) == [("", "Over USB (MTP) · Not mounted; choose it to open it")] * 2
+    assert [s.found for s in win._choices] == [world.offered[0], edge]
+
+
+def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatch, tmp_path,
+                                                     device_root):
+    """C9: the Edge's GarminDevice.xml is cut short; the test watch is fine: a row "could
+    not be read" next to the normal one; nothing stops the list."""
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    two_watches(world, monkeypatch, tmp_path, device_root)
+    usb_device(world.root, "1-2", 1, 10, "091e", "5158")
+    (tmp_path / "edge" / "GARMIN" / "GarminDevice.xml").write_text("<Device><Model>")
+    win.refresh_device()
+    assert rows_of(win) == [("Test watch", "Over USB (MTP) · Software 23.39"),
+                            ("", "Over USB (MTP) · Could not be read")]
+
+
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
