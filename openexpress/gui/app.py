@@ -250,6 +250,13 @@ def mass_storage_text() -> str:
              "not apply to it.")
 
 
+def drive_not_mounted_text() -> str:
+    """A Garmin device in mass storage mode on USB whose drive the system has not mounted
+    (after it was ejected, or when the desktop does not mount drives by itself)."""
+    return _("The Garmin device is connected, but its drive is not mounted. Open it in the "
+             "file manager, or unplug the cable and plug it in again.")
+
+
 def show_not_for_mass_storage(sec) -> None:
     """A page that does not apply to a Garmin device in mass storage mode: it loads nothing
     and says why, as the Music page of a device without media does."""
@@ -974,8 +981,11 @@ class MainWindow(Adw.ApplicationWindow):
                     _("Connect your Garmin device with a USB cable. "
                       "It will be detected automatically."), False)
         if state == MASS_STORAGE:
+            # The window opens such a drive once the system mounts it, so with none open it
+            # is not mounted; only the Flatpak cannot open it (step 6) and sends it to --path.
+            text = not_ready_text(state) if paths.in_flatpak() else drive_not_mounted_text()
             # TRANSLATORS: a device connected as a USB drive, not over MTP
-            return _("Mass storage mode"), not_ready_text(state), False
+            return _("Mass storage mode"), text, False
         if waited_s < WAIT_FOR_DEVICE_S:
             return (_("The device is starting…"),
                     _("This takes a moment after the cable is plugged in."), True)

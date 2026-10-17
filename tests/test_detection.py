@@ -647,6 +647,8 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
 
 # What the window says about an open Garmin drive: on its device page and on the pages that
 # do not apply to it.
+DRIVE_NOT_MOUNTED_TEXT = ("The Garmin device is connected, but its drive is not mounted. Open "
+                          "it in the file manager, or unplug the cable and plug it in again.")
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
                      "openExpress shows its information and software updates; sync, apps, "
                      "maps and music do not apply to it.")
@@ -1259,6 +1261,81 @@ def test_window_after_a_garmin_drive_is_unplugged(drive_window, monkeypatch, cap
     assert win.session is None and win.built[-1] is None and win._updated_apps == set()
     assert [r.getMessage() for r in caplog.records] == [
         "mount removed (file:): the open device, showing no device (a task is running: False)"]
+
+
+def _run_at_once(work, done, failed):
+    try:
+        result = work()
+    except Exception as e:  # noqa: BLE001 - as the window's in_background: any failure
+        failed(e)
+    else:
+        done(result)
+
+
+def test_a_second_mount_event_of_the_open_drive_reloads_nothing(drive_window, monkeypatch,
+                                                                caplog):
+    """The same drive reported again right after it was opened: the drive still answers, so
+    the pages stay as they are (no second "all pages are loaded anew")."""
+    from openexpress.gui.app import MainWindow
+
+    win, drive = drive_window, drive_window.world.drive()
+    win.in_background = _run_at_once
+    monitor_with(monkeypatch, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    win.timers.fire()
+    opened = win.session
+    assert opened is not None and opened.mass_storage and win.built == [opened]
+    caplog.clear()  # only what the second event writes
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_added(win, None, drive)  # within the same 2 s
+        win.timers.fire()
+    assert win.session is opened and win.built == [opened]
+    assert "all pages are loaded anew" not in caplog.text
+    assert "device detection: the open device is still there, nothing to do" in caplog.text
+
+
+def test_two_mount_events_of_a_drive_before_it_is_open_open_it_once(drive_window, monkeypatch):
+    """Two reports of one drive before the first detection: one detection, one opening."""
+    from openexpress.gui.app import MainWindow
+
+    win, drive = drive_window, drive_window.world.drive()
+    monitor_with(monkeypatch, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    assert len(win.timers.live) == 1
+    win.timers.fire()
+    assert len(win.built) == 1 and win.built[0] is not None and win.built[0].mass_storage
+
+
+def _open_below(root: Path) -> list[str]:
+    """The files and folders this process has open below `root` (Linux: /proc/self/fd)."""
+    found = []
+    for fd in Path("/proc/self/fd").iterdir():
+        try:
+            target = os.readlink(fd)
+        except OSError:
+            continue
+        if target == str(root) or target.startswith(str(root) + os.sep):
+            found.append(target)
+    return found
+
+
+@pytest.mark.skipif(not Path("/proc/self/fd").is_dir(), reason="needs /proc")
+def test_reading_a_garmin_drive_keeps_nothing_open_on_it(drive_window, monkeypatch):
+    """After the window read the drive (GarminDevice.xml, folder listings, the start of a file,
+    free space), no file or folder on it stays open and the current folder is not on it:
+    nothing makes the system say the drive is busy when it is ejected."""
+    s = drive_session(drive_window, monkeypatch)
+    root = s.storage.root
+    cwd = os.getcwd()
+    s.storage.read("GARMIN/GarminDevice.xml")
+    s.storage.listdir("GARMIN")
+    assert s.storage.exists("GARMIN/GarminDevice.xml")
+    s.storage.size("GARMIN/GarminDevice.xml")
+    s.storage.read_start("GARMIN/GarminDevice.xml", 16)
+    s.storage.free_space()
+    assert _open_below(root) == []
+    assert os.getcwd() == cwd and not cwd.startswith(str(root))
 
 
 def test_no_update_is_installed_on_a_garmin_drive_yet(drive_window, monkeypatch):
@@ -1936,9 +2013,21 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
         MainWindow._poll_usb(win, clock=plugged.clock)
         assert refreshed == []  # nothing to look for over MTP
         assert shown[-1][2] is False and "PIN" not in shown[-1][1]
-        assert shown[-1] == ("Mass storage mode",
-                             gio_storage.not_ready_text(gio_storage.MASS_STORAGE), False)
+        # The window opens such a drive once it is mounted (step 5c): no advice about --path.
+        assert shown[-1] == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+        assert "--path" not in shown[-1][1]
     assert updates == ["Mass storage mode"]  # the Sync button says why, told once
+
+
+def test_flatpak_window_still_sends_a_garmin_drive_to_the_command_line(plugged, monkeypatch):
+    """The Flatpak window cannot open a drive (step 6): the advice about --path stays there."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    mass_storage_device(plugged.root)
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
+        "Mass storage mode", gio_storage.not_ready_text(gio_storage.MASS_STORAGE), False)
 
 
 class _SyncButton:
