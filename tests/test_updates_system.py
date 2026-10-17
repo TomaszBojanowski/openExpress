@@ -1193,3 +1193,37 @@ def test_over_mtp_the_old_file_still_counts_as_freed(device_root, tmp_path, monk
         replaces_atomically = False
 
     assert updates.check_space(OverMtp(device_root), [font])[0] == font.size - 3
+
+
+# --- names from the server never lead out of the cache (review of 106cd25) ---------------------
+
+
+@pytest.mark.parametrize("field,value", [("part_number", "../x"), ("version", "1/2"),
+                                         ("device_path", "Garmin/.."), ("device_path", "Garmin/"),
+                                         ("part_number", "")])
+def test_a_name_from_the_server_that_is_no_path_is_refused(device_root, tmp_path, monkeypatch,
+                                                           field, value):
+    """The cache of an update is cache/software/<part number>/<version>/<file name>, all as
+    the server gives them (the file name is the last part of its path on the device): a part
+    that is no plain name refuses the update before anything is downloaded, and nothing is
+    written outside the cache."""
+    import dataclasses
+
+    from openexpress import paths
+
+    (font,) = [u for u in updates.parse_updates(lower_keys(server_answer())) if not u.is_system]
+    crafted = dataclasses.replace(font, **{field: value})
+    fetched = []
+    monkeypatch.setattr(download, "fetch", lambda *a, **k: fetched.append(a))
+    before = {p for p in tmp_path.rglob("*") if p.is_file()}
+    with pytest.raises(updates.UpdateError, match="cannot be used as a path"):
+        updates.cache_path(crafted)
+    with pytest.raises(updates.UpdateError, match="cannot be used as a path"):
+        updates.install([crafted], LocalStorage(device_root))
+    assert fetched == []
+    new = {p for p in tmp_path.rglob("*") if p.is_file()} - before
+    cache = paths.cache_dir().resolve()
+    assert all(p.resolve().is_relative_to(cache) for p in new)  # at most its lock
+    assert not any(p.resolve().is_relative_to(cache / "software") for p in new)
+    assert updates.cache_path(font).resolve().is_relative_to(
+        (paths.cache_dir() / "software").resolve())

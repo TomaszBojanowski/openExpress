@@ -1371,3 +1371,28 @@ def test_about_links_to_the_support_page(monkeypatch):
     assert about.props["website"] == "https://github.com/TomaszBojanowski/openExpress"
     assert about.props["issue_url"] == "https://github.com/TomaszBojanowski/openExpress/issues"
     assert about.links == [("Support the project", "https://buymeacoffee.com/sojer2005")]
+
+
+# --- names from the server never lead out of the picture cache (review of 106cd25) ------------
+
+
+@pytest.mark.parametrize("name", ["app-a/b.png", "app-../../x.png", "..", "", "/tmp/x.png"])
+def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
+    """An icon is cached as app-<app ID>.png, the app ID as the Connect IQ server gives it:
+    a name that is no plain file name is not saved (and not even asked for), the icon stays
+    as it is; nothing is written outside the cache. The same for device pictures."""
+    from openexpress.gui import app
+
+    asked = []
+
+    class Http:
+        def get(self, url, **kw):
+            asked.append(url)
+            raise AssertionError("asked for a picture with a bad name")
+
+    before = {p for p in Path(xdg).rglob("*") if p.is_file()}
+    assert app.cached_download(Http(), "https://res.garmin.com/x.png", name) is None
+    assert app.download_picture(Http(), "https://res.garmin.com/x.png", name) == (
+        None, "not a file name")
+    assert asked == []
+    assert {p for p in Path(xdg).rglob("*") if p.is_file()} == before

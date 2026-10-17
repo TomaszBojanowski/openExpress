@@ -255,7 +255,18 @@ def select(updates: list[SoftwareUpdate], wanted: list[str],
 
 
 def cache_path(u: SoftwareUpdate) -> Path:
-    return paths.cache_dir() / "software" / u.part_number / u.version / u.filename
+    """cache/software/<part number>/<version>/<file name>, each as the server gives it: a
+    part that is no plain name (empty, "..", with a separator) is refused, and so is a path
+    that would leave the cache."""
+    root = paths.cache_dir() / "software"
+    parts = (u.part_number, u.version, u.filename)
+    bad = next((part for part in parts if not paths.is_safe_component(part)), None)
+    path = root.joinpath(*parts) if bad is None else None
+    if path is None or not paths.is_inside(path, root):
+        raise UpdateError(_("The server gave a name that cannot be used as a path on this "
+                            "computer: '{name}'").format(name=bad if bad is not None else
+                                                         "/".join(parts)))
+    return path
 
 
 def check_space(storage: Storage, updates: list[SoftwareUpdate]) -> tuple[int, int | None]:

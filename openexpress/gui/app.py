@@ -151,9 +151,21 @@ def format_when(ts: float) -> str:
     return when.strftime("%x %H:%M")
 
 
+def picture_target(name: str) -> Path | None:
+    """cache/images/<name>, the name from a server (an app ID, a part number): None when it
+    is no plain file name or would leave the cache (nothing is saved then)."""
+    images = paths.cache_dir() / "images"
+    if not paths.is_safe_component(name) or not paths.is_inside(images / name, images):
+        log.info("picture: a name from the server is no file name here, not saved")
+        return None
+    return images / name
+
+
 def cached_download(http, url: str, name: str) -> Path | None:
     """Downloads a small file (picture, icon) once into the cache."""
-    target = paths.cache_dir() / "images" / name
+    target = picture_target(name)
+    if target is None:
+        return None
     if target.exists() and target.stat().st_size:
         return target
     try:
@@ -226,6 +238,9 @@ def bike_accessory_text() -> str:
 def download_picture(http, url: str, name: str,
                      clock=time.monotonic) -> tuple[Path | None, str]:
     """Download a device picture into the cache: (file, "") or (None, why not)."""
+    target = picture_target(name)
+    if target is None:
+        return None, "not a file name"
     if not url.startswith(PICTURE_HOST):
         return None, "not res.garmin.com"
     deadline = clock() + PICTURE_TIMEOUT_S
@@ -251,7 +266,6 @@ def download_picture(http, url: str, name: str,
         return None, "timeout" if "Timeout" in type(e).__name__ else "network error"
     if not bytes(data).startswith(PNG_SIGNATURE):
         return None, "not a PNG"
-    target = paths.cache_dir() / "images" / name
     try:
         with cache.using():
             target.parent.mkdir(parents=True, exist_ok=True)
