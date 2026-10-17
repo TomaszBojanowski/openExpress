@@ -640,6 +640,12 @@ class MainWindow(Adw.ApplicationWindow):
         self._start_targets: list = []
         self._stay_on_start = False
         self._navigated = False
+        # The devices connected, as last known (the list chosen from, the one device, or the
+        # list read again on a change); kept while one of them is open, for the start page.
+        self._connected: list = []
+        # A detection started with a device open: if the start page is shown, it stays.
+        self._reopening = False
+        self._reread_pending = False
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
@@ -1061,6 +1067,9 @@ class MainWindow(Adw.ApplicationWindow):
             self.refresh_device()
         elif getattr(self, "_detect_after_task", False) and not self.busy:
             detection_due(self)
+        elif getattr(self, "_reread_pending", False) and not self.busy:
+            self._reread_pending = False
+            self._reread_connected()
 
     @staticmethod
     def in_background(fn, on_done, on_error=None) -> None:
@@ -1147,9 +1156,10 @@ class MainWindow(Adw.ApplicationWindow):
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
             # Another Garmin device went away (several connected): the open one is still at
-            # its place on USB, so it stays open.
-            log.info("mount removed (%s): not the open device, which is still there; ignored",
-                     where)
+            # its place on USB, so it stays open; the start page lists those left.
+            log.info("mount removed (%s): not the open device, which is still there; the "
+                     "list of devices is read again", where)
+            self._reread_connected()
             return
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
@@ -1231,6 +1241,8 @@ class MainWindow(Adw.ApplicationWindow):
             self._refresh_pending = True
             return
         self._refresh_pending = False
+        # With a device open and the start page shown, the start page stays (whoever asked).
+        self._reopening = self.session is not None
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
 
@@ -1279,6 +1291,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._usb_title = _("Choose a device")  # the Sync button says the same
         self._update_banner()
         self._update_actions()
+        self._connected = list(self._choices or [])
         self._show_start()
 
     def open_choice(self, found) -> None:
@@ -1310,14 +1323,39 @@ class MainWindow(Adw.ApplicationWindow):
         return self.navigation.get_visible_page() is self.start.page
 
     def _on_refresh(self) -> None:
-        """Refresh (the button, F5): on the start page it stays there, also when one device
-        is found (decision 7); in the device view, as before."""
-        self._stay_on_start = self._on_start_page()
+        """Refresh (the button, F5). On the start page with a device open: the list is read
+        again, nothing else (decision A); without one, a detection that stays there also when
+        one device is found (decision 7). In the device view, as before."""
+        on_start = self._on_start_page()
+        if on_start and self.session is not None:
+            self._reread_connected()
+            return
+        self._stay_on_start = on_start
         self.refresh_device()
+
+    def _reread_connected(self) -> None:
+        """Read the devices connected again (their GarminDevice.xml only: nothing opened,
+        nothing asked of the account), while one is open; the list is replaced whole and
+        drawn once, the old tiles stay until then. Never opens a device view (D7). After the
+        running task, if one runs."""
+        if self.busy:
+            self._reread_pending = True
+            return
+        s = self.session
+
+        def done(found):
+            if self.session is not s:
+                return  # closed or replaced meanwhile: drawn by what did that
+            log.info("start page: %d devices connected", len(found))
+            self._connected = found
+            if self._on_start_page():
+                self._render_start()
+
+        self.in_background(connected_devices, done)
 
     def _show_start(self) -> None:
         """The start page, as it is now."""
-        self._stay_on_start = False
+        self._stay_on_start = self._reopening = False
         self._navigated = True
         if self._on_start_page():
             self._render_start()
@@ -1327,8 +1365,9 @@ class MainWindow(Adw.ApplicationWindow):
     def _show_device_view(self) -> None:
         """The view of the device open now, above the start page (D7): unless Refresh was
         pressed on the start page, which stays then."""
-        if self._stay_on_start:
-            self._stay_on_start = False
+        stay = self._stay_on_start or self._reopening
+        self._stay_on_start = self._reopening = False
+        if stay and self._on_start_page():
             self._render_start()
             return
         if not self._on_start_page():
@@ -1348,25 +1387,17 @@ class MainWindow(Adw.ApplicationWindow):
             self._render_start()
 
     def _render_start(self) -> None:
-        """With no device open: the devices to choose from, or none and the notice of the
-        USB state. With one open: its tile at once, then the devices connected now (read in
-        the background, unless a task works with the device)."""
+        """Drawn once, from what is known: with no device open, the devices to choose from,
+        or none and the notice of the USB state; with one open, the devices connected as last
+        known, the open one among them. Nothing is read here."""
         s = self.session
         if s is None:
             self._show_tiles(self._choices or [], notice=not self._choices)
             return
-        self._show_tiles([session_summary(s)], notice=False)
-        if self.busy:
-            return
-
-        def done(found):
-            if self.session is not s or not self._on_start_page():
-                return
-            if not any(self._is_open(f) for f in found):
-                found = [session_summary(s), *found]
-            self._show_tiles(found, notice=False)
-
-        self.in_background(connected_devices, done)
+        connected = self._connected
+        if not any(self._is_open(c) for c in connected):
+            connected = [session_summary(s), *connected]
+        self._show_tiles(connected, notice=False)
 
     def _is_open(self, summary) -> bool:
         """Whether an entry is the device open now: by the unit ID, else by the address
@@ -1413,6 +1444,7 @@ class MainWindow(Adw.ApplicationWindow):
             # The empty pages tell the state on USB now, not the one from before the device
             # was opened (e.g. "starting" when the window opened with a starting device).
             self._poll_usb()
+            self._connected = []
             self._show_start()
             return
         page = self.pages.get_visible_child_name()
@@ -1424,6 +1456,8 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_check_session = self.session
         self.show_overview()
         self.load_section(page)
+        if not any(self._is_open(c) for c in self._connected):
+            self._connected = []  # the one device (D7): its tile comes from the session
         self._show_device_view()
 
     def _update_banner(self) -> None:

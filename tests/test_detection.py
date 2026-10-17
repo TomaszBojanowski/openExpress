@@ -1567,6 +1567,9 @@ def choosing_window(drive_window):
     if hasattr(MainWindow, "open_choice"):
         win.open_choice = types.MethodType(MainWindow.open_choice, win)
     win.error = lambda title, text: win.errors.append(text)
+    # The start page reads the list again when another device goes away (D5): recorded here.
+    win.rereads = []
+    win._reread_connected = lambda: win.rereads.append(win.session)
     return win
 
 
@@ -3313,7 +3316,7 @@ class FakeSection:
 
 START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
-                 "_on_popped")
+                 "_on_popped", "_reread_connected")
 
 
 def start_stand_in(start, sections, win=None):
@@ -3334,6 +3337,7 @@ def start_stand_in(start, sections, win=None):
     win.in_background = lambda work, done, failed=None: done(work())
     win.toast = win.errors.append
     win._start_targets, win._stay_on_start, win._navigated = [], False, False
+    win._connected, win._reopening, win._reread_pending = [], False, False
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -3502,3 +3506,135 @@ def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
     finally:
         netstatus.STATUS.remove_listener(win._net_listener)
         win.destroy()
+
+
+# --- the start page with a device open: no flicker, no reopening (live test of T2) -----------
+
+
+def defer_background(win):
+    """Work in the background waits until the test runs it (`run_later`)."""
+    later = []
+    win.in_background = lambda work, done, failed=None: later.append((work, done))
+    return later
+
+
+def run_later(later):
+    while later:
+        work, done = later.pop(0)
+        done(work())
+
+
+def drawn_names(win, since=0):
+    """The names on the tiles of each drawing of the start page since `since`."""
+    return [[name for name, _on, _how in tiles] for tiles, _notice in win.start.shown[since:]]
+
+
+def two_and_one_open(win, monkeypatch, tmp_path, device_root, name):
+    """Two watches connected, `name` chosen on the start page and open, then back on the
+    start page with the list drawn; the Edge is on USB at 1-2."""
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")
+    win.refresh_device()
+    win._open_tile(drawn_names(win)[-1].index(name))
+    assert win.session.device.description == name
+    return edge
+
+
+def count_opening(monkeypatch):
+    """Each device opened and each account check, from now on."""
+    from openexpress import service
+
+    calls = []
+    for name in ("open_session", "check_session"):
+        real = getattr(service, name)
+        monkeypatch.setattr(service, name, lambda *a, _real=real, _name=name, **k: (
+            calls.append(_name), _real(*a, **k))[1])
+    return calls
+
+
+def test_back_draws_the_list_at_once_never_one_tile_of_two(start_window, monkeypatch,
+                                                           tmp_path, device_root):
+    """Live test of T2 (17.10.2026): two devices, back from the view of one: the start page
+    is drawn once, at once, with both tiles; never only the open one first, and nothing is
+    read again."""
+    win = start_window
+    later = defer_background(win)
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Edge 1050")
+    drawn = len(win.start.shown)
+    back(win)
+    assert drawn_names(win, drawn) == [["Test watch", "Edge 1050"]]
+    assert later == []
+
+
+def test_refresh_on_the_start_page_reads_the_list_only(start_window, monkeypatch, tmp_path,
+                                                       device_root):
+    """Decision A: Refresh on the start page with a device open reads the list again, once,
+    in whole: the open device is not opened again, the account not asked, its view not
+    rebuilt; the start page stays and shows both tiles all the time."""
+    win = start_window
+    later = defer_background(win)
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Edge 1050")
+    back(win)
+    run_later(later)
+    opening, built, drawn = count_opening(monkeypatch), len(win.overviews), len(win.start.shown)
+    win._on_refresh()
+    run_later(later)
+    assert opening == [] and len(win.overviews) == built
+    assert win.navigation.stack == ["start page"]
+    assert drawn_names(win, drawn) == [["Test watch", "Edge 1050"]]
+
+
+def test_reading_the_list_again_never_opens_a_device_view(start_window, monkeypatch, tmp_path,
+                                                          device_root):
+    """Guards D7: the list read again with one device left (the Edge unplugged) shows its
+    tile; the start page stays, no device view comes up."""
+    win = start_window
+    later = defer_background(win)
+    edge = two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    back(win)
+    run_later(later)
+    win.world.offered.remove(edge)
+    win._on_refresh()
+    run_later(later)
+    assert win.navigation.stack == ["start page"]
+    assert drawn_names(win)[-1] == ["Test watch"]
+
+
+def test_another_device_unplugged_while_one_is_open_updates_the_list(start_window, monkeypatch,
+                                                                     tmp_path, device_root):
+    """K6 with the start page: the test watch open, the start page shown, the Edge unplugged:
+    the list is read again and drawn once, with the test watch only; it stays open."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    later = defer_background(win)
+    edge = two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    opened = win.session
+    back(win)
+    run_later(later)
+    drawn = len(win.start.shown)
+    win.world.offered.remove(edge)
+    for f in (win.world.root / "1-2").iterdir():
+        f.unlink()
+    (win.world.root / "1-2").rmdir()
+    MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
+    run_later(later)
+    assert win.session is opened and win.navigation.stack == ["start page"]
+    assert drawn_names(win, drawn) == [["Test watch"]]
+
+
+def test_a_pending_refresh_stays_on_the_start_page(start_window, monkeypatch, tmp_path,
+                                                   device_root):
+    """A detection with a device open while the start page is shown (a refresh left over
+    from a task, "Try Again" on the banner) keeps the start page: the device view comes up
+    only when chosen."""
+    win = start_window
+    later = defer_background(win)
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Edge 1050")
+    back(win)
+    run_later(later)
+    win.refresh_device()
+    run_later(later)
+    assert win.navigation.stack == ["start page"]
+    assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]

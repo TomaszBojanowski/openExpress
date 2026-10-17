@@ -892,6 +892,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         software_label=types.SimpleNamespace(set_label=lambda text: None),
         _update_banner=lambda: None, _update_actions=lambda: None,
         _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation (D5)
+        _connected=[],  # the devices connected, for the start page
         show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
         load_apps=None, load_music=None,  # other pages: not loaded here
         run_task=lambda title, work, done, failed, device=True: run(work, done, failed),
