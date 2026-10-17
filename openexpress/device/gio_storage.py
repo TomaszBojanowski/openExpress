@@ -822,6 +822,21 @@ def probe(found: FoundDevice) -> DeviceSummary:
     return summary
 
 
+def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
+    """One entry per device. Entries with the same unit ID are one device seen in two ways
+    (over MTP and as a drive, while it switches): the MTP entry stays, in the place of the
+    first (D1). Entries without details cannot be told apart and are each kept."""
+    out: list[DeviceSummary] = []
+    for s in summaries:
+        seen = next((i for i, o in enumerate(out)
+                     if s.unit_id is not None and o.unit_id == s.unit_id), None)
+        if seen is None:
+            out.append(s)
+        elif out[seen].found.kind != "mtp" and s.found.kind == "mtp":
+            out[seen] = s
+    return out
+
+
 def _probe(found: FoundDevice, parse) -> DeviceSummary:
     if not found.mounted:
         return DeviceSummary(found, reason=NOT_MOUNTED)

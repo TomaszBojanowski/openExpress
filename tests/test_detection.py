@@ -4,6 +4,7 @@ All serial numbers and USB trees here are made up.
 """
 
 import hashlib
+import itertools
 import logging
 import os
 import shutil
@@ -1536,6 +1537,236 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
                                      set_empty=lambda *notice: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
     assert shown == [("Mass storage mode", FLATPAK_DRIVE_TEXT, False)]
+
+
+# --- several devices: a list to choose from (start page, K5) ---------------------------------
+
+EDGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
+ <Model><PartNumber>006-B4440-00</PartNumber><SoftwareVersion>3311</SoftwareVersion>
+  <Description>Edge 1050</Description></Model>
+ <Id>3000000002</Id>
+</Device>
+"""
+
+
+@pytest.fixture
+def choosing_window(drive_window):
+    """The window's detection with the list to choose from: what the list would show is
+    recorded (kind and name of each entry); opening one goes through the real code."""
+    from openexpress.gui.app import MainWindow
+
+    win = drive_window
+    win._choices, win._choices_usb, win.shown_choices, win.errors = None, None, [], []
+    win.show_choices = lambda: win.shown_choices.append(
+        [(s.found.kind, s.description) for s in win._choices])
+    # Bound only when it exists, so that on code without it the tests fail on what they check.
+    if hasattr(MainWindow, "open_choice"):
+        win.open_choice = types.MethodType(MainWindow.open_choice, win)
+    win.error = lambda title, text: win.errors.append(text)
+    return win
+
+
+def two_watches(world, monkeypatch, tmp_path, device_root):
+    """Two different MTP devices: the test watch (NUMERIC) and an Edge 1050 (NAMED), each
+    with its own GarminDevice.xml."""
+    edge_root = tmp_path / "edge"
+    (edge_root / "GARMIN").mkdir(parents=True)
+    (edge_root / "GARMIN" / "GarminDevice.xml").write_text(EDGE_XML)
+    mtp = gio_storage.GioStorage  # the stand-in of watch_and_drives
+
+    class TwoDevices(mtp):
+        def __init__(self, uri):
+            super().__init__(uri)
+            if uri.startswith(NAMED):
+                self.root = edge_root
+
+    monkeypatch.setattr(gio_storage, "GioStorage", TwoDevices)
+    world.plug("51b4")
+    world.offer()
+    edge = gio_storage.FoundDevice(NAMED, "Edge", True,
+                                   usb=gio_storage.GarminUsb("5158", "usb", 1, 10))
+    world.offered.append(edge)
+    return edge
+
+
+def test_window_offers_a_choice_of_two_mtp_devices(choosing_window, monkeypatch, tmp_path,
+                                                   device_root):
+    """K5: two MTP devices: a list of both by name, no session, no "starting" or "PIN",
+    and no detection planned again."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.session is None and win.built == []
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
+    assert win.timers.live == {}
+
+
+def test_window_offers_an_mtp_device_and_a_garmin_drive(choosing_window, monkeypatch):
+    """K5 (P2): an MTP device and a Garmin drive, two different devices: both on the list
+    (opening without a choice would take the MTP device, D1)."""
+    win = choosing_window
+    monitor_with(monkeypatch, win.world.drive())
+    win.world.plug("51b4")
+    win.world.offer()
+    win.refresh_device()
+    assert win.session is None
+    assert win.shown_choices == [[("mtp", "Test watch"), ("ums", "Varia RTL515")]]
+
+
+def test_one_device_in_both_modes_is_no_choice(choosing_window, monkeypatch, device_root):
+    """K5 (P2, D1): the same device seen over MTP and as a drive (the same unit ID) is one
+    device: no list; it opens over MTP, as before."""
+    win = choosing_window
+    (device_root / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)
+    monitor_with(monkeypatch, win.world.drive())
+    win.world.plug("51b4")
+    win.world.offer()
+    win.refresh_device()
+    assert win.shown_choices == []
+    (s,) = win.built
+    assert s is win.session and not s.mass_storage
+
+
+def test_the_devices_to_choose_from_are_merged_by_unit_id():
+    """K5: one entry per device: an MTP entry and a drive with the same unit ID are one
+    (the MTP entry stays, D1); entries without details are kept apart."""
+    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12)
+
+    def summary(kind, uri, unit_id, reason=None):
+        return gio_storage.DeviceSummary(
+            gio_storage.FoundDevice(uri, "x", True, usb=usb, kind=kind),
+            "name" if reason is None else "", "", "", unit_id, reason)
+
+    mtp, drive = summary("mtp", NUMERIC, 3000000003), summary("ums", "file:///d/", 3000000003)
+    other = summary("mtp", NAMED, 3000000002)
+    unknown = [summary("mtp", "mtp://a/", None, "not-mounted"),
+               summary("mtp", "mtp://b/", None, "not-mounted")]
+    assert gio_storage.distinct_devices([drive, mtp, other, *unknown]) == [
+        mtp, other, *unknown]
+
+
+def test_choosing_a_device_opens_it(choosing_window, monkeypatch, tmp_path, device_root):
+    """K5: a click on an entry opens that device, as if it were the only one."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    chosen = next(s for s in win._choices if s.found is edge)
+    win.open_choice(chosen.found)
+    (s,) = win.built
+    assert s is win.session and s.storage.label.startswith(NAMED)
+    assert s.device.description == "Edge 1050" and win._choices is None
+
+
+def test_unplugging_down_to_one_device_opens_it(choosing_window, monkeypatch):
+    """K5 (D7): two drives on the list; one is unplugged: the list is detected again and the
+    one left is opened."""
+    from openexpress.gui.app import MainWindow
+
+    win = choosing_window
+    first = win.world.drive()
+    second = win.world.drive("GARMIN 2", port="1-5", devnum=13, disk="sdc")
+    # Another radar: its own unit ID.
+    xml = Path(second.root.path) / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(RTL515_XML.replace("3000000003", "3000000004"))
+    monitor_with(monkeypatch, first, second)
+    win.refresh_device()
+    assert win.session is None and win.shown_choices == [
+        [("ums", "Varia RTL515"), ("ums", "Varia RTL515")]]
+    for name in ("sdc", "sdc1"):  # unplugged: gone from /sys
+        (win.world.drives.block / name).unlink()
+    monitor_with(monkeypatch, first)
+    MainWindow._on_mount_removed(win, None, second)
+    assert len(win.timers.live) == 1
+    win.timers.fire()
+    (s,) = win.built
+    assert s is win.session and s.mass_storage and s.storage.device_uri == first.root.get_uri()
+
+
+def test_refresh_keeps_the_device_chosen(choosing_window, monkeypatch, tmp_path, device_root):
+    """K5: with two devices connected and one chosen, Refresh opens the chosen one again
+    instead of going back to the list."""
+    win = choosing_window
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    win.open_choice(edge)
+    win.refresh_device()  # "Refresh"
+    assert len(win.shown_choices) == 1  # the list only once, at the start
+    first, again = win.built
+    assert again is win.session and again is not first
+    assert again.storage.label.startswith(NAMED) and again.device.description == "Edge 1050"
+
+
+def test_one_device_found_twice_opens_without_a_list(choosing_window, monkeypatch):
+    """K5: two entries of one device (the same unit ID) where opening says "Several devices":
+    it is opened at once, not offered as a list of one."""
+    win = choosing_window
+    first = win.world.drive()
+    second = win.world.drive("GARMIN 2", port="1-5", devnum=13, disk="sdc")
+    monitor_with(monkeypatch, first, second)  # both with the same GarminDevice.xml
+    win.refresh_device()
+    assert win.shown_choices == []
+    (s,) = win.built
+    assert s is win.session and s.mass_storage and s.device.description == "Varia RTL515"
+
+
+def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch):
+    """K5: the list comes from what is plugged in, not from the account: a drive and an MTP
+    device that the account does not list are both there, and the account is not asked."""
+    from openexpress import service
+
+    asked = []
+    monkeypatch.setattr(service, "require_account_device",
+                        lambda client, unit_id: asked.append(unit_id) or [])
+    monkeypatch.setattr(service, "check_session",
+                        lambda s: asked.append("check") or s)
+    win = choosing_window
+    monitor_with(monkeypatch, win.world.drive())
+    win.world.plug("51b4")
+    win.world.offer()
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("ums", "Varia RTL515")]]
+    assert asked == []
+
+
+@pytest.mark.needs_display
+def test_list_shows_names_and_never_addresses(monkeypatch):
+    """K5: one row per device: its name (or "Garmin device" without details), how it is
+    connected, its version or why it has no details; never an MTP address; the other pages
+    say to choose a device."""
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow, Section
+
+    win, section = page_window("watch")
+    maps = Section("maps", "Maps", "x-symbolic", "Loading…")
+    win.sections["maps"] = maps
+    win._update_banner = win._update_actions = lambda: None
+    win.open_choice = lambda found: None
+    usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
+    win._choices = [
+        gio_storage.DeviceSummary(gio_storage.FoundDevice(NUMERIC, "x", True, usb=usb),
+                                  "fēnix 8", "006-B4532-00", "23.39", 1234567890),
+        gio_storage.DeviceSummary(gio_storage.FoundDevice(NAMED, "x", False, usb=usb),
+                                  reason=gio_storage.NOT_MOUNTED),
+        gio_storage.DeviceSummary(gio_storage.FoundDevice("file:///run/media/u/GARMIN/", "x",
+                                                          True, usb=usb, kind="ums"),
+                                  "Varia RTL515", "006-B3592-03", "3.36", 3000000003)]
+    MainWindow.show_choices(win)
+    texts = _texts(section.page)
+    rows = list(itertools.pairwise(texts))  # a row's title, then its subtitle
+    for title, subtitle in (("fēnix 8", "Over USB (MTP) · Software 23.39"),
+                            ("Garmin device", ("Over USB (MTP) · Not mounted; choose it to "
+                                               "open it")),
+                            ("Varia RTL515", "USB drive · Software 3.36")):
+        assert (title, subtitle) in rows
+    assert "Several Garmin devices are connected" in texts
+    assert not any("mtp://" in t or "0000abcdef" in t or "file:" in t for t in texts)
+    assert not any("PIN" in t or "starting" in t for t in texts)
+    assert maps.empty.get_title() == "Choose a device"
 
 
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------

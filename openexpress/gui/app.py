@@ -10,6 +10,7 @@ import time
 import traceback
 import types
 import weakref
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -29,13 +30,20 @@ from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
     MASS_STORAGE,
+    NO_DEVICE_FILE,
+    NOT_MOUNTED,
     PRESENT,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
+    SeveralDevices,
+    distinct_devices,
+    find_all_devices,
+    garmin_products_on_usb,
     garmin_ums,
     garmin_usb,
     not_ready_text,
     own_remount,
+    probe,
     usb_state,
     usb_still_there,
 )
@@ -284,6 +292,53 @@ def flatpak_drive_text() -> str:
     return _("The Garmin device is connected as a USB drive. This version (Flatpak) does not "
              "open drives; use the version from source, or the command line with --path and "
              "the folder where the system mounted the device.")
+
+
+@dataclass
+class DeviceChoices:
+    """Several Garmin devices are connected: their summaries, one per device, to choose
+    from (what a detection gives instead of a session)."""
+    summaries: list
+
+
+def choice_subtitle(summary) -> str:
+    """How an entry of the list is connected, and its version or why it has no details.
+    Never its address: an MTP address carries the serial number."""
+    how = _("USB drive") if summary.found.kind == "ums" else _("Over USB (MTP)")
+    if summary.ok:
+        what = _("Software {version}").format(version=summary.software_version)
+    elif summary.reason == NOT_MOUNTED:
+        what = _("Not mounted; choose it to open it")
+    elif summary.reason == NO_DEVICE_FILE:
+        what = _("No GarminDevice.xml found")
+    else:
+        what = _("Could not be read")
+    return f"{how} · {what}"
+
+
+def detect_devices(current_uri: str | None = None):
+    """The window's detection: a session on the one device connected, as before, or
+    DeviceChoices when several different ones are (MTP devices and Garmin drives alike;
+    one device seen in both ways is one). The device open now (`current_uri`) is opened
+    again when it is still there. The list asks nothing of the account."""
+    found = find_all_devices()
+    if len(found) > 1:
+        again = next((f for f in found if current_uri is not None
+                      and f.uri.rstrip("/") == current_uri.rstrip("/")), None)
+        if again is not None:
+            return service.check_session(service.open_session(found=again))
+        summaries = distinct_devices([probe(f) for f in found])
+        if len(summaries) > 1:
+            return DeviceChoices(summaries)
+    try:
+        return service.check_session(service.open_session(allow_ums=True))
+    except SeveralDevices as e:
+        if not e.devices:
+            raise
+        left = distinct_devices([probe(f) for f in e.devices])
+        if len(left) == 1:  # one device found in two ways: no choice to make
+            return service.check_session(service.open_session(found=left[0].found))
+        return DeviceChoices(left)
 
 
 def show_not_for_mass_storage(sec) -> None:
@@ -559,6 +614,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._updated_apps: set = set()
         # A device that was just plugged in is on USB for a while before gvfs offers it.
         self._usb_state, self._usb_since = ABSENT, 0.0
+        # Several devices connected: the list to choose from, and the Garmin devices on USB
+        # when it was made (one plugged in or out without a mount event is noticed by that).
+        self._choices: list | None = None
+        self._choices_usb: list[str] | None = None
         GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
         self.refresh_device()
 
@@ -987,6 +1046,12 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         # A Garmin drive is known by its label as well: an unplugged one is gone from /sys.
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
+        if s is None and any(c.found.uri.rstrip("/") + "/" == uri
+                             for c in getattr(self, "_choices", None) or []):
+            log.info("mount removed (%s): one of the devices to choose from, detecting in "
+                     "1.5 s", where)
+            schedule_detection(self, 1500)
+            return
         if not ours and s is None and (garmin_usb(mount) or garmin_ums(mount)):
             # gvfs reports two mounts of one device: the pages are empty after the first.
             log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
@@ -1027,6 +1092,16 @@ class MainWindow(Adw.ApplicationWindow):
         if self.session is not None or self.busy:
             self._usb_state = ABSENT
             return True
+        if getattr(self, "_choices", None):
+            # The list stays as it is; a Garmin device plugged in or out (also one that was
+            # never mounted, which sends no mount event) brings one new detection.
+            now = garmin_products_on_usb()
+            if now != self._choices_usb:
+                self._choices_usb = now
+                log.info("USB: the Garmin devices changed while the list is shown, detecting "
+                         "in 1.5 s")
+                schedule_detection(self, 1500)
+            return True
         state = usb_state()
         if state == ABSENT and self._usb_state != ABSENT:
             # Off the bus for a moment between its two modes, or unplugged? Wait and see.
@@ -1062,22 +1137,84 @@ class MainWindow(Adw.ApplicationWindow):
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
 
-        def done(sess):
+        def done(result):
+            if isinstance(result, DeviceChoices):
+                log.info("device detection: %d devices, a list to choose from",
+                         len(result.summaries))
+                self.session = None
+                self._choices, self._choices_usb = result.summaries, garmin_products_on_usb()
+                self.show_choices()
+                return
             log.info("device detection: %s, all pages are loaded anew",
-                     _same_device(self.session, sess))
-            self.session = sess
+                     _same_device(self.session, result))
+            self._choices = None
+            self.session = result
             self.show_device()
 
         def failed(_e):
             self.session = None
+            self._choices = None
             self.show_device()
             return True
 
         if self.session is None:
             self.sections["watch"].show("loading")
-        # A Garmin device in mass storage mode too, when no MTP device is there or on its way.
-        self.run_task(_("Detecting the device…"),
-                      lambda: service.check_session(service.open_session(allow_ums=True)),
+        # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
+        # several different devices give a list to choose from.
+        current = getattr(self.session, "storage", None)
+        current_uri = getattr(current, "device_uri", None)
+        self.run_task(_("Detecting the device…"), lambda: detect_devices(current_uri),
+                      done, failed)
+
+    def show_choices(self) -> None:
+        """Several Garmin devices are connected: the Device page lists them by name (never by
+        address), the other pages say so. Nothing is opened until one is chosen."""
+        self.maps_cache = self.updates_cache = self.apps_cache = None
+        self.update_state = self.map_state = None
+        for key, sec in self.sections.items():
+            sec.loaded = False
+            sec.clear()
+            if key != "watch":
+                sec.set_empty(_("Choose a device"),
+                              _("Several Garmin devices are connected. Choose one on the "
+                                "Device page."), False)
+                sec.show("empty")
+        self._usb_title = _("Choose a device")  # the Sync button says the same
+        self._update_banner()
+        self._update_actions()
+        sec = self.sections["watch"]
+        g = sec.group(_("Several Garmin devices are connected"), _("Choose the device to open."))
+        for summary in self._choices:
+            row = Adw.ActionRow(
+                title=GLib.markup_escape_text(summary.description or _("Garmin device")),
+                subtitle=GLib.markup_escape_text(choice_subtitle(summary)), activatable=True)
+            row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+            # The entry's data, not the row: a handler never holds its widget.
+            row.connect("activated", lambda _row, found=summary.found: self.open_choice(found))
+            g.add(row)
+        sec.show("content")
+
+    def open_choice(self, found) -> None:
+        """The device chosen from the list, opened as if it were the only one."""
+        if self.busy:
+            self.toast(_("Another operation is in progress"))
+            return
+
+        def done(sess):
+            log.info("device detection: the device chosen, all pages are loaded anew")
+            self._choices = None
+            self.session = sess
+            self.show_device()
+
+        def failed(e):
+            # Unplugged meanwhile, or not readable: said, and the devices detected again.
+            self.error(_("Could not open the device"), str(e) or type(e).__name__)
+            self._choices = None
+            self.refresh_device()
+            return True
+
+        self.run_task(_("Opening the device…"),
+                      lambda: service.check_session(service.open_session(found=found)),
                       done, failed)
 
     def show_device(self) -> None:
