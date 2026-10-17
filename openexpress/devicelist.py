@@ -1,0 +1,126 @@
+"""The tiles of the start page: one list made of the devices connected now, the devices this
+installation remembers (known_devices) and the devices of the Garmin account
+(GarminClient.account_devices). Data in, data out: nothing is asked of a device or a server.
+
+One device is one tile. Sources are merged by the unit ID only, never by the part number (two
+watches of one model are two devices); a connected device without a unit ID (no <Id>, or not
+read) has a tile of its own. The unit ID is used only to merge: no tile holds it, and the log
+never names it."""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+
+from openexpress.device.gio_storage import distinct_devices
+from openexpress.service import _unit_id
+
+log = logging.getLogger(__name__)
+
+# The kinds of device known without asking a server; None: not known.
+BIKE_COMPUTER = "bike_computer"
+# The account's deviceCategories that tell a kind, the first match wins.
+CATEGORIES = (("DEDICATED_BIKE_COMPUTER", BIKE_COMPUTER),)
+
+
+@dataclass(frozen=True)
+class Tile:
+    description: str  # "" for a connected device whose GarminDevice.xml was not read
+    part_number: str
+    software_version: str
+    kind: str | None  # "mtp" or "ums" (connected or remembered); None: only on the account
+    connected: bool
+    on_account: bool
+    primary: bool  # the account's primary device (its primaryActivityTrackerIndicator)
+    last_seen: float | None  # from what this installation remembers only
+    image_part_number: str  # the key of its picture in the cache
+    image_url: str | None  # the account's address of its picture
+    category: str | None
+
+
+def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
+    """The tiles, in order: the devices connected now first (the primary one first among
+    them), then the others, the one seen last first; those never seen here at the end.
+
+    `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
+    the account's device list (keys in lower case), used only when `logged_in`. Fields:
+    name and version from the connected device's GarminDevice.xml, else as remembered, else
+    as the account says; on_account, primary, the picture address and the category only
+    from the account; when it was seen only from what is remembered."""
+    on_account: dict[int, dict] = {}
+    account_only: list[dict] = []  # entries of the account without a usable unit ID
+    for entry in (account or []) if logged_in else []:
+        unit_id = _unit_id(entry.get("unitid"))
+        if unit_id is None:
+            account_only.append(entry)
+        else:
+            on_account.setdefault(unit_id, entry)
+    done: set[int] = set()
+
+    now = []
+    for s in distinct_devices(list(connected)):
+        unit_id = s.unit_id if s.ok else None
+        known = remembered.get(unit_id) if unit_id is not None else None
+        entry = on_account.get(unit_id) if unit_id is not None else None
+        if unit_id is not None:
+            done.add(unit_id)
+        now.append(_tile(s.description, s.part_number, s.software_version, s.found.kind,
+                         True, known, entry))
+    now.sort(key=lambda t: not t.primary)  # stable: otherwise in the order found
+
+    rest = [_tile("", "", "", None, False, known, on_account.get(unit_id))
+            for unit_id, known in remembered.items() if unit_id not in done]
+    done.update(remembered)
+    rest += [_tile("", "", "", None, False, None, entry)
+             for unit_id, entry in on_account.items() if unit_id not in done]
+    rest += [_tile("", "", "", None, False, None, entry) for entry in account_only]
+    rest.sort(key=lambda t: (t.last_seen is None, -(t.last_seen or 0.0),
+                             t.description.casefold(), t.part_number))
+
+    result = now + rest
+    log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
+              len(now), sum(t.on_account for t in result))
+    return result
+
+
+def _tile(description: str, part_number: str, version: str, kind: str | None,
+          connected: bool, known, entry: dict | None) -> Tile:
+    """One tile: what the connected device says (if connected), else what is remembered of
+    it (`known`), else what the account says (`entry`)."""
+    account = _account_fields(entry) if entry is not None else None
+    part = part_number or (known.part_number if known else "") or (
+        account["part_number"] if account else "")
+    return Tile(
+        description=description or (known.description if known else "") or (
+            account["description"] if account else ""),
+        part_number=part,
+        software_version=version or (known.software_version if known else "") or (
+            account["software_version"] if account else ""),
+        kind=kind or (known.kind if known else None),
+        connected=connected,
+        on_account=account is not None,
+        primary=bool(account and account["primary"]),
+        last_seen=known.last_seen if known else None,
+        image_part_number=part,
+        image_url=account["image_url"] if account else None,
+        category=account["category"] if account else None,
+    )
+
+
+def _account_fields(entry: dict) -> dict:
+    """What a tile takes from one entry of the account's device list (keys in lower case);
+    anything of another type than expected counts as missing."""
+    def text(key: str) -> str:
+        value = entry.get(key)
+        return value if isinstance(value, str) else ""
+
+    categories = entry.get("devicecategories")
+    categories = categories if isinstance(categories, list) else []
+    return {
+        "description": text("productdisplayname") or text("displayname"),
+        "part_number": text("partnumber"),
+        "software_version": text("currentfirmwareversion"),
+        "primary": entry.get("primaryactivitytrackerindicator") is True,
+        "image_url": text("imageurl") or None,
+        "category": next((kind for name, kind in CATEGORIES if name in categories), None),
+    }
