@@ -1,3 +1,4 @@
+import logging
 import struct
 
 import pytest
@@ -331,6 +332,31 @@ def test_watcher_retries_open_session(monkeypatch):
                         lambda: (_ for _ in ()).throw(DeviceError("gone")))
     with pytest.raises(DeviceError):
         w._open_session(sleep=sleeps.append)
+
+
+def test_watcher_does_nothing_with_several_devices(monkeypatch, caplog):
+    """K7 (P4): with several devices connected the background service asks once, does not
+    try again, syncs nothing and shows no notification; one line in the log says why. Only
+    a device chosen in the window is synced."""
+    from openexpress import watch
+    from openexpress.device.gio_storage import SeveralDevices
+
+    opened, shown = [], []
+
+    def open_session():
+        opened.append(1)
+        raise SeveralDevices("Several devices connected, choose one with --device-uri: …")
+
+    monkeypatch.setattr(watch.service, "open_session", open_session)
+    monkeypatch.setattr(watch.service, "run_sync",
+                        lambda *a, **kw: pytest.fail("nothing may be synced"))
+    monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
+    w = watch.Watcher()
+    with caplog.at_level(logging.INFO, logger="openexpress.watch"):
+        w._sync()
+    assert opened == [1] and shown == []  # asked once: no waiting, no retry
+    assert [r.getMessage() for r in caplog.records] == [
+        "Not syncing: several devices are connected"]
 
 
 def test_upload_412_still_raises(device_root, tmp_path):
