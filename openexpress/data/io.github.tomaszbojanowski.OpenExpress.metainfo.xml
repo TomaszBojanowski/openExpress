@@ -97,6 +97,34 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.0" date="2026-10-17">
+      <description>
+        <ul>
+          <li>A start page lists your devices as tiles: those connected now, those seen on
+          this computer before and those on your Garmin account, each with its picture, or an
+          icon of its kind until the picture is known. A section of seven or more devices
+          becomes a list. With exactly one device connected, its page opens straight away; a
+          device that is not connected opens a read-only view.</li>
+          <li>With several devices connected at once, you choose one on the start page instead
+          of getting an error.</li>
+          <li>Devices in mass storage mode, such as the Varia RTL515, open in the window of the
+          version from source: their information and software updates. The Flatpak cannot open
+          drives yet and says so.</li>
+          <li>On the command line, openexpress devices lists the devices seen on this computer,
+          and --forget N forgets one.</li>
+          <li>openexpress cache shows how much space the cache takes and --clear empties it;
+          the same is in Preferences, under Storage.</li>
+          <li>About openExpress links to a page where you can support the project (Buy Me a
+          Coffee).</li>
+          <li>Fixes from an external review: a failed write no longer deletes the previous
+          firmware or map file on the device; a missing or malformed checksum no longer skips
+          the verification of a download; all downloads use HTTPS; names from the device or
+          from Garmin's servers can no longer make files be written outside the backup or
+          cache folders.</li>
+          <li>Refresh asks Garmin's map and update servers once instead of twice.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.2" date="2026-10-16">
       <description>
         <ul>

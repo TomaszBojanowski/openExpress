@@ -21,23 +21,24 @@ Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/o
        alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
 
-**Install:** download `openexpress-0.5.2.flatpak` from the
+**Install:** download `openexpress-0.6.0.flatpak` from the
 [latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest), then run
 
 ```bash
-flatpak install --user openexpress-0.5.2.flatpak
+flatpak install --user openexpress-0.6.0.flatpak
 ```
 
 The GNOME runtime comes from Flathub. More in [Install](#install), including the version
 from source.
 
-**Devices in mass storage mode:** openExpress 0.5.2 works with Garmin devices that connect
-over USB in MTP mode, such as the fēnix 8 and the Edge 1050. Devices that connect as a USB
-drive instead (mass storage mode: some older Garmin models, and accessories such as the
-Varia RTL515) are not yet supported by the 0.5.2 window – only the command line reads them,
-with `--path`; support in the window is coming in the next release. If you are not sure
-which mode your device uses, plug it in: if it appears as a USB drive in your file manager
-rather than through MTP, it is in mass storage mode.
+**Devices in mass storage mode:** besides devices that connect over USB in MTP mode, such as
+the fēnix 8 and the Edge 1050, openExpress 0.6 supports Garmin devices that connect as a USB
+drive (mass storage mode: some older Garmin models, and accessories such as the Varia RTL515):
+their information and software updates, in the window of the version from source and on the
+command line with `--path`. It is tested on the Varia RTL515; reports from other devices in
+mass storage mode are welcome. The Flatpak cannot open drives yet and says so. If you are not
+sure which mode your device uses, plug it in: if it appears as a USB drive in your file
+manager rather than through MTP, it is in mass storage mode.
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
@@ -167,9 +168,10 @@ updates are only queued in Garmin Connect, from where the phone or Garmin Expres
 them, apps are removed on the phone, and nothing is written to the device.
 
 **USB modes:** devices that connect over MTP (most watches and bike computers) work in both
-versions; devices that connect as a USB drive (mass storage, e.g. the Varia RTL515) open only
-in the version from source – in its window, or on the command line with `--path` – and the
-Flatpak does not open them yet.
+versions; devices that connect as a USB drive (mass storage, e.g. the Varia RTL515) are
+supported in the version from source – in its window, or on the command line with `--path` –
+and the Flatpak does not open them yet. Mass storage is tested on the Varia RTL515; reports
+from other such devices are welcome.
 
 **The Flatpak and the version from source are separate installations:** each keeps its own
 setup (the key from the Garmin Express installer), login, settings and sync state: its own
