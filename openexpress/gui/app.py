@@ -32,6 +32,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     PRESENT,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
+    garmin_ums,
     garmin_usb,
     not_ready_text,
     own_remount,
@@ -910,7 +911,8 @@ class MainWindow(Adw.ApplicationWindow):
             # Mounted again by our own install; the open device stays as it is.
             log.info("mount added (%s): our own remount, ignored", where)
             return
-        if garmin_usb(mount):
+        # Over MTP, or a drive of a Garmin device in mass storage mode.
+        if garmin_usb(mount) or garmin_ums(mount):
             log.info("mount added (%s): a Garmin device, detecting in 1.5 s "
                      "(a device is open: %s)", where, self.session is not None)
             schedule_detection(self, 1500, mount.get_root().get_uri())
@@ -925,8 +927,9 @@ class MainWindow(Adw.ApplicationWindow):
         # The USB device is already gone, so compare with the device that is open.
         uri = mount.get_root().get_uri().rstrip("/") + "/"
         s = self.session
+        # A Garmin drive is known by its label as well: an unplugged one is gone from /sys.
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
-        if not ours and s is None and garmin_usb(mount):
+        if not ours and s is None and (garmin_usb(mount) or garmin_ums(mount)):
             # gvfs reports two mounts of one device: the pages are empty after the first.
             log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
                      where)
@@ -1010,8 +1013,10 @@ class MainWindow(Adw.ApplicationWindow):
 
         if self.session is None:
             self.sections["watch"].show("loading")
+        # A Garmin device in mass storage mode too, when no MTP device is there or on its way.
         self.run_task(_("Detecting the device…"),
-                      lambda: service.check_session(service.open_session()), done, failed)
+                      lambda: service.check_session(service.open_session(allow_ums=True)),
+                      done, failed)
 
     def show_device(self) -> None:
         self.maps_cache = self.updates_cache = self.apps_cache = None
@@ -1169,21 +1174,25 @@ class MainWindow(Adw.ApplicationWindow):
             row.set_subtitle(_("{size} free").format(size=_human(free)))
         g.add(row)
 
-        g = sec.group(_("Sync with Garmin Connect"))
-        if s.ownership_error is not None:
-            g.add(Adw.ActionRow(title=_("Sync is not available for this device"),
-                                subtitle=GLib.markup_escape_text(str(s.ownership_error))))
-        else:
-            self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
-            self._last_sync_children = []
-            g.add(self.last_sync_row)
-            self._show_last_sync()
-        if s.ownership_error is None and not self._background_enabled():
-            row = Adw.ActionRow(title=_("Automatic sync is off"),
-                                subtitle=_("Turn it on to sync whenever the device is connected"))
-            # TRANSLATORS: button that turns on automatic sync
-            row.add_suffix(self._button(_("Turn On"), lambda: self.set_background(True)))
-            g.add(row)
+        # A Garmin device in mass storage mode is never synced and has no maps.
+        mass_storage = getattr(s, "mass_storage", False)
+        if not mass_storage:
+            g = sec.group(_("Sync with Garmin Connect"))
+            if s.ownership_error is not None:
+                g.add(Adw.ActionRow(title=_("Sync is not available for this device"),
+                                    subtitle=GLib.markup_escape_text(str(s.ownership_error))))
+            else:
+                self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
+                self._last_sync_children = []
+                g.add(self.last_sync_row)
+                self._show_last_sync()
+            if s.ownership_error is None and not self._background_enabled():
+                row = Adw.ActionRow(
+                    title=_("Automatic sync is off"),
+                    subtitle=_("Turn it on to sync whenever the device is connected"))
+                # TRANSLATORS: button that turns on automatic sync
+                row.add_suffix(self._button(_("Turn On"), lambda: self.set_background(True)))
+                g.add(row)
 
         g = sec.group(pgettext("tab", "Updates"))
         self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
@@ -1193,13 +1202,14 @@ class MainWindow(Adw.ApplicationWindow):
         self._render_update_state()
         if self.update_state is None:
             self._check_updates_quietly()
-        self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), activatable=True)
-        self.map_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-        self.map_row.connect("activated", lambda *_a: self.select_section("maps"))
-        g.add(self.map_row)
-        self._render_map_state()
-        if self.map_state is None:
-            self._check_maps_quietly()
+        if not mass_storage:
+            self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), activatable=True)
+            self.map_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+            self.map_row.connect("activated", lambda *_a: self.select_section("maps"))
+            g.add(self.map_row)
+            self._render_map_state()
+            if self.map_state is None:
+                self._check_maps_quietly()
 
         if s.logged_in:
             g = sec.group(_("Garmin Connect account"))
@@ -1306,8 +1316,10 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
-        # The account is asked only about a device that is on it.
-        on_account = s.logged_in and s.ownership_error is None
+        # The account is asked only about a device that is on it; never about a Garmin device
+        # in mass storage mode, which it was not checked for.
+        on_account = (s.logged_in and s.ownership_error is None
+                      and not getattr(s, "mass_storage", False))
         name = device_picture_path(part).name
 
         def work():
@@ -1911,6 +1923,11 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         s = self.session
+        if getattr(s, "mass_storage", False):
+            # Copying to a USB drive needs a flush and the eject first (planned).
+            self.toast(_("Installing updates on a device in mass storage mode is not "
+                         "available yet."))
+            return
         chosen = upd.select(self.updates_cache, [u.part_number])
         # A system update: from which version of the device software to which.
         version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system

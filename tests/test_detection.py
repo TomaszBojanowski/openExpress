@@ -1088,6 +1088,170 @@ def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     assert started == []
 
 
+# --- the window and a Garmin drive -----------------------------------------------------------
+
+
+@pytest.fixture
+def drive_window(watch_and_drives, monkeypatch):
+    """The window's own code for mount events and detection; a task runs at once and each
+    `show_device` is recorded with the session it shows."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    timers = Timers()
+    monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
+    monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
+    win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, built=[],
+                                _updated_apps={"an app waiting for the unplug"}, timers=timers,
+                                world=watch_and_drives,
+                                sections={"watch": types.SimpleNamespace(show=lambda s: None)})
+
+    def run_task(title, fn, done, failed):
+        try:
+            result = fn()
+        except Exception as e:  # noqa: BLE001 - as the real one: the error goes to `failed`
+            failed(e)
+        else:
+            done(result)
+
+    win.run_task = run_task
+    win.show_device = lambda: win.built.append(win.session)
+    win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
+    return win
+
+
+def test_window_detects_a_garmin_drive_when_it_is_mounted(drive_window, caplog):
+    """Test 1: the mount of a Garmin drive leads to a detection; a pendrive does not."""
+    from openexpress.gui.app import MainWindow
+
+    win, world = drive_window, drive_window.world
+    pendrive = FakeDriveMount(drive_folder(world.drives, label="STICK"),
+                              usb_drive(world.drives, vendor="0781", product="5581", port="1-6",
+                                        devnum=14, disk="sdd", partition="sdd1"), name="STICK")
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_added(win, None, pendrive)
+        assert win.timers.live == {}
+        MainWindow._on_mount_added(win, None, world.drive())
+    assert len(win.timers.live) == 1
+    assert [r.getMessage() for r in caplog.records] == [
+        "mount added (file:): not a Garmin device, ignored",
+        "mount added (file:): a Garmin device, detecting in 1.5 s (a device is open: False)"]
+
+
+def test_window_opens_a_garmin_drive(drive_window, monkeypatch):
+    """Test 2: the window's detection opens the RTL515 as a Garmin drive; nothing is asked of
+    the account. An MTP device next to it would come first (step 4)."""
+    monitor_with(monkeypatch, drive_window.world.drive())
+    drive_window.refresh_device()
+    (s,) = drive_window.built
+    assert s is drive_window.session and s is not None and s.mass_storage
+    assert s.device.description == "Varia RTL515" and s.storage.usb_id == "091e:20ee"
+    assert s.ownership_error is None and s.account_devices is None
+
+
+def drive_session(drive_window, monkeypatch):
+    """A session on the RTL515 drive as the window gets it (step 4), without the window."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, drive_window.world.drive())
+    return service.check_session(service.open_session(allow_ums=True))
+
+
+def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatch):
+    """Not from the account, also when logged in: by unit-info, as for an MTP device that
+    the account does not list."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    s, asked = drive_session(drive_window, monkeypatch), []
+    s.client = types.SimpleNamespace(
+        auth=object(), http=None,  # logged in
+        device_image_url=lambda unit_id: asked.append(("account", unit_id)),
+        unit_info=lambda unit_id, part: asked.append(("unit-info", unit_id, part))
+        or {"graphicurl": "https://res.garmin.com/rtl515.png"})
+    monkeypatch.setattr(app, "download_picture",
+                        lambda http, url, name: asked.append(("download", url)) or (None, "test"))
+    works, hidden = [], types.SimpleNamespace(set_visible=lambda visible: None)
+    win = types.SimpleNamespace(session=s, device_image=hidden, device_picture=hidden,
+                                in_background=lambda work, done: works.append(work))
+    MainWindow._show_device_picture(win)
+    assert works[0]() == (None, "download refused: test")
+    assert asked == [("unit-info", 3000000003, "006-B3592-03"),
+                     ("download", "https://res.garmin.com/rtl515.png")]
+
+
+def _texts(widget):
+    """The texts of all labels below a widget."""
+    from openexpress.gui.app import Gtk
+
+    found = [widget.get_label()] if isinstance(widget, Gtk.Label) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found += _texts(child)
+        child = child.get_next_sibling()
+    return found
+
+
+@pytest.mark.needs_display
+def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
+    """Name, version, storage, the software check and the part number; no sync and no maps
+    (and so no map check)."""
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow
+
+    win, section = page_window("watch")
+    win.session = drive_session(drive_window, monkeypatch)
+    win.update_state, win.map_state, calls = None, None, []
+    for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
+                 "_show_last_sync"):
+        setattr(win, name, lambda name=name: calls.append(name))
+    for name in ("_render_update_state", "_render_map_state", "select_section", "backup",
+                 "set_background", "logout"):
+        setattr(win, name, lambda *a, **kw: None)
+    win._background_enabled = lambda: False
+    MainWindow.show_overview(win)
+    texts = _texts(section.page)
+    for text in ("Varia RTL515", "Software 3.36", "Device storage", "Device software",
+                 "Part number", "006-B3592-03"):
+        assert text in texts
+    for text in ("Sync with Garmin Connect", "Last sync", "Automatic sync is off", "Maps"):
+        assert text not in texts
+    assert calls == ["_show_device_picture", "_check_updates_quietly"]
+
+
+def test_window_after_a_garmin_drive_is_unplugged(drive_window, monkeypatch, caplog):
+    """Mounted, detected and opened; unplugged: no device, as after an MTP device."""
+    from openexpress.gui.app import MainWindow
+
+    win, drive = drive_window, drive_window.world.drive()
+    monitor_with(monkeypatch, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    win.timers.fire()
+    assert win.session is not None and win.session.mass_storage
+    # Unplugged: the system takes the mount away and /sys has no block device for it.
+    for link in win.world.drives.block.iterdir():
+        link.unlink()
+    monitor_with(monkeypatch)
+    caplog.clear()  # only what the unplug writes
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_removed(win, None, drive)
+    assert win.session is None and win.built[-1] is None and win._updated_apps == set()
+    assert [r.getMessage() for r in caplog.records] == [
+        "mount removed (file:): the open device, showing no device (a task is running: False)"]
+
+
+def test_no_update_is_installed_on_a_garmin_drive_yet(drive_window, monkeypatch):
+    """D3: copying updates to a drive comes with step 7 (fsync, ejecting)."""
+    from openexpress.gui.app import MainWindow
+
+    shown = []
+    win = types.SimpleNamespace(session=drive_session(drive_window, monkeypatch), updates_cache=[],
+                                toast=shown.append)
+    MainWindow.confirm_update(win, types.SimpleNamespace(part_number="006-B3592-03"))
+    assert shown == ["Installing updates on a device in mass storage mode is not available yet."]
+
+
 # --- the device to ourselves for a PTP session ----------------------------------------------
 
 
