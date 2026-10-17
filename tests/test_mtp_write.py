@@ -207,3 +207,106 @@ def test_a_drive_removes_its_temporary_copy_when_the_rename_fails(device_root, t
         updates.install([font], LocalStorage(device_root))
     assert old.read_bytes() == OLD
     assert not [p for p in old.parent.iterdir() if p.name.endswith(PART_SUFFIX)]
+
+
+# --- clean up only on evidence that the target was touched (review, after 0.6.0) --------------
+
+
+def refuses_untouched(src, dst):
+    """gio copy starts and refuses without touching the device."""
+    return subprocess.CompletedProcess(["gio"], 1, "", "Error copying file: not allowed")
+
+
+def test_a_copy_that_started_but_touched_nothing_keeps_the_old_file(device_root, tmp_path,
+                                                                    monkeypatch, flatpak):
+    """The host's gio copy starts, copies nothing and fails: the old file has the size it
+    had before the copy and no progress came, so it is left as it is."""
+    font = the_font(tmp_path, monkeypatch)
+    old = old_font(device_root)
+    flatpak.copy = refuses_untouched
+    with pytest.raises(DeviceError):
+        updates.install([font], gio(device_root))
+    assert flatpak.started == ["006-D0000-00.fnt"] and old.read_bytes() == OLD
+
+
+def popen_running(script):
+    """A real short process in place of `flatpak-spawn --host gio copy -p`: `script` for sh."""
+    real = subprocess.Popen
+
+    def popen(args, **kw):
+        return real(["sh", "-c", script], **kw)
+
+    return popen
+
+
+def test_with_the_progress_bar_no_progress_line_keeps_the_old_file(device_root, tmp_path,
+                                                                   monkeypatch, flatpak):
+    """The same with the progress bar: gio copy -p printed no progress before it failed."""
+    monkeypatch.setattr(gio_storage.subprocess, "Popen",
+                        popen_running("echo 'Error copying file: not allowed' >&2; exit 1"))
+    font = the_font(tmp_path, monkeypatch)
+    old = old_font(device_root)
+    with pytest.raises(DeviceError):
+        updates.install([font], gio(device_root), transfer_progress=lambda done, total: None)
+    assert old.read_bytes() == OLD
+
+
+def test_with_the_progress_bar_a_progress_line_is_evidence(device_root, tmp_path, monkeypatch,
+                                                          flatpak):
+    """Guards: gio copy -p printed progress, then failed: the copy did start, so what is
+    under the name goes (over MTP the old file was deleted before the new one was sent)."""
+    old = old_font(device_root)
+    script = (f"printf 'half' > '{old}'; "
+              "printf '\\rCopied 1.0 MB out of 2.0 MB (1.0 MB/s)'; exit 1")
+    monkeypatch.setattr(gio_storage.subprocess, "Popen", popen_running(script))
+    font = the_font(tmp_path, monkeypatch)
+    with pytest.raises(DeviceError):
+        updates.install([font], gio(device_root), transfer_progress=lambda done, total: None)
+    assert not old.exists()
+
+
+def test_gio_in_this_process_refusing_keeps_the_old_file(device_root, tmp_path, monkeypatch):
+    """The version from source copies with Gio in its own process: a GLib error that leaves
+    the target as it was (same size) leaves the old file."""
+    from gi.repository import Gio, GLib
+
+    class Refusing:
+        def copy(self, *a):
+            raise GLib.Error.new_literal(Gio.io_error_quark(), "refused",
+                                         int(Gio.IOErrorEnum.FAILED))
+
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: False)
+    monkeypatch.setattr(gio_storage.Gio.File, "new_for_path", staticmethod(lambda p: Refusing()))
+    font = the_font(tmp_path, monkeypatch)
+    old = old_font(device_root)
+    with pytest.raises(DeviceError):
+        updates.install([font], gio(device_root))
+    assert old.read_bytes() == OLD
+
+
+def test_the_old_file_deleted_by_gvfs_and_nothing_new_is_no_error(device_root, tmp_path,
+                                                                   monkeypatch, flatpak):
+    """Guards: the copy started, gvfs deleted the old file and sent nothing: there is
+    nothing to clean up, and only the write's own error is raised."""
+    font = the_font(tmp_path, monkeypatch)
+    old = old_font(device_root)
+
+    def deleted_then_failed(src, dst):
+        dst.unlink()
+        return subprocess.CompletedProcess(["gio"], 1, "", "Error copying file: unplugged")
+
+    flatpak.copy = deleted_then_failed
+    with pytest.raises(DeviceError, match="unplugged"):
+        updates.install([font], gio(device_root))
+    assert not old.exists()
+
+
+def test_a_half_file_where_there_was_none_goes(device_root, tmp_path, monkeypatch, flatpak):
+    """Guards: no file of that name before the copy; half a file after it broke off: it
+    goes."""
+    font = the_font(tmp_path, monkeypatch)
+    target = device_root / "GARMIN" / "Font" / "006-D0000-00.fnt"
+    flatpak.copy = half_and_fail
+    with pytest.raises(DeviceError):
+        updates.install([font], gio(device_root))
+    assert not target.exists()

@@ -16,6 +16,13 @@ class FakeTarget:
     def get_uri(self):
         return self.uri
 
+    def query_info(self, *a):
+        """No file there before the copy (what Gio says of a target that does not exist)."""
+        from gi.repository import Gio, GLib
+
+        raise GLib.Error.new_literal(Gio.io_error_quark(), "not there",
+                                     int(Gio.IOErrorEnum.NOT_FOUND))
+
 
 @pytest.fixture
 def flatpak(monkeypatch, xdg):
@@ -34,6 +41,7 @@ def flatpak(monkeypatch, xdg):
     monkeypatch.setattr(gio_storage.subprocess, "run", run)
     st = gio_storage.GioStorage.__new__(gio_storage.GioStorage)
     st._f = lambda real: FakeTarget("mtp://watch/" + real)
+    st._attempts = {}  # as __init__ makes it
     return st, calls
 
 
@@ -284,6 +292,7 @@ def test_write_file_passes_the_progress_on_and_reports_the_end(host, monkeypatch
     monkeypatch.setattr(gio_storage, "_host_visible", lambda p: True)
     st = gio_storage.GioStorage.__new__(gio_storage.GioStorage)
     st._f = lambda real: FakeTarget("mtp://watch/" + real)
+    st._attempts = {}  # as __init__ makes it
     host.answer([u.encode() for u in MEASURED])
     seen = []
     st._write_file("GARMIN/map.img", host.local, lambda done, total: seen.append((done, total)))

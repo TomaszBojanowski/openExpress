@@ -120,7 +120,7 @@ def _detail(stderr: str, stdout: str) -> str:
     return detail
 
 
-def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
+def host_copy(local: Path, target_uri: str, what: str, progress=None, started=None) -> None:
     """Copies a local file to the watch with the host's `gio copy`.
 
     gvfs refuses to copy local files for sandboxed (Flatpak) apps, and gvfs-mtp supports no
@@ -129,7 +129,8 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
 
     With `progress(done, total)` the copy runs with `-p` and what it prints is read while it
     runs. When that cannot be read, `progress` is simply not called: the result of the copy
-    depends on the exit code alone.
+    depends on the exit code alone. `started()` is called for each line of progress read: the
+    evidence that the copy is under way (and that the device is being written).
     """
     if not shutil.which("flatpak-spawn"):
         raise CopyNotStarted(f"{what}: " + _("flatpak-spawn is not available"))
@@ -173,6 +174,8 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
             *complete, pending = re.split(r"[\r\n]", pending + text)
             for update in (*complete, pending):
                 fraction = copy_fraction(update)
+                if fraction is not None and started is not None:
+                    started()
                 if fraction is not None and fraction > shown:
                     shown = fraction
                     progress(int(fraction * size), size)
@@ -190,6 +193,18 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
         raise DeviceError(f"{what}: {_detail(stderr, ''.join(said))}")
 
 
+# The size of a file that could not be told.
+_UNKNOWN = object()
+
+
+@dataclass
+class _Attempt:
+    """A write to the device under way: the size of the target before it (None: no file;
+    _UNKNOWN), and whether gio copy reported progress."""
+    before: object
+    progressed: bool = False
+
+
 class GioStorage(Storage):
     def __init__(self, root_uri: str):
         self.root = Gio.File.new_for_uri(root_uri.rstrip("/") + "/")
@@ -198,6 +213,9 @@ class GioStorage(Storage):
         self.usb_id: str | None = None
         self.usb: GarminUsb | None = None
         self.device_uri: str | None = None  # the address gvfs mounts, above the storage
+        # Each write under way: what the target was before it, and whether gio copy said it
+        # was copying (see _discard_partial).
+        self._attempts: dict[str, _Attempt] = {}
 
     def _f(self, real: str) -> Gio.File:
         return self.root.resolve_relative_path(real) if real else self.root
@@ -286,6 +304,17 @@ class GioStorage(Storage):
             local.stat()
         except OSError as e:
             raise CopyNotStarted(f"{what}: {e}") from e
+        # What the target is before the copy: the evidence _discard_partial goes by.
+        self._attempts[real_path] = _Attempt(self._size_now(real_path))
+        try:
+            self._send(local, real_path, progress, what)
+        except CopyNotStarted:
+            self._attempts.pop(real_path, None)  # nothing touched, nothing to clean up
+            raise
+        # Any other failure: _discard_partial (called by write_file) reads and drops it.
+        self._attempts.pop(real_path, None)
+
+    def _send(self, local: Path, real_path: str, progress, what: str) -> None:
         if in_flatpak() and not _host_visible(local):
             # E.g. a file in the sandbox's private /tmp: stage it where the host can read it.
             with _staging():
@@ -305,19 +334,53 @@ class GioStorage(Storage):
             return
         self._copy_local(local, real_path, progress, what)
 
-    def _discard_partial(self, real_path: str) -> None:
-        """Over MTP the old file is deleted before the new one is sent: what a copy that
-        broke off leaves under the name is half a new file, never the old one."""
+    def _size_now(self, real_path: str):
+        """The size of the file under the name: None when there is none, _UNKNOWN when it
+        cannot be told."""
         try:
-            if self._f(real_path).query_exists(None):
-                self._delete(real_path)
+            info = self._f(real_path).query_info(
+                "standard::size", Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, None)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.NOT_FOUND):
+                return None
+            return _UNKNOWN
+        return info.get_size()
+
+    def _discard_partial(self, real_path: str) -> None:
+        """After a copy that failed once it ran: the file under the name is deleted only on
+        evidence that the copy touched it - gio copy reported progress, or a file is there
+        now where there was none, or with another size than before. Otherwise it is the old
+        file, untouched (e.g. gio copy started and refused at once), and it stays.
+
+        Not told apart, and safe either way: the old and the new file of the same size, gio
+        copy reporting no progress and gvfs replacing the old one with the whole new one -
+        then the complete new file is kept. Half a new file of exactly the old size is all
+        but impossible, and would only be kept, never wrongly deleted."""
+        attempt = self._attempts.pop(real_path, None)
+        now = self._size_now(real_path)
+        if now is None or attempt is None:
+            return  # nothing under the name, or nothing known of the copy
+        if attempt.progressed:
+            touched = True
+        elif attempt.before is _UNKNOWN or now is _UNKNOWN:
+            touched = False  # no evidence
+        else:
+            touched = attempt.before is None or now != attempt.before
+        if not touched:
+            log.info("device: a failed copy left the file under its name as it was; kept")
+            return
+        try:
+            self._delete(real_path)
         except Exception as e:  # noqa: BLE001 - cleanup after a failure: that one is reported
             log.warning("Cannot delete a partly copied file: %s", type(e).__name__)
 
     def _copy_local(self, local: Path, real_path: str, progress, what: str) -> None:
+        attempt = self._attempts.get(real_path)
         target = self._f(real_path)
         if in_flatpak():
-            host_copy(local, target.get_uri(), what, progress)
+            host_copy(local, target.get_uri(), what, progress,
+                      started=(lambda: setattr(attempt, "progressed", True)) if attempt
+                      else None)
             if progress:
                 size = local.stat().st_size
                 progress(size, size)
