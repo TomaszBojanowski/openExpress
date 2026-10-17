@@ -124,6 +124,10 @@ class Watcher(Gio.Application):
     def _sync(self):
         try:
             s = self._open_session()
+            if s.mass_storage:
+                # Never synced, and not worth a notification.
+                log.info("Not syncing: the device is in mass storage mode")
+                return
             if not s.logged_in:
                 log.info("Not logged in: skipping sync")
                 return

@@ -980,6 +980,114 @@ def test_the_log_of_a_garmin_drive_has_no_user_name(drives, monkeypatch, caplog)
         assert MEDIA_USER not in text and "file://" not in text and str(drives.media) not in text
 
 
+@pytest.fixture
+def watch_and_drives(plugged, drives, device_root, monkeypatch):
+    """The made-up USB tree and gvfs of `plugged`, the drives of `drives`; an MTP device
+    offered by gvfs reads like conftest's test watch (device_root)."""
+    from openexpress.device.storage import LocalStorage
+
+    class MtpStorage(LocalStorage):
+        def __init__(self, uri):
+            super().__init__(device_root)
+            self.label, self.usb_id, self.usb, self.device_uri = uri, None, None, None
+
+        def _f(self, name):
+            return FakeFile(self.label + name)
+
+    monkeypatch.setattr(gio_storage, "GioStorage", MtpStorage)
+    plugged.drives = drives
+
+    def drive(label="GARMIN", port="1-4", devnum=12, disk="sdb"):
+        """A Garmin drive on USB (also in /sys/bus/usb/devices) and mounted by the system."""
+        mass_storage_device(plugged.root, name=port)
+        return FakeDriveMount(drive_folder(drives, label=label),
+                              usb_drive(drives, port=port, devnum=devnum, disk=disk,
+                                        partition=disk + "1"), name=label)
+
+    plugged.drive = drive
+    return plugged
+
+
+def test_a_garmin_drive_opens_only_when_asked_for(watch_and_drives, monkeypatch):
+    """Without allow_ums, as before: MTP alone (the command line, the background service)."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    with pytest.raises(gio_storage.NotThereYet) as error:
+        service.open_session()
+    assert str(error.value) == gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
+    s = service.open_session(allow_ums=True)
+    assert s.mass_storage and s.storage.mass_storage and s.storage.usb_id == "091e:20ee"
+    assert s.device.description == "Varia RTL515" and s.device.unit_id == 3000000003
+
+
+def test_mtp_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
+    """D1: the MTP device opens as it does today; the drive is skipped, and the log says so."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        s = service.open_session(allow_ums=True)
+    assert not s.mass_storage and s.device.description == "Test watch"
+    assert "1 Garmin drive in mass storage mode skipped" in caplog.text
+    assert "opened in mass storage mode" not in caplog.text
+
+
+def test_a_watch_on_its_way_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
+    """A watch that is still starting is waited for (by the window), not passed over."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    watch_and_drives.plug("0003")
+    with caplog.at_level(logging.INFO, logger="openexpress"), \
+            pytest.raises(gio_storage.NotThereYet) as error:
+        service.open_session(allow_ums=True)
+    assert str(error.value) == "The device is starting. Try again in a moment."
+    assert "opened in mass storage mode" not in caplog.text
+
+
+def test_several_mtp_devices_next_to_a_garmin_drive(watch_and_drives, monkeypatch):
+    """Two MTP devices: "Several devices" as before, with their addresses."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    watch_and_drives.offered.append(gio_storage.FoundDevice(NAMED, "mtp", True))
+    with pytest.raises(gio_storage.SeveralDevices, match="--device-uri: " + NUMERIC):
+        service.open_session(allow_ums=True)
+
+
+def test_several_garmin_drives(watch_and_drives, monkeypatch):
+    """Two drives: the same error, without file:// addresses (the user name) and without the
+    advice about --device-uri, which takes no drive."""
+    from openexpress import service
+
+    monitor_with(monkeypatch, watch_and_drives.drive(),
+                 watch_and_drives.drive("GARMIN 2", port="1-5", devnum=13, disk="sdc"))
+    with pytest.raises(gio_storage.SeveralDevices) as error:
+        service.open_session(allow_ums=True)
+    text = str(error.value)
+    assert text == ("Several Garmin devices are connected in mass storage mode. Connect only "
+                    "one of them.")
+    assert "file:" not in text and "--device-uri" not in text and MEDIA_USER not in text
+    assert error.value.__cause__ is None
+
+
+def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
+    """watch.on_mount stays with garmin_usb (MTP): a drive starts no sync."""
+    from openexpress import watch
+
+    started = []
+    monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
+    mount = FakeDriveMount(drive_folder(drives), usb_drive(drives))
+    monitor_with(monkeypatch, mount)
+    watch.Watcher().on_mount(None, mount)
+    assert started == []
+
+
 # --- the device to ourselves for a PTP session ----------------------------------------------
 
 

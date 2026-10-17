@@ -22,7 +22,7 @@ from openexpress.connect import (
     OwnershipUnknown,
     Unauthorized,
 )
-from openexpress.device.storage import Storage
+from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, ngettext
 from openexpress.settings import Settings, SetupError, load_consumer
@@ -55,6 +55,15 @@ class DeviceSession:
     def first_sync(self) -> bool:
         return not self.state.file.exists()
 
+    @property
+    def mass_storage(self) -> bool:
+        """A Garmin device in mass storage mode: never synced, nothing asked of the account."""
+        return self.storage.mass_storage
+
+
+class MassStorageMode(Exception):
+    """What is refused for a Garmin device in mass storage mode."""
+
 
 def make_client(settings: Settings) -> GarminClient:
     try:
@@ -70,15 +79,47 @@ def make_client(settings: Settings) -> GarminClient:
     return GarminClient(settings, consumer, auth)
 
 
-def open_session(device_uri: str | None = None, storage: Storage | None = None) -> DeviceSession:
+def open_session(device_uri: str | None = None, storage: Storage | None = None,
+                 allow_ums: bool = False) -> DeviceSession:
+    """A session on the connected device: MTP alone, unless `allow_ums` (the window) also
+    lets a Garmin device in mass storage mode be opened."""
     if storage is None:
         from openexpress.device.gio_storage import open_device_storage
 
-        storage = open_device_storage(device_uri)
+        storage = (_open_device_or_drive() if allow_ums and device_uri is None
+                   else open_device_storage(device_uri))
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(device)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
+
+
+def _open_device_or_drive() -> Storage:
+    """An MTP device comes first, also one that is still on its way to MTP; a Garmin device
+    in mass storage mode is opened only when there is none."""
+    from openexpress.device import gio_storage
+
+    try:
+        storage = gio_storage.open_device_storage()
+    except gio_storage.SeveralDevices:
+        raise
+    except DeviceError:
+        if gio_storage.usb_state() not in (gio_storage.ABSENT, gio_storage.MASS_STORAGE):
+            raise
+        drives = gio_storage.find_ums_devices()
+        if not drives:
+            raise
+        if len(drives) > 1:
+            # Their addresses name the user's folder, and --device-uri takes no drive.
+            raise gio_storage.SeveralDevices(
+                _("Several Garmin devices are connected in mass storage mode. Connect only "
+                  "one of them.")) from None
+        return gio_storage.open_ums_storage(drives[0])
+    skipped = len(gio_storage.find_ums_devices())
+    if skipped:
+        log.info("device: an MTP device is open, %d Garmin drive in mass storage mode skipped",
+                 skipped)
+    return storage
 
 
 def _unit_id(value) -> int | None:
@@ -300,9 +341,14 @@ def check_session(s: DeviceSession) -> DeviceSession:
     """For the window: run the ownership check and keep the refusal instead of raising.
 
     A rejected login makes the session logged out, so the window asks to log in again.
+    A Garmin device in mass storage mode is not checked: nothing is asked of the account
+    about it (`s.mass_storage` tells the window why there is no sync).
     """
     s.ownership_error = None
     s.account_devices = None
+    if s.mass_storage:
+        log.info("device: in mass storage mode, the account is not asked about it")
+        return s
     if s.logged_in:
         try:
             s.account_devices = require_account_device(s.client, s.device.unit_id)
@@ -462,6 +508,9 @@ def run_sync(
     include_diagnostics: bool = False,
 ) -> SyncSummary:
     """Full sync. `first_run`: 'baseline' or 'all' for the first time."""
+    if s.mass_storage:
+        log.info("sync: refused, the device is in mass storage mode")
+        raise MassStorageMode(_("A device in mass storage mode is not synced."))
     started = time.monotonic()
     log.info("sync: start (first run: %s, diagnostics: %s)", first_run or "-",
              include_diagnostics)

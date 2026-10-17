@@ -523,6 +523,59 @@ def test_watcher_rejected_login_gets_one_notification(device_root, xdg, device, 
     assert watcher.notes[0][0] == "Sync failed" and "Please log in again" in watcher.notes[0][1]
 
 
+# --- a Garmin device in mass storage mode: no sync, nothing asked of the account -------------
+
+
+def ums_session(device_root, device, client):
+    """A session on a Garmin drive, as service.open_session(allow_ums=True) makes it."""
+    from openexpress.device.storage import UmsStorage
+
+    return service.DeviceSession(UmsStorage(device_root, device_root.as_uri()), device,
+                                 Settings(), client)
+
+
+def test_watcher_does_not_sync_a_garmin_drive(device_root, xdg, device, watcher, monkeypatch):
+    """Even when it gets a drive (e.g. the MTP device left between the event and the
+    opening): no sync, no request, no notification (D4), nothing written."""
+    sync.SyncState(UNIT).save()  # synced before: the watcher would sync it at once
+    client = make_client([{"unitid": UNIT}])
+    monkeypatch.setattr(watcher, "_open_session", lambda: ums_session(device_root, device, client))
+    before = tree(device_root)
+    watcher._sync()
+    assert watcher.synced == [] and watcher.notes == [] and client.http.sent == []
+    assert tree(device_root) == before
+
+
+def test_watcher_opens_mtp_devices_only(watcher, monkeypatch):
+    """It asks for a session without allow_ums: MTP alone."""
+    calls = []
+    monkeypatch.setattr(service, "open_session", lambda *a, **kw: calls.append((a, kw)) or "s")
+    assert watcher._open_session() == "s" and calls == [((), {})]
+
+
+def test_run_sync_refuses_a_garmin_drive(device_root, xdg, device):
+    sync.SyncState(UNIT).save()
+    client = make_client([{"unitid": UNIT}])
+    client.verified_unit_id = UNIT  # as if checked: the refusal does not depend on it
+    before = tree(device_root)
+    with pytest.raises(service.MassStorageMode) as error:
+        service.run_sync(ums_session(device_root, device, client))
+    assert str(error.value) == "A device in mass storage mode is not synced."
+    assert client.http.sent == [] and tree(device_root) == before
+    assert service.load_last_sync(UNIT) is None
+
+
+def test_a_garmin_drive_makes_no_account_request(device_root, device):
+    """check_session asks the account nothing about it and says it is a drive, so the window
+    can leave out the banner and say why there is no Sync."""
+    client = make_client([{"unitid": UNIT}])
+    s = service.check_session(ums_session(device_root, device, client))
+    assert s.mass_storage is True and s.logged_in
+    assert s.ownership_error is None and s.account_devices is None
+    assert client.http.sent == [] and client.verified_unit_id is None
+    assert service.check_session(session(device_root, device, client)).mass_storage is False
+
+
 # --- window ---------------------------------------------------------------------------------
 
 
