@@ -198,7 +198,8 @@ def unlock_e2(ident):
 
 class RecordingStorage(LocalStorage):
     """Remembers what was written, in order; can fail writing chosen files. A failure
-    leaves half a file under the real name, as over MTP: not a drive's temporary copy."""
+    leaves half a file under the real name, as over MTP (not a drive's temporary copy), and
+    removes it as GioStorage does, unless asked to keep it."""
 
     replaces_atomically = False
 
@@ -213,6 +214,11 @@ class RecordingStorage(LocalStorage):
             self._p(real_path).write_bytes(b"half")
             raise DeviceError("unplugged")
         super()._write_file(real_path, local, progress)
+
+    def _discard_partial(self, real_path):
+        # As GioStorage: the storage removes the half it left (a shared file is kept: the
+        # caller asks so).
+        self._p(real_path).unlink(missing_ok=True)
 
     def _write(self, real_path, data):
         self.order.append(real_path)

@@ -27,6 +27,11 @@ class DeviceError(Exception):
     pass
 
 
+class CopyNotStarted(DeviceError):
+    """A write that failed before anything on the device was touched (e.g. the copy command
+    could not be started): the file under the name, if any, is as it was."""
+
+
 class RemountFailed(DeviceError):
     """The device was not mounted again after a PTP session."""
 
@@ -46,9 +51,9 @@ class Storage(ABC):
     # A Garmin device in mass storage mode that the program found itself (UmsStorage).
     mass_storage = False
     # Whether write_file keeps the file it replaces until the new one is whole (a temporary
-    # copy renamed at the end): after a failed copy the old file is still there and working,
-    # and must be kept; and both have to fit for a while. Over MTP the old file is deleted
-    # before the new one is sent, so what a failure leaves under the name is half a new one.
+    # copy renamed at the end), so both have to fit for a while: what the space checks count.
+    # Over MTP the old file is deleted before the new one is sent. (What a failed write
+    # leaves behind is cleaned up by the storage itself: _discard_partial.)
     replaces_atomically = False
 
     @abstractmethod
@@ -164,11 +169,25 @@ class Storage(ABC):
         self._write(real, data)
         return real
 
-    def write_file(self, path: str, local: Path, progress=None) -> str:
-        """Stream a local file to the device (large map/firmware files)."""
+    def write_file(self, path: str, local: Path, progress=None, keep_partial: bool = False) -> str:
+        """Stream a local file to the device (large map/firmware files). After a failure the
+        storage itself cleans up what the copy left under the name (_discard_partial), unless
+        the copy never started (CopyNotStarted: the old file is untouched) or `keep_partial`
+        (a file other maps use, never deleted)."""
         real = self._target(path)
-        self._write_file(real, Path(local), progress)
+        try:
+            self._write_file(real, Path(local), progress)
+        except CopyNotStarted:
+            raise
+        except BaseException:
+            if not keep_partial:
+                self._discard_partial(real)
+            raise
         return real
+
+    def _discard_partial(self, real_path: str) -> None:  # noqa: B027 - nothing by default
+        """What a copy that started and failed left under the name. Nothing here: a drive
+        copies to a temporary file, which it removes itself."""
 
     def _write_file(self, real_path: str, local: Path, progress=None) -> None:
         self._write(real_path, local.read_bytes())

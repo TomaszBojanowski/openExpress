@@ -28,6 +28,7 @@ from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.requi
 
 from openexpress.device import ptp  # noqa: E402
 from openexpress.device.storage import (  # noqa: E402
+    CopyNotStarted,
     DeviceError,
     Entry,
     LocalStorage,
@@ -131,14 +132,16 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
     depends on the exit code alone.
     """
     if not shutil.which("flatpak-spawn"):
-        raise DeviceError(f"{what}: " + _("flatpak-spawn is not available"))
+        raise CopyNotStarted(f"{what}: " + _("flatpak-spawn is not available"))
     command = ["flatpak-spawn", "--host", "gio", "copy"]
     if progress is None:
         try:
             res = subprocess.run([*command, str(local), target_uri],
                                  capture_output=True, text=True, timeout=HOST_COPY_TIMEOUT_S,
                                  check=False)
-        except (OSError, subprocess.TimeoutExpired) as e:
+        except OSError as e:  # the command could not be started
+            raise CopyNotStarted(f"{what}: {e}") from e
+        except subprocess.TimeoutExpired as e:
             raise DeviceError(f"{what}: {e}") from e
         if res.returncode != 0:
             raise DeviceError(f"{what}: {_detail(res.stderr, res.stdout)}")
@@ -147,8 +150,8 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None) -> None:
         size = Path(local).stat().st_size
         proc = subprocess.Popen([*command, "-p", str(local), target_uri],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except OSError as e:
-        raise DeviceError(f"{what}: {e}") from e
+    except OSError as e:  # the command could not be started
+        raise CopyNotStarted(f"{what}: {e}") from e
     errors: list[bytes] = []
     reader = threading.Thread(target=lambda: errors.append(proc.stderr.read()), daemon=True)
     reader.start()  # so that a lot of error output cannot block the copy
@@ -274,20 +277,42 @@ class GioStorage(Storage):
                 os.unlink(tmp)
 
     def _write_file(self, real_path: str, local, progress=None) -> None:
+        """Everything that can fail before the device is touched (the file to send, its
+        staging in the Flatpak, starting the copy) raises CopyNotStarted: the old file stays.
+        What fails once the copy runs leaves half a file, which write_file removes."""
         what = _("Cannot write {path}").format(path=real_path)
         local = Path(local)
+        try:
+            local.stat()
+        except OSError as e:
+            raise CopyNotStarted(f"{what}: {e}") from e
         if in_flatpak() and not _host_visible(local):
             # E.g. a file in the sandbox's private /tmp: stage it where the host can read it.
             with _staging():
-                fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
-                os.close(fd)
                 try:
-                    shutil.copyfile(local, tmp)
+                    fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
+                    os.close(fd)
+                except OSError as e:
+                    raise CopyNotStarted(f"{what}: {e}") from e
+                try:
+                    try:
+                        shutil.copyfile(local, tmp)
+                    except OSError as e:
+                        raise CopyNotStarted(f"{what}: {e}") from e
                     self._copy_local(Path(tmp), real_path, progress, what)
                 finally:
                     os.unlink(tmp)
             return
         self._copy_local(local, real_path, progress, what)
+
+    def _discard_partial(self, real_path: str) -> None:
+        """Over MTP the old file is deleted before the new one is sent: what a copy that
+        broke off leaves under the name is half a new file, never the old one."""
+        try:
+            if self._f(real_path).query_exists(None):
+                self._delete(real_path)
+        except Exception as e:  # noqa: BLE001 - cleanup after a failure: that one is reported
+            log.warning("Cannot delete a partly copied file: %s", type(e).__name__)
 
     def _copy_local(self, local: Path, real_path: str, progress, what: str) -> None:
         target = self._f(real_path)

@@ -325,15 +325,10 @@ def _install(
         local = local_files[u.key]
         size = local.stat().st_size
         progress(_("Copying to the device: {path}").format(path=u.device_path))
-        try:
-            real = storage.write_file(u.device_path, local, transfer_progress)
-            ok = storage.size(real) == size
-        except Exception:
-            # Half a new file under the name (MTP) must go; on a drive the name still holds
-            # the old, working file (the half copy is gone already): it stays.
-            if not storage.replaces_atomically:
-                _delete_quietly(storage, u.device_path)
-            raise
+        # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
+        # on a drive, nor when the copy never started): nothing is deleted here.
+        real = storage.write_file(u.device_path, local, transfer_progress)
+        ok = storage.size(real) == size
         if not ok:
             # A truncated firmware file must not stay where the watch would install it.
             _delete_quietly(storage, real)

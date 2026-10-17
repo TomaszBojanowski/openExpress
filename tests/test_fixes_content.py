@@ -343,12 +343,16 @@ class TruncatingStorage(LocalStorage):
 
 
 class CrashingStorage(LocalStorage):
-    # Half a file under the real name, as over MTP: not a drive's temporary copy.
+    # Half a file under the real name, as over MTP: not a drive's temporary copy; and, as
+    # GioStorage, it removes that half itself (the caller never deletes anything).
     replaces_atomically = False
 
     def _write_file(self, real_path, local, progress=None):
         self._p(real_path).write_bytes(b"half")
         raise DeviceError("unplugged")
+
+    def _discard_partial(self, real_path):
+        self._p(real_path).unlink(missing_ok=True)
 
 
 @pytest.mark.parametrize("cls,exc", [(TruncatingStorage, updates.UpdateError),
