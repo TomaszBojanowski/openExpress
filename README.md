@@ -31,6 +31,14 @@ flatpak install --user openexpress-0.5.2.flatpak
 The GNOME runtime comes from Flathub. More in [Install](#install), including the version
 from source.
 
+**Devices in mass storage mode:** openExpress 0.5.2 works with Garmin devices that connect
+over USB in MTP mode, such as the fēnix 8 and the Edge 1050. Devices that connect as a USB
+drive instead (mass storage mode: some older Garmin models, and accessories such as the
+Varia RTL515) are not yet supported by the 0.5.2 window – only the command line reads them,
+with `--path`; support in the window is coming in the next release. If you are not sure
+which mode your device uses, plug it in: if it appears as a USB drive in your file manager
+rather than through MTP, it is in mass storage mode.
+
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
 virtual machine. How the Garmin services and the watch's file layout work was learned by
