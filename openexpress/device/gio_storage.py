@@ -498,6 +498,10 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
 
 STARTING_PRODUCT = "0003"
 ABSENT, STARTING, PRESENT = "absent", "starting", "present"
+# Only Garmin devices in mass storage mode (e.g. the Varia RTL515): the system offers them
+# as a USB drive, never over MTP, so there is nothing to wait for.
+MASS_STORAGE = "mass-storage"
+MASS_STORAGE_CLASS = "08"  # the USB interface class
 WAIT_FOR_DEVICE_S = 45
 # Between its transitional mode and MTP the device is off the bus for a moment (about
 # 0.3 s on the fēnix 8). Only a longer absence means that it was unplugged.
@@ -512,8 +516,20 @@ class SeveralDevices(DeviceError):
     pass
 
 
-def garmin_products_on_usb() -> list[str]:
-    """USB product IDs of the Garmin devices plugged in, whatever state they are in."""
+def _mass_storage_only(base: Path) -> bool:
+    """Whether every interface of this USB device is a mass storage interface. False when
+    none of their classes can be read."""
+    classes = []
+    for interface in base.glob(f"{base.name}:*"):
+        try:
+            classes.append((interface / "bInterfaceClass").read_text().strip().lower())
+        except OSError:
+            continue
+    return bool(classes) and all(c == MASS_STORAGE_CLASS for c in classes)
+
+
+def _garmin_on_usb() -> list[tuple[str, bool]]:
+    """(USB product ID, whether it is in mass storage mode) of each Garmin device plugged in."""
     found = []
     try:
         entries = sorted(SYSFS_USB.iterdir())
@@ -522,18 +538,28 @@ def garmin_products_on_usb() -> list[str]:
     for base in entries:
         try:
             if (base / "idVendor").read_text().strip().lower() == GARMIN_VID:
-                found.append((base / "idProduct").read_text().strip().lower())
+                found.append(((base / "idProduct").read_text().strip().lower(),
+                              _mass_storage_only(base)))
         except OSError:
             continue
     return found
 
 
+def garmin_products_on_usb() -> list[str]:
+    """USB product IDs of the Garmin devices plugged in, whatever state they are in."""
+    return [product for product, _mass_storage in _garmin_on_usb()]
+
+
 def usb_state() -> str:
     """ABSENT: no Garmin device on USB; STARTING: one is there in its transitional mode;
-    PRESENT: one is there in its normal mode (which says nothing about gvfs yet)."""
-    products = garmin_products_on_usb()
-    if not products:
+    PRESENT: one is there in its normal mode (which says nothing about gvfs yet);
+    MASS_STORAGE: the only Garmin devices there are in mass storage mode."""
+    devices = _garmin_on_usb()
+    if not devices:
         return ABSENT
+    products = [product for product, mass_storage in devices if not mass_storage]
+    if not products:
+        return MASS_STORAGE
     return PRESENT if any(p != STARTING_PRODUCT for p in products) else STARTING
 
 
@@ -545,6 +571,10 @@ def not_ready_text(state: str) -> str:
     if state == PRESENT:
         return _("The Garmin device is connected, but it does not offer its files. Check its "
                  "screen: if it is locked with a PIN or asks something, unlock it or confirm.")
+    if state == MASS_STORAGE:
+        return _("The Garmin device is connected in mass storage mode (as a USB drive); "
+                 "openExpress opens such a device only from the command line, with --path "
+                 "and the folder where the system mounted it.")
     return _("No Garmin device (MTP) found. Connect the device with a USB cable "
              "and unlock it if it asks to allow the connection.")
 
@@ -574,20 +604,23 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
         except DeviceError as e:
             state = usb_state()
             if state != seen:
-                # ABSENT: no Garmin on USB; STARTING: 091e:0003; PRESENT: on USB, not mounted.
+                # ABSENT: no Garmin on USB; STARTING: 091e:0003; PRESENT: on USB, not mounted;
+                # MASS_STORAGE: only Garmin devices in mass storage mode.
                 log.info("device: not available after %.1f s, USB state: %s (%s), waiting: %s",
                          clock() - started, state,
                          ", ".join(f"091e:{p}" for p in garmin_products_on_usb()) or "-", wait)
                 seen = state
-            if state == ABSENT:
-                if not (wait and told):
-                    raise
-                if gone_since is None:
-                    gone_since = clock()
-                if clock() - gone_since >= USB_GAP_S or clock() >= deadline:
-                    raise
-                sleep(1)
-                continue
+            if state in (ABSENT, MASS_STORAGE):
+                if wait and told:
+                    # A device we were waiting for left the bus: unplugged, or between modes.
+                    if gone_since is None:
+                        gone_since = clock()
+                    if clock() - gone_since < USB_GAP_S and clock() < deadline:
+                        sleep(1)
+                        continue
+                if state == MASS_STORAGE and isinstance(e, NotThereYet):
+                    raise NotThereYet(not_ready_text(state)) from e
+                raise
             gone_since = None
             if not wait:
                 if isinstance(e, NotThereYet) and state == STARTING:

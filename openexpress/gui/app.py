@@ -28,6 +28,7 @@ from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
+    MASS_STORAGE,
     PRESENT,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
@@ -947,6 +948,9 @@ class MainWindow(Adw.ApplicationWindow):
             return (_("Connect your device"),
                     _("Connect your Garmin device with a USB cable. "
                       "It will be detected automatically."), False)
+        if state == MASS_STORAGE:
+            # TRANSLATORS: a device connected as a USB drive, not over MTP
+            return _("Mass storage mode"), not_ready_text(state), False
         if waited_s < WAIT_FOR_DEVICE_S:
             return (_("The device is starting…"),
                     _("This takes a moment after the cable is plugged in."), True)

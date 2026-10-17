@@ -945,6 +945,65 @@ def test_usb_states(plugged):
     assert gio_storage.usb_state() == gio_storage.PRESENT
 
 
+def mass_storage_device(root, name="1-4", product="20ee", classes=("08",)):
+    """A Garmin device in mass storage mode, like the Varia RTL515 (091e:20ee). As in /sys,
+    its interfaces are folders "<name>:<configuration>.<number>" with their class (None: a
+    folder without it)."""
+    d = usb_device(root, name, 1, 12, "091e", product)
+    for number, cls in enumerate(classes):
+        interface = d / f"{name}:1.{number}"
+        interface.mkdir()
+        if cls is not None:
+            (interface / "bInterfaceClass").write_text(f"{cls}\n")
+    return d
+
+
+def test_usb_state_ignores_a_garmin_in_mass_storage_mode(plugged):
+    """A Garmin device whose interfaces are all mass storage (class 08) is no MTP device on
+    its way: there is nothing to wait for. A watch next to it is waited for as before."""
+    mass_storage_device(plugged.root)
+    assert gio_storage.usb_state() != gio_storage.PRESENT
+    assert gio_storage.usb_state() == gio_storage.MASS_STORAGE
+    assert gio_storage.garmin_products_on_usb() == ["20ee"]  # still named in the log
+    plugged.plug("0003")
+    assert gio_storage.usb_state() == gio_storage.STARTING
+    plugged.plug("51b4")
+    assert gio_storage.usb_state() == gio_storage.PRESENT
+
+
+@pytest.mark.parametrize("classes", [("08", "ff"), ("06",), ("ff",), (None,), ()])
+def test_a_garmin_with_other_interfaces_is_waited_for_as_before(plugged, classes):
+    """Not only mass storage, or interfaces whose class cannot be read: as before."""
+    mass_storage_device(plugged.root, product="51b4", classes=classes)
+    assert gio_storage.usb_state() == gio_storage.PRESENT
+
+
+def test_cli_does_not_wait_for_a_garmin_in_mass_storage_mode(plugged):
+    """Not 45 s of "the device is starting" and then the advice about a PIN: at once, what
+    to do with such a device."""
+    mass_storage_device(plugged.root)
+    for wait in (True, False):
+        with pytest.raises(gio_storage.NotThereYet) as error:
+            plugged.open(wait=wait)
+        assert plugged.clock.slept == 0 and plugged.notices == []
+        assert "PIN" not in str(error.value)
+        assert str(error.value) == gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
+        assert "--path" in str(error.value) and plugged.opened == []
+
+
+def test_a_watch_is_waited_for_next_to_a_garmin_in_mass_storage_mode(plugged):
+    """The fēnix 8 is plugged in while a radar is connected as a USB drive: its short
+    absence between the two modes is still no unplug."""
+    mass_storage_device(plugged.root)
+    plugged.plug("0003")
+    plugged.steps[18.5] = lambda: plugged.plug(None)
+    plugged.steps[20.0] = lambda: plugged.plug("51b4")
+    plugged.steps[22.0] = plugged.offer
+    st = plugged.open()
+    assert st.uri == NUMERIC and plugged.notices == ["The device is starting…"]
+    assert 22 <= plugged.clock.now < 24
+
+
 def test_starting_device_is_waited_for(plugged):
     plugged.plug("0003")
     plugged.steps[19] = lambda: plugged.plug("51b4")   # it comes back as an MTP device
@@ -1149,6 +1208,31 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     plugged.plug("0003")
     poll()
     assert len(shown) == count and len(updates) == 4
+
+
+def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
+    """No spinner, no search over MTP and, after the wait, no advice about a PIN: the page
+    says at once what the device is."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown, refreshed, updates = [], [], []
+    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
+                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
+                                _usb_notice=MainWindow._usb_notice,
+                                refresh_device=lambda: refreshed.append(1))
+    win._update_actions = lambda: updates.append(win._usb_title)
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    mass_storage_device(plugged.root)
+    for now in (10, 10 + gio_storage.WAIT_FOR_DEVICE_S + 1):
+        plugged.clock.now = now
+        MainWindow._poll_usb(win, clock=plugged.clock)
+        assert refreshed == []  # nothing to look for over MTP
+        assert shown[-1][2] is False and "PIN" not in shown[-1][1]
+        assert shown[-1] == ("Mass storage mode",
+                             gio_storage.not_ready_text(gio_storage.MASS_STORAGE), False)
+    assert updates == ["Mass storage mode"]  # the Sync button says why, told once
 
 
 class _SyncButton:
