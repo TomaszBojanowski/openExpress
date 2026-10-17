@@ -26,7 +26,13 @@ gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress.device import ptp  # noqa: E402
-from openexpress.device.storage import DeviceError, Entry, RemountFailed, Storage  # noqa: E402
+from openexpress.device.storage import (  # noqa: E402
+    DeviceError,
+    Entry,
+    LocalStorage,
+    RemountFailed,
+    Storage,
+)
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import in_flatpak  # noqa: E402
 
@@ -34,6 +40,8 @@ log = logging.getLogger(__name__)
 
 GARMIN_VID = "091e"
 SYSFS_USB = Path("/sys/bus/usb/devices")
+# Each block device (a disk, a partition) with a link to where it is in the device tree.
+SYSFS_BLOCK = Path("/sys/class/block")
 # The device nodes libusb opens. A Flatpak has them only with the --device=usb permission.
 USB_NODES = Path("/dev/bus/usb")
 _ATTRS = "standard::name,standard::type,standard::size,time::modified"
@@ -454,6 +462,79 @@ def find_devices() -> list[FoundDevice]:
             if uri.rstrip("/") not in found:
                 found[uri.rstrip("/")] = FoundDevice(uri, vol.get_name(), False, vol, usb)
     return list(found.values())
+
+
+# --- a Garmin device in mass storage mode: a USB drive ------------------------------------
+#
+# Its volume names the block device (e.g. /dev/sdb1); /sys/class/block leads from it to the
+# USB device it belongs to. Neither the label of the volume nor the folders on it decide.
+
+_BLOCK_DEVICE = re.compile(r"/dev/([A-Za-z0-9_][A-Za-z0-9_.-]*)")
+
+
+def _block_device_usb(unix_device: str | None) -> tuple[str, str, int, int] | None:
+    """(idVendor, idProduct, busnum, devnum) of the USB device that holds this block device;
+    None when it is not on USB or not known. Only these four attributes are read."""
+    name = _BLOCK_DEVICE.fullmatch(unix_device or "")
+    if name is None:
+        return None
+    try:
+        here = (SYSFS_BLOCK / name.group(1)).resolve(strict=True)
+    except (OSError, RuntimeError):
+        return None
+    # Up the device tree to the first folder that is a USB device: a disk on USB has its
+    # partition, the disk, the SCSI and the USB interface folders below it. A disk that is
+    # not on USB (e.g. NVMe) has none above it.
+    for folder in (here, *here.parents):
+        if (folder / "idVendor").is_file():
+            try:
+                return ((folder / "idVendor").read_text().strip().lower(),
+                        (folder / "idProduct").read_text().strip().lower(),
+                        int((folder / "busnum").read_text()),
+                        int((folder / "devnum").read_text()))
+            except (OSError, ValueError):
+                return None
+    return None
+
+
+def garmin_ums(mount) -> GarminUsb | None:
+    """Whether a Gio mount is a Garmin device in mass storage mode: a local folder on a block
+    device of a USB device of vendor 091e; None if not. Its files are not read here (that is
+    find_ums_devices), only /sys."""
+    root = mount.get_root()
+    uri = root.get_uri() if root is not None else None
+    if not uri or not uri.lower().startswith("file://"):
+        return None
+    volume = mount.get_volume() if hasattr(mount, "get_volume") else None
+    ids = _block_device_usb(volume.get_identifier("unix-device") if volume is not None else None)
+    if ids is None or ids[0] != GARMIN_VID:
+        return None
+    return GarminUsb(ids[1], "usb", ids[2], ids[3])
+
+
+def find_ums_devices() -> list[FoundDevice]:
+    """The mounted Garmin devices in mass storage mode that have GARMIN/GarminDevice.xml, in
+    any letter case. Only the folder listings on the way to that file are read."""
+    found = []
+    for mount in Gio.VolumeMonitor.get().get_mounts():
+        usb = garmin_ums(mount)
+        if usb is None:
+            continue
+        root = mount.get_root()
+        path = root.get_path()
+        try:
+            has_xml = path is not None and LocalStorage(Path(path)).exists(
+                "GARMIN/GarminDevice.xml")
+        except (DeviceError, OSError):
+            has_xml = False
+        if not has_xml:
+            # No path in the log: it has the user name.
+            log.info("device: a Garmin drive (USB %s) without GARMIN/GarminDevice.xml, skipped",
+                     usb.usb_id)
+            continue
+        found.append(FoundDevice(root.get_uri(), mount.get_name(), True, mount.get_volume(),
+                                 usb))
+    return found
 
 
 def mount(dev: FoundDevice, timeout_s: int = 30) -> None:

@@ -6,6 +6,7 @@ All serial numbers and USB trees here are made up.
 import logging
 import os
 import types
+from pathlib import Path
 
 import pytest
 
@@ -638,6 +639,187 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
     assert started == []
     w.on_mount(None, FakeMount(NAMED))
     assert started == [w.start_sync]
+
+
+# --- a Garmin device in mass storage mode: a USB drive -------------------------------------
+
+# Made by hand after the Varia RTL515 (17.10.2026); the unit ID is made up.
+RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
+ <Model><PartNumber>006-B3592-03</PartNumber><SoftwareVersion>336</SoftwareVersion>
+  <Description>Varia RTL515</Description></Model>
+ <Id>3000000003</Id>
+ <MassStorageMode>
+  <UpdateFile><PartNumber>006-B3592-03</PartNumber>
+   <Version><Major>3</Major><Minor>36</Minor></Version>
+   <Path>GARMIN/</Path><FileName>GUPDATE.GCD</FileName></UpdateFile>
+  <UpdateFile><PartNumber>006-B3593-06</PartNumber>
+   <Version><Major>3</Major><Minor>27</Minor></Version>
+   <Path>GARMIN/REMOTESW/</Path><FileName>6B359306.GCD</FileName></UpdateFile>
+ </MassStorageMode>
+</Device>
+"""
+DRIVE_SERIAL = "0000abcdef56"
+
+
+class FakeLocalFile(FakeFile):
+    """The root of a mounted USB drive: a local folder."""
+
+    def __init__(self, path):
+        super().__init__(path.as_uri())
+        self.path = str(path)
+
+    def get_path(self):
+        return self.path
+
+
+class FakeDriveMount:
+    """Like the mount of a USB drive: a local folder, and a volume that names the block device."""
+
+    def __init__(self, folder, unix_device, name="GARMIN"):
+        self.root, self.name = FakeLocalFile(folder), name
+        self.volume = FakeVolume(None, unix_device, name) if unix_device != "no volume" else None
+
+    def get_root(self):
+        return self.root
+
+    def get_volume(self):
+        return self.volume
+
+    def get_name(self):
+        return self.name
+
+
+@pytest.fixture
+def drives(tmp_path, monkeypatch):
+    """A made-up /sys with /sys/class/block, and a folder for what the system mounts."""
+    sys_root = tmp_path / "sys-with-drives"
+    world = types.SimpleNamespace(block=sys_root / "class" / "block", media=tmp_path / "media",
+                                  pci=sys_root / "devices" / "pci0000:00" / "0000:00:14.0")
+    world.block.mkdir(parents=True)
+    world.media.mkdir()
+    world.hub = usb_device(world.pci, "usb1", 1, 1, "1d6b", "0002")
+    monkeypatch.setattr(gio_storage, "SYSFS_BLOCK", world.block)
+    return world
+
+
+def _block(drives, below, disk, partition):
+    """The block device (and its partition) below a device folder, linked from
+    /sys/class/block as the kernel does it; returns what the volume gives as unix-device."""
+    folder = below / "block" / disk
+    folder.mkdir(parents=True)
+    (drives.block / disk).symlink_to(os.path.relpath(folder, drives.block))
+    if partition is None:
+        return f"/dev/{disk}"
+    (folder / partition).mkdir()
+    (drives.block / partition).symlink_to(os.path.relpath(folder / partition, drives.block))
+    return f"/dev/{partition}"
+
+
+def usb_drive(drives, vendor="091e", product="20ee", port="1-4", devnum=12, disk="sdb",
+              partition="sdb1"):
+    """A USB drive as the kernel shows it: the USB device, its mass storage interface and the
+    SCSI disk below it. Its serial number is there but must never be read."""
+    usb = usb_device(drives.hub, port, 1, devnum, vendor, product, serial=DRIVE_SERIAL)
+    interface = usb / f"{port}:1.0"
+    interface.mkdir()
+    (interface / "bInterfaceClass").write_text("08\n")
+    return _block(drives, interface / "host6" / "target6:0:0" / "6:0:0:0", disk, partition)
+
+
+def drive_folder(drives, label="GARMIN", xml_path="GARMIN/GarminDevice.xml"):
+    """The folder where the system mounted a drive, with the device file when `xml_path`."""
+    folder = drives.media / label
+    # One GARMIN folder in whatever letter case: a FAT drive cannot have two.
+    (folder / (xml_path or "GARMIN/-")).parent.mkdir(parents=True)
+    if xml_path:
+        (folder / xml_path).write_text(RTL515_XML)
+    return folder
+
+
+def monitor_with(monkeypatch, *mounts):
+    monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get",
+                        staticmethod(lambda: FakeMonitor(mounts=mounts)))
+
+
+@pytest.mark.parametrize("xml_path, partition", [
+    ("GARMIN/GarminDevice.xml", "sdb1"),
+    ("Garmin/garmindevice.xml", "sdb1"),   # any letter case, as on the device
+    ("GARMIN/GarminDevice.xml", None),     # a drive without partitions
+])
+def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
+    """A volume whose block device belongs to the USB device 091e:20ee and that has
+    GARMIN/GarminDevice.xml: a Garmin device in mass storage mode."""
+    mount = FakeDriveMount(drive_folder(drives, xml_path=xml_path),
+                           usb_drive(drives, partition=partition))
+    usb = gio_storage.garmin_ums(mount)
+    assert usb == gio_storage.GarminUsb("20ee", "usb") and usb.usb_id == "091e:20ee"
+    assert (usb.bus, usb.address) == (1, 12)
+    monitor_with(monkeypatch, mount)
+    found = gio_storage.find_ums_devices()
+    assert [(d.uri, d.name, d.mounted, d.usb) for d in found] == [
+        (mount.root.get_uri(), "GARMIN", True, usb)]
+    assert found[0].volume is mount.volume
+    assert DRIVE_SERIAL not in repr(found)  # the serial number is never read
+
+
+def test_a_pendrive_with_a_garmin_folder_is_ignored(drives, monkeypatch):
+    """The same folders and file on a drive of another vendor (here a SanDisk pendrive)."""
+    mount = FakeDriveMount(drive_folder(drives), usb_drive(drives, vendor="0781",
+                                                             product="5581"))
+    assert gio_storage.garmin_ums(mount) is None
+    monitor_with(monkeypatch, mount)
+    assert gio_storage.find_ums_devices() == []
+
+
+def test_a_garmin_drive_without_the_device_file_is_ignored(drives, monkeypatch, caplog):
+    """E.g. the memory card of a Garmin device: vendor 091e, a GARMIN folder, no device file."""
+    folder = drive_folder(drives, label="CARD", xml_path=None)
+    mount = FakeDriveMount(folder, usb_drive(drives))
+    assert gio_storage.garmin_ums(mount) is not None  # a Garmin drive…
+    monitor_with(monkeypatch, mount)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.find_ums_devices() == []  # …but not a device we can use
+    assert "without GARMIN/GarminDevice.xml" in caplog.text and "091e:20ee" in caplog.text
+    assert str(drives.media) not in caplog.text  # no local path (it has the user name)
+
+
+@pytest.mark.parametrize("case", ["no volume", "no unix-device", "not in /sys", "nvme",
+                                  "not a block device", "outside /sys", "mtp mount"])
+def test_a_drive_of_unknown_usb_origin_is_ignored(drives, monkeypatch, case):
+    """Only the USB device the block device belongs to decides: no guess by the label
+    "GARMIN" or by the folders on the drive."""
+    folder = drive_folder(drives)
+    usb_drive(drives)  # a Garmin drive is plugged in: none of these leads to it
+    nvme = _block(drives, drives.pci / "0000:04:00.0" / "nvme" / "nvme0", "nvme0n1", "nvme0n1p1")
+    mount = {
+        "no volume": FakeDriveMount(folder, "no volume"),
+        "no unix-device": FakeDriveMount(folder, None),
+        "not in /sys": FakeDriveMount(folder, "/dev/sdz1"),
+        "nvme": FakeDriveMount(folder, nvme),
+        "not a block device": FakeDriveMount(folder, "/dev/bus/usb/001/012"),
+        "outside /sys": FakeDriveMount(folder, "/dev/../../sys/class/block/sdb1"),
+        "mtp mount": FakeMount(NUMERIC),
+    }[case]
+    assert gio_storage.garmin_ums(mount) is None
+    monitor_with(monkeypatch, mount)
+    assert gio_storage.find_ums_devices() == []
+
+
+def test_mtp_detection_does_not_see_a_garmin_drive(sysfs, drives, monkeypatch):
+    """_identify, garmin_usb and find_devices stay for MTP alone."""
+    mount = FakeDriveMount(drive_folder(drives), usb_drive(drives))
+    assert gio_storage.garmin_usb(mount) is None
+    monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(
+        lambda: FakeMonitor(mounts=[mount, FakeMount(NAMED)],
+                            volumes=[mount.volume, FakeVolume(NAMED, "/dev/bus/usb/001/028")])))
+    assert [d.uri for d in gio_storage.find_devices()] == [NAMED]
+
+
+def test_no_disk_of_the_computer_running_the_tests_is_a_garmin_drive():
+    """conftest.py points /sys/class/block to an empty folder for every test."""
+    assert list(gio_storage.SYSFS_BLOCK.iterdir()) == []
+    assert gio_storage.garmin_ums(FakeDriveMount(Path("/"), "/dev/sda1")) is None
 
 
 # --- the device to ourselves for a PTP session ----------------------------------------------

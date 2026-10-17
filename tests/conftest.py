@@ -41,6 +41,25 @@ def pytest_runtest_setup(item):
     if item.get_closest_marker("needs_display") and not display_available():
         pytest.skip("no display")
 
+
+# --- no disk of the computer running the tests is a Garmin device ---------------------------
+
+
+@pytest.fixture(scope="session")
+def _empty_sys_class_block(tmp_path_factory):
+    return tmp_path_factory.mktemp("sys-class-block")
+
+
+@pytest.fixture(autouse=True)
+def no_block_devices(_empty_sys_class_block, monkeypatch):
+    """/sys/class/block is an empty folder, unless a test makes its own: a USB drive plugged
+    into this computer is never taken for a Garmin device in mass storage mode."""
+    try:
+        from openexpress.device import gio_storage
+    except (ImportError, ValueError):  # no PyGObject: nothing reads /sys/class/block
+        return
+    monkeypatch.setattr(gio_storage, "SYSFS_BLOCK", _empty_sys_class_block)
+
 DEVICE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
  <Model><PartNumber>006-B0000-00</PartNumber><SoftwareVersion>2339</SoftwareVersion>
