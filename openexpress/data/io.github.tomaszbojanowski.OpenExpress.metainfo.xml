@@ -97,6 +97,14 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.1" date="2026-10-17">
+      <description>
+        <p>A failed write over MTP no longer deletes the previous firmware or map file on the
+        device when the copy failed before the device was touched, for example because the
+        device was busy or opened in a file manager. The file is removed only with evidence
+        that it was actually being replaced. Reported in an external review.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-10-17">
       <description>
         <ul>

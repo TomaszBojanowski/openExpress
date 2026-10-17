@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 19:38+0200\n"
+"POT-Creation-Date: 2026-10-17 20:10+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2333,51 +2333,51 @@ msgstr "Garmin;Fenix;Connect;sync;synchronizacja;zegarek;"
 msgid "the Flatpak is missing the permission to copy files to the device"
 msgstr "Flatpakowi brakuje uprawnienia do kopiowania plików na urządzenie"
 
-#: openexpress/device/gio_storage.py:135
+#: openexpress/device/gio_storage.py:136
 msgid "flatpak-spawn is not available"
 msgstr "flatpak-spawn jest niedostępny"
 
-#: openexpress/device/gio_storage.py:211 openexpress/device/gio_storage.py:228
+#: openexpress/device/gio_storage.py:229 openexpress/device/gio_storage.py:246
 #: openexpress/device/storage.py:282
 #, python-brace-format
 msgid "Cannot list {path}"
 msgstr "Nie można wyświetlić zawartości {path}"
 
-#: openexpress/device/gio_storage.py:240 openexpress/device/gio_storage.py:245
+#: openexpress/device/gio_storage.py:258 openexpress/device/gio_storage.py:263
 #: openexpress/device/storage.py:289 openexpress/device/storage.py:293
 #, python-brace-format
 msgid "Cannot read {path}"
 msgstr "Nie można odczytać {path}"
 
-#: openexpress/device/gio_storage.py:266 openexpress/device/gio_storage.py:283
+#: openexpress/device/gio_storage.py:284 openexpress/device/gio_storage.py:301
 #: openexpress/device/storage.py:299 openexpress/device/storage.py:313
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr "Nie można zapisać {path}"
 
-#: openexpress/device/gio_storage.py:336 openexpress/device/storage.py:339
+#: openexpress/device/gio_storage.py:399 openexpress/device/storage.py:339
 #, python-brace-format
 msgid "Cannot delete {path}"
 msgstr "Nie można usunąć {path}"
 
-#: openexpress/device/gio_storage.py:342 openexpress/device/storage.py:343
+#: openexpress/device/gio_storage.py:405 openexpress/device/storage.py:343
 #, python-brace-format
 msgid "Cannot create directory {path}"
 msgstr "Nie można utworzyć katalogu {path}"
 
-#: openexpress/device/gio_storage.py:599 openexpress/device/gio_storage.py:983
+#: openexpress/device/gio_storage.py:662 openexpress/device/gio_storage.py:1046
 msgid "The device is not mounted."
 msgstr "Urządzenie nie jest zamontowane."
 
-#: openexpress/device/gio_storage.py:632
+#: openexpress/device/gio_storage.py:695
 msgid "Mounting the device timed out"
 msgstr "Przekroczono czas montowania urządzenia"
 
-#: openexpress/device/gio_storage.py:634 openexpress/device/gio_storage.py:996
+#: openexpress/device/gio_storage.py:697 openexpress/device/gio_storage.py:1059
 msgid "Cannot mount the device"
 msgstr "Nie można zamontować urządzenia"
 
-#: openexpress/device/gio_storage.py:721
+#: openexpress/device/gio_storage.py:784
 msgid ""
 "The device is still starting. Wait until it shows its usual screen, or "
 "unplug it and plug it in again."
@@ -2385,7 +2385,7 @@ msgstr ""
 "Urządzenie nadal się uruchamia. Poczekaj, aż pokaże zwykły ekran, albo "
 "odłącz je i podłącz ponownie."
 
-#: openexpress/device/gio_storage.py:724
+#: openexpress/device/gio_storage.py:787
 msgid ""
 "The Garmin device is connected, but it does not offer its files. Check its "
 "screen: if it is locked with a PIN or asks something, unlock it or confirm."
@@ -2394,7 +2394,7 @@ msgstr ""
 "ekran: jeśli jest zablokowane kodem PIN albo o coś pyta, odblokuj je lub "
 "potwierdź."
 
-#: openexpress/device/gio_storage.py:727
+#: openexpress/device/gio_storage.py:790
 msgid ""
 "The Garmin device is connected in mass storage mode (as a USB drive); "
 "openExpress opens such a device only from the command line, with --path and "
@@ -2404,7 +2404,7 @@ msgstr ""
 "openExpress otwiera takie urządzenie tylko z wiersza poleceń, z opcją --path "
 "i folderem, w którym system je zamontował."
 
-#: openexpress/device/gio_storage.py:730
+#: openexpress/device/gio_storage.py:793
 msgid ""
 "No Garmin device (MTP) found. Connect the device with a USB cable and unlock "
 "it if it asks to allow the connection."
@@ -2412,35 +2412,35 @@ msgstr ""
 "Nie znaleziono urządzenia Garmin (MTP). Podłącz urządzenie kablem USB i "
 "odblokuj je, jeśli poprosi o zezwolenie na połączenie."
 
-#: openexpress/device/gio_storage.py:779
+#: openexpress/device/gio_storage.py:842
 msgid "The device is starting. Try again in a moment."
 msgstr "Urządzenie się uruchamia. Spróbuj ponownie za chwilę."
 
-#: openexpress/device/gio_storage.py:786 openexpress/gui/app.py:1334
+#: openexpress/device/gio_storage.py:849 openexpress/gui/app.py:1334
 msgid "The device is starting…"
 msgstr "Urządzenie się uruchamia…"
 
-#: openexpress/device/gio_storage.py:800
+#: openexpress/device/gio_storage.py:863
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 "Podłączono kilka urządzeń, wybierz jedno za pomocą --device-uri: {names}"
 
-#: openexpress/device/gio_storage.py:819
+#: openexpress/device/gio_storage.py:882
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr "Nie znaleziono GARMIN/GarminDevice.xml na urządzeniu {uri}"
 
-#: openexpress/device/gio_storage.py:974
+#: openexpress/device/gio_storage.py:1037
 #, python-brace-format
 msgid "{action}: the device did not answer in time"
 msgstr "{action}: urządzenie nie odpowiedziało na czas"
 
-#: openexpress/device/gio_storage.py:987
+#: openexpress/device/gio_storage.py:1050
 msgid "Cannot unmount the device"
 msgstr "Nie można odmontować urządzenia"
 
-#: openexpress/device/gio_storage.py:1007
+#: openexpress/device/gio_storage.py:1070
 msgid "The device was mounted again but its files are not visible."
 msgstr "Urządzenie zostało ponownie zamontowane, ale nie widać jego plików."
 

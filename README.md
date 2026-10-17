@@ -21,11 +21,11 @@ Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/o
        alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
 
-**Install:** download `openexpress-0.6.0.flatpak` from the
+**Install:** download `openexpress-0.6.1.flatpak` from the
 [latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest), then run
 
 ```bash
-flatpak install --user openexpress-0.6.0.flatpak
+flatpak install --user openexpress-0.6.1.flatpak
 ```
 
 The GNOME runtime comes from Flathub. More in [Install](#install), including the version
