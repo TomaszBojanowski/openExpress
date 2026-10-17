@@ -9,43 +9,36 @@
   maps, Connect IQ apps and music over USB.
 </p>
 
-Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
-
 > **openExpress is not affiliated with, endorsed by or supported by Garmin Ltd.**
 > Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin Ltd. or its
 > subsidiaries. openExpress talks to the same Garmin services as the official Windows/macOS
 > app; Garmin may change them at any time. Use at your own risk.
 
-<p align="center">
-  <img src="docs/screenshots/updates.png" width="800"
-       alt="The Updates page: a beta software update offered for an Edge 1050">
-</p>
-
-**Install:** add the openExpress Flatpak repository and install the app from it:
+## Install
 
 ```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak remote-add --user --if-not-exists openexpress https://flatpak.bojanowski.me/openexpress.flatpakrepo
 flatpak install --user openexpress io.github.tomaszbojanowski.OpenExpress
 ```
 
-Updates then come with `flatpak update`. The GNOME runtime comes from Flathub.
-Alternatively, for example to install offline, download `openexpress-0.6.2.flatpak` from the
-[latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest), then run
+Updates then come with `flatpak update`. The GNOME runtime comes from Flathub, hence the
+first line; skip it if you already have Flathub. openExpress then appears in your application
+menu; see [Getting started](#getting-started).
 
-```bash
-flatpak install --user openexpress-0.6.2.flatpak
-```
+Not using Flatpak, or installing offline? See [Other ways to install](#other-ways-to-install).
 
-More in [Install](#install), including the version from source.
+## Contents
 
-**Devices in mass storage mode:** besides devices that connect over USB in MTP mode, such as
-the fēnix 8 and the Edge 1050, openExpress 0.6 supports Garmin devices that connect as a USB
-drive (mass storage mode: some older Garmin models, and accessories such as the Varia RTL515):
-their information and software updates, in the window of the version from source and on the
-command line with `--path`. It is tested on the Varia RTL515; reports from other devices in
-mass storage mode are welcome. The Flatpak cannot open drives yet and says so. If you are not
-sure which mode your device uses, plug it in: if it appears as a USB drive in your file
-manager rather than through MTP, it is in mass storage mode.
+- [Features](#features) · [Supported devices](#supported-devices)
+- [Usage](#usage): [getting started](#getting-started), [window and background sync](#application-window-and-background-sync),
+  [command line](#command-line), [software updates](#software-updates), [maps of your own](#maps-of-your-own),
+  [Connect IQ apps](#connect-iq-apps), [music](#music), [sync details](#sync-details)
+- [Configuration](#configuration): [languages](#languages), [log file](#log-file), [cache](#cache),
+  [privacy and security](#privacy-and-security), [Flatpak permissions](#flatpak-permissions)
+- [Other ways to install](#other-ways-to-install) · [Development](#development) · [License](#license)
+
+## Features
 
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
@@ -54,22 +47,9 @@ analysing the official application, solely to make openExpress interoperate with
 It contains no Garmin code or data: the few values it needs to talk to
 Garmin's servers are read from **your own copy** of the official installer during setup.
 
-**Status:** beta. The main features work and are tested on the devices listed below; other
-Garmin devices that connect over USB (MTP) should work, but are untested – reports are
-welcome. Developed on Fedora/GNOME and tested with these Garmin devices:
-
-- **fēnix 8 Solar**, on the developer's Garmin account: sync, Connect IQ apps, maps and
-  music are tested; software updates are checked and downloaded, but not yet installed on
-  this device.
-- **Edge 1050**, on the same account: mostly reading is tested; one system software update
-  was installed with openExpress (beta 33.12, 14 October 2026).
-- **Venu 2**, not on the account: reading is tested, and it was the first device to get
-  software updates installed with openExpress (Time Zone Map and Exercise to muscle
-  mapping, 13 October 2026).
-
-Details are in [Supported devices](#supported-devices).
-
-**Highlights**
+**Status:** beta. The main features work and are tested on the devices listed in
+[Supported devices](#supported-devices); other Garmin devices that connect over USB (MTP)
+should work, but are untested – reports are welcome. Developed on Fedora/GNOME.
 
 - Garmin Connect sync: new activities, sleep, HRV, metrics… are uploaded; courses, workouts
   and Connect IQ apps queued in Connect are written to the watch; TrueUp for multiple devices.
@@ -80,7 +60,83 @@ Details are in [Supported devices](#supported-devices).
 - GTK 4 / libadwaita window, command-line tool and background sync with notifications.
 - No telemetry. English and Polish, translatable with gettext.
 
-## What works
+<p align="center">
+  <img src="docs/screenshots/updates.png" width="800"
+       alt="The Updates page: a beta software update offered for an Edge 1050">
+</p>
+
+Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
+
+### Not yet available
+
+- Connect IQ app settings (the settings form is rendered by apps.garmin.com).
+- Checking the privacy-policy consents before a sync (the upload consent is checked, see
+  [Privacy and security](#privacy-and-security)).
+
+## Supported devices
+
+| Device | Status |
+|---|---|
+| fēnix 8 (47 mm, Solar) | on the developer's Garmin account; tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
+| epix (part 006-B3943) | read-only commands and backup tested |
+| Edge 1050 | on the same account; detected automatically; read-only commands, backup and sync plan tested; one system software update installed in the window (beta 33.12, 14 October 2026) |
+| Venu 2 (part 006-B3703) | read-only commands tested; it was the first device to get software updates installed with openExpress (two components, Time Zone Map and Exercise to muscle mapping, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
+| Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
+
+Tried openExpress with another device? Please send a
+[device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) –
+also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**
+→ **Open on GitHub** opens the form with the report and a title filled in; or run
+`openexpress report`, which prints the report and an address that does the same. The report
+contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
+
+### USB modes: MTP and mass storage
+
+Devices that connect over MTP (most watches and bike computers, such as the fēnix 8 and the
+Edge 1050) work in both the Flatpak and the version from source. Since 0.6, openExpress also
+supports Garmin devices that connect as a USB drive (mass storage mode: some older Garmin
+models, and accessories such as the Varia RTL515): their information and software updates, in
+the window of the version from source and on the command line with `--path`. The Flatpak
+cannot open drives yet and says so. Mass storage is tested on the Varia RTL515; reports from
+other devices in mass storage mode are welcome. If you are not sure which mode your device
+uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
+it is in mass storage mode.
+
+## Usage
+
+### Getting started
+
+openExpress appears in your application menu. Click **Choose Installer…** in the banner at
+the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
+the Device page (or in Preferences) to sync whenever the watch is connected.
+The command-line tool is available as
+`flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`);
+in the version from source it is `openexpress <command>`.
+
+If the login window does not capture the ticket, use `openexpress login --manual`: you
+sign in using a regular browser and paste the final URL containing `ticket=ST-…`.
+
+### Application window and background sync
+
+```bash
+openexpress gui                       # application window
+openexpress install-desktop --apply   # "openExpress" menu entry and background service
+systemctl --user daemon-reload
+systemctl --user enable --now openexpress-watch.service
+```
+
+The background service syncs the watch every time it is connected and shows a notification.
+It does nothing until you log in and perform the first sync
+(in the application window or with `openexpress baseline`/`sync`). The window and the service
+never sync at the same time (shared lock). A watch that is not registered to the signed-in
+account only gets a notification.
+
+<p align="center">
+  <img src="docs/screenshots/device.png" width="700"
+       alt="The device page: sync, updates, Garmin Connect account and tools">
+</p>
+
+### Command line
 
 | Command | Description |
 |---|---|
@@ -119,157 +175,7 @@ command fail at once instead.
 While a sync, a backup or a write is running, the window shows **Do not unplug the device**
 and the command-line tool prints the same warning when it starts such an operation.
 
-## Supported devices
-
-| Device | Status |
-|---|---|
-| fēnix 8 (47 mm, Solar) | tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
-| epix (part 006-B3943) | read-only commands and backup tested |
-| Edge 1050 | detected automatically; read-only commands, backup and sync plan tested; one system software update installed in the window (beta 33.12, 14 October 2026) |
-| Venu 2 (part 006-B3703) | read-only commands tested; installing software updates tested (two components, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
-| Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
-
-Tried openExpress with another device? Please send a
-[device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) –
-also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**
-→ **Open on GitHub** opens the form with the report and a title filled in; or run
-`openexpress report`, which prints the report and an address that does the same. The report
-contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
-
-## Install
-
-### Flatpak (recommended)
-
-Install from the openExpress Flatpak repository (signed; updates then come with
-`flatpak update`):
-
-```bash
-flatpak remote-add --user --if-not-exists openexpress https://flatpak.bojanowski.me/openexpress.flatpakrepo
-flatpak install --user openexpress io.github.tomaszbojanowski.OpenExpress   # needs the Flathub remote for the GNOME runtime
-flatpak run io.github.tomaszbojanowski.OpenExpress
-```
-
-Alternatively, for example to install offline, download `openexpress-<version>.flatpak` from
-the [latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest) and run:
-
-```bash
-flatpak install --user openexpress-*.flatpak   # needs the Flathub remote for the GNOME runtime
-```
-
-An app installed from such a file is not updated by `flatpak update`. To switch it to the
-repository, keeping your setup, login and settings, add the repository as above and run
-`flatpak install --user --reinstall openexpress io.github.tomaszbojanowski.OpenExpress`.
-
-openExpress then appears in your application menu. Click **Choose Installer…** in the banner
-at the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
-the Device page (or in Preferences) to sync whenever the watch is connected.
-The command-line tool is available as
-`flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`).
-
-**About the Flatpak's permissions:** besides network, USB storage access through GNOME's
-gvfs and your Downloads/Music folders, the Flatpak has two permissions that weaken the
-sandbox:
-
-- It can run commands on the host (`org.freedesktop.Flatpak`). It uses this only to copy
-  files to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
-  devices.
-- It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of
-  `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
-  (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
-  connection, and the device disappears from the file manager for a moment while it is
-  used.
-
-If you prefer not to grant the first one, use the version from source (writing to the watch
-then works without it). The second one can be turned off with
-`flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; Flatpak
-older than 1.16 ignores it. Without it, on devices that hide their app folder, installs and
-updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
-them, apps are removed on the phone, and nothing is written to the device.
-
-**USB modes:** devices that connect over MTP (most watches and bike computers) work in both
-versions; devices that connect as a USB drive (mass storage, e.g. the Varia RTL515) are
-supported in the version from source – in its window, or on the command line with `--path` –
-and the Flatpak does not open them yet. Mass storage is tested on the Varia RTL515; reports
-from other such devices are welcome.
-
-**The Flatpak and the version from source are separate installations:** each keeps its own
-setup (the key from the Garmin Express installer), login, settings and sync state: its own
-last syncs, uploaded files and list of your own maps. After switching from one to the other,
-choose the installer and log in again. The first sync of each device then starts anew: the
-window asks whether to mark the files already on it as uploaded, and on the command line
-`openexpress sync --apply` stops and suggests `openexpress baseline --apply` or `--all`.
-
-openExpress is not on Flathub and will not be: it uses Garmin's unofficial interfaces.
-
-Build the Flatpak yourself (this needs `flatpak-builder` with Flatpak 1.16 or newer; older
-versions refuse `--device=usb` with "Unknown device type usb"):
-
-```bash
-flatpak install --user flathub org.gnome.Sdk//50
-flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.tomaszbojanowski.OpenExpress.yml
-```
-
-### From source
-
-## Requirements
-
-- Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0
-  (login window) and GIO/gvfs (MTP). Optional: `mutagen` (music tags), `7z` (setup),
-  `libusb-1.0` (Connect IQ apps on devices that hide their app folder; usually installed).
-  - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1`
-  - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0`
-- Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
-  openexpress uses the same connection, so the file manager can stay open.
-- The official Garmin Express installer for Windows (`GarminExpress.exe`, free download from
-  garmin.com), used once during setup. It is not installed or run.
-
-## First run
-
-```bash
-git clone https://github.com/TomaszBojanowski/openExpress.git
-cd openExpress
-pip install --user .                 # or run without installing: python3 -m openexpress …
-
-# 1. One-time setup from the official installer (downloaded from garmin.com)
-openexpress setup --from-installer ~/Downloads/GarminExpress.exe
-
-# 2. Log in
-openexpress login                    # window with the official Garmin sign-in page
-openexpress whoami --check
-
-# 3. Preview and first sync
-openexpress sync                     # plan only
-openexpress baseline --apply         # if the watch also syncs via your phone
-openexpress sync --apply
-```
-
-The easiest way is the window: `openexpress gui`, then click **Choose Installer…** in the
-banner at the top and **Log In**.
-
-If the login window does not capture the ticket, use `openexpress login --manual`: you
-sign in using a regular browser and paste the final URL containing `ticket=ST-…`.
-
-## Application window and background sync
-
-```bash
-openexpress gui                       # application window
-openexpress install-desktop --apply   # "openExpress" menu entry and background service
-systemctl --user daemon-reload
-systemctl --user enable --now openexpress-watch.service
-```
-
-The background service syncs the watch every time it is connected and shows a notification.
-It does nothing until you log in and perform the first sync
-(in the application window or with `openexpress baseline`/`sync`). The window and the service
-never sync at the same time (shared lock). A watch that is not registered to the signed-in
-account only gets a notification.
-
-<p align="center">
-  <img src="docs/screenshots/device.png" width="700"
-       alt="The device page: sync, updates, Garmin Connect account and tools">
-</p>
-
-## Software updates
+### Software updates
 
 The Updates page (and `openexpress updates`) asks Garmin's update server what is new for the
 connected device; no login is needed.
@@ -295,7 +201,7 @@ Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 20
        alt="The question before a system update: versions, license link and warning">
 </p>
 
-## Maps of your own
+### Maps of your own
 
 Besides the maps Garmin offers, a device with maps also takes map files made by others, for
 example from OpenStreetMap data (such as the Garmin `.img` downloads of BBBike.org).
@@ -320,14 +226,15 @@ is stored in the file.
   <img src="docs/screenshots/maps.png" width="700" alt="Maps, with a map of your own">
 </p>
 
-## Connect IQ apps
+### Connect IQ apps
 
 - Some watches (e.g. the fēnix 8) keep their app folder out of the ordinary file listing.
   On such a device `apps install`, `apps update`, `apps remove` and the buttons in the window
   talk to it over a direct USB connection; the device disappears from the file manager for a
   moment and is mounted again afterwards. The device finishes the change after it is
   unplugged; until then the app is shown as waiting. A sync never does this: it leaves such
-  apps in the queue. In the Flatpak this needs its USB permission (see above).
+  apps in the queue. In the Flatpak this needs its USB permission (see
+  [Flatpak permissions](#flatpak-permissions)).
 - The apps already on the device keep their order and their on/off state: the app list is
   written back exactly as the device reported it, with only the requested change.
 - Before every change to the apps (install, update, remove, enable/disable, order) a copy of
@@ -343,7 +250,7 @@ is stored in the file.
   <img src="docs/screenshots/apps.png" width="700" alt="Connect IQ apps">
 </p>
 
-## Music
+### Music
 
 The Music page (*Files…*, *Folders…*, *Add Playlist…*) and `openexpress music` copy music,
 podcasts and audiobooks to the folders the device declares, as Artist/Album, and write
@@ -354,7 +261,45 @@ replaced. Tested on a fēnix 8.
   <img src="docs/screenshots/music.png" width="700" alt="Music">
 </p>
 
-## Log file
+### Sync details
+
+- The watch must be registered to the Garmin account you are signed in to. Before every sync
+  and every Connect IQ operation the account's device list is fetched from Garmin Connect;
+  if the watch is not on it, or the list cannot be fetched, nothing is uploaded and nothing
+  is written to the watch. `openexpress baseline` therefore needs a login now. Features
+  without the account (backup, software updates, maps, music) work with any watch.
+- **TrueUp** (`FIT_TYPE_39`): when you own several Garmin devices, Connect asks the client to
+  check back after a short delay (at most 90 s) and then sends adjusted daily totals, which
+  are written to the watch.
+- **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
+  installed during sync, except on devices that hide their app folder: there they stay
+  queued until you run `apps install` or use the window (see
+  [Connect IQ apps](#connect-iq-apps)). New watch faces are installed but not activated, like
+  in Garmin Express.
+- **Last sync** on the Device page, `openexpress sync` and the notification of the
+  background sync use the same words: how many new files were uploaded, how many Connect
+  already had (recognised before sending or, after sending, by Garmin), how many Garmin
+  rejected and how many errors there were; the new files are named by their type
+  (activities, sleep, HRV status…; others as "other data").
+
+### Upgrading from 0.3.x
+
+- `sync --include-consent` was removed. Whether data may be uploaded is now read from the
+  Garmin account before every sync (see [Privacy and security](#privacy-and-security));
+  upload locations that need a consent are used exactly when the account has given it.
+
+## Configuration
+
+### Languages
+
+The interface is available in English and Polish. The language follows the system
+locale; you can override it:
+
+- in the window: main menu (☰) → Preferences → Language,
+- for one command: `openexpress --lang pl …` or `OPENEXPRESS_LANG=pl`,
+- permanently: `openexpress setup --ui-language pl` (`system` restores the default).
+
+### Log file
 
 openExpress keeps a log of what it does, to make problems easier to find:
 
@@ -386,7 +331,7 @@ openExpress keeps a log of what it does, to make problems easier to find:
   GitHub** puts only the report into the form and the log into the clipboard, to paste into
   the issue: the log never goes into the address. Read it before you send it.
 
-## Cache
+### Cache
 
 Downloaded maps and software updates, device pictures and files on their way to the device
 are kept in `~/.cache/openexpress` (the Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/cache/openexpress`;
@@ -394,7 +339,7 @@ each installation has its own). `openexpress cache` shows how big it is, `openex
 empties it, and so does Preferences → Storage → Clear… in the window; maps are then downloaded again
 when they are installed or updated. It is not cleared while a download or an install is running.
 
-## Privacy and security
+### Privacy and security
 
 - The password is entered only on Garmin's page; openExpress never sees or stores it. What
   is stored locally after signing in is an OAuth1 token and, next to it, your user name,
@@ -424,45 +369,107 @@ when they are installed or updated. It is not cleared while a download or an ins
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 
-## Not yet available (next stages)
+### Flatpak permissions
 
-- Connect IQ app settings (the settings form is rendered by apps.garmin.com).
-- Checking the privacy-policy consents before a sync (the upload consent is checked, see above).
+Besides network, USB storage access through GNOME's gvfs and your Downloads/Music folders,
+the Flatpak has two permissions that weaken the sandbox:
 
-## Upgrading from 0.3.x
+- It can run commands on the host (`org.freedesktop.Flatpak`). It uses this only to copy
+  files to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
+  devices.
+- It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of
+  `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
+  (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
+  connection, and the device disappears from the file manager for a moment while it is
+  used.
 
-- `sync --include-consent` was removed. Whether data may be uploaded is now read from the
-  Garmin account before every sync (see *Privacy and security*); upload locations that need
-  a consent are used exactly when the account has given it.
+If you prefer not to grant the first one, use the [version from source](#from-source)
+(writing to the watch then works without it). The second one can be turned off with
+`flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; Flatpak
+older than 1.16 ignores it. Without it, on devices that hide their app folder, installs and
+updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
+them, apps are removed on the phone, and nothing is written to the device.
 
-## Sync details
+## Other ways to install
 
-- The watch must be registered to the Garmin account you are signed in to. Before every sync
-  and every Connect IQ operation the account's device list is fetched from Garmin Connect;
-  if the watch is not on it, or the list cannot be fetched, nothing is uploaded and nothing
-  is written to the watch. `openexpress baseline` therefore needs a login now. Features
-  without the account (backup, software updates, maps, music) work with any watch.
-- **TrueUp** (`FIT_TYPE_39`): when you own several Garmin devices, Connect asks the client to
-  check back after a short delay (at most 90 s) and then sends adjusted daily totals, which
-  are written to the watch.
-- **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
-  installed during sync, except on devices that hide their app folder: there they stay
-  queued until you run `apps install` or use the window (see *Connect IQ apps*). New watch
-  faces are installed but not activated, like in Garmin Express.
-- **Last sync** on the Device page, `openexpress sync` and the notification of the
-  background sync use the same words: how many new files were uploaded, how many Connect
-  already had (recognised before sending or, after sending, by Garmin), how many Garmin
-  rejected and how many errors there were; the new files are named by their type
-  (activities, sleep, HRV status…; others as "other data").
+### Flatpak bundle from a release
 
-## Languages
+For example to install offline, download `openexpress-<version>.flatpak` from the
+[latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest) and run:
 
-The interface is available in English and Polish. The language follows the system
-locale; you can override it:
+```bash
+flatpak install --user openexpress-<version>.flatpak   # needs the Flathub remote for the GNOME runtime
+```
 
-- in the window: main menu (☰) → Preferences → Language,
-- for one command: `openexpress --lang pl …` or `OPENEXPRESS_LANG=pl`,
-- permanently: `openexpress setup --ui-language pl` (`system` restores the default).
+An app installed from such a file is not updated by `flatpak update`. To switch it to the
+repository, keeping your setup, login and settings, add the repository as in
+[Install](#install) and run
+`flatpak install --user --reinstall openexpress io.github.tomaszbojanowski.OpenExpress`.
+
+### From source
+
+Requirements:
+
+- Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0
+  (login window) and GIO/gvfs (MTP). Optional: `mutagen` (music tags), `7z` (setup),
+  `libusb-1.0` (Connect IQ apps on devices that hide their app folder; usually installed).
+  - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1`
+  - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0`
+- Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
+  openexpress uses the same connection, so the file manager can stay open.
+- The official Garmin Express installer for Windows (`GarminExpress.exe`, free download from
+  garmin.com), used once during setup. It is not installed or run.
+
+First run:
+
+```bash
+git clone https://github.com/TomaszBojanowski/openExpress.git
+cd openExpress
+pip install --user .                 # or run without installing: python3 -m openexpress …
+
+# 1. One-time setup from the official installer (downloaded from garmin.com)
+openexpress setup --from-installer ~/Downloads/GarminExpress.exe
+
+# 2. Log in
+openexpress login                    # window with the official Garmin sign-in page
+openexpress whoami --check
+
+# 3. Preview and first sync
+openexpress sync                     # plan only
+openexpress baseline --apply         # if the watch also syncs via your phone
+openexpress sync --apply
+```
+
+The easiest way is the window: `openexpress gui`, then click **Choose Installer…** in the
+banner at the top and **Log In**.
+
+**The Flatpak and the version from source are separate installations:** each keeps its own
+setup (the key from the Garmin Express installer), login, settings and sync state: its own
+last syncs, uploaded files and list of your own maps. After switching from one to the other,
+choose the installer and log in again. The first sync of each device then starts anew: the
+window asks whether to mark the files already on it as uploaded, and on the command line
+`openexpress sync --apply` stops and suggests `openexpress baseline --apply` or `--all`.
+
+### Building the Flatpak yourself
+
+openExpress is not on Flathub and will not be: it uses Garmin's unofficial interfaces.
+Building the Flatpak needs `flatpak-builder` with Flatpak 1.16 or newer; older versions
+refuse `--device=usb` with "Unknown device type usb":
+
+```bash
+flatpak install --user flathub org.gnome.Sdk//50
+flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.tomaszbojanowski.OpenExpress.yml
+```
+
+## Development
+
+```bash
+python3 -m pytest
+```
+
+Bug reports: please include the watch model, the output of `openexpress info` and the
+command you ran. Never post `~/.config/openexpress/*.json` (your login token) or your
+`GarminDevice.xml` (it contains the serial number and map unlock codes).
 
 ### Adding a translation
 
@@ -477,16 +484,6 @@ python3 -m pytest tests/test_i18n.py # checks placeholders and compiled catalogs
 
 Keep `{placeholders}` unchanged and fill all plural forms. Add the language name to
 `LANGUAGE_NAMES` in `openexpress/i18n.py`.
-
-## Development
-
-```bash
-python3 -m pytest
-```
-
-Bug reports: please include the watch model, the output of `openexpress info` and the
-command you ran. Never post `~/.config/openexpress/*.json` (your login token) or your
-`GarminDevice.xml` (it contains the serial number and map unlock codes).
 
 ## License
 
