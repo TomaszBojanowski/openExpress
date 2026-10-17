@@ -1841,8 +1841,78 @@ class MainWindow(Adw.ApplicationWindow):
         row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
         g.add(row)
         page.add(g)
+        page.add(self._cache_group())
         dialog.add(page)
         dialog.present(self)
+
+    def _cache_group(self) -> Adw.PreferencesGroup:
+        """The "Storage" group of the preferences: how big the cache is, and clearing it. The
+        size is counted at once (it is a few dozen files: no file is read)."""
+        # TRANSLATORS: group in the preferences: the cache of downloaded maps and updates
+        g = Adw.PreferencesGroup(title=_("Storage"))
+        row = Adw.ActionRow(title=_("Cache"))
+        # Not one of the action buttons: those all come back on after a task, and this one
+        # stays grey while there is nothing to clear.
+        button = Gtk.Button(label=_("Clear…"), valign=Gtk.Align.CENTER)
+        button.connect("clicked", self._ask_clear_cache)
+        row.add_suffix(button)
+        self._render_cache_row(row, button, cache.usage())
+        g.add(row)
+        return g
+
+    def _render_cache_row(self, row, button, use) -> None:
+        if use.total == 0:
+            # TRANSLATORS: the cache, with nothing in it
+            text = _("Empty")
+        elif use.sizes["maps"] * 2 >= use.total:
+            text = _("{size}, mostly downloaded maps").format(size=_human(use.total))
+        else:
+            text = _human(use.total)
+        row.set_subtitle(text)
+        button.set_sensitive(use.total > 0)
+
+    def _ask_clear_cache(self, button) -> None:
+        """Asks first, naming the maps and their size; then clears as `cache --clear --apply`
+        does. The row is taken from the button, and held weakly while the question is open."""
+        if self.busy:
+            self.toast(_("Another operation is in progress"))
+            return
+        row = weakref.ref(button.get_ancestor(Adw.ActionRow))
+        button = weakref.ref(button)
+        use = cache.usage()
+        maps, other = use.sizes["maps"], use.total - use.sizes["maps"]
+        if maps:
+            body = _("This deletes the downloaded maps ({maps}) and the other files of the cache "
+                     "({other}). The maps will have to be downloaded again.").format(
+                maps=_human(maps), other=_human(other))
+        else:
+            body = _("This deletes the files of the cache ({size}). They are downloaded again "
+                     "when needed.").format(size=_human(use.total))
+        d = Adw.AlertDialog(heading=_("Clear the cache?"), body=body)
+        d.add_response("cancel", _("Cancel"))
+        # TRANSLATORS: button that clears the cache
+        d.add_response("clear", _("Clear"))
+        d.set_response_appearance("clear", Adw.ResponseAppearance.DESTRUCTIVE)
+        d.set_default_response("cancel")
+        d.set_close_response("cancel")
+
+        def done(freed):
+            if row() is not None and button() is not None:
+                self._render_cache_row(row(), button(), cache.usage())
+            self.toast(_("Freed {size}.").format(size=_human(freed.total)))
+
+        def failed(e):
+            if isinstance(e, cache.CacheError):
+                self.error(_("The cache was not cleared"), str(e))
+                return True
+            return False
+
+        def response(_d, r):
+            if r == "clear":
+                self.run_task(_("Clearing the cache…"), cache.clear, done, failed, device=False)
+
+        d.connect("response", response)
+        d.present(self)
 
     def show_shortcuts(self) -> None:
         dialog = Adw.ShortcutsDialog()

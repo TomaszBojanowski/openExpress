@@ -322,3 +322,157 @@ def test_a_cache_folder_that_is_a_link_is_left_alone(cache, tmp_path):
     assert freed.total == 30
     assert (cache / "maps").is_symlink() and (tmp_path / "elsewhere" / "map").exists()
     assert list((cache / "images").iterdir()) == []
+
+
+# --- the "Storage" group of the preferences (C3/C4) --------------------------------------------
+
+
+@pytest.fixture
+def prefs(cache, monkeypatch):
+    """A stand-in for the window around the cache group: tasks run at once; dialogs are
+    recorded instead of shown. Needs a display (widgets)."""
+    import types
+
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    dialogs, errors, toasts = [], [], []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+
+    def run_task(title, work, done, failed=None, device=True):
+        try:
+            result = work()
+        except Exception as e:  # noqa: BLE001 - as the window's run_task: to `failed`
+            if not (failed and failed(e)):
+                errors.append(str(e))
+        else:
+            done(result)
+
+    win = types.SimpleNamespace(busy=False, run_task=run_task, dialogs=dialogs, errors=errors,
+                                toast=toasts.append, toasts=toasts,
+                                error=lambda title, text: errors.append(text))
+    for name in ("_cache_group", "_ask_clear_cache", "_render_cache_row"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win
+
+
+def cache_row(group):
+    """The "Cache" row of the group and its "Clear…" button."""
+    from gi.repository import Adw, Gtk
+
+    rows, buttons = [], []
+
+    def walk(widget):
+        if isinstance(widget, Adw.ActionRow):
+            rows.append(widget)
+        if isinstance(widget, Gtk.Button) and widget.get_label() == "Clear…":
+            buttons.append(widget)
+        child = widget.get_first_child()
+        while child is not None:
+            walk(child)
+            child = child.get_next_sibling()
+
+    walk(group)
+    (row,), (button,) = rows, buttons
+    return row, button
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("files, subtitle, can_clear", [
+    ({"maps/m": 5000, "images/p.png": 30}, "5.0 kB, mostly downloaded maps", True),
+    ({"images/p.png": 3000, "software/s/1/f": 1000}, "4.0 kB", True),
+    ({}, "Empty", False),
+])
+def test_the_group_shows_how_big_the_cache_is(prefs, cache, files, subtitle, can_clear):
+    """The row says how big the cache is (cache.usage(), as the command line), mostly maps
+    or not; with nothing in it, "Empty" and the button is grey."""
+    fill(cache, files)
+    group = prefs._cache_group()
+    assert group.get_title() == "Storage"
+    row, button = cache_row(group)
+    assert (row.get_title(), row.get_subtitle()) == ("Cache", subtitle)
+    assert button.get_sensitive() is can_clear
+
+
+@pytest.mark.needs_display
+def test_clear_asks_first(prefs, cache):
+    """"Clear…" opens a confirmation that names the maps and their size; Cancel is the
+    default, Clear is destructive. Nothing is deleted yet."""
+    from gi.repository import Adw
+
+    fill(cache, {"maps/m": 5000, "images/p.png": 30})
+    _row, button = cache_row(prefs._cache_group())
+    button.emit("clicked")
+    (confirm,) = prefs.dialogs
+    assert confirm.get_heading() == "Clear the cache?"
+    assert confirm.get_body() == ("This deletes the downloaded maps (5.0 kB) and the other "
+                                  "files of the cache (30 B). The maps will have to be "
+                                  "downloaded again.")
+    assert confirm.get_default_response() == "cancel" and confirm.get_close_response() == "cancel"
+    assert confirm.get_response_appearance("clear") == Adw.ResponseAppearance.DESTRUCTIVE
+    assert (cache / "maps" / "m").exists()
+
+
+@pytest.mark.needs_display
+def test_confirming_clears_and_shows_the_new_size(prefs, cache):
+    """Clear: the cache is cleared as by `cache --clear --apply`; the row says "Empty", the
+    button is grey, and a toast says how much was freed."""
+    fill(cache, {"maps/m": 5000, "images/p.png": 30})
+    row, button = cache_row(prefs._cache_group())
+    button.emit("clicked")
+    prefs.dialogs[0].emit("response", "clear")
+    assert list((cache / "maps").iterdir()) == [] and list((cache / "images").iterdir()) == []
+    assert row.get_subtitle() == "Empty" and not button.get_sensitive()
+    assert prefs.toasts == ["Freed 5.0 kB."] and prefs.errors == []
+
+
+@pytest.mark.needs_display
+def test_clearing_while_the_cache_is_in_use(prefs, cache):
+    """A download or an install holds the cache: the message says so; nothing is deleted
+    and the row still shows the size."""
+    from openexpress import cache as oe_cache
+
+    fill(cache, {"maps/m": 5000})
+    row, button = cache_row(prefs._cache_group())
+    button.emit("clicked")
+    with oe_cache.using():
+        prefs.dialogs[0].emit("response", "clear")
+    assert prefs.errors == [("The cache is in use (a download or an install is running). "
+                             "Try again later.")]
+    assert (cache / "maps" / "m").exists() and row.get_subtitle().startswith("5.0 kB")
+
+
+@pytest.mark.needs_display
+def test_cancel_does_nothing(prefs, cache):
+    """Cancel: nothing deleted, no task, nothing said."""
+    fill(cache, {"maps/m": 5000})
+    _row, button = cache_row(prefs._cache_group())
+    button.emit("clicked")
+    prefs.dialogs[0].emit("response", "cancel")
+    assert (cache / "maps" / "m").exists() and prefs.errors == [] and prefs.toasts == []
+
+
+@pytest.mark.needs_display
+def test_preferences_have_the_storage_group(cache, monkeypatch):
+    """The "Storage" group is in the preferences, after Sync, Language and Setup."""
+    import types
+
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.app import MainWindow
+
+    shown = []
+    monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
+    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                                error=lambda title, text: None, run_task=None, toast=None)
+    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    titles, add = [], Adw.PreferencesPage.add
+    monkeypatch.setattr(Adw.PreferencesPage, "add",
+                        lambda page, group: titles.append(group.get_title()) or add(page, group))
+    MainWindow.show_preferences(win)
+    (dialog,) = shown
+    assert titles == ["Sync with Garmin Connect", "Language", "Setup", "Storage"]
+    assert isinstance(dialog, Gtk.Widget)

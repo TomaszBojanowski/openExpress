@@ -345,6 +345,14 @@ openExpress keeps a log of what it does, to make problems easier to find:
   GitHub** puts only the report into the form and the log into the clipboard, to paste into
   the issue: the log never goes into the address. Read it before you send it.
 
+## Cache
+
+Downloaded maps and software updates, device pictures and files on their way to the device
+are kept in `~/.cache/openexpress` (the Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/cache/openexpress`;
+each installation has its own). `openexpress cache` shows how big it is, `openexpress cache --clear --apply`
+empties it, and so does Preferences → Storage → Clear… in the window; maps are then downloaded again
+when they are installed or updated. It is not cleared while a download or an install is running.
+
 ## Privacy and security
 
 - The password is entered only on Garmin's page; openExpress never sees or stores it. What
