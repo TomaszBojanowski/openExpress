@@ -23,6 +23,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.fit import FitError, true_up_time
 from openexpress.i18n import _
+from openexpress.progress import Waiting
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def run(
         m = _find(messages, CHECK_BACK)
         if m is None:
             break
-        progress(_("TrueUp: waiting for Garmin Connect…"))
+        progress(Waiting(_("TrueUp: waiting for Garmin Connect…")))
         data = _fetch(client, m)
         try:
             when = true_up_time(data or b"")

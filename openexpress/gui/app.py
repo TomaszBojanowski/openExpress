@@ -63,6 +63,7 @@ from openexpress.gui import start  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
+from openexpress.progress import Waiting  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
     extract_consumer_from_dll,
@@ -96,6 +97,8 @@ def save_gui_settings(data: dict) -> None:
 DEFAULT_WINDOW = (1000, 740)
 MIN_WINDOW = (360, 480)
 MAX_WINDOW = 10000
+WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
+LONG_WAIT_S = 20  # after this, the label says that the wait can take a while
 
 
 def window_geometry(settings: dict) -> tuple[int, int, bool]:
@@ -741,6 +744,7 @@ class MainWindow(Adw.ApplicationWindow):
         # What the pages show while no device is open; the Sync button says the same.
         self._usb_title = ""
         self.busy = False
+        self._waiting = 0  # GLib timer that moves the bar during a wait for a server
         self.gui_settings = load_gui_settings()
         width, height, maximized = window_geometry(self.gui_settings)
         self.set_default_size(width, height)
@@ -1142,6 +1146,7 @@ class MainWindow(Adw.ApplicationWindow):
         d.present(self)
 
     def set_busy(self, busy: bool, text: str = "", device: bool = False) -> None:
+        self._stop_waiting()
         self.busy = busy
         self.action_bar.set_revealed(busy)
         self.progress_label.set_text(text)
@@ -1154,12 +1159,41 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_actions()
 
     def progress(self, text: str) -> None:
-        GLib.idle_add(self.progress_label.set_text, text)
-        GLib.idle_add(self.progress_bar.pulse)
+        GLib.idle_add(self._show_progress, text)
 
     def fraction(self, done: int, total: int | None) -> None:
         if total:
-            GLib.idle_add(self.progress_bar.set_fraction, min(1.0, done / total))
+            GLib.idle_add(self._show_fraction, min(1.0, done / total))
+
+    def _show_progress(self, text: str) -> bool:
+        """A step moves the bar once. A wait for a server (`Waiting`), whose length nobody
+        knows, keeps it moving until the next step, and after a while the label says so."""
+        self._stop_waiting()
+        self.progress_label.set_text(text)
+        self.progress_bar.pulse()
+        if isinstance(text, Waiting):
+            until = time.monotonic() + LONG_WAIT_S
+            told = []
+
+            def pulse() -> bool:
+                self.progress_bar.pulse()
+                if not told and time.monotonic() >= until:
+                    told.append(True)
+                    self.progress_label.set_text(f"{text} {_('This can take a few minutes.')}")
+                return True
+
+            self._waiting = GLib.timeout_add(WAIT_PULSE_MS, pulse)
+        return False
+
+    def _show_fraction(self, fraction: float) -> bool:
+        self._stop_waiting()
+        self.progress_bar.set_fraction(fraction)
+        return False
+
+    def _stop_waiting(self) -> None:
+        if self._waiting:
+            GLib.source_remove(self._waiting)
+            self._waiting = 0
 
     def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True) -> None:
         """Run `fn()` in a thread; the result is passed back to the GUI thread.

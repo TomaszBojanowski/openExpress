@@ -25,6 +25,7 @@ from openexpress.connect import (
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, ngettext
+from openexpress.progress import Waiting
 from openexpress.settings import Settings, SetupError, load_consumer
 
 log = logging.getLogger(__name__)
@@ -620,7 +621,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     require_account_device(s.client, s.device.unit_id)
     out = SyncSummary()
     state = s.state
-    progress(_("Fetching configuration from the Garmin server…"))
+    progress(Waiting(_("Fetching configuration from the Garmin server…")))
     cfg = s.client.upload_settings(s.device.unit_id)
     if s.first_sync:
         if first_run == "baseline":
@@ -655,7 +656,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
                 n).format(count=n))
     else:
         out.lines.append(_("No new data to upload."))
-    progress(_("Checking for files from Garmin Connect…"))
+    progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     items = sync.plan_downloads(s.device, messages)
     todo = [i for i in items if not i.unsupported and not i.handled_by]

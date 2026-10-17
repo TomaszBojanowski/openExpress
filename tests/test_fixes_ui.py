@@ -401,8 +401,10 @@ def _busy_window(session):
     win = types.SimpleNamespace(
         session=session, busy=False, action_bar=_Widget(), progress_label=_Widget(),
         progress_bar=_Widget(), unplug_label=_Widget(), banner=_Widget(), _action_buttons=[],
-        _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[])
+        _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[],
+        _waiting=0)
     win.toast = win.toasts.append
+    win._stop_waiting = types.MethodType(MainWindow._stop_waiting, win)
     win.set_busy = types.MethodType(MainWindow.set_busy, win)
     win.run_task = types.MethodType(MainWindow.run_task, win)
     return win
