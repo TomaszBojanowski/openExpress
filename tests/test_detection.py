@@ -1375,10 +1375,9 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
 BIKE_ACCESSORY_TEXT = (
-    "Unplug the device and switch it on: it installs the update by itself, which takes a few "
-    "minutes, and cannot be used meanwhile. Its LEDs flash during the installation and may "
-    "go dark for a moment; when the update is finished, the LED flashes green and the main "
-    "light comes on.")
+    "Unplug the device and turn it on — it installs the update on its own and won't work for "
+    "a short while. The lights flash and may briefly go dark during the install; when it's "
+    "done, a light flashes green and the main light comes on.")
 
 
 def varia_answer(data=VARIA_UPDATE):
