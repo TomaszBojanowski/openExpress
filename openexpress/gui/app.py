@@ -59,7 +59,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import start  # noqa: E402
-from openexpress.gui.start import RememberedPage, StartPage  # noqa: E402
+from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.settings import (  # noqa: E402
@@ -420,6 +420,31 @@ def tile_picture(part: str, url: str | None):
         source = "the account"
     texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
     return (texture, source) if texture is not None else (None, "the file is not a picture")
+
+
+def open_device_kind(s, account) -> str | None:
+    """The kind of the open device as its tile knows it: the same devicelist.tiles from
+    devices.json and the account's list (also for D7, when no tile was shown before).
+    Nothing is asked."""
+    d = s.device
+    unit_id = getattr(d, "unit_id", None) or None
+    if unit_id is None:
+        return None
+    kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
+    summary = DeviceSummary(FoundDevice("", "", True, kind=kind), getattr(d, "description", ""),
+                            getattr(d, "part_number", ""), "", unit_id)
+    tiles = devicelist.tiles([summary], known_devices.load(), account,
+                             logged_in=account is not None)
+    return next((t.category for t in tiles if t.connected), None)
+
+
+def device_view_icon(win, s) -> str:
+    """The icon of the device view before the picture: that of the device's kind, from the
+    window's account list (or the one its ownership check read) and devices.json."""
+    account = getattr(win, "_account", None)
+    if account is None:
+        account = getattr(s, "account_devices", None)
+    return kind_icon(open_device_kind(s, account))
 
 
 def resolve_account(win) -> None:
@@ -1792,7 +1817,8 @@ class MainWindow(Adw.ApplicationWindow):
         hero = sec.group()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER,
                       margin_bottom=12)
-        self.device_image = Gtk.Image(icon_name=APP_ID, pixel_size=128,
+        # Until its picture comes: the icon its tile shows (T5.1), not the program's.
+        self.device_image = Gtk.Image(icon_name=device_view_icon(self, s), pixel_size=128,
                                       height_request=DEVICE_PICTURE_SIZE)
         self.device_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, can_shrink=True,
                                           visible=False)
@@ -1999,6 +2025,10 @@ class MainWindow(Adw.ApplicationWindow):
             if texture is None:
                 log.info("device picture: none (%s)", source if path is None
                          else "the file is not a picture")
+                if self.session is s:
+                    # Still the icon (a picture in the cache returns before this work);
+                    # unit-info may have told the kind meanwhile (a bike accessory).
+                    self.device_image.set_from_icon_name(device_view_icon(self, s))
                 return
             log.info("device picture: from %s", source)
             cache[part] = texture

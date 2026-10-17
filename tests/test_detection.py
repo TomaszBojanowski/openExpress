@@ -4561,3 +4561,84 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
             assert painted(light, *on_line), (name, "the line is missing")
     finally:
         renderer.unrealize()
+
+
+# --- the device view's icon before its picture (T5.2) -------------------------------------------
+
+
+def _device_view_icon(drive_window, monkeypatch, account=None):
+    """The icon the device view of the RTL515 drive shows before its picture comes (the
+    picture is not asked here), and the stand-in of the window."""
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow
+
+    win, _section = page_window("watch")
+    win.session = drive_session(drive_window, monkeypatch)
+    win._account = account
+    win.update_state, win.map_state = None, None
+    for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
+                 "_show_last_sync", "_render_update_state", "_render_map_state",
+                 "select_section", "backup", "set_background", "logout"):
+        setattr(win, name, lambda *a, **kw: None)
+    win._background_enabled = lambda: False
+    MainWindow.show_overview(win)
+    return win.device_image.get_icon_name(), win
+
+
+@pytest.mark.needs_display
+def test_the_device_view_waits_with_the_neutral_icon_like_the_tile(drive_window, monkeypatch):
+    """T5.2: a device of an unknown kind, no picture in the cache: the device view shows the
+    icon its tile shows (the neutral one), not the icon of the program."""
+    from openexpress.gui.app import APP_ID
+    from openexpress.gui.start import kind_icon
+
+    icon, _win = _device_view_icon(drive_window, monkeypatch)
+    assert icon == kind_icon(None) and icon != APP_ID
+
+
+@pytest.mark.needs_display
+def test_the_device_view_waits_with_the_icon_of_its_kind(drive_window, monkeypatch):
+    """T5.2: the kind as the tiles know it (devices.json, or the account: also for D7, with
+    no tile before): the same icon in the device view."""
+    from openexpress import known_devices
+    from openexpress.connect import lower_keys
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.start import kind_icon
+
+    known_devices.remember(3000000003, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=1.0)
+    known_devices.set_category(3000000003, "bike-accessory")
+    icon, win = _device_view_icon(drive_window, monkeypatch)
+    assert icon == kind_icon("bike-accessory")
+    known_devices.forget(3000000003)
+    # Opened at once (D7, no tile before): the kind from the account's list all the same.
+    win._account = lower_keys([{"unitId": 3000000003, "productDisplayName": "Varia RTL515",
+                                "deviceCategories": ["DEDICATED_BIKE_COMPUTER"]}])
+    MainWindow.show_overview(win)
+    assert win.device_image.get_icon_name() == kind_icon("cycling-computer")
+
+
+@pytest.mark.needs_display
+def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
+        drive_window, monkeypatch):
+    """T5.2: the unit-info the device view asks for the picture (as before, one request)
+    tells a bike accessory and gives no picture: the icon becomes the radar; nothing more
+    is asked for the icon."""
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.start import kind_icon
+
+    icon, win = _device_view_icon(drive_window, monkeypatch)
+    assert icon == kind_icon(None)
+    asked = []
+
+    def unit_info(unit_id, part_number):
+        asked.append(part_number)
+        return {"segmenttype": "bikeaccessory"}  # no picture address
+
+    monkeypatch.setattr(win.session.client, "unit_info", unit_info)
+    win.in_background = lambda work, done, failed=None: done(work())
+    win._show_device_picture = types.MethodType(MainWindow._show_device_picture, win)
+    win._set_device_texture = types.MethodType(MainWindow._set_device_texture, win)
+    win._show_device_picture()
+    assert asked == ["006-B3592-03"]
+    assert win.device_image.get_icon_name() == kind_icon("bike-accessory")

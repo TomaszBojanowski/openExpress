@@ -374,10 +374,13 @@ def test_window_geometry(xdg):
 
 class _Widget:
     def __init__(self):
-        self.visible, self.text = None, None
+        self.visible, self.text, self.icon = None, None, None
 
     def set_visible(self, visible):
         self.visible = visible
+
+    def set_from_icon_name(self, name):  # the device view's icon of the kind (T5.2)
+        self.icon = name
 
     def set_text(self, text):
         self.text = text
