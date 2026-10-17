@@ -3327,7 +3327,8 @@ class FakeSection:
 
 START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
-                 "_on_popped", "_reread_connected", "_show_remembered")
+                 "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
+                 "_set_account", "_show_account", "_last_sync_text", "logout")
 
 
 def start_stand_in(start, sections, win=None):
@@ -3350,6 +3351,7 @@ def start_stand_in(start, sections, win=None):
     win.toast = win.errors.append
     win._start_targets, win._stay_on_start, win._navigated = [], False, False
     win._connected, win._reopening, win._reread_pending = [], False, False
+    win._account = None
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -3912,3 +3914,215 @@ def test_the_read_only_view_offers_no_action():
     assert not view.sync_button.get_sensitive()
     assert not view.update_row.get_sensitive() and not view.map_row.get_sensitive()
     assert view.page.get_title() == "Venu 2"
+
+
+# --- devices of the Garmin account on the start page (D5, T4) ---------------------------------
+
+FORERUNNER = 3000000005
+ACCOUNT_LIST = [  # as GET device-service/deviceregistration/devices gives it (made up)
+    {"unitId": 3000000002, "productDisplayName": "Edge 1050", "partNumber": "006-B4440-00",
+     "currentFirmwareVersion": "33.12", "primaryActivityTrackerIndicator": False},
+    {"unitId": VENU, "productDisplayName": "Venu 2", "partNumber": "006-B3703-00",
+     "currentFirmwareVersion": "19.05", "primaryActivityTrackerIndicator": False},
+    {"unitId": FORERUNNER, "productDisplayName": "Forerunner 965",
+     "partNumber": "006-B4315-00", "currentFirmwareVersion": "22.26",
+     "primaryActivityTrackerIndicator": True}]
+
+
+class FakeAccountClient:
+    """The client of service.make_client: logged in or not; its device list or an error.
+    No request leaves the test."""
+
+    def __init__(self, logged_in=True, error=None):
+        self.auth = object() if logged_in else None
+        self.error, self.asked = error, 0
+
+    def account_devices(self):
+        from openexpress.connect import lower_keys
+
+        self.asked += 1
+        if self.error is not None:
+            raise self.error
+        return lower_keys(ACCOUNT_LIST)
+
+
+def with_account(monkeypatch, client):
+    """The client the start page asks for the account's devices (opening a device keeps
+    its own)."""
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app, "account_client", lambda: client)
+    return client
+
+
+def sections(win, since=-1):
+    """([(name, connected)], the tiles) of one drawing of the start page."""
+    tiles = win.start.shown[since][0]
+    return [(name, on) for name, on, _how in tiles], tiles
+
+
+def test_the_account_list_comes_after_the_first_drawing_with_one_more(start_window,
+                                                                      monkeypatch, tmp_path,
+                                                                      device_root):
+    """T4: the start page is drawn at once with the connected and remembered devices; the
+    account's list, read in the background, adds its devices that are neither (the
+    Forerunner) with exactly one more drawing: the tiles before are the same, no device
+    view comes up. A device of the account that is connected or remembered is not
+    repeated."""
+    import time
+
+    win = start_window
+    later = defer_background(win)
+    client = with_account(monkeypatch, FakeAccountClient())
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    first, first_tiles = sections(win)
+    assert first == [("Test watch", True), ("Edge 1050", True), ("Varia RTL515", False),
+                     ("Venu 2", False)]
+    drawn = len(win.start.shown)
+    win._fetch_account()
+    assert len(win.start.shown) == drawn  # nothing until the answer
+    run_later(later)
+    assert client.asked == 1 and len(win.start.shown) == drawn + 1
+    now, now_tiles = sections(win)
+    assert now == [*first, ("Forerunner 965", False)]
+    assert now_tiles[:4] == first_tiles  # the same names and words
+    assert now_tiles[4][2] == "Software 22.26 · Not seen on this computer"
+    assert win.navigation.stack == ["start page"] and win.session is None
+    assert not any(str(u) in how for _n, _on, how in now_tiles for u in (FORERUNNER, VENU))
+
+
+def test_the_account_list_while_a_device_view_is_shown(start_window, monkeypatch):
+    """D7 stays: one device open in its view; the account's list arrives: nothing is drawn
+    and the view stays up; back on the start page, its devices are there."""
+    win = start_window
+    later = defer_background(win)
+    with_account(monkeypatch, FakeAccountClient())
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    assert win.navigation.stack == ["start page", "device view"]
+    drawn = len(win.start.shown)
+    win._fetch_account()
+    run_later(later)
+    assert len(win.start.shown) == drawn
+    assert win.navigation.stack == ["start page", "device view"]
+    back(win)
+    names = [name for name, _on in sections(win)[0]]
+    assert names == ["Test watch", "Edge 1050", "Forerunner 965", "Venu 2"]  # by name
+
+
+def test_not_logged_in_there_are_no_account_devices(start_window, monkeypatch, caplog):
+    """Not logged in: nothing is asked, no tile of the account; after logging out the
+    devices of the account are gone from the start page."""
+    import logging
+
+    win = start_window
+    later = defer_background(win)
+    client = with_account(monkeypatch, FakeAccountClient(logged_in=False))
+    nothing_connected(win, monkeypatch)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._fetch_account()
+        run_later(later)
+    assert client.asked == 0 and sections(win)[0] == []
+    assert "start page: not logged in, no devices of the account" in caplog.text
+    with_account(monkeypatch, FakeAccountClient())
+    win._fetch_account()
+    run_later(later)
+    assert [name for name, _on in sections(win)[0]] == ["Edge 1050", "Forerunner 965",
+                                                        "Venu 2"]
+    win.logout()
+    run_later(later)
+    assert sections(win)[0] == []
+
+
+def test_the_account_list_failing_leaves_no_section(start_window, monkeypatch, caplog):
+    """A network or server error: no tile of the account, no exception, one line in the
+    log (never the answer)."""
+    import logging
+
+    from openexpress.connect import ApiError
+
+    win = start_window
+    later = defer_background(win)
+    win.in_background = lambda work, done, failed=None: later.append(
+        (work, done, failed))
+
+    def run_with_errors():
+        while later:
+            work, done, failed = later.pop(0)
+            try:
+                result = work()
+            except Exception as e:  # noqa: BLE001 - as in_background: to `failed`
+                if failed is not None:
+                    failed(e)
+            else:
+                done(result)
+
+    with_account(monkeypatch, FakeAccountClient(error=ApiError("HTTP 503")))
+    nothing_connected(win, monkeypatch)
+    drawn = len(win.start.shown)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._fetch_account()
+        run_with_errors()
+    assert len(win.start.shown) == drawn and sections(win)[0] == []
+    assert "start page: the devices of the account could not be read (ApiError)" in (
+        caplog.text)
+
+
+def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
+    """T4: a tile only on the account opens the read-only view with what the account says:
+    its name and version; it was never seen here and never synced from here. Nothing is
+    opened or read from USB."""
+    from openexpress.gui import app
+
+    win = start_window
+    later = defer_background(win)
+    with_account(monkeypatch, FakeAccountClient())
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    opening = count_opening(monkeypatch)
+
+    def no_device(*_a, **_k):
+        raise AssertionError("a device was looked for")
+
+    for name in ("find_all_devices", "probe", "usb_state", "usb_still_there"):
+        monkeypatch.setattr(app, name, no_device)
+    names = [name for name, _on in sections(win)[0]]
+    win._open_tile(names.index("Forerunner 965"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert opening == [] and win.session is None
+    assert win.remembered.shown[-1] == {
+        "name": "Forerunner 965", "version": "Software 22.26", "part_number": "006-B4315-00",
+        "last_seen": "Not seen on this computer",
+        "last_sync": "Not synced yet with openExpress"}
+
+
+@pytest.mark.needs_display
+def test_the_account_section_adds_tiles_without_touching_the_others():
+    """The section "On the account" comes after the others, only with such tiles; adding it
+    keeps the tiles of the other sections (the same widgets)."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name, connected, last_seen, on_account=False):
+        return Tile(name, "006-B4532-00", "23.39", "mtp" if last_seen else None, connected,
+                    on_account, False, last_seen, "006-B4532-00", None, None)
+
+    first = [(tile("fēnix 8", True, None), "Over USB (MTP)"),
+             (tile("Venu 2", False, 1.0), "Software 19.05 · Last seen")]
+    start = StartPage()
+    start.show(first, False)
+    assert not start.account_title.get_visible()
+    before = start.tiles()
+    # The account's list adds a device and its flags to the connected one.
+    start.show([(tile("fēnix 8", True, None, on_account=True), "Over USB (MTP)"), first[1],
+                (tile("Forerunner 965", False, None, on_account=True),
+                 "Software 22.26 · Not seen on this computer")], False)
+    assert start.account_title.get_visible()
+    assert start.account_title.get_label() == "On the account"
+    after = start.tiles()
+    assert after[0] is before[0] and after[1] is before[1] and len(after) == 3
+    assert after[2].get_parent() is start.account_grid

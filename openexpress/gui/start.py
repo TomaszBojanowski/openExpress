@@ -13,6 +13,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
+from openexpress import devicelist  # noqa: E402
+from openexpress.devicelist import CONNECTED, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.i18n import _, pgettext  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
@@ -60,10 +62,17 @@ def _heading(text: str) -> Gtk.Label:
     return label
 
 
+def display_key(tile, how: str) -> tuple:
+    """What a tile shows: the same tile is not built again (e.g. when the account's list
+    only adds its flags to a connected device)."""
+    return tile.description, how, tile.connected
+
+
 class StartPage:
     """The page "Devices": a notice on top (the state on USB, while no device is open), the
-    tiles of the devices connected, then those of the devices remembered and not connected.
-    `on_open(index)` is called with the place of the tile clicked in the whole list."""
+    tiles of the devices connected, of those remembered and not connected, and of those only
+    on the Garmin account. `on_open(index)` is called with the place of the tile clicked in
+    the whole list."""
 
     def __init__(self, on_open=None, header_start=(), header_end=()):
         self.header = Adw.HeaderBar()
@@ -90,7 +99,6 @@ class StartPage:
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
         self._notice = None
-        self._entries: list = []  # what the tiles show now
         self.set_empty("", "", False)
         box.append(self.notice_group)
 
@@ -100,19 +108,25 @@ class StartPage:
         # TRANSLATORS: heading above the tiles of the devices seen before, not connected now
         self.remembered_title = _heading(_("Remembered"))
         self.remembered_grid = _tile_grid()
-        self.remembered_grid.set_visible(False)
-        # How many tiles come before the remembered ones (a list: the handlers hold no widget).
-        self._before_remembered = [0]
-        if on_open is not None:
-            # The place of the tile only: the handlers hold no widget.
-            self.grid.connect("child-activated",
-                              lambda _grid, child: on_open(child.get_index()))
-            self.remembered_grid.connect(
-                "child-activated", lambda _grid, child, before=self._before_remembered:
-                on_open(before[0] + child.get_index()))
-        for widget in (self.connected_title, self.grid, self.remembered_title,
-                       self.remembered_grid):
-            box.append(widget)
+        # TRANSLATORS: heading above the tiles of the devices of the Garmin account that were
+        # never connected to this computer
+        self.account_title = _heading(_("On the account"))
+        self.account_grid = _tile_grid()
+        # Each section: its title, its tiles, how many tiles come before it (a list, so that
+        # the handlers hold no widget) and what its tiles show now.
+        self._sections = {
+            CONNECTED: (self.connected_title, self.grid, [0], []),
+            REMEMBERED: (self.remembered_title, self.remembered_grid, [0], []),
+            ON_ACCOUNT: (self.account_title, self.account_grid, [0], []),
+        }
+        for title, grid, before, _shown in self._sections.values():
+            grid.set_visible(False)
+            if on_open is not None:
+                # The place of the tile only: the handlers hold no widget.
+                grid.connect("child-activated", lambda _grid, child, before=before:
+                             on_open(before[0] + child.get_index()))
+            box.append(title)
+            box.append(grid)
         clamp = Adw.Clamp(maximum_size=900, child=box)
         self.stack.add_named(Gtk.ScrolledWindow(child=clamp,
                                                 hscrollbar_policy=Gtk.PolicyType.NEVER),
@@ -139,25 +153,28 @@ class StartPage:
         """The tiles (devicelist.Tile, how the device is connected), in this order; `notice`:
         whether the notice on top is shown."""
         self.notice_group.set_visible(notice)
-        entries = list(entries)
-        connected = [e for e in entries if e[0].connected]
-        remembered = [e for e in entries if not e[0].connected]
-        if entries != self._entries:  # the same tiles keep their widgets
-            self._entries = entries
-            self._before_remembered[0] = len(connected)
-            for grid, part in ((self.grid, connected), (self.remembered_grid, remembered)):
+        parts: dict[str, list] = {name: [] for name in self._sections}
+        for tile, how in entries:  # in the order of the sections (devicelist.entries)
+            parts[devicelist.section(tile)].append((tile, how))
+        count = 0
+        for name, (title, grid, before, shown) in self._sections.items():
+            part = parts[name]
+            before[0] = count
+            count += len(part)
+            keys = [display_key(tile, how) for tile, how in part]
+            if keys != shown:  # a section whose tiles show the same keeps their widgets
+                shown[:] = keys
                 grid.remove_all()
                 for tile, how in part:
                     grid.append(tile_widget(tile, how))
-        self.connected_title.set_visible(bool(connected))
-        self.remembered_title.set_visible(bool(remembered))
-        self.remembered_grid.set_visible(bool(remembered))
+            title.set_visible(bool(part))
+            grid.set_visible(bool(part))
         self.stack.set_visible_child_name("content")
 
     def tiles(self) -> list:
         """The tiles shown, in order: the connected ones, then the remembered ones."""
         found = []
-        for grid in (self.grid, self.remembered_grid):
+        for _title, grid, _before, _shown in self._sections.values():
             child = grid.get_first_child()
             while child is not None:
                 found.append(child)
@@ -211,10 +228,10 @@ class RememberedPage:
         group.add(self.map_row)
         content.add(group)
 
-        group = Adw.PreferencesGroup(title=_("Tools"))
+        self.tools_group = Adw.PreferencesGroup(title=_("Tools"))
         self.part_row = Adw.ActionRow(title=_("Part number"), subtitle_selectable=True)
-        group.add(self.part_row)
-        content.add(group)
+        self.tools_group.add(self.part_row)
+        content.add(self.tools_group)
 
         view = Adw.ToolbarView(content=content)
         view.add_top_bar(header)
@@ -223,13 +240,17 @@ class RememberedPage:
 
     def show(self, name: str, version: str, part_number: str, last_seen: str,
              last_sync: str) -> None:
+        """What is known; a version or a part number not known is left out, not shown
+        empty."""
         name = name or _("Garmin device")
         self.page.set_title(name)
         self.name_label.set_label(name)
         self.version_label.set_label(version)
+        self.version_label.set_visible(bool(version))
         self.seen_label.set_label(last_seen)
         self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
+        self.tools_group.set_visible(bool(part_number))
 
 
 def tile_widget(tile, how: str) -> Gtk.FlowBoxChild:

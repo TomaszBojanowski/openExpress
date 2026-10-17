@@ -395,6 +395,27 @@ def session_summary(s) -> DeviceSummary:
 OPEN = "open"
 
 
+def account_client():
+    """The client the start page asks for the account's devices: who is logged in now."""
+    return service.make_client(Settings.load())
+
+
+def account_subtitle(fields: dict) -> str:
+    """A device only on the account: its version as Garmin Connect knows it (if it says)."""
+    seen = _("Not seen on this computer")
+    version = fields["software_version"]
+    return " · ".join((_("Software {version}").format(version=version), seen)) if version else seen
+
+
+def tile_subtitle(source) -> str:
+    """The words under the name of a tile, by what it was made of (devicelist.entries)."""
+    if isinstance(source, KnownDevice):
+        return remembered_subtitle(source)
+    if isinstance(source, dict):  # only on the account
+        return account_subtitle(devicelist.account_fields(source))
+    return choice_subtitle(source)
+
+
 def remembered_subtitle(known) -> str:
     """A remembered device that is not connected: its version and when it was last seen."""
     return " · ".join((_("Software {version}").format(version=known.software_version),
@@ -666,6 +687,9 @@ class MainWindow(Adw.ApplicationWindow):
         # A detection started with a device open: if the start page is shown, it stays.
         self._reopening = False
         self._reread_pending = False
+        # The devices of the Garmin account (their entries, keys in lower case), read once
+        # per start and login; None: not logged in, or not read.
+        self._account: list | None = None
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
@@ -711,6 +735,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._choices_usb: list[str] | None = None
         GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
         self.refresh_device()
+        self._fetch_account()
 
     # --- layout -----------------------------------------------------------------------
 
@@ -1349,6 +1374,8 @@ class MainWindow(Adw.ApplicationWindow):
         again, nothing else (decision A); without one, a detection that stays there also when
         one device is found (decision 7). In the device view, as before."""
         on_start = self._on_start_page()
+        if on_start:
+            self._fetch_account()  # the start page lists the account's devices too
         if on_start and self.session is not None:
             self._reread_connected()
             return
@@ -1374,6 +1401,39 @@ class MainWindow(Adw.ApplicationWindow):
                 self._render_start()
 
         self.in_background(connected_devices, done)
+
+    def _fetch_account(self) -> None:
+        """Read the devices of the Garmin account in the background, if one is logged in;
+        when they change, the start page (if shown) is drawn once more, which adds the
+        section "On the account" without touching the other tiles. Not logged in, or an
+        error: no such section, one line in the log."""
+        def work():
+            client = account_client()
+            if client.auth is None:
+                return None
+            return client.account_devices()
+
+        def done(devices):
+            if devices is None:
+                log.info("start page: not logged in, no devices of the account")
+            else:
+                log.info("start page: %d devices on the account", len(devices))
+            self._set_account(devices)
+
+        def failed(e):
+            # Only the kind of error: its text may quote the answer.
+            log.info("start page: the devices of the account could not be read (%s)",
+                     type(e).__name__)
+            self._set_account(None)
+
+        self.in_background(work, done, failed)
+
+    def _set_account(self, devices) -> None:
+        if devices == self._account:
+            return
+        self._account = devices
+        if self._on_start_page():
+            self._render_start()
 
     def _show_start(self) -> None:
         """The start page, as it is now."""
@@ -1443,13 +1503,12 @@ class MainWindow(Adw.ApplicationWindow):
         """The tiles of these devices, then of those remembered and not connected (from
         devices.json, the only thing read here); what each one opens is kept here, not in
         the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
-        entries = devicelist.entries(summaries, known_devices.load(), None, logged_in=False)
-        self._start_targets = [source if isinstance(source, KnownDevice)
+        entries = devicelist.entries(summaries, known_devices.load(), self._account,
+                                     logged_in=self._account is not None)
+        self._start_targets = [source if isinstance(source, KnownDevice | dict)
                                else OPEN if self._is_open(source) else source.found
                                for _tile, source in entries]
-        self.start.show([(tile, remembered_subtitle(source)
-                          if isinstance(source, KnownDevice) else choice_subtitle(source))
-                         for tile, source in entries], notice)
+        self.start.show([(tile, tile_subtitle(source)) for tile, source in entries], notice)
 
     def _open_tile(self, index: int) -> None:
         """A tile clicked: the open device's view, or that device opened."""
@@ -1460,8 +1519,32 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_device_view()
         elif isinstance(target, KnownDevice):
             self._show_remembered(target)
+        elif isinstance(target, dict):
+            self._show_account(target)
         else:
             self.open_choice(target)
+
+    def _last_sync_text(self, unit_id) -> str:
+        """The last sync of a device from this computer, in the words of the device page."""
+        data = service.load_last_sync(unit_id) if unit_id else None
+        if not data:
+            return _("Not synced yet with openExpress")
+        return format_when(data.get("time", time.time())) + " · " + service.describe_counts(data)
+
+    def _show_account(self, entry: dict) -> None:
+        """The read-only view of a device only on the account, with what the account says
+        (no version or part number when it says none). Nothing is opened or asked."""
+        if not self._on_start_page():
+            return
+        fields = devicelist.account_fields(entry)
+        version = fields["software_version"]
+        self.remembered.show(
+            name=fields["description"],
+            version=_("Software {version}").format(version=version) if version else "",
+            part_number=fields["part_number"],
+            last_seen=_("Not seen on this computer"),
+            last_sync=self._last_sync_text(service._unit_id(entry.get("unitid"))))
+        self.navigation.push(self.remembered.page)
 
     def _show_remembered(self, known) -> None:
         """The read-only view of a device remembered and not connected: what was known when
@@ -1469,12 +1552,7 @@ class MainWindow(Adw.ApplicationWindow):
         asked; the open device (if any) and the detection are not touched."""
         if not self._on_start_page():
             return
-        data = service.load_last_sync(known.unit_id)
-        if data:
-            last_sync = (format_when(data.get("time", time.time())) + " · "
-                         + service.describe_counts(data))
-        else:
-            last_sync = _("Not synced yet with openExpress")
+        last_sync = self._last_sync_text(known.unit_id)
         self.remembered.show(
             name=known.description,
             version=_("Software {version}").format(version=known.software_version),
@@ -1513,6 +1591,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.load_section(page)
         if not any(self._is_open(c) for c in self._connected):
             self._connected = []  # the one device (D7): its tile comes from the session
+        account = getattr(self.session, "account_devices", None)
+        if account is not None:
+            self._account = account  # read by check_session: not asked again
         self._show_device_view()
 
     def _update_banner(self) -> None:
@@ -2234,6 +2315,7 @@ class MainWindow(Adw.ApplicationWindow):
                            else _("Logged in, but the account details could not be loaded"))
                 self.session = None
                 self.refresh_device()
+                self._fetch_account()
 
             def start():
                 if self.busy:
@@ -2255,6 +2337,7 @@ class MainWindow(Adw.ApplicationWindow):
         store.delete()
         self.toast(_("Logged out"))
         self.session = None
+        self._account = None  # the start page lists no device of the account any more
         self.refresh_device()
 
     def backup(self) -> None:

@@ -275,7 +275,8 @@ def test_the_masked_account_answer():
 
 def test_each_tile_comes_with_what_it_was_made_of():
     """entries(): each tile with its source, kept outside the tile: the connected device's
-    summary (to open it), else what is remembered of it, else None (only on the account)."""
+    summary (to open it), else what is remembered of it, else its entry of the account's
+    list (only on the account; None before T4)."""
     from openexpress import devicelist
 
     drive = connected("file:///run/media/u/GARMIN/", "Varia RTL515", "006-B3592-03", "3.36",
@@ -288,7 +289,50 @@ def test_each_tile_comes_with_what_it_was_made_of():
         "fēnix 8", "Varia RTL515", "Edge 1050 (remembered)"]
     (_, fenix), (_, varia), (_, edge) = entries
     assert fenix.found.uri == "mtp://fenix/" and varia is mtp and edge is known[EDGE]
-    only_on_account = devicelist.entries([], {}, account(), logged_in=True)
-    assert [source for _, source in only_on_account] == [None, None]
+    answer = account()
+    only_on_account = devicelist.entries([], {}, answer, logged_in=True)
+    assert [source for _, source in only_on_account] == answer  # T4: the account's entries
     assert [t for t, _ in entries] == devicelist.tiles(
         [drive, mtp, fenix_connected()], known, account(), logged_in=True)
+
+
+FORERUNNER = 3000000005
+ACCOUNT_WITH_A_THIRD = [*ACCOUNT_ANSWER, {
+    "unitId": FORERUNNER, "deviceId": FORERUNNER, "displayName": "DEVICE 3",
+    "productDisplayName": "Forerunner 965", "partNumber": "006-B4315-00",
+    "currentFirmwareVersion": "22.26", "primaryActivityTrackerIndicator": False,
+    "deviceCategories": ["FITNESS", "WELLNESS"],
+    "imageUrl": "https://res.garmin.com/en/products/010-02809-10/v/c1_01_md.png"}]
+
+
+def test_each_tile_has_its_section():
+    """T4: connected, remembered (not connected), only on the account; a device in two
+    sources is in the more present one: connected before remembered before the account."""
+    from openexpress import devicelist
+
+    tiles = devicelist.tiles([fenix_connected()], remembered(EDGE_SEEN, VENU_SEEN),
+                             account(ACCOUNT_WITH_A_THIRD), logged_in=True)
+    assert [(t.description, devicelist.section(t)) for t in tiles] == [
+        ("fēnix 8", devicelist.CONNECTED),
+        ("Edge 1050 (remembered)", devicelist.REMEMBERED),
+        ("Venu 2", devicelist.REMEMBERED),
+        ("Forerunner 965", devicelist.ON_ACCOUNT)]
+    forerunner = tiles[-1]
+    assert (forerunner.on_account, forerunner.software_version, forerunner.last_seen) == (
+        True, "22.26", None)
+    assert [devicelist.section(t) for t in devicelist.tiles(
+        [fenix_connected()], remembered(EDGE_SEEN), account(ACCOUNT_WITH_A_THIRD),
+        logged_in=False)] == [devicelist.CONNECTED, devicelist.REMEMBERED]
+
+
+def test_a_tile_only_on_the_account_comes_with_its_entry():
+    """T4: the source of a tile only on the account is its entry of the account's list (for
+    the window to show it); the tile itself still holds no unit ID."""
+    from openexpress import devicelist
+
+    answer = account(ACCOUNT_WITH_A_THIRD)
+    entries = devicelist.entries([fenix_connected()], remembered(EDGE_SEEN), answer,
+                                 logged_in=True)
+    tile, source = entries[-1]
+    assert tile.description == "Forerunner 965" and source is answer[2]
+    assert str(FORERUNNER) not in repr(tile)

@@ -17,6 +17,10 @@ from openexpress.service import _unit_id
 
 log = logging.getLogger(__name__)
 
+# The sections of the start page: connected now, remembered (seen here before, not connected),
+# only on the Garmin account (never seen here).
+CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
+
 # The kinds of device known without asking a server; None: not known.
 BIKE_COMPUTER = "bike_computer"
 # The account's deviceCategories that tell a kind, the first match wins.
@@ -46,7 +50,7 @@ def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
 def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile, object]]:
     """(tile, its source) in order: the source is kept outside the tile, for the window to
     act on it: the connected device's DeviceSummary (to open it), else the KnownDevice
-    remembered, else None (only on the account).
+    remembered, else its entry of the account's list (only on the account).
 
     The tiles, in order: the devices connected now first (the primary one first among
     them), then the others, the one seen last first; those never seen here at the end.
@@ -80,9 +84,9 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id)), known)
             for unit_id, known in remembered.items() if unit_id not in done]
     done.update(remembered)
-    rest += [(_tile("", "", "", None, False, None, entry), None)
+    rest += [(_tile("", "", "", None, False, None, entry), entry)
              for unit_id, entry in on_account.items() if unit_id not in done]
-    rest += [(_tile("", "", "", None, False, None, entry), None) for entry in account_only]
+    rest += [(_tile("", "", "", None, False, None, entry), entry) for entry in account_only]
     rest.sort(key=lambda e: (e[0].last_seen is None, -(e[0].last_seen or 0.0),
                              e[0].description.casefold(), e[0].part_number))
 
@@ -96,7 +100,7 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
           connected: bool, known, entry: dict | None) -> Tile:
     """One tile: what the connected device says (if connected), else what is remembered of
     it (`known`), else what the account says (`entry`)."""
-    account = _account_fields(entry) if entry is not None else None
+    account = account_fields(entry) if entry is not None else None
     part = part_number or (known.part_number if known else "") or (
         account["part_number"] if account else "")
     return Tile(
@@ -116,7 +120,15 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
     )
 
 
-def _account_fields(entry: dict) -> dict:
+def section(tile: Tile) -> str:
+    """The section of the start page of a tile: CONNECTED, REMEMBERED (seen here before;
+    only those have when they were seen) or ON_ACCOUNT."""
+    if tile.connected:
+        return CONNECTED
+    return REMEMBERED if tile.last_seen is not None else ON_ACCOUNT
+
+
+def account_fields(entry: dict) -> dict:
     """What a tile takes from one entry of the account's device list (keys in lower case);
     anything of another type than expected counts as missing."""
     def text(key: str) -> str:
