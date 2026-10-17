@@ -2137,6 +2137,48 @@ def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatc
                             ("", "Over USB (MTP) · Could not be read")]
 
 
+def test_an_mtp_device_and_two_drives_give_three_rows(choosing_window, monkeypatch):
+    """D11: an MTP device and two Garmin drives: three rows."""
+    win = choosing_window
+    monitor_with(monkeypatch, win.world.drive(), another_drive(win.world, 3000000004))
+    win.world.plug("51b4")
+    win.world.offer()
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("ums", "Varia RTL515"),
+                                  ("ums", "Varia RTL515")]]
+
+
+def test_one_device_seen_both_ways_next_to_another(choosing_window, monkeypatch, tmp_path,
+                                                   device_root):
+    """D12 (P2, D1): the radar is seen over MTP and as a drive at once (the same unit ID),
+    an Edge is connected too: the radar is one row (its MTP entry), the Edge another; two
+    rows, not three."""
+    win = choosing_window
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    (device_root / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)  # the radar over MTP
+    monitor_with(monkeypatch, win.world.drive())
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Varia RTL515"), ("mtp", "Edge 1050")]]
+
+
+def test_devices_on_and_off_the_account_are_both_listed(choosing_window, monkeypatch, tmp_path,
+                                                        device_root):
+    """D13: the account lists the Edge but not the test watch: both are on the list, and
+    the list does not ask the account (K5)."""
+    from openexpress import service
+
+    asked = []
+    monkeypatch.setattr(service, "require_account_device",
+                        lambda client, unit_id: asked.append(unit_id) or [{"unitid": 3000000002}])
+    monkeypatch.setattr(service, "check_session", lambda s: asked.append("check") or s)
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
+    assert asked == []
+
+
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
