@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 15:40+0200\n"
+"POT-Creation-Date: 2026-10-17 16:05+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2676,7 +2676,7 @@ msgid "Device"
 msgstr "Urządzenie"
 
 #: openexpress/gui/app.py:666 openexpress/gui/app.py:1288
-#: openexpress/gui/start.py:54
+#: openexpress/gui/start.py:61
 msgid "Detecting the device…"
 msgstr "Wykrywanie urządzenia…"
 
@@ -4019,16 +4019,16 @@ msgid "Removing…"
 msgstr "Usuwanie…"
 
 #. TRANSLATORS: heading above the tiles of the devices connected now
-#: openexpress/gui/start.py:75
+#: openexpress/gui/start.py:82
 msgid "Connected"
 msgstr "Podłączone"
 
 #. TRANSLATORS: title of the start page, which lists the Garmin devices
-#: openexpress/gui/start.py:96
+#: openexpress/gui/start.py:103
 msgid "Devices"
 msgstr "Urządzenia"
 
-#: openexpress/gui/start.py:137
+#: openexpress/gui/start.py:144
 msgid "Garmin device"
 msgstr "Urządzenie Garmin"
 

@@ -19,10 +19,17 @@ APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
 TILE_WIDTH = 200
 
-# The frame of the tile of a connected device, in the accent colour (loaded once per display).
+# The tiles of the start page only (loaded once per display): a quiet 1px edge around the
+# tile of a connected device; the accent only under the pointer or with the keyboard focus.
+# The edge is an outline drawn inside the tile: neither its size nor the layout changes.
 CSS = """
 flowboxchild.oe-tile.connected {
-  outline: 2px solid @accent_color;
+  outline: 1px solid alpha(currentColor, 0.15);
+  outline-offset: -1px;
+}
+flowboxchild.oe-tile:hover,
+flowboxchild.oe-tile:focus:focus-visible {
+  outline: 2px solid alpha(@accent_color, 0.7);
   outline-offset: -2px;
 }
 """
