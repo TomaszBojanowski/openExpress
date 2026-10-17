@@ -3,6 +3,7 @@ the data folder. All unit IDs here are made up."""
 
 import logging
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -106,3 +107,82 @@ def test_the_flatpak_keeps_its_own_file(tmp_path, monkeypatch):
     sandbox = tmp_path / ".var" / "app" / "io.github.tomaszbojanowski.OpenExpress" / "data"
     monkeypatch.setenv("XDG_DATA_HOME", str(sandbox))
     assert known_devices.path() == sandbox / "openexpress" / "devices.json"
+
+
+# --- the lock of devices.json (D2) ------------------------------------------------------------
+
+HOLDER = """
+import sys
+from openexpress import known_devices
+
+write = known_devices._write
+
+
+def slow_write(known):
+    # Read, not yet written: the moment another process could slip in.
+    print("read", flush=True)
+    sys.stdin.readline()
+    write(known)
+
+
+known_devices._write = slow_write
+known_devices.remember(3000000001, "fenix 8", "006-B4532-00", "23.39", "mtp", now=1.0)
+print("done", flush=True)
+"""
+
+
+def holder(tmp_path):
+    """Another process (e.g. the background service) remembering the fēnix, stopped between
+    reading devices.json and writing it."""
+    import os
+    import subprocess
+    import sys
+
+    from openexpress import known_devices
+
+    script = tmp_path / "holder.py"
+    script.write_text(HOLDER)
+    env = {**os.environ, "PYTHONPATH": str(Path(known_devices.__file__).parent.parent)}
+    proc = subprocess.Popen([sys.executable, str(script)], stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, text=True, env=env)
+    assert proc.stdout.readline().strip() == "read"
+    return proc
+
+
+def test_two_processes_remembering_at_once_keep_both(store, tmp_path):
+    """The other process has read devices.json and is about to write it; this one remembers
+    the Edge meanwhile. With the lock the Edge waits and reads the fēnix in: both entries
+    stay (without it, the other process would write over the Edge)."""
+    import threading
+
+    from openexpress import known_devices
+
+    proc = holder(tmp_path)
+    edge = threading.Thread(target=known_devices.remember,
+                            args=(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", 2.0))
+    edge.start()
+    edge.join(0.5)  # it waits for the other process (with the lock)
+    proc.stdin.write("\n")
+    proc.stdin.flush()
+    assert proc.stdout.readline().strip() == "done" and proc.wait(timeout=20) == 0
+    edge.join(10)
+    assert not edge.is_alive()
+    assert set(known_devices.load()) == {FENIX, EDGE}
+
+
+def test_the_lock_goes_with_the_process(store, tmp_path):
+    """A process that holds the lock and ends (here: killed between reading and writing)
+    leaves nothing behind: remembering goes on at once."""
+    import threading
+
+    from openexpress import known_devices
+
+    proc = holder(tmp_path)
+    proc.kill()
+    proc.wait(timeout=20)
+    edge = threading.Thread(target=known_devices.remember,
+                            args=(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", 2.0))
+    edge.start()
+    edge.join(10)
+    assert not edge.is_alive()
+    assert set(known_devices.load()) == {EDGE}

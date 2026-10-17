@@ -9,6 +9,8 @@ the sync state, own maps…) stays. The unit ID is never written to the log."""
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import logging
 import time
@@ -20,6 +22,9 @@ from openexpress import paths
 log = logging.getLogger(__name__)
 
 FILE_NAME = "devices.json"
+# Held while devices.json is read, changed and written, so that the window, the command
+# line and the background service never write over each other's entries.
+LOCK_NAME = "devices.lock"
 FORMAT = 1
 
 
@@ -47,27 +52,43 @@ def load() -> dict[int, KnownDevice]:
 def remember(unit_id: int, description: str, part_number: str, software_version: str,
              kind: str, now: float | None = None) -> KnownDevice:
     """Add or update the entry of a device seen now; when it was first seen stays."""
-    known, writable = _read()
-    now = time.time() if now is None else now
-    old = known.get(unit_id)
-    entry = KnownDevice(unit_id, description, part_number, software_version, kind,
-                        old.first_seen if old is not None else now, now)
-    known[unit_id] = entry
-    if writable:
-        _write(known)
-        log.info("devices: remembered %s", part_number)
+    with _locked():
+        known, writable = _read()
+        now = time.time() if now is None else now
+        old = known.get(unit_id)
+        entry = KnownDevice(unit_id, description, part_number, software_version, kind,
+                            old.first_seen if old is not None else now, now)
+        known[unit_id] = entry
+        if writable:
+            _write(known)
+            log.info("devices: remembered %s", part_number)
     return entry
 
 
 def forget(unit_id: int) -> bool:
     """Remove the entry of this device; whether there was one. Nothing else is deleted."""
-    known, writable = _read()
-    entry = known.pop(unit_id, None)
-    if entry is None or not writable:
-        return False
-    _write(known)
+    with _locked():
+        known, writable = _read()
+        entry = known.pop(unit_id, None)
+        if entry is None or not writable:
+            return False
+        _write(known)
     log.info("devices: forgot %s", entry.part_number)
     return True
+
+
+@contextlib.contextmanager
+def _locked():
+    """One reader-changer-writer of devices.json at a time, in any process; the system lets go
+    of it when the process ends. Reading alone needs no lock: the file is replaced whole."""
+    folder = paths.data_dir()
+    paths.make_dir(folder)
+    with open(folder / LOCK_NAME, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def _read() -> tuple[dict[int, KnownDevice], bool]:
