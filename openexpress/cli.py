@@ -143,7 +143,7 @@ def cmd_setup(args) -> int:
     if args.environment:
         settings.environment = args.environment
     if args.locale:
-        settings.locale = args.locale
+        settings.chosen_locale = args.locale
     settings.save()
     # Settings.save() rewrites settings.json from its own fields, so ui_language goes after it.
     if args.ui_language:

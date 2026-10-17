@@ -547,6 +547,24 @@ def test_cli_install_dry_run_shows_the_app_list(iq_device, device_root, apps_cli
     assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_files(st) == before
 
 
+def test_the_store_is_asked_in_the_language_of_the_system(iq_device, device_root, apps_cli,
+                                                          monkeypatch):
+    """App names and descriptions come in the language of the user (issue #5)."""
+    from openexpress import i18n
+    from openexpress.cli import main
+
+    monkeypatch.setattr(i18n, "system_language_names",
+                        lambda: ["de_DE.UTF-8", "de_DE", "de", "C"], raising=False)
+    monkeypatch.setattr(i18n, "chosen_language", lambda: None, raising=False)
+    asked = []
+    monkeypatch.setattr(FakeStore, "account_apps", lambda self, device, locale: asked.append(
+        ("downloads", locale)) or [store_app(FACE, "Face It")])
+    monkeypatch.setattr(FakeStore, "updates", lambda self, device, installed, locale: asked.append(
+        ("updates", locale)) or [])
+    assert main(["--path", str(device_root), "apps"]) == 0
+    assert asked == [("downloads", "de-DE"), ("updates", "de-DE")]
+
+
 def test_cli_install_apply_writes_what_the_preview_said(iq_device, device_root, apps_cli, capsys):
     from openexpress.cli import main
 

@@ -192,6 +192,9 @@ def fake_webkit(monkeypatch):
     webkit = types.ModuleType("gi.repository.WebKit")
     webkit.WebView = _fake_view_type()
     webkit.NetworkSession = types.SimpleNamespace(new_ephemeral=lambda: None)
+    webkit.languages = []  # every list given to WebContext.set_preferred_languages
+    context = types.SimpleNamespace(set_preferred_languages=webkit.languages.append)
+    webkit.WebContext = types.SimpleNamespace(get_default=lambda: context)
     webkit.PolicyDecisionType = types.SimpleNamespace(NAVIGATION_ACTION=0, NEW_WINDOW_ACTION=1,
                                                       RESPONSE=2)
     real = gi.require_version
@@ -259,6 +262,23 @@ def test_the_sign_in_window_takes_the_ticket_from_a_navigation_and_tells_a_cance
     win.realize()
     win.close()
     assert got == [None]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("names, expected", [
+    (["de_DE.UTF-8", "de_DE", "de.UTF-8", "de", "C"], [["de_DE", "de"]]),
+    (["sr_RS.UTF-8@latin", "sr_RS@latin", "sr_RS.UTF-8", "sr_RS", "sr", "C"], [["sr_RS", "sr"]]),
+    (["C"], []),  # nothing to ask for: WebKit keeps its own choice
+])
+def test_the_sign_in_browser_asks_for_the_languages_of_the_system(fake_webkit, monkeypatch,
+                                                                    names, expected):
+    """Garmin's pages that do not take the language from the address read Accept-Language."""
+    from openexpress import i18n
+
+    monkeypatch.setattr(i18n, "system_language_names", lambda: list(names), raising=False)
+    monkeypatch.setattr(i18n, "chosen_language", lambda: None, raising=False)
+    sso.create_login_window(Settings(), [].append)
+    assert fake_webkit.languages == expected
 
 
 def test_extract_consumer_from_dll(tmp_path):

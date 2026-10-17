@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import gettext
 import json
+import locale
 import os
 from pathlib import Path
 
@@ -26,6 +27,7 @@ SOURCE_LANGUAGE = "en"
 
 _translation: gettext.NullTranslations = gettext.NullTranslations()
 _language = SOURCE_LANGUAGE
+_chosen: str | None = None  # the language chosen for the program; None: the system's
 
 
 def available_languages() -> list[str]:
@@ -83,8 +85,9 @@ def _system_translation() -> gettext.NullTranslations:
 
 def setup(language: str | None = None) -> str:
     """Activates a language (None: configured or system language). Returns the language used."""
-    global _translation, _language
+    global _translation, _language, _chosen
     lang = language or _configured_language()
+    _chosen = lang or None
     if lang == SOURCE_LANGUAGE:
         _translation = gettext.NullTranslations()
         _language = SOURCE_LANGUAGE
@@ -102,6 +105,46 @@ def setup(language: str | None = None) -> str:
 
 def current_language() -> str:
     return _language
+
+
+def chosen_language() -> str | None:
+    """The language chosen for the program (--lang, OPENEXPRESS_LANG, Preferences); None when
+    it follows the system."""
+    return _chosen
+
+
+# The country Garmin gets for a language the system names without one.
+_USUAL_COUNTRY = {"en": "en_US", "de": "de_DE", "pl": "pl_PL", "fr": "fr_FR"}
+
+
+def _glib():
+    try:
+        from gi.repository import GLib
+    except ImportError:
+        return None
+    return GLib
+
+
+def system_language_names() -> list[str]:
+    """The languages of the system, most wanted first, as GLib lists them (e.g. "de_DE.UTF-8",
+    "de_DE", "de", "C"); without GLib the locale of the C library. The one place they are read."""
+    glib = _glib()
+    if glib is not None:
+        return list(glib.get_language_names())
+    name = locale.getlocale()[0]
+    return [name] if name else []
+
+
+def garmin_locale() -> str:
+    """The language for Garmin in the form its servers take (e.g. "de_DE"), as Garmin Express
+    sends the culture of Windows: the one chosen for the program, else the system's. "en_US"
+    when neither names one."""
+    chosen = chosen_language()
+    names = [chosen] if chosen else system_language_names()
+    code = (names[0] if names else "").split(".")[0].split("@")[0].replace("-", "_")
+    if code in ("", "C", "POSIX"):
+        return "en_US"
+    return code if "_" in code else _USUAL_COUNTRY.get(code, code)
 
 
 def _(message: str) -> str:

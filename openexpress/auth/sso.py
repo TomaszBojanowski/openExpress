@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
+from openexpress import i18n
 from openexpress.i18n import _
 from openexpress.settings import SSO_CLIENT_ID, Settings
 
@@ -27,6 +28,16 @@ class LoginCancelled(Exception):
 
 def sign_in_url(settings: Settings) -> str:
     return f"{settings.hosts['sso']}mobile/sso/{settings.locale}/sign-in?clientId={SSO_CLIENT_ID}"
+
+
+def browser_languages() -> list[str]:
+    """The languages for the sign-in browser (its Accept-Language), for Garmin's pages that do
+    not read the language from the address: the one chosen for the program, else those of the
+    system, without encodings and modifiers."""
+    chosen = i18n.chosen_language()
+    names = [i18n.garmin_locale(), chosen] if chosen else i18n.system_language_names()
+    return list(dict.fromkeys(n for n in names
+                              if n not in ("C", "POSIX") and not any(c in n for c in ".@")))
 
 
 def ticket_from_url(url: str) -> ServiceTicket | None:
@@ -68,6 +79,9 @@ def create_login_window(settings: Settings, on_ticket, application=None, parent=
     if parent is not None:
         win.set_transient_for(parent)
         win.set_modal(True)
+    languages = browser_languages()
+    if languages:
+        WebKit.WebContext.get_default().set_preferred_languages(languages)
     # Ephemeral session: no persistent cookies, every login starts fresh.
     view = WebKit.WebView(network_session=WebKit.NetworkSession.new_ephemeral())
 

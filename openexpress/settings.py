@@ -7,13 +7,16 @@ The user imports it from their own copy of Garmin Express (`openexpress setup`).
 from __future__ import annotations
 
 import json
+import logging
 import re
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from openexpress import paths
+from openexpress import i18n, paths
 from openexpress.i18n import _
+
+log = logging.getLogger(__name__)
 
 ENVIRONMENTS: dict[str, dict[str, str]] = {
     "production": {
@@ -33,6 +36,9 @@ ENVIRONMENTS: dict[str, dict[str, str]] = {
 SSO_CLIENT_ID = "GarminExpress_WIN_Default"
 UPLOAD_CONFIG_CLIENT_ID = "express-windows"
 
+# Up to 0.6.1 settings.json got "locale": "pl_PL" on the first start, chosen or not: now ignored.
+_OLD_LOCALE_KEY = "locale"
+
 
 class SetupError(Exception):
     pass
@@ -48,7 +54,7 @@ class Consumer:
 @dataclass
 class Settings:
     environment: str = "production"
-    locale: str = "pl_PL"
+    chosen_locale: str = ""  # from `setup --locale`; empty: the language of the system
     client_name: str = "express"
     client_version: str = "7.29.1.0"
     client_platform: str = "Windows"
@@ -61,6 +67,11 @@ class Settings:
     @property
     def hosts(self) -> dict[str, str]:
         return ENVIRONMENTS[self.environment]
+
+    @property
+    def locale(self) -> str:
+        """The language for Garmin's pages and answers, e.g. "de_DE"."""
+        return self.chosen_locale or i18n.garmin_locale()
 
     @classmethod
     def load(cls) -> Settings:
@@ -78,12 +89,19 @@ class Settings:
         known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
         s = cls(**known)
         # Keys owned by other parts of the program (e.g. "ui_language") survive save().
-        s._extra = {k: v for k, v in data.items() if k not in cls.__dataclass_fields__}
+        s._extra = {k: v for k, v in data.items()
+                    if k not in cls.__dataclass_fields__ and k != _OLD_LOCALE_KEY}
         if s.environment not in ENVIRONMENTS:
             raise SetupError(_("Unknown environment: {name}").format(name=s.environment))
-        if not s.client_guid:
-            s.client_guid = str(uuid.uuid4())
-            s.save()
+        old_locale = _OLD_LOCALE_KEY in data
+        if old_locale:
+            log.info("settings: the locale saved by an older version (%r) is no longer used; "
+                     "now %s (%s)", data[_OLD_LOCALE_KEY], s.locale,
+                     "chosen" if s.chosen_locale
+                     else "as the program" if i18n.chosen_language() else "as the system")
+        if not s.client_guid or old_locale:
+            s.client_guid = s.client_guid or str(uuid.uuid4())
+            s.save()  # without the old key, so that it is told once
         return s
 
     def save(self) -> None:
@@ -93,10 +111,12 @@ class Settings:
             # Keys written by others since load() (e.g. the GUI language choice) win.
             current = json.loads(path.read_text()) if path.exists() else {}
             data.update({k: v for k, v in current.items()
-                         if k not in self.__dataclass_fields__})
+                         if k not in self.__dataclass_fields__ and k != _OLD_LOCALE_KEY})
         except (OSError, ValueError):
             pass
         data.update(asdict(self))
+        if not self.chosen_locale:
+            del data["chosen_locale"]  # no choice: the system decides at every start
         paths.write_private(
             path,
             json.dumps(data, indent=2),
