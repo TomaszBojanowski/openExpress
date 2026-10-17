@@ -1777,6 +1777,101 @@ def test_two_mtp_devices_known_by_their_usb_device_are_both_listed(choosing_wind
     assert win.shown_choices == [[("mtp", "Edge 1050"), ("mtp", "Test watch")]]
 
 
+def three_devices(win, monkeypatch, tmp_path, device_root):
+    """The test watch and an Edge over MTP, and a Varia drive: the list of three."""
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")  # the Edge on USB
+    drive = win.world.drive()
+    monitor_with(monkeypatch, drive)
+    win.refresh_device()
+    assert win.shown_choices == [
+        [("mtp", "Test watch"), ("mtp", "Edge 1050"), ("ums", "Varia RTL515")]]
+    return drive
+
+
+def test_unplugging_another_device_keeps_the_open_one(choosing_window, monkeypatch, tmp_path,
+                                                      device_root):
+    """K6: the test watch was chosen from the list and is open; the Edge, which is not the
+    one shown, is unplugged. The open device stays as it is: not closed, no list."""
+    from openexpress.gui.app import MainWindow
+
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    edge = two_watches(world, monkeypatch, tmp_path, device_root)
+    usb_device(world.root, "1-2", 1, 10, "091e", "5158")
+    win.refresh_device()
+    fenix = next(s.found for s in win._choices if s.found is not edge)
+    win.open_choice(fenix)
+    (opened,) = win.built
+    # The Edge is unplugged: gone from gvfs and from /sys.
+    world.offered.remove(edge)
+    for f in (world.root / "1-2").iterdir():
+        f.unlink()
+    (world.root / "1-2").rmdir()
+    MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
+    win.timers.fire()
+    assert win.session is opened and win.built == [opened] and len(win.shown_choices) == 1
+
+
+def test_a_device_gone_from_the_list_of_three_leaves_two(choosing_window, monkeypatch,
+                                                         tmp_path, device_root):
+    """K6 (guards K5): the list of three; the drive is unplugged: the list of the two
+    others."""
+    from openexpress.gui.app import MainWindow
+
+    win = choosing_window
+    drive = three_devices(win, monkeypatch, tmp_path, device_root)
+    for name in ("sdb", "sdb1"):  # unplugged: gone from /sys
+        (win.world.drives.block / name).unlink()
+    monitor_with(monkeypatch)
+    MainWindow._on_mount_removed(win, None, drive)
+    win.timers.fire()
+    assert win.session is None
+    assert win.shown_choices[-1] == [("mtp", "Test watch"), ("mtp", "Edge 1050")]
+
+
+def test_a_third_device_makes_the_list_grow(choosing_window, monkeypatch, tmp_path,
+                                            device_root):
+    """K6 (guards K5): the list of two; a drive is mounted: the list of three."""
+    from openexpress.gui.app import MainWindow
+
+    win = choosing_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
+    drive = win.world.drive()
+    monitor_with(monkeypatch, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    win.timers.fire()
+    assert win.session is None and win.shown_choices[-1] == [
+        ("mtp", "Test watch"), ("mtp", "Edge 1050"), ("ums", "Varia RTL515")]
+
+
+def test_a_device_never_mounted_that_leaves_is_noticed(choosing_window, monkeypatch, tmp_path,
+                                                       device_root):
+    """K6 (guards K5): an Edge whose volume was never mounted (an entry without details)
+    leaves USB without any mount event; the poll of USB notices it, and the one device
+    left opens (D7)."""
+    from openexpress.gui.app import MainWindow
+
+    win, world = choosing_window, choosing_window.world
+    monitor_with(monkeypatch)
+    edge = two_watches(world, monkeypatch, tmp_path, device_root)
+    edge.mounted = False
+    usb_device(world.root, "1-2", 1, 10, "091e", "5158")
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "")]]
+    world.offered.remove(edge)
+    for f in (world.root / "1-2").iterdir():
+        f.unlink()
+    (world.root / "1-2").rmdir()
+    MainWindow._poll_usb(win)
+    win.timers.fire()
+    (s,) = win.built
+    assert s is win.session and s.storage.label.startswith(NUMERIC)
+
+
 def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch):
     """K5: the list comes from what is plugged in, not from the account: a drive and an MTP
     device that the account does not list are both there, and the account is not asked."""

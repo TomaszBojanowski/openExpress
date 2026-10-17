@@ -1063,6 +1063,13 @@ class MainWindow(Adw.ApplicationWindow):
             log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
                      where)
             return
+        if (not ours and s is not None
+                and usb_still_there(getattr(s.storage, "usb", None))):
+            # Another Garmin device went away (several connected): the open one is still at
+            # its place on USB, so it stays open.
+            log.info("mount removed (%s): not the open device, which is still there; ignored",
+                     where)
+            return
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
