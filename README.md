@@ -19,6 +19,16 @@
        alt="The Updates page: a beta software update offered for an Edge 1050">
 </p>
 
+**Install:** download `openexpress-0.5.2.flatpak` from the
+[latest release](https://github.com/TomaszBojanowski/openExpress/releases/latest), then run
+
+```bash
+flatpak install --user openexpress-0.5.2.flatpak
+```
+
+The GNOME runtime comes from Flathub. More in [Install](#install), including the version
+from source.
+
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
 virtual machine. How the Garmin services and the watch's file layout work was learned by
