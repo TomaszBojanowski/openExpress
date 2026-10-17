@@ -457,6 +457,19 @@ def detection_due(win) -> None:
     win._detect_after_task = False
     reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
     s = win.session
+    if s is not None and reasons:
+        # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
+        # window started, before one was chosen) bring nothing new: they never close the
+        # device chosen.
+        listed = {c.found.uri.rstrip("/") for c in getattr(win, "_connected", None) or []}
+        known = [r for r in reasons if r is not None and not _on_mount(s.storage, r)
+                 and r.rstrip("/") in listed]
+        if known:
+            reasons = [r for r in reasons if r not in known]
+            log.info("device detection: %d mount(s) of devices already on the list, ignored",
+                     len(known))
+            if not reasons:
+                return  # nothing new: the open device stays as it is
     if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
                                        for r in reasons):
         # Another device mounted or plugged in: with several, the list to choose from, even

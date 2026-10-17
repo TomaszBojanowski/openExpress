@@ -67,6 +67,7 @@ class StartPage:
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
         self._notice = None
+        self._entries: list = []  # what the tiles show now
         self.set_empty("", "", False)
         box.append(self.notice_group)
 
@@ -109,9 +110,12 @@ class StartPage:
         """The tiles (devicelist.Tile, how the device is connected), in this order; `notice`:
         whether the notice on top is shown."""
         self.notice_group.set_visible(notice)
-        self.grid.remove_all()
-        for tile, how in entries:
-            self.grid.append(tile_widget(tile, how))
+        entries = list(entries)
+        if entries != self._entries:  # the same tiles keep their widgets
+            self._entries = entries
+            self.grid.remove_all()
+            for tile, how in entries:
+                self.grid.append(tile_widget(tile, how))
         self.connected_title.set_visible(any(tile.connected for tile, _how in entries))
         self.stack.set_visible_child_name("content")
 

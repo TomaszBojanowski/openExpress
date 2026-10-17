@@ -3638,3 +3638,94 @@ def test_a_pending_refresh_stays_on_the_start_page(start_window, monkeypatch, tm
     run_later(later)
     assert win.navigation.stack == ["start page"]
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
+
+
+# --- opening a device from the start page: nothing undoes the choice (live test of T2) -------
+
+
+def mounts_reported_at_start(win):
+    """gvfs reports the mounts of the devices already connected as the window starts: a
+    detection planned for each, in 1.5 s."""
+    from openexpress.gui.app import schedule_detection
+
+    schedule_detection(win, 1500, NUMERIC)
+    schedule_detection(win, 1500, NAMED)
+
+
+@pytest.mark.parametrize("when", ["after the choice", "during the opening"])
+def test_a_detection_planned_before_the_choice_leaves_the_device_open(
+        start_window, monkeypatch, tmp_path, device_root, when):
+    """Live test of T2 (17.10.2026): two devices on the start page, the mounts of both
+    reported at the start; the Edge is clicked. The detection planned before the click finds
+    only devices already on the list: the Edge stays open, its view stays up, and the start
+    page below is not drawn again (the window used to close the Edge, go back and draw the
+    tiles anew, whose first frames showed empty under the animation)."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    later = defer_background(win)
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")  # the Edge on USB
+    win.refresh_device()
+    mounts_reported_at_start(win)
+    drawn = len(win.start.shown)
+    opening = count_opening(monkeypatch)
+    if when == "during the opening":
+        # The detection is due while the device is being opened: after that task.
+        real_run_task = win.run_task
+
+        def run_task(title, fn, done, failed):
+            win.busy = True
+            win.timers.fire()
+            win.busy = False
+            real_run_task(title, fn, done, failed)
+            MainWindow._run_pending_refresh(win)
+
+        win.run_task = run_task
+    win._open_tile(drawn_names(win)[-1].index("Edge 1050"))
+    win.timers.fire()
+    run_later(later)
+    assert win.session is not None and win.session.device.description == "Edge 1050"
+    assert win.navigation.stack == ["start page", "device view"]
+    assert len(win.start.shown) == drawn  # not drawn again
+    assert opening == ["open_session", "check_session"]  # the Edge, once
+
+
+def test_a_device_mounted_after_the_list_still_brings_the_list(start_window, monkeypatch,
+                                                              tmp_path, device_root):
+    """Guards D7 (eaaa05b): a device that was not on the list is mounted while one is open:
+    the list to choose from, as before."""
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    assert win.navigation.stack == ["start page", "device view"]
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    from openexpress.gui.app import schedule_detection
+
+    schedule_detection(win, 1500, NAMED)
+    win.timers.fire()
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
+
+
+@pytest.mark.needs_display
+def test_the_same_list_keeps_its_tiles():
+    """The start page given the same tiles again keeps the widgets it has (nothing removed
+    and added); other tiles are built anew."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name):
+        return Tile(name, "006-B4532-00", "23.39", "mtp", True, False, False, None,
+                    "006-B4532-00", None, None)
+
+    entries = [(tile("fēnix 8"), "Over USB (MTP) · Software 23.39"),
+               (tile("Edge 1050"), "Over USB (MTP) · Software 33.12")]
+    start = StartPage()
+    start.show(entries, False)
+    before = start.tiles()
+    start.show(list(entries), False)
+    assert all(a is b for a, b in zip(before, start.tiles(), strict=True))
+    start.show(entries[:1], False)
+    assert len(start.tiles()) == 1 and start.tiles()[0] is not before[0]
