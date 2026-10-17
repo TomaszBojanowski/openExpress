@@ -166,6 +166,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
         if opt is None:
             continue
         files = []
+        unchecked = 0  # files without an MD5 the program can read
         listed = opt.get("files") or []
         for f in listed:
             deliv = next(
@@ -174,12 +175,20 @@ def parse_maps(response: dict) -> list[UniversalMap]:
             )
             if not deliv or not f.get("filename") or not (deliv.get("url") or ""):
                 continue
+            md5 = download.normalize_md5(deliv.get("md5"))
+            if md5 is None:
+                # Never downloaded without its check: the map cannot be installed. The file
+                # stays listed: its name is still Garmin's (own maps, removals).
+                unchecked += 1
             files.append(MapFile(
                 device_path=_device_path(f["filename"]),
                 url=deliv.get("url") or "",
-                md5=download.normalize_md5(deliv.get("md5")),
+                md5=md5,
                 size=int(deliv.get("sizeinbytes") or 0),
             ))
+        if unchecked:
+            log.info("maps: the server gave no valid MD5 for %d file(s) of %s; it cannot be "
+                     "installed", unchecked, m.get("displayname") or "a map")
         rel = m.get("release") or {}
         region = (m.get("geographicregion") or {}).get("title") or ""
         out.append(UniversalMap(
@@ -196,7 +205,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
                              for f in m.get("filestoremove") or [] if f.get("filename")],
             hosts=_hosts(m.get("downloadhosts")),
             eula_urls=list(m.get("eulaurls") or []),
-            installable=bool(files) and len(files) == len(listed),
+            installable=bool(files) and len(files) == len(listed) and not unchecked,
         ))
     return out
 

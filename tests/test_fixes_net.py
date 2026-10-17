@@ -218,7 +218,7 @@ def ranged(ignore_start=False, content_range=True, wrong_start=False):
 def test_size_zero_without_part(server, tmp_path):
     server.routes["/f"] = (200, {}, DATA)
     dest = tmp_path / "f.bin"
-    download.fetch([server.url + "/f"], dest, 0, None)
+    download.fetch([server.url + "/f"], dest, 0, download.NO_MD5)
     assert dest.read_bytes() == DATA
 
 
@@ -228,7 +228,7 @@ def test_resume_checks_content_range(server, tmp_path, kw):
     server.routes["/f"] = ranged(**kw)
     dest = tmp_path / "f.bin"
     dest.with_name("f.bin.part").write_bytes(DATA[:1000])
-    download.fetch([server.url + "/f"], dest, None, None)
+    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
     assert dest.read_bytes() == DATA
 
 
@@ -252,7 +252,7 @@ def test_416_with_complete_part(server, tmp_path):
     # A .part longer than the file: deleted and downloaded again without Range.
     dest.unlink()
     part.write_bytes(DATA + b"junk")
-    download.fetch([server.url + "/f"], dest, None, None)
+    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
     assert dest.read_bytes() == DATA
     assert not part.exists()
 
@@ -423,3 +423,60 @@ def test_activity_matches_body_not_signed():
                                     nonce=nonce, timestamp=ts)
     assert auth == expected
     assert dict(parse_qsl(query))  # sanity
+
+
+# --- an MD5 is required, HTTPS only (review of 106cd25) ----------------------------------------
+
+
+class RecordingSession:
+    """Remembers each address asked; answers nothing (as if the network were down)."""
+
+    def __init__(self):
+        self.asked = []
+
+    def get(self, url, **kw):
+        self.asked.append(url)
+        raise requests.ConnectionError("no network in this test")
+
+
+@pytest.mark.parametrize("md5", [None, ""])
+def test_a_download_without_an_md5_is_refused_before_any_request(tmp_path, md5):
+    """No MD5 (missing, or unreadable where the server gives one) is never "no check": the
+    file is not downloaded at all."""
+    session = RecordingSession()
+    with pytest.raises(download.DownloadError, match="no MD5 checksum"):
+        download.fetch(["https://download.garmin.com/f"], tmp_path / "f.bin", 4, md5,
+                       session=session)
+    assert session.asked == []
+
+
+def test_a_download_without_a_check_is_said_so(server, tmp_path):
+    """Without an MD5 only when the caller says so: download.NO_MD5."""
+    server.routes["/f"] = (200, {}, DATA)
+    dest = tmp_path / "f.bin"
+    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
+    assert dest.read_bytes() == DATA
+
+
+def test_http_is_asked_over_https(tmp_path):
+    """An address over plain HTTP (Garmin gives its fallback map hosts so) is asked over
+    HTTPS, once even when the same address is also given over HTTPS."""
+    session = RecordingSession()
+    with pytest.raises(download.DownloadError):
+        download.fetch(["https://omtmapupdate.garmin.com/a.img",
+                        "http://omtmapupdate.garmin.com/a.img",
+                        "http://worldwide.omtmapupdate.garmin.com/a.img"],
+                       tmp_path / "a.img", 4, md5hex(DATA), session=session)
+    assert set(session.asked) == {"https://omtmapupdate.garmin.com/a.img",
+                                  "https://worldwide.omtmapupdate.garmin.com/a.img"}
+    assert not any(url.startswith("http:") for url in session.asked)
+
+
+@pytest.mark.parametrize("url", ["ftp://download.garmin.com/a.img", "file:///etc/passwd",
+                                 "a.img"])
+def test_another_scheme_is_refused_before_any_request(tmp_path, url):
+    session = RecordingSession()
+    with pytest.raises(download.DownloadError, match="only over HTTPS"):
+        download.fetch(["https://download.garmin.com/b.img", url], tmp_path / "a.img", 4,
+                       md5hex(DATA), session=session)
+    assert session.asked == []

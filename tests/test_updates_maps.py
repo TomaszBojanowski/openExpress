@@ -91,7 +91,7 @@ def test_fetch_resume_and_verify(server, tmp_path):
     with pytest.raises(download.DownloadError):
         download.fetch([server + "/fw/aux.gcd"], tmp_path / "x", 300, md5hex(b"other"))
     # the first URL fails, the second works
-    download.fetch([server + "/missing", server + "/fw/aux.gcd"], tmp_path / "y", 300, None)
+    download.fetch([server + "/missing", server + "/fw/aux.gcd"], tmp_path / "y", 300, download.NO_MD5)
 
 
 def sw_response(base):
@@ -1393,3 +1393,42 @@ def test_a_drive_needs_room_for_the_new_map_beside_the_old(server, device_root, 
     assert maps.space_needed(LocalStorage(device_root), east, []) == east.size
     replaced = len(b"old E2") + len(b"old")  # E2.img and the shared DEM.img
     assert maps.space_needed(OverMtp(device_root), east, []) == east.size - replaced
+
+
+# --- an invalid MD5 never turns off the check (review of 106cd25) -------------------------------
+
+
+@pytest.mark.parametrize("md5", ["0" * 31, "z" * 32, "", None, "bm90IGFuIG1kNQ=="])
+def test_a_map_file_with_an_invalid_md5_makes_the_map_not_installable(server, device_root,
+                                                                      xdg, md5):
+    """An MD5 the program cannot read (31 hex digits, not hex, empty, missing, base64 of
+    something else) is not "no check": the map cannot be installed and says so; nothing is
+    downloaded. The file stays listed (its name is Garmin's)."""
+    response = maps_response(server)
+    response["maps"][2]["installoptions"][0]["files"][0]["deliverableoptions"][0]["md5"] = md5
+    japan = maps.parse_maps(response)[2]
+    assert not japan.installable
+    assert [f.device_path for f in japan.files] == ["Garmin/J.img"]
+    with pytest.raises(maps.MapError, match="cannot be installed"):
+        maps.install(japan, maps.parse_maps(response), LocalStorage(device_root),
+                     lambda ident: {})
+    assert not (device_root / "GARMIN" / "J.img").exists()
+
+
+def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):
+    """A software update the server lists without an MD5: refused before it is
+    downloaded, nothing written to the device."""
+    answer = sw_response(server)
+    for u in answer["updates"]:
+        u["deliverable"]["md5"] = None
+    items = updates.parse_updates(answer)
+    asked = []
+
+    class Session(requests.Session):
+        def get(self, url, **kw):
+            asked.append(url)
+            return super().get(url, **kw)
+
+    with pytest.raises(download.DownloadError, match="no MD5 checksum"):
+        updates.install(items, LocalStorage(device_root), session=Session())
+    assert asked == [] and not (device_root / "GARMIN" / "GUPDATE.GSP").exists()

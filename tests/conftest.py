@@ -178,3 +178,11 @@ def device_root(tmp_path) -> Path:
     (g / "Monitor" / "M1.FIT").write_bytes(make_fit(1100000500, 32))
     (g / "Settings" / "Settings.fit").write_bytes(make_fit(1000, 2))
     return root
+
+
+@pytest.fixture(autouse=True)
+def plain_http_to_the_test_servers(monkeypatch):
+    """The program downloads over HTTPS only; the tests' local servers speak plain HTTP."""
+    from openexpress import download
+
+    monkeypatch.setattr(download, "PLAIN_HTTP_HOSTS", frozenset({"127.0.0.1", "localhost"}))

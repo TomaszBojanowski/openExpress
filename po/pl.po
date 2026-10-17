@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 18:14+0200\n"
+"POT-Creation-Date: 2026-10-17 18:39+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -327,8 +327,8 @@ msgstr "Pobieranie {name}"
 msgid "Writing {path}"
 msgstr "Zapisywanie {path}"
 
-#: openexpress/ciq.py:920 openexpress/ciq.py:1474 openexpress/maps.py:409
-#: openexpress/updates.py:324
+#: openexpress/ciq.py:920 openexpress/ciq.py:1474 openexpress/maps.py:423
+#: openexpress/updates.py:329
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr "Weryfikacja zapisu {path} się nie powiodła"
@@ -1278,7 +1278,7 @@ msgstr "Żadna aplikacja nie pasuje do „{query}”"
 msgid "Several entries match: {names}. Choose one with --type."
 msgstr "Pasuje kilka wpisów: {names}. Wybierz jeden opcją --type."
 
-#: openexpress/cli.py:983 openexpress/maps.py:213
+#: openexpress/cli.py:983 openexpress/maps.py:222
 #, python-brace-format
 msgid "Ambiguous name, matches: {names}"
 msgstr "Niejednoznaczna nazwa, pasują: {names}"
@@ -2329,29 +2329,29 @@ msgid "flatpak-spawn is not available"
 msgstr "flatpak-spawn jest niedostępny"
 
 #: openexpress/device/gio_storage.py:208 openexpress/device/gio_storage.py:225
-#: openexpress/device/storage.py:256
+#: openexpress/device/storage.py:263
 #, python-brace-format
 msgid "Cannot list {path}"
 msgstr "Nie można wyświetlić zawartości {path}"
 
 #: openexpress/device/gio_storage.py:237 openexpress/device/gio_storage.py:242
-#: openexpress/device/storage.py:263 openexpress/device/storage.py:267
+#: openexpress/device/storage.py:270 openexpress/device/storage.py:274
 #, python-brace-format
 msgid "Cannot read {path}"
 msgstr "Nie można odczytać {path}"
 
 #: openexpress/device/gio_storage.py:263 openexpress/device/gio_storage.py:277
-#: openexpress/device/storage.py:273 openexpress/device/storage.py:287
+#: openexpress/device/storage.py:280 openexpress/device/storage.py:294
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr "Nie można zapisać {path}"
 
-#: openexpress/device/gio_storage.py:311 openexpress/device/storage.py:313
+#: openexpress/device/gio_storage.py:311 openexpress/device/storage.py:320
 #, python-brace-format
 msgid "Cannot delete {path}"
 msgstr "Nie można usunąć {path}"
 
-#: openexpress/device/gio_storage.py:317 openexpress/device/storage.py:317
+#: openexpress/device/gio_storage.py:317 openexpress/device/storage.py:324
 #, python-brace-format
 msgid "Cannot create directory {path}"
 msgstr "Nie można utworzyć katalogu {path}"
@@ -2523,46 +2523,55 @@ msgstr "Urządzenie nie podało, gdzie zapisało „{name}”."
 msgid "“{name}” was not written correctly."
 msgstr "Nie udało się poprawnie zapisać „{name}”."
 
-#: openexpress/device/storage.py:131 openexpress/device/storage.py:139
+#: openexpress/device/storage.py:136 openexpress/device/storage.py:144
 #, python-brace-format
 msgid "File not found on the device: {path}"
 msgstr "Nie znaleziono pliku na urządzeniu: {path}"
 
-#: openexpress/device/storage.py:152
+#: openexpress/device/storage.py:157
 #, python-brace-format
 msgid "Cannot write {path}: it is a directory"
 msgstr "Nie można zapisać {path}: to katalog"
 
-#: openexpress/device/storage.py:185
+#: openexpress/device/storage.py:190
 msgid "Refusing to delete the root of the device storage"
 msgstr "Odmowa usunięcia głównego katalogu pamięci urządzenia"
 
-#: openexpress/device/storage.py:204
+#: openexpress/device/storage.py:209
 #, python-brace-format
 msgid "Invalid file name: '{path}'"
 msgstr "Nieprawidłowa nazwa pliku: „{path}”"
 
-#: openexpress/device/storage.py:246 openexpress/device/storage.py:254
+#: openexpress/device/storage.py:253 openexpress/device/storage.py:261
 #, python-brace-format
 msgid "Not a directory: {path}"
 msgstr "To nie jest katalog: {path}"
 
-#: openexpress/download.py:115
+#: openexpress/download.py:75
+#, python-brace-format
+msgid "Refusing to download {url}: files are downloaded only over HTTPS"
+msgstr "Nie pobrano {url}: pliki są pobierane tylko przez HTTPS"
+
+#: openexpress/download.py:143
+msgid "The server gave no MD5 checksum for this file, so it was not downloaded"
+msgstr "Serwer nie podał sumy kontrolnej MD5 tego pliku, więc nie został pobrany"
+
+#: openexpress/download.py:148
 #, python-brace-format
 msgid "Invalid MD5 checksum from the server: {value}"
 msgstr "Nieprawidłowa suma MD5 z serwera: {value}"
 
-#: openexpress/download.py:149
+#: openexpress/download.py:182
 #, python-brace-format
 msgid "{url}: size {got} instead of {size}"
 msgstr "{url}: rozmiar {got} zamiast {size}"
 
-#: openexpress/download.py:154
+#: openexpress/download.py:187
 #, python-brace-format
 msgid "{url}: MD5 checksum mismatch"
 msgstr "{url}: niezgodna suma kontrolna MD5"
 
-#: openexpress/download.py:159
+#: openexpress/download.py:192
 msgid "Could not download the file:"
 msgstr "Nie można pobrać pliku:"
 
@@ -4116,12 +4125,12 @@ msgstr "do pobrania"
 msgid "No maps are available for this device."
 msgstr "Dla tego urządzenia nie ma dostępnych map."
 
-#: openexpress/maps.py:212
+#: openexpress/maps.py:221
 #, python-brace-format
 msgid "No map named '{name}'"
 msgstr "Brak mapy o nazwie „{name}”"
 
-#: openexpress/maps.py:259
+#: openexpress/maps.py:268
 #, python-brace-format
 msgid ""
 "Map '{name}' is on the device already and will be loaded after the device is "
@@ -4130,39 +4139,39 @@ msgstr ""
 "Mapa {name} jest już na urządzeniu i zostanie wczytana po odłączeniu. "
 "Najpierw odłącz urządzenie."
 
-#: openexpress/maps.py:322
+#: openexpress/maps.py:334
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: the server did not provide all of its files"
 msgstr ""
 "Mapy „{name}” nie można zainstalować: serwer nie podał wszystkich jej plików"
 
-#: openexpress/maps.py:328 openexpress/music.py:273 openexpress/ownmaps.py:236
-#: openexpress/updates.py:286
+#: openexpress/maps.py:340 openexpress/music.py:273 openexpress/ownmaps.py:236
+#: openexpress/updates.py:288
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr "Za mało miejsca na urządzeniu: potrzeba {need}, wolne {free}"
 
-#: openexpress/maps.py:336
+#: openexpress/maps.py:348
 #, python-brace-format
 msgid "Downloading {path} ({size})"
 msgstr "Pobieranie {path} ({size})"
 
-#: openexpress/maps.py:346
+#: openexpress/maps.py:358
 msgid "Activating the map on the Garmin server"
 msgstr "Aktywacja mapy na serwerze Garmin"
 
-#: openexpress/maps.py:365
+#: openexpress/maps.py:377
 #, python-brace-format
 msgid "Removing old file {path}"
 msgstr "Usuwanie starego pliku {path}"
 
-#: openexpress/maps.py:370 openexpress/updates.py:314
+#: openexpress/maps.py:382 openexpress/updates.py:316
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr "Kopiowanie na urządzenie: {path}"
 
-#: openexpress/maps.py:426
+#: openexpress/maps.py:440
 #, python-brace-format
 msgid ""
 "Cannot write {path}, which other maps on the device also use ({maps}). "
@@ -4171,7 +4180,7 @@ msgstr ""
 "Nie można zapisać {path}, którego używają też inne mapy na urządzeniu "
 "({maps}). Zainstaluj mapę ponownie."
 
-#: openexpress/maps.py:444
+#: openexpress/maps.py:458
 #, python-brace-format
 msgid ""
 "The map files were copied, but its unlock file {path} could not be written "
@@ -4184,17 +4193,17 @@ msgstr ""
 "nie działa, odłącz urządzenie i zainstaluj mapę ponownie; jeśli jest na "
 "liście zainstalowanych, najpierw ją usuń."
 
-#: openexpress/maps.py:449
+#: openexpress/maps.py:463
 #, python-brace-format
 msgid "Writing the unlock file again ({attempt} of {tries})"
 msgstr "Ponawianie zapisu pliku odblokowującego ({attempt} z {tries})"
 
-#: openexpress/maps.py:470
+#: openexpress/maps.py:484
 #, python-brace-format
 msgid "Map '{name}' cannot be removed"
 msgstr "Nie można usunąć mapy „{name}”"
 
-#: openexpress/maps.py:480
+#: openexpress/maps.py:494
 #, python-brace-format
 msgid "Removing {path}"
 msgstr "Usuwanie {path}"
@@ -5018,17 +5027,17 @@ msgstr "Nieokreślona"
 msgid "Not in the list: {items}"
 msgstr "Brak na liście: {items}"
 
-#: openexpress/updates.py:296
+#: openexpress/updates.py:298
 #, python-brace-format
 msgid "{part}: the server did not provide a download URL"
 msgstr "{part}: serwer nie podał adresu URL do pobrania"
 
-#: openexpress/updates.py:298
+#: openexpress/updates.py:300
 #, python-brace-format
 msgid "Downloading {name} {version} ({size})"
 msgstr "Pobieranie {name} {version} ({size})"
 
-#: openexpress/updates.py:307
+#: openexpress/updates.py:309
 #, python-brace-format
 msgid "{part}: the RGN format is not supported by openExpress"
 msgstr "{part}: format RGN nie jest obsługiwany przez openExpress"
