@@ -23,7 +23,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import i18n, netstatus, paths, service  # noqa: E402
+from openexpress import cache, i18n, netstatus, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
@@ -149,8 +149,9 @@ def cached_download(http, url: str, name: str) -> Path | None:
             return None
     except Exception:  # noqa: BLE001 - pictures are optional
         return None
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(resp.content)
+    with cache.using():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(resp.content)
     return target
 
 
@@ -228,10 +229,11 @@ def download_picture(http, url: str, name: str,
         return None, "not a PNG"
     target = paths.cache_dir() / "images" / name
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        partial = target.with_name(target.name + ".part")
-        partial.write_bytes(data)
-        partial.replace(target)  # never a half-written picture in the cache
+        with cache.using():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            partial = target.with_name(target.name + ".part")
+            partial.write_bytes(data)
+            partial.replace(target)  # never a half-written picture in the cache
     except OSError:
         return None, "cannot write the cache"
     return target, ""

@@ -7,6 +7,7 @@ conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 from __future__ import annotations
 
 import codecs
+import contextlib
 import logging
 import os
 import re
@@ -58,6 +59,14 @@ def _host_visible(path: Path) -> bool:
     home = str(Path.home())
     run_user = f"/run/user/{os.getuid()}/"
     return p.startswith((home + "/", run_user))
+
+
+def _staging():
+    """In the Flatpak a file is staged in the cache (transfer) on its way to the device: the
+    cache is held until it is deleted. Elsewhere nothing is staged there."""
+    from openexpress import cache
+
+    return cache.using() if in_flatpak() else contextlib.nullcontext()
 
 
 def _staging_dir() -> Path:
@@ -252,29 +261,31 @@ class GioStorage(Storage):
     def _write(self, real_path: str, data: bytes) -> None:
         # gvfs-mtp can't write streams; it can only copy a whole local file.
         what = _("Cannot write {path}").format(path=real_path)
-        fd, tmp = tempfile.mkstemp(prefix="openexpress-",
-                                   dir=_staging_dir() if in_flatpak() else None)
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(data)
-            self._copy_local(Path(tmp), real_path, None, what)
-        except OSError as e:
-            raise DeviceError(f"{what}: {e}") from e
-        finally:
-            os.unlink(tmp)
+        with _staging():
+            fd, tmp = tempfile.mkstemp(prefix="openexpress-",
+                                       dir=_staging_dir() if in_flatpak() else None)
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    f.write(data)
+                self._copy_local(Path(tmp), real_path, None, what)
+            except OSError as e:
+                raise DeviceError(f"{what}: {e}") from e
+            finally:
+                os.unlink(tmp)
 
     def _write_file(self, real_path: str, local, progress=None) -> None:
         what = _("Cannot write {path}").format(path=real_path)
         local = Path(local)
         if in_flatpak() and not _host_visible(local):
             # E.g. a file in the sandbox's private /tmp: stage it where the host can read it.
-            fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
-            os.close(fd)
-            try:
-                shutil.copyfile(local, tmp)
-                self._copy_local(Path(tmp), real_path, progress, what)
-            finally:
-                os.unlink(tmp)
+            with _staging():
+                fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
+                os.close(fd)
+                try:
+                    shutil.copyfile(local, tmp)
+                    self._copy_local(Path(tmp), real_path, progress, what)
+                finally:
+                    os.unlink(tmp)
             return
         self._copy_local(local, real_path, progress, what)
 

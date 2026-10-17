@@ -17,7 +17,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from openexpress import applog, download, paths
+from openexpress import applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.i18n import N_, _, human_size
 
@@ -273,7 +273,7 @@ class InstallReport:
     restart_required: bool = False
 
 
-def install(
+def _install(
     updates: list[SoftwareUpdate],
     storage: Storage,
     session=None,
@@ -327,6 +327,13 @@ def install(
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(size), posixpath.dirname(real))
     return report
+
+
+def install(*args, **kwargs) -> InstallReport:
+    """Install software updates (see _install), holding the cache from the download to the
+    copy to the device: it is not cleared meanwhile."""
+    with cache.using():
+        return _install(*args, **kwargs)
 
 
 def _delete_quietly(storage: Storage, path: str) -> None:

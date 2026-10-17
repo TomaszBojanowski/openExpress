@@ -24,7 +24,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from openexpress import applog, download, paths
+from openexpress import applog, cache, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.i18n import _, human_size
@@ -304,7 +304,7 @@ class MapReport:
     unlocks: list[str] = field(default_factory=list)
 
 
-def install(
+def _install(
     m: UniversalMap,
     all_maps: list[UniversalMap],
     storage: Storage,
@@ -384,6 +384,13 @@ def install(
              " (md5 %s)", m.name, m.version, len(report.written), applog.size(m.size),
              len(report.removed), len(report.unlocks), ", ".join(gmas) or "-")
     return report
+
+
+def install(*args, **kwargs) -> MapReport:
+    """Install a map (see _install), holding the cache from the download to the copy to the
+    device: it is not cleared meanwhile."""
+    with cache.using():
+        return _install(*args, **kwargs)
 
 
 def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,

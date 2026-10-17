@@ -7,13 +7,15 @@ installation has its own cache."""
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress import paths
-from openexpress.i18n import N_
+from openexpress.i18n import N_, _
 
 # The folders openExpress keeps in its cache, in the order they are shown; nothing else in
 # the cache folder is counted (or, later, deleted).
@@ -21,6 +23,52 @@ FOLDERS = ("maps", "images", "software", "transfer")
 # TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
 FOLDER_NAMES = {"maps": N_("Maps"), "images": N_("Pictures"),
                 "software": N_("Software updates"), "transfer": N_("Transfer")}
+
+
+# The lock of the cache, in its folder; a clearing never deletes it. Shared while files of the
+# cache are downloaded, written or read for an install (any process: the window, the command
+# line, the background service), exclusive while it is cleared.
+LOCK_NAME = "cache.lock"
+
+
+class CacheBusy(Exception):
+    """The cache is in use (a download or an install is running): it is not cleared now."""
+
+
+@contextlib.contextmanager
+def using():
+    """Hold the cache while its files are downloaded, written or read for an install. Many
+    may hold it at once; while a clearing runs, this waits for it (a clearing is short)."""
+    with _lock_file() as f:
+        fcntl.flock(f, fcntl.LOCK_SH)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def clearing():
+    """Hold the cache alone, to clear it. Refused at once (CacheBusy) while anything uses it;
+    no download starts until it ends."""
+    with _lock_file() as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise CacheBusy(_("The cache is in use (a download or an install is running). "
+                              "Try again later.")) from None
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def _lock_file():
+    root = paths.cache_dir()
+    root.mkdir(parents=True, exist_ok=True)
+    with open(root / LOCK_NAME, "a") as f:
+        yield f
 
 
 @dataclass
