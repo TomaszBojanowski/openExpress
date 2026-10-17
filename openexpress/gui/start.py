@@ -11,13 +11,15 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
-from openexpress.i18n import _  # noqa: E402
+from openexpress.i18n import _, pgettext  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
 TILE_WIDTH = 200
+# A longer text wraps instead of widening its tile (so that tiles share a line).
+TEXT_CHARS = 40
 
 # The tiles of the start page only (loaded once per display): a quiet 1px edge around the
 # tile of a connected device; the accent only under the pointer or with the keyboard focus.
@@ -45,9 +47,23 @@ def load_css(display) -> None:
                                               Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 
+def _tile_grid() -> Gtk.FlowBox:
+    return Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
+                       activate_on_single_click=True, min_children_per_line=1,
+                       max_children_per_line=4, column_spacing=12, row_spacing=12,
+                       valign=Gtk.Align.START)
+
+
+def _heading(text: str) -> Gtk.Label:
+    label = Gtk.Label(label=text, xalign=0, visible=False)
+    label.add_css_class("heading")
+    return label
+
+
 class StartPage:
-    """The page "Devices": a notice on top (the state on USB, while no device is open) and a
-    tile for each device. `on_open(index)` is called with the place of the tile clicked."""
+    """The page "Devices": a notice on top (the state on USB, while no device is open), the
+    tiles of the devices connected, then those of the devices remembered and not connected.
+    `on_open(index)` is called with the place of the tile clicked in the whole list."""
 
     def __init__(self, on_open=None, header_start=(), header_end=()):
         self.header = Adw.HeaderBar()
@@ -79,18 +95,24 @@ class StartPage:
         box.append(self.notice_group)
 
         # TRANSLATORS: heading above the tiles of the devices connected now
-        self.connected_title = Gtk.Label(label=_("Connected"), xalign=0, visible=False)
-        self.connected_title.add_css_class("heading")
-        box.append(self.connected_title)
-        self.grid = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
-                                activate_on_single_click=True, min_children_per_line=1,
-                                max_children_per_line=4, column_spacing=12, row_spacing=12,
-                                valign=Gtk.Align.START)
+        self.connected_title = _heading(_("Connected"))
+        self.grid = _tile_grid()
+        # TRANSLATORS: heading above the tiles of the devices seen before, not connected now
+        self.remembered_title = _heading(_("Remembered"))
+        self.remembered_grid = _tile_grid()
+        self.remembered_grid.set_visible(False)
+        # How many tiles come before the remembered ones (a list: the handlers hold no widget).
+        self._before_remembered = [0]
         if on_open is not None:
-            # The place of the tile only: the handler holds no widget.
+            # The place of the tile only: the handlers hold no widget.
             self.grid.connect("child-activated",
                               lambda _grid, child: on_open(child.get_index()))
-        box.append(self.grid)
+            self.remembered_grid.connect(
+                "child-activated", lambda _grid, child, before=self._before_remembered:
+                on_open(before[0] + child.get_index()))
+        for widget in (self.connected_title, self.grid, self.remembered_title,
+                       self.remembered_grid):
+            box.append(widget)
         clamp = Adw.Clamp(maximum_size=900, child=box)
         self.stack.add_named(Gtk.ScrolledWindow(child=clamp,
                                                 hscrollbar_policy=Gtk.PolicyType.NEVER),
@@ -118,21 +140,96 @@ class StartPage:
         whether the notice on top is shown."""
         self.notice_group.set_visible(notice)
         entries = list(entries)
+        connected = [e for e in entries if e[0].connected]
+        remembered = [e for e in entries if not e[0].connected]
         if entries != self._entries:  # the same tiles keep their widgets
             self._entries = entries
-            self.grid.remove_all()
-            for tile, how in entries:
-                self.grid.append(tile_widget(tile, how))
-        self.connected_title.set_visible(any(tile.connected for tile, _how in entries))
+            self._before_remembered[0] = len(connected)
+            for grid, part in ((self.grid, connected), (self.remembered_grid, remembered)):
+                grid.remove_all()
+                for tile, how in part:
+                    grid.append(tile_widget(tile, how))
+        self.connected_title.set_visible(bool(connected))
+        self.remembered_title.set_visible(bool(remembered))
+        self.remembered_grid.set_visible(bool(remembered))
         self.stack.set_visible_child_name("content")
 
     def tiles(self) -> list:
-        """The tiles shown, in order."""
-        found, child = [], self.grid.get_first_child()
-        while child is not None:
-            found.append(child)
-            child = child.get_next_sibling()
+        """The tiles shown, in order: the connected ones, then the remembered ones."""
+        found = []
+        for grid in (self.grid, self.remembered_grid):
+            child = grid.get_first_child()
+            while child is not None:
+                found.append(child)
+                child = child.get_next_sibling()
         return found
+
+
+class RememberedPage:
+    """The read-only view of a device remembered and not connected: what was known of it
+    when it was last seen, and its last sync. It offers nothing to do: Sync and the rows of
+    updates and maps cannot be used, the banner says why. It is given words only (never a
+    device, an address or a unit ID)."""
+
+    def __init__(self):
+        header = Adw.HeaderBar()
+        # TRANSLATORS: button that starts syncing
+        self.sync_button = Gtk.Button(label=_("Sync"), sensitive=False)
+        header.pack_end(self.sync_button)
+        self.banner = Adw.Banner(
+            title=_("Device not connected — connect it to sync or update"), revealed=True)
+        self.sync_button.set_tooltip_text(self.banner.get_title())
+
+        content = Adw.PreferencesPage()
+        hero = Adw.PreferencesGroup()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6,
+                      halign=Gtk.Align.CENTER, margin_bottom=12)
+        box.append(Gtk.Image(icon_name=APP_ID, pixel_size=128))
+        self.name_label = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
+        self.name_label.add_css_class("title-1")
+        self.version_label = Gtk.Label()
+        self.version_label.add_css_class("dim-label")
+        self.seen_label = Gtk.Label()
+        self.seen_label.add_css_class("dim-label")
+        for widget in (self.name_label, self.version_label, self.seen_label):
+            box.append(widget)
+        hero.add(box)
+        content.add(hero)
+
+        group = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
+        self.last_sync_row = Adw.ActionRow(title=_("Last sync"))
+        group.add(self.last_sync_row)
+        content.add(group)
+
+        group = Adw.PreferencesGroup(title=pgettext("tab", "Updates"))
+        check = _("Connect the device to check")
+        self.update_row = Adw.ActionRow(title=_("Device software"), subtitle=check,
+                                        sensitive=False)
+        self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), subtitle=check,
+                                     sensitive=False)
+        group.add(self.update_row)
+        group.add(self.map_row)
+        content.add(group)
+
+        group = Adw.PreferencesGroup(title=_("Tools"))
+        self.part_row = Adw.ActionRow(title=_("Part number"), subtitle_selectable=True)
+        group.add(self.part_row)
+        content.add(group)
+
+        view = Adw.ToolbarView(content=content)
+        view.add_top_bar(header)
+        view.add_top_bar(self.banner)
+        self.page = Adw.NavigationPage(title=_("Devices"), tag="remembered", child=view)
+
+    def show(self, name: str, version: str, part_number: str, last_seen: str,
+             last_sync: str) -> None:
+        name = name or _("Garmin device")
+        self.page.set_title(name)
+        self.name_label.set_label(name)
+        self.version_label.set_label(version)
+        self.seen_label.set_label(last_seen)
+        self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
+        self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
 
 
 def tile_widget(tile, how: str) -> Gtk.FlowBoxChild:
@@ -142,11 +239,12 @@ def tile_widget(tile, how: str) -> Gtk.FlowBoxChild:
                   margin_bottom=12, margin_start=12, margin_end=12)
     box.append(Gtk.Image(icon_name=APP_ID, pixel_size=TILE_ICON_SIZE))
     name = Gtk.Label(label=tile.description or _("Garmin device"), wrap=True,
-                     justify=Gtk.Justification.CENTER)
+                     justify=Gtk.Justification.CENTER, max_width_chars=TEXT_CHARS)
     name.add_css_class("heading")
     box.append(name)
     if how:
-        label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER)
+        label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER,
+                          max_width_chars=TEXT_CHARS)
         label.add_css_class("dim-label")
         label.add_css_class("caption")
         box.append(label)

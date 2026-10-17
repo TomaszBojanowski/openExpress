@@ -3300,6 +3300,17 @@ class FakeNavigation:
         pass
 
 
+class FakeRememberedPage:
+    """The read-only view of a remembered device: what it shows is recorded."""
+
+    def __init__(self):
+        self.page = "remembered view"
+        self.shown = []
+
+    def show(self, **fields):
+        self.shown.append(fields)
+
+
 class FakeSection:
     def __init__(self):
         self.loaded, self.state, self.empty = False, None, None
@@ -3316,7 +3327,7 @@ class FakeSection:
 
 START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
-                 "_on_popped", "_reread_connected")
+                 "_on_popped", "_reread_connected", "_show_remembered")
 
 
 def start_stand_in(start, sections, win=None):
@@ -3326,6 +3337,7 @@ def start_stand_in(start, sections, win=None):
 
     win = win or types.SimpleNamespace(session=None, busy=False, _choices=None, errors=[])
     win.start, win.device_view = start, "device view"
+    win.remembered = FakeRememberedPage()
     win.navigation = FakeNavigation(start.page)
     win.sections = sections
     win.pages = types.SimpleNamespace(get_visible_child_name=lambda: "watch")
@@ -3421,15 +3433,17 @@ def test_a_tile_opens_its_device_and_back_keeps_it_open(start_window, monkeypatc
 
 
 def test_unplugging_the_open_device_shows_the_start_page(start_window, monkeypatch):
-    """The open device unplugged: the start page, without tiles, with the notice of the USB
-    state on top."""
+    """The open device unplugged: the start page, with the notice of the USB state on top
+    and no device connected; the one unplugged is remembered (T3)."""
     win = start_window
     one_watch(win, monkeypatch)
     win.refresh_device()
     win.session = None  # as _on_mount_removed does
     win.show_device()
     assert win.navigation.stack == ["start page"]
-    assert win.start.shown[-1] == ([], True)
+    tiles, notice = win.start.shown[-1]
+    assert [(name, on) for name, on, _how in tiles] == [("Test watch", False)]
+    assert notice is True
 
 
 def test_refresh_on_the_start_page_stays_there(start_window, monkeypatch):
@@ -3598,7 +3612,9 @@ def test_reading_the_list_again_never_opens_a_device_view(start_window, monkeypa
     win._on_refresh()
     run_later(later)
     assert win.navigation.stack == ["start page"]
-    assert drawn_names(win)[-1] == ["Test watch"]
+    # The Edge is no longer connected; it is remembered (T3).
+    assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
+        ("Test watch", True), ("Edge 1050", False)]
 
 
 def test_another_device_unplugged_while_one_is_open_updates_the_list(start_window, monkeypatch,
@@ -3621,7 +3637,10 @@ def test_another_device_unplugged_while_one_is_open_updates_the_list(start_windo
     MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
     run_later(later)
     assert win.session is opened and win.navigation.stack == ["start page"]
-    assert drawn_names(win, drawn) == [["Test watch"]]
+    # Drawn once: the Edge is no longer connected, it is remembered (T3).
+    assert len(win.start.shown) == drawn + 1
+    assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
+        ("Test watch", True), ("Edge 1050", False)]
 
 
 def test_a_pending_refresh_stays_on_the_start_page(start_window, monkeypatch, tmp_path,
@@ -3729,3 +3748,167 @@ def test_the_same_list_keeps_its_tiles():
     assert all(a is b for a, b in zip(before, start.tiles(), strict=True))
     start.show(entries[:1], False)
     assert len(start.tiles()) == 1 and start.tiles()[0] is not before[0]
+
+
+# --- remembered devices on the start page (D5, T3) ---------------------------------------------
+
+TEST_WATCH = 1234567890  # the <Id> of conftest's test watch (made up)
+VARIA, VENU = 3000000003, 3000000004
+DAY = 86400.0
+
+
+def remember_others(now):
+    """The test watch (seen long ago), a Varia (seen yesterday) and a Venu 2 (three days ago)
+    remembered by this installation."""
+    from openexpress import known_devices
+
+    known_devices.remember(TEST_WATCH, "Test watch", "006-B0000-00", "1.00", "mtp",
+                           now=now - 9 * DAY)
+    known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=now - DAY)
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=now - 3 * DAY)
+
+
+def drawn_tiles(win):
+    """(name, connected, how) of each tile of the last drawing of the start page."""
+    return win.start.shown[-1][0]
+
+
+def nothing_connected(win, monkeypatch):
+    """No Garmin device on USB: the start page with the notice and what is remembered."""
+    monitor_with(monkeypatch)
+    win.refresh_device()
+    assert win.session is None and win.navigation.stack == ["start page"]
+
+
+def test_the_start_page_lists_remembered_devices_after_the_connected(start_window, monkeypatch,
+                                                                     tmp_path, device_root):
+    """T3: the devices remembered and not connected come after the connected ones, the one
+    seen last first; one both connected and remembered is listed once, as connected. A
+    remembered tile says its version and when it was seen; never a unit ID."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    tiles = drawn_tiles(win)
+    assert [(name, on) for name, on, _how in tiles] == [
+        ("Test watch", True), ("Edge 1050", True), ("Varia RTL515", False), ("Venu 2", False)]
+    assert tiles[2][2].startswith("Software 3.36 · Last seen ")
+    assert tiles[3][2].startswith("Software 19.05 · Last seen ")
+    assert not any(str(u) in how for _n, _on, how in tiles
+                   for u in (TEST_WATCH, VARIA, VENU, 3000000002))
+
+
+def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
+    """T3: a remembered device that is not connected opens its read-only view: its name,
+    version, when it was seen and its last sync, as remembered. Nothing is opened, nothing
+    is read from USB, nothing is asked of a server; back is the start page."""
+    import time
+
+    from openexpress import service
+    from openexpress.gui import app
+
+    win = start_window
+    remember_others(time.time())
+    service.record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
+    nothing_connected(win, monkeypatch)
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    assert names == ["Varia RTL515", "Venu 2", "Test watch"]
+    opening = count_opening(monkeypatch)
+
+    def no_device(*_a, **_k):
+        raise AssertionError("a device was looked for")
+
+    for name in ("find_all_devices", "probe", "usb_state", "usb_still_there"):
+        monkeypatch.setattr(app, name, no_device)
+    monkeypatch.setattr(app.service, "make_client", no_device)
+    win._open_tile(names.index("Venu 2"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert opening == [] and win.session is None
+    venu = win.remembered.shown[-1]
+    assert (venu["name"], venu["version"], venu["part_number"]) == (
+        "Venu 2", "Software 19.05", "006-B3703-00")
+    assert venu["last_seen"].startswith("Last seen ")
+    assert venu["last_sync"] != "Not synced yet with openExpress" and "2" in venu["last_sync"]
+    back(win)
+    assert win.navigation.stack == ["start page"]
+    win._open_tile(names.index("Varia RTL515"))
+    assert win.remembered.shown[-1]["last_sync"] == "Not synced yet with openExpress"
+    assert not any(str(u) in str(f) for f in win.remembered.shown for u in (VARIA, VENU))
+
+
+def test_a_connected_tile_still_opens_its_device(start_window, monkeypatch, tmp_path,
+                                                 device_root):
+    """Guards T2: with remembered devices on the list, a connected tile opens that device,
+    a remembered one opens nothing."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    win._open_tile(names.index("Edge 1050"))
+    assert win.session.device.description == "Edge 1050"
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_a_device_plugged_in_while_a_remembered_one_is_shown_opens_its_view(start_window,
+                                                                            monkeypatch):
+    """D7 also from the read-only view: one device plugged in and detected: its view."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    nothing_connected(win, monkeypatch)
+    win._open_tile(0)
+    assert win.navigation.stack == ["start page", "remembered view"]
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    assert win.session is not None
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+@pytest.mark.needs_display
+def test_the_remembered_section_only_with_remembered_devices():
+    """The section "Remembered" with its tiles (unframed) only when there are some; the
+    connected ones above it."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name, connected):
+        return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
+                    None if connected else 1.0, "006-B4532-00", None, None)
+
+    start = StartPage()
+    start.show([(tile("fēnix 8", True), "Over USB (MTP) · Software 23.39")], False)
+    assert start.connected_title.get_visible()
+    assert not start.remembered_title.get_visible()
+    start.show([(tile("fēnix 8", True), "x"), (tile("Venu 2", False), "y")], False)
+    assert start.remembered_title.get_visible() and start.remembered_title.get_label() == (
+        "Remembered")
+    connected, remembered = start.tiles()
+    assert connected.get_parent() is start.grid
+    assert remembered.get_parent() is start.remembered_grid
+    assert connected.has_css_class("connected") and not remembered.has_css_class("connected")
+    start.show([(tile("Venu 2", False), "y")], True)
+    assert not start.connected_title.get_visible() and start.remembered_title.get_visible()
+
+
+@pytest.mark.needs_display
+def test_the_read_only_view_offers_no_action():
+    """The read-only view: the banner says the device is not connected; Sync and the rows of
+    updates and maps cannot be used."""
+    from openexpress.gui.start import RememberedPage
+
+    view = RememberedPage()
+    view.show(name="Venu 2", version="Software 19.05", part_number="006-B3703-00",
+              last_seen="Last seen 2026-10-17 14:27", last_sync="Not synced yet with openExpress")
+    assert view.banner.get_revealed()
+    assert view.banner.get_title() == ("Device not connected — connect it to sync or update")
+    assert not view.sync_button.get_sensitive()
+    assert not view.update_row.get_sensitive() and not view.map_row.get_sensitive()
+    assert view.page.get_title() == "Venu 2"

@@ -33,7 +33,7 @@ from openexpress import (  # noqa: E402
     service,
 )
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
+from openexpress.cli import FINISH_STEPS_WINDOW, _human, _seen_at  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
@@ -59,8 +59,9 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import start  # noqa: E402
-from openexpress.gui.start import StartPage  # noqa: E402
+from openexpress.gui.start import RememberedPage, StartPage  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
+from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
     extract_consumer_from_dll,
@@ -392,6 +393,12 @@ def session_summary(s) -> DeviceSummary:
 
 # The target of the tile of the device open now: its view, without opening it again.
 OPEN = "open"
+
+
+def remembered_subtitle(known) -> str:
+    """A remembered device that is not connected: its version and when it was last seen."""
+    return " · ".join((_("Software {version}").format(version=known.software_version),
+                       _("Last seen {when}").format(when=_seen_at(known.last_seen))))
 
 
 def show_not_for_mass_storage(sec) -> None:
@@ -813,6 +820,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.navigation = Adw.NavigationView()
         self.navigation.add(self.start.page)  # the first one added is shown
         self.navigation.add(self.device_view)
+        self.remembered = RememberedPage()  # the read-only view of a remembered device
+        self.navigation.add(self.remembered.page)
         self.navigation.connect("popped", self._on_popped)
 
         self.toasts = Adw.ToastOverlay(child=self.navigation)
@@ -1380,11 +1389,16 @@ class MainWindow(Adw.ApplicationWindow):
         pressed on the start page, which stays then."""
         stay = self._stay_on_start or self._reopening
         self._stay_on_start = self._reopening = False
-        if stay and self._on_start_page():
-            self._render_start()
+        visible = self.navigation.get_visible_page()
+        if visible is self.device_view:
             return
-        if not self._on_start_page():
+        if stay:
+            if visible is self.start.page:
+                self._render_start()
             return
+        if visible is not self.start.page:
+            # The read-only view of a remembered device: the device view takes its place.
+            self.navigation.pop_to_page(self.start.page)
         if not self._navigated:  # the window just opened: straight to the device
             self._navigated = True
             self.navigation.set_animate_transitions(False)
@@ -1394,9 +1408,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.navigation.push(self.device_view)
 
     def _on_popped(self, _navigation, page) -> None:
-        """Back from the device view (the arrow, Alt+Left, a swipe, or the window itself):
-        the open device stays open; the start page is drawn anew."""
-        if page is self.device_view:
+        """Back from the device view or from the read-only view of a remembered device (the
+        arrow, Alt+Left, a swipe, or the window itself): the open device stays open; the
+        start page is drawn anew (the same tiles keep their widgets)."""
+        if page is not self.start.page:
             self._render_start()
 
     def _render_start(self) -> None:
@@ -1425,11 +1440,16 @@ class MainWindow(Adw.ApplicationWindow):
         return bool(uri) and summary.found.uri.rstrip("/") == uri
 
     def _show_tiles(self, summaries: list, notice: bool) -> None:
-        """The tiles of these devices; what each one opens is kept here, not in the tile."""
-        entries = devicelist.entries(summaries, {}, None, logged_in=False)
-        self._start_targets = [OPEN if self._is_open(source) else source.found
+        """The tiles of these devices, then of those remembered and not connected (from
+        devices.json, the only thing read here); what each one opens is kept here, not in
+        the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
+        entries = devicelist.entries(summaries, known_devices.load(), None, logged_in=False)
+        self._start_targets = [source if isinstance(source, KnownDevice)
+                               else OPEN if self._is_open(source) else source.found
                                for _tile, source in entries]
-        self.start.show([(tile, choice_subtitle(source)) for tile, source in entries], notice)
+        self.start.show([(tile, remembered_subtitle(source)
+                          if isinstance(source, KnownDevice) else choice_subtitle(source))
+                         for tile, source in entries], notice)
 
     def _open_tile(self, index: int) -> None:
         """A tile clicked: the open device's view, or that device opened."""
@@ -1438,8 +1458,30 @@ class MainWindow(Adw.ApplicationWindow):
         target = self._start_targets[index]
         if target is OPEN:
             self._show_device_view()
+        elif isinstance(target, KnownDevice):
+            self._show_remembered(target)
         else:
             self.open_choice(target)
+
+    def _show_remembered(self, known) -> None:
+        """The read-only view of a device remembered and not connected: what was known when
+        it was last seen, and its last sync, from this computer only. Nothing is opened or
+        asked; the open device (if any) and the detection are not touched."""
+        if not self._on_start_page():
+            return
+        data = service.load_last_sync(known.unit_id)
+        if data:
+            last_sync = (format_when(data.get("time", time.time())) + " · "
+                         + service.describe_counts(data))
+        else:
+            last_sync = _("Not synced yet with openExpress")
+        self.remembered.show(
+            name=known.description,
+            version=_("Software {version}").format(version=known.software_version),
+            part_number=known.part_number,
+            last_seen=_("Last seen {when}").format(when=_seen_at(known.last_seen)),
+            last_sync=last_sync)
+        self.navigation.push(self.remembered.page)
 
     def show_device(self) -> None:
         self.maps_cache = self.updates_cache = self.apps_cache = None
