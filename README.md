@@ -29,6 +29,8 @@ flatpak install --user openexpress-0.5.2.flatpak
 The GNOME runtime comes from Flathub. More in [Install](#install), including the version
 from source.
 
+Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
+
 Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
 virtual machine. How the Garmin services and the watch's file layout work was learned by
