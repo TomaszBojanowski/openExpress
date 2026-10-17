@@ -1928,6 +1928,107 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
     assert maps.empty.get_title() == "Choose a device"
 
 
+# --- several devices: edge cases (after K1–K7) -----------------------------------------------
+
+
+def another_drive(world, unit_id, label="GARMIN 2", port="1-5", devnum=13, disk="sdc"):
+    """One more Varia drive, with its own unit ID."""
+    drive = world.drive(label, port=port, devnum=devnum, disk=disk)
+    xml = Path(drive.root.path) / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(RTL515_XML.replace("3000000003", str(unit_id)))
+    return drive
+
+
+def unplug_drive(win, monkeypatch, drive, disk, *left):
+    """A drive unplugged: gone from /sys and from gvfs; the window hears of it."""
+    from openexpress.gui.app import MainWindow
+
+    for name in (disk, disk + "1"):
+        (win.world.drives.block / name).unlink()
+    monitor_with(monkeypatch, *left)
+    MainWindow._on_mount_removed(win, None, drive)
+    win.timers.fire()
+
+
+def unplug_mtp(win, found, usb_folder=None):
+    """An MTP device unplugged: gone from gvfs (and from /sys); the window hears of it."""
+    from openexpress.gui.app import MainWindow
+
+    win.world.offered.remove(found)
+    if usb_folder is not None:
+        for f in usb_folder.iterdir():
+            f.unlink()
+        usb_folder.rmdir()
+    MainWindow._on_mount_removed(win, None, FakeMount(found.uri))
+    win.timers.fire()
+
+
+def rows_of(win):
+    """The rows of the list now shown: name and subtitle, as the window writes them."""
+    from openexpress.gui.app import choice_subtitle
+
+    return [(s.description, choice_subtitle(s)) for s in win._choices]
+
+
+def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, device_root):
+    """A1: three devices at once: three rows, each with its name and how it is connected."""
+    win = choosing_window
+    three_devices(win, monkeypatch, tmp_path, device_root)
+    assert rows_of(win) == [("Test watch", "Over USB (MTP) · Software 23.39"),
+                            ("Edge 1050", "Over USB (MTP) · Software 33.11"),
+                            ("Varia RTL515", "USB drive · Software 3.36")]
+
+
+def test_four_devices_give_four_rows(choosing_window, monkeypatch, tmp_path, device_root):
+    """A2: two MTP devices and two drives: four rows."""
+    win = choosing_window
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    monitor_with(monkeypatch, win.world.drive(), another_drive(win.world, 3000000004))
+    win.refresh_device()
+    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050"),
+                                  ("ums", "Varia RTL515"), ("ums", "Varia RTL515")]]
+
+
+def test_unplugging_one_by_one_down_to_none(choosing_window, monkeypatch):
+    """A3: three drives on the list, unplugged one after another: two on the list, then the
+    last one open (D7), then no device at all; never a list of one or of none."""
+    win = choosing_window
+    first = win.world.drive()
+    second = another_drive(win.world, 3000000004)
+    third = another_drive(win.world, 3000000005, "GARMIN 3", "1-6", 14, "sdd")
+    monitor_with(monkeypatch, first, second, third)
+    win.refresh_device()
+    assert len(win._choices) == 3
+    unplug_drive(win, monkeypatch, third, "sdd", first, second)
+    assert win.session is None and len(win._choices) == 2 and win.built == []
+    unplug_drive(win, monkeypatch, second, "sdc", first)
+    (s,) = win.built
+    assert s is win.session and s.storage.device_uri == first.root.get_uri()
+    unplug_drive(win, monkeypatch, first, "sdb")
+    assert win.session is None and win.built[-1] is None and not win._choices
+    assert all(len(shown) > 1 for shown in win.shown_choices)
+
+
+@pytest.mark.parametrize("left", ["mtp", "ums"])
+def test_the_one_device_left_opens_whatever_its_kind(choosing_window, monkeypatch, left):
+    """A4 (D7): an MTP device and a drive on the list; one goes: the other one opens, an MTP
+    device as well as a drive."""
+    win, world = choosing_window, choosing_window.world
+    drive = world.drive()
+    monitor_with(monkeypatch, drive)
+    world.plug("51b4")
+    world.offer()
+    win.refresh_device()
+    assert len(win._choices) == 2
+    if left == "mtp":
+        unplug_drive(win, monkeypatch, drive, "sdb")
+    else:
+        unplug_mtp(win, world.offered[0], world.root / "garmin51b4")
+    (s,) = win.built
+    assert s is win.session and s.mass_storage == (left == "ums")
+    assert s.device.description == ("Varia RTL515" if left == "ums" else "Test watch")
+
+
 # --- installing an update on a Garmin drive (step 7) ----------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
