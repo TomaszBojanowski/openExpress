@@ -970,7 +970,6 @@ def test_without_a_login_the_fallback_is_used_too(pictures):
 
 @pytest.mark.parametrize("url, response, error, why", [
     ("https://example.org/x.png", None, None, "not res.garmin.com"),
-    ("http://res.garmin.com/x.png", None, None, "not res.garmin.com"),
     ("https://res.garmin.com.example.org/x.png", None, None, "not res.garmin.com"),
     (PICTURE_URL, PictureResponse(status=302), None, "HTTP 302"),  # redirects are not followed
     (PICTURE_URL, PictureResponse(status=404), None, "HTTP 404"),
@@ -1396,3 +1395,43 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
         None, "not a file name")
     assert asked == []
     assert {p for p in Path(xdg).rglob("*") if p.is_file()} == before
+
+
+# --- pictures over HTTPS only (after 4f3ac65) ---------------------------------------------------
+
+
+def test_a_picture_over_http_is_asked_over_https(xdg):
+    """A picture or an icon whose address is plain HTTP is asked over HTTPS, as every
+    download (download.secure_url); it is saved as before."""
+    from openexpress.gui import app
+
+    icon = types.SimpleNamespace(ok=True, content=b"icon")
+
+    class IconHttp:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, url, **kw):
+            self.calls.append(url)
+            return icon
+
+    http = IconHttp()
+    assert app.cached_download(http, "http://services.garmin.com/icon/1", "app-1.png")
+    assert http.calls == ["https://services.garmin.com/icon/1"]
+    pictures = PictureHttp()
+    path, why = app.download_picture(pictures, "http://res.garmin.com/en/a.png", "device-a.png")
+    assert (path is not None, why) == (True, "")
+    assert [url for url, _kw in pictures.calls] == ["https://res.garmin.com/en/a.png"]
+
+
+@pytest.mark.parametrize("url", ["ftp://res.garmin.com/a.png", "file:///etc/passwd", "a.png"])
+def test_a_picture_over_another_scheme_is_not_asked(xdg, url, log_file):
+    """Any other address: nothing is asked or saved, the icon stays; one line in the log, no
+    message (pictures are optional)."""
+    from openexpress.gui import app
+
+    http = PictureHttp()
+    assert app.cached_download(http, url, "app-1.png") is None
+    assert app.download_picture(http, url, "device-a.png") == (None, "not HTTPS")
+    assert http.calls == []
+    assert not any(p.is_file() for p in (Path(xdg) / "cache").rglob("*.png"))

@@ -26,6 +26,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - import
 from openexpress import (  # noqa: E402
     cache,
     devicelist,
+    download,
     i18n,
     known_devices,
     netstatus,
@@ -169,6 +170,11 @@ def cached_download(http, url: str, name: str) -> Path | None:
     if target.exists() and target.stat().st_size:
         return target
     try:
+        url = download.secure_url(url)  # HTTPS only, as every download
+    except download.DownloadError:
+        log.info("picture: not an HTTPS address, not asked")
+        return None
+    try:
         resp = http.get(url, timeout=20)
         if not resp.ok or not resp.content:
             return None
@@ -241,6 +247,10 @@ def download_picture(http, url: str, name: str,
     target = picture_target(name)
     if target is None:
         return None, "not a file name"
+    try:
+        url = download.secure_url(url)  # HTTPS only, as every download
+    except download.DownloadError:
+        return None, "not HTTPS"
     if not url.startswith(PICTURE_HOST):
         return None, "not res.garmin.com"
     deadline = clock() + PICTURE_TIMEOUT_S
