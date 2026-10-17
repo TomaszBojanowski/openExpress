@@ -271,6 +271,9 @@ class TruncatingStorage(LocalStorage):
 
 
 class CrashingStorage(LocalStorage):
+    # Half a file under the real name, as over MTP: not a drive's temporary copy.
+    replaces_atomically = False
+
     def _write_file(self, real_path, local, progress=None):
         self._p(real_path).write_bytes(b"half")
         raise DeviceError("unplugged")

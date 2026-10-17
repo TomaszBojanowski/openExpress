@@ -259,10 +259,12 @@ def cache_path(u: SoftwareUpdate) -> Path:
 
 
 def check_space(storage: Storage, updates: list[SoftwareUpdate]) -> tuple[int, int | None]:
-    """Return (bytes needed, bytes free). Files being replaced are not counted."""
+    """Return (bytes needed, bytes free). A file being replaced counts as freed only where
+    it is deleted before the new one is written (MTP); on a drive it stays until the new
+    one is whole, so all of the new file must fit beside it."""
     need = 0
     for u in updates:
-        existing = storage.size(u.device_path) or 0
+        existing = 0 if storage.replaces_atomically else storage.size(u.device_path) or 0
         need += max(0, (u.size or 0) - existing)
     return need, storage.free_space()
 
@@ -316,7 +318,10 @@ def _install(
             real = storage.write_file(u.device_path, local, transfer_progress)
             ok = storage.size(real) == size
         except Exception:
-            _delete_quietly(storage, u.device_path)
+            # Half a new file under the name (MTP) must go; on a drive the name still holds
+            # the old, working file (the half copy is gone already): it stays.
+            if not storage.replaces_atomically:
+                _delete_quietly(storage, u.device_path)
             raise
         if not ok:
             # A truncated firmware file must not stay where the watch would install it.

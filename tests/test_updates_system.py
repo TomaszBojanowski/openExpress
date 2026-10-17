@@ -1103,3 +1103,93 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
         fn()
     assert len(calls["kw"]) == 2
     assert all(kw["download_progress"] is win.fraction for kw in calls["kw"])
+
+
+# --- a failed copy keeps the old file (review of 106cd25) ---------------------------------------
+
+
+def disk_full_halfway(monkeypatch, name=""):
+    """Writing a temporary copy (".<name>.openexpress-part", of a file whose name holds
+    `name`) fails halfway: the disk is full. Other files are written as usual."""
+    import errno
+    import os
+
+    from openexpress.device.storage import PART_SUFFIX
+
+    real_open, real_write, parts = os.open, os.write, set()
+
+    def open_(path, *args, **kwargs):
+        fd = real_open(path, *args, **kwargs)
+        if str(path).endswith(PART_SUFFIX) and name in Path(path).name:
+            parts.add(fd)
+        return fd
+
+    def write(fd, data):
+        if fd in parts:
+            real_write(fd, bytes(data)[:max(1, len(data) // 2)])
+            raise OSError(errno.ENOSPC, "No space left on device")
+        return real_write(fd, data)
+
+    monkeypatch.setattr(os, "open", open_)
+    monkeypatch.setattr(os, "write", write)
+
+
+def the_font(tmp_path, monkeypatch):
+    (font,) = [u for u in updates.parse_updates(lower_keys(server_answer())) if not u.is_system]
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(FONT)
+        return dest
+
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    return font
+
+
+def test_a_failed_copy_keeps_the_old_file_on_a_drive(device_root, tmp_path, monkeypatch):
+    """A drive (USB mass storage, --path) writes a new file under a temporary name and
+    renames it when it is whole. A copy that fails halfway (disk full) leaves the old,
+    working file as it was and no temporary file: the old one is never deleted."""
+    from openexpress.device.storage import PART_SUFFIX, DeviceError
+
+    font = the_font(tmp_path, monkeypatch)
+    old = device_root / "GARMIN" / "Font" / "006-D0000-00.fnt"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"OLD")
+    disk_full_halfway(monkeypatch)
+    with pytest.raises(DeviceError):
+        updates.install([font], LocalStorage(device_root))
+    assert old.read_bytes() == b"OLD"
+    assert not [p.name for p in old.parent.iterdir() if p.name.endswith(PART_SUFFIX)]
+
+
+def test_a_drive_needs_room_for_the_new_file_beside_the_old(device_root, tmp_path, monkeypatch):
+    """On a drive the old file stays until the new one is whole: the free space must hold
+    all of the new file (and the margin), whatever the old one takes."""
+    font = the_font(tmp_path, monkeypatch)
+    old = device_root / "GARMIN" / "Font" / "006-D0000-00.fnt"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"OLD")
+    storage = LocalStorage(device_root)
+    monkeypatch.setattr(storage, "free_space", lambda: font.size + updates.SPACE_MARGIN - 1)
+    assert updates.check_space(storage, [font])[0] == font.size
+    with pytest.raises(updates.UpdateError, match="Not enough space"):
+        updates.install([font], storage)
+    monkeypatch.setattr(storage, "free_space", lambda: font.size + updates.SPACE_MARGIN)
+    updates.install([font], storage)
+    assert old.read_bytes() == FONT
+
+
+def test_over_mtp_the_old_file_still_counts_as_freed(device_root, tmp_path, monkeypatch):
+    """Guards the MTP way (gvfs deletes the old file before it sends the new one): the old
+    file's size still counts as freed there."""
+    font = the_font(tmp_path, monkeypatch)
+    old = device_root / "GARMIN" / "Font" / "006-D0000-00.fnt"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"OLD")
+
+    class OverMtp(LocalStorage):
+        replaces_atomically = False
+
+    assert updates.check_space(OverMtp(device_root), [font])[0] == font.size - 3

@@ -280,8 +280,11 @@ def removal_list(maps: list[UniversalMap], target: UniversalMap, rewriting: bool
 def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
     freed = sum(storage.size(p) or 0 for p in removing)
     gone = {p.casefold() for p in removing}
-    replaced = sum(storage.size(f.device_path) or 0 for f in m.files
-                   if f.device_path.casefold() not in gone)
+    # A file being replaced frees its space before the new one is written over MTP only; on
+    # a drive it stays until the new one is whole.
+    replaced = 0 if storage.replaces_atomically else sum(
+        storage.size(f.device_path) or 0 for f in m.files
+        if f.device_path.casefold() not in gone)
     return max(0, m.size - freed - replaced)
 
 
@@ -395,12 +398,14 @@ def install(*args, **kwargs) -> MapReport:
 
 def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,
                    keep: bool = False) -> str:
-    """Writes one file and checks its size. A file that failed is deleted, unless `keep`."""
+    """Writes one file and checks its size. A file that failed is deleted, unless `keep`,
+    or unless the storage keeps the old file until the new one is whole (a drive): then the
+    old file is what is left under the name, and it stays."""
     try:
         real = storage.write_file(f.device_path, local, transfer_progress)
         ok = storage.size(real) == f.size
     except Exception:
-        if not keep:
+        if not keep and not storage.replaces_atomically:
             _delete_quietly(storage, f.device_path)
         raise
     if not ok:

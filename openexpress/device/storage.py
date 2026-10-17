@@ -45,6 +45,11 @@ class Storage(ABC):
     label = "storage"
     # A Garmin device in mass storage mode that the program found itself (UmsStorage).
     mass_storage = False
+    # Whether write_file keeps the file it replaces until the new one is whole (a temporary
+    # copy renamed at the end): after a failed copy the old file is still there and working,
+    # and must be kept; and both have to fit for a while. Over MTP the old file is deleted
+    # before the new one is sent, so what a failure leaves under the name is half a new one.
+    replaces_atomically = False
 
     @abstractmethod
     def _list(self, real_path: str) -> list[Entry]: ...
@@ -238,6 +243,8 @@ class LocalStorage(Storage):
     A write counts only once it is on the disk (fsync of the file and of its folder): a
     device in mass storage mode may lose what is still in the system's cache when its cable
     goes out, and some (the Varia) reset their USB instead of being ejected."""
+
+    replaces_atomically = True  # _write_file: a temporary copy, renamed when whole
 
     def __init__(self, root: Path):
         self.root = Path(root)

@@ -197,7 +197,10 @@ def unlock_e2(ident):
 
 
 class RecordingStorage(LocalStorage):
-    """Remembers what was written, in order; can fail writing chosen files."""
+    """Remembers what was written, in order; can fail writing chosen files. A failure
+    leaves half a file under the real name, as over MTP: not a drive's temporary copy."""
+
+    replaces_atomically = False
 
     def __init__(self, root, fail=None):
         super().__init__(root)
@@ -1355,3 +1358,38 @@ def test_space_counts_a_file_once_whatever_its_spelling(device_root):
     m = _a_map("Map", 1, ["GARMIN/d1.IMG"], ["Garmin/D1.img"])
     m.files[0].size = 7000
     assert maps.space_needed(LocalStorage(device_root), m, ["Garmin/D1.img"]) == 4000
+
+
+# --- a failed copy keeps the old map file (review of 106cd25) -----------------------------------
+
+
+def test_a_failed_copy_keeps_the_old_map_file_on_a_drive(server, device_root, xdg, monkeypatch):
+    """A drive: a map file whose copy fails halfway (disk full) leaves the old file of that
+    name as it was, and no temporary file."""
+    from test_updates_system import disk_full_halfway
+
+    from openexpress.device.storage import PART_SUFFIX
+
+    all_maps, east = east_with_shared_dem(server, device_root)
+    old = device_root / "GARMIN" / "E2.img"
+    old.write_bytes(b"old E2")
+    disk_full_halfway(monkeypatch, "E2.img")  # the file of this map alone
+    with pytest.raises(DeviceError):
+        maps.install(east, all_maps, LocalStorage(device_root), unlock_e2)
+    assert old.read_bytes() == b"old E2"
+    assert not [p.name for p in old.parent.iterdir() if p.name.endswith(PART_SUFFIX)]
+
+
+def test_a_drive_needs_room_for_the_new_map_beside_the_old(server, device_root, xdg):
+    """On a drive the files of the map being replaced stay until the new ones are whole: the
+    space needed is all of the new map (only files deleted before do free some); over MTP
+    the old files still count as freed."""
+    all_maps, east = east_with_shared_dem(server, device_root)
+    (device_root / "GARMIN" / "E2.img").write_bytes(b"old E2")
+
+    class OverMtp(LocalStorage):
+        replaces_atomically = False
+
+    assert maps.space_needed(LocalStorage(device_root), east, []) == east.size
+    replaced = len(b"old E2") + len(b"old")  # E2.img and the shared DEM.img
+    assert maps.space_needed(OverMtp(device_root), east, []) == east.size - replaced
