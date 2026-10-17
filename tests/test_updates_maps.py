@@ -816,6 +816,172 @@ def test_a_failed_quiet_check_does_not_hide_what_the_maps_page_found(server):
     assert win.map_state == "current"
 
 
+# --- "Refresh": one request for a page and the row of the device page -------------------------
+
+
+def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
+    """A window that shows `page`, with a device open, drawn anew the way "Refresh" draws it
+    (MainWindow.show_device). Garmin's servers give the answers in turn (an exception is
+    raised); a task and background work run at once. Stand-ins only for what draws widgets."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    asked = {"maps": [], "updates": []}
+
+    def server(kind, answers):
+        asked[kind].append(b"xml")
+        answer = answers[len(asked[kind]) - 1]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    class Section:
+        loaded, state, error = False, None, None
+
+        def clear(self):
+            pass
+
+        def show(self, state):
+            self.state = state
+
+        def show_error(self, text):
+            self.state, self.error = "error", text
+
+    def run(work, done, failed):
+        try:
+            result = work()
+        except Exception as e:  # noqa: BLE001 - like the window: any failure of the work
+            failed(e)
+        else:
+            done(result)
+
+    def show_overview():
+        # What the device page does for its two rows; the rest of it draws widgets.
+        win._render_update_state()
+        if win.update_state is None:
+            win._check_updates_quietly()
+        win._render_map_state()
+        if win.map_state is None:
+            win._check_maps_quietly()
+
+    def show_maps(result, own=None):
+        win.shown.append("maps")
+        win._set_map_state(result)  # what the Maps page does for the row of the device page
+
+    def show_updates(items, beta=False):
+        win.shown.append("updates")
+        win._set_update_state(updates.pending(items), updates.staged(items))  # likewise
+
+    session = types.SimpleNamespace(
+        client=types.SimpleNamespace(
+            universal_maps=lambda raw: server("maps", maps_answers),
+            software_updates=lambda raw, include_reinstalls=False: server(
+                "updates", updates_answers)),
+        # A device that declares no folder for maps: the Maps page has no own maps.
+        device=types.SimpleNamespace(raw=b"xml", software_version_str="23.39",
+                                     targets=lambda datatype: []),
+        storage=LocalStorage(device_root), ownership_error=None)
+    win = types.SimpleNamespace(
+        session=session, sections={k: Section() for k in ("watch", "updates", "maps", "apps",
+                                                           "music")},
+        pages=types.SimpleNamespace(get_visible_child_name=lambda: page),
+        busy=False, _action_buttons=[], _retry_sources={}, shown=[],
+        map_state=None, map_update_count=0, _map_check_session=None, map_row=Row(),
+        update_state=None, update_count=0, _update_check_session=None, update_row=Row(),
+        software_label=types.SimpleNamespace(set_label=lambda text: None),
+        _update_banner=lambda: None, _update_actions=lambda: None,
+        show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
+        load_apps=None, load_music=None,  # other pages: not loaded here
+        run_task=lambda title, work, done, failed, device=True: run(work, done, failed),
+        in_background=lambda work, done, failed=None: run(work, done, failed))
+    for name in ("show_device", "load_section", "_load", "load_maps", "load_updates",
+                 "_check_maps_quietly", "_set_map_state", "_render_map_state",
+                 "_check_updates_quietly", "_set_update_state", "_render_update_state"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win, asked
+
+
+def test_a_refresh_on_the_maps_page_asks_the_map_server_once(server, device_root):
+    win, asked = _refresh_window("maps", device_root, [map_answer(server, 1, 1)],
+                                 [sw_response(server)])
+    win.show_device()
+    assert len(asked["maps"]) == 1 and win.shown == ["maps"]
+    # The answer of the Maps page is the row's too.
+    assert (win.map_state, win.map_row.subtitle) == ("available", "1 update available")
+    assert win._map_check_session is None
+
+
+def test_a_refresh_on_the_maps_page_that_fails_asks_once_and_the_row_says_so(device_root):
+    win, asked = _refresh_window("maps", device_root, [ApiError("Map check: HTTP 500", 500)],
+                                 [{"updates": []}])
+    win.show_device()
+    assert len(asked["maps"]) == 1
+    assert (win.sections["maps"].state, win.sections["maps"].error) == (
+        "error", "Map check: HTTP 500")
+    assert (win.map_state, win.map_row.subtitle) == ("failed", "Could not check for updates")
+    assert win._map_check_session is None
+
+
+def test_a_refresh_on_the_device_page_still_checks_the_maps_for_its_row(server, device_root):
+    win, asked = _refresh_window("watch", device_root, [map_answer(server, 1, 1)],
+                                 [sw_response(server)])
+    win.show_device()
+    assert len(asked["maps"]) == 1 and win.shown == []  # the Maps page loads when opened
+    assert (win.map_state, win.map_row.subtitle) == ("available", "1 update available")
+    assert win._map_check_session is None
+
+
+def test_a_refresh_on_the_updates_page_asks_the_update_server_once(server, device_root):
+    win, asked = _refresh_window("updates", device_root, [map_answer(server, 1, 1)],
+                                 [sw_response(server)])
+    win.show_device()
+    assert len(asked["updates"]) == 1 and win.shown == ["updates"]
+    # The answer of the Updates page is the row's too.
+    assert (win.update_state, win.update_row.subtitle) == ("available", "2 updates available")
+    assert win._update_check_session is None
+
+
+def test_a_refresh_on_the_updates_page_that_fails_asks_once_and_the_row_says_so(device_root):
+    win, asked = _refresh_window("updates", device_root, [lower_keys(NO_MAPS)],
+                                 [ApiError("Update check: HTTP 500", 500)])
+    win.show_device()
+    assert len(asked["updates"]) == 1
+    assert (win.sections["updates"].state, win.sections["updates"].error) == (
+        "error", "Update check: HTTP 500")
+    assert (win.update_state, win.update_row.subtitle) == (
+        "failed", "Could not check for updates")
+    assert win._update_check_session is None
+
+
+def test_a_refresh_on_the_device_page_still_checks_the_updates_for_its_row(server, device_root):
+    win, asked = _refresh_window("watch", device_root, [map_answer(server, 1, 1)],
+                                 [sw_response(server)])
+    win.show_device()
+    assert len(asked["updates"]) == 1 and win.shown == []  # the Updates page loads when opened
+    assert (win.update_state, win.update_row.subtitle) == ("available", "2 updates available")
+    assert win._update_check_session is None
+
+
+def test_unplugging_leaves_no_check_waiting_for_the_old_device(server, device_root,
+                                                                 monkeypatch):
+    from gi.repository import GLib
+
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, callback: 1)
+    monkeypatch.setattr(GLib, "source_remove", lambda source: None)
+    win, asked = _refresh_window("maps", device_root, [map_answer(server, 1, 1)],
+                                 [sw_response(server)])
+    win.busy = True  # another task runs: the Maps page waits to try again …
+    win.in_background = lambda work, done, failed=None: None  # … and the row's check runs
+    win.show_device()
+    old = win.session
+    assert (win._map_check_session, win._update_check_session) == (old, old)
+    win.session, win._poll_usb = None, lambda: None  # unplugged
+    win.show_device()
+    assert win._map_check_session is None and win._update_check_session is None
+    assert asked == {"maps": [], "updates": []}
+
+
 # --- "Check Again" on a Maps page that has maps -----------------------------------------------
 
 

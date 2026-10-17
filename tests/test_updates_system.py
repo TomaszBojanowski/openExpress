@@ -526,7 +526,7 @@ def test_the_page_learns_from_the_answer_whether_beta_versions_are_offered(devic
             client=types.SimpleNamespace(
                 software_updates=lambda raw, include_reinstalls=False: lower_keys(beta_answer()))),
         show_updates=lambda items, beta=False: shown.append(([u.part_number for u in items], beta)))
-    win._load = lambda key, title, work, show: show(work())
+    win._load = lambda key, title, work, show, on_error=None: show(work())
     MainWindow.load_updates(win)
     assert shown == [(["006-D0000-00", "006-V0000-00"], True)]
 

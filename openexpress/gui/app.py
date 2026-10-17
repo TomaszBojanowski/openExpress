@@ -1020,12 +1020,21 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_banner()
         self._update_actions()
         if self.session is None:
+            # No check waits for the device that is gone (nor keeps it in memory).
+            self._map_check_session = self._update_check_session = None
             # The empty pages tell the state on USB now, not the one from before the device
             # was opened (e.g. "starting" when the window opened with a starting device).
             self._poll_usb()
             return
+        page = self.pages.get_visible_child_name()
+        # The Maps or Updates page asks right away, and its answer fills the row of the device
+        # page as well (show_maps, show_updates): the row does not ask a second time.
+        if page == "maps":
+            self._map_check_session = self.session
+        elif page == "updates":
+            self._update_check_session = self.session
         self.show_overview()
-        self.load_section(self.pages.get_visible_child_name())
+        self.load_section(page)
 
     def _update_banner(self) -> None:
         s = self.session
@@ -1070,8 +1079,10 @@ class MainWindow(Adw.ApplicationWindow):
                   "apps": self.load_apps, "music": self.load_music}[key]
         loader()
 
-    def _load(self, key: str, title: str, work, show, device: bool = True) -> None:
-        """Common pattern: spinner in the section, work in a thread, then `show(result)`."""
+    def _load(self, key: str, title: str, work, show, device: bool = True,
+              on_error=None) -> None:
+        """Common pattern: spinner in the section, work in a thread, then `show(result)`.
+        `on_error(e)` when the work failed for the device that is still open."""
         sec = self.sections[key]
         sess = self.session
         source = self._retry_sources.pop(key, None)
@@ -1094,6 +1105,8 @@ class MainWindow(Adw.ApplicationWindow):
         def failed(e):
             if self.session is sess:
                 sec.show_error(str(e) or e.__class__.__name__)
+                if on_error is not None:
+                    on_error(e)
             return True
 
         if self.busy:
@@ -1101,7 +1114,7 @@ class MainWindow(Adw.ApplicationWindow):
             def retry():
                 self._retry_sources.pop(key, None)
                 if self.session is sess:
-                    self._load(key, title, work, show, device)
+                    self._load(key, title, work, show, device, on_error)
                 return False
 
             self._retry_sources[key] = GLib.timeout_add(700, retry)
@@ -1351,6 +1364,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
         """`staged`: system updates copied already, waiting for the device to install them
         when it is disconnected; told only when nothing else is to be installed first."""
+        self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_count = len(new_updates)
         self.update_state = ("available" if new_updates else "ready" if staged else "current")
         self._render_update_state()
@@ -1747,8 +1761,16 @@ class MainWindow(Adw.ApplicationWindow):
                                      upd.component_count(s.device))
             return items, upd.beta_offered(answer)
 
+        def failed(_e):
+            # The "Device software" row waited for this answer (show_device): it says so.
+            if self._update_check_session is s:
+                self._update_check_session = None
+            if self.update_state is None:
+                self.update_state = "failed"
+                self._render_update_state()
+
         self._load("updates", _("Checking for updates…"), work,
-                   lambda result: self.show_updates(*result))
+                   lambda result: self.show_updates(*result), on_error=failed)
 
     def show_updates(self, items, beta: bool = False) -> None:
         if self.session is None:
@@ -1966,7 +1988,16 @@ class MainWindow(Adw.ApplicationWindow):
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
             return result, ownmaps.overview(s.device, s.storage, result[0])
 
-        self._load("maps", _("Checking maps…"), work, lambda r: self.show_maps(r[0], r[1]))
+        def failed(_e):
+            # The "Maps" row waited for this answer (show_device): it says the check failed.
+            if self._map_check_session is s:
+                self._map_check_session = None
+            if self.map_state is None:
+                self.map_state = "failed"
+                self._render_map_state()
+
+        self._load("maps", _("Checking maps…"), work, lambda r: self.show_maps(r[0], r[1]),
+                   on_error=failed)
 
     def show_maps(self, result, own=None) -> None:
         from openexpress import maps as mp
