@@ -395,6 +395,22 @@ def session_summary(s) -> DeviceSummary:
 OPEN = "open"
 
 
+def tile_picture(part: str, url: str | None):
+    """(texture, where it came from) or (None, why not): the file in the cache by part
+    number, else the account's address downloaded into it."""
+    path = device_picture_path(part)
+    source = "the cache"
+    if not path.exists():
+        if not url:
+            return None, "not in the cache"
+        path, why = download_picture(account_client().http, url, path.name)
+        if path is None:
+            return None, f"download refused: {why}"
+        source = "the account"
+    texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
+    return (texture, source) if texture is not None else (None, "the file is not a picture")
+
+
 def resolve_account(win) -> None:
     """After a detection: the account's devices for the start page from the device just
     opened (its ownership check read them, also when it is not on the account), else, if
@@ -1539,6 +1555,41 @@ class MainWindow(Adw.ApplicationWindow):
                                else OPEN if self._is_open(source) else source.found
                                for _tile, source in entries]
         self.start.show([(tile, tile_subtitle(source)) for tile, source in entries], notice)
+        self._load_tile_pictures([tile for tile, _source in entries])
+
+    def _load_tile_pictures(self, tiles: list) -> None:
+        """The pictures of the tiles, by part number (never by unit ID), the same as the
+        device view's: in memory at once; else the file in the cache, or the account's
+        address of the picture (a device on the account), read in the background and put
+        into the tile there. Nothing else is asked (no unit-info for a device not open).
+        Each part number once; none, or a failure: the icon stays."""
+        textures = getattr(self, "_device_textures", None)
+        if textures is None:
+            textures = self._device_textures = {}
+        asked = getattr(self, "_pictures_asked", None)
+        if asked is None:
+            asked = self._pictures_asked = set()
+        for tile in tiles:
+            part = tile.image_part_number
+            if not part:
+                continue
+            if textures.get(part) is not None:
+                self.start.set_picture(part, textures[part])
+                continue
+            if part in asked or not (tile.image_url or device_picture_path(part).exists()):
+                continue  # read already, or nothing to read yet (no file, no address)
+            asked.add(part)
+            self.in_background(lambda part=part, url=tile.image_url: tile_picture(part, url),
+                               lambda result, part=part: self._tile_picture_done(part, result))
+
+    def _tile_picture_done(self, part: str, result) -> None:
+        texture, source = result
+        if texture is None:
+            log.info("start page: no picture of %s (%s)", part, source)
+            return
+        log.info("start page: picture of %s from %s", part, source)
+        self._device_textures[part] = texture
+        self.start.set_picture(part, texture)
 
     def _open_tile(self, index: int) -> None:
         """A tile clicked: the open device's view, or that device opened."""
@@ -1937,6 +1988,9 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             log.info("device picture: from %s", source)
             cache[part] = texture
+            start = getattr(self, "start", None)
+            if start is not None:
+                start.set_picture(part, texture)  # its tile on the start page as well
             if self.session is s:
                 self._set_device_texture(texture)
 

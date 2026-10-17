@@ -99,6 +99,9 @@ class StartPage:
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
         self._notice = None
+        # The pictures known, by part number (never by unit ID): put into the tiles there
+        # and into those built later.
+        self._pictures: dict = {}
         self.set_empty("", "", False)
         box.append(self.notice_group)
 
@@ -166,10 +169,22 @@ class StartPage:
                 shown[:] = keys
                 grid.remove_all()
                 for tile, how in part:
-                    grid.append(tile_widget(tile, how))
+                    grid.append(tile_widget(tile, how,
+                                            self._pictures.get(tile.image_part_number)))
             title.set_visible(bool(part))
             grid.set_visible(bool(part))
         self.stack.set_visible_child_name("content")
+
+    def set_picture(self, part_number: str, texture) -> None:
+        """The picture of the devices of this part number, put into their tiles that are
+        there (the same widgets: nothing is built again) and kept for those built later."""
+        self._pictures[part_number] = texture
+        for _title, grid, _before, _shown in self._sections.values():
+            child = grid.get_first_child()
+            while child is not None:
+                if getattr(child, "part_number", None) == part_number:
+                    tile_image(child).set_from_paintable(texture)
+                child = child.get_next_sibling()
 
     def tiles(self) -> list:
         """The tiles shown, in order: the connected ones, then the remembered ones."""
@@ -253,12 +268,21 @@ class RememberedPage:
         self.tools_group.set_visible(bool(part_number))
 
 
-def tile_widget(tile, how: str) -> Gtk.FlowBoxChild:
-    """One tile: an icon (the picture comes later), the name, how it is connected and its
+def tile_image(child: Gtk.FlowBoxChild) -> Gtk.Image:
+    """The image of a tile: the icon, or the picture of the device in its place."""
+    return child.get_child().get_first_child()
+
+
+def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
+    """One tile: the picture of the device if it is known, else the icon (the picture is
+    put in its place later, in the same size), the name, how it is connected and its
     version; framed when connected."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
-    box.append(Gtk.Image(icon_name=APP_ID, pixel_size=TILE_ICON_SIZE))
+    image = Gtk.Image(icon_name=APP_ID, pixel_size=TILE_ICON_SIZE)
+    if picture is not None:
+        image.set_from_paintable(picture)
+    box.append(image)
     name = Gtk.Label(label=tile.description or _("Garmin device"), wrap=True,
                      justify=Gtk.Justification.CENTER, max_width_chars=TEXT_CHARS)
     name.add_css_class("heading")
@@ -270,6 +294,7 @@ def tile_widget(tile, how: str) -> Gtk.FlowBoxChild:
         label.add_css_class("caption")
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, width_request=TILE_WIDTH)
+    child.part_number = tile.image_part_number  # which picture goes into it
     child.add_css_class("card")
     child.add_css_class("oe-tile")
     if tile.connected:

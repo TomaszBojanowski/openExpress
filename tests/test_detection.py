@@ -3265,13 +3265,16 @@ class FakeStartPage:
 
     def __init__(self):
         self.page = "start page"
-        self.shown, self.notices = [], []
+        self.shown, self.notices, self.pictures = [], [], []
 
     def show(self, entries, notice):
         self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
 
     def set_empty(self, title, description, busy):
         self.notices.append((title, description, busy))
+
+    def set_picture(self, part_number, texture):
+        self.pictures.append((part_number, texture))
 
 
 class FakeNavigation:
@@ -3329,7 +3332,7 @@ START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_vie
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
                  "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
-                 "_want_account")
+                 "_want_account", "_load_tile_pictures", "_tile_picture_done")
 
 
 def start_stand_in(start, sections, win=None):
@@ -4225,3 +4228,155 @@ def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeyp
     back(win)
     assert names_on_the_start_page(win) == ["Test watch"]
     assert asked == [1, 1]  # logged out: nothing asked
+
+
+# --- pictures on the tiles (D5, T5) -------------------------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"made up"
+
+
+def fake_pictures(monkeypatch):
+    """Pictures as textures named after their file; downloads counted and answered here
+    (`answers`: url -> True to save it, False to fail). No request leaves the test."""
+    from openexpress.gui import app
+
+    fakes = types.SimpleNamespace(downloads=[], answers={})
+    monkeypatch.setattr(app, "load_texture", lambda path, size: f"texture of {path.name}")
+
+    def download(http, url, name):
+        fakes.downloads.append(url)
+        if not fakes.answers.get(url):
+            return None, "network error"
+        target = app.device_picture_path(name[len("device-"):-len(".png")])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(PNG)
+        return target, ""
+
+    monkeypatch.setattr(app, "download_picture", download)
+    return fakes
+
+
+def in_the_cache(part_number):
+    from openexpress.gui.app import device_picture_path
+
+    path = device_picture_path(part_number)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(PNG)
+
+
+def test_a_connected_tile_shows_the_picture_of_the_device_view(start_window, monkeypatch,
+                                                               tmp_path, device_root):
+    """T5: a connected tile shows what the device view shows: its picture in memory at
+    once (the same texture), else its file in the cache by part number, read in the
+    background; nothing downloaded for a connected device the account does not list."""
+    win = start_window
+    later = defer_background(win)
+    fakes = fake_pictures(monkeypatch)
+    win._device_textures = {"006-B0000-00": "the device view's texture"}
+    in_the_cache("006-B4440-00")
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.start.pictures == [("006-B0000-00", "the device view's texture")]
+    run_later(later)
+    assert win.start.pictures[1:] == [("006-B4440-00", "texture of device-006-B4440-00.png")]
+    assert fakes.downloads == []
+
+
+def test_a_remembered_tile_shows_its_picture_from_the_cache_only(start_window, monkeypatch):
+    """T5: a remembered device: its picture from the cache by part number (the Venu 2);
+    none in the cache (the Varia): the icon stays, nothing is downloaded."""
+    import time
+
+    win = start_window
+    later = defer_background(win)
+    fakes = fake_pictures(monkeypatch)
+    remember_others(time.time())
+    in_the_cache("006-B3703-00")
+    nothing_connected(win, monkeypatch)
+    run_later(later)
+    assert win.start.pictures == [("006-B3703-00", "texture of device-006-B3703-00.png")]
+    assert fakes.downloads == []
+
+
+def test_a_picture_comes_into_the_tile_there_and_nothing_else_moves(start_window, monkeypatch,
+                                                                    tmp_path, device_root):
+    """T5 with d348bcf and f2f2615: the picture read in the background is put into the tile
+    that is there: the start page is not drawn again, no view comes up or goes; read once,
+    not at each drawing."""
+    win = start_window
+    later = defer_background(win)
+    fake_pictures(monkeypatch)
+    in_the_cache("006-B4440-00")
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    drawn, stack = len(win.start.shown), list(win.navigation.stack)
+    run_later(later)
+    assert len(win.start.shown) == drawn and win.navigation.stack == stack
+    assert win.start.pictures == [("006-B4440-00", "texture of device-006-B4440-00.png")]
+    win._render_start()  # drawn again: the picture known already, nothing read again
+    assert later == []
+    assert win.start.pictures[-1] == ("006-B4440-00", "texture of device-006-B4440-00.png")
+
+
+def test_an_account_tile_downloads_its_picture_and_a_failure_leaves_the_icon(start_window,
+                                                                             monkeypatch):
+    """T5: a device only on the account: its picture from the account's address, into the
+    cache by part number; a download that fails leaves the icon, raises nothing, and is not
+    tried again at each drawing."""
+    from openexpress.connect import lower_keys
+
+    win = start_window
+    later = defer_background(win)
+    fakes = fake_pictures(monkeypatch)
+    good = "https://res.garmin.com/en/products/forerunner.png"
+    bad = "https://res.garmin.com/en/products/venu.png"
+    fakes.answers = {good: True, bad: False}
+
+    class WithPictures(FakeAccountClient):
+        http = object()
+
+        def account_devices(self):
+            listed = lower_keys(ACCOUNT_LIST)
+            listed[1]["imageurl"], listed[2]["imageurl"] = bad, good
+            return listed
+
+    with_account(monkeypatch, WithPictures())
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    run_later(later)
+    assert sorted(fakes.downloads) == sorted([good, bad])
+    assert win.start.pictures == [("006-B4315-00", "texture of device-006-B4315-00.png")]
+    win._render_start()
+    run_later(later)
+    assert sorted(fakes.downloads) == sorted([good, bad])  # not tried again
+
+
+@pytest.mark.needs_display
+def test_the_picture_goes_into_the_tile_that_is_there():
+    """StartPage.set_picture puts the picture into the tiles of that part number, the same
+    widgets; a tile built later gets it at once."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.app import Gdk, GLib
+    from openexpress.gui.start import StartPage, tile_image
+
+    def tile(name, part, connected=True):
+        return Tile(name, part, "1.00", "mtp", connected, False, False,
+                    None if connected else 1.0, part, None, None)
+
+    texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
+                                    12)
+    start = StartPage()
+    start.show([(tile("fēnix 8", "006-B4532-00"), "x"), (tile("Edge 1050", "006-B4440-00"), "y")],
+               False)
+    before = start.tiles()
+    start.set_picture("006-B4532-00", texture)
+    assert start.tiles() == before
+    assert tile_image(before[0]).get_paintable() is texture
+    assert tile_image(before[1]).get_paintable() is None  # still the icon
+    start.show([(tile("fēnix 8", "006-B4532-00"), "x"),
+                (tile("Venu 2", "006-B3703-00", connected=False), "z"),
+                (tile("fēnix 8 (2)", "006-B4532-00", connected=False), "w")], False)
+    assert tile_image(start.tiles()[2]).get_paintable() is texture
