@@ -1338,3 +1338,33 @@ def test_cli_update_install_shows_a_bar_while_copying(offered, monkeypatch, caps
     assert isinstance(asked["bar"], cli._Bar)
     captured = capsys.readouterr()
     assert " 50%" in captured.out + captured.err  # the bar of the command line
+
+
+def test_about_links_to_the_support_page(monkeypatch):
+    """"About openExpress" links to the support page, beside the website and the issue
+    tracker."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    dialogs = []
+
+    class About:
+        def __init__(self, **props):
+            self.props, self.links = props, []
+            dialogs.append(self)
+
+        def add_link(self, title, url):
+            self.links.append((title, url))
+
+        def set_translator_credits(self, credits):
+            pass
+
+        def present(self, parent):
+            pass
+
+    monkeypatch.setattr(app.Adw, "AboutDialog", About)
+    MainWindow.show_about(types.SimpleNamespace())
+    (about,) = dialogs
+    assert about.props["website"] == "https://github.com/TomaszBojanowski/openExpress"
+    assert about.props["issue_url"] == "https://github.com/TomaszBojanowski/openExpress/issues"
+    assert about.links == [("Support the project", "https://buymeacoffee.com/sojer2005")]

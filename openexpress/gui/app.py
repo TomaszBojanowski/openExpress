@@ -2755,6 +2755,8 @@ class MainWindow(Adw.ApplicationWindow):
                        "Garmin Ltd. Garmin, fēnix, Garmin Connect and Garmin Express are "
                        "trademarks of Garmin Ltd. or its subsidiaries."),
         )
+        # TRANSLATORS: a link in "About openExpress" to the page where one can support it
+        about.add_link(_("Support the project"), "https://buymeacoffee.com/sojer2005")
         # TRANSLATORS: replace with your name(s) in the translated version
         credits = _("translator-credits")
         if credits != "translator-credits":
