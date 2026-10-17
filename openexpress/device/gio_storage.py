@@ -767,6 +767,12 @@ def _open_device_storage(uri: str | None) -> GioStorage:
         uri, usb = devices[0].uri, devices[0].usb
     else:
         usb = _identify(uri, None)
+    return _mtp_storage(uri, usb)
+
+
+def _mtp_storage(uri: str, usb: GarminUsb | None) -> GioStorage:
+    """The storage of a mounted MTP device that has GARMIN/GarminDevice.xml: the device
+    itself or one of its top folders (its internal storage)."""
     top = GioStorage(uri)
     candidates = [e.name for e in top._list("") if e.is_dir]
     for st in [GioStorage(top._f(name).get_uri()) for name in candidates] + [top]:
@@ -775,6 +781,72 @@ def _open_device_storage(uri: str | None) -> GioStorage:
             st.usb, st.device_uri = usb, uri
             return st
     raise NotThereYet(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))
+
+
+# --- a short look at a device found, for a list to choose from -----------------------------
+
+# Why a summary has no details.
+NOT_MOUNTED = "not-mounted"  # an MTP device whose volume is not mounted: never mounted here
+NO_DEVICE_FILE = "no-device-file"  # no GARMIN/GarminDevice.xml on it
+UNREADABLE = "unreadable"  # the device or its GarminDevice.xml could not be read
+
+
+@dataclass
+class DeviceSummary:
+    """What GarminDevice.xml says about a device found: enough for an entry in a list."""
+    found: FoundDevice
+    description: str = ""
+    part_number: str = ""
+    software_version: str = ""
+    unit_id: int | None = field(default=None, repr=False)  # in memory only, never written
+    reason: str | None = None  # NOT_MOUNTED, NO_DEVICE_FILE or UNREADABLE: no details
+
+    @property
+    def ok(self) -> bool:
+        return self.reason is None
+
+
+def probe(found: FoundDevice) -> DeviceSummary:
+    """Read only GarminDevice.xml of a device from find_all_devices: no session, no account,
+    no server, no PTP, nothing mounted. Never raises: without details, the summary says
+    why. One log line, without the address or the unit ID."""
+    from openexpress import applog
+    from openexpress.device.xmldevice import parse
+
+    summary = _probe(found, parse)
+    if summary.ok:
+        applog.hide(summary.unit_id, "unit")  # as hide_device: never in the log
+    log.info("device: probed %s (USB %s): %s", found.kind,
+             found.usb.usb_id if found.usb is not None else "?",
+             "details read" if summary.ok else summary.reason)
+    return summary
+
+
+def _probe(found: FoundDevice, parse) -> DeviceSummary:
+    if not found.mounted:
+        return DeviceSummary(found, reason=NOT_MOUNTED)
+    try:
+        if found.kind == "ums":
+            path = Gio.File.new_for_uri(found.uri).get_path()
+            if path is None:
+                return DeviceSummary(found, reason=UNREADABLE)
+            storage: Storage = UmsStorage(Path(path), found.uri, found.usb)
+            if not storage.exists("GARMIN/GarminDevice.xml"):
+                return DeviceSummary(found, reason=NO_DEVICE_FILE)
+        else:
+            storage = _mtp_storage(found.uri, found.usb)
+    except NotThereYet:
+        return DeviceSummary(found, reason=NO_DEVICE_FILE)
+    except Exception as e:  # noqa: BLE001 - a summary, never an error; the reason is kept
+        log.debug("device: probe could not open it (%s)", type(e).__name__)
+        return DeviceSummary(found, reason=UNREADABLE)
+    try:
+        device = parse(storage.read("GARMIN/GarminDevice.xml"))
+    except Exception as e:  # noqa: BLE001 - the error may quote the file; only its kind
+        log.debug("device: probe could not read GarminDevice.xml (%s)", type(e).__name__)
+        return DeviceSummary(found, reason=UNREADABLE)
+    return DeviceSummary(found, device.description, device.part_number,
+                         device.software_version_str, device.unit_id)
 
 
 # --- the device to ourselves, for PTP ----------------------------------------------------

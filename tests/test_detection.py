@@ -1155,6 +1155,72 @@ def test_all_devices_lists_an_mtp_device_and_a_garmin_drive(watch_and_drives, mo
     assert read == [] and watch_and_drives.opened == []
 
 
+def summary_of(summary):
+    return (summary.found.kind, summary.description, summary.part_number,
+            summary.software_version, summary.reason)
+
+
+def test_probe_reads_a_garmin_drive(watch_and_drives, monkeypatch):
+    """K3: model, part number and version from the drive's GarminDevice.xml; the unit ID
+    is kept in memory only."""
+    drive = watch_and_drives.drive()
+    monitor_with(monkeypatch, drive)
+    (found,) = gio_storage.find_all_devices()
+    summary = gio_storage.probe(found)
+    assert summary_of(summary) == ("ums", "Varia RTL515", "006-B3592-03", "3.36", None)
+    assert summary.ok and summary.unit_id == 3000000003 and summary.found is found
+
+
+@pytest.mark.parametrize("content, reason", [
+    (None, "no-device-file"),            # a GARMIN folder without the file
+    (b"<Device><Model>", "unreadable"),  # cut short
+])
+def test_probe_of_a_drive_without_a_readable_device_file(drives, content, reason):
+    """K3: no exception; the summary says why it has no details."""
+    folder = drive_folder(drives, xml_path=None)
+    if content is not None:
+        (folder / "GARMIN" / "GarminDevice.xml").write_bytes(content)
+    found = gio_storage.FoundDevice(folder.as_uri(), "GARMIN", True,
+                                    usb=gio_storage.GarminUsb("20ee", "usb", 1, 12), kind="ums")
+    summary = gio_storage.probe(found)
+    assert summary_of(summary) == ("ums", "", "", "", reason)
+    assert not summary.ok and summary.unit_id is None
+
+
+def test_probe_does_not_mount_an_mtp_device(watch_and_drives, monkeypatch):
+    """K3 (P3): an MTP device whose volume is not mounted gets an entry without details;
+    nothing is mounted or read."""
+    mounted = []
+    monkeypatch.setattr(gio_storage, "mount", lambda dev, *a, **kw: mounted.append(dev))
+    monkeypatch.setattr(gio_storage, "GioStorage",
+                        lambda uri: pytest.fail("nothing is opened for an unmounted device"))
+    found = gio_storage.FoundDevice(NUMERIC, "fenix", False,
+                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+    summary = gio_storage.probe(found)
+    assert summary_of(summary) == ("mtp", "", "", "", "not-mounted")
+    assert mounted == []
+
+
+def test_probe_never_writes_the_unit_id(watch_and_drives, monkeypatch, caplog):
+    """K3: neither the log (the raw records, before the log filter) nor the summary's text
+    shows the unit ID; the MTP device and the drive each get one line."""
+    drive = watch_and_drives.drive()
+    monitor_with(monkeypatch, drive)
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    with caplog.at_level(logging.DEBUG, logger="openexpress"):
+        summaries = [gio_storage.probe(f) for f in gio_storage.find_all_devices()]
+    assert [summary_of(s) for s in summaries] == [
+        ("mtp", "Test watch", "006-B0000-00", "23.39", None),
+        ("ums", "Varia RTL515", "006-B3592-03", "3.36", None)]
+    assert [s.unit_id for s in summaries] == [1234567890, 3000000003]
+    for secret in ("1234567890", "3000000003"):
+        assert secret not in caplog.text and all(secret not in repr(s) for s in summaries)
+    assert [r.getMessage() for r in caplog.records if "probed" in r.getMessage()] == [
+        "device: probed mtp (USB 091e:51b4): details read",
+        "device: probed ums (USB 091e:20ee): details read"]
+
+
 def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     """watch.on_mount stays with garmin_usb (MTP): a drive starts no sync."""
     from openexpress import watch
