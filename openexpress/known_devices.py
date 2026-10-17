@@ -49,6 +49,11 @@ def load() -> dict[int, KnownDevice]:
     return _read()[0]
 
 
+def in_order(known: dict[int, KnownDevice]) -> list[KnownDevice]:
+    """The devices as they are listed and numbered: the one seen last first."""
+    return sorted(known.values(), key=lambda d: (-d.last_seen, d.part_number, d.description))
+
+
 def remember(unit_id: int, description: str, part_number: str, software_version: str,
              kind: str, now: float | None = None) -> KnownDevice:
     """Add or update the entry of a device seen now; when it was first seen stays."""

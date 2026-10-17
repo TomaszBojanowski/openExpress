@@ -22,7 +22,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
-from openexpress.i18n import N_, _, human_size, ngettext
+from openexpress.i18n import N_, _, human_size, ngettext, pgettext
 from openexpress.settings import (
     ENVIRONMENTS,
     Consumer,
@@ -322,6 +322,48 @@ def cmd_cache(args) -> int:
     elif args.clear:
         print(_("Dry run: nothing was deleted. Add --apply to delete it."))
     return 0
+
+
+def cmd_devices(args) -> int:
+    """The devices this installation has seen (devices.json), numbered; --forget N removes the
+    entry of one (with --apply), never its sync state. The unit ID is never shown."""
+    devices = known_devices.in_order(known_devices.load())
+    if args.forget is None:
+        if not devices:
+            print(_("No devices are remembered yet."))
+            return 0
+        print(_("Devices this installation has seen:"))
+        for number, d in enumerate(devices, 1):
+            how = _("USB drive") if d.kind == "ums" else _("Over USB (MTP)")
+            print(f"  {number}. " + " · ".join((
+                d.description, d.part_number,
+                _("Software {version}").format(version=d.software_version), how,
+                _("Last seen {when}").format(when=_seen_at(d.last_seen)))))
+        return 0
+    if not 1 <= args.forget <= len(devices):
+        _error(_("Error: {error}").format(error=_(
+            "There is no device number {number} on the list (it has {count}).").format(
+            number=args.forget, count=len(devices))))
+        return 1
+    d = devices[args.forget - 1]
+    name = f"{d.description} ({d.part_number})"
+    if not args.apply:
+        print(_("Device to forget: {device}").format(device=name))
+        print(_("Dry run: nothing was forgotten. Add --apply to forget it."))
+        return 0
+    if not known_devices.forget(d.unit_id):
+        _error(_("Error: {error}").format(error=_("{device} was not forgotten.").format(
+            device=name)))
+        return 1
+    print(_("Forgot {device}.").format(device=name))
+    return 0
+
+
+def _seen_at(ts: float) -> str:
+    """A moment as the program writes dates, in local time: "17.10.2026 13:20" in Polish."""
+    t = time.localtime(ts)
+    return pgettext("date and hour", "{date} {time}").format(
+        date=time.strftime(_("%Y-%m-%d"), t), time=time.strftime("%H:%M", t))
 
 
 def cmd_upload_config(args) -> int:
@@ -1589,6 +1631,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("delete what is in the cache (downloaded again when needed)"))
     s.add_argument("--apply", action="store_true", help=_("really delete (with --clear)"))
     s.set_defaults(func=cmd_cache)
+
+    s = sub.add_parser("devices", help=_("the devices this installation has seen"))
+    s.add_argument("--forget", type=int, metavar="N",
+                   help=_("forget device number N of the list (its sync state stays)"))
+    s.add_argument("--apply", action="store_true", help=_("really forget (with --forget)"))
+    s.set_defaults(func=cmd_devices)
 
     s = sub.add_parser("whoami", help=_("logged-in account"))
     s.add_argument("--check", action="store_true", help=_("verify the token with the server"))

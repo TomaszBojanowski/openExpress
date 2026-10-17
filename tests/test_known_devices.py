@@ -1,6 +1,7 @@
 """What this installation remembers of the Garmin devices it has seen (D1): devices.json in
 the data folder. All unit IDs here are made up."""
 
+import calendar
 import logging
 import stat
 from pathlib import Path
@@ -186,3 +187,98 @@ def test_the_lock_goes_with_the_process(store, tmp_path):
     edge.join(10)
     assert not edge.is_alive()
     assert set(known_devices.load()) == {EDGE}
+
+
+# --- `openexpress devices` (D4) -----------------------------------------------------------------
+
+SEEN_FENIX = float(calendar.timegm((2026, 10, 17, 0, 0, 0)))  # UTC
+SEEN_VARIA = float(calendar.timegm((2026, 10, 17, 2, 20, 0)))
+
+
+@pytest.fixture
+def utc():
+    """Local time is UTC in these tests, whatever the computer says."""
+    import os
+    import time
+
+    old = os.environ.get("TZ")
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+    yield
+    if old is None:
+        del os.environ["TZ"]
+    else:
+        os.environ["TZ"] = old
+    time.tzset()
+
+
+def two_remembered():
+    from openexpress import known_devices
+
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=SEEN_FENIX)
+    known_devices.remember(3000000003, "Varia RTL515", "006-B3592-03", "3.36", "ums",
+                           now=SEEN_VARIA)
+
+
+def test_devices_lists_what_is_remembered(store, utc, capsys):
+    """Numbered, the device seen last first: name, part number, version, how it was connected,
+    when it was seen; never the unit ID."""
+    from openexpress.cli import main
+
+    two_remembered()
+    assert main(["devices"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines() == [
+        "Devices this installation has seen:",
+        "  1. Varia RTL515 · 006-B3592-03 · Software 3.36 · USB drive · Last seen 2026-10-17 02:20",
+        "  2. fēnix 8 · 006-B4532-00 · Software 23.39 · Over USB (MTP) · Last seen 2026-10-17 00:00"]
+    assert str(FENIX) not in out and "3000000003" not in out
+
+
+def test_devices_with_nothing_remembered(store, capsys):
+    """No device remembered yet: said so, exit code 0."""
+    from openexpress.cli import main
+
+    assert main(["devices"]) == 0
+    assert capsys.readouterr().out.strip() == "No devices are remembered yet."
+
+
+def test_forget_without_apply_forgets_nothing(store, utc, capsys):
+    """--forget N: which device would be forgotten; nothing is."""
+    from openexpress import known_devices
+    from openexpress.cli import main
+
+    two_remembered()
+    assert main(["devices", "--forget", "2"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Device to forget: fēnix 8 (006-B4532-00)",
+        "Dry run: nothing was forgotten. Add --apply to forget it."]
+    assert set(known_devices.load()) == {FENIX, 3000000003}
+
+
+def test_forget_with_apply_removes_the_entry_only(store, utc, capsys):
+    """--forget N --apply: the entry goes; the device's own folder (its sync state) stays."""
+    from openexpress import known_devices, paths
+    from openexpress.cli import main
+
+    two_remembered()
+    sync_state = paths.device_dir(FENIX) / "sync" / "state.json"
+    sync_state.parent.mkdir(parents=True)
+    sync_state.write_text("{}")
+    assert main(["devices", "--forget", "2", "--apply"]) == 0
+    assert capsys.readouterr().out.strip() == "Forgot fēnix 8 (006-B4532-00)."
+    assert set(known_devices.load()) == {3000000003}
+    assert sync_state.read_text() == "{}"
+
+
+@pytest.mark.parametrize("number", ["3", "0"])
+def test_forget_a_number_not_on_the_list(store, utc, capsys, number):
+    """A number that is not on the list: an error, exit code 1, nothing forgotten."""
+    from openexpress import known_devices
+    from openexpress.cli import main
+
+    two_remembered()
+    assert main(["devices", "--forget", number, "--apply"]) == 1
+    assert capsys.readouterr().err.strip() == (
+        f"Error: There is no device number {number} on the list (it has 2).")
+    assert set(known_devices.load()) == {FENIX, 3000000003}
