@@ -317,7 +317,7 @@ def unplug_window(monkeypatch, usb):
         session=session, busy=False, sections=pages, built=[], _updated_apps=set(),
         _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="", _usb_gone=None,
         _usb_notice=MainWindow._usb_notice, _update_banner=lambda: None,
-        _update_actions=lambda: None)
+        _update_actions=lambda: None, start=FakeStartPage(), _show_start=lambda: None)
     win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
     real_show = types.MethodType(MainWindow.show_device, win)
     win.show_device = lambda: (win.built.append(win.session), real_show())
@@ -1535,6 +1535,7 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
     page = types.SimpleNamespace(session=None, busy=False, _usb_state=gio_storage.ABSENT,
                                  _usb_since=0.0, _usb_title="", _usb_notice=MainWindow._usb_notice,
                                  _update_actions=lambda: None, refresh_device=lambda: None,
+                                 start=FakeStartPage(),
                                  sections={"watch": types.SimpleNamespace(
                                      set_empty=lambda *notice: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
@@ -1893,18 +1894,14 @@ def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch
 
 @pytest.mark.needs_display
 def test_list_shows_names_and_never_addresses(monkeypatch):
-    """K5: one row per device: its name (or "Garmin device" without details), how it is
-    connected, its version or why it has no details; never an MTP address; the other pages
-    say to choose a device."""
-    from test_fixes_ui import page_window
-
+    """K5, on the start page since D5 (T2): one tile per device: its name (or "Garmin
+    device" without details), how it is connected, its version or why it has no details;
+    never an MTP address; the other pages say to choose a device."""
     from openexpress.gui.app import MainWindow, Section
+    from openexpress.gui.start import StartPage
 
-    win, section = page_window("watch")
     maps = Section("maps", "Maps", "x-symbolic", "Loading…")
-    win.sections["maps"] = maps
-    win._update_banner = win._update_actions = lambda: None
-    win.open_choice = lambda found: None
+    win = start_stand_in(StartPage(), {"maps": maps})
     usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
     win._choices = [
         gio_storage.DeviceSummary(gio_storage.FoundDevice(NUMERIC, "x", True, usb=usb),
@@ -1915,17 +1912,17 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
                                                           True, usb=usb, kind="ums"),
                                   "Varia RTL515", "006-B3592-03", "3.36", 3000000003)]
     MainWindow.show_choices(win)
-    texts = _texts(section.page)
-    rows = list(itertools.pairwise(texts))  # a row's title, then its subtitle
+    texts = _texts(win.start.page)
+    rows = list(itertools.pairwise(texts))  # a tile's name, then how it is connected
     for title, subtitle in (("fēnix 8", "Over USB (MTP) · Software 23.39"),
                             ("Garmin device", ("Over USB (MTP) · Not mounted; choose it to "
                                                "open it")),
                             ("Varia RTL515", "USB drive · Software 3.36")):
         assert (title, subtitle) in rows
-    assert "Several Garmin devices are connected" in texts
     assert not any("mtp://" in t or "0000abcdef" in t or "file:" in t for t in texts)
     assert not any("PIN" in t or "starting" in t for t in texts)
     assert maps.empty.get_title() == "Choose a device"
+    assert win.navigation.stack == [win.start.page]
 
 
 # --- several devices: edge cases (after K1–K7) -----------------------------------------------
@@ -3027,7 +3024,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
     win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
                                 _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
-                                _usb_notice=MainWindow._usb_notice,
+                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
                                 refresh_device=lambda: refreshed.append(1))
     # The Sync button is told whenever the words on the pages change, and only then.
     win._update_actions = lambda: updates.append(win._usb_title)
@@ -3091,7 +3088,7 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
     win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
                                 _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
-                                _usb_notice=MainWindow._usb_notice,
+                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
                                 refresh_device=lambda: refreshed.append(1))
     win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
@@ -3255,3 +3252,253 @@ def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
     win.session = types.SimpleNamespace(logged_in=False, ownership_error=None)
     win.update()
     assert _looks(win)[2] == "Not logged in to Garmin Connect"
+
+
+# --- the start page and D7 (D5, T2) ------------------------------------------------------------
+
+
+class FakeStartPage:
+    """The start page: what it shows is recorded (name, connected, how; the notice)."""
+
+    def __init__(self):
+        self.page = "start page"
+        self.shown, self.notices = [], []
+
+    def show(self, entries, notice):
+        self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
+
+    def set_empty(self, title, description, busy):
+        self.notices.append((title, description, busy))
+
+
+class FakeNavigation:
+    """Adw.NavigationView: a stack of pages; popping says so to those listening."""
+
+    def __init__(self, root):
+        self.stack, self.listeners = [root], []
+
+    def get_visible_page(self):
+        return self.stack[-1]
+
+    def push(self, page):
+        self.stack.append(page)
+
+    def pop_to_page(self, page):
+        while self.stack[-1] is not page:
+            popped = self.stack.pop()
+            for fn in self.listeners:
+                fn(self, popped)
+
+    def connect(self, signal, fn):
+        assert signal == "popped"
+        self.listeners.append(fn)
+
+    def set_animate_transitions(self, on):
+        pass
+
+
+class FakeSection:
+    def __init__(self):
+        self.loaded, self.state, self.empty = False, None, None
+
+    def clear(self):
+        pass
+
+    def show(self, name):
+        self.state = name
+
+    def set_empty(self, *notice):
+        self.empty = notice
+
+
+START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
+                 "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
+                 "_on_popped")
+
+
+def start_stand_in(start, sections, win=None):
+    """A stand-in of the window with the real code of the start page and of D7 on a fake
+    navigation; the device view's pages are recorded, not built."""
+    from openexpress.gui.app import MainWindow
+
+    win = win or types.SimpleNamespace(session=None, busy=False, _choices=None, errors=[])
+    win.start, win.device_view = start, "device view"
+    win.navigation = FakeNavigation(start.page)
+    win.sections = sections
+    win.pages = types.SimpleNamespace(get_visible_child_name=lambda: "watch")
+    win._update_banner = win._update_actions = lambda: None
+    win.overviews = []
+    win.show_overview = lambda: win.overviews.append(win.session)
+    win.load_section = lambda key: None
+    win._poll_usb = lambda: None
+    win.in_background = lambda work, done, failed=None: done(work())
+    win.toast = win.errors.append
+    win._start_targets, win._stay_on_start, win._navigated = [], False, False
+    for name in START_METHODS:
+        if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
+            setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    win.navigation.connect("popped", lambda nav, page: win._on_popped(nav, page))
+    return win
+
+
+@pytest.fixture
+def start_window(choosing_window):
+    """The window's detection (choosing_window) with the start page and D7."""
+    return start_stand_in(FakeStartPage(), {"watch": FakeSection(), "maps": FakeSection()},
+                          choosing_window)
+
+
+def one_watch(win, monkeypatch):
+    monitor_with(monkeypatch)
+    win.world.plug("51b4")
+    win.world.offer()
+
+
+def back(win):
+    """The back arrow (or Alt+Left, or the swipe): the start page."""
+    win.navigation.pop_to_page(win.start.page)
+
+
+def test_one_device_connected_opens_its_view(start_window, monkeypatch):
+    """D7: exactly one device connected: its view at once, as before."""
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    assert win.session is not None and win.overviews == [win.session]
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_several_devices_connected_show_the_start_page(start_window, monkeypatch, tmp_path,
+                                                       device_root):
+    """D7: several devices: the start page with a tile each (connected, how, never the
+    address), no device open; the other pages say to choose one."""
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.session is None and win.navigation.stack == ["start page"]
+    tiles, notice = win.start.shown[-1]
+    assert [(name, on) for name, on, _how in tiles] == [("Test watch", True),
+                                                       ("Edge 1050", True)]
+    assert all(how.startswith("Over USB (MTP) · Software ") for _n, _on, how in tiles)
+    assert notice is False
+    assert win.sections["maps"].empty[0] == "Choose a device"
+
+
+def test_a_tile_opens_its_device_and_back_keeps_it_open(start_window, monkeypatch, tmp_path,
+                                                        device_root):
+    """A click on a tile opens that device in its view; back on the start page it stays
+    open, its tile opens its view again without opening it anew, another tile opens the
+    other device."""
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    names = [name for name, _on, _how in win.start.shown[-1][0]]
+    win._open_tile(names.index("Edge 1050"))
+    s = win.session
+    assert s.device.description == "Edge 1050"
+    assert win.navigation.stack == ["start page", "device view"] and win.overviews == [s]
+
+    back(win)
+    assert win.session is s and win.navigation.stack == ["start page"]
+    tiles, notice = win.start.shown[-1]
+    assert [(name, on) for name, on, _how in tiles] == [("Test watch", True),
+                                                       ("Edge 1050", True)]
+    assert notice is False
+    win._open_tile(1)  # the Edge, open already
+    assert win.session is s and win.overviews == [s]
+    assert win.navigation.stack == ["start page", "device view"]
+
+    back(win)
+    win._open_tile(0)
+    assert win.session.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_unplugging_the_open_device_shows_the_start_page(start_window, monkeypatch):
+    """The open device unplugged: the start page, without tiles, with the notice of the USB
+    state on top."""
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    win.session = None  # as _on_mount_removed does
+    win.show_device()
+    assert win.navigation.stack == ["start page"]
+    assert win.start.shown[-1] == ([], True)
+
+
+def test_refresh_on_the_start_page_stays_there(start_window, monkeypatch):
+    """Decision 7: Refresh on the start page, one device connected: the start page stays,
+    with its tile; Refresh in the device view stays in the device view."""
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    back(win)
+    win._on_refresh()
+    assert win.session is not None and win.navigation.stack == ["start page"]
+    tiles, _notice = win.start.shown[-1]
+    assert [(name, on) for name, on, _how in tiles] == [("Test watch", True)]
+    win._open_tile(0)
+    win._on_refresh()
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_the_start_page_tells_the_usb_state(plugged, monkeypatch):
+    """With no device open, the start page has the words of the pages on top: no device,
+    a device that is starting, or one that is not ready."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown = []
+    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    start = FakeStartPage()
+    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
+                                start=start, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
+                                _usb_title="", _usb_notice=MainWindow._usb_notice,
+                                refresh_device=lambda: None, _update_actions=lambda: None)
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    MainWindow._poll_usb(win, clock=plugged.clock)
+    assert start.notices[-1] == shown[-1] and shown[-1][0] == "Connect your device"
+    usb_device(plugged.root, "1-4", 1, 40, "091e", "0003")  # starting
+    MainWindow._poll_usb(win, clock=plugged.clock)
+    assert start.notices[-1] == shown[-1] and shown[-1][0] == "The device is starting…"
+
+
+@pytest.mark.needs_display
+def test_a_connected_tile_has_the_accent_frame():
+    """The tile of a connected device is framed; one not connected is not."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(connected):
+        return Tile("fēnix 8", "006-B4532-00", "23.39", "mtp", connected, False, False, None,
+                    "006-B4532-00", None, None)
+
+    start = StartPage()
+    start.show([(tile(True), "Over USB (MTP) · Software 23.39"), (tile(False), "")], False)
+    first, second = start.tiles()
+    assert first.has_css_class("connected") and not second.has_css_class("connected")
+    assert first.has_css_class("card") and second.has_css_class("card")
+
+
+@pytest.mark.needs_display
+def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
+    """The real window: the start page is the root of the navigation and the device view is
+    a page above it, whose sidebar header shows the back arrow; the header of its content
+    only when folded (there it goes back to the sidebar), so never two arrows."""
+    from openexpress import netstatus
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True: None)
+    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    win = MainWindow(None)
+    try:
+        assert win.navigation.get_visible_page() is win.start.page
+        assert win.device_view.get_child() is win.split
+        assert win.sidebar_header.get_show_back_button() is True
+        assert win.content_header.get_show_back_button() is False
+    finally:
+        netstatus.STATUS.remove_listener(win._net_listener)
+        win.destroy()

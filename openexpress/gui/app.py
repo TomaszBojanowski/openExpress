@@ -23,7 +23,15 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import cache, i18n, known_devices, netstatus, paths, service  # noqa: E402
+from openexpress import (  # noqa: E402
+    cache,
+    devicelist,
+    i18n,
+    known_devices,
+    netstatus,
+    paths,
+    service,
+)
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
@@ -35,6 +43,8 @@ from openexpress.device.gio_storage import (  # noqa: E402
     PRESENT,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
+    DeviceSummary,
+    FoundDevice,
     NotThereYet,
     SeveralDevices,
     distinct_devices,
@@ -48,6 +58,8 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_state,
     usb_still_there,
 )
+from openexpress.gui import start  # noqa: E402
+from openexpress.gui.start import StartPage  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
@@ -347,14 +359,39 @@ def _choose(found: list):
         if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
             known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
                                s.found.kind)
-    left = [s for s in summaries
-            if s.ok or s.found.usb is None or s.found.usb.bus is None
-            or usb_still_there(s.found.usb)]  # no details, and no longer on USB: gone
+    left = _still_there(summaries)
     if len(left) > 1:
         return DeviceChoices(left)
     if left:  # also one device found in two ways: no choice to make
         return service.check_session(service.open_session(found=left[0].found))
     raise NotThereYet(not_ready_text(ABSENT))
+
+
+def _still_there(summaries: list) -> list:
+    """Without the entries that have no details and are no longer on USB: gone."""
+    return [s for s in summaries
+            if s.ok or s.found.usb is None or s.found.usb.bus is None
+            or usb_still_there(s.found.usb)]
+
+
+def connected_devices() -> list:
+    """The devices connected now, one entry each, as the start page shows them while a
+    device is open: GarminDevice.xml of each is read, nothing is opened or mounted and
+    nothing is asked of the account."""
+    return _still_there(distinct_devices([probe(f) for f in find_all_devices()]))
+
+
+def session_summary(s) -> DeviceSummary:
+    """The open device as an entry of the start page (never its address in a label)."""
+    d = s.device
+    kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
+    found = FoundDevice(str(getattr(s.storage, "device_uri", "") or ""), "", True, kind=kind)
+    return DeviceSummary(found, d.description, d.part_number, d.software_version_str,
+                         d.unit_id or None)
+
+
+# The target of the tile of the device open now: its view, without opening it again.
+OPEN = "open"
 
 
 def show_not_for_mass_storage(sec) -> None:
@@ -597,6 +634,12 @@ class MainWindow(Adw.ApplicationWindow):
         self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
+        # The start page: what each tile opens (OPEN or a FoundDevice), in its order, kept
+        # outside the tiles; whether Refresh was pressed there (it stays there, decision 7);
+        # whether the window went to a page yet (the first time without an animation).
+        self._start_targets: list = []
+        self._stay_on_start = False
+        self._navigated = False
 
         # TRANSLATORS: tab title
         self.sections = {s.key: s for s in (
@@ -645,9 +688,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     # --- layout -----------------------------------------------------------------------
 
-    def _build_layout(self) -> None:
-        self.split = Adw.NavigationSplitView(min_sidebar_width=210, max_sidebar_width=260)
-
+    @staticmethod
+    def _main_menu() -> Gio.Menu:
         menu = Gio.Menu()
         section = Gio.Menu()
         section.append(_("Preferences"), "app.preferences")
@@ -656,9 +698,16 @@ class MainWindow(Adw.ApplicationWindow):
         section.append(_("Report a Device or Problem…"), "app.report")
         section.append(_("About openExpress"), "app.about")
         menu.append_section(None, section)
+        return menu
+
+    def _build_layout(self) -> None:
+        self.split = Adw.NavigationSplitView(min_sidebar_width=210, max_sidebar_width=260)
+
+        menu = self._main_menu()
         menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
                                      tooltip_text=_("Main Menu"), primary=True)
-        sidebar_header = Adw.HeaderBar()
+        # Its back arrow goes to the start page (the device view is a page above it).
+        self.sidebar_header = sidebar_header = Adw.HeaderBar()
         sidebar_header.pack_end(menu_button)
         sidebar_view = Adw.ToolbarView()
         sidebar_view.add_top_bar(sidebar_header)
@@ -681,7 +730,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.split.set_sidebar(Adw.NavigationPage(title="openExpress", child=sidebar_view))
 
         content_view = Adw.ToolbarView()
-        header = Adw.HeaderBar()
+        # Its back arrow only when folded, where it goes back to the sidebar: otherwise the
+        # sidebar's arrow is the one, and there would be two.
+        self.content_header = header = Adw.HeaderBar(show_back_button=False)
         self.refresh_button = Gtk.Button(icon_name="view-refresh-symbolic",
                                          tooltip_text=_("Refresh"), action_name="win.refresh")
         header.pack_start(self.refresh_button)
@@ -727,16 +778,30 @@ class MainWindow(Adw.ApplicationWindow):
 
         breakpoint = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 620sp"))
         breakpoint.add_setter(self.split, "collapsed", True)
+        breakpoint.add_setter(self.content_header, "show-back-button", True)
         breakpoint.add_setter(self.sync_button, "visible", False)
         breakpoint.add_setter(self.sync_icon_button, "visible", True)
         self.add_breakpoint(breakpoint)
 
-        self.toasts = Adw.ToastOverlay(child=self.split)
+        # The start page is the root; the device view comes above it (D5, D7).
+        refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text=_("Refresh"),
+                             action_name="win.refresh")
+        start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
+                                    tooltip_text=_("Main Menu"), primary=True)
+        self.start = StartPage(self._open_tile, header_start=[refresh], header_end=[start_menu])
+        self.device_view = Adw.NavigationPage(title="openExpress", tag="device",
+                                              child=self.split)
+        self.navigation = Adw.NavigationView()
+        self.navigation.add(self.start.page)  # the first one added is shown
+        self.navigation.add(self.device_view)
+        self.navigation.connect("popped", self._on_popped)
+
+        self.toasts = Adw.ToastOverlay(child=self.navigation)
         self.set_content(self.toasts)
         self.nav.select_row(self.nav.get_row_at_index(0))
 
     def _install_actions(self) -> None:
-        for name, cb in (("refresh", lambda *_a: self.refresh_device()),
+        for name, cb in (("refresh", lambda *_a: self._on_refresh()),
                          ("sync", lambda *_a: self.start_sync())):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", cb)
@@ -1151,6 +1216,7 @@ class MainWindow(Adw.ApplicationWindow):
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
         for sec in self.sections.values():
             sec.set_empty(*notice)
+        self.start.set_empty(*notice)  # the start page says it on top
         if notice[0] != self._usb_title:
             self._usb_title = notice[0]
             self._update_actions()  # the Sync button says the same as the pages
@@ -1198,32 +1264,22 @@ class MainWindow(Adw.ApplicationWindow):
                       done, failed)
 
     def show_choices(self) -> None:
-        """Several Garmin devices are connected: the Device page lists them by name (never by
-        address), the other pages say so. Nothing is opened until one is chosen."""
+        """Several Garmin devices are connected: the start page shows a tile for each (never
+        an address), the device pages say to choose one. Nothing is opened until one is
+        chosen."""
         self.maps_cache = self.updates_cache = self.apps_cache = None
         self.update_state = self.map_state = None
-        for key, sec in self.sections.items():
+        for sec in self.sections.values():
             sec.loaded = False
             sec.clear()
-            if key != "watch":
-                sec.set_empty(_("Choose a device"),
-                              _("Several Garmin devices are connected. Choose one on the "
-                                "Device page."), False)
-                sec.show("empty")
+            sec.set_empty(_("Choose a device"),
+                          _("Several Garmin devices are connected. Choose one on the "
+                            "Device page."), False)
+            sec.show("empty")
         self._usb_title = _("Choose a device")  # the Sync button says the same
         self._update_banner()
         self._update_actions()
-        sec = self.sections["watch"]
-        g = sec.group(_("Several Garmin devices are connected"), _("Choose the device to open."))
-        for summary in self._choices:
-            row = Adw.ActionRow(
-                title=GLib.markup_escape_text(summary.description or _("Garmin device")),
-                subtitle=GLib.markup_escape_text(choice_subtitle(summary)), activatable=True)
-            row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-            # The entry's data, not the row: a handler never holds its widget.
-            row.connect("activated", lambda _row, found=summary.found: self.open_choice(found))
-            g.add(row)
-        sec.show("content")
+        self._show_start()
 
     def open_choice(self, found) -> None:
         """The device chosen from the list, opened as if it were the only one."""
@@ -1248,6 +1304,99 @@ class MainWindow(Adw.ApplicationWindow):
                       lambda: service.check_session(service.open_session(found=found)),
                       done, failed)
 
+    # --- the start page and the device view (D5, D7) ---------------------------------------
+
+    def _on_start_page(self) -> bool:
+        return self.navigation.get_visible_page() is self.start.page
+
+    def _on_refresh(self) -> None:
+        """Refresh (the button, F5): on the start page it stays there, also when one device
+        is found (decision 7); in the device view, as before."""
+        self._stay_on_start = self._on_start_page()
+        self.refresh_device()
+
+    def _show_start(self) -> None:
+        """The start page, as it is now."""
+        self._stay_on_start = False
+        self._navigated = True
+        if self._on_start_page():
+            self._render_start()
+        else:
+            self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
+
+    def _show_device_view(self) -> None:
+        """The view of the device open now, above the start page (D7): unless Refresh was
+        pressed on the start page, which stays then."""
+        if self._stay_on_start:
+            self._stay_on_start = False
+            self._render_start()
+            return
+        if not self._on_start_page():
+            return
+        if not self._navigated:  # the window just opened: straight to the device
+            self._navigated = True
+            self.navigation.set_animate_transitions(False)
+            self.navigation.push(self.device_view)
+            self.navigation.set_animate_transitions(True)
+            return
+        self.navigation.push(self.device_view)
+
+    def _on_popped(self, _navigation, page) -> None:
+        """Back from the device view (the arrow, Alt+Left, a swipe, or the window itself):
+        the open device stays open; the start page is drawn anew."""
+        if page is self.device_view:
+            self._render_start()
+
+    def _render_start(self) -> None:
+        """With no device open: the devices to choose from, or none and the notice of the
+        USB state. With one open: its tile at once, then the devices connected now (read in
+        the background, unless a task works with the device)."""
+        s = self.session
+        if s is None:
+            self._show_tiles(self._choices or [], notice=not self._choices)
+            return
+        self._show_tiles([session_summary(s)], notice=False)
+        if self.busy:
+            return
+
+        def done(found):
+            if self.session is not s or not self._on_start_page():
+                return
+            if not any(self._is_open(f) for f in found):
+                found = [session_summary(s), *found]
+            self._show_tiles(found, notice=False)
+
+        self.in_background(connected_devices, done)
+
+    def _is_open(self, summary) -> bool:
+        """Whether an entry is the device open now: by the unit ID, else by the address
+        (both compared in memory only)."""
+        s = self.session
+        if s is None:
+            return False
+        unit_id = getattr(s.device, "unit_id", None)
+        if unit_id and summary.unit_id is not None:
+            return summary.unit_id == unit_id
+        uri = str(getattr(s.storage, "device_uri", "") or "").rstrip("/")
+        return bool(uri) and summary.found.uri.rstrip("/") == uri
+
+    def _show_tiles(self, summaries: list, notice: bool) -> None:
+        """The tiles of these devices; what each one opens is kept here, not in the tile."""
+        entries = devicelist.entries(summaries, {}, None, logged_in=False)
+        self._start_targets = [OPEN if self._is_open(source) else source.found
+                               for _tile, source in entries]
+        self.start.show([(tile, choice_subtitle(source)) for tile, source in entries], notice)
+
+    def _open_tile(self, index: int) -> None:
+        """A tile clicked: the open device's view, or that device opened."""
+        if not 0 <= index < len(self._start_targets):
+            return
+        target = self._start_targets[index]
+        if target is OPEN:
+            self._show_device_view()
+        else:
+            self.open_choice(target)
+
     def show_device(self) -> None:
         self.maps_cache = self.updates_cache = self.apps_cache = None
         self.update_state = None
@@ -1264,6 +1413,7 @@ class MainWindow(Adw.ApplicationWindow):
             # The empty pages tell the state on USB now, not the one from before the device
             # was opened (e.g. "starting" when the window opened with a starting device).
             self._poll_usb()
+            self._show_start()
             return
         page = self.pages.get_visible_child_name()
         # The Maps or Updates page asks right away, and its answer fills the row of the device
@@ -1274,6 +1424,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_check_session = self.session
         self.show_overview()
         self.load_section(page)
+        self._show_device_view()
 
     def _update_banner(self) -> None:
         s = self.session
@@ -3468,6 +3619,7 @@ class App(Adw.Application):
         Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).add_search_path(
             str(Path(__file__).resolve().parent.parent / "data"))
         Gtk.Window.set_default_icon_name(APP_ID)
+        start.load_css(Gdk.Display.get_default())
 
         def window_call(name):
             return lambda *_a: getattr(self.main_window(), name)()

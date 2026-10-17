@@ -39,7 +39,16 @@ class Tile:
 
 
 def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
-    """The tiles, in order: the devices connected now first (the primary one first among
+    """The tiles of entries(), without what they were made of."""
+    return [tile for tile, _source in entries(connected, remembered, account, logged_in)]
+
+
+def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile, object]]:
+    """(tile, its source) in order: the source is kept outside the tile, for the window to
+    act on it: the connected device's DeviceSummary (to open it), else the KnownDevice
+    remembered, else None (only on the account).
+
+    The tiles, in order: the devices connected now first (the primary one first among
     them), then the others, the one seen last first; those never seen here at the end.
 
     `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
@@ -64,22 +73,22 @@ def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
         entry = on_account.get(unit_id) if unit_id is not None else None
         if unit_id is not None:
             done.add(unit_id)
-        now.append(_tile(s.description, s.part_number, s.software_version, s.found.kind,
-                         True, known, entry))
-    now.sort(key=lambda t: not t.primary)  # stable: otherwise in the order found
+        now.append((_tile(s.description, s.part_number, s.software_version, s.found.kind,
+                          True, known, entry), s))
+    now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
-    rest = [_tile("", "", "", None, False, known, on_account.get(unit_id))
+    rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id)), known)
             for unit_id, known in remembered.items() if unit_id not in done]
     done.update(remembered)
-    rest += [_tile("", "", "", None, False, None, entry)
+    rest += [(_tile("", "", "", None, False, None, entry), None)
              for unit_id, entry in on_account.items() if unit_id not in done]
-    rest += [_tile("", "", "", None, False, None, entry) for entry in account_only]
-    rest.sort(key=lambda t: (t.last_seen is None, -(t.last_seen or 0.0),
-                             t.description.casefold(), t.part_number))
+    rest += [(_tile("", "", "", None, False, None, entry), None) for entry in account_only]
+    rest.sort(key=lambda e: (e[0].last_seen is None, -(e[0].last_seen or 0.0),
+                             e[0].description.casefold(), e[0].part_number))
 
     result = now + rest
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
-              len(now), sum(t.on_account for t in result))
+              len(now), sum(t.on_account for t, _source in result))
     return result
 
 

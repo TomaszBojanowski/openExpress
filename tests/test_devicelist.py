@@ -271,3 +271,24 @@ def test_the_masked_account_answer():
         ("fenix 8 - 47mm, Solar", "006-B4532-00", True, True)]
     ids = {str(d["unitId"]) for d in answer}
     assert not any(i in repr(t) for t in tiles for i in ids)
+
+
+def test_each_tile_comes_with_what_it_was_made_of():
+    """entries(): each tile with its source, kept outside the tile: the connected device's
+    summary (to open it), else what is remembered of it, else None (only on the account)."""
+    from openexpress import devicelist
+
+    drive = connected("file:///run/media/u/GARMIN/", "Varia RTL515", "006-B3592-03", "3.36",
+                      VARIA, kind="ums")
+    mtp = connected("mtp://varia/", "Varia RTL515", "006-B3592-03", "3.36", VARIA)
+    known = remembered(EDGE_SEEN)
+    entries = devicelist.entries([drive, mtp, fenix_connected()], known, account(),
+                                 logged_in=True)
+    assert [t.description for t, _ in entries] == [
+        "fēnix 8", "Varia RTL515", "Edge 1050 (remembered)"]
+    (_, fenix), (_, varia), (_, edge) = entries
+    assert fenix.found.uri == "mtp://fenix/" and varia is mtp and edge is known[EDGE]
+    only_on_account = devicelist.entries([], {}, account(), logged_in=True)
+    assert [source for _, source in only_on_account] == [None, None]
+    assert [t for t, _ in entries] == devicelist.tiles(
+        [drive, mtp, fenix_connected()], known, account(), logged_in=True)
