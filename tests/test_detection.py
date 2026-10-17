@@ -4642,3 +4642,91 @@ def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
     win._show_device_picture()
     assert asked == ["006-B3592-03"]
     assert win.device_image.get_icon_name() == kind_icon("bike-accessory")
+
+
+# --- a list instead of tiles for many devices (T6a) --------------------------------------------
+
+
+def seven_watches():
+    """Seven different watches connected (made up), as the detection lists them."""
+    usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
+    return [gio_storage.DeviceSummary(
+        gio_storage.FoundDevice(f"mtp://watch-{n}/", "x", True, usb=usb),
+        f"Watch {n}", f"006-B000{n}-00", "1.00", 3000000100 + n) for n in range(7)]
+
+
+@pytest.mark.needs_display
+def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(monkeypatch):
+    """T6a: seven devices connected: their section is a list, not tiles; each row has the
+    name, the words and the icon its tile would have (the kind, else the neutral one), and
+    nothing is asked for the pictures (no unit-info, no download). A click on a row opens
+    that device, as a click on its tile. Two remembered devices stay tiles."""
+    from openexpress import known_devices
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow, Section
+    from openexpress.gui.start import StartPage, kind_icon, tile_image
+
+    def asked(*_a, **_k):
+        raise AssertionError("asked for a picture")
+
+    monkeypatch.setattr(app, "picture_from_unit_info", asked)
+    monkeypatch.setattr(app, "download_picture", asked)
+    known_devices.remember(3000000101, "Watch 1", "006-B0001-00", "1.00", "mtp", now=1.0)
+    known_devices.set_category(3000000101, "watch")
+    known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=2.0)
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=3.0)
+    opened = []
+    start = StartPage(opened.append)
+    win = start_stand_in(start, {"maps": Section("maps", "Maps", "x-symbolic", "Loading…")})
+    later = defer_background(win)
+    win._choices = seven_watches()
+    MainWindow.show_choices(win)
+    assert later == []  # nothing to read: no file in the cache, no address
+    assert not start.grid.get_visible() and start.grid.get_first_child() is None
+    assert start.list.get_visible()
+    rows = start.tiles()[:7]
+    assert all(row.get_parent() is start.list for row in rows)
+    assert [row.get_title() for row in rows] == [f"Watch {n}" for n in range(7)]
+    assert rows[0].get_subtitle() == "Over USB (MTP) · Software 1.00"
+    assert tile_image(rows[1]).get_icon_name() == kind_icon("watch")
+    assert tile_image(rows[0]).get_icon_name() == kind_icon(None)
+    remembered = start.tiles()[7:]
+    assert len(remembered) == 2
+    # Tiles there: the empty list of that section is hidden, not only empty.
+    assert start.remembered_grid.get_visible() and not start.remembered_list.get_visible()
+    assert all(t.get_parent() is start.remembered_grid for t in remembered)
+    start.list.emit("row-activated", rows[3])
+    start.remembered_grid.emit("child-activated", remembered[1])
+    assert opened == [3, 8]  # the places in the whole list, as for tiles
+    assert win._start_targets[3].uri == "mtp://watch-3/"  # the device of that row
+
+
+@pytest.mark.needs_display
+def test_a_row_gets_its_picture_like_a_tile():
+    """T6a: the picture of a part number goes into the row that is there (the same widget)
+    and into rows built later, as into tiles."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.app import Gdk, GLib
+    from openexpress.gui.start import StartPage, tile_image
+
+    def tile(n):
+        return Tile(f"Watch {n}", f"006-B000{n}-00", "1.00", "mtp", True, False, False, None,
+                    f"006-B000{n}-00", None, None)
+
+    entries = [(tile(n), "x") for n in range(7)]
+    six = StartPage()
+    six.show(entries[:6], False)  # six: tiles, the empty list hidden
+    assert six.grid.get_visible() and not six.list.get_visible()
+    assert six.list.get_first_child() is None
+    start = StartPage()
+    start.show(entries, False)
+    rows = start.tiles()
+    assert len(rows) == 7 and all(row.get_parent() is start.list for row in rows)
+    texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
+                                    12)
+    start.set_picture("006-B0002-00", texture)
+    assert start.tiles() == rows
+    assert tile_image(rows[2]).get_paintable() is texture
+    assert tile_image(rows[1]).get_paintable() is None
+    start.show([*entries, (tile(8), "y")], False)  # one more: rows built anew
+    assert tile_image(start.tiles()[2]).get_paintable() is texture

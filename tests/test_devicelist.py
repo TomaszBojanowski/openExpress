@@ -389,3 +389,16 @@ def test_the_account_list_teaches_the_kind_of_remembered_devices(tmp_path):
                                        {**ACCOUNT_ANSWER[1], "hasOpticalHeartRate": True}]))
     known = known_devices.load()
     assert set(known) == {EDGE} and known[EDGE].category == "cycling-computer"
+
+
+# --- grid or list, by the number in a section (T6a) ---------------------------------------------
+
+
+def test_a_section_is_a_grid_up_to_six_then_a_list():
+    """T6a: up to six devices in a section, tiles in a grid; seven or more, a list; none,
+    no section. Counted for each section on its own."""
+    from openexpress import devicelist
+
+    assert devicelist.layout(0) is None
+    assert [devicelist.layout(n) for n in (1, 2, 6)] == [devicelist.GRID] * 3
+    assert [devicelist.layout(n) for n in (7, 8, 30)] == [devicelist.LIST] * 3

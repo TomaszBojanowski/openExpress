@@ -14,12 +14,13 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from openexpress import devicelist  # noqa: E402
-from openexpress.devicelist import CONNECTED, ON_ACCOUNT, REMEMBERED  # noqa: E402
+from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.i18n import _, pgettext  # noqa: E402
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
+ROW_ICON_SIZE = 48  # in a row of a list (a section of many devices)
 # The icon of a tile without a picture, by the kind of the device (the files in data/,
 # symbolic: in the colours of the light or dark theme); without a kind a neutral one, so
 # that a device of an unknown kind never looks like a watch.
@@ -66,10 +67,46 @@ def _tile_grid() -> Gtk.FlowBox:
                        valign=Gtk.Align.START)
 
 
+def _device_list() -> Gtk.ListBox:
+    rows = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, valign=Gtk.Align.START)
+    rows.add_css_class("boxed-list")
+    return rows
+
+
 def _heading(text: str) -> Gtk.Label:
     label = Gtk.Label(label=text, xalign=0, visible=False)
     label.add_css_class("heading")
     return label
+
+
+class _Section:
+    """One section of the start page: its title, its tiles (a grid) or its rows (a list, for
+    many devices), how many items come before it in the whole list (a list of one number, so
+    that the handlers hold no widget) and what its items show now."""
+
+    def __init__(self, title: str, on_open):
+        self.title = _heading(title)
+        self.grid, self.list = _tile_grid(), _device_list()
+        self.grid.set_visible(False)
+        self.list.set_visible(False)
+        self.before = [0]
+        self.shown = None
+        if on_open is not None:
+            # The place of the item only: the handlers hold no widget.
+            self.grid.connect("child-activated", lambda _grid, child, before=self.before:
+                              on_open(before[0] + child.get_index()))
+            self.list.connect("row-activated", lambda _rows, row, before=self.before:
+                              on_open(before[0] + row.get_index()))
+
+    def items(self) -> list:
+        """Its tiles or its rows, in order (one of the two is empty)."""
+        found = []
+        for container in (self.grid, self.list):
+            child = container.get_first_child()
+            while child is not None:
+                found.append(child)
+                child = child.get_next_sibling()
+        return found
 
 
 def display_key(tile, how: str) -> tuple:
@@ -115,31 +152,26 @@ class StartPage:
         self.set_empty("", "", False)
         box.append(self.notice_group)
 
-        # TRANSLATORS: heading above the tiles of the devices connected now
-        self.connected_title = _heading(_("Connected"))
-        self.grid = _tile_grid()
-        # TRANSLATORS: heading above the tiles of the devices seen before, not connected now
-        self.remembered_title = _heading(_("Remembered"))
-        self.remembered_grid = _tile_grid()
-        # TRANSLATORS: heading above the tiles of the devices of the Garmin account that were
-        # never connected to this computer
-        self.account_title = _heading(_("On the account"))
-        self.account_grid = _tile_grid()
-        # Each section: its title, its tiles, how many tiles come before it (a list, so that
-        # the handlers hold no widget) and what its tiles show now.
         self._sections = {
-            CONNECTED: (self.connected_title, self.grid, [0], []),
-            REMEMBERED: (self.remembered_title, self.remembered_grid, [0], []),
-            ON_ACCOUNT: (self.account_title, self.account_grid, [0], []),
+            # TRANSLATORS: heading above the tiles of the devices connected now
+            CONNECTED: _Section(_("Connected"), on_open),
+            # TRANSLATORS: heading above the tiles of the devices seen before, not connected now
+            REMEMBERED: _Section(_("Remembered"), on_open),
+            # TRANSLATORS: heading above the tiles of the devices of the Garmin account that
+            # were never connected to this computer
+            ON_ACCOUNT: _Section(_("On the account"), on_open),
         }
-        for title, grid, before, _shown in self._sections.values():
-            grid.set_visible(False)
-            if on_open is not None:
-                # The place of the tile only: the handlers hold no widget.
-                grid.connect("child-activated", lambda _grid, child, before=before:
-                             on_open(before[0] + child.get_index()))
-            box.append(title)
-            box.append(grid)
+        for section in self._sections.values():
+            box.append(section.title)
+            box.append(section.grid)
+            box.append(section.list)
+        connected, remembered, account = self._sections.values()
+        self.connected_title, self.grid, self.list = (connected.title, connected.grid,
+                                                      connected.list)
+        self.remembered_title, self.remembered_grid, self.remembered_list = (
+            remembered.title, remembered.grid, remembered.list)
+        self.account_title, self.account_grid, self.account_list = (
+            account.title, account.grid, account.list)
         clamp = Adw.Clamp(maximum_size=900, child=box)
         self.stack.add_named(Gtk.ScrolledWindow(child=clamp,
                                                 hscrollbar_policy=Gtk.PolicyType.NEVER),
@@ -170,48 +202,45 @@ class StartPage:
         for tile, how in entries:  # in the order of the sections (devicelist.entries)
             parts[devicelist.section(tile)].append((tile, how))
         count = 0
-        for name, (title, grid, before, shown) in self._sections.items():
+        for name, section in self._sections.items():
             part = parts[name]
-            before[0] = count
+            section.before[0] = count
             count += len(part)
-            keys = [display_key(tile, how) for tile, how in part]
-            if keys != shown:  # a section whose tiles show the same keeps their widgets
-                shown[:] = keys
-                grid.remove_all()
+            mode = devicelist.layout(len(part))  # tiles while few, a list for many
+            keys = (mode, [display_key(tile, how) for tile, how in part])
+            if keys != section.shown:  # items that show the same keep their widgets
+                section.shown = keys
+                section.grid.remove_all()
+                section.list.remove_all()
                 for tile, how in part:
-                    grid.append(tile_widget(tile, how,
-                                            self._pictures.get(tile.image_part_number)))
-            else:  # the same tiles: a kind learnt since changes the icon there
-                child = grid.get_first_child()
-                for tile, _how in part:
-                    if not child.has_picture:
-                        tile_image(child).set_from_icon_name(kind_icon(tile.category))
-                    child = child.get_next_sibling()
-            title.set_visible(bool(part))
-            grid.set_visible(bool(part))
+                    picture = self._pictures.get(tile.image_part_number)
+                    if mode == LIST:
+                        section.list.append(row_widget(tile, how, picture))
+                    else:
+                        section.grid.append(tile_widget(tile, how, picture))
+            else:  # the same items: a kind learnt since changes the icon there
+                for item, (tile, _how) in zip(section.items(), part, strict=True):
+                    if not item.has_picture:
+                        tile_image(item).set_from_icon_name(kind_icon(tile.category))
+            section.title.set_visible(bool(part))
+            section.grid.set_visible(mode is not None and mode != LIST)
+            section.list.set_visible(mode == LIST)
         self.stack.set_visible_child_name("content")
 
     def set_picture(self, part_number: str, texture) -> None:
         """The picture of the devices of this part number, put into their tiles that are
         there (the same widgets: nothing is built again) and kept for those built later."""
         self._pictures[part_number] = texture
-        for _title, grid, _before, _shown in self._sections.values():
-            child = grid.get_first_child()
-            while child is not None:
-                if getattr(child, "part_number", None) == part_number:
-                    tile_image(child).set_from_paintable(texture)
-                    child.has_picture = True
-                child = child.get_next_sibling()
+        for section in self._sections.values():
+            for item in section.items():
+                if getattr(item, "part_number", None) == part_number:
+                    tile_image(item).set_from_paintable(texture)
+                    item.has_picture = True
 
     def tiles(self) -> list:
-        """The tiles shown, in order: the connected ones, then the remembered ones."""
-        found = []
-        for _title, grid, _before, _shown in self._sections.values():
-            child = grid.get_first_child()
-            while child is not None:
-                found.append(child)
-                child = child.get_next_sibling()
-        return found
+        """The items shown (tiles, or rows of a section of many), in the order of the whole
+        list: the connected ones, the remembered ones, those only on the account."""
+        return [item for section in self._sections.values() for item in section.items()]
 
 
 class RememberedPage:
@@ -285,13 +314,47 @@ class RememberedPage:
         self.tools_group.set_visible(bool(part_number))
 
 
-def tile_image(child: Gtk.FlowBoxChild) -> Gtk.Image:
-    """The image of a tile: the icon, or the picture of the device in its place."""
-    return child.get_child().get_first_child()
+def tile_image(item) -> Gtk.Image:
+    """The image of a tile or a row: the icon, or the picture of the device in its place."""
+    return item.image
 
 
 def kind_icon(category) -> str:
     return KIND_ICONS.get(category, DEVICE_ICON)
+
+
+def _name(tile) -> str:
+    return tile.description or _("Garmin device")
+
+
+def _image(tile, picture, size: int) -> Gtk.Image:
+    """The image of an item, the same for a tile and a row: the picture of the device if it
+    is known, else the icon of its kind (the picture is put in its place later, in the
+    same size)."""
+    image = Gtk.Image(icon_name=kind_icon(tile.category), pixel_size=size)
+    if picture is not None:
+        image.set_from_paintable(picture)
+    return image
+
+
+def _mark(item, tile, image, picture) -> None:
+    """What set_picture and show need to find in an item: its image, which picture goes
+    into it and whether it is there."""
+    item.image = image
+    item.part_number = tile.image_part_number
+    item.has_picture = picture is not None
+
+
+def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
+    """One row of a section of many devices: what its tile would show, smaller: the picture
+    or the icon of the kind, the name, how it is connected and its version."""
+    row = Adw.ActionRow(title=GLib.markup_escape_text(_name(tile)),
+                        subtitle=GLib.markup_escape_text(how), activatable=True)
+    image = _image(tile, picture, ROW_ICON_SIZE)
+    row.add_prefix(image)
+    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+    _mark(row, tile, image, picture)
+    return row
 
 
 def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
@@ -300,11 +363,9 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
     its version; framed when connected."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
-    image = Gtk.Image(icon_name=kind_icon(tile.category), pixel_size=TILE_ICON_SIZE)
-    if picture is not None:
-        image.set_from_paintable(picture)
+    image = _image(tile, picture, TILE_ICON_SIZE)
     box.append(image)
-    name = Gtk.Label(label=tile.description or _("Garmin device"), wrap=True,
+    name = Gtk.Label(label=_name(tile), wrap=True,
                      justify=Gtk.Justification.CENTER, max_width_chars=TEXT_CHARS)
     name.add_css_class("heading")
     box.append(name)
@@ -315,8 +376,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         label.add_css_class("caption")
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, width_request=TILE_WIDTH)
-    child.part_number = tile.image_part_number  # which picture goes into it
-    child.has_picture = picture is not None
+    _mark(child, tile, image, picture)
     child.add_css_class("card")
     child.add_css_class("oe-tile")
     if tile.connected:

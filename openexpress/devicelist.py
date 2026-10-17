@@ -23,6 +23,18 @@ log = logging.getLogger(__name__)
 # only on the Garmin account (never seen here).
 CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
 
+# How a section of the start page shows its devices: tiles in a grid while they are few, a
+# list once they are many (counted for each section on its own).
+GRID, LIST = "grid", "list"
+GRID_MAX = 6
+
+
+def layout(count: int) -> str | None:
+    """GRID up to GRID_MAX devices, LIST beyond; None: no device, no section."""
+    if count <= 0:
+        return None
+    return GRID if count <= GRID_MAX else LIST
+
 
 
 @dataclass(frozen=True)
