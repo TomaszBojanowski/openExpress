@@ -4309,6 +4309,50 @@ def test_one_of_two_on_the_list_unplugged_while_a_remembered_one_is_shown(
     assert win.navigation.stack == ["start page", "device view"]
 
 
+def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, monkeypatch,
+                                                                  tmp_path, device_root,
+                                                                  caplog):
+    """Two devices on the list, the Edge chosen, its opening fails: the list to choose from
+    is gone (the devices connected are still known) and the detection after the failure is
+    running. The other device's mount removed meanwhile plans no detection of its own."""
+    from openexpress import service
+    from openexpress.device.storage import DeviceError
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert len(win._choices) == 2
+    running = []  # the detection after the failure: in its thread until the test says so
+    real = win.run_task
+
+    def run_task(title, fn, done, failed=None, device=True, in_page=False):
+        if title == "Detecting the device…":
+            running.append((fn, done, failed))
+            return None
+        return real(title, fn, done, failed)
+
+    win.run_task = run_task
+
+    def refuse(*_a, **_k):
+        raise DeviceError("not readable")
+
+    monkeypatch.setattr(service, "open_session", refuse)
+    win._open_tile(drawn_names(win)[-1].index("Edge 1050"))
+    assert win.errors == ["not readable"] and len(running) == 1
+    assert win.session is None and win._choices is None
+    assert [c.description for c in win._connected] == ["Test watch", "Edge 1050"]
+    watch = next(f for f in win.world.offered if f.uri == NUMERIC)
+    win.world.offered.remove(watch)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
+    assert win.timers.live == {} and len(running) == 1
+    assert "one of the devices to choose from" not in caplog.text
+    assert "a Garmin device, no device is open, nothing to do" in caplog.text
+    assert win.session is None and win.navigation.stack == ["start page"]
+
+
 def test_a_tile_clicked_during_a_detection(start_window, monkeypatch, tmp_path, device_root):
     """A connected tile clicked while a task (e.g. a detection) runs: the window says so and
     opens nothing."""
