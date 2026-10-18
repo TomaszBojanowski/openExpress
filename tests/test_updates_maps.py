@@ -1465,6 +1465,21 @@ def test_the_command_line_says_why_a_map_cannot_be_installed(server, device_root
     assert device_files(device_root) == before
 
 
+@pytest.mark.parametrize("how, text", [("checksum", BAD_CHECKSUM_TEXT),
+                                       ("file", MISSING_FILE_TEXT)])
+def test_the_dry_run_refuses_a_map_that_cannot_be_installed(server, device_root, xdg,
+                                                            monkeypatch, capsys, how, text):
+    """Refused before anything is promised, as with --apply: no plan, the same reason."""
+    from openexpress import cli
+
+    answer_with(monkeypatch, body=json.dumps(_japan_answer(server, how)).encode())
+    before = device_files(device_root)
+    assert cli.main(["--path", str(device_root), "maps", "install", "Japan"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "" and text in captured.err
+    assert device_files(device_root) == before
+
+
 def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):
     """A software update the server lists without an MD5: refused before it is
     downloaded, nothing written to the device."""
