@@ -380,7 +380,8 @@ def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_st
     assert win.net_label.get_label() == netstatus.STATE_TEXT[state]
     assert win.net_icon.get_label() == DOT and win.net_icon.has_css_class(NET_COLOUR[state])
     assert len(NET_COLOURS & set(win.net_icon.get_css_classes())) == 1
-    assert win.net_button.get_tooltip_text() is None  # a popover instead of a tooltip
+    assert win.net_button.get_tooltip_text() == (
+        "The state comes from the program's last requests.")  # the note of the popover
     assert win.net_button.get_popover() is not None
 
 
@@ -393,35 +394,28 @@ def test_the_popover_names_each_service_with_its_server_and_time(network_state):
     window._render_net_status(win)
     assert win.net_heading.get_label() == "Garmin server problem"
     connect, omt, sign_in = (win.net_rows[s] for s in netstatus.SERVICES)
-    assert (connect.name.get_label(), connect.host.get_label()) == ("Garmin Connect",
+    assert (connect.row.get_title(), connect.row.get_subtitle()) == ("Garmin Connect",
                                                                     "connectapi.garmin.com")
-    assert connect.when.get_label().startswith("at ") and connect.outcome.get_label() == "answered"
+    assert connect.when.get_label() == "just now" and not connect.state.get_visible()
     assert connect.dot.get_label() == DOT and connect.dot.has_css_class("success")
-    assert connect.row.get_sensitive() and not connect.later.get_visible()
-    assert (omt.name.get_label(), omt.host.get_label()) == ("Updates and maps", "omt.garmin.com")
-    assert omt.outcome.get_label() == "server error (HTTP 503)" and omt.dot.has_css_class("error")
-    assert omt.later.get_visible() and omt.later.get_label().startswith("last answer at ")
-    assert (sign_in.name.get_label(), sign_in.host.get_label()) == ("Sign-in", "sso.garmin.com")
-    assert sign_in.outcome.get_label() == "not needed yet" and sign_in.when.get_label() == ""
+    assert connect.row.get_sensitive()
+    assert (omt.row.get_title(), omt.row.get_subtitle()) == ("Updates and maps",
+                                                            "omt.garmin.com")
+    assert omt.state.get_visible() and omt.state.get_label() == "server error (HTTP 503)"
+    assert omt.state.has_css_class("error") and omt.dot.has_css_class("error")
+    assert omt.row.get_tooltip_text().startswith("last answer at ")
+    assert (sign_in.row.get_title(), sign_in.row.get_subtitle()) == ("Sign-in",
+                                                                    "sso.garmin.com")
+    assert sign_in.when.get_label() == "not asked yet" and not sign_in.state.get_visible()
     assert sign_in.dot.has_css_class("dim-label") and not sign_in.row.get_sensitive()  # greyed
 
 
 @pytest.mark.needs_display
-def test_the_popover_heading_when_all_is_well_and_its_note(network_state):
-    from gi.repository import Gtk
-
+def test_the_popover_heading_when_all_is_well(network_state):
     win, _bar, window = _status_window()
     note(network_state, [(netstatus.CONNECT, 200)])
     window._render_net_status(win)
     assert win.net_heading.get_label() == "Connected to Garmin's servers"
-    box = win.net_button.get_popover().get_child()
-    labels = []
-    child = box.get_first_child()
-    while child is not None:
-        if isinstance(child, Gtk.Label):
-            labels.append(child.get_label())
-        child = child.get_next_sibling()
-    assert labels[-1] == "The state comes from the program's last requests."
 
 
 @pytest.mark.needs_display
@@ -434,7 +428,7 @@ def test_an_open_popover_follows_new_answers_in_the_same_rows(network_state):
     window._render_net_status(win)  # what the listener does on the GTK thread
     assert win.net_heading.get_label() == "No connection"
     assert {s: r.row for s, r in win.net_rows.items()} == rows_before  # the same widgets
-    assert win.net_rows[netstatus.OMT].outcome.get_label() == "no connection"
+    assert win.net_rows[netstatus.OMT].state.get_label() == "no connection"
 
 
 @pytest.mark.needs_display
@@ -462,16 +456,16 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
     root.set_child(app.MainWindow._build_net_status(root))
     network_state.note(netstatus.CONNECT, netstatus.Result(
         netstatus.OK, yesterday_evening, "connectapi.garmin.com", 200))
-    root._render_net_status()  # the answer came yesterday: "at 23:40"
+    root._render_net_status()  # the answer came a minute ago
     when = root.net_rows[netstatus.CONNECT].when
-    assert when.get_label() == "at 23:40"
+    assert when.get_label() == "1 min ago"
 
-    clock[0] = real.time()  # today the popover is opened
+    clock[0] = yesterday_evening + 10 * 3600 + 20 * 60  # the popover opened at 10:00 today
     popover = root.net_button.get_popover()
     show = GObject.signal_lookup("show", Gtk.Widget)
     assert GObject.signal_has_handler_pending(popover, show, 0, False)  # opening redraws
     app._render_net_status_on_show(popover)  # what opening it does
-    assert when.get_label() == f"at {real.strftime('%Y-%m-%d', y)} 23:40"
+    assert when.get_label() == "yesterday, 23:40"
     root.destroy()
 
 
@@ -602,3 +596,96 @@ def test_today_has_only_the_hour_in_polish(polish):
     line = netstatus.describe(last, answered, PROD, now)[1].splitlines()[2]
     assert line == (f"Aktualizacje i mapy (omt.garmin.com): błąd serwera (HTTP 503) o {hour}; "
                     f"ostatnia odpowiedź o {hour}")
+
+
+# --- the tidier popover (18.10.2026) ------------------------------------------------------------
+
+@pytest.mark.needs_display
+def test_a_good_row_has_its_dot_and_time_but_no_word(network_state):
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200)])
+    window._render_net_status(win)
+    connect = win.net_rows[netstatus.CONNECT]
+    assert (connect.row.get_title(), connect.row.get_subtitle()) == (
+        "Garmin Connect", "connectapi.garmin.com")
+    assert connect.dot.has_css_class("success") and not connect.state.get_visible()
+    assert connect.when.get_label() == "just now"
+    tooltip = connect.row.get_tooltip_text()  # the whole date and hour of the answer
+    assert tooltip.startswith("last answer at ") and tooltip.count("-") == 2
+
+
+@pytest.mark.needs_display
+def test_a_row_with_a_problem_says_it_in_its_colour(network_state):
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.OMT, 200), (netstatus.OMT, 503)])
+    window._render_net_status(win)
+    omt = win.net_rows[netstatus.OMT]
+    assert omt.state.get_visible() and omt.state.get_label() == "server error (HTTP 503)"
+    assert omt.state.has_css_class("error") and omt.state.has_css_class("caption-heading")
+    assert omt.when.get_label() == "just now"
+    assert omt.row.get_tooltip_text().startswith("last answer at ")  # the last good one
+
+
+@pytest.mark.needs_display
+def test_a_service_not_asked_yet_is_greyed(network_state):
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200)])
+    window._render_net_status(win)
+    sign_in = win.net_rows[netstatus.SIGN_IN]
+    assert sign_in.when.get_label() == "not asked yet" and not sign_in.state.get_visible()
+    assert not sign_in.row.get_sensitive() and sign_in.row.get_tooltip_text() is None
+
+
+@pytest.mark.needs_display
+def test_the_note_is_the_tooltip_of_the_button_not_a_footer(network_state):
+    from gi.repository import Gtk
+
+    win, _bar, window = _status_window()
+    note(network_state, [(netstatus.CONNECT, 200)])
+    window._render_net_status(win)
+    note_text = "The state comes from the program's last requests."
+    assert win.net_button.get_tooltip_text() == note_text
+
+    def labels(widget):
+        found, child = [], widget.get_first_child()
+        if isinstance(widget, Gtk.Label):
+            found.append(widget.get_label())
+        while child is not None:
+            found += labels(child)
+            child = child.get_next_sibling()
+        return found
+
+    assert note_text not in labels(win.net_button.get_popover().get_child())
+    assert win.net_heading.get_label() == "Connected to Garmin's servers"
+    assert win.net_heading_dot.has_css_class("success")
+
+
+@pytest.mark.needs_display
+def test_try_again_shows_only_when_something_is_wrong_and_refreshes_the_page(network_state):
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gtk
+
+    from openexpress.gui import app
+
+    refreshed = []
+
+    class Root(Gtk.Window):  # never shown: a stand-in for the main window
+        session = None
+        _render_net_status = app.MainWindow._render_net_status
+
+        def _on_refresh(self):
+            refreshed.append(True)
+
+    root = Root()
+    root.set_child(app.MainWindow._build_net_status(root))
+    note(network_state, [(netstatus.CONNECT, 200)])
+    root._render_net_status()
+    assert not root.net_retry.get_visible()  # all is well: nothing to try
+    note(network_state, [(netstatus.CONNECT, None)])
+    root._render_net_status()
+    assert root.net_retry.get_visible() and root.net_retry.get_label() == "Try Again"
+    root.net_retry.emit("clicked")
+    assert refreshed == [True]  # Refresh of the page: no request of its own
+    root.destroy()

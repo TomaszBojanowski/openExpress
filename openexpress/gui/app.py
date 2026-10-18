@@ -20,8 +20,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
 gi.require_version("Gdk", "4.0")
-gi.require_version("Pango", "1.0")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import (  # noqa: E402
     cache,
@@ -698,6 +697,9 @@ NET_ROW_COLOUR = {
     netstatus.CLOCK: "warning",
 }
 NET_COLOURS = set(NET_COLOUR.values()) | set(NET_ROW_COLOUR.values())
+# The states in which the popover offers to try again.
+NET_BAD = (netstatus.OFFLINE, netstatus.SERVER_PROBLEM, netstatus.SIGN_IN_EXPIRED,
+           netstatus.CLOCK_OFF)
 NET_POPOVER_WIDTH = 320  # opened upwards from the left edge of the button: inside the window
 DOT = "\u25cf"  # ●
 
@@ -720,6 +722,17 @@ def _render_net_status_later(ref) -> bool:
     if win is not None:
         win._render_net_status()
     return False
+
+
+def _retry_from_net_status(button) -> None:
+    """ "Try Again" in the popover: closes it and refreshes the page shown, as its Refresh
+    button does. The window comes from the button itself, so the handler holds no widget."""
+    popover = button.get_ancestor(Gtk.Popover)
+    if popover is not None:
+        popover.popdown()
+    refresh = getattr(button.get_root(), "_on_refresh", None)
+    if refresh is not None:
+        refresh()
 
 
 def _render_net_status_on_show(popover) -> None:
@@ -1040,49 +1053,45 @@ class MainWindow(Adw.ApplicationWindow):
         self.net_button = Gtk.MenuButton(child=inner, direction=Gtk.ArrowType.UP)
         self.net_button.add_css_class("flat")
 
+        # What the state comes from, on the button rather than at the bottom of the popover.
+        self.net_button.set_tooltip_text(_(netstatus.NOTE))
+
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8,
                       margin_bottom=8, margin_start=8, margin_end=8,
                       width_request=NET_POPOVER_WIDTH - 16)
+        head = Gtk.Box(spacing=6)
+        self.net_heading_dot = _dot()
         # Wrapped labels ask for the width of their whole text: a small limit keeps the
         # popover at its own width.
-        self.net_heading = Gtk.Label(xalign=0, wrap=True, max_width_chars=20)
+        self.net_heading = Gtk.Label(xalign=0, wrap=True, max_width_chars=20, hexpand=True)
         self.net_heading.add_css_class("heading")
-        box.append(self.net_heading)
-        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, show_separators=True)
+        head.append(self.net_heading_dot)
+        head.append(self.net_heading)
+        box.append(head)
+        listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        listbox.add_css_class("boxed-list")
         self.net_rows = {}
         for key in netstatus.SERVICES:
-            # ● name        at 00:15
-            #   server       server error (HTTP 503)
-            #                last answer at 23:40      (after a failure only)
-            grid = Gtk.Grid(column_spacing=6, row_spacing=1, margin_top=5, margin_bottom=5,
-                            margin_start=4, margin_end=4)
+            # ● name                      server error (HTTP 503)   (a problem only)
+            #   server                                  5 min ago
+            row = Adw.ActionRow(activatable=False)
             dot = _dot()
-            name = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
+            row.add_prefix(dot)
+            right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
+            state = Gtk.Label(xalign=1, visible=False)
+            state.add_css_class("caption-heading")
             when = Gtk.Label(xalign=1)
             when.add_css_class("caption")
-            host = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
-            outcome = Gtk.Label(xalign=1)
-            later = Gtk.Label(xalign=1)
-            for small in (host, outcome, later):
-                small.add_css_class("caption")
-            for grey in (host, later):
-                grey.add_css_class("dim-label")
-            grid.attach(dot, 0, 0, 1, 1)
-            grid.attach(name, 1, 0, 1, 1)
-            grid.attach(when, 2, 0, 1, 1)
-            grid.attach(host, 1, 1, 1, 1)
-            grid.attach(outcome, 2, 1, 1, 1)
-            grid.attach(later, 1, 2, 2, 1)
-            row = Gtk.ListBoxRow(child=grid, activatable=False)
+            right.append(state)
+            right.append(when)
+            row.add_suffix(right)
             listbox.append(row)
-            self.net_rows[key] = types.SimpleNamespace(
-                row=row, dot=dot, name=name, when=when, host=host, outcome=outcome,
-                later=later)
+            self.net_rows[key] = types.SimpleNamespace(row=row, dot=dot, state=state, when=when)
         box.append(listbox)
-        note = Gtk.Label(label=_(netstatus.NOTE), xalign=0, wrap=True, max_width_chars=20)
-        note.add_css_class("caption")
-        note.add_css_class("dim-label")
-        box.append(note)
+        # The same as Refresh of the page shown: no request of its own to Garmin's servers.
+        self.net_retry = Gtk.Button(label=_("Try Again"), halign=Gtk.Align.END, visible=False)
+        self.net_retry.connect("clicked", _retry_from_net_status)
+        box.append(self.net_retry)
         popover = Gtk.Popover(child=box, has_arrow=False, position=Gtk.PositionType.TOP)
         # Centred over a rectangle as wide as the popover that starts at the button's left
         # edge: the popover goes up and to the right, never out of the side of the window.
@@ -1112,16 +1121,22 @@ class MainWindow(Adw.ApplicationWindow):
             [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
             [text, _("Show the state of Garmin's servers") + "\n" + whole])
         self.net_heading.set_label(netstatus.heading(state))
+        _paint(self.net_heading_dot, NET_COLOUR[state])
+        self.net_retry.set_visible(state in NET_BAD)
         for r in netstatus.rows(last, answered, hosts):
             w = self.net_rows[r.service]
-            w.name.set_label(r.name)
-            w.when.set_label(r.time)
-            w.host.set_label(r.host)
-            w.outcome.set_label(r.outcome)
-            w.later.set_label(r.last_answer)
-            w.later.set_visible(bool(r.last_answer))
+            w.row.set_title(GLib.markup_escape_text(r.name))
+            w.row.set_subtitle(GLib.markup_escape_text(r.host))
             _paint(w.dot, NET_ROW_COLOUR[r.kind])
-            w.row.set_sensitive(r.kind is not None)  # not needed yet: greyed
+            # The word only for a problem; a good answer has its dot and its time.
+            problem = r.kind not in (None, netstatus.OK)
+            w.state.set_label(r.outcome if problem else "")
+            w.state.set_visible(problem)
+            if problem:
+                _paint(w.state, NET_ROW_COLOUR[r.kind])
+            w.when.set_label(r.time if r.kind is not None else _("not asked yet"))
+            w.row.set_tooltip_text(r.answered or None)
+            w.row.set_sensitive(r.kind is not None)  # not asked yet: greyed
 
     def _remember_geometry(self) -> None:
         # The default size follows the user's resizing and keeps the last unmaximized

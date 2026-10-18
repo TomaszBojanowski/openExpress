@@ -13,10 +13,11 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
-from openexpress.i18n import N_, _, pgettext
+from openexpress.i18n import N_, _, pgettext, relative_time
 
 log = logging.getLogger(__name__)
 
@@ -227,6 +228,19 @@ def at(ts: float, now: float | None = None) -> str:
     return _("at {date} {time}").format(date=date, time=hour)
 
 
+def ago(ts: float, now: float | None = None) -> str:
+    """The time of an answer in the popover: "just now", "5 min ago", "yesterday, 23:41"."""
+    return relative_time(datetime.fromtimestamp(ts),
+                         datetime.fromtimestamp(now if now is not None else time.time()))
+
+
+def at_full(ts: float) -> str:
+    """ "at 2026-10-14 23:41": always with the date (the tooltip of a row)."""
+    t = time.localtime(ts)
+    return _("at {date} {time}").format(date=time.strftime(_("%Y-%m-%d"), t),
+                                         time=time.strftime("%H:%M", t))
+
+
 # TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well
 CONNECTED_HEADING = N_("Connected to Garmin's servers")
 # TRANSLATORS: at the bottom of the window with the state of Garmin's servers
@@ -243,7 +257,8 @@ class Row:
     detail: str  # how it answered, with the time: "server error (HTTP 503) at 00:15"
     last_answer: str  # "last answer at …" after a failure; "" otherwise
     outcome: str = ""  # the same without the time, short: "server error (HTTP 503)"
-    time: str = ""  # "at 00:15", "at 2026-10-14 00:15"; "" when not needed yet
+    time: str = ""  # "just now", "5 min ago", "yesterday, 23:41"; "" when not needed yet
+    answered: str = ""  # "last answer at 2026-10-14 23:41", with the date; "" if none yet
 
 
 def heading(state: str) -> str:
@@ -280,8 +295,10 @@ def rows(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, s
             outcome = _("clock off by {minutes} min").format(minutes=r.minutes)
         last_answer = (_("last answer {at}").format(at=at(answered[s], now))
                        if r is not None and r.kind != OK and s in answered else "")
+        good = r.at if r is not None and r.kind == OK else answered.get(s)
         out.append(Row(s, _(SERVICE_NAME[s]), host or "?", r.kind if r else None, detail,
-                       last_answer, outcome, at(r.at, now) if r else ""))
+                       last_answer, outcome, ago(r.at, now) if r else "",
+                       _("last answer {at}").format(at=at_full(good)) if good else ""))
     return out
 
 

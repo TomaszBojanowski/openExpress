@@ -19,6 +19,7 @@ import gettext
 import json
 import locale
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 DOMAIN = "openexpress"
@@ -105,6 +106,31 @@ def setup(language: str | None = None) -> str:
 
 def current_language() -> str:
     return _language
+
+
+def relative_time(moment: datetime, now: datetime) -> str:
+    """When something happened, told against `now` (both local): "just now" under a minute
+    (also a moment a little ahead), "5 min ago", "3 h ago" the same day, "yesterday, 23:41"
+    within a day; else the date and the hour in the format of the language."""
+    seconds = (now - moment).total_seconds()
+    if seconds < 60:
+        return _("just now")
+    if seconds < 3600:
+        n = int(seconds // 60)
+        # TRANSLATORS: how long ago, in minutes
+        return ngettext("{n} min ago", "{n} min ago", n).format(n=n)
+    hour = moment.strftime("%H:%M")
+    if moment.date() == now.date():
+        n = int(seconds // 3600)
+        # TRANSLATORS: how long ago, in hours
+        return ngettext("{n} h ago", "{n} h ago", n).format(n=n)
+    if moment.date() == now.date() - timedelta(days=1) and seconds < 86400:
+        # TRANSLATORS: a moment of yesterday, e.g. "yesterday, 23:41"
+        return _("yesterday, {time}").format(time=hour)
+    # TRANSLATORS: strftime format of a date in the popover of the server state button
+    date = moment.strftime(_("%Y-%m-%d"))
+    # TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
+    return pgettext("date and hour", "{date} {time}").format(date=date, time=hour)
 
 
 def chosen_language() -> str | None:
