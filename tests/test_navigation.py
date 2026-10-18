@@ -158,6 +158,10 @@ PLANS = [
     # A device listed without its details (e.g. not mounted yet): its mount is looked at.
     ("P-unread-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False,
      Detect(keep_open=True)),
+    # With a device open, left aside as every mount of a device listed (since T2).
+    # behaviour to change in step 6 (Q1): the list is read again instead
+    ("P-unread-mount-on-the-list-while-open", Cause.PLUGGED, (E + "/",), WATCH_LABEL, (W, E),
+     False, Nothing()),
     # After 1c55104: another device unplugged, its two mounts removed: the list read once.
     ("P-read-the-list", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, READ_THE_LIST), WATCH_LABEL,
      (W, E), False, ReadList()),
@@ -172,7 +176,7 @@ PLANS = [
 
 
 # The entries listed without their details, by the id of the row (none in the others).
-UNREAD = {"P-unread-mount-on-the-list": (E,)}
+UNREAD = {"P-unread-mount-on-the-list": (E,), "P-unread-mount-on-the-list-while-open": (E,)}
 
 
 @pytest.mark.parametrize("row_id, cause, reasons, open_label, listed, moved, expected",

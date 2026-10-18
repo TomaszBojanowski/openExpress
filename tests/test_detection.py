@@ -4447,6 +4447,35 @@ def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, 
         ("Edge 1050", "Over USB (MTP) · Software 33.11")]
 
 
+def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
+        start_window, monkeypatch, tmp_path, device_root, caplog):
+    """The test watch chosen from the list and open, the Edge on the list not mounted yet
+    ("Not mounted"); gvfs then mounts it: with a device open its mount is left aside as
+    that of any device listed (since T2): no detection, the test watch stays open."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")  # the Edge on USB
+    win.world.offered[win.world.offered.index(edge)] = gio_storage.FoundDevice(
+        NAMED, "Edge", False, usb=edge.usb)
+    win.refresh_device()
+    win._open_tile(drawn_names(win)[-1].index("Test watch"))
+    opened = win.session
+    assert opened.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+    win.world.offered[1] = edge  # mounted now
+    ran = detections(win)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_added(win, None, FakeMount(NAMED))
+        win.timers.fire()
+    # behaviour to change in step 6 (Q1): the list is read again instead
+    assert ran == []
+    assert "device detection: mount of a device already listed, nothing to do" in caplog.text
+    assert win.session is opened and win.navigation.stack == ["start page", "device view"]
+
+
 def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
                                                                 tmp_path, device_root):
     """Two devices listed at the start; gvfs reports their mounts, which bring no second

@@ -148,10 +148,11 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
         return ReadList()
     # Mounts of devices already listed with their details bring nothing new (Q2), whether
     # one is open or not: gvfs reports them as the window starts, and twice for one device.
-    # One listed without them (not mounted yet, not readable) is looked at: its tile may
-    # get its details now.
-    known = [r for r in rest if r is not None and not on_open(r)
-             and r.rstrip("/") in listed - unread]
+    # One listed without them (not mounted yet, not readable) is looked at while none is
+    # open: its tile may get its details now. With a device open every mount of a device
+    # listed is left aside, as since T2, until Q1 reads the list again instead.
+    skipped = listed if open_label is not None else listed - unread
+    known = [r for r in rest if r is not None and not on_open(r) and r.rstrip("/") in skipped]
     rest = [r for r in rest if r not in known]
     ignored = len(known)
     # (The list to read again with no device open any more: the open one went away too.)
