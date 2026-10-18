@@ -1,0 +1,190 @@
+"""Where the user goes after a detection, decided here in full and nowhere else: whether a
+detection is needed at all (plan) and, once it has a result, which page the window shows
+(navigate_after). Both are pure: no window, no session, no GTK, nothing read from USB or
+asked of a server; addresses are compared in memory only and never written to the log,
+nor is a unit ID. `before` is what the user saw (the devices on the start page and the
+device open when the detection started), not what is known now; `after` is what the
+detection found. The table in tests/test_navigation.py is the source of truth: each row
+is one situation of the window, with today's outcome, and the rows marked with a decision
+(Q1-Q3 in the notes) are those that are to change."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
+from enum import Enum
+
+# A trigger that asks only for the list of devices connected to be read again (another
+# device than the open one went away); never an address. The same as the window's.
+READ_THE_LIST = "read the list of devices again"
+
+
+class Cause(Enum):
+    """Why the window looks for devices (or why it decides where the user goes)."""
+    START = "window start"
+    PLUGGED = "device mounted"
+    UNPLUGGED_OPEN = "open device unplugged"
+    UNPLUGGED_OTHER = "another device unplugged"
+    UNPLUGGED_CHOICE = "a device on the list unplugged"
+    USB_CHANGED = "USB changed"
+    REFRESH_ON_START = "refresh on the start page"
+    REFRESH_IN_VIEW = "refresh in the device view"
+    CHOSEN = "tile chosen"
+    CHOICE_FAILED = "the device chosen could not be opened"
+    ACCOUNT_CHANGED = "account changed"
+
+
+class Page(Enum):
+    START = "start page"
+    DEVICE = "device view"
+    REMEMBERED = "remembered device's view"
+
+
+@dataclass(frozen=True)
+class View:
+    """The page shown; for the read-only view of a device not connected, which one it is
+    (by its unit ID: compared in memory only, never shown or written)."""
+    page: Page
+    shown_unit_id: int | None = field(default=None, repr=False)
+
+
+@dataclass(frozen=True)
+class Seen:
+    """Devices by their addresses: those connected, and the one open (or None)."""
+    connected: frozenset[str] = frozenset()
+    open: str | None = None
+
+
+# --- where the user goes: what the window does with it ---------------------------------------
+
+@dataclass(frozen=True)
+class Stay:
+    """The page shown stays; `redraw_start`: the start page is drawn again (shown, or under
+    the view of a remembered device)."""
+    redraw_start: bool = False
+
+
+@dataclass(frozen=True)
+class ShowDevice:
+    """The view of the device open, above the start page (the first time without an
+    animation)."""
+    animate: bool = True
+
+
+@dataclass(frozen=True)
+class ShowStart:
+    """Back to the start page."""
+
+
+Decision = Stay | ShowDevice | ShowStart
+
+
+# --- whether to look for devices --------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Nothing:
+    """No detection: nothing new."""
+
+
+@dataclass(frozen=True)
+class ReadList:
+    """Only the list of devices connected is read again; the open device stays."""
+
+
+@dataclass(frozen=True)
+class Detect:
+    """A detection; `keep_open`: the device open now is opened again when it is still there
+    (several connected), instead of giving the list to choose from."""
+    keep_open: bool = True
+
+
+@dataclass(frozen=True)
+class CheckOpen:
+    """Only the open device's own mount was reported: whether it still answers (a
+    detection only if it does not)."""
+
+
+Plan = Nothing | ReadList | Detect | CheckOpen
+
+# Causes whose detection runs with the device open still open: if it is found again, the
+# page shown stays (the window's "reopening").
+_REOPENING = (Cause.PLUGGED, Cause.REFRESH_IN_VIEW)
+# Causes that come by the window's timer, with the triggers so far (`reasons`).
+_TIMED = (Cause.PLUGGED, Cause.UNPLUGGED_OTHER, Cause.UNPLUGGED_CHOICE, Cause.USB_CHANGED)
+
+
+def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | None = None,
+         listed: frozenset[str] = frozenset(),
+         open_moved: Callable[[], bool] = lambda: False) -> Plan:
+    """Whether to look for devices, and how. `reasons`: the triggers of the timer (the
+    address of a mount reported, None for a change on USB, READ_THE_LIST); `open_label`:
+    the address of the open device's storage (None: none open); `listed`: the addresses of
+    the devices connected (without the trailing slash); `open_moved`: whether the open
+    device is no longer at its place on USB (asked only when it matters)."""
+    if cause not in _TIMED:
+        if cause in (Cause.UNPLUGGED_OPEN, Cause.CHOSEN):
+            return Nothing()  # no detection: the device is gone, or the one chosen is opened
+        if cause is Cause.REFRESH_ON_START and open_label is not None:
+            return ReadList()  # the list (and the account's) read again, nothing opened
+        return Detect(keep_open=True)
+
+    def on_open(r: str) -> bool:
+        return open_label is not None and open_label.startswith(r.rstrip("/") + "/")
+
+    read_the_list = READ_THE_LIST in reasons
+    rest = [r for r in reasons if r != READ_THE_LIST]
+    if open_label is not None and read_the_list and not rest:
+        return ReadList()
+    if open_label is not None and rest:
+        # Mounts of devices already listed bring nothing new while one is open.
+        known = [r for r in rest if r is not None and not on_open(r)
+                 and r.rstrip("/") in listed]
+        rest = [r for r in rest if r not in known]
+        if known and not rest:
+            return ReadList() if read_the_list else Nothing()
+    if open_label is None or not rest or any(r is None or not on_open(r) for r in rest):
+        # Another device mounted or plugged in: with one open, the list to choose from (D7).
+        return Detect(keep_open=open_label is None)
+    if open_moved():
+        return Detect(keep_open=True)  # the same address, another place on USB
+    return CheckOpen()
+
+
+def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> Decision:
+    """Where the user goes once the window knows what is connected (`after`), from the
+    page shown (`visible`) and what the user saw (`before`)."""
+    if cause is Cause.UNPLUGGED_OTHER:
+        # Only the list was read again: the start page is drawn if shown, nothing moves.
+        return Stay(redraw_start=visible.page is Page.START)
+    if after.open is None:
+        # The list to choose from, or no device at all.
+        if visible.page is Page.START:
+            return Stay(redraw_start=True)
+        if visible.page is Page.REMEMBERED and after.connected == before.connected:
+            return Stay(redraw_start=True)  # nothing came or went: drawn under it
+        return ShowStart()
+    if visible.page is Page.DEVICE:
+        return Stay()
+    stays = cause is Cause.REFRESH_ON_START or (
+        cause in _REOPENING and before.open is not None)
+    if stays:
+        return Stay(redraw_start=visible.page is Page.START)
+    return ShowDevice(animate=cause is not Cause.START)
+
+
+def describe(cause: Cause, visible: View, before: Seen, after: Seen,
+             decision: Decision) -> str:
+    """The line of the log for a decision: its cause, the page shown, how many devices
+    before and after, and where the user goes. Never an address or a unit ID."""
+    if isinstance(decision, ShowDevice):
+        outcome = "the device view"
+    elif isinstance(decision, ShowStart):
+        outcome = "back to the start page"
+    elif decision.redraw_start and visible.page is Page.START:
+        outcome = "the start page stays, drawn again"
+    elif decision.redraw_start:
+        outcome = f"the {visible.page.value} stays, the start page drawn under it"
+    else:
+        outcome = f"the {visible.page.value} stays"
+    return (f"navigation: {cause.value}, on the {visible.page.value}, "
+            f"{len(before.connected)} → {len(after.connected)} devices: {outcome}")
