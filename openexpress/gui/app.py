@@ -615,6 +615,8 @@ def detection_due(win) -> None:
                           else None,
                           listed=uris(connected.devices) if connected is not None
                           else frozenset(),
+                          unread=connected.unread() if connected is not None
+                          else frozenset(),
                           open_moved=lambda: (usb is not None and usb.bus is not None
                                               and not usb_still_there(usb)))
     # Mounts of devices already on the start page's list (e.g. reported by gvfs as the

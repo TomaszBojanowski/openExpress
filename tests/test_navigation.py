@@ -155,6 +155,9 @@ PLANS = [
     ("P-start-mounts-listed", Cause.PLUGGED, (W + "/", E + "/"), None, (W, E), False,
      Nothing()),
     ("P-listed-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False, Nothing()),
+    # A device listed without its details (e.g. not mounted yet): its mount is looked at.
+    ("P-unread-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False,
+     Detect(keep_open=True)),
     # After 1c55104: another device unplugged, its two mounts removed: the list read once.
     ("P-read-the-list", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, READ_THE_LIST), WATCH_LABEL,
      (W, E), False, ReadList()),
@@ -168,17 +171,23 @@ PLANS = [
 ]
 
 
-@pytest.mark.parametrize("cause, reasons, open_label, listed, moved, expected",
-                         [row[1:] for row in PLANS], ids=[row[0] for row in PLANS])
-def test_whether_to_look_for_devices(cause, reasons, open_label, listed, moved, expected):
+# The entries listed without their details, by the id of the row (none in the others).
+UNREAD = {"P-unread-mount-on-the-list": (E,)}
+
+
+@pytest.mark.parametrize("row_id, cause, reasons, open_label, listed, moved, expected",
+                         PLANS, ids=[row[0] for row in PLANS])
+def test_whether_to_look_for_devices(row_id, cause, reasons, open_label, listed, moved,
+                                     expected):
     asked = []
 
     def open_moved():
         asked.append(True)
         return moved
 
+    more = {"unread": frozenset(UNREAD[row_id])} if row_id in UNREAD else {}
     assert plan(cause, reasons, open_label=open_label, listed=frozenset(listed),
-                open_moved=open_moved) == expected
+                open_moved=open_moved, **more) == expected
     assert len(asked) <= 1
 
 

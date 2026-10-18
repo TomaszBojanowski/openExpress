@@ -11,8 +11,8 @@ EDGE = "mtp://Garmin_Edge_1050_0000abcdef34/"
 VARIA = "file:///run/media/made-up-user/GARMIN/"
 
 
-def entry(uri, name=""):
-    return types.SimpleNamespace(found=types.SimpleNamespace(uri=uri), description=name)
+def entry(uri, name="", ok=True):
+    return types.SimpleNamespace(found=types.SimpleNamespace(uri=uri), description=name, ok=ok)
 
 
 def two():
@@ -90,6 +90,14 @@ def test_listed_compares_addresses_with_or_without_the_slash():
     c = Connected()
     c.reread(two())
     assert c.listed(EDGE) and c.listed(EDGE.rstrip("/")) and not c.listed(VARIA)
+
+
+def test_unread_gives_the_devices_listed_without_their_details():
+    c = Connected()
+    assert c.unread() == frozenset()
+    c.reread([entry(WATCH, "Test watch"), entry(EDGE, ok=False)])
+    assert c.unread() == {EDGE.rstrip("/")}
+    assert c.listed(EDGE)  # still on the list
 
 
 def test_is_choice_only_while_there_is_a_list():

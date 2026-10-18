@@ -4418,6 +4418,35 @@ def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, 
     assert win.session is None and win.navigation.stack == ["start page"]
 
 
+def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, monkeypatch,
+                                                                  tmp_path, device_root):
+    """Two devices on the list, the Edge not mounted yet (no details: "Not mounted"); gvfs
+    then mounts it: its mount is not one of a device already known, so a detection runs
+    1.5 s later and its tile gets its details."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    monitor_with(monkeypatch)
+    edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
+    usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")  # the Edge on USB
+    win.world.offered[win.world.offered.index(edge)] = gio_storage.FoundDevice(
+        NAMED, "Edge", False, usb=edge.usb)
+    win.refresh_device()
+    assert [(name, how) for name, _on, how in drawn_tiles(win)] == [
+        ("Test watch", "Over USB (MTP) · Software 23.39"),
+        ("", "Over USB (MTP) · Not mounted; choose it to open it")]
+    win.world.offered[1] = edge  # mounted now
+    ran = detections(win)
+    MainWindow._on_mount_added(win, None, FakeMount(NAMED))
+    assert ran == [] and len(win.timers.live) == 1  # planned, in 1.5 s
+    win.timers.fire()
+    assert ran == ["Detecting the device…"]
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert [(name, how) for name, _on, how in drawn_tiles(win)] == [
+        ("Test watch", "Over USB (MTP) · Software 23.39"),
+        ("Edge 1050", "Over USB (MTP) · Software 33.11")]
+
+
 def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
                                                                 tmp_path, device_root):
     """Two devices listed at the start; gvfs reports their mounts, which bring no second

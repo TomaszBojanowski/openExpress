@@ -61,6 +61,11 @@ class Connected:
         """Whether this address is one of the devices connected."""
         return uri.rstrip("/") in uris(self.devices)
 
+    def unread(self) -> frozenset[str]:
+        """The addresses of the devices connected whose details were not read (e.g. not
+        mounted yet), without the trailing slash."""
+        return uris(c for c in self.devices if not c.ok)
+
     def is_choice(self, uri: str) -> bool:
         """Whether this address is on the list to choose from (only while there is one)."""
         return self.choosing and self.listed(uri)

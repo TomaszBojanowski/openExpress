@@ -124,13 +124,14 @@ _REOPENING = (*_TIMED, Cause.REFRESH_IN_VIEW)
 
 
 def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | None = None,
-         listed: frozenset[str] = frozenset(),
+         listed: frozenset[str] = frozenset(), unread: frozenset[str] = frozenset(),
          open_moved: Callable[[], bool] = lambda: False) -> Plan:
     """Whether to look for devices, and how. `reasons`: the triggers of the timer (the
     address of a mount reported, None for a change on USB, READ_THE_LIST); `open_label`:
     the address of the open device's storage (None: none open); `listed`: the addresses of
-    the devices connected (without the trailing slash); `open_moved`: whether the open
-    device is no longer at its place on USB (asked only when it matters)."""
+    the devices connected, and `unread`: those of them listed without their details (e.g.
+    not mounted yet), all without the trailing slash; `open_moved`: whether the open device
+    is no longer at its place on USB (asked only when it matters)."""
     if cause not in _TIMED:
         if cause in (Cause.UNPLUGGED_OPEN, Cause.CHOSEN):
             return Nothing()  # no detection: the device is gone, or the one chosen is opened
@@ -145,9 +146,12 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     rest = [r for r in reasons if r != READ_THE_LIST]
     if open_label is not None and read_the_list and not rest:
         return ReadList()
-    # Mounts of devices already listed bring nothing new (Q2), whether one is open or not:
-    # gvfs reports them as the window starts, and twice for one device.
-    known = [r for r in rest if r is not None and not on_open(r) and r.rstrip("/") in listed]
+    # Mounts of devices already listed with their details bring nothing new (Q2), whether
+    # one is open or not: gvfs reports them as the window starts, and twice for one device.
+    # One listed without them (not mounted yet, not readable) is looked at: its tile may
+    # get its details now.
+    known = [r for r in rest if r is not None and not on_open(r)
+             and r.rstrip("/") in listed - unread]
     rest = [r for r in rest if r not in known]
     ignored = len(known)
     # (The list to read again with no device open any more: the open one went away too.)
