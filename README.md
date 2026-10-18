@@ -96,9 +96,9 @@ Devices that connect over MTP (most watches and bike computers, such as the fēn
 Edge 1050) work in both the Flatpak and the version from source. Since 0.6, openExpress also
 supports Garmin devices that connect as a USB drive (mass storage mode: some older Garmin
 models, and accessories such as the Varia RTL515): their information and software updates, in
-the window of the version from source and on the command line with `--path`. The Flatpak
-cannot open drives yet and says so. Mass storage is tested on the Varia RTL515; reports from
-other devices in mass storage mode are welcome. If you are not sure which mode your device
+the window (of the Flatpak and of the version from source) and on the command line with
+`--path`. Mass storage is tested on the Varia RTL515; reports from other devices in mass
+storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
 it is in mass storage mode.
 
@@ -372,7 +372,7 @@ when they are installed or updated. It is not cleared while a download or an ins
 ### Flatpak permissions
 
 Besides network, USB storage access through GNOME's gvfs and your Downloads/Music folders,
-the Flatpak has two permissions that weaken the sandbox:
+the Flatpak has three permissions that weaken the sandbox:
 
 - It can run commands on the host (`org.freedesktop.Flatpak`). It uses this only to copy
   files to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
@@ -382,13 +382,20 @@ the Flatpak has two permissions that weaken the sandbox:
   (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
   connection, and the device disappears from the file manager for a moment while it is
   used.
+- It can read and write the drives the system mounts under `/run/media` and `/media`
+  (`--filesystem=/run/media`, `--filesystem=/media`): every removable drive mounted there
+  (USB sticks, memory cards, external disks), not only Garmin devices. It uses this only for
+  Garmin devices in mass storage mode (e.g. the Varia RTL515), which connect as a drive.
 
 If you prefer not to grant the first one, use the [version from source](#from-source)
 (writing to the watch then works without it). The second one can be turned off with
 `flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; Flatpak
 older than 1.16 ignores it. Without it, on devices that hide their app folder, installs and
 updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
-them, apps are removed on the phone, and nothing is written to the device.
+them, apps are removed on the phone, and nothing is written to the device. The third one can
+be turned off with `flatpak override --user --nofilesystem=/run/media --nofilesystem=/media
+io.github.tomaszbojanowski.OpenExpress`; the window then says that it has no access to the
+drive, and devices in mass storage mode are left to the version from source.
 
 ## Other ways to install
 

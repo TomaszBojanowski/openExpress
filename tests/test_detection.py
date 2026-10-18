@@ -652,9 +652,8 @@ def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
 # do not apply to it.
 DRIVE_NOT_MOUNTED_TEXT = ("The Garmin device is connected, but its drive is not mounted. Open "
                           "it in the file manager, or unplug the cable and plug it in again.")
-FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive. This version (Flatpak) "
-                      "does not open drives; use the version from source, or the command line "
-                      "with --path and the folder where the system mounted the device.")
+FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive, but this version "
+                      "(Flatpak) has no access to /run/media, where the system mounted it.")
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
                      "openExpress shows its information and software updates; sync, apps, "
                      "maps and music do not apply to it.")
@@ -1515,7 +1514,8 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
                                                               caplog):
     """Test 12 (F1): in the Flatpak the drive of a Garmin device is known from /sys (vendor
     091e) and from gvfs, but its folder under /run/media is not in the sandbox. No session;
-    the page says that this version does not open drives, and the log says why it was skipped."""
+    the page says that this version has no access to the drive's folder, and the log says why
+    it was skipped."""
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
@@ -1540,6 +1540,31 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
                                      set_empty=lambda *notice: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
     assert shown == [("Mass storage mode", FLATPAK_DRIVE_TEXT, False)]
+
+
+def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidden(
+        drive_window, monkeypatch):
+    """The Flatpak with its access to /run/media: a Garmin device in mass storage mode whose
+    drive is not mounted gets the words of the version from source; only a drive mounted
+    where the sandbox cannot see gets the Flatpak's sentence (the condition that skips it in
+    the detection)."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    monitor_with(monkeypatch)  # on USB, not mounted
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
+        "Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+    drive = drive_window.world.drive()
+    monitor_with(monkeypatch, drive)  # mounted and visible: the window opens it
+    assert not gio_storage.drive_hidden_in_sandbox()
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)[1] == DRIVE_NOT_MOUNTED_TEXT
+    shutil.rmtree(drive.root.path)  # mounted, but out of the sandbox's sight
+    assert gio_storage.drive_hidden_in_sandbox()
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
+        "Mass storage mode", FLATPAK_DRIVE_TEXT, False)
+    assert "--path" not in FLATPAK_DRIVE_TEXT
 
 
 # --- several devices: a list to choose from (start page, K5) ---------------------------------
@@ -3107,16 +3132,19 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     assert updates == ["Mass storage mode"]  # the Sync button says why, told once
 
 
-def test_flatpak_window_still_sends_a_garmin_drive_to_the_command_line(plugged, monkeypatch):
-    """The Flatpak window cannot open a drive (step 6, F1): the only place where the advice
-    about --path stays."""
+def test_the_flatpak_window_without_a_hidden_drive_speaks_as_from_source(plugged, monkeypatch):
+    """The Flatpak reaches /run/media: with no drive out of its sight, the words of the
+    version from source, without advice about --path."""
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
+    monitor_with(monkeypatch)  # nothing mounted
     mass_storage_device(plugged.root)
-    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
-        "Mass storage mode", FLATPAK_DRIVE_TEXT, False)
+    notice = MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)
+    assert notice == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+    assert "--path" not in notice[1]
 
 
 class _SyncButton:

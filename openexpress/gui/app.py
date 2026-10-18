@@ -49,6 +49,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     NotThereYet,
     SeveralDevices,
     distinct_devices,
+    drive_hidden_in_sandbox,
     find_all_devices,
     garmin_products_on_usb,
     garmin_ums,
@@ -335,12 +336,10 @@ def drive_not_mounted_text() -> str:
 
 
 def flatpak_drive_text() -> str:
-    """A Garmin device in mass storage mode seen by the Flatpak, which has no access to the
-    folders where the system mounts drives (/run/media): the only place that sends the user
-    to --path."""
-    return _("The Garmin device is connected as a USB drive. This version (Flatpak) does not "
-             "open drives; use the version from source, or the command line with --path and "
-             "the folder where the system mounted the device.")
+    """A Garmin drive mounted by the system in a folder the Flatpak cannot see (its access to
+    /run/media and /media turned off)."""
+    return _("The Garmin device is connected as a USB drive, but this version (Flatpak) has no "
+             "access to /run/media, where the system mounted it.")
 
 
 @dataclass
@@ -1371,9 +1370,8 @@ class MainWindow(Adw.ApplicationWindow):
                       "It will be detected automatically."), False)
         if state == MASS_STORAGE:
             # The window opens such a drive once the system mounts it, so with none open it
-            # is not mounted; the Flatpak opens no drive, mounted or not (F1), and sends it
-            # to the version from source or to --path.
-            text = flatpak_drive_text() if paths.in_flatpak() else drive_not_mounted_text()
+            # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see (F1).
+            text = flatpak_drive_text() if drive_hidden_in_sandbox() else drive_not_mounted_text()
             # TRANSLATORS: a device connected as a USB drive, not over MTP
             return _("Mass storage mode"), text, False
         if waited_s < WAIT_FOR_DEVICE_S:

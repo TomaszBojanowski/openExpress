@@ -613,6 +613,18 @@ def garmin_ums(mount) -> GarminUsb | None:
     return GarminUsb(ids[1], "usb", ids[2], ids[3])
 
 
+def _hidden_in_sandbox(path: str | None) -> bool:
+    """A drive that gvfs reports mounted, whose folder the Flatpak cannot see (F1: no access
+    to /run/media or /media, e.g. the permission was turned off)."""
+    return path is not None and in_flatpak() and not os.path.isdir(path)
+
+
+def drive_hidden_in_sandbox() -> bool:
+    """Whether a mounted Garmin drive is out of the Flatpak's sight: why it is not opened."""
+    return any(_hidden_in_sandbox(m.get_root().get_path())
+               for m in Gio.VolumeMonitor.get().get_mounts() if garmin_ums(m) is not None)
+
+
 def find_ums_devices() -> list[FoundDevice]:
     """The mounted Garmin devices in mass storage mode that have GARMIN/GarminDevice.xml, in
     any letter case. Only the folder listings on the way to that file are read."""
@@ -623,8 +635,8 @@ def find_ums_devices() -> list[FoundDevice]:
             continue
         root = mount.get_root()
         path = root.get_path()
-        if path is not None and in_flatpak() and not os.path.isdir(path):
-            # gvfs tells the sandbox about the mount, but /run/media is not in it (step 6, F1).
+        if _hidden_in_sandbox(path):
+            # gvfs tells the sandbox about the mount, but its folder is not in it (F1).
             log.info("device: a Garmin drive (USB %s) is not visible in the Flatpak, skipped",
                      usb.usb_id)
             continue

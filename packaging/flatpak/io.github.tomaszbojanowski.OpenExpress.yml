@@ -17,6 +17,10 @@ finish-args:
   # The watch is mounted by the host's gvfs (MTP); talk to it over D-Bus.
   - --talk-name=org.gtk.vfs.*
   - --filesystem=xdg-run/gvfsd
+  # Devices in mass storage mode (e.g. the Varia RTL515) are drives the system mounts under
+  # /run/media (or /media on some distributions): read and written there.
+  - --filesystem=/run/media
+  - --filesystem=/media
   # gvfs refuses to copy local files for sandboxed apps and gvfs-mtp offers no other way
   # to write to the watch, so files are copied with the host's `gio copy` via flatpak-spawn.
   - --talk-name=org.freedesktop.Flatpak
