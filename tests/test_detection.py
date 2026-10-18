@@ -4429,6 +4429,72 @@ def test_the_mounts_reported_at_the_start_detect_again_on_the_start_page(
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
 
 
+def test_a_device_mounted_on_an_empty_start_page_opens_its_view(start_window, monkeypatch):
+    """N0, nothing remembered, the start page shown: gvfs reports the mount of a Garmin
+    device; a detection runs and finds it: its view comes up (D7)."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    nothing_connected(win, monkeypatch)
+    assert drawn_tiles(win) == [] and win.start.shown[-1][1] is True  # only the notice
+    one_watch(win, monkeypatch)
+    ran = detections(win)
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    assert ran == [] and len(win.timers.live) == 1  # planned, in 1.5 s
+    win.timers.fire()
+    assert ran == ["Detecting the device…"]
+    assert win.session is not None and win.session.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+@pytest.mark.needs_display
+def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
+    """The real window, one device open in its view: the Refresh button in the header of
+    the view finds the same device again (the one open is asked for again); the view stays,
+    nothing goes back to the start page."""
+    from openexpress import netstatus
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    real_refresh = MainWindow.refresh_device
+    ready = []
+    # Nothing is detected while the window opens; the real detection code once it is open.
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True: (
+        real_refresh(self, keep_open) if ready else None))
+    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+
+    def session(n):
+        return types.SimpleNamespace(
+            storage=types.SimpleNamespace(device_uri=NUMERIC, label=NUMERIC + "Internal"),
+            device=types.SimpleNamespace(unit_id=1234567890, description=f"Test watch {n}"))
+
+    asked = []
+    found = session(2)
+    monkeypatch.setattr(app, "detect_devices",
+                        lambda current_uri=None: (asked.append(current_uri), found)[1])
+    win = MainWindow(None)
+    try:
+        # What the device's pages would read is not built here: nothing asked of a server.
+        win.show_overview = win._update_banner = win._update_actions = lambda: None
+        win.load_section = lambda key, force=False: None
+        win.run_task = lambda title, fn, done, failed, **kw: done(fn())
+        win._account_wanted = False
+        win.session = session(1)
+        win.navigation.push(win.device_view)
+        assert win.navigation.get_visible_page() is win.device_view
+        ready.append(True)
+        button = win.refresh_button
+        assert button.get_ancestor(app.Adw.HeaderBar) is win.content_header
+        assert button.get_action_name() == "win.refresh"
+        button.emit("clicked")
+        assert asked == [NUMERIC]  # the device open now, opened again
+        assert win.session is found
+        assert win.navigation.get_visible_page() is win.device_view
+    finally:
+        netstatus.STATUS.remove_listener(win._net_listener)
+        win.destroy()
+
+
 @pytest.mark.needs_display
 def test_the_remembered_section_only_with_remembered_devices():
     """The section "Remembered" with its tiles (unframed) only when there are some; the
