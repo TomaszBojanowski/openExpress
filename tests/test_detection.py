@@ -4160,6 +4160,275 @@ def test_the_open_device_unplugged_while_a_remembered_one_is_shown_gives_the_sta
     assert win.navigation.stack == ["start page"]
 
 
+# --- the navigation matrix of the start page, as it behaves today (audit, part 3) ----------
+# Cells marked "behaviour to change in step 6" describe what the window does now and what
+# the decisions Q1-Q3 (AGENTS.md) will change: the change is meant to show in these tests.
+
+
+def detections(win):
+    """The detections run from now on (each one a task: the window is busy meanwhile)."""
+    titles = []
+    real = win.run_task
+
+    def run_task(title, fn, done, failed=None, device=True, in_page=False):
+        titles.append(title)
+        return real(title, fn, done, failed)
+
+    win.run_task = run_task
+    return titles
+
+
+def remembered_shown(win):
+    """The tile of the remembered Venu 2 clicked: its read-only view on top."""
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    win._open_tile(names.index("Venu 2"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+
+
+def edge_unplugged(win):
+    """The Edge (NAMED) unplugged: gone from gvfs and from /sys; the window hears of it."""
+    from openexpress.gui.app import MainWindow
+
+    edge = next(f for f in win.world.offered if f.uri == NAMED)
+    win.world.offered.remove(edge)
+    usb = win.world.root / "1-2"
+    if usb.exists():
+        for f in usb.iterdir():
+            f.unlink()
+        usb.rmdir()
+    MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
+    win.timers.fire()
+
+
+def second_device_mounted(win, monkeypatch, tmp_path, device_root):
+    """The Edge plugged in and mounted while the test watch is connected."""
+    from openexpress.gui.app import schedule_detection
+
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    schedule_detection(win, 1500, NAMED)
+    win.timers.fire()
+
+
+def test_a_second_device_plugged_in_while_one_is_open_on_the_start_page(
+        start_window, monkeypatch, tmp_path, device_root):
+    """N1, the start page shown, a second device mounted: the list, on the start page."""
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    back(win)
+    second_device_mounted(win, monkeypatch, tmp_path, device_root)
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
+
+
+def test_a_second_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
+                                                                    tmp_path, device_root):
+    """N1, a remembered device's view shown, a second device mounted: the start page (the
+    devices connected changed)."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    back(win)
+    remembered_shown(win)
+    second_device_mounted(win, monkeypatch, tmp_path, device_root)
+    assert win.session is None and win.navigation.stack == ["start page"]
+
+
+def test_a_third_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
+                                                                   tmp_path, device_root):
+    """N2 on the list, a remembered device's view shown, a Garmin drive mounted: the start
+    page with three devices connected."""
+    import time
+
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    remembered_shown(win)
+    drive = win.world.drive()
+    monitor_with(monkeypatch, drive)
+    MainWindow._on_mount_added(win, None, drive)
+    win.timers.fire()
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert [name for name, on, _how in drawn_tiles(win) if on] == [
+        "Test watch", "Edge 1050", "Varia RTL515"]  # in the order found
+
+
+def test_another_device_unplugged_while_a_remembered_one_is_shown(start_window, monkeypatch,
+                                                                  tmp_path, device_root):
+    """N2 with the test watch open, a remembered device's view shown, the Edge unplugged:
+    the view stays, the test watch stays open."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    opened = win.session
+    back(win)
+    remembered_shown(win)
+    edge_unplugged(win)
+    assert win.session is opened
+    assert win.navigation.stack == ["start page", "remembered view"]
+
+
+def test_one_of_two_on_the_list_unplugged_on_the_start_page(start_window, monkeypatch,
+                                                           tmp_path, device_root):
+    """U2-S: two devices on the list, the start page shown, one unplugged: the one left is
+    opened and its view comes up (K5, D7)."""
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.session is None and win.navigation.stack == ["start page"]
+    edge_unplugged(win)
+    assert win.session.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_one_of_two_on_the_list_unplugged_while_a_remembered_one_is_shown(
+        start_window, monkeypatch, tmp_path, device_root):
+    """U2-R: two devices on the list, a remembered device's view shown, one unplugged: the
+    one left is opened and its view takes the place of the remembered one."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    remembered_shown(win)
+    edge_unplugged(win)
+    assert win.session.device.description == "Test watch"
+    # behaviour to change in step 6 (Q1): the session opens, the remembered view stays
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_a_tile_clicked_during_a_detection(start_window, monkeypatch, tmp_path, device_root):
+    """A connected tile clicked while a task (e.g. a detection) runs: the window says so and
+    opens nothing."""
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    opening = count_opening(monkeypatch)
+    win.busy = True  # a detection is running
+    win._open_tile(drawn_names(win)[-1].index("Edge 1050"))
+    # behaviour to change in step 6 (Q2): no second detection after the start, so no toast
+    assert win.errors == ["Another operation is in progress"]
+    assert opening == [] and win.session is None and win.navigation.stack == ["start page"]
+
+
+def login_finished(win, monkeypatch):
+    """The login window gives a ticket and the login task finishes (the exchange of the
+    ticket stands in: nothing leaves the test)."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    tickets = []
+    monkeypatch.setattr(app.sso, "create_login_window",
+                        lambda settings, on_ticket, **kw: (tickets.append(on_ticket),
+                                                           types.SimpleNamespace(
+                                                               present=lambda: None))[1])
+    monkeypatch.setattr(app.GLib, "idle_add", lambda fn: fn())
+    real = win.run_task
+
+    def run_task(title, fn, done, failed=None, device=True, in_page=False):
+        if title == "Logging in…":
+            return done((types.SimpleNamespace(display="someone"), True))
+        return real(title, fn, done, failed)
+
+    win.run_task = run_task
+    win.get_application = lambda: None
+    MainWindow.login(win)
+    tickets[0](types.SimpleNamespace(ticket="ST-made-up", service="https://example.invalid/"))
+
+
+def test_the_login_finished_in_the_device_view(start_window, monkeypatch):
+    """N1, the device view shown: after the login the same device, its view stays."""
+    win = start_window
+    with_account(monkeypatch, FakeAccountClient(logged_in=False))
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    login_finished(win, monkeypatch)
+    assert win.session is not None and win.session.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+    assert "Logged in as someone" in win.errors
+
+
+def test_the_login_finished_after_going_back_to_the_start_page(start_window, monkeypatch):
+    """N1, the login started in the device view, the start page shown when it finishes: the
+    device view comes up again."""
+    win = start_window
+    with_account(monkeypatch, FakeAccountClient(logged_in=False))
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    back(win)
+    login_finished(win, monkeypatch)
+    assert win.session is not None
+    # behaviour to change in step 6 (Q3): the start page stays, as after Refresh there
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_logging_out_in_the_device_view(start_window, monkeypatch):
+    """N1, the device view shown, logged out: the view stays; back on the start page there
+    is no section of the account any more."""
+    win = start_window
+    with_account(monkeypatch, FakeAccountClient())
+    one_watch(win, monkeypatch)
+    win._want_account()
+    win.refresh_device()
+    assert win._account is not None
+    back(win)
+    assert "Forerunner 965" in drawn_names(win)[-1]
+    win._open_tile(0)
+    assert win.navigation.stack == ["start page", "device view"]
+    win.logout()
+    assert win.session is not None and win.navigation.stack == ["start page", "device view"]
+    assert win._account is None
+    back(win)
+    assert drawn_names(win)[-1] == ["Test watch"]
+
+
+def test_try_again_on_the_banner_in_the_device_view(start_window, monkeypatch):
+    """N1, the device view shown, "Try Again" on the banner: a detection, the view stays."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    first = win.session
+    ran = detections(win)
+    win._banner_kind = "recheck"
+    MainWindow._banner_action(win)
+    assert ran == ["Detecting the device…"]
+    assert win.session is not None and win.session is not first
+    assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_the_mounts_reported_at_the_start_detect_again_on_the_start_page(
+        start_window, monkeypatch, tmp_path, device_root):
+    """N2 at the start, the start page shown: gvfs reports the mounts of both devices
+    listed; one more detection runs (a task: the window is busy meanwhile), the start page
+    stays with the same tiles."""
+    win = start_window
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    ran = detections(win)
+    mounts_reported_at_start(win)
+    win.timers.fire()
+    # behaviour to change in step 6 (Q2): mounts of devices listed bring no detection
+    assert ran == ["Detecting the device…"]
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
+
+
 @pytest.mark.needs_display
 def test_the_remembered_section_only_with_remembered_devices():
     """The section "Remembered" with its tiles (unframed) only when there are some; the
