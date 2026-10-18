@@ -3443,7 +3443,7 @@ START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_vie
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
                  "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
                  "_want_account", "_load_tile_pictures", "_tile_picture_done",
-                 "_show_page_picture")
+                 "_show_page_picture", "_on_remembered_page", "_start_summaries")
 
 
 def start_stand_in(start, sections, win=None):
@@ -3467,6 +3467,7 @@ def start_stand_in(start, sections, win=None):
     win._start_targets, win._stay_on_start, win._navigated = [], False, False
     win._connected, win._reopening, win._reread_pending = [], False, False
     win._account, win._account_wanted = None, False
+    win._drawn_connected = frozenset()
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -3987,6 +3988,105 @@ def test_a_device_plugged_in_while_a_remembered_one_is_shown_opens_its_view(star
     win.refresh_device()
     assert win.session is not None
     assert win.navigation.stack == ["start page", "device view"]
+
+
+def test_a_detection_that_still_finds_nothing_keeps_the_remembered_view(start_window,
+                                                                        monkeypatch):
+    """A detection that ends with no device, as before it: the read-only view of the
+    remembered device stays; the start page under it is drawn anew."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    nothing_connected(win, monkeypatch)
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    win._open_tile(names.index("Venu 2"))
+    drawings = len(win.start.shown)
+    win.refresh_device()
+    assert win.session is None
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert len(win.start.shown) == drawings + 1
+    assert [name for name, _on, _how in drawn_tiles(win)] == names
+
+
+def test_a_detection_that_finds_the_same_devices_keeps_the_remembered_view(start_window,
+                                                                           monkeypatch,
+                                                                           tmp_path,
+                                                                           device_root):
+    """Two devices listed; a second detection (e.g. after gvfs tells of the mount of one of
+    them) finds the same two: the remembered view stays, the tiles are drawn under it."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    win._open_tile(names.index("Venu 2"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    drawings = len(win.start.shown)
+    win.refresh_device()
+    assert win.session is None
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert len(win.start.shown) == drawings + 1
+    assert [name for name, _on, _how in drawn_tiles(win)] == names
+
+
+def test_the_account_list_arriving_keeps_the_remembered_view(start_window, monkeypatch):
+    """The account's list read while a remembered device is shown: its view stays; the start
+    page under it gets the account's tile."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    later = defer_background(win)
+    with_account(monkeypatch, FakeAccountClient())
+    nothing_connected(win, monkeypatch)
+    run_later(later)
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    assert "Forerunner 965" not in names
+    win._open_tile(names.index("Venu 2"))
+    win._fetch_account()
+    run_later(later)
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert "Forerunner 965" in [name for name, _on, _how in drawn_tiles(win)]
+
+
+def test_devices_plugged_in_while_a_remembered_one_is_shown_give_the_start_page(
+        start_window, monkeypatch, tmp_path, device_root):
+    """Guards D7: something did change (two devices came): the start page with their
+    tiles, as before."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    nothing_connected(win, monkeypatch)
+    win._open_tile(0)
+    assert win.navigation.stack == ["start page", "remembered view"]
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    assert win.session is None and win.navigation.stack == ["start page"]
+    assert [(name, on) for name, on, _how in drawn_tiles(win)][:2] == [
+        ("Test watch", True), ("Edge 1050", True)]
+
+
+def test_the_open_device_unplugged_while_a_remembered_one_is_shown_gives_the_start_page(
+        start_window, monkeypatch):
+    """Guards: the open device gone is a change: the start page, as before."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    back(win)
+    names = [name for name, _on, _how in drawn_tiles(win)]
+    win._open_tile(names.index("Venu 2"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    win.session = None  # as _on_mount_removed does
+    win.show_device()
+    assert win.navigation.stack == ["start page"]
 
 
 @pytest.mark.needs_display

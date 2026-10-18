@@ -406,6 +406,11 @@ def session_summary(s) -> DeviceSummary:
 OPEN = "open"
 
 
+def connected_uris(summaries) -> frozenset:
+    """The addresses of these entries of the start page (compared in memory only)."""
+    return frozenset(c.found.uri.rstrip("/") for c in summaries)
+
+
 def tile_picture(part: str, url: str | None):
     """(texture, where it came from) or (None, why not): the file in the cache by part
     number, else the account's address downloaded into it."""
@@ -768,6 +773,7 @@ class MainWindow(Adw.ApplicationWindow):
         # The devices connected, as last known (the list chosen from, the one device, or the
         # list read again on a change); kept while one of them is open, for the start page.
         self._connected: list = []
+        self._drawn_connected: frozenset = frozenset()  # the addresses of the tiles drawn last
         # A detection started with a device open: if the start page is shown, it stays.
         self._reopening = False
         self._reread_pending = False
@@ -1580,17 +1586,24 @@ class MainWindow(Adw.ApplicationWindow):
         if devices:
             # The kinds it tells of the devices remembered, kept for when it is not there.
             self.in_background(lambda: devicelist.remember_kinds(devices), lambda _r: None)
-        if self._on_start_page():
-            self._render_start()
+        if self._on_start_page() or self._on_remembered_page():
+            self._render_start()  # under the view of a remembered device, which stays
 
     def _show_start(self) -> None:
-        """The start page, as it is now."""
+        """The start page, as it is now. Over the view of a remembered device only when a
+        device came or went: a detection that found what was there leaves it shown and draws
+        the start page under it."""
         self._stay_on_start = self._reopening = False
         self._navigated = True
-        if self._on_start_page():
+        if self._on_start_page() or (
+                self._on_remembered_page()
+                and connected_uris(self._start_summaries()[0]) == self._drawn_connected):
             self._render_start()
         else:
             self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
+
+    def _on_remembered_page(self) -> bool:
+        return self.navigation.get_visible_page() is self.remembered.page
 
     def _show_device_view(self) -> None:
         """The view of the device open now, above the start page (D7): unless Refresh was
@@ -1626,14 +1639,18 @@ class MainWindow(Adw.ApplicationWindow):
         """Drawn once, from what is known: with no device open, the devices to choose from,
         or none and the notice of the USB state; with one open, the devices connected as last
         known, the open one among them. Nothing is read here."""
+        self._show_tiles(*self._start_summaries())
+
+    def _start_summaries(self) -> tuple[list, bool]:
+        """The devices connected as known now, for the start page, and whether the notice of
+        the USB state goes with them."""
         s = self.session
         if s is None:
-            self._show_tiles(self._choices or [], notice=not self._choices)
-            return
+            return self._choices or [], not self._choices
         connected = self._connected
         if not any(self._is_open(c) for c in connected):
             connected = [session_summary(s), *connected]
-        self._show_tiles(connected, notice=False)
+        return connected, False
 
     def _is_open(self, summary) -> bool:
         """Whether an entry is the device open now: by the unit ID, else by the address
@@ -1651,6 +1668,7 @@ class MainWindow(Adw.ApplicationWindow):
         """The tiles of these devices, then of those remembered and not connected (from
         devices.json, the only thing read here); what each one opens is kept here, not in
         the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
+        self._drawn_connected = connected_uris(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
                                      logged_in=self._account is not None)
         self._start_targets = [source if isinstance(source, KnownDevice | dict)
