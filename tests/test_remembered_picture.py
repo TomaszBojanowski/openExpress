@@ -199,3 +199,24 @@ def test_the_view_guesses_the_icon_from_the_name_as_the_tile_does():
     known.description = "Venu 2"
     win._show_remembered(known)
     assert _shown(win.remembered.page) == ([f"{APP_ID}-watch-symbolic"], [])
+
+
+def test_a_picture_is_loaded_without_a_deprecated_call(tmp_path):
+    """A real small PNG becomes a texture with no DeprecationWarning (Gdk.Texture.new_for_pixbuf
+    is deprecated); a file that is no picture gives None, as before."""
+    import warnings
+
+    from gi.repository import Gdk
+
+    from openexpress.gui import app
+
+    path = tmp_path / "device-006-B0000-00.png"
+    path.write_bytes(_texture().save_to_png_bytes().get_data())
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"not a picture")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        texture = app.load_texture(path)
+        assert isinstance(texture, Gdk.Texture)
+        assert (texture.get_width(), texture.get_height()) == (2, 2)
+        assert app.load_texture(bad) is None

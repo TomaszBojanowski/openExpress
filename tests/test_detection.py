@@ -4248,7 +4248,7 @@ def fake_pictures(monkeypatch):
     from openexpress.gui import app
 
     fakes = types.SimpleNamespace(downloads=[], answers={})
-    monkeypatch.setattr(app, "load_texture", lambda path, size: f"texture of {path.name}")
+    monkeypatch.setattr(app, "load_texture", lambda path: f"texture of {path.name}")
 
     def download(http, url, name):
         fakes.downloads.append(url)

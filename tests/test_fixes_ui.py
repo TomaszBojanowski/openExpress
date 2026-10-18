@@ -859,7 +859,7 @@ def _picture_window(client, logged_in=False, ownership_error=None, monkeypatch=N
 
     if monkeypatch is not None:
         monkeypatch.setattr(app, "load_texture",
-                            lambda path, size: ("texture", path.read_bytes())
+                            lambda path: ("texture", path.read_bytes())
                             if path.read_bytes().startswith(PNG[:8]) else None)
     device = types.SimpleNamespace(unit_id=SECRET_UNIT, part_number="006-B0000-00")
     win = types.SimpleNamespace(

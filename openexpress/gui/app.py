@@ -291,14 +291,14 @@ def download_picture(http, url: str, name: str,
     return target, ""
 
 
-def load_texture(path: Path, size: int):
-    """Picture as a texture scaled to `size`; handles formats GTK cannot load (e.g. GIF)."""
-    gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gdk, GdkPixbuf
+def load_texture(path: Path):
+    """Picture as a texture, None when the file is no picture GTK can read (GTK reads PNG,
+    JPEG and TIFF itself and other formats, e.g. GIF, through its own loaders). The size is
+    left to the image that shows it: Gtk.Image fits a paintable to its pixel size."""
+    from gi.repository import Gdk
 
     try:
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), size, size, True)
-        return Gdk.Texture.new_for_pixbuf(pixbuf)
+        return Gdk.Texture.new_from_filename(str(path))
     except GLib.Error:
         return None
 
@@ -440,7 +440,7 @@ def tile_picture(part: str, url: str | None):
         if path is None:
             return None, f"download refused: {why}"
         source = "the account"
-    texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
+    texture = load_texture(path)
     return (texture, source) if texture is not None else (None, "the file is not a picture")
 
 
@@ -2049,7 +2049,7 @@ class MainWindow(Adw.ApplicationWindow):
         if part not in cache:
             path = device_picture_path(part)
             if path.exists():
-                cache[part] = load_texture(path, 2 * DEVICE_PICTURE_SIZE)
+                cache[part] = load_texture(path)
                 log.info("device picture: from the cache")
         if cache.get(part) is not None:
             self._set_device_texture(cache[part])
@@ -2081,7 +2081,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(result):
             path, source = result
-            texture = load_texture(path, 2 * DEVICE_PICTURE_SIZE) if path else None
+            texture = load_texture(path) if path else None
             if texture is None:
                 log.info("device picture: none (%s)", source if path is None
                          else "the file is not a picture")
@@ -3429,7 +3429,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(files):
             for app_id, path in files.items():
-                texture = load_texture(path, 64) if path else None
+                texture = load_texture(path) if path else None
                 if texture and app_id in images:
                     images[app_id].set_from_paintable(texture)
                     images[app_id].set_pixel_size(32)
