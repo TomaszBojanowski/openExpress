@@ -3828,7 +3828,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
     service.record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
     nothing_connected(win, monkeypatch)
     names = [name for name, _on, _how in drawn_tiles(win)]
-    assert names == ["Varia RTL515", "Venu 2", "Test watch"]
+    assert names == ["Test watch", "Varia RTL515", "Venu 2"]
     opening = count_opening(monkeypatch)
 
     def no_device(*_a, **_k):

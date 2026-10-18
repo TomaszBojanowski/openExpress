@@ -198,9 +198,9 @@ def test_a_device_not_on_the_account_has_no_account_fields():
 # --- order -------------------------------------------------------------------------------------
 
 
-def test_connected_first_the_primary_first_then_by_last_seen():
-    """Connected first, the account's primary device first among them; then the rest, seen
-    last first; a device only on the account (never seen) at the end."""
+def test_connected_first_the_primary_first_then_by_name():
+    """Connected first, the account's primary device first among them; then the remembered
+    ones, then those only on the account, each section by name."""
     from openexpress import devicelist
 
     varia_now = connected("file:///run/media/u/GARMIN/", "Varia RTL515", "006-B3592-03",
@@ -213,7 +213,47 @@ def test_connected_first_the_primary_first_then_by_last_seen():
     assert [t.description for t in tiles] == ["fēnix 8", "Varia RTL515", "Venu 2", "Edge 1050"]
     tiles = devicelist.tiles([], remembered(venu, older_edge, VARIA_SEEN), [], logged_in=False)
     assert [t.description for t in tiles] == [
-        "Varia RTL515", "Venu 2", "Edge 1050 (remembered)"]
+        "Edge 1050 (remembered)", "Varia RTL515", "Venu 2"]
+
+
+def test_devices_not_connected_are_in_name_order_not_by_when_they_were_seen():
+    """A device seen later does not move ahead: the order of the tiles stays the same from one
+    plug-in to the next ("last seen" is only in the subtitle)."""
+    from openexpress import devicelist
+
+    venu_later = (VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", NOW - 9 * DAY, NOW - DAY)
+    edge_earlier = (EDGE, "edge 1050", "006-B4440-00", "33.11", "mtp", NOW - 9 * DAY,
+                    NOW - 6 * DAY)
+    tiles = devicelist.tiles([], remembered(venu_later, edge_earlier), [], logged_in=False)
+    assert [t.description for t in tiles] == ["edge 1050", "Venu 2"]  # casefold
+
+
+def test_the_same_name_is_ordered_by_part_number():
+    from openexpress import devicelist
+
+    second = (VENU, "Garmin device", "006-B0002-00", "1.00", "mtp", NOW - 9 * DAY, NOW - DAY)
+    first = (EDGE, "Garmin device", "006-B0001-00", "1.00", "mtp", NOW - 9 * DAY, NOW - 6 * DAY)
+    for order in ((second, first), (first, second)):
+        tiles = devicelist.tiles([], remembered(*order), [], logged_in=False)
+        assert [t.part_number for t in tiles] == ["006-B0001-00", "006-B0002-00"]
+
+
+def test_the_account_section_coming_later_does_not_reorder_the_others():
+    """Each section in name order, the sections one after the other (the window counts a
+    click over the whole list): the devices only on the account after the remembered ones,
+    even when their names come first."""
+    from openexpress import devicelist
+
+    venu = (VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", NOW - 9 * DAY, NOW - DAY)
+    known = remembered(venu, VARIA_SEEN)
+    without = devicelist.tiles([fenix_connected()], known, [], logged_in=False)
+    with_account = devicelist.tiles([fenix_connected()], known, account(ACCOUNT_WITH_A_THIRD),
+                                    logged_in=True)
+    assert [t.description for t in without] == ["fēnix 8", "Varia RTL515", "Venu 2"]
+    assert [(t.description, devicelist.section(t)) for t in with_account] == [
+        ("fēnix 8", devicelist.CONNECTED),
+        ("Varia RTL515", devicelist.REMEMBERED), ("Venu 2", devicelist.REMEMBERED),
+        ("Edge 1050", devicelist.ON_ACCOUNT), ("Forerunner 965", devicelist.ON_ACCOUNT)]
 
 
 # --- not logged in -----------------------------------------------------------------------------

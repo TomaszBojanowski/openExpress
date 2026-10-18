@@ -63,7 +63,10 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     remembered, else its entry of the account's list (only on the account).
 
     The tiles, in order: the devices connected now first (the primary one first among
-    them), then the others, the one seen last first; those never seen here at the end.
+    them), then those remembered, then those only on the account, each section by name
+    (case ignored, then part number), so that the order does not change from one plug-in to
+    the next; when a device was seen is only shown. The sections follow each other: the
+    window counts a click over the whole list.
 
     `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
     the account's device list (keys in lower case), used only when `logged_in`. Fields:
@@ -97,8 +100,8 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     rest += [(_tile("", "", "", None, False, None, entry), entry)
              for unit_id, entry in on_account.items() if unit_id not in done]
     rest += [(_tile("", "", "", None, False, None, entry), entry) for entry in account_only]
-    rest.sort(key=lambda e: (e[0].last_seen is None, -(e[0].last_seen or 0.0),
-                             e[0].description.casefold(), e[0].part_number))
+    rest.sort(key=lambda e: (section(e[0]) != REMEMBERED, e[0].description.casefold(),
+                             e[0].part_number))
 
     result = now + rest
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
