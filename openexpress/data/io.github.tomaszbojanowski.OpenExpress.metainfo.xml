@@ -97,6 +97,25 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.3" date="2026-10-18">
+      <description>
+        <ul>
+          <li>Remembered and account-only devices show their picture (or a kind icon) on the
+          device page instead of the app icon.</li>
+          <li>Devices on the start page are listed in a stable order: connected first, then by
+          name.</li>
+          <li>The tile icon falls back to the model name when the account gives no device kind
+          (Venu 2 shows a watch).</li>
+          <li>One busy indicator per task: a spinner until the first progress report, then the
+          progress bar.</li>
+          <li>A map with a missing file or an invalid checksum says which, has no Install
+          button, and is refused in the dry run too.</li>
+          <li>Readable names for training status, primary training device and Garmin Coach
+          files in sync summaries; "settings change log" for type 41.</li>
+          <li>Device pictures are loaded without GdkPixbuf.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.2" date="2026-10-17">
       <description>
         <p>The sign-in page, request headers and the Connect IQ store now follow the system
