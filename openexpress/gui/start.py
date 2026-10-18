@@ -2,8 +2,8 @@
 navigation; the view of one device comes above it, with the back arrow to this page.
 
 The page only shows what it is given (devicelist.Tile and how the device is connected) and
-says which tile was clicked by its place in the list: it never holds a device, an address or
-a unit ID."""
+says which tile was clicked by the place it had in the list it was given (each tile keeps
+it): it never holds a device, an address or a unit ID."""
 
 from __future__ import annotations
 
@@ -84,22 +84,19 @@ def _heading(text: str) -> Gtk.Label:
 
 class _Section:
     """One section of the start page: its title, its tiles (a grid) or its rows (a list, for
-    many devices), how many items come before it in the whole list (a list of one number, so
-    that the handlers hold no widget) and what its items show now."""
+    many devices) and what its items show now."""
 
     def __init__(self, title: str, on_open):
         self.title = _heading(title)
         self.grid, self.list = _tile_grid(), _device_list()
         self.grid.set_visible(False)
         self.list.set_visible(False)
-        self.before = [0]
         self.shown = None
         if on_open is not None:
-            # The place of the item only: the handlers hold no widget.
-            self.grid.connect("child-activated", lambda _grid, child, before=self.before:
-                              on_open(before[0] + child.get_index()))
-            self.list.connect("row-activated", lambda _rows, row, before=self.before:
-                              on_open(before[0] + row.get_index()))
+            # The key the item was given (its place in the list shown), read from the item
+            # the signal hands over: the handlers hold no widget.
+            self.grid.connect("child-activated", lambda _grid, child: on_open(child.key))
+            self.list.connect("row-activated", lambda _rows, row: on_open(row.key))
 
     def items(self) -> list:
         """Its tiles or its rows, in order (one of the two is empty)."""
@@ -121,8 +118,8 @@ def display_key(tile, how: str) -> tuple:
 class StartPage:
     """The page "Devices": a notice on top (the state on USB, while no device is open), the
     tiles of the devices connected, of those remembered and not connected, and of those only
-    on the Garmin account. `on_open(index)` is called with the place of the tile clicked in
-    the whole list."""
+    on the Garmin account. `on_open(key)` is called with the place the tile clicked had in
+    the list given to show(), whatever section it is in."""
 
     def __init__(self, on_open=None, header_start=(), header_end=()):
         self.header = Adw.HeaderBar()
@@ -198,31 +195,30 @@ class StartPage:
         self.notice_icon.set_visible(not busy)
 
     def show(self, entries, notice: bool) -> None:
-        """The tiles (devicelist.Tile, how the device is connected), in this order; `notice`:
-        whether the notice on top is shown."""
+        """The tiles (devicelist.Tile, how the device is connected), each in its section, in
+        this order within it; `notice`: whether the notice on top is shown. Each item keeps
+        its place in `entries`, which on_open is given."""
         self.notice_group.set_visible(notice)
         parts: dict[str, list] = {name: [] for name in self._sections}
-        for tile, how in entries:  # in the order of the sections (devicelist.entries)
-            parts[devicelist.section(tile)].append((tile, how))
-        count = 0
+        for key, (tile, how) in enumerate(entries):
+            parts[devicelist.section(tile)].append((key, tile, how))
         for name, section in self._sections.items():
             part = parts[name]
-            section.before[0] = count
-            count += len(part)
             mode = devicelist.layout(len(part))  # tiles while few, a list for many
-            keys = (mode, [display_key(tile, how) for tile, how in part])
+            keys = (mode, [display_key(tile, how) for _key, tile, how in part])
             if keys != section.shown:  # items that show the same keep their widgets
                 section.shown = keys
                 section.grid.remove_all()
                 section.list.remove_all()
-                for tile, how in part:
+                for key, tile, how in part:
                     picture = self._pictures.get(tile.image_part_number)
-                    if mode == LIST:
-                        section.list.append(row_widget(tile, how, picture))
-                    else:
-                        section.grid.append(tile_widget(tile, how, picture))
-            else:  # the same items: a kind learnt since changes the icon there
-                for item, (tile, _how) in zip(section.items(), part, strict=True):
+                    item = (row_widget(tile, how, picture) if mode == LIST
+                            else tile_widget(tile, how, picture))
+                    item.key = key
+                    (section.list if mode == LIST else section.grid).append(item)
+            else:  # the same items: their places may have moved; a kind learnt since
+                for item, (key, tile, _how) in zip(section.items(), part, strict=True):
+                    item.key = key
                     if not item.has_picture:
                         tile_image(item).set_from_icon_name(kind_icon(devicelist.icon_kind(tile)))
             section.title.set_visible(bool(part))

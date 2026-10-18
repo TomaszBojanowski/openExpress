@@ -763,12 +763,13 @@ class MainWindow(Adw.ApplicationWindow):
         self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
-        # The start page: what each tile opens (OPEN: the open device's view; a FoundDevice
-        # to open; a KnownDevice or an entry of the account to show read-only), in its order,
-        # kept outside the tiles; whether Refresh was pressed there (it stays there, decision
-        # 7); whether the window went to a page yet (the first time without an animation).
-        self._start_targets: list = []
-        self._start_tiles: list = []  # the tiles of these targets, in the same order
+        # The start page: (tile, what it opens) in the order given to the page, which hands
+        # back the place of the tile clicked; what it opens (OPEN: the open device's view; a
+        # FoundDevice to open; a KnownDevice or an entry of the account to show read-only) is
+        # kept here, never in the tile. Whether Refresh was pressed there (it stays there,
+        # decision 7); whether the window went to a page yet (the first time without an
+        # animation).
+        self._start_entries: list = []
         self._stay_on_start = False
         self._navigated = False
         # The devices connected, as last known: the list chosen from (a copy of _choices), or
@@ -1674,10 +1675,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._drawn_connected = connected_uris(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
                                      logged_in=self._account is not None)
-        self._start_targets = [source if isinstance(source, KnownDevice | dict)
-                               else OPEN if self._is_open(source) else source.found
-                               for _tile, source in entries]
-        self._start_tiles = [tile for tile, _source in entries]
+        self._start_entries = [
+            (tile, source if isinstance(source, KnownDevice | dict)
+             else OPEN if self._is_open(source) else source.found)
+            for tile, source in entries]
         self.start.show([(tile, tile_subtitle(source)) for tile, source in entries], notice)
         self._load_tile_pictures([tile for tile, _source in entries])
 
@@ -1711,15 +1712,15 @@ class MainWindow(Adw.ApplicationWindow):
             with_device_picture(self, part, url, use, tile_picture)
 
     def _open_tile(self, index: int) -> None:
-        """A tile clicked: the open device's view, or that device opened."""
-        if not 0 <= index < len(self._start_targets):
+        """A tile clicked (its place in _start_entries): the open device's view, that device
+        opened, or the read-only view of a device not connected."""
+        if not 0 <= index < len(self._start_entries):
             return
-        target = self._start_targets[index]
-        tiles = getattr(self, "_start_tiles", [])
+        tile, target = self._start_entries[index]
         if target is OPEN:
             self._show_device_view()
         elif isinstance(target, KnownDevice):
-            self._show_remembered(target, tiles[index] if index < len(tiles) else None)
+            self._show_remembered(target, tile)
         elif isinstance(target, dict):
             self._show_account(target)
         else:

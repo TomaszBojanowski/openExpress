@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 # The sections of the start page: connected now, remembered (seen here before, not connected),
 # only on the Garmin account (never seen here).
 CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
+SECTIONS = (CONNECTED, REMEMBERED, ON_ACCOUNT)  # in the order of the page
 
 # How a section of the start page shows its devices: tiles in a grid while they are few, a
 # list once they are many (counted for each section on its own).
@@ -115,6 +116,10 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
                              e[0].part_number))
 
     result = now + rest
+    # The start page groups them by section; kept in that order so that the list reads the
+    # same as the page.
+    order = [SECTIONS.index(section(tile)) for tile, _source in result]
+    assert order == sorted(order), "the tiles are not in the order of the sections"
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
               len(now), sum(t.on_account for t, _source in result))
     return result

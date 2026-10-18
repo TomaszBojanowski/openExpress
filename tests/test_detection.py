@@ -3535,7 +3535,7 @@ def start_stand_in(start, sections, win=None):
     win._poll_usb = lambda: None
     win.in_background = lambda work, done, failed=None: done(work())
     win.toast = win.errors.append
-    win._start_targets, win._stay_on_start, win._navigated = [], False, False
+    win._start_entries, win._stay_on_start, win._navigated = [], False, False
     win._connected, win._reopening, win._reread_pending = [], False, False
     win._account, win._account_wanted = None, False
     win._drawn_connected = frozenset()
@@ -5051,7 +5051,81 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(monkeypatch)
     start.list.emit("row-activated", rows[3])
     start.remembered_grid.emit("child-activated", remembered[1])
     assert opened == [3, 8]  # the places in the whole list, as for tiles
-    assert win._start_targets[3].uri == "mtp://watch-3/"  # the device of that row
+    assert win._start_entries[3][1].uri == "mtp://watch-3/"  # the device of that row
+
+
+@pytest.mark.needs_display
+def test_a_click_gives_the_place_the_tile_had_in_the_list_shown():
+    """The page groups the tiles by section; a click gives the place the tile had in the
+    list it was given, not one counted again through the sections."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name, connected, seen):
+        return Tile(name, "006-B4532-00", "1.00", "mtp" if connected or seen else None,
+                    connected, not connected and not seen, False, seen, "006-B4532-00",
+                    None, None)
+
+    opened = []
+    start = StartPage(opened.append)
+    entries = [(tile("Remembered A", False, 1.0), "a"), (tile("Connected B", True, None), "b"),
+               (tile("Account C", False, None), "c"), (tile("Connected D", True, None), "d")]
+    start.show(entries, False)
+    by_name = {}
+    for item in start.tiles():
+        by_name[item.get_child().get_first_child().get_next_sibling().get_label()] = item
+    for name in ("Account C", "Connected D", "Remembered A", "Connected B"):
+        item = by_name[name]
+        item.get_parent().emit("child-activated", item)
+    assert opened == [2, 3, 0, 1]
+    # Drawn again with one tile less before them: the tiles kept know their new places.
+    start.show(entries[1:], False)
+    item = next(i for i in start.tiles() if i.get_parent() is start.account_grid)
+    start.account_grid.emit("child-activated", item)
+    assert opened[-1] == 1
+
+
+@pytest.mark.needs_display
+def test_a_click_in_each_section_of_the_real_page_opens_its_device(choosing_window, monkeypatch,
+                                                                    tmp_path, device_root):
+    """Through the real start page: a connected tile opens that device, a remembered one and
+    one only on the account their read-only views."""
+    import time
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.start import StartPage
+
+    remember_others(time.time())
+    with_account(monkeypatch, FakeAccountClient())
+    win = start_stand_in(StartPage(lambda key: win._open_tile(key)),
+                         {"watch": FakeSection(), "maps": FakeSection()}, choosing_window)
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win._want_account()
+    win.refresh_device()
+    assert win.session is None and win._account is not None
+
+    def click(name):
+        key = next(k for k, (tile, _target) in enumerate(win._start_entries)
+                   if tile.description == name)
+        item = next(i for i in win.start.tiles() if i.key == key)
+        parent = item.get_parent()
+        parent.emit("child-activated" if isinstance(parent, Gtk.FlowBox) else "row-activated",
+                    item)
+
+    click("Edge 1050")
+    assert win.session.device.description == "Edge 1050"
+    assert win.navigation.stack == [win.start.page, "device view"]
+    back(win)
+    click("Venu 2")
+    assert win.navigation.stack == [win.start.page, "remembered view"]
+    assert win.remembered.shown[-1]["name"] == "Venu 2"
+    back(win)
+    click("Forerunner 965")
+    assert win.navigation.stack == [win.start.page, "remembered view"]
+    assert win.remembered.shown[-1]["name"] == "Forerunner 965"
+    assert win.remembered.shown[-1]["last_seen"] == "Not seen on this computer"
 
 
 @pytest.mark.needs_display
