@@ -10,11 +10,12 @@ never names it."""
 from __future__ import annotations
 
 import logging
+import unicodedata
 from dataclasses import dataclass
 
 from openexpress import known_devices
 from openexpress.device.gio_storage import distinct_devices
-from openexpress.known_devices import CYCLING_COMPUTER, WATCH
+from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH
 from openexpress.service import _unit_id
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,17 @@ CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
 # list once they are many (counted for each section on its own).
 GRID, LIST = "grid", "list"
 GRID_MAX = 6
+
+# The start of a model name and the kind it tells, for the icon only: the last resort after
+# what Garmin says (the account, unit-info, devices.json). Never stored, never read by the
+# program's logic. Lower case, without diacritics.
+NAME_KINDS = {
+    WATCH: ("fenix", "epix", "enduro", "forerunner", "venu", "vivoactive", "vivomove",
+            "vivosmart", "instinct", "quatix", "tactix", "descent", "marq", "lily",
+            "approach s"),
+    CYCLING_COMPUTER: ("edge",),
+    BIKE_ACCESSORY: ("varia",),
+}
 
 
 def layout(count: int) -> str | None:
@@ -133,6 +145,29 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         category=(account["category"] if account else None) or (
             known.category if known else None),
     )
+
+
+def kind_from_name(name: str | None) -> str | None:
+    """The kind a model name tells by its start ("fēnix 8 - 47mm, Solar": a watch), case and
+    diacritics ignored; a known start must end there or before a character that is not a
+    letter ("Approach S70", not "Venusaur"). None: not known (the neutral icon)."""
+    text = "".join(c for c in unicodedata.normalize("NFKD", name or "")
+                   if not unicodedata.combining(c)).casefold().strip()
+    for kind, starts in NAME_KINDS.items():
+        for start in starts:
+            if text.startswith(start) and not text[len(start):len(start) + 1].isalpha():
+                return kind
+    return None
+
+
+def icon_kind_of(category: str | None, name: str | None) -> str | None:
+    """The kind for the icon: what Garmin says, else what the model name tells."""
+    return category or kind_from_name(name)
+
+
+def icon_kind(tile: Tile) -> str | None:
+    """The kind for the icon of a tile (its `category` stays what Garmin says)."""
+    return icon_kind_of(tile.category, tile.description)
 
 
 def section(tile: Tile) -> str:

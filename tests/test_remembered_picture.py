@@ -188,3 +188,14 @@ def test_a_late_picture_of_the_device_before_does_not_replace_the_image_of_the_n
         on_done(fn())
     assert _shown(win.remembered.page) == ([f"{APP_ID}-watch-symbolic"], [])
     assert win._device_textures[ACCOUNT_PART] is not None  # kept for its tile
+
+
+@pytest.mark.needs_display
+def test_the_view_guesses_the_icon_from_the_name_as_the_tile_does():
+    """Venu 2 remembered without a word from Garmin on its kind: a watch's icon, as on its
+    tile (the name only for the icon, never stored)."""
+    win = _window()
+    known = _remembered(category=None)
+    known.description = "Venu 2"
+    win._show_remembered(known)
+    assert _shown(win.remembered.page) == ([f"{APP_ID}-watch-symbolic"], [])

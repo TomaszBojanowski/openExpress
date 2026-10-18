@@ -457,7 +457,7 @@ def open_device_kind(s, account) -> str | None:
                             getattr(d, "part_number", ""), "", unit_id)
     tiles = devicelist.tiles([summary], known_devices.load(), account,
                              logged_in=account is not None)
-    return next((t.category for t in tiles if t.connected), None)
+    return next((devicelist.icon_kind(t) for t in tiles if t.connected), None)
 
 
 def device_view_icon(win, s) -> str:
@@ -1666,11 +1666,12 @@ class MainWindow(Adw.ApplicationWindow):
             log.info("start page: picture of %s from %s", part, source)
         self.start.set_picture(part, texture)
 
-    def _show_page_picture(self, part: str, url: str | None, category) -> None:
+    def _show_page_picture(self, part: str, url: str | None, category, name: str) -> None:
         """The image of the page of a device that is not connected, as its tile has it: the
-        icon of its kind at once (never the program's), then its picture, if any; a picture
-        that comes after another device was opened is not shown."""
-        self.remembered.show_icon(part, kind_icon(category))
+        icon of its kind at once (never the program's; by the model name when Garmin says
+        none), then its picture, if any; a picture that comes after another device was
+        opened is not shown."""
+        self.remembered.show_icon(part, kind_icon(devicelist.icon_kind_of(category, name)))
 
         def use(texture, source):
             if self.remembered.set_picture(part, texture):
@@ -1714,7 +1715,8 @@ class MainWindow(Adw.ApplicationWindow):
             part_number=fields["part_number"],
             last_seen=_("Not seen on this computer"),
             last_sync=self._last_sync_text(service._unit_id(entry.get("unitid"))))
-        self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"])
+        self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"],
+                                fields["description"])
         self.navigation.push(self.remembered.page)
 
     def _show_remembered(self, known, tile=None) -> None:
@@ -1733,9 +1735,10 @@ class MainWindow(Adw.ApplicationWindow):
             last_seen=_("Last seen {when}").format(when=_seen_at(known.last_seen)),
             last_sync=last_sync)
         if tile is not None:
-            self._show_page_picture(tile.image_part_number, tile.image_url, tile.category)
+            self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
+                                    tile.description)
         else:
-            self._show_page_picture(known.part_number, None, known.category)
+            self._show_page_picture(known.part_number, None, known.category, known.description)
         self.navigation.push(self.remembered.page)
 
     def show_device(self) -> None:

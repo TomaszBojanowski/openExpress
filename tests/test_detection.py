@@ -4481,7 +4481,7 @@ def test_a_tile_without_a_picture_shows_the_icon_of_its_kind():
     start.show([(tile("Edge 1050", "006-B4440-00", "cycling-computer"), "a"),
                 (tile("fēnix 8", "006-B4532-00", "watch"), "b"),
                 (tile("Varia RTL515", "006-B3592-03", "bike-accessory", False), "c"),
-                (tile("Venu 2", "006-B3703-00", None, False), "d")], False)
+                (tile("Test device", "006-B3703-00", None, False), "d")], False)
     icons = [tile_image(child).get_icon_name() for child in start.tiles()]
     assert icons == [KIND_ICONS["cycling-computer"], KIND_ICONS["watch"],
                      KIND_ICONS["bike-accessory"], DEVICE_ICON]
@@ -4493,7 +4493,7 @@ def test_a_tile_without_a_picture_shows_the_icon_of_its_kind():
     start.show([(tile("Edge 1050", "006-B4440-00", "cycling-computer"), "a"),
                 (tile("fēnix 8", "006-B4532-00", "watch"), "b"),
                 (tile("Varia RTL515", "006-B3592-03", "bike-accessory", False), "c"),
-                (tile("Venu 2", "006-B3703-00", "watch", False), "d")], False)
+                (tile("Test device", "006-B3703-00", "watch", False), "d")], False)
     assert start.tiles() == before  # the same widgets
     assert tile_image(before[1]).get_paintable() is texture  # the picture first
     assert tile_image(before[3]).get_icon_name() == KIND_ICONS["watch"]  # learnt later
@@ -4573,15 +4573,18 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
 # --- the device view's icon before its picture (T5.2) -------------------------------------------
 
 
-def _device_view_icon(drive_window, monkeypatch, account=None):
+def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
     """The icon the device view of the RTL515 drive shows before its picture comes (the
-    picture is not asked here), and the stand-in of the window."""
+    picture is not asked here), and the stand-in of the window; `name`: another model name
+    (one that tells no kind)."""
     from test_fixes_ui import page_window
 
     from openexpress.gui.app import MainWindow
 
     win, _section = page_window("watch")
     win.session = drive_session(drive_window, monkeypatch)
+    if name is not None:
+        win.session.device.description = name
     win._account = account
     win.update_state, win.map_state = None, None
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
@@ -4600,7 +4603,7 @@ def test_the_device_view_waits_with_the_neutral_icon_like_the_tile(drive_window,
     from openexpress.gui.app import APP_ID
     from openexpress.gui.start import kind_icon
 
-    icon, _win = _device_view_icon(drive_window, monkeypatch)
+    icon, _win = _device_view_icon(drive_window, monkeypatch, name="Test drive")
     assert icon == kind_icon(None) and icon != APP_ID
 
 
@@ -4634,7 +4637,7 @@ def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
     from openexpress.gui.app import MainWindow
     from openexpress.gui.start import kind_icon
 
-    icon, win = _device_view_icon(drive_window, monkeypatch)
+    icon, win = _device_view_icon(drive_window, monkeypatch, name="Test drive")
     assert icon == kind_icon(None)
     asked = []
 
@@ -4649,6 +4652,24 @@ def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
     win._show_device_picture()
     assert asked == ["006-B3592-03"]
     assert win.device_image.get_icon_name() == kind_icon("bike-accessory")
+
+
+@pytest.mark.needs_display
+def test_a_tile_without_a_word_from_garmin_shows_the_icon_its_name_tells():
+    """The model name, only for the icon and only when Garmin says no kind: Venu 2 a watch,
+    Varia a radar; an unknown name the neutral icon."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import DEVICE_ICON, KIND_ICONS, StartPage, tile_image
+
+    def tile(name, part):
+        return Tile(name, part, "1.00", "mtp", False, False, False, 1.0, part, None, None)
+
+    start = StartPage()
+    start.show([(tile("Test device", "006-B0000-01"), "a"),
+                (tile("Varia RTL515", "006-B3592-03"), "b"),
+                (tile("Venu 2", "006-B3703-00"), "c")], False)
+    assert [tile_image(child).get_icon_name() for child in start.tiles()] == [
+        DEVICE_ICON, KIND_ICONS["bike-accessory"], KIND_ICONS["watch"]]
 
 
 # --- a list instead of tiles for many devices (T6a) --------------------------------------------

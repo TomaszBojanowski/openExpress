@@ -221,7 +221,7 @@ class StartPage:
             else:  # the same items: a kind learnt since changes the icon there
                 for item, (tile, _how) in zip(section.items(), part, strict=True):
                     if not item.has_picture:
-                        tile_image(item).set_from_icon_name(kind_icon(tile.category))
+                        tile_image(item).set_from_icon_name(kind_icon(devicelist.icon_kind(tile)))
             section.title.set_visible(bool(part))
             section.grid.set_visible(mode is not None and mode != LIST)
             section.list.set_visible(mode == LIST)
@@ -348,7 +348,7 @@ def _image(tile, picture, size: int) -> Gtk.Image:
     """The image of an item, the same for a tile and a row: the picture of the device if it
     is known, else the icon of its kind (the picture is put in its place later, in the
     same size)."""
-    image = Gtk.Image(icon_name=kind_icon(tile.category), pixel_size=size)
+    image = Gtk.Image(icon_name=kind_icon(devicelist.icon_kind(tile)), pixel_size=size)
     if picture is not None:
         image.set_from_paintable(picture)
     return image

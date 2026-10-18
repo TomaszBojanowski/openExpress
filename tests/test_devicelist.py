@@ -431,6 +431,63 @@ def test_the_account_list_teaches_the_kind_of_remembered_devices(tmp_path):
     assert set(known) == {EDGE} and known[EDGE].category == "cycling-computer"
 
 
+# --- the icon's kind from the model name, as a last resort --------------------------------------
+
+
+@pytest.mark.parametrize("name, kind", [
+    ("Venu 2", "watch"), ("fēnix 8 - 47mm, Solar", "watch"), ("FENIX 7", "watch"),
+    ("vívoactive 5", "watch"), ("Forerunner 965", "watch"), ("Approach S70", "watch"),
+    ("Instinct 3", "watch"), ("MARQ Gen 2", "watch"), ("Lily 2", "watch"),
+    ("Edge 1050", "cycling-computer"), ("Edge", "cycling-computer"),
+    ("Varia RTL515", "bike-accessory"),
+    ("Approach Z82", None), ("Venusaur", None), ("Index S2", None), ("Test watch", None),
+    ("", None), (None, None),
+])
+def test_the_kind_guessed_from_the_start_of_the_model_name(name, kind):
+    from openexpress import devicelist
+
+    assert devicelist.kind_from_name(name) == kind
+
+
+def test_the_icon_of_a_tile_falls_back_to_the_name_and_the_kind_stays_unknown():
+    """Venu 2 without a word from Garmin: a watch's icon; the tile's kind - what the program
+    reads - stays unknown."""
+    from openexpress import devicelist
+
+    (tile,) = devicelist.tiles([], remembered(VENU_SEEN), None, logged_in=False)
+    assert tile.category is None
+    assert devicelist.icon_kind(tile) == "watch"
+    (other,) = devicelist.tiles([], remembered(
+        (EDGE, "Index S2", "006-B0000-01", "1.00", "mtp", NOW - 9 * DAY, NOW - DAY)), None,
+        logged_in=False)
+    assert devicelist.icon_kind(other) is None  # the neutral icon
+
+
+def test_what_garmin_says_wins_over_the_name():
+    from openexpress import devicelist
+    from openexpress.known_devices import KnownDevice
+
+    edge_a_watch = KnownDevice(EDGE, "Edge", "006-B4440-00", "1.00", "mtp", 1.0, 4.0,
+                               category="watch")
+    (tile,) = devicelist.tiles([], {EDGE: edge_a_watch}, None, logged_in=False)
+    assert devicelist.icon_kind(tile) == "watch"
+    (fenix,) = devicelist.tiles([], {}, account([{**ACCOUNT_ANSWER[1],
+                                                  "productDisplayName": "Edge 1050",
+                                                  "hasOpticalHeartRate": True}]),
+                                logged_in=True)
+    assert devicelist.icon_kind(fenix) == "watch"
+
+
+def test_a_kind_from_the_name_is_never_kept_in_devices_json():
+    from openexpress import devicelist, known_devices
+
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
+    tiles = devicelist.tiles([], known_devices.load(), account(), logged_in=True)
+    assert [devicelist.icon_kind(t) for t in tiles if t.description == "Venu 2"] == ["watch"]
+    devicelist.remember_kinds(account())
+    assert known_devices.load()[VENU].category is None
+
+
 # --- grid or list, by the number in a section (T6a) ---------------------------------------------
 
 
