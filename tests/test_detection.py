@@ -3313,6 +3313,12 @@ class FakeRememberedPage:
     def show(self, **fields):
         self.shown.append(fields)
 
+    def show_icon(self, part_number, icon):
+        self.icon = (part_number, icon)
+
+    def set_picture(self, part_number, texture):
+        return False
+
 
 class FakeSection:
     def __init__(self):
@@ -3332,7 +3338,8 @@ START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_vie
                  "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
                  "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
-                 "_want_account", "_load_tile_pictures", "_tile_picture_done")
+                 "_want_account", "_load_tile_pictures", "_tile_picture_done",
+                 "_show_page_picture")
 
 
 def start_stand_in(start, sections, win=None):

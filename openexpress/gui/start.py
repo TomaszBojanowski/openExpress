@@ -247,7 +247,8 @@ class RememberedPage:
     """The read-only view of a device remembered and not connected: what was known of it
     when it was last seen, and its last sync. It offers nothing to do: Sync and the rows of
     updates and maps cannot be used, the banner says why. It is given words only (never a
-    device, an address or a unit ID)."""
+    device, an address or a unit ID), and the image of the model: the icon of its kind, then
+    its picture, as on its tile."""
 
     def __init__(self):
         header = Adw.HeaderBar()
@@ -262,7 +263,9 @@ class RememberedPage:
         hero = Adw.PreferencesGroup()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6,
                       halign=Gtk.Align.CENTER, margin_bottom=12)
-        box.append(Gtk.Image(icon_name=APP_ID, pixel_size=128))
+        self.image = Gtk.Image(icon_name=DEVICE_ICON, pixel_size=128)
+        self._part = ""  # the part number whose picture this view may show now
+        box.append(self.image)
         self.name_label = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
         self.name_label.add_css_class("title-1")
         self.version_label = Gtk.Label()
@@ -312,6 +315,20 @@ class RememberedPage:
         self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
         self.tools_group.set_visible(bool(part_number))
+
+    def show_icon(self, part_number: str, icon: str) -> None:
+        """The icon of the device's kind until its picture comes; only a picture of this
+        part number is taken after it (not a late one of the device shown before)."""
+        self._part = part_number
+        self.image.set_from_icon_name(icon)
+
+    def set_picture(self, part_number: str, texture) -> bool:
+        """The picture of the model, if this view still shows a device of that part
+        number. Whether it was taken."""
+        if not part_number or part_number != self._part:
+            return False
+        self.image.set_from_paintable(texture)
+        return True
 
 
 def tile_image(item) -> Gtk.Image:

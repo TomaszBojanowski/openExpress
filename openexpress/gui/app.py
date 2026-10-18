@@ -60,6 +60,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import start  # noqa: E402
+from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
@@ -288,12 +289,6 @@ def download_picture(http, url: str, name: str,
     except OSError:
         return None, "cannot write the cache"
     return target, ""
-
-
-def device_picture_path(part_number: str) -> Path:
-    """Cached product picture of a watch model (the picture never changes for a model)."""
-    safe = "".join(c for c in part_number if c.isalnum() or c in "-_") or "unknown"
-    return paths.cache_dir() / "images" / f"device-{safe}.png"
 
 
 def load_texture(path: Path, size: int):
@@ -775,6 +770,7 @@ class MainWindow(Adw.ApplicationWindow):
         # outside the tiles; whether Refresh was pressed there (it stays there, decision 7);
         # whether the window went to a page yet (the first time without an animation).
         self._start_targets: list = []
+        self._start_tiles: list = []  # the tiles of these targets, in the same order
         self._stay_on_start = False
         self._navigated = False
         # The devices connected, as last known (the list chosen from, the one device, or the
@@ -1651,52 +1647,48 @@ class MainWindow(Adw.ApplicationWindow):
         self._start_targets = [source if isinstance(source, KnownDevice | dict)
                                else OPEN if self._is_open(source) else source.found
                                for _tile, source in entries]
+        self._start_tiles = [tile for tile, _source in entries]
         self.start.show([(tile, tile_subtitle(source)) for tile, source in entries], notice)
         self._load_tile_pictures([tile for tile, _source in entries])
 
     def _load_tile_pictures(self, tiles: list) -> None:
-        """The pictures of the tiles, by part number (never by unit ID), the same as the
-        device view's: in memory at once; else the file in the cache, or the account's
-        address of the picture (a device on the account), read in the background and put
-        into the tile there. Nothing else is asked (no unit-info for a device not open).
-        Each part number once; none, or a failure: the icon stays."""
-        textures = getattr(self, "_device_textures", None)
-        if textures is None:
-            textures = self._device_textures = {}
-        asked = getattr(self, "_pictures_asked", None)
-        if asked is None:
-            asked = self._pictures_asked = set()
+        """The pictures of the tiles (`pictures.with_device_picture`), put into the tile
+        there."""
         for tile in tiles:
-            part = tile.image_part_number
-            if not part:
-                continue
-            if textures.get(part) is not None:
-                self.start.set_picture(part, textures[part])
-                continue
-            if part in asked or not (tile.image_url or device_picture_path(part).exists()):
-                continue  # read already, or nothing to read yet (no file, no address)
-            asked.add(part)
-            self.in_background(lambda part=part, url=tile.image_url: tile_picture(part, url),
-                               lambda result, part=part: self._tile_picture_done(part, result))
+            if tile.image_part_number:
+                with_device_picture(self, tile.image_part_number, tile.image_url,
+                                    lambda texture, source, part=tile.image_part_number:
+                                        self._tile_picture_done(part, texture, source),
+                                    tile_picture)
 
-    def _tile_picture_done(self, part: str, result) -> None:
-        texture, source = result
-        if texture is None:
-            log.info("start page: no picture of %s (%s)", part, source)
-            return
-        log.info("start page: picture of %s from %s", part, source)
-        self._device_textures[part] = texture
+    def _tile_picture_done(self, part: str, texture, source: str) -> None:
+        if source != "memory":
+            log.info("start page: picture of %s from %s", part, source)
         self.start.set_picture(part, texture)
+
+    def _show_page_picture(self, part: str, url: str | None, category) -> None:
+        """The image of the page of a device that is not connected, as its tile has it: the
+        icon of its kind at once (never the program's), then its picture, if any; a picture
+        that comes after another device was opened is not shown."""
+        self.remembered.show_icon(part, kind_icon(category))
+
+        def use(texture, source):
+            if self.remembered.set_picture(part, texture):
+                log.info("device page: picture of %s from %s", part, source)
+
+        if part:
+            with_device_picture(self, part, url, use, tile_picture)
 
     def _open_tile(self, index: int) -> None:
         """A tile clicked: the open device's view, or that device opened."""
         if not 0 <= index < len(self._start_targets):
             return
         target = self._start_targets[index]
+        tiles = getattr(self, "_start_tiles", [])
         if target is OPEN:
             self._show_device_view()
         elif isinstance(target, KnownDevice):
-            self._show_remembered(target)
+            self._show_remembered(target, tiles[index] if index < len(tiles) else None)
         elif isinstance(target, dict):
             self._show_account(target)
         else:
@@ -1722,12 +1714,15 @@ class MainWindow(Adw.ApplicationWindow):
             part_number=fields["part_number"],
             last_seen=_("Not seen on this computer"),
             last_sync=self._last_sync_text(service._unit_id(entry.get("unitid"))))
+        self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"])
         self.navigation.push(self.remembered.page)
 
-    def _show_remembered(self, known) -> None:
+    def _show_remembered(self, known, tile=None) -> None:
         """The read-only view of a device remembered and not connected: what was known when
-        it was last seen, and its last sync, from this computer only. Nothing is opened or
-        asked; the open device (if any) and the detection are not touched."""
+        it was last seen, and its last sync, from this computer only; its image as its
+        `tile` has it (the account's picture and kind, if it is on the account). Nothing is
+        opened or asked but that picture; the open device (if any) and the detection are not
+        touched."""
         if not self._on_start_page():
             return
         last_sync = self._last_sync_text(known.unit_id)
@@ -1737,6 +1732,10 @@ class MainWindow(Adw.ApplicationWindow):
             part_number=known.part_number,
             last_seen=_("Last seen {when}").format(when=_seen_at(known.last_seen)),
             last_sync=last_sync)
+        if tile is not None:
+            self._show_page_picture(tile.image_part_number, tile.image_url, tile.category)
+        else:
+            self._show_page_picture(known.part_number, None, known.category)
         self.navigation.push(self.remembered.page)
 
     def show_device(self) -> None:
