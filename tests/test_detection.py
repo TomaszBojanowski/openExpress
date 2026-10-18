@@ -4116,6 +4116,56 @@ def test_the_remembered_section_only_with_remembered_devices():
 
 
 @pytest.mark.needs_display
+# PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+def test_tiles_have_one_width_in_every_section():
+    """Tiles in different sections, with texts of different lengths, have the same width
+    once the window is laid out (no grid fits its tiles to its longest text, nor widens
+    them to fill its line); three share a line in a window 1100 px wide."""
+    import time
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, GLib, Gtk
+
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import TILE_WIDTH, StartPage
+
+    def tile(name, connected):
+        return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
+                    None if connected else 1.0, "006-B4532-00", None, None)
+
+    start = StartPage()
+    long_text = ("Software 19.05 · Last seen yesterday, 23:41 · with a text much longer "
+                 "than any other on the page")
+    start.show([(tile("fēnix 8", True), "Over USB (MTP)"),
+                (tile("Edge 1050", True), "USB drive"),
+                (tile("Varia", True), "USB drive"),
+                (tile("Venu 2", False), long_text),
+                (tile("A device with a rather long name indeed", False), long_text)], False)
+    nav = Adw.NavigationView()
+    nav.add(start.page)
+    win = Gtk.Window(default_width=1100, default_height=900, child=nav)
+    win.present()
+    try:
+        tiles = start.tiles()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not all(t.get_width() for t in tiles):
+            GLib.MainContext.default().iteration(False)
+        for _ in range(50):  # a few more passes for the layout to settle
+            GLib.MainContext.default().iteration(False)
+        widths = [t.get_width() for t in tiles]
+        assert len(set(widths)) == 1, widths
+        assert TILE_WIDTH - 12 <= widths[0] <= TILE_WIDTH  # the tile's own CSS edge aside
+        rows = {round(t.compute_bounds(start.grid)[1].get_y()) for t in tiles[:3]}
+        assert len(rows) == 1  # the three connected ones on one line
+    finally:
+        win.destroy()
+
+
+@pytest.mark.needs_display
 def test_the_read_only_view_offers_no_action():
     """The read-only view: the banner says the device is not connected; Sync and the rows of
     updates and maps cannot be used."""

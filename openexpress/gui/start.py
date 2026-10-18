@@ -11,7 +11,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
@@ -30,9 +30,11 @@ KIND_ICONS = {
     BIKE_ACCESSORY: f"{APP_ID}-bike-accessory-symbolic",
 }
 DEVICE_ICON = f"{APP_ID}-device-symbolic"
-TILE_WIDTH = 200
-# A longer text wraps instead of widening its tile (so that tiles share a line).
-TEXT_CHARS = 40
+# One width for every tile, in every section (never fitted to the longest text of a
+# section): three on a line in a window 1100 px wide (where Adw.Clamp gives the page 800 px
+# of content). A longer name is cut short; the line under it takes at most two lines.
+TILE_WIDTH = 250
+SUBTITLE_LINES = 2
 
 # The tiles of the start page only (loaded once per display): a quiet 1px edge around the
 # tile of a connected device; the accent only under the pointer or with the keyboard focus.
@@ -61,10 +63,11 @@ def load_css(display) -> None:
 
 
 def _tile_grid() -> Gtk.FlowBox:
+    # On the left: a grid filling the line would widen its tiles to share it.
     return Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
                        activate_on_single_click=True, min_children_per_line=1,
                        max_children_per_line=4, column_spacing=12, row_spacing=12,
-                       valign=Gtk.Align.START)
+                       valign=Gtk.Align.START, halign=Gtk.Align.START)
 
 
 def _device_list() -> Gtk.ListBox:
@@ -382,13 +385,16 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
                   margin_bottom=12, margin_start=12, margin_end=12)
     image = _image(tile, picture, TILE_ICON_SIZE)
     box.append(image)
-    name = Gtk.Label(label=_name(tile), wrap=True,
-                     justify=Gtk.Justification.CENTER, max_width_chars=TEXT_CHARS)
+    # max_width_chars=1: the texts never ask for more than the tile's width (they take
+    # the width the tile has, TILE_WIDTH), so that every tile is as wide as the others.
+    name = Gtk.Label(label=_name(tile), ellipsize=Pango.EllipsizeMode.END,
+                     max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
     box.append(name)
     if how:
         label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER,
-                          max_width_chars=TEXT_CHARS)
+                          ellipsize=Pango.EllipsizeMode.END, lines=SUBTITLE_LINES,
+                          max_width_chars=1)
         label.add_css_class("dim-label")
         label.add_css_class("caption")
         box.append(label)
