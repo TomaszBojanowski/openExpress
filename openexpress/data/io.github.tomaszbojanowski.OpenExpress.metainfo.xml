@@ -97,6 +97,27 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.4" date="2026-10-18">
+      <description>
+        <ul>
+          <li>Devices in mass-storage mode, such as the Varia RTL515, now work in the Flatpak:
+          the sandbox can see removable drives under /run/media and /media (new permission,
+          documented in the README).</li>
+          <li>The command line finds a mass-storage device by itself; --path is only for a
+          folder with no device attached. Commands that do not apply to such a device say
+          so.</li>
+          <li>The device report tells whether the Flatpak came from the openExpress repository
+          or from a bundle, with its build commit.</li>
+          <li>The server status popover shows relative times, shows the state only when
+          something is wrong, and then offers Try Again.</li>
+          <li>A remembered device's page no longer closes by itself shortly after the window
+          starts.</li>
+          <li>Tiles on the start page have one width in every section and are centred; the info
+          line of a USB drive no longer shows its mount path.</li>
+          <li>Internal: the start page keeps one list of tiles and one picture store.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.3" date="2026-10-18">
       <description>
         <ul>
