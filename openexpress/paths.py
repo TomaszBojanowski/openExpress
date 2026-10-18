@@ -69,11 +69,15 @@ def flatpak_origin() -> str | None:
     "…-origin"), asked of the host; None outside the Flatpak and on any failure."""
     if not in_flatpak():
         return None
+    # With two branches installed (e.g. master and test), a question without the branch is
+    # ambiguous and fails: this one's branch goes with the app ID when it can be read.
+    build = flatpak_build()
+    ref = f"{APP_ID}//{build[0]}" if build and build[0] else APP_ID
     # Only reads the metadata of the installation; besides copying files to the device
     # (gio copy), the one use of flatpak-spawn.
     try:
         answer = subprocess.run(
-            ["flatpak-spawn", "--host", "flatpak", "info", "--show-origin", APP_ID],
+            ["flatpak-spawn", "--host", "flatpak", "info", "--show-origin", ref],
             capture_output=True, text=True, timeout=3, check=False)
     except (OSError, subprocess.SubprocessError):
         return None

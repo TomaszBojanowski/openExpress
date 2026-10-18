@@ -79,6 +79,28 @@ def test_the_origin_is_asked_of_the_host(monkeypatch, answer, origin):
                        "io.github.tomaszbojanowski.OpenExpress"], 3)]
 
 
+def test_the_origin_is_asked_for_this_branch(monkeypatch, info_file):
+    """With two branches installed (master and test) a question without the branch is
+    ambiguous and fails: the branch from /.flatpak-info goes with the app ID."""
+    info_file.write_text(INFO.replace("branch=master", "branch=test"))
+    monkeypatch.setattr(paths, "in_flatpak", lambda: True)
+    calls = _host(monkeypatch, (0, "openexpress-test\n"))
+    assert paths.flatpak_origin() == "openexpress-test"
+    assert calls == [(["flatpak-spawn", "--host", "flatpak", "info", "--show-origin",
+                       "io.github.tomaszbojanowski.OpenExpress//test"], 3)]
+
+
+@pytest.mark.parametrize("text", [None, "[Instance]\napp-commit=abc\n", "not an ini file\n[[["])
+def test_without_a_readable_branch_the_origin_is_asked_without_one(monkeypatch, info_file,
+                                                                   text):
+    if text is not None:
+        info_file.write_text(text)
+    monkeypatch.setattr(paths, "in_flatpak", lambda: True)
+    calls = _host(monkeypatch, (0, "openexpress\n"))
+    assert paths.flatpak_origin() == "openexpress"
+    assert calls[0][0][-1] == "io.github.tomaszbojanowski.OpenExpress"
+
+
 def test_the_origin_is_never_asked_outside_the_flatpak(monkeypatch):
     monkeypatch.setattr(paths, "in_flatpak", lambda: False)
     calls = _host(monkeypatch, (0, "openexpress\n"))
