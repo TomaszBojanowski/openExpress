@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from openexpress.gui.connected import Connected
+
 gio_storage = pytest.importorskip("openexpress.device.gio_storage")
 # The real one, before any test puts a stand-in in its place.
 REAL_FIND_DEVICES = gio_storage.find_devices
@@ -316,6 +318,7 @@ def unplug_window(monkeypatch, usb):
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = types.SimpleNamespace(
         session=session, busy=False, sections=pages, built=[], _updated_apps=set(),
+        connected=Connected(),
         _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="", _usb_gone=None,
         _usb_notice=MainWindow._usb_notice, _update_banner=lambda: None,
         _update_actions=lambda: None, start=FakeStartPage(), _show_start=lambda: None)
@@ -421,7 +424,7 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
     tasks, shown = [], []
     open_one = device(3000000001)
     win = types.SimpleNamespace(
-        busy=True, _refresh_pending=False, session=open_one,
+        busy=True, _refresh_pending=False, session=open_one, connected=Connected(),
         sections={"watch": types.SimpleNamespace(show=lambda state: None)},
         run_task=lambda title, fn, done, failed: tasks.append(done),
         show_device=lambda: shown.append(win.session),
@@ -491,7 +494,7 @@ def detecting(tmp_path, monkeypatch):
     monkeypatch.setattr(app, "garmin_usb", lambda m: True)
     monkeypatch.setattr(app, "own_remount", lambda m: False)
     win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, tasks=[],
-                                built=[], reads=[],
+                                built=[], reads=[], connected=Connected(),
                                 sections={"watch": types.SimpleNamespace(show=lambda s: None)})
 
     def run_task(title, fn, done, failed):
@@ -1425,7 +1428,7 @@ def drive_window(watch_and_drives, monkeypatch):
     monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
     win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, built=[],
                                 _updated_apps={"an app waiting for the unplug"}, timers=timers,
-                                world=watch_and_drives,
+                                world=watch_and_drives, connected=Connected(),
                                 sections={"watch": types.SimpleNamespace(show=lambda s: None)})
 
     def run_task(title, fn, done, failed):
@@ -1721,6 +1724,11 @@ EDGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+def choices(win):
+    """The list to choose from (gui/connected.py), or None while there is none."""
+    return win.connected.devices if win.connected.choosing else None
+
+
 @pytest.fixture
 def choosing_window(drive_window):
     """The window's detection with the list to choose from: what the list would show is
@@ -1728,9 +1736,9 @@ def choosing_window(drive_window):
     from openexpress.gui.app import MainWindow
 
     win = drive_window
-    win._choices, win._choices_usb, win.shown_choices, win.errors = None, None, [], []
+    win.shown_choices, win.errors = [], []
     win.show_choices = lambda: win.shown_choices.append(
-        [(s.found.kind, s.description) for s in win._choices])
+        [(s.found.kind, s.description) for s in choices(win)])
     # Bound only when it exists, so that on code without it the tests fail on what they check.
     if hasattr(MainWindow, "open_choice"):
         win.open_choice = types.MethodType(MainWindow.open_choice, win)
@@ -1827,11 +1835,11 @@ def test_choosing_a_device_opens_it(choosing_window, monkeypatch, tmp_path, devi
     monitor_with(monkeypatch)
     edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
     win.refresh_device()
-    chosen = next(s for s in win._choices if s.found is edge)
+    chosen = next(s for s in choices(win) if s.found is edge)
     win.open_choice(chosen.found)
     (s,) = win.built
     assert s is win.session and s.storage.label.startswith(NAMED)
-    assert s.device.description == "Edge 1050" and win._choices is None
+    assert s.device.description == "Edge 1050" and choices(win) is None
 
 
 def test_unplugging_down_to_one_device_opens_it(choosing_window, monkeypatch):
@@ -1925,7 +1933,7 @@ def test_two_devices_without_an_id_are_not_merged(choosing_window, monkeypatch, 
     win.refresh_device()
     assert win.session is None
     assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
-    assert [s.unit_id for s in win._choices] == [None, None]
+    assert [s.unit_id for s in choices(win)] == [None, None]
 
 
 def test_two_mtp_devices_known_by_their_usb_device_are_both_listed(choosing_window, monkeypatch,
@@ -1972,7 +1980,7 @@ def test_unplugging_another_device_keeps_the_open_one(choosing_window, monkeypat
     edge = two_watches(world, monkeypatch, tmp_path, device_root)
     usb_device(world.root, "1-2", 1, 10, "091e", "5158")
     win.refresh_device()
-    fenix = next(s.found for s in win._choices if s.found is not edge)
+    fenix = next(s.found for s in choices(win) if s.found is not edge)
     win.open_choice(fenix)
     (opened,) = win.built
     # The Edge is unplugged: gone from gvfs and from /sys.
@@ -2074,14 +2082,14 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
     maps = Section("maps", "Maps", "x-symbolic", "Loading…")
     win = start_stand_in(StartPage(), {"maps": maps})
     usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
-    win._choices = [
+    win.connected.listing([
         gio_storage.DeviceSummary(gio_storage.FoundDevice(NUMERIC, "x", True, usb=usb),
                                   "fēnix 8", "006-B4532-00", "23.39", 1234567890),
         gio_storage.DeviceSummary(gio_storage.FoundDevice(NAMED, "x", False, usb=usb),
                                   reason=gio_storage.NOT_MOUNTED),
         gio_storage.DeviceSummary(gio_storage.FoundDevice("file:///run/media/u/GARMIN/", "x",
                                                           True, usb=usb, kind="ums"),
-                                  "Varia RTL515", "006-B3592-03", "3.36", 3000000003)]
+                                  "Varia RTL515", "006-B3592-03", "3.36", 3000000003)], None)
     MainWindow.show_choices(win)
     texts = _texts(win.start.page)
     rows = list(itertools.pairwise(texts))  # a tile's name, then how it is connected
@@ -2135,7 +2143,7 @@ def rows_of(win):
     """The rows of the list now shown: name and subtitle, as the window writes them."""
     from openexpress.gui.app import choice_subtitle
 
-    return [(s.description, choice_subtitle(s)) for s in win._choices]
+    return [(s.description, choice_subtitle(s)) for s in choices(win)]
 
 
 def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, device_root):
@@ -2166,14 +2174,14 @@ def test_unplugging_one_by_one_down_to_none(choosing_window, monkeypatch):
     third = another_drive(win.world, 3000000005, "GARMIN 3", "1-6", 14, "sdd")
     monitor_with(monkeypatch, first, second, third)
     win.refresh_device()
-    assert len(win._choices) == 3
+    assert len(choices(win)) == 3
     unplug_drive(win, monkeypatch, third, "sdd", first, second)
-    assert win.session is None and len(win._choices) == 2 and win.built == []
+    assert win.session is None and len(choices(win)) == 2 and win.built == []
     unplug_drive(win, monkeypatch, second, "sdc", first)
     (s,) = win.built
     assert s is win.session and s.storage.device_uri == first.root.get_uri()
     unplug_drive(win, monkeypatch, first, "sdb")
-    assert win.session is None and win.built[-1] is None and not win._choices
+    assert win.session is None and win.built[-1] is None and not choices(win)
     assert all(len(shown) > 1 for shown in win.shown_choices)
 
 
@@ -2187,7 +2195,7 @@ def test_the_one_device_left_opens_whatever_its_kind(choosing_window, monkeypatc
     world.plug("51b4")
     world.offer()
     win.refresh_device()
-    assert len(win._choices) == 2
+    assert len(choices(win)) == 2
     if left == "mtp":
         unplug_drive(win, monkeypatch, drive, "sdb")
     else:
@@ -2235,7 +2243,7 @@ def test_all_devices_gone_before_they_are_read(choosing_window, monkeypatch, tmp
     vanishing(monkeypatch, NUMERIC, NAMED)
     win.refresh_device()
     assert win.shown_choices == [] and win.session is None and win.built == [None]
-    assert not win._choices
+    assert not choices(win)
 
 
 def test_choosing_a_device_that_is_gone(choosing_window, monkeypatch, tmp_path, device_root):
@@ -2246,7 +2254,7 @@ def test_choosing_a_device_that_is_gone(choosing_window, monkeypatch, tmp_path, 
     edge = two_watches(world, monkeypatch, tmp_path, device_root)
     usb_device(world.root, "1-2", 1, 10, "091e", "5158")
     win.refresh_device()
-    assert len(win._choices) == 2
+    assert len(choices(win)) == 2
     world.offered.remove(edge)  # unplugged…
     for f in (world.root / "1-2").iterdir():
         f.unlink()
@@ -2288,7 +2296,7 @@ def test_two_devices_not_mounted_are_two_rows(choosing_window, monkeypatch, tmp_
     win.refresh_device()
     assert win.session is None and win.built == []
     assert rows_of(win) == [("", "Over USB (MTP) · Not mounted; choose it to open it")] * 2
-    assert [s.found for s in win._choices] == [world.offered[0], edge]
+    assert [s.found for s in choices(win)] == [world.offered[0], edge]
 
 
 def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatch, tmp_path,
@@ -2405,7 +2413,7 @@ def test_the_list_remembers_each_device_with_details(choosing_window, monkeypatc
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     win.refresh_device()
-    assert win.session is None and len(win._choices) == 2
+    assert win.session is None and len(choices(win)) == 2
     assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39"),
                             3000000002: ("mtp", "Edge 1050", "006-B4440-00", "33.11")}
 
@@ -2420,7 +2428,7 @@ def test_an_entry_without_details_is_not_remembered(choosing_window, monkeypatch
     edge.mounted = False
     usb_device(win.world.root, "1-2", 1, 10, "091e", "5158")
     win.refresh_device()
-    assert len(win._choices) == 2
+    assert len(choices(win)) == 2
     assert remembered() == {1234567890: ("mtp", "Test watch", "006-B0000-00", "23.39")}
 
 
@@ -2447,7 +2455,7 @@ def test_a_failed_remembering_does_not_stop_the_detection(choosing_window, monke
         two_watches(watch_and_drives, monkeypatch, tmp_path, device_root)
         choosing_window.refresh_device()
     assert s.device.description == "Test watch"
-    assert len(choosing_window._choices) == 2
+    assert len(choices(choosing_window)) == 2
     assert "devices: not remembered (OSError)" in caplog.text
     assert remembered() == {}
 
@@ -3522,7 +3530,7 @@ def start_stand_in(start, sections, win=None):
     navigation; the device view's pages are recorded, not built."""
     from openexpress.gui.app import MainWindow
 
-    win = win or types.SimpleNamespace(session=None, busy=False, _choices=None, errors=[])
+    win = win or types.SimpleNamespace(session=None, busy=False, errors=[])
     win.start, win.device_view = start, "device view"
     win.remembered = FakeRememberedPage()
     win.navigation = FakeNavigation(start.page)
@@ -3536,9 +3544,8 @@ def start_stand_in(start, sections, win=None):
     win.in_background = lambda work, done, failed=None: done(work())
     win.toast = win.errors.append
     win._start_entries, win._stay_on_start, win._navigated = [], False, False
-    win._connected, win._reopening, win._reread_pending = [], False, False
+    win.connected, win._reopening, win._reread_pending = Connected(), False, False
     win._account, win._account_wanted = None, False
-    win._drawn_connected = frozenset()
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -4323,7 +4330,7 @@ def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, 
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     win.refresh_device()
-    assert len(win._choices) == 2
+    assert len(choices(win)) == 2
     running = []  # the detection after the failure: in its thread until the test says so
     real = win.run_task
 
@@ -4341,8 +4348,8 @@ def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, 
     monkeypatch.setattr(service, "open_session", refuse)
     win._open_tile(drawn_names(win)[-1].index("Edge 1050"))
     assert win.errors == ["not readable"] and len(running) == 1
-    assert win.session is None and win._choices is None
-    assert [c.description for c in win._connected] == ["Test watch", "Edge 1050"]
+    assert win.session is None and choices(win) is None
+    assert [c.description for c in win.connected.devices] == ["Test watch", "Edge 1050"]
     watch = next(f for f in win.world.offered if f.uri == NUMERIC)
     win.world.offered.remove(watch)
     with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
@@ -5428,7 +5435,7 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(monkeypatch)
     start = StartPage(opened.append)
     win = start_stand_in(start, {"maps": Section("maps", "Maps", "x-symbolic", "Loading…")})
     later = defer_background(win)
-    win._choices = seven_watches()
+    win.connected.listing(seven_watches(), None)
     MainWindow.show_choices(win)
     assert later == []  # nothing to read: no file in the cache, no address
     assert not start.grid.get_visible() and start.grid.get_first_child() is None

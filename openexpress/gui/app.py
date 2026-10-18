@@ -61,6 +61,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import pictures, start  # noqa: E402
+from openexpress.gui.connected import Connected  # noqa: E402
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
@@ -406,11 +407,6 @@ def session_summary(s) -> DeviceSummary:
 OPEN = "open"
 
 
-def connected_uris(summaries) -> frozenset:
-    """The addresses of these entries of the start page (compared in memory only)."""
-    return frozenset(c.found.uri.rstrip("/") for c in summaries)
-
-
 def cached_texture(part: str):
     """The picture of a part number in the cache, read now; None: no file, or not a
     picture. The one reader of the cache for every view."""
@@ -571,9 +567,9 @@ def detection_due(win) -> None:
         # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
         # window started, before one was chosen) bring nothing new: they never close the
         # device chosen.
-        listed = {c.found.uri.rstrip("/") for c in getattr(win, "_connected", None) or []}
+        connected = getattr(win, "connected", None)
         known = [r for r in reasons if r is not None and not _on_mount(s.storage, r)
-                 and r.rstrip("/") in listed]
+                 and connected is not None and connected.listed(r)]
         if known:
             reasons = [r for r in reasons if r not in known]
             log.info("device detection: %d mount(s) of devices already on the list, ignored",
@@ -781,11 +777,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._start_entries: list = []
         self._stay_on_start = False
         self._navigated = False
-        # The devices connected, as last known: the list chosen from (a copy of _choices), or
-        # the list read again on a change while one of them is open; empty when the one
-        # device connected is open (D7: its tile comes from the session) or none is.
-        self._connected: list = []
-        self._drawn_connected: frozenset = frozenset()  # the addresses of the tiles drawn last
+        # The devices connected, as last known (gui/connected.py): the list to choose from
+        # while there is one, the devices connected while one of them is open, what was on
+        # USB when the list was made and the addresses of the tiles drawn last.
+        self.connected = Connected()
         # A detection started with a device open: if the start page is shown, it stays.
         self._reopening = False
         self._reread_pending = False
@@ -832,10 +827,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._updated_apps: set = set()
         # A device that was just plugged in is on USB for a while before gvfs offers it.
         self._usb_state, self._usb_since = ABSENT, 0.0
-        # Several devices connected: the list to choose from, and the Garmin devices on USB
-        # when it was made (one plugged in or out without a mount event is noticed by that).
-        self._choices: list | None = None
-        self._choices_usb: list[str] | None = None
         GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
         self._start()
 
@@ -1346,8 +1337,8 @@ class MainWindow(Adw.ApplicationWindow):
         s = self.session
         # A Garmin drive is known by its label as well: an unplugged one is gone from /sys.
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
-        if s is None and any(c.found.uri.rstrip("/") + "/" == uri
-                             for c in getattr(self, "_choices", None) or []):
+        connected = getattr(self, "connected", None)
+        if s is None and connected is not None and connected.is_choice(uri):
             log.info("mount removed (%s): one of the devices to choose from, detecting in "
                      "1.5 s", where)
             schedule_detection(self, 1500)
@@ -1399,12 +1390,11 @@ class MainWindow(Adw.ApplicationWindow):
         if self.session is not None or self.busy:
             self._usb_state = ABSENT
             return True
-        if getattr(self, "_choices", None):
+        connected = getattr(self, "connected", None)
+        if connected is not None and connected.choosing and connected.devices:
             # The list stays as it is; a Garmin device plugged in or out (also one that was
             # never mounted, which sends no mount event) brings one new detection.
-            now = garmin_products_on_usb()
-            if now != self._choices_usb:
-                self._choices_usb = now
+            if connected.usb_changed(garmin_products_on_usb()):
                 log.info("USB: the Garmin devices changed while the list is shown, detecting "
                          "in 1.5 s")
                 schedule_detection(self, 1500)
@@ -1454,18 +1444,18 @@ class MainWindow(Adw.ApplicationWindow):
                 log.info("device detection: %d devices, a list to choose from",
                          len(result.summaries))
                 self.session = None
-                self._choices, self._choices_usb = result.summaries, garmin_products_on_usb()
+                self.connected.listing(result.summaries, garmin_products_on_usb())
                 self.show_choices()
                 return
             log.info("device detection: %s, all pages are loaded anew",
                      _same_device(self.session, result))
-            self._choices = None
+            self.connected.stop_choosing()
             self.session = result
             self.show_device()
 
         def failed(_e):
             self.session = None
-            self._choices = None
+            self.connected.clear()
             self.show_no_device()
             return True
 
@@ -1494,7 +1484,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._usb_title = _("Choose a device")  # the Sync button says the same
         self._update_banner()
         self._update_actions()
-        self._connected = list(self._choices or [])
         resolve_account(self)
         self._show_start()
 
@@ -1506,14 +1495,14 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(sess):
             log.info("device detection: the device chosen, all pages are loaded anew")
-            self._choices = None
+            self.connected.stop_choosing()
             self.session = sess
             self.show_device()
 
         def failed(e):
             # Unplugged meanwhile, or not readable: said, and the devices detected again.
             self.error(_("Could not open the device"), str(e) or type(e).__name__)
-            self._choices = None
+            self.connected.stop_choosing()
             self.refresh_device()
             return True
 
@@ -1554,7 +1543,7 @@ class MainWindow(Adw.ApplicationWindow):
             if self.session is not s:
                 return  # closed or replaced meanwhile: drawn by what did that
             log.info("start page: %d devices connected", len(found))
-            self._connected = found
+            self.connected.reread(found)
             if self._on_start_page():
                 self._render_start()
 
@@ -1610,7 +1599,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._navigated = True
         if self._on_start_page() or (
                 self._on_remembered_page()
-                and connected_uris(self._start_summaries()[0]) == self._drawn_connected):
+                and not self.connected.changed_since_drawn(self._start_summaries()[0])):
             self._render_start()
         else:
             self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
@@ -1660,11 +1649,8 @@ class MainWindow(Adw.ApplicationWindow):
         the USB state goes with them."""
         s = self.session
         if s is None:
-            return self._choices or [], not self._choices
-        connected = self._connected
-        if not any(self._is_open(c) for c in connected):
-            connected = [session_summary(s), *connected]
-        return connected, False
+            return self.connected.for_start()
+        return self.connected.for_start(session_summary(s), self._is_open)
 
     def _is_open(self, summary) -> bool:
         """Whether an entry is the device open now: by the unit ID, else by the address
@@ -1682,7 +1668,7 @@ class MainWindow(Adw.ApplicationWindow):
         """The tiles of these devices, then of those remembered and not connected (from
         devices.json, the only thing read here); what each one opens is kept here, not in
         the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
-        self._drawn_connected = connected_uris(summaries)
+        self.connected.drew(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
                                      logged_in=self._account is not None)
         self._start_entries = [
@@ -1803,7 +1789,7 @@ class MainWindow(Adw.ApplicationWindow):
         # The empty pages tell the state on USB now, not the one from before the device
         # was opened (e.g. "starting" when the window opened with a starting device).
         self._poll_usb()
-        self._connected = []
+        self.connected.clear()
         resolve_account(self)
         self._show_start()
 
@@ -1823,8 +1809,8 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_check_session = self.session
         self.show_overview()
         self.load_section(page)
-        if not any(self._is_open(c) for c in self._connected):
-            self._connected = []  # the one device (D7): its tile comes from the session
+        # Else the one device (D7): its tile comes from the session.
+        self.connected.keep_if_open(lambda c: self._is_open(c))
         resolve_account(self)
         self._show_device_view()
 

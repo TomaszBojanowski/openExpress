@@ -10,6 +10,7 @@ import requests
 from openexpress import applog, download, maps, updates
 from openexpress.connect import ApiError, lower_keys
 from openexpress.device.storage import DeviceError, LocalStorage
+from openexpress.gui.connected import Connected
 
 FILES = {
     "/fw/GUPDATE.GSP": b"F" * 5000,
@@ -901,7 +902,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         software_label=types.SimpleNamespace(set_label=lambda text: None),
         _update_banner=lambda: None, _update_actions=lambda: None,
         _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation (D5)
-        _connected=[],  # the devices connected, for the start page
+        connected=Connected(),  # the devices connected, for the start page
         show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
         load_apps=None, load_music=None,  # other pages: not loaded here
         run_task=lambda title, work, done, failed, device=True, in_page=False: run(
