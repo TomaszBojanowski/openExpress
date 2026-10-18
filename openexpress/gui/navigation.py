@@ -81,14 +81,20 @@ Decision = Stay | ShowDevice | ShowStart
 
 # --- whether to look for devices --------------------------------------------------------------
 
+# `ignored` (each plan): how many mounts of devices already listed were left aside, and
+# `moved` (Detect): the open device is at another place on USB - for the log only, never
+# part of what the plan is.
+
 @dataclass(frozen=True)
 class Nothing:
     """No detection: nothing new."""
+    ignored: int = field(default=0, compare=False)
 
 
 @dataclass(frozen=True)
 class ReadList:
     """Only the list of devices connected is read again; the open device stays."""
+    ignored: int = field(default=0, compare=False)
 
 
 @dataclass(frozen=True)
@@ -96,21 +102,25 @@ class Detect:
     """A detection; `keep_open`: the device open now is opened again when it is still there
     (several connected), instead of giving the list to choose from."""
     keep_open: bool = True
+    ignored: int = field(default=0, compare=False)
+    moved: bool = field(default=False, compare=False)
 
 
 @dataclass(frozen=True)
 class CheckOpen:
     """Only the open device's own mount was reported: whether it still answers (a
     detection only if it does not)."""
+    ignored: int = field(default=0, compare=False)
 
 
 Plan = Nothing | ReadList | Detect | CheckOpen
 
-# Causes whose detection runs with the device open still open: if it is found again, the
-# page shown stays (the window's "reopening").
-_REOPENING = (Cause.PLUGGED, Cause.REFRESH_IN_VIEW)
 # Causes that come by the window's timer, with the triggers so far (`reasons`).
 _TIMED = (Cause.PLUGGED, Cause.UNPLUGGED_OTHER, Cause.UNPLUGGED_CHOICE, Cause.USB_CHANGED)
+# Causes whose detection runs with the device open still open: if it is found again, the
+# page shown stays (the window's "reopening"). Those of the timer, and Refresh and the
+# like; the others drop the open device first, or open the one chosen.
+_REOPENING = (*_TIMED, Cause.REFRESH_IN_VIEW)
 
 
 def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | None = None,
@@ -140,14 +150,18 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
         known = [r for r in rest if r is not None and not on_open(r)
                  and r.rstrip("/") in listed]
         rest = [r for r in rest if r not in known]
+        ignored = len(known)
         if known and not rest:
-            return ReadList() if read_the_list else Nothing()
+            return ReadList(ignored=ignored) if read_the_list else Nothing(ignored=ignored)
+    else:
+        ignored = 0
     if open_label is None or not rest or any(r is None or not on_open(r) for r in rest):
         # Another device mounted or plugged in: with one open, the list to choose from (D7).
-        return Detect(keep_open=open_label is None)
+        return Detect(keep_open=open_label is None, ignored=ignored)
     if open_moved():
-        return Detect(keep_open=True)  # the same address, another place on USB
-    return CheckOpen()
+        # The same address, another place on USB.
+        return Detect(keep_open=True, ignored=ignored, moved=True)
+    return CheckOpen(ignored=ignored)
 
 
 def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> Decision:

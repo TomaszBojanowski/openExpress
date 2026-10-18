@@ -99,7 +99,7 @@ def test_logout_in_the_window_removes_the_saved_login():
     saved_login()
     said, refreshed = [], []
     win = types.SimpleNamespace(session=object(), toast=said.append,
-                                refresh_device=lambda: refreshed.append(True))
+                                refresh_device=lambda **_kw: refreshed.append(True))
     MainWindow.logout(win)
     assert not login_file().exists()
     with pytest.raises(store.NotLoggedIn):

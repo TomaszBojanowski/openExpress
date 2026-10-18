@@ -61,7 +61,23 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import pictures, start  # noqa: E402
-from openexpress.gui.connected import Connected  # noqa: E402
+from openexpress.gui.connected import Connected, uris  # noqa: E402
+from openexpress.gui.navigation import (  # noqa: E402
+    READ_THE_LIST,
+    Cause,
+    CheckOpen,
+    Detect,
+    Nothing,
+    Page,
+    ReadList,
+    Seen,
+    ShowStart,
+    Stay,
+    View,
+    describe,
+    navigate_after,
+)
+from openexpress.gui.navigation import plan as detection_plan  # noqa: E402
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
@@ -537,20 +553,40 @@ def _on_mount(storage, mount_uri: str) -> bool:
     return str(getattr(storage, "label", "")).startswith(mount_uri.rstrip("/") + "/")
 
 
-# A trigger that asks only for the list of devices connected to be read again (another
-# device than the open one went away); never an address.
-READ_THE_LIST = "read the list of devices again"
+def _cause_of(reason: str | None) -> Cause:
+    """Why a trigger of the timer came, when its caller did not say."""
+    if reason == READ_THE_LIST:
+        return Cause.UNPLUGGED_OTHER
+    return Cause.USB_CHANGED if reason is None else Cause.PLUGGED
 
 
-def schedule_detection(win, delay_ms: int, mount_uri: str | None = None) -> None:
+def _timed_cause(causes: list) -> Cause:
+    """The cause of a detection by the timer, from those of its triggers: a mount first;
+    never "another device unplugged" (that one only reads the list)."""
+    for cause in (Cause.PLUGGED, Cause.UNPLUGGED_CHOICE, Cause.USB_CHANGED):
+        if cause in causes:
+            return cause
+    return Cause.USB_CHANGED if causes else Cause.PLUGGED
+
+
+def open_address(s) -> str | None:
+    """The address of the open device (compared in memory only), or None."""
+    if s is None:
+        return None
+    return str(getattr(getattr(s, "storage", None), "device_uri", "") or "")
+
+
+def schedule_detection(win, delay_ms: int, mount_uri: str | None = None,
+                       cause: Cause | None = None) -> None:
     """Look for the device after `delay_ms`: after a mount of a Garmin device (`mount_uri`),
     after it showed up on USB (None), or only read the list of devices connected again
-    (READ_THE_LIST). One timer for all of them: another trigger moves it, and what is
-    decided when it fires covers every trigger so far."""
+    (READ_THE_LIST); `cause`: why (navigation.Cause). One timer for all of them: another
+    trigger moves it, and what is decided when it fires covers every trigger so far."""
     if getattr(win, "_detect_timer", None) is not None:
         GLib.source_remove(win._detect_timer)
         log.info("device detection: moved by another trigger")
     win._detect_reasons = [*getattr(win, "_detect_reasons", []), mount_uri]
+    win._detect_causes = [*getattr(win, "_detect_causes", []), cause or _cause_of(mount_uri)]
 
     def due():
         win._detect_timer = None
@@ -561,52 +597,50 @@ def schedule_detection(win, delay_ms: int, mount_uri: str | None = None) -> None
 
 
 def detection_due(win) -> None:
-    """The scheduled detection: decided now, or after the running task (e.g. the detection
-    at start, during which gvfs reports the mount that is being opened)."""
+    """The scheduled detection: decided now (navigation.plan), or after the running task
+    (e.g. the detection at start, during which gvfs reports the mount that is being
+    opened)."""
     if win.busy:
         win._detect_after_task = True
         return
     win._detect_after_task = False
     reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
-    read_the_list = READ_THE_LIST in reasons
-    reasons = [r for r in reasons if r != READ_THE_LIST]
+    causes, win._detect_causes = getattr(win, "_detect_causes", []), []
+    cause = _timed_cause(causes)
     s = win.session
-    if s is not None and read_the_list and not reasons:
-        # Only another device went away: the open one stays, the list is read once.
-        win._reread_connected()
-        return
-    if s is not None and reasons:
+    connected = getattr(win, "connected", None)
+    usb = getattr(s.storage, "usb", None) if s is not None else None
+    what = detection_plan(cause, reasons,
+                          open_label=str(getattr(s.storage, "label", "")) if s is not None
+                          else None,
+                          listed=uris(connected.devices) if connected is not None
+                          else frozenset(),
+                          open_moved=lambda: (usb is not None and usb.bus is not None
+                                              and not usb_still_there(usb)))
+    if what.ignored:
         # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
         # window started, before one was chosen) bring nothing new: they never close the
         # device chosen.
-        connected = getattr(win, "connected", None)
-        known = [r for r in reasons if r is not None and not _on_mount(s.storage, r)
-                 and connected is not None and connected.listed(r)]
-        if known:
-            reasons = [r for r in reasons if r not in known]
-            log.info("device detection: %d mount(s) of devices already on the list, ignored",
-                     len(known))
-            if not reasons:
-                if read_the_list:
-                    win._reread_connected()
-                return  # nothing new: the open device stays as it is
-    if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
-                                       for r in reasons):
-        # Another device mounted or plugged in: with several, the list to choose from, even
-        # while one is open (D7); only Refresh and the like keep the open device. With none
-        # open there is nothing to keep.
-        if s is None:
-            win.refresh_device()
-        else:
-            win.refresh_device(keep_open=False)
+        log.info("device detection: %d mount(s) of devices already on the list, ignored",
+                 what.ignored)
+    if isinstance(what, Nothing):
+        return  # nothing new: the open device stays as it is
+    if isinstance(what, ReadList):
+        win._reread_connected()  # another device went away: the open one stays
         return
-    usb = getattr(s.storage, "usb", None)
-    if usb is not None and usb.bus is not None and not usb_still_there(usb):
-        # The same address (it carries the serial number), but not the same place on USB:
-        # unplugged and plugged in again, so the device may have changed (it applies what
-        # was waiting when it is unplugged) and the session points to the old place.
-        log.info("device detection: the same address, but not at the same place on USB")
-        win.refresh_device()
+    if isinstance(what, Detect):
+        if what.moved:
+            # The same address (it carries the serial number), but not the same place on
+            # USB: unplugged and plugged in again, so the device may have changed (it
+            # applies what was waiting when it is unplugged) and the session points to the
+            # old place.
+            log.info("device detection: the same address, but not at the same place on USB")
+        # Another device mounted or plugged in: with several, the list to choose from, even
+        # while one is open (D7); only Refresh and the like keep the open device.
+        if what.keep_open:
+            win.refresh_device(cause=cause)
+        else:
+            win.refresh_device(keep_open=False, cause=cause)
         return
 
     def done(_xml):
@@ -616,10 +650,42 @@ def detection_due(win) -> None:
     def failed(e):
         log.info("device detection: the open device does not answer (%s)", type(e).__name__)
         if win.session is s:
-            win.refresh_device()
+            win.refresh_device(cause=Cause.PLUGGED)
 
-    # Its mount was reported, not a new one: if it still answers, the pages stay as they are.
+    # CheckOpen: its mount was reported, not a new one: if it still answers, the pages stay
+    # as they are.
+    assert isinstance(what, CheckOpen)
     win.in_background(lambda: s.storage.read("GARMIN/GarminDevice.xml"), done, failed)
+
+
+def _take_asked(win, own: Cause) -> tuple[Cause, str | None]:
+    """Why the decision made now is made and the device open when it was asked: those of
+    the detection that ends here (if one), else `own`. A Refresh on the start page asked
+    while a task ran keeps the start page for what that task brings as well, once."""
+    asked = getattr(win, "_asked", None)
+    win._asked = None
+    cause, open_before = asked if asked is not None else (own, None)
+    if getattr(win, "_pending_cause", None) is Cause.REFRESH_ON_START:
+        cause, win._pending_cause = Cause.REFRESH_ON_START, Cause.REFRESH_IN_VIEW
+    return cause, open_before
+
+
+def decided(win, cause: Cause, before: Seen, after: Seen):
+    """Where the user goes (navigation.navigate_after), with one line of the log."""
+    view = visible_view(win)
+    decision = navigate_after(cause, view, before, after)
+    log.info("%s", describe(cause, view, before, after, decision))
+    return decision
+
+
+def visible_view(win) -> View:
+    """The page shown, for navigation (the remembered device by its unit ID, in memory)."""
+    page = win.navigation.get_visible_page()
+    if page is win.start.page:
+        return View(Page.START)
+    if page is win.remembered.page:
+        return View(Page.REMEMBERED, getattr(win, "_remembered_unit", None))
+    return View(Page.DEVICE)
 
 
 class Section:
@@ -779,24 +845,26 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_pending = False
         self._detect_timer: int | None = None
         self._detect_reasons: list[str | None] = []
+        self._detect_causes: list[Cause] = []
         self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
         # The start page: (tile, what it opens) in the order given to the page, which hands
         # back the place of the tile clicked; what it opens (OPEN: the open device's view; a
         # FoundDevice to open; a KnownDevice or an entry of the account to show read-only) is
-        # kept here, never in the tile. Whether Refresh was pressed there (it stays there,
-        # decision 7); whether the window went to a page yet (the first time without an
-        # animation).
+        # kept here, never in the tile.
         self._start_entries: list = []
-        self._stay_on_start = False
-        self._navigated = False
+        # Where the user goes is decided by navigation.navigate_after: why the coming
+        # decision is made and the device open when it was asked (set when a detection
+        # starts, or as the open device goes); the cause of a detection that waits for the
+        # running task; the remembered device shown (its unit ID, in memory only).
+        self._asked: tuple | None = None
+        self._pending_cause: Cause | None = None
+        self._remembered_unit: int | None = None
         # The devices connected, as last known (gui/connected.py): the list to choose from
         # while there is one, the devices connected while one of them is open, what was on
         # USB when the list was made and the addresses of the tiles drawn last.
         self.connected = Connected()
-        # A detection started with a device open: if the start page is shown, it stays.
-        self._reopening = False
         self._reread_pending = False
         # The devices of the Garmin account (their entries, keys in lower case), read once
         # per start and login; None: not logged in, or not read.
@@ -848,7 +916,7 @@ class MainWindow(Adw.ApplicationWindow):
         """What the window does as it opens: the detection, and the account's devices for
         the start page, read once (from the device opened, if one is)."""
         self._want_account()
-        self.refresh_device()
+        self.refresh_device(cause=Cause.START)
 
     # --- layout -----------------------------------------------------------------------
 
@@ -1337,7 +1405,7 @@ class MainWindow(Adw.ApplicationWindow):
         if garmin_usb(mount) or garmin_ums(mount):
             log.info("mount added (%s): a Garmin device, detecting in 1.5 s "
                      "(a device is open: %s)", where, self.session is not None)
-            schedule_detection(self, 1500, mount.get_root().get_uri())
+            schedule_detection(self, 1500, mount.get_root().get_uri(), Cause.PLUGGED)
         else:
             log.info("mount added (%s): not a Garmin device, ignored", where)
 
@@ -1355,7 +1423,7 @@ class MainWindow(Adw.ApplicationWindow):
         if s is None and connected is not None and connected.is_choice(uri):
             log.info("mount removed (%s): one of the devices to choose from, detecting in "
                      "1.5 s", where)
-            schedule_detection(self, 1500)
+            schedule_detection(self, 1500, cause=Cause.UNPLUGGED_CHOICE)
             return
         if not ours and s is None and (garmin_usb(mount) or garmin_ums(mount)):
             # gvfs reports two mounts of one device: the pages are empty after the first.
@@ -1369,12 +1437,13 @@ class MainWindow(Adw.ApplicationWindow):
             # by the timer of the other triggers (gvfs reports two mounts of one device).
             log.info("mount removed (%s): not the open device, which is still there; the "
                      "list of devices is read again in 1.5 s", where)
-            schedule_detection(self, 1500, READ_THE_LIST)
+            schedule_detection(self, 1500, READ_THE_LIST, Cause.UNPLUGGED_OTHER)
             return
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
                      bool(getattr(self, "busy", False)))
+            self._asked = (Cause.UNPLUGGED_OPEN, open_address(s))
             self.session = None
             self._updated_apps = set()  # unplugged: the device applies what was waiting
             self.show_no_device()
@@ -1412,7 +1481,7 @@ class MainWindow(Adw.ApplicationWindow):
             if connected.usb_changed(garmin_products_on_usb()):
                 log.info("USB: the Garmin devices changed while the list is shown, detecting "
                          "in 1.5 s")
-                schedule_detection(self, 1500)
+                schedule_detection(self, 1500, cause=Cause.USB_CHANGED)
             return True
         state = usb_state()
         if state == ABSENT and self._usb_state != ABSENT:
@@ -1429,7 +1498,7 @@ class MainWindow(Adw.ApplicationWindow):
         if state == PRESENT and self._usb_state != PRESENT:
             # It left its transitional mode: look for it once gvfs had a moment.
             log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
-            schedule_detection(self, 2500)
+            schedule_detection(self, 2500, cause=Cause.PLUGGED)
         self._usb_state = state
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
         for sec in self.sections.values():
@@ -1440,17 +1509,26 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_actions()  # the Sync button says the same as the pages
         return True
 
-    def refresh_device(self, keep_open: bool = True) -> None:
+    def refresh_device(self, keep_open: bool = True, cause: Cause | None = None) -> None:
         """Detect the device anew. `keep_open`: with several devices connected, the one open
-        now is opened again (Refresh); False when another device was just plugged in."""
+        now is opened again (Refresh); False when another device was just plugged in.
+        `cause`: why (navigation.Cause); none said: a detection asked again (Refresh and the
+        like), or the one that waited for the running task."""
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
             log.info("device detection: after the running task")
             self._refresh_pending = True
+            if cause is not None:
+                self._pending_cause = cause  # the last one asked, as it was asked
             return
         self._refresh_pending = False
-        # With a device open and the start page shown, the start page stays (whoever asked).
-        self._reopening = self.session is not None
+        pending, self._pending_cause = getattr(self, "_pending_cause", None), None
+        if pending is Cause.REFRESH_ON_START:
+            cause = pending  # Refresh on the start page waited for the task: it stays there
+        elif cause is None:
+            cause = pending or Cause.REFRESH_IN_VIEW
+        # Why, and the device open now: where the user goes once it is done (navigation).
+        self._asked = (cause, open_address(self.session))
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
 
@@ -1518,7 +1596,7 @@ class MainWindow(Adw.ApplicationWindow):
             # Unplugged meanwhile, or not readable: said, and the devices detected again.
             self.error(_("Could not open the device"), str(e) or type(e).__name__)
             self.connected.stop_choosing()
-            self.refresh_device()
+            self.refresh_device(cause=Cause.CHOICE_FAILED)
             return True
 
         self.run_task(_("Opening the device…"),
@@ -1535,14 +1613,17 @@ class MainWindow(Adw.ApplicationWindow):
         again, nothing else (decision A); without one, a detection that stays there also when
         one device is found (decision 7). In the device view, as before."""
         on_start = self._on_start_page()
-        if on_start and self.session is not None:
+        cause = Cause.REFRESH_ON_START if on_start else Cause.REFRESH_IN_VIEW
+        s = self.session
+        what = detection_plan(cause, open_label=str(getattr(s.storage, "label", ""))
+                              if s is not None else None)
+        if isinstance(what, ReadList):
             self._fetch_account()  # the start page lists the account's devices too
             self._reread_connected()
             return
         if on_start:
             self._want_account()  # from the device the detection opens, or asked after it
-        self._stay_on_start = on_start
-        self.refresh_device()
+        self.refresh_device(cause=cause)
 
     def _reread_connected(self) -> None:
         """Read the devices connected again (their GarminDevice.xml only: nothing opened,
@@ -1607,14 +1688,12 @@ class MainWindow(Adw.ApplicationWindow):
             self._render_start()  # under the view of a remembered device, which stays
 
     def _show_start(self) -> None:
-        """The start page, as it is now. Over the view of a remembered device only when a
-        device came or went: a detection that found what was there leaves it shown and draws
-        the start page under it."""
-        self._stay_on_start = self._reopening = False
-        self._navigated = True
-        if self._on_start_page() or (
-                self._on_remembered_page()
-                and not self.connected.changed_since_drawn(self._start_summaries()[0])):
+        """The start page, as it is now, or the page shown stays (navigation.navigate_after:
+        over the view of a remembered device only when a device came or went)."""
+        cause, open_before = _take_asked(self, Cause.REFRESH_IN_VIEW)
+        after = Seen(uris(self._start_summaries()[0]), None)
+        decision = decided(self, cause, Seen(self.connected.drawn, open_before), after)
+        if isinstance(decision, Stay):
             self._render_start()
         else:
             self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
@@ -1623,23 +1702,27 @@ class MainWindow(Adw.ApplicationWindow):
         return self.navigation.get_visible_page() is self.remembered.page
 
     def _show_device_view(self) -> None:
-        """The view of the device open now, above the start page (D7): unless the start page
-        is to stay - Refresh pressed there (_stay_on_start) or a detection started with a
-        device open (_reopening). Over the view of a remembered device it takes its place."""
-        stay = self._stay_on_start or self._reopening
-        self._stay_on_start = self._reopening = False
+        """The view of the device open now, above the start page (D7), or the page shown
+        stays (navigation.navigate_after: e.g. after Refresh on the start page, or a
+        detection that found the device open again)."""
+        cause, open_before = _take_asked(self, Cause.CHOSEN)
+        address = open_address(self.session)
+        # The devices connected with the open one among them, for the count in the log.
+        connected = uris(self.connected.devices) | ({address.rstrip("/")} if address else set())
+        decision = decided(self, cause, Seen(self.connected.drawn, open_before),
+                           Seen(frozenset(connected), address))
         visible = self.navigation.get_visible_page()
-        if visible is self.device_view:
-            return
-        if stay:
-            if visible is self.start.page:
+        if isinstance(decision, Stay):
+            if decision.redraw_start and visible is self.start.page:
                 self._render_start()
+            return
+        if isinstance(decision, ShowStart):
+            self.navigation.pop_to_page(self.start.page)
             return
         if visible is not self.start.page:
             # The read-only view of a remembered device: the device view takes its place.
             self.navigation.pop_to_page(self.start.page)
-        if not self._navigated:  # the window just opened: straight to the device
-            self._navigated = True
+        if not decision.animate:  # the window just opened: straight to the device
             self.navigation.set_animate_transitions(False)
             self.navigation.push(self.device_view)
             self.navigation.set_animate_transitions(True)
@@ -1759,6 +1842,7 @@ class MainWindow(Adw.ApplicationWindow):
             last_sync=self._last_sync_text(service.unit_id_of(entry.get("unitid"))))
         self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"],
                                 fields["description"])
+        self._remembered_unit = service.unit_id_of(entry.get("unitid"))
         self.navigation.push(self.remembered.page)
 
     def _show_remembered(self, known, tile=None) -> None:
@@ -1781,6 +1865,7 @@ class MainWindow(Adw.ApplicationWindow):
                                     tile.description)
         else:
             self._show_page_picture(known.part_number, None, known.category, known.description)
+        self._remembered_unit = known.unit_id
         self.navigation.push(self.remembered.page)
 
     def _clear_device_pages(self) -> None:
@@ -1861,7 +1946,7 @@ class MainWindow(Adw.ApplicationWindow):
         if kind == "setup":
             self.choose_dll()
         elif kind == "recheck":
-            self.refresh_device()
+            self.refresh_device(cause=Cause.REFRESH_IN_VIEW)
         else:
             self.login()
 
@@ -1869,7 +1954,7 @@ class MainWindow(Adw.ApplicationWindow):
         sec = self.sections[key]
         if self.session is None or (sec.loaded and not force) or key == "watch":
             if key == "watch" and self.session is not None and force:
-                self.refresh_device()
+                self.refresh_device(cause=Cause.REFRESH_IN_VIEW)
             return
         if getattr(self.session, "mass_storage", False) and key in NOT_FOR_MASS_STORAGE:
             show_not_for_mass_storage(sec)  # no request, nothing read
@@ -2521,7 +2606,7 @@ class MainWindow(Adw.ApplicationWindow):
                 save_consumer(consumer)
                 self.toast(_("Application key saved"))
                 self.session = None
-                self.refresh_device()
+                self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
 
             self.run_task(_("Reading the installer…"), lambda: read(path), saved, device=False)
 
@@ -2556,7 +2641,7 @@ class MainWindow(Adw.ApplicationWindow):
                            else _("Logged in, but the account details could not be loaded"))
                 self.session = None
                 self._want_account()
-                self.refresh_device()
+                self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
 
             def start():
                 if self.busy:
@@ -2579,7 +2664,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast(_("Logged out"))
         self.session = None
         self._account = None  # the start page lists no device of the account any more
-        self.refresh_device()
+        self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
 
     def backup(self) -> None:
         from openexpress.backup import run_backup

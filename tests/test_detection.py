@@ -3226,7 +3226,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
                                 _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                                 _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
-                                refresh_device=lambda: refreshed.append(1))
+                                refresh_device=lambda **_kw: refreshed.append(1))
     # The Sync button is told whenever the words on the pages change, and only then.
     win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
@@ -3562,8 +3562,8 @@ def start_stand_in(start, sections, win=None):
     win._poll_usb = lambda: None
     win.in_background = lambda work, done, failed=None: done(work())
     win.toast = win.errors.append
-    win._start_entries, win._stay_on_start, win._navigated = [], False, False
-    win.connected, win._reopening, win._reread_pending = Connected(), False, False
+    win._start_entries, win._asked, win._pending_cause = [], None, None
+    win.connected, win._reread_pending = Connected(), False
     win._account, win._account_wanted = None, False
     for name in START_METHODS:
         if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
@@ -3724,7 +3724,8 @@ def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
-    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True: None)
+    monkeypatch.setattr(MainWindow, "refresh_device",
+                        lambda self, keep_open=True, cause=None: None)
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
@@ -4567,8 +4568,8 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
     real_refresh = MainWindow.refresh_device
     ready = []
     # Nothing is detected while the window opens; the real detection code once it is open.
-    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True: (
-        real_refresh(self, keep_open) if ready else None))
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True, cause=None: (
+        real_refresh(self, keep_open, cause) if ready else None))
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
 
     def session(n):
