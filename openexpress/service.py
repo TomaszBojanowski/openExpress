@@ -148,7 +148,7 @@ def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
     return storage
 
 
-def _unit_id(value) -> int | None:
+def unit_id_of(value) -> int | None:
     """A unit ID from the server: a positive int or a string of digits; else ignored."""
     if isinstance(value, str) and value.isascii() and value.isdigit():
         value = int(value)
@@ -179,7 +179,7 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
             raise OwnershipUnknown(
                 _("Could not check whether this device belongs to your Garmin account "
                   "({error}). Nothing was synced.").format(error=e)) from e
-        if unit_id not in {_unit_id(d.get("unitid")) for d in devices}:
+        if unit_id not in {unit_id_of(d.get("unitid")) for d in devices}:
             refused = NotAccountDevice(
                 _("This device is not registered to your Garmin account. To use it with "
                   "Garmin Connect here, sign in to the account it belongs to or add the "
@@ -322,11 +322,11 @@ def primary_training_status(client: GarminClient, device: GarminDevice,
     if devices is None:
         devices = require_account_device(client, device.unit_id)
     raw = client.primary_training_device().get("deviceid")
-    unit_id = _unit_id(raw)
+    unit_id = unit_id_of(raw)
     if unit_id is None and raw not in (None, 0, "0", ""):
         raise ApiError(_("{what}: unexpected response from the server").format(
             what=_("Primary training device")))
-    by_id = {_unit_id(d.get("unitid")): d for d in devices}
+    by_id = {unit_id_of(d.get("unitid")): d for d in devices}
     entry = by_id.get(unit_id) if unit_id is not None else None
     name = (entry.get("productdisplayname") or entry.get("displayname") or "") if entry else ""
     capable = by_id.get(device.unit_id, {}).get("primarytrainingcapable")

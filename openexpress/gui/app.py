@@ -763,15 +763,17 @@ class MainWindow(Adw.ApplicationWindow):
         self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
-        # The start page: what each tile opens (OPEN or a FoundDevice), in its order, kept
-        # outside the tiles; whether Refresh was pressed there (it stays there, decision 7);
-        # whether the window went to a page yet (the first time without an animation).
+        # The start page: what each tile opens (OPEN: the open device's view; a FoundDevice
+        # to open; a KnownDevice or an entry of the account to show read-only), in its order,
+        # kept outside the tiles; whether Refresh was pressed there (it stays there, decision
+        # 7); whether the window went to a page yet (the first time without an animation).
         self._start_targets: list = []
         self._start_tiles: list = []  # the tiles of these targets, in the same order
         self._stay_on_start = False
         self._navigated = False
-        # The devices connected, as last known (the list chosen from, the one device, or the
-        # list read again on a change); kept while one of them is open, for the start page.
+        # The devices connected, as last known: the list chosen from (a copy of _choices), or
+        # the list read again on a change while one of them is open; empty when the one
+        # device connected is open (D7: its tile comes from the session) or none is.
         self._connected: list = []
         self._drawn_connected: frozenset = frozenset()  # the addresses of the tiles drawn last
         # A detection started with a device open: if the start page is shown, it stays.
@@ -1358,7 +1360,7 @@ class MainWindow(Adw.ApplicationWindow):
                      bool(getattr(self, "busy", False)))
             self.session = None
             self._updated_apps = set()  # unplugged: the device applies what was waiting
-            self.show_device()
+            self.show_no_device()
         else:
             log.info("mount removed (%s): not the open device, ignored", where)
 
@@ -1453,7 +1455,7 @@ class MainWindow(Adw.ApplicationWindow):
         def failed(_e):
             self.session = None
             self._choices = None
-            self.show_device()
+            self.show_no_device()
             return True
 
         if self.session is None:
@@ -1606,8 +1608,9 @@ class MainWindow(Adw.ApplicationWindow):
         return self.navigation.get_visible_page() is self.remembered.page
 
     def _show_device_view(self) -> None:
-        """The view of the device open now, above the start page (D7): unless Refresh was
-        pressed on the start page, which stays then."""
+        """The view of the device open now, above the start page (D7): unless the start page
+        is to stay - Refresh pressed there (_stay_on_start) or a detection started with a
+        device open (_reopening). Over the view of a remembered device it takes its place."""
         stay = self._stay_on_start or self._reopening
         self._stay_on_start = self._reopening = False
         visible = self.navigation.get_visible_page()
@@ -1741,7 +1744,7 @@ class MainWindow(Adw.ApplicationWindow):
             version=_("Software {version}").format(version=version) if version else "",
             part_number=fields["part_number"],
             last_seen=_("Not seen on this computer"),
-            last_sync=self._last_sync_text(service._unit_id(entry.get("unitid"))))
+            last_sync=self._last_sync_text(service.unit_id_of(entry.get("unitid"))))
         self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"],
                                 fields["description"])
         self.navigation.push(self.remembered.page)
@@ -1768,7 +1771,8 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_page_picture(known.part_number, None, known.category, known.description)
         self.navigation.push(self.remembered.page)
 
-    def show_device(self) -> None:
+    def _clear_device_pages(self) -> None:
+        """Every page of the device view loaded anew: nothing kept from the device before."""
         self.maps_cache = self.updates_cache = self.apps_cache = None
         self.update_state = None
         self.map_state = None
@@ -1778,16 +1782,27 @@ class MainWindow(Adw.ApplicationWindow):
             sec.show("empty" if self.session is None else "loading")
         self._update_banner()
         self._update_actions()
+
+    def show_no_device(self) -> None:
+        """No device open (unplugged, or none found): the pages are empty and tell the state
+        on USB, the start page is shown (_show_start decides whether to go there)."""
+        self._clear_device_pages()
+        # No check waits for the device that is gone (nor keeps it in memory).
+        self._map_check_session = self._update_check_session = None
+        # The empty pages tell the state on USB now, not the one from before the device
+        # was opened (e.g. "starting" when the window opened with a starting device).
+        self._poll_usb()
+        self._connected = []
+        resolve_account(self)
+        self._show_start()
+
+    def show_device(self) -> None:
+        """The device open now (self.session) in every page, and its view (D7,
+        _show_device_view); without one, show_no_device."""
         if self.session is None:
-            # No check waits for the device that is gone (nor keeps it in memory).
-            self._map_check_session = self._update_check_session = None
-            # The empty pages tell the state on USB now, not the one from before the device
-            # was opened (e.g. "starting" when the window opened with a starting device).
-            self._poll_usb()
-            self._connected = []
-            resolve_account(self)
-            self._show_start()
+            self.show_no_device()
             return
+        self._clear_device_pages()
         page = self.pages.get_visible_child_name()
         # The Maps or Updates page asks right away, and its answer fills the row of the device
         # page as well (show_maps, show_updates): the row does not ask a second time.

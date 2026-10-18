@@ -103,8 +103,8 @@ def cli_client(monkeypatch):
     (0, None), ("0", None), (-5, None),
 ])
 def test_unit_id_normalization(value, expected):
-    assert service._unit_id(value) == expected
-    assert type(service._unit_id(value)) is type(expected)
+    assert service.unit_id_of(value) == expected
+    assert type(service.unit_id_of(value)) is type(expected)
 
 
 @pytest.mark.parametrize("listed", [UNIT, str(UNIT)])

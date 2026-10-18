@@ -2423,6 +2423,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
         _updated_apps=set(), toast=toasts.append, progress=lambda text: None,
         error=lambda title, text: pytest.fail(text),
         load_section=lambda key, force=False: None, show_device=lambda: shown.append(1),
+        show_no_device=lambda: shown.append(1),
         run_task=lambda title, fn, done=None, failed=None: done(fn()))
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert win._updated_apps == {FACE}

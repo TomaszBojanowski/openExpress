@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from openexpress import known_devices
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH
-from openexpress.service import _unit_id
+from openexpress.service import unit_id_of
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,6 @@ def layout(count: int) -> str | None:
     if count <= 0:
         return None
     return GRID if count <= GRID_MAX else LIST
-
 
 
 @dataclass(frozen=True)
@@ -88,7 +87,7 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     on_account: dict[int, dict] = {}
     account_only: list[dict] = []  # entries of the account without a usable unit ID
     for entry in (account or []) if logged_in else []:
-        unit_id = _unit_id(entry.get("unitid"))
+        unit_id = unit_id_of(entry.get("unitid"))
         if unit_id is None:
             account_only.append(entry)
         else:
@@ -208,7 +207,7 @@ def remember_kinds(account) -> None:
     that they are known offline; a device that is not remembered gets no entry."""
     remembered = known_devices.load()
     for entry in account or []:
-        unit_id = _unit_id(entry.get("unitid"))
+        unit_id = unit_id_of(entry.get("unitid"))
         category = account_fields(entry)["category"]
         if unit_id in remembered and category is not None:
             known_devices.set_category(unit_id, category)

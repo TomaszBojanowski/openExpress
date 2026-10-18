@@ -907,7 +907,8 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         run_task=lambda title, work, done, failed, device=True, in_page=False: run(
             work, done, failed),
         in_background=lambda work, done, failed=None: run(work, done, failed))
-    for name in ("show_device", "load_section", "_load", "load_maps", "load_updates",
+    for name in ("show_device", "show_no_device", "_clear_device_pages", "load_section",
+                 "_load", "load_maps", "load_updates",
                  "_check_maps_quietly", "_set_map_state", "_render_map_state",
                  "_check_updates_quietly", "_set_update_state", "_render_update_state"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))

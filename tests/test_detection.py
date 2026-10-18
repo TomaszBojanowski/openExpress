@@ -271,7 +271,8 @@ def test_window_notices_the_removal_of_the_open_device(no_sysfs):
 
     def window(label):
         session = types.SimpleNamespace(storage=types.SimpleNamespace(label=label))
-        return types.SimpleNamespace(session=session, show_device=lambda: shown.append(1))
+        return types.SimpleNamespace(session=session, show_device=lambda: shown.append(1),
+                                     show_no_device=lambda: shown.append(1))
 
     # A made-up address that neither sysfs (the device is gone) nor the fallback recognises.
     win = window("mtp://[usb:001,028]/Internal%20Storage")
@@ -319,8 +320,9 @@ def unplug_window(monkeypatch, usb):
         _usb_notice=MainWindow._usb_notice, _update_banner=lambda: None,
         _update_actions=lambda: None, start=FakeStartPage(), _show_start=lambda: None)
     win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
-    real_show = types.MethodType(MainWindow.show_device, win)
-    win.show_device = lambda: (win.built.append(win.session), real_show())
+    real_show = types.MethodType(MainWindow.show_no_device, win)
+    win._clear_device_pages = types.MethodType(MainWindow._clear_device_pages, win)
+    win.show_no_device = lambda: (win.built.append(win.session), real_show())
     # Opened while the device was starting: the last words the pages were given.
     for page in pages.values():
         page.set_empty("The device is starting…", "", True)
@@ -378,7 +380,8 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog)
     monkeypatch.setattr(app, "own_remount", lambda m: m.uri in remounted)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
-    win = types.SimpleNamespace(session=session, busy=False, show_device=lambda: None)
+    win = types.SimpleNamespace(session=session, busy=False, show_device=lambda: None,
+                                show_no_device=lambda: None)
     stick = "file:///run/media/someone/STICK/"
 
     with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
@@ -421,7 +424,8 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
         busy=True, _refresh_pending=False, session=open_one,
         sections={"watch": types.SimpleNamespace(show=lambda state: None)},
         run_task=lambda title, fn, done, failed: tasks.append(done),
-        show_device=lambda: shown.append(win.session))
+        show_device=lambda: shown.append(win.session),
+        show_no_device=lambda: shown.append(win.session))
     with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
         MainWindow.refresh_device(win)  # a task is running: later
         win.busy = False
@@ -508,7 +512,7 @@ def detecting(tmp_path, monkeypatch):
         MainWindow._run_pending_refresh(win)
 
     win.run_task, win.in_background, win.finish = run_task, in_background, finish
-    win.show_device = lambda: win.built.append(win.session)
+    win.show_device = win.show_no_device = lambda: win.built.append(win.session)
     win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
     win.timers = timers
     return win
@@ -1433,7 +1437,7 @@ def drive_window(watch_and_drives, monkeypatch):
             done(result)
 
     win.run_task = run_task
-    win.show_device = lambda: win.built.append(win.session)
+    win.show_device = win.show_no_device = lambda: win.built.append(win.session)
     win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
     return win
 
@@ -2854,6 +2858,7 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
     shown, started = [], []
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = types.SimpleNamespace(session=session, show_device=lambda: shown.append(1),
+                                show_no_device=lambda: shown.append(1),
                                 refresh_device=lambda: shown.append(2))
     monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
     w = watch.Watcher()
@@ -2880,7 +2885,8 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
     shown = []
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal")),
-        busy=False, show_device=lambda: shown.append(1), _updated_apps={"waiting"})
+        busy=False, show_device=lambda: shown.append(1), _updated_apps={"waiting"},
+        show_no_device=lambda: shown.append(1))
     with caplog.at_level(logging.INFO):
         MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
     assert win.session is None and shown == [1] and win._updated_apps == set()
@@ -3502,8 +3508,9 @@ class FakeSection:
         self.empty = notice
 
 
-START_METHODS = ("show_device", "show_choices", "_show_start", "_show_device_view", "_is_open",
-                 "_show_tiles", "_render_start", "_on_start_page", "_open_tile", "_on_refresh",
+START_METHODS = ("show_device", "show_no_device", "_clear_device_pages", "show_choices",
+                 "_show_start", "_show_device_view", "_is_open", "_show_tiles", "_render_start",
+                 "_on_start_page", "_open_tile", "_on_refresh",
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
                  "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
                  "_want_account", "_load_tile_pictures", "_tile_picture_done",
@@ -3964,8 +3971,8 @@ def nothing_connected(win, monkeypatch):
 
 def test_the_start_page_lists_remembered_devices_after_the_connected(start_window, monkeypatch,
                                                                      tmp_path, device_root):
-    """T3: the devices remembered and not connected come after the connected ones, the one
-    seen last first; one both connected and remembered is listed once, as connected. A
+    """T3: the devices remembered and not connected come after the connected ones, by name;
+    one both connected and remembered is listed once, as connected. A
     remembered tile says its version and when it was seen; never a unit ID."""
     import time
 
