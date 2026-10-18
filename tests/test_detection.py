@@ -3816,7 +3816,8 @@ def test_reading_the_list_again_never_opens_a_device_view(start_window, monkeypa
 def test_another_device_unplugged_while_one_is_open_updates_the_list(start_window, monkeypatch,
                                                                      tmp_path, device_root):
     """K6 with the start page: the test watch open, the start page shown, the Edge unplugged:
-    the list is read again and drawn once, with the test watch only; it stays open."""
+    the list is read again 1.5 s later and drawn once, with the test watch only; it stays
+    open."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -3831,10 +3832,47 @@ def test_another_device_unplugged_while_one_is_open_updates_the_list(start_windo
         f.unlink()
     (win.world.root / "1-2").rmdir()
     MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
+    win.timers.fire()
     run_later(later)
     assert win.session is opened and win.navigation.stack == ["start page"]
     # Drawn once: the Edge is no longer connected, it is remembered (T3).
     assert len(win.start.shown) == drawn + 1
+    assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
+        ("Test watch", True), ("Edge 1050", False)]
+
+
+def test_two_mounts_removed_for_one_device_read_the_list_once(start_window, monkeypatch,
+                                                              tmp_path, device_root, caplog):
+    """gvfs reports two mounts of one MTP device: the test watch open, the Edge unplugged,
+    both its mounts removed one after the other. The list of devices connected is read once,
+    1.5 s later, by the timer of every other trigger (the second one moves it); never twice
+    at the same time, where the one that ends last would win (log 18.10.2026, 23:05:30)."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    later = defer_background(win)
+    edge = two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    opened = win.session
+    back(win)
+    run_later(later)
+    reads = []
+    real = win._reread_connected
+    win._reread_connected = lambda: (reads.append(win.session), real())
+    win.world.offered.remove(edge)
+    for f in (win.world.root / "1-2").iterdir():
+        f.unlink()
+    (win.world.root / "1-2").rmdir()
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
+        MainWindow._on_mount_removed(win, None, FakeMount(NAMED))  # gvfs: the other mount
+    assert reads == [] and later == []
+    assert len(win.timers.live) == 1
+    assert caplog.text.count("the list of devices is read again in 1.5 s") == 2
+    assert "device detection: moved by another trigger" in caplog.text
+    win.timers.fire()
+    run_later(later)
+    assert reads == [opened] and win.session is opened
+    assert win.navigation.stack == ["start page"]
     assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
         ("Test watch", True), ("Edge 1050", False)]
 

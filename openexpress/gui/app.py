@@ -537,10 +537,16 @@ def _on_mount(storage, mount_uri: str) -> bool:
     return str(getattr(storage, "label", "")).startswith(mount_uri.rstrip("/") + "/")
 
 
+# A trigger that asks only for the list of devices connected to be read again (another
+# device than the open one went away); never an address.
+READ_THE_LIST = "read the list of devices again"
+
+
 def schedule_detection(win, delay_ms: int, mount_uri: str | None = None) -> None:
-    """Look for the device after `delay_ms`: after a mount of a Garmin device (`mount_uri`)
-    or after it showed up on USB (None). One timer for all of them: another trigger moves it,
-    and what is decided when it fires covers every trigger so far."""
+    """Look for the device after `delay_ms`: after a mount of a Garmin device (`mount_uri`),
+    after it showed up on USB (None), or only read the list of devices connected again
+    (READ_THE_LIST). One timer for all of them: another trigger moves it, and what is
+    decided when it fires covers every trigger so far."""
     if getattr(win, "_detect_timer", None) is not None:
         GLib.source_remove(win._detect_timer)
         log.info("device detection: moved by another trigger")
@@ -562,7 +568,13 @@ def detection_due(win) -> None:
         return
     win._detect_after_task = False
     reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
+    read_the_list = READ_THE_LIST in reasons
+    reasons = [r for r in reasons if r != READ_THE_LIST]
     s = win.session
+    if s is not None and read_the_list and not reasons:
+        # Only another device went away: the open one stays, the list is read once.
+        win._reread_connected()
+        return
     if s is not None and reasons:
         # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
         # window started, before one was chosen) bring nothing new: they never close the
@@ -575,6 +587,8 @@ def detection_due(win) -> None:
             log.info("device detection: %d mount(s) of devices already on the list, ignored",
                      len(known))
             if not reasons:
+                if read_the_list:
+                    win._reread_connected()
                 return  # nothing new: the open device stays as it is
     if s is None or not reasons or any(r is None or not _on_mount(s.storage, r)
                                        for r in reasons):
@@ -1351,10 +1365,11 @@ class MainWindow(Adw.ApplicationWindow):
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
             # Another Garmin device went away (several connected): the open one is still at
-            # its place on USB, so it stays open; the start page lists those left.
+            # its place on USB, so it stays open; the start page lists those left, read once
+            # by the timer of the other triggers (gvfs reports two mounts of one device).
             log.info("mount removed (%s): not the open device, which is still there; the "
-                     "list of devices is read again", where)
-            self._reread_connected()
+                     "list of devices is read again in 1.5 s", where)
+            schedule_detection(self, 1500, READ_THE_LIST)
             return
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
