@@ -733,6 +733,12 @@ class NotThereYet(DeviceError):
     """gvfs does not offer a Garmin device, or its files cannot be seen yet."""
 
 
+class MassStorageNotice(NotThereYet):
+    """A Garmin device in mass storage mode is on USB, but its drive is not mounted or is
+    out of the Flatpak's sight: a notice, not an error (the command line writes no "Error:"
+    before it; the exit code stays 1)."""
+
+
 class SeveralDevices(DeviceError):
     """More than one device where one was to be opened. `devices`: what was found (kind,
     address, USB id), for a window that lets the user choose; the text is for the command
@@ -790,6 +796,34 @@ def usb_state() -> str:
     return PRESENT if any(p != STARTING_PRODUCT for p in products) else STARTING
 
 
+def mass_storage_text() -> str:
+    """What an open Garmin device in mass storage mode offers: for its pages in the window,
+    and the refusal of the commands that do not apply to it."""
+    return _("The device is connected in mass storage mode (as a USB drive): openExpress "
+             "shows its information and software updates; sync, apps, maps and music do "
+             "not apply to it.")
+
+
+def drive_not_mounted_text() -> str:
+    """A Garmin device in mass storage mode on USB whose drive the system has not mounted
+    (after it was ejected, or when the desktop does not mount drives by itself)."""
+    return _("The Garmin device is connected, but its drive is not mounted. Open it in the "
+             "file manager, or unplug the cable and plug it in again.")
+
+
+def flatpak_drive_text() -> str:
+    """A Garmin drive mounted by the system in a folder the Flatpak cannot see (its access to
+    /run/media and /media turned off)."""
+    return _("The Garmin device is connected as a USB drive, but this version (Flatpak) has no "
+             "access to /run/media, where the system mounted it.")
+
+
+def drive_notice_text() -> str:
+    """A Garmin drive on USB that cannot be opened: not mounted, or out of the sandbox's
+    sight (the same words in the window and on the command line)."""
+    return flatpak_drive_text() if drive_hidden_in_sandbox() else drive_not_mounted_text()
+
+
 def not_ready_text(state: str) -> str:
     """What to tell the user when the wait for a plugged-in device ran out."""
     if state == STARTING:
@@ -799,9 +833,7 @@ def not_ready_text(state: str) -> str:
         return _("The Garmin device is connected, but it does not offer its files. Check its "
                  "screen: if it is locked with a PIN or asks something, unlock it or confirm.")
     if state == MASS_STORAGE:
-        return _("The Garmin device is connected in mass storage mode (as a USB drive); "
-                 "openExpress opens such a device only from the command line, with --path "
-                 "and the folder where the system mounted it.")
+        return drive_notice_text()
     return _("No Garmin device (MTP) found. Connect the device with a USB cable "
              "and unlock it if it asks to allow the connection.")
 
@@ -846,7 +878,7 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                         sleep(1)
                         continue
                 if state == MASS_STORAGE and isinstance(e, NotThereYet):
-                    raise NotThereYet(not_ready_text(state)) from e
+                    raise MassStorageNotice(not_ready_text(state)) from e
                 raise
             gone_since = None
             if not wait:

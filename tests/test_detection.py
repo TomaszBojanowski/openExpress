@@ -1047,6 +1047,81 @@ def test_mtp_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
     assert "opened in mass storage mode" not in caplog.text
 
 
+# --- the command line opens a Garmin drive as the window does (Varia, step 3) ---------------------
+
+
+def test_the_command_line_opens_a_garmin_drive_without_path(watch_and_drives, monkeypatch,
+                                                            capsys):
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    assert main(["info"]) == 0
+    out = capsys.readouterr().out
+    assert "Varia RTL515" in out and "Data types:   0" in out
+
+
+def test_the_command_line_opens_mtp_before_a_garmin_drive(watch_and_drives, monkeypatch,
+                                                          capsys, caplog):
+    """D1, as in the window: the MTP device opens, the drive is skipped and the log says so."""
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert main(["info"]) == 0
+    assert "Test watch" in capsys.readouterr().out
+    assert "1 Garmin drive in mass storage mode skipped" in caplog.text
+
+
+def test_a_garmin_drive_not_mounted_is_told_without_error_or_path(plugged, monkeypatch,
+                                                                  capsys):
+    """A notice, not an error: the words of the window, without "Error:" and without advice
+    about --path; still exit code 1, which scripts check."""
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch)  # on USB, not mounted
+    mass_storage_device(plugged.root)
+    assert main(["--no-wait", "info"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err.strip() == DRIVE_NOT_MOUNTED_TEXT
+    assert "Error" not in captured.err and "--path" not in captured.err
+
+
+@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"],
+                                     ["backup"]])
+def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypatch, capsys,
+                                                      command):
+    """The refusal of the window, in one sentence, before any request or login."""
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    assert main(command) == 1
+    captured = capsys.readouterr()
+    assert MASS_STORAGE_TEXT in captured.err and captured.err.count("\n") == 1
+
+
+def test_sync_refuses_a_folder_without_data_types(tmp_path, capsys):
+    """A copy of a Varia with --path: nothing to sync, said so, instead of trying."""
+    from openexpress.cli import main
+
+    (tmp_path / "GARMIN").mkdir()
+    (tmp_path / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)
+    assert main(["--path", str(tmp_path), "sync"]) == 1
+    assert "declares no data types" in capsys.readouterr().err
+
+
+def test_updates_work_on_a_garmin_drive(watch_and_drives, monkeypatch, capsys):
+    from openexpress import cli
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    monkeypatch.setattr(cli, "GarminClient", lambda settings: types.SimpleNamespace(
+        software_updates=lambda raw, include_reinstalls=False: {}))
+    assert cli.main(["updates"]) == 0
+    out = capsys.readouterr().out
+    assert "Varia RTL515" in out and "Software is up to date." in out
+
+
 def test_a_watch_on_its_way_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
     """A watch that is still starting is waited for (by the window), not passed over."""
     from openexpress import service
@@ -2875,8 +2950,8 @@ def test_a_garmin_with_other_interfaces_is_waited_for_as_before(plugged, classes
 
 
 def test_cli_does_not_wait_for_a_garmin_in_mass_storage_mode(plugged):
-    """Not 45 s of "the device is starting" and then the advice about a PIN: at once, what
-    to do with such a device."""
+    """Not 45 s of "the device is starting" and then the advice about a PIN: at once, the
+    words of the window for a drive that is not mounted, as a notice."""
     mass_storage_device(plugged.root)
     for wait in (True, False):
         with pytest.raises(gio_storage.NotThereYet) as error:
@@ -2884,7 +2959,8 @@ def test_cli_does_not_wait_for_a_garmin_in_mass_storage_mode(plugged):
         assert plugged.clock.slept == 0 and plugged.notices == []
         assert "PIN" not in str(error.value)
         assert str(error.value) == gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
-        assert "--path" in str(error.value) and plugged.opened == []
+        assert "--path" not in str(error.value) and plugged.opened == []
+        assert isinstance(error.value, gio_storage.MassStorageNotice)
 
 
 def test_a_watch_is_waited_for_next_to_a_garmin_in_mass_storage_mode(plugged):

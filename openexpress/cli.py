@@ -44,15 +44,26 @@ _human = human_size  # the name the commands and the window use
 WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music"})
 
 
+# Commands that do not apply to a Garmin device in mass storage mode (as in the window).
+NOT_ON_A_DRIVE = ("sync", "baseline", "apps", "music", "maps", "backup")
+
+
 def open_storage(args) -> Storage:
+    """The connected device: MTP first, else a Garmin drive, as the window opens them;
+    --device-uri names an MTP device; --path a folder without a device (e.g. a copy)."""
     if args.path:
         return LocalStorage(Path(args.path))
+    from openexpress import service
     from openexpress.device.gio_storage import open_device_storage
 
     # A device that was just plugged in needs a while before its files can be seen.
-    st = open_device_storage(
-        args.device_uri, wait=not getattr(args, "no_wait", False),
-        notify=lambda line: print(line, file=sys.stderr, flush=True))
+    wait = not getattr(args, "no_wait", False)
+
+    def notify(line):
+        print(line, file=sys.stderr, flush=True)
+
+    st = (open_device_storage(args.device_uri, wait=wait, notify=notify) if args.device_uri
+          else service.open_device_or_drive(wait=wait, notify=notify))
     if getattr(args, "apply", False) and getattr(args, "cmd", None) in WORKS_ON_DEVICE:
         # On stderr, so that it does not mix with the result.
         print(_("Do not unplug the device until the operation is finished."),
@@ -61,11 +72,19 @@ def open_storage(args) -> Storage:
 
 
 def open_device(args) -> tuple[Storage, GarminDevice]:
-    from openexpress import applog
+    from openexpress import applog, service
+    from openexpress.device.gio_storage import mass_storage_text
 
     st = open_storage(args)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(dev)
+    command = getattr(args, "cmd", None)
+    if st.mass_storage and command in NOT_ON_A_DRIVE:
+        raise service.MassStorageMode(mass_storage_text())
+    if command in ("sync", "baseline") and not dev.datatypes():
+        raise service.MassStorageMode(_(
+            "Nothing to sync: the device declares no data types (for example a device in "
+            "mass storage mode, or a copy of one)."))
     if not args.path:  # a device found now; a folder given with --path may be a copy
         known_devices.seen(dev.unit_id, dev.description, dev.part_number,
                            dev.software_version_str, "ums" if st.mass_storage else "mtp")
@@ -1834,11 +1853,19 @@ def _error(text: str) -> None:
 
 def _run(args, service, requests) -> int:
 
+    from openexpress.device.gio_storage import MassStorageNotice
+
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
+                   service.MassStorageMode,
                    Unauthorized, service.SyncBusy,
                    service.PrimaryTrainingError) + _domain_errors()
     try:
         return args.func(args)
+    except MassStorageNotice as e:
+        # What the window says about the drive: a notice, not an error; exit code 1.
+        log.info("not opened: %s", type(e).__name__)
+        _error(str(e))
+        return 1
     except user_errors as e:
         log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
         _error(_("Error: {error}").format(error=e))

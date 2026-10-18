@@ -91,7 +91,7 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
     if storage is None:
         from openexpress.device.gio_storage import open_device_storage
 
-        storage = (_open_device_or_drive() if allow_ums and device_uri is None
+        storage = (open_device_or_drive() if allow_ums and device_uri is None
                    else open_device_storage(device_uri))
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(device)
@@ -119,13 +119,14 @@ def _open_found(found) -> Storage:
     return storage
 
 
-def _open_device_or_drive() -> Storage:
+def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
     """An MTP device comes first, also one that is still on its way to MTP; a Garmin device
-    in mass storage mode is opened only when there is none."""
+    in mass storage mode is opened only when there is none (the window and the command
+    line). `wait`, `notify`: as for open_device_storage."""
     from openexpress.device import gio_storage
 
     try:
-        storage = gio_storage.open_device_storage()
+        storage = gio_storage.open_device_storage(wait=wait, notify=notify)
     except gio_storage.SeveralDevices:
         raise
     except DeviceError:

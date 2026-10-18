@@ -48,11 +48,12 @@ from openexpress.device.gio_storage import (  # noqa: E402
     NotThereYet,
     SeveralDevices,
     distinct_devices,
-    drive_hidden_in_sandbox,
+    drive_notice_text,
     find_all_devices,
     garmin_products_on_usb,
     garmin_ums,
     garmin_usb,
+    mass_storage_text,
     not_ready_text,
     own_remount,
     probe,
@@ -318,27 +319,6 @@ def still_in_window(buttons: list) -> list:
 
 # The pages that do not apply to a Garmin device in mass storage mode.
 NOT_FOR_MASS_STORAGE = ("maps", "apps", "music")
-
-
-def mass_storage_text() -> str:
-    """What an open Garmin device in mass storage mode offers, for its pages."""
-    return _("The device is connected in mass storage mode (as a USB drive): openExpress "
-             "shows its information and software updates; sync, apps, maps and music do "
-             "not apply to it.")
-
-
-def drive_not_mounted_text() -> str:
-    """A Garmin device in mass storage mode on USB whose drive the system has not mounted
-    (after it was ejected, or when the desktop does not mount drives by itself)."""
-    return _("The Garmin device is connected, but its drive is not mounted. Open it in the "
-             "file manager, or unplug the cable and plug it in again.")
-
-
-def flatpak_drive_text() -> str:
-    """A Garmin drive mounted by the system in a folder the Flatpak cannot see (its access to
-    /run/media and /media turned off)."""
-    return _("The Garmin device is connected as a USB drive, but this version (Flatpak) has no "
-             "access to /run/media, where the system mounted it.")
 
 
 @dataclass
@@ -1386,7 +1366,7 @@ class MainWindow(Adw.ApplicationWindow):
         if state == MASS_STORAGE:
             # The window opens such a drive once the system mounts it, so with none open it
             # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see (F1).
-            text = flatpak_drive_text() if drive_hidden_in_sandbox() else drive_not_mounted_text()
+            text = drive_notice_text()
             # TRANSLATORS: a device connected as a USB drive, not over MTP
             return _("Mass storage mode"), text, False
         if waited_s < WAIT_FOR_DEVICE_S:

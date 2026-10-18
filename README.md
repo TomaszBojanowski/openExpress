@@ -96,9 +96,11 @@ Devices that connect over MTP (most watches and bike computers, such as the fēn
 Edge 1050) work in both the Flatpak and the version from source. Since 0.6, openExpress also
 supports Garmin devices that connect as a USB drive (mass storage mode: some older Garmin
 models, and accessories such as the Varia RTL515): their information and software updates, in
-the window (of the Flatpak and of the version from source) and on the command line with
-`--path`. Mass storage is tested on the Varia RTL515; reports from other devices in mass
-storage mode are welcome. If you are not sure which mode your device
+the window and on the command line, in the Flatpak and in the version from source. Both find
+such a device by themselves, an MTP device first when both are connected; `--path` is only for
+a folder without a device, such as a copy. Commands that do not apply to such a device (sync,
+apps, maps, music, backup) say so. Mass storage is tested on the Varia RTL515; reports from
+other devices in mass storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
 it is in mass storage mode.
 
