@@ -2898,7 +2898,11 @@ class MainWindow(Adw.ApplicationWindow):
                 row.set_sensitive(m.waiting != mp.WAIT_REMOVE)
                 g.add(row)
                 continue
-            if m.update_available:
+            if m.update_available and not mp.can_install(m):
+                # No button: say why instead (the same reason the install would give).
+                row.set_subtitle(GLib.markup_escape_text(
+                    self._map_subtitle(m) + "\n" + mp.cannot_install_reason(m)))
+            elif m.update_available:
                 # TRANSLATORS: button
                 row.add_suffix(self._button(_("Update"), lambda m=m: self.confirm_map(m),
                                             "suggested-action"))
@@ -2921,10 +2925,13 @@ class MainWindow(Adw.ApplicationWindow):
         listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         listbox.add_css_class("boxed-list")
         for m in available:
+            line = f"{m.region} · {m.version} · {_human(m.size)}"
+            if not mp.can_install(m):
+                line += "\n" + mp.cannot_install_reason(m)  # instead of the button
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
-                                subtitle=GLib.markup_escape_text(
-                                    f"{m.region} · {m.version} · {_human(m.size)}"))
-            row.add_suffix(self._button(_("Install"), lambda m=m: self.confirm_map(m)))
+                                subtitle=GLib.markup_escape_text(line))
+            if mp.can_install(m):
+                row.add_suffix(self._button(_("Install"), lambda m=m: self.confirm_map(m)))
             listbox.append(row)
             rows.append((row, f"{m.name} {m.region} {m.map_type}".casefold()))
         g.add(listbox)
@@ -3101,6 +3108,10 @@ class MainWindow(Adw.ApplicationWindow):
     def confirm_map(self, m) -> None:
         from openexpress import maps as mp
 
+        if not mp.can_install(m):
+            # Refused before anything is asked or promised, as on the command line.
+            self.error(_("Cannot install the map"), mp.cannot_install_message(m))
+            return
         s = self.session
         if not (s.client.consumer and s.client.consumer.url_salt):
             self.error(_("Setup missing"),

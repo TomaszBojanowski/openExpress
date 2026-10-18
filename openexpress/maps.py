@@ -165,6 +165,19 @@ def read_maps(response: dict) -> tuple[list[UniversalMap], int]:
 MISSING_FILE, BAD_CHECKSUM = "missing-file", "bad-checksum"
 
 
+def can_install(m: UniversalMap) -> bool:
+    """Whether the server gave a usable, checked download for every file of `m`."""
+    return m.installable and bool(m.files)
+
+
+def cannot_install_reason(m: UniversalMap) -> str:
+    """The same reason as cannot_install_message, short, for the line under the map's name."""
+    if m.unavailable == BAD_CHECKSUM:
+        return _("Cannot be installed: the server gave an invalid checksum for one of its "
+                 "files")
+    return _("Cannot be installed: the server did not provide all of its files")
+
+
 def cannot_install_message(m: UniversalMap) -> str:
     """Why `m` cannot be installed, the same words in the command line and the window."""
     if m.unavailable == BAD_CHECKSUM:
@@ -348,7 +361,7 @@ def _install(
 ) -> MapReport:
     if m.waiting == WAIT_INSTALL:
         raise MapError(waiting_message(m))
-    if not m.installable or not m.files:
+    if not can_install(m):
         raise MapError(cannot_install_message(m))
     removing = removal_list(all_maps, m, rewriting=True)
     need = space_needed(storage, m, removing)

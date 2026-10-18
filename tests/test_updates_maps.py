@@ -1480,6 +1480,101 @@ def test_the_dry_run_refuses_a_map_that_cannot_be_installed(server, device_root,
     assert device_files(device_root) == before
 
 
+SHORT_REASONS = {
+    "checksum": "Cannot be installed: the server gave an invalid checksum for one of its files",
+    "file": "Cannot be installed: the server did not provide all of its files",
+}
+
+
+def _buttons(widget):
+    """The buttons in a widget and below it, by label."""
+    from openexpress.gui.app import Gtk
+
+    found, child = [], widget.get_first_child()
+    if isinstance(widget, Gtk.Button) and widget.get_label():
+        found.append(widget.get_label())
+    while child is not None:
+        found += _buttons(child)
+        child = child.get_next_sibling()
+    return found
+
+
+def _rows(listbox):
+    child, rows = listbox.get_first_child(), []
+    while child is not None:
+        rows.append(child)
+        child = child.get_next_sibling()
+    return rows
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("how", ["checksum", "file"])
+def test_a_map_that_cannot_be_installed_has_no_install_button_and_says_why(server,
+                                                                          device_root, how):
+    """On the page: no Install (nor Update) for a map whose download is unusable; its line
+    says why, in short. The other maps keep their buttons."""
+    from openexpress.gui.app import MainWindow
+
+    answer = _japan_answer(server, how)
+    east = answer["maps"][1]["installoptions"][0]["files"][0]
+    if how == "checksum":
+        east["deliverableoptions"][0]["md5"] = "z" * 32
+    else:
+        east["deliverableoptions"] = []
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(answer))
+    on_device, available = win.sections["maps"].groups
+    rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
+    (japan,) = _rows(available.rows[-1])
+    assert japan.get_title() == "TopoActive Japan"
+    for row in (japan, rows["TopoActive East"]):
+        assert _buttons(row) == []  # neither Install nor Update
+        assert row.get_subtitle().endswith("\n" + SHORT_REASONS[how])
+    assert "TopoActive West" in rows  # up to date, nothing to install: as before
+
+
+@pytest.mark.needs_display
+def test_the_install_buttons_stay_for_maps_that_can_be_installed(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
+    on_device, available = win.sections["maps"].groups
+    rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
+    (japan,) = _rows(available.rows[-1])
+    assert _buttons(japan) == ["Install"] and "\n" not in japan.get_subtitle()
+    assert "Update" in _buttons(rows["TopoActive East"])
+
+
+@pytest.mark.parametrize("how, text", [("checksum", BAD_CHECKSUM_TEXT),
+                                       ("file", MISSING_FILE_TEXT)])
+def test_the_window_refuses_before_it_asks_to_install(server, device_root, monkeypatch, how,
+                                                     text):
+    """Reached some other way: the window says why, and asks nothing."""
+    import types
+
+    from openexpress.gui import app
+
+    asked, said = [], []
+
+    class Question:
+        def __init__(self, **kw):
+            asked.append(kw)
+
+        def __getattr__(self, name):
+            return lambda *a, **kw: None
+
+    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    japan = maps.parse_maps(_japan_answer(server, how))[2]
+    storage = LocalStorage(device_root)
+    win = types.SimpleNamespace(
+        maps_cache=[japan], error=lambda title, body: said.append((title, body)),
+        session=types.SimpleNamespace(storage=storage, client=types.SimpleNamespace(
+            consumer=types.SimpleNamespace(url_salt="salt"))))
+    app.MainWindow.confirm_map(win, japan)
+    assert said == [("Cannot install the map", text)] and asked == []
+
+
 def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):
     """A software update the server lists without an MD5: refused before it is
     downloaded, nothing written to the device."""

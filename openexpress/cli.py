@@ -913,7 +913,7 @@ def cmd_maps(args) -> int:
         if m.waiting == mp.WAIT_INSTALL:
             # Refused before anything is listed: it is written already.
             raise mp.MapError(mp.waiting_message(m))
-        if not m.installable or not m.files:
+        if not mp.can_install(m):
             # Refused before anything is promised, the same reason as with --apply.
             raise mp.MapError(mp.cannot_install_message(m))
         removing = mp.removal_list(all_maps, m, rewriting=True)
