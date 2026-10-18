@@ -405,8 +405,9 @@ class SyncSummary:
 # Readable names of the data types of new files. A name is given only where it is plain from
 # the FIT SDK (the file type by its number), the upload address the server gives for the type
 # (e.g. ".../upload/hrvstatus"), or the folder the device declares for it in GarminDevice.xml
-# (e.g. "Garmin/Sleep"); any other type is shown as "other data (NAME)". Types with the same
-# name are counted together.
+# (e.g. "Garmin/Sleep"); where the name in the FIT profile is technical, the name says what the
+# data is, after that name and the folder the device declares. Any other type is shown as
+# "other data (NAME)". Types with the same name are counted together.
 TYPE_NAMES = {
     "FIT_TYPE_4": N_("activities"),             # FIT SDK: activity; upload: activity
     "FIT_TYPE_9": N_("weight"),                 # FIT SDK: weight; upload: weight
@@ -414,13 +415,19 @@ TYPE_NAMES = {
     "FIT_TYPE_32": N_("monitoring"),            # FIT SDK: monitoring_b
     "FIT_TYPE_35": N_("segment list"),          # FIT SDK: segment_list; upload: segment-list
     "FIT_TYPE_38": N_("golf scorecards"),       # folder: SCORCRDS
-    "FIT_TYPE_41": N_("change log"),            # upload: changelog
+    "FIT_TYPE_41": N_("settings change log"),   # FIT profile: settings_change_log
     "FIT_TYPE_44": N_("metrics"),               # upload: metrics
     "FIT_TYPE_49": N_("sleep"),                 # folder: Sleep
     "FIT_TYPE_58": N_("device monitoring"),     # upload: device-monitoring
     "FIT_TYPE_61": N_("ECG"),                   # folder: ECG
     "FIT_TYPE_68": N_("HRV status"),            # upload: hrvstatus
+    # FIT profile: fbt_lha_backup; folder: Garmin/FbtBackup
+    "FIT_TYPE_72": N_("training status data"),
     "FIT_TYPE_73": N_("skin temperature"),      # upload: skintemp
+    # FIT profile: primary_training_backup; folder: Garmin/FbtPtdBackup
+    "FIT_TYPE_74": N_("primary training device data"),
+    # FIT profile: adaptive_coaching_schedule; folder: Garmin/Coach
+    "FIT_TYPE_77": N_("Garmin Coach plan"),
     "FIT_TYPE_79": N_("sleep disruptions"),     # upload: sleep-disruptions
     "FIT_TYPE_88": N_("multi-day activities"),  # upload: multi-day-activity
     "BACKUP_PRIMARY": N_("device backup"),      # upload: backup

@@ -121,6 +121,23 @@ def test_new_files_in_polish():
                     "urządzenia ×1, inne dane (FIT_TYPE_70) ×1")
 
 
+def test_names_for_the_training_status_primary_device_and_coach_files():
+    """Types 72, 74 and 77 seen in real syncs, and 41 named after what it is; any other type
+    stays "other data"."""
+    step = {"kind": "new_files", "types": {"FIT_TYPE_77": 2, "FIT_TYPE_70": 1, "FIT_TYPE_74": 1,
+                                           "FIT_TYPE_41": 1, "FIT_TYPE_72": 1}}
+    assert service.describe_lines([step]) == [
+        ("New files: settings change log ×1, training status data ×1, primary training device "
+         "data ×1, Garmin Coach plan ×2, other data (FIT_TYPE_70) ×1")]
+    i18n.setup("pl")
+    try:
+        (line,) = service.describe_lines([step])
+    finally:
+        i18n.setup("en")
+    assert line == ("Nowe pliki: dziennik zmian ustawień ×1, dane o wytrenowaniu ×1, dane "
+                    "urządzenia głównego ×1, plan Garmin Coach ×2, inne dane (FIT_TYPE_70) ×1")
+
+
 # --- each device keeps its own last sync -----------------------------------------------------
 
 
