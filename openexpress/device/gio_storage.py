@@ -668,7 +668,7 @@ def open_ums_storage(dev: FoundDevice) -> UmsStorage:
     try:
         if path is None:
             raise DeviceError("not a local folder")
-        st = UmsStorage(Path(path), dev.uri, dev.usb)
+        st = UmsStorage(Path(path), dev.uri, dev.usb, dev.name)
     except DeviceError:
         # Unplugged since it was found. The error would name the folder, with the user name.
         raise NotThereYet(_("The device is not mounted.")) from None
@@ -988,7 +988,7 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
             path = Gio.File.new_for_uri(found.uri).get_path()
             if path is None:
                 return DeviceSummary(found, reason=UNREADABLE)
-            storage: Storage = UmsStorage(Path(path), found.uri, found.usb)
+            storage: Storage = UmsStorage(Path(path), found.uri, found.usb, found.name)
             if not storage.exists("GARMIN/GarminDevice.xml"):
                 return DeviceSummary(found, reason=NO_DEVICE_FILE)
         else:

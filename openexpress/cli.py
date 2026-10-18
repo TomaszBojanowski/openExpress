@@ -180,13 +180,31 @@ def cmd_setup(args) -> int:
     return 0
 
 
+def storage_text(st) -> str:
+    """Where the device is, for `info`: over MTP its storage; for a drive "USB drive" and
+    the label of its volume, never the mount path (it has the user name)."""
+    if not getattr(st, "mass_storage", False):
+        return st.label
+    name = getattr(st, "volume_name", None)
+    # TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
+    return _("USB drive ({name})").format(name=name) if name else _("USB drive")
+
+
+def storage_id(st) -> str:
+    """The same for `info --json`, not translated: "usb-drive:GARMIN"."""
+    if not getattr(st, "mass_storage", False):
+        return st.label
+    name = getattr(st, "volume_name", None)
+    return f"usb-drive:{name}" if name else "usb-drive"
+
+
 def cmd_info(args) -> int:
     st, dev = open_device(args)
     if args.json:
         print(json.dumps({
             "unit_id": dev.unit_id, "part_number": dev.part_number,
             "software_version": dev.software_version_str, "description": dev.description,
-            "storage": st.label, "free_bytes": st.free_space(),
+            "storage": storage_id(st), "free_bytes": st.free_space(),
             "datatypes": dev.datatypes(),
         }, indent=2, ensure_ascii=False))
         return 0
@@ -195,7 +213,7 @@ def cmd_info(args) -> int:
         (_("Part number:"), dev.part_number),
         (_("Software:"), dev.software_version_str),
         (_("Unit ID:"), dev.unit_id),
-        (_("Storage:"), st.label),
+        (_("Storage:"), storage_text(st)),
         (_("Free space:"), _human(st.free_space())),
         (_("Data types:"), _("{datatypes}, components: {components}").format(
             datatypes=len(dev.datatypes()), components=len(dev.update_files))),

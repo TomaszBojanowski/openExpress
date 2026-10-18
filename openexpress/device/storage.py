@@ -356,8 +356,11 @@ class UmsStorage(LocalStorage):
 
     mass_storage = True
 
-    def __init__(self, root: Path, device_uri: str, usb=None):
+    def __init__(self, root: Path, device_uri: str, usb=None, volume_name: str | None = None):
         super().__init__(root)
+        # The label of the volume as Gio gives it ("GARMIN"): what is shown instead of the
+        # mount path, which has the user name.
+        self.volume_name = volume_name or None
         # The address of the mount as Gio gives it. The label ends with "/", like the storage
         # of an MTP device below its mount: the window tells by it which mount it is on.
         self.device_uri = device_uri

@@ -1060,6 +1060,70 @@ def test_the_command_line_opens_a_garmin_drive_without_path(watch_and_drives, mo
     assert "Varia RTL515" in out and "Data types:   0" in out
 
 
+def _storage_line(out):
+    (line,) = [line for line in out.splitlines() if line.startswith(("Storage:", "Pamięć:"))]
+    return line.split(":", 1)[1].strip()
+
+
+@pytest.mark.parametrize("lang, words", [("en", "USB drive (GARMIN)"),
+                                         ("pl", "Dysk USB (GARMIN)")])
+def test_the_info_of_a_drive_names_its_volume_not_its_mount_path(watch_and_drives, monkeypatch,
+                                                                 capsys, lang, words):
+    """The mount path has the user name (/run/media/<user>/GARMIN): the line says a USB
+    drive and the label of its volume."""
+    from openexpress import i18n
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    try:
+        assert main(["--lang", lang, "info"]) == 0
+    finally:
+        i18n.setup("en")
+    out = capsys.readouterr().out
+    assert _storage_line(out) == words
+    assert MEDIA_USER not in out and "file:" not in out and "/run/media" not in out
+
+
+def test_the_json_info_of_a_drive_has_no_mount_path(watch_and_drives, monkeypatch, capsys):
+    import json
+
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    assert main(["info", "--json"]) == 0
+    out = capsys.readouterr().out
+    assert json.loads(out)["storage"] == "usb-drive:GARMIN"
+    assert MEDIA_USER not in out and "file:" not in out
+
+
+def test_the_info_of_a_drive_without_a_volume_label(watch_and_drives, monkeypatch, capsys):
+    import json
+
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive(label=""))
+    assert main(["info"]) == 0
+    assert _storage_line(capsys.readouterr().out) == "USB drive"
+    assert main(["info", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["storage"] == "usb-drive"
+
+
+def test_the_info_of_an_mtp_device_still_gives_its_storage(watch_and_drives, monkeypatch,
+                                                           capsys):
+    """Guards: over MTP the line is as before (the address of its storage)."""
+    import json
+
+    from openexpress.cli import main
+
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    monitor_with(monkeypatch)
+    assert main(["info"]) == 0
+    assert _storage_line(capsys.readouterr().out).startswith("mtp://")
+    assert main(["info", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["storage"].startswith("mtp://")
+
+
 def test_the_command_line_opens_mtp_before_a_garmin_drive(watch_and_drives, monkeypatch,
                                                           capsys, caplog):
     """D1, as in the window: the MTP device opens, the drive is skipped and the log says so."""
