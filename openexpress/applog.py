@@ -206,11 +206,23 @@ def counts(names) -> str:
     return ", ".join(f"{k}×{v}" for k, v in sorted(seen.items())) or "-"
 
 
+def _packaging() -> str:
+    """ "source", or "Flatpak/<origin> <commit>" with the commit in groups of four: never
+    seven digits in a row for the filter to hide."""
+    if not paths.in_flatpak():
+        return "source"
+    origin, commit = paths.flatpak_source()
+    words = f"Flatpak/{origin or 'unknown'}"
+    if commit:
+        words += " " + "_".join(commit[i:i + 4] for i in range(0, len(commit), 4))
+    return words
+
+
 def environment() -> str:
     """What the start line says about the program: its version, how it is packaged, the
     Python version, the language it runs in and the PID. Nothing about the user or the
     computer."""
-    return (f"openExpress {__version__}, {'Flatpak' if paths.in_flatpak() else 'source'}, "
+    return (f"openExpress {__version__}, {_packaging()}, "
             f"Python {platform.python_version()}, language {i18n.current_language()}, "
             f"pid {os.getpid()}")
 

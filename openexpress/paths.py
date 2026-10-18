@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import configparser
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
 APP_NAME = "openexpress"
+APP_ID = "io.github.tomaszbojanowski.OpenExpress"
+FLATPAK_INFO = Path("/.flatpak-info")
 LEGACY_NAME = "garmin-linux"  # name used before the first public release
 
 
@@ -44,6 +48,44 @@ def cache_dir() -> Path:
 
 def in_flatpak() -> bool:
     return Path("/.flatpak-info").exists()
+
+
+def flatpak_build() -> tuple[str | None, str | None] | None:
+    """(branch, the first 12 characters of the app's commit) of this Flatpak, from
+    /.flatpak-info; None outside the Flatpak or when the file cannot be read."""
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        if not parser.read(FLATPAK_INFO, encoding="utf-8") or not parser.has_section("Instance"):
+            return None
+        instance = parser["Instance"]
+        commit = instance.get("app-commit") or None
+        return instance.get("branch") or None, commit[:12] if commit else None
+    except (configparser.Error, OSError, UnicodeError):
+        return None
+
+
+def flatpak_origin() -> str | None:
+    """The remote this Flatpak was installed from ("openexpress"; a bundle gets
+    "…-origin"), asked of the host; None outside the Flatpak and on any failure."""
+    if not in_flatpak():
+        return None
+    # Only reads the metadata of the installation; besides copying files to the device
+    # (gio copy), the one use of flatpak-spawn.
+    try:
+        answer = subprocess.run(
+            ["flatpak-spawn", "--host", "flatpak", "info", "--show-origin", APP_ID],
+            capture_output=True, text=True, timeout=3, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if answer.returncode != 0:
+        return None
+    return answer.stdout.strip() or None
+
+
+def flatpak_source() -> tuple[str | None, str | None]:
+    """(origin, short commit) of this Flatpak, for the report and the log."""
+    build = flatpak_build()
+    return flatpak_origin(), build[1] if build else None
 
 
 def state_dir() -> Path:

@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
-from openexpress import __version__
+from openexpress import __version__, paths
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import human_size
@@ -75,8 +75,15 @@ def _os_name() -> str:
 
 
 def _install_type() -> str:
-    if Path("/.flatpak-info").exists():
-        return "Flatpak"
+    if paths.in_flatpak():
+        origin, commit = paths.flatpak_source()
+        if origin is None:
+            words = "Flatpak, origin unknown"
+        elif origin.endswith("-origin"):
+            words = "Flatpak bundle"  # a .flatpak file installs from a remote "…-origin"
+        else:
+            words = f'Flatpak from the "{origin}" repository'
+        return f"{words}, commit {commit}" if commit else words
     here = Path(__file__).resolve()
     return "pip" if "site-packages" in here.parts or "dist-packages" in here.parts else "source"
 

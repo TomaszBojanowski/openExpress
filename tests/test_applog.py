@@ -643,7 +643,8 @@ def test_the_filter_leaves_every_marker_alone():
         assert applog.redact(text) == text
 
 
-@pytest.mark.parametrize("flatpak, packaging", [(True, "Flatpak"), (False, "source")])
+@pytest.mark.parametrize("flatpak, packaging", [(True, "Flatpak/openexpress bd8b_1bc1_f17f"),
+                                                (False, "source")])
 def test_start_line_says_what_runs_and_nothing_about_the_user(flatpak, packaging, log_file,
                                                               device_root, monkeypatch):
     import getpass
@@ -655,6 +656,8 @@ def test_start_line_says_what_runs_and_nothing_about_the_user(flatpak, packaging
     from openexpress.cli import main
 
     monkeypatch.setattr(paths, "in_flatpak", lambda: flatpak)
+    monkeypatch.setattr(paths, "flatpak_origin", lambda: "openexpress")
+    monkeypatch.setattr(paths, "flatpak_build", lambda: ("master", "bd8b1bc1f17f"))
     assert main(["--path", str(device_root), "files"]) == 0
     start = next(line for line in lines(log_file) if " start: " in line)
     said = start.split(" start: ", 1)[1]
