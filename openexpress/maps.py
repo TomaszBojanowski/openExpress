@@ -65,8 +65,10 @@ class UniversalMap:
     files_to_remove: list[str]
     hosts: list[str]
     eula_urls: list[str] = field(default_factory=list)
-    # False when the server did not provide a usable download for every file.
+    # False when the server did not provide a usable download for every file;
+    # `unavailable` then says why: MISSING_FILE or BAD_CHECKSUM.
     installable: bool = True
+    unavailable: str | None = None
     # WAIT_INSTALL or WAIT_REMOVE: written to or removed from the device, which takes it in
     # only when it is unplugged (see mark_waiting); None otherwise.
     waiting: str | None = None
@@ -158,6 +160,20 @@ def read_maps(response: dict) -> tuple[list[UniversalMap], int]:
     return parse_maps(response), len(_listed(response))
 
 
+# Why a map cannot be installed: a file without a usable download, or one whose MD5 the
+# program cannot read (never downloaded without its check).
+MISSING_FILE, BAD_CHECKSUM = "missing-file", "bad-checksum"
+
+
+def cannot_install_message(m: UniversalMap) -> str:
+    """Why `m` cannot be installed, the same words in the command line and the window."""
+    if m.unavailable == BAD_CHECKSUM:
+        return _("Map '{name}' cannot be installed: the server gave an invalid checksum for "
+                 "one of its files.").format(name=m.name)
+    return _("Map '{name}' cannot be installed: the server did not provide "
+             "all of its files").format(name=m.name)
+
+
 def parse_maps(response: dict) -> list[UniversalMap]:
     out = []
     for m in _listed(response):
@@ -191,6 +207,7 @@ def parse_maps(response: dict) -> list[UniversalMap]:
                      "installed", unchecked, m.get("displayname") or "a map")
         rel = m.get("release") or {}
         region = (m.get("geographicregion") or {}).get("title") or ""
+        missing = not files or len(files) != len(listed)
         out.append(UniversalMap(
             name=m.get("displayname") or rel.get("productgroupname") or "?",
             map_type=m.get("maptype") or "",
@@ -205,7 +222,8 @@ def parse_maps(response: dict) -> list[UniversalMap]:
                              for f in m.get("filestoremove") or [] if f.get("filename")],
             hosts=_hosts(m.get("downloadhosts")),
             eula_urls=list(m.get("eulaurls") or []),
-            installable=bool(files) and len(files) == len(listed) and not unchecked,
+            installable=not missing and not unchecked,
+            unavailable=MISSING_FILE if missing else BAD_CHECKSUM if unchecked else None,
         ))
     return out
 
@@ -331,8 +349,7 @@ def _install(
     if m.waiting == WAIT_INSTALL:
         raise MapError(waiting_message(m))
     if not m.installable or not m.files:
-        raise MapError(_("Map '{name}' cannot be installed: the server did not provide "
-                         "all of its files").format(name=m.name))
+        raise MapError(cannot_install_message(m))
     removing = removal_list(all_maps, m, rewriting=True)
     need = space_needed(storage, m, removing)
     free = storage.free_space()

@@ -1421,6 +1421,50 @@ def test_a_map_file_with_an_invalid_md5_makes_the_map_not_installable(server, de
     assert not (device_root / "GARMIN" / "J.img").exists()
 
 
+MISSING_FILE_TEXT = ("Map 'TopoActive Japan' cannot be installed: the server did not provide "
+                     "all of its files")
+BAD_CHECKSUM_TEXT = ("Map 'TopoActive Japan' cannot be installed: the server gave an invalid "
+                     "checksum for one of its files.")
+
+
+def _japan_answer(server, how):
+    response = maps_response(server)
+    japan = response["maps"][2]["installoptions"][0]["files"][0]
+    if how == "checksum":
+        japan["deliverableoptions"][0]["md5"] = "z" * 32
+    else:
+        japan["deliverableoptions"] = []
+    return response
+
+
+@pytest.mark.parametrize("how, text", [("checksum", BAD_CHECKSUM_TEXT),
+                                       ("file", MISSING_FILE_TEXT)])
+def test_a_map_says_why_it_cannot_be_installed(server, device_root, xdg, how, text):
+    """The window installs through maps.install: a bad checksum is said as such, a missing
+    file as before; nothing is written."""
+    response = _japan_answer(server, how)
+    japan = maps.parse_maps(response)[2]
+    with pytest.raises(maps.MapError) as refused:
+        maps.install(japan, maps.parse_maps(response), LocalStorage(device_root),
+                     lambda ident: {})
+    assert str(refused.value) == text
+    assert not (device_root / "GARMIN" / "J.img").exists()
+
+
+@pytest.mark.parametrize("how, text", [("checksum", BAD_CHECKSUM_TEXT),
+                                       ("file", MISSING_FILE_TEXT)])
+def test_the_command_line_says_why_a_map_cannot_be_installed(server, device_root, xdg,
+                                                              monkeypatch, capsys, how, text):
+    from openexpress import cli
+
+    answer_with(monkeypatch, body=json.dumps(_japan_answer(server, how)).encode())
+    monkeypatch.setattr(cli, "_url_salt", lambda: "salt")
+    before = device_files(device_root)
+    assert cli.main(["--path", str(device_root), "maps", "install", "Japan", "--apply"]) == 1
+    assert text in capsys.readouterr().err
+    assert device_files(device_root) == before
+
+
 def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):
     """A software update the server lists without an MD5: refused before it is
     downloaded, nothing written to the device."""
