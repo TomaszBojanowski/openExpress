@@ -104,6 +104,12 @@ NAVIGATION = [
     ("N1-login-back-on-S-Q3", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
      ShowDevice()),
     ("N1-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
+    # Q3: a change of account never moves the user. Today the session is dropped before the
+    # detection, so with two devices plugged in it gives the list: back to the start page.
+    ("N2-logout-on-D-Q3", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V),
+     ShowStart()),
+    ("N2-login-on-D-Q3", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V),
+     ShowStart()),
 ]
 
 
@@ -119,7 +125,8 @@ def test_the_ids_are_unique_and_the_marked_rows_are_known():
     marked = sorted(i for i in ids if i.endswith(("-Q1", "-Q2", "-Q3")))
     assert marked == ["N0-plug-other-on-R-Q1", "N0-plug-two-on-R-Q1", "N1-login-back-on-S-Q3",
                       "N1-plug-on-D-Q1", "N1-plug-on-R-Q1", "N1-unplug-open-on-R-Q1",
-                      "N2-plug-third-on-R-Q1", "U2-R-Q1"]
+                      "N2-login-on-D-Q3", "N2-logout-on-D-Q3", "N2-plug-third-on-R-Q1",
+                      "U2-R-Q1"]
 
 
 WATCH_LABEL = W + "/Internal Storage/"  # the open watch's storage, below its mount

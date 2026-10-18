@@ -4504,6 +4504,23 @@ def test_logging_out_in_the_device_view(start_window, monkeypatch):
     assert drawn_names(win)[-1] == ["Test watch"]
 
 
+def test_logging_out_in_the_device_view_with_two_devices_plugged_in(start_window, monkeypatch,
+                                                                   tmp_path, device_root):
+    """The test watch open in its view, the Edge plugged in too; logged out: the session is
+    dropped before the detection, which finds two devices and gives the list to choose
+    from, on the start page (live test 18.10.2026, 23:52:35, with a Varia)."""
+    win = start_window
+    with_account(monkeypatch, FakeAccountClient())
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    assert win.navigation.stack == ["start page", "device view"]
+    win.logout()
+    assert win._account is None and win.session is None
+    # behaviour to change in step 6 (Q3): the same device opened again, its view stays
+    assert win.navigation.stack == ["start page"]
+    assert [(name, on) for name, on, _how in drawn_tiles(win)][:2] == [
+        ("Test watch", True), ("Edge 1050", True)]
+
+
 def test_try_again_on_the_banner_in_the_device_view(start_window, monkeypatch):
     """N1, the device view shown, "Try Again" on the banner: a detection, the view stays."""
     from openexpress.gui.app import MainWindow
