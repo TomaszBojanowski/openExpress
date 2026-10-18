@@ -906,7 +906,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.progress_bar = Gtk.ProgressBar(show_text=False, hexpand=True)
         self.progress_label = Gtk.Label(xalign=0, ellipsize=3, hexpand=True)
-        spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+        # One indicator at a time: the spinner until the task tells its progress, then the bar.
+        self.busy_spinner = (Adw.Spinner() if hasattr(Adw, "Spinner")
+                             else Gtk.Spinner(spinning=True))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
         box.append(self.progress_label)
         box.append(self.progress_bar)
@@ -917,7 +919,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.unplug_label.add_css_class("warning")
         box.append(self.unplug_label)
         self.action_bar = Gtk.ActionBar(revealed=False)
-        self.action_bar.pack_start(spinner)
+        self.action_bar.pack_start(self.busy_spinner)
         self.action_bar.set_center_widget(box)
         content_view.add_bottom_bar(self.action_bar)
 
@@ -1141,13 +1143,18 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("ok", _("OK"))
         d.present(self)
 
-    def set_busy(self, busy: bool, text: str = "", device: bool = False) -> None:
+    def set_busy(self, busy: bool, text: str = "", device: bool = False,
+                 in_page: bool = False) -> None:
+        """A task starts or ends. Its indicator is the spinner until it tells its progress,
+        then the bar (`_show_bar`, one way); none for a page that shows it loads (`in_page`)."""
         self._stop_waiting()
         self.busy = busy
         self.action_bar.set_revealed(busy)
         self.progress_label.set_text(text)
         self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)
+        self.progress_bar.set_visible(False)
+        self.busy_spinner.set_visible(busy and not in_page)
         self._action_buttons = still_in_window(self._action_buttons)
         for b in self._action_buttons:
             b.set_sensitive(not busy)
@@ -1161,10 +1168,16 @@ class MainWindow(Adw.ApplicationWindow):
         if total:
             GLib.idle_add(self._show_fraction, min(1.0, done / total))
 
+    def _show_bar(self) -> None:
+        """The task tells its progress: the bar instead of the spinner, until the task ends."""
+        self.busy_spinner.set_visible(False)
+        self.progress_bar.set_visible(True)
+
     def _show_progress(self, text: str) -> bool:
         """A step moves the bar once. A wait for a server (`Waiting`), whose length nobody
         knows, keeps it moving until the next step, and after a while the label says so."""
         self._stop_waiting()
+        self._show_bar()
         self.progress_label.set_text(text)
         self.progress_bar.pulse()
         if isinstance(text, Waiting):
@@ -1183,6 +1196,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _show_fraction(self, fraction: float) -> bool:
         self._stop_waiting()
+        self._show_bar()
         self.progress_bar.set_fraction(fraction)
         return False
 
@@ -1191,15 +1205,17 @@ class MainWindow(Adw.ApplicationWindow):
             GLib.source_remove(self._waiting)
             self._waiting = 0
 
-    def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True) -> None:
+    def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True,
+                 in_page: bool = False) -> None:
         """Run `fn()` in a thread; the result is passed back to the GUI thread.
 
         `device` is False for a task that does not touch the connected device: the user is
-        then not told to keep it plugged in."""
+        then not told to keep it plugged in. `in_page`: the page shows that it loads, so the
+        bottom bar has no indicator of its own."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
-        self.set_busy(True, title, device=device and self.session is not None)
+        self.set_busy(True, title, device=device and self.session is not None, in_page=in_page)
         log.info("task: %s", fn.__qualname__.split(".<locals>")[0] if hasattr(fn, "__qualname__")
                  else "?")
 
@@ -1864,7 +1880,7 @@ class MainWindow(Adw.ApplicationWindow):
 
             self._retry_sources[key] = GLib.timeout_add(700, retry)
             return
-        self.run_task(title, work, done, failed, device=device)
+        self.run_task(title, work, done, failed, device=device, in_page=True)
 
     # --- overview ---------------------------------------------------------------------
 

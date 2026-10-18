@@ -75,7 +75,10 @@ class _Label:
 
 class _Bar:
     def __init__(self):
-        self.pulses, self.fraction = 0, None
+        self.pulses, self.fraction, self.visible = 0, None, True
+
+    def set_visible(self, visible):
+        self.visible = visible
 
     def pulse(self):  # the bar moves and no longer shows a fraction
         self.pulses += 1
@@ -86,11 +89,14 @@ class _Bar:
 
 
 class _Shown:
+    def __init__(self):
+        self.visible = True  # as GTK makes a widget
+
     def set_revealed(self, revealed):
         pass
 
     def set_visible(self, visible):
-        pass
+        self.visible = visible
 
     def set_sensitive(self, sensitive):
         pass
@@ -118,10 +124,11 @@ def window(monkeypatch):
     win = types.SimpleNamespace(
         session=None, busy=True, action_bar=_Shown(), progress_label=_Label(),
         progress_bar=_Bar(), unplug_label=_Shown(), banner=_Shown(), _action_buttons=[],
-        _update_actions=lambda: None, _waiting=0, timers=timers)
+        _update_actions=lambda: None, _waiting=0, timers=timers, busy_spinner=_Shown())
     for name, member in vars(MainWindow).items():
         if callable(member) and (name in ("progress", "fraction", "set_busy")
-                                 or "wait" in name or name.startswith("_show_")):
+                                 or "wait" in name or name.startswith("_show_")
+                                 or "indicator" in name):
             setattr(win, name, types.MethodType(member, win))
     return win
 
@@ -182,3 +189,56 @@ def test_after_20_s_of_waiting_the_label_says_it_can_take_a_while(window, monkey
     window.progress(Waiting("Checking for files from Garmin Connect…"))
     assert _tick(window) is True
     assert window.progress_label.text == "Checking for files from Garmin Connect…"
+
+
+# --- one busy indicator: the spinner until the bar has something to show ------------------------
+
+def _indicators(win):
+    return win.busy_spinner.visible, win.progress_bar.visible
+
+
+def test_a_task_starts_with_the_spinner_and_no_bar(window):
+    """A task that tells no progress (detection, login, …): the spinner alone, not an empty
+    bar that would look stuck."""
+    window.set_busy(True, "Detecting the device…")
+    assert _indicators(window) == (True, False)
+    assert window.progress_label.text == "Detecting the device…"
+
+
+@pytest.mark.parametrize("first", ["step", "fraction", "wait"])
+def test_the_first_progress_turns_the_spinner_into_the_bar_for_good(window, first):
+    from openexpress.progress import Waiting
+
+    window.set_busy(True, "Syncing…")
+    {"step": lambda: window.progress("Uploading activity (1.0 kB)"),
+     "fraction": lambda: window.fraction(1, 4),
+     "wait": lambda: window.progress(Waiting(TRUEUP_WAIT))}[first]()
+    assert _indicators(window) == (False, True)
+    window.progress("Downloading A course")  # one way only: never back to the spinner
+    window.fraction(2, 4)
+    window.progress(Waiting(TRUEUP_WAIT))
+    assert _indicators(window) == (False, True)
+    window.set_busy(False)
+    window.set_busy(True, "Installing apps…")  # the next task starts anew
+    assert _indicators(window) == (True, False)
+
+
+def test_a_page_that_loads_has_its_own_indicator_only(window):
+    """The page shows that it loads; the bottom bar keeps its words (and "do not unplug"),
+    without a spinner or a bar of its own."""
+    window.session = "device"
+    window.set_busy(True, "Checking maps…", device=True, in_page=True)
+    assert _indicators(window) == (False, False)
+    assert window.progress_label.text == "Checking maps…" and window.unplug_label.visible
+
+
+def test_loading_a_page_runs_its_task_as_one_with_its_own_indicator():
+    from openexpress.gui.app import MainWindow
+
+    asked = []
+    section = types.SimpleNamespace(show=lambda name: None)
+    win = types.SimpleNamespace(
+        sections={"maps": section}, session="device", _retry_sources={}, busy=False,
+        run_task=lambda *args, **kw: asked.append(kw))
+    MainWindow._load(win, "maps", "Checking maps…", lambda: None, lambda result: None)
+    assert asked == [{"device": True, "in_page": True}]

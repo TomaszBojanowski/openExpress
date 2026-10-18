@@ -867,7 +867,7 @@ def own_maps_window(key="maps"):
         if win.answer == "ok":
             on_ok()
 
-    def run_task(title, work, done=None, failed=None, device=True):
+    def run_task(title, work, done=None, failed=None, device=True, in_page=False):
         win.shown.append(("task", title))
         try:
             result = work()

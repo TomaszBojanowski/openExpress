@@ -297,7 +297,8 @@ def _fake_window(session):
 
     win = types.SimpleNamespace(session=session, busy=False, sections={"maps": _Sec()},
                                 _retry_sources={}, tasks=[])
-    win.run_task = lambda title, work, done, failed, device=True: win.tasks.append((done, failed))
+    win.run_task = (lambda title, work, done, failed, device=True, in_page=False:
+                    win.tasks.append((done, failed)))
     win._load = types.MethodType(MainWindow._load, win)
     return win
 
@@ -402,7 +403,7 @@ def _busy_window(session):
         session=session, busy=False, action_bar=_Widget(), progress_label=_Widget(),
         progress_bar=_Widget(), unplug_label=_Widget(), banner=_Widget(), _action_buttons=[],
         _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[],
-        _waiting=0)
+        _waiting=0, busy_spinner=_Widget())
     win.toast = win.toasts.append
     win._stop_waiting = types.MethodType(MainWindow._stop_waiting, win)
     win.set_busy = types.MethodType(MainWindow.set_busy, win)
@@ -1280,7 +1281,7 @@ def page_window(key):
     toplevel = Gtk.Window()
     toplevel.set_child(section.stack)
 
-    def run_task(title, work, done, failed, device=True):
+    def run_task(title, work, done, failed, device=True, in_page=False):
         win.set_busy(True)
         result = work()
         win.set_busy(False)
