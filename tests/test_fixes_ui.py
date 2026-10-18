@@ -933,6 +933,45 @@ def test_picture_in_the_cache_needs_no_request(pictures):
     assert log_file.read_text().count("device picture: from the cache") == 1
 
 
+def test_a_cache_file_that_is_no_picture_is_not_kept(pictures):
+    """A file in the cache that is not a picture: nothing kept for that part number (no None
+    in the window's store), and the sources on the network are asked."""
+    xdg, _log_file, monkeypatch = pictures
+    folder = xdg / "cache" / "openexpress" / "images"
+    folder.mkdir(parents=True)
+    (folder / "device-006-B0000-00.png").write_bytes(b"not a picture")
+    win = _picture_window(PictureClient(unit_info=_unit_info()), monkeypatch=monkeypatch)
+    win.show()
+    assert "006-B0000-00" not in getattr(win, "_device_textures", {})
+    assert win.shown == [] and len(win.jobs) == 1
+
+
+@pytest.mark.needs_display
+def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictures):
+    """One store: the picture the device view read from the cache is there at once for a
+    tile of that part number built later, with nothing read again in the background."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui import app
+    from openexpress.gui import pictures as store
+    from openexpress.gui.app import Gdk, GLib
+    from openexpress.gui.start import StartPage, tile_image
+
+    xdg, _log_file, monkeypatch = pictures
+    folder = xdg / "cache" / "openexpress" / "images"
+    folder.mkdir(parents=True)
+    (folder / "device-006-B0000-00.png").write_bytes(PNG)
+    texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
+                                    12)
+    monkeypatch.setattr(app, "load_texture", lambda path: texture)
+    win = _picture_window(PictureClient(unit_info=_unit_info()))
+    win.show()
+    assert win.shown == [texture] and win.jobs == []
+    start = StartPage(picture_of=lambda part: store.known(win, part))
+    start.show([(Tile("Test watch", "006-B0000-00", "1.00", "mtp", True, False, False, None,
+                      "006-B0000-00", None, None), "x")], False)
+    assert tile_image(start.tiles()[0]).get_paintable() is texture
+
+
 def test_account_is_the_first_source_and_unit_info_the_fallback(pictures, monkeypatch):
     xdg, log_file, monkeypatch = pictures
     from openexpress.gui import app

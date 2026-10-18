@@ -60,7 +60,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_state,
     usb_still_there,
 )
-from openexpress.gui import start  # noqa: E402
+from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
@@ -411,20 +411,29 @@ def connected_uris(summaries) -> frozenset:
     return frozenset(c.found.uri.rstrip("/") for c in summaries)
 
 
+def cached_texture(part: str):
+    """The picture of a part number in the cache, read now; None: no file, or not a
+    picture. The one reader of the cache for every view."""
+    path = device_picture_path(part)
+    return load_texture(path) if path.exists() else None
+
+
 def tile_picture(part: str, url: str | None):
     """(texture, where it came from) or (None, why not): the file in the cache by part
     number, else the account's address downloaded into it."""
     path = device_picture_path(part)
-    source = "the cache"
-    if not path.exists():
-        if not url:
-            return None, "not in the cache"
-        path, why = download_picture(account_client().http, url, path.name)
-        if path is None:
-            return None, f"download refused: {why}"
-        source = "the account"
+    if path.exists():
+        texture = cached_texture(part)
+        return (texture, "the cache") if texture is not None else (
+            None, "the file is not a picture")
+    if not url:
+        return None, "not in the cache"
+    path, why = download_picture(account_client().http, url, path.name)
+    if path is None:
+        return None, f"download refused: {why}"
     texture = load_texture(path)
-    return (texture, source) if texture is not None else (None, "the file is not a picture")
+    return (texture, "the account") if texture is not None else (
+        None, "the file is not a picture")
 
 
 def open_device_kind(s, account) -> str | None:
@@ -940,7 +949,8 @@ class MainWindow(Adw.ApplicationWindow):
                              action_name="win.refresh")
         start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
                                     tooltip_text=_("Main Menu"), primary=True)
-        self.start = StartPage(self._open_tile, header_start=[refresh], header_end=[start_menu])
+        self.start = StartPage(self._open_tile, header_start=[refresh], header_end=[start_menu],
+                               picture_of=lambda part: pictures.known(self, part))
         self.device_view = Adw.NavigationPage(title="openExpress", tag="device",
                                               child=self.split)
         self.navigation = Adw.NavigationView()
@@ -2083,19 +2093,19 @@ class MainWindow(Adw.ApplicationWindow):
         self.device_image.set_visible(False)
 
     def _show_device_picture(self) -> None:
-        """Shows the watch picture at once from memory or disk; downloads it only once."""
+        """Shows the device's picture at once from memory or the cache (the window's one
+        store and reader, as the tiles have them); else asks for it in the background, the
+        account first, then unit-info, and keeps it for every view."""
         s = self.session
         part = s.device.part_number
-        cache = getattr(self, "_device_textures", None)
-        if cache is None:
-            cache = self._device_textures = {}
-        if part not in cache:
-            path = device_picture_path(part)
-            if path.exists():
-                cache[part] = load_texture(path)
+        texture = pictures.known(self, part)
+        if texture is None:
+            texture = cached_texture(part)
+            if texture is not None:
+                pictures.keep(self, part, texture)
                 log.info("device picture: from the cache")
-        if cache.get(part) is not None:
-            self._set_device_texture(cache[part])
+        if texture is not None:
+            self._set_device_texture(texture)
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
@@ -2134,7 +2144,7 @@ class MainWindow(Adw.ApplicationWindow):
                     self.device_image.set_from_icon_name(device_view_icon(self, s))
                 return
             log.info("device picture: from %s", source)
-            cache[part] = texture
+            pictures.keep(self, part, texture)
             start = getattr(self, "start", None)
             if start is not None:
                 start.set_picture(part, texture)  # its tile on the start page as well

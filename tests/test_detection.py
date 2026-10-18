@@ -4700,10 +4700,12 @@ def test_the_picture_goes_into_the_tile_that_is_there():
 
     texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
                                     12)
-    start = StartPage()
+    textures = {}  # the window's store, which the page reads
+    start = StartPage(picture_of=textures.get)
     start.show([(tile("fēnix 8", "006-B4532-00"), "x"), (tile("Edge 1050", "006-B4440-00"), "y")],
                False)
     before = start.tiles()
+    textures["006-B4532-00"] = texture  # kept by the window, then given to the page
     start.set_picture("006-B4532-00", texture)
     assert start.tiles() == before
     assert tile_image(before[0]).get_paintable() is texture
@@ -5145,12 +5147,14 @@ def test_a_row_gets_its_picture_like_a_tile():
     six.show(entries[:6], False)  # six: tiles, the empty list hidden
     assert six.grid.get_visible() and not six.list.get_visible()
     assert six.list.get_first_child() is None
-    start = StartPage()
+    textures = {}  # the window's store, which the page reads
+    start = StartPage(picture_of=textures.get)
     start.show(entries, False)
     rows = start.tiles()
     assert len(rows) == 7 and all(row.get_parent() is start.list for row in rows)
     texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
                                     12)
+    textures["006-B0002-00"] = texture  # kept by the window, then given to the page
     start.set_picture("006-B0002-00", texture)
     assert start.tiles() == rows
     assert tile_image(rows[2]).get_paintable() is texture

@@ -1,6 +1,9 @@
-"""Pictures of device models for the tiles of the start page and for the pages of devices that
-are not connected, the same as the device view's: by part number (never by unit ID), from
-memory, from the cache, or from the account's address of the picture."""
+"""Pictures of device models, by part number (never by unit ID), for every view: the tiles of
+the start page, the pages of devices that are not connected and the device view. One store
+in the window (`win._device_textures`, never None in it); the tiles and those pages read the
+cache or the account's address of the picture in the background (with_device_picture), the
+device view reads the cache at once and asks its own sources (the account by unit ID,
+unit-info) itself - all of them keep what they found here."""
 
 from __future__ import annotations
 
@@ -22,6 +25,25 @@ def device_picture_path(part_number: str) -> Path:
     return paths.cache_dir() / "images" / f"device-{safe}.png"
 
 
+def store(win) -> dict:
+    """The window's pictures, by part number."""
+    textures = getattr(win, "_device_textures", None)
+    if textures is None:
+        textures = win._device_textures = {}
+    return textures
+
+
+def known(win, part: str):
+    """The picture of this part number in memory, or None."""
+    return store(win).get(part)
+
+
+def keep(win, part: str, texture) -> None:
+    """Keep a picture found (never None: a part number without one is simply not there)."""
+    if texture is not None:
+        store(win)[part] = texture
+
+
 def with_device_picture(win, part: str, url: str | None, use: Use, read) -> None:
     """The picture of a model for `use`: in memory (`win._device_textures`) at once; else the
     file in the cache, or the account's address (a device on the account), read with
@@ -29,9 +51,7 @@ def with_device_picture(win, part: str, url: str | None, use: Use, read) -> None
     memory and given to everyone who asked for it meanwhile. Nothing else is asked (no
     unit-info for a device not open). Each part number is read once; none, or a failure:
     `use` is not called and the icon stays."""
-    textures = getattr(win, "_device_textures", None)
-    if textures is None:
-        textures = win._device_textures = {}
+    textures = store(win)
     asked = getattr(win, "_pictures_asked", None)
     if asked is None:
         asked = win._pictures_asked = set()
@@ -56,6 +76,6 @@ def _read(win, part: str, result) -> None:
     if texture is None:
         log.info("pictures: no picture of %s (%s)", part, source)
         return
-    win._device_textures[part] = texture
+    keep(win, part, texture)
     for use in users:
         use(texture, source)

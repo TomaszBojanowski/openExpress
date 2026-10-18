@@ -121,7 +121,7 @@ class StartPage:
     on the Garmin account. `on_open(key)` is called with the place the tile clicked had in
     the list given to show(), whatever section it is in."""
 
-    def __init__(self, on_open=None, header_start=(), header_end=()):
+    def __init__(self, on_open=None, header_start=(), header_end=(), picture_of=None):
         self.header = Adw.HeaderBar()
         for widget in header_start:
             self.header.pack_start(widget)
@@ -146,9 +146,9 @@ class StartPage:
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
         self._notice = None
-        # The pictures known, by part number (never by unit ID): put into the tiles there
-        # and into those built later.
-        self._pictures: dict = {}
+        # The picture known of a part number (never by unit ID), read from the window's
+        # store when a tile is built; set_picture puts one into the tiles already there.
+        self._picture_of = picture_of or (lambda _part: None)
         self.set_empty("", "", False)
         box.append(self.notice_group)
 
@@ -211,7 +211,7 @@ class StartPage:
                 section.grid.remove_all()
                 section.list.remove_all()
                 for key, tile, how in part:
-                    picture = self._pictures.get(tile.image_part_number)
+                    picture = self._picture_of(tile.image_part_number)
                     item = (row_widget(tile, how, picture) if mode == LIST
                             else tile_widget(tile, how, picture))
                     item.key = key
@@ -228,8 +228,8 @@ class StartPage:
 
     def set_picture(self, part_number: str, texture) -> None:
         """The picture of the devices of this part number, put into their tiles that are
-        there (the same widgets: nothing is built again) and kept for those built later."""
-        self._pictures[part_number] = texture
+        there (the same widgets: nothing is built again); those built later read it from
+        the window's store (picture_of)."""
         for section in self._sections.values():
             for item in section.items():
                 if getattr(item, "part_number", None) == part_number:
