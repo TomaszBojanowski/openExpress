@@ -1335,6 +1335,25 @@ def test_probe_of_a_drive_without_a_readable_device_file(drives, content, reason
     assert not summary.ok and summary.unit_id is None
 
 
+def test_probe_of_an_mtp_device_that_cannot_be_opened_logs_why(monkeypatch, caplog):
+    """An MTP mount that gvfs still reports but that cannot be opened (e.g. unplugged while
+    the list is read): an entry without details, and the kind of the error with its message
+    in the log at INFO, never the address (it carries the serial number)."""
+    def refuse(uri, usb):
+        raise RuntimeError(f"Could not open {NAMED}Internal: Not found")
+
+    monkeypatch.setattr(gio_storage, "_mtp_storage", refuse)
+    found = gio_storage.FoundDevice(NAMED, "Edge", True, usb=gio_storage.GarminUsb(None, "uri"))
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        summary = gio_storage.probe(found)
+    assert summary_of(summary) == ("mtp", "", "", "", "unreadable")
+    lines = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert ("device: probe could not open it (RuntimeError: Could not open "
+            "mtp://<device>/Internal: Not found)") in lines
+    assert "device: probed mtp (USB 091e:unknown): unreadable" in lines
+    assert "0000abcdef34" not in caplog.text and "Garmin_Edge" not in caplog.text
+
+
 def test_probe_does_not_mount_an_mtp_device(watch_and_drives, monkeypatch):
     """K3 (P3): an MTP device whose volume is not mounted gets an entry without details;
     nothing is mounted or read."""

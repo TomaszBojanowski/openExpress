@@ -996,7 +996,12 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
     except NotThereYet:
         return DeviceSummary(found, reason=NO_DEVICE_FILE)
     except Exception as e:  # noqa: BLE001 - a summary, never an error; the reason is kept
-        log.debug("device: probe could not open it (%s)", type(e).__name__)
+        from openexpress import applog
+
+        # Its kind and message (an MTP address in it carries the serial number: filtered
+        # here, before the log's own filter); e.g. a device unplugged while gvfs still has it.
+        log.info("device: probe could not open it (%s: %s)", type(e).__name__,
+                 applog.redact(str(e)))
         return DeviceSummary(found, reason=UNREADABLE)
     try:
         device = parse(storage.read("GARMIN/GarminDevice.xml"))
