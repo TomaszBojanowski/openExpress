@@ -152,10 +152,9 @@ PLANS = [
     ("P-own-mount-moved", Cause.PLUGGED, (W + "/",), WATCH_LABEL, (W,), True,
      Detect(keep_open=True)),
     # Q2: mounts of devices already listed bring no detection, whether one is open or not.
-    ("P-start-mounts-listed-Q2", Cause.PLUGGED, (W + "/", E + "/"), None, (W, E), False,
-     Detect(keep_open=True)),
-    ("P-listed-mount-on-the-list-Q2", Cause.PLUGGED, (E + "/",), None, (W, E), False,
-     Detect(keep_open=True)),
+    ("P-start-mounts-listed", Cause.PLUGGED, (W + "/", E + "/"), None, (W, E), False,
+     Nothing()),
+    ("P-listed-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False, Nothing()),
     # After 1c55104: another device unplugged, its two mounts removed: the list read once.
     ("P-read-the-list", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, READ_THE_LIST), WATCH_LABEL,
      (W, E), False, ReadList()),

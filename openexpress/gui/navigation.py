@@ -145,16 +145,14 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     rest = [r for r in reasons if r != READ_THE_LIST]
     if open_label is not None and read_the_list and not rest:
         return ReadList()
-    if open_label is not None and rest:
-        # Mounts of devices already listed bring nothing new while one is open.
-        known = [r for r in rest if r is not None and not on_open(r)
-                 and r.rstrip("/") in listed]
-        rest = [r for r in rest if r not in known]
-        ignored = len(known)
-        if known and not rest:
-            return ReadList(ignored=ignored) if read_the_list else Nothing(ignored=ignored)
-    else:
-        ignored = 0
+    # Mounts of devices already listed bring nothing new (Q2), whether one is open or not:
+    # gvfs reports them as the window starts, and twice for one device.
+    known = [r for r in rest if r is not None and not on_open(r) and r.rstrip("/") in listed]
+    rest = [r for r in rest if r not in known]
+    ignored = len(known)
+    # (The list to read again with no device open any more: the open one went away too.)
+    if known and not rest and not (read_the_list and open_label is None):
+        return ReadList(ignored=ignored) if read_the_list else Nothing(ignored=ignored)
     if open_label is None or not rest or any(r is None or not on_open(r) for r in rest):
         # Another device mounted or plugged in: with one open, the list to choose from (D7).
         return Detect(keep_open=open_label is None, ignored=ignored)

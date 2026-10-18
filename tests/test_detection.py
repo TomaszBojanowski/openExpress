@@ -4418,19 +4418,34 @@ def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, 
     assert win.session is None and win.navigation.stack == ["start page"]
 
 
-def test_a_tile_clicked_during_a_detection(start_window, monkeypatch, tmp_path, device_root):
-    """A connected tile clicked while a task (e.g. a detection) runs: the window says so and
-    opens nothing."""
+def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
+                                                                tmp_path, device_root):
+    """Two devices listed at the start; gvfs reports their mounts, which bring no second
+    detection (Q2): a tile clicked then opens its device at once, with no "Another operation
+    is in progress" (the detection that used to run then kept the window busy)."""
     win = start_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     win.refresh_device()
+    running = []  # a detection: in its thread until the test says so
+    real = win.run_task
+
+    def run_task(title, fn, done, failed=None, device=True, in_page=False):
+        if title == "Detecting the device…":
+            win.busy = True
+            running.append(done)
+            return None
+        return real(title, fn, done, failed)
+
+    win.run_task = run_task
+    mounts_reported_at_start(win)
+    win.timers.fire()
     opening = count_opening(monkeypatch)
-    win.busy = True  # a detection is running
     win._open_tile(drawn_names(win)[-1].index("Edge 1050"))
-    # behaviour to change in step 6 (Q2): no second detection after the start, so no toast
-    assert win.errors == ["Another operation is in progress"]
-    assert opening == [] and win.session is None and win.navigation.stack == ["start page"]
+    assert running == [] and win.errors == []
+    assert opening == ["open_session", "check_session"]
+    assert win.session.device.description == "Edge 1050"
+    assert win.navigation.stack == ["start page", "device view"]
 
 
 def login_finished(win, monkeypatch):
@@ -4537,20 +4552,21 @@ def test_try_again_on_the_banner_in_the_device_view(start_window, monkeypatch):
     assert win.navigation.stack == ["start page", "device view"]
 
 
-def test_the_mounts_reported_at_the_start_detect_again_on_the_start_page(
-        start_window, monkeypatch, tmp_path, device_root):
+def test_the_mounts_reported_at_the_start_bring_no_detection_on_the_start_page(
+        start_window, monkeypatch, tmp_path, device_root, caplog):
     """N2 at the start, the start page shown: gvfs reports the mounts of both devices
-    listed; one more detection runs (a task: the window is busy meanwhile), the start page
-    stays with the same tiles."""
+    listed; they bring no more detection (Q2), the start page stays with the same tiles."""
     win = start_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     win.refresh_device()
     ran = detections(win)
     mounts_reported_at_start(win)
-    win.timers.fire()
-    # behaviour to change in step 6 (Q2): mounts of devices listed bring no detection
-    assert ran == ["Detecting the device…"]
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        win.timers.fire()
+    assert ran == []
+    assert "device detection: mount of a device already listed, nothing to do" in caplog.text
+    assert "mtp://" not in caplog.text  # no address in the log
     assert win.session is None and win.navigation.stack == ["start page"]
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
 

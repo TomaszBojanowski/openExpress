@@ -617,14 +617,16 @@ def detection_due(win) -> None:
                           else frozenset(),
                           open_moved=lambda: (usb is not None and usb.bus is not None
                                               and not usb_still_there(usb)))
+    # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
+    # window started, before one was chosen or not) bring nothing new: no detection, and
+    # they never close the device chosen.
+    if isinstance(what, Nothing):
+        if what.ignored:
+            log.info("device detection: mount of a device already listed, nothing to do")
+        return  # nothing new: the open device stays as it is
     if what.ignored:
-        # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
-        # window started, before one was chosen) bring nothing new: they never close the
-        # device chosen.
         log.info("device detection: %d mount(s) of devices already on the list, ignored",
                  what.ignored)
-    if isinstance(what, Nothing):
-        return  # nothing new: the open device stays as it is
     if isinstance(what, ReadList):
         win._reread_connected()  # another device went away: the open one stays
         return
