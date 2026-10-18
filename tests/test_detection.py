@@ -4187,6 +4187,21 @@ def test_the_remembered_section_only_with_remembered_devices():
 
 
 @pytest.mark.needs_display
+def test_the_tile_grids_are_centred():
+    """Every section's grid is centred: with one column the free room is on both sides, not
+    only on the right (the headings stay on the left)."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.start import StartPage
+
+    start = StartPage()
+    grids = (start.grid, start.remembered_grid, start.account_grid)
+    assert [g.get_halign() for g in grids] == [Gtk.Align.CENTER] * 3
+    titles = (start.connected_title, start.remembered_title, start.account_title)
+    assert all(title.get_xalign() == 0 for title in titles)
+
+
+@pytest.mark.needs_display
 # PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 def test_tiles_have_one_width_in_every_section():

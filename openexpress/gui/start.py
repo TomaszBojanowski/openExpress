@@ -63,11 +63,12 @@ def load_css(display) -> None:
 
 
 def _tile_grid() -> Gtk.FlowBox:
-    # On the left: a grid filling the line would widen its tiles to share it.
+    # Centred, not filling the line: a grid that fills it would widen its tiles to share
+    # it; with one column the free room is on both sides.
     return Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
                        activate_on_single_click=True, min_children_per_line=1,
                        max_children_per_line=4, column_spacing=12, row_spacing=12,
-                       valign=Gtk.Align.START, halign=Gtk.Align.START)
+                       valign=Gtk.Align.START, halign=Gtk.Align.CENTER)
 
 
 def _device_list() -> Gtk.ListBox:
