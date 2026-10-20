@@ -3273,7 +3273,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     clock.now = 10
     poll()
     assert shown[-1] == ("The device is starting…",
-                         "This takes a moment after the cable is plugged in.", True)
+                         "This takes a moment after the cable is plugged in", True)
     assert refreshed == []
     assert updates[-1] == win._usb_title == "The device is starting…" and len(updates) == 2
     clock.now = 29

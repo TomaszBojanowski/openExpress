@@ -1511,7 +1511,7 @@ class MainWindow(Adw.ApplicationWindow):
             return _("Mass storage mode"), text, False
         if waited_s < WAIT_FOR_DEVICE_S:
             return (_("The device is starting…"),
-                    _("This takes a moment after the cable is plugged in."), True)
+                    _("This takes a moment after the cable is plugged in"), True)
         return _("The device is not ready"), not_ready_text(state), False
 
     def _poll_usb(self, clock=time.monotonic) -> bool:
@@ -2329,7 +2329,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.update_row.set_subtitle(_("Update ready: disconnect the device to install it"))
             self.software_label.set_label(version + " · " + _("update ready to install"))
         elif self.update_state == "current":
-            self.update_row.set_subtitle(_("Software is up to date."))
+            # TRANSLATORS: subtitle of the row "Device software", without a full stop
+            self.update_row.set_subtitle(_("Software is up to date"))
             self.software_label.set_label(version)
         elif self.update_state == "failed":
             self.update_row.set_subtitle(_("Could not check for updates"))
@@ -2387,9 +2388,10 @@ class MainWindow(Adw.ApplicationWindow):
             text = ngettext("{count} update available", "{count} updates available",
                             self.map_update_count).format(count=self.map_update_count)
         elif self.map_state == "current":
-            text = _("All installed maps are up to date.")
+            # TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
+            text = _("All installed maps are up to date")
         elif self.map_state == "empty":
-            text = _("No maps are installed.")
+            text = _("No maps are installed")
         elif self.map_state == "none":
             text = mp.no_maps_message()
         elif self.map_state == "failed":
@@ -3737,7 +3739,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _order_blocked(state) -> str:
         """Why the order cannot be changed now; empty when it can."""
         if state.unreadable:
-            return _("The app list on the device has entries that cannot be read.")
+            return _("The app list on the device has entries that cannot be read")
         if state.waiting:
             return _("The device has not applied earlier changes yet. Unplug it, wait until "
                      "it is ready and try again.")

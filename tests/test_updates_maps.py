@@ -743,8 +743,8 @@ def _overview_window(answers, device_root=None):
     ((1, 2, 3), "available", "1 update available"),
     ((2, 0, 0), "available", "2 updates available"),
     ((5, 1, 0), "available", "5 updates available"),
-    ((0, 2, 3), "current", "All installed maps are up to date."),
-    ((0, 0, 3), "empty", "No maps are installed."),
+    ((0, 2, 3), "current", "All installed maps are up to date"),
+    ((0, 0, 3), "empty", "No maps are installed"),
 ])
 def test_maps_row_says_what_the_check_found(counts, state, text, server):
     win, asked, _later = _overview_window([map_answer(server, *counts)])
@@ -804,7 +804,7 @@ def test_maps_page_updates_the_row_of_the_device_page(server, device_root):
     page._set_map_state = win._set_map_state
     MainWindow.show_maps(page, maps.read_maps(map_answer(server, 0, 2)))
     assert (win.map_state, win.map_row.subtitle) == (
-        "current", "All installed maps are up to date.")
+        "current", "All installed maps are up to date")
     assert asked == [b"xml"]  # the row itself asked only once
 
 
@@ -1092,7 +1092,7 @@ def test_check_again_updates_the_row_of_the_device_page(server, device_root):
     win.load_section("maps")
     assert win.map_row.subtitle == "1 update available"
     check_again_buttons(win)[0].emit("clicked")
-    assert win.map_row.subtitle == "All installed maps are up to date." and len(asked) == 2
+    assert win.map_row.subtitle == "All installed maps are up to date" and len(asked) == 2
 
 
 # --- progress while an update file is copied ----------------------------------------------------
