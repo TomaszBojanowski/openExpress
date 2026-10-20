@@ -4089,6 +4089,41 @@ def test_the_start_page_lists_remembered_devices_after_the_connected(start_windo
                    for u in (TEST_WATCH, VARIA, VENU, 3000000002))
 
 
+def test_a_remembered_tile_says_when_it_was_seen_in_relative_words():
+    """T9 step 1: a remembered device seen two hours ago: "Last seen 2 h ago" under its name,
+    as the last sync says when it was (i18n.relative_time), not the full date."""
+    from datetime import datetime
+
+    from openexpress.gui.app import remembered_subtitle
+    from openexpress.known_devices import KnownDevice
+
+    now = datetime(2026, 10, 20, 23, 22)
+    seen = datetime(2026, 10, 20, 21, 22).timestamp()
+    venu = KnownDevice(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", seen, seen)
+    assert remembered_subtitle(venu, now) == "Software 19.05 · Last seen 2 h ago"
+
+
+@pytest.mark.needs_display
+def test_a_remembered_tile_tells_the_full_date_in_its_tooltip():
+    """T9 step 1: the tooltip of a remembered device's tile tells when it was last seen, in
+    full; a connected one has none."""
+    from datetime import datetime
+
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    seen = datetime(2026, 10, 20, 21, 22).timestamp()
+    start = StartPage()
+    start.show([(Tile("fēnix 8", "006-B4532-00", "23.39", "mtp", True, False, False, None,
+                      "006-B4532-00", None, None), "Over USB (MTP)"),
+                (Tile("Venu 2", "006-B3703-00", "19.05", "mtp", False, False, False, seen,
+                      "006-B3703-00", None, None), "Software 19.05 · Last seen 2 h ago")],
+               False)
+    connected, remembered = start.tiles()
+    assert remembered.get_tooltip_text() == "Last seen 2026-10-20 21:22"
+    assert connected.get_tooltip_text() is None
+
+
 def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
     """T3: a remembered device that is not connected opens its read-only view: its name,
     version, when it was seen and its last sync, as remembered. Nothing is opened, nothing

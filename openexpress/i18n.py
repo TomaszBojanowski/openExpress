@@ -127,10 +127,16 @@ def relative_time(moment: datetime, now: datetime) -> str:
     if moment.date() == now.date() - timedelta(days=1) and seconds < 86400:
         # TRANSLATORS: a moment of yesterday, e.g. "yesterday, 23:41"
         return _("yesterday, {time}").format(time=hour)
+    return full_time(moment)
+
+
+def full_time(moment: datetime) -> str:
+    """A moment in full (local): the date and the hour in the format of the language."""
     # TRANSLATORS: strftime format of a date in the popover of the server state button
     date = moment.strftime(_("%Y-%m-%d"))
     # TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
-    return pgettext("date and hour", "{date} {time}").format(date=date, time=hour)
+    return pgettext("date and hour", "{date} {time}").format(date=date,
+                                                             time=moment.strftime("%H:%M"))
 
 
 def chosen_language() -> str | None:

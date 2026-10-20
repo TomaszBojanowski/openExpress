@@ -7,6 +7,8 @@ it): it never holds a device, an address or a unit ID."""
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -15,7 +17,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
-from openexpress.i18n import _, pgettext  # noqa: E402
+from openexpress.i18n import _, full_time, pgettext  # noqa: E402
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
@@ -455,6 +457,14 @@ def _name(tile) -> str:
     return tile.description or _("Garmin device")
 
 
+def seen_tooltip(tile) -> str | None:
+    """The tooltip of a device not connected that this computer has seen: when, in full
+    (under its name it is told against now)."""
+    if tile.connected or not tile.last_seen:
+        return None
+    return _("Last seen {when}").format(when=full_time(datetime.fromtimestamp(tile.last_seen)))
+
+
 def _image(tile, picture, size: int) -> Gtk.Image:
     """The image of an item, the same for a tile and a row: the picture of the device if it
     is known, else the icon of its kind (the picture is put in its place later, in the
@@ -481,6 +491,7 @@ def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
     image = _image(tile, picture, ROW_ICON_SIZE)
     row.add_prefix(image)
     row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+    row.set_tooltip_text(seen_tooltip(tile))
     _mark(row, tile, image, picture)
     return row
 
@@ -506,7 +517,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         label.add_css_class("dim-label")
         label.add_css_class("caption")
         box.append(label)
-    child = Gtk.FlowBoxChild(child=box)
+    child = Gtk.FlowBoxChild(child=box, tooltip_text=seen_tooltip(tile))
     _mark(child, tile, image, picture)
     child.add_css_class("card")
     child.add_css_class("oe-tile")

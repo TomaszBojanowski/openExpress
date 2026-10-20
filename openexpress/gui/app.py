@@ -524,10 +524,12 @@ def tile_subtitle(source) -> str:
     return choice_subtitle(source)
 
 
-def remembered_subtitle(known) -> str:
-    """A remembered device that is not connected: its version and when it was last seen."""
+def remembered_subtitle(known, now: datetime | None = None) -> str:
+    """A remembered device that is not connected: its version and when it was last seen,
+    told against now as the last sync is ("Last seen 2 h ago"; in full in its tooltip)."""
+    when = i18n.relative_time(datetime.fromtimestamp(known.last_seen), now or datetime.now())
     return " · ".join((_("Software {version}").format(version=known.software_version),
-                       _("Last seen {when}").format(when=_seen_at(known.last_seen))))
+                       _("Last seen {when}").format(when=when)))
 
 
 def show_not_for_mass_storage(sec) -> None:
