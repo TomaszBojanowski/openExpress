@@ -19,18 +19,17 @@ def _report(uploaded=0, checked=0, server=0, rejected=0, failed=0):
 
 
 def test_the_row_leaves_out_what_is_zero():
-    assert service.describe_counts({"uploaded": 0}) == "0 new files uploaded"
-    assert service.describe_counts({"uploaded": 1, "downloaded": 0}) == "1 new file uploaded"
+    assert service.describe_counts({"uploaded": 0}) == "no new files"
+    assert service.describe_counts({"uploaded": 1, "downloaded": 0}) == "1 file, 1 uploaded"
     assert service.describe_counts(
         {"uploaded": 7, "skipped_known": 3, "rejected": 1, "downloaded": 2,
          "errors": ["upload: HTTP 500", "download: HTTP 404"]}) == (
-        "7 new files uploaded · 3 already in Connect · 1 rejected by Garmin · 2 received · "
-        "2 errors")  # the errors of uploads and downloads together
+        "11 files, 7 uploaded · 2 received")  # rejected and errors: warnings in the details
 
 
 @pytest.mark.parametrize(("count", "words"), [
-    (1, "wysłano 1 nowy plik"), (2, "wysłano 2 nowe pliki"), (5, "wysłano 5 nowych plików"),
-    (22, "wysłano 22 nowe pliki")])
+    (1, "5 plików, 1 wysłany"), (2, "6 plików, 2 wysłane"), (5, "9 plików, 5 wysłanych"),
+    (22, "26 plików, 22 wysłane")])
 def test_the_row_in_polish(count, words):
     i18n.setup("pl")
     try:
@@ -38,22 +37,59 @@ def test_the_row_in_polish(count, words):
                                        "downloaded": 2, "errors": ["x"]})
     finally:
         i18n.setup("en")
-    assert row == f"{words} · 3 już w Connect · 1 odrzucone przez Garmina · 2 odebrane · 1 błąd"
+    assert row == f"{words} · 2 odebrane"
+
+
+def test_the_row_of_a_sync_in_polish():
+    """The sync of 18.10: 8 files from the device, 6 uploaded, 2 already in Garmin Connect -
+    when, told against now, then the numbers; the details name the files and the 2."""
+    from datetime import datetime
+
+    from openexpress.gui.app import last_sync_words
+
+    data = {"time": datetime(2026, 10, 18, 21, 14).timestamp(), "uploaded": 6,
+            "skipped_known": 2, "downloaded": 0, "rejected": 0, "errors": [], "lines": [
+                {"kind": "new_files", "types": {"FIT_TYPE_4": 1, "FIT_TYPE_32": 5,
+                                                "FIT_TYPE_44": 1, "FIT_TYPE_58": 1}},
+                {"kind": "uploads", "uploaded": 6, "known": 2, "known_checked": 1,
+                 "known_server": 1, "rejected": 0, "errors": 0}]}
+    i18n.setup("pl")
+    try:
+        row = last_sync_words(data, datetime(2026, 10, 20, 10, 0))
+        details = service.describe_lines(data["lines"])
+    finally:
+        i18n.setup("en")
+    assert row == "18.10.2026 o 21:14 · 8 plików, 6 wysłanych"
+    assert details == [("Pliki z urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
+                        "urządzenia"), "2 pliki były już w Garmin Connect"]
+
+
+@pytest.mark.parametrize(("received", "words"), [(1, "1 odebrany"), (2, "2 odebrane"),
+                                                 (5, "5 odebranych")])
+def test_the_files_from_connect_in_polish(received, words):
+    i18n.setup("pl")
+    try:
+        row = service.describe_counts({"uploaded": 1, "downloaded": received})
+    finally:
+        i18n.setup("en")
+    assert row == f"1 plik, 1 wysłany · {words}"
 
 
 # --- the details -----------------------------------------------------------------------------
 
 
-def test_the_details_say_how_files_already_in_connect_were_recognised():
+def test_the_details_leave_how_files_were_recognised_to_the_log():
+    """The step keeps how the files already in Connect were recognised; the words say how
+    many there were, and what went wrong only when anything did (the log of the sync tells
+    the rest)."""
     step = service.uploads_step(_report(uploaded=7, checked=2, server=1, failed=1))
     assert step == {"kind": "uploads", "uploaded": 7, "known": 3, "known_checked": 2,
                     "known_server": 1, "rejected": 0, "errors": 1}
     assert service.describe_lines([step]) == [
-        ("New files uploaded: 7 · already in Connect: 3 (2 recognised before sending, 1 by "
-         "Garmin) · rejected by Garmin: 0 · upload errors: 1")]
-    # Nothing already in Connect: no breakdown of nothing.
+        "3 files were already in Garmin Connect", "1 file could not be uploaded"]
+    # Nothing already in Connect: nothing said of it.
     assert service.describe_lines([service.uploads_step(_report(uploaded=2, rejected=1))]) == [
-        "New files uploaded: 2 · already in Connect: 0 · rejected by Garmin: 1 · upload errors: 0"]
+        "1 file was rejected by Garmin"]
 
 
 def test_the_details_in_polish():
@@ -63,8 +99,48 @@ def test_the_details_in_polish():
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == ("Wysłane nowe pliki: 7 · już w Connect: 3 (2 rozpoznane przed wysłaniem, "
-                    "1 przez Garmina) · odrzucone przez Garmina: 0 · błędy wysyłania: 0")
+    assert line == "3 pliki były już w Garmin Connect"
+
+
+def test_what_went_wrong_is_a_warning():
+    step = service.uploads_step(_report(uploaded=1, checked=1, rejected=2, failed=1))
+    assert service.describe_steps([step]) == [
+        ("1 file was already in Garmin Connect", False),
+        ("2 files were rejected by Garmin", True),
+        ("1 file could not be uploaded", True)]
+
+
+@pytest.mark.needs_display
+def test_the_window_marks_the_warnings(xdg):
+    """Under "Last sync": the warnings with an icon and in the colour of warnings, the
+    other lines as they are; the full date in the row's tooltip."""
+    import types
+
+    import gi
+
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    service.save_last_sync(A, service.SyncSummary(
+        uploaded=1, errors=["download: HTTP 404"],
+        lines=[service.new_files_step([types.SimpleNamespace(datatype="FIT_TYPE_4")] * 3),
+               service.uploads_step(_report(uploaded=1, checked=1, rejected=1))]))
+    row = Adw.ExpanderRow(title="Last sync")
+    win = types.SimpleNamespace(
+        last_sync_row=row, _last_sync_children=[],
+        session=types.SimpleNamespace(ownership_error=None,
+                                      device=types.SimpleNamespace(unit_id=A)))
+    MainWindow._show_last_sync(win)
+    assert row.get_subtitle().endswith(" · 3 files, 1 uploaded")
+    assert row.get_tooltip_text()  # the full date
+    shown = [(child.get_title(), child.has_css_class("warning"))
+             for child in win._last_sync_children]
+    assert shown == [("Files from the device: activities ×3", False),
+                     ("1 file was already in Garmin Connect", False),
+                     ("1 file was rejected by Garmin", True),
+                     ("download: HTTP 404", True)]
 
 
 # --- one source of words ---------------------------------------------------------------------
@@ -77,17 +153,20 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
     steps = [line for line in data["lines"] if isinstance(line, dict)]
     assert [step["kind"] for step in steps] == ["new_files", "uploads"]
     words = service.describe_lines(steps)
-    assert words == ["New files: activities ×2",
-                     ("New files uploaded: 2 · already in Connect: 0 · rejected by Garmin: 0 · "
-                      "upload errors: 0")]
+    assert words == ["Files from the device: activities ×2"]
     assert all(line in printed for line in words)  # printed exactly as the window shows it
-    assert service.describe_counts(data).startswith("2 new files uploaded")
+    assert service.describe_counts(data) == "2 files, 2 uploaded"
+    assert "2 files, 2 uploaded" in printed  # the numbers of the row, then the details
 
 
 def test_the_notification_says_what_the_window_shows():
     summary = service.SyncSummary(uploaded=1, lines=[
         "First sync.", service.new_files_step([]), service.uploads_step(_report(uploaded=1))])
-    assert summary.text.splitlines() == service.describe_lines(summary.lines)  # watch.py uses .text
+    # watch.py uses .text: the numbers of the row, then the details.
+    assert summary.text.splitlines() == [
+        service.describe_counts({"uploaded": 1, "lines": summary.lines}),
+        *service.describe_lines(summary.lines)]
+    assert summary.text.splitlines() == ["1 file, 1 uploaded", "First sync."]
 
 
 # --- the types of new files ------------------------------------------------------------------
@@ -99,8 +178,8 @@ def test_new_files_are_named_by_their_type():
         "FIT_TYPE_4": 2, "BACKUP_PRIMARY": 1, "FIT_TYPE_68": 1}}
     # The named types in a fixed order, the two backups counted together, then the others.
     assert service.describe_lines([step]) == [
-        ("New files: activities ×2, monitoring ×3, HRV status ×1, device backup ×2, "
-         "other data (FIT_TYPE_70) ×1, other data (WELLNESS_TYPE_1) ×2")]
+        ("Files from the device: activities ×2, monitoring ×3, HRV status, device backup ×2, "
+         "other data (FIT_TYPE_70), other data (WELLNESS_TYPE_1) ×2")]
 
 
 @pytest.mark.parametrize(("datatype", "name"), sorted(service.TYPE_NAMES.items()))
@@ -117,8 +196,8 @@ def test_new_files_in_polish():
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == ("Nowe pliki: aktywności ×1, sen ×1, EKG ×1, zaburzenia snu ×1, kopia zapasowa "
-                    "urządzenia ×1, inne dane (FIT_TYPE_70) ×1")
+    assert line == ("Pliki z urządzenia: aktywności, sen, EKG, zaburzenia snu, kopia zapasowa "
+                    "urządzenia, inne dane (FIT_TYPE_70)")
 
 
 def test_the_device_level_monitoring_is_the_device_log():
@@ -139,15 +218,15 @@ def test_names_for_the_training_status_primary_device_and_coach_files():
     step = {"kind": "new_files", "types": {"FIT_TYPE_77": 2, "FIT_TYPE_70": 1, "FIT_TYPE_74": 1,
                                            "FIT_TYPE_41": 1, "FIT_TYPE_72": 1}}
     assert service.describe_lines([step]) == [
-        ("New files: settings change log ×1, training status data ×1, primary training device "
-         "data ×1, Garmin Coach plan ×2, other data (FIT_TYPE_70) ×1")]
+        ("Files from the device: settings change log, training status data, primary training "
+         "device data, Garmin Coach plan ×2, other data (FIT_TYPE_70)")]
     i18n.setup("pl")
     try:
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == ("Nowe pliki: dziennik zmian ustawień ×1, dane o wytrenowaniu ×1, dane "
-                    "urządzenia głównego ×1, plan Garmin Coach ×2, inne dane (FIT_TYPE_70) ×1")
+    assert line == ("Pliki z urządzenia: dziennik zmian ustawień, dane o wytrenowaniu, dane "
+                    "urządzenia głównego, plan Garmin Coach ×2, inne dane (FIT_TYPE_70)")
 
 
 # --- each device keeps its own last sync -----------------------------------------------------
@@ -191,10 +270,11 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
     service.save_last_sync(B, service.SyncSummary(uploaded=1))
     said = []
     row = types.SimpleNamespace(set_subtitle=said.append, set_enable_expansion=lambda on: None,
-                                remove=lambda child: None, add_row=lambda child: None)
+                                remove=lambda child: None, add_row=lambda child: None,
+                                set_tooltip_text=lambda text: None)
     win = types.SimpleNamespace(
         last_sync_row=row, _last_sync_children=[],
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))
     MainWindow._show_last_sync(win)
-    assert len(said) == 1 and said[0].endswith("3 new files uploaded")
+    assert len(said) == 1 and said[0].endswith("3 files, 3 uploaded")

@@ -289,11 +289,11 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
         {"kind": "uploads", "uploaded": 2, "known": 0, "known_checked": 0, "known_server": 0,
          "rejected": 0, "errors": 0}]
     # The same words in the summary and from what is stored.
-    assert "New files: activities ×2" in summary.text.splitlines()
-    assert ("New files uploaded: 2 · already in Connect: 0 · rejected by Garmin: 0 · upload "
-            "errors: 0") in summary.text.splitlines()
+    assert "Files from the device: activities ×2" in summary.text.splitlines()
+    assert "2 files, 2 uploaded · 1 received" in summary.text.splitlines()
     stored = service.load_last_sync(UNIT)
-    assert service.describe_lines(stored["lines"]) == summary.text.splitlines()
+    assert [service.describe_counts(stored),
+            *service.describe_lines(stored["lines"])] == summary.text.splitlines()
 
 
 def test_the_last_sync_is_put_into_words_when_shown(xdg):
@@ -309,12 +309,11 @@ def test_the_last_sync_is_put_into_words_when_shown(xdg):
     lines = service.load_last_sync(42)["lines"]
     assert service.describe_lines(lines) == [
         "Written before, in words.",
-        "New files: activities ×4, sleep ×1",
-        ("New files uploaded: 3 · already in Connect: 2 (1 recognised before sending, 1 by "
-         "Garmin) · rejected by Garmin: 0 · upload errors: 0")]  # the unknown step left out
+        "Files from the device: activities ×4, sleep",
+        "2 files were already in Garmin Connect"]  # the unknown step left out
     i18n.setup("pl")  # the language of the moment it is shown, not of the sync
     try:
-        assert service.describe_lines(lines)[1] == "Nowe pliki: aktywności ×4, sen ×1"
+        assert service.describe_lines(lines)[1] == "Pliki z urządzenia: aktywności ×4, sen"
     finally:
         i18n.setup("en")
 

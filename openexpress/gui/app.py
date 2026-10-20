@@ -164,6 +164,14 @@ def save_ui_language(code: str) -> None:
     paths.write_private(p, json.dumps(data, indent=2))
 
 
+def last_sync_words(data: dict, now: datetime | None = None) -> str:
+    """The row under "Last sync": when, told against now ("yesterday, 23:41"), and the
+    numbers of that sync."""
+    when = datetime.fromtimestamp(data.get("time", time.time()))
+    return (i18n.relative_time(when, now or datetime.now()) + " · "
+            + service.describe_counts(data))
+
+
 def format_when(ts: float) -> str:
     when = datetime.fromtimestamp(ts)
     now = datetime.now()
@@ -1832,7 +1840,7 @@ class MainWindow(Adw.ApplicationWindow):
         data = service.load_last_sync(unit_id) if unit_id else None
         if not data:
             return _("Not synced yet with openExpress")
-        return format_when(data.get("time", time.time())) + " · " + service.describe_counts(data)
+        return last_sync_words(data)
 
     def _show_account(self, entry: dict) -> None:
         """The read-only view of a device only on the account, with what the account says
@@ -2391,14 +2399,17 @@ class MainWindow(Adw.ApplicationWindow):
             row.set_subtitle(_("Not synced yet with openExpress"))
             row.set_enable_expansion(False)
             return
-        summary = service.describe_counts(data)  # the same words as the details below
-        errors = data.get("errors") or []
-        row.set_subtitle(GLib.markup_escape_text(
-            format_when(data.get("time", time.time())) + " · " + summary))
+        # The same words as the command line and the notification of the background sync.
+        row.set_subtitle(GLib.markup_escape_text(last_sync_words(data)))
+        row.set_tooltip_text(format_when(data.get("time", time.time())))  # the full date
         row.set_enable_expansion(True)
-        for line in service.describe_lines(data.get("lines")) + errors:
+        errors = [(text, True) for text in data.get("errors") or []]
+        for line, warning in service.describe_steps(data.get("lines")) + errors:
             child = Adw.ActionRow(title=GLib.markup_escape_text(line), title_lines=3)
             child.add_css_class("property")
+            if warning:  # files rejected, or that could not be uploaded or written
+                child.add_prefix(Gtk.Image(icon_name="dialog-warning-symbolic"))
+                child.add_css_class("warning")
             row.add_row(child)
             self._last_sync_children.append(child)
 

@@ -400,7 +400,12 @@ class SyncSummary:
 
     @property
     def text(self) -> str:
-        return "\n".join(describe_lines(self.lines))
+        """The numbers and the details, as the window shows them (the notification of the
+        background sync)."""
+        data = {"uploaded": self.uploaded, "skipped_known": self.skipped_known,
+                "downloaded": self.downloaded, "rejected": self.rejected,
+                "errors": self.errors, "lines": self.lines}
+        return "\n".join([describe_counts(data), *describe_lines(self.lines)])
 
 
 # Readable names of the data types of new files. A name is given only where it is plain from
@@ -446,35 +451,48 @@ def type_name(datatype: str) -> str:
 
 
 def _describe_types(types: dict) -> str:
-    """ "activities ×2, monitoring ×3, other data (FIT_TYPE_70) ×1": the named types in the
-    order of TYPE_NAMES, then the others by name."""
+    """ "activities ×2, monitoring ×3, other data (FIT_TYPE_70)": the named types in the order
+    of TYPE_NAMES, then the others by name; how many only when more than one."""
     order = {name: i for i, name in enumerate(TYPE_NAMES)}
     counted: dict[str, int] = {}
     for datatype in sorted(types, key=lambda t: (order.get(t, len(order)), t)):
         name = type_name(datatype)
         counted[name] = counted.get(name, 0) + types[datatype]
-    return ", ".join(f"{name} ×{count}" for name, count in counted.items())
+    return ", ".join(name if count == 1 else f"{name} ×{count}"
+                     for name, count in counted.items())
 
 
-def _describe_line(line) -> str | None:
-    """A line of a sync summary in words; None for a step this version does not know."""
+def _describe_step(line) -> list[tuple[str, bool]]:
+    """A line of a sync summary in words: (text, whether it is a warning) for each sentence
+    it gives; none for a step this version does not know. How the files already in Connect
+    were recognised (before sending, or by Garmin) is only in the log of the sync."""
     if isinstance(line, str):
-        return line  # written in words already (also every line of an older version)
+        return [(line, False)]  # written in words already (also every line of an older version)
     kind = line.get("kind") if isinstance(line, dict) else None
     if kind == "new_files":
-        return _("New files: {types}").format(types=_describe_types(line.get("types") or {}))
+        types = line.get("types") or {}
+        if not types:
+            return []
+        return [(_("Files from the device: {types}").format(types=_describe_types(types)),
+                 False)]
     if kind == "uploads":
-        numbers = {"uploaded": line.get("uploaded", 0), "known": line.get("known", 0),
-                   "checked": line.get("known_checked", 0),
-                   "server": line.get("known_server", 0),
-                   "rejected": line.get("rejected", 0), "errors": line.get("errors", 0)}
-        if numbers["known"]:
-            return _("New files uploaded: {uploaded} · already in Connect: {known} ({checked} "
-                     "recognised before sending, {server} by Garmin) · rejected by Garmin: "
-                     "{rejected} · upload errors: {errors}").format(**numbers)
-        return _("New files uploaded: {uploaded} · already in Connect: {known} · rejected by "
-                 "Garmin: {rejected} · upload errors: {errors}").format(**numbers)
-    return None
+        known, rejected = line.get("known", 0), line.get("rejected", 0)
+        errors = line.get("errors", 0)
+        said = []
+        if known:
+            said.append((ngettext("{count} file was already in Garmin Connect",
+                                  "{count} files were already in Garmin Connect",
+                                  known).format(count=known), False))
+        if rejected:
+            said.append((ngettext("{count} file was rejected by Garmin",
+                                  "{count} files were rejected by Garmin",
+                                  rejected).format(count=rejected), True))
+        if errors:
+            said.append((ngettext("{count} file could not be uploaded",
+                                  "{count} files could not be uploaded",
+                                  errors).format(count=errors), True))
+        return said
+    return []
 
 
 def new_files_step(candidates) -> dict:
@@ -492,30 +510,46 @@ def uploads_step(rep) -> dict:
             "rejected": len(rep.rejected), "errors": len(rep.failed)}
 
 
+def _new_files(data: dict) -> int:
+    """How many new files the device had: from the step of its new files, and never fewer
+    than those uploaded, already in Connect and rejected (all a sync of an older version
+    tells)."""
+    listed = sum(n for line in data.get("lines") or []
+                 if isinstance(line, dict) and line.get("kind") == "new_files"
+                 for n in (line.get("types") or {}).values() if isinstance(n, int))
+    counted = data.get("uploaded", 0) + data.get("skipped_known", 0) + data.get("rejected", 0)
+    return max(listed, counted)
+
+
 def describe_counts(data: dict) -> str:
-    """The numbers of the last sync in one line, as the window shows them under "Last sync":
-    the new files always, the rest only when there is any. The same words as the details."""
-    uploaded, known = data.get("uploaded", 0), data.get("skipped_known", 0)
-    rejected, received = data.get("rejected", 0), data.get("downloaded", 0)
-    errors = len(data.get("errors") or [])  # uploads and downloads
-    parts = [ngettext("{count} new file uploaded", "{count} new files uploaded",
-                      uploaded).format(count=uploaded)]
-    if known:
-        parts.append(_("{count} already in Connect").format(count=known))
-    if rejected:
-        parts.append(_("{count} rejected by Garmin").format(count=rejected))
+    """The numbers of a sync in one line: "8 files, 6 uploaded · 2 received" - the new
+    files and how many were uploaded, and the files from Garmin Connect written to the
+    device when there are any. The window shows it under "Last sync" after when it was;
+    the command line and the notification put it before the details."""
+    files, uploaded = _new_files(data), data.get("uploaded", 0)
+    received = data.get("downloaded", 0)
+    if files:
+        parts = [ngettext("{count} file", "{count} files", files).format(count=files) + ", "
+                 + ngettext("{count} uploaded", "{count} uploaded", uploaded).format(
+                     count=uploaded)]
+    else:
+        parts = [_("no new files")]
     if received:
         parts.append(ngettext("{count} received", "{count} received", received).format(
             count=received))
-    if errors:
-        parts.append(ngettext("{count} error", "{count} errors", errors).format(count=errors))
     return " · ".join(parts)
+
+
+def describe_steps(lines) -> list[tuple[str, bool]]:
+    """The lines of a sync summary in words, each with whether it is a warning (files
+    rejected, or that could not be uploaded): for the window, which marks the warnings."""
+    return [said for line in lines or [] for said in _describe_step(line)]
 
 
 def describe_lines(lines) -> list[str]:
     """The lines of a sync summary in words, for the window, the notification and the
     command line alike."""
-    return [text for text in map(_describe_line, lines or []) if text]
+    return [text for text, _warning in describe_steps(lines)]
 
 
 class SyncBusy(Exception):

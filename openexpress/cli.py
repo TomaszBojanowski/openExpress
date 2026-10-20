@@ -534,8 +534,10 @@ def cmd_sync(args) -> int:
         elif up_plan and up_plan.candidates:
             print("\n" + _("Uploading…"))
             rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
-            # The same steps and words as a sync in the window or in the background.
+            # The same steps and words as a sync in the window or in the background: the
+            # numbers, then the details.
             steps = [service.new_files_step(up_plan.candidates), service.uploads_step(rep)]
+            print(service.describe_counts({"uploaded": len(rep.uploaded), "lines": steps}))
             for text in service.describe_lines(steps):
                 print(text)
             summary.lines += steps

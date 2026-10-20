@@ -125,8 +125,8 @@ def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, c
     assert len(fake_client["client"].uploads) == 2
     data = service.load_last_sync(1234567890)
     assert data["uploaded"] == 2 and data["errors"] == []
-    assert ("New files uploaded: 2 · already in Connect: 0 · rejected by Garmin: 0 · upload "
-            "errors: 0") in service.describe_lines(data["lines"])  # the window's own words
+    assert service.describe_counts(data) == "2 files, 2 uploaded"  # the window's own words
+    assert service.describe_lines(data["lines"]) == ["Files from the device: activities ×2"]
 
 
 # --- 12: errors and exit codes -----------------------------------------------------------
