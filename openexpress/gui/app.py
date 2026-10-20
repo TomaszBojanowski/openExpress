@@ -62,7 +62,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_still_there,
 )
 from openexpress.gui import pictures, start  # noqa: E402
-from openexpress.gui.connected import Connected, uris  # noqa: E402
+from openexpress.gui.connected import Connected, unit_ids, uris  # noqa: E402
 from openexpress.gui.navigation import (  # noqa: E402
     READ_THE_LIST,
     Cause,
@@ -585,6 +585,19 @@ def open_address(s) -> str | None:
     if s is None:
         return None
     return str(getattr(getattr(s, "storage", None), "device_uri", "") or "")
+
+
+def open_unit(s) -> int | None:
+    """The unit ID of the open device (compared in memory only, never shown), or None."""
+    return getattr(getattr(s, "device", None), "unit_id", None) or None
+
+
+def seen_open(s, connected) -> Seen:
+    """What the window knows after a detection or a read of the list: the devices connected
+    (`connected`, entries) with the open one among them."""
+    address, unit = open_address(s), open_unit(s)
+    return Seen(uris(connected) | ({address.rstrip("/")} if address else set()), address,
+                unit_ids(connected) | ({unit} if unit else set()), unit)
 
 
 def schedule_detection(win, delay_ms: int, mount_uri: str | None = None,
@@ -1681,12 +1694,12 @@ class MainWindow(Adw.ApplicationWindow):
                 if self._on_start_page():
                     self._render_start()
                 return
-            # The devices connected with the open one among them, for the count in the log.
-            connected = uris(found) | ({address.rstrip("/")} if address else set())
-            # The open device stays open: the page shown stays (Stay), drawn if the start page.
-            decision = decided(self, cause, before, Seen(frozenset(connected), address))
-            if (isinstance(decision, Stay) and decision.redraw_start
-                    and self._on_start_page()):
+            # The open device stays open; the user goes to the start page only from the view
+            # of a remembered device that came now (decision 3).
+            decision = decided(self, cause, before, seen_open(s, found))
+            if isinstance(decision, ShowStart):
+                self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
+            elif isinstance(decision, Stay) and decision.redraw_start:
                 self._render_start()
 
         self.in_background(connected_devices, done)
@@ -1737,7 +1750,8 @@ class MainWindow(Adw.ApplicationWindow):
         """The start page, as it is now, or the page shown stays (navigation.navigate_after:
         over the view of a remembered device only when a device came or went)."""
         cause, open_before = _take_asked(self, Cause.REFRESH_IN_VIEW)
-        after = Seen(uris(self._start_summaries()[0]), None)
+        shown = self._start_summaries()[0]
+        after = Seen(uris(shown), None, unit_ids(shown))
         decision = decided(self, cause, Seen(self.connected.drawn, open_before), after)
         if isinstance(decision, Stay):
             self._render_start()
@@ -1752,14 +1766,11 @@ class MainWindow(Adw.ApplicationWindow):
         stays (navigation.navigate_after: e.g. after Refresh on the start page, or a
         detection that found the device open again)."""
         cause, open_before = _take_asked(self, Cause.CHOSEN)
-        address = open_address(self.session)
-        # The devices connected with the open one among them, for the count in the log.
-        connected = uris(self.connected.devices) | ({address.rstrip("/")} if address else set())
         decision = decided(self, cause, Seen(self.connected.drawn, open_before),
-                           Seen(frozenset(connected), address))
+                           seen_open(self.session, self.connected.devices))
         visible = self.navigation.get_visible_page()
         if isinstance(decision, Stay):
-            if decision.redraw_start and visible is self.start.page:
+            if decision.redraw_start:  # the start page shown, or under a remembered device
                 self._render_start()
             return
         if isinstance(decision, ShowStart):

@@ -50,9 +50,13 @@ class View:
 
 @dataclass(frozen=True)
 class Seen:
-    """Devices by their addresses: those connected, and the one open (or None)."""
+    """Devices by their addresses: those connected, and the one open (or None); and by their
+    unit IDs (compared in memory only, never shown or written): those connected that have
+    one, and the open one's (None: none open, or it has none)."""
     connected: frozenset[str] = frozenset()
     open: str | None = None
+    units: frozenset[int] = field(default=frozenset(), repr=False)
+    open_unit: int | None = field(default=None, repr=False)
 
 
 # --- where the user goes: what the window does with it ---------------------------------------
@@ -180,13 +184,24 @@ def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> De
     if cause is Cause.UNPLUGGED_OTHER:
         # Only the list was read again: the start page is drawn if shown, nothing moves.
         return Stay(redraw_start=visible.page is Page.START)
+    if visible.page is Page.REMEMBERED:
+        # Q1: other devices coming or going move nothing; the start page is drawn under the
+        # view (one device opened in the background, or the list). The very device shown
+        # (by its unit ID; one without is never it) brings its view, opened alone, or the
+        # start page with its tile (with another device, or while another one is open).
+        shown = visible.shown_unit_id
+        if shown is not None and shown == after.open_unit:
+            return ShowDevice()
+        if shown is not None and shown in after.units:
+            return ShowStart()
+        if after.open is not None and before.open is not None and cause in _REOPENING:
+            return Stay()  # the device open stays open: only the list read again
+        return Stay(redraw_start=True)
     if after.open is None:
         # The list to choose from, or no device at all.
         if visible.page is Page.START:
             return Stay(redraw_start=True)
-        if visible.page is Page.REMEMBERED and after.connected == before.connected:
-            return Stay(redraw_start=True)  # nothing came or went: drawn under it
-        return ShowStart()
+        return ShowStart()  # the device shown is gone
     if visible.page is Page.DEVICE:
         return Stay()
     stays = cause is Cause.REFRESH_ON_START or (

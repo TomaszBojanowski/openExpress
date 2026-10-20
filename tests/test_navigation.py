@@ -1,8 +1,10 @@
 """Where the user goes after a detection (openexpress/gui/navigation.py): the start page's
 navigation matrix as the window behaves today, one row per situation, with a short id. Rows
-whose id ends in "-Q1", "-Q2" or "-Q3" are today's behaviour that the decision of that
-number (AGENTS.md) is to change; the change will show in this table. No display, no GTK;
+whose id ends in "-Q" and the number of a decision (AGENTS.md) are today's behaviour that
+this decision is to change; the change will show in this table. No display, no GTK;
 the addresses and unit IDs are made up."""
+
+import re
 
 import pytest
 
@@ -27,7 +29,8 @@ from openexpress.gui.navigation import (
 W = "mtp://091e_51b4_0000abcdef12"  # the watch
 E = "mtp://Garmin_Edge_1050_0000abcdef34"  # the Edge
 V = "file:///run/media/made-up-user/GARMIN"  # the Varia, a drive
-WATCH_UNIT, VENU_UNIT = 1234567890, 3000000004
+WATCH_UNIT, EDGE_UNIT, VARIA_UNIT, VENU_UNIT = 1234567890, 3000000002, 3000000003, 3000000004
+UNITS = {W: WATCH_UNIT, E: EDGE_UNIT, V: VARIA_UNIT}
 
 S = View(Page.START)
 D = View(Page.DEVICE)
@@ -35,8 +38,10 @@ R_WATCH = View(Page.REMEMBERED, WATCH_UNIT)  # the watch's read-only view
 R = View(Page.REMEMBERED, VENU_UNIT)  # the read-only view of a Venu 2 not connected
 
 
-def seen(*connected, open=None):
-    return Seen(frozenset(connected), open)
+def seen(*connected, open=None, ids=True):
+    """What was seen, with the unit IDs of the devices read (`ids` False: none has one)."""
+    units = frozenset(UNITS[c] for c in connected) if ids else frozenset()
+    return Seen(frozenset(connected), open, units, UNITS[open] if ids and open else None)
 
 
 NONE = seen()
@@ -50,16 +55,26 @@ NAVIGATION = [
     # --- a device plugged in (mounted) -----------------------------------------------------
     ("N0-plug-on-S", Cause.PLUGGED, S, NONE, seen(W, open=W), ShowDevice()),
     ("N0-plug-same-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W), ShowDevice()),
-    # Q1: on a remembered device's view nothing moves but that very device plugged in.
-    ("N0-plug-other-on-R-Q1", Cause.PLUGGED, R, NONE, seen(W, open=W), ShowDevice()),
-    ("N0-plug-two-on-R-Q1", Cause.PLUGGED, R, NONE, seen(W, E), ShowStart()),
+    # Q1: on a remembered device's view nothing moves but that very device plugged in: one
+    # other device is opened in the background, two give the list, under the view.
+    ("N0-plug-other-on-R", Cause.PLUGGED, R, NONE, seen(W, open=W), Stay(redraw_start=True)),
+    ("N0-plug-two-on-R", Cause.PLUGGED, R, NONE, seen(W, E), Stay(redraw_start=True)),
+    # A device without a unit ID is never the one shown.
+    ("N0-plug-same-without-id-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W, ids=False),
+     Stay(redraw_start=True)),
+    # Decision 3: the very device shown comes with another one, or while another one is
+    # open: the start page with its tile; the device open stays open.
+    ("N0-plug-same-and-other-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, E), ShowStart()),
+    ("N1-plug-same-on-R-while-open", Cause.PLUGGED, R_WATCH, seen(E, open=E),
+     seen(W, E, open=E), ShowStart()),
     # Q1: with a device open, plugging in another does not change the view: the open one
     # stays open, the list is read again (on the start page the tiles of both).
     ("N1-plug-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, E, open=W),
      Stay(redraw_start=True)),
     ("N1-plug-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, E, open=W), Stay()),
     ("N1-plug-on-R", Cause.PLUGGED, R, seen(W, open=W), seen(W, E, open=W), Stay()),
-    ("N2-plug-third-on-R-Q1", Cause.PLUGGED, R, seen(W, E), seen(W, E, V), ShowStart()),
+    ("N2-plug-third-on-R", Cause.PLUGGED, R, seen(W, E), seen(W, E, V),
+     Stay(redraw_start=True)),
     ("N1-same-found-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
     ("N1-same-found-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, open=W), Stay()),
@@ -70,7 +85,8 @@ NAVIGATION = [
     ("N1-unplug-open-on-D", Cause.UNPLUGGED_OPEN, D, seen(W, open=W), NONE, ShowStart()),
     ("N1-unplug-open-on-S", Cause.UNPLUGGED_OPEN, S, seen(W, open=W), NONE,
      Stay(redraw_start=True)),
-    ("N1-unplug-open-on-R-Q1", Cause.UNPLUGGED_OPEN, R, seen(W, open=W), NONE, ShowStart()),
+    ("N1-unplug-open-on-R", Cause.UNPLUGGED_OPEN, R, seen(W, open=W), NONE,
+     Stay(redraw_start=True)),
     ("N2-unplug-other-on-D", Cause.UNPLUGGED_OTHER, D, seen(W, E, open=W), seen(W, open=W),
      Stay()),
     ("N2-unplug-other-on-S", Cause.UNPLUGGED_OTHER, S, seen(W, E, open=W), seen(W, open=W),
@@ -79,7 +95,7 @@ NAVIGATION = [
      Stay()),
     ("U2-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E), seen(W, open=W), ShowDevice()),
     # Q1: on a remembered device's view the one left opens, the view stays.
-    ("U2-R-Q1", Cause.UNPLUGGED_CHOICE, R, seen(W, E), seen(W, open=W), ShowDevice()),
+    ("U2-R", Cause.UNPLUGGED_CHOICE, R, seen(W, E), seen(W, open=W), Stay(redraw_start=True)),
     ("U3-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E, V), seen(W, E), Stay(redraw_start=True)),
     ("N2-usb-changed-on-S", Cause.USB_CHANGED, S, seen(W, E), seen(W, E),
      Stay(redraw_start=True)),
@@ -124,10 +140,8 @@ def test_where_the_user_goes(cause, visible, before, after, decision):
 def test_the_ids_are_unique_and_the_marked_rows_are_known():
     ids = [row[0] for row in NAVIGATION]
     assert len(ids) == len(set(ids))
-    marked = sorted(i for i in ids if i.endswith(("-Q1", "-Q2", "-Q3")))
-    assert marked == ["N0-plug-other-on-R-Q1", "N0-plug-two-on-R-Q1", "N1-login-back-on-S-Q3",
-                      "N1-unplug-open-on-R-Q1", "N2-login-on-D-Q3", "N2-logout-on-D-Q3",
-                      "N2-plug-third-on-R-Q1", "U2-R-Q1"]
+    marked = sorted(i for i in ids if re.search(r"-Q\d+$", i))
+    assert marked == ["N1-login-back-on-S-Q3", "N2-login-on-D-Q3", "N2-logout-on-D-Q3"]
 
 
 WATCH_LABEL = W + "/Internal Storage/"  # the open watch's storage, below its mount
@@ -220,7 +234,8 @@ def test_the_log_line_tells_no_address_and_no_unit_id(cause, visible, before, af
     line = describe(cause, visible, before, after, decision)
     assert line.startswith(f"navigation: {cause.value}, on the {visible.page.value}, "
                            f"{len(before.connected)} → {len(after.connected)} devices: ")
-    for secret in (W, E, V, "0000abcdef", "made-up-user", str(WATCH_UNIT), str(VENU_UNIT)):
+    for secret in (W, E, V, "0000abcdef", "made-up-user",
+                   *(str(u) for u in (WATCH_UNIT, EDGE_UNIT, VARIA_UNIT, VENU_UNIT))):
         assert secret not in line
 
 
@@ -241,3 +256,9 @@ def test_the_log_line_tells_where_the_user_goes(decision, visible, words):
 
 def test_the_unit_id_of_a_remembered_view_is_never_shown():
     assert str(VENU_UNIT) not in repr(R) and str(VENU_UNIT) not in str(R)
+
+
+def test_the_unit_ids_of_what_was_seen_are_never_shown():
+    what = seen(W, E, open=W)
+    for unit in (WATCH_UNIT, EDGE_UNIT):
+        assert str(unit) not in repr(what) and str(unit) not in str(what)

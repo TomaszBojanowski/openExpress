@@ -21,6 +21,12 @@ def uris(summaries) -> frozenset[str]:
     return frozenset(c.found.uri.rstrip("/") for c in summaries)
 
 
+def unit_ids(summaries) -> frozenset[int]:
+    """The unit IDs of these entries (compared in memory only), without those that have
+    none."""
+    return frozenset(u for c in summaries if (u := getattr(c, "unit_id", None)))
+
+
 @dataclass
 class Connected:
     devices: list = field(default_factory=list)
