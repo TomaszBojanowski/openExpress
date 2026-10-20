@@ -4865,16 +4865,16 @@ def test_the_remembered_section_only_with_remembered_devices():
 
 
 @pytest.mark.needs_display
-def test_the_tile_grids_are_centred():
-    """Every section's grid is centred: with one column the free room is on both sides, not
-    only on the right (the headings stay on the left)."""
+def test_the_tile_grids_start_where_the_headings_do():
+    """T9 step 0: every section's grid starts at the left, where its heading starts (the
+    tiles share the line out; a section of fewer tiles keeps them as wide, from the left)."""
     from gi.repository import Gtk
 
     from openexpress.gui.start import StartPage
 
     start = StartPage()
     grids = (start.grid, start.remembered_grid, start.account_grid)
-    assert [g.get_halign() for g in grids] == [Gtk.Align.CENTER] * 3
+    assert [g.get_halign() for g in grids] == [Gtk.Align.START] * 3
     titles = (start.connected_title, start.remembered_title, start.account_title)
     assert all(title.get_xalign() == 0 for title in titles)
 
@@ -4884,8 +4884,8 @@ def test_the_tile_grids_are_centred():
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 def test_tiles_have_one_width_in_every_section():
     """Tiles in different sections, with texts of different lengths, have the same width
-    once the window is laid out (no grid fits its tiles to its longest text, nor widens
-    them to fill its line); three share a line in a window 1100 px wide."""
+    once the window is laid out (no grid fits its tiles to its longest text): the width the
+    page gives them (T9 step 0); three share a line in a window 1100 px wide."""
     import time
 
     import gi
@@ -4895,7 +4895,7 @@ def test_tiles_have_one_width_in_every_section():
     from gi.repository import Adw, GLib, Gtk
 
     from openexpress.devicelist import Tile
-    from openexpress.gui.start import TILE_WIDTH, StartPage
+    from openexpress.gui.start import StartPage
 
     def tile(name, connected):
         return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
@@ -4918,13 +4918,83 @@ def test_tiles_have_one_width_in_every_section():
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and not all(t.get_width() for t in tiles):
             GLib.MainContext.default().iteration(False)
-        for _ in range(50):  # a few more passes for the layout to settle
+        settled = time.monotonic() + 0.5  # the width from the page comes a frame later
+        while time.monotonic() < settled:
             GLib.MainContext.default().iteration(False)
         widths = [t.get_width() for t in tiles]
         assert len(set(widths)) == 1, widths
-        assert TILE_WIDTH - 12 <= widths[0] <= TILE_WIDTH  # the tile's own CSS edge aside
+        columns, width = start.columns.layout
+        assert columns == 3
+        assert width - 12 <= widths[0] <= width  # the tile's own CSS edge aside
         rows = {round(t.compute_bounds(start.grid)[1].get_y()) for t in tiles[:3]}
         assert len(rows) == 1  # the three connected ones on one line
+    finally:
+        win.destroy()
+
+
+@pytest.mark.needs_display
+# PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+@pytest.mark.parametrize("window, per_line", [(1000, 3), (400, 1)])
+def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
+    """T9 step 0: how many tiles share a line follows the width of the page (a tile at least
+    220 px wide, 12 px between them), and they share the line out: three in a window 1000 px
+    wide, one filling it in a window 400 px wide. The same width in every section, each grid
+    where its heading starts, and laid out once for as long as the window keeps its size."""
+    import time
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, GLib, Gtk
+
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name, connected):
+        return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
+                    None if connected else 1.0, "006-B4532-00", None, None)
+
+    def turn(seconds):
+        """The main loop, for so long: frames come on the frame clock, not at once."""
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            GLib.MainContext.default().iteration(False)
+
+    def bounds(widget, box):
+        _ok, b = widget.compute_bounds(box)
+        return round(b.get_x()), round(b.get_y()), round(b.get_x() + b.get_width())
+
+    start = StartPage()
+    start.show([(tile("fēnix 8", True), "Over USB (MTP)"),
+                (tile("Edge 1050", True), "USB drive"),
+                (tile("Varia", True), "USB drive"),
+                (tile("Venu 2", False), "Software 19.05")], False)
+    nav = Adw.NavigationView()
+    nav.add(start.page)
+    win = Gtk.Window(default_width=window, default_height=900, child=nav)
+    win.present()
+    try:
+        tiles = start.tiles()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not all(t.get_width() for t in tiles):
+            turn(0.01)
+        turn(0.5)  # the width from the page comes a frame later
+        assert start.columns.layout[0] == per_line
+        assert len({t.get_width() for t in tiles}) == 1  # also the remembered one
+        box = start.connected_title.get_parent()
+        left, _top, right = bounds(start.connected_title, box)  # the heading spans the page
+        connected = [bounds(t, box) for t in tiles[:3]]
+        assert len({top for _x, top, _r in connected}) == 3 // per_line  # lines
+        assert all(x == left for x, _top, _r in connected[::per_line])  # under the heading
+        last = connected[per_line - 1]
+        assert right - 12 <= last[2] <= right  # the line filled, its CSS edge aside
+        remembered = bounds(tiles[3], box)
+        assert remembered[0] == left  # a section of one tile starts at the left too
+        laid_out = start.columns.updates
+        turn(0.5)  # the window keeps its size: nothing is laid out again
+        assert start.columns.updates == laid_out >= 1
     finally:
         win.destroy()
 

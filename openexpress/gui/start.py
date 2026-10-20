@@ -31,9 +31,12 @@ KIND_ICONS = {
 }
 DEVICE_ICON = f"{APP_ID}-device-symbolic"
 # One width for every tile, in every section (never fitted to the longest text of a
-# section): three on a line in a window 1100 px wide (where Adw.Clamp gives the page 800 px
-# of content). A longer name is cut short; the line under it takes at most two lines.
-TILE_WIDTH = 250
+# section), from the width of the page (T9 step 0): as many tiles on a line as fit at least
+# MIN_TILE_WIDTH each, TILE_SPACING between them, sharing the line out; three in a window
+# 1000 px wide (where Adw.Clamp gives the page about 760 px), one filling the line in a
+# narrow window. A longer name is cut short; the line under it takes at most two lines.
+MIN_TILE_WIDTH = 220
+TILE_SPACING = 12
 SUBTITLE_LINES = 2
 
 # The tiles of the start page only (loaded once per display): a quiet 1px edge around the
@@ -62,13 +65,93 @@ def load_css(display) -> None:
                                               Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 
+def columns(width: int) -> tuple[int, int]:
+    """How many tiles share a line of this many pixels, and how wide each one is: as many as
+    fit at least MIN_TILE_WIDTH wide, TILE_SPACING between them, never fewer than one."""
+    count = max(1, (width + TILE_SPACING) // (MIN_TILE_WIDTH + TILE_SPACING))
+    return count, max(1, (width - TILE_SPACING * (count - 1)) // count)
+
+
 def _tile_grid() -> Gtk.FlowBox:
-    # Centred, not filling the line: a grid that fills it would widen its tiles to share
-    # it; with one column the free room is on both sides.
+    # At the left, where the heading is: the tiles get their width from the page
+    # (_TileColumns), so a line of them fills the page and a shorter line starts at the left.
     return Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
                        activate_on_single_click=True, min_children_per_line=1,
-                       max_children_per_line=4, column_spacing=12, row_spacing=12,
-                       valign=Gtk.Align.START, halign=Gtk.Align.CENTER)
+                       max_children_per_line=4, column_spacing=TILE_SPACING,
+                       row_spacing=TILE_SPACING, valign=Gtk.Align.START,
+                       halign=Gtk.Align.START)
+
+
+class _ColumnsLayout(Gtk.LayoutManager):
+    """The layout of _TileColumns: its one child as a bin lays it out, and then the width
+    it was given told to the widget (which GTK hands over: nothing is kept here)."""
+
+    __gtype_name__ = "OpenExpressColumnsLayout"
+
+    def do_get_request_mode(self, widget):
+        child = widget.get_first_child()
+        return child.get_request_mode() if child is not None else Gtk.SizeRequestMode.CONSTANT_SIZE
+
+    def do_measure(self, widget, orientation, for_size):
+        child = widget.get_first_child()
+        if child is None or not child.should_layout():
+            return 0, 0, -1, -1
+        return child.measure(orientation, for_size)
+
+    def do_allocate(self, widget, width, height, baseline):
+        child = widget.get_first_child()
+        if child is not None and child.should_layout():
+            child.allocate(width, height, baseline, None)
+        widget.allocated(width)
+
+
+class _TileColumns(Adw.Bin):
+    """The content of the start page: on a new width, how many tiles share a line and how
+    wide they are (columns()), the same in every section. They are set when the window is
+    idle, never during its layout, and only when either changes: a page laid out keeps its
+    tiles. (A scrollbar that comes with the new layout makes the page narrower, so that
+    fewer tiles share a line and the page gets longer: it stays, and nothing goes back.)"""
+
+    __gtype_name__ = "OpenExpressTileColumns"
+
+    def __init__(self, child: Gtk.Widget, grids: list):
+        super().__init__(child=child)
+        self.set_layout_manager(_ColumnsLayout())
+        self._grids = grids
+        self._margins = child.get_margin_start() + child.get_margin_end()
+        self.layout = (0, MIN_TILE_WIDTH)  # (tiles on a line, their width): none set yet
+        self.updates = 0  # how many times the tiles were laid out (for the tests)
+        self._wanted = None
+
+    def allocated(self, width: int) -> None:
+        """The page got this width (from its layout): the tiles follow, once it is idle."""
+        wanted = columns(width - self._margins)
+        if wanted != self.layout and wanted != self._wanted:
+            if self._wanted is None:
+                GLib.idle_add(self._apply)
+            self._wanted = wanted
+
+    def _apply(self) -> bool:
+        wanted, self._wanted = self._wanted, None
+        if wanted is not None and wanted != self.layout:
+            self.layout = wanted
+            self.updates += 1
+            for grid in self._grids:
+                self.fit(grid)
+        return False
+
+    def tile_width(self) -> int:
+        return self.layout[1]
+
+    def fit(self, grid: Gtk.FlowBox) -> None:
+        """This grid's tiles at the width of the page now, as many on a line as fit."""
+        count, width = self.layout
+        if count:
+            grid.set_max_children_per_line(count)
+        child = grid.get_first_child()
+        while child is not None:
+            child.set_size_request(width, -1)
+            child = child.get_next_sibling()
 
 
 def _device_list() -> Gtk.ListBox:
@@ -173,7 +256,9 @@ class StartPage:
             remembered.title, remembered.grid, remembered.list)
         self.account_title, self.account_grid, self.account_list = (
             account.title, account.grid, account.list)
-        clamp = Adw.Clamp(maximum_size=900, child=box)
+        # The tiles' width, from the width of the page, the same in every section.
+        self.columns = _TileColumns(box, [s.grid for s in self._sections.values()])
+        clamp = Adw.Clamp(maximum_size=900, child=self.columns)
         self.stack.add_named(Gtk.ScrolledWindow(child=clamp,
                                                 hscrollbar_policy=Gtk.PolicyType.NEVER),
                              "content")
@@ -214,7 +299,7 @@ class StartPage:
                 for key, tile, how in part:
                     picture = self._picture_of(tile.image_part_number)
                     item = (row_widget(tile, how, picture) if mode == LIST
-                            else tile_widget(tile, how, picture))
+                            else tile_widget(tile, how, picture, self.columns.tile_width()))
                     item.key = key
                     (section.list if mode == LIST else section.grid).append(item)
             else:  # the same items: their places may have moved; a kind learnt since
@@ -374,7 +459,7 @@ def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
     return row
 
 
-def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
+def tile_widget(tile, how: str, picture=None, width: int = MIN_TILE_WIDTH) -> Gtk.FlowBoxChild:
     """One tile: the picture of the device if it is known, else the icon of its kind (the
     picture is put in its place later, in the same size), the name, how it is connected and
     its version; framed when connected."""
@@ -383,7 +468,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
     image = _image(tile, picture, TILE_ICON_SIZE)
     box.append(image)
     # max_width_chars=1: the texts never ask for more than the tile's width (they take
-    # the width the tile has, TILE_WIDTH), so that every tile is as wide as the others.
+    # the width the tile has, `width`), so that every tile is as wide as the others.
     name = Gtk.Label(label=_name(tile), ellipsize=Pango.EllipsizeMode.END,
                      max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
@@ -395,7 +480,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         label.add_css_class("dim-label")
         label.add_css_class("caption")
         box.append(label)
-    child = Gtk.FlowBoxChild(child=box, width_request=TILE_WIDTH)
+    child = Gtk.FlowBoxChild(child=box, width_request=width)
     _mark(child, tile, image, picture)
     child.add_css_class("card")
     child.add_css_class("oe-tile")
