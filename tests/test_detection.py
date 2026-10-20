@@ -5504,6 +5504,35 @@ def test_the_account_list_keeps_the_kind_of_a_remembered_device(start_window, mo
     assert known_devices.load()[3000000002].category == "cycling-computer"
 
 
+def test_the_ownership_check_keeps_the_kind_of_a_remembered_device(start_window, monkeypatch):
+    """Q4: the account's list read by the ownership check of the device opened (and not
+    asked again for the start page) keeps the kinds it tells of remembered devices, as the
+    list read for the start page does (the Edge is a cycling computer)."""
+    from openexpress import known_devices
+    from openexpress.connect import GarminClient
+
+    win = start_window
+    later = defer_background(win)
+    asked = logged_in_everywhere(monkeypatch)
+    listed = GarminClient.account_devices
+
+    def with_kinds(client):
+        devices = listed(client)
+        for entry in devices:
+            if entry.get("unitid") == 3000000002:
+                entry["devicecategories"] = ["FITNESS", "DEDICATED_BIKE_COMPUTER"]
+        return devices
+
+    monkeypatch.setattr(GarminClient, "account_devices", with_kinds)
+    known_devices.remember(3000000002, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    one_watch(win, monkeypatch)
+    win._start()  # the device opened, whose ownership check reads the account's list
+    run_later(later)
+    run_later(later)
+    assert asked == [1]  # that list, not asked again
+    assert known_devices.load()[3000000002].category == "cycling-computer"
+
+
 def test_tiles_without_a_picture_ask_nothing(start_window, monkeypatch):
     """Tiles whose devices have no picture: the icon of their kind, and nothing is asked
     (no unit-info, no download)."""

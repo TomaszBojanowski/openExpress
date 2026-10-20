@@ -494,7 +494,9 @@ def resolve_account(win) -> None:
         listed = getattr(getattr(s, "ownership_error", None), "devices", None)
     if listed is not None:
         win._account_wanted = False
-        win._account = listed  # not asked again
+        # Not asked again; kept as any list of the account is, with the kinds it tells (Q4).
+        # The caller draws the page shown, after deciding where the user goes.
+        win._set_account(listed, draw=False)
     elif getattr(win, "_account_wanted", False):
         win._account_wanted = False
         win._fetch_account()
@@ -1752,14 +1754,17 @@ class MainWindow(Adw.ApplicationWindow):
         asked then (resolve_account). One request, never two at once."""
         self._account_wanted = True
 
-    def _set_account(self, devices) -> None:
+    def _set_account(self, devices, draw: bool = True) -> None:
+        """The account's list, however it was read (for the start page, or by the ownership
+        check of the device opened). `draw`: the start page is drawn again if it is shown
+        or under a remembered device's view (False: the caller draws)."""
         if devices == self._account:
             return
         self._account = devices
         if devices:
             # The kinds it tells of the devices remembered, kept for when it is not there.
             self.in_background(lambda: devicelist.remember_kinds(devices), lambda _r: None)
-        if self._on_start_page() or self._on_remembered_page():
+        if draw and (self._on_start_page() or self._on_remembered_page()):
             self._render_start()  # under the view of a remembered device, which stays
 
     def _show_start(self) -> None:
