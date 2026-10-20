@@ -142,6 +142,9 @@ def test_the_window_marks_the_warnings(xdg):
         label = item if isinstance(item, Gtk.Label) else item.get_last_child()
         shown.append((label.get_label(), label.has_css_class("warning"),
                       item is not label and item.get_first_child().has_css_class("warning")))
+        # Secondary text: smaller; dimmed, but a warning in the colour of warnings only.
+        assert label.has_css_class("caption")
+        assert label.has_css_class("dim-label") is not label.has_css_class("warning")
         item = item.get_next_sibling()
     assert shown == [("Files from the device: activities ×3", False, False),
                      ("1 file was already in Garmin Connect", False, False),

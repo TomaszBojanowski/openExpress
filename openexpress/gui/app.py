@@ -2406,7 +2406,9 @@ class MainWindow(Adw.ApplicationWindow):
             details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
                               margin_bottom=10, margin_start=12, margin_end=12)
             for text, warning in said:
+                # Secondary, as the subtitle of a row: smaller, and dimmed unless a warning.
                 label = Gtk.Label(label=text, xalign=0, wrap=True)
+                label.add_css_class("caption")
                 if warning:  # files rejected, or that could not be uploaded or written
                     line = Gtk.Box(spacing=6)
                     icon = Gtk.Image(icon_name="dialog-warning-symbolic")
@@ -2415,6 +2417,7 @@ class MainWindow(Adw.ApplicationWindow):
                         line.append(widget)
                     details.append(line)
                 else:
+                    label.add_css_class("dim-label")
                     details.append(label)
             row.add_row(details)
             self._last_sync_children.append(details)
