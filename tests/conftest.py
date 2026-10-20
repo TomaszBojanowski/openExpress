@@ -1,13 +1,103 @@
+import atexit
 import functools
 import os
+import select
+import shutil
 import struct
+import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
+# --- the display of the tests: an X server of their own, never the desktop -------------------
+#
+# Tests that make GTK widgets need a display, and one of them shows a window. By default they
+# get an X server of their own, hidden (Xvfb), so that nothing shows on the desktop. Set
+# before anything opens a display (importing Gtk does):
+#   OPENEXPRESS_TESTS_ON_SCREEN=1   the display of the session, as before;
+#   OPENEXPRESS_TESTS_NO_DISPLAY=1  no display at all: the tests that need one are skipped.
+# Without Xvfb (or if it does not start), the display of the session, as before.
+
+ON_SCREEN, NO_DISPLAY = "OPENEXPRESS_TESTS_ON_SCREEN", "OPENEXPRESS_TESTS_NO_DISPLAY"
+XVFB_SCREEN = "1280x1024x24"
+_xvfb: subprocess.Popen | None = None
+
+
+def _start_xvfb() -> subprocess.Popen | None:
+    """A hidden X server on a free display (it tells which once it is ready), or None."""
+    program = shutil.which("Xvfb")
+    if program is None:
+        return None
+    read_end, write_end = os.pipe()
+    try:
+        server = subprocess.Popen(
+            [program, "-displayfd", str(write_end), "-nolisten", "tcp",
+             "-screen", "0", XVFB_SCREEN],
+            pass_fds=(write_end,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+    except OSError:
+        os.close(read_end)
+        os.close(write_end)
+        return None
+    os.close(write_end)
+    number, deadline = b"", time.monotonic() + 10
+    while not number.endswith(b"\n") and time.monotonic() < deadline:
+        ready, _w, _x = select.select([read_end], [], [], max(0.0, deadline - time.monotonic()))
+        chunk = os.read(read_end, 16) if ready else b""
+        if not chunk:
+            break
+        number += chunk
+    os.close(read_end)
+    if not number.strip().isdigit():
+        server.kill()
+        server.wait()
+        return None
+    os.environ["DISPLAY"] = ":" + number.strip().decode()
+    os.environ["GDK_BACKEND"] = "x11"
+    os.environ.pop("WAYLAND_DISPLAY", None)
+    return server
+
+
+def _stop_xvfb() -> None:
+    global _xvfb
+    if _xvfb is not None:
+        _xvfb.terminate()
+        try:
+            _xvfb.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _xvfb.kill()
+            _xvfb.wait()
+        _xvfb = None
+
+
+if os.environ.get(NO_DISPLAY) == "1":
+    os.environ.pop("DISPLAY", None)
+    os.environ.pop("WAYLAND_DISPLAY", None)
+    os.environ["GDK_BACKEND"] = "x11"  # else GDK finds the session's Wayland socket anyway
+    DISPLAY_OF_TESTS = "none (the tests that need one are skipped)"
+elif os.environ.get(ON_SCREEN) == "1":
+    DISPLAY_OF_TESTS = "the session's"
+else:
+    _xvfb = _start_xvfb()
+    if _xvfb is not None:
+        atexit.register(_stop_xvfb)  # also if pytest ends early
+        DISPLAY_OF_TESTS = f"a hidden X server ({os.environ['DISPLAY']})"
+    else:
+        DISPLAY_OF_TESTS = "the session's (no Xvfb)"
+
+
+def pytest_report_header(config):
+    return f"display of the tests: {DISPLAY_OF_TESTS}"
+
+
+def pytest_unconfigure(config):
+    _stop_xvfb()
+
+
 # Tests check English messages regardless of the system language.
 os.environ["OPENEXPRESS_LANG"] = "en"
-from openexpress import i18n
+from openexpress import i18n  # noqa: E402 - after the display and the language are set
 
 i18n.setup("en")
 
