@@ -6,11 +6,7 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: What would you like openExpress to do?
+      label: What would you like openExpress to do, and why?
+      placeholder: For example, which device you use and how you would use it
     validations:
       required: true
-  - type: textarea
-    id: why
-    attributes:
-      label: Why is it useful?
-      description: For example, which watch you use and how you would use the feature.

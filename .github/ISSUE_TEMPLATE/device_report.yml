@@ -18,9 +18,10 @@ body:
     attributes:
       label: Device report
       description: |
-        In the window: main menu (☰) → **Report a Device or Problem…** → Copy.
-        Or in a terminal: `openexpress report`
-        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report`).
+        In the window: main menu (☰) → **Report a Device or Problem…**, tick
+        **Attach the last log** → **Copy**.
+        Or in a terminal: `openexpress report --log`
+        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report --log`).
       render: markdown
     validations:
       required: true
@@ -28,54 +29,18 @@ body:
     id: works
     attributes:
       label: What did you try, and what worked?
-      description: Tick only what you tried and that worked; describe problems below.
+      description: Tick only what you tried and it worked. Anything that failed goes in the field below.
       options:
-        - label: The device is detected and the Device page shows it
-        - label: Logging in to Garmin Connect
-        - label: Sync – a new activity appeared in Garmin Connect
-        - label: Sync – a course or workout from Garmin Connect arrived on the device
-        - label: Checking for software updates
-        - label: Installing a system software update (GUPDATE file; the device installs it after it is disconnected)
-        - label: Installing other software components (e.g. time zone map, sensor or map support files)
-        - label: Installing, updating or removing a Garmin map
-        - label: Adding or removing a map of your own (.img)
-        - label: Installing or removing a Connect IQ app or watch face
-        - label: Copying music, podcasts or audiobooks
-        - label: Making a backup
-        - label: Background sync when the device is connected
-  - type: dropdown
-    id: beta
-    attributes:
-      label: Is the device in Garmin's beta program?
-      options:
-        - "Yes"
-        - "No"
-        - Don't know
-    validations:
-      required: false
+        - label: The device was detected
+        - label: Sync with Garmin Connect (activities, courses, workouts)
+        - label: Software updates (firmware and other components)
+        - label: Maps (Garmin maps or your own .img)
+        - label: Connect IQ apps or watch faces
+        - label: Music, podcasts or audiobooks
   - type: textarea
-    id: problems
+    id: failed
     attributes:
-      label: What did not work? Error messages
-      description: |
-        What you did, what you expected and what happened, with the exact error message.
-        For details run the command with `-v`, e.g. `openexpress -v sync`.
-
-        **Before pasting:** the log at the end of the device report is already filtered, and
-        so are the log lines that `-v` prints (openExpress 0.4.8 and newer). Error messages
-        and the output of commands such as `openexpress info` are not, nor is anything else
-        you paste (`journalctl`, screenshots): remove the serial number (it is also part of
-        `mtp://…` addresses), the unit ID, your e-mail address and the names of your files
-        first.
+      label: What didn't work?
+      placeholder: What you did and any error you saw
     validations:
       required: false
-  - type: dropdown
-    id: install
-    attributes:
-      label: How did you install openExpress?
-      options:
-        - Flatpak bundle from GitHub releases
-        - pip / wheel
-        - From source (git clone)
-    validations:
-      required: true
