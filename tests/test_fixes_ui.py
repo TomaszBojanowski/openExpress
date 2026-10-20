@@ -1011,8 +1011,9 @@ def test_without_a_login_the_fallback_is_used_too(pictures):
 
 
 @pytest.mark.parametrize("url, response, error, why", [
-    ("https://example.org/x.png", None, None, "not res.garmin.com"),
-    ("https://res.garmin.com.example.org/x.png", None, None, "not res.garmin.com"),
+    ("https://example.org/x.png", None, None, "host example.org is not res.garmin.com"),
+    ("https://res.garmin.com.example.org/x.png", None, None,
+     "host res.garmin.com.example.org is not res.garmin.com"),
     (PICTURE_URL, PictureResponse(status=302), None, "HTTP 302"),  # redirects are not followed
     (PICTURE_URL, PictureResponse(status=404), None, "HTTP 404"),
     (PICTURE_URL, PictureResponse(kind="text/html"), None, "not a PNG"),
@@ -1035,6 +1036,7 @@ def test_anything_unexpected_leaves_the_generic_icon(pictures, url, response, er
     assert f"device picture: none (download refused: {why})" in log_file.read_text()
     if not url.startswith("https://res.garmin.com/"):
         assert client.http.calls == []  # another host is not even asked
+        assert "x.png" not in log_file.read_text()  # its host only, never the address
 
 
 def test_a_download_that_takes_too_long_is_given_up(pictures):

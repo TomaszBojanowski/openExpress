@@ -9,6 +9,7 @@ import threading
 import time
 import traceback
 import types
+import urllib.parse
 import weakref
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -274,7 +275,9 @@ def download_picture(http, url: str, name: str,
     except download.DownloadError:
         return None, "not HTTPS"
     if not url.startswith(PICTURE_HOST):
-        return None, "not res.garmin.com"
+        # Only the host, for the log: never the whole address (its path may say anything).
+        host = urllib.parse.urlsplit(url).hostname or "unknown"
+        return None, f"host {host} is not res.garmin.com"
     deadline = clock() + PICTURE_TIMEOUT_S
     data = bytearray()
     try:
