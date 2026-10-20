@@ -111,7 +111,8 @@ def current_language() -> str:
 def relative_time(moment: datetime, now: datetime) -> str:
     """When something happened, told against `now` (both local): "just now" under a minute
     (also a moment a little ahead), "5 min ago", "3 h ago" the same day, "yesterday, 23:41"
-    within a day; else the date and the hour in the format of the language."""
+    within a day, "3 days ago" two to six days back (by the date); else the date and the hour
+    in the format of the language."""
     seconds = (now - moment).total_seconds()
     if seconds < 60:
         return _("just now")
@@ -127,6 +128,10 @@ def relative_time(moment: datetime, now: datetime) -> str:
     if moment.date() == now.date() - timedelta(days=1) and seconds < 86400:
         # TRANSLATORS: a moment of yesterday, e.g. "yesterday, 23:41"
         return _("yesterday, {time}").format(time=hour)
+    days = (now.date() - moment.date()).days
+    if 2 <= days <= 6:
+        # TRANSLATORS: how long ago, in days (two to six)
+        return ngettext("{n} day ago", "{n} days ago", days).format(n=days)
     return full_time(moment)
 
 

@@ -1,6 +1,6 @@
 """When something happened, told against now: "just now", "5 min ago", "3 h ago",
-"yesterday, 23:41", else the date and the hour (the server state popover, later the start
-page)."""
+"yesterday, 23:41", "3 days ago" (two to six days back), else the date and the hour (the
+server state popover, the last sync, the tiles of the start page)."""
 
 from datetime import datetime
 
@@ -18,7 +18,11 @@ CASES = [
     (datetime(2026, 10, 18, 17, 10), "3 h ago", "3 godz. temu"),
     (datetime(2026, 10, 17, 23, 41), "yesterday, 23:41", "wczoraj, 23:41"),
     (datetime(2026, 10, 17, 8, 15), "2026-10-17 08:15", "17.10.2026 o 08:15"),  # yesterday, >24 h
-    (datetime(2026, 10, 15, 23, 41), "2026-10-15 23:41", "15.10.2026 o 23:41"),
+    (datetime(2026, 10, 16, 23, 59), "2 days ago", "2 dni temu"),  # by the date, not by 48 h
+    (datetime(2026, 10, 15, 23, 41), "3 days ago", "3 dni temu"),
+    (datetime(2026, 10, 13, 8, 0), "5 days ago", "5 dni temu"),
+    (datetime(2026, 10, 12, 0, 1), "6 days ago", "6 dni temu"),
+    (datetime(2026, 10, 11, 23, 59), "2026-10-11 23:59", "11.10.2026 o 23:59"),  # 7 days: the date
 ]
 
 

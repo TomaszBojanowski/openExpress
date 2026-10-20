@@ -59,7 +59,7 @@ def test_the_row_of_a_sync_in_polish():
         details = service.describe_lines(data["lines"])
     finally:
         i18n.setup("en")
-    assert row == "18.10.2026 o 21:14 · 8 plików, 6 wysłanych"
+    assert row == "2 dni temu · 8 plików, 6 wysłanych"  # two days back (by the date)
     assert details == [("Pliki z urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
                         "urządzenia"), "2 pliki były już w Garmin Connect"]
 

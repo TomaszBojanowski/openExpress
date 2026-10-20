@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:15+0200\n"
+"POT-Creation-Date: 2026-10-21 00:19+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -809,14 +809,14 @@ msgid "Forgot {device}."
 msgstr "Zapomniano {device}."
 
 #. TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
-#: openexpress/cli.py:402 openexpress/i18n.py:138 openexpress/netstatus.py:218
+#: openexpress/cli.py:402 openexpress/i18n.py:143 openexpress/netstatus.py:218
 #, python-brace-format
 msgctxt "date and hour"
 msgid "{date} {time}"
 msgstr "{date} o {time}"
 
 #. TRANSLATORS: strftime format of a date in the popover of the server state button
-#: openexpress/cli.py:403 openexpress/i18n.py:136 openexpress/netstatus.py:209
+#: openexpress/cli.py:403 openexpress/i18n.py:141 openexpress/netstatus.py:209
 #: openexpress/netstatus.py:240
 msgid "%Y-%m-%d"
 msgstr "%d.%m.%Y"
@@ -4093,12 +4093,12 @@ msgstr "Podłącz urządzenie, aby sprawdzić"
 msgid "Garmin device"
 msgstr "Urządzenie Garmin"
 
-#: openexpress/i18n.py:117
+#: openexpress/i18n.py:118
 msgid "just now"
 msgstr "przed chwilą"
 
 #. TRANSLATORS: how long ago, in minutes
-#: openexpress/i18n.py:121
+#: openexpress/i18n.py:122
 #, python-brace-format
 msgid "{n} min ago"
 msgid_plural "{n} min ago"
@@ -4107,7 +4107,7 @@ msgstr[1] "{n} min temu"
 msgstr[2] "{n} min temu"
 
 #. TRANSLATORS: how long ago, in hours
-#: openexpress/i18n.py:126
+#: openexpress/i18n.py:127
 #, python-brace-format
 msgid "{n} h ago"
 msgid_plural "{n} h ago"
@@ -4116,13 +4116,22 @@ msgstr[1] "{n} godz. temu"
 msgstr[2] "{n} godz. temu"
 
 #. TRANSLATORS: a moment of yesterday, e.g. "yesterday, 23:41"
-#: openexpress/i18n.py:129
+#: openexpress/i18n.py:130
 #, python-brace-format
 msgid "yesterday, {time}"
 msgstr "wczoraj, {time}"
 
+#. TRANSLATORS: how long ago, in days (two to six)
+#: openexpress/i18n.py:134
+#, python-brace-format
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] "{n} dzień temu"
+msgstr[1] "{n} dni temu"
+msgstr[2] "{n} dni temu"
+
 #. TRANSLATORS: the decimal separator of your language, one character: "." or ","
-#: openexpress/i18n.py:203
+#: openexpress/i18n.py:208
 msgctxt "decimal separator"
 msgid "."
 msgstr ","
