@@ -79,6 +79,18 @@ def test_keep_if_open_leaves_choosing_as_it_is():
     assert c.choosing  # stop_choosing says when the list is gone
 
 
+def test_a_device_found_alone_leaves_no_other_known():
+    """One of two on the list unplugged, the one left found alone and opened: neither the
+    list nor the device gone stays; the open one's tile comes from the session."""
+    c = Connected()
+    c.listing(two(), ["51b4", "5158"])
+    c.found_alone()
+    c.keep_if_open(opens(WATCH))
+    assert c.devices == [] and not c.choosing
+    shown, _notice = c.for_start(entry(WATCH, "Test watch (open)"), opens(WATCH))
+    assert [d.description for d in shown] == ["Test watch (open)"]
+
+
 def test_reread_replaces_the_devices():
     c = Connected()
     c.reread(two())

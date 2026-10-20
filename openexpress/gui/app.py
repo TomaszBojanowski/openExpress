@@ -1546,6 +1546,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._asked = (cause, open_address(self.session))
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
+        # The device to open again when it is still there, among several (None: none).
+        current = getattr(self.session, "storage", None) if keep_open else None
+        current_uri = getattr(current, "device_uri", None)
 
         def done(result):
             if isinstance(result, DeviceChoices):
@@ -1557,7 +1560,12 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             log.info("device detection: %s, all pages are loaded anew",
                      _same_device(self.session, result))
-            self.connected.stop_choosing()
+            if current_uri is None:
+                # With no device to open again, a session means the one device connected:
+                # the devices listed before are gone (e.g. one of two unplugged).
+                self.connected.found_alone()
+            else:
+                self.connected.stop_choosing()
             self.session = result
             self.show_device()
 
@@ -1571,8 +1579,6 @@ class MainWindow(Adw.ApplicationWindow):
             self.sections["watch"].show("loading")
         # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
         # several different devices give a list to choose from.
-        current = getattr(self.session, "storage", None) if keep_open else None
-        current_uri = getattr(current, "device_uri", None)
         self.run_task(_("Detecting the device…"), lambda: detect_devices(current_uri),
                       done, failed)
 

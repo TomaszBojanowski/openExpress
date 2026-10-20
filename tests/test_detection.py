@@ -4375,6 +4375,28 @@ def test_one_of_two_on_the_list_unplugged_while_a_remembered_one_is_shown(
     assert win.navigation.stack == ["start page", "device view"]
 
 
+@pytest.mark.parametrize("shown", ["start page", "remembered view"])
+def test_the_device_unplugged_from_the_list_leaves_no_tile(start_window, monkeypatch, tmp_path,
+                                                          device_root, shown):
+    """U2: two devices on the list, the Edge unplugged; the test watch, found alone, is
+    opened. Back on the start page the Edge has no tile of a device connected: it is gone
+    (such a tile would try to open it, and fail)."""
+    import time
+
+    win = start_window
+    remember_others(time.time())
+    monitor_with(monkeypatch)
+    two_watches(win.world, monkeypatch, tmp_path, device_root)
+    win.refresh_device()
+    if shown == "remembered view":
+        remembered_shown(win)
+    edge_unplugged(win)
+    assert win.session.device.description == "Test watch"
+    back(win)
+    assert [name for name, on, _how in drawn_tiles(win) if on] == ["Test watch"]
+    assert not win.connected.listed(NAMED)
+
+
 def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, monkeypatch,
                                                                   tmp_path, device_root,
                                                                   caplog):
