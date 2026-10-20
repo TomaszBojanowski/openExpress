@@ -1564,7 +1564,8 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
     for text in ("Varia RTL515", "Software 3.36", "Device storage", "Device software",
                  "Part number", "006-B3592-03"):
         assert text in texts
-    for text in ("Sync with Garmin Connect", "Last sync", "Automatic sync is off", "Maps"):
+    for text in ("Sync with Garmin Connect", "Last sync", "Sync automatically when connected",
+                 "Maps"):
         assert text not in texts
     assert calls == ["_show_device_picture", "_check_updates_quietly"]
 

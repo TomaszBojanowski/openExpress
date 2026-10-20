@@ -2079,13 +2079,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self._last_sync_children = []
                 g.add(self.last_sync_row)
                 self._show_last_sync()
-            if s.ownership_error is None and not self._background_enabled():
-                row = Adw.ActionRow(
-                    title=_("Automatic sync is off"),
-                    subtitle=_("Turn it on to sync whenever the device is connected"))
-                # TRANSLATORS: button that turns on automatic sync
-                row.add_suffix(self._button(_("Turn On"), lambda: self.set_background(True)))
-                g.add(row)
+            if s.ownership_error is None:
+                g.add(self._auto_sync_row())
 
         g = sec.group(pgettext("tab", "Updates"))
         self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
@@ -2454,6 +2449,29 @@ class MainWindow(Adw.ApplicationWindow):
         except Exception as e:  # noqa: BLE001
             log.debug("%s", traceback.format_exc())
             done(False, str(e))
+
+    def _auto_sync_row(self) -> Adw.SwitchRow:
+        """The background sync, on or off as it is, from the device page (the same as in
+        Preferences): a change that fails puts the switch back."""
+        row = Adw.SwitchRow(title=_("Sync automatically when connected"),
+                            active=self._background_enabled())
+
+        def toggled(switch, _pspec):
+            # The row from the signal; it is held only until the change is done.
+            wanted = switch.get_active()
+            if wanted == self._background_enabled():
+                return
+
+            def result(ok):
+                if not ok:
+                    switch.handler_block_by_func(toggled)
+                    switch.set_active(not wanted)
+                    switch.handler_unblock_by_func(toggled)
+
+            self.set_background(wanted, result)
+
+        row.connect("notify::active", toggled)
+        return row
 
     def show_preferences(self) -> None:
         dialog = Adw.PreferencesDialog()

@@ -143,6 +143,29 @@ def test_the_window_marks_the_warnings(xdg):
                      ("download: HTTP 404", True)]
 
 
+@pytest.mark.needs_display
+@pytest.mark.parametrize("enabled", [False, True])
+def test_the_device_page_switches_the_automatic_sync(enabled):
+    """A switch, on or off as the background sync is; turning it asks for the change (a
+    fake here: the background sync of this computer is never touched), and a change that
+    fails puts it back."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    asked = []
+    win = types.SimpleNamespace(_background_enabled=lambda: enabled,
+                                set_background=lambda on, result: asked.append((on, result)))
+    row = MainWindow._auto_sync_row(win)
+    assert row.get_title() == "Sync automatically when connected"
+    assert row.get_active() is enabled and asked == []
+    row.set_active(not enabled)
+    ((wanted, result),) = asked
+    assert wanted is (not enabled)
+    result(False)  # it failed: the switch is put back, and nothing more is asked
+    assert row.get_active() is enabled and len(asked) == 1
+
+
 # --- one source of words ---------------------------------------------------------------------
 
 
