@@ -419,7 +419,9 @@ TYPE_NAMES = {
     "FIT_TYPE_41": N_("settings change log"),   # FIT profile: settings_change_log
     "FIT_TYPE_44": N_("metrics"),               # upload: metrics
     "FIT_TYPE_49": N_("sleep"),                 # folder: Sleep
-    "FIT_TYPE_58": N_("device monitoring"),     # upload: device-monitoring
+    # FIT profile: device_monitoring ("data logged on a device level", not the wearer's
+    # monitoring); upload: device-monitoring; folder: Garmin/Device
+    "FIT_TYPE_58": N_("device log"),
     "FIT_TYPE_61": N_("ECG"),                   # folder: ECG
     "FIT_TYPE_68": N_("HRV status"),            # upload: hrvstatus
     # FIT profile: fbt_lha_backup; folder: Garmin/FbtBackup

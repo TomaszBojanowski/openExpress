@@ -121,6 +121,18 @@ def test_new_files_in_polish():
                     "urządzenia ×1, inne dane (FIT_TYPE_70) ×1")
 
 
+def test_the_device_level_monitoring_is_the_device_log():
+    """Type 58 is what the device logs about itself, not the wearer's monitoring (type 32):
+    "device log", told apart from the settings change log and the primary device's data."""
+    assert service.type_name("FIT_TYPE_58") == "device log"
+    assert service.type_name("FIT_TYPE_32") == "monitoring"
+    i18n.setup("pl")
+    try:
+        assert service.type_name("FIT_TYPE_58") == "dziennik urządzenia"
+    finally:
+        i18n.setup("en")
+
+
 def test_names_for_the_training_status_primary_device_and_coach_files():
     """Types 72, 74 and 77 seen in real syncs, and 41 named after what it is; any other type
     stays "other data"."""
