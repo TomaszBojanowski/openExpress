@@ -97,6 +97,28 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.6" date="2026-10-20">
+      <description>
+        <ul>
+          <li>Changed: plugging in or unplugging another device no longer takes you away from
+          the device or remembered-device view you're on; signing in or out keeps you where you
+          are (signing out on the view of a device from your account returns to the start
+          page).</li>
+          <li>Changed: the last sync is described plainly — relative time, files found and
+          uploaded, what was already in Garmin Connect, and warnings only when something went
+          wrong. Automatic sync is a switch on the device page.</li>
+          <li>Added: the Garmin Connect account in Preferences, so you can sign in or out
+          without a device connected.</li>
+          <li>Changed: the command-line sync output ends with the same summary line as the
+          window.</li>
+          <li>Changed: device-level FIT files are named "device log".</li>
+          <li>Fixed: a device unplugged from the list could leave a tile behind that failed to
+          open.</li>
+          <li>Fixed: device types from the Garmin Connect account are remembered after the
+          ownership check.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.5" date="2026-10-20">
       <description>
         <ul>

@@ -279,10 +279,11 @@ replaced. Tested on a fēnix 8.
   [Connect IQ apps](#connect-iq-apps)). New watch faces are installed but not activated, like
   in Garmin Express.
 - **Last sync** on the Device page, `openexpress sync` and the notification of the
-  background sync use the same words: how many new files were uploaded, how many Connect
-  already had (recognised before sending or, after sending, by Garmin), how many Garmin
-  rejected and how many errors there were; the new files are named by their type
-  (activities, sleep, HRV status…; others as "other data").
+  background sync use the same words: when it was, how many new files the device had and
+  how many were uploaded, and how many came from Garmin Connect. The details name the new
+  files by their type (activities, sleep, HRV status, device log…; others as "other data"),
+  say how many Garmin Connect already had, and warn only when Garmin rejected a file or one
+  could not be uploaded.
 
 ### Upgrading from 0.3.x
 
