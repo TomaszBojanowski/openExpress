@@ -97,6 +97,21 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.5" date="2026-10-20">
+      <description>
+        <ul>
+          <li>Fixed: a stale "could not read" tile could appear after unplugging one of several
+          devices (the list was read twice at once).</li>
+          <li>Fixed: no second detection right after the window starts when the devices are
+          already listed.</li>
+          <li>Changed: the start page's navigation decisions are made in one place and logged
+          ("navigation: …" lines); the reason an MTP device could not be opened is logged; the
+          host of a refused device picture is logged.</li>
+          <li>Internal: the devices plugged in are kept in one store; tests for the start page
+          matrix.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.4" date="2026-10-18">
       <description>
         <ul>
