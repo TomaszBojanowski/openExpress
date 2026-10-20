@@ -687,6 +687,17 @@ def detection_due(win) -> None:
     win.in_background(lambda: s.storage.read("GARMIN/GarminDevice.xml"), done, failed)
 
 
+def account_changed(win, cause: Cause = Cause.ACCOUNT_CHANGED) -> None:
+    """A change of account (login, logout, the key from the installer): the session made
+    with the old one is dropped and the devices detected again. The device open before is
+    opened again when it is still there, also among several, and the page shown stays
+    (Q3), but for the view of a device of the account after a logout (`cause`
+    LOGGED_OUT)."""
+    reopen = open_address(win.session) or None
+    win.session = None
+    win.refresh_device(cause=cause, reopen=reopen)
+
+
 def _take_asked(win, own: Cause) -> tuple[Cause, str | None]:
     """Why the decision made now is made and the device open when it was asked: those of
     the detection that ends here (if one), else `own`. A Refresh on the start page asked
@@ -713,7 +724,8 @@ def visible_view(win) -> View:
     if page is win.start.page:
         return View(Page.START)
     if page is win.remembered.page:
-        return View(Page.REMEMBERED, getattr(win, "_remembered_unit", None))
+        return View(Page.REMEMBERED, getattr(win, "_remembered_unit", None),
+                    getattr(win, "_remembered_from_account", False))
     return View(Page.DEVICE)
 
 
@@ -890,6 +902,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._asked: tuple | None = None
         self._pending_cause: Cause | None = None
         self._remembered_unit: int | None = None
+        self._remembered_from_account = False  # the view shows what the account says
         # The devices connected, as last known (gui/connected.py): the list to choose from
         # while there is one, the devices connected while one of them is open, what was on
         # USB when the list was made and the addresses of the tiles drawn last.
@@ -1540,33 +1553,39 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_actions()  # the Sync button says the same as the pages
         return True
 
-    def refresh_device(self, cause: Cause | None = None, read_list: bool = False) -> None:
+    def refresh_device(self, cause: Cause | None = None, read_list: bool = False,
+                       reopen: str | None = None) -> None:
         """Detect the device anew; with several devices connected, the one open now is
         opened again when it is still there. `cause`: why (navigation.Cause); none said: a
         detection asked again (Refresh and the like), or the one that waited for the
         running task. `read_list`: once a device is open, the list of devices connected is
         read again (another device came as well; asked by the timer, which itself waits for
-        a running task)."""
+        a running task). `reopen`: the address of the device open before its session was
+        dropped (a change of account), opened again as the open one would be."""
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
             log.info("device detection: after the running task")
             self._refresh_pending = True
             if cause is not None:
                 self._pending_cause = cause  # the last one asked, as it was asked
+            if reopen:
+                self._pending_reopen = reopen
             return
         self._refresh_pending = False
+        reopen = reopen or getattr(self, "_pending_reopen", None)
+        self._pending_reopen = None
         pending, self._pending_cause = getattr(self, "_pending_cause", None), None
         if pending is Cause.REFRESH_ON_START:
             cause = pending  # Refresh on the start page waited for the task: it stays there
         elif cause is None:
             cause = pending or Cause.REFRESH_IN_VIEW
         # Why, and the device open now: where the user goes once it is done (navigation).
-        self._asked = (cause, open_address(self.session))
+        self._asked = (cause, open_address(self.session) or reopen)
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
         # The device to open again when it is still there, among several (None: none).
         current = getattr(self.session, "storage", None)
-        current_uri = getattr(current, "device_uri", None)
+        current_uri = getattr(current, "device_uri", None) or reopen
 
         def done(result):
             if isinstance(result, DeviceChoices):
@@ -1897,6 +1916,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"],
                                 fields["description"])
         self._remembered_unit = service.unit_id_of(entry.get("unitid"))
+        self._remembered_from_account = True
         self.navigation.push(self.remembered.page)
 
     def _show_remembered(self, known, tile=None) -> None:
@@ -1920,6 +1940,7 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self._show_page_picture(known.part_number, None, known.category, known.description)
         self._remembered_unit = known.unit_id
+        self._remembered_from_account = False
         self.navigation.push(self.remembered.page)
 
     def _clear_device_pages(self) -> None:
@@ -2694,8 +2715,7 @@ class MainWindow(Adw.ApplicationWindow):
             def saved(consumer):
                 save_consumer(consumer)
                 self.toast(_("Application key saved"))
-                self.session = None
-                self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
+                account_changed(self)
 
             self.run_task(_("Reading the installer…"), lambda: read(path), saved, device=False)
 
@@ -2728,9 +2748,8 @@ class MainWindow(Adw.ApplicationWindow):
                 auth, profile_ok = result
                 self.toast(_("Logged in as {account}").format(account=auth.display) if profile_ok
                            else _("Logged in, but the account details could not be loaded"))
-                self.session = None
                 self._want_account()
-                self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
+                account_changed(self)
 
             def start():
                 if self.busy:
@@ -2751,9 +2770,8 @@ class MainWindow(Adw.ApplicationWindow):
     def logout(self) -> None:
         store.delete()
         self.toast(_("Logged out"))
-        self.session = None
         self._account = None  # the start page lists no device of the account any more
-        self.refresh_device(cause=Cause.ACCOUNT_CHANGED)
+        account_changed(self, Cause.LOGGED_OUT)
 
     def backup(self) -> None:
         from openexpress.backup import run_backup

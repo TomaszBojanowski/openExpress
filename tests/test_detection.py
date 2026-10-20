@@ -4261,9 +4261,8 @@ def test_the_open_device_unplugged_while_a_remembered_one_is_shown_keeps_its_vie
     assert [name for name, on, _how in drawn_tiles(win) if on] == []
 
 
-# --- the navigation matrix of the start page, as it behaves today (audit, part 3) ----------
-# Cells marked "behaviour to change in step 6" describe what the window does now and what
-# the decisions Q1-Q3 (AGENTS.md) will change: the change is meant to show in these tests.
+# --- the navigation matrix of the start page (audit, part 3) --------------------------------
+# The window as the decisions Q1, Q2 and Q3 (AGENTS.md) have it.
 
 
 def detections(win):
@@ -4687,8 +4686,8 @@ def test_the_login_finished_in_the_device_view(start_window, monkeypatch):
 
 
 def test_the_login_finished_after_going_back_to_the_start_page(start_window, monkeypatch):
-    """N1, the login started in the device view, the start page shown when it finishes: the
-    device view comes up again."""
+    """N1, the login started in the device view, the start page shown when it finishes
+    (Q3): the device is open again, the start page stays, as after Refresh there."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient(logged_in=False))
     one_watch(win, monkeypatch)
@@ -4696,8 +4695,7 @@ def test_the_login_finished_after_going_back_to_the_start_page(start_window, mon
     back(win)
     login_finished(win, monkeypatch)
     assert win.session is not None
-    # behaviour to change in step 6 (Q3): the start page stays, as after Refresh there
-    assert win.navigation.stack == ["start page", "device view"]
+    assert win.navigation.stack == ["start page"]
 
 
 def test_logging_out_in_the_device_view(start_window, monkeypatch):
@@ -4722,17 +4720,19 @@ def test_logging_out_in_the_device_view(start_window, monkeypatch):
 
 def test_logging_out_in_the_device_view_with_two_devices_plugged_in(start_window, monkeypatch,
                                                                    tmp_path, device_root):
-    """The test watch open in its view, the Edge plugged in too; logged out: the session is
-    dropped before the detection, which finds two devices and gives the list to choose
-    from, on the start page (live test 18.10.2026, 23:52:35, with a Varia)."""
+    """The test watch open in its view, the Edge plugged in too; logged out (Q3, live test
+    18.10.2026, 23:52:35, with a Varia): the session is dropped, the detection opens the
+    same device again although two are connected; its view stays."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient())
     two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
     assert win.navigation.stack == ["start page", "device view"]
+    opened = win.session
     win.logout()
-    assert win._account is None and win.session is None
-    # behaviour to change in step 6 (Q3): the same device opened again, its view stays
-    assert win.navigation.stack == ["start page"]
+    assert win._account is None
+    assert win.session is not opened and win.session.device.description == "Test watch"
+    assert win.navigation.stack == ["start page", "device view"]
+    back(win)
     assert [(name, on) for name, on, _how in drawn_tiles(win)][:2] == [
         ("Test watch", True), ("Edge 1050", True)]
 
@@ -5129,6 +5129,46 @@ def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
         "last_sync": "Not synced yet with openExpress"}
 
 
+def test_logging_out_on_the_view_of_a_device_of_the_account_gives_the_start_page(
+        start_window, monkeypatch):
+    """The exception to Q3: logged out on the read-only view of a device only on the
+    account, which has nothing to show without it: back on the start page, where its tile
+    is gone."""
+    win = start_window
+    later = defer_background(win)
+    with_account(monkeypatch, FakeAccountClient())
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    names = [name for name, _on in sections(win)[0]]
+    win._open_tile(names.index("Forerunner 965"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    win.logout()
+    run_later(later)
+    assert win.navigation.stack == ["start page"]
+    assert "Forerunner 965" not in [name for name, _on in sections(win)[0]]
+
+
+def test_logging_out_on_the_view_of_a_remembered_device_keeps_it(start_window, monkeypatch):
+    """Q3: logged out on the read-only view of a device remembered by this computer (not
+    from the account): the view stays."""
+    import time
+
+    win = start_window
+    later = defer_background(win)
+    remember_others(time.time())
+    with_account(monkeypatch, FakeAccountClient())
+    nothing_connected(win, monkeypatch)
+    win._fetch_account()
+    run_later(later)
+    names = [name for name, _on in sections(win)[0]]
+    win._open_tile(names.index("Venu 2"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    win.logout()
+    run_later(later)
+    assert win.navigation.stack == ["start page", "remembered view"]
+
+
 @pytest.mark.needs_display
 def test_the_account_section_adds_tiles_without_touching_the_others():
     """The section "On the account" comes after the others, only with such tiles; adding it
@@ -5247,9 +5287,9 @@ def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeyp
     assert asked == [1, 1]
     assert names_on_the_start_page(win) == ["Test watch", "Edge 1050", "Forerunner 965",
                                             "Instinct 3", "Venu 2"]
-    win.logout()  # in the device view; the one device is opened again (D7)
+    win.logout()  # on the start page; the one device is opened again, the page stays (Q3)
     run_later(later)
-    assert win.navigation.stack == ["start page", "device view"]
+    assert win.navigation.stack == ["start page"]
     back(win)
     assert names_on_the_start_page(win) == ["Test watch"]
     assert asked == [1, 1]  # logged out: nothing asked

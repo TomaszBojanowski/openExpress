@@ -32,6 +32,7 @@ class Cause(Enum):
     CHOSEN = "tile chosen"
     CHOICE_FAILED = "the device chosen could not be opened"
     ACCOUNT_CHANGED = "account changed"
+    LOGGED_OUT = "logged out"  # a change of account, after which the account tells nothing
 
 
 class Page(Enum):
@@ -43,9 +44,11 @@ class Page(Enum):
 @dataclass(frozen=True)
 class View:
     """The page shown; for the read-only view of a device not connected, which one it is
-    (by its unit ID: compared in memory only, never shown or written)."""
+    (by its unit ID: compared in memory only, never shown or written) and whether it shows
+    what the account says of it (`from_account`), not what this computer remembers."""
     page: Page
     shown_unit_id: int | None = field(default=None, repr=False)
+    from_account: bool = False
 
 
 @dataclass(frozen=True)
@@ -188,6 +191,8 @@ def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> De
         # view (one device opened in the background, or the list). The very device shown
         # (by its unit ID; one without is never it) brings its view, opened alone, or the
         # start page with its tile (with another device, or while another one is open).
+        if cause is Cause.LOGGED_OUT and visible.from_account:
+            return ShowStart()  # without the account the view has nothing to show (Q3)
         shown = visible.shown_unit_id
         if shown is not None and shown == after.open_unit:
             return ShowDevice()
@@ -203,7 +208,8 @@ def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> De
         return ShowStart()  # the device shown is gone
     if visible.page is Page.DEVICE:
         return Stay()
-    stays = cause is Cause.REFRESH_ON_START or (
+    # Refresh on the start page and a change of account (Q3) never move the user.
+    stays = cause in (Cause.REFRESH_ON_START, Cause.ACCOUNT_CHANGED, Cause.LOGGED_OUT) or (
         cause in _REOPENING and before.open is not None)
     if stays:
         return Stay(redraw_start=visible.page is Page.START)

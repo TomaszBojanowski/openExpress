@@ -36,6 +36,8 @@ S = View(Page.START)
 D = View(Page.DEVICE)
 R_WATCH = View(Page.REMEMBERED, WATCH_UNIT)  # the watch's read-only view
 R = View(Page.REMEMBERED, VENU_UNIT)  # the read-only view of a Venu 2 not connected
+ACCOUNT_UNIT = 3000000007
+R_ACCOUNT = View(Page.REMEMBERED, ACCOUNT_UNIT, from_account=True)  # a device of the account
 
 
 def seen(*connected, open=None, ids=True):
@@ -118,16 +120,28 @@ NAVIGATION = [
      Stay(redraw_start=True)),
     # --- the account ------------------------------------------------------------------------
     ("N1-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
-    # Q3: the start page stays, as after Refresh there.
-    ("N1-login-back-on-S-Q3", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
-     ShowDevice()),
+    # Q3: a change of account never moves the user: the start page stays, as after Refresh
+    # there.
+    ("N1-login-back-on-S", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
+     Stay(redraw_start=True)),
     ("N1-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
-    # Q3: a change of account never moves the user. Today the session is dropped before the
-    # detection, so with two devices plugged in it gives the list: back to the start page.
-    ("N2-logout-on-D-Q3", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V),
-     ShowStart()),
-    ("N2-login-on-D-Q3", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V),
-     ShowStart()),
+    # Q3: the device open before the change is opened again, also with two plugged in.
+    ("N2-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
+     Stay()),
+    ("N2-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
+     Stay()),
+    ("N1-logged-out-on-S", Cause.LOGGED_OUT, S, seen(W, open=W), seen(W, open=W),
+     Stay(redraw_start=True)),
+    ("N1-logged-out-on-D", Cause.LOGGED_OUT, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("N1-logged-out-on-R", Cause.LOGGED_OUT, R, seen(W, open=W), seen(W, open=W),
+     Stay(redraw_start=True)),
+    # The exception to Q3: logged out on the view of a device of the account, which has
+    # nothing to show without it: the start page.
+    ("N0-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, NONE, NONE, ShowStart()),
+    ("N1-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, seen(W, open=W),
+     seen(W, open=W), ShowStart()),
+    ("N0-login-on-R-account", Cause.ACCOUNT_CHANGED, R_ACCOUNT, NONE, NONE,
+     Stay(redraw_start=True)),
 ]
 
 
@@ -141,7 +155,7 @@ def test_the_ids_are_unique_and_the_marked_rows_are_known():
     ids = [row[0] for row in NAVIGATION]
     assert len(ids) == len(set(ids))
     marked = sorted(i for i in ids if re.search(r"-Q\d+$", i))
-    assert marked == ["N1-login-back-on-S-Q3", "N2-login-on-D-Q3", "N2-logout-on-D-Q3"]
+    assert marked == []
 
 
 WATCH_LABEL = W + "/Internal Storage/"  # the open watch's storage, below its mount
@@ -235,7 +249,8 @@ def test_the_log_line_tells_no_address_and_no_unit_id(cause, visible, before, af
     assert line.startswith(f"navigation: {cause.value}, on the {visible.page.value}, "
                            f"{len(before.connected)} → {len(after.connected)} devices: ")
     for secret in (W, E, V, "0000abcdef", "made-up-user",
-                   *(str(u) for u in (WATCH_UNIT, EDGE_UNIT, VARIA_UNIT, VENU_UNIT))):
+                   *(str(u) for u in (WATCH_UNIT, EDGE_UNIT, VARIA_UNIT, VENU_UNIT,
+                                      ACCOUNT_UNIT))):
         assert secret not in line
 
 
