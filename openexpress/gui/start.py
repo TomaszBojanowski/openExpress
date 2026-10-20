@@ -73,13 +73,15 @@ def columns(width: int) -> tuple[int, int]:
 
 
 def _tile_grid() -> Gtk.FlowBox:
-    # At the left, where the heading is: the tiles get their width from the page
-    # (_TileColumns), so a line of them fills the page and a shorter line starts at the left.
+    # Filling the line, from the left where the heading is: the grid shares the line out
+    # into as many equal places as tiles share it (_TileColumns), also when it has fewer
+    # tiles than that; a tile asks only for what its content needs, so that the window can
+    # always get narrower.
     return Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
                        activate_on_single_click=True, min_children_per_line=1,
                        max_children_per_line=4, column_spacing=TILE_SPACING,
                        row_spacing=TILE_SPACING, valign=Gtk.Align.START,
-                       halign=Gtk.Align.START)
+                       halign=Gtk.Align.FILL)
 
 
 class _ColumnsLayout(Gtk.LayoutManager):
@@ -107,10 +109,13 @@ class _ColumnsLayout(Gtk.LayoutManager):
 
 class _TileColumns(Adw.Bin):
     """The content of the start page: on a new width, how many tiles share a line and how
-    wide they are (columns()), the same in every section. They are set when the window is
-    idle, never during its layout, and only when either changes: a page laid out keeps its
-    tiles. (A scrollbar that comes with the new layout makes the page narrower, so that
-    fewer tiles share a line and the page gets longer: it stays, and nothing goes back.)"""
+    wide they are (columns()), the same in every section. Each grid gets how many share a
+    line, and the pixels that do not divide evenly as its right margin, so that every tile
+    is exactly as wide; the tiles themselves get no width (one that became their minimum
+    kept the window from getting narrower). Set when the window is idle, never during its
+    layout, and only when the columns, the width of a tile or those pixels change. (A
+    scrollbar that comes with the new layout makes the page narrower, so that fewer tiles
+    share a line and the page gets longer: it stays, and nothing goes back.)"""
 
     __gtype_name__ = "OpenExpressTileColumns"
 
@@ -120,38 +125,31 @@ class _TileColumns(Adw.Bin):
         self._grids = grids
         self._margins = child.get_margin_start() + child.get_margin_end()
         self.layout = (0, MIN_TILE_WIDTH)  # (tiles on a line, their width): none set yet
+        self._spare = 0  # the pixels of the line that do not divide evenly among them
         self.updates = 0  # how many times the tiles were laid out (for the tests)
         self._wanted = None
 
     def allocated(self, width: int) -> None:
         """The page got this width (from its layout): the tiles follow, once it is idle."""
-        wanted = columns(width - self._margins)
-        if wanted != self.layout and wanted != self._wanted:
+        count, tile = columns(width - self._margins)
+        wanted = (count, tile, width - self._margins - count * tile - TILE_SPACING * (count - 1))
+        if wanted != (*self.layout, self._spare) and wanted != self._wanted:
             if self._wanted is None:
                 GLib.idle_add(self._apply)
             self._wanted = wanted
 
     def _apply(self) -> bool:
         wanted, self._wanted = self._wanted, None
-        if wanted is not None and wanted != self.layout:
-            self.layout = wanted
+        if self.get_root() is None:  # the page left its window meanwhile: nothing to lay out
+            return False
+        if wanted is not None and wanted != (*self.layout, self._spare):
+            count, tile, self._spare = wanted
+            self.layout = (count, tile)
             self.updates += 1
             for grid in self._grids:
-                self.fit(grid)
+                grid.set_max_children_per_line(count)
+                grid.set_margin_end(self._spare)
         return False
-
-    def tile_width(self) -> int:
-        return self.layout[1]
-
-    def fit(self, grid: Gtk.FlowBox) -> None:
-        """This grid's tiles at the width of the page now, as many on a line as fit."""
-        count, width = self.layout
-        if count:
-            grid.set_max_children_per_line(count)
-        child = grid.get_first_child()
-        while child is not None:
-            child.set_size_request(width, -1)
-            child = child.get_next_sibling()
 
 
 def _device_list() -> Gtk.ListBox:
@@ -299,7 +297,7 @@ class StartPage:
                 for key, tile, how in part:
                     picture = self._picture_of(tile.image_part_number)
                     item = (row_widget(tile, how, picture) if mode == LIST
-                            else tile_widget(tile, how, picture, self.columns.tile_width()))
+                            else tile_widget(tile, how, picture))
                     item.key = key
                     (section.list if mode == LIST else section.grid).append(item)
             else:  # the same items: their places may have moved; a kind learnt since
@@ -459,7 +457,7 @@ def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
     return row
 
 
-def tile_widget(tile, how: str, picture=None, width: int = MIN_TILE_WIDTH) -> Gtk.FlowBoxChild:
+def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
     """One tile: the picture of the device if it is known, else the icon of its kind (the
     picture is put in its place later, in the same size), the name, how it is connected and
     its version; framed when connected."""
@@ -468,7 +466,7 @@ def tile_widget(tile, how: str, picture=None, width: int = MIN_TILE_WIDTH) -> Gt
     image = _image(tile, picture, TILE_ICON_SIZE)
     box.append(image)
     # max_width_chars=1: the texts never ask for more than the tile's width (they take
-    # the width the tile has, `width`), so that every tile is as wide as the others.
+    # the width the grid gives the tile), so that every tile is as wide as the others.
     name = Gtk.Label(label=_name(tile), ellipsize=Pango.EllipsizeMode.END,
                      max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
@@ -480,7 +478,7 @@ def tile_widget(tile, how: str, picture=None, width: int = MIN_TILE_WIDTH) -> Gt
         label.add_css_class("dim-label")
         label.add_css_class("caption")
         box.append(label)
-    child = Gtk.FlowBoxChild(child=box, width_request=width)
+    child = Gtk.FlowBoxChild(child=box)
     _mark(child, tile, image, picture)
     child.add_css_class("card")
     child.add_css_class("oe-tile")

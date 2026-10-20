@@ -4866,15 +4866,16 @@ def test_the_remembered_section_only_with_remembered_devices():
 
 @pytest.mark.needs_display
 def test_the_tile_grids_start_where_the_headings_do():
-    """T9 step 0: every section's grid starts at the left, where its heading starts (the
-    tiles share the line out; a section of fewer tiles keeps them as wide, from the left)."""
+    """T9 step 0: every section's grid fills the line from the left, where its heading
+    starts: it shares the line out among its tiles; a section of fewer tiles keeps them as
+    wide, from the left (where they stand is checked laid out, in the tests below)."""
     from gi.repository import Gtk
 
     from openexpress.gui.start import StartPage
 
     start = StartPage()
     grids = (start.grid, start.remembered_grid, start.account_grid)
-    assert [g.get_halign() for g in grids] == [Gtk.Align.START] * 3
+    assert [g.get_halign() for g in grids] == [Gtk.Align.FILL] * 3
     titles = (start.connected_title, start.remembered_title, start.account_title)
     assert all(title.get_xalign() == 0 for title in titles)
 
@@ -4995,6 +4996,60 @@ def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
         laid_out = start.columns.updates
         turn(0.5)  # the window keeps its size: nothing is laid out again
         assert start.columns.updates == laid_out >= 1
+    finally:
+        win.destroy()
+
+
+@pytest.mark.needs_display
+# PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+@pytest.mark.parametrize("sizes, per_line", [((1000, 700, 520, 450, 420, 400), 1),
+                                              ((400, 450, 520, 700, 1000), 3)])
+def test_the_tiles_follow_the_window_narrowed_or_widened(sizes, per_line, capfd):
+    """T9 step 0, after 6f750d4: the same window narrowed step by step from 1000 px to
+    400 px, as when it is dragged (or widened back): the tiles follow, one column at the end
+    (or three), and they always fit in the window. The width they were given never becomes
+    their minimum, which kept the window from getting narrower ("... exceeds ... width")."""
+    import time
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, GLib, Gtk
+
+    from openexpress.devicelist import Tile
+    from openexpress.gui.start import StartPage
+
+    def tile(name, connected):
+        return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
+                    None if connected else 1.0, "006-B4532-00", None, None)
+
+    def turn(seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            GLib.MainContext.default().iteration(False)
+
+    start = StartPage()
+    start.show([(tile("fēnix 8", True), "Over USB (MTP)"),
+                (tile("Edge 1050", True), "USB drive"),
+                (tile("Varia", True), "USB drive"),
+                (tile("Venu 2", False), "Software 19.05")], False)
+    nav = Adw.NavigationView()
+    nav.add(start.page)
+    win = Gtk.Window(default_width=sizes[0], default_height=740, child=nav)
+    win.present()
+    try:
+        turn(0.8)
+        for size in sizes[1:]:  # the same window, narrowed or widened step by step
+            win.set_default_size(size, 740)
+            turn(0.5)
+            assert nav.get_width() <= size  # the page is no wider than the window asked
+        assert start.columns.layout[0] == per_line
+        for t in start.tiles():
+            _ok, b = t.compute_bounds(nav)
+            assert b.get_x() >= 0 and b.get_x() + b.get_width() <= nav.get_width()
+        assert "exceeds" not in capfd.readouterr().err
     finally:
         win.destroy()
 
