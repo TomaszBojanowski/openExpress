@@ -101,6 +101,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.7" date="2026-10-21">
+      <description>
+        <ul>
+          <li>Changed: tiles on the start page share out the width of the window — three
+          columns where they fit, one full-width column in a narrow window — and stand centred
+          with their headings.</li>
+          <li>Changed: dates read naturally ("8 min ago", "yesterday, 22:30", "3 days ago") on
+          the tiles, in the last sync and in the server status; the full date is in the
+          tooltip. They update by themselves while the page is open.</li>
+          <li>Fixed: narrowing the window could leave tiles wider than the window.</li>
+          <li>Changed: new screenshots, with the start page first.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.6" date="2026-10-20">
       <description>
         <ul>
