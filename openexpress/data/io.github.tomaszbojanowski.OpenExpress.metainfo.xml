@@ -60,6 +60,10 @@
   <url type="translate">https://github.com/TomaszBojanowski/openExpress#adding-a-translation</url>
   <screenshots>
     <screenshot type="default">
+      <caption>The start page: the devices connected and those seen before</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/start.png</image>
+    </screenshot>
+    <screenshot>
       <caption>Software updates, with a beta version offered for the device</caption>
       <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/updates.png</image>
     </screenshot>

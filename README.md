@@ -111,6 +111,15 @@ it is in mass storage mode.
 openExpress appears in your application menu. Click **Choose Installer…** in the banner at
 the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
 the Device page (or in Preferences) to sync whenever the watch is connected.
+
+The window opens on the start page: a tile for each Garmin device connected, and for those
+seen before; a tile opens its device.
+
+<p align="center">
+  <img src="docs/screenshots/start.png" width="700"
+       alt="The start page: three devices connected and one remembered">
+</p>
+
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`);
 in the version from source it is `openexpress <command>`.
