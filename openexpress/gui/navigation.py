@@ -100,8 +100,10 @@ class ReadList:
 @dataclass(frozen=True)
 class Detect:
     """A detection; `keep_open`: the device open now is opened again when it is still there
-    (several connected), instead of giving the list to choose from."""
+    (several connected), instead of giving the list to choose from; `read_list`: the list of
+    devices connected is read again after it (another device came as well)."""
     keep_open: bool = True
+    read_list: bool = False
     ignored: int = field(default=0, compare=False)
     moved: bool = field(default=False, compare=False)
 
@@ -131,7 +133,8 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     the address of the open device's storage (None: none open); `listed`: the addresses of
     the devices connected, and `unread`: those of them listed without their details (e.g.
     not mounted yet), all without the trailing slash; `open_moved`: whether the open device
-    is no longer at its place on USB (asked only when it matters)."""
+    is no longer at its place on USB (asked only when it matters). A device open stays open
+    (Q1): another device mounted or seen on USB only has the list read again."""
     if cause not in _TIMED:
         if cause in (Cause.UNPLUGGED_OPEN, Cause.CHOSEN):
             return Nothing()  # no detection: the device is gone, or the one chosen is opened
@@ -148,22 +151,26 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
         return ReadList()
     # Mounts of devices already listed with their details bring nothing new (Q2), whether
     # one is open or not: gvfs reports them as the window starts, and twice for one device.
-    # One listed without them (not mounted yet, not readable) is looked at while none is
-    # open: its tile may get its details now. With a device open every mount of a device
-    # listed is left aside, as since T2, until Q1 reads the list again instead.
-    skipped = listed if open_label is not None else listed - unread
+    # One listed without them (not mounted yet, not readable) is looked at: its tile may
+    # get its details now.
+    skipped = listed - unread
     known = [r for r in rest if r is not None and not on_open(r) and r.rstrip("/") in skipped]
     rest = [r for r in rest if r not in known]
     ignored = len(known)
     # (The list to read again with no device open any more: the open one went away too.)
     if known and not rest and not (read_the_list and open_label is None):
         return ReadList(ignored=ignored) if read_the_list else Nothing(ignored=ignored)
-    if open_label is None or not rest or any(r is None or not on_open(r) for r in rest):
-        # Another device mounted or plugged in: with one open, the list to choose from (D7).
-        return Detect(keep_open=open_label is None, ignored=ignored)
-    if open_moved():
-        # The same address, another place on USB.
-        return Detect(keep_open=True, ignored=ignored, moved=True)
+    if open_label is None:
+        return Detect(keep_open=True, ignored=ignored)
+    # Another device mounted, or seen on USB (a trigger without an address): the open one
+    # stays open, the list is read again (Q1).
+    others = [r for r in rest if r is None or not on_open(r)]
+    if len(others) < len(rest) and open_moved():
+        # Its own mount too, at another place on USB (the same address): opened again,
+        # then the list read again if another device came as well.
+        return Detect(keep_open=True, read_list=bool(others), ignored=ignored, moved=True)
+    if others or not rest:
+        return ReadList(ignored=ignored)
     return CheckOpen(ignored=ignored)
 
 

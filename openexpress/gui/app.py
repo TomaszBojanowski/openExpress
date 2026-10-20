@@ -641,7 +641,10 @@ def detection_due(win) -> None:
         log.info("device detection: %d mount(s) of devices already on the list, ignored",
                  what.ignored)
     if isinstance(what, ReadList):
-        win._reread_connected()  # another device went away: the open one stays
+        # Another device came or went, or one listed was mounted: the open one stays (Q1).
+        only_gone = bool(causes) and all(c is Cause.UNPLUGGED_OTHER for c in causes)
+        win._reread_cause = Cause.UNPLUGGED_OTHER if only_gone else cause
+        win._reread_connected()
         return
     if isinstance(what, Detect):
         if what.moved:
@@ -650,12 +653,12 @@ def detection_due(win) -> None:
             # applies what was waiting when it is unplugged) and the session points to the
             # old place.
             log.info("device detection: the same address, but not at the same place on USB")
-        # Another device mounted or plugged in: with several, the list to choose from, even
-        # while one is open (D7); only Refresh and the like keep the open device.
-        if what.keep_open:
-            win.refresh_device(cause=cause)
-        else:
+        if not what.keep_open:
             win.refresh_device(keep_open=False, cause=cause)
+        elif what.read_list:
+            win.refresh_device(cause=cause, read_list=True)  # another device came as well
+        else:
+            win.refresh_device(cause=cause)
         return
 
     def done(_xml):
@@ -881,6 +884,8 @@ class MainWindow(Adw.ApplicationWindow):
         # USB when the list was made and the addresses of the tiles drawn last.
         self.connected = Connected()
         self._reread_pending = False
+        # Why the list is read again (navigation.Cause), for where the user goes after it.
+        self._reread_cause: Cause | None = None
         # The devices of the Garmin account (their entries, keys in lower case), read once
         # per start and login; None: not logged in, or not read.
         self._account: list | None = None
@@ -1524,11 +1529,14 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_actions()  # the Sync button says the same as the pages
         return True
 
-    def refresh_device(self, keep_open: bool = True, cause: Cause | None = None) -> None:
+    def refresh_device(self, keep_open: bool = True, cause: Cause | None = None,
+                       read_list: bool = False) -> None:
         """Detect the device anew. `keep_open`: with several devices connected, the one open
-        now is opened again (Refresh); False when another device was just plugged in.
-        `cause`: why (navigation.Cause); none said: a detection asked again (Refresh and the
-        like), or the one that waited for the running task."""
+        now is opened again (Refresh). `cause`: why (navigation.Cause); none said: a
+        detection asked again (Refresh and the like), or the one that waited for the
+        running task. `read_list`: once a device is open, the list of devices connected is
+        read again (another device came as well; asked by the timer, which itself waits for
+        a running task)."""
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
             log.info("device detection: after the running task")
@@ -1568,6 +1576,9 @@ class MainWindow(Adw.ApplicationWindow):
                 self.connected.stop_choosing()
             self.session = result
             self.show_device()
+            if read_list and self.session is result:
+                self._reread_cause = cause
+                self._reread_connected()
 
         def failed(_e):
             self.session = None
@@ -1640,6 +1651,7 @@ class MainWindow(Adw.ApplicationWindow):
                               if s is not None else None)
         if isinstance(what, ReadList):
             self._fetch_account()  # the start page lists the account's devices too
+            self._reread_cause = cause
             self._reread_connected()
             return
         if on_start:
@@ -1660,8 +1672,21 @@ class MainWindow(Adw.ApplicationWindow):
             if self.session is not s:
                 return  # closed or replaced meanwhile: drawn by what did that
             log.info("start page: %d devices connected", len(found))
+            cause, self._reread_cause = (getattr(self, "_reread_cause", None)
+                                         or Cause.UNPLUGGED_OTHER), None
+            address = open_address(s)
+            before = Seen(self.connected.drawn, address)
             self.connected.reread(found)
-            if self._on_start_page():
+            if s is None:  # nothing open, nothing to decide
+                if self._on_start_page():
+                    self._render_start()
+                return
+            # The devices connected with the open one among them, for the count in the log.
+            connected = uris(found) | ({address.rstrip("/")} if address else set())
+            # The open device stays open: the page shown stays (Stay), drawn if the start page.
+            decision = decided(self, cause, before, Seen(frozenset(connected), address))
+            if (isinstance(decision, Stay) and decision.redraw_start
+                    and self._on_start_page()):
                 self._render_start()
 
         self.in_background(connected_devices, done)

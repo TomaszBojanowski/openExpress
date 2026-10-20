@@ -556,16 +556,19 @@ def test_a_mount_event_during_the_first_detection_does_not_load_the_pages_again(
     assert caplog.text.count("the open device is still there, nothing to do") == 2
 
 
-def test_a_mount_with_another_address_is_detected_as_before(detecting):
+def test_a_mount_with_another_address_reads_the_list_again(detecting):
+    """Q1: another device mounted while one is open: the open one stays open, only the list
+    of devices connected is read again (no detection)."""
     from openexpress.gui.app import MainWindow
 
     win = detecting
+    win.rereads = []
+    win._reread_connected = lambda: win.rereads.append(win.session)
     win.session = opened(win, NUMERIC)
     MainWindow._on_mount_added(win, None, FakeMount(NAMED))
     win.timers.fire()
-    assert len(win.tasks) == 1 and win.reads == []
-    win.finish(opened(win, NAMED, unit_id=3000000002))
-    assert len(win.built) == 1
+    assert win.tasks == [] and win.reads == [] and win.built == []
+    assert win.rereads == [win.session]
 
 
 def test_no_open_device_is_detected_as_before(detecting):
@@ -608,6 +611,30 @@ def test_the_same_address_at_a_new_place_on_usb_is_detected_again(detecting, tmp
     assert "the same address, but not at the same place on USB" in caplog.text
 
 
+def test_its_own_mount_at_a_new_place_and_another_device_read_the_list_after(detecting,
+                                                                           tmp_path):
+    """Q1, two mounts at once: the open device's own, at a new place on USB, and another
+    device's. The open one is detected again first, then the list of devices connected is
+    read, so that the other one gets its tile."""
+    import shutil
+
+    from openexpress.gui.app import MainWindow
+
+    win = detecting
+    win.rereads = []
+    win._reread_connected = lambda: win.rereads.append(win.session)
+    win.session = opened(win, NUMERIC)
+    shutil.rmtree(tmp_path / "sys" / "1-4")
+    usb_device(tmp_path / "sys", "1-4", 1, 41, "091e", "51b4")
+    MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
+    MainWindow._on_mount_added(win, None, FakeMount(NAMED))
+    win.timers.fire()
+    assert len(win.tasks) == 1 and win.rereads == []  # the detection first
+    again = opened(win, NUMERIC)
+    win.finish(again)
+    assert win.built == [again] and win.rereads == [again]
+
+
 def test_an_open_device_whose_place_on_usb_is_not_known_is_kept_by_its_address(detecting):
     from openexpress.gui.app import MainWindow
 
@@ -623,19 +650,23 @@ def test_several_triggers_lead_to_one_detection(detecting):
     from openexpress.gui.app import MainWindow, schedule_detection
 
     win = detecting
+    win.rereads = []
+    win._reread_connected = lambda: win.rereads.append(win.session)
     win.session = opened(win, NUMERIC)
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     assert win.timers.removed == [1] and list(win.timers.live) == [2]  # the same one, moved
     win.timers.fire()
     assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []
-    # A mount of the open device and the device seen on USB: one detection covers both.
+    # A mount of the open device and a device seen on USB: one decision covers both. The
+    # open one is at its place on USB, so it stays open; the trigger without an address
+    # only has the list read again (Q1).
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     schedule_detection(win, 2500)
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     assert len(win.timers.live) == 1
     win.timers.fire()
-    assert len(win.tasks) == 1 and len(win.reads) == 1
+    assert win.tasks == [] and len(win.reads) == 1 and win.rereads == [win.session]
 
 
 def test_watcher_reacts_to_garmin_devices_only(sysfs, monkeypatch):
@@ -1915,12 +1946,12 @@ def test_one_device_found_twice_opens_without_a_list(choosing_window, monkeypatc
     assert s is win.session and s.mass_storage and s.device.description == "Varia RTL515"
 
 
-def test_a_second_device_plugged_in_while_one_is_open_gives_the_list(choosing_window,
-                                                                    monkeypatch, tmp_path,
-                                                                    device_root):
-    """K5, found on the devices: the Edge is open alone, then the fēnix is mounted. The
-    detection that follows lists both; it does not open the Edge again (keep_open is only
-    for Refresh and the like, not for a device plugged in)."""
+def test_a_second_device_plugged_in_while_one_is_open_keeps_it_open(choosing_window,
+                                                                   monkeypatch, tmp_path,
+                                                                   device_root):
+    """K5, found on the devices: the Edge is open alone, then the fēnix is mounted. Q1: the
+    Edge stays open (not opened again), no list to choose from; only the list of devices
+    connected is read again."""
     from openexpress.gui.app import MainWindow
 
     win, world = choosing_window, choosing_window.world
@@ -1934,8 +1965,8 @@ def test_a_second_device_plugged_in_while_one_is_open_gives_the_list(choosing_wi
     world.offered[:] = [fenix, edge]  # then gvfs mounts the fēnix
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     win.timers.fire()
-    assert win.shown_choices == [[("mtp", "Test watch"), ("mtp", "Edge 1050")]]
-    assert win.built == [opened] and win.session is None  # the Edge was not opened again
+    assert win.shown_choices == [] and win.rereads == [opened]
+    assert win.built == [opened] and win.session is opened  # not opened again
 
 
 def test_two_devices_without_an_id_are_not_merged(choosing_window, monkeypatch, tmp_path,
@@ -3966,20 +3997,22 @@ def test_a_detection_planned_before_the_choice_leaves_the_device_open(
     assert opening == ["open_session", "check_session"]  # the Edge, once
 
 
-def test_a_device_mounted_after_the_list_still_brings_the_list(start_window, monkeypatch,
-                                                              tmp_path, device_root):
-    """Guards D7 (eaaa05b): a device that was not on the list is mounted while one is open:
-    the list to choose from, as before."""
+def test_a_device_mounted_while_one_is_open_keeps_its_view(start_window, monkeypatch,
+                                                           tmp_path, device_root):
+    """Q1: a device that was not on the list is mounted while one is open: the open one
+    stays open and its view stays; back on the start page, the tiles of both."""
     win = start_window
     one_watch(win, monkeypatch)
     win.refresh_device()
+    opened = win.session
     assert win.navigation.stack == ["start page", "device view"]
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     from openexpress.gui.app import schedule_detection
 
     schedule_detection(win, 1500, NAMED)
     win.timers.fire()
-    assert win.session is None and win.navigation.stack == ["start page"]
+    assert win.session is opened and win.navigation.stack == ["start page", "device view"]
+    back(win)
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
 
 
@@ -4277,30 +4310,36 @@ def second_device_mounted(win, monkeypatch, tmp_path, device_root):
 
 def test_a_second_device_plugged_in_while_one_is_open_on_the_start_page(
         start_window, monkeypatch, tmp_path, device_root):
-    """N1, the start page shown, a second device mounted: the list, on the start page."""
+    """N1, the start page shown, a second device mounted (Q1): the open one stays open, the
+    start page shows the tiles of both."""
     win = start_window
     one_watch(win, monkeypatch)
     win.refresh_device()
+    opened = win.session
     back(win)
     second_device_mounted(win, monkeypatch, tmp_path, device_root)
-    assert win.session is None and win.navigation.stack == ["start page"]
+    assert win.session is opened and win.navigation.stack == ["start page"]
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
 
 
 def test_a_second_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
                                                                     tmp_path, device_root):
-    """N1, a remembered device's view shown, a second device mounted: the start page (the
-    devices connected changed)."""
+    """N1, a remembered device's view shown, a second device mounted (Q1): the view stays,
+    the open one stays open; back on the start page, the tiles of both."""
     import time
 
     win = start_window
     remember_others(time.time())
     one_watch(win, monkeypatch)
     win.refresh_device()
+    opened = win.session
     back(win)
     remembered_shown(win)
     second_device_mounted(win, monkeypatch, tmp_path, device_root)
-    assert win.session is None and win.navigation.stack == ["start page"]
+    assert win.session is opened
+    assert win.navigation.stack == ["start page", "remembered view"]
+    back(win)
+    assert [name for name, on, _how in drawn_tiles(win) if on] == ["Test watch", "Edge 1050"]
 
 
 def test_a_third_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
@@ -4473,8 +4512,8 @@ def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, 
 def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
         start_window, monkeypatch, tmp_path, device_root, caplog):
     """The test watch chosen from the list and open, the Edge on the list not mounted yet
-    ("Not mounted"); gvfs then mounts it: with a device open its mount is left aside as
-    that of any device listed (since T2): no detection, the test watch stays open."""
+    ("Not mounted"); gvfs then mounts it (Q1): no detection, the test watch stays open,
+    the list is read again and the Edge's tile gets its details."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -4493,10 +4532,15 @@ def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
     with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
         MainWindow._on_mount_added(win, None, FakeMount(NAMED))
         win.timers.fire()
-    # behaviour to change in step 6 (Q1): the list is read again instead
     assert ran == []
-    assert "device detection: mount of a device already listed, nothing to do" in caplog.text
+    assert "nothing to do" not in caplog.text
+    assert ("navigation: device mounted, on the device view, 2 → 2 devices: the device "
+            "view stays") in caplog.text
     assert win.session is opened and win.navigation.stack == ["start page", "device view"]
+    back(win)
+    assert [(name, how) for name, _on, how in drawn_tiles(win)][:2] == [
+        ("Test watch", "Over USB (MTP) · Software 23.39"),
+        ("Edge 1050", "Over USB (MTP) · Software 33.11")]
 
 
 def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
