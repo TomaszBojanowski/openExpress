@@ -2397,16 +2397,27 @@ class MainWindow(Adw.ApplicationWindow):
         # The same words as the command line and the notification of the background sync.
         row.set_subtitle(GLib.markup_escape_text(last_sync_words(data)))
         row.set_tooltip_text(format_when(data.get("time", time.time())))  # the full date
-        row.set_enable_expansion(True)
-        errors = [(text, True) for text in data.get("errors") or []]
-        for line, warning in service.describe_steps(data.get("lines")) + errors:
-            child = Adw.ActionRow(title=GLib.markup_escape_text(line), title_lines=3)
-            child.add_css_class("property")
-            if warning:  # files rejected, or that could not be uploaded or written
-                child.add_prefix(Gtk.Image(icon_name="dialog-warning-symbolic"))
-                child.add_css_class("warning")
-            row.add_row(child)
-            self._last_sync_children.append(child)
+        said = service.describe_steps(data.get("lines")) + [
+            (text, True) for text in data.get("errors") or []]
+        row.set_enable_expansion(bool(said))
+        if said:
+            # The details as one row of a few lines: the files, those already in Garmin
+            # Connect, then what went wrong, with an icon and in the colour of warnings.
+            details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
+                              margin_bottom=10, margin_start=12, margin_end=12)
+            for text, warning in said:
+                label = Gtk.Label(label=text, xalign=0, wrap=True)
+                if warning:  # files rejected, or that could not be uploaded or written
+                    line = Gtk.Box(spacing=6)
+                    icon = Gtk.Image(icon_name="dialog-warning-symbolic")
+                    for widget in (icon, label):
+                        widget.add_css_class("warning")
+                        line.append(widget)
+                    details.append(line)
+                else:
+                    details.append(label)
+            row.add_row(details)
+            self._last_sync_children.append(details)
 
     def _watch_last_sync(self) -> None:
         """Updates the overview when the background service finishes a sync."""

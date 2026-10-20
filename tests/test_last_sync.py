@@ -112,14 +112,15 @@ def test_what_went_wrong_is_a_warning():
 
 @pytest.mark.needs_display
 def test_the_window_marks_the_warnings(xdg):
-    """Under "Last sync": the warnings with an icon and in the colour of warnings, the
-    other lines as they are; the full date in the row's tooltip."""
+    """Under "Last sync": the details as one row of a few lines, the warnings with an icon
+    and in the colour of warnings, the other lines as they are; the full date in the row's
+    tooltip."""
     import types
 
     import gi
 
     gi.require_version("Adw", "1")
-    from gi.repository import Adw
+    from gi.repository import Adw, Gtk
 
     from openexpress.gui.app import MainWindow
 
@@ -135,12 +136,17 @@ def test_the_window_marks_the_warnings(xdg):
     MainWindow._show_last_sync(win)
     assert row.get_subtitle().endswith(" · 3 files, 1 uploaded")
     assert row.get_tooltip_text()  # the full date
-    shown = [(child.get_title(), child.has_css_class("warning"))
-             for child in win._last_sync_children]
-    assert shown == [("Files from the device: activities ×3", False),
-                     ("1 file was already in Garmin Connect", False),
-                     ("1 file was rejected by Garmin", True),
-                     ("download: HTTP 404", True)]
+    (details,) = win._last_sync_children  # one row
+    shown, item = [], details.get_first_child()
+    while item is not None:  # a label, or the icon and the label of a warning
+        label = item if isinstance(item, Gtk.Label) else item.get_last_child()
+        shown.append((label.get_label(), label.has_css_class("warning"),
+                      item is not label and item.get_first_child().has_css_class("warning")))
+        item = item.get_next_sibling()
+    assert shown == [("Files from the device: activities ×3", False, False),
+                     ("1 file was already in Garmin Connect", False, False),
+                     ("1 file was rejected by Garmin", True, True),
+                     ("download: HTTP 404", True, True)]
 
 
 @pytest.mark.needs_display
@@ -164,6 +170,34 @@ def test_the_device_page_switches_the_automatic_sync(enabled):
     assert wanted is (not enabled)
     result(False)  # it failed: the switch is put back, and nothing more is asked
     assert row.get_active() is enabled and len(asked) == 1
+
+
+@pytest.mark.parametrize(("result", "lines", "errors"), [
+    ({"written": "GARMIN/NewFiles/x.FIT"},
+     ["TrueUp: daily totals aligned with your other Garmin devices"], []),
+    ({"note": "Connect has not prepared TrueUp data yet"}, [], []),  # in the log only
+    ({"note": "the device does not support TrueUp"}, [], []),
+    ({"note": "empty TrueUp file"}, [], []),
+    (RuntimeError("HTTP 500"), [], ["TrueUp: HTTP 500"]),  # a failure is among the errors
+])
+def test_trueup_says_only_what_it_wrote(monkeypatch, result, lines, errors):
+    import types
+
+    from openexpress import trueup
+
+    def run(*_a, **_k):
+        if isinstance(result, Exception):
+            raise result
+        res = trueup.TrueUpResult()
+        for key, value in result.items():
+            setattr(res, key, value)
+        return res
+
+    monkeypatch.setattr(trueup, "run", run)
+    said_errors = []
+    s = types.SimpleNamespace(device=None, storage=None, client=None)
+    assert service._trueup(s, [], lambda m: None, said_errors) == lines
+    assert said_errors == errors
 
 
 # --- one source of words ---------------------------------------------------------------------

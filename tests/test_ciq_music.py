@@ -689,7 +689,7 @@ def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == []  # not an error
     assert lines == [("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
-                      "this device over USB yet.")]
+                      "this device over USB yet")]
 
 
 def test_cli_install_on_a_device_without_usb_apps(no_usb_apps, device_root, apps_cli, capsys):
@@ -1204,7 +1204,7 @@ def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == [] and lines == [
         ("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
-         "this device over USB yet.")]
+         "this device over USB yet")]
     assert st.sessions == 0 and fake.operations == [] and client.acks == []
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})  # the default
     assert rep.for_phone == ["Face It"] and st.sessions == 0
@@ -2646,7 +2646,7 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
     errors = []
     lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
     assert errors == [] and lines == [
-        "The Flatpak has no access to USB devices; 1 Connect IQ app waits in the queue."]
+        "The Flatpak has no access to USB devices; 1 Connect IQ app waits in the queue"]
     assert untouched(st, dev, fake, attempts, backups, before)
 
 

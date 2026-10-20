@@ -132,11 +132,11 @@ def test_expired_login_and_wrong_clock_are_raised_as_such(error):
 
 def test_messages():
     assert gate(consent=None).message() == (
-        "Nothing was uploaded: the Garmin account has no consent to upload data from devices.")
+        "Nothing was uploaded: the Garmin account has no consent to upload data from devices")
     assert gate(preference="false").message() == (
-        "Nothing was uploaded: device sync is turned off in the Garmin account.")
+        "Nothing was uploaded: device sync is turned off in the Garmin account")
     assert gate(consent=ApiError("x")).message() == (
-        "Nothing was uploaded: the upload consent could not be checked. Try again later.")
+        "Nothing was uploaded: the upload consent could not be checked. Try again later")
     assert gate(preference="false").message(done=False).startswith("Nothing would be uploaded: ")
 
 
@@ -205,7 +205,7 @@ def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake
     out = capsys.readouterr().out
     assert client.uploads == []
     assert out.count("Nothing was uploaded: ") == 1 and text in out
-    assert "Written: 1" in out and acks == [5]  # the queue is still served
+    assert "no new files · 1 received" in out and acks == [5]  # the queue is still served
     assert list((device_root / "GARMIN/NewFiles").iterdir())
     data = service.load_last_sync(UNIT)
     assert data["uploaded"] == 0 and any("Nothing was uploaded" in line for line in data["lines"])
@@ -224,7 +224,7 @@ def test_dry_run_shows_that_nothing_would_be_uploaded(device_root, xdg, fake_cli
     client = fake_client["client"] = Account(preference="false")
     assert main(["--path", str(device_root), "sync"]) == 0
     out = capsys.readouterr().out
-    assert "Nothing would be uploaded: device sync is turned off in the Garmin account." in out
+    assert "Nothing would be uploaded: device sync is turned off in the Garmin account" in out
     assert "Dry run" in out and client.uploads == []
 
 
@@ -294,6 +294,23 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
     stored = service.load_last_sync(UNIT)
     assert [service.describe_counts(stored),
             *service.describe_lines(stored["lines"])] == summary.text.splitlines()
+
+
+def test_the_files_from_connect_are_only_counted(device_root, xdg):
+    """A file from Garmin Connect written to the device: counted in the numbers
+    (" · 1 received"), with no line of its own; no line ends with a full stop."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
+    summary = service.run_sync(s, first_run="all")
+    assert summary.downloaded == 1
+    assert summary.text.splitlines() == ["2 files, 2 uploaded · 1 received",
+                                         "Files from the device: activities ×2"]
+    assert not any(line.endswith(".") for line in summary.text.splitlines())
 
 
 def test_the_last_sync_is_put_into_words_when_shown(xdg):

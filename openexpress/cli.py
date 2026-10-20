@@ -534,10 +534,9 @@ def cmd_sync(args) -> int:
         elif up_plan and up_plan.candidates:
             print("\n" + _("Uploading…"))
             rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
-            # The same steps and words as a sync in the window or in the background: the
-            # numbers, then the details.
+            # The same steps and words as a sync in the window or in the background (the
+            # numbers come at the end, with the files from Garmin Connect).
             steps = [service.new_files_step(up_plan.candidates), service.uploads_step(rep)]
-            print(service.describe_counts({"uploaded": len(rep.uploaded), "lines": steps}))
             for text in service.describe_lines(steps):
                 print(text)
             summary.lines += steps
@@ -556,11 +555,7 @@ def cmd_sync(args) -> int:
         if any(not i.unsupported and not i.handled_by for i in dl_items):
             print("\n" + _("Downloading to the device…"))
             drep = sync.run_downloads(dl_items, st, client, progress, state=state)
-            line = _("Written: {written}, empty: {empty}, errors: {errors}").format(
-                written=len(drep.written), empty=len(drep.empty), errors=len(drep.failed))
-            print(line)
-            summary.lines.append(line)
-            summary.downloaded = len(drep.written)
+            summary.downloaded = len(drep.written)  # in the numbers at the end
             summary.errors += [f"{label}: {err}" for label, err in drep.failed]
             for label, err in drep.failed:
                 print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
@@ -580,6 +575,7 @@ def cmd_sync(args) -> int:
             summary.lines += lines
             summary.errors += errors
     service.save_last_sync(dev.unit_id, summary)
+    print("\n" + summary.counts)  # the numbers of the row under "Last sync" in the window
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
                               len(summary.errors)).format(count=len(summary.errors)))

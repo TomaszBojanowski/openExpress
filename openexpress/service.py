@@ -242,9 +242,9 @@ class UploadGate:
 
     def why(self) -> str:
         return {
-            NO_CONSENT: _("the Garmin account has no consent to upload data from devices."),
-            SYNC_OFF: _("device sync is turned off in the Garmin account."),
-            NOT_CHECKED: _("the upload consent could not be checked. Try again later."),
+            NO_CONSENT: _("the Garmin account has no consent to upload data from devices"),
+            SYNC_OFF: _("device sync is turned off in the Garmin account"),
+            NOT_CHECKED: _("the upload consent could not be checked. Try again later"),
         }.get(self.reason, "")
 
     def message(self, done: bool = True) -> str:
@@ -399,13 +399,17 @@ class SyncSummary:
     lines: list = field(default_factory=list)
 
     @property
+    def counts(self) -> str:
+        """The numbers of this sync, as under "Last sync" (describe_counts)."""
+        return describe_counts({"uploaded": self.uploaded, "skipped_known": self.skipped_known,
+                                "downloaded": self.downloaded, "rejected": self.rejected,
+                                "errors": self.errors, "lines": self.lines})
+
+    @property
     def text(self) -> str:
         """The numbers and the details, as the window shows them (the notification of the
         background sync)."""
-        data = {"uploaded": self.uploaded, "skipped_known": self.skipped_known,
-                "downloaded": self.downloaded, "rejected": self.rejected,
-                "errors": self.errors, "lines": self.lines}
-        return "\n".join([describe_counts(data), *describe_lines(self.lines)])
+        return "\n".join([self.counts, *describe_lines(self.lines)])
 
 
 # Readable names of the data types of new files. A name is given only where it is plain from
@@ -670,8 +674,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     if s.first_sync:
         if first_run == "baseline":
             n = sync.mark_baseline(s.device, s.storage, cfg, state, s.client)
-            out.lines.append(ngettext("Marked {count} existing file as already uploaded.",
-                                      "Marked {count} existing files as already uploaded.",
+            out.lines.append(ngettext("Marked {count} existing file as already uploaded",
+                                      "Marked {count} existing files as already uploaded",
                                       n).format(count=n))
         elif first_run != "all":
             raise FirstSyncChoiceNeeded()
@@ -695,11 +699,11 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         if rep.tracker_conflict:
             n = len(rep.tracker_conflict)
             out.lines.append(ngettext(
-                "Skipped {count} file: another device is your active tracker in Garmin Connect.",
-                "Skipped {count} files: another device is your active tracker in Garmin Connect.",
+                "Skipped {count} file: another device is your active tracker in Garmin Connect",
+                "Skipped {count} files: another device is your active tracker in Garmin Connect",
                 n).format(count=n))
     else:
-        out.lines.append(_("No new data to upload."))
+        out.lines.append(_("No new data to upload"))
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     items = sync.plan_downloads(s.device, messages)
@@ -710,9 +714,6 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         out.errors += [f"{label}: {err}" for label, err in drep.failed]
         out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
                        .format(name=label) for label in drep.ack_failed]
-        out.lines.append(ngettext("Wrote {count} file from Connect to the device.",
-                                  "Wrote {count} files from Connect to the device.",
-                                  out.downloaded).format(count=out.downloaded))
     if any(i.handled_by == "Connect IQ" for i in items):
         out.lines += _install_queued_apps(s, messages, progress, out.errors)
     if any(i.handled_by == "TrueUp" for i in items):
@@ -720,8 +721,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     skipped = [i for i in items if i.unsupported]
     if skipped:
         out.lines.append(ngettext(
-            "Skipped {count} item from Connect (not accepted by the device).",
-            "Skipped {count} items from Connect (not accepted by the device).",
+            "Skipped {count} item from Garmin Connect (not accepted by the device)",
+            "Skipped {count} items from Garmin Connect (not accepted by the device)",
             len(skipped)).format(count=len(skipped)))
     state.save()
     return out
@@ -745,20 +746,20 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
     errors += [f"Connect IQ {name}: {err}" for name, err in rep.failed]
     lines = []
     if rep.installed:
-        lines.append(_("Installed Connect IQ apps: {names}.").format(
+        lines.append(_("Installed Connect IQ apps: {names}").format(
             names=", ".join(rep.installed)))
     if rep.for_phone:
         n = len(rep.for_phone)
         lines.append(ngettext(
             "The Flatpak has no access to USB devices; {count} Connect IQ app waits in the "
-            "queue.",
+            "queue",
             "The Flatpak has no access to USB devices; {count} Connect IQ apps wait in the "
-            "queue.", n).format(count=n)
+            "queue", n).format(count=n)
             if all(name in rep.sandboxed for name in rep.for_phone) else ngettext(
             "{count} Connect IQ app waits in the queue: openExpress cannot install apps on "
-            "this device over USB yet.",
+            "this device over USB yet",
             "{count} Connect IQ apps wait in the queue: openExpress cannot install apps on "
-            "this device over USB yet.", n).format(count=n))
+            "this device over USB yet", n).format(count=n))
     return lines
 
 
@@ -772,8 +773,8 @@ def _trueup(s, messages, progress, errors) -> list[str]:
         errors.append(f"TrueUp: {e}")
         return []
     if res.written:
-        return [_("TrueUp: daily totals aligned with your other Garmin devices.")]
-    return [_("TrueUp: {note}.").format(note=res.note)] if res.note else []
+        return [_("TrueUp: daily totals aligned with your other Garmin devices")]
+    return []  # nothing to write, or not supported: in the log only (trueup.run)
 
 
 class FirstSyncChoiceNeeded(Exception):
