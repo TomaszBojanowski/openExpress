@@ -17,7 +17,8 @@ CASES = [
     (datetime(2026, 10, 18, 20, 5), "25 min ago", "25 min temu"),
     (datetime(2026, 10, 18, 17, 10), "3 h ago", "3 godz. temu"),
     (datetime(2026, 10, 17, 23, 41), "yesterday, 23:41", "wczoraj, 23:41"),
-    (datetime(2026, 10, 17, 8, 15), "2026-10-17 08:15", "17.10.2026 o 08:15"),  # yesterday, >24 h
+    (datetime(2026, 10, 17, 8, 15), "yesterday, 08:15", "wczoraj, 08:15"),  # by the date: 36 h
+    (datetime(2026, 10, 17, 19, 30), "yesterday, 19:30", "wczoraj, 19:30"),  # 25 h ago
     (datetime(2026, 10, 16, 23, 59), "2 days ago", "2 dni temu"),  # by the date, not by 48 h
     (datetime(2026, 10, 15, 23, 41), "3 days ago", "3 dni temu"),
     (datetime(2026, 10, 13, 8, 0), "5 days ago", "5 dni temu"),
