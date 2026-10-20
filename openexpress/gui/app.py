@@ -117,6 +117,8 @@ def save_gui_settings(data: dict) -> None:
 
 DEFAULT_WINDOW = (1000, 740)
 MIN_WINDOW = (360, 480)
+# How often the texts told against now ("2 min ago") are looked at again, while shown.
+RELATIVE_REFRESH_S = 60
 MAX_WINDOW = 10000
 WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
 LONG_WAIT_S = 20  # after this, the label says that the wait can take a while
@@ -1106,6 +1108,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.remembered = RememberedPage()  # the read-only view of a remembered device
         self.navigation.add(self.remembered.page)
         self.navigation.connect("popped", self._on_popped)
+        # The texts told against now are drawn again while the page with them is shown.
+        self.navigation.connect("notify::visible-page", lambda *_a: self._update_relative_timer())
+        # Only while the window is on the screen: shown, hidden, closed.
+        self.connect("map", lambda *_a: self._update_relative_timer())
+        self.connect("unmap", lambda *_a: self._update_relative_timer())
 
         self.toasts = Adw.ToastOverlay(child=self.navigation)
         self.set_content(self.toasts)
@@ -1174,6 +1181,8 @@ class MainWindow(Adw.ApplicationWindow):
         if not self.busy:
             self._remember_geometry()
             netstatus.STATUS.remove_listener(self._net_listener)
+            self._closed = True
+            self._update_relative_timer()  # no timer left once the window is closed
             return False
         if self._close_dialog is None:
             d = Adw.AlertDialog(
@@ -1879,8 +1888,44 @@ class MainWindow(Adw.ApplicationWindow):
             (tile, source if isinstance(source, KnownDevice | dict)
              else OPEN if self._is_open(source) else source.found)
             for tile, source in entries]
-        self.start.show([(tile, tile_subtitle(source)) for tile, source in entries], notice)
+        texts = [tile_subtitle(source) for _tile, source in entries]
+        # What each tile says, told against now for a remembered one: drawn again when it
+        # would say something else (_refresh_relative_texts).
+        self._start_texts = [(source, text) for (_tile, source), text in zip(entries, texts)]
+        self.start.show([(tile, text) for (tile, _source), text in zip(entries, texts)],
+                        notice)
         self._load_tile_pictures([tile for tile, _source in entries])
+
+    def _update_relative_timer(self) -> None:
+        """A timer once a minute while the start page or the device view is shown (their
+        texts are told against now); none on another page, nor while the window is not on
+        the screen or once it is closed."""
+        visible = self.navigation.get_visible_page()
+        wanted = (self.get_mapped() and not getattr(self, "_closed", False)
+                  and visible in (self.start.page, self.device_view))
+        timer = getattr(self, "_relative_timer", None)
+        if wanted and timer is None:
+            self._relative_timer = GLib.timeout_add_seconds(RELATIVE_REFRESH_S,
+                                                            self._refresh_relative_texts)
+        elif not wanted and timer is not None:
+            GLib.source_remove(timer)
+            self._relative_timer = None
+
+    def _refresh_relative_texts(self) -> bool:
+        """Once a minute: the texts told against now drawn again where they changed: the
+        tiles of the start page (all of them, once), the row of the last sync (its words)."""
+        visible = self.navigation.get_visible_page()
+        if visible is self.start.page:
+            if any(tile_subtitle(source) != text
+                   for source, text in getattr(self, "_start_texts", [])):
+                self._render_start()
+        elif visible is self.device_view:
+            row, data = getattr(self, "last_sync_row", None), getattr(self, "_last_sync_data", None)
+            if row is not None and data:
+                text = GLib.markup_escape_text(last_sync_words(data))
+                if row.get_subtitle() != text:
+                    row.set_subtitle(text)
+        return True
 
     def _load_tile_pictures(self, tiles: list) -> None:
         """The pictures of the tiles (`pictures.with_device_picture`), put into the tile
@@ -2485,6 +2530,7 @@ class MainWindow(Adw.ApplicationWindow):
             row.remove(child)
         self._last_sync_children = []
         data = service.load_last_sync(self.session.device.unit_id)
+        self._last_sync_data = data  # its time told against now, again every minute
         if not data:
             row.set_subtitle(_("Not synced yet with openExpress"))
             row.set_enable_expansion(False)

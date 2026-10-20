@@ -5170,6 +5170,87 @@ def test_one_tile_stands_in_the_middle():
 
 
 @pytest.mark.needs_display
+def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeypatch):
+    """T9 step 1: once a minute while the start page or the device view is shown, the texts
+    told against now are drawn again: the tiles only when one of their texts changed, the
+    row of the last sync only when its words changed. No timer on the read-only view of a
+    remembered device (no such texts there), nor once the window is closed."""
+    from datetime import datetime
+
+    import gi
+
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+
+    from openexpress import known_devices, netstatus
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    class Clock(datetime):
+        current = datetime(2026, 10, 21, 12, 0)
+
+        @classmethod
+        def now(cls, tz=None):
+            return cls.current
+
+    timers, real_remove = {}, app.GLib.source_remove
+
+    def add_seconds(seconds, fn):
+        timers[len(timers) + 1000] = (seconds, fn)
+        return len(timers) + 999
+
+    def remove(source):
+        if timers.pop(source, None) is None:
+            real_remove(source)
+
+    def minute_timers():
+        return [fn for seconds, fn in timers.values() if seconds == app.RELATIVE_REFRESH_S]
+
+    monkeypatch.setattr(app, "datetime", Clock)
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, **kw: None)
+    monkeypatch.setattr(app.GLib, "timeout_add_seconds", add_seconds)
+    monkeypatch.setattr(app.GLib, "source_remove", remove)
+    seen = datetime(2026, 10, 21, 11, 58).timestamp()
+    known_devices.remember(3000000004, "Venu 2", "006-B3703-00", "19.05", "mtp", now=seen)
+    win = MainWindow(None)
+    try:
+        assert minute_timers() == []  # not on the screen yet
+        win.present()
+        drawn, real_render = [], win._render_start
+        win._render_start = lambda: (drawn.append(1), real_render())[1]
+        assert len(minute_timers()) == 1  # the start page is shown
+        win._render_start()
+        assert "Last seen 2 min ago" in win.start.tiles()[0].get_first_child().get_last_child().get_label()
+        (tick,) = minute_timers()
+        tick()
+        assert len(drawn) == 1  # the same words: not drawn again
+        Clock.current = datetime(2026, 10, 21, 12, 1)
+        tick()
+        assert len(drawn) == 2  # "3 min ago" now
+        tick()
+        assert len(drawn) == 2
+        win.navigation.push(win.remembered.page)
+        assert minute_timers() == []  # no texts told against now there
+        win.navigation.pop()
+        assert len(minute_timers()) == 1
+        win.navigation.push(win.device_view)
+        assert len(minute_timers()) == 1
+        row, changes = Adw.ExpanderRow(), []
+        row.connect("notify::subtitle", lambda *_a: changes.append(1))
+        win.last_sync_row, win._last_sync_data = row, {"time": seen, "uploaded": 1}
+        (tick,) = minute_timers()
+        tick()
+        assert row.get_subtitle() == "3 min ago · 1 file, 1 uploaded" and len(changes) == 1
+        tick()
+        assert len(changes) == 1  # the same words: left as they are
+        win.close()
+        assert minute_timers() == []  # closed: no timer left
+    finally:
+        netstatus.STATUS.remove_listener(win._net_listener)
+        win.destroy()
+
+
+@pytest.mark.needs_display
 def test_the_read_only_view_offers_no_action():
     """The read-only view: the banner says the device is not connected; Sync and the rows of
     updates and maps cannot be used."""
