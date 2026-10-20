@@ -3757,7 +3757,7 @@ def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(MainWindow, "refresh_device",
-                        lambda self, keep_open=True, cause=None: None)
+                        lambda self, cause=None: None)
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
@@ -4802,8 +4802,8 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
     real_refresh = MainWindow.refresh_device
     ready = []
     # Nothing is detected while the window opens; the real detection code once it is open.
-    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, keep_open=True, cause=None: (
-        real_refresh(self, keep_open, cause) if ready else None))
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: (
+        real_refresh(self, cause) if ready else None))
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
 
     def session(n):

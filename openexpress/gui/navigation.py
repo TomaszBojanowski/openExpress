@@ -103,10 +103,9 @@ class ReadList:
 
 @dataclass(frozen=True)
 class Detect:
-    """A detection; `keep_open`: the device open now is opened again when it is still there
-    (several connected), instead of giving the list to choose from; `read_list`: the list of
-    devices connected is read again after it (another device came as well)."""
-    keep_open: bool = True
+    """A detection (the device open now is opened again when it is still there, among
+    several); `read_list`: the list of devices connected is read again after it (another
+    device came as well)."""
     read_list: bool = False
     ignored: int = field(default=0, compare=False)
     moved: bool = field(default=False, compare=False)
@@ -144,7 +143,7 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
             return Nothing()  # no detection: the device is gone, or the one chosen is opened
         if cause is Cause.REFRESH_ON_START and open_label is not None:
             return ReadList()  # the list (and the account's) read again, nothing opened
-        return Detect(keep_open=True)
+        return Detect()
 
     def on_open(r: str) -> bool:
         return open_label is not None and open_label.startswith(r.rstrip("/") + "/")
@@ -165,14 +164,14 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     if known and not rest and not (read_the_list and open_label is None):
         return ReadList(ignored=ignored) if read_the_list else Nothing(ignored=ignored)
     if open_label is None:
-        return Detect(keep_open=True, ignored=ignored)
+        return Detect(ignored=ignored)
     # Another device mounted, or seen on USB (a trigger without an address): the open one
     # stays open, the list is read again (Q1).
     others = [r for r in rest if r is None or not on_open(r)]
     if len(others) < len(rest) and open_moved():
         # Its own mount too, at another place on USB (the same address): opened again,
         # then the list read again if another device came as well.
-        return Detect(keep_open=True, read_list=bool(others), ignored=ignored, moved=True)
+        return Detect(read_list=bool(others), ignored=ignored, moved=True)
     if others or not rest:
         return ReadList(ignored=ignored)
     return CheckOpen(ignored=ignored)

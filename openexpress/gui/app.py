@@ -666,9 +666,7 @@ def detection_due(win) -> None:
             # applies what was waiting when it is unplugged) and the session points to the
             # old place.
             log.info("device detection: the same address, but not at the same place on USB")
-        if not what.keep_open:
-            win.refresh_device(keep_open=False, cause=cause)
-        elif what.read_list:
+        if what.read_list:
             win.refresh_device(cause=cause, read_list=True)  # another device came as well
         else:
             win.refresh_device(cause=cause)
@@ -1542,10 +1540,9 @@ class MainWindow(Adw.ApplicationWindow):
             self._update_actions()  # the Sync button says the same as the pages
         return True
 
-    def refresh_device(self, keep_open: bool = True, cause: Cause | None = None,
-                       read_list: bool = False) -> None:
-        """Detect the device anew. `keep_open`: with several devices connected, the one open
-        now is opened again (Refresh). `cause`: why (navigation.Cause); none said: a
+    def refresh_device(self, cause: Cause | None = None, read_list: bool = False) -> None:
+        """Detect the device anew; with several devices connected, the one open now is
+        opened again when it is still there. `cause`: why (navigation.Cause); none said: a
         detection asked again (Refresh and the like), or the one that waited for the
         running task. `read_list`: once a device is open, the list of devices connected is
         read again (another device came as well; asked by the timer, which itself waits for
@@ -1568,7 +1565,7 @@ class MainWindow(Adw.ApplicationWindow):
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
         # The device to open again when it is still there, among several (None: none).
-        current = getattr(self.session, "storage", None) if keep_open else None
+        current = getattr(self.session, "storage", None)
         current_uri = getattr(current, "device_uri", None)
 
         def done(result):

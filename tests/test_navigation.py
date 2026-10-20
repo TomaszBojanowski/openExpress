@@ -148,16 +148,16 @@ WATCH_LABEL = W + "/Internal Storage/"  # the open watch's storage, below its mo
 
 # (id, cause, reasons, open device's storage, devices listed, whether it moved, the plan)
 PLANS = [
-    ("P-start", Cause.START, (), None, (), False, Detect(keep_open=True)),
+    ("P-start", Cause.START, (), None, (), False, Detect()),
     ("P-refresh-on-S-open", Cause.REFRESH_ON_START, (), WATCH_LABEL, (W,), False, ReadList()),
-    ("P-refresh-on-S-none", Cause.REFRESH_ON_START, (), None, (), False, Detect(keep_open=True)),
+    ("P-refresh-on-S-none", Cause.REFRESH_ON_START, (), None, (), False, Detect()),
     ("P-refresh-in-view", Cause.REFRESH_IN_VIEW, (), WATCH_LABEL, (W,), False,
-     Detect(keep_open=True)),
-    ("P-account", Cause.ACCOUNT_CHANGED, (), None, (), False, Detect(keep_open=True)),
-    ("P-choice-failed", Cause.CHOICE_FAILED, (), None, (W, E), False, Detect(keep_open=True)),
+     Detect()),
+    ("P-account", Cause.ACCOUNT_CHANGED, (), None, (), False, Detect()),
+    ("P-choice-failed", Cause.CHOICE_FAILED, (), None, (W, E), False, Detect()),
     ("P-unplugged-open", Cause.UNPLUGGED_OPEN, (), None, (), False, Nothing()),
     ("P-chosen", Cause.CHOSEN, (), None, (W, E), False, Nothing()),
-    ("P-new-mount-none-open", Cause.PLUGGED, (E + "/",), None, (), False, Detect(keep_open=True)),
+    ("P-new-mount-none-open", Cause.PLUGGED, (E + "/",), None, (), False, Detect()),
     # Q1: the device open stays open (not opened again), no list: the list is read again.
     ("P-new-mount-while-open", Cause.PLUGGED, (E + "/",), WATCH_LABEL, (W,), False,
      ReadList()),
@@ -167,20 +167,20 @@ PLANS = [
      Nothing()),
     ("P-own-mount", Cause.PLUGGED, (W + "/",), WATCH_LABEL, (W,), False, CheckOpen()),
     ("P-own-mount-moved", Cause.PLUGGED, (W + "/",), WATCH_LABEL, (W,), True,
-     Detect(keep_open=True)),
+     Detect()),
     # Its own mount and another device's: at the same place on USB the list is read again;
     # at another place it is opened again, and the list read after that.
     ("P-own-and-new-mount", Cause.PLUGGED, (W + "/", E + "/"), WATCH_LABEL, (W,), False,
      ReadList()),
     ("P-own-and-new-mount-moved", Cause.PLUGGED, (W + "/", E + "/"), WATCH_LABEL, (W,), True,
-     Detect(keep_open=True, read_list=True)),
+     Detect(read_list=True)),
     # Q2: mounts of devices already listed bring no detection, whether one is open or not.
     ("P-start-mounts-listed", Cause.PLUGGED, (W + "/", E + "/"), None, (W, E), False,
      Nothing()),
     ("P-listed-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False, Nothing()),
     # A device listed without its details (e.g. not mounted yet): its mount is looked at.
     ("P-unread-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False,
-     Detect(keep_open=True)),
+     Detect()),
     # With a device open too (Q1): the list is read again, its tile may get its details.
     ("P-unread-mount-on-the-list-while-open", Cause.PLUGGED, (E + "/",), WATCH_LABEL, (W, E),
      False, ReadList()),
@@ -190,10 +190,10 @@ PLANS = [
     ("P-read-the-list-and-a-listed-mount", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, E + "/"),
      WATCH_LABEL, (W, E), False, ReadList()),
     ("P-read-the-list-the-open-one-gone", Cause.UNPLUGGED_OTHER, (READ_THE_LIST,), None, (W,),
-     False, Detect(keep_open=True)),
-    ("P-usb-changed", Cause.USB_CHANGED, (None,), None, (W, E), False, Detect(keep_open=True)),
+     False, Detect()),
+    ("P-usb-changed", Cause.USB_CHANGED, (None,), None, (W, E), False, Detect()),
     ("P-choice-unplugged", Cause.UNPLUGGED_CHOICE, (None,), None, (W, E), False,
-     Detect(keep_open=True)),
+     Detect()),
 ]
 
 
