@@ -86,6 +86,7 @@ from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.progress import Waiting  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
+    SetupError,
     extract_consumer_from_dll,
     extract_url_salt_from_dll,
     save_consumer,
@@ -689,12 +690,37 @@ def detection_due(win) -> None:
     win.in_background(lambda: s.storage.read("GARMIN/GarminDevice.xml"), done, failed)
 
 
+def logged_in_auth():
+    """Who is logged in to Garmin Connect now, as the start page asks it; None: nobody."""
+    try:
+        return account_client().auth
+    except SetupError:  # the settings file is damaged: said where it is used
+        return None
+
+
+def render_account_row(win) -> None:
+    """The account's row of the preferences, while they are open: who is logged in, with
+    Log out, or nobody, with Log In."""
+    shown = getattr(win, "_account_row", None)
+    if shown is None:
+        return
+    row, button = shown
+    auth = logged_in_auth()
+    if auth is None:
+        row.set_title(_("Not logged in"))
+        button.set_label(_("Log In"))
+    else:
+        row.set_title(GLib.markup_escape_text(auth.display))
+        button.set_label(_("Log out"))
+
+
 def account_changed(win, cause: Cause = Cause.ACCOUNT_CHANGED) -> None:
     """A change of account (login, logout, the key from the installer): the session made
     with the old one is dropped and the devices detected again. The device open before is
     opened again when it is still there, also among several, and the page shown stays
     (Q3), but for the view of a device of the account after a logout (`cause`
     LOGGED_OUT)."""
+    render_account_row(win)
     reopen = open_address(win.session) or None
     win.session = None
     win.refresh_device(cause=cause, reopen=reopen)
@@ -2557,6 +2583,9 @@ class MainWindow(Adw.ApplicationWindow):
     def show_preferences(self) -> None:
         dialog = Adw.PreferencesDialog()
         page = Adw.PreferencesPage(title=_("General"), icon_name="preferences-system-symbolic")
+        page.add(self._account_group())
+        # Closed: the window keeps no widget of the preferences.
+        dialog.connect("closed", lambda _d: setattr(self, "_account_row", None))
         g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
         sw = Adw.SwitchRow(
             title=_("Sync in the background"),
@@ -2613,6 +2642,25 @@ class MainWindow(Adw.ApplicationWindow):
         page.add(self._cache_group())
         dialog.add(page)
         dialog.present(self)
+
+    def _account_group(self) -> Adw.PreferencesGroup:
+        """The "Garmin Connect account" group of the preferences: one row, who is logged in
+        with Log out, or nobody with Log In; drawn again when the account changes."""
+        g = Adw.PreferencesGroup(title=_("Garmin Connect account"))
+        row = Adw.ActionRow()
+        button = self._button("", self._account_action)
+        row.add_suffix(button)
+        g.add(row)
+        self._account_row = (row, button)
+        render_account_row(self)
+        return g
+
+    def _account_action(self) -> None:
+        """Log out or Log In in the preferences: the same as in the device view."""
+        if logged_in_auth() is None:
+            self.login()
+        else:
+            self.logout()
 
     def _cache_group(self) -> Adw.PreferencesGroup:
         """The "Storage" group of the preferences: how big the cache is, and clearing it. The

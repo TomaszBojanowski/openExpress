@@ -467,12 +467,69 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
     win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
                                 set_background=lambda on, done=None: None, choose_dll=lambda: None,
                                 error=lambda title, text: None, run_task=None, toast=None)
-    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row"):
-        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row",
+                 "_account_group", "_account_action"):
+        if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
+            setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     titles, add = [], Adw.PreferencesPage.add
     monkeypatch.setattr(Adw.PreferencesPage, "add",
                         lambda page, group: titles.append(group.get_title()) or add(page, group))
     MainWindow.show_preferences(win)
     (dialog,) = shown
-    assert titles == ["Sync with Garmin Connect", "Language", "Setup", "Storage"]
+    assert titles == ["Garmin Connect account", "Sync with Garmin Connect", "Language", "Setup",
+                      "Storage"]
     assert isinstance(dialog, Gtk.Widget)
+
+
+def _descendants(widget):
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        yield from _descendants(child)
+        child = child.get_next_sibling()
+
+
+@pytest.mark.needs_display
+def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch):
+    """The group "Garmin Connect account", first in the preferences: who is logged in with
+    Log out, or "Not logged in" with Log In. The button goes the way of the device view
+    (MainWindow.logout / login, so Q3 decides where the user goes), and the row follows a
+    change of account while the preferences are open."""
+    import types
+
+    from gi.repository import Adw
+
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown, calls = [], []
+    monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
+    client = types.SimpleNamespace(auth=types.SimpleNamespace(display="someone"))
+    monkeypatch.setattr(app, "account_client", lambda: client)
+    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                                error=lambda title, text: None, run_task=None, toast=None,
+                                session=None, refresh_device=lambda **kw: None,
+                                logout=lambda: calls.append("logout"),
+                                login=lambda: calls.append("login"))
+    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row",
+                 "_account_group", "_account_action"):
+        if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
+            setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    groups, add = [], Adw.PreferencesPage.add
+    monkeypatch.setattr(Adw.PreferencesPage, "add",
+                        lambda page, group: groups.append(group) or add(page, group))
+    MainWindow.show_preferences(win)
+    assert groups[0].get_title() == "Garmin Connect account"
+    (row,) = [w for w in _descendants(groups[0]) if isinstance(w, Adw.ActionRow)]
+    (button,) = [w for w in _descendants(row) if isinstance(w, app.Gtk.Button)]
+    assert (row.get_title(), button.get_label()) == ("someone", "Log out")
+    button.emit("clicked")
+    assert calls == ["logout"]
+    client.auth = None  # logged out: the window tells of the change of account
+    app.account_changed(win, app.Cause.LOGGED_OUT)
+    assert (row.get_title(), button.get_label()) == ("Not logged in", "Log In")
+    button.emit("clicked")
+    assert calls == ["logout", "login"]
+    shown[0].emit("closed")  # the preferences closed: the window keeps no widget of them
+    assert getattr(win, "_account_row", None) is None
