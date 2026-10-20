@@ -5054,6 +5054,86 @@ def test_the_tiles_follow_the_window_narrowed_or_widened(sizes, per_line, capfd)
         win.destroy()
 
 
+def _laid_out_start_page(window: int, entries):
+    """A start page with these tiles in a window `window` px wide, laid out on the display of
+    the tests: (start page, its navigation view, the window to destroy)."""
+    import time
+
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, GLib, Gtk
+
+    from openexpress.gui.start import StartPage
+
+    start = StartPage()
+    start.show(entries, False)
+    nav = Adw.NavigationView()
+    nav.add(start.page)
+    win = Gtk.Window(default_width=window, default_height=740, child=nav)
+    win.present()
+    end = time.monotonic() + 0.8  # the width from the page comes a frame later
+    while time.monotonic() < end:
+        GLib.MainContext.default().iteration(False)
+    return start, nav, win
+
+
+def _start_tile(name, connected):
+    from openexpress.devicelist import Tile
+
+    return Tile(name, "006-B4532-00", "23.39", "mtp", connected, False, False,
+                None if connected else 1.0, "006-B4532-00", None, None)
+
+
+def _left_right(widget, nav):
+    """How far a widget stands from the left and from the right edge of the page."""
+    _ok, b = widget.compute_bounds(nav)
+    return round(b.get_x()), round(nav.get_width() - b.get_x() - b.get_width())
+
+
+@pytest.mark.needs_display
+# PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+def test_a_wide_window_with_two_tiles_a_section_has_two_columns_in_the_middle():
+    """T9 step 0: a window 1500 px wide, two sections of two tiles each: two columns (no
+    third, empty one), each tile at most 300 px wide; the block of headings and tiles in the
+    middle of the window, the headings at the left edge of the tiles."""
+    start, nav, win = _laid_out_start_page(1500, [
+        (_start_tile("fēnix 8", True), "Over USB (MTP)"), (_start_tile("Edge 1050", True), "x"),
+        (_start_tile("Venu 2", False), "y"), (_start_tile("Instinct 3", False), "z")])
+    try:
+        assert start.columns.layout[0] == 2
+        tiles = start.tiles()
+        assert len({t.get_width() for t in tiles}) == 1 and tiles[0].get_width() <= 300
+        box = start.connected_title.get_parent()
+        left, right = _left_right(box, nav)
+        assert abs(left - right) <= 1, (left, right)
+        for title, first in ((start.connected_title, tiles[0]),
+                             (start.remembered_title, tiles[2])):
+            assert _left_right(title, nav)[0] == _left_right(first, nav)[0]
+        assert _left_right(tiles[1], nav)[1] == right  # the second column ends the block
+    finally:
+        win.destroy()
+
+
+@pytest.mark.needs_display
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+def test_one_tile_stands_in_the_middle():
+    """T9 step 0: one tile only, in a wide window: one column, at most 300 px wide, in the
+    middle of the window, its heading at its left edge."""
+    start, nav, win = _laid_out_start_page(1500, [(_start_tile("fēnix 8", True), "x")])
+    try:
+        assert start.columns.layout[0] == 1
+        (tile,) = start.tiles()
+        assert tile.get_width() <= 300
+        left, right = _left_right(tile, nav)
+        assert abs(left - right) <= 1, (left, right)
+        assert _left_right(start.connected_title, nav)[0] == left
+    finally:
+        win.destroy()
+
+
 @pytest.mark.needs_display
 def test_the_read_only_view_offers_no_action():
     """The read-only view: the banner says the device is not connected; Sync and the rows of

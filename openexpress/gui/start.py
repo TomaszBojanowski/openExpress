@@ -11,7 +11,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
@@ -36,6 +36,7 @@ DEVICE_ICON = f"{APP_ID}-device-symbolic"
 # 1000 px wide (where Adw.Clamp gives the page about 760 px), one filling the line in a
 # narrow window. A longer name is cut short; the line under it takes at most two lines.
 MIN_TILE_WIDTH = 220
+MAX_TILE_WIDTH = 300  # in a wide window: the tiles do not grow past it, the block is centred
 TILE_SPACING = 12
 SUBTITLE_LINES = 2
 
@@ -65,11 +66,15 @@ def load_css(display) -> None:
                                               Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 
-def columns(width: int) -> tuple[int, int]:
+def columns(width: int, most: int | None = None) -> tuple[int, int]:
     """How many tiles share a line of this many pixels, and how wide each one is: as many as
-    fit at least MIN_TILE_WIDTH wide, TILE_SPACING between them, never fewer than one."""
-    count = max(1, (width + TILE_SPACING) // (MIN_TILE_WIDTH + TILE_SPACING))
-    return count, max(1, (width - TILE_SPACING * (count - 1)) // count)
+    fit at least MIN_TILE_WIDTH wide, TILE_SPACING between them, never fewer than one, nor
+    more than the most tiles a section has (`most`); each at most MAX_TILE_WIDTH wide but
+    when only one fits (a narrow window: one column on the whole line)."""
+    fit = max(1, (width + TILE_SPACING) // (MIN_TILE_WIDTH + TILE_SPACING))
+    count = max(1, min(fit, most)) if most else fit
+    tile = max(1, (width - TILE_SPACING * (count - 1)) // count)
+    return count, tile if fit == 1 else min(tile, MAX_TILE_WIDTH)
 
 
 def _tile_grid() -> Gtk.FlowBox:
@@ -85,8 +90,9 @@ def _tile_grid() -> Gtk.FlowBox:
 
 
 class _ColumnsLayout(Gtk.LayoutManager):
-    """The layout of _TileColumns: its one child as a bin lays it out, and then the width
-    it was given told to the widget (which GTK hands over: nothing is kept here)."""
+    """The layout of _TileColumns: its one child as wide as the block of tiles and in the
+    middle (never a minimum: the window can always get narrower), and then the width it was
+    given told to the widget (which GTK hands over: nothing is kept here)."""
 
     __gtype_name__ = "OpenExpressColumnsLayout"
 
@@ -98,23 +104,27 @@ class _ColumnsLayout(Gtk.LayoutManager):
         child = widget.get_first_child()
         if child is None or not child.should_layout():
             return 0, 0, -1, -1
+        if orientation == Gtk.Orientation.VERTICAL and for_size >= 0:
+            for_size = widget.block(for_size)  # its height at the width it will have
         return child.measure(orientation, for_size)
 
     def do_allocate(self, widget, width, height, baseline):
+        widget.allocated(width)
         child = widget.get_first_child()
         if child is not None and child.should_layout():
-            child.allocate(width, height, baseline, None)
-        widget.allocated(width)
+            inner = widget.block(width)
+            place = Gsk.Transform.new().translate(Graphene.Point().init((width - inner) // 2, 0))
+            child.allocate(inner, height, baseline, place)
 
 
 class _TileColumns(Adw.Bin):
-    """The content of the start page: on a new width, how many tiles share a line and how
-    wide they are (columns()), the same in every section. Each grid gets how many share a
-    line, and the pixels that do not divide evenly as its right margin, so that every tile
-    is exactly as wide; the tiles themselves get no width (one that became their minimum
-    kept the window from getting narrower). Set when the window is idle, never during its
-    layout, and only when the columns, the width of a tile or those pixels change. (A
-    scrollbar that comes with the new layout makes the page narrower, so that fewer tiles
+    """The headings and the tiles of the start page: on a new width (or a new count of tiles),
+    how many tiles share a line and how wide they are (columns()), the same in every
+    section; the block of them as wide as that, in the middle of the page. Each grid gets how
+    many share a line and shares its line out itself; the tiles get no width (one that
+    became their minimum kept the window from getting narrower). Set when the window is
+    idle, never during its layout, and only when the columns or the width of a tile change.
+    (A scrollbar that comes with the new layout makes the page narrower, so that fewer tiles
     share a line and the page gets longer: it stays, and nothing goes back.)"""
 
     __gtype_name__ = "OpenExpressTileColumns"
@@ -125,30 +135,45 @@ class _TileColumns(Adw.Bin):
         self._grids = grids
         self._margins = child.get_margin_start() + child.get_margin_end()
         self.layout = (0, MIN_TILE_WIDTH)  # (tiles on a line, their width): none set yet
-        self._spare = 0  # the pixels of the line that do not divide evenly among them
         self.updates = 0  # how many times the tiles were laid out (for the tests)
         self._wanted = None
+        self._most = 0  # the most tiles a section has (0: none)
+        self._width = None  # the width the page was given last
+
+    def set_most(self, most: int) -> None:
+        """The most tiles a section has now: no more columns than that."""
+        if most != self._most:
+            self._most = most
+            if self._width is not None:
+                self.allocated(self._width)
 
     def allocated(self, width: int) -> None:
         """The page got this width (from its layout): the tiles follow, once it is idle."""
-        count, tile = columns(width - self._margins)
-        wanted = (count, tile, width - self._margins - count * tile - TILE_SPACING * (count - 1))
-        if wanted != (*self.layout, self._spare) and wanted != self._wanted:
+        self._width = width
+        wanted = columns(width - self._margins, self._most or None)
+        if wanted != self.layout and wanted != self._wanted:
             if self._wanted is None:
                 GLib.idle_add(self._apply)
             self._wanted = wanted
+
+    def block(self, width: int) -> int:
+        """How wide the block of headings and tiles is in a page this wide: as wide as the
+        tiles on a line and the room between them, never wider than the page."""
+        count, tile = self.layout
+        if not count or not self._most:
+            return width
+        return min(width, count * tile + TILE_SPACING * (count - 1) + self._margins)
 
     def _apply(self) -> bool:
         wanted, self._wanted = self._wanted, None
         if self.get_root() is None:  # the page left its window meanwhile: nothing to lay out
             return False
-        if wanted is not None and wanted != (*self.layout, self._spare):
-            count, tile, self._spare = wanted
-            self.layout = (count, tile)
+        if wanted is not None and wanted != self.layout:
+            self.layout = wanted
             self.updates += 1
             for grid in self._grids:
-                grid.set_max_children_per_line(count)
-                grid.set_margin_end(self._spare)
+                grid.set_max_children_per_line(wanted[0])
+            self.queue_resize()  # the block's new width, in the middle
         return False
 
 
@@ -217,8 +242,8 @@ class StartPage:
             loading.set_paintable(Adw.SpinnerPaintable.new(loading))
         self.stack.add_named(loading, "loading")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, margin_top=24,
-                      margin_bottom=24, margin_start=12, margin_end=12)
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, margin_top=24,
+                       margin_bottom=24, margin_start=12, margin_end=12)
         self.notice_group = Adw.PreferencesGroup(visible=False)
         self.notice = Adw.ActionRow()
         self.notice_icon = Gtk.Image(icon_name=APP_ID, pixel_size=32)
@@ -232,7 +257,8 @@ class StartPage:
         # store when a tile is built; set_picture puts one into the tiles already there.
         self._picture_of = picture_of or (lambda _part: None)
         self.set_empty("", "", False)
-        box.append(self.notice_group)
+        page.append(self.notice_group)  # the whole width, above the block of tiles
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
 
         self._sections = {
             # TRANSLATORS: heading above the tiles of the devices connected now
@@ -256,7 +282,8 @@ class StartPage:
             account.title, account.grid, account.list)
         # The tiles' width, from the width of the page, the same in every section.
         self.columns = _TileColumns(box, [s.grid for s in self._sections.values()])
-        clamp = Adw.Clamp(maximum_size=900, child=self.columns)
+        page.append(self.columns)
+        clamp = Adw.Clamp(maximum_size=900, child=page)
         self.stack.add_named(Gtk.ScrolledWindow(child=clamp,
                                                 hscrollbar_policy=Gtk.PolicyType.NEVER),
                              "content")
@@ -286,6 +313,7 @@ class StartPage:
         parts: dict[str, list] = {name: [] for name in self._sections}
         for key, (tile, how) in enumerate(entries):
             parts[devicelist.section(tile)].append((key, tile, how))
+        self.columns.set_most(max(len(part) for part in parts.values()))
         for name, section in self._sections.items():
             part = parts[name]
             mode = devicelist.layout(len(part))  # tiles while few, a list for many
