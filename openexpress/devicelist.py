@@ -261,18 +261,20 @@ def remember_kinds(account) -> None:
 
 
 # What Garmin said of the kind of each model in this run, by part number: the account's
-# categories and unit-info's segment, and whether a kind came of them; and what was told.
+# categories, unit-info's segment and connect support, and whether a kind came of them; and
+# what was told.
 _kind_evidence: dict[str, dict] = {}
 _kind_told: set = set()
 
 
 def note_kind_evidence(part_number: str, categories: list[str] | None = None,
-                       segment: str | None = None, kind: str | None = None) -> None:
+                       segment: str | None = None, kind: str | None = None,
+                       connect_support: str | None = None) -> None:
     """Keep what Garmin said of the kind of a model (`categories` of the account's list,
-    `segment` of unit-info; `kind`: what the program made of it). While Garmin tells no kind
-    of it, one line in the log says all of it, once for each new piece: so that a report
-    tells the signal Garmin gives for such a device (an inReach). The part number only:
-    never a unit ID or a serial number."""
+    `segment` and `connect_support` of unit-info; `kind`: what the program made of it).
+    While Garmin tells no kind of it, one line in the log says all of it, once for each new
+    piece: so that a report tells the signal Garmin gives for such a device (an inReach).
+    The part number only: never a unit ID or a serial number."""
     if not part_number:
         return
     known = _kind_evidence.setdefault(part_number, {})
@@ -280,16 +282,24 @@ def note_kind_evidence(part_number: str, categories: list[str] | None = None,
         known["categories"] = tuple(categories)
     if segment is not None:
         known["segment"] = segment
+    if connect_support is not None:
+        known["connect_support"] = connect_support
     if kind is not None:
         known["kind"] = kind
     if known.get("kind"):
         return
-    told = (part_number, known.get("categories"), known.get("segment"))
+    told = (part_number, known.get("categories"), known.get("segment"),
+            known.get("connect_support"))
     if told in _kind_told:
         return
     _kind_told.add(told)
     said = known.get("categories")
     log.info("devices: Garmin tells no kind of %s (account categories: %s; unit-info "
-             "segment: %s)", part_number,
+             "segment: %s, connect support: %s)", part_number,
              ("none" if said == () else ", ".join(said)) if said is not None else "not known",
-             known.get("segment") or "not asked")
+             known.get("segment") or "not asked", known.get("connect_support") or "not asked")
+
+
+def unit_info_heard(part_number: str) -> bool:
+    """Whether unit-info answered about this model in this run (note_kind_evidence)."""
+    return "segment" in _kind_evidence.get(part_number, {})

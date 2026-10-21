@@ -500,12 +500,13 @@ def test_a_device_garmin_tells_no_kind_of_is_logged_with_what_garmin_said(kinds_
     with caplog.at_level(logging.INFO, logger="openexpress"):
         devicelist.remember_kinds(account([ACCOUNT_ANSWER[0], INREACH]))
         devicelist.remember_kinds(account([ACCOUNT_ANSWER[0], INREACH]))  # read again
-        devicelist.note_kind_evidence("006-B3968-00", segment="Outdoor")  # unit-info, later
+        devicelist.note_kind_evidence("006-B3968-00", segment="Outdoor",  # unit-info, later
+                                      connect_support="Enabled")
     assert _no_kind_lines(caplog) == [
         ("devices: Garmin tells no kind of 006-B3968-00 (account categories: OUTDOOR; "
-         "unit-info segment: not asked)"),
+         "unit-info segment: not asked, connect support: not asked)"),
         ("devices: Garmin tells no kind of 006-B3968-00 (account categories: OUTDOOR; "
-         "unit-info segment: Outdoor)")]
+         "unit-info segment: Outdoor, connect support: Enabled)")]
     assert "3000000005" not in caplog.text
 
 
@@ -520,10 +521,13 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
     varia = types.SimpleNamespace(unit_id=VARIA, part_number="006-B3592-03")
     with caplog.at_level(logging.INFO, logger="openexpress"):
         app.note_segment(venu, {"segmenttype": "Fitness", "serialnumber": "SECRET123"})
+        app.note_segment(venu, {"segmenttype": "Fitness", "connectsupport": "Enabled"})
         app.note_segment(varia, {"segmenttype": "BikeAccessory"})
     assert _no_kind_lines(caplog) == [
         ("devices: Garmin tells no kind of 006-B3703-00 (account categories: not known; "
-         "unit-info segment: Fitness)")]
+         "unit-info segment: Fitness, connect support: none given)"),
+        ("devices: Garmin tells no kind of 006-B3703-00 (account categories: not known; "
+         "unit-info segment: Fitness, connect support: Enabled)")]
     assert "SECRET123" not in caplog.text and str(VENU) not in caplog.text
 
 

@@ -1074,7 +1074,7 @@ def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
     assert ("device picture: none (download refused: host s3.amazonaws.com, first segment "
             "garmin-bucket: not an allowed bucket)") in log
     assert client.http.calls == [] and _cache(xdg) == []
-    assert "secret" not in log and "Signature" not in log and "devices" not in log
+    assert "secret" not in log and "Signature" not in log and "/devices" not in log
 
 
 @pytest.mark.parametrize("logged_in, account_url, unit_info_url, kept", [
@@ -1140,6 +1140,43 @@ def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(
             known_devices.remember(SECRET_UNIT, "Test watch", "006-B0000-00", "1.00", "mtp")
         win.show()
         assert win.jobs == [] and again.asked == [], logged_in
+
+
+def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(pictures):
+    """#11, an inReach Mini 2 in mass storage mode: the account is never asked about it, and
+    with its picture in the cache and its address kept, unit-info was not asked either, so
+    the log never said what Garmin tells of it. Now unit-info is asked once in each run while
+    Garmin has told no kind of it, and only its segment and connect support are noted; the
+    file in the cache stays. A drive whose kind is kept (a Varia) is not asked."""
+    from openexpress import devicelist, known_devices
+
+    xdg, log_file, monkeypatch = pictures
+    known_devices.remember(SECRET_UNIT, "inReach Mini 2", "006-B0000-00", "5.05", "ums")
+    known_devices.set_image_url(SECRET_UNIT, PICTURE_URL)
+    _save(xdg, "device-006-B0000-00.png")
+    info = dict(_unit_info(), segmenttype="Outdoor", connectsupport="Enabled")
+    client = PictureClient(unit_info=info)
+    win = _picture_window(client, logged_in=True, monkeypatch=monkeypatch)
+    win.session.mass_storage = True
+    win.show()
+    assert win.shown == [("texture", PNG)]  # at once, from the cache
+    _finish(win)
+    assert client.asked == ["unit-info"] and client.http.calls == []  # never the account
+    win.show()  # opened again in the same run
+    assert win.jobs == [] and client.asked == ["unit-info"]
+    log = log_file.read_text()
+    assert ("devices: Garmin tells no kind of 006-B0000-00 (account categories: not known; "
+            "unit-info segment: Outdoor, connect support: Enabled)") in log
+    assert str(SECRET_UNIT) not in log and SECRET_SERIAL not in log
+
+    known_devices.set_category(SECRET_UNIT, known_devices.BIKE_ACCESSORY)  # a Varia
+    monkeypatch.setattr(devicelist, "_kind_evidence", {})  # the next run
+    monkeypatch.setattr(devicelist, "_kind_told", set())
+    again = PictureClient(unit_info=info)
+    win = _picture_window(again, monkeypatch=monkeypatch)
+    win.session.mass_storage = True
+    win.show()
+    assert win.jobs == [] and again.asked == []
 
 
 def test_a_download_that_takes_too_long_is_given_up(pictures):

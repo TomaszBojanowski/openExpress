@@ -161,6 +161,18 @@ def no_drive_ejected(monkeypatch):
         return
     monkeypatch.setattr(gio_storage, "_ejected", [])
 
+
+@pytest.fixture(autouse=True)
+def no_kinds_heard(monkeypatch):
+    """What Garmin said of the kinds of models is kept for as long as openExpress runs: every
+    test starts with nothing heard."""
+    try:
+        from openexpress import devicelist
+    except (ImportError, ValueError):  # no PyGObject: nothing hears it
+        return
+    monkeypatch.setattr(devicelist, "_kind_evidence", {})
+    monkeypatch.setattr(devicelist, "_kind_told", set())
+
 DEVICE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
  <Model><PartNumber>006-B0000-00</PartNumber><SoftwareVersion>2339</SoftwareVersion>

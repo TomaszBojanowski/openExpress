@@ -262,19 +262,22 @@ def picture_from_unit_info(client, device) -> str | None:
 
 
 def note_segment(device, info) -> None:
-    """Keep the kind Garmin's update server tells in an answer the window asked for anyway
-    (for a picture, after an update): a bike accessory (e.g. a Varia). Only this field is
-    read; never another request for it. A segment that tells no kind the program knows goes
-    to the log with the part number (devicelist.note_kind_evidence)."""
+    """Keep the kind Garmin's update server tells in an answer the window asked for (for a
+    picture, after an update, for a drive whose kind is not told): a bike accessory (e.g. a
+    Varia). Only this field and its connect support are read. A segment that tells no kind
+    the program knows goes to the log with the part number and the connect support
+    (devicelist.note_kind_evidence)."""
     segment = info.get("segmenttype") if isinstance(info, dict) else None
     bike_accessory = isinstance(segment, str) and segment.casefold() == "bikeaccessory"
     if bike_accessory:
         known_devices.set_category(device.unit_id, known_devices.BIKE_ACCESSORY)
     if isinstance(info, dict):
+        support = info.get("connectsupport")
         devicelist.note_kind_evidence(
             getattr(device, "part_number", "") or "",
             segment=segment if isinstance(segment, str) and segment else "none given",
-            kind=known_devices.BIKE_ACCESSORY if bike_accessory else None)
+            kind=known_devices.BIKE_ACCESSORY if bike_accessory else None,
+            connect_support=support if isinstance(support, str) and support else "none given")
 
 
 def is_bike_accessory(client, device) -> bool:
@@ -490,6 +493,16 @@ def picture_address_known(device) -> bool:
     unit_id = getattr(device, "unit_id", None)
     entry = known_devices.load().get(unit_id) if unit_id else None
     return entry is None or entry.image_url is not None
+
+
+def kind_untold(device) -> bool:
+    """Whether Garmin has told no kind of this device yet: none kept with it, and unit-info
+    has not answered about its model in this run."""
+    unit_id = getattr(device, "unit_id", None)
+    entry = known_devices.load().get(unit_id) if unit_id else None
+    if entry is not None and entry.category is not None:
+        return False
+    return not devicelist.unit_info_heard(getattr(device, "part_number", "") or "")
 
 
 def remember_picture_address(device, url: str | None) -> None:
@@ -2423,10 +2436,13 @@ class MainWindow(Adw.ApplicationWindow):
                 log.info("device picture: from the cache")
         if texture is not None:
             self._set_device_texture(texture)
-            if not on_account and not picture_address_known(s.device):
+            if (not on_account and not picture_address_known(s.device)) or (
+                    getattr(s, "mass_storage", False) and kind_untold(s.device)):
                 # Off the account its address comes only from unit-info, while it is
                 # connected: asked now for the address alone, so that the picture can come
                 # back once the cache is cleared (a Venu 2, 21.10.2026). The file stays.
+                # A drive whose kind Garmin has not told: asked once a run as well, so that
+                # the log says what unit-info tells of it (an inReach, #11).
                 self.in_background(
                     lambda: remember_picture_address(s.device,
                                                      picture_from_unit_info(s.client, s.device)),

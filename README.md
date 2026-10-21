@@ -387,12 +387,14 @@ when they are installed or updated. It is not cleared while a download or an ins
   Garmin Connect are still written to the device. Upload locations that need a further
   consent are used only when that consent is given.
 - The picture of a device that is not on the signed-in account (or when nobody is signed
-  in) is looked up on Garmin's update server; like the update check, that request names the
-  device (unit ID). The answer is not stored: only the picture is cached, and the address of
-  the picture of the model is kept with the devices this installation remembers, so that the
-  picture can be downloaded again after the cache is cleared. Of the answer, the log names
-  only the market segment of a device whose kind Garmin does not tell otherwise (with its
-  part number), as it names the account's categories of such a device.
+  in) is looked up on Garmin's update server, and so, once each time openExpress runs, is
+  what that server says of an open device in mass storage mode whose kind Garmin has not
+  told; like the update check, that request names the device (unit ID). The answer is not
+  stored: only the picture is cached, and the address of the picture of the model is kept
+  with the devices this installation remembers, so that the picture can be downloaded again
+  after the cache is cleared. Of the answer, the log names only the market segment and the
+  connect support of a device whose kind Garmin does not tell otherwise (with its part
+  number), as it names the account's categories of such a device.
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 
