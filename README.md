@@ -99,7 +99,8 @@ models, and accessories such as the Varia RTL515): their information and softwar
 the window and on the command line, in the Flatpak and in the version from source. Both find
 such a device by themselves, an MTP device first when both are connected; `--path` is only for
 a folder without a device, such as a copy. Commands that do not apply to such a device (sync,
-apps, maps, music, backup) say so. Mass storage is tested on the Varia RTL515; reports from
+apps, maps, music, backup) say so. Mass storage is tested on the Varia RTL515 (on 21 October
+2026 also copying a component update and ejecting the drive in the window); reports from
 other devices in mass storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
 it is in mass storage mode.
@@ -204,6 +205,11 @@ connected device; no login is needed.
 - **After the file is copied** the device installs it when it is disconnected. Until then
   the page says *Update ready to install* and `openexpress updates` says that the update
   waits for the device.
+- **A device that connects as a USB drive** is ejected first: after the copy the window
+  asks to eject it (`openexpress updates --install` ejects it by itself), and says that the
+  cable can be unplugged only once that has worked. Some of these devices install an update
+  only after a clean eject. Until it is unplugged, openExpress does not open the ejected
+  drive again.
 
 Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026).
 
