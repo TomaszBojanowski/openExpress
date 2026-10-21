@@ -388,7 +388,9 @@ when they are installed or updated. It is not cleared while a download or an ins
   consent are used only when that consent is given.
 - The picture of a device that is not on the signed-in account (or when nobody is signed
   in) is looked up on Garmin's update server; like the update check, that request names the
-  device (unit ID). The answer is not stored or logged, only the picture is cached.
+  device (unit ID). The answer is not stored or logged: only the picture is cached, and the
+  address of the picture of the model is kept with the devices this installation remembers,
+  so that the picture can be downloaded again after the cache is cleared.
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 
