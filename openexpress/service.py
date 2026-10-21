@@ -201,6 +201,21 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
 
 UPLOAD_CONSENT = "DI_CONNECT_UPLOAD"
 NO_CONSENT, SYNC_OFF, NOT_CHECKED = "no-consent", "sync-off", "not-checked"
+# Why nothing was uploaded: in the details of a sync, after "Nothing was uploaded: "…
+NOT_UPLOADED_WHY = {
+    NO_CONSENT: N_("the Garmin account has no consent to upload data from devices"),
+    SYNC_OFF: N_("device sync is turned off in the Garmin account"),
+    NOT_CHECKED: N_("the upload consent could not be checked. Try again later"),
+}
+# … and in its row, short (under "Last sync", first in the numbers of the command line).
+NOT_UPLOADED_ROW = {
+    # TRANSLATORS: under "Last sync": nothing was uploaded, and why
+    NO_CONSENT: N_("nothing uploaded: no consent in the account"),
+    # TRANSLATORS: under "Last sync": nothing was uploaded, and why
+    SYNC_OFF: N_("nothing uploaded: device sync is off in the account"),
+    # TRANSLATORS: under "Last sync": nothing was uploaded, and why
+    NOT_CHECKED: N_("nothing uploaded: the consent could not be checked"),
+}
 
 
 def consent_granted(body: dict | None, consent_type: str, country=lambda: None) -> bool:
@@ -241,11 +256,8 @@ class UploadGate:
         return not self.reason
 
     def why(self) -> str:
-        return {
-            NO_CONSENT: _("the Garmin account has no consent to upload data from devices"),
-            SYNC_OFF: _("device sync is turned off in the Garmin account"),
-            NOT_CHECKED: _("the upload consent could not be checked. Try again later"),
-        }.get(self.reason, "")
+        why = NOT_UPLOADED_WHY.get(self.reason)
+        return _(why) if why else ""
 
     def message(self, done: bool = True) -> str:
         """`done`: after a sync; otherwise for a plan (dry run)."""
@@ -479,6 +491,9 @@ def _describe_step(line) -> list[tuple[str, bool]]:
             return []
         return [(_("Files from the device: {types}").format(types=_describe_types(types)),
                  False)]
+    if kind == "not_uploaded":
+        gate = UploadGate(str(line.get("reason") or ""))
+        return [(gate.message(), False)] if gate.why() else []  # one of a newer version: none
     if kind == "uploads":
         known, rejected = line.get("known", 0), line.get("rejected", 0)
         errors = line.get("errors", 0)
@@ -505,6 +520,12 @@ def new_files_step(candidates) -> dict:
             "types": dict(collections.Counter(c.datatype for c in candidates))}
 
 
+def not_uploaded_step(gate: UploadGate) -> dict:
+    """Why a sync uploaded nothing (gate.reason: no consent, device sync off, not checked):
+    a step of the summary, put into words when it is shown."""
+    return {"kind": "not_uploaded", "reason": gate.reason}
+
+
 def uploads_step(rep) -> dict:
     """What became of the uploads of a sync: a step of the summary. "known": already in
     Connect, recognised before sending or, after it was sent, by Garmin."""
@@ -528,12 +549,20 @@ def _new_files(data: dict) -> int:
 def describe_counts(data: dict) -> str:
     """The numbers of a sync in one line: "8 new files, 6 uploaded · 2 received" - the new
     files on the device and how many of them were uploaded ("none uploaded"; "nothing to
-    upload" when it had none), and the files from Garmin Connect written to the device when
-    there are any. The window shows it under "Last sync" after when it was; the command
-    line and the notification put it before the details."""
+    upload" when it had none; "nothing uploaded: <why>" when the upload did not take
+    place), and the files from Garmin Connect written to the device when there are any.
+    The window shows it under "Last sync" after when it was; the command line and the
+    notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
     received = data.get("downloaded", 0)
-    if files:
+    blocked = next((line for line in data.get("lines") or [] if isinstance(line, dict)
+                    and line.get("kind") == "not_uploaded"), None)
+    if blocked is not None:
+        # Nothing was uploaded, and why; a reason of a newer version: only that.
+        row = NOT_UPLOADED_ROW.get(blocked.get("reason"))
+        # TRANSLATORS: under "Last sync": nothing was uploaded
+        parts = [_(row) if row else _("nothing uploaded")]
+    elif files:
         # TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
         found = ngettext("{count} new file", "{count} new files", files).format(count=files)
         sent = (ngettext("{count} uploaded", "{count} uploaded", uploaded).format(
@@ -693,7 +722,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
                              consent_granted=gate.granted)
     if not gate.allowed:
         # Files from Connect are still written to the device below.
-        out.lines.append(gate.message())
+        out.lines.append(not_uploaded_step(gate))
     elif plan.candidates:
         out.lines.append(new_files_step(plan.candidates))
         rep = sync.run_uploads(plan, s.device, s.storage, s.client, state, progress)

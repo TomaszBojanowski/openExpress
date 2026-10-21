@@ -74,6 +74,67 @@ def test_every_row_in_english_and_polish(data, english, polish):
             i18n.setup("en")
 
 
+def _blocked(reason, received=0):
+    """A sync that uploaded nothing because of `reason` (service.UploadGate), as recorded."""
+    return {"uploaded": 0, "downloaded": received,
+            "lines": [{"kind": "not_uploaded", "reason": reason}]}
+
+
+# The row when nothing was uploaded: why, the same for every reason the upload is blocked
+# (PLAN, 22.10.2026; it was "no new files", though the device was not even asked).
+BLOCKED_ROWS = [
+    (_blocked("no-consent"), "nothing uploaded: no consent in the account",
+     "nic nie wysłano: brak zgody na koncie"),
+    (_blocked("no-consent", 7), "nothing uploaded: no consent in the account · 7 received",
+     "nic nie wysłano: brak zgody na koncie · 7 odebranych"),
+    (_blocked("sync-off"), "nothing uploaded: device sync is off in the account",
+     "nic nie wysłano: synchronizacja urządzeń wyłączona na koncie"),
+    (_blocked("sync-off", 1), "nothing uploaded: device sync is off in the account · 1 received",
+     "nic nie wysłano: synchronizacja urządzeń wyłączona na koncie · 1 odebrany"),
+    (_blocked("not-checked"), "nothing uploaded: the consent could not be checked",
+     "nic nie wysłano: nie udało się sprawdzić zgody"),
+    (_blocked("not-checked", 2), "nothing uploaded: the consent could not be checked · 2 received",
+     "nic nie wysłano: nie udało się sprawdzić zgody · 2 odebrane"),
+    (_blocked("a reason of a newer version"), "nothing uploaded", "nic nie wysłano"),
+]
+
+
+@pytest.mark.parametrize(("data", "english", "polish"), BLOCKED_ROWS, ids=[r[1] for r in BLOCKED_ROWS])
+def test_every_row_of_a_sync_that_uploaded_nothing(data, english, polish):
+    test_every_row_in_english_and_polish(data, english, polish)
+
+
+@pytest.mark.parametrize(("reason", "english", "polish"), [
+    ("no-consent",
+     ("Nothing was uploaded: the Garmin account has no consent to upload data from devices"),
+     ("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
+      "z\u00a0urządzeń")),
+    ("sync-off", "Nothing was uploaded: device sync is turned off in the Garmin account",
+     "Nie wysłano danych: synchronizacja urządzeń jest wyłączona na koncie Garmin"),
+    ("not-checked",
+     "Nothing was uploaded: the upload consent could not be checked. Try again later",
+     ("Nie wysłano danych: nie udało się sprawdzić zgody na przesyłanie. Spróbuj ponownie "
+      "później")),
+])
+def test_the_details_say_why_in_full_as_before(reason, english, polish):
+    for language, words in (("en", english), ("pl", polish)):
+        i18n.setup(language)
+        try:
+            assert service.describe_lines(_blocked(reason)["lines"]) == [words], language
+        finally:
+            i18n.setup("en")
+    assert service.describe_lines(_blocked("a reason of a newer version")["lines"]) == []
+
+
+def test_an_older_record_of_a_blocked_sync_reads_as_before():
+    """Before 22.10.2026 the reason was kept as the words of that moment: they stay the
+    details, and the row has no reason to tell."""
+    data = {"uploaded": 0, "downloaded": 1, "lines": [
+        "Nothing was uploaded: device sync is turned off in the Garmin account"]}
+    assert service.describe_counts(data) == "nothing to upload · 1 received"
+    assert service.describe_lines(data["lines"]) == data["lines"]
+
+
 @pytest.mark.parametrize(("count", "words"), [
     (1, "5 nowych plików, 1 wysłany"), (2, "6 nowych plików, 2 wysłane"),
     (5, "9 nowych plików, 5 wysłanych"), (22, "26 nowych plików, 22 wysłane")])

@@ -528,9 +528,9 @@ def cmd_sync(args) -> int:
         if up_plan is not None and (gate is None or not gate.allowed):
             # No consent, device sync turned off, or the check failed: nothing is uploaded.
             # Files from Connect are still written to the device below.
-            line = (gate or service.UploadGate(service.NOT_CHECKED)).message()
-            print("\n" + line)
-            summary.lines.append(line)
+            blocked = gate or service.UploadGate(service.NOT_CHECKED)
+            print("\n" + blocked.message())
+            summary.lines.append(service.not_uploaded_step(blocked))  # the row says why too
         elif up_plan and up_plan.candidates:
             print("\n" + _("Uploading…"))
             rep = sync.run_uploads(up_plan, dev, st, client, state, progress)

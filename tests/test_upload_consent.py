@@ -190,14 +190,17 @@ def test_without_a_consent_check_such_types_are_skipped(device_root, xdg):
 
 # --- a whole sync -----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("kw, text", [
-    ({"consent": {**OPT_IN, "useroption": "opt-out"}}, "no consent to upload data"),
-    ({"preference": "false"}, "device sync is turned off"),
-    ({"consent": ApiError("HTTP 500", 500)}, "could not be checked"),
-    ({"consent": None}, "no consent to upload data"),
+@pytest.mark.parametrize("kw, text, reason, row", [
+    ({"consent": {**OPT_IN, "useroption": "opt-out"}}, "no consent to upload data",
+     "no-consent", "no consent in the account"),
+    ({"preference": "false"}, "device sync is turned off", "sync-off",
+     "device sync is off in the account"),
+    ({"consent": ApiError("HTTP 500", 500)}, "could not be checked", "not-checked",
+     "the consent could not be checked"),
+    ({"consent": None}, "no consent to upload data", "no-consent", "no consent in the account"),
 ])
 def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake_client, capsys,
-                                                         kw, text):
+                                                         kw, text, reason, row):
     client = fake_client["client"] = Account(messages=QUEUED, **kw)
     acks = []
     client.ack_message = acks.append
@@ -205,10 +208,13 @@ def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake
     out = capsys.readouterr().out
     assert client.uploads == []
     assert out.count("Nothing was uploaded: ") == 1 and text in out
-    assert "nothing to upload · 1 received" in out and acks == [5]  # the queue is still served
+    # Why, in the numbers at the end too; the queue is still served.
+    assert f"nothing uploaded: {row} · 1 received" in out and acks == [5]
     assert list((device_root / "GARMIN/NewFiles").iterdir())
     data = service.load_last_sync(UNIT)
-    assert data["uploaded"] == 0 and any("Nothing was uploaded" in line for line in data["lines"])
+    # The reason is kept, the words are made when it is shown (the window, in its language).
+    assert data["uploaded"] == 0 and {"kind": "not_uploaded", "reason": reason} in data["lines"]
+    assert service.describe_counts(data) == f"nothing uploaded: {row} · 1 received"
     # Asked before anything could be uploaded, and once.
     assert client.asked.count(("consent", "DI_CONNECT_UPLOAD")) == 1
 
@@ -269,6 +275,8 @@ def test_window_and_background_sync_use_the_same_gate(device_root, xdg):
         blocked = [line for line in service.describe_lines(summary.lines)
                    if line.startswith("Nothing was uploaded")]
         assert len(blocked) == (0 if uploads else 1) and summary.errors == []
+        if not uploads:  # the window and the background sync keep the reason as well
+            assert summary.counts == "nothing uploaded: device sync is off in the account · 1 received"
 
 
 # --- the last sync: numbers kept, words made when shown -----------------------------------------
