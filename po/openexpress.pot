@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.6.7\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:40+0200\n"
+"POT-Creation-Date: 2026-10-21 15:54+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,35 +18,50 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: openexpress/applog.py:296
+#: openexpress/applog.py:346
 #, python-brace-format
 msgid "No log file: {error}"
 msgstr ""
 
-#: openexpress/auth/sso.py:76
+#: openexpress/auth/sso.py:238
+msgid "The sign-in page stopped working"
+msgstr ""
+
+#: openexpress/auth/sso.py:241
+msgid ""
+"Try again, or sign in without this window: run this command in a terminal, "
+"sign in in your web browser and paste the address you end up on."
+msgstr ""
+
+#: openexpress/auth/sso.py:251 openexpress/gui/app.py:1247
+#: openexpress/gui/app.py:2088
+msgid "Try Again"
+msgstr ""
+
+#: openexpress/auth/sso.py:281
 msgid "Sign in to Garmin"
 msgstr ""
 
-#: openexpress/auth/sso.py:139
+#: openexpress/auth/sso.py:357
 msgid "Login cancelled or no SSO ticket received."
 msgstr ""
 
-#: openexpress/auth/sso.py:145
+#: openexpress/auth/sso.py:363
 msgid "1. Open this URL in your browser:"
 msgstr ""
 
-#: openexpress/auth/sso.py:147
+#: openexpress/auth/sso.py:365
 msgid ""
 "2. Sign in. Afterwards, copy the full URL from the browser's address bar\n"
 "   (it contains 'ticket=ST-...'). If the browser shows an error, the URL "
 "still works."
 msgstr ""
 
-#: openexpress/auth/sso.py:150
+#: openexpress/auth/sso.py:368
 msgid "3. Paste the URL: "
 msgstr ""
 
-#: openexpress/auth/sso.py:153
+#: openexpress/auth/sso.py:371
 msgid "The given URL has no ticket=ST-... parameter"
 msgstr ""
 
@@ -649,7 +664,7 @@ msgid "Token works: {username} / {email}"
 msgstr ""
 
 #: openexpress/cli.py:346 openexpress/cli.py:381 openexpress/cli.py:392
-#: openexpress/cli.py:1887 openexpress/cli.py:1909
+#: openexpress/cli.py:1891 openexpress/cli.py:1913
 #, python-brace-format
 msgid "Error: {error}"
 msgstr ""
@@ -1954,17 +1969,17 @@ msgstr ""
 msgid "--key and --secret must be given together"
 msgstr ""
 
-#: openexpress/cli.py:1891
+#: openexpress/cli.py:1895
 #, python-brace-format
 msgid "Server error: {error}"
 msgstr ""
 
-#: openexpress/cli.py:1896
+#: openexpress/cli.py:1900
 #, python-brace-format
 msgid "Network error: could not reach the Garmin server ({error})"
 msgstr ""
 
-#: openexpress/cli.py:1902
+#: openexpress/cli.py:1906
 msgid "Interrupted."
 msgstr ""
 
@@ -2570,10 +2585,6 @@ msgstr ""
 #: openexpress/gui/app.py:1192 openexpress/gui/app.py:1312
 #: openexpress/gui/app.py:3144
 msgid "OK"
-msgstr ""
-
-#: openexpress/gui/app.py:1247 openexpress/gui/app.py:2088
-msgid "Try Again"
 msgstr ""
 
 #: openexpress/gui/app.py:1277

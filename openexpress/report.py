@@ -42,11 +42,16 @@ FEATURES = [
 LOG_LINES = 200
 
 
-def with_log(text: str, lines: list[str]) -> str:
-    """The report followed by the end of the program's log (already redacted)."""
+def with_log(text: str, lines: list[str], crash: list[str] | None = None) -> str:
+    """The report followed by the end of the program's log and, when there is one, the end
+    of crash.log (Python's trace of a crash; both redacted already)."""
     body = "\n".join(lines) if lines else "(no log file)"
-    return (f"{text}\n### Log (last {len(lines)} lines)\n```\n{body}\n```\n" if lines
-            else f"{text}\n### Log\n{body}\n")
+    out = (f"{text}\n### Log (last {len(lines)} lines)\n```\n{body}\n```\n" if lines
+           else f"{text}\n### Log\n{body}\n")
+    if crash:
+        out += (f"### Crash log (last {len(crash)} lines of crash.log)\n```\n"
+                + "\n".join(crash) + "\n```\n")
+    return out
 
 
 def issue_url(text: str, model: str | None) -> str | None:

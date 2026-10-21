@@ -239,7 +239,7 @@ def cmd_report(args) -> int:
         logged_in = False
     report_text = text = report.build(dev, st, logged_in)
     if args.log:
-        text = report.with_log(text, applog.tail(report.LOG_LINES))
+        text = report.with_log(text, applog.tail(report.LOG_LINES), applog.crash_tail())
     print(text, end="")
     # An address that opens the form with the report filled in; never with the log.
     url = report.issue_url(report_text, dev.description)
@@ -1840,6 +1840,10 @@ def main(argv: list[str] | None = None) -> int:
     applog.setup(args.cmd if args.cmd in ("gui", "watch") else "cli", args.verbose)
     started = time.monotonic()
     log.info("start: %s (%s)", _command_line(args, argv), applog.environment())
+    applog.enable_crash_log()  # a crash of GTK or WebKit leaves Python's trace in crash.log
+    from openexpress.auth import sso
+
+    sso.note_unfinished_sign_in()  # the last run ended with the sign-in window open
     code: int | str = "error"
     try:
         code = _run(args, service, requests)

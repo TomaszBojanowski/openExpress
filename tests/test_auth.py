@@ -167,6 +167,8 @@ def _fake_view_type():
             __gsignals__ = {
                 "decide-policy": (GObject.SignalFlags.RUN_LAST, bool, (object, int)),
                 "load-changed": (GObject.SignalFlags.RUN_FIRST, None, (int,)),
+                "load-failed": (GObject.SignalFlags.RUN_LAST, bool, (int, str, object)),
+                "web-process-terminated": (GObject.SignalFlags.RUN_LAST, None, (int,)),
             }
             uri = GObject.Property(type=str, default="")
 

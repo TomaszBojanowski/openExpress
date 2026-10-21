@@ -17,6 +17,7 @@ program prints for the user (e.g. the addresses to choose from with `--device-ur
 
 from __future__ import annotations
 
+import faulthandler
 import fcntl
 import getpass
 import logging
@@ -251,6 +252,55 @@ def tail(count: int = 200) -> list[str]:
             continue
         lines = text.splitlines() + lines
     return [redact(line) for line in lines[-count:]]
+
+
+CRASH_NAME = "crash.log"
+CRASH_KEEP = 32 * 1024  # what is kept of a crash.log that grew past twice as much, in bytes
+CRASH_LINES = 80  # the end of crash.log attached to a report
+_crash_file = None  # open for as long as the program runs: faulthandler writes into it
+
+
+def crash_path() -> Path:
+    return paths.state_dir() / CRASH_NAME
+
+
+def enable_crash_log() -> None:
+    """Python's own trace of a fatal signal (a crash in GTK or WebKit, say) into crash.log next
+    to the log: the program cannot go on then, but the report tells where it was. A
+    faulthandler enabled already (PYTHONFAULTHANDLER, pytest's) is left alone."""
+    global _crash_file
+    if faulthandler.is_enabled() or _crash_file is not None:
+        return
+    path = crash_path()
+    try:
+        paths.make_dir(path.parent)
+        _trim(path)
+        os.close(os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600))
+        _crash_file = open(path, "a", encoding="utf-8")  # noqa: SIM115 - open while running
+    except OSError:
+        return  # the program works without it
+    faulthandler.enable(file=_crash_file, all_threads=True)
+
+
+def _trim(path: Path) -> None:
+    """A crash.log grown past twice CRASH_KEEP keeps only its end, from a whole line."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return
+    if len(data) > 2 * CRASH_KEEP:
+        end = data[-CRASH_KEEP:]
+        paths.write_private(path, end[end.find(b"\n") + 1:].decode("utf-8", errors="replace"))
+
+
+def crash_tail(count: int = CRASH_LINES) -> list[str]:
+    """The last `count` lines of crash.log, through the same filter as the log (no home
+    folder, no unit ID): empty when there is none."""
+    try:
+        text = crash_path().read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    return [redact(line) for line in text.splitlines()[-count:]]
 
 
 def file_level(verbose: bool = False) -> int | None:

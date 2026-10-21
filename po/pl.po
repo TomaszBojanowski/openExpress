@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:40+0200\n"
+"POT-Creation-Date: 2026-10-21 15:54+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -18,24 +18,39 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: openexpress/applog.py:296
+#: openexpress/applog.py:346
 #, python-brace-format
 msgid "No log file: {error}"
 msgstr "Brak pliku logu: {error}"
 
-#: openexpress/auth/sso.py:76
+#: openexpress/auth/sso.py:238
+msgid "The sign-in page stopped working"
+msgstr "Strona logowania przestała działać"
+
+#: openexpress/auth/sso.py:241
+msgid ""
+"Try again, or sign in without this window: run this command in a terminal, "
+"sign in in your web browser and paste the address you end up on."
+msgstr "Spróbuj ponownie albo zaloguj się bez tego okna: uruchom to polecenie w terminalu, zaloguj się w przeglądarce i wklej adres, na którym skończysz."
+
+#: openexpress/auth/sso.py:251 openexpress/gui/app.py:1247
+#: openexpress/gui/app.py:2088
+msgid "Try Again"
+msgstr "Spróbuj ponownie"
+
+#: openexpress/auth/sso.py:281
 msgid "Sign in to Garmin"
 msgstr "Zaloguj się do Garmin"
 
-#: openexpress/auth/sso.py:139
+#: openexpress/auth/sso.py:357
 msgid "Login cancelled or no SSO ticket received."
 msgstr "Anulowano logowanie lub nie otrzymano biletu SSO."
 
-#: openexpress/auth/sso.py:145
+#: openexpress/auth/sso.py:363
 msgid "1. Open this URL in your browser:"
 msgstr "1. Otwórz ten adres URL w przeglądarce:"
 
-#: openexpress/auth/sso.py:147
+#: openexpress/auth/sso.py:365
 msgid ""
 "2. Sign in. Afterwards, copy the full URL from the browser's address bar\n"
 "   (it contains 'ticket=ST-...'). If the browser shows an error, the URL "
@@ -46,11 +61,11 @@ msgstr ""
 "   (zawiera „ticket=ST-...”). Jeśli przeglądarka pokaże błąd, adres URL "
 "nadal działa."
 
-#: openexpress/auth/sso.py:150
+#: openexpress/auth/sso.py:368
 msgid "3. Paste the URL: "
 msgstr "3. Wklej adres URL: "
 
-#: openexpress/auth/sso.py:153
+#: openexpress/auth/sso.py:371
 msgid "The given URL has no ticket=ST-... parameter"
 msgstr "Podany adres URL nie zawiera parametru ticket=ST-..."
 
@@ -734,7 +749,7 @@ msgid "Token works: {username} / {email}"
 msgstr "Token działa: {username} / {email}"
 
 #: openexpress/cli.py:346 openexpress/cli.py:381 openexpress/cli.py:392
-#: openexpress/cli.py:1887 openexpress/cli.py:1909
+#: openexpress/cli.py:1891 openexpress/cli.py:1913
 #, python-brace-format
 msgid "Error: {error}"
 msgstr "Błąd: {error}"
@@ -2193,17 +2208,17 @@ msgstr "zainstaluj nawet wtedy, gdy zainstalowany jest Flatpak openExpress"
 msgid "--key and --secret must be given together"
 msgstr "--key i --secret trzeba podać razem"
 
-#: openexpress/cli.py:1891
+#: openexpress/cli.py:1895
 #, python-brace-format
 msgid "Server error: {error}"
 msgstr "Błąd serwera: {error}"
 
-#: openexpress/cli.py:1896
+#: openexpress/cli.py:1900
 #, python-brace-format
 msgid "Network error: could not reach the Garmin server ({error})"
 msgstr "Błąd sieci: nie można połączyć się z serwerem Garmin ({error})"
 
-#: openexpress/cli.py:1902
+#: openexpress/cli.py:1906
 msgid "Interrupted."
 msgstr "Przerwano."
 
@@ -2835,10 +2850,6 @@ msgstr ""
 #: openexpress/gui/app.py:3144
 msgid "OK"
 msgstr "OK"
-
-#: openexpress/gui/app.py:1247 openexpress/gui/app.py:2088
-msgid "Try Again"
-msgstr "Spróbuj ponownie"
 
 #: openexpress/gui/app.py:1277
 msgid "Show the state of Garmin's servers"

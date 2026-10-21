@@ -3529,7 +3529,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         if not attach_log:
             return report_text
-        return report.with_log(report_text, applog.tail(report.LOG_LINES))
+        return report.with_log(report_text, applog.tail(report.LOG_LINES), applog.crash_tail())
 
     @staticmethod
     def _report_view(report_text: str):
