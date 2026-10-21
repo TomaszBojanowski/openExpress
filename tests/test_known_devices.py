@@ -350,7 +350,7 @@ def test_the_address_of_a_picture_is_kept_and_optional(store, caplog):
 
 
 @pytest.mark.parametrize("url", [
-    "http://res.garmin.com/a.png", "https://example.org/a.png",
+    "http://example.org/a.png", "https://example.org/a.png",
     "https://s3.amazonaws.com/garmin-bucket/a.png?X-Amz-Signature=secret", "", None])
 def test_an_address_that_is_not_allowed_is_never_kept(store, url):
     """Only an address that picture_urls allows is kept (the one rule of the downloads); one
@@ -370,3 +370,12 @@ def test_an_address_that_is_not_allowed_is_never_kept(store, url):
     data["devices"][str(VENU)]["image_url"] = url or 7
     store.write_text(json.dumps(data))
     assert known_devices.load()[VENU].image_url is None
+
+
+def test_an_address_over_plain_http_is_kept_over_https(store):
+    """Plain HTTP from Garmin's host is asked over HTTPS, so it is kept so."""
+    from openexpress import known_devices
+
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
+    assert known_devices.set_image_url(VENU, "http://res.garmin.com/a.png") is True
+    assert known_devices.load()[VENU].image_url == "https://res.garmin.com/a.png"

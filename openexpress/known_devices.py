@@ -114,8 +114,10 @@ def set_category(unit_id: int, category: str) -> bool:
 
 def set_image_url(unit_id: int, url) -> bool:
     """Keep the address of the picture of a device remembered, as Garmin gives it (a newer one
-    replaces the one before); whether it changed. Only an address picture_urls allows; a
-    device that is not remembered gets no entry for it. The log names the host only."""
+    replaces the one before); whether it changed. Only an address picture_urls allows, kept
+    as it is asked (plain HTTP over HTTPS); a device that is not remembered gets no entry for
+    it. The log names the host only."""
+    url = picture_urls.upgraded(url)
     if not picture_urls.allowed(url):
         return False
     with _locked():

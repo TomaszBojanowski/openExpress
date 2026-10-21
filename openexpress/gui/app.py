@@ -288,6 +288,7 @@ def download_picture(http, url: str, name: str,
     target = picture_target(name)
     if target is None:
         return None, "not a file name"
+    url = picture_urls.upgraded(url)  # plain HTTP over HTTPS, as every download
     why = picture_urls.refusal(url)  # the host at most, never the whole address
     if why is not None:
         return None, why

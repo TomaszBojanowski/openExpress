@@ -164,8 +164,8 @@ def picture_address(account_url: str | None, remembered_url: str | None):
     word; the one remembered with the device when the account gives none it may download
     (none for a device off the account, or offline; one on S3, #8). With neither allowed,
     the account's, so that the log says why there is no picture."""
-    if remembered_url and not picture_urls.allowed(account_url) and picture_urls.allowed(
-            remembered_url):
+    if (remembered_url and not picture_urls.allowed(picture_urls.upgraded(account_url))
+            and picture_urls.allowed(remembered_url)):
         return remembered_url, PICTURE_REMEMBERED
     if account_url:
         return account_url, PICTURE_FROM_ACCOUNT

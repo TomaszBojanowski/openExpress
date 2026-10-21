@@ -476,6 +476,18 @@ def test_an_account_address_that_is_not_allowed_gives_way_to_the_remembered_one(
     assert (tile.image_url, tile.image_source) == (VENU_PICTURE, "the remembered address")
 
 
+def test_an_account_address_over_plain_http_is_still_the_accounts():
+    """Asked over HTTPS like every download, it may be downloaded: the account's stays."""
+    from openexpress import devicelist, known_devices
+
+    http_url = "http://res.garmin.com/en/products/010-02890-01/V/c1_01_md.png"
+    answer = account([{**ACCOUNT_ANSWER[0], "imageUrl": http_url}])
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    known_devices.set_image_url(EDGE, VENU_PICTURE)
+    tile = _tile_of(devicelist.tiles([], known_devices.load(), answer, True), "006-B4440-00")
+    assert (tile.image_url, tile.image_source) == (http_url, "the account")
+
+
 def test_the_account_list_keeps_the_picture_addresses_of_remembered_devices():
     """Only of devices remembered here, and only an address that is allowed."""
     from openexpress import devicelist, known_devices

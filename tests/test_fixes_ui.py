@@ -1517,10 +1517,10 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
 # --- pictures over HTTPS only (after 4f3ac65) ---------------------------------------------------
 
 
-def test_an_icon_over_http_is_asked_over_https_a_device_picture_is_refused(xdg):
-    """An icon whose address is plain HTTP is asked over HTTPS, as every download
-    (download.secure_url); a device picture only from an HTTPS address (#8), so it is not
-    asked at all."""
+def test_a_picture_over_http_is_asked_over_https(xdg):
+    """A picture or an icon whose address is plain HTTP is asked over HTTPS, as every
+    download; for a device picture the rule (picture_urls) then still asks for one of
+    Garmin's hosts, so plain HTTP from another host is not asked at all."""
     from openexpress.gui import app
 
     icon = types.SimpleNamespace(ok=True, content=b"icon")
@@ -1538,8 +1538,12 @@ def test_an_icon_over_http_is_asked_over_https_a_device_picture_is_refused(xdg):
     assert http.calls == ["https://services.garmin.com/icon/1"]
     pictures = PictureHttp()
     path, why = app.download_picture(pictures, "http://res.garmin.com/en/a.png", "device-a.png")
-    assert (path, why) == (None, "not HTTPS")
-    assert pictures.calls == []
+    assert (path is not None, why) == (True, "")
+    assert [url for url, _kw in pictures.calls] == ["https://res.garmin.com/en/a.png"]
+    other = PictureHttp()
+    assert app.download_picture(other, "http://example.org/a.png", "device-b.png") == (
+        None, "host example.org is not allowed")
+    assert other.calls == []
 
 
 @pytest.mark.parametrize("url", ["ftp://res.garmin.com/a.png", "file:///etc/passwd", "a.png"])

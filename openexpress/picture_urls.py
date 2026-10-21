@@ -22,8 +22,18 @@ _S3_BUCKET_HOST = re.compile(r"(?P<bucket>[a-z0-9][a-z0-9.-]*?)\.s3(?:[.-][a-z0-
                              r"\.amazonaws\.com")
 
 
+def upgraded(url):
+    """The address as it is asked: plain HTTP over HTTPS instead, as every download of the
+    program (download.secure_url); any other address as it is, for refusal() to judge. Used
+    before the rule wherever an address is downloaded or kept."""
+    if isinstance(url, str) and url[:7].lower() == "http://":
+        return "https://" + url[7:]
+    return url
+
+
 def refusal(url) -> str | None:
-    """None when this address of a device picture may be downloaded; else why not."""
+    """None when this address of a device picture may be downloaded; else why not. Plain
+    HTTP is refused here: it is upgraded() before."""
     if not isinstance(url, str) or not url:
         return "no address"
     try:
@@ -56,5 +66,6 @@ def refusal(url) -> str | None:
 
 
 def allowed(url) -> bool:
-    """Whether this address of a device picture may be downloaded (and remembered)."""
+    """Whether this address of a device picture may be downloaded (and remembered), as it
+    is: upgraded() first for an address from Garmin."""
     return refusal(url) is None

@@ -51,3 +51,18 @@ def test_a_bucket_of_garmin_on_s3_is_allowed_once_named(monkeypatch):
     assert picture_urls.refusal("https://s3.amazonaws.com/other/a.png") == (
         "host s3.amazonaws.com, first segment other: not an allowed bucket")
     assert picture_urls.refusal("http://s3.amazonaws.com/garmin-bucket/a.png") == "not HTTPS"
+
+
+@pytest.mark.parametrize("url, asked", [
+    ("http://res.garmin.com/a.png", "https://res.garmin.com/a.png"),
+    ("HTTP://static.garmincdn.com/a.jpg", "https://static.garmincdn.com/a.jpg"),
+    ("https://res.garmin.com/a.png", "https://res.garmin.com/a.png"),
+    ("ftp://res.garmin.com/a.png", "ftp://res.garmin.com/a.png"),  # for refusal() to judge
+    (None, None),
+])
+def test_plain_http_is_asked_over_https_before_the_rule(url, asked):
+    """As every download of the program (download.secure_url): plain HTTP over HTTPS; the
+    rule then still asks for HTTPS and Garmin's hosts."""
+    assert picture_urls.upgraded(url) == asked
+    assert picture_urls.refusal(picture_urls.upgraded("http://example.org/a.png")) == (
+        "host example.org is not allowed")
