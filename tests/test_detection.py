@@ -3643,7 +3643,7 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     assert updates == ["Mass storage mode"]  # the Sync button says why, told once
 
 
-REPLUG_HINT = "If the device's screen shows nothing, unplug the cable and plug it in again."
+REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
 STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 

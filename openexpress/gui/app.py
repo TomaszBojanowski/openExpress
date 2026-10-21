@@ -106,7 +106,8 @@ USB_POLL_S = 2
 # in; plugging it in again helped, 21.10.2026). Only the words change, not the detection.
 REPLUG_HINT_S = 15
 # TRANSLATORS: added to the page while a device on USB is not offered over MTP
-REPLUG_HINT = N_("If the device's screen shows nothing, unplug the cable and plug it in again.")
+REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unplug the cable and "
+                 "plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 log = logging.getLogger(__name__)
