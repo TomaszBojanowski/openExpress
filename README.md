@@ -211,11 +211,16 @@ connected device; no login is needed.
   only after a clean eject. Until it is unplugged, openExpress does not open the ejected
   drive again.
 
+<p align="center">
+  <img src="docs/screenshots/updates-beta.png" width="700"
+       alt="The Updates page: a beta system update offered for an Edge 1050">
+</p>
+
 Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026).
 
 <p align="center">
   <img src="docs/screenshots/update-confirm.png" width="700"
-       alt="The question before an update: size, place on the device, changes and license link">
+       alt="The question before a system update: versions, license link and warning">
 </p>
 
 ### Maps of your own
