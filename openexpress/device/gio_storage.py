@@ -633,6 +633,10 @@ def find_ums_devices() -> list[FoundDevice]:
         usb = garmin_ums(mount)
         if usb is None:
             continue
+        if ejected_by_us(usb):
+            log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
+                     "is unplugged", usb.usb_id)
+            continue
         root = mount.get_root()
         path = root.get_path()
         if _hidden_in_sandbox(path):
@@ -708,6 +712,93 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
     if error:
         raise _err(error[0], _("Cannot mount the device"))
     dev.mounted = True
+
+
+# --- a Garmin drive ejected by openExpress -------------------------------------------------
+#
+# A Garmin device in mass storage mode may take a file written to it only once the computer
+# lets go of its drive (#11: an inReach Mini 2 installed its update only after it was ejected,
+# although the file was synced to the disk). So after a write the drive is ejected before the
+# cable may go out. Ejected, the drive stays on USB, not mounted (the Varia RTL515 keeps its
+# place, ejected from the system and from the Flatpak, 21.10.2026): until it leaves that place
+# openExpress does not open it again, also when something mounts it again.
+
+EJECT_TIMEOUT_S = 60
+_ejected: list[GarminUsb] = []  # where on USB the drives ejected by us are
+_ejected_lock = threading.Lock()
+
+
+class DriveNotMounted(DeviceError):
+    """The drive to eject is not mounted any more: ejected or unmounted meanwhile."""
+
+
+def eject(storage) -> None:
+    """Eject the drive of a Garmin device in mass storage mode (`storage`: a UmsStorage): the
+    system writes out what it still holds, unmounts the drive and tells the device that it
+    may go. The drive is then not opened again until it is unplugged (ejected_by_us).
+    Raises DeviceError when the system refuses, e.g. while a program uses the drive."""
+    key = _key(storage.device_uri)
+    found = next((m for m in Gio.VolumeMonitor.get().get_mounts()
+                  if m.get_root() is not None and _key(m.get_root().get_uri()) == key), None)
+    if found is None:
+        raise DriveNotMounted(_("The drive is not mounted any more. If it was ejected, you can "
+                                "unplug the cable."))
+    what = _("Cannot eject the device")
+    if found.can_eject():
+        _wait(lambda done: found.eject_with_operation(
+            Gio.MountUnmountFlags.NONE, None, None,
+            lambda m, res: done(lambda: m.eject_with_operation_finish(res))),
+            EJECT_TIMEOUT_S, what)
+    else:  # a drive that the system can only unmount
+        _wait(lambda done: found.unmount_with_operation(
+            Gio.MountUnmountFlags.NONE, None, None,
+            lambda m, res: done(lambda: m.unmount_with_operation_finish(res))),
+            EJECT_TIMEOUT_S, what)
+    usb = getattr(storage, "usb", None)
+    if usb is not None:
+        with _ejected_lock:
+            _ejected.append(usb)
+    log.info("device: ejected (USB %s)", getattr(storage, "usb_id", None) or "?")
+
+
+def _forget_unplugged() -> None:
+    """The drives ejected by us that left their place on USB are ours no more."""
+    with _ejected_lock:
+        for usb in [u for u in _ejected if not usb_still_there(u)]:
+            _ejected.remove(usb)
+            log.info("device: the drive ejected by openExpress was unplugged (USB %s)",
+                     usb.usb_id)
+
+
+def ejected_by_us(usb: GarminUsb | None) -> bool:
+    """Whether this drive was ejected by openExpress and is still at its place on USB: then it
+    is neither opened nor listed, and its mount is ignored, until it is unplugged."""
+    if usb is None:
+        return False
+    _forget_unplugged()
+    with _ejected_lock:
+        return any(u == usb and (u.bus, u.address) == (usb.bus, usb.address) for u in _ejected)
+
+
+def ejected_drive_waits() -> bool:
+    """Whether a drive ejected by openExpress is still plugged in: the cable can go out."""
+    _forget_unplugged()
+    with _ejected_lock:
+        return bool(_ejected)
+
+
+def ejected_text() -> str:
+    """A drive ejected by openExpress: the cable can go out now (and only now)."""
+    return _("The device is ejected. You can unplug the cable.")
+
+
+def not_ejected_text(window: bool = True) -> str:
+    """After a failed eject: the cable must stay in, and what to do."""
+    if window:
+        return _("Do not unplug the cable yet: the device may not see the update. Close any "
+                 "program that uses the drive and try again, or eject it in the file manager.")
+    return _("Do not unplug the cable yet: the device may not see the update. Close any "
+             "program that uses the drive and eject it in the file manager.")
 
 
 # --- a device that is plugged in but not there yet ---------------------------------------
@@ -819,8 +910,10 @@ def flatpak_drive_text() -> str:
 
 
 def drive_notice_text() -> str:
-    """A Garmin drive on USB that cannot be opened: not mounted, or out of the sandbox's
-    sight (the same words in the window and on the command line)."""
+    """A Garmin drive on USB that cannot be opened: ejected by openExpress, not mounted, or
+    out of the sandbox's sight (the same words in the window and on the command line)."""
+    if ejected_drive_waits():
+        return ejected_text()
     return flatpak_drive_text() if drive_hidden_in_sandbox() else drive_not_mounted_text()
 
 

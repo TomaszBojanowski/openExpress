@@ -46,16 +46,22 @@ from openexpress.device.gio_storage import (  # noqa: E402
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
     DeviceSummary,
+    DriveNotMounted,
     FoundDevice,
     NotThereYet,
     SeveralDevices,
     distinct_devices,
     drive_notice_text,
+    eject,
+    ejected_by_us,
+    ejected_drive_waits,
+    ejected_text,
     find_all_devices,
     garmin_products_on_usb,
     garmin_ums,
     garmin_usb,
     mass_storage_text,
+    not_ejected_text,
     not_ready_text,
     own_remount,
     probe,
@@ -1485,8 +1491,14 @@ class MainWindow(Adw.ApplicationWindow):
             # Mounted again by our own install; the open device stays as it is.
             log.info("mount added (%s): our own remount, ignored", where)
             return
+        ums = garmin_ums(mount)
+        if ums is not None and ejected_by_us(ums):
+            # Mounted again after we ejected it: it stays closed until it is unplugged.
+            log.info("mount added (%s): a Garmin drive ejected by openExpress, ignored until it "
+                     "is unplugged", where)
+            return
         # Over MTP, or a drive of a Garmin device in mass storage mode.
-        if garmin_usb(mount) or garmin_ums(mount):
+        if garmin_usb(mount) or ums:
             log.info("mount added (%s): a Garmin device, detecting in 1.5 s "
                      "(a device is open: %s)", where, self.session is not None)
             schedule_detection(self, 1500, mount.get_root().get_uri(), Cause.PLUGGED)
@@ -1542,6 +1554,9 @@ class MainWindow(Adw.ApplicationWindow):
                     _("Connect your Garmin device with a USB cable. "
                       "It will be detected automatically."), False)
         if state == MASS_STORAGE:
+            if ejected_drive_waits():
+                # TRANSLATORS: title while a drive ejected by openExpress is still plugged in
+                return _("Device ejected"), ejected_text(), False
             # The window opens such a drive once the system mounts it, so with none open it
             # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see (F1).
             text = drive_notice_text()
@@ -2400,7 +2415,10 @@ class MainWindow(Adw.ApplicationWindow):
                 self.update_count).format(count=self.update_count))
             self.software_label.set_label(version + " · " + _("update available"))
         elif self.update_state == "ready":
-            self.update_row.set_subtitle(_("Update ready: disconnect the device to install it"))
+            self.update_row.set_subtitle(
+                _("Update ready: eject the device to install it")
+                if getattr(self.session, "mass_storage", False)
+                else _("Update ready: disconnect the device to install it"))
             self.software_label.set_label(version + " · " + _("update ready to install"))
         elif self.update_state == "current":
             # TRANSLATORS: subtitle of the row "Device software", without a full stop
@@ -3021,8 +3039,16 @@ class MainWindow(Adw.ApplicationWindow):
         elif ready is not None:
             icon, title = "software-update-available-symbolic", _("Update ready to install")
             versions = f"{d.software_version_str}{ARROW}{ready.version}"
-            # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
-            disconnect = _("disconnect the device to install it")
+            if getattr(self.session, "mass_storage", False):
+                # A drive: the device takes the update once it is ejected (#11).
+                # TRANSLATORS: after the versions, e.g. "3.36 → 3.40 · eject the device…"
+                disconnect = _("eject the device to install it")
+                buttons.append(self._button(_("Eject"),
+                                            lambda s=self.session: self.eject_device(s),
+                                            "suggested-action"))
+            else:
+                # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
+                disconnect = _("disconnect the device to install it")
             subtitle = f"{versions} · {disconnect}"
             if ready.is_beta:
                 subtitle = (f"{versions} · ", _("Beta"), f" · {disconnect}")
@@ -3093,8 +3119,8 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         s = self.session
-        # A drive: the copy counts once it is on the disk (LocalStorage syncs it), so the cable
-        # can go out right after; a Varia is not worth ejecting (it resets its USB).
+        # A drive: the copy is on the disk once written (LocalStorage syncs it), but the device
+        # may take it only once the drive is ejected (#11), so the cable may go out only then.
         mass_storage = getattr(s, "mass_storage", False)
         chosen = upd.select(self.updates_cache, [u.part_number])
         # A system update: from which version of the device software to which.
@@ -3140,14 +3166,7 @@ class MainWindow(Adw.ApplicationWindow):
             if not mass_storage:
                 self.error(_("Done"), self._update_done_text(rep))
                 return
-            done = Adw.AlertDialog(heading=_("Done"),
-                                   body=_("Update saved. You can unplug the cable."))
-            done.add_response("ok", _("OK"))
-            if bike_accessory:
-                # As Garmin Express does for such a device: how it finishes the update.
-                done.connect("response", lambda *_a: self.error(_("Finish the update"),
-                                                                bike_accessory_text()))
-            done.present(self)
+            self.ask_to_eject(s, bike_accessory)
 
         def response(_d, r):
             if r != "ok":
@@ -3156,6 +3175,55 @@ class MainWindow(Adw.ApplicationWindow):
 
         d.connect("response", response)
         d.present(self)
+
+    def ask_to_eject(self, s, bike_accessory: bool = False) -> None:
+        """After an update was saved on a Garmin drive: it is to be ejected first; that the
+        cable can go out is said only once it is (eject_device)."""
+        d = Adw.AlertDialog(heading=_("Update saved"),
+                            body=_("Eject the device before you unplug the cable: until then "
+                                   "it may not see the update."))
+        # TRANSLATORS: button; the device is ejected later
+        d.add_response("later", _("Later"))
+        # TRANSLATORS: button that ejects the device (its USB drive)
+        d.add_response("eject", _("Eject"))
+        d.set_response_appearance("eject", Adw.ResponseAppearance.SUGGESTED)
+        d.set_default_response("eject")
+        d.set_close_response("later")
+
+        def response(_d, r):
+            if r == "eject":
+                self.eject_device(s, bike_accessory)
+
+        d.connect("response", response)
+        d.present(self)
+
+    def eject_device(self, s, bike_accessory: bool = False) -> None:
+        """Eject the drive of a device in mass storage mode; then the cable can go out. When
+        the system refuses, why, that the cable must stay in, and Try Again."""
+        def ejected(_result):
+            done = Adw.AlertDialog(heading=_("Done"), body=ejected_text())
+            done.add_response("ok", _("OK"))
+            if bike_accessory:
+                # As Garmin Express does for such a device: how it finishes the update.
+                done.connect("response", lambda *_a: self.error(_("Finish the update"),
+                                                                bike_accessory_text()))
+            done.present(self)
+
+        def failed(e) -> bool:
+            if isinstance(e, DriveNotMounted):
+                self.error(_("The device is not mounted"), str(e))
+                return True
+            d = Adw.AlertDialog(heading=_("The device was not ejected"),
+                                body=f"{e}\n\n{not_ejected_text()}")
+            d.add_response("close", _("Close"))
+            d.add_response("retry", _("Try Again"))
+            d.set_response_appearance("retry", Adw.ResponseAppearance.SUGGESTED)
+            d.connect("response", lambda _d, r: r == "retry"
+                      and self.eject_device(s, bike_accessory))
+            d.present(self)
+            return True
+
+        self.run_task(_("Ejecting the device…"), lambda: eject(s.storage), ejected, failed)
 
     def _show_installed(self, session, chosen) -> None:
         """After an update was copied: the files are on the device now. The page shows that

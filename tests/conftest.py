@@ -150,6 +150,17 @@ def no_block_devices(_empty_sys_class_block, monkeypatch):
         return
     monkeypatch.setattr(gio_storage, "SYSFS_BLOCK", _empty_sys_class_block)
 
+
+@pytest.fixture(autouse=True)
+def no_drive_ejected(monkeypatch):
+    """openExpress remembers the Garmin drives it ejected for as long as it runs: every test
+    starts with none."""
+    try:
+        from openexpress.device import gio_storage
+    except (ImportError, ValueError):  # no PyGObject: nothing is ejected
+        return
+    monkeypatch.setattr(gio_storage, "_ejected", [])
+
 DEVICE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
  <Model><PartNumber>006-B0000-00</PartNumber><SoftwareVersion>2339</SoftwareVersion>

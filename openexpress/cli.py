@@ -690,14 +690,42 @@ def _flags(u) -> str:
     return (" [" + _("PRIMARY") + "]" if u.is_system else "") + _beta_mark(u)
 
 
-def _print_staged(staged) -> None:
+def _to_install_staged(st) -> str:
+    """What makes the device install an update copied already: a device in mass storage
+    mode takes it once its drive is ejected (#11)."""
+    if getattr(st, "mass_storage", False):
+        return _("To install it, eject the drive in the file manager, then unplug the device.")
+    return _("Disconnect the device to install it.")
+
+
+def _print_staged(staged, st) -> None:
     """System updates on the device already, waiting for it to install them."""
     if not staged:
         return
     print(_("Update copied, waiting for the device to install it:"))
     for u in staged:
         print("  " + _update_line(u) + _flags(u))
-    print(_("Disconnect the device to install it."))
+    print(_to_install_staged(st))
+
+
+def _eject_drive(st) -> bool:
+    """After a write to a Garmin drive: eject it, so that the device takes the update (#11);
+    only then may the cable go out. False, with what to do, when it is not ejected."""
+    from openexpress.device import gio_storage
+
+    print(_("Ejecting the device…"))
+    try:
+        gio_storage.eject(st)
+    except gio_storage.DriveNotMounted as e:
+        _error(str(e))
+        return False
+    except DeviceError as e:
+        log.info("eject: %s", e)
+        _error(_("The device was not ejected: {error}").format(error=e))
+        _error(gio_storage.not_ejected_text(window=False))
+        return False
+    print(gio_storage.ejected_text())
+    return True
 
 
 def _print_present(present, verbose: bool) -> None:
@@ -732,7 +760,7 @@ def cmd_updates(args) -> int:
         listed = items if args.reinstalls else [u for u in items if not u.on_device]
         if not listed:
             if staged:
-                _print_staged(staged)  # not up to date: the update waits for the device
+                _print_staged(staged, st)  # not up to date: the update waits for the device
             else:
                 print(_("Software is up to date.") if not args.reinstalls
                       else _("The server returned no items."))
@@ -750,7 +778,7 @@ def cmd_updates(args) -> int:
                 print(f"      • {c}")
         if not args.reinstalls:
             _print_present(present, args.verbose)
-            _print_staged(staged)
+            _print_staged(staged, st)
         print("\n" + _("Install: {command}").format(
             command="openexpress updates --install PART_NUMBER [--reinstalls] --apply"))
         return 0
@@ -770,7 +798,7 @@ def cmd_updates(args) -> int:
         if not chosen:
             print(_("Nothing to install: every offered file is already on the device."))
             if any(any(u is s for s in staged) for u in skipped):
-                print(_("Disconnect the device to install it."))  # what is left to do
+                print(_to_install_staged(st))  # what is left to do
             return 0
     if not chosen:
         # "all" with nothing offered (a part number that is not offered is an error in select).
@@ -796,6 +824,8 @@ def cmd_updates(args) -> int:
                       transfer_progress=_Bar())
     n = len(rep.installed)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
+    if n and getattr(st, "mass_storage", False) and not _eject_drive(st):
+        return 1  # the cable must stay in: no steps that begin with unplugging it
     if n:
         print(_(FINISH_STEPS))
     return 0

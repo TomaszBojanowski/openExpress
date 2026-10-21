@@ -45,6 +45,10 @@ filterwarnings = [
     # Not our code: PyGObject 3.56 warns on its own while loading the GLib overrides, at
     # `from gi.repository import GLib`. Only this one message is silenced.
     "ignore:GLib\\.unix_signal_add_full is deprecated:gi.PyGIDeprecationWarning",
+    # Not our code either: PyGObject's event loop policy (gi.events) on Python 3.14, the first
+    # time a GLib.MainLoop runs (gio_storage._wait). Only these two messages are silenced.
+    "ignore:'asyncio\\.AbstractEventLoopPolicy' is deprecated:DeprecationWarning:gi.events",
+    "ignore:'asyncio\\.get_event_loop_policy' is deprecated:DeprecationWarning:gi.events",
 ]
 
 [tool.setuptools.package-data]

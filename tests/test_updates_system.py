@@ -284,9 +284,10 @@ def _text(widget):
     return "".join(p.get_label() for p in parts), [sorted(p.get_css_classes()) for p in parts]
 
 
-def _updates_page(items, beta=False):
+def _updates_page(items, beta=False, drive=False):
     """The Updates page of a window that is never shown; returns the window, the status at the
-    top (icon, its styles, the texts with their styles, the buttons) and the other groups."""
+    top (icon, its styles, the texts with their styles, the buttons) and the other groups.
+    `drive`: the device is in mass storage mode."""
     import gi
 
     gi.require_version("Gtk", "4.0")
@@ -296,10 +297,11 @@ def _updates_page(items, beta=False):
 
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
-            description="Test watch", software_version_str="23.39")),
+            description="Test watch", software_version_str="23.39"), mass_storage=drive),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
-        _set_update_state=lambda new, staged=(): None)
+        ejected=[], _set_update_state=lambda new, staged=(): None)
     win.confirm_update = win.asked.append
+    win.eject_device = win.ejected.append
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
     for name in ("_updates_status", "_update_row", "_button"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -877,6 +879,17 @@ def test_status_of_a_beta_that_waits_for_the_device():
 
 
 @pytest.mark.needs_display
+def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
+    """A device in mass storage mode takes the update once it is ejected (#11): Eject, which
+    does that; an MTP device is only to be disconnected, as above."""
+    win, status, _groups, buttons = _updates_page(_staged_items(), drive=True)
+    assert status["texts"][1] == (f"{VERSIONS} · eject the device to install it", ["dim-label"])
+    assert status["buttons"] == [("Eject", True), ("Check Again", False)]
+    buttons[0].emit("clicked")
+    assert win.ejected == [win.session]
+
+
+@pytest.mark.needs_display
 def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
     assert status["texts"][0][0] == "Update ready to install"
@@ -884,14 +897,16 @@ def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     assert [r.get_title() for r in available.rows] == ["Test Font"]
 
 
-def _overview(items=None):
-    """The "Device software" row and the software label of the device page."""
+def _overview(items=None, drive=False):
+    """The "Device software" row and the software label of the device page; `drive`: the
+    device is in mass storage mode."""
     from gi.repository import Adw, Gtk
 
     from openexpress.gui.app import MainWindow
 
     win = types.SimpleNamespace(
-        session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39")),
+        session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39"),
+                                      mass_storage=drive),
         update_row=Adw.ActionRow(), software_label=Gtk.Label())
     win._render_update_state = types.MethodType(MainWindow._render_update_state, win)
     return win, MainWindow
@@ -914,6 +929,19 @@ def test_device_page_says_the_update_waits_for_the_device():
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert (win.update_state, win.update_row.get_subtitle()) == ("available",
                                                                  "1 update available")
+
+
+@pytest.mark.needs_display
+def test_device_page_says_an_update_on_a_drive_waits_to_be_ejected():
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+
+    items = _staged_items()
+    win, MainWindow = _overview(drive=True)
+    MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
+    assert win.update_row.get_subtitle() == "Update ready: eject the device to install it"
+    assert win.software_label.get_label() == "Software 23.39 · update ready to install"
 
 
 def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):

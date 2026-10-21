@@ -729,11 +729,16 @@ class FakeLocalFile(FakeFile):
 
 
 class FakeDriveMount:
-    """Like the mount of a USB drive: a local folder, and a volume that names the block device."""
+    """Like the mount of a USB drive: a local folder, and a volume that names the block device.
+    It is ejected (or unmounted, when it cannot be ejected) as Gio does it: the answer comes
+    later, from the main loop (`answer`); with `refusal` set the system refuses with it."""
 
-    def __init__(self, folder, unix_device, name="GARMIN"):
+    answer = staticmethod(lambda callback: gio_storage.GLib.idle_add(callback))
+
+    def __init__(self, folder, unix_device, name="GARMIN", ejectable=True):
         self.root, self.name = FakeLocalFile(folder), name
         self.volume = FakeVolume(None, unix_device, name) if unix_device != "no volume" else None
+        self.ejectable, self.refusal, self.ejected, self.unmounted = ejectable, None, 0, 0
 
     def get_root(self):
         return self.root
@@ -743,6 +748,41 @@ class FakeDriveMount:
 
     def get_name(self):
         return self.name
+
+    def can_eject(self):
+        return self.ejectable
+
+    def eject_with_operation(self, flags, operation, cancellable, callback):
+        self.ejected += 1
+        type(self).answer(lambda: callback(self, "ejected"))
+
+    def unmount_with_operation(self, flags, operation, cancellable, callback):
+        self.unmounted += 1
+        type(self).answer(lambda: callback(self, "unmounted"))
+
+    def eject_with_operation_finish(self, _result):
+        if self.refusal:
+            raise gio_storage.GLib.Error.new_literal(gio_storage.Gio.io_error_quark(),
+                                                     self.refusal, gio_storage.Gio.IOErrorEnum.BUSY)
+        return True
+
+    unmount_with_operation_finish = eject_with_operation_finish
+
+
+def ejects_at_once(monkeypatch):
+    """The system's answer to an eject comes at once, without a main loop: the windows of these
+    tests have made-up timers, which gio_storage._wait would hand its own timeout."""
+    monkeypatch.setattr(FakeDriveMount, "answer", staticmethod(lambda callback: callback()))
+
+    def wait(start, timeout_s, what):
+        answers = []
+        start(answers.append)
+        try:
+            answers[0]()
+        except gio_storage.GLib.Error as e:
+            raise gio_storage._err(e, what) from None
+
+    monkeypatch.setattr(gio_storage, "_wait", wait)
 
 
 @pytest.fixture
@@ -2587,22 +2627,29 @@ def test_an_update_written_to_a_drive_is_on_the_disk_before_it_counts(drive_wind
     assert len(steps) == 3 and steps[-1] == (size, size)  # 10 kB in 4 kB steps
 
 
-@pytest.mark.needs_display
-@pytest.mark.parametrize("segment, notes", [
-    ("bikeaccessory", [("Done", "Update saved. You can unplug the cable."),
-                       ("Finish the update", BIKE_ACCESSORY_TEXT)]),
-    ("fitness", [("Done", "Update saved. You can unplug the cable.")]),
-])
-def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
-    """D3 lifted: the window asks, then copies; exactly one file comes to the drive. It says
-    the cable can be unplugged (a Varia is not worth ejecting), and for a bike accessory, as
-    Garmin Express does, how the device finishes the update."""
+# After an update was saved on a Garmin drive (#11): the drive is ejected before the cable may
+# go out; only then is that said.
+EJECT_FIRST_TEXT = ("Eject the device before you unplug the cable: until then it may not see "
+                    "the update.")
+EJECTED_TEXT = "The device is ejected. You can unplug the cable."
+NOT_EJECTED_TEXT = ("Do not unplug the cable yet: the device may not see the update. Close any "
+                    "program that uses the drive and try again, or eject it in the file manager.")
+NOT_EJECTED_CLI_TEXT = ("Do not unplug the cable yet: the device may not see the update. Close "
+                        "any program that uses the drive and eject it in the file manager.")
+
+
+def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
+    """The window asked, and the update was copied to the RTL515's drive: (session, the drive's
+    mount, every dialog shown so far, the questions to the update server). A task runs at once;
+    an error goes to its own handler, as in the window."""
     from gi.repository import Adw
 
     from openexpress import updates
     from openexpress.gui.app import MainWindow
 
     s = drive_session(drive_window, monkeypatch)
+    (mount,) = gio_storage.Gio.VolumeMonitor.get().get_mounts()
+    ejects_at_once(monkeypatch)
     asked = []
     s.client = types.SimpleNamespace(
         http=None, unit_info=lambda unit, part: asked.append((unit, part)) or {
@@ -2611,12 +2658,21 @@ def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, 
     items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
     dialogs, toasts = [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+
+    def run_task(title, work, done, failed=None, device=True):
+        try:
+            result = work()
+        except Exception as e:  # as the real one: the error goes to `failed`
+            if not (failed and failed(e)):
+                raise
+        else:
+            done(result)
+
     win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
                                 toast=toasts.append, progress=lambda text: None, fraction=None,
-                                _show_installed=lambda session, chosen: None,
-                                run_task=lambda title, work, done, failed=None, device=True:
-                                done(work()))
-    win.error = types.MethodType(MainWindow.error, win)
+                                _show_installed=lambda session, chosen: None, run_task=run_task)
+    for name in ("error", "ask_to_eject", "eject_device"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)
     MainWindow.confirm_update(win, items[0])
     assert toasts == [] and len(dialogs) == 1  # asked first, as for an MTP device
@@ -2626,12 +2682,181 @@ def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, 
         "GARMIN/GUPDATE.GCD": len(VARIA_UPDATE)}
     assert set(before) <= set(after)  # nothing went away
     assert (s.storage.root / "GARMIN" / "GUPDATE.GCD").read_bytes() == VARIA_UPDATE
+    return s, mount, dialogs, asked
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("segment, notes", [
+    ("bikeaccessory", [("Done", EJECTED_TEXT), ("Finish the update", BIKE_ACCESSORY_TEXT)]),
+    ("fitness", [("Done", EJECTED_TEXT)]),
+])
+def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
+    """The window asks, then copies; exactly one file comes to the drive. Then it asks to eject
+    the drive and does not say that the cable can go out (#11: a device in mass storage mode
+    may take the file only once ejected). Once ejected it says so, and for a bike accessory, as
+    Garmin Express does, how the device finishes the update."""
+    s, mount, dialogs, asked = installed_on_a_drive(drive_window, monkeypatch, segment)
+    (question,) = dialogs[1:]
+    assert (question.get_heading(), question.get_body()) == ("Update saved", EJECT_FIRST_TEXT)
+    assert [question.get_response_label(r) for r in ("later", "eject")] == ["Later", "Eject"]
+    assert mount.ejected == 0  # only when asked to
+    question.emit("response", "eject")
+    assert (mount.ejected, mount.unmounted) == (1, 0)
+    assert gio_storage.ejected_by_us(s.storage.usb)
     # The second note comes when the first is closed.
-    shown = [(dialogs[1].get_heading(), dialogs[1].get_body())]
-    dialogs[1].emit("response", "ok")
-    shown += [(d.get_heading(), d.get_body()) for d in dialogs[2:]]
+    shown = [(dialogs[2].get_heading(), dialogs[2].get_body())]
+    dialogs[2].emit("response", "ok")
+    shown += [(d.get_heading(), d.get_body()) for d in dialogs[3:]]
     assert shown == notes
     assert asked == [(3000000003, "006-B3592-03")]  # one question to the update server
+
+
+@pytest.mark.needs_display
+def test_a_drive_not_ejected_is_never_said_to_be_safe_to_unplug(drive_window, monkeypatch):
+    """"Later": the drive stays mounted, and nothing says that the cable can go out."""
+    s, mount, dialogs, _asked = installed_on_a_drive(drive_window, monkeypatch)
+    dialogs[1].emit("response", "later")
+    assert len(dialogs) == 2 and mount.ejected == 0
+    assert not gio_storage.ejected_by_us(s.storage.usb)
+    assert all("You can unplug" not in d.get_body() for d in dialogs)
+
+
+@pytest.mark.needs_display
+def test_a_failed_eject_says_so_and_offers_to_try_again(drive_window, monkeypatch):
+    """The system refuses (a program still uses the drive): the window says why and that the
+    cable must stay in, never that it can go out; Try Again ejects it once the drive is free."""
+    s, mount, dialogs, _asked = installed_on_a_drive(drive_window, monkeypatch)
+    mount.refusal = "Target is busy"
+    dialogs[1].emit("response", "eject")
+    (failed,) = dialogs[2:]
+    assert failed.get_heading() == "The device was not ejected"
+    assert failed.get_body() == "Cannot eject the device: Target is busy\n\n" + NOT_EJECTED_TEXT
+    assert [failed.get_response_label(r) for r in ("close", "retry")] == ["Close", "Try Again"]
+    assert not gio_storage.ejected_by_us(s.storage.usb)
+    assert all("You can unplug" not in d.get_body() for d in dialogs)
+    mount.refusal = None  # the program let go of the drive
+    failed.emit("response", "retry")
+    assert mount.ejected == 2
+    assert [(d.get_heading(), d.get_body()) for d in dialogs[3:]] == [("Done", EJECTED_TEXT)]
+
+
+@pytest.mark.parametrize("ejectable, asked", [(True, (1, 0)), (False, (0, 1))])
+def test_eject_asks_the_system_and_waits_for_its_answer(watch_and_drives, monkeypatch, caplog,
+                                                        ejectable, asked):
+    """The real wait for Gio's answer, which comes from the main loop. A drive that cannot be
+    ejected is unmounted; one that is not mounted any more is said so."""
+    from openexpress import service
+
+    mount = watch_and_drives.drive()
+    mount.ejectable = ejectable
+    monitor_with(monkeypatch, mount)
+    s = service.open_session(allow_ums=True)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        gio_storage.eject(s.storage)
+    assert (mount.ejected, mount.unmounted) == asked
+    assert "device: ejected (USB 091e:20ee)" in [r.getMessage() for r in caplog.records]
+    monitor_with(monkeypatch)  # ejected meanwhile, in the file manager
+    with pytest.raises(gio_storage.DriveNotMounted) as error:
+        gio_storage.eject(s.storage)
+    assert str(error.value) == ("The drive is not mounted any more. If it was ejected, you can "
+                                "unplug the cable.")
+
+
+def test_a_drive_ejected_by_openexpress_is_not_opened_again_until_unplugged(drive_window,
+                                                                            monkeypatch, caplog):
+    """Ejected, the drive stays on USB (the Varia, 21.10.2026). Mounted again meanwhile (here:
+    still in the monitor), it is neither opened nor listed, and the pages say that the cable
+    can go out. Unplugged and plugged in again, it opens as before."""
+    from openexpress.gui.app import MainWindow
+
+    world = drive_window.world
+    mount = world.drive()
+    monitor_with(monkeypatch, mount)
+    drive_window.refresh_device()
+    (s,) = drive_window.built
+    ejects_at_once(monkeypatch)
+    gio_storage.eject(s.storage)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        MainWindow._on_mount_added(drive_window, None, mount)
+        assert drive_window.timers.live == {}  # no detection
+        assert gio_storage.find_ums_devices() == []
+    messages = [r.getMessage() for r in caplog.records]
+    assert ("mount added (file:): a Garmin drive ejected by openExpress, ignored until it is "
+            "unplugged") in messages
+    assert ("device: a Garmin drive (USB 091e:20ee) ejected by openExpress, skipped until it "
+            "is unplugged") in messages
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
+        "Device ejected", EJECTED_TEXT, False)
+    assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) == EJECTED_TEXT
+    shutil.rmtree(world.root / "1-4")  # unplugged
+    assert not gio_storage.ejected_drive_waits()
+    mass_storage_device(world.root, name="1-4")  # plugged in again
+    assert [d.uri for d in gio_storage.find_ums_devices()] == [mount.root.get_uri()]
+    assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)[:2] == (
+        "Mass storage mode", DRIVE_NOT_MOUNTED_TEXT)
+
+
+def _drive_client(monkeypatch):
+    """The update server of the command line offers the RTL515 its update."""
+    from openexpress import cli
+
+    monkeypatch.setattr(cli, "GarminClient", lambda settings: types.SimpleNamespace(
+        http=None, software_updates=lambda raw, include_reinstalls=False: varia_answer()))
+
+
+def test_cli_ejects_a_drive_after_writing_an_update(watch_and_drives, monkeypatch, capsys):
+    """Copied, then ejected; only then that the cable can go out, and the steps that follow."""
+    from openexpress import cli
+
+    mount = watch_and_drives.drive()
+    monitor_with(monkeypatch, mount)
+    ejects_at_once(monkeypatch)
+    downloaded_from_nowhere(monkeypatch)
+    _drive_client(monkeypatch)
+    assert cli.main(["updates", "--install", "006-B3592-03", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert mount.ejected == 1
+    assert (out.index("Copied 1 file.") < out.index("Ejecting the device…")
+            < out.index(EJECTED_TEXT) < out.index("To finish the installation:"))
+
+
+def test_cli_says_when_a_drive_is_not_ejected(watch_and_drives, monkeypatch, capsys):
+    """The system refuses: why, that the cable must stay in, and an exit code that is not 0;
+    neither that the cable can go out nor the steps after unplugging."""
+    from openexpress import cli
+
+    mount = watch_and_drives.drive()
+    mount.refusal = "Target is busy"
+    monitor_with(monkeypatch, mount)
+    ejects_at_once(monkeypatch)
+    downloaded_from_nowhere(monkeypatch)
+    _drive_client(monkeypatch)
+    assert cli.main(["updates", "--install", "006-B3592-03", "--apply"]) == 1
+    captured = capsys.readouterr()
+    assert "Copied 1 file." in captured.out
+    assert "You can unplug" not in captured.out + captured.err
+    assert "To finish the installation:" not in captured.out
+    assert captured.err.splitlines()[-2:] == [  # after the progress of the copy
+        "The device was not ejected: Cannot eject the device: Target is busy",
+        NOT_EJECTED_CLI_TEXT]
+
+
+def test_cli_says_a_copied_update_on_a_drive_waits_to_be_ejected(watch_and_drives, monkeypatch,
+                                                                   capsys):
+    """The update was copied earlier (and the drive not ejected): how to have it installed."""
+    from openexpress import cli
+
+    mount = watch_and_drives.drive()
+    (Path(mount.root.get_path()) / "GARMIN" / "GUPDATE.GCD").write_bytes(VARIA_UPDATE)
+    monitor_with(monkeypatch, mount)
+    _drive_client(monkeypatch)
+    to_install = "To install it, eject the drive in the file manager, then unplug the device."
+    assert cli.main(["updates"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "Update copied, waiting for the device to install it:" in out
+    assert out[-1] == to_install and "Disconnect the device to install it." not in out
+    assert cli.main(["updates", "--install", "all"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == to_install
 
 
 def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(drive_window,
