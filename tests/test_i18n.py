@@ -177,7 +177,7 @@ def test_cli_in_polish_shows_sizes_with_a_comma_and_versions_with_a_point(polish
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 6657199308)
     assert main(["--path", str(device_root), "info"]) == 0
     out = capsys.readouterr().out
-    assert "6,7\u00a0GB" in out and "6.7\u00a0GB" not in out
+    assert "6,7 GB" in out and "6.7 GB" not in out
     assert "23.39" in out and "23,39" not in out  # a version number is not a decimal fraction
 
 

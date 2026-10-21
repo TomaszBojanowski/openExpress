@@ -1854,7 +1854,32 @@ def _lang_from_argv(argv: list[str]) -> str | None:
     return None
 
 
+class _PlainSpaces:
+    """A text stream that writes the hard spaces of the program's texts (U+00A0, so that a
+    size or a Polish one-letter word stays on its line in the window) as plain ones: what
+    the command line writes is copied, searched and parsed."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, text: str) -> int:
+        return self._stream.write(text.replace("\u00a0", " "))
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
 def main(argv: list[str] | None = None) -> int:
+    """The command line: every command, its help and its errors write plain spaces."""
+    streams = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = (None if s is None else _PlainSpaces(s) for s in streams)
+    try:
+        return _main(argv)
+    finally:
+        sys.stdout, sys.stderr = streams
+
+
+def _main(argv: list[str] | None) -> int:
     lang = _lang_from_argv(sys.argv[1:] if argv is None else argv)
     if lang:
         i18n.setup(lang)

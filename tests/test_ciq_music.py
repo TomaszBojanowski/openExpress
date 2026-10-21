@@ -2537,7 +2537,7 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
 
     assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Install New Face 1.0 (1.0\u00a0kB)",
+        "Install New Face 1.0 (1.0 kB)",
         ("  New Face: The Flatpak has no access to USB devices, so it cannot install apps on "
          "this device. The app will be queued in Garmin Connect and installed by the phone or "
          "Garmin Express."),
@@ -2568,7 +2568,7 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
 
     assert main(["--path", str(st.root), "apps", "update"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Update Face It 1.0 (1.0\u00a0kB)",
+        "Update Face It 1.0 (1.0 kB)",
         ("  Face It: The Flatpak has no access to USB devices, so it cannot update apps on "
          "this device. The update will be queued in Garmin Connect and installed by the "
          "phone or Garmin Express."),
@@ -2878,9 +2878,9 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
     argv = ["--path", str(device_root), "music", "add", *map(str, songs)]
     assert main(argv) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Found 2 playable files; 2 to copy (306\u00a0B), 0 already on the device.",
+        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
         f"  + {ONE}",
-        f"  ~ {TWO}  (replaces the file on the device: 150\u00a0B → 203\u00a0B)",
+        f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)",
         "1 file on the device will be replaced.",
         "Dry run. Add --apply.",
     ]
@@ -2888,7 +2888,7 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
 
     assert main([*argv, "--apply"]) == 0
     out = capsys.readouterr().out
-    assert f"  ~ {TWO}  (replaces the file on the device: 150\u00a0B → 203\u00a0B)" in out
+    assert f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)" in out
     assert "1 file on the device will be replaced." in out
     assert (st.root / TWO).read_bytes() == songs[1].read_bytes()  # the new content
 
@@ -2898,7 +2898,7 @@ def test_music_add_without_a_replaced_file_reads_as_before(iq_device, device_roo
 
     assert main(["--path", str(device_root), "music", "add", *map(str, songs)]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Found 2 playable files; 2 to copy (306\u00a0B), 0 already on the device.",
+        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
         f"  + {ONE}", f"  + {TWO}", "Dry run. Add --apply."]
 
 

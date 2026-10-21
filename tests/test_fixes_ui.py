@@ -749,16 +749,16 @@ def test_cli_updates_counts_only_real_updates(offered, capsys):
     assert out[1] == "Available updates: 3"
     assert out[2:5] == [
         # GUPDATE.GCD: a system update, although the server sets neither flag.
-        "  006-B0000-00          2.70  Critical           2\u00a0B  Test watch System Software [PRIMARY]",
-        "  006-DA002-00          2.70  Recommended        9\u00a0B  Map support file (DA00200.sid)",
-        "  006-DA003-00          2.70  Recommended        7\u00a0B  Map support file (DA00300.sid)"]
+        "  006-B0000-00          2.70  Critical           2 B  Test watch System Software [PRIMARY]",
+        "  006-DA002-00          2.70  Recommended        9 B  Map support file (DA00200.sid)",
+        "  006-DA003-00          2.70  Recommended        7 B  Map support file (DA00300.sid)"]
     assert "Already on the device: 1" in out and not any("DA00100" in line for line in out)
 
     assert main(["--path", str(root), "-v", "updates"]) == 0
     out = capsys.readouterr().out.splitlines()
     at = out.index("Already on the device: 1")
     assert out[at + 1:at + 3] == [
-        "  006-DA001-00          2.70  Recommended        9\u00a0B  Map support file (DA00100.sid)",
+        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)",
         "      -> Garmin/SID/DA00100.sid"]
 
 
@@ -1294,7 +1294,7 @@ def test_cli_install_all_says_what_it_skips(offered, capsys):
     out = capsys.readouterr().out.splitlines()
     assert out[1:3] == [
         "Skipped 1 file that is already on the device.",
-        "  006-DA001-00          2.70  Recommended        9\u00a0B  Map support file (DA00100.sid)"]
+        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)"]
 
 
 def test_cli_install_all_with_nothing_left_writes_nothing(offered, capsys, monkeypatch):

@@ -215,7 +215,8 @@ def human_size(n: int | None, localize: bool = True) -> str:
     """A size as the user reads it, like GNOME Files writes it: powers of 1000, the units
     B, kB, MB and GB, one decimal ("699.4 kB"), with the decimal separator of the program's
     language; "?" when the size is not known. A hard space between the number and the unit,
-    so that a text that wraps never breaks a size ("4,7 / GB").
+    so that a text of the window that wraps never breaks a size ("4,7 / GB"); the command
+    line and the log write it as a plain one.
 
     Without `localize` the decimal point and a plain space stay, for text that is always in
     English (the device report)."""

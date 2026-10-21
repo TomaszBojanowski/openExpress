@@ -2,6 +2,7 @@
 Files, and readable sizes instead of raw byte counts in messages."""
 
 import base64
+import re
 
 import pytest
 from test_sync import UPLOAD_CONFIG, FakeClient, _setup
@@ -40,8 +41,8 @@ def test_sizes_in_polish_only_differ_in_the_separator(polish):
 
 def test_a_size_never_breaks_between_its_number_and_its_unit():
     """The window at 360 px (21.10.2026): "4,7 / GB". A hard space (U+00A0) joins the number
-    and the unit, in English and in Polish, wherever a size is shown; the device report,
-    text for GitHub, keeps a plain one."""
+    and the unit, in English and in Polish; the device report, text for GitHub, keeps a plain
+    one (and the command line and the log write plain spaces)."""
     for language in ("en", "pl"):
         i18n.setup(language)
         try:
@@ -51,6 +52,26 @@ def test_a_size_never_breaks_between_its_number_and_its_unit():
         finally:
             i18n.setup("en")
     assert human_size(4_700_000_000, localize=False) == "4.7 GB"
+
+
+def test_the_command_line_writes_plain_spaces(device_root, capsys):
+    """The hard spaces are for the window, whose texts wrap (a size, a Polish one-letter
+    word); what the command line writes is copied, searched and parsed, so every command
+    writes plain spaces (22.10.2026): here the sizes of `info` and the words of `--help`."""
+    from openexpress.cli import main
+
+    try:
+        assert main(["--lang", "pl", "--path", str(device_root), "info"]) == 0
+        with pytest.raises(SystemExit):
+            main(["--lang", "pl", "--help"])
+        assert human_size(2_500_000) == "2,5\u00a0MB"  # the window's, still
+    finally:
+        i18n.setup("en")
+    out = capsys.readouterr()
+    text = out.out + out.err
+    assert re.search(r"\d,\d (kB|MB|GB)", text)  # a size, with a plain space
+    assert re.search(r"(?<!\w)[wziouaWZIOUA] \w", text)  # a one-letter word, with a plain one
+    assert "\u00a0" not in text
 
 
 def test_commands_and_window_use_the_same_function():

@@ -134,8 +134,8 @@ def test_cli_lists_the_system_update_first_and_marks_it(offered, no_download, ca
     assert out[:4] == [
         "Test watch, software 23.39",
         "Available updates: 2",
-        "  006-V0000-00         23.40  Recommended       12\u00a0B  Test Bundle [PRIMARY]",
-        "  006-D0000-00         23.40  Recommended        4\u00a0B  Test Font"]
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
+        "  006-D0000-00         23.40  Recommended        4 B  Test Font"]
 
 
 def test_cli_warns_before_a_system_update(offered, no_download, capsys):
@@ -476,8 +476,8 @@ def test_cli_marks_a_beta_version(offered_beta, no_download, capsys):
         "Test watch, software 23.39",
         "Garmin offers beta software for this device.",
         "Available updates: 2",
-        "  006-V0000-00         23.40  Recommended       12\u00a0B  Test Bundle [PRIMARY] [BETA]",
-        "  006-D0000-00         23.40  Recommended        4\u00a0B  Test Font"]
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY] [BETA]",
+        "  006-D0000-00         23.40  Recommended        4 B  Test Font"]
 
 
 def test_cli_says_beta_versions_are_offered_when_none_is_listed(offered_beta, no_download,
@@ -496,7 +496,7 @@ def test_cli_marks_beta_in_polish(offered_beta, no_download, capsys):
     finally:
         i18n.setup("en")
     out = capsys.readouterr().out.splitlines()
-    assert out[1] == "Garmin oferuje dla tego urządzenia oprogramowanie w\u00a0wersji beta."
+    assert out[1] == "Garmin oferuje dla tego urządzenia oprogramowanie w wersji beta."
     assert out[3].endswith("Test Bundle [GŁÓWNE] [BETA]")
 
 
@@ -584,11 +584,11 @@ def test_beta_in_the_window_in_polish(monkeypatch):
 def test_cli_marks_a_beta_version_in_what_will_be_installed(offered_beta, no_download, capsys):
     root = offered_beta()
     assert main(["--path", str(root), "updates", "--install", "006-V0000-00"]) == 0
-    assert ("  006-V0000-00 23.40  Test Bundle [BETA]  (12\u00a0B) -> Garmin/GUPDATE.GSP"
+    assert ("  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP"
             in capsys.readouterr().out.splitlines())
     # Not a beta: no mark.
     assert main(["--path", str(root), "updates", "--install", "006-D0000-00"]) == 0
-    assert ("  006-D0000-00 23.40  Test Font  (4\u00a0B) -> Garmin/Font/006-D0000-00.fnt"
+    assert ("  006-D0000-00 23.40  Test Font  (4 B) -> Garmin/Font/006-D0000-00.fnt"
             in capsys.readouterr().out.splitlines())
 
 
@@ -603,7 +603,7 @@ def test_cli_marks_a_beta_version_in_what_will_be_installed_in_polish(offered_be
         i18n.setup("en")
     out = capsys.readouterr().out.splitlines()
     assert "Do zainstalowania:" in out
-    assert "  006-V0000-00 23.40  Test Bundle [BETA]  (12\u00a0B) -> Garmin/GUPDATE.GSP" in out
+    assert "  006-V0000-00 23.40  Test Bundle [BETA]  (12 B) -> Garmin/GUPDATE.GSP" in out
 
 
 @pytest.mark.needs_display
@@ -815,9 +815,9 @@ def test_cli_says_a_copied_update_waits_for_the_device(offered, no_download, cap
     assert capsys.readouterr().out.splitlines() == [
         "Test watch, software 23.39",
         "Available updates: 1",
-        "  006-D0000-00         23.40  Recommended        4\u00a0B  Test Font",
+        "  006-D0000-00         23.40  Recommended        4 B  Test Font",
         "Update copied, waiting for the device to install it:",
-        "  006-V0000-00         23.40  Recommended       12\u00a0B  Test Bundle [PRIMARY]",
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
         "Disconnect the device to install it.",
         "",
         "Install: openexpress updates --install PART_NUMBER [--reinstalls] --apply"]
@@ -831,7 +831,7 @@ def test_cli_is_not_up_to_date_while_a_copied_update_waits(offered, no_download,
     assert out == [
         "Test watch, software 23.39",
         "Update copied, waiting for the device to install it:",
-        "  006-V0000-00         23.40  Recommended       12\u00a0B  Test Bundle [PRIMARY]",
+        "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
         "Disconnect the device to install it.",
         "Already on the device: 1"]  # the font: no update, and not waiting for anything
 
@@ -865,7 +865,7 @@ def test_cli_copied_update_in_polish(offered, no_download, capsys):
         i18n.setup("en")
     assert out[1:4] == [
         "Aktualizacja skopiowana, czeka na instalację przez urządzenie:",
-        "  006-V0000-00         23.40  Zalecana          12\u00a0B  Test Bundle [GŁÓWNE]",
+        "  006-V0000-00         23.40  Zalecana          12 B  Test Bundle [GŁÓWNE]",
         "Odłącz urządzenie, aby ją zainstalować."]
     assert out_all[-1] == "Odłącz urządzenie, aby ją zainstalować."
 

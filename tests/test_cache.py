@@ -84,11 +84,11 @@ def test_cache_command_lists_the_four_folders_and_the_total(cache, capsys):
     assert main(["cache"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
-        "  Maps: 1.8\u00a0kB",
-        "  Pictures: 30\u00a0B",
-        "  Software updates: 4.0\u00a0kB",
-        "  Transfer: 0\u00a0B",
-        "  Total: 5.8\u00a0kB"]
+        "  Maps: 1.8 kB",
+        "  Pictures: 30 B",
+        "  Software updates: 4.0 kB",
+        "  Transfer: 0 B",
+        "  Total: 5.8 kB"]
     assert (cache / "maps" / "aaa").exists()
 
 
@@ -97,7 +97,7 @@ def test_cache_command_with_no_cache(cache, capsys):
     from openexpress.cli import main
 
     assert main(["cache"]) == 0
-    assert capsys.readouterr().out.splitlines()[-1] == "  Total: 0\u00a0B"
+    assert capsys.readouterr().out.splitlines()[-1] == "  Total: 0 B"
 
 
 # --- the lock of the cache (C2, part 1): shared while it is used, exclusive to clear it -------
@@ -268,11 +268,11 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
     assert main(["cache", "--clear"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
-        "  Maps: 1.8\u00a0kB",
-        "  Pictures: 30\u00a0B",
-        "  Software updates: 4.0\u00a0kB",
-        "  Transfer: 20\u00a0B",
-        "  Total: 5.8\u00a0kB",
+        "  Maps: 1.8 kB",
+        "  Pictures: 30 B",
+        "  Software updates: 4.0 kB",
+        "  Transfer: 20 B",
+        "  Total: 5.8 kB",
         "Dry run: nothing was deleted. Add --apply to delete it."]
     assert sorted(p for p in cache.rglob("*")) == before
 
@@ -286,7 +286,7 @@ def test_clear_with_apply_empties_the_four_folders(cache, tmp_path, capsys):
     stay = filled(cache, tmp_path)
     assert main(["cache", "--clear", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[-1] == "Freed 5.8\u00a0kB." and "  Total: 5.8\u00a0kB" in out
+    assert out[-1] == "Freed 5.8 kB." and "  Total: 5.8 kB" in out
     for name in ("maps", "images", "software", "transfer"):
         assert (cache / name).is_dir() and list((cache / name).iterdir()) == []
     assert (cache / "cache.lock").exists()

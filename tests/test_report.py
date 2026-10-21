@@ -137,6 +137,23 @@ def test_cli_report_with_log_appends_the_filtered_end(device_root, xdg, log_file
     assert "read it before you send it" in out.err
 
 
+def test_the_report_has_plain_spaces(device_root, log_file):
+    """Text for GitHub: no hard space, also in a Polish session and in a line of the log
+    written with one (by a version from before 22.10.2026)."""
+    from openexpress import applog, i18n
+
+    i18n.setup("pl")
+    try:
+        st = LocalStorage(device_root)
+        text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, logged_in=True)
+    finally:
+        i18n.setup("en")
+    _write_log(log_file, ["old: plik z\u00a0urządzenia, 2,5\u00a0MB"])
+    tail = applog.tail(report.LOG_LINES)
+    assert tail == ["old: plik z urządzenia, 2,5 MB"]
+    assert "\u00a0" not in report.with_log(text, tail)
+
+
 def test_only_the_last_200_lines_are_attached(log_file):
     from openexpress import applog
 
@@ -341,6 +358,6 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
         i18n.setup("en")
     err = capsys.readouterr().err
     assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
-            "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z\u00a0wypełnionym raportem: "
+            "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
             "https://github.com/") in err
-    assert "Logu nie ma w\u00a0adresie: wklej go w\u00a0zgłoszeniu." in err
+    assert "Logu nie ma w adresie: wklej go w zgłoszeniu." in err

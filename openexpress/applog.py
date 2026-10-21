@@ -134,12 +134,19 @@ def redact(text: str) -> str:
     return text
 
 
+def _plain(text: str) -> str:
+    """The hard spaces of the program's texts (U+00A0: the window keeps a size or a Polish
+    one-letter word on its line) as plain spaces, as every line of the log has them."""
+    return text.replace("\u00a0", " ")
+
+
 class _Redacting(logging.Formatter):
     """Formats the whole record (message, traceback, stack) and redacts the result: for the
-    log file and for the terminal alike (e.g. `-v`, or the journal of the watcher)."""
+    log file and for the terminal alike (e.g. `-v`, or the journal of the watcher); with
+    plain spaces."""
 
     def format(self, record: logging.LogRecord) -> str:
-        return redact(super().format(record))
+        return _plain(redact(super().format(record)))
 
 
 class _Formatter(_Redacting):
@@ -240,7 +247,8 @@ def shown_path() -> str:
 
 def tail(count: int = 200) -> list[str]:
     """The last `count` lines of the log, redacted once more (the rules may have become
-    stricter since a line was written). Empty when there is no log."""
+    stricter since a line was written) and with plain spaces (a line written before
+    22.10.2026 may have hard ones). Empty when there is no log."""
     lines: list[str] = []
     path = log_path()
     for file in (path, path.with_name(path.name + ".1")):  # the current file, then the one before
@@ -251,7 +259,7 @@ def tail(count: int = 200) -> list[str]:
         except OSError:
             continue
         lines = text.splitlines() + lines
-    return [redact(line) for line in lines[-count:]]
+    return [_plain(redact(line)) for line in lines[-count:]]
 
 
 CRASH_NAME = "crash.log"
