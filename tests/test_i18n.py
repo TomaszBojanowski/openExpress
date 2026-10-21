@@ -1,6 +1,7 @@
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -89,6 +90,51 @@ def test_no_polish_one_letter_word_is_left_at_the_end_of_a_line():
             for key, value in e.items()
             if key.startswith("msgstr") and ONE_LETTER_WORD.search(_unescaped(value))]
     assert left == []
+
+
+SAMPLE_PO = """msgid ""
+msgstr ""
+"Language: pl\\n"
+
+#: x.py:1
+msgid "a b"
+msgstr "Plik w katalogu i z kopii"
+
+msgid "{a} sizes"
+msgstr ""
+"Rozmiar {a} w "
+"oknie %i <a href=\\"x\\">a</a> -a opcja"
+
+msgid "one"
+msgid_plural "many"
+msgstr[0] "a {count} z"
+msgstr[1] "W tle"
+msgstr[2] "u nas"
+
+#~ msgid "old"
+#~ msgstr "w starym"
+"""
+
+
+def test_the_tool_puts_hard_spaces_into_msgstr_only(tmp_path):
+    """tools/po-hard-spaces.py: a preview writes nothing; --apply changes the spaces after
+    one-letter words in msgstr only (also at the end of a line of the file), never in the
+    header, a msgid, an obsolete entry, a format code, a tag or an option."""
+    tool = ROOT / "tools" / "po-hard-spaces.py"
+    po = tmp_path / "pl.po"
+    po.write_text(SAMPLE_PO, encoding="utf-8")
+    preview = subprocess.run([sys.executable, "-I", str(tool), str(po)], capture_output=True,
+                             text=True, check=True)
+    assert po.read_text(encoding="utf-8") == SAMPLE_PO
+    assert preview.stdout.endswith("\n5 texts, 7 spaces (preview, nothing written)\n")
+    subprocess.run([sys.executable, "-I", str(tool), str(po), "--apply"], capture_output=True,
+                   check=True)
+    nb = "\u00a0"
+    assert po.read_text(encoding="utf-8") == (
+        SAMPLE_PO.replace('"Plik w katalogu i z kopii"', f'"Plik w{nb}katalogu i{nb}z{nb}kopii"')
+        .replace('"Rozmiar {a} w "', f'"Rozmiar {{a}} w{nb}"')
+        .replace('"a {count} z"', f'"a{nb}{{count}} z"')
+        .replace('"W tle"', f'"W{nb}tle"').replace('"u nas"', f'"u{nb}nas"'))
 
 
 @pytest.mark.skipif(not shutil.which("msgfmt"), reason="msgfmt not installed")
