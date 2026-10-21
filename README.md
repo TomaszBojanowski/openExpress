@@ -64,7 +64,7 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 <p align="center">
   <img src="docs/screenshots/updates.png" width="800"
-       alt="The Updates page: a beta software update offered for an Edge 1050">
+       alt="The Updates page: a component update offered for an Edge 1050">
 </p>
 
 ### Not yet available
@@ -209,7 +209,7 @@ Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 20
 
 <p align="center">
   <img src="docs/screenshots/update-confirm.png" width="700"
-       alt="The question before a system update: versions, license link and warning">
+       alt="The question before an update: size, place on the device, changes and license link">
 </p>
 
 ### Maps of your own
