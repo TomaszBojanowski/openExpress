@@ -330,7 +330,7 @@ def test_the_last_sync_is_put_into_words_when_shown(xdg):
         "2 files were already in Garmin Connect"]  # the unknown step left out
     i18n.setup("pl")  # the language of the moment it is shown, not of the sync
     try:
-        assert service.describe_lines(lines)[1] == "Pliki z urządzenia: aktywności ×4, sen"
+        assert service.describe_lines(lines)[1] == "Pliki z\u00a0urządzenia: aktywności ×4, sen"
     finally:
         i18n.setup("en")
 

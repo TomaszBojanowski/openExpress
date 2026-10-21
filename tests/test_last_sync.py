@@ -60,8 +60,8 @@ def test_the_row_of_a_sync_in_polish():
     finally:
         i18n.setup("en")
     assert row == "2 dni temu\u00a0· 8 plików, 6 wysłanych"  # two days back (by the date)
-    assert details == [("Pliki z urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
-                        "urządzenia"), "2 pliki były już w Garmin Connect"]
+    assert details == [("Pliki z\u00a0urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
+                        "urządzenia"), "2 pliki były już w\u00a0Garmin Connect"]
 
 
 @pytest.mark.parametrize(("received", "words"), [(1, "1 odebrany"), (2, "2 odebrane"),
@@ -99,7 +99,7 @@ def test_the_details_in_polish():
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == "3 pliki były już w Garmin Connect"
+    assert line == "3 pliki były już w\u00a0Garmin Connect"
 
 
 def test_what_went_wrong_is_a_warning():
@@ -256,7 +256,7 @@ def test_new_files_in_polish():
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == ("Pliki z urządzenia: aktywności, sen, EKG, zaburzenia snu, kopia zapasowa "
+    assert line == ("Pliki z\u00a0urządzenia: aktywności, sen, EKG, zaburzenia snu, kopia zapasowa "
                     "urządzenia, inne dane (FIT_TYPE_70)")
 
 
@@ -285,7 +285,7 @@ def test_names_for_the_training_status_primary_device_and_coach_files():
         (line,) = service.describe_lines([step])
     finally:
         i18n.setup("en")
-    assert line == ("Pliki z urządzenia: dziennik zmian ustawień, dane o wytrenowaniu, dane "
+    assert line == ("Pliki z\u00a0urządzenia: dziennik zmian ustawień, dane o\u00a0wytrenowaniu, dane "
                     "urządzenia głównego, plan Garmin Coach ×2, inne dane (FIT_TYPE_70)")
 
 

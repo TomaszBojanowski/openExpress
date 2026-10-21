@@ -158,7 +158,7 @@ def test_cli_does_not_warn_before_a_plain_file(offered, no_download, capsys):
 
 WARNING_EN = ("Warning: this is a device system update. Charge the device and do not disconnect "
               "it while copying.")
-WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urządzenie i nie odłączaj "
+WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urządzenie i\u00a0nie odłączaj "
               "go podczas kopiowania.")
 
 
@@ -496,7 +496,7 @@ def test_cli_marks_beta_in_polish(offered_beta, no_download, capsys):
     finally:
         i18n.setup("en")
     out = capsys.readouterr().out.splitlines()
-    assert out[1] == "Garmin oferuje dla tego urządzenia oprogramowanie w wersji beta."
+    assert out[1] == "Garmin oferuje dla tego urządzenia oprogramowanie w\u00a0wersji beta."
     assert out[3].endswith("Test Bundle [GŁÓWNE] [BETA]")
 
 
@@ -578,7 +578,7 @@ def test_beta_in_the_window_in_polish(monkeypatch):
     assert [t for t, _c in status["texts"]] == [
         "Dostępna aktualizacja oprogramowania", f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B",
         "Test Bundle\u00a0· Zalecana\u00a0· GUPDATE.GSP",
-        "Garmin oferuje dla tego urządzenia oprogramowanie w wersji beta."]
+        "Garmin oferuje dla tego urządzenia oprogramowanie w\u00a0wersji beta."]
 
 
 def test_cli_marks_a_beta_version_in_what_will_be_installed(offered_beta, no_download, capsys):

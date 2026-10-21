@@ -581,8 +581,8 @@ def test_another_day_has_its_date_first_in_polish(polish):
     lines = another_day_tooltip()
     assert lines[0] == "Nieprawidłowy czas komputera"
     assert lines[1] == (f"Garmin Connect (connectapi.garmin.com): czas komputera różni się "
-                        f"o 120 min ({day} o {hour})")
-    assert lines[2] == f"Aktualizacje i mapy (omt.garmin.com): odpowiedź {day} o {hour}"
+                        f"o\u00a0120 min ({day} o\u00a0{hour})")
+    assert lines[2] == f"Aktualizacje i\u00a0mapy (omt.garmin.com): odpowiedź {day} o\u00a0{hour}"
     assert lines[3] == "Logowanie (sso.garmin.com): nie było potrzeby"
 
 
@@ -594,8 +594,8 @@ def test_today_has_only_the_hour_in_polish(polish):
     now = last[netstatus.OMT].at
     hour = netstatus.when(now, now)
     line = netstatus.describe(last, answered, PROD, now)[1].splitlines()[2]
-    assert line == (f"Aktualizacje i mapy (omt.garmin.com): błąd serwera (HTTP 503) o {hour}; "
-                    f"ostatnia odpowiedź o {hour}")
+    assert line == (f"Aktualizacje i\u00a0mapy (omt.garmin.com): błąd serwera (HTTP 503) o\u00a0{hour}; "
+                    f"ostatnia odpowiedź o\u00a0{hour}")
 
 
 # --- the tidier popover (18.10.2026) ------------------------------------------------------------

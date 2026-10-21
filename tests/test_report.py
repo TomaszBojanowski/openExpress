@@ -283,11 +283,11 @@ def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
         i18n.setup("en")
     assert dialog.get_response_label("open") == "Otwórz na GitHubie"
     assert dialog.get_body() == (
-        "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z wypełnionym raportem; nic nie zostanie "
+        "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z\u00a0wypełnionym raportem; nic nie zostanie "
         "opublikowane, dopóki go nie wyślesz. Raport nie zawiera numeru seryjnego, "
         "identyfikatora urządzenia ani adresu e-mail.")  # the same words as on the command line
-    assert said == ["Log jest w schowku: wklej go w zgłoszeniu"]
-    assert said_too_long == ["Raport skopiowany: wklej go w formularzu"]
+    assert said == ["Log jest w\u00a0schowku: wklej go w\u00a0zgłoszeniu"]
+    assert said_too_long == ["Raport skopiowany: wklej go w\u00a0formularzu"]
 
 
 # --- the command line: an address that fills in the form --------------------------------------
@@ -341,6 +341,6 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
         i18n.setup("en")
     err = capsys.readouterr().err
     assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
-            "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
+            "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z\u00a0wypełnionym raportem: "
             "https://github.com/") in err
-    assert "Logu nie ma w adresie: wklej go w zgłoszeniu." in err
+    assert "Logu nie ma w\u00a0adresie: wklej go w\u00a0zgłoszeniu." in err

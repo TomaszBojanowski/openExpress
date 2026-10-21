@@ -71,6 +71,26 @@ def test_placeholders_match(po):
                     assert source <= set(PLACEHOLDER.findall(value)) | {"%s"}, (e["msgid"], value)
 
 
+# A one-letter word: a letter that follows no letter or digit, and is no format code (%i),
+# tag (<a …>), option (-a), placeholder ({a}), path (/a) or escape (\\a).
+ONE_LETTER_WORD = re.compile(r"(?<![\w%<\-/{\\])[wziouaWZIOUA] ")
+
+
+def _unescaped(raw: str) -> str:
+    """A text of a .po file as the program gets it (its escapes undone)."""
+    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), raw)
+
+
+def test_no_polish_one_letter_word_is_left_at_the_end_of_a_line():
+    """Polish typography: after w, z, i, o, u and a (also at the start of a sentence) a hard
+    space (U+00A0), so that a text that wraps never leaves one at the end of a line (the
+    window at 360 px, 21.10.2026: "…oprogramowanie w / wersji beta")."""
+    left = [(e["msgid"], value) for e in _entries(ROOT / "po" / "pl.po")
+            for key, value in e.items()
+            if key.startswith("msgstr") and ONE_LETTER_WORD.search(_unescaped(value))]
+    assert left == []
+
+
 @pytest.mark.skipif(not shutil.which("msgfmt"), reason="msgfmt not installed")
 @pytest.mark.parametrize("po", PO_FILES, ids=lambda p: p.stem)
 def test_compiled_catalog_is_current(po, tmp_path):
@@ -168,4 +188,4 @@ def test_window_row_in_polish_uses_the_same_sizes(polish):
     assert app._human is __import__("openexpress.cli", fromlist=["_human"])._human
     text = _("{free} free of {total}").format(free=app._human(6657199308),
                                               total=app._human(7623566950))
-    assert text == "6,7\u00a0GB wolne z 7,6\u00a0GB"
+    assert text == "6,7\u00a0GB wolne z\u00a07,6\u00a0GB"

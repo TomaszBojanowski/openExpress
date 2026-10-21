@@ -23,7 +23,7 @@ CASES = [
     (datetime(2026, 10, 15, 23, 41), "3 days ago", "3 dni temu"),
     (datetime(2026, 10, 13, 8, 0), "5 days ago", "5 dni temu"),
     (datetime(2026, 10, 12, 0, 1), "6 days ago", "6 dni temu"),
-    (datetime(2026, 10, 11, 23, 59), "2026-10-11 23:59", "11.10.2026 o 23:59"),  # 7 days: the date
+    (datetime(2026, 10, 11, 23, 59), "2026-10-11 23:59", "11.10.2026 o\u00a023:59"),  # 7 days: the date
 ]
 
 

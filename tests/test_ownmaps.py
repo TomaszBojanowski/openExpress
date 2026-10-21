@@ -612,7 +612,7 @@ def test_add_in_polish(maps_cli, my_map, capsys):
     assert out[1] == "  osm-test.img (2,0\u00a0kB) zostanie zapisany jako GARMIN/osm-test.img"
     assert out[2].startswith("Wolne miejsce na urządzeniu: ")
     assert out[2].endswith(" (mapa zajmie 2,0\u00a0kB)")
-    assert "Plik o nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err
+    assert "Plik o\u00a0nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err
 
 
 # --- "maps remove --own": removing a map this installation copied -------------------------------
@@ -794,7 +794,7 @@ def test_remove_own_in_polish(added, capsys):
     assert out[1] == "  - GARMIN/osm-test.img  (2,0\u00a0kB)"
     assert err == ("Błąd: Plik by-hand.img nie został skopiowany przez tę instalację openExpress "
                    "(mógł zostać skopiowany ręcznie albo przez inną instalację), więc nie "
-                   "zostanie usunięty. Jeśli chcesz go usunąć, zrób to w menedżerze plików.")
+                   "zostanie usunięty. Jeśli chcesz go usunąć, zrób to w\u00a0menedżerze plików.")
 
 
 # --- the Maps page of the window ------------------------------------------------------------------
@@ -1169,10 +1169,10 @@ def test_own_maps_in_the_window_in_polish(window_device, my_map):
         i18n.setup("en")
     (group,) = win.sections["maps"].groups
     assert group.get_title() == "Własne mapy"
-    note = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"  # it has no header
+    note = "plik nierozpoznany jako mapa; usuń go w\u00a0menedżerze plików"  # it has no header
     assert rows_of(group) == [("by-hand.img", f"by-hand.img\u00a0· 2,0\u00a0kB\u00a0· {note}", False)]
-    refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
-               "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
+    refusal = ("Plik o\u00a0nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
+               "Zmień nazwę pliku na komputerze i\u00a0dodaj go ponownie.")
     assert win.shown[-1] == ("error", "Nie można dodać mapy", refusal)
 
 
@@ -1518,7 +1518,7 @@ def test_foreign_maps_in_the_window_in_polish(window_device):
     rows = rows_of(win.sections["maps"].groups[0])
     assert ("Sometown cyclemap", "osm-test.img\u00a0· 1,5\u00a0kB\u00a0· nieskopiowana przez tę instalację",
             True) in rows
-    unknown = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"
+    unknown = "plik nierozpoznany jako mapa; usuń go w\u00a0menedżerze plików"
     assert ("broken.img", f"broken.img\u00a0· 9\u00a0B\u00a0· {unknown}", False) in rows
     asked = win.shown[-1]
     assert asked[0] == "ask" and asked[2].startswith(
