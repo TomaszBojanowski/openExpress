@@ -5655,7 +5655,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         win.last_sync_row, win._last_sync_data = row, {"time": seen, "uploaded": 1}
         (tick,) = minute_timers()
         tick()
-        assert row.get_subtitle() == "3 min ago\u00a0· 1 file, 1 uploaded" and len(changes) == 1
+        assert row.get_subtitle() == "3 min ago\u00a0· 1 new file, 1 uploaded" and len(changes) == 1
         tick()
         assert len(changes) == 1  # the same words: left as they are
         win.close()

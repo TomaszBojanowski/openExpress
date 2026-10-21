@@ -205,7 +205,7 @@ def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake
     out = capsys.readouterr().out
     assert client.uploads == []
     assert out.count("Nothing was uploaded: ") == 1 and text in out
-    assert "no new files · 1 received" in out and acks == [5]  # the queue is still served
+    assert "nothing to upload · 1 received" in out and acks == [5]  # the queue is still served
     assert list((device_root / "GARMIN/NewFiles").iterdir())
     data = service.load_last_sync(UNIT)
     assert data["uploaded"] == 0 and any("Nothing was uploaded" in line for line in data["lines"])
@@ -290,7 +290,7 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
          "rejected": 0, "errors": 0}]
     # The same words in the summary and from what is stored.
     assert "Files from the device: activities ×2" in summary.text.splitlines()
-    assert "2 files, 2 uploaded · 1 received" in summary.text.splitlines()
+    assert "2 new files, 2 uploaded · 1 received" in summary.text.splitlines()
     stored = service.load_last_sync(UNIT)
     assert [service.describe_counts(stored),
             *service.describe_lines(stored["lines"])] == summary.text.splitlines()
@@ -308,7 +308,7 @@ def test_the_files_from_connect_are_only_counted(device_root, xdg):
     s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
     summary = service.run_sync(s, first_run="all")
     assert summary.downloaded == 1
-    assert summary.text.splitlines() == ["2 files, 2 uploaded · 1 received",
+    assert summary.text.splitlines() == ["2 new files, 2 uploaded · 1 received",
                                          "Files from the device: activities ×2"]
     assert not any(line.endswith(".") for line in summary.text.splitlines())
 

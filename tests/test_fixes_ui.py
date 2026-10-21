@@ -125,7 +125,7 @@ def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, c
     assert len(fake_client["client"].uploads) == 2
     data = service.load_last_sync(1234567890)
     assert data["uploaded"] == 2 and data["errors"] == []
-    assert service.describe_counts(data) == "2 files, 2 uploaded"  # the window's own words
+    assert service.describe_counts(data) == "2 new files, 2 uploaded"  # the window's own words
     assert service.describe_lines(data["lines"]) == ["Files from the device: activities ×2"]
 
 

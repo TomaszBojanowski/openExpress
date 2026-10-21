@@ -526,18 +526,24 @@ def _new_files(data: dict) -> int:
 
 
 def describe_counts(data: dict) -> str:
-    """The numbers of a sync in one line: "8 files, 6 uploaded · 2 received" - the new
-    files and how many were uploaded, and the files from Garmin Connect written to the
-    device when there are any. The window shows it under "Last sync" after when it was;
-    the command line and the notification put it before the details."""
+    """The numbers of a sync in one line: "8 new files, 6 uploaded · 2 received" - the new
+    files on the device and how many of them were uploaded ("none uploaded"; "nothing to
+    upload" when it had none), and the files from Garmin Connect written to the device when
+    there are any. The window shows it under "Last sync" after when it was; the command
+    line and the notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
     received = data.get("downloaded", 0)
     if files:
-        parts = [ngettext("{count} file", "{count} files", files).format(count=files) + ", "
-                 + ngettext("{count} uploaded", "{count} uploaded", uploaded).format(
-                     count=uploaded)]
+        # TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
+        found = ngettext("{count} new file", "{count} new files", files).format(count=files)
+        sent = (ngettext("{count} uploaded", "{count} uploaded", uploaded).format(
+            count=uploaded) if uploaded
+            # TRANSLATORS: after "3 new files, ": not one of them was uploaded
+            else _("none uploaded"))
+        parts = [f"{found}, {sent}"]
     else:
-        parts = [_("no new files")]
+        # TRANSLATORS: the device had no new file to upload to Garmin Connect
+        parts = [_("nothing to upload")]
     if received:
         parts.append(ngettext("{count} received", "{count} received", received).format(
             count=received))

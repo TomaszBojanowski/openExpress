@@ -19,17 +19,64 @@ def _report(uploaded=0, checked=0, server=0, rejected=0, failed=0):
 
 
 def test_the_row_leaves_out_what_is_zero():
-    assert service.describe_counts({"uploaded": 0}) == "no new files"
-    assert service.describe_counts({"uploaded": 1, "downloaded": 0}) == "1 file, 1 uploaded"
+    assert service.describe_counts({"uploaded": 0}) == "nothing to upload"
+    assert service.describe_counts({"uploaded": 1, "downloaded": 0}) == "1 new file, 1 uploaded"
     assert service.describe_counts(
         {"uploaded": 7, "skipped_known": 3, "rejected": 1, "downloaded": 2,
          "errors": ["upload: HTTP 500", "download: HTTP 404"]}) == (
-        "11 files, 7 uploaded · 2 received")  # rejected and errors: warnings in the details
+        "11 new files, 7 uploaded · 2 received")  # rejected and errors: warnings in the details
+
+
+def _sync(new, uploaded, received=0):
+    """What a sync records: `new` files on the device, `uploaded` of them sent, the rest
+    already in Garmin Connect; `received` files from Garmin Connect written to the device."""
+    return {"uploaded": uploaded, "skipped_known": new - uploaded, "downloaded": received,
+            "lines": [{"kind": "new_files", "types": {"FIT_TYPE_4": new}}] if new else []}
+
+
+# Every row the window, the command line and the notification can show (PLAN, 21.10.2026):
+# the files on the device are new ones, "0 uploaded" is "none uploaded", and nothing new on
+# the device is "nothing to upload" (it was "no new files", also next to files received).
+ROWS = [
+    (_sync(8, 6), "8 new files, 6 uploaded", "8 nowych plików, 6 wysłanych"),
+    (_sync(8, 6, 2), "8 new files, 6 uploaded · 2 received",
+     "8 nowych plików, 6 wysłanych · 2 odebrane"),
+    (_sync(1, 1), "1 new file, 1 uploaded", "1 nowy plik, 1 wysłany"),
+    (_sync(3, 3), "3 new files, 3 uploaded", "3 nowe pliki, 3 wysłane"),
+    (_sync(22, 22), "22 new files, 22 uploaded", "22 nowe pliki, 22 wysłane"),
+    (_sync(25, 1), "25 new files, 1 uploaded", "25 nowych plików, 1 wysłany"),
+    (_sync(3, 0), "3 new files, none uploaded", "3 nowe pliki, nic nie wysłano"),
+    (_sync(3, 0, 1), "3 new files, none uploaded · 1 received",
+     "3 nowe pliki, nic nie wysłano · 1 odebrany"),
+    (_sync(0, 0), "nothing to upload", "nic do wysłania"),
+    (_sync(0, 0, 7), "nothing to upload · 7 received", "nic do wysłania · 7 odebranych"),
+    (_sync(0, 0, 1), "nothing to upload · 1 received", "nic do wysłania · 1 odebrany"),
+]
+
+
+@pytest.mark.parametrize(("data", "english", "polish"), ROWS, ids=[r[1] for r in ROWS])
+def test_every_row_in_english_and_polish(data, english, polish):
+    """The words of the command line and the notification (plain spaces), and the row of the
+    window (when, then the same words; a hard space before "·")."""
+    from datetime import datetime
+
+    from openexpress.gui.app import last_sync_words
+
+    data = {**data, "time": datetime(2026, 10, 19, 12, 0).timestamp()}
+    now = datetime(2026, 10, 22, 12, 0)
+    for language, words, when in (("en", english, "3 days ago"), ("pl", polish, "3 dni temu")):
+        i18n.setup(language)
+        try:
+            assert service.describe_counts(data) == words, language
+            assert last_sync_words(data, now) == (
+                f"{when} · {words}".replace(" · ", "\u00a0· ")), language
+        finally:
+            i18n.setup("en")
 
 
 @pytest.mark.parametrize(("count", "words"), [
-    (1, "5 plików, 1 wysłany"), (2, "6 plików, 2 wysłane"), (5, "9 plików, 5 wysłanych"),
-    (22, "26 plików, 22 wysłane")])
+    (1, "5 nowych plików, 1 wysłany"), (2, "6 nowych plików, 2 wysłane"),
+    (5, "9 nowych plików, 5 wysłanych"), (22, "26 nowych plików, 22 wysłane")])
 def test_the_row_in_polish(count, words):
     i18n.setup("pl")
     try:
@@ -59,7 +106,7 @@ def test_the_row_of_a_sync_in_polish():
         details = service.describe_lines(data["lines"])
     finally:
         i18n.setup("en")
-    assert row == "2 dni temu\u00a0· 8 plików, 6 wysłanych"  # two days back (by the date)
+    assert row == "2 dni temu\u00a0· 8 nowych plików, 6 wysłanych"  # two days back (by the date)
     assert details == [("Pliki z\u00a0urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
                         "urządzenia"), "2 pliki były już w\u00a0Garmin Connect"]
 
@@ -72,7 +119,7 @@ def test_the_files_from_connect_in_polish(received, words):
         row = service.describe_counts({"uploaded": 1, "downloaded": received})
     finally:
         i18n.setup("en")
-    assert row == f"1 plik, 1 wysłany · {words}"
+    assert row == f"1 nowy plik, 1 wysłany · {words}"
 
 
 # --- the details -----------------------------------------------------------------------------
@@ -134,7 +181,7 @@ def test_the_window_marks_the_warnings(xdg):
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))
     MainWindow._show_last_sync(win)
-    assert row.get_subtitle().endswith("\u00a0· 3 files, 1 uploaded")
+    assert row.get_subtitle().endswith("\u00a0· 3 new files, 1 uploaded")
     assert row.get_tooltip_text()  # the full date
     (details,) = win._last_sync_children  # one row
     shown, item = [], details.get_first_child()
@@ -215,8 +262,8 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
     words = service.describe_lines(steps)
     assert words == ["Files from the device: activities ×2"]
     assert all(line in printed for line in words)  # printed exactly as the window shows it
-    assert service.describe_counts(data) == "2 files, 2 uploaded"
-    assert "2 files, 2 uploaded" in printed  # the numbers of the row, then the details
+    assert service.describe_counts(data) == "2 new files, 2 uploaded"
+    assert "2 new files, 2 uploaded" in printed  # the numbers of the row, then the details
 
 
 def test_the_notification_says_what_the_window_shows():
@@ -226,7 +273,7 @@ def test_the_notification_says_what_the_window_shows():
     assert summary.text.splitlines() == [
         service.describe_counts({"uploaded": 1, "lines": summary.lines}),
         *service.describe_lines(summary.lines)]
-    assert summary.text.splitlines() == ["1 file, 1 uploaded", "First sync."]
+    assert summary.text.splitlines() == ["1 new file, 1 uploaded", "First sync."]
 
 
 # --- the types of new files ------------------------------------------------------------------
@@ -337,4 +384,4 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))
     MainWindow._show_last_sync(win)
-    assert len(said) == 1 and said[0].endswith("3 files, 3 uploaded")
+    assert len(said) == 1 and said[0].endswith("3 new files, 3 uploaded")
