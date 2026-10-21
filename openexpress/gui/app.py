@@ -10,7 +10,6 @@ import threading
 import time
 import traceback
 import types
-import urllib.parse
 import weakref
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -32,6 +31,7 @@ from openexpress import (  # noqa: E402
     known_devices,
     netstatus,
     paths,
+    picture_urls,
     service,
 )
 from openexpress.auth import sso, store  # noqa: E402
@@ -230,13 +230,12 @@ def cached_download(http, url: str, name: str) -> Path | None:
 DEVICE_PICTURE_SIZE = 180
 
 
-# The picture of a device that the Garmin account cannot give (the device is not on the
-# account, or nobody is logged in) comes from Garmin's update server instead. Only a PNG from
-# this host is taken, small and quickly, or the generic icon stays.
-PICTURE_HOST = "https://res.garmin.com/"
+# A picture of a device model is taken only from an address picture_urls allows, as a PNG or
+# a JPEG (its type and its first bytes agree), small and quickly, or the generic icon stays.
 PICTURE_MAX_BYTES = 2 * 1024 * 1024
 PICTURE_TIMEOUT_S = 15
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+PICTURE_SIGNATURES = {"image/png": PNG_SIGNATURE, "image/jpeg": b"\xff\xd8\xff"}
 
 
 def picture_from_unit_info(client, device) -> str | None:
@@ -284,18 +283,14 @@ def bike_accessory_text() -> str:
 
 def download_picture(http, url: str, name: str,
                      clock=time.monotonic) -> tuple[Path | None, str]:
-    """Download a device picture into the cache: (file, "") or (None, why not)."""
+    """Download a device picture into the cache: (file, "") or (None, why not). The file
+    keeps its name whether it is a PNG or a JPEG: GTK reads a picture by its content."""
     target = picture_target(name)
     if target is None:
         return None, "not a file name"
-    try:
-        url = download.secure_url(url)  # HTTPS only, as every download
-    except download.DownloadError:
-        return None, "not HTTPS"
-    if not url.startswith(PICTURE_HOST):
-        # Only the host, for the log: never the whole address (its path may say anything).
-        host = urllib.parse.urlsplit(url).hostname or "unknown"
-        return None, f"host {host} is not res.garmin.com"
+    why = picture_urls.refusal(url)  # the host at most, never the whole address
+    if why is not None:
+        return None, why
     deadline = clock() + PICTURE_TIMEOUT_S
     data = bytearray()
     try:
@@ -304,8 +299,9 @@ def download_picture(http, url: str, name: str,
             if resp.status_code != 200:
                 return None, f"HTTP {resp.status_code}"
             kind = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-            if kind != "image/png":
-                return None, "not a PNG"
+            signature = PICTURE_SIGNATURES.get(kind)
+            if signature is None:
+                return None, "not a PNG or JPEG"
             length = resp.headers.get("Content-Length") or ""
             if length.isdigit() and int(length) > PICTURE_MAX_BYTES:
                 return None, "too large"
@@ -317,8 +313,8 @@ def download_picture(http, url: str, name: str,
                     return None, "timeout"
     except Exception as e:  # noqa: BLE001 - pictures are optional
         return None, "timeout" if "Timeout" in type(e).__name__ else "network error"
-    if not bytes(data).startswith(PNG_SIGNATURE):
-        return None, "not a PNG"
+    if not bytes(data).startswith(signature):
+        return None, "not a PNG or JPEG"
     try:
         with cache.using():
             target.parent.mkdir(parents=True, exist_ok=True)

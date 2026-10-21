@@ -1011,14 +1011,16 @@ def test_without_a_login_the_fallback_is_used_too(pictures):
 
 
 @pytest.mark.parametrize("url, response, error, why", [
-    ("https://example.org/x.png", None, None, "host example.org is not res.garmin.com"),
+    ("https://example.org/x.png", None, None, "host example.org is not allowed"),
     ("https://res.garmin.com.example.org/x.png", None, None,
-     "host res.garmin.com.example.org is not res.garmin.com"),
+     "host res.garmin.com.example.org is not allowed"),
     (PICTURE_URL, PictureResponse(status=302), None, "HTTP 302"),  # redirects are not followed
     (PICTURE_URL, PictureResponse(status=404), None, "HTTP 404"),
-    (PICTURE_URL, PictureResponse(kind="text/html"), None, "not a PNG"),
-    (PICTURE_URL, PictureResponse(kind="image/jpeg"), None, "not a PNG"),
-    (PICTURE_URL, PictureResponse(body=b"<html>not a picture</html>"), None, "not a PNG"),
+    (PICTURE_URL, PictureResponse(kind="text/html"), None, "not a PNG or JPEG"),
+    # Said to be a JPEG, but a PNG: the type and the content must agree.
+    (PICTURE_URL, PictureResponse(kind="image/jpeg"), None, "not a PNG or JPEG"),
+    (PICTURE_URL, PictureResponse(body=b"<html>not a picture</html>"), None,
+     "not a PNG or JPEG"),
     (PICTURE_URL, PictureResponse(length=5_000_000), None, "too large"),
     (PICTURE_URL, PictureResponse(body=PNG + b"x" * (2 * 1024 * 1024)), None, "too large"),
     (PICTURE_URL, None, requests.ConnectionError("down"), "network error"),
@@ -1037,6 +1039,42 @@ def test_anything_unexpected_leaves_the_generic_icon(pictures, url, response, er
     if not url.startswith("https://res.garmin.com/"):
         assert client.http.calls == []  # another host is not even asked
         assert "x.png" not in log_file.read_text()  # its host only, never the address
+
+
+JPEG = b"\xff\xd8\xff\xe0" + b"jpeg bytes"
+
+
+@pytest.mark.parametrize("url, response, saved", [
+    ("https://static.garmincdn.com/pumac/fenix.png", PictureResponse(), PNG),
+    (PICTURE_URL, PictureResponse(kind="image/jpeg", body=JPEG), JPEG),
+])
+def test_a_png_or_jpeg_from_an_allowed_host_is_saved(pictures, url, response, saved):
+    """#8: static.garmincdn.com serves device pictures too, and a JPEG is taken as a PNG is.
+    The file keeps its name in the cache: GTK reads a picture by its content."""
+    xdg, _log, _monkeypatch = pictures
+    from openexpress.gui import app
+
+    http = PictureHttp(response)
+    path, why = app.download_picture(http, url, "device-x.png")
+    assert (why, path.name, path.read_bytes()) == ("", "device-x.png", saved)
+    assert [asked for asked, _kw in http.calls] == [url]
+    assert _cache(xdg) == ["device-x.png"]
+
+
+def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
+    """No bucket of Garmin's on S3 is known yet: nothing is asked, and the log says which
+    bucket it was, without the rest of the address or its signature."""
+    xdg, log_file, monkeypatch = pictures
+    url = "https://s3.amazonaws.com/garmin-bucket/devices/x.png?X-Amz-Signature=secret"
+    client = PictureClient(unit_info=_unit_info(url), http=PictureHttp())
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)
+    log = log_file.read_text()
+    assert ("device picture: none (download refused: host s3.amazonaws.com, first segment "
+            "garmin-bucket: not an allowed bucket)") in log
+    assert client.http.calls == [] and _cache(xdg) == []
+    assert "secret" not in log and "Signature" not in log and "devices" not in log
 
 
 def test_a_download_that_takes_too_long_is_given_up(pictures):
@@ -1444,9 +1482,10 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
 # --- pictures over HTTPS only (after 4f3ac65) ---------------------------------------------------
 
 
-def test_a_picture_over_http_is_asked_over_https(xdg):
-    """A picture or an icon whose address is plain HTTP is asked over HTTPS, as every
-    download (download.secure_url); it is saved as before."""
+def test_an_icon_over_http_is_asked_over_https_a_device_picture_is_refused(xdg):
+    """An icon whose address is plain HTTP is asked over HTTPS, as every download
+    (download.secure_url); a device picture only from an HTTPS address (#8), so it is not
+    asked at all."""
     from openexpress.gui import app
 
     icon = types.SimpleNamespace(ok=True, content=b"icon")
@@ -1464,8 +1503,8 @@ def test_a_picture_over_http_is_asked_over_https(xdg):
     assert http.calls == ["https://services.garmin.com/icon/1"]
     pictures = PictureHttp()
     path, why = app.download_picture(pictures, "http://res.garmin.com/en/a.png", "device-a.png")
-    assert (path is not None, why) == (True, "")
-    assert [url for url, _kw in pictures.calls] == ["https://res.garmin.com/en/a.png"]
+    assert (path, why) == (None, "not HTTPS")
+    assert pictures.calls == []
 
 
 @pytest.mark.parametrize("url", ["ftp://res.garmin.com/a.png", "file:///etc/passwd", "a.png"])

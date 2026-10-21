@@ -1,0 +1,60 @@
+"""Which addresses of device pictures openExpress downloads: Garmin's own hosts, over HTTPS
+(#8). The one rule for every picture of a device model, wherever its address comes from (the
+account, Garmin's update server): the window downloads only what passes it.
+
+Amazon S3 is allowed only for a bucket named in S3_BUCKETS, by the first segment of the path
+(s3.amazonaws.com/<bucket>/...) or by the host (<bucket>.s3[.<region>].amazonaws.com). A
+refusal says why in words for the log, with the host and at most that first segment: never
+the rest of the address, nor its query (a signed address carries a token there)."""
+
+from __future__ import annotations
+
+import re
+from urllib.parse import urlsplit
+
+HOSTS = frozenset({"res.garmin.com", "static.garmincdn.com"})
+# Garmin's buckets of device pictures on S3. None is known yet: S3 is refused, and the log
+# names the bucket, so that a real one can be added here.
+S3_BUCKETS: frozenset[str] = frozenset()
+
+_S3_PATH_HOST = re.compile(r"s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com")
+_S3_BUCKET_HOST = re.compile(r"(?P<bucket>[a-z0-9][a-z0-9.-]*?)\.s3(?:[.-][a-z0-9-]+)?"
+                             r"\.amazonaws\.com")
+
+
+def refusal(url) -> str | None:
+    """None when this address of a device picture may be downloaded; else why not."""
+    if not isinstance(url, str) or not url:
+        return "no address"
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return "not an address"
+    if parts.scheme.lower() != "https":
+        return "not HTTPS"
+    host = (parts.hostname or "").lower()
+    if not host:
+        return "not an address"
+    if parts.username is not None or parts.password is not None:
+        return f"host {host}: a user name in the address"
+    if port not in (None, 443):
+        return f"host {host}: port {port}"
+    if host in HOSTS:
+        return None
+    if _S3_PATH_HOST.fullmatch(host):
+        bucket = parts.path.lstrip("/").split("/", 1)[0]
+        if bucket and bucket in S3_BUCKETS:
+            return None
+        return f"host {host}, first segment {bucket or '-'}: not an allowed bucket"
+    hosted = _S3_BUCKET_HOST.fullmatch(host)
+    if hosted is not None:
+        if hosted.group("bucket") in S3_BUCKETS:
+            return None
+        return f"host {host}: not an allowed bucket"
+    return f"host {host} is not allowed"
+
+
+def allowed(url) -> bool:
+    """Whether this address of a device picture may be downloaded (and remembered)."""
+    return refusal(url) is None

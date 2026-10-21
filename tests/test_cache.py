@@ -224,7 +224,7 @@ def test_saving_a_picture_holds_the_cache(cache, monkeypatch):
             return [png]
 
     http = types.SimpleNamespace(get=lambda url, **kw: Stream())
-    path, why = app.download_picture(http, app.PICTURE_HOST + "p.png", "device-x.png")
+    path, why = app.download_picture(http, "https://res.garmin.com/p.png", "device-x.png")
     assert path is not None and why == ""
     assert seen == [True, True] and not in_use()
 
