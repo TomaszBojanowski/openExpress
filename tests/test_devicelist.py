@@ -152,7 +152,7 @@ def test_fields_come_from_the_connected_device_first():
         "kind": "mtp", "connected": True, "on_account": True, "primary": True,
         "last_seen": NOW - 2 * DAY, "image_part_number": "006-B4532-00",
         "image_url": "https://res.garmin.com/en/products/010-02906-11/v/c1_01_md.png",
-        "category": None}
+        "category": None, "image_source": "the account"}
 
 
 def test_fields_of_a_device_not_connected_come_from_the_memory_first():
@@ -177,7 +177,7 @@ def test_a_device_only_on_the_account():
         "kind": None, "connected": False, "on_account": True, "primary": False,
         "last_seen": None, "image_part_number": "006-B4440-00",
         "image_url": "https://res.garmin.com/en/products/010-02890-01/V/c1_01_md.png",
-        "category": "cycling-computer"}
+        "category": "cycling-computer", "image_source": "the account"}
 
 
 def test_a_device_not_on_the_account_has_no_account_fields():
@@ -429,6 +429,64 @@ def test_the_account_list_teaches_the_kind_of_remembered_devices(tmp_path):
                                        {**ACCOUNT_ANSWER[1], "hasOpticalHeartRate": True}]))
     known = known_devices.load()
     assert set(known) == {EDGE} and known[EDGE].category == "cycling-computer"
+
+
+# --- the address of a tile's picture: the account's, else the one remembered ------------------
+
+VENU_PICTURE = "https://res.garmin.com/en/products/010-02430-11/g/cf-lg.png"
+S3_PICTURE = "https://s3.amazonaws.com/garmin-bucket/edge.png?X-Amz-Signature=secret"
+
+
+def _tile_of(tiles, part):
+    (tile,) = [t for t in tiles if t.part_number == part]
+    return tile
+
+
+def test_a_tile_takes_the_remembered_address_when_the_account_gives_none():
+    """Venu 2 is off the account: its tile takes the address remembered with it (from
+    unit-info, when it was last connected), and says so; a device on the account takes the
+    account's address, which is the newer word."""
+    from openexpress import devicelist, known_devices
+
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
+    known_devices.set_image_url(VENU, VENU_PICTURE)
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    known_devices.set_image_url(EDGE, "https://res.garmin.com/en/products/older.png")
+    tiles = devicelist.tiles([], known_devices.load(), account(), logged_in=True)
+    venu, edge = _tile_of(tiles, "006-B3703-00"), _tile_of(tiles, "006-B4440-00")
+    assert (venu.image_url, venu.image_source) == (VENU_PICTURE, "the remembered address")
+    assert (edge.image_url, edge.image_source) == (ACCOUNT_ANSWER[0]["imageUrl"],
+                                                    "the account")
+    tiles = devicelist.tiles([], known_devices.load(), None, logged_in=False)  # offline
+    assert _tile_of(tiles, "006-B4440-00").image_source == "the remembered address"
+
+
+def test_an_account_address_that_is_not_allowed_gives_way_to_the_remembered_one():
+    """The account gives an address on S3 (#8), which is not downloaded: the remembered one
+    is taken instead; with none remembered, the account's stays, so that the log says why
+    there is no picture."""
+    from openexpress import devicelist, known_devices
+
+    answer = account([{**ACCOUNT_ANSWER[0], "imageUrl": S3_PICTURE}])
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    tile = _tile_of(devicelist.tiles([], known_devices.load(), answer, True), "006-B4440-00")
+    assert (tile.image_url, tile.image_source) == (S3_PICTURE, "the account")
+    known_devices.set_image_url(EDGE, VENU_PICTURE)
+    tile = _tile_of(devicelist.tiles([], known_devices.load(), answer, True), "006-B4440-00")
+    assert (tile.image_url, tile.image_source) == (VENU_PICTURE, "the remembered address")
+
+
+def test_the_account_list_keeps_the_picture_addresses_of_remembered_devices():
+    """Only of devices remembered here, and only an address that is allowed."""
+    from openexpress import devicelist, known_devices
+
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", now=1.0)
+    devicelist.remember_picture_addresses(account())
+    known = known_devices.load()
+    assert set(known) == {EDGE} and known[EDGE].image_url == ACCOUNT_ANSWER[0]["imageUrl"]
+    devicelist.remember_picture_addresses(account([{**ACCOUNT_ANSWER[0],
+                                                    "imageUrl": S3_PICTURE}]))
+    assert known_devices.load()[EDGE].image_url == ACCOUNT_ANSWER[0]["imageUrl"]
 
 
 # --- the icon's kind from the model name, as a last resort --------------------------------------

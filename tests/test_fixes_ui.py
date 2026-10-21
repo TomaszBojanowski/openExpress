@@ -1077,6 +1077,41 @@ def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
     assert "secret" not in log and "Signature" not in log and "devices" not in log
 
 
+@pytest.mark.parametrize("logged_in, account_url, unit_info_url, kept", [
+    # Off the account (or nobody logged in): the address from unit-info.
+    (False, None, PICTURE_URL, PICTURE_URL),
+    # On the account: the account's address.
+    (True, "https://res.garmin.com/en/products/account.png", None,
+     "https://res.garmin.com/en/products/account.png"),
+    # An address that is not allowed is not kept: the one before stays.
+    (False, None, "https://s3.amazonaws.com/garmin-bucket/x.png?X-Amz-Signature=s", "before"),
+])
+def test_the_address_of_a_picture_is_kept_with_the_device(pictures, logged_in, account_url,
+                                                          unit_info_url, kept):
+    """The device view keeps the address of its picture with the device remembered, for
+    when the picture is no longer in the cache and the device is not connected."""
+    from openexpress import known_devices
+
+    xdg, _log, monkeypatch = pictures
+    known_devices.remember(SECRET_UNIT, "Test watch", "006-B0000-00", "1.00", "mtp")
+    before = "https://res.garmin.com/en/products/before.png"
+    known_devices.set_image_url(SECRET_UNIT, before)
+
+    class Http(PictureHttp):
+        def get(self, url, **kw):  # the account's picture comes through cached_download
+            self.calls.append((url, kw))
+            return (types.SimpleNamespace(ok=True, content=PNG) if "account" in url
+                    else self.response)
+
+    client = PictureClient(account_url=account_url, unit_info=_unit_info(unit_info_url),
+                           http=Http())
+    win = _picture_window(client, logged_in=logged_in, monkeypatch=monkeypatch)
+    win.show()
+    _finish(win)
+    assert known_devices.load()[SECRET_UNIT].image_url == (before if kept == "before"
+                                                           else kept)
+
+
 def test_a_download_that_takes_too_long_is_given_up(pictures):
     xdg, _log, _monkeypatch = pictures
     from openexpress.gui import app

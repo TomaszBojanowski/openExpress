@@ -1,8 +1,12 @@
 """What this installation remembers of the Garmin devices it has seen, for devices that are
 not connected now: devices.json in the data folder (~/.local/share/openexpress; in the
-Flatpak below XDG_DATA_HOME, ~/.var/app/<app ID>/data). One entry per unit ID, with only
-what GarminDevice.xml says and when the device was seen: no address (an MTP address has the
-serial number), no GarminDevice.xml (it has it too), nothing of the account.
+Flatpak below XDG_DATA_HOME, ~/.var/app/<app ID>/data). One entry per unit ID, with what
+GarminDevice.xml says and when the device was seen, its kind as Garmin tells it, and the
+address of the picture of its model as Garmin gives it (the account's list, or Garmin's
+update server for a device off the account), so that the picture can be downloaded again
+when it is no longer in the cache: a picture of the model, with neither the unit ID nor
+anything of the account in it, and only an address picture_urls allows. No address of the
+device itself (an MTP address has the serial number), no GarminDevice.xml (it has it too).
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
 the sync state, own maps…) stays. The unit ID is never written to the log."""
@@ -16,8 +20,9 @@ import logging
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from openexpress import paths
+from openexpress import paths, picture_urls
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +47,7 @@ class KnownDevice:
     first_seen: float
     last_seen: float
     category: str | None = None  # one of CATEGORIES; None: not known
+    image_url: str | None = None  # the address of its model's picture; None: not known
 
 
 def path() -> Path:
@@ -68,7 +74,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
         old = known.get(unit_id)
         entry = KnownDevice(unit_id, description, part_number, software_version, kind,
                             old.first_seen if old is not None else now, now,
-                            old.category if old is not None else None)
+                            old.category if old is not None else None,
+                            old.image_url if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -102,6 +109,23 @@ def set_category(unit_id: int, category: str) -> bool:
         entry.category = category
         _write(known)
     log.info("devices: %s is a %s", entry.part_number, category)
+    return True
+
+
+def set_image_url(unit_id: int, url) -> bool:
+    """Keep the address of the picture of a device remembered, as Garmin gives it (a newer one
+    replaces the one before); whether it changed. Only an address picture_urls allows; a
+    device that is not remembered gets no entry for it. The log names the host only."""
+    if not picture_urls.allowed(url):
+        return False
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable or entry.image_url == url:
+            return False
+        entry.image_url = url
+        _write(known)
+    log.info("devices: the picture of %s is at %s", entry.part_number, urlsplit(url).hostname)
     return True
 
 
@@ -147,10 +171,12 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
         known = {}
         for key, value in data["devices"].items():
             category = value.get("category")
+            image_url = value.get("image_url")
             entry = KnownDevice(int(key), str(value["description"]), str(value["part_number"]),
                                 str(value["software_version"]), str(value["kind"]),
                                 float(value["first_seen"]), float(value["last_seen"]),
-                                category if category in CATEGORIES else None)
+                                category if category in CATEGORIES else None,
+                                image_url if picture_urls.allowed(image_url) else None)
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -164,8 +190,9 @@ def _write(known: dict[int, KnownDevice]) -> None:
     for unit_id, entry in sorted(known.items()):
         fields = asdict(entry)
         del fields["unit_id"]  # it is the key
-        if fields["category"] is None:
-            del fields["category"]  # optional: written only when known
+        for optional in ("category", "image_url"):
+            if fields[optional] is None:
+                del fields[optional]  # written only when known
         devices[str(unit_id)] = fields
     paths.write_private(path(), json.dumps({"version": FORMAT, "devices": devices}, indent=1,
                                            ensure_ascii=False))

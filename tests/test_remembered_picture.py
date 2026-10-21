@@ -220,3 +220,66 @@ def test_a_picture_is_loaded_without_a_deprecated_call(tmp_path):
         assert isinstance(texture, Gdk.Texture)
         assert (texture.get_width(), texture.get_height()) == (2, 2)
         assert app.load_texture(bad) is None
+
+
+# --- the picture of a device off the account, from the address remembered with it ------------
+
+REMEMBERED_UNIT = 1234567892
+REMEMBERED_URL = "https://res.garmin.com/en/products/test-venu.png"
+
+
+def _remembered_with_address():
+    from openexpress import known_devices
+
+    known_devices.remember(REMEMBERED_UNIT, "Test watch", PART, "1.00", "mtp")
+    assert known_devices.set_image_url(REMEMBERED_UNIT, REMEMBERED_URL)
+    return known_devices.load()[REMEMBERED_UNIT]
+
+
+@pytest.mark.needs_display
+def test_a_tile_off_the_account_gets_its_picture_from_the_remembered_address(monkeypatch,
+                                                                              caplog):
+    """Venu 2, 21 October 2026: off the account, its picture gone with the cache
+    (Preferences, Clear), and unit-info is not asked for a device that is not connected. Its
+    address was remembered when it was last connected: the start page downloads it again."""
+    from openexpress import devicelist, known_devices
+
+    downloads = _fake_download(monkeypatch)
+    _remembered_with_address()
+    (tile,) = devicelist.tiles([], known_devices.load(), None, False)
+    win = _window()
+    shown = []
+    win.start = types.SimpleNamespace(set_picture=lambda part, texture: shown.append(part))
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._load_tile_pictures([tile])
+    assert downloads == [REMEMBERED_URL] and shown == [PART]
+    assert (f"start page: picture of {PART} from the remembered address"
+            in [r.getMessage() for r in caplog.records])
+
+
+@pytest.mark.needs_display
+def test_the_page_of_a_device_off_the_account_gets_it_from_there_too(monkeypatch, caplog):
+    """Its page opened without a tile (as from the list of devices): the same address."""
+    downloads = _fake_download(monkeypatch)
+    known = _remembered_with_address()
+    win = _window()
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._show_remembered(known)
+    icons, paintables = _shown(win.remembered.page)
+    assert downloads == [REMEMBERED_URL] and len(paintables) == 1 and icons == []
+    assert (f"device page: picture of {PART} from the remembered address"
+            in [r.getMessage() for r in caplog.records])
+
+
+def test_the_account_list_read_by_the_window_keeps_the_picture_addresses():
+    """However the window reads the account's list (_set_account), the addresses of the
+    pictures of the devices remembered here are kept with them, as their kinds are."""
+    from openexpress import known_devices
+    from openexpress.gui.app import MainWindow
+
+    known_devices.remember(1234567891, "Test bike computer", ACCOUNT_PART, "2.00", "mtp")
+    win = types.SimpleNamespace(_account=None,
+                                in_background=lambda fn, on_done, on_error=None: on_done(fn()))
+    MainWindow._set_account(win, [_account_entry()], draw=False)
+    known = known_devices.load()[1234567891]
+    assert (known.image_url, known.category) == (ACCOUNT_URL, "cycling-computer")

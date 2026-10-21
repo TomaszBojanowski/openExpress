@@ -13,7 +13,7 @@ import logging
 import unicodedata
 from dataclasses import dataclass
 
-from openexpress import known_devices
+from openexpress import known_devices, picture_urls
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH
 from openexpress.service import unit_id_of
@@ -60,8 +60,10 @@ class Tile:
     primary: bool  # the account's primary device (its primaryActivityTrackerIndicator)
     last_seen: float | None  # from what this installation remembers only
     image_part_number: str  # the key of its picture in the cache
-    image_url: str | None  # the account's address of its picture
+    image_url: str | None  # the address of its picture: the account's, else the remembered one
     category: str | None
+    # Where image_url comes from, for the log: "the account" or "the remembered address".
+    image_source: str | None = None
 
 
 def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
@@ -132,6 +134,8 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
     account = account_fields(entry) if entry is not None else None
     part = part_number or (known.part_number if known else "") or (
         account["part_number"] if account else "")
+    image_url, image_source = picture_address(account["image_url"] if account else None,
+                                              known.image_url if known else None)
     return Tile(
         description=description or (known.description if known else "") or (
             account["description"] if account else ""),
@@ -144,11 +148,28 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         primary=bool(account and account["primary"]),
         last_seen=known.last_seen if known else None,
         image_part_number=part,
-        image_url=account["image_url"] if account else None,
+        image_url=image_url,
         # The account's word first, else what is remembered (also offline).
         category=(account["category"] if account else None) or (
             known.category if known else None),
+        image_source=image_source,
     )
+
+
+PICTURE_FROM_ACCOUNT, PICTURE_REMEMBERED = "the account", "the remembered address"
+
+
+def picture_address(account_url: str | None, remembered_url: str | None):
+    """(address, where it comes from) of a tile's picture: the account's, which is the newer
+    word; the one remembered with the device when the account gives none it may download
+    (none for a device off the account, or offline; one on S3, #8). With neither allowed,
+    the account's, so that the log says why there is no picture."""
+    if remembered_url and not picture_urls.allowed(account_url) and picture_urls.allowed(
+            remembered_url):
+        return remembered_url, PICTURE_REMEMBERED
+    if account_url:
+        return account_url, PICTURE_FROM_ACCOUNT
+    return None, None
 
 
 def kind_from_name(name: str | None) -> str | None:
@@ -205,6 +226,18 @@ def account_fields(entry: dict) -> dict:
         "image_url": text("imageurl") or None,
         "category": category,
     }
+
+
+def remember_picture_addresses(account) -> None:
+    """Keep the addresses of the pictures the account gives for the devices remembered here
+    (devices.json), for when a picture is no longer in the cache and the account is not
+    there; only an address that may be downloaded (known_devices.set_image_url)."""
+    remembered = known_devices.load()
+    for entry in account or []:
+        unit_id = unit_id_of(entry.get("unitid"))
+        url = account_fields(entry)["image_url"]
+        if unit_id in remembered and url:
+            known_devices.set_image_url(unit_id, url)
 
 
 def remember_kinds(account) -> None:

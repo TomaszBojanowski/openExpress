@@ -314,3 +314,59 @@ def test_the_kind_is_kept_and_optional(store, caplog):
     data["devices"][str(EDGE)]["category"] = "toaster"
     store.write_text(json.dumps(data))
     assert known_devices.load()[EDGE].category is None
+
+
+VENU = 3000000004
+PICTURE = "https://res.garmin.com/en/products/010-02430-11/g/cf-lg.png"
+NEWER_PICTURE = "https://static.garmincdn.com/pumac/venu2.jpg"
+
+
+def test_the_address_of_a_picture_is_kept_and_optional(store, caplog):
+    """The address of the picture of a model (Garmin's: from the account, or its update
+    server for a device off the account) is an optional field, as the kind: a file without it
+    is read as before, a device without one is written without the field; set_image_url keeps
+    it, a newer address replaces it, a device seen again keeps it. The log names the part
+    number and the host, never the unit ID or the whole address."""
+    import json
+
+    from openexpress import known_devices
+
+    store.parent.mkdir(parents=True)
+    store.write_text(json.dumps({"version": 1, "devices": {str(VENU): {
+        "description": "Venu 2", "part_number": "006-B3703-00", "software_version": "19.05",
+        "kind": "mtp", "first_seen": 1.0, "last_seen": 1.0}}}))
+    assert known_devices.load()[VENU].image_url is None
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=2.0)
+    assert "image_url" not in json.loads(store.read_text())["devices"][str(FENIX)]
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert known_devices.set_image_url(VENU, PICTURE) is True
+    assert "devices: the picture of 006-B3703-00 is at res.garmin.com" in caplog.text
+    assert str(VENU) not in caplog.text and "010-02430-11" not in caplog.text
+    assert known_devices.set_image_url(VENU, PICTURE) is False  # no change
+    assert known_devices.set_image_url(VENU, NEWER_PICTURE) is True
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.06", "mtp", now=3.0)
+    assert known_devices.load()[VENU].image_url == NEWER_PICTURE
+    assert json.loads(store.read_text())["devices"][str(VENU)]["image_url"] == NEWER_PICTURE
+
+
+@pytest.mark.parametrize("url", [
+    "http://res.garmin.com/a.png", "https://example.org/a.png",
+    "https://s3.amazonaws.com/garmin-bucket/a.png?X-Amz-Signature=secret", "", None])
+def test_an_address_that_is_not_allowed_is_never_kept(store, url):
+    """Only an address that picture_urls allows is kept (the one rule of the downloads); one
+    written into the file by other means reads as none. A device not remembered gets no
+    entry for it."""
+    import json
+
+    from openexpress import known_devices
+
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
+    assert known_devices.set_image_url(VENU, PICTURE) is True
+    assert known_devices.set_image_url(VENU, url) is False
+    assert known_devices.load()[VENU].image_url == PICTURE  # the one before stays
+    assert known_devices.set_image_url(3000000009, PICTURE) is False
+    assert 3000000009 not in known_devices.load()
+    data = json.loads(store.read_text())
+    data["devices"][str(VENU)]["image_url"] = url or 7
+    store.write_text(json.dumps(data))
+    assert known_devices.load()[VENU].image_url is None

@@ -447,9 +447,10 @@ def cached_texture(part: str):
     return load_texture(path) if path.exists() else None
 
 
-def tile_picture(part: str, url: str | None):
+def tile_picture(part: str, url: str | None, source: str | None = None):
     """(texture, where it came from) or (None, why not): the file in the cache by part
-    number, else the account's address downloaded into it."""
+    number, else the address of the tile downloaded into it; `source` says whose address it
+    is (devicelist: the account's, or the one remembered with the device)."""
     path = device_picture_path(part)
     if path.exists():
         texture = cached_texture(part)
@@ -461,8 +462,21 @@ def tile_picture(part: str, url: str | None):
     if path is None:
         return None, f"download refused: {why}"
     texture = load_texture(path)
-    return (texture, "the account") if texture is not None else (
+    return (texture, source or devicelist.PICTURE_FROM_ACCOUNT) if texture is not None else (
         None, "the file is not a picture")
+
+
+def remember_picture_address(device, url: str | None) -> None:
+    """Keep the address of the picture of the open device with it (known_devices), for when
+    its picture is no longer in the cache and it is not connected; only an address that may
+    be downloaded. Optional: a failure is only written to the log."""
+    unit_id = getattr(device, "unit_id", None)
+    if not unit_id or not url:
+        return
+    try:
+        known_devices.set_image_url(unit_id, url)
+    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
+        log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
 
 
 def open_device_kind(s, account) -> str | None:
@@ -1811,8 +1825,13 @@ class MainWindow(Adw.ApplicationWindow):
             return
         self._account = devices
         if devices:
-            # The kinds it tells of the devices remembered, kept for when it is not there.
-            self.in_background(lambda: devicelist.remember_kinds(devices), lambda _r: None)
+            # The kinds it tells of the devices remembered and the addresses of their
+            # pictures, kept for when it is not there.
+            def remember():
+                devicelist.remember_kinds(devices)
+                devicelist.remember_picture_addresses(devices)
+
+            self.in_background(remember, lambda _r: None)
         if draw and (self._on_start_page() or self._on_remembered_page()):
             self._render_start()  # under the view of a remembered device, which stays
 
@@ -1947,14 +1966,16 @@ class MainWindow(Adw.ApplicationWindow):
                 with_device_picture(self, tile.image_part_number, tile.image_url,
                                     lambda texture, source, part=tile.image_part_number:
                                         self._tile_picture_done(part, texture, source),
-                                    tile_picture)
+                                    lambda part, url, source=tile.image_source:
+                                        tile_picture(part, url, source))
 
     def _tile_picture_done(self, part: str, texture, source: str) -> None:
         if source != "memory":
             log.info("start page: picture of %s from %s", part, source)
         self.start.set_picture(part, texture)
 
-    def _show_page_picture(self, part: str, url: str | None, category, name: str) -> None:
+    def _show_page_picture(self, part: str, url: str | None, category, name: str,
+                           source: str | None = None) -> None:
         """The image of the page of a device that is not connected, as its tile has it: the
         icon of its kind at once (never the program's; by the model name when Garmin says
         none), then its picture, if any; a picture that comes after another device was
@@ -1966,7 +1987,8 @@ class MainWindow(Adw.ApplicationWindow):
                 log.info("device page: picture of %s from %s", part, source)
 
         if part:
-            with_device_picture(self, part, url, use, tile_picture)
+            with_device_picture(self, part, url, use,
+                                lambda part, url: tile_picture(part, url, source))
 
     def _open_tile(self, index: int) -> None:
         """A tile clicked (its place in _start_entries): the open device's view, that device
@@ -2026,9 +2048,10 @@ class MainWindow(Adw.ApplicationWindow):
             last_sync=last_sync)
         if tile is not None:
             self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
-                                    tile.description)
+                                    tile.description, tile.image_source)
         else:
-            self._show_page_picture(known.part_number, None, known.category, known.description)
+            self._show_page_picture(known.part_number, known.image_url, known.category,
+                                    known.description, devicelist.PICTURE_REMEMBERED)
         self._remembered_unit = known.unit_id
         self._remembered_from_account = False
         self.navigation.push(self.remembered.page)
@@ -2369,12 +2392,14 @@ class MainWindow(Adw.ApplicationWindow):
                 except Exception as e:  # noqa: BLE001 - optional; the other source is tried
                     log.info("device picture: the account failed (%s)", type(e).__name__)
                     url = None
+                remember_picture_address(s.device, url)
                 path = cached_download(s.client.http, url, name) if url else None
                 if path:
                     return path, "the account"
             url = picture_from_unit_info(s.client, s.device)
             if not url:
                 return None, "unit-info gave no address"
+            remember_picture_address(s.device, url)
             path, why = download_picture(s.client.http, url, name)
             return (path, "unit-info") if path else (None, f"download refused: {why}")
 
