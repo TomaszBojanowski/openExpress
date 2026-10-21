@@ -108,6 +108,9 @@ REPLUG_HINT_S = 15
 # TRANSLATORS: added to the page while a device on USB is not offered over MTP
 REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unplug the cable and "
                  "plug it back in.")
+# TRANSLATORS: the same, after the sentence about a PIN, which names the device already
+REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, unplug the cable "
+                           "and plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 log = logging.getLogger(__name__)
@@ -1576,7 +1579,9 @@ class MainWindow(Adw.ApplicationWindow):
             if waited_s < WAIT_FOR_DEVICE_S:
                 # One sentence becomes two: each with its full stop.
                 text = _("This takes a moment after the cable is plugged in.")
-            return title, f"{text} {_(REPLUG_HINT)}", busy
+                return title, f"{text} {_(REPLUG_HINT)}", busy
+            # After the sentence about a PIN (not_ready_text), which names the device.
+            return title, f"{text} {_(REPLUG_HINT_AFTER_PIN)}", busy
         if state == ABSENT:
             return (_("Connect your device"),
                     _("Connect your Garmin device with a USB cable. "
