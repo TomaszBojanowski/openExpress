@@ -16,6 +16,7 @@ import posixpath
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NamedTuple
 
 from openexpress import applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
@@ -135,30 +136,49 @@ NOT_ON_THE_DEVICE = "not on the device"
 MD5_DIFFERS = "MD5 differs"
 
 
-def presence(storage: Storage, u: SoftwareUpdate) -> str:
+class Presence(NamedTuple):
+    """Whether the file of an offered update is on the device (`why`: MATCHES, or why not, in
+    words for the log) and the path of the file found at its place (`real`), if any."""
+
+    why: str
+    real: str | None = None
+
+
+def presence(storage: Storage, u: SoftwareUpdate) -> Presence:
     """Whether the file of this update is on the device already (MATCHES: same size and same
-    MD5), and if not, why not, in words for the log. Only reads. Without a size and an MD5
-    from the server nothing can be said."""
+    MD5), and if not, why not. The file is looked for in any letter case. Only reads. Without
+    a size and an MD5 from the server nothing can be said."""
     md5 = download.normalize_md5(u.md5) if u.md5 else None
     if not u.device_path or not u.size or md5 is None:
-        return "not compared (no size or MD5 from the server)"
+        return Presence("not compared (no size or MD5 from the server)")
+    real = None
     try:
         real = storage.resolve(u.device_path)
         size = storage.size(real) if real is not None else None
         if size is None:
-            return NOT_ON_THE_DEVICE
+            return Presence(NOT_ON_THE_DEVICE)
         if size != u.size:
-            return (f"size differs ({applog.size(size)} on the device, "
-                    f"{applog.size(u.size)} offered)")
-        return MATCHES if hashlib.md5(storage.read(real)).hexdigest() == md5 else MD5_DIFFERS
+            return Presence(f"size differs ({applog.size(size)} on the device, "
+                            f"{applog.size(u.size)} offered)", real)
+        same = hashlib.md5(storage.read(real)).hexdigest() == md5
+        return Presence(MATCHES if same else MD5_DIFFERS, real)
     except DeviceError as e:
         log.info("updates: cannot compare %s with the device: %s", u.part_number, e)
-        return "not compared (cannot be read)"
+        return Presence("not compared (cannot be read)", real)
 
 
 def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
     """Whether the file of this update is on the device already: same size and same MD5."""
-    return presence(storage, u) == MATCHES
+    return presence(storage, u).why == MATCHES
+
+
+def _where(u: SoftwareUpdate, found: Presence) -> str:
+    """The place of an update's file for the log: the server's path, and the file on the
+    device too when its name has another letter case (its folder's case is the device's
+    own and is written into as it is)."""
+    if found.real and posixpath.basename(found.real) != posixpath.basename(u.device_path):
+        return f"{u.device_path} (on the device: {found.real})"
+    return u.device_path
 
 
 def component_count(device) -> int | None:
@@ -178,11 +198,11 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
     found = []
     for u in offered:
         found.append(presence(storage, u))
-        u.on_device = found[-1] == MATCHES
+        u.on_device = found[-1].why == MATCHES
     # For each: where its file goes on the device, from the device's folder, and whether it
     # is there (#11); never an address (a download address carries a token).
-    named = ", ".join(f"{u.part_number} {u.version} at {u.device_path}: {why}"
-                      for u, why in zip(offered[:LOG_ITEMS], found, strict=False))
+    named = ", ".join(f"{u.part_number} {u.version} at {_where(u, p)}: {p.why}"
+                      for u, p in zip(offered[:LOG_ITEMS], found, strict=False))
     if len(offered) > LOG_ITEMS:
         named += f", … and {len(offered) - LOG_ITEMS} more"
     log.info("updates: %d offered%s, %d of them already on the device%s", len(offered),
@@ -359,6 +379,7 @@ def _install(
         local = local_files[u.key]
         size = local.stat().st_size
         progress(_("Copying to the device: {path}").format(path=u.device_path))
+        _clear_the_place(storage, u)
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing is deleted here.
         real = storage.write_file(u.device_path, local, transfer_progress)
@@ -373,6 +394,36 @@ def _install(
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(size), real)
     return report
+
+
+# Left by a device that takes an update in parts (Garmin Express deletes it before it writes
+# a system update, for devices with incremental updates).
+LEFTOVER_FILE = "GUPDATE.TMP"
+
+
+def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
+    """Before the file of an update is written, as Garmin Express does: a file at its place
+    whose name differs only in letter case is deleted, so that the new file has exactly the
+    name the server gives (an Edge 1050 did not install GUPDATE.GSP written over its own
+    GUPDATE.gsp, 21.10.2026); for a system update also a leftover GUPDATE.TMP in the same
+    folder. A file of exactly that name is replaced by the copy itself (on a drive only once
+    the new one is whole). Names compared in any letter case; the log names what is deleted."""
+    parent, name = posixpath.split(u.device_path)
+    real_parent = storage.resolve(parent) if parent else ""
+    if real_parent is None:
+        return  # no folder yet: nothing there
+    for e in storage.listdir(real_parent):
+        if e.is_dir:
+            continue
+        other_case = e.name != name and e.name.casefold() == name.casefold()
+        leftover = u.is_system and e.name.casefold() == LEFTOVER_FILE.casefold()
+        if not (other_case or leftover):
+            continue
+        real = posixpath.join(real_parent, e.name) if real_parent else e.name
+        storage.delete(real)
+        log.info("software update: %s %s: deleted %s (%s), %s", u.part_number, u.version, real,
+                 applog.size(e.size), "its file in another letter case" if other_case
+                 else "a leftover of an earlier update")
 
 
 def install(*args, **kwargs) -> InstallReport:

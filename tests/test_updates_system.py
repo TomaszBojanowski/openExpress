@@ -1275,6 +1275,107 @@ def test_over_mtp_the_old_file_still_counts_as_freed(device_root, tmp_path, monk
     assert updates.check_space(OverMtp(device_root), [font])[0] == font.size - 3
 
 
+# --- the file of an update gets exactly the name the server gives, as in Garmin Express -------
+
+
+class _OverMtp(LocalStorage):
+    """The MTP way: gvfs deletes the old file before it sends the new one."""
+
+    replaces_atomically = False
+
+
+def _offered_from_nowhere(tmp_path, monkeypatch):
+    """The bundle (a system update, Garmin/GUPDATE.GSP) and the font of server_answer(), each
+    downloaded with its own content."""
+    bundle, font = sorted(updates.parse_updates(lower_keys(server_answer())),
+                          key=lambda u: not u.is_system)
+    files = {bundle.filename: BUNDLE, font.filename: FONT}
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(files[dest.name])
+        return dest
+
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    return bundle, font
+
+
+def _logged(caplog, prefix):
+    return [r.getMessage() for r in caplog.records if r.getMessage().startswith(prefix)]
+
+
+def _gupdate_files(folder):
+    return sorted(p.name for p in folder.iterdir() if p.name.upper().startswith("GUPDATE"))
+
+
+@pytest.mark.parametrize("storage_class", [LocalStorage, _OverMtp])
+def test_a_file_in_another_letter_case_gives_way_to_the_name_from_the_server(
+        device_root, tmp_path, monkeypatch, caplog, storage_class):
+    """Edge 1050, 21.10.2026: GUPDATE.gsp of 2_442_874 B was on the device, the server gives
+    GUPDATE.GSP; written over it, the update kept the old name and was not installed. As Garmin
+    Express: the old file is deleted first, the new one has exactly the server's name, and the
+    log names the file on the device too."""
+    bundle, _font = _offered_from_nowhere(tmp_path, monkeypatch)
+    garmin = device_root / "GARMIN"
+    (garmin / "GUPDATE.gsp").write_bytes(bytes(2_442_874))
+    storage = storage_class(device_root)
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.mark_present(storage, [bundle])
+        updates.install([bundle], storage)
+    assert _gupdate_files(garmin) == ["GUPDATE.GSP"]
+    assert (garmin / "GUPDATE.GSP").read_bytes() == BUNDLE
+    assert (garmin / "GUPDATE.GSP").stat().st_size == bundle.size
+    assert _logged(caplog, "updates: ") == [
+        ("updates: 1 offered (006-V0000-00 23.40 at Garmin/GUPDATE.GSP (on the device: "
+         "GARMIN/GUPDATE.gsp): size differs (2_442_874 B on the device, 12 B offered)), 0 of "
+         "them already on the device")]
+    assert _logged(caplog, "software update: ") == [
+        ("software update: 006-V0000-00 23.40: deleted GARMIN/GUPDATE.gsp (2_442_874 B), its "
+         "file in another letter case"),
+        "software update: 006-V0000-00 23.40 (12 B) copied to GARMIN/GUPDATE.GSP"]
+
+
+@pytest.mark.parametrize("storage_class", [LocalStorage, _OverMtp])
+def test_a_system_update_deletes_a_leftover_gupdate_tmp_first(device_root, tmp_path,
+                                                              monkeypatch, caplog, storage_class):
+    """As Garmin Express for devices that take updates in parts: GUPDATE.TMP (any letter case)
+    next to the file of a system update is deleted before it is written. Another update leaves
+    such a file where it is."""
+    bundle, font = _offered_from_nowhere(tmp_path, monkeypatch)
+    garmin = device_root / "GARMIN"
+    (garmin / "gupdate.tmp").write_bytes(bytes(1234))
+    (garmin / "Font").mkdir(exist_ok=True)
+    (garmin / "Font" / "GUPDATE.TMP").write_bytes(b"not next to a system update")
+    storage = storage_class(device_root)
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.install([font, bundle], storage)
+    assert _gupdate_files(garmin) == ["GUPDATE.GSP"]
+    assert (garmin / "GUPDATE.GSP").read_bytes() == BUNDLE
+    assert (garmin / "Font" / "GUPDATE.TMP").read_bytes() == b"not next to a system update"
+    assert ("software update: 006-V0000-00 23.40: deleted GARMIN/gupdate.tmp (1_234 B), a "
+            "leftover of an earlier update") in _logged(caplog, "software update: ")
+
+
+@pytest.mark.parametrize("storage_class", [LocalStorage, _OverMtp])
+def test_without_a_file_at_its_place_an_update_gets_the_name_from_the_server(
+        device_root, tmp_path, monkeypatch, caplog, storage_class):
+    """Nothing to delete: the copy only. A folder in another letter case (GARMIN for the
+    server's Garmin) is the device's own and is written into as it is; the log does not name
+    the file twice for it."""
+    bundle, _font = _offered_from_nowhere(tmp_path, monkeypatch)
+    storage = storage_class(device_root)
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        updates.install([bundle], storage)
+        updates.mark_present(storage, [bundle])
+    assert _gupdate_files(device_root / "GARMIN") == ["GUPDATE.GSP"]
+    assert _logged(caplog, "software update: ") == [
+        "software update: 006-V0000-00 23.40 (12 B) copied to GARMIN/GUPDATE.GSP"]
+    assert _logged(caplog, "updates: ") == [
+        ("updates: 1 offered (006-V0000-00 23.40 at Garmin/GUPDATE.GSP: matches), 1 of them "
+         "already on the device")]
+
+
 # --- names from the server never lead out of the cache (review of 106cd25) ---------------------
 
 
