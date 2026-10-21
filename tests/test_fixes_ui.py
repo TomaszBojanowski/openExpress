@@ -1112,6 +1112,36 @@ def test_the_address_of_a_picture_is_kept_with_the_device(pictures, logged_in, a
                                                            else kept)
 
 
+def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(pictures):
+    """Venu 2, 21.10.2026 (from source): its picture was in the cache, so unit-info was not
+    asked and the address of the picture was not kept; once the cache is cleared it would be
+    gone again. Now unit-info is asked for the address alone (the file in the cache stays as it
+    is), once: with the address kept, nothing is asked. A device on the account gets its
+    address from the account's list, not here."""
+    from openexpress import known_devices
+
+    xdg, _log, monkeypatch = pictures
+    known_devices.remember(SECRET_UNIT, "Test watch", "006-B0000-00", "1.00", "mtp")
+    cached = _save(xdg, "device-006-B0000-00.png")
+    before = cached.stat().st_mtime_ns
+    client = PictureClient(unit_info=_unit_info(), http=PictureHttp())
+    win = _picture_window(client, monkeypatch=monkeypatch)
+    win.show()
+    assert win.shown == [("texture", PNG)]  # at once, from the cache
+    _finish(win)
+    assert client.asked == ["unit-info"] and client.http.calls == []  # the address only
+    assert known_devices.load()[SECRET_UNIT].image_url == PICTURE_URL
+    assert cached.stat().st_mtime_ns == before and _cache(xdg) == ["device-006-B0000-00.png"]
+    for logged_in in (False, True):  # the address kept; or a device on the account
+        again = PictureClient(unit_info=_unit_info(), http=PictureHttp())
+        win = _picture_window(again, logged_in=logged_in, monkeypatch=monkeypatch)
+        if logged_in:
+            known_devices.forget(SECRET_UNIT)
+            known_devices.remember(SECRET_UNIT, "Test watch", "006-B0000-00", "1.00", "mtp")
+        win.show()
+        assert win.jobs == [] and again.asked == [], logged_in
+
+
 def test_a_download_that_takes_too_long_is_given_up(pictures):
     xdg, _log, _monkeypatch = pictures
     from openexpress.gui import app

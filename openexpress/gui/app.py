@@ -477,6 +477,14 @@ def tile_picture(part: str, url: str | None, source: str | None = None):
         None, "the file is not a picture")
 
 
+def picture_address_known(device) -> bool:
+    """Whether the address of the picture of this device is kept with it already; True also
+    for a device that is not remembered (there is nothing to keep it with)."""
+    unit_id = getattr(device, "unit_id", None)
+    entry = known_devices.load().get(unit_id) if unit_id else None
+    return entry is None or entry.image_url is not None
+
+
 def remember_picture_address(device, url: str | None) -> None:
     """Keep the address of the picture of the open device with it (known_devices), for when
     its picture is no longer in the cache and it is not connected; only an address that may
@@ -2396,6 +2404,10 @@ class MainWindow(Adw.ApplicationWindow):
         account first, then unit-info, and keeps it for every view."""
         s = self.session
         part = s.device.part_number
+        # The account is asked only about a device that is on it; never about a Garmin device
+        # in mass storage mode, which it was not checked for.
+        on_account = (s.logged_in and s.ownership_error is None
+                      and not getattr(s, "mass_storage", False))
         texture = pictures.known(self, part)
         if texture is None:
             texture = cached_texture(part)
@@ -2404,13 +2416,17 @@ class MainWindow(Adw.ApplicationWindow):
                 log.info("device picture: from the cache")
         if texture is not None:
             self._set_device_texture(texture)
+            if not on_account and not picture_address_known(s.device):
+                # Off the account its address comes only from unit-info, while it is
+                # connected: asked now for the address alone, so that the picture can come
+                # back once the cache is cleared (a Venu 2, 21.10.2026). The file stays.
+                self.in_background(
+                    lambda: remember_picture_address(s.device,
+                                                     picture_from_unit_info(s.client, s.device)),
+                    lambda _r: None)
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
-        # The account is asked only about a device that is on it; never about a Garmin device
-        # in mass storage mode, which it was not checked for.
-        on_account = (s.logged_in and s.ownership_error is None
-                      and not getattr(s, "mass_storage", False))
         name = device_picture_path(part).name
 
         def work():
