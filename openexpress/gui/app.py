@@ -817,6 +817,34 @@ def visible_view(win) -> View:
     return View(Page.DEVICE)
 
 
+# Adw.WrapBox is in libadwaita 1.7; with an older one (the window works from 1.5) a FlowBox,
+# which puts the widgets in columns across its lines: good for a row of buttons.
+WRAP_BOX = getattr(Adw, "WrapBox", None)
+
+
+def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
+    """The widgets side by side and centred, `spacing` apart; those that do not fit the width
+    of the window (MIN_WINDOW at the narrowest) go on to the next line, centred too, `spacing`
+    below."""
+    if WRAP_BOX is not None:
+        row = WRAP_BOX(child_spacing=spacing, line_spacing=spacing, align=0.5,
+                       halign=Gtk.Align.CENTER, **props)
+        for widget in widgets:
+            row.append(widget)
+        return row
+    row = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
+                      column_spacing=spacing, row_spacing=spacing, min_children_per_line=1,
+                      max_children_per_line=max(1, len(widgets)), halign=Gtk.Align.CENTER,
+                      **props)
+    row.add_css_class("oe-wrap")  # no room of its own around each widget (start.CSS)
+    for widget in widgets:
+        row.append(widget)
+        place = widget.get_parent()  # the FlowBoxChild it is put in
+        place.set_focusable(False)  # the widget itself takes the focus, as in a box
+        place.set_halign(Gtk.Align.CENTER)
+    return row
+
+
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -2272,8 +2300,10 @@ class MainWindow(Adw.ApplicationWindow):
         title = Gtk.Label(label=d.description, wrap=True, justify=Gtk.Justification.CENTER)
         title.add_css_class("title-1")
         box.append(title)
+        # It wraps, as the name above it: the window gets as narrow as MIN_WINDOW.
         self.software_label = Gtk.Label(
-            label=_("Software {version}").format(version=d.software_version_str))
+            label=_("Software {version}").format(version=d.software_version_str), wrap=True,
+            justify=Gtk.Justification.CENTER)
         self.software_label.add_css_class("dim-label")
         box.append(self.software_label)
         hero.add(box)
@@ -3117,10 +3147,11 @@ class MainWindow(Adw.ApplicationWindow):
             versions, size = f"{d.software_version_str}{ARROW}{system.version}", _human(system.size)
             subtitle = f"{versions} · {size}"
             if system.is_beta:
-                # Three parts, so that "Beta" can have the warning colour of the theme (light
-                # and dark); Pango markup knows no colours of the theme.
+                # The versions, "Beta" and the rest apart, so that "Beta" can have the warning
+                # colour of the theme (light and dark); Pango markup knows no colours of the
+                # theme.
                 # TRANSLATORS: marks a beta version of the device software
-                subtitle = (f"{versions} · ", _("Beta"), f" · {size}")
+                subtitle = (versions, _("Beta"), size)
             detail = f"{system.title} · {system.severity_text} · {system.filename}"
             # TRANSLATORS: button
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
@@ -3140,7 +3171,7 @@ class MainWindow(Adw.ApplicationWindow):
                 disconnect = _("disconnect the device to install it")
             subtitle = f"{versions} · {disconnect}"
             if ready.is_beta:
-                subtitle = (f"{versions} · ", _("Beta"), f" · {disconnect}")
+                subtitle = (versions, _("Beta"), disconnect)
             detail = f"{ready.title} · {ready.severity_text} · {ready.filename}"
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
@@ -3169,18 +3200,32 @@ class MainWindow(Adw.ApplicationWindow):
                              (detail, ["caption", "dim-label"]),
                              (_(upd.BETA_OFFERED) if beta else None, ["caption", "dim-label"])):
             if isinstance(text, tuple):  # a beta version: "Beta" stands out
-                line = Gtk.Box(halign=Gtk.Align.CENTER)
-                for part, part_styles in zip(text, (styles, ["warning", "heading"], styles)):
-                    line.append(label(part, part_styles))
-                box.append(line)
+                versions, word, after = text
+                # In a narrow window the parts go on to the next line: a separator stays
+                # with the part before it, never at the start of a line.
+                if WRAP_BOX is None:
+                    # A FlowBox puts parts in columns: one text that wraps, "Beta" in bold
+                    # (Pango markup knows no colours of the theme); a hard space before
+                    # each separator.
+                    line = label("", styles, wrap=True, justify=Gtk.Justification.CENTER,
+                                 max_width_chars=50)
+                    line.set_markup(f"{GLib.markup_escape_text(versions)}\u00a0· "
+                                    f"<b>{GLib.markup_escape_text(word)}</b>\u00a0· "
+                                    f"{GLib.markup_escape_text(after)}")
+                    box.append(line)
+                    continue
+                marked = Gtk.Box()
+                marked.append(label(word, ["warning", "heading"]))
+                marked.append(label(" · ", styles))
+                box.append(wrapping_row(
+                    [label(f"{versions} · ", styles), marked,
+                     label(after, styles, wrap=True, justify=Gtk.Justification.CENTER)], 0))
             elif text:
                 box.append(label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
                                  max_width_chars=50))
-        row = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER, margin_top=8)
         for b in buttons:
             b.add_css_class("pill")
-            row.append(b)
-        box.append(row)
+        box.append(wrapping_row(buttons, 12, margin_top=8))  # one under the other if need be
         sec.group().add(box)
 
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
@@ -3373,7 +3418,8 @@ class MainWindow(Adw.ApplicationWindow):
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                           halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
             box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
-            title = Gtk.Label(label=mp.no_maps_message())
+            title = Gtk.Label(label=mp.no_maps_message(), wrap=True,
+                              justify=Gtk.Justification.CENTER)
             title.add_css_class("title-2")
             box.append(title)
             check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)

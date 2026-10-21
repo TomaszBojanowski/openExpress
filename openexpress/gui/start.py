@@ -48,9 +48,11 @@ MAX_TILE_WIDTH = 300  # in a wide window: the tiles do not grow past it, the blo
 TILE_SPACING = 12
 SUBTITLE_LINES = 2
 
-# The tiles of the start page only (loaded once per display): a quiet 1px edge around the
-# tile of a connected device; the accent only under the pointer or with the keyboard focus.
-# The edge is an outline drawn inside the tile: neither its size nor the layout changes.
+# The program's own style (loaded once per display). The tiles of the start page: a quiet
+# 1px edge around the tile of a connected device; the accent only under the pointer or with
+# the keyboard focus. The edge is an outline drawn inside the tile: neither its size nor the
+# layout changes. A row that wraps with a libadwaita older than 1.7 (app.wrapping_row): no
+# room around each of its widgets, as in a box.
 CSS = """
 flowboxchild.oe-tile.connected {
   outline: 1px solid alpha(currentColor, 0.15);
@@ -60,6 +62,9 @@ flowboxchild.oe-tile:hover,
 flowboxchild.oe-tile:focus:focus-visible {
   outline: 2px solid alpha(@accent_color, 0.7);
   outline-offset: -2px;
+}
+flowbox.oe-wrap > flowboxchild {
+  padding: 0;
 }
 """
 

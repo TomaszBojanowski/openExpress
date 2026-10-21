@@ -275,12 +275,20 @@ def _children(widget):
         child = child.get_next_sibling()
 
 
+def _labels(widget):
+    """The labels of a line made of parts, in their order, also inside the boxes that hold
+    some of them together."""
+    if hasattr(widget, "get_label"):
+        return [widget]
+    return [label for child in _children(widget) for label in _labels(child)]
+
+
 def _text(widget):
     """A line of the status and its styles; a line made of parts (a beta version) as one text,
     with the styles of each part."""
-    parts = list(_children(widget)) if not hasattr(widget, "get_label") else []
-    if not parts:
+    if hasattr(widget, "get_label"):
         return widget.get_label(), sorted(widget.get_css_classes())
+    parts = _labels(widget)
     return "".join(p.get_label() for p in parts), [sorted(p.get_css_classes()) for p in parts]
 
 
@@ -317,9 +325,16 @@ def _read_page(win):
     status = {
         "icon": (image.get_icon_name(), image.get_pixel_size(), image.has_css_class("success")),
         "texts": [_text(w) for w in labels],
-        "buttons": [(b.get_label(), b.has_css_class("suggested-action")) for b in _children(row)],
+        "buttons": [(b.get_label(), b.has_css_class("suggested-action")) for b in _buttons(row)],
     }
-    return status, groups, list(_children(row))
+    return status, groups, _buttons(row)
+
+
+def _buttons(row):
+    """The buttons of the status, also when each is in a FlowBoxChild (an older libadwaita)."""
+    from gi.repository import Gtk
+
+    return [b.get_child() if isinstance(b, Gtk.FlowBoxChild) else b for b in _children(row)]
 
 
 def _items(*answer_entries):
@@ -492,7 +507,8 @@ def test_status_with_a_beta_system_update():
     assert status["texts"] == [
         ("Software update available", ["title-1"]),
         # "Beta" in the warning colour, not dimmed like the rest of the line.
-        (f"{VERSIONS} · Beta · 12 B", [["dim-label"], ["heading", "warning"], ["dim-label"]]),
+        (f"{VERSIONS} · Beta · 12 B",
+         [["dim-label"], ["heading", "warning"], ["dim-label"], ["dim-label"]]),
         ("Test Bundle · Recommended · GUPDATE.GSP", ["caption", "dim-label"]),
         ("Garmin offers beta software for this device.", ["caption", "dim-label"])]
 
@@ -603,12 +619,19 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
             assert styles[1] == ["heading", "warning"] and "dim-label" not in styles[1]
         else:  # one label, as before
             assert (text, styles) == (f"{VERSIONS} · 12 B", ["dim-label"])
-    # The line of parts is centred like the labels around it.
+    # The line of parts is centred like the labels around it, and its parts go on to the next
+    # line in a narrow window: a separator ends a part, it never starts one.
+    from openexpress.gui import app
+
     win, _status, _groups, _buttons = _updates_page(
         updates.parse_updates(lower_keys(beta_answer())))
     (box,) = win.sections["updates"].groups[0].rows
     line = list(_children(box))[2]
-    assert isinstance(line, Gtk.Box) and line.get_halign() == Gtk.Align.CENTER
+    assert isinstance(line, app.WRAP_BOX or Gtk.FlowBox)
+    assert line.get_halign() == Gtk.Align.CENTER
+    parts = [_text(part)[0] for part in _children(line)]
+    assert parts == [f"{VERSIONS} · ", "Beta · ", "12 B"]
+    assert not any(part.lstrip().startswith("·") for part in parts)
 
 
 # --- the license in the question before an update ----------------------------------------------
@@ -875,11 +898,30 @@ def test_status_of_an_update_that_waits_for_the_device():
 
 
 @pytest.mark.needs_display
+def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(monkeypatch):
+    """Without Adw.WrapBox (libadwaita before 1.7): "Beta" in bold, and a hard space before
+    each separator, so that a separator never starts a line; the buttons in a FlowBox."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app, "WRAP_BOX", None)
+    win, _status, _groups, _shown = _updates_page(
+        updates.parse_updates(lower_keys(beta_answer())))
+    (box,) = win.sections["updates"].groups[0].rows
+    _image, _title, line, *_rest, row = _children(box)
+    assert line.get_text() == f"{VERSIONS}\u00a0· Beta\u00a0· 12 B"
+    assert "<b>Beta</b>" in line.get_label() and line.get_wrap()
+    assert isinstance(row, Gtk.FlowBox)
+    assert [b.get_label() for b in _buttons(row)] == ["Install", "Check Again"]
+
+
+@pytest.mark.needs_display
 def test_status_of_a_beta_that_waits_for_the_device():
     _win, status, _groups, _buttons = _updates_page(_staged_items(BETA), beta=True)
     assert status["texts"][1] == (
         f"{VERSIONS} · Beta · disconnect the device to install it",
-        [["dim-label"], ["heading", "warning"], ["dim-label"]])
+        [["dim-label"], ["heading", "warning"], ["dim-label"], ["dim-label"]])
     assert status["texts"][3][0] == "Garmin offers beta software for this device."
 
 
