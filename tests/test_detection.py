@@ -2859,6 +2859,48 @@ def test_cli_says_a_copied_update_on_a_drive_waits_to_be_ejected(watch_and_drive
     assert capsys.readouterr().out.splitlines()[-1] == to_install
 
 
+def test_the_log_says_where_an_update_goes_and_whether_it_is_on_a_drive(drive_window,
+                                                                         monkeypatch, caplog):
+    """#11: the log names the file of each offered update on the device, from the device's
+    folder (never the mount path, which has the user name), and whether it is there: not yet;
+    copied, it matches; another file at its place has another MD5 or size."""
+    from openexpress import applog, updates
+
+    s = drive_session(drive_window, monkeypatch)
+    downloaded_from_nowhere(monkeypatch)
+    target = s.storage.root / "GARMIN" / "GUPDATE.GCD"
+    seen = []
+
+    def logged(prefix, work):
+        with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+            caplog.clear()
+            work()
+        lines = [applog.redact(r.getMessage()) for r in caplog.records]
+        seen.extend(lines)
+        return [line for line in lines if line.startswith(prefix)]
+
+    def offered():
+        (line,) = logged("updates: ", lambda: updates.mark_present(
+            s.storage, updates.parse_updates(varia_answer()), 2))
+        return line
+
+    def said(reason, present=0):
+        return (f"updates: 1 offered (006-B3592-03 3.40 at GARMIN/GUPDATE.GCD: {reason}), "
+                f"{present} of them already on the device; 2 components listed")
+
+    assert offered() == said("not on the device")
+    assert logged("software update: ", lambda: updates.install(
+        updates.parse_updates(varia_answer()), s.storage)) == [
+        "software update: 006-B3592-03 3.40 (10_244 B) copied to GARMIN/GUPDATE.GCD"]
+    assert offered() == said("matches", present=1)
+    target.write_bytes(VARIA_UPDATE[:-1] + b"?")  # the same size, another content
+    assert offered() == said("MD5 differs")
+    target.write_bytes(b"GCD")
+    assert offered() == said("size differs (3 B on the device, 10_244 B offered)")
+    assert seen and all(str(s.storage.root) not in line and MEDIA_USER not in line
+                        for line in seen)
+
+
 def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(drive_window,
                                                                             monkeypatch):
     """Test 2: the drive runs out of space in the middle of the copy. The error names the file

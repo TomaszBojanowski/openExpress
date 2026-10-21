@@ -126,20 +126,36 @@ SEVERITY_NAMES = {
 }
 
 
-def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
-    """Whether the file of this update is on the device already: same size and same MD5.
-    Only reads. Without a size and an MD5 from the server nothing can be said."""
+# Whether the file of an offered update is on the device, as the log says it.
+MATCHES = "matches"
+NOT_ON_THE_DEVICE = "not on the device"
+MD5_DIFFERS = "MD5 differs"
+
+
+def presence(storage: Storage, u: SoftwareUpdate) -> str:
+    """Whether the file of this update is on the device already (MATCHES: same size and same
+    MD5), and if not, why not, in words for the log. Only reads. Without a size and an MD5
+    from the server nothing can be said."""
     md5 = download.normalize_md5(u.md5) if u.md5 else None
     if not u.device_path or not u.size or md5 is None:
-        return False
+        return "not compared (no size or MD5 from the server)"
     try:
         real = storage.resolve(u.device_path)
-        if real is None or storage.size(real) != u.size:
-            return False
-        return hashlib.md5(storage.read(real)).hexdigest() == md5
+        size = storage.size(real) if real is not None else None
+        if size is None:
+            return NOT_ON_THE_DEVICE
+        if size != u.size:
+            return (f"size differs ({applog.size(size)} on the device, "
+                    f"{applog.size(u.size)} offered)")
+        return MATCHES if hashlib.md5(storage.read(real)).hexdigest() == md5 else MD5_DIFFERS
     except DeviceError as e:
         log.info("updates: cannot compare %s with the device: %s", u.part_number, e)
-        return False
+        return "not compared (cannot be read)"
+
+
+def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
+    """Whether the file of this update is on the device already: same size and same MD5."""
+    return presence(storage, u) == MATCHES
 
 
 def component_count(device) -> int | None:
@@ -156,12 +172,14 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
 
     `components`: how many components the device's GarminDevice.xml lists, for the log."""
     offered = [u for u in updates if not u.is_reinstall and not u.is_metadata]
+    found = []
     for u in offered:
-        u.on_device = is_on_device(storage, u)
-    # Part numbers and versions only: no paths, no addresses (a download address carries
-    # a token).
-    named = ", ".join(f"{u.part_number} {u.version}" + (" on the device" if u.on_device else "")
-                      for u in offered[:LOG_ITEMS])
+        found.append(presence(storage, u))
+        u.on_device = found[-1] == MATCHES
+    # For each: where its file goes on the device, from the device's folder, and whether it
+    # is there (#11); never an address (a download address carries a token).
+    named = ", ".join(f"{u.part_number} {u.version} at {u.device_path}: {why}"
+                      for u, why in zip(offered[:LOG_ITEMS], found, strict=False))
     if len(offered) > LOG_ITEMS:
         named += f", … and {len(offered) - LOG_ITEMS} more"
     log.info("updates: %d offered%s, %d of them already on the device%s", len(offered),
@@ -335,8 +353,9 @@ def _install(
             raise UpdateError(_("Write verification of {path} failed").format(path=real))
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
+        # The whole path from the device's folder, as mark_present names it (#11).
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
-                 applog.size(size), posixpath.dirname(real))
+                 applog.size(size), real)
     return report
 
 

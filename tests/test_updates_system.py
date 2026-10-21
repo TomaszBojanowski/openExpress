@@ -734,10 +734,13 @@ def test_the_log_names_the_offered_updates_and_counts_the_components(device_root
     with caplog.at_level(logging.INFO, logger="openexpress.updates"):
         updates.mark_present(LocalStorage(device_root), updates.parse_updates(lower_keys(answer)),
                              161)
-    # In the server's order; no reinstall, no -META entry, no path and no address.
+    # In the server's order, each with its file on the device (from the device's folder) and
+    # whether it is there; no reinstall, no -META entry and no address.
     assert _offered_log(caplog) == [
-        ("updates: 3 offered (006-D0000-00 23.40 on the device, 006-V0000-00 23.40 on the "
-         "device, 006-D1111-00 23.40), 2 of them already on the device; 161 components listed")]
+        ("updates: 3 offered (006-D0000-00 23.40 at Garmin/Font/006-D0000-00.fnt: matches, "
+         "006-V0000-00 23.40 at Garmin/GUPDATE.GSP: matches, 006-D1111-00 23.40 at "
+         "Garmin/SID/new.sid: not on the device), 2 of them already on the device; "
+         "161 components listed")]
 
 
 def test_the_log_names_twenty_updates_at_most(device_root, caplog):
@@ -747,8 +750,10 @@ def test_the_log_names_twenty_updates_at_most(device_root, caplog):
         updates.mark_present(LocalStorage(device_root), updates.parse_updates(lower_keys(answer)),
                              68)
     line = _offered_log(caplog)[0]
-    assert line.startswith("updates: 25 offered (006-D0001-00 23.40, ")
-    assert "006-D0020-00 23.40, … and 5 more), 0 of them" in line and "006-D0021-00" not in line
+    assert line.startswith("updates: 25 offered (006-D0001-00 23.40 at Garmin/f1.bin: not on "
+                           "the device, ")
+    assert ("006-D0020-00 23.40 at Garmin/f20.bin: not on the device, … and 5 more), 0 of them"
+            in line and "006-D0021-00" not in line)
 
 
 def test_the_log_without_offers_looks_as_before(device_root, caplog):
