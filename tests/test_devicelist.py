@@ -431,6 +431,102 @@ def test_the_account_list_teaches_the_kind_of_remembered_devices(tmp_path):
     assert set(known) == {EDGE} and known[EDGE].category == "cycling-computer"
 
 
+# --- handhelds (inReach, GPSMAP…): their kind from the model name, for the icon only ----------
+
+INREACH = {"unitId": 3000000005, "deviceId": 3000000005, "displayName": "DEVICE 5",
+           "productDisplayName": "inReach Mini 2", "partNumber": "006-B3968-00",
+           "currentFirmwareVersion": "5.05", "deviceCategories": ["OUTDOOR"],
+           "hasOpticalHeartRate": False}
+
+
+@pytest.mark.parametrize("name", ["inReach Mini 2", "INREACH Messenger", "GPSMAP 67i",
+                                  "Montana 700i", "eTrex 32x", "Oregon 750t"])
+def test_a_handheld_is_told_by_its_model_name(name):
+    from openexpress import devicelist
+
+    assert devicelist.kind_from_name(name) == "handheld"
+
+
+def test_an_inreach_without_a_picture_gets_the_icon_of_a_handheld_and_nothing_else():
+    """inReach Mini 2 (#11): Garmin tells no kind of it, its name does, for the icon only: the
+    tile's kind stays what Garmin says (none), nothing is kept in devices.json. A name that
+    tells nothing keeps the neutral icon."""
+    from openexpress import devicelist, known_devices
+    from openexpress.gui.start import APP_ID, DEVICE_ICON, kind_icon
+
+    tiles = devicelist.tiles([], {}, account([INREACH, {**INREACH, "unitId": VENU,
+                                                        "productDisplayName": "Index S2",
+                                                        "partNumber": "006-B0000-00"}]), True)
+    inreach, scale = _tile_of(tiles, "006-B3968-00"), _tile_of(tiles, "006-B0000-00")
+    assert (inreach.category, devicelist.icon_kind(inreach)) == (None, "handheld")
+    assert kind_icon(devicelist.icon_kind(inreach)) == f"{APP_ID}-handheld-symbolic"
+    assert kind_icon(devicelist.icon_kind(scale)) == DEVICE_ICON
+    assert "handheld" not in known_devices.CATEGORIES  # never a kind Garmin tells, never kept
+    known_devices.remember(3000000005, "inReach Mini 2", "006-B3968-00", "5.05", "ums", now=1.0)
+    devicelist.remember_kinds(account([INREACH]))
+    assert known_devices.load()[3000000005].category is None
+
+
+def test_the_open_inreach_gets_the_icon_of_a_handheld_too():
+    """The device view before its picture: the same kind as its tile."""
+    import types
+
+    from openexpress.gui import app
+
+    s = types.SimpleNamespace(mass_storage=True, device=types.SimpleNamespace(
+        unit_id=3000000005, description="inReach Mini 2", part_number="006-B3968-00"))
+    assert app.open_device_kind(s, None) == "handheld"
+
+
+@pytest.fixture
+def kinds_told(monkeypatch):
+    """What Garmin said of the kinds of models, as this process has heard it: none yet."""
+    from openexpress import devicelist
+
+    monkeypatch.setattr(devicelist, "_kind_evidence", {})
+    monkeypatch.setattr(devicelist, "_kind_told", set())
+
+
+def _no_kind_lines(caplog):
+    return [r.getMessage() for r in caplog.records if "tells no kind" in r.getMessage()]
+
+
+def test_a_device_garmin_tells_no_kind_of_is_logged_with_what_garmin_said(kinds_told, caplog):
+    """So that a report tells the signal Garmin gives for such a device (an inReach): the
+    account's categories and unit-info's segment, with the part number only (no unit ID),
+    once for each new piece; a device whose kind Garmin tells is not named."""
+    from openexpress import devicelist
+
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        devicelist.remember_kinds(account([ACCOUNT_ANSWER[0], INREACH]))
+        devicelist.remember_kinds(account([ACCOUNT_ANSWER[0], INREACH]))  # read again
+        devicelist.note_kind_evidence("006-B3968-00", segment="Outdoor")  # unit-info, later
+    assert _no_kind_lines(caplog) == [
+        ("devices: Garmin tells no kind of 006-B3968-00 (account categories: OUTDOOR; "
+         "unit-info segment: not asked)"),
+        ("devices: Garmin tells no kind of 006-B3968-00 (account categories: OUTDOOR; "
+         "unit-info segment: Outdoor)")]
+    assert "3000000005" not in caplog.text
+
+
+def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, caplog):
+    """A device off the account: what unit-info says (here the window's note_segment, after
+    an update or for a picture); a bike accessory is a kind Garmin tells."""
+    import types
+
+    from openexpress.gui import app
+
+    venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
+    varia = types.SimpleNamespace(unit_id=VARIA, part_number="006-B3592-03")
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        app.note_segment(venu, {"segmenttype": "Fitness", "serialnumber": "SECRET123"})
+        app.note_segment(varia, {"segmenttype": "BikeAccessory"})
+    assert _no_kind_lines(caplog) == [
+        ("devices: Garmin tells no kind of 006-B3703-00 (account categories: not known; "
+         "unit-info segment: Fitness)")]
+    assert "SECRET123" not in caplog.text and str(VENU) not in caplog.text
+
+
 # --- the address of a tile's picture: the account's, else the one remembered ------------------
 
 VENU_PICTURE = "https://res.garmin.com/en/products/010-02430-11/g/cf-lg.png"

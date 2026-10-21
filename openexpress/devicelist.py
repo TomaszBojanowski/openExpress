@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from openexpress import known_devices, picture_urls
 from openexpress.device.gio_storage import distinct_devices
-from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH
+from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
 from openexpress.service import unit_id_of
 
 log = logging.getLogger(__name__)
@@ -39,6 +39,8 @@ NAME_KINDS = {
             "approach s"),
     CYCLING_COMPUTER: ("edge",),
     BIKE_ACCESSORY: ("varia",),
+    # Handhelds, with inReach or not: for their icon only; Garmin tells no kind of them.
+    HANDHELD: ("inreach", "gpsmap", "montana", "etrex", "oregon"),
 }
 
 
@@ -242,10 +244,52 @@ def remember_picture_addresses(account) -> None:
 
 def remember_kinds(account) -> None:
     """Keep the kinds the account tells of the devices remembered here (devices.json), so
-    that they are known offline; a device that is not remembered gets no entry."""
+    that they are known offline; a device that is not remembered gets no entry. What the
+    account says of a device whose kind it does not tell goes to the log
+    (note_kind_evidence)."""
     remembered = known_devices.load()
     for entry in account or []:
         unit_id = unit_id_of(entry.get("unitid"))
-        category = account_fields(entry)["category"]
+        fields = account_fields(entry)
+        category = fields["category"]
+        categories = entry.get("devicecategories")
+        note_kind_evidence(fields["part_number"], categories=[
+            str(c) for c in (categories if isinstance(categories, list) else [])],
+            kind=category)
         if unit_id in remembered and category is not None:
             known_devices.set_category(unit_id, category)
+
+
+# What Garmin said of the kind of each model in this run, by part number: the account's
+# categories and unit-info's segment, and whether a kind came of them; and what was told.
+_kind_evidence: dict[str, dict] = {}
+_kind_told: set = set()
+
+
+def note_kind_evidence(part_number: str, categories: list[str] | None = None,
+                       segment: str | None = None, kind: str | None = None) -> None:
+    """Keep what Garmin said of the kind of a model (`categories` of the account's list,
+    `segment` of unit-info; `kind`: what the program made of it). While Garmin tells no kind
+    of it, one line in the log says all of it, once for each new piece: so that a report
+    tells the signal Garmin gives for such a device (an inReach). The part number only:
+    never a unit ID or a serial number."""
+    if not part_number:
+        return
+    known = _kind_evidence.setdefault(part_number, {})
+    if categories is not None:
+        known["categories"] = tuple(categories)
+    if segment is not None:
+        known["segment"] = segment
+    if kind is not None:
+        known["kind"] = kind
+    if known.get("kind"):
+        return
+    told = (part_number, known.get("categories"), known.get("segment"))
+    if told in _kind_told:
+        return
+    _kind_told.add(told)
+    said = known.get("categories")
+    log.info("devices: Garmin tells no kind of %s (account categories: %s; unit-info "
+             "segment: %s)", part_number,
+             ("none" if said == () else ", ".join(said)) if said is not None else "not known",
+             known.get("segment") or "not asked")

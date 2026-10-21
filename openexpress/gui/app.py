@@ -264,10 +264,17 @@ def picture_from_unit_info(client, device) -> str | None:
 def note_segment(device, info) -> None:
     """Keep the kind Garmin's update server tells in an answer the window asked for anyway
     (for a picture, after an update): a bike accessory (e.g. a Varia). Only this field is
-    read; never another request for it."""
+    read; never another request for it. A segment that tells no kind the program knows goes
+    to the log with the part number (devicelist.note_kind_evidence)."""
     segment = info.get("segmenttype") if isinstance(info, dict) else None
-    if isinstance(segment, str) and segment.casefold() == "bikeaccessory":
+    bike_accessory = isinstance(segment, str) and segment.casefold() == "bikeaccessory"
+    if bike_accessory:
         known_devices.set_category(device.unit_id, known_devices.BIKE_ACCESSORY)
+    if isinstance(info, dict):
+        devicelist.note_kind_evidence(
+            getattr(device, "part_number", "") or "",
+            segment=segment if isinstance(segment, str) and segment else "none given",
+            kind=known_devices.BIKE_ACCESSORY if bike_accessory else None)
 
 
 def is_bike_accessory(client, device) -> bool:

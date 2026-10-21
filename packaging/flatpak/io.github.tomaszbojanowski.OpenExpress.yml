@@ -85,6 +85,7 @@ modules:
       - install -Dm644 openexpress/data/${FLATPAK_ID}-watch-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-watch-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-cycling-computer-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-cycling-computer-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-bike-accessory-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-bike-accessory-symbolic.svg
+      - install -Dm644 openexpress/data/${FLATPAK_ID}-handheld-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-handheld-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-device-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-device-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
     sources:

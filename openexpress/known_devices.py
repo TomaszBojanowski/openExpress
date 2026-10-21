@@ -35,6 +35,9 @@ FORMAT = 1
 # page knows them offline. An optional field: files without it are read as before.
 WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY = "watch", "cycling-computer", "bike-accessory"
 CATEGORIES = (WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY)
+# A handheld (inReach, GPSMAP, Montana…): told by the model name only, for the icon; Garmin
+# tells no such kind that the program knows, so it is never kept here (not in CATEGORIES).
+HANDHELD = "handheld"
 
 
 @dataclass

@@ -18,7 +18,12 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 from openexpress import devicelist  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.i18n import _, full_time, pgettext  # noqa: E402
-from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, WATCH  # noqa: E402
+from openexpress.known_devices import (  # noqa: E402
+    BIKE_ACCESSORY,
+    CYCLING_COMPUTER,
+    HANDHELD,
+    WATCH,
+)
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
@@ -30,6 +35,7 @@ KIND_ICONS = {
     WATCH: f"{APP_ID}-watch-symbolic",
     CYCLING_COMPUTER: f"{APP_ID}-cycling-computer-symbolic",
     BIKE_ACCESSORY: f"{APP_ID}-bike-accessory-symbolic",
+    HANDHELD: f"{APP_ID}-handheld-symbolic",
 }
 DEVICE_ICON = f"{APP_ID}-device-symbolic"
 # One width for every tile, in every section (never fitted to the longest text of a
