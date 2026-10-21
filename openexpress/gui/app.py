@@ -5,6 +5,7 @@ from __future__ import annotations
 import gc
 import json
 import logging
+import os
 import threading
 import time
 import traceback
@@ -34,7 +35,7 @@ from openexpress import (  # noqa: E402
     service,
 )
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.cli import FINISH_STEPS_WINDOW, _human, _seen_at  # noqa: E402
+from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human, _seen_at  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
@@ -4377,7 +4378,24 @@ class App(Adw.Application):
         self.main_window().present()
 
 
+def missing_display() -> str | None:
+    """Why the window has no display to open on, as the variables that choose it tell it
+    ("GDK_BACKEND=x11, WAYLAND_DISPLAY=-, DISPLAY=-"); None when GTK has one. GTK tries
+    once, as it is imported: Gtk.init_check() tells nothing more after that."""
+    if Gdk.Display.get_default() is not None:
+        return None
+    return ", ".join(f"{name}={os.environ.get(name) or '-'}"
+                     for name in ("GDK_BACKEND", "WAYLAND_DISPLAY", "DISPLAY"))
+
+
 def main(argv=None) -> int:
+    told = missing_display()
+    if told is not None:
+        # One line, before anything is built on a display that is not there.
+        log.info("no display: %s", told)
+        _error(_("No display available ({details}): openExpress needs a graphical session")
+               .format(details=told))
+        return 1
     return App().run(argv or [])
 
 
