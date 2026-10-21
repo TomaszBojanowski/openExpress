@@ -101,6 +101,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.8" date="2026-10-21">
+      <description>
+        <ul>
+          <li>Added: when the Garmin sign-in page stops working, the window says so, offers Try
+          Again and shows the command for signing in without it.</li>
+          <li>Changed: the log and the problem report now describe the sign-in window's
+          environment (WebKit, graphics, session) and keep a crash trace, to make sign-in
+          problems easier to diagnose. Sign-in tickets never appear in the log.</li>
+          <li>Fixed: starting the window without a graphical session prints one clear line and
+          exits with an error, instead of a series of warnings.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.7" date="2026-10-21">
       <description>
         <ul>
