@@ -84,11 +84,11 @@ def test_cache_command_lists_the_four_folders_and_the_total(cache, capsys):
     assert main(["cache"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
-        "  Maps: 1.8 kB",
-        "  Pictures: 30 B",
-        "  Software updates: 4.0 kB",
-        "  Transfer: 0 B",
-        "  Total: 5.8 kB"]
+        "  Maps: 1.8\u00a0kB",
+        "  Pictures: 30\u00a0B",
+        "  Software updates: 4.0\u00a0kB",
+        "  Transfer: 0\u00a0B",
+        "  Total: 5.8\u00a0kB"]
     assert (cache / "maps" / "aaa").exists()
 
 
@@ -97,7 +97,7 @@ def test_cache_command_with_no_cache(cache, capsys):
     from openexpress.cli import main
 
     assert main(["cache"]) == 0
-    assert capsys.readouterr().out.splitlines()[-1] == "  Total: 0 B"
+    assert capsys.readouterr().out.splitlines()[-1] == "  Total: 0\u00a0B"
 
 
 # --- the lock of the cache (C2, part 1): shared while it is used, exclusive to clear it -------
@@ -268,11 +268,11 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
     assert main(["cache", "--clear"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
-        "  Maps: 1.8 kB",
-        "  Pictures: 30 B",
-        "  Software updates: 4.0 kB",
-        "  Transfer: 20 B",
-        "  Total: 5.8 kB",
+        "  Maps: 1.8\u00a0kB",
+        "  Pictures: 30\u00a0B",
+        "  Software updates: 4.0\u00a0kB",
+        "  Transfer: 20\u00a0B",
+        "  Total: 5.8\u00a0kB",
         "Dry run: nothing was deleted. Add --apply to delete it."]
     assert sorted(p for p in cache.rglob("*")) == before
 
@@ -286,7 +286,7 @@ def test_clear_with_apply_empties_the_four_folders(cache, tmp_path, capsys):
     stay = filled(cache, tmp_path)
     assert main(["cache", "--clear", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[-1] == "Freed 5.8 kB." and "  Total: 5.8 kB" in out
+    assert out[-1] == "Freed 5.8\u00a0kB." and "  Total: 5.8\u00a0kB" in out
     for name in ("maps", "images", "software", "transfer"):
         assert (cache / name).is_dir() and list((cache / name).iterdir()) == []
     assert (cache / "cache.lock").exists()
@@ -380,8 +380,8 @@ def cache_row(group):
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize("files, subtitle, can_clear", [
-    ({"maps/m": 5000, "images/p.png": 30}, "5.0 kB, mostly downloaded maps", True),
-    ({"images/p.png": 3000, "software/s/1/f": 1000}, "4.0 kB", True),
+    ({"maps/m": 5000, "images/p.png": 30}, "5.0\u00a0kB, mostly downloaded maps", True),
+    ({"images/p.png": 3000, "software/s/1/f": 1000}, "4.0\u00a0kB", True),
     ({}, "Empty", False),
 ])
 def test_the_group_shows_how_big_the_cache_is(prefs, cache, files, subtitle, can_clear):
@@ -406,8 +406,8 @@ def test_clear_asks_first(prefs, cache):
     button.emit("clicked")
     (confirm,) = prefs.dialogs
     assert confirm.get_heading() == "Clear the cache?"
-    assert confirm.get_body() == ("This deletes the downloaded maps (5.0 kB) and the other "
-                                  "files of the cache (30 B). The maps will have to be "
+    assert confirm.get_body() == ("This deletes the downloaded maps (5.0\u00a0kB) and the other "
+                                  "files of the cache (30\u00a0B). The maps will have to be "
                                   "downloaded again.")
     assert confirm.get_default_response() == "cancel" and confirm.get_close_response() == "cancel"
     assert confirm.get_response_appearance("clear") == Adw.ResponseAppearance.DESTRUCTIVE
@@ -424,7 +424,7 @@ def test_confirming_clears_and_shows_the_new_size(prefs, cache):
     prefs.dialogs[0].emit("response", "clear")
     assert list((cache / "maps").iterdir()) == [] and list((cache / "images").iterdir()) == []
     assert row.get_subtitle() == "Empty" and not button.get_sensitive()
-    assert prefs.toasts == ["Freed 5.0 kB."] and prefs.errors == []
+    assert prefs.toasts == ["Freed 5.0\u00a0kB."] and prefs.errors == []
 
 
 @pytest.mark.needs_display
@@ -440,7 +440,7 @@ def test_clearing_while_the_cache_is_in_use(prefs, cache):
         prefs.dialogs[0].emit("response", "clear")
     assert prefs.errors == [("The cache is in use (a download or an install is running). "
                              "Try again later.")]
-    assert (cache / "maps" / "m").exists() and row.get_subtitle().startswith("5.0 kB")
+    assert (cache / "maps" / "m").exists() and row.get_subtitle().startswith("5.0\u00a0kB")
 
 
 @pytest.mark.needs_display

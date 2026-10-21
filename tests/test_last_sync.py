@@ -59,7 +59,7 @@ def test_the_row_of_a_sync_in_polish():
         details = service.describe_lines(data["lines"])
     finally:
         i18n.setup("en")
-    assert row == "2 dni temu · 8 plików, 6 wysłanych"  # two days back (by the date)
+    assert row == "2 dni temu\u00a0· 8 plików, 6 wysłanych"  # two days back (by the date)
     assert details == [("Pliki z urządzenia: aktywności, monitorowanie ×5, metryki, dziennik "
                         "urządzenia"), "2 pliki były już w Garmin Connect"]
 
@@ -134,7 +134,7 @@ def test_the_window_marks_the_warnings(xdg):
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))
     MainWindow._show_last_sync(win)
-    assert row.get_subtitle().endswith(" · 3 files, 1 uploaded")
+    assert row.get_subtitle().endswith("\u00a0· 3 files, 1 uploaded")
     assert row.get_tooltip_text()  # the full date
     (details,) = win._last_sync_children  # one row
     shown, item = [], details.get_first_child()

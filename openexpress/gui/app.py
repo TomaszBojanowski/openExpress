@@ -113,6 +113,15 @@ REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, un
                            "and plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
+# Between the parts of a caption: a hard space before "·", a plain one after it, so that a
+# caption that wraps in a narrow window never starts a line with "·".
+SEPARATOR = "\u00a0· "
+
+
+def caption(*parts: str) -> str:
+    """The parts of a caption, the empty ones left out, SEPARATOR between them; a separator
+    inside a part (a translation, the words of the command line) is made the same."""
+    return SEPARATOR.join(part.replace(" · ", SEPARATOR) for part in parts if part)
 log = logging.getLogger(__name__)
 
 
@@ -188,8 +197,8 @@ def last_sync_words(data: dict, now: datetime | None = None) -> str:
     """The row under "Last sync": when, told against now ("yesterday, 23:41"), and the
     numbers of that sync."""
     when = datetime.fromtimestamp(data.get("time", time.time()))
-    return (i18n.relative_time(when, now or datetime.now()) + " · "
-            + service.describe_counts(data))
+    return caption(i18n.relative_time(when, now or datetime.now()),
+                   service.describe_counts(data))
 
 
 def format_when(ts: float) -> str:
@@ -395,7 +404,7 @@ def choice_subtitle(summary) -> str:
         what = _("No GarminDevice.xml found")
     else:
         what = _("Could not be read")
-    return f"{how} · {what}"
+    return caption(how, what)
 
 
 def detect_devices(current_uri: str | None = None):
@@ -570,7 +579,7 @@ def account_subtitle(fields: dict) -> str:
     """A device only on the account: its version as Garmin Connect knows it (if it says)."""
     seen = _("Not seen on this computer")
     version = fields["software_version"]
-    return " · ".join((_("Software {version}").format(version=version), seen)) if version else seen
+    return caption(_("Software {version}").format(version=version), seen) if version else seen
 
 
 def tile_subtitle(source) -> str:
@@ -586,8 +595,8 @@ def remembered_subtitle(known, now: datetime | None = None) -> str:
     """A remembered device that is not connected: its version and when it was last seen,
     told against now as the last sync is ("Last seen 2 h ago"; in full in its tooltip)."""
     when = i18n.relative_time(datetime.fromtimestamp(known.last_seen), now or datetime.now())
-    return " · ".join((_("Software {version}").format(version=known.software_version),
-                       _("Last seen {when}").format(when=when)))
+    return caption(_("Software {version}").format(version=known.software_version),
+                   _("Last seen {when}").format(when=when))
 
 
 def show_not_for_mass_storage(sec) -> None:
@@ -2532,13 +2541,13 @@ class MainWindow(Adw.ApplicationWindow):
             self.update_row.set_subtitle(ngettext(
                 "{count} update available", "{count} updates available",
                 self.update_count).format(count=self.update_count))
-            self.software_label.set_label(version + " · " + _("update available"))
+            self.software_label.set_label(caption(version, _("update available")))
         elif self.update_state == "ready":
             self.update_row.set_subtitle(
                 _("Update ready: eject the device to install it")
                 if getattr(self.session, "mass_storage", False)
                 else _("Update ready: disconnect the device to install it"))
-            self.software_label.set_label(version + " · " + _("update ready to install"))
+            self.software_label.set_label(caption(version, _("update ready to install")))
         elif self.update_state == "current":
             # TRANSLATORS: subtitle of the row "Device software", without a full stop
             self.update_row.set_subtitle(_("Software is up to date"))
@@ -3138,21 +3147,21 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import updates as upd
 
         d = self.session.device
-        installed = _("{model} · version {version}").format(model=d.description,
-                                                            version=d.software_version_str)
+        installed = caption(_("{model} · version {version}").format(
+            model=d.description, version=d.software_version_str))
         detail = None
         buttons = []
         if system is not None:
             icon, title = "software-update-available-symbolic", _("Software update available")
             versions, size = f"{d.software_version_str}{ARROW}{system.version}", _human(system.size)
-            subtitle = f"{versions} · {size}"
+            subtitle = caption(versions, size)
             if system.is_beta:
                 # The versions, "Beta" and the rest apart, so that "Beta" can have the warning
                 # colour of the theme (light and dark); Pango markup knows no colours of the
                 # theme.
                 # TRANSLATORS: marks a beta version of the device software
                 subtitle = (versions, _("Beta"), size)
-            detail = f"{system.title} · {system.severity_text} · {system.filename}"
+            detail = caption(system.title, system.severity_text, system.filename)
             # TRANSLATORS: button
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
                                         "suggested-action"))
@@ -3169,10 +3178,10 @@ class MainWindow(Adw.ApplicationWindow):
             else:
                 # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
                 disconnect = _("disconnect the device to install it")
-            subtitle = f"{versions} · {disconnect}"
+            subtitle = caption(versions, disconnect)
             if ready.is_beta:
                 subtitle = (versions, _("Beta"), disconnect)
-            detail = f"{ready.title} · {ready.severity_text} · {ready.filename}"
+            detail = caption(ready.title, ready.severity_text, ready.filename)
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
             title = ngettext("{count} update available", "{count} updates available",
@@ -3209,16 +3218,16 @@ class MainWindow(Adw.ApplicationWindow):
                     # each separator.
                     line = label("", styles, wrap=True, justify=Gtk.Justification.CENTER,
                                  max_width_chars=50)
-                    line.set_markup(f"{GLib.markup_escape_text(versions)}\u00a0· "
-                                    f"<b>{GLib.markup_escape_text(word)}</b>\u00a0· "
+                    line.set_markup(f"{GLib.markup_escape_text(versions)}{SEPARATOR}"
+                                    f"<b>{GLib.markup_escape_text(word)}</b>{SEPARATOR}"
                                     f"{GLib.markup_escape_text(after)}")
                     box.append(line)
                     continue
                 marked = Gtk.Box()
                 marked.append(label(word, ["warning", "heading"]))
-                marked.append(label(" · ", styles))
+                marked.append(label(SEPARATOR, styles))
                 box.append(wrapping_row(
-                    [label(f"{versions} · ", styles), marked,
+                    [label(versions + SEPARATOR, styles), marked,
                      label(after, styles, wrap=True, justify=Gtk.Justification.CENTER)], 0))
             elif text:
                 box.append(label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
@@ -3229,12 +3238,11 @@ class MainWindow(Adw.ApplicationWindow):
         sec.group().add(box)
 
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
-        details = (f"{u.version} · {_human(u.size)} · {u.severity_text}"
-                   + (f" · {u.filename}" if u.filename else ""))
+        details = caption(u.version, _human(u.size), u.severity_text, u.filename)
         # A system update says so in its title; the name the server gives it goes first.
         row = Adw.ActionRow(
             title=GLib.markup_escape_text(_("System software") if u.is_system else u.title),
-            subtitle=GLib.markup_escape_text(f"{u.title} · {details}" if u.is_system
+            subtitle=GLib.markup_escape_text(caption(u.title, details) if u.is_system
                                              else details),
         )
         # TRANSLATORS: button
@@ -3483,7 +3491,7 @@ class MainWindow(Adw.ApplicationWindow):
         listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         listbox.add_css_class("boxed-list")
         for m in available:
-            line = f"{m.region} · {m.version} · {_human(m.size)}"
+            line = caption(m.region, m.version, _human(m.size))
             if not mp.can_install(m):
                 line += "\n" + mp.cannot_install_reason(m)  # instead of the button
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
@@ -3525,7 +3533,7 @@ class MainWindow(Adw.ApplicationWindow):
             parts.append(_("not copied by this installation"))
         elif not ours:  # not a map by its header: it has no remove button
             parts.append(_("not recognised as a map; remove it in the file manager"))
-        return " · ".join(parts)
+        return caption(*parts)
 
     def _ask(self, heading: str, body: str, label: str, on_ok, destructive: bool = False) -> None:
         """A confirmation with Cancel and one other button; `on_ok` runs when that is chosen."""
@@ -3580,7 +3588,7 @@ class MainWindow(Adw.ApplicationWindow):
         file and the space. Hyphens in the name do not break ("13-Oct-2026" stays together);
         only what is shown changes, not the name."""
         lines = [(plan.title or plan.name).replace("-", "\u2011"), "",
-                 f"{plan.name} · {_human(plan.size)}"]
+                 caption(plan.name, _human(plan.size))]
         if plan.free is not None:
             lines.append(_("Free space on the device: {free} (the map takes {size})").format(
                 free=_human(plan.free), size=_human(plan.size)))
@@ -3661,7 +3669,7 @@ class MainWindow(Adw.ApplicationWindow):
         kind = m.map_type.strip()
         parts = [kind if kind.casefold() != m.name.strip().casefold() else "",
                  m.version, _human(m.size), m.status]
-        return " · ".join(part for part in parts if part)
+        return caption(*parts)
 
     def confirm_map(self, m) -> None:
         from openexpress import maps as mp
@@ -3898,10 +3906,10 @@ class MainWindow(Adw.ApplicationWindow):
                              "suggested-action")
             g.set_header_suffix(b)
         for a in state.store_apps:
-            sub = f"{a.type_name} · v{a.version or '?'}"
+            sub = caption(a.type_name, f"v{a.version or '?'}")
             if a.disabled:
                 # TRANSLATORS: state of a Connect IQ app
-                sub += " · " + _("disabled")
+                sub = caption(sub, _("disabled"))
             waiting = self._waiting_note(a, a.app_id in self._updated_apps)
             if waiting:
                 # Written or deleted already; the device applies it once it is unplugged.
@@ -3913,7 +3921,8 @@ class MainWindow(Adw.ApplicationWindow):
                 g.add(row)
                 continue
             if a.app_id in upd:
-                sub += " · " + _("update {version}").format(version=upd[a.app_id].version_name)
+                sub = caption(sub, _("update {version}").format(
+                    version=upd[a.app_id].version_name))
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(sub))
             icons[a.app_id] = self._app_icon(row)
@@ -3946,8 +3955,8 @@ class MainWindow(Adw.ApplicationWindow):
         for a in missing:
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(
-                                    f"{self._store_type_name(a)} · {a.version_name} · "
-                                    f"{_human(a.size)} · {a.developer}"))
+                                    caption(self._store_type_name(a), a.version_name,
+                                            _human(a.size), a.developer)))
             icons[a.app_id] = self._app_icon(row)
             row.add_suffix(self._button(_("Install"), lambda a=a: self.install_apps([a])))
             g.add(row)
@@ -4018,8 +4027,9 @@ class MainWindow(Adw.ApplicationWindow):
         space = _human(state.available_space)
         if slots is None:
             return _("{size} free").format(size=space)
-        return ngettext("{count} free slot · {size} free", "{count} free slots · {size} free",
-                        slots).format(count=slots, size=space)
+        return caption(ngettext("{count} free slot · {size} free",
+                                "{count} free slots · {size} free", slots).format(
+            count=slots, size=space))
 
     @staticmethod
     def _waiting_note(app, updated: bool = False) -> str:
@@ -4339,9 +4349,9 @@ class MainWindow(Adw.ApplicationWindow):
         for kind in kinds:
             files = [i for i in items if i.kind == kind]
             n = len(files)
-            g = sec.group(on_watch[kind],
-                          ngettext("{count} file · {size}", "{count} files · {size}", n).format(
-                              count=n, size=_human(sum(f.size for f in files))))
+            g = sec.group(on_watch[kind], caption(
+                ngettext("{count} file · {size}", "{count} files · {size}", n).format(
+                    count=n, size=_human(sum(f.size for f in files)))))
             if not files:
                 continue
             exp = Adw.ExpanderRow(title=ngettext("Show {count} file", "Show {count} files",

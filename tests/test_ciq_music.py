@@ -300,7 +300,7 @@ def test_window_playlist_summary(iq_device, library):
     text = MainWindow._playlist_summary(plan)
     assert text.splitlines() == [
         "3 tracks",
-        "2 files to copy (306 B), 0 already on the device",
+        "2 files to copy (306\u00a0B), 0 already on the device",
         "",
         "2 tracks cannot be added:",
         "• lossless.flac (format not supported by the device)",
@@ -312,7 +312,7 @@ def test_window_playlist_summary(iq_device, library):
     music.add_playlist(music.plan_playlist(library, dev, st), dev, st)
     again = MainWindow._playlist_summary(music.plan_playlist(library, dev, st), in_flatpak=True)
     assert again.splitlines() == [
-        "1 track", "0 files to copy (0 B), 1 already on the device",
+        "1 track", "0 files to copy (0\u00a0B), 1 already on the device",
         "A playlist with this name is already on the device and will be replaced."]
 
     many = music.PlaylistPlan("x", "Music/x.m3u8", False, music.CopyPlan(),
@@ -2537,7 +2537,7 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
 
     assert main(["--path", str(st.root), "apps", "install", "New Face"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Install New Face 1.0 (1.0 kB)",
+        "Install New Face 1.0 (1.0\u00a0kB)",
         ("  New Face: The Flatpak has no access to USB devices, so it cannot install apps on "
          "this device. The app will be queued in Garmin Connect and installed by the phone or "
          "Garmin Express."),
@@ -2568,7 +2568,7 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
 
     assert main(["--path", str(st.root), "apps", "update"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Update Face It 1.0 (1.0 kB)",
+        "Update Face It 1.0 (1.0\u00a0kB)",
         ("  Face It: The Flatpak has no access to USB devices, so it cannot update apps on "
          "this device. The update will be queued in Garmin Connect and installed by the "
          "phone or Garmin Express."),
@@ -2864,7 +2864,7 @@ def test_copy_plan_tells_a_new_file_from_one_it_replaces(iq_device, songs):
     assert asked == [ONE, TWO]  # one question per file, as before
     track = plan.to_copy[0][0]
     assert music.replaced_note(plan, track, TWO) == (
-        "(replaces the file on the device: 150 B → 203 B)")
+        "(replaces the file on the device: 150\u00a0B → 203\u00a0B)")
     assert music.replaced_note(plan, track, ONE) == ""
     assert music.replaced_text(plan) == "1 file on the device will be replaced."
 
@@ -2878,9 +2878,9 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
     argv = ["--path", str(device_root), "music", "add", *map(str, songs)]
     assert main(argv) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
+        "Found 2 playable files; 2 to copy (306\u00a0B), 0 already on the device.",
         f"  + {ONE}",
-        f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)",
+        f"  ~ {TWO}  (replaces the file on the device: 150\u00a0B → 203\u00a0B)",
         "1 file on the device will be replaced.",
         "Dry run. Add --apply.",
     ]
@@ -2888,7 +2888,7 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
 
     assert main([*argv, "--apply"]) == 0
     out = capsys.readouterr().out
-    assert f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)" in out
+    assert f"  ~ {TWO}  (replaces the file on the device: 150\u00a0B → 203\u00a0B)" in out
     assert "1 file on the device will be replaced." in out
     assert (st.root / TWO).read_bytes() == songs[1].read_bytes()  # the new content
 
@@ -2898,7 +2898,7 @@ def test_music_add_without_a_replaced_file_reads_as_before(iq_device, device_roo
 
     assert main(["--path", str(device_root), "music", "add", *map(str, songs)]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
+        "Found 2 playable files; 2 to copy (306\u00a0B), 0 already on the device.",
         f"  + {ONE}", f"  + {TWO}", "Dry run. Add --apply."]
 
 
@@ -2936,7 +2936,7 @@ def test_window_says_before_copying_that_files_are_replaced(iq_device, songs, li
 
     st, dev = iq_device
     tracks = music.scan(songs, dev)
-    plain = "306 B will be copied to the device (0 files already there)."
+    plain = "306\u00a0B will be copied to the device (0 files already there)."
     assert MainWindow._copy_summary(music.plan_copy(tracks, dev, st)) == plain
     assert "replaced" not in MainWindow._playlist_summary(music.plan_playlist(library, dev, st))
 
@@ -2944,7 +2944,7 @@ def test_window_says_before_copying_that_files_are_replaced(iq_device, songs, li
     assert MainWindow._copy_summary(music.plan_copy(tracks, dev, st)) == (
         plain + "\n\n1 file on the device will be replaced.")
     lines = MainWindow._playlist_summary(music.plan_playlist(library, dev, st)).splitlines()
-    assert lines[:3] == ["3 tracks", "2 files to copy (306 B), 0 already on the device",
+    assert lines[:3] == ["3 tracks", "2 files to copy (306\u00a0B), 0 already on the device",
                          "1 file on the device will be replaced."]
 
 
@@ -2963,7 +2963,7 @@ def test_replaced_files_in_polish(iq_device, songs):
             counts.append(music.replaced_text(plan))
     finally:
         i18n.setup("en")
-    assert note == "(zastąpi plik na urządzeniu: 1,5 kB → 203 B)"
+    assert note == "(zastąpi plik na urządzeniu: 1,5\u00a0kB → 203\u00a0B)"
     assert counts == ["1 plik na urządzeniu zostanie zastąpiony.",
                       "2 pliki na urządzeniu zostaną zastąpione.",
                       "5 plików na urządzeniu zostanie zastąpionych."]

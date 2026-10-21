@@ -612,10 +612,10 @@ def test_maps_page_with_maps_keeps_the_groups(server, device_root):
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize("name,map_type,subtitle", [
-    ("Base maps", "Base maps", "2026.11 · 9.0 kB · up to date"),
-    ("Base Maps", " base maps ", "2026.11 · 9.0 kB · up to date"),  # case and outer spaces
-    ("TopoActive Western Europe", "TopoActive", "TopoActive · 2026.11 · 9.0 kB · up to date"),
-    ("Something", "", "2026.11 · 9.0 kB · up to date"),  # no type from the server
+    ("Base maps", "Base maps", "2026.11\u00a0· 9.0\u00a0kB\u00a0· up to date"),
+    ("Base Maps", " base maps ", "2026.11\u00a0· 9.0\u00a0kB\u00a0· up to date"),  # case and outer spaces
+    ("TopoActive Western Europe", "TopoActive", "TopoActive\u00a0· 2026.11\u00a0· 9.0\u00a0kB\u00a0· up to date"),
+    ("Something", "", "2026.11\u00a0· 9.0\u00a0kB\u00a0· up to date"),  # no type from the server
 ])
 def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle, server,
                                                         device_root):

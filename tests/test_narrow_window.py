@@ -6,6 +6,7 @@ and filled with stand-ins: an Edge 1050 with a beta update, long names of compon
 maps, apps and music. Nothing asks a device or a server: detection, loading and the requests
 in the background are replaced by nothing. The width is measured in GNOME's font."""
 
+import re
 import time
 import types
 import uuid
@@ -138,17 +139,28 @@ def _music():
 
 
 def _tiles():
+    """Tiles of devices connected, remembered and only on the account, with the words under
+    their names as the window makes them."""
     from openexpress.devicelist import Tile
+    from openexpress.gui import app
+    from openexpress.known_devices import KnownDevice
 
-    def tile(name, part, connected, last_seen=None):
-        return Tile(name, part, "23.39", "mtp" if connected else None, connected, False, False,
-                    last_seen, part, None, None)
+    def tile(name, part, connected, last_seen=None, on_account=False):
+        return Tile(name, part, "23.39", "mtp" if connected else None, connected, on_account,
+                    False, last_seen, part, None, None)
 
-    return [(tile("fēnix 8 - 47mm, Solar", "006-B4532-00", True), "Over USB (MTP)"),
-            (tile("Edge 1050", "006-B4440-00", True), "Over USB (MTP)"),
-            (tile("Varia RTL515", "006-B3592-03", True), "USB drive"),
-            (tile("Venu 2", "006-B3703-00", False, time.time() - 86400),
-             "Software 19.05 · Last seen yesterday, 23:41")]
+    def connected(kind):
+        return app.choice_subtitle(types.SimpleNamespace(
+            found=types.SimpleNamespace(kind=kind), ok=True, software_version="23.39"))
+
+    seen = time.time() - 86400
+    venu = KnownDevice(UNIT, "Venu 2", "006-B3703-00", "19.05", "mtp", seen, seen)
+    return [(tile("fēnix 8 - 47mm, Solar", "006-B4532-00", True), connected("mtp")),
+            (tile("Edge 1050", "006-B4440-00", True), connected("mtp")),
+            (tile("Varia RTL515", "006-B3592-03", True), connected("ums")),
+            (tile("Venu 2", "006-B3703-00", False, seen), app.remembered_subtitle(venu)),
+            (tile("epix (Gen 2)", "006-B3943-00", False, on_account=True),
+             app.account_subtitle({"software_version": "27.18"}))]
 
 
 EDGE = ("Edge 1050", "33.11", "006-B4440-00")
@@ -283,6 +295,64 @@ def test_the_start_page_fits_the_narrowest_window(narrow_window, language):
     win.start.show(_tiles(), False)
     _iterate(0.05)
     assert _min_width(win.start.page) <= NARROWEST
+
+
+def _texts(widget):
+    """The texts of all labels under `widget` (the rows of an expander too, folded or not)."""
+    from openexpress.gui.app import Gtk
+
+    if isinstance(widget, Gtk.Label) and widget.get_text():
+        yield widget.get_text()
+    child = widget.get_first_child()
+    while child is not None:
+        yield from _texts(child)
+        child = child.get_next_sibling()
+
+
+SIZE_WITH_A_SPACE = re.compile(r"\d (B|kB|MB|GB)\b")
+
+
+def _breaks_badly(texts) -> list[str]:
+    """The texts that may break where they should not: a size between its number and its
+    unit, a separator "·" before it (a plain space before the separator)."""
+    return [t for t in texts if SIZE_WITH_A_SPACE.search(t) or " ·" in t]
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("page", ["start", *DEVICE_PAGES])
+def test_captions_break_only_where_they_should(narrow_window, language, page):
+    """The window at 360 px (21.10.2026): "4,7 / GB", and a separator that may start a line.
+    A size keeps its number and unit together, and "·" stays with the part before it (a hard
+    space before it, a plain one after)."""
+    win = narrow_window(language)
+    if page == "start":
+        win.start.show(_tiles(), False)
+        root = win.start.page
+    else:
+        key = _fill(win, page)
+        win.navigation.set_animate_transitions(False)
+        win.navigation.push(win.device_view)
+        win.select_section(key)
+        root = win.device_view
+    texts = list(_texts(root))
+    assert any("\u00a0·" in t for t in texts) or page in ("maps-none", "music")
+    assert _breaks_badly(texts) == []
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_line_of_the_last_sync_keeps_its_separators_too(language):
+    """When the last sync was and its numbers, joined in the command line's words (service):
+    in the window "·" stays with the part before it."""
+    from openexpress import i18n
+    from openexpress.gui import app
+
+    i18n.setup(language)
+    try:
+        line = app.last_sync_words({"time": time.time() - 3 * 86400, "uploaded": 6,
+                                    "downloaded": 7, "new_files": {"FIT_TYPE_4": 8}})
+    finally:
+        i18n.setup("en")
+    assert line.count("\u00a0· ") == 2 and _breaks_badly([line]) == []
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

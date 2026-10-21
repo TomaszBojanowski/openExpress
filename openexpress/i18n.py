@@ -214,18 +214,19 @@ def decimal(number: str) -> str:
 def human_size(n: int | None, localize: bool = True) -> str:
     """A size as the user reads it, like GNOME Files writes it: powers of 1000, the units
     B, kB, MB and GB, one decimal ("699.4 kB"), with the decimal separator of the program's
-    language; "?" when the size is not known.
+    language; "?" when the size is not known. A hard space between the number and the unit,
+    so that a text that wraps never breaks a size ("4,7 / GB").
 
-    Without `localize` the decimal point stays, for text that is always in English (the
-    device report)."""
+    Without `localize` the decimal point and a plain space stay, for text that is always in
+    English (the device report)."""
     if n is None:
         return "?"
     value = float(n)
     for unit in ("B", "kB", "MB", "GB"):
         # Compare what would be printed: 999.96 kB is "1.0 MB", not "1000.0 kB".
         if unit == "GB" or round(value, 0 if unit == "B" else 1) < 1000:
-            text = f"{value:.0f} B" if unit == "B" else f"{value:.1f} {unit}"
-            return decimal(text) if localize else text
+            number = f"{value:.0f}" if unit == "B" else f"{value:.1f}"
+            return f"{decimal(number)}\u00a0{unit}" if localize else f"{number} {unit}"
         value /= 1000
     return str(n)
 

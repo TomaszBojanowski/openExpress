@@ -25,15 +25,32 @@ VALUES = (None, 0, 1, 999, 1000, 1500, 2048, 699392, 999_949, 999_950, 1_000_000
 
 def test_sizes_use_powers_of_1000_like_gnome_files():
     assert [human_size(n) for n in VALUES] == [
-        "?", "0 B", "1 B", "999 B", "1.0 kB", "1.5 kB", "2.0 kB", "699.4 kB", "999.9 kB",
-        "1.0 MB",  # 999.95 kB is not written as "1000.0 kB"
-        "1.0 MB", "67.1 MB", "1.0 GB", "6.7 GB", "2500.0 GB"]
+        "?", "0\u00a0B", "1\u00a0B", "999\u00a0B", "1.0\u00a0kB", "1.5\u00a0kB", "2.0\u00a0kB",
+        "699.4\u00a0kB", "999.9\u00a0kB",
+        "1.0\u00a0MB",  # 999.95 kB is not written as "1000.0 kB"
+        "1.0\u00a0MB", "67.1\u00a0MB", "1.0\u00a0GB", "6.7\u00a0GB", "2500.0\u00a0GB"]
 
 
 def test_sizes_in_polish_only_differ_in_the_separator(polish):
     assert [human_size(n) for n in VALUES] == [
-        "?", "0 B", "1 B", "999 B", "1,0 kB", "1,5 kB", "2,0 kB", "699,4 kB", "999,9 kB",
-        "1,0 MB", "1,0 MB", "67,1 MB", "1,0 GB", "6,7 GB", "2500,0 GB"]
+        "?", "0\u00a0B", "1\u00a0B", "999\u00a0B", "1,0\u00a0kB", "1,5\u00a0kB", "2,0\u00a0kB",
+        "699,4\u00a0kB", "999,9\u00a0kB", "1,0\u00a0MB", "1,0\u00a0MB", "67,1\u00a0MB",
+        "1,0\u00a0GB", "6,7\u00a0GB", "2500,0\u00a0GB"]
+
+
+def test_a_size_never_breaks_between_its_number_and_its_unit():
+    """The window at 360 px (21.10.2026): "4,7 / GB". A hard space (U+00A0) joins the number
+    and the unit, in English and in Polish, wherever a size is shown; the device report,
+    text for GitHub, keeps a plain one."""
+    for language in ("en", "pl"):
+        i18n.setup(language)
+        try:
+            for n in VALUES[1:]:
+                number, unit = human_size(n).split("\u00a0")
+                assert unit in ("B", "kB", "MB", "GB") and " " not in number, (language, n)
+        finally:
+            i18n.setup("en")
+    assert human_size(4_700_000_000, localize=False) == "4.7 GB"
 
 
 def test_commands_and_window_use_the_same_function():
@@ -55,12 +72,12 @@ def uploading(device_root, tmp_path):
 
 def test_upload_progress_shows_a_readable_size(device_root, tmp_path):
     assert uploading(device_root, tmp_path) == [
-        "Uploading FIT_TYPE_4/2026-10-03-10-00-00.fit (1.5 kB)"]
+        "Uploading FIT_TYPE_4/2026-10-03-10-00-00.fit (1.5\u00a0kB)"]
 
 
 def test_upload_progress_in_polish(polish, device_root, tmp_path):
     assert uploading(device_root, tmp_path) == [
-        "Wysyłanie FIT_TYPE_4/2026-10-03-10-00-00.fit (1,5 kB)"]
+        "Wysyłanie FIT_TYPE_4/2026-10-03-10-00-00.fit (1,5\u00a0kB)"]
 
 
 def test_update_download_progress_shows_a_readable_size(server, device_root, xdg):
@@ -115,16 +132,16 @@ def test_not_enough_space_is_said_with_readable_sizes(server, device_root, xdg, 
     for text in said:
         assert text.startswith("Not enough space on the device: ") and "1200000" not in text
     # An update says what it keeps free besides (maps and music do not, as before).
-    assert said[0].endswith(" needed and 2.1 MB kept free, but only 1.2 MB free")
-    assert all(text.endswith(" needed, 1.2 MB free") for text in said[1:])
-    assert said[2] == "Not enough space on the device: 2.5 MB needed, 1.2 MB free"
+    assert said[0].endswith(" needed and 2.1\u00a0MB kept free, but only 1.2\u00a0MB free")
+    assert all(text.endswith(" needed, 1.2\u00a0MB free") for text in said[1:])
+    assert said[2] == "Not enough space on the device: 2.5\u00a0MB needed, 1.2\u00a0MB free"
 
 
 def test_not_enough_space_in_polish(polish, server, device_root, xdg, tmp_path,
                                     monkeypatch):
     said = not_enough_space(server, device_root, tmp_path, monkeypatch)
-    assert said[2] == "Za mało miejsca na urządzeniu: potrzeba 2,5 MB, wolne 1,2 MB"
-    assert all(text.endswith(", wolne 1,2 MB") for text in said)
+    assert said[2] == "Za mało miejsca na urządzeniu: potrzeba 2,5\u00a0MB, wolne 1,2\u00a0MB"
+    assert all(text.endswith(", wolne 1,2\u00a0MB") for text in said)
 
 
 # --- the device report and the log -------------------------------------------------------------
@@ -134,7 +151,7 @@ def test_report_sizes_match_the_window_but_keep_the_point(polish, device_root, m
     from openexpress import report
     from openexpress.device.xmldevice import parse
 
-    assert human_size(6_657_199_308) == "6,7 GB"  # the window, in Polish
+    assert human_size(6_657_199_308) == "6,7\u00a0GB"  # the window, in Polish
     assert human_size(6_657_199_308, localize=False) == "6.7 GB"
     assert human_size(512, localize=False) == "512 B" and human_size(None, localize=False) == "?"
 

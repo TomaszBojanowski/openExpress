@@ -275,7 +275,7 @@ def test_gui_helpers():
     assert MainWindow._removed_files(1) == "Removed 1 file"
     assert MainWindow._removed_files(3) == "Removed 3 files"
     state = types.SimpleNamespace(available_slots=2, available_space=2048)
-    assert MainWindow._apps_space(state) == "2 free slots · 2.0 kB free"
+    assert MainWindow._apps_space(state) == "2 free slots\u00a0· 2.0\u00a0kB free"
 
 
 class _Sec:
@@ -632,9 +632,9 @@ def test_updates_page_with_several_updates(monkeypatch):
     assert available.title == "Available updates"
     assert [(r.get_title(), r.get_subtitle()) for r in available.rows] == [
         # The server only repeats the type: a readable name, the file name tells them apart.
-        ("Map support file", "2.70 · 2.0 kB · Recommended · 006-D0001-00.sid"),
-        ("Voice &lt;pack&gt;", "2.40 · 2.0 kB · Critical · 006-D0002-00.sid"),
-        ("Thing", "2.60 · 2.0 kB · Optional · 006-D0003-00.sid")]  # unknown values stay raw
+        ("Map support file", "2.70\u00a0· 2.0\u00a0kB\u00a0· Recommended\u00a0· 006-D0001-00.sid"),
+        ("Voice &lt;pack&gt;", "2.40\u00a0· 2.0\u00a0kB\u00a0· Critical\u00a0· 006-D0002-00.sid"),
+        ("Thing", "2.60\u00a0· 2.0\u00a0kB\u00a0· Optional\u00a0· 006-D0003-00.sid")]  # unknown values stay raw
     assert advanced.title == "Advanced" and isinstance(advanced.rows[0], Adw.ExpanderRow)
     # The file that is already on the device is listed with the reinstalls, not as an update.
     assert advanced.rows[0].get_subtitle().startswith("2 components already on the device")
@@ -749,16 +749,16 @@ def test_cli_updates_counts_only_real_updates(offered, capsys):
     assert out[1] == "Available updates: 3"
     assert out[2:5] == [
         # GUPDATE.GCD: a system update, although the server sets neither flag.
-        "  006-B0000-00          2.70  Critical           2 B  Test watch System Software [PRIMARY]",
-        "  006-DA002-00          2.70  Recommended        9 B  Map support file (DA00200.sid)",
-        "  006-DA003-00          2.70  Recommended        7 B  Map support file (DA00300.sid)"]
+        "  006-B0000-00          2.70  Critical           2\u00a0B  Test watch System Software [PRIMARY]",
+        "  006-DA002-00          2.70  Recommended        9\u00a0B  Map support file (DA00200.sid)",
+        "  006-DA003-00          2.70  Recommended        7\u00a0B  Map support file (DA00300.sid)"]
     assert "Already on the device: 1" in out and not any("DA00100" in line for line in out)
 
     assert main(["--path", str(root), "-v", "updates"]) == 0
     out = capsys.readouterr().out.splitlines()
     at = out.index("Already on the device: 1")
     assert out[at + 1:at + 3] == [
-        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)",
+        "  006-DA001-00          2.70  Recommended        9\u00a0B  Map support file (DA00100.sid)",
         "      -> Garmin/SID/DA00100.sid"]
 
 
@@ -1294,7 +1294,7 @@ def test_cli_install_all_says_what_it_skips(offered, capsys):
     out = capsys.readouterr().out.splitlines()
     assert out[1:3] == [
         "Skipped 1 file that is already on the device.",
-        "  006-DA001-00          2.70  Recommended        9 B  Map support file (DA00100.sid)"]
+        "  006-DA001-00          2.70  Recommended        9\u00a0B  Map support file (DA00100.sid)"]
 
 
 def test_cli_install_all_with_nothing_left_writes_nothing(offered, capsys, monkeypatch):

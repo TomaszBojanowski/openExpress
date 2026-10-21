@@ -301,9 +301,10 @@ def test_maps_command_lists_own_maps_with_their_names(maps_cli, capsys):
         out = capsys.readouterr().out.splitlines()
         at = out.index("Own maps (not from Garmin):")
         assert out[at - 1] == "" and out[at - 2].startswith("Free space on the device:")
+        nine, two = "9\u00a0B", "2.0\u00a0kB"  # outside the f-strings: Python 3.11
         assert out[at + 1:] == [
-            f"  {'copy.img':48} {'9 B':>9}  (name not read)",
-            f"  {'osm-test.img':48} {'2.0 kB':>9}  Sometown cyclemap/latin1 Example.org",
+            f"  {'copy.img':48} {nine:>9}  (name not read)",
+            f"  {'osm-test.img':48} {two:>9}  Sometown cyclemap/latin1 Example.org",
         ]
     assert sorted(p.name for p in maps_cli.rglob("*")) == before  # nothing was written
 
@@ -446,7 +447,7 @@ def test_add_refuses_when_there_is_not_enough_room(maps_cli, my_map, monkeypatch
     # The file fits, but not with the margin kept for maps.
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 2000 + mp.SPACE_MARGIN - 1)
     refused(capsys, maps_cli, [str(my_map)],
-            "Error: Not enough space on the device: 2.0 kB needed, 52.4 MB free")
+            "Error: Not enough space on the device: 2.0\u00a0kB needed, 52.4\u00a0MB free")
 
 
 def test_add_dry_run_says_what_would_be_written(maps_cli, my_map, monkeypatch, capsys):
@@ -456,8 +457,8 @@ def test_add_dry_run_says_what_would_be_written(maps_cli, my_map, monkeypatch, c
     captured = capsys.readouterr()
     assert captured.out.splitlines() == [
         "Map: Sometown cyclemap/latin1 Example.org",
-        "  osm-test.img (2.0 kB) will be written to GARMIN/osm-test.img",  # the device's spelling
-        "Free space on the device: 12.4 GB (the map takes 2.0 kB)",
+        "  osm-test.img (2.0\u00a0kB) will be written to GARMIN/osm-test.img",  # the device's spelling
+        "Free space on the device: 12.4\u00a0GB (the map takes 2.0\u00a0kB)",
         "Dry run. Add --apply.",
     ]
     assert captured.err == "" and tree(maps_cli) == before and state_of(maps_cli) == []
@@ -467,7 +468,7 @@ def test_add_apply_writes_the_map_and_puts_it_on_the_list(maps_cli, my_map, caps
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
     out = capsys.readouterr().out
     # The path as the device spells it (this made-up device calls the folder "GARMIN").
-    assert "Wrote GARMIN/osm-test.img (2.0 kB)." in out and "Dry run" not in out
+    assert "Wrote GARMIN/osm-test.img (2.0\u00a0kB)." in out and "Dry run" not in out
     written = next(p for p in maps_cli.rglob("osm-test.img"))
     assert written.read_bytes() == my_map.read_bytes()
     (entry,) = state_of(maps_cli)
@@ -477,9 +478,10 @@ def test_add_apply_writes_the_map_and_puts_it_on_the_list(maps_cli, my_map, caps
     assert entry["added"].startswith("20") and len(entry["added"]) == 19
 
     assert main(["--path", str(maps_cli), "maps"]) == 0  # and "maps" shows it
+    two = "2.0\u00a0kB"  # outside the f-string: Python 3.11
     assert capsys.readouterr().out.splitlines()[-2:] == [
         "Own maps (not from Garmin):",
-        f"  {'osm-test.img':48} {'2.0 kB':>9}  Sometown cyclemap/latin1 Example.org"]
+        f"  {'osm-test.img':48} {two:>9}  Sometown cyclemap/latin1 Example.org"]
 
     # Again: the file is there now.
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
@@ -607,9 +609,9 @@ def test_add_in_polish(maps_cli, my_map, capsys):
     finally:
         i18n.setup("en")
     assert out[0] == "Mapa: Sometown cyclemap/latin1 Example.org"
-    assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako GARMIN/osm-test.img"
+    assert out[1] == "  osm-test.img (2,0\u00a0kB) zostanie zapisany jako GARMIN/osm-test.img"
     assert out[2].startswith("Wolne miejsce na urządzeniu: ")
-    assert out[2].endswith(" (mapa zajmie 2,0 kB)")
+    assert out[2].endswith(" (mapa zajmie 2,0\u00a0kB)")
     assert "Plik o nazwie taken.img jest już na urządzeniu; nic nie zostanie nadpisane." in err
 
 
@@ -683,8 +685,8 @@ def test_remove_own_dry_run_says_what_would_go(added, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert captured.out.splitlines() == [
         "Removing own map: Sometown cyclemap/latin1 Example.org",
-        "  - GARMIN/osm-test.img  (2.0 kB)",
-        "Free space on the device: 12.4 GB (removing it frees 2.0 kB)",
+        "  - GARMIN/osm-test.img  (2.0\u00a0kB)",
+        "Free space on the device: 12.4\u00a0GB (removing it frees 2.0\u00a0kB)",
         "Dry run. Add --apply.",
     ]
     assert captured.err == "" and tree(added) == before and state_of(added) == listed
@@ -696,7 +698,7 @@ def test_remove_own_apply_deletes_the_file_and_then_the_entry(added, my_map, cap
                  "--apply"]) == 0
     capsys.readouterr()
     assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img", "--apply"]) == 0
-    assert "Removed GARMIN/osm-test.img (2.0 kB)." in capsys.readouterr().out
+    assert "Removed GARMIN/osm-test.img (2.0\u00a0kB)." in capsys.readouterr().out
     assert not list(added.rglob("osm-test.img")) and list(added.rglob("second.img"))
     assert [m["filename"] for m in state_of(added)] == ["second.img"]
 
@@ -789,7 +791,7 @@ def test_remove_own_in_polish(added, capsys):
     finally:
         i18n.setup("en")
     assert out[0] == "Usuwanie własnej mapy: Sometown cyclemap/latin1 Example.org"
-    assert out[1] == "  - GARMIN/osm-test.img  (2,0 kB)"
+    assert out[1] == "  - GARMIN/osm-test.img  (2,0\u00a0kB)"
     assert err == ("Błąd: Plik by-hand.img nie został skopiowany przez tę instalację openExpress "
                    "(mógł zostać skopiowany ręcznie albo przez inną instalację), więc nie "
                    "zostanie usunięty. Jeśli chcesz go usunąć, zrób to w menedżerze plików.")
@@ -934,11 +936,11 @@ def test_own_maps_group_shows_names_sizes_and_who_copied_them():
     assert group.get_title() == "Own maps"
     assert group.get_description().startswith("Maps not from Garmin")
     assert rows_of(group) == [
-        ("Sometown &lt;cyclemap&gt;", "ours.img · 51.0 MB", True),  # ours: a remove button
+        ("Sometown &lt;cyclemap&gt;", "ours.img\u00a0· 51.0\u00a0MB", True),  # ours: a remove button
         # A map someone else copied: a button too (the question is stronger).
-        ("Copied by hand", f"by-hand.img · 2.0 kB · {NOT_OURS_NOTE}", True),
+        ("Copied by hand", f"by-hand.img\u00a0· 2.0\u00a0kB\u00a0· {NOT_OURS_NOTE}", True),
         # Not a map by its header: nobody knows what it is, so no button.
-        ("what.img", f"what.img · 9 B · {NOT_A_MAP_NOTE}", False),
+        ("what.img", f"what.img\u00a0· 9\u00a0B\u00a0· {NOT_A_MAP_NOTE}", False),
     ]
     labels = sorted(b.get_label() or b.get_tooltip_text() for b in win._action_buttons)
     assert labels == ["Add Map…", "Remove by-hand.img", "Remove ours.img"]
@@ -1027,10 +1029,10 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
         ("task", "Checking maps…"),
         ("ask", "Copy this map to the device?",
          ("Sometown cyclemap/latin1 Example.org\n\n"  # the name of the map on its own
-          "new-map.img · 2.0 kB\n"
-          "Free space on the device: 12.4 GB (the map takes 2.0 kB)"), "Copy", False),
+          "new-map.img\u00a0· 2.0\u00a0kB\n"
+          "Free space on the device: 12.4\u00a0GB (the map takes 2.0\u00a0kB)"), "Copy", False),
         ("task", "Copying the map…"),
-        ("toast", "Wrote Garmin/new-map.img (2.0 kB)."),
+        ("toast", "Wrote Garmin/new-map.img (2.0\u00a0kB)."),
     ]
     assert win.reloads == [("maps", True)]
     assert (root / "Garmin" / "new-map.img").read_bytes() == target.read_bytes()
@@ -1085,9 +1087,9 @@ def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
     win.confirm_remove_own(ours)
     assert win.shown == [
         ("ask", "Remove Sometown cyclemap/latin1 Example.org?",
-         "Garmin/ours.img (2.0 kB) will be removed from the device.", "Remove", True),
+         "Garmin/ours.img (2.0\u00a0kB) will be removed from the device.", "Remove", True),
         ("task", "Removing Sometown cyclemap/latin1 Example.org…"),
-        ("toast", "Removed Garmin/ours.img (2.0 kB)."),
+        ("toast", "Removed Garmin/ours.img (2.0\u00a0kB)."),
     ]
     assert not (root / "Garmin" / "ours.img").exists() and ownmaps.recorded(dev) == []
     assert win.reloads == [("maps", True)]
@@ -1168,7 +1170,7 @@ def test_own_maps_in_the_window_in_polish(window_device, my_map):
     (group,) = win.sections["maps"].groups
     assert group.get_title() == "Własne mapy"
     note = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"  # it has no header
-    assert rows_of(group) == [("by-hand.img", f"by-hand.img · 2,0 kB · {note}", False)]
+    assert rows_of(group) == [("by-hand.img", f"by-hand.img\u00a0· 2,0\u00a0kB\u00a0· {note}", False)]
     refusal = ("Plik o nazwie osm-test.img jest już na urządzeniu; nic nie zostanie nadpisane. "
                "Zmień nazwę pliku na komputerze i dodaj go ponownie.")
     assert win.shown[-1] == ("error", "Nie można dodać mapy", refusal)
@@ -1213,14 +1215,14 @@ def test_free_space_is_said_once_with_what_the_map_takes(maps_cli, my_map, monke
 
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
-    assert "Free space on the device: 12.4 GB (the map takes 2.0 kB)" in capsys.readouterr().out
+    assert "Free space on the device: 12.4\u00a0GB (the map takes 2.0\u00a0kB)" in capsys.readouterr().out
     i18n.setup("pl")
     try:
         assert main(["--path", str(maps_cli), "maps", "remove", "--own", "osm-test.img"]) == 0
         out = capsys.readouterr().out
     finally:
         i18n.setup("en")
-    assert "Wolne miejsce na urządzeniu: 12,4 GB (usunięcie zwolni 2,0 kB)" in out
+    assert "Wolne miejsce na urządzeniu: 12,4\u00a0GB (usunięcie zwolni 2,0\u00a0kB)" in out
     assert "teraz" not in out and "potem" not in out
 
 
@@ -1272,12 +1274,12 @@ def test_confirmation_keeps_a_date_in_the_name_together(tmp_path):
     assert text.splitlines() == [
         "Gdynia openfietslite/latin1 BBBike.org 13\u2011Oct\u2011202",  # no break at the hyphens
         "",
-        "osm-test.img · 51.0 MB",
-        "Free space on the device: 12.4 GB (the map takes 51.0 MB)",
+        "osm-test.img\u00a0· 51.0\u00a0MB",
+        "Free space on the device: 12.4\u00a0GB (the map takes 51.0\u00a0MB)",
     ]
     assert plan.title.count("-") == 2  # the plan itself keeps the name as it is in the file
     plan.free = None  # a device that does not report its free space
-    assert MainWindow._add_map_text(plan).splitlines()[-1] == "osm-test.img · 51.0 MB"
+    assert MainWindow._add_map_text(plan).splitlines()[-1] == "osm-test.img\u00a0· 51.0\u00a0MB"
 
 
 @pytest.mark.needs_display
@@ -1333,10 +1335,10 @@ def test_window_asks_more_strongly_before_removing_a_foreign_map(window_device):
     win.confirm_remove_own(own, foreign=True)
     assert win.shown == [
         ("ask", "Remove Sometown cyclemap?",
-         f"{ANYWAY}\n\nGarmin/osm-test.img (1.5 kB) will be removed from the device.",
+         f"{ANYWAY}\n\nGarmin/osm-test.img (1.5\u00a0kB) will be removed from the device.",
          "Remove Anyway", True),
         ("task", "Removing Sometown cyclemap…"),
-        ("toast", "Removed Garmin/osm-test.img (1.5 kB)."),
+        ("toast", "Removed Garmin/osm-test.img (1.5\u00a0kB)."),
     ]
     assert not (root / "Garmin" / "osm-test.img").exists()
     assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]
@@ -1352,7 +1354,7 @@ def test_the_question_for_a_map_of_ours_stays_as_it_was(window_device, my_map):
     win.answer = "cancel"
     win.confirm_remove_own(own)
     (asked,) = win.shown
-    assert asked[2] == "Garmin/ours.img (2.0 kB) will be removed from the device."
+    assert asked[2] == "Garmin/ours.img (2.0\u00a0kB) will be removed from the device."
     assert asked[3:] == ("Remove", True) and ANYWAY not in asked[2]
 
 
@@ -1514,10 +1516,10 @@ def test_foreign_maps_in_the_window_in_polish(window_device):
     finally:
         i18n.setup("en")
     rows = rows_of(win.sections["maps"].groups[0])
-    assert ("Sometown cyclemap", "osm-test.img · 1,5 kB · nieskopiowana przez tę instalację",
+    assert ("Sometown cyclemap", "osm-test.img\u00a0· 1,5\u00a0kB\u00a0· nieskopiowana przez tę instalację",
             True) in rows
     unknown = "plik nierozpoznany jako mapa; usuń go w menedżerze plików"
-    assert ("broken.img", f"broken.img · 9 B · {unknown}", False) in rows
+    assert ("broken.img", f"broken.img\u00a0· 9\u00a0B\u00a0· {unknown}", False) in rows
     asked = win.shown[-1]
     assert asked[0] == "ask" and asked[2].startswith(
         "Tej mapy nie wgrał openExpress.\n\n")
