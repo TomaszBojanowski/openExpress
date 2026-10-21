@@ -117,7 +117,15 @@ def display_available() -> bool:
         from gi.repository import Gdk, Gtk  # noqa: F401 - importing Gtk opens the display
     except (ImportError, ValueError):
         return False
-    return Gdk.Display.get_default() is not None
+    if Gdk.Display.get_default() is None:
+        return False
+    # The widgets in libadwaita's style, as the program's Adw.Application has them (e.g. the
+    # size of the texts of a title or a caption): the same for every test, whatever its order.
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+
+    Adw.init()
+    return True
 
 
 def pytest_configure(config):
