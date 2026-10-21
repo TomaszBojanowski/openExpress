@@ -3588,7 +3588,9 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     assert refreshed == [1] and len(updates) == 2  # still starting: the same words
     clock.now = 10 + 46
     poll()
-    assert shown[-1] == ("The device is not ready", gio_storage.not_ready_text("present"), False)
+    # 27 s in its normal mode by now: the advice to plug it in again is added (see below).
+    assert shown[-1] == ("The device is not ready",
+                         f"{gio_storage.not_ready_text('present')} {REPLUG_HINT}", False)
     assert updates[-1] == "The device is not ready" and len(updates) == 3
     # Off the bus for a moment: the page stays; only a longer absence is an unplug.
     plugged.plug(None)
@@ -3639,6 +3641,111 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
         assert shown[-1] == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
         assert "--path" not in shown[-1][1]
     assert updates == ["Mass storage mode"]  # the Sync button says why, told once
+
+
+REPLUG_HINT = "If the device's screen shows nothing, unplug the cable and plug it in again."
+STARTING_TEXT = "This takes a moment after the cable is plugged in"
+
+
+def _banner_window(monkeypatch):
+    """The window's own code for the page shown while no device is open."""
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown, refreshed = [], []
+    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
+                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
+                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
+                                refresh_device=lambda **_kw: refreshed.append(1),
+                                _update_actions=lambda: None)
+    # A detection runs at once; its timer is made up, and so is its removal.
+    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn() or 1)
+    monkeypatch.setattr(app.GLib, "source_remove", lambda sid: None)
+    return win, shown, refreshed
+
+
+def _replug_lines(caplog):
+    return [r.getMessage() for r in caplog.records if "replug" in r.getMessage()]
+
+
+def test_a_device_in_its_normal_mode_without_mtp_for_15_s_is_to_be_plugged_in_again(
+        plugged, monkeypatch, caplog):
+    """Edge 1050, 21.10.2026: restarted with its cable in, on USB in its normal mode, but gvfs
+    mounted nothing, and only plugging it in again helped. After 15 s in its normal mode
+    without MTP the page adds what to do (one line in the log); before, it says what it said."""
+    from openexpress.gui.app import MainWindow
+
+    win, shown, _refreshed = _banner_window(monkeypatch)
+    clock = plugged.clock
+    plugged.plug("5158")
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        for now, notice in ((100, ("The device is starting…", STARTING_TEXT, True)),
+                            (114.9, ("The device is starting…", STARTING_TEXT, True)),
+                            (115, ("The device is starting…", f"{STARTING_TEXT}. {REPLUG_HINT}",
+                                   True)),
+                            (117, ("The device is starting…", f"{STARTING_TEXT}. {REPLUG_HINT}",
+                                   True)),
+                            (100 + gio_storage.WAIT_FOR_DEVICE_S + 1,
+                             ("The device is not ready",
+                              f"{gio_storage.not_ready_text('present')} {REPLUG_HINT}", False))):
+            clock.now = now
+            MainWindow._poll_usb(win, clock=clock)
+            assert shown[-1] == notice, now
+    assert _replug_lines(caplog) == ["USB: present for 15 s without MTP, suggesting to replug"]
+
+
+def test_plugging_it_in_again_starts_the_15_s_anew(plugged, monkeypatch, caplog):
+    from openexpress.gui.app import MainWindow
+
+    win, shown, _refreshed = _banner_window(monkeypatch)
+    clock = plugged.clock
+    poll = lambda: MainWindow._poll_usb(win, clock=clock)  # noqa: E731
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        plugged.plug("5158")
+        clock.now = 0
+        poll()
+        clock.now = 20
+        poll()
+        assert REPLUG_HINT in shown[-1][1]
+        plugged.plug(None)  # unplugged
+        poll()
+        clock.now += gio_storage.USB_GAP_S + 1
+        poll()
+        assert shown[-1][0] == "Connect your device"
+        plugged.plug("5158")  # and plugged in again
+        for now, hint in ((40, False), (54, False), (55, True)):
+            clock.now = now
+            poll()
+            assert (REPLUG_HINT in shown[-1][1]) is hint, now
+    assert len(_replug_lines(caplog)) == 2  # once each time
+
+
+def test_the_15_s_count_from_the_normal_mode_not_the_transitional_one(plugged, monkeypatch):
+    """A fēnix 8 is on USB as 091e:0003 for about 19 s after the cable goes in, then in its
+    normal mode, and gvfs offers it a moment later: no advice to plug it in again meanwhile."""
+    from openexpress.gui.app import MainWindow
+
+    win, shown, _refreshed = _banner_window(monkeypatch)
+    clock = plugged.clock
+    plugged.plug("0003")
+    for now, product, hint in ((0, "0003", False), (19, "0003", False), (19, "51b4", False),
+                               (33, "51b4", False), (34, "51b4", True)):
+        plugged.plug(product)
+        clock.now = now
+        MainWindow._poll_usb(win, clock=clock)
+        assert (REPLUG_HINT in shown[-1][1]) is hint, (now, product)
+
+
+def test_a_garmin_drive_gets_no_advice_to_plug_it_in_again(plugged, monkeypatch):
+    from openexpress.gui.app import MainWindow
+
+    win, shown, _refreshed = _banner_window(monkeypatch)
+    mass_storage_device(plugged.root)
+    for now in (0, 20, 60):
+        plugged.clock.now = now
+        MainWindow._poll_usb(win, clock=plugged.clock)
+        assert shown[-1] == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
 
 
 def test_the_flatpak_window_without_a_hidden_drive_speaks_as_from_source(plugged, monkeypatch):

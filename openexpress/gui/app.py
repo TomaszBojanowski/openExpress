@@ -88,7 +88,7 @@ from openexpress.gui.navigation import (  # noqa: E402
 from openexpress.gui.navigation import plan as detection_plan  # noqa: E402
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
-from openexpress.i18n import _, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import N_, _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.progress import Waiting  # noqa: E402
 from openexpress.settings import (  # noqa: E402
@@ -101,6 +101,12 @@ from openexpress.settings import (  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
+# A device this long on USB in its normal mode without being offered over MTP: the page adds
+# that it may be plugged in again (gvfs did not mount an Edge 1050 restarted with its cable
+# in; plugging it in again helped, 21.10.2026). Only the words change, not the detection.
+REPLUG_HINT_S = 15
+# TRANSLATORS: added to the page while a device on USB is not offered over MTP
+REPLUG_HINT = N_("If the device's screen shows nothing, unplug the cable and plug it in again.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 log = logging.getLogger(__name__)
@@ -1558,8 +1564,18 @@ class MainWindow(Adw.ApplicationWindow):
             log.info("mount removed (%s): not the open device, ignored", where)
 
     @staticmethod
-    def _usb_notice(state: str, waited_s: float) -> tuple[str, str, bool]:
-        """(title, description, busy) of the placeholder while no device is open."""
+    def _usb_notice(state: str, waited_s: float,
+                    normal_s: float = 0.0) -> tuple[str, str, bool]:
+        """(title, description, busy) of the placeholder while no device is open. `normal_s`:
+        how long a device has been on USB in its normal mode without being offered over MTP;
+        from REPLUG_HINT_S on, the description adds that it may be plugged in again (an Edge
+        1050 restarted with its cable in was never mounted by gvfs, 21.10.2026)."""
+        if state == PRESENT and normal_s >= REPLUG_HINT_S:
+            title, text, busy = MainWindow._usb_notice(state, waited_s)
+            if waited_s < WAIT_FOR_DEVICE_S:
+                # One sentence becomes two: each with its full stop.
+                text = _("This takes a moment after the cable is plugged in.")
+            return title, f"{text} {_(REPLUG_HINT)}", busy
         if state == ABSENT:
             return (_("Connect your device"),
                     _("Connect your Garmin device with a USB cable. "
@@ -1608,9 +1624,15 @@ class MainWindow(Adw.ApplicationWindow):
         if state == PRESENT and self._usb_state != PRESENT:
             # It left its transitional mode: look for it once gvfs had a moment.
             log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
+            self._normal_since, self._replug_told = clock(), False
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         self._usb_state = state
-        notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0)
+        normal_s = clock() - getattr(self, "_normal_since", 0.0) if state == PRESENT else 0.0
+        if normal_s >= REPLUG_HINT_S and not getattr(self, "_replug_told", False):
+            self._replug_told = True
+            log.info("USB: present for %d s without MTP, suggesting to replug", REPLUG_HINT_S)
+        notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0,
+                                  normal_s)
         for sec in self.sections.values():
             sec.set_empty(*notice)
         self.start.set_empty(*notice)  # the start page says it on top
