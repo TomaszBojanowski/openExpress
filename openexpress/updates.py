@@ -24,7 +24,10 @@ from openexpress.i18n import N_, _, human_size
 log = logging.getLogger(__name__)
 
 RGN_MAGIC = b"KpGr"
+# Room kept free on the device besides an update: at most SPACE_MARGIN, and no more than a
+# part of a small drive (the whole drive of a Varia RTL515 is 1.3 MB).
 SPACE_MARGIN = 2 * 1024 * 1024
+SPACE_MARGIN_PART = 0.05
 # The files of a device system update. The server does not always say so: the system
 # updates of a fēnix 8 and an Edge 1050 (GUPDATE.GSP, a bundle with the device software)
 # come without "isprimaryfirmware" and without "isrestartrequired". The data type does not
@@ -298,6 +301,16 @@ def check_space(storage: Storage, updates: list[SoftwareUpdate]) -> tuple[int, i
     return need, storage.free_space()
 
 
+def space_margin(storage: Storage) -> int:
+    """The room kept free on the device besides an update: SPACE_MARGIN, or SPACE_MARGIN_PART
+    of the storage when that is less (a small drive); SPACE_MARGIN when its size is not
+    known."""
+    capacity = storage.capacity()
+    if not capacity:
+        return SPACE_MARGIN
+    return min(SPACE_MARGIN, int(capacity * SPACE_MARGIN_PART))
+
+
 @dataclass
 class InstallReport:
     installed: list[str] = field(default_factory=list)
@@ -313,9 +326,12 @@ def _install(
     download_progress: Callable[[int, int | None], None] | None = None,
 ) -> InstallReport:
     need, free = check_space(storage, updates)
-    if free is not None and need + SPACE_MARGIN > free:
-        raise UpdateError(_("Not enough space on the device: {need} needed, {free} free")
-                          .format(need=human_size(need), free=human_size(free)))
+    margin = space_margin(storage)
+    if free is not None and need + margin > free:
+        raise UpdateError(_("Not enough space on the device: {need} needed and {margin} kept "
+                            "free, but only {free} free")
+                          .format(need=human_size(need), margin=human_size(margin),
+                                  free=human_size(free)))
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}

@@ -89,8 +89,10 @@ def test_map_download_progress_shows_a_readable_size(server, device_root, xdg):
 
 
 def not_enough_space(server, device_root, tmp_path, monkeypatch):
-    """The three places that refuse to write when the device is too full."""
+    """The three places that refuse to write when the device is too full (a big one: an
+    update keeps 2 MiB free)."""
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 1_200_000)
+    monkeypatch.setattr(LocalStorage, "capacity", lambda self: 32_000_000_000)
     st = LocalStorage(device_root)
     said = []
     with pytest.raises(updates.UpdateError) as error:
@@ -111,8 +113,10 @@ def test_not_enough_space_is_said_with_readable_sizes(server, device_root, xdg, 
                                                       monkeypatch):
     said = not_enough_space(server, device_root, tmp_path, monkeypatch)
     for text in said:
-        assert text.startswith("Not enough space on the device: ")
-        assert text.endswith(" needed, 1.2 MB free") and "1200000" not in text
+        assert text.startswith("Not enough space on the device: ") and "1200000" not in text
+    # An update says what it keeps free besides (maps and music do not, as before).
+    assert said[0].endswith(" needed and 2.1 MB kept free, but only 1.2 MB free")
+    assert all(text.endswith(" needed, 1.2 MB free") for text in said[1:])
     assert said[2] == "Not enough space on the device: 2.5 MB needed, 1.2 MB free"
 
 

@@ -2638,6 +2638,17 @@ NOT_EJECTED_CLI_TEXT = ("Do not unplug the cable yet: the device may not see the
                         "any program that uses the drive and eject it in the file manager.")
 
 
+def run_at_once(title, work, done, failed=None, device=True):
+    """A task of the window, run at once; an error goes to its own handler, as in the window."""
+    try:
+        result = work()
+    except Exception as e:  # as the real one: the error goes to `failed`
+        if not (failed and failed(e)):
+            raise
+    else:
+        done(result)
+
+
 def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     """The window asked, and the update was copied to the RTL515's drive: (session, the drive's
     mount, every dialog shown so far, the questions to the update server). A task runs at once;
@@ -2658,19 +2669,10 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
     dialogs, toasts = [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
-
-    def run_task(title, work, done, failed=None, device=True):
-        try:
-            result = work()
-        except Exception as e:  # as the real one: the error goes to `failed`
-            if not (failed and failed(e)):
-                raise
-        else:
-            done(result)
-
     win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
                                 toast=toasts.append, progress=lambda text: None, fraction=None,
-                                _show_installed=lambda session, chosen: None, run_task=run_task)
+                                _show_installed=lambda session, chosen: None,
+                                run_task=run_at_once)
     for name in ("error", "ask_to_eject", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)
@@ -2738,6 +2740,41 @@ def test_a_failed_eject_says_so_and_offers_to_try_again(drive_window, monkeypatc
     failed.emit("response", "retry")
     assert mount.ejected == 2
     assert [(d.get_heading(), d.get_body()) for d in dialogs[3:]] == [("Done", EJECTED_TEXT)]
+
+
+@pytest.mark.needs_display
+def test_an_update_that_does_not_fit_says_so_under_its_own_heading(drive_window, monkeypatch):
+    """The Varia's drive holds 1.3 MB: the room kept free is 5% of it, and a refusal says
+    what is needed, what is kept free and what is free, under "Update not installed" (not
+    under the name of the task). Nothing comes to the drive."""
+    from gi.repository import Adw
+
+    from openexpress import updates
+    from openexpress.device.storage import UmsStorage
+    from openexpress.gui.app import MainWindow
+
+    s = drive_session(drive_window, monkeypatch)
+    s.client = types.SimpleNamespace(http=None, unit_info=lambda unit, part: {})
+    downloaded_from_nowhere(monkeypatch)
+    monkeypatch.setattr(UmsStorage, "capacity", lambda self: 1_300_000)
+    monkeypatch.setattr(UmsStorage, "free_space", lambda self: 50_000)
+    items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
+    dialogs = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+    win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
+                                toast=lambda text: None, progress=lambda text: None,
+                                fraction=None, _show_installed=lambda session, chosen: None,
+                                run_task=run_at_once)
+    for name in ("error", "ask_to_eject", "eject_device"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    before = drive_tree(s.storage.root)
+    MainWindow.confirm_update(win, items[0])
+    dialogs[0].emit("response", "ok")
+    (refused,) = dialogs[1:]
+    assert refused.get_heading() == "Update not installed"
+    assert refused.get_body() == ("Not enough space on the device: 10.2 kB needed and 65.0 kB "
+                                  "kept free, but only 50.0 kB free")
+    assert drive_tree(s.storage.root) == before
 
 
 @pytest.mark.parametrize("ejectable, asked", [(True, (1, 0)), (False, (0, 1))])

@@ -3168,10 +3168,15 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             self.ask_to_eject(s, bike_accessory)
 
+        def failed(e) -> bool:
+            # Under a heading of its own, not the name of the task ("Installing update…").
+            self.error(_("Update not installed"), str(e) or type(e).__name__)
+            return True
+
         def response(_d, r):
             if r != "ok":
                 return
-            self.run_task(_("Installing update…"), install, installed)
+            self.run_task(_("Installing update…"), install, installed, failed)
 
         d.connect("response", response)
         d.present(self)

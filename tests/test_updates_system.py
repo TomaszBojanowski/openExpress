@@ -989,7 +989,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     win.session.client = types.SimpleNamespace(http=None, software_updates=nothing)
     win.session.storage = types.SimpleNamespace(read=nothing, size=nothing)
     win.updates_beta, win.shown = False, []
-    win.run_task = lambda title, work, done: done(work())
+    win.run_task = lambda title, work, done, failed=None: done(work())
     win.error = lambda title, text: win.shown.append(title)
     win.progress = win.fraction = None
     win._update_done_text = MainWindow._update_done_text
@@ -1212,6 +1212,53 @@ def test_a_drive_needs_room_for_the_new_file_beside_the_old(device_root, tmp_pat
     monkeypatch.setattr(storage, "free_space", lambda: font.size + updates.SPACE_MARGIN)
     updates.install([font], storage)
     assert old.read_bytes() == FONT
+
+
+def _small_drive(device_root, tmp_path, monkeypatch, size):
+    """A drive of 1.3 MB with 929.8 kB free (as the Varia RTL515, 21.10.2026), and an update
+    of `size` bytes offered for it."""
+    data = bytes(range(256)) * (size // 256) + bytes(size % 256)
+    (update,) = _items(_entry("006-D2222-00", "Test Part", "Firmware", "GARMIN\\REMOTESW",
+                              "D2222.GCD", data))
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        return dest
+
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    storage = LocalStorage(device_root)
+    monkeypatch.setattr(storage, "capacity", lambda: 1_300_000)
+    monkeypatch.setattr(storage, "free_space", lambda: 929_800)
+    return storage, update, data
+
+
+def test_the_room_kept_free_is_a_part_of_a_small_drive(device_root, tmp_path, monkeypatch):
+    """2 MiB kept free is more than the whole drive of a Varia (1.3 MB): 5% of the drive
+    is kept free instead. 204 kB fit into the 929.8 kB free."""
+    storage, update, data = _small_drive(device_root, tmp_path, monkeypatch, 204_100)
+    updates.install([update], storage)
+    assert (device_root / "GARMIN" / "REMOTESW" / "D2222.GCD").read_bytes() == data
+    assert updates.space_margin(storage) == 65_000
+
+
+def test_an_update_too_big_for_a_small_drive_says_what_is_kept_free(device_root, tmp_path,
+                                                                     monkeypatch):
+    storage, update, _data = _small_drive(device_root, tmp_path, monkeypatch, 1_200_000)
+    with pytest.raises(updates.UpdateError) as error:
+        updates.install([update], storage)
+    assert str(error.value) == ("Not enough space on the device: 1.2 MB needed and 65.0 kB "
+                                "kept free, but only 929.8 kB free")
+    assert not (device_root / "GARMIN" / "REMOTESW").exists()
+
+
+def test_the_room_kept_free_on_a_big_or_unknown_storage_is_2_mib(device_root, monkeypatch):
+    storage = LocalStorage(device_root)
+    monkeypatch.setattr(storage, "capacity", lambda: 32_000_000_000)  # a watch
+    assert updates.space_margin(storage) == 2 * 1024 * 1024 == updates.SPACE_MARGIN
+    monkeypatch.setattr(storage, "capacity", lambda: None)  # not known
+    assert updates.space_margin(storage) == updates.SPACE_MARGIN
 
 
 def test_over_mtp_the_old_file_still_counts_as_freed(device_root, tmp_path, monkeypatch):

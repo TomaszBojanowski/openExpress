@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 18:54+0200\n"
+"POT-Creation-Date: 2026-10-21 19:13+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -36,7 +36,7 @@ msgstr ""
 "terminalu, zaloguj się w przeglądarce i wklej adres, na którym skończysz."
 
 #: openexpress/auth/sso.py:251 openexpress/gui/app.py:1254
-#: openexpress/gui/app.py:2104 openexpress/gui/app.py:3219
+#: openexpress/gui/app.py:2104 openexpress/gui/app.py:3224
 msgid "Try Again"
 msgstr "Spróbuj ponownie"
 
@@ -354,7 +354,7 @@ msgid "Writing {path}"
 msgstr "Zapisywanie {path}"
 
 #: openexpress/ciq.py:920 openexpress/ciq.py:1474 openexpress/maps.py:448
-#: openexpress/updates.py:335
+#: openexpress/updates.py:369
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr "Weryfikacja zapisu {path} się nie powiodła"
@@ -529,7 +529,7 @@ msgstr[2] "Zmieni się {count} pozycji ({kinds}):"
 msgid "{position}: {new} (now: {old})"
 msgstr "{position}: {new} (teraz: {old})"
 
-#: openexpress/ciq.py:1438 openexpress/cli.py:1517 openexpress/gui/app.py:4334
+#: openexpress/ciq.py:1438 openexpress/cli.py:1517 openexpress/gui/app.py:4339
 #, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
@@ -1068,7 +1068,7 @@ msgstr "Odłącz urządzenie, aby ją zainstalować."
 msgid "Update copied, waiting for the device to install it:"
 msgstr "Aktualizacja skopiowana, czeka na instalację przez urządzenie:"
 
-#: openexpress/cli.py:716 openexpress/gui/app.py:3226
+#: openexpress/cli.py:716 openexpress/gui/app.py:3231
 msgid "Ejecting the device…"
 msgstr "Wysuwanie urządzenia…"
 
@@ -1169,7 +1169,7 @@ msgstr "Mapa: {title}"
 msgid "{file} ({size}) will be written to {path}"
 msgstr "{file} ({size}) zostanie zapisany jako {path}"
 
-#: openexpress/cli.py:872 openexpress/gui/app.py:3445
+#: openexpress/cli.py:872 openexpress/gui/app.py:3450
 #, python-brace-format
 msgid "Free space on the device: {free} (the map takes {size})"
 msgstr "Wolne miejsce na urządzeniu: {free} (mapa zajmie {size})"
@@ -1182,7 +1182,7 @@ msgstr "Wolne miejsce na urządzeniu: {free} (mapa zajmie {size})"
 msgid "Dry run. Add --apply."
 msgstr "Tryb próbny. Dodaj --apply."
 
-#: openexpress/cli.py:879 openexpress/gui/app.py:3459
+#: openexpress/cli.py:879 openexpress/gui/app.py:3464
 #, python-brace-format
 msgid "Wrote {path} ({size})."
 msgstr "Zapisano {path} ({size})."
@@ -1196,7 +1196,7 @@ msgstr ""
 "Pliku {name} nie ma już na urządzeniu. Uruchom polecenie z --apply, żeby "
 "usunąć go z listy własnych map."
 
-#: openexpress/cli.py:894 openexpress/gui/app.py:3501
+#: openexpress/cli.py:894 openexpress/gui/app.py:3506
 #, python-brace-format
 msgid "Took {name} off the list of own maps; the file was not on the device."
 msgstr "Usunięto {name} z listy własnych map; pliku nie było na urządzeniu."
@@ -1211,7 +1211,7 @@ msgstr "Usuwanie własnej mapy: {title}"
 msgid "Free space on the device: {free} (removing it frees {size})"
 msgstr "Wolne miejsce na urządzeniu: {free} (usunięcie zwolni {size})"
 
-#: openexpress/cli.py:906 openexpress/gui/app.py:3498
+#: openexpress/cli.py:906 openexpress/gui/app.py:3503
 #, python-brace-format
 msgid "Removed {path} ({size})."
 msgstr "Usunięto {path} ({size})."
@@ -1337,7 +1337,7 @@ msgstr "Niejednoznaczna nazwa, pasują: {names}"
 
 #. TRANSLATORS: state of a Connect IQ app or built-in activity on the watch
 #. TRANSLATORS: state of a Connect IQ app
-#: openexpress/cli.py:1056 openexpress/gui/app.py:3764
+#: openexpress/cli.py:1056 openexpress/gui/app.py:3769
 msgid "disabled"
 msgstr "wyłączona"
 
@@ -1372,7 +1372,7 @@ msgstr "Podgląd zmian dla wybranej kopii: openexpress apps order --from NAZWA"
 msgid "Order of the apps from the copy {name}"
 msgstr "Kolejność aplikacji z kopii {name}"
 
-#: openexpress/cli.py:1091 openexpress/gui/app.py:4009
+#: openexpress/cli.py:1091 openexpress/gui/app.py:4014
 msgid "The apps on the device are already in this order."
 msgstr "Aplikacje na urządzeniu są już w tej kolejności."
 
@@ -1394,7 +1394,7 @@ msgstr "te same aplikacje z tymi samymi flagami; zmienia się tylko kolejność"
 msgid "Copy of the current app list: {name}"
 msgstr "Kopia bieżącej listy aplikacji: {name}"
 
-#: openexpress/cli.py:1105 openexpress/gui/app.py:4007
+#: openexpress/cli.py:1105 openexpress/gui/app.py:4012
 msgid ""
 "Wrote the new order to the device; it takes effect after the device is "
 "unplugged."
@@ -1447,7 +1447,7 @@ msgstr[2] "Usunięto {count} plików. Usunięto także z listy na koncie."
 msgid "removed: {name} ({type})"
 msgstr "usunięto: {name} ({type})"
 
-#: openexpress/cli.py:1146 openexpress/gui/app.py:4121
+#: openexpress/cli.py:1146 openexpress/gui/app.py:4126
 msgid "The device finishes the removal after it is unplugged."
 msgstr "Urządzenie dokończy usuwanie po odłączeniu."
 
@@ -1648,7 +1648,7 @@ msgstr ""
 msgid "Would remove it from your account list. Add --apply."
 msgstr "Zostałaby usunięta z listy na koncie. Dodaj --apply."
 
-#: openexpress/cli.py:1348 openexpress/gui/app.py:4084
+#: openexpress/cli.py:1348 openexpress/gui/app.py:4089
 #, python-brace-format
 msgid "Removed {name} from your account list."
 msgstr "Usunięto {name} z listy na koncie."
@@ -1758,7 +1758,7 @@ msgstr "Listy odtwarzania: {count}: {names}"
 msgid "Playlists: {count}"
 msgstr "Listy odtwarzania: {count}"
 
-#: openexpress/cli.py:1500 openexpress/gui/app.py:4191
+#: openexpress/cli.py:1500 openexpress/gui/app.py:4196
 #, python-brace-format
 msgid "Free space: {size}"
 msgstr "Wolne miejsce: {size}"
@@ -2799,8 +2799,8 @@ msgctxt "tab"
 msgid "Maps"
 msgstr "Mapy"
 
-#: openexpress/gui/app.py:966 openexpress/gui/app.py:3266
-#: openexpress/gui/app.py:3470
+#: openexpress/gui/app.py:966 openexpress/gui/app.py:3271
+#: openexpress/gui/app.py:3475
 msgid "Checking maps…"
 msgstr "Sprawdzanie map…"
 
@@ -2810,17 +2810,17 @@ msgctxt "tab"
 msgid "Apps"
 msgstr "Aplikacje"
 
-#: openexpress/gui/app.py:969 openexpress/gui/app.py:3741
+#: openexpress/gui/app.py:969 openexpress/gui/app.py:3746
 msgid "Loading Connect IQ apps…"
 msgstr "Wczytywanie aplikacji Connect IQ…"
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:971 openexpress/gui/app.py:4172
+#: openexpress/gui/app.py:971 openexpress/gui/app.py:4177
 msgctxt "tab"
 msgid "Music"
 msgstr "Muzyka"
 
-#: openexpress/gui/app.py:972 openexpress/gui/app.py:4176
+#: openexpress/gui/app.py:972 openexpress/gui/app.py:4181
 msgid "Reading music on the device…"
 msgstr "Odczytywanie muzyki na urządzeniu…"
 
@@ -2880,7 +2880,7 @@ msgstr "Nie zalogowano do Garmin Connect"
 
 #: openexpress/gui/app.py:1157 openexpress/gui/app.py:1392
 #: openexpress/gui/app.py:1702 openexpress/gui/app.py:2112
-#: openexpress/gui/app.py:2762 openexpress/gui/app.py:4146
+#: openexpress/gui/app.py:2762 openexpress/gui/app.py:4151
 msgid "Another operation is in progress"
 msgstr "Trwa inna operacja"
 
@@ -2897,7 +2897,7 @@ msgstr ""
 "urządzeniu nie został zapisany tylko częściowo."
 
 #: openexpress/gui/app.py:1199 openexpress/gui/app.py:1319
-#: openexpress/gui/app.py:3205
+#: openexpress/gui/app.py:3210
 msgid "OK"
 msgstr "OK"
 
@@ -2971,12 +2971,12 @@ msgstr "Pamięć"
 msgid "Device storage"
 msgstr "Pamięć urządzenia"
 
-#: openexpress/gui/app.py:2210 openexpress/gui/app.py:3306
+#: openexpress/gui/app.py:2210 openexpress/gui/app.py:3311
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr "{free} wolne z {total}"
 
-#: openexpress/gui/app.py:2219 openexpress/gui/app.py:3880
+#: openexpress/gui/app.py:2219 openexpress/gui/app.py:3885
 #, python-brace-format
 msgid "{size} free"
 msgstr "Wolne: {size}"
@@ -3065,11 +3065,11 @@ msgstr ""
 
 #: openexpress/gui/app.py:2318 openexpress/gui/app.py:2776
 #: openexpress/gui/app.py:2946 openexpress/gui/app.py:3154
-#: openexpress/gui/app.py:3395 openexpress/gui/app.py:3552
-#: openexpress/gui/app.py:3584 openexpress/gui/app.py:3974
-#: openexpress/gui/app.py:3994 openexpress/gui/app.py:4075
-#: openexpress/gui/app.py:4101 openexpress/gui/app.py:4260
-#: openexpress/gui/app.py:4355
+#: openexpress/gui/app.py:3400 openexpress/gui/app.py:3557
+#: openexpress/gui/app.py:3589 openexpress/gui/app.py:3979
+#: openexpress/gui/app.py:3999 openexpress/gui/app.py:4080
+#: openexpress/gui/app.py:4106 openexpress/gui/app.py:4265
+#: openexpress/gui/app.py:4360
 msgid "Cancel"
 msgstr "Anuluj"
 
@@ -3378,7 +3378,7 @@ msgstr "Beta"
 
 #. TRANSLATORS: button
 #: openexpress/gui/app.py:3037 openexpress/gui/app.py:3107
-#: openexpress/gui/app.py:3352 openexpress/gui/app.py:3812
+#: openexpress/gui/app.py:3357 openexpress/gui/app.py:3817
 msgid "Install"
 msgstr "Zainstaluj"
 
@@ -3392,7 +3392,7 @@ msgid "eject the device to install it"
 msgstr "wysuń urządzenie, aby ją zainstalować"
 
 #. TRANSLATORS: button that ejects the device (its USB drive)
-#: openexpress/gui/app.py:3046 openexpress/gui/app.py:3188
+#: openexpress/gui/app.py:3046 openexpress/gui/app.py:3193
 msgid "Eject"
 msgstr "Wysuń"
 
@@ -3401,8 +3401,8 @@ msgstr "Wysuń"
 msgid "disconnect the device to install it"
 msgstr "odłącz urządzenie, aby ją zainstalować"
 
-#: openexpress/gui/app.py:3064 openexpress/gui/app.py:3285
-#: openexpress/gui/app.py:3302
+#: openexpress/gui/app.py:3064 openexpress/gui/app.py:3290
+#: openexpress/gui/app.py:3307
 msgid "Check Again"
 msgstr "Sprawdź ponownie"
 
@@ -3445,28 +3445,32 @@ msgstr "Zainstalować aktualizację?"
 msgid "License agreement (EULA)"
 msgstr "Umowa licencyjna (EULA)"
 
-#: openexpress/gui/app.py:3143 openexpress/gui/app.py:3547
+#: openexpress/gui/app.py:3143 openexpress/gui/app.py:3552
 #, python-brace-format
 msgid "License: {url}"
 msgstr "Licencja: {url}"
 
-#: openexpress/gui/app.py:3155 openexpress/gui/app.py:3553
+#: openexpress/gui/app.py:3155 openexpress/gui/app.py:3558
 msgid "Accept and install"
 msgstr "Zaakceptuj i zainstaluj"
 
-#: openexpress/gui/app.py:3167 openexpress/gui/app.py:3204
+#: openexpress/gui/app.py:3167 openexpress/gui/app.py:3209
 msgid "Done"
 msgstr "Gotowe"
 
-#: openexpress/gui/app.py:3174
+#: openexpress/gui/app.py:3173
+msgid "Update not installed"
+msgstr "Nie zainstalowano aktualizacji"
+
+#: openexpress/gui/app.py:3179
 msgid "Installing update…"
 msgstr "Instalowanie aktualizacji…"
 
-#: openexpress/gui/app.py:3182
+#: openexpress/gui/app.py:3187
 msgid "Update saved"
 msgstr "Aktualizacja zapisana"
 
-#: openexpress/gui/app.py:3183
+#: openexpress/gui/app.py:3188
 msgid ""
 "Eject the device before you unplug the cable: until then it may not see the "
 "update."
@@ -3475,162 +3479,162 @@ msgstr ""
 "aktualizacji."
 
 #. TRANSLATORS: button; the device is ejected later
-#: openexpress/gui/app.py:3186
+#: openexpress/gui/app.py:3191
 msgid "Later"
 msgstr "Później"
 
-#: openexpress/gui/app.py:3208
+#: openexpress/gui/app.py:3213
 msgid "Finish the update"
 msgstr "Dokończ aktualizację"
 
-#: openexpress/gui/app.py:3214
+#: openexpress/gui/app.py:3219
 msgid "The device is not mounted"
 msgstr "Urządzenie nie jest zamontowane"
 
-#: openexpress/gui/app.py:3216
+#: openexpress/gui/app.py:3221
 msgid "The device was not ejected"
 msgstr "Nie wysunięto urządzenia"
 
-#: openexpress/gui/app.py:3218 openexpress/gui/app.py:3644
+#: openexpress/gui/app.py:3223 openexpress/gui/app.py:3649
 msgid "Close"
 msgstr "Zamknij"
 
-#: openexpress/gui/app.py:3298 openexpress/gui/app.py:3755
+#: openexpress/gui/app.py:3303 openexpress/gui/app.py:3760
 msgid "On the device"
 msgstr "Na urządzeniu"
 
-#: openexpress/gui/app.py:3307
+#: openexpress/gui/app.py:3312
 #, python-brace-format
 msgid "Maps use {size}"
 msgstr "Mapy zajmują {size}"
 
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:3325 openexpress/gui/app.py:3781
+#: openexpress/gui/app.py:3330 openexpress/gui/app.py:3786
 msgid "Update"
 msgstr "Zaktualizuj"
 
-#: openexpress/gui/app.py:3328 openexpress/gui/app.py:3377
-#: openexpress/gui/app.py:3785
+#: openexpress/gui/app.py:3333 openexpress/gui/app.py:3382
+#: openexpress/gui/app.py:3790
 #, python-brace-format
 msgid "Remove {name}"
 msgstr "Usuń {name}"
 
 #. TRANSLATORS: group title: maps that can be installed
-#: openexpress/gui/app.py:3339
+#: openexpress/gui/app.py:3344
 msgid "Available"
 msgstr "Do pobrania"
 
-#: openexpress/gui/app.py:3339
+#: openexpress/gui/app.py:3344
 msgid "Free maps available for this device"
 msgstr "Darmowe mapy dostępne dla tego urządzenia"
 
-#: openexpress/gui/app.py:3340
+#: openexpress/gui/app.py:3345
 msgid "Search maps or regions"
 msgstr "Szukaj map lub regionów"
 
-#: openexpress/gui/app.py:3364
+#: openexpress/gui/app.py:3369
 msgid "Own maps"
 msgstr "Własne mapy"
 
-#: openexpress/gui/app.py:3364
+#: openexpress/gui/app.py:3369
 msgid "Maps not from Garmin, e.g. from OpenStreetMap"
 msgstr "Mapy spoza Garmina, np. z danych OpenStreetMap"
 
-#: openexpress/gui/app.py:3365
+#: openexpress/gui/app.py:3370
 msgid "Add Map…"
 msgstr "Dodaj mapę…"
 
-#: openexpress/gui/app.py:3367
+#: openexpress/gui/app.py:3372
 msgid "The map folder could not be read"
 msgstr "Nie udało się odczytać katalogu map"
 
-#: openexpress/gui/app.py:3369
+#: openexpress/gui/app.py:3374
 msgid "No maps of your own on the device"
 msgstr "Na urządzeniu nie ma własnych map"
 
-#: openexpress/gui/app.py:3385
+#: openexpress/gui/app.py:3390
 msgid "not copied by this installation"
 msgstr "nieskopiowana przez tę instalację"
 
-#: openexpress/gui/app.py:3387
+#: openexpress/gui/app.py:3392
 msgid "not recognised as a map; remove it in the file manager"
 msgstr "plik nierozpoznany jako mapa; usuń go w menedżerze plików"
 
-#: openexpress/gui/app.py:3417
+#: openexpress/gui/app.py:3422
 msgid "Choose a map file (.img)"
 msgstr "Wybierz plik mapy (.img)"
 
-#: openexpress/gui/app.py:3418
+#: openexpress/gui/app.py:3423
 msgid "Garmin map files (*.img)"
 msgstr "Pliki map Garmin (*.img)"
 
-#: openexpress/gui/app.py:3431 openexpress/gui/app.py:4234
-#: openexpress/gui/app.py:4291
+#: openexpress/gui/app.py:3436 openexpress/gui/app.py:4239
+#: openexpress/gui/app.py:4296
 msgid "Choose files stored on this computer"
 msgstr "Wybierz pliki zapisane na tym komputerze"
 
-#: openexpress/gui/app.py:3456
+#: openexpress/gui/app.py:3461
 msgid "Cannot add the map"
 msgstr "Nie można dodać mapy"
 
-#: openexpress/gui/app.py:3463
+#: openexpress/gui/app.py:3468
 msgid "Copy this map to the device?"
 msgstr "Skopiować tę mapę na urządzenie?"
 
 #. TRANSLATORS: button
-#: openexpress/gui/app.py:3463 openexpress/gui/app.py:3643
-#: openexpress/gui/app.py:4262
+#: openexpress/gui/app.py:3468 openexpress/gui/app.py:3648
+#: openexpress/gui/app.py:4267
 msgid "Copy"
 msgstr "Skopiuj"
 
-#: openexpress/gui/app.py:3465
+#: openexpress/gui/app.py:3470
 msgid "Copying the map…"
 msgstr "Kopiowanie mapy…"
 
-#: openexpress/gui/app.py:3491
+#: openexpress/gui/app.py:3496
 msgid "Cannot remove the map"
 msgstr "Nie można usunąć mapy"
 
-#: openexpress/gui/app.py:3505
+#: openexpress/gui/app.py:3510
 #, python-brace-format
 msgid "{path} ({size}) will be removed from the device."
 msgstr "Plik {path} ({size}) zostanie usunięty z urządzenia."
 
-#: openexpress/gui/app.py:3509
+#: openexpress/gui/app.py:3514
 msgid "openExpress did not copy this map to the device."
 msgstr "Tej mapy nie wgrał openExpress."
 
-#: openexpress/gui/app.py:3510 openexpress/gui/app.py:3581
-#: openexpress/gui/app.py:4073 openexpress/gui/app.py:4100
+#: openexpress/gui/app.py:3515 openexpress/gui/app.py:3586
+#: openexpress/gui/app.py:4078 openexpress/gui/app.py:4105
 #, python-brace-format
 msgid "Remove {name}?"
 msgstr "Usunąć {name}?"
 
-#: openexpress/gui/app.py:3511
+#: openexpress/gui/app.py:3516
 msgid "Remove Anyway"
 msgstr "Usuń mimo to"
 
-#: openexpress/gui/app.py:3511 openexpress/gui/app.py:3585
-#: openexpress/gui/app.py:4103 openexpress/gui/app.py:4213
-#: openexpress/gui/app.py:4220
+#: openexpress/gui/app.py:3516 openexpress/gui/app.py:3590
+#: openexpress/gui/app.py:4108 openexpress/gui/app.py:4218
+#: openexpress/gui/app.py:4225
 msgid "Remove"
 msgstr "Usuń"
 
-#: openexpress/gui/app.py:3513 openexpress/gui/app.py:3588
-#: openexpress/gui/app.py:4083 openexpress/gui/app.py:4125
+#: openexpress/gui/app.py:3518 openexpress/gui/app.py:3593
+#: openexpress/gui/app.py:4088 openexpress/gui/app.py:4130
 #, python-brace-format
 msgid "Removing {name}…"
 msgstr "Usuwanie {name}…"
 
-#: openexpress/gui/app.py:3531
+#: openexpress/gui/app.py:3536
 msgid "Cannot install the map"
 msgstr "Nie można zainstalować mapy"
 
-#: openexpress/gui/app.py:3535
+#: openexpress/gui/app.py:3540
 msgid "Setup missing"
 msgstr "Brak konfiguracji"
 
-#: openexpress/gui/app.py:3536
+#: openexpress/gui/app.py:3541
 msgid ""
 "Downloading maps requires the Utilities.dll file from Garmin Express.\n"
 "Run: openexpress setup --utilities-dll /path/to/Utilities.dll"
@@ -3638,67 +3642,67 @@ msgstr ""
 "Pobieranie map wymaga pliku Utilities.dll z Garmin Express.\n"
 "Uruchom: openexpress setup --utilities-dll /path/to/Utilities.dll"
 
-#: openexpress/gui/app.py:3541
+#: openexpress/gui/app.py:3546
 #, python-brace-format
 msgid "Download: {size}"
 msgstr "Pobieranie: {size}"
 
-#: openexpress/gui/app.py:3542
+#: openexpress/gui/app.py:3547
 #, python-brace-format
 msgid "Space on the device: {needed} ({free} free)"
 msgstr "Miejsce na urządzeniu: {needed} (wolne: {free})"
 
-#: openexpress/gui/app.py:3544
+#: openexpress/gui/app.py:3549
 #, python-brace-format
 msgid "Files: {count}"
 msgstr "Pliki: {count}"
 
-#: openexpress/gui/app.py:3545
+#: openexpress/gui/app.py:3550
 #, python-brace-format
 msgid "Old files to remove: {count}"
 msgstr "Stare pliki do usunięcia: {count}"
 
-#: openexpress/gui/app.py:3548
+#: openexpress/gui/app.py:3553
 msgid "Copying large maps over USB can take tens of minutes."
 msgstr "Kopiowanie dużych map przez USB może potrwać kilkadziesiąt minut."
 
-#: openexpress/gui/app.py:3549
+#: openexpress/gui/app.py:3554
 #, python-brace-format
 msgid "Update {name}?"
 msgstr "Zaktualizować {name}?"
 
-#: openexpress/gui/app.py:3549
+#: openexpress/gui/app.py:3554
 #, python-brace-format
 msgid "Install {name}?"
 msgstr "Zainstalować {name}?"
 
-#: openexpress/gui/app.py:3560
+#: openexpress/gui/app.py:3565
 #, python-brace-format
 msgid "Installing {name}…"
 msgstr "Instalowanie {name}…"
 
-#: openexpress/gui/app.py:3568
+#: openexpress/gui/app.py:3573
 #, python-brace-format
 msgid "{name} copied; unplug the device to load it"
 msgstr "Skopiowano {name}; odłącz urządzenie, aby ją wczytać"
 
-#: openexpress/gui/app.py:3582
+#: openexpress/gui/app.py:3587
 msgid "These files will be removed from the device:"
 msgstr "Z urządzenia zostaną usunięte te pliki:"
 
-#: openexpress/gui/app.py:3616
+#: openexpress/gui/app.py:3621
 msgid "Attach the last log"
 msgstr "Dołącz ostatni log"
 
-#: openexpress/gui/app.py:3617
+#: openexpress/gui/app.py:3622
 msgid "The log is filtered, but read it before you send it."
 msgstr "Log jest filtrowany, ale przeczytaj go przed wysłaniem."
 
-#: openexpress/gui/app.py:3630
+#: openexpress/gui/app.py:3635
 msgid "Connect the device first, so that the report can describe it."
 msgstr "Najpierw podłącz urządzenie, żeby raport mógł je opisać."
 
-#: openexpress/gui/app.py:3634
+#: openexpress/gui/app.py:3639
 msgid ""
 "Open on GitHub starts a new issue with this report filled in; nothing is "
 "published until you submit it. The report contains no serial number, unit ID "
@@ -3708,27 +3712,27 @@ msgstr ""
 "zostanie opublikowane, dopóki go nie wyślesz. Raport nie zawiera numeru "
 "seryjnego, identyfikatora urządzenia ani adresu e-mail."
 
-#: openexpress/gui/app.py:3638
+#: openexpress/gui/app.py:3643
 msgid "Report a Device or Problem"
 msgstr "Zgłoś urządzenie lub problem"
 
-#: openexpress/gui/app.py:3645
+#: openexpress/gui/app.py:3650
 msgid "Open on GitHub"
 msgstr "Otwórz na GitHubie"
 
-#: openexpress/gui/app.py:3656
+#: openexpress/gui/app.py:3661
 msgid "Report copied"
 msgstr "Skopiowano raport"
 
-#: openexpress/gui/app.py:3674
+#: openexpress/gui/app.py:3679
 msgid "Report copied: paste it into the form"
 msgstr "Raport skopiowany: wklej go w formularzu"
 
-#: openexpress/gui/app.py:3677
+#: openexpress/gui/app.py:3682
 msgid "The log is in the clipboard: paste it into the issue"
 msgstr "Log jest w schowku: wklej go w zgłoszeniu"
 
-#: openexpress/gui/app.py:3691
+#: openexpress/gui/app.py:3696
 msgid ""
 "Unofficial Linux app for Garmin watches: sync with Garmin Connect, software "
 "updates, maps, Connect IQ apps and music.\n"
@@ -3746,73 +3750,73 @@ msgstr ""
 "są znakami towarowymi Garmin Ltd. lub jej spółek zależnych."
 
 #. TRANSLATORS: a link in "About openExpress" to the page where one can support it
-#: openexpress/gui/app.py:3698
+#: openexpress/gui/app.py:3703
 msgid "Support the project"
 msgstr "Wesprzyj projekt"
 
 #. TRANSLATORS: replace with your name(s) in the translated version
-#: openexpress/gui/app.py:3700
+#: openexpress/gui/app.py:3705
 msgid "translator-credits"
 msgstr "Tomasz Bojanowski"
 
-#: openexpress/gui/app.py:3715
+#: openexpress/gui/app.py:3720
 msgid "Sign in to manage apps."
 msgstr "Zaloguj się, aby zarządzać aplikacjami."
 
-#: openexpress/gui/app.py:3757
+#: openexpress/gui/app.py:3762
 msgid "Update all"
 msgstr "Zaktualizuj wszystko"
 
-#: openexpress/gui/app.py:3776
+#: openexpress/gui/app.py:3781
 #, python-brace-format
 msgid "update {version}"
 msgstr "aktualizacja {version}"
 
-#: openexpress/gui/app.py:3788
+#: openexpress/gui/app.py:3793
 msgid "Order"
 msgstr "Kolejność"
 
-#: openexpress/gui/app.py:3791 openexpress/gui/app.py:3951
-#: openexpress/gui/app.py:3954 openexpress/gui/app.py:3959
+#: openexpress/gui/app.py:3796 openexpress/gui/app.py:3956
+#: openexpress/gui/app.py:3959 openexpress/gui/app.py:3964
 msgid "Restore the order from a copy"
 msgstr "Przywróć kolejność z kopii"
 
-#: openexpress/gui/app.py:3793
+#: openexpress/gui/app.py:3798
 msgid "A copy of the app list is made before every change"
 msgstr "Kopia listy aplikacji powstaje przed każdą zmianą"
 
-#: openexpress/gui/app.py:3794
+#: openexpress/gui/app.py:3799
 msgid "Restore…"
 msgstr "Przywróć…"
 
-#: openexpress/gui/app.py:3802
+#: openexpress/gui/app.py:3807
 msgid "In your Garmin account"
 msgstr "Na koncie Garmin"
 
-#: openexpress/gui/app.py:3803
+#: openexpress/gui/app.py:3808
 msgid "Apps you added in the Connect IQ store (website or phone)."
 msgstr "Aplikacje dodane w sklepie Connect IQ (w witrynie lub na telefonie)."
 
-#: openexpress/gui/app.py:3804
+#: openexpress/gui/app.py:3809
 msgid ""
 "Add apps in the Connect IQ store (website or phone); they will show up here."
 msgstr ""
 "Dodaj aplikacje w sklepie Connect IQ (w witrynie lub na telefonie); pojawią "
 "się tutaj."
 
-#: openexpress/gui/app.py:3817
+#: openexpress/gui/app.py:3822
 msgid "Built-in activities and apps"
 msgstr "Wbudowane aktywności i aplikacje"
 
-#: openexpress/gui/app.py:3818
+#: openexpress/gui/app.py:3823
 msgid "Changes take effect after you disconnect the device."
 msgstr "Zmiany zostaną zastosowane po odłączeniu urządzenia."
 
-#: openexpress/gui/app.py:3819
+#: openexpress/gui/app.py:3824
 msgid "Search activities"
 msgstr "Szukaj aktywności"
 
-#: openexpress/gui/app.py:3821
+#: openexpress/gui/app.py:3826
 #, python-brace-format
 msgid "Show {count} item"
 msgid_plural "Show {count} items"
@@ -3820,7 +3824,7 @@ msgstr[0] "Pokaż {count} element"
 msgstr[1] "Pokaż {count} elementy"
 msgstr[2] "Pokaż {count} elementów"
 
-#: openexpress/gui/app.py:3881
+#: openexpress/gui/app.py:3886
 #, python-brace-format
 msgid "{count} free slot · {size} free"
 msgid_plural "{count} free slots · {size} free"
@@ -3828,24 +3832,24 @@ msgstr[0] "{count} wolne miejsce na aplikację · wolne: {size}"
 msgstr[1] "{count} wolne miejsca na aplikacje · wolne: {size}"
 msgstr[2] "{count} wolnych miejsc na aplikacje · wolne: {size}"
 
-#: openexpress/gui/app.py:3889
+#: openexpress/gui/app.py:3894
 msgid "Will be installed after the device is unplugged"
 msgstr "Zostanie zainstalowana po odłączeniu urządzenia"
 
-#: openexpress/gui/app.py:3891
+#: openexpress/gui/app.py:3896
 msgid "Will be removed after the device is unplugged"
 msgstr "Zostanie usunięta po odłączeniu urządzenia"
 
-#: openexpress/gui/app.py:3893
+#: openexpress/gui/app.py:3898
 msgid "Will be updated after the device is unplugged"
 msgstr "Zostanie zaktualizowana po odłączeniu urządzenia"
 
-#: openexpress/gui/app.py:3907
+#: openexpress/gui/app.py:3912
 msgid "The app list on the device has entries that cannot be read"
 msgstr ""
 "Lista aplikacji na urządzeniu zawiera wpisy, których nie można odczytać"
 
-#: openexpress/gui/app.py:3909
+#: openexpress/gui/app.py:3914
 msgid ""
 "The device has not applied earlier changes yet. Unplug it, wait until it is "
 "ready and try again."
@@ -3853,7 +3857,7 @@ msgstr ""
 "Urządzenie nie zastosowało jeszcze wcześniejszych zmian. Odłącz je, "
 "poczekaj, aż będzie gotowe, i spróbuj ponownie."
 
-#: openexpress/gui/app.py:3923
+#: openexpress/gui/app.py:3928
 #, python-brace-format
 msgid "{count} position differs from now"
 msgid_plural "{count} positions differ from now"
@@ -3861,15 +3865,15 @@ msgstr[0] "Różni się {count} pozycja"
 msgstr[1] "Różnią się {count} pozycje"
 msgstr[2] "Różni się {count} pozycji"
 
-#: openexpress/gui/app.py:3925
+#: openexpress/gui/app.py:3930
 msgid "The same order as now"
 msgstr "Kolejność taka sama jak obecnie"
 
-#: openexpress/gui/app.py:3934
+#: openexpress/gui/app.py:3939
 msgid "The same apps with the same flags; only the order changes."
 msgstr "Te same aplikacje z tymi samymi flagami; zmienia się tylko kolejność."
 
-#: openexpress/gui/app.py:3955
+#: openexpress/gui/app.py:3960
 msgid ""
 "There are no copies of the app list yet. A copy is made before every change "
 "of the apps on the device."
@@ -3877,50 +3881,50 @@ msgstr ""
 "Nie ma jeszcze kopii listy aplikacji. Kopia powstaje przed każdą zmianą "
 "aplikacji na urządzeniu."
 
-#: openexpress/gui/app.py:3960
+#: openexpress/gui/app.py:3965
 msgid "Choose the copy of the app list to take the order from."
 msgstr "Wybierz kopię listy aplikacji, z której ma pochodzić kolejność."
 
 #. TRANSLATORS: button that leads to the summary of the change
-#: openexpress/gui/app.py:3976
+#: openexpress/gui/app.py:3981
 msgid "Next"
 msgstr "Dalej"
 
-#: openexpress/gui/app.py:3984
+#: openexpress/gui/app.py:3989
 msgid "Reading the copies of the app list…"
 msgstr "Odczytywanie kopii listy aplikacji…"
 
-#: openexpress/gui/app.py:3991
+#: openexpress/gui/app.py:3996
 msgid "Restore this order?"
 msgstr "Przywrócić tę kolejność?"
 
-#: openexpress/gui/app.py:3995
+#: openexpress/gui/app.py:4000
 msgid "Restore the Order"
 msgstr "Przywróć kolejność"
 
-#: openexpress/gui/app.py:4012
+#: openexpress/gui/app.py:4017
 msgid "Restoring the order…"
 msgstr "Przywracanie kolejności…"
 
-#: openexpress/gui/app.py:4030
+#: openexpress/gui/app.py:4035
 msgid "Queued in Garmin Connect"
 msgstr "W kolejce w Garmin Connect"
 
-#: openexpress/gui/app.py:4037
+#: openexpress/gui/app.py:4042
 #, python-brace-format
 msgid "Installed {names}"
 msgstr "Zainstalowano {names}"
 
-#: openexpress/gui/app.py:4039
+#: openexpress/gui/app.py:4044
 msgid "Queued; it will be installed on the next sync"
 msgstr ""
 "Dodano do kolejki; zostanie zainstalowana przy następnej synchronizacji"
 
-#: openexpress/gui/app.py:4042
+#: openexpress/gui/app.py:4047
 msgid "Installing apps…"
 msgstr "Instalowanie aplikacji…"
 
-#: openexpress/gui/app.py:4051
+#: openexpress/gui/app.py:4056
 #, python-brace-format
 msgid ""
 "{names}: openExpress cannot install apps on this device over USB yet. The "
@@ -3931,11 +3935,11 @@ msgstr ""
 "Aplikacja czeka w kolejce w Garmin Connect, a zainstaluje ją telefon albo "
 "Garmin Express."
 
-#: openexpress/gui/app.py:4062
+#: openexpress/gui/app.py:4067
 msgid "Here you can only remove it from your account list."
 msgstr "Tutaj można ją tylko usunąć z listy na koncie."
 
-#: openexpress/gui/app.py:4063
+#: openexpress/gui/app.py:4068
 #, python-brace-format
 msgid ""
 "{name} cannot be removed over USB: this device shows no app files. Remove it "
@@ -3949,11 +3953,11 @@ msgstr ""
 "\n"
 "Tutaj można ją tylko usunąć z listy na koncie."
 
-#: openexpress/gui/app.py:4076
+#: openexpress/gui/app.py:4081
 msgid "Remove from Account"
 msgstr "Usuń z konta"
 
-#: openexpress/gui/app.py:4096
+#: openexpress/gui/app.py:4101
 msgid ""
 "The app will be deleted from the device over a direct USB connection; the "
 "device disappears from the file manager for a moment. The device finishes "
@@ -3963,58 +3967,58 @@ msgstr ""
 "urządzenie na chwilę zniknie z menedżera plików. Urządzenie dokończy "
 "usuwanie po odłączeniu."
 
-#: openexpress/gui/app.py:4099
+#: openexpress/gui/app.py:4104
 msgid "The app and its settings will be deleted from the device."
 msgstr "Aplikacja i jej ustawienia zostaną usunięte z urządzenia."
 
-#: openexpress/gui/app.py:4102
+#: openexpress/gui/app.py:4107
 msgid "Remove and forget"
 msgstr "Usuń i zapomnij"
 
-#: openexpress/gui/app.py:4119
+#: openexpress/gui/app.py:4124
 #, python-brace-format
 msgid "Removed {name}"
 msgstr "Usunięto aplikację {name}"
 
-#: openexpress/gui/app.py:4148
+#: openexpress/gui/app.py:4153
 #, python-brace-format
 msgid "{name} enabled"
 msgstr "{name}: włączona"
 
-#: openexpress/gui/app.py:4148
+#: openexpress/gui/app.py:4153
 #, python-brace-format
 msgid "{name} disabled"
 msgstr "{name}: wyłączona"
 
-#: openexpress/gui/app.py:4158
+#: openexpress/gui/app.py:4163
 msgid "Saving…"
 msgstr "Zapisywanie…"
 
-#: openexpress/gui/app.py:4191
+#: openexpress/gui/app.py:4196
 msgid "Add to the device"
 msgstr "Dodaj na urządzenie"
 
-#: openexpress/gui/app.py:4194
+#: openexpress/gui/app.py:4199
 msgid "Folders…"
 msgstr "Katalogi…"
 
-#: openexpress/gui/app.py:4195
+#: openexpress/gui/app.py:4200
 msgid "Files…"
 msgstr "Pliki…"
 
-#: openexpress/gui/app.py:4197
+#: openexpress/gui/app.py:4202
 msgid "Music on the device"
 msgstr "Muzyka na urządzeniu"
 
-#: openexpress/gui/app.py:4197
+#: openexpress/gui/app.py:4202
 msgid "Podcasts on the device"
 msgstr "Podcasty na urządzeniu"
 
-#: openexpress/gui/app.py:4198
+#: openexpress/gui/app.py:4203
 msgid "Audiobooks on the device"
 msgstr "Audiobooki na urządzeniu"
 
-#: openexpress/gui/app.py:4203
+#: openexpress/gui/app.py:4208
 #, python-brace-format
 msgid "{count} file · {size}"
 msgid_plural "{count} files · {size}"
@@ -4022,7 +4026,7 @@ msgstr[0] "{count} plik · {size}"
 msgstr[1] "{count} pliki · {size}"
 msgstr[2] "{count} plików · {size}"
 
-#: openexpress/gui/app.py:4207
+#: openexpress/gui/app.py:4212
 #, python-brace-format
 msgid "Show {count} file"
 msgid_plural "Show {count} files"
@@ -4030,23 +4034,23 @@ msgstr[0] "Pokaż {count} plik"
 msgstr[1] "Pokaż {count} pliki"
 msgstr[2] "Pokaż {count} plików"
 
-#: openexpress/gui/app.py:4216
+#: openexpress/gui/app.py:4221
 msgid "Playlists"
 msgstr "Listy odtwarzania"
 
-#: openexpress/gui/app.py:4217
+#: openexpress/gui/app.py:4222
 msgid "Add Playlist…"
 msgstr "Dodaj listę…"
 
-#: openexpress/gui/app.py:4224
+#: openexpress/gui/app.py:4229
 msgid "Choose music to copy to the device"
 msgstr "Wybierz muzykę do skopiowania na urządzenie"
 
-#: openexpress/gui/app.py:4254
+#: openexpress/gui/app.py:4259
 msgid "Nothing new to copy"
 msgstr "Brak nowych plików do skopiowania"
 
-#: openexpress/gui/app.py:4258
+#: openexpress/gui/app.py:4263
 #, python-brace-format
 msgid "Copy {count} file?"
 msgid_plural "Copy {count} files?"
@@ -4054,11 +4058,11 @@ msgstr[0] "Skopiować {count} plik?"
 msgstr[1] "Skopiować {count} pliki?"
 msgstr[2] "Skopiować {count} plików?"
 
-#: openexpress/gui/app.py:4265 openexpress/gui/app.py:4360
+#: openexpress/gui/app.py:4270 openexpress/gui/app.py:4365
 msgid "Copying music…"
 msgstr "Kopiowanie muzyki…"
 
-#: openexpress/gui/app.py:4268
+#: openexpress/gui/app.py:4273
 #, python-brace-format
 msgid "Copied {count} file"
 msgid_plural "Copied {count} files"
@@ -4066,19 +4070,19 @@ msgstr[0] "Skopiowano {count} plik"
 msgstr[1] "Skopiowano {count} pliki"
 msgstr[2] "Skopiowano {count} plików"
 
-#: openexpress/gui/app.py:4273
+#: openexpress/gui/app.py:4278
 msgid "Scanning files…"
 msgstr "Skanowanie plików…"
 
-#: openexpress/gui/app.py:4276
+#: openexpress/gui/app.py:4281
 msgid "Choose a playlist to add to the device"
 msgstr "Wybierz listę odtwarzania do dodania na urządzenie"
 
-#: openexpress/gui/app.py:4278
+#: openexpress/gui/app.py:4283
 msgid "Playlists (.m3u, .m3u8)"
 msgstr "Listy odtwarzania (.m3u, .m3u8)"
 
-#: openexpress/gui/app.py:4302
+#: openexpress/gui/app.py:4307
 #, python-brace-format
 msgid "{size} will be copied to the device ({count} file already there)."
 msgid_plural ""
@@ -4093,7 +4097,7 @@ msgstr[2] ""
 "Na urządzenie zostanie skopiowane {size} ({count} plików jest już na "
 "urządzeniu)."
 
-#: openexpress/gui/app.py:4313
+#: openexpress/gui/app.py:4318
 #, python-brace-format
 msgid "{count} track"
 msgid_plural "{count} tracks"
@@ -4101,7 +4105,7 @@ msgstr[0] "{count} utwór"
 msgstr[1] "{count} utwory"
 msgstr[2] "{count} utworów"
 
-#: openexpress/gui/app.py:4315
+#: openexpress/gui/app.py:4320
 #, python-brace-format
 msgid "{count} file to copy ({size}), {already} already on the device"
 msgid_plural "{count} files to copy ({size}), {already} already on the device"
@@ -4111,13 +4115,13 @@ msgstr[1] ""
 msgstr[2] ""
 "Do skopiowania: {count} plików ({size}), już na urządzeniu: {already}"
 
-#: openexpress/gui/app.py:4324
+#: openexpress/gui/app.py:4329
 msgid ""
 "A playlist with this name is already on the device and will be replaced."
 msgstr ""
 "Lista odtwarzania o tej nazwie jest już na urządzeniu i zostanie zastąpiona."
 
-#: openexpress/gui/app.py:4328
+#: openexpress/gui/app.py:4333
 #, python-brace-format
 msgid "{count} track cannot be added:"
 msgid_plural "{count} tracks cannot be added:"
@@ -4125,7 +4129,7 @@ msgstr[0] "Nie można dodać {count} utworu:"
 msgstr[1] "Nie można dodać {count} utworów:"
 msgstr[2] "Nie można dodać {count} utworów:"
 
-#: openexpress/gui/app.py:4337
+#: openexpress/gui/app.py:4342
 msgid ""
 "openExpress installed as a Flatpak can read music only from the Music and "
 "Downloads folders."
@@ -4133,34 +4137,34 @@ msgstr ""
 "openExpress zainstalowany jako Flatpak może odczytywać muzykę tylko z "
 "katalogów Muzyka i Pobrane."
 
-#: openexpress/gui/app.py:4350 openexpress/music.py:358
+#: openexpress/gui/app.py:4355 openexpress/music.py:358
 msgid "The playlist has no tracks that can be added."
 msgstr "Lista odtwarzania nie zawiera utworów, które można dodać."
 
-#: openexpress/gui/app.py:4353
+#: openexpress/gui/app.py:4358
 #, python-brace-format
 msgid "Add the playlist “{name}”?"
 msgstr "Dodać listę odtwarzania „{name}”?"
 
 #. TRANSLATORS: button that adds the playlist to the device
-#: openexpress/gui/app.py:4357
+#: openexpress/gui/app.py:4362
 msgid "Add"
 msgstr "Dodaj"
 
-#: openexpress/gui/app.py:4363
+#: openexpress/gui/app.py:4368
 #, python-brace-format
 msgid "Playlist “{name}” added"
 msgstr "Dodano listę odtwarzania „{name}”"
 
-#: openexpress/gui/app.py:4367
+#: openexpress/gui/app.py:4372
 msgid "Reading the playlist…"
 msgstr "Odczytywanie listy odtwarzania…"
 
-#: openexpress/gui/app.py:4374
+#: openexpress/gui/app.py:4379
 msgid "Removing…"
 msgstr "Usuwanie…"
 
-#: openexpress/gui/app.py:4464
+#: openexpress/gui/app.py:4469
 #, python-brace-format
 msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""
@@ -4332,7 +4336,6 @@ msgstr ""
 "Najpierw odłącz urządzenie."
 
 #: openexpress/maps.py:370 openexpress/music.py:273 openexpress/ownmaps.py:236
-#: openexpress/updates.py:299
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr "Za mało miejsca na urządzeniu: potrzeba {need}, wolne {free}"
@@ -4351,7 +4354,7 @@ msgstr "Aktywacja mapy na serwerze Garmin"
 msgid "Removing old file {path}"
 msgstr "Usuwanie starego pliku {path}"
 
-#: openexpress/maps.py:412 openexpress/updates.py:327
+#: openexpress/maps.py:412 openexpress/updates.py:361
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr "Kopiowanie na urządzenie: {path}"
@@ -5149,7 +5152,7 @@ msgstr "TrueUp: zapisywanie dziennych podsumowań na urządzeniu"
 msgid "empty TrueUp file"
 msgstr "pusty plik TrueUp"
 
-#: openexpress/updates.py:34
+#: openexpress/updates.py:37
 msgid ""
 "Warning: this is a device system update. Charge the device and do not "
 "disconnect it while copying."
@@ -5157,51 +5160,51 @@ msgstr ""
 "Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urządzenie i nie "
 "odłączaj go podczas kopiowania."
 
-#: openexpress/updates.py:40
+#: openexpress/updates.py:43
 msgid "Garmin offers beta software for this device."
 msgstr "Garmin oferuje dla tego urządzenia oprogramowanie w wersji beta."
 
 #. TRANSLATORS: kind of update: a file that belongs to a map (Garmin/SID/*.sid)
-#: openexpress/updates.py:111
+#: openexpress/updates.py:114
 msgid "Map support file"
 msgstr "Plik dodatkowy mapy"
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:113
+#: openexpress/updates.py:116
 msgid "Software"
 msgstr "Oprogramowanie"
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:115
+#: openexpress/updates.py:118
 msgid "Configuration"
 msgstr "Konfiguracja"
 
 #. TRANSLATORS: kind of update: a file that describes other updates
-#: openexpress/updates.py:117
+#: openexpress/updates.py:120
 msgid "Update information"
 msgstr "Informacje o aktualizacji"
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:121
+#: openexpress/updates.py:124
 msgid "Critical"
 msgstr "Krytyczna"
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:123
+#: openexpress/updates.py:126
 msgid "Recommended"
 msgstr "Zalecana"
 
 #. TRANSLATORS: importance of an update, when the server does not say
-#: openexpress/updates.py:125
+#: openexpress/updates.py:128
 msgid "Unspecified"
 msgstr "Nieokreślona"
 
-#: openexpress/updates.py:253
+#: openexpress/updates.py:274
 #, python-brace-format
 msgid "Not in the list: {items}"
 msgstr "Brak na liście: {items}"
 
-#: openexpress/updates.py:266
+#: openexpress/updates.py:287
 #, python-brace-format
 msgid ""
 "The server gave a name that cannot be used as a path on this computer: "
@@ -5210,17 +5213,26 @@ msgstr ""
 "Serwer podał nazwę, której nie można użyć jako ścieżki na tym komputerze: "
 "'{name}'"
 
-#: openexpress/updates.py:309
+#: openexpress/updates.py:331
+#, python-brace-format
+msgid ""
+"Not enough space on the device: {need} needed and {margin} kept free, but "
+"only {free} free"
+msgstr ""
+"Za mało miejsca na urządzeniu: potrzeba {need} i {margin} zapasu, wolne "
+"{free}"
+
+#: openexpress/updates.py:343
 #, python-brace-format
 msgid "{part}: the server did not provide a download URL"
 msgstr "{part}: serwer nie podał adresu URL do pobrania"
 
-#: openexpress/updates.py:311
+#: openexpress/updates.py:345
 #, python-brace-format
 msgid "Downloading {name} {version} ({size})"
 msgstr "Pobieranie {name} {version} ({size})"
 
-#: openexpress/updates.py:320
+#: openexpress/updates.py:354
 #, python-brace-format
 msgid "{part}: the RGN format is not supported by openExpress"
 msgstr "{part}: format RGN nie jest obsługiwany przez openExpress"
@@ -5326,9 +5338,6 @@ msgstr "Synchronizacja się nie powiodła"
 #~ msgstr ""
 #~ "Instalowanie aktualizacji na urządzeniu w trybie pamięci masowej nie jest "
 #~ "jeszcze dostępne."
-
-#~ msgid "not installed"
-#~ msgstr "niezainstalowana"
 
 #~ msgid "installed"
 #~ msgstr "zainstalowana"
