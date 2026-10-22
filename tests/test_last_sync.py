@@ -446,3 +446,42 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
                                       device=types.SimpleNamespace(unit_id=A)))
     MainWindow._show_last_sync(win)
     assert len(said) == 1 and said[0].endswith("3 new files, 3 uploaded")
+
+
+UNIT = 3000000001
+
+
+@pytest.mark.parametrize("field, value", [
+    ("time", "yesterday"), ("time", None), ("time", True), ("time", float("nan")),
+    ("time", 1e300), ("uploaded", None), ("downloaded", "2"), ("rejected", 1.5),
+    ("skipped_known", False), ("errors", "a text"), ("lines", 5),
+])
+def test_a_record_of_the_last_sync_of_an_unexpected_shape_reads_as_none(xdg, field, value):
+    """Only a file edited by hand has it: "Not synced yet" rather than a window that cannot
+    draw the row (a value of the wrong type stopped the drawing)."""
+    import json
+
+    from openexpress import paths
+    from openexpress.gui.app import last_sync_words
+
+    good = {"time": 1761000000.0, "unit_id": UNIT, "uploaded": 1, "downloaded": 0,
+            "skipped_known": 0, "rejected": 0, "errors": [], "lines": []}
+    path = service.device_last_sync_path(UNIT)
+    paths.write_private(path, json.dumps(good))
+    assert last_sync_words(service.load_last_sync(UNIT))  # read and drawn
+    paths.write_private(path, json.dumps({**good, field: value}))
+    data = service.load_last_sync(UNIT)
+    assert data is None
+
+
+@pytest.mark.parametrize("text", ["[]", "3", '"a text"', "null"])
+def test_gui_settings_of_an_unexpected_shape_read_as_none(xdg, text):
+    """gui.json that is not an object (edited by hand): the defaults, not a window that does
+    not start."""
+    from openexpress import paths
+    from openexpress.gui import app
+
+    paths.write_private(app.gui_settings_path(), text)
+    settings = app.load_gui_settings()
+    assert settings == {}
+    assert app.window_geometry(settings) == (*app.DEFAULT_WINDOW, False)

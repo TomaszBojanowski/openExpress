@@ -10,6 +10,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from openexpress import applog, known_devices, paths, sync
 from openexpress.auth import store
@@ -685,15 +686,40 @@ def _read_json(path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+_LAST_SYNC_COUNTS = ("uploaded", "downloaded", "skipped_known", "rejected")
+
+
+def _usable_last_sync(data: dict | None) -> dict | None:
+    """The record as it is, or None when a field has a value of another type than the
+    program writes (only a file edited by hand has one): shown as no sync, not as a row
+    that cannot be drawn. A field left out reads as before."""
+    if data is None:
+        return None
+    when = data.get("time", 0.0)
+    if isinstance(when, bool) or not isinstance(when, int | float):
+        return None
+    try:
+        datetime.fromtimestamp(when)
+    except (ValueError, OverflowError, OSError):
+        return None
+    for key in _LAST_SYNC_COUNTS:
+        value = data.get(key, 0)
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+    if not all(isinstance(data.get(key, []), list) for key in ("errors", "lines")):
+        return None
+    return data
+
+
 def load_last_sync(unit_id: int | None = None) -> dict | None:
     """The last sync of this device (of any device without `unit_id`). Its own file comes
     first; the shared file, which earlier versions wrote alone, counts only when it is of
     this device."""
     if unit_id is not None:
-        data = _read_json(device_last_sync_path(unit_id))
+        data = _usable_last_sync(_read_json(device_last_sync_path(unit_id)))
         if data is not None and data.get("unit_id") == unit_id:
             return data
-    data = _read_json(last_sync_path())
+    data = _usable_last_sync(_read_json(last_sync_path()))
     if data is None or (unit_id is not None and data.get("unit_id") != unit_id):
         return None
     return data

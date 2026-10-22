@@ -130,11 +130,14 @@ def gui_settings_path() -> Path:
 
 
 def load_gui_settings() -> dict:
+    """The window's own settings; {} when there are none, or when the file is not an
+    object (edited by hand): the defaults then, never a window that does not start."""
     p = gui_settings_path()
     try:
-        return json.loads(p.read_text()) if p.exists() else {}
+        data = json.loads(p.read_text()) if p.exists() else {}
     except ValueError:
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def save_gui_settings(data: dict) -> None:
