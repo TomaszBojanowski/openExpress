@@ -18,7 +18,12 @@ from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.requi
 
 from openexpress import service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import SeveralDevices, garmin_usb, own_remount  # noqa: E402
+from openexpress.device.gio_storage import (  # noqa: E402
+    MassStorageNotice,
+    SeveralDevices,
+    garmin_usb,
+    own_remount,
+)
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
@@ -113,8 +118,10 @@ class Watcher(Gio.Application):
         for attempt in range(OPEN_RETRIES + 1):
             try:
                 return service.open_session()
-            except SeveralDevices:
-                raise  # nothing to wait for: syncing waits for a choice in the window
+            except (SeveralDevices, MassStorageNotice):
+                # Nothing to wait for: syncing waits for a choice in the window, and a drive
+                # is never synced (P4).
+                raise
             except DeviceError:
                 # Right after mounting, gvfs may not be ready yet.
                 if attempt == OPEN_RETRIES or self.quit_requested:
@@ -155,6 +162,10 @@ class Watcher(Gio.Application):
         except SeveralDevices:
             # P4: nothing is synced and nothing shown; a device chosen in the window is.
             log.info("Not syncing: several devices are connected")
+        except MassStorageNotice:
+            # P4 and D4: only a Garmin drive is there (the device plugged in went away before
+            # its sync started): nothing synced and nothing shown, as with several devices.
+            log.info("Not syncing: only a device in mass storage mode is connected")
         except OwnershipError as e:
             log.info("Not syncing: %s", e)
             GLib.idle_add(self.notify, _("Garmin: this device was not synced"), str(e))

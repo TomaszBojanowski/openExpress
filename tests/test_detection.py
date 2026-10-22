@@ -1568,6 +1568,31 @@ def test_the_watcher_syncs_nothing_with_a_garmin_drive_alone(watch_and_drives, m
     assert synced == []
 
 
+def test_a_sync_that_finds_only_a_garmin_drive_says_nothing(watch_and_drives, monkeypatch,
+                                                             caplog):
+    """P4 and D4: the watch was plugged in and out again before its sync started, a Garmin
+    drive is left. As with several devices: asked once (nothing to wait for), one INFO line
+    in the log, no notification and no ERROR (there was "Sync failed: ... its drive is not
+    mounted", while it was)."""
+    from openexpress import watch
+
+    synced, shown = _watcher_syncs(monkeypatch)
+    monkeypatch.setattr(watch, "OPEN_RETRIES", 3)
+    monkeypatch.setattr(watch, "OPEN_RETRY_DELAY_S", 0)
+    opened = []
+    asked = watch.service.open_session
+    monkeypatch.setattr(watch.service, "open_session",
+                        lambda *a, **kw: (opened.append(1), asked(*a, **kw))[1])
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    with caplog.at_level(logging.INFO, logger="openexpress.watch"):
+        watch.Watcher()._sync()
+    assert synced == [] and shown == [] and opened == [1]
+    assert [(r.levelname, r.getMessage()) for r in caplog.records
+            if r.name == "openexpress.watch"] == [
+        ("INFO", "Not syncing: only a device in mass storage mode is connected")]
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
 # --- the window and a Garmin drive -----------------------------------------------------------
 
 
