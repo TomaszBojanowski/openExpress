@@ -406,9 +406,10 @@ when they are installed or updated. It is not cleared while a download or an ins
 Besides network, USB storage access through GNOME's gvfs and your Downloads/Music folders,
 the Flatpak has three permissions that weaken the sandbox:
 
-- It can run commands on the host (`org.freedesktop.Flatpak`). It uses this only to copy
-  files to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
-  devices.
+- It can run commands on the host (`org.freedesktop.Flatpak`). It uses this to copy files
+  to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
+  devices, and to read which repository the Flatpak was installed from
+  (`flatpak info --show-origin`, for the device report and the log; it changes nothing).
 - It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of
   `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
   (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
