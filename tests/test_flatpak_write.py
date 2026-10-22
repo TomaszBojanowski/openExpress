@@ -71,6 +71,22 @@ def test_write_file_stages_sandbox_private_files(flatpak, tmp_path, monkeypatch)
         private.unlink()
 
 
+@pytest.mark.parametrize("name", ["-x.mp3", "Name: x.mp3"])
+def test_the_host_gets_the_file_by_its_whole_path(monkeypatch, tmp_path, name):
+    """A file given as it was typed (`music add .` lists the folder by relative names): the
+    host's gio would take "-x.mp3" for an option and "Name: x.mp3" for an address. It gets
+    the whole path, the one _host_visible looked at."""
+    commands = []
+    monkeypatch.setattr(gio_storage.shutil, "which", lambda name: "/usr/bin/" + name)
+    monkeypatch.setattr(gio_storage.subprocess, "run", lambda cmd, **kw: (
+        commands.append(cmd), subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    (tmp_path / name).write_bytes(b"MP3")
+    monkeypatch.chdir(tmp_path)
+    gio_storage.host_copy(Path(name), "mtp://watch/Music/x.mp3", "Cannot write x.mp3")
+    assert commands == [["flatpak-spawn", "--host", "gio", "copy",
+                         str((tmp_path / name).resolve()), "mtp://watch/Music/x.mp3"]]
+
+
 def test_host_copy_error_is_reported(flatpak, monkeypatch):
     st, _calls = flatpak
     monkeypatch.setattr(gio_storage.subprocess, "run",

@@ -135,9 +135,12 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
     if not shutil.which("flatpak-spawn"):
         raise CopyNotStarted(f"{what}: " + _("flatpak-spawn is not available"))
     command = ["flatpak-spawn", "--host", "gio", "copy"]
+    # The whole path, as _host_visible saw it: one given as typed ("-x.mp3", "Name: x.mp3")
+    # would be an option or an address to the host's gio.
+    source = str(Path(local).resolve())
     if progress is None:
         try:
-            res = subprocess.run([*command, str(local), target_uri],
+            res = subprocess.run([*command, source, target_uri],
                                  capture_output=True, text=True, timeout=HOST_COPY_TIMEOUT_S,
                                  check=False)
         except OSError as e:  # the command could not be started
@@ -149,7 +152,7 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         return
     try:
         size = Path(local).stat().st_size
-        proc = subprocess.Popen([*command, "-p", str(local), target_uri],
+        proc = subprocess.Popen([*command, "-p", source, target_uri],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as e:  # the command could not be started
         raise CopyNotStarted(f"{what}: {e}") from e
