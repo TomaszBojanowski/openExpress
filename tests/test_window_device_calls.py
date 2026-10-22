@@ -172,3 +172,78 @@ def test_a_device_gone_during_the_check_says_nothing(map_window, monkeypatch):
     win.tasks.before_done = lambda: setattr(win, "session", None)
     app.MainWindow.confirm_map(win, m)
     assert Question.asked == [] and win.tasks.errors == []
+
+
+# --- step 3: the question before the order of the apps is restored ---------------------------
+
+from test_ciq_music import iq_device, order_device  # noqa: E402, F401 - the fixtures
+
+NOTE = "Before any change, a copy of the app list of the device is made."
+
+
+def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeypatch):
+    from openexpress import ciq
+    from openexpress.gui import app
+
+    st, dev, backups = order_device
+    Question.asked = []
+    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
+    storage = Counting(st.root)
+    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=storage),
+                                _order_summary=app.MainWindow._order_summary,
+                                restore_order=lambda copy: None)
+    app.MainWindow.confirm_order(win, copy, plan, NOTE)
+    assert storage.on_gtk == []
+    (asked,) = Question.asked
+    assert NOTE in asked["body"]
+
+
+class Dialog:
+    """Adw.AlertDialog as choose_order uses it: its list and its handlers are kept."""
+
+    def __init__(self, **kw):
+        self.kw, self.handlers, self.extra = kw, {}, None
+        Dialog.made.append(self)
+
+    def set_extra_child(self, widget):
+        self.extra = widget
+
+    def connect(self, signal, handler):
+        self.handlers[signal] = handler
+
+    def __getattr__(self, name):
+        return lambda *a, **kw: None
+
+
+@pytest.mark.needs_display
+def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
+    """The note comes with the list read in the background (read_installed read the app
+    list, so it is there): Next hands it to the question, which asks the device nothing."""
+    from gi.repository import Gtk
+
+    from openexpress import ciq
+    from openexpress.gui import app
+
+    st, dev, backups = order_device
+    Dialog.made = []
+    monkeypatch.setattr(app.Adw, "AlertDialog", Dialog)
+    real = ciq.order_choices
+    monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
+    storage = Counting(st.root)
+    asked = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=storage), run_task=Tasks(),
+        error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,
+        _order_rows=app.MainWindow._order_rows,
+        confirm_order=lambda copy, plan, note=None: asked.append(note))
+    app.MainWindow.choose_order(win)
+    (dialog,) = Dialog.made
+    box = dialog.extra.get_child().get_child()
+    assert isinstance(box, Gtk.ListBox)
+    rows = [box.get_row_at_index(i) for i in range(20)]
+    box.select_row(next(r for r in rows if r is not None and r.get_selectable()))
+    dialog.handlers["response"](dialog, "next")
+    assert asked == [NOTE]
+    assert storage.on_gtk == [] and storage.elsewhere

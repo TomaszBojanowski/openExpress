@@ -1361,7 +1361,13 @@ def has_app_list(device: GarminDevice, storage: Storage) -> bool:
 
 def app_list_copy_note(device: GarminDevice, storage: Storage) -> str:
     """For dry runs of everything that changes the apps: what happens before the change."""
-    if has_app_list(device, storage):
+    return copy_note(has_app_list(device, storage))
+
+
+def copy_note(has_list: bool) -> str:
+    """app_list_copy_note when it is known whether the device has its app list (e.g. it was
+    just read by read_installed): nothing asked of the device."""
+    if has_list:
         return _("Before any change, a copy of the app list of the device is made.")
     return _("No copy will be made: the device has no app list.")
 

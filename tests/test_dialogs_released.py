@@ -113,7 +113,7 @@ def _order_window(monkeypatch, chosen):
         error=lambda title, text: pytest.fail(text),
         _order_blocked=lambda state: None,
         _order_rows=lambda choices: [("Copy of 12.10.2026", "213 apps", True)],
-        confirm_order=lambda copy, plan: chosen.append((copy, plan)),
+        confirm_order=lambda copy, plan, note: chosen.append((copy, plan)),
         run_task=lambda title, work, done: done(work()))
     win.choose_order = types.MethodType(MainWindow.choose_order, win)
     return win, choice

@@ -4164,10 +4164,11 @@ class MainWindow(Adw.ApplicationWindow):
 
         def work():
             state = ciq.read_installed(s.device, s.storage)
-            return state, ciq.order_choices(s.device, state)
+            # read_installed read the app list (OUT.BIN): it is there, nothing more to ask.
+            return state, ciq.order_choices(s.device, state), ciq.copy_note(True)
 
         def show(result):
-            state, choices = result
+            state, choices, note = result
             blocked = self._order_blocked(state)
             if blocked:
                 self.error(_("Restore the order from a copy"), blocked)
@@ -4209,7 +4210,7 @@ class MainWindow(Adw.ApplicationWindow):
 
             def response(_dialog, r):
                 if r == "next" and self._order_chosen is not None:
-                    self.confirm_order(*self._order_chosen)
+                    self.confirm_order(*self._order_chosen, note)
 
             box.connect("row-selected", selected)
             d.connect("response", response)
@@ -4219,14 +4220,14 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.run_task(_("Reading the copies of the app list…"), work, show)
 
-    def confirm_order(self, copy, plan) -> None:
+    def confirm_order(self, copy, plan, note: str) -> None:
+        """`note`: what happens before the change (ciq.copy_note), told by choose_order with
+        the copies it read: the question asks the device nothing."""
         from openexpress import ciq
 
-        s = self.session
         d = Adw.AlertDialog(
             heading=_("Restore this order?"),
-            body=ciq.copy_title(copy) + "\n\n" + self._order_summary(
-                plan, ciq.app_list_copy_note(s.device, s.storage)))
+            body=ciq.copy_title(copy) + "\n\n" + self._order_summary(plan, note))
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", _("Restore the Order"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
