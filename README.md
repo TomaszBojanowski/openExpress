@@ -373,9 +373,12 @@ when they are installed or updated. It is not cleared while a download or an ins
 - **No telemetry.** Unlike Garmin Express, the program sends nothing to
   Microsoft Application Insights. Watch diagnostics (error logs, KPIs, memory
   dumps, behaviour log) are not uploaded without `--include-diagnostics`.
-- Sync **never deletes files from the watch**. Files are deleted only by
-  `maps update/remove` (old map files indicated by the server), always after showing
-  the list in dry-run mode. Files shared by several maps (e.g. the Europe terrain model) are
+- Sync **never deletes files from the watch**. Files are deleted only when you ask for it:
+  by `maps update/remove` (old map files indicated by the server), `maps remove --own`,
+  `music remove` and `apps remove`, on the command line always after a dry run that lists
+  them. Installing a software update first deletes a leftover update file of the same name
+  in another letter case and `GUPDATE.TMP`, as Garmin Express does, and removes a copy that
+  failed its check. Files shared by several maps (e.g. the Europe terrain model) are
   protected.
 - Software updates and maps: downloaded files are verified (size, MD5);
   they are copied to the watch only after all files have been downloaded. The RGN format
