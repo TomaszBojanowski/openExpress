@@ -1168,8 +1168,15 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
             storage=LocalStorage(device_root),
             client=types.SimpleNamespace(http=None, consumer=types.SimpleNamespace(url_salt="s"))),
         updates_cache=updates.parse_updates(lower_keys(server_answer())), maps_cache=[m],
-        progress=lambda text: None, fraction=lambda done, total: None,
-        run_task=lambda title, fn, done=None, failed=None: tasks.append(fn))
+        progress=lambda text: None, fraction=lambda done, total: None)
+
+    def run_task(title, fn, done=None, failed=None):
+        tasks.append(fn)
+        if title == "Checking the space…":  # the question of the map comes after it
+            done(fn())
+
+    win.run_task = run_task
+    win._ask_install_map = types.MethodType(MainWindow._ask_install_map, win)
     MainWindow.confirm_update(win, win.updates_cache[0])
     MainWindow.confirm_map(win, m)
     for dialog in asked:

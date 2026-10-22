@@ -3733,10 +3733,34 @@ class MainWindow(Adw.ApplicationWindow):
                          "Run: openexpress setup --utilities-dll /path/to/Utilities.dll"))
             return
         removing = mp.removal_list(self.maps_cache, m, rewriting=True)
-        need = mp.space_needed(s.storage, m, removing)
+
+        def work():
+            # Over MTP each size is a round trip through gvfs: never on the window's thread.
+            return mp.space_needed(s.storage, m, removing), s.storage.free_space()
+
+        def done(result):
+            if self.session is not s or m not in (self.maps_cache or []):
+                # Unplugged, or the list read again without it, meanwhile: nothing to ask.
+                log.info("maps: the device or its list changed while the space was checked, "
+                         "nothing asked")
+                return
+            need, free = result
+            self._ask_install_map(m, need, free, removing)
+
+        def failed(_e):
+            return self.session is not s  # gone meanwhile: the window says so already
+
+        self.run_task(_("Checking the space…"), work, done, failed)
+
+    def _ask_install_map(self, m, need: int, free: int | None, removing: list[str]) -> None:
+        """The question before a map is installed, with the space it needs and the space
+        there is (read in the background by confirm_map)."""
+        from openexpress import maps as mp
+
+        s = self.session
         body = (_("Download: {size}").format(size=_human(m.size)) + "\n"
                 + _("Space on the device: {needed} ({free} free)").format(
-                    needed=_human(need), free=_human(s.storage.free_space())) + "\n"
+                    needed=_human(need), free=_human(free)) + "\n"
                 + _("Files: {count}").format(count=len(m.files))
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
                    if removing else "")
