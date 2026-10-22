@@ -671,8 +671,9 @@ def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
 
 
 def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int,
-                errors: list[str], lines: list[str]) -> None:
-    """Store a sync result made outside run_sync (e.g. by the CLI) as the last sync."""
+                errors: list[str], lines: list) -> None:
+    """Store a sync result made outside run_sync as the last sync. `lines`: the steps as
+    SyncSummary.lines has them (a text, or the numbers of a step as a dict)."""
     save_last_sync(unit_id, SyncSummary(uploaded=uploaded, skipped_known=skipped_known,
                                         downloaded=downloaded, errors=list(errors),
                                         lines=list(lines)))
