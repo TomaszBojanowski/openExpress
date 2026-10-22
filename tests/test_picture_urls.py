@@ -106,3 +106,19 @@ def test_plain_http_is_asked_over_https_before_the_rule(url, asked):
     assert picture_urls.upgraded(url) == asked
     assert picture_urls.refusal(picture_urls.upgraded("http://example.org/a.png")) == (
         "host example.org is not allowed")
+
+
+@pytest.mark.parametrize("url, said", [
+    ("https://res.garmin.com/a.png", "no query"),
+    ("https://res.garmin.com/a.png?", "no query"),  # an empty query says nothing
+    ("https://s3.amazonaws.com/garmin-connect-prod/a.png?X-Amz-Signature=secret",
+     "with query"),
+    ("ftp://example.org/a.png?token=secret", "with query"),
+    ("a.png", "no query"),
+    ("", None),
+    (None, None),
+    ("https://[::1/a.png?x=1", None),  # not an address
+])
+def test_the_log_says_whether_an_address_has_a_query_never_what(url, said):
+    """For the log, next to the host: a signed address carries its token in the query."""
+    assert picture_urls.query_said(url) == said

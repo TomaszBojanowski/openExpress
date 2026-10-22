@@ -1011,9 +1011,9 @@ def test_without_a_login_the_fallback_is_used_too(pictures):
 
 
 @pytest.mark.parametrize("url, response, error, why", [
-    ("https://example.org/x.png", None, None, "host example.org is not allowed"),
+    ("https://example.org/x.png", None, None, "host example.org is not allowed; no query"),
     ("https://res.garmin.com.example.org/x.png", None, None,
-     "host res.garmin.com.example.org is not allowed"),
+     "host res.garmin.com.example.org is not allowed; no query"),
     (PICTURE_URL, PictureResponse(status=302), None, "HTTP 302"),  # redirects are not followed
     (PICTURE_URL, PictureResponse(status=404), None, "HTTP 404"),
     (PICTURE_URL, PictureResponse(kind="text/html"), None, "not a PNG or JPEG"),
@@ -1072,7 +1072,7 @@ def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
     _finish(win)
     log = log_file.read_text()
     assert ("device picture: none (download refused: host s3.amazonaws.com, first segment "
-            "garmin-bucket: not an allowed bucket)") in log
+            "garmin-bucket: not an allowed bucket; with query)") in log
     assert client.http.calls == [] and _cache(xdg) == []
     assert "secret" not in log and "Signature" not in log and "/devices" not in log
 
@@ -1633,8 +1633,24 @@ def test_a_picture_over_http_is_asked_over_https(xdg):
     assert [url for url, _kw in pictures.calls] == ["https://res.garmin.com/en/a.png"]
     other = PictureHttp()
     assert app.download_picture(other, "http://example.org/a.png", "device-b.png") == (
-        None, "host example.org is not allowed")
+        None, "host example.org is not allowed; no query")
     assert other.calls == []
+
+
+@pytest.mark.parametrize("url, why", [
+    ("https://example.org/a.png?token=secret", "host example.org is not allowed; with query"),
+    ("https://example.org/a.png", "host example.org is not allowed; no query"),
+    ("https://s3.amazonaws.com/other-bucket/a.png?X-Amz-Signature=secret",
+     "host s3.amazonaws.com, first segment other-bucket: not an allowed bucket; with query"),
+    ("ftp://res.garmin.com/a.png?x=1", "not HTTPS; with query"),
+    ("", "no address"),  # nothing to say of a query
+])
+def test_a_refusal_says_whether_the_address_has_a_query_never_what(xdg, url, why):
+    from openexpress.gui import app
+
+    http = PictureHttp()
+    assert app.download_picture(http, url, "device-a.png") == (None, why)
+    assert http.calls == [] and "secret" not in why and "token" not in why
 
 
 @pytest.mark.parametrize("url", ["ftp://res.garmin.com/a.png", "file:///etc/passwd", "a.png"])
@@ -1645,6 +1661,6 @@ def test_a_picture_over_another_scheme_is_not_asked(xdg, url, log_file):
 
     http = PictureHttp()
     assert app.cached_download(http, url, "app-1.png") is None
-    assert app.download_picture(http, url, "device-a.png") == (None, "not HTTPS")
+    assert app.download_picture(http, url, "device-a.png") == (None, "not HTTPS; no query")
     assert http.calls == []
     assert not any(p.is_file() for p in (Path(xdg) / "cache").rglob("*.png"))

@@ -320,7 +320,8 @@ def download_picture(http, url: str, name: str,
     url = picture_urls.upgraded(url)  # plain HTTP over HTTPS, as every download
     why = picture_urls.refusal(url)  # the host at most, never the whole address
     if why is not None:
-        return None, why
+        said = picture_urls.query_said(url)  # whether it has a query, never what
+        return None, f"{why}; {said}" if said else why
     deadline = clock() + PICTURE_TIMEOUT_S
     data = bytearray()
     try:

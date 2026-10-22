@@ -349,6 +349,24 @@ def test_the_address_of_a_picture_is_kept_and_optional(store, caplog):
     assert json.loads(store.read_text())["devices"][str(VENU)]["image_url"] == NEWER_PICTURE
 
 
+@pytest.mark.parametrize("url, logged", [
+    (PICTURE, "devices: the picture of 006-B3703-00 is at res.garmin.com; no query"),
+    ("https://s3.amazonaws.com/garmin-connect-prod/devices/venu2.png?X-Amz-Signature=secret",
+     "devices: the picture of 006-B3703-00 is at s3.amazonaws.com; with query"),
+])
+def test_the_log_says_whether_a_kept_address_has_a_query(store, caplog, url, logged):
+    """The host and the fact of a query, never the path or the query itself (a signed address
+    carries its token there)."""
+    from openexpress import known_devices
+
+    known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp")
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert known_devices.set_image_url(VENU, url) is True
+    assert logged in caplog.text.splitlines()[-1]
+    for private in ("secret", "Signature", "venu2", "/devices", "010-02430-11"):
+        assert private not in caplog.text, private
+
+
 @pytest.mark.parametrize("url", [
     "http://example.org/a.png", "https://example.org/a.png",
     "https://s3.amazonaws.com/garmin-bucket/a.png?X-Amz-Signature=secret", "", None])

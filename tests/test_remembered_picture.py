@@ -150,6 +150,76 @@ def _fake_download(monkeypatch):
     return downloads
 
 
+OTHER_BUCKET_URL = "https://s3.amazonaws.com/other-bucket/devices/x.png?X-Amz-Signature=secret"
+
+
+class _Unasked:
+    """Stands in for the account's HTTP session: records what would be asked."""
+
+    def __init__(self):
+        self.calls = []
+
+    def get(self, url, **kw):
+        self.calls.append(url)
+        raise AssertionError("an address that is not allowed was asked")
+
+
+def _tile_with_an_address_not_allowed(monkeypatch):
+    from openexpress import devicelist
+    from openexpress.gui import app
+
+    http = _Unasked()
+    monkeypatch.setattr(app, "account_client", lambda: types.SimpleNamespace(http=http))
+    (tile,) = devicelist.tiles([], {}, [dict(_account_entry(), imageurl=OTHER_BUCKET_URL)],
+                               True)
+    assert (tile.image_url, tile.image_source) == (OTHER_BUCKET_URL, "the account")
+    win = _window()
+    shown = []
+    win.start = types.SimpleNamespace(set_picture=lambda part, texture: shown.append(part))
+    return win, tile, http, shown
+
+
+@pytest.mark.needs_display
+def test_a_tile_whose_address_is_not_allowed_takes_the_picture_in_the_cache(monkeypatch,
+                                                                            caplog):
+    """The rule of the addresses is asked only when the picture is not in the cache: a tile of
+    the account with an address that is not allowed (a bucket on S3 that is not Garmin
+    Connect's) shows the file kept, asks nothing and logs no refusal (006-B4536-00 in #8,
+    until the cache was cleared)."""
+    from openexpress.gui import app
+
+    path = app.device_picture_path(ACCOUNT_PART)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(_texture().save_to_png_bytes().get_data())
+    win, tile, http, shown = _tile_with_an_address_not_allowed(monkeypatch)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._load_tile_pictures([tile])
+    assert shown == [ACCOUNT_PART] and http.calls == []
+    logged = [r.getMessage() for r in caplog.records]
+    assert f"start page: picture of {ACCOUNT_PART} from the cache" in logged
+    assert not any("refused" in m or "no picture" in m for m in logged), logged
+
+
+@pytest.mark.needs_display
+def test_without_the_file_the_address_of_the_tile_is_refused(monkeypatch, caplog):
+    """No file in the cache: the address is refused as before, nothing is asked, the icon
+    stays; the log names the host, the bucket and whether the address has a query, never
+    the rest of it."""
+    from openexpress.gui import app
+
+    win, tile, http, shown = _tile_with_an_address_not_allowed(monkeypatch)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        win._load_tile_pictures([tile])
+    assert shown == [] and http.calls == []
+    assert not app.device_picture_path(ACCOUNT_PART).exists()
+    logged = [r.getMessage() for r in caplog.records]
+    assert [m for m in logged if m.startswith(f"pictures: no picture of {ACCOUNT_PART} ")] == [
+        (f"pictures: no picture of {ACCOUNT_PART} (download refused: host s3.amazonaws.com, "
+         "first segment other-bucket: not an allowed bucket; with query)")]
+    for private in ("secret", "Signature", "devices/x.png", "x.png"):
+        assert private not in caplog.text, private
+
+
 def _later(win):
     """Background work waits until the test runs it."""
     later = []

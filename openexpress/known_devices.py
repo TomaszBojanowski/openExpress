@@ -119,7 +119,7 @@ def set_image_url(unit_id: int, url) -> bool:
     """Keep the address of the picture of a device remembered, as Garmin gives it (a newer one
     replaces the one before); whether it changed. Only an address picture_urls allows, kept
     as it is asked (plain HTTP over HTTPS); a device that is not remembered gets no entry for
-    it. The log names the host only."""
+    it. The log names the host, and whether the address has a query, only."""
     url = picture_urls.upgraded(url)
     if not picture_urls.allowed(url):
         return False
@@ -130,7 +130,8 @@ def set_image_url(unit_id: int, url) -> bool:
             return False
         entry.image_url = url
         _write(known)
-    log.info("devices: the picture of %s is at %s", entry.part_number, urlsplit(url).hostname)
+    log.info("devices: the picture of %s is at %s; %s", entry.part_number,
+             urlsplit(url).hostname, picture_urls.query_said(url))
     return True
 
 

@@ -5,7 +5,8 @@ account, Garmin's update server): the window downloads only what passes it.
 Amazon S3 is allowed only for a bucket named in S3_BUCKETS, by the first segment of the path
 (s3.amazonaws.com/<bucket>/...) or by the host (<bucket>.s3[.<region>].amazonaws.com). A
 refusal says why in words for the log, with the host and at most that first segment: never
-the rest of the address, nor its query (a signed address carries a token there)."""
+the rest of the address, nor its query (a signed address carries a token there); whether
+there is a query, query_said() tells."""
 
 from __future__ import annotations
 
@@ -64,6 +65,19 @@ def refusal(url) -> str | None:
             return None
         return f"host {host}: not an allowed bucket"
     return f"host {host} is not allowed"
+
+
+def query_said(url) -> str | None:
+    """For the log, next to the host: whether the address has a query ("with query" / "no
+    query"), never what it is (a signed address carries its token there). None: no
+    address."""
+    if not isinstance(url, str) or not url:
+        return None
+    try:
+        query = urlsplit(url).query
+    except ValueError:
+        return None
+    return "with query" if query else "no query"
 
 
 def allowed(url) -> bool:
