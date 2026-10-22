@@ -1503,6 +1503,71 @@ def test_watcher_is_not_started_by_a_garmin_drive(drives, monkeypatch):
     assert started == []
 
 
+def _watcher_syncs(monkeypatch):
+    """The watcher's own choice of the device (service.open_session as it calls it, on the
+    made-up USB and gvfs), signed in and past the first sync; what it would sync is recorded
+    (`synced`: the names of the devices), nothing is sent and nothing shown."""
+    from openexpress import service, watch
+
+    real = service.open_session
+    synced, shown = [], []
+
+    def opened(*args, **kwargs):
+        s = real(*args, **kwargs)
+        return types.SimpleNamespace(storage=s.storage, device=s.device, client=None,
+                                     mass_storage=s.mass_storage, logged_in=True,
+                                     first_sync=False)
+
+    monkeypatch.setattr(watch.service, "open_session", opened)
+    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit: None)
+    monkeypatch.setattr(watch.service, "run_sync", lambda s, progress=None, **kw: (
+        synced.append(s.device.description), service.SyncSummary())[1])
+    monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
+    monkeypatch.setattr(watch, "OPEN_RETRIES", 0)  # no waiting for a device not there
+    return synced, shown
+
+
+def test_the_watcher_syncs_the_watch_next_to_a_garmin_drive(watch_and_drives, monkeypatch):
+    """P4: a device in mass storage mode is left out; one device left (the watch): synced."""
+    from openexpress import watch
+
+    synced, _shown = _watcher_syncs(monkeypatch)
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    watch_and_drives.plug("51b4")
+    watch_and_drives.offer()
+    watch.Watcher()._sync()
+    assert synced == ["Test watch"]
+
+
+def test_the_watcher_syncs_nothing_with_two_watches(watch_and_drives, monkeypatch, tmp_path,
+                                                    device_root):
+    """P4: two devices left (two MTP devices): nothing synced, nothing shown."""
+    from openexpress import watch
+
+    synced, shown = _watcher_syncs(monkeypatch)
+    monitor_with(monkeypatch)
+    two_watches(watch_and_drives, monkeypatch, tmp_path, device_root)
+    watch.Watcher()._sync()
+    assert synced == [] and shown == []
+
+
+def test_the_watcher_syncs_nothing_with_a_garmin_drive_alone(watch_and_drives, monkeypatch):
+    """P4: a drive alone starts no sync (its mount is not a device's), and a sync asked for
+    while only a drive is there syncs nothing."""
+    from openexpress import watch
+
+    synced, _shown = _watcher_syncs(monkeypatch)
+    drive = watch_and_drives.drive()
+    monitor_with(monkeypatch, drive)
+    started = []
+    monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
+    w = watch.Watcher()
+    w.on_mount(None, drive)
+    assert started == []
+    w._sync()
+    assert synced == []
+
+
 # --- the window and a Garmin drive -----------------------------------------------------------
 
 
