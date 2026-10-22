@@ -278,6 +278,15 @@ def test_write_private(tmp_path, monkeypatch):
     assert sorted(p.name for p in target.parent.iterdir()) == ["secret.json", "secret.json.tmp"]
 
 
+def test_write_private_writes_bytes_as_they_are(tmp_path):
+    """A copy of a file from the device: bytes, not text."""
+    target = tmp_path / "d" / "a.fit"
+    data = bytes(range(256)) + b"\r\n"
+    paths.write_private(target, data)
+    assert target.read_bytes() == data
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+
+
 def test_app_dir_migration_race(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     old, new = tmp_path / paths.LEGACY_NAME, tmp_path / paths.APP_NAME

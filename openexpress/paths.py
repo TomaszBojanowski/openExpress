@@ -154,13 +154,15 @@ def _make_private(root: Path) -> None:
     os.chmod(root, PRIVATE_DIR)  # the umask cuts mkdir's mode; this folder was just made
 
 
-def write_private(path: Path, data: str) -> None:
-    """Atomically write a file readable only by its owner (0600)."""
+def write_private(path: Path, data: str | bytes) -> None:
+    """Atomically write a file readable only by its owner (0600): text in UTF-8, bytes as
+    they are."""
     make_dir(path.parent)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     try:
         os.fchmod(fd, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
+        binary = isinstance(data, bytes)
+        with (os.fdopen(fd, "wb") if binary else os.fdopen(fd, "w", encoding="utf-8")) as f:
             fd = -1
             f.write(data)
             f.flush()

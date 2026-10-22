@@ -127,6 +127,57 @@ def test_failed_upload_kept_as_pending(device_root, tmp_path):
     assert not state.pending_files("FIT_TYPE_4")
 
 
+def _failed_once(device_root, tmp_path):
+    """A sync whose uploads of activities failed: a copy of each waits in sync/pending."""
+    st, dev, state = _setup(device_root, tmp_path)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
+    sync.run_uploads(plan, dev, st, FakeClient(statuses={"https://up.example/activity": 500}),
+                     state)
+    assert [p.name for p in state.pending_files("FIT_TYPE_4")] == [
+        "2026-10-01-10-00-00.fit", "2026-10-02-10-00-00.fit"]
+    return st, dev, state
+
+
+def test_the_copy_of_a_failed_upload_is_private(device_root, tmp_path):
+    """An activity is private: its copy is readable by its owner only (as the log is)."""
+    _st, _dev, state = _failed_once(device_root, tmp_path)
+    for p in state.pending_files("FIT_TYPE_4"):
+        assert p.stat().st_mode & 0o777 == 0o600, p.name
+    assert (device_root / "GARMIN/Activity/2026-10-01-10-00-00.fit").read_bytes() == \
+        state.pending_path("FIT_TYPE_4", "2026-10-01-10-00-00.fit").read_bytes()
+
+
+def test_the_copy_goes_when_connect_already_has_the_activity(device_root, tmp_path):
+    """Found in Connect before the upload (by the time of the activity): nothing is left to
+    upload, so the copy is not kept (it was kept for ever: the plan skips what is done)."""
+    st, dev, state = _failed_once(device_root, tmp_path)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
+    rep = sync.run_uploads(plan, dev, st, FakeClient(matches={"1100000000"}), state)
+    assert rep.already_in_connect == ["2026-10-01-10-00-00.fit"]
+    assert not state.pending_files("FIT_TYPE_4")  # the other one was uploaded
+
+
+def test_the_copy_goes_when_only_its_copy_is_left_and_connect_has_it(device_root, tmp_path):
+    st, dev, state = _failed_once(device_root, tmp_path)
+    (device_root / "GARMIN/Activity/2026-10-01-10-00-00.fit").unlink()  # the watch deleted it
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
+    assert [c.name for c in plan.candidates if c.device_path is None] == [
+        "2026-10-01-10-00-00.fit"]
+    rep = sync.run_uploads(plan, dev, st, FakeClient(matches={"1100000000"}), state)
+    assert rep.already_in_connect == ["2026-10-01-10-00-00.fit"]
+    assert not state.pending_files("FIT_TYPE_4")
+
+
+def test_the_copy_goes_when_the_files_on_the_device_are_marked_as_uploaded(device_root,
+                                                                           tmp_path):
+    """baseline: the files on the device count as uploaded, so their copies are not kept; a
+    copy whose file is no longer on the device waits for its upload, as before."""
+    st, dev, state = _failed_once(device_root, tmp_path)
+    (device_root / "GARMIN/Activity/2026-10-02-10-00-00.fit").unlink()
+    sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, FakeClient())
+    assert [p.name for p in state.pending_files("FIT_TYPE_4")] == ["2026-10-02-10-00-00.fit"]
+
+
 def test_baseline(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     assert sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, FakeClient()) == 4

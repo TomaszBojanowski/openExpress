@@ -106,6 +106,16 @@ class SyncState:
         d = self.pending_dir / datatype
         return sorted(p for p in d.iterdir() if p.is_file()) if d.is_dir() else []
 
+    def keep_pending(self, datatype: str, name: str, data: bytes) -> None:
+        """Keep a copy of a file whose upload failed, for the next sync (an activity is
+        private: readable by its owner only)."""
+        paths.write_private(self.pending_path(datatype, name), data)
+
+    def drop_pending(self, datatype: str, name: str) -> None:
+        """The file is done (uploaded, found in Connect, marked as uploaded): its copy goes.
+        Without it the copy would stay for ever, as the plan skips a file that is done."""
+        self.pending_path(datatype, name).unlink(missing_ok=True)
+
     def unacked(self) -> set[str]:
         """Queue messages already written to the watch whose acknowledgement failed."""
         try:
@@ -373,6 +383,7 @@ def run_uploads(
             continue
         if c.external_id and matched.get(c.external_id):
             state.mark_completed(c.datatype, c.name)
+            state.drop_pending(c.datatype, c.name)
             report.already_in_connect.append(c.name)
         else:
             remaining.append(c)
@@ -461,9 +472,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
     if ok:
         if c.multi:
             state.mark_completed(c.datatype, c.name)
-            pending = state.pending_path(c.datatype, c.name)
-            if pending.exists():
-                pending.unlink()
+            state.drop_pending(c.datatype, c.name)
         elif c.device_path:
             state.mark_singleton(c.datatype, c.device_path, md5(data))
         {"uploaded": report.uploaded, "duplicate": report.duplicates,
@@ -472,10 +481,8 @@ def _upload_one(c, data, label, last, client, state, report, progress,
     else:
         report.failed.append((label, error))
         if c.multi:
-            p = state.pending_path(c.datatype, c.name)
             if c.device_path is not None:
-                paths.make_dir(p.parent)
-                p.write_bytes(data)
+                state.keep_pending(c.datatype, c.name, data)
             if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
                 stop_types.add(c.datatype)
 
@@ -509,6 +516,7 @@ def mark_baseline(device: GarminDevice, storage: Storage, upload_config: dict,
             continue
         if c.multi:
             state.mark_completed(c.datatype, c.name)
+            state.drop_pending(c.datatype, c.name)
         else:
             state.mark_singleton(c.datatype, c.device_path, md5(c.data or b""))
         n += 1
