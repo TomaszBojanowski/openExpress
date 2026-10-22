@@ -83,8 +83,11 @@ def test_the_sign_in_window_says_what_it_runs_on(sign_in_window, caplog):
         win.present()  # realized: its renderer is known now
     (line,) = [r.getMessage() for r in caplog.records
                if r.getMessage().startswith("login: sign-in window: ")]
+    import locale
+
+    told = f"{locale.setlocale(locale.LC_CTYPE)} ({locale.nl_langinfo(locale.CODESET)})"
     for part in ("WebKit 2.", ", GTK 4.", ", GDK Gdk", ", GSK Gsk", ", session ", ", runtime ",
-                 ", GPU ", ", acceleration on-demand", ", env "):
+                 f", locale {told}", ", GPU ", ", acceleration on-demand", ", env "):
         assert part in line, (part, line)
     assert "://" not in line  # no address
     assert sso.sign_in_marker().exists()  # open: a crash now is noted at the next start

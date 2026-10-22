@@ -1892,9 +1892,14 @@ def _main(argv: list[str] | None) -> int:
 
     from openexpress import applog, service
 
+    # Before any process is started (the start line may ask flatpak-spawn) and before GTK:
+    # a locale the C library cannot have (a Flatpak runtime without it) becomes C.UTF-8.
+    fallback = i18n.ensure_utf8_locale()
     applog.setup(args.cmd if args.cmd in ("gui", "watch") else "cli", args.verbose)
     started = time.monotonic()
     log.info("start: %s (%s)", _command_line(args, argv), applog.environment())
+    if fallback:
+        log.info("%s", fallback)
     applog.enable_crash_log()  # a crash of GTK or WebKit leaves Python's trace in crash.log
     from openexpress.auth import sso
 

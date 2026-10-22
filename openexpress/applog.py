@@ -230,11 +230,12 @@ def _packaging() -> str:
 
 def environment() -> str:
     """What the start line says about the program: its version, how it is packaged, the
-    Python version, the language it runs in and the PID. Nothing about the user or the
-    computer."""
+    Python version, the language it runs in, the locale of the C library with its character
+    set (#10: a Flatpak runtime without the system's) and the PID. Nothing about the user or
+    the computer, nor a variable of the environment."""
     return (f"openExpress {__version__}, {_packaging()}, "
             f"Python {platform.python_version()}, language {i18n.current_language()}, "
-            f"pid {os.getpid()}")
+            f"locale {i18n.locale_said()}, pid {os.getpid()}")
 
 
 def log_path() -> Path:

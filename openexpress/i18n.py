@@ -29,6 +29,11 @@ SOURCE_LANGUAGE = "en"
 _translation: gettext.NullTranslations = gettext.NullTranslations()
 _language = SOURCE_LANGUAGE
 _chosen: str | None = None  # the language chosen for the program; None: the system's
+# The languages of the system as they were before ensure_utf8_locale set LC_ALL (None: it
+# did not), which GLib reads before LANG.
+_names_before: list[str] | None = None
+FALLBACK_LOCALE = "C.UTF-8"
+_CATEGORIES = ("LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE", "LC_MONETARY", "LC_MESSAGES")
 
 
 def available_languages() -> list[str]:
@@ -164,12 +169,78 @@ def _glib():
 
 def system_language_names() -> list[str]:
     """The languages of the system, most wanted first, as GLib lists them (e.g. "de_DE.UTF-8",
-    "de_DE", "de", "C"); without GLib the locale of the C library. The one place they are read."""
+    "de_DE", "de", "C"); without GLib the locale of the C library. The one place they are read.
+    After ensure_utf8_locale changed LC_ALL: as they were before."""
+    if _names_before is not None:
+        return list(_names_before)
     glib = _glib()
     if glib is not None:
         return list(glib.get_language_names())
     name = locale.getlocale()[0]
     return [name] if name else []
+
+
+def codeset() -> str:
+    """The character set of the C library's locale now ("UTF-8"; "" when it cannot tell)."""
+    try:
+        return locale.nl_langinfo(locale.CODESET)
+    except (AttributeError, ValueError):
+        return ""
+
+
+def locale_said() -> str:
+    """The locale of the C library now and its character set, for the log ("C.UTF-8
+    (UTF-8)"): what it was set to, never a variable of the environment."""
+    return f"{locale.setlocale(locale.LC_CTYPE)} ({codeset() or '?'})"
+
+
+def _not_available() -> str:
+    """The locale(s) of the environment that the C library cannot set (while it is being
+    tried): by category, LC_ALL first, then LC_<category>, then LANG."""
+    names = []
+    for category in _CATEGORIES:
+        name = (os.environ.get("LC_ALL") or os.environ.get(category) or os.environ.get("LANG")
+                or "C")
+        try:
+            locale.setlocale(getattr(locale, category), "")
+        except locale.Error:
+            if name not in names:
+                names.append(name)
+    return ", ".join(names) or os.environ.get("LC_ALL") or os.environ.get("LANG") or "?"
+
+
+def ensure_utf8_locale() -> str | None:
+    """Before GTK takes the locale from the environment (setlocale(LC_ALL, "")) and before
+    the program starts any process: whether the C library can have that locale, in UTF-8.
+    If not (a Flatpak whose runtime has no data for the language of the system), LC_ALL is
+    set to C.UTF-8 for the program and the processes it starts: in the "C" locale GLib
+    converts no name with a character outside ASCII, so flatpak-spawn failed and the
+    sign-in window took the program down (#10). LANGUAGE is left as it is (the translations
+    follow it); the languages of the system for Garmin stay as they were (read now, before
+    the change); Python's own locale is set back as it was. What to log, or None when
+    nothing is changed."""
+    global _names_before
+    saved = locale.setlocale(locale.LC_ALL)
+    try:
+        try:
+            locale.setlocale(locale.LC_ALL, "")
+        except locale.Error:
+            problem = f"locale {_not_available()} not available"
+        else:
+            charset = codeset()
+            if charset.replace("-", "").upper() == "UTF8":
+                return None
+            problem = (f"locale {locale.setlocale(locale.LC_CTYPE)} is not UTF-8 "
+                       f"({charset or '?'})")
+        try:
+            locale.setlocale(locale.LC_ALL, FALLBACK_LOCALE)
+        except locale.Error:
+            return f"{problem}, nor is {FALLBACK_LOCALE}: the locale is left as it is"
+    finally:
+        locale.setlocale(locale.LC_ALL, saved)
+    _names_before = system_language_names()
+    os.environ["LC_ALL"] = FALLBACK_LOCALE
+    return f"{problem}, using {FALLBACK_LOCALE}"
 
 
 def garmin_locale() -> str:

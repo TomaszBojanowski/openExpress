@@ -131,8 +131,9 @@ def _host(url: str | None) -> str:
 def window_environment(win) -> str:
     """What the sign-in window runs on, for the log: the versions of WebKit and GTK, the
     display and the renderer (once it is realized), the session and the desktop, the runtime,
-    the makers of the graphics cards, WebKit's hardware acceleration and the variables that
-    change the drawing. Nothing of the user, no address."""
+    the locale GTK set with its character set (#10), the makers of the graphics cards,
+    WebKit's hardware acceleration and the variables that change the drawing. Nothing of the
+    user, no address."""
     import gi
 
     gi.require_version("Gtk", "4.0")
@@ -151,6 +152,7 @@ def window_environment(win) -> str:
         f"GSK {renderer.__gtype__.name if renderer is not None else 'none'}",
         f"session {session}",
         f"runtime {flatpak_runtime()}",
+        f"locale {i18n.locale_said()}",
         f"GPU {gpu_vendors()}",
         f"acceleration {_nick(view.get_settings().get_hardware_acceleration_policy())}",
         f"env {rendering_env()}"))

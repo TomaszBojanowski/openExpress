@@ -148,3 +148,97 @@ def test_a_locale_chosen_with_setup_wins_and_is_kept(monkeypatch, capsys):
     assert sso.sign_in_url(Settings.load()) == SIGN_IN.format("fr_FR")
     saved = json.loads(settings_file().read_text())
     assert saved["chosen_locale"] == "fr_FR" and "locale" not in saved
+
+
+# --- a locale the system has and the Flatpak's runtime has not (#10) --------------------------
+
+CATEGORIES = ("LC_ALL", "LC_CTYPE", "LC_MESSAGES", "LC_NUMERIC", "LC_TIME", "LC_COLLATE",
+              "LC_MONETARY")
+
+
+def danish_system(monkeypatch, language=None):
+    """LANG=da_DK.UTF-8 and nothing else of the locale set; LANGUAGE as given."""
+    for var in CATEGORIES:
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("LANG", "da_DK.UTF-8")
+    if language is None:
+        monkeypatch.delenv("LANGUAGE", raising=False)
+    else:
+        monkeypatch.setenv("LANGUAGE", language)
+    monkeypatch.setattr(i18n, "chosen_language", lambda: None, raising=False)
+
+
+def not_in_the_runtime(monkeypatch):
+    """setlocale cannot take the locale of the environment (as in a runtime without it); the
+    others (C.UTF-8) as they are."""
+    import locale
+
+    real = locale.setlocale
+
+    def setlocale(category, value=None):
+        if value == "":
+            raise locale.Error("unsupported locale setting")
+        return real(category, value)
+
+    monkeypatch.setattr(locale, "setlocale", setlocale)
+
+
+@pytest.mark.parametrize("language", ["en_US:en", None])
+def test_a_locale_the_runtime_lacks_gives_c_utf_8_to_the_program(monkeypatch, language):
+    """GTK would fall back to "C" (ASCII), and GLib could then convert no name with a
+    character outside ASCII: flatpak-spawn failed and the sign-in window took the program
+    down (#10). LC_ALL=C.UTF-8 for the program and the processes it starts; LANGUAGE stays,
+    Python's own locale stays as it was, and so does the language for Garmin."""
+    import locale
+    import os
+
+    danish_system(monkeypatch, language)
+    before = locale.setlocale(locale.LC_ALL)
+    for_garmin = Settings().locale
+    not_in_the_runtime(monkeypatch)
+    assert i18n.ensure_utf8_locale() == "locale da_DK.UTF-8 not available, using C.UTF-8"
+    assert os.environ["LC_ALL"] == "C.UTF-8" and os.environ["LANG"] == "da_DK.UTF-8"
+    assert os.environ.get("LANGUAGE") == language
+    assert locale.setlocale(locale.LC_ALL) == before
+    assert Settings().locale == for_garmin == ("en_US" if language else "da_DK")
+
+
+def test_a_locale_that_is_there_changes_nothing(monkeypatch):
+    import os
+
+    for var in (*CATEGORIES, "LANGUAGE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("LANG", "C.UTF-8")  # in every runtime and on every system
+    assert i18n.ensure_utf8_locale() is None
+    assert "LC_ALL" not in os.environ
+
+
+def test_a_locale_that_is_not_utf_8_gives_c_utf_8(monkeypatch):
+    import locale
+    import os
+
+    for var in (*CATEGORIES, "LANGUAGE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("LANG", "C")
+    real = locale.nl_langinfo
+    monkeypatch.setattr(locale, "nl_langinfo", lambda item: "ANSI_X3.4-1968"
+                        if item == locale.CODESET else real(item))
+    assert i18n.ensure_utf8_locale() == ("locale C is not UTF-8 (ANSI_X3.4-1968), "
+                                         "using C.UTF-8")
+    assert os.environ["LC_ALL"] == "C.UTF-8"
+
+
+def test_the_command_line_sets_it_before_anything_starts_and_logs_it(monkeypatch, device_root,
+                                                                    log_file):
+    """Before the start line (which may ask flatpak-spawn already) and before GTK: one INFO
+    line after the start line."""
+    import os
+
+    danish_system(monkeypatch, "en_US:en")
+    not_in_the_runtime(monkeypatch)
+    assert main(["--path", str(device_root), "files"]) == 0
+    assert os.environ["LC_ALL"] == "C.UTF-8"
+    text = log_file.read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(text) if " start: " in line)
+    assert text[start + 1].endswith(
+        "INFO openexpress.cli: locale da_DK.UTF-8 not available, using C.UTF-8")

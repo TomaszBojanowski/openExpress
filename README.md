@@ -430,6 +430,20 @@ be turned off with `flatpak override --user --nofilesystem=/run/media --nofilesy
 io.github.tomaszbojanowski.OpenExpress`; the window then says that it has no access to the
 drive, and devices in mass storage mode are left to the version from source.
 
+### The Flatpak and the language of your system
+
+The Flatpak runtime has the locale data only of the languages Flatpak installed for it (see
+`flatpak config`). If your system's language is not one of them, openExpress switches itself
+to the `C.UTF-8` locale, so that file names and the sign-in window work as usual, and the
+log says so in one line. openExpress's own texts are not affected; GTK's own (the buttons of
+its dialogs and the like) are then in English. To have those in your language as well, add
+it and update (with the code of your language instead of `da`):
+
+```bash
+flatpak config --user --set extra-languages da
+flatpak update
+```
+
 ## Other ways to install
 
 ### Flatpak bundle from a release

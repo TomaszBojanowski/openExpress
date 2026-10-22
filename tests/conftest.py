@@ -261,6 +261,21 @@ def xdg(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def program_locale(monkeypatch):
+    """cli.main may set LC_ALL for the program (i18n.ensure_utf8_locale): never beyond the
+    test; nor the language names it keeps from before."""
+    from openexpress import i18n
+
+    monkeypatch.setattr(i18n, "_names_before", None, raising=False)
+    before = os.environ.get("LC_ALL")
+    yield
+    if before is None:
+        os.environ.pop("LC_ALL", None)
+    else:
+        os.environ["LC_ALL"] = before
+
+
+@pytest.fixture(autouse=True)
 def log_file(tmp_path, monkeypatch) -> Path:
     """No test writes to the real log file; the log set up by a test is closed after it."""
     from openexpress import applog

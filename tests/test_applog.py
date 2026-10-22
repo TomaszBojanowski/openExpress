@@ -702,8 +702,14 @@ def test_start_line_says_what_runs_and_nothing_about_the_user(flatpak, packaging
     assert main(["--path", str(device_root), "files"]) == 0
     start = next(line for line in lines(log_file) if " start: " in line)
     said = start.split(" start: ", 1)[1]
+    import locale
+
+    # The C library's locale and its character set (#10), as set: no variable of the
+    # environment.
+    told = f"{locale.setlocale(locale.LC_CTYPE)} ({locale.nl_langinfo(locale.CODESET)})"
     assert said == (f"files --path (openExpress {__version__}, {packaging}, "
-                    f"Python {platform.python_version()}, language en, pid {os.getpid()})")
+                    f"Python {platform.python_version()}, language en, locale {told}, "
+                    f"pid {os.getpid()})")
     assert applog.redact(start) == start  # the filter changes nothing in it
     for private in (str(Path.home()), getpass.getuser(), socket.gethostname(),
                     str(device_root)):
