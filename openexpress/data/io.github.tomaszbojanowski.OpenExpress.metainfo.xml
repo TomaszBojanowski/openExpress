@@ -105,6 +105,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.12" date="2026-10-22">
+      <description>
+        <ul>
+          <li>When the system language isn't installed in the Flatpak, the app now falls back
+          to C.UTF-8 instead of crashing at the login window (#10).</li>
+          <li>A Varia or another device connected as a USB drive stays listed as connected
+          (and opens) after the open watch or Edge is unplugged.</li>
+          <li>A cancelled login is logged quietly, and the app's private state files are
+          created readable by you only.</li>
+          <li>A handful of small fixes from a code review.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.11" date="2026-10-22">
       <description>
         <ul>
