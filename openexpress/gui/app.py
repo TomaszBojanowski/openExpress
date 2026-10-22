@@ -2807,8 +2807,12 @@ class MainWindow(Adw.ApplicationWindow):
         dialog = Adw.PreferencesDialog()
         page = Adw.PreferencesPage(title=_("General"), icon_name="preferences-system-symbolic")
         page.add(self._account_group())
-        # Closed: the window keeps no widget of the preferences.
-        dialog.connect("closed", lambda _d: setattr(self, "_account_row", None))
+        # The window holds the dialog while it is open, for the handlers of its rows (one
+        # that held the dialog itself would keep it after it closed); closed, the window
+        # keeps no widget of the preferences.
+        self._preferences = dialog
+        dialog.connect("closed", lambda _d: (setattr(self, "_account_row", None),
+                                             setattr(self, "_preferences", None)))
         g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
         sw = Adw.SwitchRow(
             title=_("Sync in the background"),
@@ -2849,7 +2853,10 @@ class MainWindow(Adw.ApplicationWindow):
             except (OSError, ValueError) as e:
                 self.error(_("Language"), str(e))
                 return
-            dialog.add_toast(Adw.Toast(title=_("Restart the application to change the language")))
+            shown = getattr(self, "_preferences", None)
+            if shown is not None:
+                shown.add_toast(Adw.Toast(
+                    title=_("Restart the application to change the language")))
 
         combo.connect("notify::selected", language_changed)
         g.add(combo)
@@ -4153,10 +4160,24 @@ class MainWindow(Adw.ApplicationWindow):
             # TRANSLATORS: button that leads to the summary of the change
             d.add_response("next", _("Next"))
             d.set_response_enabled("next", False)
-            box.connect("row-selected",
-                        lambda _b, row: d.set_response_enabled("next", row is not None))
-            d.connect("response", lambda _d, r: r == "next" and box.get_selected_row()
-                      and self.confirm_order(*box.get_selected_row().choice))
+            # The window holds the dialog and the copy chosen while it is open: a handler that
+            # held the dialog, or the list, would keep both after it closed.
+            self._order_dialog, self._order_chosen = d, None
+
+            def selected(_box, row):
+                self._order_chosen = row.choice if row is not None else None
+                dialog = getattr(self, "_order_dialog", None)
+                if dialog is not None:
+                    dialog.set_response_enabled("next", row is not None)
+
+            def response(_dialog, r):
+                if r == "next" and self._order_chosen is not None:
+                    self.confirm_order(*self._order_chosen)
+
+            box.connect("row-selected", selected)
+            d.connect("response", response)
+            d.connect("closed", lambda _d: (setattr(self, "_order_dialog", None),
+                                            setattr(self, "_order_chosen", None)))
             d.present(self)
 
         self.run_task(_("Reading the copies of the app list…"), work, show)
