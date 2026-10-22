@@ -379,9 +379,10 @@ def _install(
         local = local_files[u.key]
         size = local.stat().st_size
         progress(_("Copying to the device: {path}").format(path=u.device_path))
-        _clear_the_place(storage, u)
+        _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
-        # on a drive, nor when the copy never started): nothing is deleted here.
+        # on a drive, nor when the copy never started): nothing more is deleted for it here,
+        # and what _clear_the_place deleted does not come back (as in Garmin Express).
         real = storage.write_file(u.device_path, local, transfer_progress)
         ok = storage.size(real) == size
         if not ok:
