@@ -1,6 +1,6 @@
 """The row "Last sync", from the file to the screen, on records of real syncs and on the shapes
-older versions wrote (testdata/last_sync/, private: the tests skip without it). For each one
-the exact words, in English and in Polish: the row (when, then the numbers) and the details,
+older versions wrote (tests/data/last_sync/, the unit IDs made up). For each one the exact
+words, in English and in Polish: the row (when, then the numbers) and the details,
 none twice, none against the row. The window shows what last_sync.describe gives, also when
 it shows a sync again (the file changes: the background service, or a sync of its own).
 
@@ -15,8 +15,7 @@ import pytest
 
 from openexpress import i18n, service
 
-PATTERNS = Path(__file__).resolve().parent.parent / "testdata" / "last_sync"
-needs_patterns = pytest.mark.skipif(not PATTERNS.is_dir(), reason="no testdata/last_sync")
+PATTERNS = Path(__file__).resolve().parent / "data" / "last_sync"
 
 NB = " "
 NOTHING_NEW = {"No new data to upload", "Brak nowych danych do wysłania"}
@@ -114,13 +113,11 @@ def language(request):
     i18n.setup("en")
 
 
-@needs_patterns
 def test_every_record_of_the_folder_has_its_words():
-    """A record added to testdata/last_sync comes with its words here."""
+    """A record added to tests/data/last_sync comes with its words here."""
     assert sorted(p.name for p in PATTERNS.glob("*.json")) == sorted(EXPECTED)
 
 
-@needs_patterns
 @pytest.mark.parametrize(("name", "language"), CASES, indirect=["language"])
 def test_every_record_in_words(name, language):
     from openexpress import last_sync
@@ -182,7 +179,6 @@ def _put(record, when):
                         json.dumps(record, ensure_ascii=False))
 
 
-@needs_patterns
 @pytest.mark.needs_display
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)
 def test_from_the_file_to_the_screen(xdg, language):
@@ -204,7 +200,6 @@ def test_from_the_file_to_the_screen(xdg, language):
     assert _shown(win.last_sync_row) == (f"{ago}{NB}· {counts}", details)
 
 
-@needs_patterns
 def test_the_notification_of_the_background_sync_says_what_the_row_says(monkeypatch):
     """The notification after a sync in the background: the numbers and the lines of the row,
     then the first errors, from the same words."""

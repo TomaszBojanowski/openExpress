@@ -1,0 +1,15 @@
+{
+ "time": 1792000000.0,
+ "unit_id": 3000000103,
+ "uploaded": 0,
+ "downloaded": 0,
+ "skipped_known": 0,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "not_uploaded",
+   "reason": "no-consent"
+  }
+ ]
+}

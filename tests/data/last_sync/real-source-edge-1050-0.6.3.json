@@ -1,0 +1,15 @@
+{
+ "time": 1792347035.5239146,
+ "unit_id": 3000000101,
+ "uploaded": 0,
+ "downloaded": 7,
+ "skipped_known": 0,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  "Oznaczono 221 istniejących plików jako już wysłane.",
+  "Brak nowych danych do wysłania.",
+  "Zapisano na urządzeniu 7 plików z Connect.",
+  "TrueUp: dzienne podsumowania uzgodnione z innymi urządzeniami Garmin."
+ ]
+}

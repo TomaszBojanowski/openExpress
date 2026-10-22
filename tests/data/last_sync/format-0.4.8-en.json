@@ -1,0 +1,13 @@
+{
+ "time": 1792000000.0,
+ "unit_id": 3000000103,
+ "uploaded": 3,
+ "downloaded": 1,
+ "skipped_known": 2,
+ "errors": [],
+ "lines": [
+  "New files: FIT_TYPE_32×2, FIT_TYPE_4×3",
+  "Uploaded 3, already in Connect 2, rejected 0, errors 0.",
+  "Wrote 1 file from Connect to the device."
+ ]
+}

@@ -1,0 +1,28 @@
+{
+ "time": 1792000000.0,
+ "unit_id": 3000000103,
+ "uploaded": 1,
+ "downloaded": 0,
+ "skipped_known": 0,
+ "rejected": 1,
+ "errors": [
+  "FIT_TYPE_4/2026-10-01-10-00-00.fit: HTTP 500"
+ ],
+ "lines": [
+  {
+   "kind": "new_files",
+   "types": {
+    "FIT_TYPE_4": 3
+   }
+  },
+  {
+   "kind": "uploads",
+   "uploaded": 1,
+   "known": 0,
+   "known_checked": 0,
+   "known_server": 0,
+   "rejected": 1,
+   "errors": 1
+  }
+ ]
+}

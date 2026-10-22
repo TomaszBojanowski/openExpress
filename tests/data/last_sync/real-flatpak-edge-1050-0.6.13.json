@@ -1,0 +1,29 @@
+{
+ "time": 1792709127.6937459,
+ "unit_id": 3000000101,
+ "uploaded": 12,
+ "downloaded": 0,
+ "skipped_known": 4,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "new_files",
+   "types": {
+    "FIT_TYPE_57": 4,
+    "FIT_TYPE_77": 9,
+    "FIT_TYPE_35": 1,
+    "FIT_TYPE_32": 2
+   }
+  },
+  {
+   "kind": "uploads",
+   "uploaded": 12,
+   "known": 4,
+   "known_checked": 0,
+   "known_server": 4,
+   "rejected": 0,
+   "errors": 0
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "time": 1792327055.2443354,
+ "unit_id": 3000000102,
+ "uploaded": 6,
+ "downloaded": 0,
+ "skipped_known": 2,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "new_files",
+   "types": {
+    "FIT_TYPE_4": 1,
+    "FIT_TYPE_41": 1,
+    "FIT_TYPE_58": 1,
+    "FIT_TYPE_72": 1,
+    "FIT_TYPE_74": 1,
+    "FIT_TYPE_77": 1,
+    "FIT_TYPE_35": 1,
+    "FIT_TYPE_32": 1
+   }
+  },
+  {
+   "kind": "uploads",
+   "uploaded": 6,
+   "known": 2,
+   "known_checked": 1,
+   "known_server": 1,
+   "rejected": 0,
+   "errors": 0
+  }
+ ]
+}
