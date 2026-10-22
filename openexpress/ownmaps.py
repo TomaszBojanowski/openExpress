@@ -288,14 +288,19 @@ def recorded(device: GarminDevice) -> list[dict]:
     return [m for m in maps if isinstance(m, dict)] if isinstance(maps, list) else []
 
 
+def _save(device: GarminDevice, maps: list[dict]) -> None:
+    """The list written whole or not at all (a list cut short would read as empty, and the
+    next write would drop every map in it), readable by its owner only."""
+    paths.write_private(_state_file(device),
+                        json.dumps({"maps": maps}, indent=1, ensure_ascii=False))
+
+
 def _record(device: GarminDevice, entry: dict) -> None:
     maps = [m for m in recorded(device)
             if str(m.get("filename", "")).casefold() != entry["filename"].casefold()]
     maps.append(entry)
     try:
-        f = _state_file(device)
-        paths.make_dir(f.parent)
-        f.write_text(json.dumps({"maps": maps}, indent=1, ensure_ascii=False), encoding="utf-8")
+        _save(device, maps)
     except OSError as e:
         # The map is on the device; only the note about it is missing.
         log.warning("own map: the list of own maps could not be saved (%s)", type(e).__name__)
@@ -305,8 +310,7 @@ def _forget(device: GarminDevice, name: str) -> None:
     maps = [m for m in recorded(device)
             if str(m.get("filename", "")).casefold() != name.casefold()]
     try:
-        _state_file(device).write_text(
-            json.dumps({"maps": maps}, indent=1, ensure_ascii=False), encoding="utf-8")
+        _save(device, maps)
     except OSError as e:
         # The file is gone from the device; the next removal finds only the stale note.
         log.warning("own map: the list of own maps could not be saved (%s)", type(e).__name__)

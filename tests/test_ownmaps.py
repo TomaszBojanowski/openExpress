@@ -1523,3 +1523,53 @@ def test_foreign_maps_in_the_window_in_polish(window_device):
         "Tej mapy nie wgrał openExpress.\n\n")
     assert "?" not in asked[2]  # one question only, in the heading
     assert asked[3:] == ("Usuń mimo to", True)
+
+
+def _entry(name):
+    return {"filename": name, "size": 1, "name": "Made-up map", "added": "2026-10-22"}
+
+
+@pytest.mark.parametrize("step", ["_record", "_forget"])
+def test_a_write_of_the_list_that_fails_half_way_keeps_the_list_before(xdg, monkeypatch, step):
+    """The disk full half-way through ownmaps.json: the list as it was stays readable (a
+    broken file reads as an empty list, and the next write would drop every map in it)."""
+    import io
+    import stat
+
+    dev = types.SimpleNamespace(unit_id=3000000001)
+    ownmaps._record(dev, _entry("first.img"))
+    ownmaps._record(dev, _entry("second.img"))
+    real_open = io.open
+
+    class HalfWay:
+        def __init__(self, f):
+            self.f = f
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.f.close()
+            return False
+
+        def write(self, text):
+            self.f.write(text[: len(text) // 2])
+            raise OSError(28, "No space left on device")
+
+        def __getattr__(self, name):
+            return getattr(self.f, name)
+
+    def failing_open(file, mode="r", *args, **kwargs):
+        f = real_open(file, mode, *args, **kwargs)
+        return HalfWay(f) if "w" in mode else f
+
+    monkeypatch.setattr(io, "open", failing_open)
+    if step == "_record":
+        ownmaps._record(dev, _entry("third.img"))
+    else:
+        ownmaps._forget(dev, "first.img")
+    monkeypatch.setattr(io, "open", real_open)
+    assert [m["filename"] for m in ownmaps.recorded(dev)] == ["first.img", "second.img"]
+    state = ownmaps._state_file(dev)
+    assert sorted(p.name for p in state.parent.iterdir()) == [state.name]  # nothing left over
+    assert stat.S_IMODE(state.stat().st_mode) == 0o600  # as the other private files
