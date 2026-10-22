@@ -210,14 +210,17 @@ def test_a_faulthandler_enabled_already_is_left_alone(monkeypatch):
 
 
 def test_the_report_attaches_the_crash_log_filtered(monkeypatch):
+    """A trace names the program's own files from its folder, wherever that is (the folder
+    itself is hidden, as every local path)."""
     import os
+    from pathlib import Path
 
     home = os.path.expanduser("~")
     path = applog.crash_path()
     paths.make_dir(path.parent)
     path.write_text("Fatal Python error: Segmentation fault\n\n"
                     "Current thread 0x00007f00 (most recent call first):\n"
-                    f'  File "{home}/garmin-linux/openexpress/auth/sso.py", line 118 in finish\n')
+                    f'  File "{Path(sso.__file__).resolve()}", line 118 in finish\n')
     crash = applog.crash_tail()
     assert crash[0] == "Fatal Python error: Segmentation fault"
     assert all(home not in line for line in crash)
