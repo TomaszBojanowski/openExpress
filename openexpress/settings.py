@@ -10,7 +10,7 @@ import json
 import logging
 import re
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from openexpress import i18n, paths
@@ -46,9 +46,11 @@ class SetupError(Exception):
 
 @dataclass
 class Consumer:
-    key: str
-    secret: str
-    url_salt: str | None = None  # map download URL signing (garmindlm parameter)
+    """From the user's own installer (setup --from-installer): kept out of repr()."""
+    key: str = field(repr=False)
+    secret: str = field(repr=False)
+    # map download URL signing (garmindlm parameter)
+    url_salt: str | None = field(default=None, repr=False)
 
 
 @dataclass

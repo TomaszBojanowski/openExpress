@@ -295,3 +295,20 @@ def test_extract_consumer_from_dll(tmp_path):
     c = extract_consumer_from_dll(dll)
     assert c.key == "11111111-2222-3333-4444-555555555555"
     assert c.secret == "AbCdEfGhIjKlMnOpQrStUvWxYz0123"
+
+
+def test_the_repr_of_the_installer_key_shows_no_secret():
+    """The key, the secret and the salt of the map addresses come from the user's own
+    installer (setup --from-installer): never in a repr() that may reach the log."""
+    from dataclasses import asdict
+
+    from openexpress.settings import Consumer
+
+    c = Consumer("key-made-up-1", "sec-made-up-2", "salt-made-up-3")
+    for text in (repr(c), str(c)):
+        for secret in ("key-made-up-1", "sec-made-up-2", "salt-made-up-3"):
+            assert secret not in text
+    # Only the text changes: compared and saved as before.
+    assert c == Consumer("key-made-up-1", "sec-made-up-2", "salt-made-up-3")
+    assert asdict(c) == {"key": "key-made-up-1", "secret": "sec-made-up-2",
+                         "url_salt": "salt-made-up-3"}
