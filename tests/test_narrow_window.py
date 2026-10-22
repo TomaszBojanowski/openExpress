@@ -196,7 +196,7 @@ def _fill(win, page: str) -> str:
     elif key == "apps":
         MainWindow.show_apps(win, _apps())
     elif key == "music":
-        MainWindow.show_music(win, _music())
+        MainWindow.show_music(win, _music(), free=win.session.storage.free_space())
     win.sections[key].show("content")
     win._update_actions()
     win._update_banner()

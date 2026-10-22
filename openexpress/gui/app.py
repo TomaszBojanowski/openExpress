@@ -4413,19 +4413,21 @@ class MainWindow(Adw.ApplicationWindow):
             sec.error.set_description(music.no_media_message())
             sec.show("error")
             return
+        # The free space too: asked of the device here, never as the page is drawn.
         self._load("music", _("Reading music on the device…"),
                    lambda: (music.list_device(s.device, s.storage),
-                            music.list_playlists(s.device, s.storage)),
-                   self.show_music)
+                            music.list_playlists(s.device, s.storage), s.storage.free_space()),
+                   lambda r: self.show_music(r[:2], free=r[2]))
 
-    def show_music(self, result) -> None:
+    def show_music(self, result, free: int | None = None) -> None:
+        """`free`: the free space of the device, read with its music (None: not known);
+        nothing is asked of the device here."""
         from openexpress import music
 
         if self.session is None:
             return
         items, playlists = result
         sec = self.sections["music"]
-        free = self.session.storage.free_space()
         # Only the kinds of media this device declares.
         kinds = music.supported_kinds(self.session.device)
         g = sec.group(_("Add to the device"), _("Free space: {size}").format(size=_human(free)))

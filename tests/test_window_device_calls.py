@@ -286,3 +286,29 @@ def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (on_device,) = [g for g in section.groups if g.get_title() == "On the device"]
     assert title in [r.get_title() for r in _rows(on_device)]
+
+
+# --- step 5: the Music page ---------------------------------------------------------------------
+
+@pytest.mark.needs_display
+def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
+    """The free space is read with the music on the device, in the task; the page shows it as
+    before and asks the device nothing as it is drawn."""
+    from test_fixes_ui import page_window
+
+    from openexpress.gui import app
+
+    st, dev = iq_device
+    win, section = page_window("music")
+    storage = Counting(st.root)
+    win.session = types.SimpleNamespace(device=dev, storage=storage)
+    win.run_task = Tasks()
+    win.toast = lambda text: None
+    win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
+    for name in ("load_music", "show_music"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
+    free = app._human(LocalStorage(st.root).free_space())
+    win.load_music()
+    assert storage.on_gtk == [] and "free_space" in storage.elsewhere
+    (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]
+    assert add.get_description() == f"Free space: {free}"
