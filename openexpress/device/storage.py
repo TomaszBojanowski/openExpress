@@ -203,6 +203,36 @@ class Storage(ABC):
         parent, name = posixpath.split(real)
         return next((e.size for e in self._list(parent) if e.name == name and not e.is_dir), None)
 
+    def sizes(self, paths: list[str]) -> dict[str, int | None]:
+        """size() of each path, with each folder on the way listed once for all of them (over
+        MTP every listing is a round trip through gvfs). The same answers: names in any
+        letter case, the exact one first; None for what is not there, or is a folder."""
+        listed: dict[str, list[Entry] | None] = {}
+
+        def entries(real: str) -> list[Entry] | None:
+            if real not in listed:
+                try:
+                    listed[real] = self._list(real)
+                except DeviceError:
+                    listed[real] = None
+            return listed[real]
+
+        def size_of(path: str) -> int | None:
+            real, entry = "", None
+            for part in [p for p in path.split("/") if p]:
+                found = entries(real)
+                if found is None:
+                    return None
+                entry = (next((e for e in found if e.name == part), None)
+                         or next((e for e in found if e.name.casefold() == part.casefold()),
+                                 None))
+                if entry is None:
+                    return None
+                real = posixpath.join(real, entry.name) if real else entry.name
+            return entry.size if entry is not None and not entry.is_dir else None
+
+        return {path: size_of(path) for path in dict.fromkeys(paths)}
+
     def delete(self, path: str) -> None:
         real = self.resolve(path)
         if real == "":

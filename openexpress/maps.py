@@ -318,13 +318,15 @@ def removal_list(maps: list[UniversalMap], target: UniversalMap, rewriting: bool
 
 
 def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
-    freed = sum(storage.size(p) or 0 for p in removing)
     gone = {p.casefold() for p in removing}
     # A file being replaced frees its space before the new one is written over MTP only; on
     # a drive it stays until the new one is whole.
-    replaced = 0 if storage.replaces_atomically else sum(
-        storage.size(f.device_path) or 0 for f in m.files
-        if f.device_path.casefold() not in gone)
+    replacing = [] if storage.replaces_atomically else [
+        f.device_path for f in m.files if f.device_path.casefold() not in gone]
+    # Every folder of these files listed once (over MTP each listing is a round trip).
+    sizes = storage.sizes([*removing, *replacing])
+    freed = sum(sizes[p] or 0 for p in removing)
+    replaced = sum(sizes[p] or 0 for p in replacing)
     return max(0, m.size - freed - replaced)
 
 

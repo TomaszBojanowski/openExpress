@@ -1595,3 +1595,78 @@ def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):
     with pytest.raises(download.DownloadError, match="no MD5 checksum"):
         updates.install(items, LocalStorage(device_root), session=Session())
     assert asked == [] and not (device_root / "GARMIN" / "GUPDATE.GSP").exists()
+
+
+# --- the space a map needs: each folder of its files listed once --------------------------------
+
+class _ListingOverMtp(LocalStorage):
+    """Replaces a file as MTP does, and counts the folders it lists."""
+    replaces_atomically = False
+
+    def __init__(self, root):
+        super().__init__(root)
+        self.listed: list[str] = []
+
+    def _list(self, real_path):
+        self.listed.append(real_path)
+        return super()._list(real_path)
+
+
+def _files_map(paths, size=10_000):
+    files = [maps.MapFile(device_path=p, url=f"https://example.org/{i}", md5=None, size=size)
+             for i, p in enumerate(paths)]
+    return maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0,
+                             is_reinstall=False, can_uninstall=True, version="2026.11",
+                             region="Test", identifier={}, files=files, files_to_remove=[],
+                             hosts=[])
+
+
+def _space_as_before(storage, m, removing):
+    """space_needed as it was until 23.10.2026: one size() for each file."""
+    freed = sum(storage.size(p) or 0 for p in removing)
+    gone = {p.casefold() for p in removing}
+    replaced = sum(storage.size(f.device_path) or 0 for f in m.files
+                   if f.device_path.casefold() not in gone)
+    return max(0, m.size - freed - replaced)
+
+
+def test_the_space_a_map_needs_lists_each_folder_once(device_root):
+    """A map of ten files in one folder, two old files removed: three folders on their way
+    (the root, Garmin, Maps), each listed once, not four listings for each of twelve files."""
+    folder = device_root / "Garmin" / "Maps"
+    folder.mkdir(parents=True, exist_ok=True)
+    for n in range(10):
+        (folder / f"Map{n}.img").write_bytes(b"x" * (100 + n))
+    (folder / "Old0.img").write_bytes(b"o" * 50)
+    (folder / "Old1.img").write_bytes(b"o" * 70)
+    m = _files_map([f"Garmin/Maps/Map{n}.img" for n in range(10)])
+    removing = ["Garmin/Maps/Old0.img", "Garmin/Maps/Old1.img"]
+    expected = _space_as_before(LocalStorage(device_root), m, removing)
+    storage = _ListingOverMtp(device_root)
+    assert maps.space_needed(storage, m, removing) == expected
+    assert sorted(storage.listed) == sorted(["", "Garmin", "Garmin/Maps"])
+
+
+@pytest.mark.parametrize("paths, removing", [
+    # Names in another letter case, as the device has them.
+    (["GARMIN/maps/map0.IMG", "Garmin/Maps/Map1.img"], []),
+    # A file that is not there, and a folder where a file is expected.
+    (["Garmin/Maps/Missing.img", "Garmin/Maps/Folder.img"], ["Garmin/Maps/Gone.img"]),
+    # Three folders, as on an Edge; a path removed twice counts twice, as before.
+    (["Garmin/Maps/Map0.img", "Garmin/SQL/Map1.db", "Map/Map2.img"],
+     ["Garmin/Maps/Old0.img", "Garmin/Maps/Old0.img"]),
+    # A folder that is not there at all, and the path of the root.
+    (["Nothing/Here/Map.img", "Garmin/Maps/Map0.img"], [""]),
+])
+def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
+    for name, size in (("Garmin/Maps/Map0.img", 300), ("Garmin/Maps/Map1.img", 500),
+                       ("Garmin/Maps/Old0.img", 70), ("Garmin/SQL/Map1.db", 900),
+                       ("Map/Map2.img", 40)):
+        (device_root / name).parent.mkdir(parents=True, exist_ok=True)
+        (device_root / name).write_bytes(b"x" * size)
+    (device_root / "Garmin/Maps/Folder.img").mkdir(parents=True, exist_ok=True)
+    m = _files_map(paths, size=100_000)
+    expected = _space_as_before(_ListingOverMtp(device_root), m, removing)
+    assert maps.space_needed(_ListingOverMtp(device_root), m, removing) == expected
+    assert maps.space_needed(LocalStorage(device_root), m, removing) == m.size - sum(
+        LocalStorage(device_root).size(p) or 0 for p in removing)
