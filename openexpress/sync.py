@@ -650,16 +650,20 @@ def run_downloads(
                 continue
             progress(_("Wrote {path}").format(path=real))
             report.written.append(f"{label} -> {real}")
+            # Written: not acknowledged until Garmin Connect says so, whatever stops the sync
+            # meanwhile (also Ctrl+C); the next sync then acknowledges it without writing it
+            # again.
+            unacked.add(mid)
             try:
                 client.ack_message(it.message_id)
             except Unauthorized:
-                unacked.add(mid)
                 raise
             except Exception as e:  # noqa: BLE001
                 log.warning("Acknowledgement of %s failed: %s", quiet, e)
-                unacked.add(mid)
                 report.ack_failed.append(label)
                 report.ack_failed_in_log.append(quiet)
+            else:
+                unacked.discard(mid)
     finally:
         if state is not None and unacked != initial:
             state.save_unacked(unacked)

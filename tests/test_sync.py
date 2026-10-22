@@ -211,6 +211,34 @@ def test_downloads(device_root, tmp_path):
     assert written[0].read_bytes() == b"COURSE"
 
 
+def test_a_file_written_but_interrupted_before_its_acknowledgement_is_not_written_again(
+        device_root, tmp_path):
+    """Ctrl+C while Garmin Connect is told a course was written: the course is remembered as
+    written and not acknowledged, so the next sync acknowledges it without a second file on
+    the device (as when the acknowledgement fails)."""
+    import pytest
+
+    st, dev, state = _setup(device_root, tmp_path)
+    items = sync.plan_downloads(dev, [
+        {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+         "metadata": {"messageurl": "course/7", "messagename": "Route"}}])
+
+    class Interrupted(FakeClient):
+        def ack_message(self, mid):
+            raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        sync.run_downloads(items, st, Interrupted(), state=state)
+    assert len(list((device_root / "GARMIN/NewFiles").iterdir())) == 1
+    again = sync.SyncState(dev.unit_id, base=tmp_path / "state")
+    assert again.unacked() == {"7"}
+    client = FakeClient()
+    rep = sync.run_downloads(items, st, client, state=again)
+    assert client.acks == [7] and rep.written == []
+    assert len(list((device_root / "GARMIN/NewFiles").iterdir())) == 1  # no second file
+    assert sync.SyncState(dev.unit_id, base=tmp_path / "state").unacked() == set()
+
+
 def test_trueup_flow(device_root, tmp_path):
     import struct
 
