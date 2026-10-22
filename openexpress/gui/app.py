@@ -703,6 +703,11 @@ def detection_due(win) -> None:
     win._detect_after_task = False
     reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
     causes, win._detect_causes = getattr(win, "_detect_causes", []), []
+    if getattr(win, "_detect_timer", None) is not None:
+        # Decided after a task: this covers the triggers that came meanwhile, so the timer
+        # armed for them would only fire again with none left.
+        GLib.source_remove(win._detect_timer)
+        win._detect_timer = None
     cause = _timed_cause(causes)
     s = win.session
     connected = getattr(win, "connected", None)

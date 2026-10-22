@@ -1553,6 +1553,30 @@ def test_window_detects_a_garmin_drive_when_it_is_mounted(drive_window, caplog):
         "mount added (file:): a Garmin device, detecting in 1.5 s (a device is open: False)"]
 
 
+def test_a_detection_after_the_task_leaves_no_timer_behind(drive_window, monkeypatch):
+    """A mount reported during a task waits for it; one more reported meanwhile arms the timer
+    again. Once the task ends, one detection covers both, and the timer armed for the second
+    is gone: it does not fire a detection of its own later, with no trigger left."""
+    from openexpress.gui.app import detection_due, schedule_detection
+
+    win = drive_window
+    asked = []
+    real = win.refresh_device
+    win.refresh_device = lambda **kw: (asked.append(kw.get("cause")), real(**kw))[1]
+    monitor_with(monkeypatch)
+    win.busy = True  # e.g. the detection at start
+    schedule_detection(win, 1500, NUMERIC)
+    win.timers.fire()  # the first one waits for the task
+    schedule_detection(win, 1500, NAMED)  # another one, while the task still runs
+    assert len(win.timers.live) == 1
+    win.busy = False
+    detection_due(win)  # as _run_pending_refresh does when the task ends
+    assert len(asked) == 1
+    assert not win.timers.live
+    win.timers.fire()
+    assert len(asked) == 1  # no second detection
+
+
 def test_window_opens_a_garmin_drive(drive_window, monkeypatch):
     """Test 2: the window's detection opens the RTL515 as a Garmin drive; nothing is asked of
     the account. An MTP device next to it would come first (step 4)."""
