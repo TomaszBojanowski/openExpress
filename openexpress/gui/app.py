@@ -1615,6 +1615,11 @@ class MainWindow(Adw.ApplicationWindow):
             return
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
+            if connected is not None and not connected.listed(uri):
+                # A pendrive, a phone, a share: none of the devices on the start page (one
+                # mounted but not listed yet is read with the list its mount asked for).
+                log.info("mount removed (%s): not a device on the list, ignored", where)
+                return
             # Another Garmin device went away (several connected): the open one is still at
             # its place on USB, so it stays open; the start page lists those left, read once
             # by the timer of the other triggers (gvfs reports two mounts of one device).

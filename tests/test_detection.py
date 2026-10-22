@@ -4308,6 +4308,29 @@ def test_another_device_unplugged_while_one_is_open_updates_the_list(start_windo
         ("Test watch", True), ("Edge 1050", False)]
 
 
+@pytest.mark.parametrize("gone", ["file:///run/media/made-up-user/PENDRIVE", PHONE])
+def test_a_mount_removed_that_is_not_on_the_list_reads_nothing(start_window, monkeypatch,
+                                                              tmp_path, device_root, gone,
+                                                              caplog):
+    """The test watch open, the Edge listed too: a pendrive or a phone unmounted is none of
+    the devices on the start page, so the list is not read again; the open device stays."""
+    from openexpress.gui.app import MainWindow
+
+    win = start_window
+    later = defer_background(win)
+    two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+    opened = win.session
+    back(win)
+    run_later(later)
+    drawn = len(win.start.shown)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        MainWindow._on_mount_removed(win, None, FakeMount(gone, name="other"))
+    assert not win.timers.live and later == []
+    assert "not a device on the list, ignored" in caplog.text
+    assert "the list of devices is read again" not in caplog.text
+    assert win.session is opened and len(win.start.shown) == drawn
+
+
 def test_two_mounts_removed_for_one_device_read_the_list_once(start_window, monkeypatch,
                                                               tmp_path, device_root, caplog):
     """gvfs reports two mounts of one MTP device: the test watch open, the Edge unplugged,
