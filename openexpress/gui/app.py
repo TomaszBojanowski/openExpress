@@ -3448,7 +3448,9 @@ class MainWindow(Adw.ApplicationWindow):
             # Garmin's (the folder and the first bytes of each such file).
             result = mp.read_maps(s.client.universal_maps(s.device.raw))
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
-            return result, ownmaps.overview(s.device, s.storage, result[0])
+            # The space too: asked of the device here, never as the page is drawn.
+            return (result, ownmaps.overview(s.device, s.storage, result[0]),
+                    (s.storage.free_space(), s.storage.capacity()))
 
         def failed(_e):
             # The "Maps" row waited for this answer (show_device): it says the check failed.
@@ -3458,10 +3460,12 @@ class MainWindow(Adw.ApplicationWindow):
                 self.map_state = "failed"
                 self._render_map_state()
 
-        self._load("maps", _("Checking maps…"), work, lambda r: self.show_maps(r[0], r[1]),
-                   on_error=failed)
+        self._load("maps", _("Checking maps…"), work,
+                   lambda r: self.show_maps(r[0], r[1], space=r[2]), on_error=failed)
 
-    def show_maps(self, result, own=None) -> None:
+    def show_maps(self, result, own=None, space=(None, None)) -> None:
+        """`space`: the free space and the size of the device, read with the maps (none told:
+        the page has no row of them); nothing is asked of the device here."""
         from openexpress import maps as mp
 
         if self.session is None:
@@ -3486,8 +3490,7 @@ class MainWindow(Adw.ApplicationWindow):
             if own is not None:
                 self.show_own_maps(own)
             return
-        s = self.session
-        free, total = s.storage.free_space(), s.storage.capacity()
+        free, total = space
         # Also the maps written or removed that the device takes in when it is unplugged.
         installed = sorted((m for m in all_maps if m.installed or m.waiting),
                            key=lambda m: (m.map_type, m.name))

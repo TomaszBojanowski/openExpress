@@ -190,7 +190,9 @@ def _fill(win, page: str) -> str:
     elif page == "maps-none":
         MainWindow.show_maps(win, ([], 0), None)
     elif key == "maps":
-        MainWindow.show_maps(win, *_maps())
+        # With the row of the space, as the page has it once the maps are read.
+        storage = win.session.storage
+        MainWindow.show_maps(win, *_maps(), space=(storage.free_space(), storage.capacity()))
     elif key == "apps":
         MainWindow.show_apps(win, _apps())
     elif key == "music":

@@ -247,3 +247,42 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     dialog.handlers["response"](dialog, "next")
     assert asked == [NOTE]
     assert storage.on_gtk == [] and storage.elsewhere
+
+
+# --- step 4: the Maps page ----------------------------------------------------------------------
+
+from test_updates_maps import _real_maps_page, maps_response, server  # noqa: E402, F401
+
+
+def _rows(group):
+    from gi.repository import Adw
+
+    out, child = [], group.get_first_child()
+    stack = [child] if child is not None else []
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Adw.ActionRow):
+            out.append(w)
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    return out
+
+
+@pytest.mark.needs_display
+def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
+    """The free space and the size of the device are read with the maps, in the task: the
+    page shows them as before and asks the device nothing as it is drawn."""
+    from openexpress.gui import app
+
+    win, section, _asked = _real_maps_page([maps_response(server)], device_root)
+    storage = Counting(device_root)
+    win.session.storage = storage
+    win.run_task = Tasks()
+    plain = LocalStorage(device_root)
+    title = f"{app._human(plain.free_space())} free of {app._human(plain.capacity())}"
+    win.load_section("maps")
+    assert storage.on_gtk == [] and "free_space" in storage.elsewhere
+    (on_device,) = [g for g in section.groups if g.get_title() == "On the device"]
+    assert title in [r.get_title() for r in _rows(on_device)]
