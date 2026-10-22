@@ -1,6 +1,6 @@
 """Which addresses of device pictures are downloaded (#8): Garmin's own hosts over HTTPS;
-Amazon S3 only from a bucket allowed by name (none yet). A refusal names the host and the
-first segment of the path at most: never the rest of the address, nor its query."""
+Amazon S3 only from a bucket allowed by name (Garmin Connect's). A refusal names the host and
+the first segment of the path at most: never the rest of the address, nor its query."""
 
 import pytest
 
@@ -51,6 +51,46 @@ def test_a_bucket_of_garmin_on_s3_is_allowed_once_named(monkeypatch):
     assert picture_urls.refusal("https://s3.amazonaws.com/other/a.png") == (
         "host s3.amazonaws.com, first segment other: not an allowed bucket")
     assert picture_urls.refusal("http://s3.amazonaws.com/garmin-bucket/a.png") == "not HTTPS"
+
+
+@pytest.mark.parametrize("url", [
+    "https://s3.amazonaws.com/garmin-connect-prod/device_images/a.png",
+    "https://s3.amazonaws.com/garmin-connect-prod/a.png?X-Amz-Signature=secret",
+    "https://s3.us-east-1.amazonaws.com/garmin-connect-prod/a.png",
+    "https://s3-external-1.amazonaws.com/garmin-connect-prod/a.png",
+    "https://garmin-connect-prod.s3.amazonaws.com/a.png",
+    "https://garmin-connect-prod.s3.us-east-1.amazonaws.com/a.png",
+    "https://GARMIN-CONNECT-PROD.S3.AMAZONAWS.COM/a.png",  # a host in any letter case
+])
+def test_the_bucket_of_garmin_connect_on_s3_is_allowed(url):
+    """#8, the log of 0.6.10 (22.10.2026): the account gives the pictures of three models in
+    the bucket garmin-connect-prod, by the path; by the host it is allowed as well."""
+    assert picture_urls.refusal(url) is None and picture_urls.allowed(url)
+
+
+@pytest.mark.parametrize("url, why", [
+    ("https://s3.amazonaws.com/garmin-connect-dev/a.png?X-Amz-Signature=secret",
+     "host s3.amazonaws.com, first segment garmin-connect-dev: not an allowed bucket"),
+    ("https://s3.amazonaws.com/garmin-connect-prod-copy/a.png",
+     "host s3.amazonaws.com, first segment garmin-connect-prod-copy: not an allowed bucket"),
+    ("https://s3.amazonaws.com/other/garmin-connect-prod/a.png",
+     "host s3.amazonaws.com, first segment other: not an allowed bucket"),
+    ("https://s3.amazonaws.com/Garmin-Connect-Prod/a.png",  # a bucket is named in lower case
+     "host s3.amazonaws.com, first segment Garmin-Connect-Prod: not an allowed bucket"),
+    ("https://other.garmin-connect-prod.s3.amazonaws.com/a.png",
+     "host other.garmin-connect-prod.s3.amazonaws.com: not an allowed bucket"),
+    ("https://garmin-connect-prod.s3.amazonaws.com.example.org/a.png",
+     "host garmin-connect-prod.s3.amazonaws.com.example.org is not allowed"),
+    ("https://garmin-connect-prod.example.org/a.png",
+     "host garmin-connect-prod.example.org is not allowed"),
+    ("https://s3.amazonaws.com:8443/garmin-connect-prod/a.png",
+     "host s3.amazonaws.com: port 8443"),
+    ("http://s3.amazonaws.com/garmin-connect-prod/a.png", "not HTTPS"),
+])
+def test_any_other_bucket_is_still_refused_with_its_host_and_bucket_only(url, why):
+    assert picture_urls.refusal(url) == why and not picture_urls.allowed(url)
+    for private in ("secret", "Signature", "a.png"):
+        assert private not in why
 
 
 @pytest.mark.parametrize("url, asked", [

@@ -164,8 +164,9 @@ PICTURE_FROM_ACCOUNT, PICTURE_REMEMBERED = "the account", "the remembered addres
 def picture_address(account_url: str | None, remembered_url: str | None):
     """(address, where it comes from) of a tile's picture: the account's, which is the newer
     word; the one remembered with the device when the account gives none it may download
-    (none for a device off the account, or offline; one on S3, #8). With neither allowed,
-    the account's, so that the log says why there is no picture."""
+    (none for a device off the account, or offline; one in a bucket on S3 that is not
+    allowed, #8). With neither allowed, the account's, so that the log says why there is no
+    picture."""
     if (remembered_url and not picture_urls.allowed(picture_urls.upgraded(account_url))
             and picture_urls.allowed(remembered_url)):
         return remembered_url, PICTURE_REMEMBERED

@@ -13,9 +13,10 @@ import re
 from urllib.parse import urlsplit
 
 HOSTS = frozenset({"res.garmin.com", "static.garmincdn.com"})
-# Garmin's buckets of device pictures on S3. None is known yet: S3 is refused, and the log
-# names the bucket, so that a real one can be added here.
-S3_BUCKETS: frozenset[str] = frozenset()
+# Garmin's buckets of device pictures on S3, by name (S3 names a bucket in lower case only).
+# garmin-connect-prod: the account's pictures of some models (#8, the log of 0.6.10). Any
+# other bucket is refused, and the log names it, so that a real one can be added here.
+S3_BUCKETS: frozenset[str] = frozenset({"garmin-connect-prod"})
 
 _S3_PATH_HOST = re.compile(r"s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com")
 _S3_BUCKET_HOST = re.compile(r"(?P<bucket>[a-z0-9][a-z0-9.-]*?)\.s3(?:[.-][a-z0-9-]+)?"

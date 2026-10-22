@@ -1062,8 +1062,8 @@ def test_a_png_or_jpeg_from_an_allowed_host_is_saved(pictures, url, response, sa
 
 
 def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
-    """No bucket of Garmin's on S3 is known yet: nothing is asked, and the log says which
-    bucket it was, without the rest of the address or its signature."""
+    """A bucket on S3 that is not allowed (only Garmin Connect's is): nothing is asked, and
+    the log says which bucket it was, without the rest of the address or its signature."""
     xdg, log_file, monkeypatch = pictures
     url = "https://s3.amazonaws.com/garmin-bucket/devices/x.png?X-Amz-Signature=secret"
     client = PictureClient(unit_info=_unit_info(url), http=PictureHttp())
@@ -1075,6 +1075,30 @@ def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
             "garmin-bucket: not an allowed bucket)") in log
     assert client.http.calls == [] and _cache(xdg) == []
     assert "secret" not in log and "Signature" not in log and "/devices" not in log
+
+
+def test_a_picture_from_the_bucket_of_garmin_connect_is_saved_and_its_address_kept(pictures):
+    """#8 (0.6.10): the account gives the pictures of some models on S3, in the bucket
+    garmin-connect-prod. They are downloaded as from Garmin's own hosts and their address is
+    kept with the device; the log names the host, never the rest of the address."""
+    from openexpress import known_devices
+    from openexpress.gui import app
+
+    xdg, log_file, _monkeypatch = pictures
+    url = ("https://s3.amazonaws.com/garmin-connect-prod/device_images/x.png"
+           "?X-Amz-Signature=secret")
+    http = PictureHttp()
+    path, why = app.download_picture(http, url, "device-006-B0000-00.png")
+    assert (why, path.read_bytes()) == ("", PNG)
+    assert [asked for asked, _kw in http.calls] == [url]
+    assert _cache(xdg) == ["device-006-B0000-00.png"]
+    known_devices.remember(SECRET_UNIT, "Test watch", "006-B0000-00", "1.00", "mtp")
+    assert known_devices.set_image_url(SECRET_UNIT, url)
+    assert known_devices.load()[SECRET_UNIT].image_url == url
+    log = log_file.read_text()
+    assert "devices: the picture of 006-B0000-00 is at s3.amazonaws.com" in log
+    for private in ("secret", "Signature", "device_images", "x.png"):
+        assert private not in log, private
 
 
 @pytest.mark.parametrize("logged_in, account_url, unit_info_url, kept", [
