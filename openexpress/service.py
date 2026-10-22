@@ -655,10 +655,8 @@ def device_last_sync_path(unit_id: int):
 
 
 def _write_json(path, data: dict) -> None:
-    paths.make_dir(path.parent)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
-    tmp.replace(path)
+    """Written whole or not at all, readable by its owner only (it names the unit ID)."""
+    paths.write_private(path, json.dumps(data, indent=1, ensure_ascii=False))
 
 
 def save_last_sync(unit_id: int, summary: SyncSummary) -> None:

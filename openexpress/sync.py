@@ -127,20 +127,15 @@ class SyncState:
         if not ids:
             self.unacked_file.unlink(missing_ok=True)
             return
-        paths.make_dir(self.dir)
-        tmp = self.unacked_file.with_suffix(".tmp")
-        tmp.write_text(json.dumps(sorted(ids)))
-        tmp.replace(self.unacked_file)
+        paths.write_private(self.unacked_file, json.dumps(sorted(ids)))
 
     def save(self) -> None:
-        paths.make_dir(self.dir)
+        """Written whole or not at all, readable by its owner only (paths.write_private)."""
         data = {
             "completed": {k: sorted(v) for k, v in sorted(self.completed.items())},
             "singleton_md5": dict(sorted(self.singleton_md5.items())),
         }
-        tmp = self.file.with_suffix(".tmp")
-        tmp.write_text(json.dumps(data, indent=1))
-        tmp.replace(self.file)
+        paths.write_private(self.file, json.dumps(data, indent=1))
 
 
 # --- upload ----------------------------------------------------------------------------

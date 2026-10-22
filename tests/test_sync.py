@@ -239,6 +239,34 @@ def test_a_file_written_but_interrupted_before_its_acknowledgement_is_not_writte
     assert sync.SyncState(dev.unit_id, base=tmp_path / "state").unacked() == set()
 
 
+def test_the_state_of_the_sync_is_readable_by_its_owner_only(tmp_path, xdg, monkeypatch):
+    """What was uploaded (state.json), what waits for its acknowledgement (unacked.json) and
+    the last sync (last_sync.json, with the unit ID): 0600, as the log and the login, also
+    where the folder was made 0755 by an older version."""
+    import os
+    import stat
+
+    from openexpress import service
+
+    old = os.umask(0o022)
+    try:
+        state = sync.SyncState(3000000001, base=tmp_path / "state")
+        state.mark_completed("FIT_TYPE_4", "a.fit")
+        state.save()
+        state.save_unacked({"7"})
+        service.save_last_sync(3000000001, service.SyncSummary(uploaded=1))
+    finally:
+        os.umask(old)
+    files = [state.file, state.unacked_file, service.device_last_sync_path(3000000001),
+             service.last_sync_path()]
+    for f in files:
+        assert stat.S_IMODE(f.stat().st_mode) == 0o600, f.name
+    # Written as before: read back the same.
+    again = sync.SyncState(3000000001, base=tmp_path / "state")
+    assert again.is_completed("FIT_TYPE_4", "a.fit") and again.unacked() == {"7"}
+    assert service.load_last_sync(3000000001)["uploaded"] == 1
+
+
 def test_trueup_flow(device_root, tmp_path):
     import struct
 
