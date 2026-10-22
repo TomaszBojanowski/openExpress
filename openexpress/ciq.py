@@ -103,6 +103,9 @@ class InstalledState:
     unreadable: int = 0
     # An app list (IN.BIN) is on the device that it has not applied yet.
     waiting: bool = False
+    # That list could not be read whole (damaged, empty, an entry cut): the apps it would
+    # name are missing, so no list may be built from it (require_readable_waiting_list).
+    in_bin_damaged: bool = False
 
     @property
     def store_apps(self) -> list[InstalledApp]:
@@ -207,29 +210,44 @@ def parse_out_bin(data: bytes) -> InstalledState:
 
 def parse_in_bin(data: bytes) -> list[tuple[uuid.UUID, int, bool, bool]]:
     """Pending app list; a damaged file is treated as empty (the watch rewrites it)."""
+    return _read_in_bin(data)[0]
+
+
+def _read_in_bin(data: bytes) -> tuple[list[tuple[uuid.UUID, int, bool, bool]], bool]:
+    """The entries of an app list (IN.BIN) and whether it was damaged: not a list, without
+    an entry (a list of the program always names every app), or with an entry that cannot
+    be read. What can be read is kept."""
     try:
         req = _bytes(_get_service(data), 5)
     except (proto.ProtoError, CiqError) as e:
         log.warning("Ignoring damaged IN.BIN: %s", e)
-        return []
+        return [], True
     if req is None:
-        return []
+        log.warning("Ignoring damaged IN.BIN: no app list in it")
+        return [], True
     try:
         entries = _all_bytes(proto.decode(req), 1)
     except proto.ProtoError as e:
         log.warning("Ignoring damaged IN.BIN: %s", e)
-        return []
+        return [], True
     out = []
+    cut = 0
     for raw in entries:
         try:
             a = proto.decode(raw)
         except proto.ProtoError:
+            cut += 1
             continue
         app_id = _app_id(a)
         if app_id is None:
+            cut += 1
             continue
         out.append((app_id, _int(a, 2, 0), bool(_int(a, 3, 0)), bool(_int(a, 4, 0))))
-    return out
+    if cut:
+        log.warning("IN.BIN: %d of %d entries cannot be read", cut, len(entries))
+    elif not out:
+        log.warning("IN.BIN: no app in it")
+    return out, bool(cut) or not out
 
 
 def build_in_bin(apps: list[InstalledApp]) -> bytes:
@@ -256,9 +274,10 @@ def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
     in_path = _config_path(device, True)
     if storage.exists(in_path):
         state.waiting = True
+        entries, state.in_bin_damaged = _read_in_bin(storage.read(in_path))
         # Keyed by ID and type: a built-in item can be listed as an app and as a widget
         # under the same ID, each with its own flags.
-        pending = {(a[0], a[1]): a for a in parse_in_bin(storage.read(in_path))}
+        pending = {(a[0], a[1]): a for a in entries}
         for app in state.apps:
             if (app.app_id, app.app_type) in pending:
                 app.disabled, app.favorite = pending.pop((app.app_id, app.app_type))[2:]
@@ -313,6 +332,22 @@ def require_complete(state: InstalledState) -> None:
             "The Connect IQ app list on the device (OUT.BIN) has {count} entries that cannot be "
             "read. Nothing was changed, so that no app is dropped from the list.",
             n).format(count=n))
+
+
+def waiting_list_text() -> str:
+    """Why the app list cannot be changed while the device has one it has not applied."""
+    return _("the device has not applied earlier changes yet; unplug it, wait until it is "
+             "ready and try again")
+
+
+def require_readable_waiting_list(state: InstalledState) -> None:
+    """Refuse to write an app list (IN.BIN) built from a waiting one that could not be read
+    whole: the apps it would name are missing, and a list without them would remove them
+    (as restore_order and the writes over PTP refuse while any list waits)."""
+    if state.in_bin_damaged:
+        log.warning("apps: the app list waiting for the device (IN.BIN) cannot be read "
+                    "whole; nothing is written")
+        raise CiqError(waiting_list_text())
 
 
 @dataclass
@@ -834,6 +869,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     report = IqInstallReport()
     state = read_installed(device, storage)
     require_complete(state)
+    require_readable_waiting_list(state)  # the list written after the apps is built from it
     free_slots = _free_slots(device, state)
     new_entries: list[InstalledApp] = []
     new_paths: list[str] = []
@@ -1480,6 +1516,7 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
                 app_type: int | None = None) -> None:
     state = read_installed(device, storage)
     require_complete(state)
+    require_readable_waiting_list(state)
     if app_type is None and sum(1 for a in state.apps if a.app_id == app_id) > 1:
         raise CiqError(_("Several entries on the device share this ID; the type is needed"))
     app = state.find(app_id, app_type)
