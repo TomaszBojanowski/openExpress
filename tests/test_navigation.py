@@ -8,6 +8,7 @@ import re
 
 import pytest
 
+from openexpress.device.gio_storage import ABSENT, MASS_STORAGE, PRESENT, STARTING
 from openexpress.gui.navigation import (
     READ_THE_LIST,
     Cause,
@@ -170,6 +171,23 @@ PLANS = [
     ("P-account", Cause.ACCOUNT_CHANGED, (), None, (), False, Detect()),
     ("P-choice-failed", Cause.CHOICE_FAILED, (), None, (W, E), False, Detect()),
     ("P-unplugged-open", Cause.UNPLUGGED_OPEN, (), None, (), False, Nothing()),
+    # The open device unplugged while another Garmin device is connected (audit 22.10.2026,
+    # point 1; seen live with 0.6.11): what is left on USB is looked for, a drive as well as
+    # a device in its normal mode. The plan knows only what is left, not what was open: an
+    # MTP device left after an MTP device or after a drive is the same row.
+    ("P-unplugged-open-mtp-a-drive-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
+     Detect()),
+    ("P-unplugged-open-mtp-another-mtp-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
+     Detect()),
+    ("P-unplugged-open-drive-an-mtp-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
+     Detect()),
+    ("P-unplugged-open-nothing-left", Cause.UNPLUGGED_OPEN, (), None, (), False, Nothing()),
+    # One still starting: looked for once in its normal mode (the USB poll); a drive ejected
+    # by openExpress is neither opened nor listed until it is unplugged (D3).
+    ("P-unplugged-open-one-starting-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
+     Nothing()),
+    ("P-unplugged-open-an-ejected-drive-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
+     Nothing()),
     ("P-chosen", Cause.CHOSEN, (), None, (W, E), False, Nothing()),
     ("P-new-mount-none-open", Cause.PLUGGED, (E + "/",), None, (), False, Detect()),
     # Q1: the device open stays open (not opened again), no list: the list is read again.
@@ -213,6 +231,15 @@ PLANS = [
 
 # The entries listed without their details, by the id of the row (none in the others).
 UNREAD = {"P-unread-mount-on-the-list": (E,), "P-unread-mount-on-the-list-while-open": (E,)}
+# What is left on USB once the open device is gone (gio_storage.usb_state()), and whether a
+# drive ejected by openExpress waits, by the id of the row (the others: not told).
+LEFT_ON_USB = {"P-unplugged-open-nothing-left": ABSENT,
+               "P-unplugged-open-mtp-a-drive-left": MASS_STORAGE,
+               "P-unplugged-open-mtp-another-mtp-left": PRESENT,
+               "P-unplugged-open-drive-an-mtp-left": PRESENT,
+               "P-unplugged-open-one-starting-left": STARTING,
+               "P-unplugged-open-an-ejected-drive-left": MASS_STORAGE}
+EJECTED_WAITS = {"P-unplugged-open-an-ejected-drive-left"}
 
 
 @pytest.mark.parametrize("row_id, cause, reasons, open_label, listed, moved, expected",
@@ -226,6 +253,10 @@ def test_whether_to_look_for_devices(row_id, cause, reasons, open_label, listed,
         return moved
 
     more = {"unread": frozenset(UNREAD[row_id])} if row_id in UNREAD else {}
+    if row_id in LEFT_ON_USB:
+        more["left_on_usb"] = LEFT_ON_USB[row_id]
+    if row_id in EJECTED_WAITS:
+        more["ejected_waits"] = True
     assert plan(cause, reasons, open_label=open_label, listed=frozenset(listed),
                 open_moved=open_moved, **more) == expected
     assert len(asked) <= 1

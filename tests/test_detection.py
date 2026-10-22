@@ -4711,6 +4711,81 @@ def test_the_open_device_unplugged_while_a_remembered_one_is_shown_keeps_its_vie
     assert [name for name, on, _how in drawn_tiles(win) if on] == []
 
 
+def real_usb_poll(win):
+    """The window's own USB poll (/sys is made up), as show_no_device calls it."""
+    from openexpress.gui.app import MainWindow
+
+    win._usb_state, win._usb_since, win._usb_title, win._usb_gone = (
+        gio_storage.ABSENT, 0.0, "", None)
+    win._usb_notice = MainWindow._usb_notice
+    win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
+
+
+@pytest.mark.parametrize("variant", ["mtp open, a drive left", "mtp open, another mtp left",
+                                     "a drive open, an mtp left"])
+def test_the_open_device_unplugged_with_another_connected_opens_the_other(
+        start_window, monkeypatch, tmp_path, device_root, variant, caplog):
+    """Audit 22.10.2026, point 1, seen live with 0.6.11 (an Edge open, a Varia connected, the
+    Edge's cable out): the device left was not looked for when it is a drive (the USB poll
+    looked only for one in its normal mode, and a mounted drive sends no event), so the
+    start page showed it as remembered, under "Mass storage mode - not mounted". Now the
+    one left is opened in each case, as one in its normal mode always was (D7): its view
+    shows, and back on the start page it is connected, with no notice of the USB state.
+    The USB poll is the window's own; only /sys and gvfs are made up."""
+    win, world = start_window, start_window.world
+    real_usb_poll(win)
+    if variant == "mtp open, another mtp left":
+        two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
+        left = "Edge 1050"
+    else:
+        drive = world.drive()
+        monitor_with(monkeypatch, drive)
+        world.plug("51b4")
+        world.offer()
+        win.refresh_device()
+        opened = "Test watch" if variant.startswith("mtp open") else "Varia RTL515"
+        win._open_tile(drawn_names(win)[-1].index(opened))
+        left = "Varia RTL515" if opened == "Test watch" else "Test watch"
+    gone = win.session.device.description
+    assert win.navigation.stack == ["start page", "device view"]
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        if variant == "a drive open, an mtp left":
+            unplug_drive(win, monkeypatch, drive, "sdb")
+        else:
+            watch = next(f for f in world.offered if f.uri == NUMERIC)
+            unplug_mtp(win, watch, world.root / "garmin51b4")
+    assert win.session is not None and win.session.device.description == left
+    assert win.session.mass_storage == (left == "Varia RTL515")
+    assert win.navigation.stack == ["start page", "device view"]
+    back(win)
+    tiles, notice = win.start.shown[-1]
+    assert (left, True) in [(name, on) for name, on, _how in tiles]
+    assert (gone, True) not in [(name, on) for name, on, _how in tiles]
+    assert notice is False  # no "Mass storage mode - the drive is not mounted" on top
+
+
+def test_a_drive_left_that_is_not_mounted_is_looked_for_once(start_window, monkeypatch,
+                                                              caplog):
+    """The open device unplugged, a Garmin drive left on USB but not mounted: one detection,
+    which finds nothing to open; then the notice of the drive, and no detection again (the
+    USB poll looks for a device left only right after the open one went)."""
+    win, world = start_window, start_window.world
+    real_usb_poll(win)
+    world.drive()  # on USB, but the system did not mount it
+    one_watch(win, monkeypatch)
+    win.refresh_device()
+    assert win.session.device.description == "Test watch"
+    titles = detections(win)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        unplug_mtp(win, world.offered[0], world.root / "garmin51b4")
+        for _ in range(3):  # the poll goes on every few seconds
+            win._poll_usb()
+            win.timers.fire()
+    assert titles == ["Detecting the device…"] and win.session is None
+    assert caplog.text.count("a Garmin drive is still connected, detecting in 2.5 s") == 1
+    assert win.start.notices[-1][0] == "Mass storage mode"
+
+
 # --- the navigation matrix of the start page (audit, part 3) --------------------------------
 # The window as the decisions Q1, Q2 and Q3 (AGENTS.md) have it.
 

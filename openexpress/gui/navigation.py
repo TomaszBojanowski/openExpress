@@ -14,6 +14,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
+from openexpress.device.gio_storage import MASS_STORAGE, PRESENT
+
 # A trigger that asks only for the list of devices connected to be read again (another
 # device than the open one went away); never an address. The same as the window's.
 READ_THE_LIST = "read the list of devices again"
@@ -133,17 +135,28 @@ _REOPENING = (*_TIMED, Cause.REFRESH_IN_VIEW)
 
 def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | None = None,
          listed: frozenset[str] = frozenset(), unread: frozenset[str] = frozenset(),
-         open_moved: Callable[[], bool] = lambda: False) -> Plan:
+         open_moved: Callable[[], bool] = lambda: False, left_on_usb: str | None = None,
+         ejected_waits: bool = False) -> Plan:
     """Whether to look for devices, and how. `reasons`: the triggers of the timer (the
     address of a mount reported, None for a change on USB, READ_THE_LIST); `open_label`:
     the address of the open device's storage (None: none open); `listed`: the addresses of
     the devices connected, and `unread`: those of them listed without their details (e.g.
     not mounted yet), all without the trailing slash; `open_moved`: whether the open device
     is no longer at its place on USB (asked only when it matters). A device open stays open
-    (Q1): another device mounted or seen on USB only has the list read again."""
+    (Q1): another device mounted or seen on USB only has the list read again.
+    `left_on_usb`, for the open device unplugged: what is on USB once it is gone (the state of
+    gio_storage.usb_state()), and `ejected_waits`: whether a drive ejected by openExpress is
+    still there."""
     if cause not in _TIMED:
-        if cause in (Cause.UNPLUGGED_OPEN, Cause.CHOSEN):
-            return Nothing()  # no detection: the device is gone, or the one chosen is opened
+        if cause is Cause.UNPLUGGED_OPEN:
+            # Another Garmin device left is looked for (D7): one in its normal mode, and a
+            # drive, which sends no event as it is mounted already; not one still starting
+            # (looked for once in its normal mode), nor a drive ejected by openExpress (D3).
+            if left_on_usb == PRESENT or (left_on_usb == MASS_STORAGE and not ejected_waits):
+                return Detect()
+            return Nothing()
+        if cause is Cause.CHOSEN:
+            return Nothing()  # no detection: the one chosen is opened
         if cause is Cause.REFRESH_ON_START and open_label is not None:
             return ReadList()  # the list (and the account's) read again, nothing opened
         return Detect()

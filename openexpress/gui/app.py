@@ -1629,6 +1629,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._asked = (Cause.UNPLUGGED_OPEN, open_address(s))
             self.session = None
             self._updated_apps = set()  # unplugged: the device applies what was waiting
+            self._open_unplugged = True  # the USB poll looks for a device left (_poll_usb)
             self.show_no_device()
         else:
             log.info("mount removed (%s): not the open device, ignored", where)
@@ -1671,7 +1672,11 @@ class MainWindow(Adw.ApplicationWindow):
         does not offer yet? Only /sys is read; nothing is sent to the device."""
         if self.session is not None or self.busy:
             self._usb_state = ABSENT
+            if self.session is not None:
+                self._open_unplugged = False  # a device is open again
             return True
+        # The open device was just unplugged: a device left on USB is looked for (below).
+        unplugged, self._open_unplugged = getattr(self, "_open_unplugged", False), False
         connected = getattr(self, "connected", None)
         if connected is not None and connected.choosing and connected.devices:
             # The list stays as it is; a Garmin device plugged in or out (also one that was
@@ -1697,6 +1702,15 @@ class MainWindow(Adw.ApplicationWindow):
             # It left its transitional mode: look for it once gvfs had a moment.
             log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
             self._normal_since, self._replug_told = clock(), False
+            schedule_detection(self, 2500, cause=Cause.PLUGGED)
+        elif unplugged and isinstance(detection_plan(Cause.UNPLUGGED_OPEN, left_on_usb=state,
+                                                     ejected_waits=ejected_drive_waits()),
+                                      Detect):
+            # A Garmin drive left after the open device went (a Varia next to an Edge,
+            # 22.10.2026): mounted already, it sends no event, so it is looked for as one in
+            # its normal mode is, above.
+            log.info("USB: the open device unplugged, a Garmin drive is still connected, "
+                     "detecting in 2.5 s")
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         self._usb_state = state
         normal_s = clock() - getattr(self, "_normal_since", 0.0) if state == PRESENT else 0.0
