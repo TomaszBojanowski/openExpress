@@ -329,6 +329,27 @@ def test_a_server_answer_shown_with_v_is_redacted(log_file, monkeypatch, capsys)
         assert secret not in err
 
 
+@pytest.mark.parametrize("manual", [False, True])
+def test_a_sign_in_left_unfinished_is_one_line_of_the_log(log_file, monkeypatch, capsys,
+                                                          manual):
+    """The sign-in window closed by the user (or `login --manual` given an address without a
+    ticket): one INFO line in the log, no traceback, not "unexpected error"; the command line
+    says so in one line, exit code 1, as before."""
+    from openexpress import cli
+    from openexpress.auth import sso
+
+    def cancelled(settings):
+        raise sso.LoginCancelled(sso._("Login cancelled or no SSO ticket received."))
+
+    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth=True: object())
+    monkeypatch.setattr(sso, "login_manual" if manual else "login_with_webview", cancelled)
+    assert cli.main(["login", "--manual"] if manual else ["login"]) == 1
+    assert capsys.readouterr().err == "Error: Login cancelled or no SSO ticket received.\n"
+    text = "\n".join(lines(log_file))
+    assert "INFO openexpress.cli: login: not signed in (LoginCancelled)" in text
+    assert "Traceback" not in text and "unexpected error" not in text
+
+
 def test_an_unexpected_error_is_told_briefly_and_redacted(log_file, monkeypatch, capsys):
     from openexpress import cli
 

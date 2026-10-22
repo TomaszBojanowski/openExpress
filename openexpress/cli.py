@@ -1928,6 +1928,7 @@ def _error(text: str) -> None:
 
 def _run(args, service, requests) -> int:
 
+    from openexpress.auth.sso import LoginCancelled
     from openexpress.device.gio_storage import MassStorageNotice
 
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
@@ -1940,6 +1941,12 @@ def _run(args, service, requests) -> int:
         # What the window says about the drive: a notice, not an error; exit code 1.
         log.info("not opened: %s", type(e).__name__)
         _error(str(e))
+        return 1
+    except LoginCancelled as e:
+        # The sign-in window closed, or an address without a ticket: the user's choice, not
+        # a fault of the program (one line, no traceback).
+        log.info("login: not signed in (%s)", type(e).__name__)
+        _error(_("Error: {error}").format(error=e))
         return 1
     except user_errors as e:
         log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
