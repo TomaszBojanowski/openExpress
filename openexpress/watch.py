@@ -143,7 +143,9 @@ class Watcher(Gio.Application):
                           _("Syncing {device}").format(device=s.device.description),
                           # TRANSLATORS: notification body while the watch is syncing
                           _("In progress…"))
-            summary = service.run_sync(s, progress=log.info)
+            # Its progress names the files and the courses: not logged (the sync logs its
+            # numbers itself).
+            summary = service.run_sync(s, progress=lambda _message: None)
             body = summary.text
             if summary.errors:
                 body += "\n" + _("Errors: {errors}").format(errors="; ".join(summary.errors[:3]))

@@ -180,11 +180,11 @@ def fetch(
             log.info("download: %s from %s", applog.size(got), urlsplit(url).netloc)
             if size is not None and got != size:
                 errors.append(_("{url}: size {got} instead of {size}")
-                              .format(url=url, got=got, size=size))
+                              .format(url=_short(url), got=got, size=size))
                 part.unlink(missing_ok=True)
                 continue
             if md5 is not None and file_md5(part) != md5:
-                errors.append(_("{url}: MD5 checksum mismatch").format(url=url))
+                errors.append(_("{url}: MD5 checksum mismatch").format(url=_short(url)))
                 part.unlink(missing_ok=True)
                 continue
             part.replace(dest)

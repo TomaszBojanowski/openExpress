@@ -406,6 +406,9 @@ class SyncSummary:
     downloaded: int = 0
     rejected: int = 0
     errors: list[str] = field(default_factory=list)
+    # The same errors as the log tells them: without the names of files, courses and
+    # workouts (`errors` names them for the user). Not kept in last_sync.json.
+    log_errors: list[str] = field(default_factory=list)
     # What happened, in order: a text, or the numbers of a step as a dict, which is put into
     # words only when it is shown (`describe_lines`): in the language of that moment.
     lines: list = field(default_factory=list)
@@ -635,7 +638,7 @@ def run_sync(
     log.info("sync: end after %.1f s: %d uploaded, %d already known, %d downloaded, %d errors",
              time.monotonic() - started, summary.uploaded, summary.skipped_known,
              summary.downloaded, len(summary.errors))
-    for error in summary.errors:
+    for error in summary.log_errors:
         log.warning("sync error: %s", error)
     return summary
 
@@ -730,6 +733,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         out.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
         out.rejected = len(rep.rejected)
         out.errors += [f"{label}: {err}" for label, err in rep.failed]
+        out.log_errors += [f"{sync.log_label(label)}: {sync.log_error(label, err)}"
+                           for label, err in rep.failed]
         out.lines.append(uploads_step(rep))
         if rep.tracker_conflict:
             n = len(rep.tracker_conflict)
@@ -749,10 +754,15 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         out.errors += [f"{label}: {err}" for label, err in drep.failed]
         out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
                        .format(name=label) for label in drep.ack_failed]
+        out.log_errors += [f"{quiet}: {err}" for quiet, err in drep.failed_in_log]
+        out.log_errors += [f"{quiet}: written, but Garmin Connect was not notified (will retry)"
+                           for quiet in drep.ack_failed_in_log]
+    told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
     if any(i.handled_by == "Connect IQ" for i in items):
         out.lines += _install_queued_apps(s, messages, progress, out.errors)
     if any(i.handled_by == "TrueUp" for i in items):
         out.lines += _trueup(s, messages, progress, out.errors)
+    out.log_errors += out.errors[told:]
     skipped = [i for i in items if i.unsupported]
     if skipped:
         out.lines.append(ngettext(

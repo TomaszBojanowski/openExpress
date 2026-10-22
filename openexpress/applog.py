@@ -64,7 +64,9 @@ _PATTERNS = [
     (re.compile(rf"(?i)\b({_KEYS})\b([\"']?\s*[=:]\s*[\"']?)[^\s&\"',;]+"), r"\1\2<hidden>"),
     (re.compile(r"\bST-[\w-]+"), "<ticket>"),
     (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+"), "<email>"),
-    (re.compile(r"\b[0-9A-Fa-f]{16,}\b"), "<hex>"),
+    # 16 hex digits or more, also after "_" (garmindlm=<time>_<signature>): "_" counts as
+    # a separator here, as any character that is not a letter or a digit.
+    (re.compile(r"(?<![^\W_])[0-9A-Fa-f]{16,}(?![^\W_])"), "<hex>"),
     # Long mixed strings of letters and digits: keys and tokens. Without "/" (a path on the
     # device is not a key), except in a string long enough to be base64.
     (re.compile(r"(?<![\w+-])(?=[\w+-]*\d)(?=[\w+-]*[a-z])(?=[\w+-]*[A-Z])[\w+-]{24,}={0,2}"),

@@ -306,6 +306,18 @@ def _label(c: UploadCandidate) -> str:
     return f"{c.datatype}/{c.name}"
 
 
+def log_label(label: str) -> str:
+    """An upload as the log names it (`_label`): its type, never the name of the file."""
+    return label.split("/")[0]
+
+
+def log_error(label: str, error: str) -> str:
+    """The error of an upload as the log tells it: the file's name (which a message about
+    reading it may quote) as <file>."""
+    name = label.split("/", 1)[1] if "/" in label else ""
+    return error.replace(name, "<file>") if name else error
+
+
 def _read_candidate(c: UploadCandidate, storage: Storage, state: SyncState) -> bytes:
     if c.data is not None:
         return c.data
@@ -391,7 +403,7 @@ def run_uploads(
              len(report.rejected), len(report.failed), len(report.not_confirmed),
              len(report.tracker_conflict))
     for label, error in report.failed:
-        log.warning("upload of %s failed: %s", label.split("/")[0], error)
+        log.warning("upload of %s failed: %s", log_label(label), log_error(label, error))
     return report
 
 
@@ -435,7 +447,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
                 try:
                     st = client.poll_location(res.location, res.poll_delay_ms)
                 except Exception as e:  # noqa: BLE001 - the file itself was accepted
-                    log.warning("Could not confirm processing of %s: %s", label, e)
+                    log.warning("Could not confirm processing of %s: %s", c.datatype, e)
                     st = None
                 if st != 201:
                     report.not_confirmed.append(label)
@@ -570,6 +582,10 @@ class DownloadReport:
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Written to the watch, but Connect was not told; acknowledged on the next sync.
     ack_failed: list[str] = field(default_factory=list)
+    # The same as the log names them: the type and the number of the queue message, never
+    # its name (a course or a workout is named by the user, often after a place).
+    failed_in_log: list[tuple[str, str]] = field(default_factory=list)
+    ack_failed_in_log: list[str] = field(default_factory=list)
 
 
 def run_downloads(
@@ -591,7 +607,8 @@ def run_downloads(
         for it in items:
             if it.unsupported or it.handled_by:
                 continue
-            label = f"{it.datatype}: {it.message_name or it.message_id}"
+            label = f"{it.datatype}: {it.message_name or it.message_id}"  # for the user
+            quiet = f"{it.datatype} (message {it.message_id})"  # for the log
             mid = str(it.message_id)
             if mid in unacked:
                 try:
@@ -599,8 +616,9 @@ def run_downloads(
                 except Unauthorized:
                     raise
                 except Exception as e:  # noqa: BLE001
-                    log.warning("Acknowledgement of %s failed again: %s", label, e)
+                    log.warning("Acknowledgement of %s failed again: %s", quiet, e)
                     report.ack_failed.append(label)
+                    report.ack_failed_in_log.append(quiet)
                 else:
                     unacked.discard(mid)
                 continue
@@ -620,6 +638,7 @@ def run_downloads(
                 raise
             except Exception as e:  # noqa: BLE001
                 report.failed.append((label, str(e)))
+                report.failed_in_log.append((quiet, str(e)))
                 continue
             progress(_("Wrote {path}").format(path=real))
             report.written.append(f"{label} -> {real}")
@@ -629,9 +648,10 @@ def run_downloads(
                 unacked.add(mid)
                 raise
             except Exception as e:  # noqa: BLE001
-                log.warning("Acknowledgement of %s failed: %s", label, e)
+                log.warning("Acknowledgement of %s failed: %s", quiet, e)
                 unacked.add(mid)
                 report.ack_failed.append(label)
+                report.ack_failed_in_log.append(quiet)
     finally:
         if state is not None and unacked != initial:
             state.save_unacked(unacked)
