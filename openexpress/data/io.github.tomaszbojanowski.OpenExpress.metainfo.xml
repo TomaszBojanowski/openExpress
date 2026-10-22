@@ -105,6 +105,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.11" date="2026-10-22">
+      <description>
+        <ul>
+          <li>Device pictures stored on Garmin's Amazon S3 storage are shown (#8).</li>
+          <li>Course and workout names no longer appear in the log attached to reports, and
+          signed download links in it are shortened.</li>
+          <li>Leftover copies of failed uploads are cleaned up once Garmin Connect has the
+          file.</li>
+          <li>"Last sync" says clearly what was uploaded, and why nothing was, if so.</li>
+          <li>The window fits 360 px wide, and captions wrap properly in Polish.</li>
+          <li>Handheld devices such as the inReach get their own placeholder icon.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.10" date="2026-10-21">
       <description>
         <ul>
