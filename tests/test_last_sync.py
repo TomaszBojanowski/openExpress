@@ -1,6 +1,8 @@
 """The last sync in words: the row under "Last sync" and the details count the same way, in
 the window, on the command line and in the notification of the background sync."""
 
+from pathlib import Path
+
 import pytest
 from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
@@ -485,3 +487,23 @@ def test_gui_settings_of_an_unexpected_shape_read_as_none(xdg, text):
     settings = app.load_gui_settings()
     assert settings == {}
     assert app.window_geometry(settings) == (*app.DEFAULT_WINDOW, False)
+
+
+def test_the_record_of_the_last_sync_is_read_as_utf_8_whatever_the_locale(xdg):
+    """Written in UTF-8 with the names as they are (a "fēnix" in an error); read in UTF-8
+    too, not in the encoding of the locale (one that is not UTF-8 could not read it back).
+    Python tells each read without an encoding when asked (-X warn_default_encoding)."""
+    import os
+    import subprocess
+    import sys
+
+    service.save_last_sync(UNIT, service.SyncSummary(errors=["fēnix 8: a made-up error"]))
+    code = ("from openexpress import service; "
+            f"print(service.load_last_sync({UNIT})['errors'][0])")
+    root = Path(__file__).resolve().parent.parent
+    run = subprocess.run([sys.executable, "-X", "warn_default_encoding", "-W",
+                          "always::EncodingWarning", "-c", code], cwd=root,
+                         capture_output=True, text=True, encoding="utf-8",
+                         env={**os.environ, "PYTHONPATH": str(root)}, check=True)
+    assert run.stdout.strip() == "fēnix 8: a made-up error"
+    assert "service.py" not in run.stderr, run.stderr

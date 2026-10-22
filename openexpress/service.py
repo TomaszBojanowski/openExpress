@@ -680,7 +680,7 @@ def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int
 
 def _read_json(path) -> dict | None:
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))  # as written, whatever the locale
     except (OSError, ValueError):
         return None
     return data if isinstance(data, dict) else None
