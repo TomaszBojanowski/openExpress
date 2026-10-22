@@ -6,6 +6,7 @@ import gc
 import json
 import logging
 import os
+import sys
 import threading
 import time
 import traceback
@@ -2293,7 +2294,19 @@ class MainWindow(Adw.ApplicationWindow):
             sec.clear()
             # Without the buttons of the page that was just cleared.
             self._action_buttons = still_in_window(self._action_buttons)
-            show(result)
+            try:
+                show(result)
+            except Exception:  # noqa: BLE001 - said on the page, written to the log
+                # Not "loading" for good: the page says so, and is read again when it is
+                # chosen again (or with Try again).
+                log_unexpected(f"showing the page {key}", sys.exc_info())
+                traceback.print_exc()  # stderr, as before
+                sec.loaded = False
+                sec.clear()
+                self._action_buttons = still_in_window(self._action_buttons)
+                sec.show_error(_(PAGE_NOT_SHOWN))
+                return
+            sec.loaded = True
             sec.show("content")
 
         def failed(e):
@@ -4645,6 +4658,32 @@ class App(Adw.Application):
         self.main_window().present()
 
 
+# A page whose drawing failed (an error of the program): under "Something went wrong", with
+# Try again.
+PAGE_NOT_SHOWN = N_("This page could not be shown. Try again; if it happens again, report the "
+                    "problem with the log attached.")
+
+
+def log_unexpected(what: str, exc_info) -> None:
+    """An exception the window did not expect: to the log as ERROR, with its traceback
+    (filtered, as every line), as the command line writes one."""
+    log.error("unexpected error %s: %s", what, exc_info[0].__name__, exc_info=exc_info)
+
+
+def install_excepthook() -> None:
+    """The window's exceptions nobody caught (in a handler of a signal, a callback of GLib:
+    PyGObject hands those to sys.excepthook too) go to the log; to stderr as before. Ctrl+C
+    is not an error."""
+    previous = sys.excepthook
+
+    def hook(exc_type, exc, tb):
+        if not issubclass(exc_type, KeyboardInterrupt):
+            log_unexpected("in the window", (exc_type, exc, tb))
+        previous(exc_type, exc, tb)
+
+    sys.excepthook = hook
+
+
 def missing_display() -> str | None:
     """Why the window has no display to open on, as the variables that choose it tell it
     ("GDK_BACKEND=x11, WAYLAND_DISPLAY=-, DISPLAY=-"); None when GTK has one. GTK tries
@@ -4663,6 +4702,7 @@ def main(argv=None) -> int:
         _error(_("No display available ({details}): openExpress needs a graphical session")
                .format(details=told))
         return 1
+    install_excepthook()
     return App().run(argv or [])
 
 
