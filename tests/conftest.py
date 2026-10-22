@@ -1,8 +1,10 @@
 import atexit
+import ctypes
 import functools
 import os
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import time
@@ -24,6 +26,23 @@ XVFB_SCREEN = "1280x1024x24"
 _xvfb: subprocess.Popen | None = None
 
 
+PR_SET_PDEATHSIG = 1  # linux/prctl.h
+
+
+def _ends_with(parent: int):
+    """For the child, before it runs: the kernel ends it (SIGTERM) once `parent` is gone, also
+    when pytest dies without its atexit (a segfault); gone already, it ends at once."""
+    def ask() -> None:
+        try:
+            ctypes.CDLL(None, use_errno=True).prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+        except (OSError, AttributeError):
+            return  # no prctl: atexit and pytest_unconfigure as before
+        if os.getppid() != parent:
+            os._exit(1)
+
+    return ask
+
+
 def _start_xvfb() -> subprocess.Popen | None:
     """A hidden X server on a free display (it tells which once it is ready), or None."""
     program = shutil.which("Xvfb")
@@ -35,7 +54,7 @@ def _start_xvfb() -> subprocess.Popen | None:
             [program, "-displayfd", str(write_end), "-nolisten", "tcp",
              "-screen", "0", XVFB_SCREEN],
             pass_fds=(write_end,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL)
+            stderr=subprocess.DEVNULL, preexec_fn=_ends_with(os.getpid()))
     except OSError:
         os.close(read_end)
         os.close(write_end)
