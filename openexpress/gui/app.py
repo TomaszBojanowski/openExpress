@@ -13,7 +13,7 @@ import traceback
 import types
 import weakref
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import gi
@@ -30,6 +30,7 @@ from openexpress import (  # noqa: E402
     download,
     i18n,
     known_devices,
+    last_sync,
     netstatus,
     paths,
     picture_urls,
@@ -114,15 +115,8 @@ REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, un
                            "and plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
-# Between the parts of a caption: a hard space before "·", a plain one after it, so that a
-# caption that wraps in a narrow window never starts a line with "·".
-SEPARATOR = "\u00a0· "
-
-
-def caption(*parts: str) -> str:
-    """The parts of a caption, the empty ones left out, SEPARATOR between them; a separator
-    inside a part (a translation, the words of the command line) is made the same."""
-    return SEPARATOR.join(part.replace(" · ", SEPARATOR) for part in parts if part)
+# The captions of the window (a hard space before "·"): in i18n, for last_sync too.
+SEPARATOR, caption, format_when = i18n.SEPARATOR, i18n.caption, i18n.format_when
 log = logging.getLogger(__name__)
 
 
@@ -199,21 +193,8 @@ def save_ui_language(code: str) -> None:
 
 def last_sync_words(data: dict, now: datetime | None = None) -> str:
     """The row under "Last sync": when, told against now ("yesterday, 23:41"), and the
-    numbers of that sync."""
-    when = datetime.fromtimestamp(data.get("time", time.time()))
-    return caption(i18n.relative_time(when, now or datetime.now()),
-                   service.describe_counts(data))
-
-
-def format_when(ts: float) -> str:
-    when = datetime.fromtimestamp(ts)
-    now = datetime.now()
-    clock = when.strftime("%H:%M")
-    if when.date() == now.date():
-        return _("Today at {time}").format(time=clock)
-    if when.date() == (now - timedelta(days=1)).date():
-        return _("Yesterday at {time}").format(time=clock)
-    return when.strftime("%x %H:%M")
+    numbers of that sync (last_sync.describe). Now is the window's clock."""
+    return last_sync.describe(data).row(now or datetime.now())
 
 
 def picture_target(name: str) -> Path | None:
@@ -2715,7 +2696,9 @@ class MainWindow(Adw.ApplicationWindow):
             return
         row = self.last_sync_row
         for child in self._last_sync_children:
-            row.remove(child)
+            # With the row the list put around it: the box alone is no child of the expander
+            # row, so it stayed, and each drawing added the details once more (since 0.6.6).
+            row.remove(child.get_parent() or child)
         self._last_sync_children = []
         data = service.load_last_sync(self.session.device.unit_id)
         self._last_sync_data = data  # its time told against now, again every minute
@@ -2723,11 +2706,12 @@ class MainWindow(Adw.ApplicationWindow):
             row.set_subtitle(_("Not synced yet with openExpress"))
             row.set_enable_expansion(False)
             return
-        # The same words as the command line and the notification of the background sync.
-        row.set_subtitle(GLib.markup_escape_text(last_sync_words(data)))
-        row.set_tooltip_text(format_when(data.get("time", time.time())))  # the full date
-        said = service.describe_steps(data.get("lines")) + [
-            (text, True) for text in data.get("errors") or []]
+        # Shown as last_sync.describe tells it: the same words as the command line and the
+        # notification of the background sync.
+        told = last_sync.describe(data)
+        row.set_subtitle(GLib.markup_escape_text(told.row(datetime.now())))
+        row.set_tooltip_text(told.tooltip)  # the full date
+        said = told.details
         row.set_enable_expansion(bool(said))
         if said:
             # The details as one row of a few lines: the files, those already in Garmin

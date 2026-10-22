@@ -414,18 +414,26 @@ class SyncSummary:
     # words only when it is shown (`describe_lines`): in the language of that moment.
     lines: list = field(default_factory=list)
 
+    def record(self, unit_id: int | None = None) -> dict:
+        """This sync as last_sync.json keeps it (save_last_sync), to be put into words by
+        last_sync.describe, as the window reads it back."""
+        return {"time": time.time(), "unit_id": unit_id, "uploaded": self.uploaded,
+                "downloaded": self.downloaded, "skipped_known": self.skipped_known,
+                "rejected": self.rejected, "errors": self.errors, "lines": self.lines}
+
     @property
     def counts(self) -> str:
-        """The numbers of this sync, as under "Last sync" (describe_counts)."""
-        return describe_counts({"uploaded": self.uploaded, "skipped_known": self.skipped_known,
-                                "downloaded": self.downloaded, "rejected": self.rejected,
-                                "errors": self.errors, "lines": self.lines})
+        """The numbers of this sync, as under "Last sync" (last_sync.describe)."""
+        from openexpress import last_sync
+
+        return last_sync.describe(self.record()).counts
 
     @property
     def text(self) -> str:
-        """The numbers and the details, as the window shows them (the notification of the
-        background sync)."""
-        return "\n".join([self.counts, *describe_lines(self.lines)])
+        """The numbers and the steps, as last_sync.describe tells them."""
+        from openexpress import last_sync
+
+        return last_sync.describe(self.record()).text
 
 
 # Readable names of the data types of new files. A name is given only where it is plain from
@@ -661,9 +669,7 @@ def _write_json(path, data: dict) -> None:
 
 
 def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
-    data = {"time": time.time(), "unit_id": unit_id, "uploaded": summary.uploaded,
-            "downloaded": summary.downloaded, "skipped_known": summary.skipped_known,
-            "rejected": summary.rejected, "errors": summary.errors, "lines": summary.lines}
+    data = summary.record(unit_id)
     # The device's own file first: the shared one only tells which sync was the newest,
     # and a sync of another device replaces it.
     _write_json(device_last_sync_path(unit_id), data)
@@ -767,8 +773,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
                 "Skipped {count} file: another device is your active tracker in Garmin Connect",
                 "Skipped {count} files: another device is your active tracker in Garmin Connect",
                 n).format(count=n))
-    else:
-        out.lines.append(_("No new data to upload"))
+    # No new file on the device: the row says it ("nothing to upload"), no line of its own.
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     items = sync.plan_downloads(s.device, messages)

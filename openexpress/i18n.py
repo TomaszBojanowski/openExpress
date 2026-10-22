@@ -15,6 +15,7 @@ Usage in code:
 
 from __future__ import annotations
 
+import functools
 import gettext
 import json
 import locale
@@ -147,6 +148,43 @@ def full_time(moment: datetime) -> str:
     # TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
     return pgettext("date and hour", "{date} {time}").format(date=date,
                                                              time=moment.strftime("%H:%M"))
+
+
+def format_when(ts: float) -> str:
+    """A moment for the full date in a tooltip: "Today at 23:41", "Yesterday at 23:41", or
+    the date of the locale and the hour."""
+    when = datetime.fromtimestamp(ts)
+    now = datetime.now()
+    clock = when.strftime("%H:%M")
+    if when.date() == now.date():
+        return _("Today at {time}").format(time=clock)
+    if when.date() == (now - timedelta(days=1)).date():
+        return _("Yesterday at {time}").format(time=clock)
+    return when.strftime("%x %H:%M")
+
+
+# Between the parts of a caption of the window: a hard space before "·", a plain one after
+# it, so that a caption that wraps in a narrow window never starts a line with "·".
+SEPARATOR = "\u00a0· "
+
+
+def caption(*parts: str) -> str:
+    """The parts of a caption of the window, the empty ones left out, SEPARATOR between
+    them; a separator inside a part (a translation, the words of the command line) is made
+    the same."""
+    return SEPARATOR.join(part.replace(" · ", SEPARATOR) for part in parts if part)
+
+
+@functools.cache
+def in_every_language(message: str) -> frozenset[str]:
+    """The message as it is (English) and as each catalogue of the program has it: to know
+    words written in the language of an earlier moment (e.g. in a record of a sync)."""
+    said = {message}
+    for language in available_languages():
+        if language != SOURCE_LANGUAGE:
+            said.add(gettext.translation(DOMAIN, LOCALE_DIR, languages=[language],
+                                         fallback=True).gettext(message))
+    return frozenset(said)
 
 
 def chosen_language() -> str | None:

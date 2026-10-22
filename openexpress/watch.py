@@ -16,7 +16,7 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import service  # noqa: E402
+from openexpress import last_sync, service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     MassStorageNotice,
@@ -153,9 +153,8 @@ class Watcher(Gio.Application):
             # Its progress names the files and the courses: not logged (the sync logs its
             # numbers itself).
             summary = service.run_sync(s, progress=lambda _message: None)
-            body = summary.text
-            if summary.errors:
-                body += "\n" + _("Errors: {errors}").format(errors="; ".join(summary.errors[:3]))
+            # The words of the row under "Last sync", as last_sync.describe tells them.
+            body = last_sync.describe(summary.record(s.device.unit_id)).notification
             GLib.idle_add(self.notify, _("Sync finished"), body)
         except service.SyncBusy:
             log.info("A sync is running in another process")

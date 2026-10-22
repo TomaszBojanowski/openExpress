@@ -510,7 +510,7 @@ def cmd_sync(args) -> int:
         )
         return 2
 
-    from openexpress import service
+    from openexpress import last_sync, service
 
     def progress(msg: str) -> None:
         print("  " + msg)
@@ -537,7 +537,7 @@ def cmd_sync(args) -> int:
             # The same steps and words as a sync in the window or in the background (the
             # numbers come at the end, with the files from Garmin Connect).
             steps = [service.new_files_step(up_plan.candidates), service.uploads_step(rep)]
-            for text in service.describe_lines(steps):
+            for text, _warning in last_sync.describe({"lines": steps}).steps:
                 print(text)
             summary.lines += steps
             summary.uploaded = len(rep.uploaded)
@@ -575,7 +575,8 @@ def cmd_sync(args) -> int:
             summary.lines += lines
             summary.errors += errors
     service.save_last_sync(dev.unit_id, summary)
-    print("\n" + summary.counts)  # the numbers of the row under "Last sync" in the window
+    # The numbers of the row under "Last sync" in the window, from the same words.
+    print("\n" + last_sync.describe(summary.record(dev.unit_id)).counts)
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
                               len(summary.errors)).format(count=len(summary.errors)))
