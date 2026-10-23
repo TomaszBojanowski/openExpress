@@ -545,6 +545,9 @@ def cmd_sync(args) -> int:
         # --download-only: the uploads were not looked at; the row says so, not "nothing to
         # upload".
         summary.lines.append(service.upload_skipped_step())
+    elif args.type:
+        # Only these types were looked at: the row says its numbers are of them only.
+        summary.lines.append(service.only_types_step(args.type))
     with service.sync_lock():
         if up_plan is not None:
             # Another process may have synced since the plan was shown: plan again under the lock.

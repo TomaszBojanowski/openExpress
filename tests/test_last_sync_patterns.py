@@ -100,6 +100,13 @@ EXPECTED = {
     "format-0.6.16-upload-skipped.json": {
         "en": ("upload skipped · 5 received", []),
         "pl": ("wysyłanie pominięte · 5 odebranych", [])},
+    # sync --apply --type FIT_TYPE_4: the numbers are of the activities only, and the row says
+    # so (23.10.2026); no line of its own.
+    "format-0.6.16-only-types.json": {
+        "en": ("activities only: 3 new files, 3 uploaded", [
+            ("Files from the device: activities ×3", False)]),
+        "pl": ("tylko aktywności: 3 nowe pliki, 3 wysłane", [
+            (f"Pliki z{NB}urządzenia: aktywności ×3", False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

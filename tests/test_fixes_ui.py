@@ -155,6 +155,31 @@ def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fak
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 2, [])
 
 
+def test_a_sync_of_some_types_says_its_numbers_are_of_them_only(device_root, xdg, fake_client,
+                                                                capsys):
+    """sync --apply --type FIT_TYPE_4 counts only the activities: the row says "activities
+    only: …" (23.10.2026). The record has the shape of its pattern in tests/data/last_sync."""
+    import json
+
+    assert main(["--path", str(device_root), "sync", "--apply", "--all",
+                 "--type", "FIT_TYPE_4"]) == 0
+    assert "activities only: 2 new files, 2 uploaded" in capsys.readouterr().out.splitlines()
+    record = service.load_last_sync(1234567890)
+    pattern = json.loads((Path(__file__).parent / "data/last_sync"
+                          / "format-0.6.16-only-types.json").read_text(encoding="utf-8"))
+    assert sorted(record) == sorted(pattern)
+    assert [line["kind"] for line in record["lines"]] == [
+        line["kind"] for line in pattern["lines"]]
+    assert record["lines"][0] == {"kind": "only_types", "types": ["FIT_TYPE_4"]}
+
+
+def test_only_some_types_is_not_said_when_the_account_let_nothing_be_uploaded():
+    """Nothing uploaded because of the account: the row says why, not which types."""
+    record = {"lines": [service.only_types_step(["FIT_TYPE_4"]),
+                        {"kind": "not_uploaded", "reason": service.NO_CONSENT}]}
+    assert service.describe_counts(record) == "nothing uploaded: no consent in the account"
+
+
 def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, capsys):
     assert main(["--path", str(device_root), "sync", "--apply", "--all"]) == 0
     assert _state_file(device_root).exists()

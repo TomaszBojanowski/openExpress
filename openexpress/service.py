@@ -512,6 +512,8 @@ def _describe_step(line) -> list[tuple[str, bool]]:
         return [(gate.message(), False)] if gate.why() else []  # one of a newer version: none
     if kind == "upload_skipped":
         return []  # the row says it ("upload skipped")
+    if kind == "only_types":
+        return []  # the row says it ("activities only: …")
     if kind == "uploads":
         known, rejected = line.get("known", 0), line.get("rejected", 0)
         errors = line.get("errors", 0)
@@ -544,6 +546,12 @@ def not_uploaded_step(gate: UploadGate) -> dict:
     return {"kind": "not_uploaded", "reason": gate.reason}
 
 
+def only_types_step(types) -> dict:
+    """A sync of only these data types (`sync --type`): a step of the summary, so that the
+    row says that its numbers are of them only."""
+    return {"kind": "only_types", "types": sorted(set(types))}
+
+
 def upload_skipped_step() -> dict:
     """A sync that did not look at the uploads at all (`sync --download-only`): a step of the
     summary, so that the row says "upload skipped", not "nothing to upload"."""
@@ -574,8 +582,9 @@ def describe_counts(data: dict) -> str:
     """The numbers of a sync in one line: "8 new files, 6 uploaded · 2 received" - the new
     files on the device and how many of them were uploaded ("none uploaded"; "nothing to
     upload" when it had none; "nothing uploaded: <why>" when the upload did not take
-    place; "upload skipped" when it was not looked at), and the files from Garmin Connect
-    written to the device when there are any.
+    place; "upload skipped" when it was not looked at; "activities only: …" when only some
+    data types were), and the files from Garmin Connect written to the device when there are
+    any.
     The window shows it under "Last sync" after when it was; the command line and the
     notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
@@ -603,6 +612,13 @@ def describe_counts(data: dict) -> str:
     else:
         # TRANSLATORS: the device had no new file to upload to Garmin Connect
         parts = [_("nothing to upload")]
+    only = next((line.get("types") for line in data.get("lines") or [] if isinstance(line, dict)
+                 and line.get("kind") == "only_types"), None)
+    if only and not skipped and blocked is None:
+        # TRANSLATORS: under "Last sync": a sync of only these data types (sync --type), e.g.
+        # "activities only: 3 new files, 3 uploaded"
+        parts[0] = _("{types} only: {numbers}").format(
+            types=_describe_types({datatype: 1 for datatype in only}), numbers=parts[0])
     if received:
         parts.append(ngettext("{count} received", "{count} received", received).format(
             count=received))
