@@ -1117,11 +1117,12 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
 
 
 @contextmanager
-def _noting(errors: list):
-    """An error of the device in the block is put in `errors` and passed on."""
+def _noting(errors: list, kinds: tuple = (DeviceError,)):
+    """An error of these `kinds` in the block (of the device, by default) is put in `errors`
+    and passed on."""
     try:
         yield
-    except DeviceError as e:
+    except kinds as e:
         errors.append(e)
         raise
 
@@ -1284,10 +1285,41 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
     in_bin = build_in_bin(_without(state.listed, listed))
     removed: list[str] = []
     problem: str | None = None
-    finished = False
+    finished = deleting = deleted = False
+    # The error that ended the session (it broke, or a refusal): the device mounted again
+    # after it (RemountFailed) would hide it otherwise.
+    ended: list[Exception] = []
+
+    def file_deleted(error) -> str:
+        return _(
+            "The file of {name} was deleted, but the app list on the device could not be "
+            "updated: {error} The device may still list the app. Unplug it and check; if "
+            "{name} is still listed, connect the device and remove the app again to "
+            "update the list.").format(name=app.name, error=error)
+
+    def list_left() -> str:
+        # The app list was not written (`problem`): with the file deleted, or already gone.
+        if removed:
+            return file_deleted(problem)
+        return _("The app list on the device could not be updated: {error}").format(
+            error=problem)
+
+    def what_became(error) -> str:
+        # Of the app, when the session ended with `error`.
+        if isinstance(error, CiqError):
+            return str(error)  # a refusal or a failed check: it says what was changed
+        if deleted:
+            return file_deleted(error)
+        if deleting:
+            return _("It is not known whether the file of {name} was deleted: {error} The "
+                     "device may still list the app. Unplug it and check; if {name} is still "
+                     "listed, connect the device and remove the app again.").format(
+                name=app.name, error=error)
+        return _("{name} was not removed: {error}").format(name=app.name, error=error)
+
     save_app_list_copy(device, storage)  # while the device is still mounted
     try:
-        with storage.exclusive_ptp() as session:
+        with storage.exclusive_ptp() as session, _noting(ended, (DeviceError, CiqError)):
             store = _ptp_store(session)
             # Everything is looked up before anything is deleted.
             folder = session.lookup(store, posixpath.dirname(path))
@@ -1302,12 +1334,14 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
                 if file.is_dir or (listed.size is not None and file.size != listed.size):
                     raise CiqError(_("{path} on the device is not the file the app list "
                                      "describes; nothing was deleted").format(path=path))
+                deleting = True
                 try:
                     session.delete(file.handle)
                 except ptp.PtpRefused as e:
                     raise CiqError(_("The device refused to delete {path} ({reason}); nothing "
                                      "was changed.").format(
                         path=path, reason=ptp.response_name(e.code))) from e
+                deleted = True  # the device said so; checked next
                 if session.lookup(store, path) is not None:
                     raise CiqError(_("the device did not delete {path}").format(path=path))
                 removed.append(path)
@@ -1326,18 +1360,16 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
             raise CiqError(_("{name} was removed, but the device could not be mounted again: "
                              "{error} Unplug the device and plug it in again.").format(
                 name=app.name, error=e)) from e
-        if problem is None:
-            raise CiqError(_("{error} Unplug the device and plug it in again.")
-                           .format(error=e)) from e
+        # What became of the app first, then the USB connection to renew.
+        said = (what_became(ended[0]) if ended else list_left() if problem is not None
+                else None)
+        usb = _("{error} Unplug the device and plug it in again.").format(error=e)
+        raise CiqError(usb if said is None else said + "\n" + usb) from e
+    except DeviceError as e:
+        # The session broke (or could not start); the device is mounted again.
+        raise CiqError(what_became(e)) from e
     if problem is not None:
-        if removed:
-            raise CiqError(_(
-                "The file of {name} was deleted, but the app list on the device could not be "
-                "updated: {error} The device may still list the app. Unplug it and check; if "
-                "{name} is still listed, connect the device and remove the app again to "
-                "update the list.").format(name=app.name, error=problem))
-        raise CiqError(_("The app list on the device could not be updated: {error}")
-                       .format(error=problem))
+        raise CiqError(list_left())
     log.info("apps remove over PTP: %s, %d files deleted, app list written", app.name,
              len(removed))
     return removed

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-23 23:20+0200\n"
+"POT-Creation-Date: 2026-10-23 23:26+0200\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -241,7 +241,7 @@ msgstr[2] ""
 "wypadła z listy."
 
 #: openexpress/ciq.py:340 openexpress/ciq.py:649 openexpress/ciq.py:1022
-#: openexpress/ciq.py:1278 openexpress/ciq.py:1298 openexpress/ciq.py:1567
+#: openexpress/ciq.py:1279 openexpress/ciq.py:1330 openexpress/ciq.py:1599
 #: openexpress/cli.py:1117
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
@@ -354,7 +354,7 @@ msgstr "Pobieranie {name}"
 msgid "Writing {path}"
 msgstr "Zapisywanie {path}"
 
-#: openexpress/ciq.py:957 openexpress/ciq.py:1204 openexpress/maps.py:450
+#: openexpress/ciq.py:957 openexpress/ciq.py:1205 openexpress/maps.py:450
 #: openexpress/updates.py:391
 #, python-brace-format
 msgid "Write verification of {path} failed"
@@ -377,16 +377,16 @@ msgstr "nie znaleziono katalogu z listą aplikacji"
 msgid "USB connection"
 msgstr "Połączenie USB"
 
-#: openexpress/ciq.py:1094 openexpress/ciq.py:1330
+#: openexpress/ciq.py:1094 openexpress/ciq.py:1366
 #, python-brace-format
 msgid "{error} Unplug the device and plug it in again."
 msgstr "{error} Odłącz urządzenie i podłącz je ponownie."
 
-#: openexpress/ciq.py:1135
+#: openexpress/ciq.py:1136
 msgid "the GARMIN folder was not found on the device"
 msgstr "nie znaleziono katalogu GARMIN na urządzeniu"
 
-#: openexpress/ciq.py:1155
+#: openexpress/ciq.py:1156
 #, python-brace-format
 msgid "An unfinished file may have been left on the device: {paths}."
 msgid_plural "Unfinished files may have been left on the device: {paths}."
@@ -394,7 +394,7 @@ msgstr[0] "Na urządzeniu mógł zostać niedokończony plik: {paths}."
 msgstr[1] "Na urządzeniu mogły zostać niedokończone pliki: {paths}."
 msgstr[2] "Na urządzeniu mogły zostać niedokończone pliki: {paths}."
 
-#: openexpress/ciq.py:1188
+#: openexpress/ciq.py:1189
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), and what was "
@@ -405,7 +405,7 @@ msgstr ""
 "tego, co z niej zapisano. Usuń {path} na urządzeniu, zanim je odłączysz (np. "
 "w Plikach): urządzenie mogłoby odczytać pół listy i usunąć aplikacje."
 
-#: openexpress/ciq.py:1195
+#: openexpress/ciq.py:1196
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), nor the one that "
@@ -416,7 +416,7 @@ msgstr ""
 "przywrócić listy, która czekała: została usunięta, więc zmiany aplikacji "
 "czekające na urządzenie przepadły. Wprowadź je ponownie."
 
-#: openexpress/ciq.py:1218
+#: openexpress/ciq.py:1219
 #, python-brace-format
 msgid ""
 "{name} is already being removed; the device finishes it after it is "
@@ -425,7 +425,7 @@ msgstr ""
 "Aplikacja {name} jest już usuwana; urządzenie dokończy usuwanie po "
 "odłączeniu."
 
-#: openexpress/ciq.py:1220
+#: openexpress/ciq.py:1221
 #, python-brace-format
 msgid ""
 "{name} is not installed yet; the device installs it after it is unplugged. "
@@ -434,49 +434,16 @@ msgstr ""
 "Aplikacja {name} nie jest jeszcze zainstalowana; urządzenie zainstaluje ją "
 "po odłączeniu. Najpierw odłącz urządzenie."
 
-#: openexpress/ciq.py:1250 openexpress/cli.py:1358
+#: openexpress/ciq.py:1251 openexpress/cli.py:1358
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
 msgstr "{name} jest częścią oprogramowania urządzenia i nie można go usunąć"
 
-#: openexpress/ciq.py:1282 openexpress/ciq.py:1596
+#: openexpress/ciq.py:1283 openexpress/ciq.py:1628
 msgid "App not found on the device"
 msgstr "Nie znaleziono aplikacji na urządzeniu"
 
-#: openexpress/ciq.py:1296
-msgid "the app folder was not found on the device"
-msgstr "nie znaleziono katalogu aplikacji na urządzeniu"
-
-#: openexpress/ciq.py:1303
-#, python-brace-format
-msgid ""
-"{path} on the device is not the file the app list describes; nothing was "
-"deleted"
-msgstr ""
-"Plik {path} na urządzeniu nie zgadza się z listą aplikacji; niczego nie "
-"usunięto"
-
-#: openexpress/ciq.py:1308
-#, python-brace-format
-msgid "The device refused to delete {path} ({reason}); nothing was changed."
-msgstr ""
-"Urządzenie odmówiło usunięcia pliku {path} ({reason}); niczego nie zmieniono."
-
-#: openexpress/ciq.py:1312
-#, python-brace-format
-msgid "the device did not delete {path}"
-msgstr "urządzenie nie usunęło pliku {path}"
-
-#: openexpress/ciq.py:1326
-#, python-brace-format
-msgid ""
-"{name} was removed, but the device could not be mounted again: {error} "
-"Unplug the device and plug it in again."
-msgstr ""
-"Usunięto aplikację {name}, ale nie udało się ponownie zamontować urządzenia: "
-"{error} Odłącz urządzenie i podłącz je ponownie."
-
-#: openexpress/ciq.py:1335
+#: openexpress/ciq.py:1295
 #, python-brace-format
 msgid ""
 "The file of {name} was deleted, but the app list on the device could not be "
@@ -489,40 +456,89 @@ msgstr ""
 "aplikację. Odłącz je i sprawdź; jeśli {name} nadal jest na liście, podłącz "
 "urządzenie i usuń aplikację jeszcze raz, żeby zaktualizować listę."
 
-#: openexpress/ciq.py:1339
+#: openexpress/ciq.py:1304
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
 msgstr "Nie udało się zaktualizować listy aplikacji na urządzeniu: {error}"
 
-#: openexpress/ciq.py:1402
+#: openexpress/ciq.py:1314
+#, python-brace-format
+msgid ""
+"It is not known whether the file of {name} was deleted: {error} The device "
+"may still list the app. Unplug it and check; if {name} is still listed, "
+"connect the device and remove the app again."
+msgstr ""
+"Nie wiadomo, czy plik aplikacji {name} został usunięty: {error} Urządzenie "
+"może nadal pokazywać tę aplikację. Odłącz je i sprawdź; jeśli {name} nadal "
+"jest na liście, podłącz urządzenie i usuń aplikację jeszcze raz."
+
+#: openexpress/ciq.py:1318
+#, python-brace-format
+msgid "{name} was not removed: {error}"
+msgstr "Nie usunięto aplikacji {name}: {error}"
+
+#: openexpress/ciq.py:1328
+msgid "the app folder was not found on the device"
+msgstr "nie znaleziono katalogu aplikacji na urządzeniu"
+
+#: openexpress/ciq.py:1335
+#, python-brace-format
+msgid ""
+"{path} on the device is not the file the app list describes; nothing was "
+"deleted"
+msgstr ""
+"Plik {path} na urządzeniu nie zgadza się z listą aplikacji; niczego nie "
+"usunięto"
+
+#: openexpress/ciq.py:1341
+#, python-brace-format
+msgid "The device refused to delete {path} ({reason}); nothing was changed."
+msgstr ""
+"Urządzenie odmówiło usunięcia pliku {path} ({reason}); niczego nie zmieniono."
+
+#: openexpress/ciq.py:1346
+#, python-brace-format
+msgid "the device did not delete {path}"
+msgstr "urządzenie nie usunęło pliku {path}"
+
+#: openexpress/ciq.py:1360
+#, python-brace-format
+msgid ""
+"{name} was removed, but the device could not be mounted again: {error} "
+"Unplug the device and plug it in again."
+msgstr ""
+"Usunięto aplikację {name}, ale nie udało się ponownie zamontować urządzenia: "
+"{error} Odłącz urządzenie i podłącz je ponownie."
+
+#: openexpress/ciq.py:1434
 #, python-brace-format
 msgid "No OUT.BIN in {name}"
 msgstr "Nie znaleziono pliku OUT.BIN w {name}"
 
-#: openexpress/ciq.py:1406
+#: openexpress/ciq.py:1438
 #, python-brace-format
 msgid "Cannot read the copy of the app list {name}: {error}"
 msgstr "Nie można odczytać kopii listy aplikacji {name}: {error}"
 
-#: openexpress/ciq.py:1411
+#: openexpress/ciq.py:1443
 #, python-brace-format
 msgid "No copy of the app list matches “{name}”."
 msgstr "Żadna kopia listy aplikacji nie pasuje do „{name}”."
 
-#: openexpress/ciq.py:1412
+#: openexpress/ciq.py:1444
 #, python-brace-format
 msgid "Several copies of the app list match “{name}”: {names}"
 msgstr "Do „{name}” pasuje kilka kopii listy aplikacji: {names}"
 
-#: openexpress/ciq.py:1441
+#: openexpress/ciq.py:1473
 msgid "Before any change, a copy of the app list of the device is made."
 msgstr "Przed zmianą zostanie utworzona kopia listy aplikacji z urządzenia."
 
-#: openexpress/ciq.py:1442
+#: openexpress/ciq.py:1474
 msgid "No copy will be made: the device has no app list."
 msgstr "Kopia nie powstanie, bo na urządzeniu nie ma listy aplikacji."
 
-#: openexpress/ciq.py:1461
+#: openexpress/ciq.py:1493
 #, python-brace-format
 msgid ""
 "Cannot read the app list of the device to make a copy of it: {error}. "
@@ -531,7 +547,7 @@ msgstr ""
 "Nie można odczytać listy aplikacji z urządzenia, żeby utworzyć jej kopię: "
 "{error}. Niczego nie zmieniono."
 
-#: openexpress/ciq.py:1484
+#: openexpress/ciq.py:1516
 #, python-brace-format
 msgid ""
 "Cannot make a copy of the app list ({name}): {error}. Nothing was changed."
@@ -539,7 +555,7 @@ msgstr ""
 "Nie można utworzyć kopii listy aplikacji ({name}): {error}. Niczego nie "
 "zmieniono."
 
-#: openexpress/ciq.py:1540
+#: openexpress/ciq.py:1572
 #, python-brace-format
 msgid "{count} position would change ({kinds}):"
 msgid_plural "{count} positions would change ({kinds}):"
@@ -547,12 +563,12 @@ msgstr[0] "Zmieni się {count} pozycja ({kinds}):"
 msgstr[1] "Zmienią się {count} pozycje ({kinds}):"
 msgstr[2] "Zmieni się {count} pozycji ({kinds}):"
 
-#: openexpress/ciq.py:1545
+#: openexpress/ciq.py:1577
 #, python-brace-format
 msgid "{position}: {new} (now: {old})"
 msgstr "{position}: {new} (teraz: {old})"
 
-#: openexpress/ciq.py:1550 openexpress/cli.py:1550 openexpress/gui/app.py:4905
+#: openexpress/ciq.py:1582 openexpress/cli.py:1550 openexpress/gui/app.py:4905
 #, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
@@ -560,17 +576,17 @@ msgstr[0] "… i {count} więcej"
 msgstr[1] "… i {count} więcej"
 msgstr[2] "… i {count} więcej"
 
-#: openexpress/ciq.py:1552
+#: openexpress/ciq.py:1584
 #, python-brace-format
 msgid "Not in the copy, left where they are: {names}"
 msgstr "Brak w kopii, pozostają na swoich miejscach: {names}"
 
-#: openexpress/ciq.py:1553
+#: openexpress/ciq.py:1585
 #, python-brace-format
 msgid "Only in the copy, ignored: {names}"
 msgstr "Tylko w kopii, pominięto: {names}"
 
-#: openexpress/ciq.py:1579 openexpress/cli.py:1156 openexpress/cli.py:1202
+#: openexpress/ciq.py:1611 openexpress/cli.py:1156 openexpress/cli.py:1202
 msgid ""
 "The app list that would be written does not match the device. Nothing was "
 "changed."
@@ -578,7 +594,7 @@ msgstr ""
 "Lista aplikacji, która zostałaby zapisana, nie zgadza się z urządzeniem. "
 "Niczego nie zmieniono."
 
-#: openexpress/ciq.py:1593
+#: openexpress/ciq.py:1625
 msgid "Several entries on the device share this ID; the type is needed"
 msgstr ""
 "Kilka wpisów na urządzeniu ma ten sam identyfikator; potrzebny jest typ"

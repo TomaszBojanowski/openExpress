@@ -1507,6 +1507,136 @@ def test_failed_remount_after_a_removal(hidden_spot):
     assert fake_in_bin(fake) is not None
 
 
+def break_removal(monkeypatch, fake, where):
+    """The cable goes out during a removal over PTP, at `where`: every answer of the device
+    after that is wrong (the session breaks)."""
+    from openexpress.device import ptp
+
+    lookup, delete, send_file, seen = (ptp.Session.lookup, ptp.Session.delete,
+                                       ptp.Session.send_file, [])
+
+    def looking(self, storage, path):
+        if path.upper().endswith("0A1B2C3D.PRG"):
+            seen.append(path)
+            # The first look for the file comes before its delete, the second after it.
+            if (where, len(seen)) in (("before the delete", 1), ("after the delete", 2)):
+                fake.wrong_transaction = True
+        return lookup(self, storage, path)
+
+    def deleting(self, handle):
+        if where == "during the delete":
+            fake.wrong_transaction = True  # the device deletes it, its answer is lost
+        return delete(self, handle)
+
+    def sending(self, storage, parent, name, data, verify_content=False):
+        if where == "at the app list":
+            fake.wrong_transaction = True
+        return send_file(self, storage, parent, name, data, verify_content=verify_content)
+
+    monkeypatch.setattr(ptp.Session, "lookup", looking)
+    monkeypatch.setattr(ptp.Session, "delete", deleting)
+    monkeypatch.setattr(ptp.Session, "send_file", sending)
+
+
+NOT_REMOVED = "Face It was not removed: "
+NOT_KNOWN = "It is not known whether the file of Face It was deleted: "
+LIST_LEFT = ("The file of Face It was deleted, but the app list on the device could not be "
+             "updated: ")
+BROKEN_REMOVALS = [("before the delete", NOT_REMOVED, True),
+                   ("during the delete", NOT_KNOWN, False),
+                   ("after the delete", LIST_LEFT, False),
+                   ("at the app list", LIST_LEFT, False)]
+
+
+@pytest.mark.parametrize(("where", "said", "file_left"), BROKEN_REMOVALS)
+def test_a_broken_removal_then_a_failed_mount_tells_what_became_of_the_app(
+        hidden_spot, monkeypatch, where, said, file_left):
+    """The session breaks, then the device is not mounted again: what became of the app
+    first (not removed; not known whether its file was deleted; its file deleted and its
+    entry left), then the USB connection to renew (decision of 23.10.2026; before, the
+    failed mount hid the rest, or the rest hid the failed mount)."""
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake, app = hidden_spot
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    break_removal(monkeypatch, fake, where)
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    lines = str(error.value).splitlines()
+    assert len(lines) == 2 and lines[0].startswith(said) and lines[1] == REMOUNT[1]
+    assert ("0A1B2C3D.PRG" in fake.names("GARMIN/Apps/Media")) is file_left
+
+
+@pytest.mark.parametrize(("where", "said", "file_left"), BROKEN_REMOVALS)
+def test_a_broken_removal_tells_what_became_of_the_app(hidden_spot, monkeypatch, where,
+                                                       said, file_left):
+    """Mounted again after the break: what became of the app, and nothing of the USB."""
+    st, dev, fake, app = hidden_spot
+    break_removal(monkeypatch, fake, where)
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value).startswith(said) and "\n" not in str(error.value)
+    assert not st.unmounted
+
+
+def test_cli_tells_the_removal_before_the_usb_connection(hidden_spot, apps_cli, monkeypatch,
+                                                         capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake, _app = hidden_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    break_removal(monkeypatch, fake, "before the delete")
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 1
+    err = capsys.readouterr().err.splitlines()
+    assert err[-2].startswith("Error: " + NOT_REMOVED) and err[-1] == REMOUNT[1]
+
+
+def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeypatch):
+    import types
+
+    from openexpress.device.storage import RemountFailed
+    from openexpress.gui import app as gui
+    from openexpress.gui.app import MainWindow
+
+    st, dev, fake, app = hidden_spot
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    break_removal(monkeypatch, fake, "after the delete")
+
+    class Answering:
+        def __init__(self, **kw):
+            pass
+
+        def connect(self, signal, handler):
+            handler(self, "ok")
+
+        def __getattr__(self, name):
+            return lambda *a, **kw: None
+
+    monkeypatch.setattr(gui.Adw, "AlertDialog", Answering)
+    errors, reads = [], []
+
+    def run_task(title, fn, done=None, failed=None):
+        try:
+            done(fn())
+        except Exception as e:  # noqa: BLE001 - as the window's run_task
+            if not (failed and failed(e)):
+                errors.append((title, str(e)))
+
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st), toast=lambda text: None,
+        error=lambda title, text: errors.append((title, text)), run_task=run_task,
+        load_section=lambda key, force=False: reads.append(key))
+    MainWindow.confirm_remove_app(win, ciq.read_installed(dev, st).find(FACE))
+    ((title, text),) = errors
+    lines = text.splitlines()
+    assert title == "Removing Face It…" and len(lines) == 2
+    assert lines[0].startswith(LIST_LEFT) and lines[1] == REMOUNT[1]
+    assert reads == ["apps"]  # the page is read again (read_again_after_failure)
+
+
 def test_built_in_and_fileless_apps_are_not_removed_directly(hidden_spot):
     st, dev, fake, _app = hidden_spot
     state = ciq.read_installed(dev, st)
