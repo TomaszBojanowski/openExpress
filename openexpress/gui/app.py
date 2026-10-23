@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import gc
 import json
 import logging
@@ -445,6 +446,85 @@ def detect_devices(current_uri: str | None = None):
         if not e.devices:
             raise
         return _choose(e.devices)
+
+
+def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | None]:
+    """(free space, capacity) of the device, asked of it: never on the window's thread. The
+    capacity is asked only when it is not given (it does not change). What cannot be asked
+    (e.g. while a session of PTP holds the device) is not known, None: no error."""
+    def ask(question: str):
+        try:
+            return getattr(storage, question)()
+        except Exception as e:  # noqa: BLE001 - unknown, said as such on the device page
+            log.info("device storage: %s not read (%s), not known", question,
+                     type(e).__name__)
+            return None
+
+    free = ask("free_space")
+    return free, capacity if capacity is not None else ask("capacity")
+
+
+def with_space(found):
+    """A device opened for the window, with its free space and capacity read in the same
+    thread (the device page and the report then ask it nothing); a list to choose from is
+    passed on as it is."""
+    if not isinstance(found, DeviceChoices):
+        found.space = read_space(found.storage)
+    return found
+
+
+def writes_to_device(fn):
+    """The work of a task that writes to the device: once run_task has run it (also when it
+    failed: a part may be written), the free space of the device is read again."""
+    @functools.wraps(fn)
+    def work(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    work.writes_to_device = True
+    return work
+
+
+def render_space(win) -> None:
+    """The subtitle (and the bar) of "Device storage" from the space the session holds:
+    "…" until it is read, "?" for what is not known. Nothing is asked of the device."""
+    row, bar = getattr(win, "storage_row", None), getattr(win, "storage_bar", None)
+    s = win.session
+    if row is None or s is None:
+        return
+    space = getattr(s, "space", None)
+    if space is None:
+        row.set_subtitle("…")
+        bar.set_visible(False)
+        return
+    free, total = space
+    if free is not None and total:
+        row.set_subtitle(_("{free} free of {total}").format(free=_human(free),
+                                                             total=_human(total)))
+        bar.set_value(min(1.0, max(0.0, 1 - free / total)))
+        bar.set_visible(True)
+    else:
+        row.set_subtitle(_("{size} free").format(size=_human(free)))
+        bar.set_visible(False)
+
+
+def refresh_space(win, s) -> None:
+    """The free space of the device of session `s` read again in the background (its
+    capacity only while it is not known), then the subtitle of "Device storage" alone put
+    right. An answer that comes after the device was unplugged, or another one opened, is
+    dropped."""
+    if s is None:
+        return
+    known = getattr(s, "space", None)
+    capacity = known[1] if known is not None else None
+
+    def got(space):
+        if win.session is not s:
+            log.info("device storage: read after the device was closed, not shown")
+            return
+        s.space = space
+        render_space(win)
+
+    MainWindow.in_background(lambda: read_space(s.storage, capacity), got)
 
 
 def _choose(found: list):
@@ -1598,11 +1678,14 @@ class MainWindow(Adw.ApplicationWindow):
         then not told to keep it plugged in. `in_page`: the page shows that it loads, so the
         bottom bar has no indicator of its own. `button`: the task was started from it; it
         spins at once, the rest of the page stays as it is, and the bar with `title` comes
-        only after TEXT_AFTER_MS. It is as it was before on_done or on_error runs."""
+        only after TEXT_AFTER_MS. It is as it was before on_done or on_error runs. A task
+        whose work writes to the device (writes_to_device): once it ends (also when it failed:
+        a part may be written), its free space is read again in the background."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
         has_device = device and self.session is not None
+        started = self.session
         restore, reveal = None, [0]
         if button is None:
             self.set_busy(True, title, device=has_device, in_page=in_page)
@@ -1637,12 +1720,18 @@ class MainWindow(Adw.ApplicationWindow):
             else:
                 GLib.idle_add(finish_ok, result)
 
+        def written() -> None:
+            if getattr(fn, "writes_to_device", False) and started is not None \
+                    and self.session is started:
+                refresh_space(self, started)
+
         def finish_ok(result):
             ended()
             try:
                 if on_done:
                     on_done(result)
             finally:
+                written()
                 self._run_pending_refresh()
             return False
 
@@ -1653,6 +1742,7 @@ class MainWindow(Adw.ApplicationWindow):
                 if not (on_error and on_error(e)):
                     self.error(title, str(e) or e.__class__.__name__)
             finally:
+                written()
                 self._run_pending_refresh()
             return False
 
@@ -1948,8 +2038,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.sections["watch"].show("loading")
         # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
         # several different devices give a list to choose from.
-        self.run_task(_("Detecting the device…"), lambda: detect_devices(current_uri),
-                      done, failed)
+        self.run_task(_("Detecting the device…"),
+                      lambda: with_space(detect_devices(current_uri)), done, failed)
 
     def show_choices(self) -> None:
         """Several Garmin devices are connected: the start page shows a tile for each (never
@@ -1990,8 +2080,8 @@ class MainWindow(Adw.ApplicationWindow):
             return True
 
         self.run_task(_("Opening the device…"),
-                      lambda: service.check_session(service.open_session(found=found)),
-                      done, failed)
+                      lambda: with_space(service.check_session(service.open_session(
+                          found=found))), done, failed)
 
     # --- the start page and the device view (D5, D7) ---------------------------------------
 
@@ -2500,21 +2590,20 @@ class MainWindow(Adw.ApplicationWindow):
         hero.add(box)
         self._show_device_picture()
 
-        free, total = s.storage.free_space(), s.storage.capacity()
+        # The space as the session holds it (read with the device, or after a task that
+        # wrote to it): the page asks the device nothing.
         g = sec.group(_("Storage"))
-        row = Adw.ActionRow(title=_("Device storage"))
-        if free is not None and total:
-            row.set_subtitle(_("{free} free of {total}").format(free=_human(free),
-                                                                 total=_human(total)))
-            bar = Gtk.LevelBar(min_value=0, max_value=1, value=1 - free / total,
-                               valign=Gtk.Align.CENTER, width_request=120)
-            bar.add_offset_value("low", 0.75)
-            bar.add_offset_value("high", 0.9)
-            bar.add_offset_value("full", 1.0)
-            row.add_suffix(bar)
-        else:
-            row.set_subtitle(_("{size} free").format(size=_human(free)))
-        g.add(row)
+        self.storage_row = Adw.ActionRow(title=_("Device storage"))
+        self.storage_bar = Gtk.LevelBar(min_value=0, max_value=1, valign=Gtk.Align.CENTER,
+                                        width_request=120, visible=False)
+        self.storage_bar.add_offset_value("low", 0.75)
+        self.storage_bar.add_offset_value("high", 0.9)
+        self.storage_bar.add_offset_value("full", 1.0)
+        self.storage_row.add_suffix(self.storage_bar)
+        g.add(self.storage_row)
+        render_space(self)
+        if getattr(s, "space", None) is None:
+            refresh_space(self, s)  # not read with the device: now, in the background
 
         # A Garmin device in mass storage mode is never synced and has no maps.
         mass_storage = getattr(s, "mass_storage", False)
@@ -3240,7 +3329,8 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         self.run_task(_("Syncing…"),
-                      lambda: service.run_sync(s, first_run, self.progress), done, failed)
+                      writes_to_device(lambda: service.run_sync(s, first_run, self.progress)),
+                      done, failed)
 
     def ask_first_sync(self) -> None:
         d = Adw.AlertDialog(
@@ -3496,7 +3586,8 @@ class MainWindow(Adw.ApplicationWindow):
         def response(_d, r):
             if r != "ok":
                 return
-            self.run_task(_("Installing update…"), install, installed, failed)
+            self.run_task(_("Installing update…"), writes_to_device(install), installed,
+                          failed)
 
         d.connect("response", response)
         d.present(self)
@@ -3795,8 +3886,8 @@ class MainWindow(Adw.ApplicationWindow):
             self._ask(_("Copy this map to the device?"), self._add_map_text(plan), _("Copy"),
                       lambda: self.run_task(
                           _("Copying the map…"),
-                          lambda: ownmaps.add(plan, s.device, s.storage,
-                                              transfer_progress=self.fraction),
+                          writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
+                                                               transfer_progress=self.fraction)),
                           lambda real: written(real, plan), refused))
 
         self.run_task(_("Checking maps…"),
@@ -3842,8 +3933,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._ask(_("Remove {name}?").format(name=m.title or m.filename), body,
                   _("Remove Anyway") if foreign else _("Remove"),
                   lambda: self.run_task(
-                      _("Removing {name}…").format(name=m.title or m.filename), work, removed,
-                      refused),
+                      _("Removing {name}…").format(name=m.title or m.filename),
+                      writes_to_device(work), removed, refused),
                   destructive=True)
 
     @staticmethod
@@ -3917,13 +4008,12 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             self.run_task(
                 _("Installing {name}…").format(name=m.name),
-                lambda: mp.install(m, self.maps_cache, s.storage,
-                                   activate=lambda ident: s.client.activate_maps(
-                                       s.device.raw, [ident]),
-                                   session=s.client.http, progress=self.progress,
-                                   transfer_progress=self.fraction,
-                                   download_progress=self.fraction,
-                                   url_salt=s.client.consumer.url_salt),
+                writes_to_device(lambda: mp.install(
+                    m, self.maps_cache, s.storage,
+                    activate=lambda ident: s.client.activate_maps(s.device.raw, [ident]),
+                    session=s.client.http, progress=self.progress,
+                    transfer_progress=self.fraction, download_progress=self.fraction,
+                    url_salt=s.client.consumer.url_salt)),
                 lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
                                         .format(name=m.name)),
                              self.load_section("maps", force=True)),
@@ -3945,7 +4035,8 @@ class MainWindow(Adw.ApplicationWindow):
         d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
         d.connect("response", lambda _d, r: r == "ok" and self.run_task(
             _("Removing {name}…").format(name=m.name),
-            lambda: mp.uninstall(m, self.maps_cache, s.storage, progress=self.progress),
+            writes_to_device(lambda: mp.uninstall(m, self.maps_cache, s.storage,
+                                                  progress=self.progress)),
             lambda removed: (self.toast(self._removed_files(len(removed))),
                              self.load_section("maps", force=True))))
         d.present(self)
@@ -4386,7 +4477,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.load_section("apps", force=True)
 
         self.run_task(_("Restoring the order…"),
-                      lambda: ciq.restore_order(s.device, s.storage, copy.state), done)
+                      writes_to_device(lambda: ciq.restore_order(s.device, s.storage,
+                                                                 copy.state)), done)
 
     def install_apps(self, apps) -> None:
         from openexpress import ciq
@@ -4415,7 +4507,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast(_("Queued; it will be installed on the next sync"))
             self.load_section("apps", force=True)
 
-        self.run_task(_("Installing apps…"), work, done)
+        self.run_task(_("Installing apps…"), writes_to_device(work), done)
 
     @staticmethod
     def _for_phone_text(names, sandboxed=(), updates=()) -> str:
@@ -4498,7 +4590,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast(text)
                 self.load_section("apps", force=True)
 
-            self.run_task(_("Removing {name}…").format(name=app.name), work, done)
+            self.run_task(_("Removing {name}…").format(name=app.name),
+                          writes_to_device(work), done)
 
         d.connect("response", response)
         d.present(self)
@@ -4532,8 +4625,8 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         self.run_task(_("Saving…"),
-                      lambda: ciq.set_enabled(s.device, s.storage, app.app_id, enabled,
-                                              app.app_type),
+                      writes_to_device(lambda: ciq.set_enabled(s.device, s.storage, app.app_id,
+                                                               enabled, app.app_type)),
                       done, failed)
 
     # --- music ------------------------------------------------------------------------
@@ -4641,8 +4734,8 @@ class MainWindow(Adw.ApplicationWindow):
             d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
             d.connect("response", lambda _d, r: r == "ok" and self.run_task(
                 _("Copying music…"),
-                lambda: music.copy(p, s.storage, progress=self.progress,
-                                   transfer_progress=self.fraction),
+                writes_to_device(lambda: music.copy(p, s.storage, progress=self.progress,
+                                                    transfer_progress=self.fraction)),
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
                                  self.load_section("music", force=True))))
@@ -4736,8 +4829,9 @@ class MainWindow(Adw.ApplicationWindow):
             d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
             d.connect("response", lambda _d, r: r == "ok" and self.run_task(
                 _("Copying music…"),
-                lambda: music.add_playlist(plan, s.device, s.storage, progress=self.progress,
-                                           transfer_progress=self.fraction),
+                writes_to_device(lambda: music.add_playlist(
+                    plan, s.device, s.storage, progress=self.progress,
+                    transfer_progress=self.fraction)),
                 lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
                                self.load_section("music", force=True))))
             d.present(self)
@@ -4749,7 +4843,8 @@ class MainWindow(Adw.ApplicationWindow):
         from openexpress import music
 
         s = self.session
-        self.run_task(_("Removing…"), lambda: music.remove(s.storage, device_paths),
+        self.run_task(_("Removing…"),
+                      writes_to_device(lambda: music.remove(s.storage, device_paths)),
                       lambda removed: (self.toast(self._removed_files(len(removed))),
                                        self.load_section("music", force=True)))
 

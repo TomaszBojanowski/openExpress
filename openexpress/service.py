@@ -44,6 +44,10 @@ class DeviceSession:
     ownership_error: Exception | None = None
     # The account's device list from that check (model names for the window).
     account_devices: list[dict] | None = None
+    # (free space, capacity) in bytes as the window read them, in the thread that opened the
+    # device and again in the background after it wrote to it; None: not read yet, and
+    # either one None: not known (it could not be asked).
+    space: tuple[int | None, int | None] | None = None
 
     @property
     def logged_in(self) -> bool:

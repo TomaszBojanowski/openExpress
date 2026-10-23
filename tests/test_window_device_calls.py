@@ -138,7 +138,7 @@ def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device
     (asked,) = Question.asked
     assert asked["heading"] == "Install Test Map?"
     assert asked["body"].startswith(
-        "Download: 3.0 kB\n"
+        "Download: 3.0\u00a0kB\n"
         f"Space on the device: {app._human(need)} ({app._human(free)} free)\nFiles: 2")
 
 
@@ -462,3 +462,258 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]
     assert add.get_description() == f"Free space: {free}"
+
+
+# --- step 6: the device page (show_overview) -----------------------------------------------------
+
+FREE, SIZE = 52_140_000_000, 64_000_000_000
+
+
+class Space(Counting):
+    """A storage whose free space and size the test sets; each question is noted. `fail`: it
+    cannot be asked (e.g. another process holds the device in a session of PTP); `wait`: the
+    free space is answered once the event is set."""
+
+    def __init__(self, root, free=FREE, size=SIZE, fail=False, wait=None):
+        super().__init__(root)
+        self.free, self.size, self.fail, self.wait = free, size, fail, wait
+
+    def free_space(self):
+        self._note("free_space")
+        if self.wait is not None:
+            self.wait.wait(5)
+        if self.fail:
+            from openexpress.device.storage import DeviceError
+
+            raise DeviceError("Cannot read the free space: the device is busy")
+        return self.free
+
+    def capacity(self):
+        self._note("capacity")
+        if self.fail:
+            from openexpress.device.storage import DeviceError
+
+            raise DeviceError("Cannot read the size: the device is busy")
+        return self.size
+
+
+NOT_READ = object()
+
+
+def _overview_window(storage, dev, space=NOT_READ):
+    """The device page of the real kind for a device in mass storage mode (no sync groups),
+    the window around it with run_task and its bar as they are; `space`: what the session
+    holds from its detection (NOT_READ: nothing)."""
+    from gi.repository import Adw, Gtk
+    from test_fixes_ui import page_window
+
+    from openexpress.gui.app import MainWindow
+
+    win, section = page_window("watch")
+    s = types.SimpleNamespace(device=dev, storage=storage, logged_in=False, ownership_error=None,
+                              account_devices=None, mass_storage=True)
+    if space is not NOT_READ:
+        s.space = space
+    win.session, win.update_state, win.map_state, win.errors = s, None, None, []
+    for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
+                 "_show_last_sync", "_render_update_state", "_render_map_state",
+                 "select_section", "backup", "set_background", "logout"):
+        setattr(win, name, lambda *a, **kw: None)
+    win._background_enabled = lambda: False
+    win.error = lambda title, text: win.errors.append(text)
+    win._waiting, win._refresh_pending = 0, False
+    win.action_bar, win.progress_label = Gtk.ActionBar(revealed=False), Gtk.Label()
+    win.progress_bar, win.busy_spinner = Gtk.ProgressBar(), Gtk.Spinner()
+    win.unplug_label, win.banner = Gtk.Label(), Adw.Banner()
+    win._update_actions = win.toast = lambda *a: None
+    for name in ("show_overview", "run_task", "set_busy", "_stop_waiting",
+                 "_run_pending_refresh"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win, section, s
+
+
+def _storage_subtitle(section) -> str:
+    from gi.repository import Adw
+
+    stack = [section.page]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Adw.ActionRow) and w.get_title() == "Device storage":
+            return w.get_subtitle()
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    raise AssertionError("no row Device storage")
+
+
+def _turn_until(done, seconds=5) -> None:
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + seconds
+    while not done() and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.005)
+
+
+READ = "52.1\u00a0GB free of 64.0\u00a0GB"
+
+
+@pytest.mark.needs_display
+def test_the_device_page_asks_the_device_nothing(iq_device):
+    """The free space and the size were read with the device (its detection): the page shows
+    them and asks the device nothing, on the window's thread or elsewhere."""
+    st, dev = iq_device
+    storage = Space(st.root)
+    win, section, _s = _overview_window(storage, dev, space=(FREE, SIZE))
+    win.show_overview()
+    assert storage.on_gtk == [] and storage.elsewhere == []
+    assert _storage_subtitle(section) == READ
+
+
+@pytest.mark.needs_display
+def test_the_storage_row_says_dots_until_the_space_is_read(iq_device):
+    """Not read yet: "…" (never "0 B" or "?"), then the space read in the background."""
+    st, dev = iq_device
+    storage = Space(st.root)
+    win, section, s = _overview_window(storage, dev)
+    win.show_overview()
+    assert _storage_subtitle(section) == "…"
+    _turn_until(lambda: _storage_subtitle(section) != "…")
+    assert _storage_subtitle(section) == READ
+    assert storage.on_gtk == [] and sorted(storage.elsewhere) == ["capacity", "free_space"]
+    assert s.space == (FREE, SIZE)
+
+
+@pytest.mark.needs_display
+def test_after_a_task_that_writes_the_free_space_is_read_again(iq_device):
+    """A task that writes to the device: once it ends, the free space alone is read again in
+    the background (the size stays) and the subtitle of the row is put right; a task that
+    only reads asks nothing more."""
+    st, dev = iq_device
+    storage = Space(st.root)
+    win, section, s = _overview_window(storage, dev, space=(FREE, SIZE))
+    win.show_overview()
+    win.run_task("Reading…", lambda: None, lambda result: None)
+    _turn_until(lambda: not win.busy)
+    _turn_until(lambda: False, 0.1)
+    assert storage.elsewhere == []
+
+    from openexpress.gui import app
+
+    def write():
+        storage.free = 40_000_000_000
+
+    win.run_task("Copying…", app.writes_to_device(write), lambda result: None)
+    _turn_until(lambda: _storage_subtitle(section) != READ)
+    assert _storage_subtitle(section) == "40.0\u00a0GB free of 64.0\u00a0GB"
+    assert storage.on_gtk == [] and storage.elsewhere == ["free_space"]
+    assert s.space == (40_000_000_000, SIZE)
+
+
+@pytest.mark.needs_display
+def test_a_space_read_after_the_device_was_unplugged_is_dropped(iq_device):
+    """The device is unplugged while its free space is read: the answer that comes later
+    changes nothing, says nothing."""
+    import threading
+
+    st, dev = iq_device
+    answer = threading.Event()
+    storage = Space(st.root, free=1, wait=answer)
+    win, section, s = _overview_window(storage, dev, space=(FREE, SIZE))
+    win.show_overview()
+    from openexpress.gui import app
+
+    win.run_task("Copying…", app.writes_to_device(lambda: None), lambda result: None)
+    _turn_until(lambda: "free_space" in storage.elsewhere)
+    win.session = None  # unplugged
+    answer.set()
+    _turn_until(lambda: False, 0.3)
+    assert s.space == (FREE, SIZE) and _storage_subtitle(section) == READ
+    assert win.errors == []
+
+
+@pytest.mark.needs_display
+def test_a_device_that_cannot_be_asked_has_an_unknown_space_and_no_error(iq_device):
+    """E.g. during a session of PTP: the space is unknown ("?"), with no error in the
+    window."""
+    st, dev = iq_device
+    storage = Space(st.root, fail=True)
+    win, section, s = _overview_window(storage, dev)
+    win.show_overview()
+    _turn_until(lambda: _storage_subtitle(section) != "…")
+    assert _storage_subtitle(section) == "? free"
+    assert s.space == (None, None) and win.errors == []
+
+
+def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, monkeypatch):
+    """refresh_device and open_choice: the device found is opened with its free space and
+    size read in the task's thread, never on the window's."""
+    from openexpress.gui import app
+
+    st, dev = iq_device
+    storage = Space(st.root)
+    session = types.SimpleNamespace(device=dev, storage=storage)
+    works = []
+    win = types.SimpleNamespace(
+        busy=False, session=None, _asked=None, sections={"watch": types.SimpleNamespace(
+            show=lambda key: None)},
+        run_task=lambda title, fn, done=None, failed=None, **kw: works.append(fn))
+    monkeypatch.setattr(app, "detect_devices", lambda current_uri=None: session)
+    monkeypatch.setattr(app.service, "open_session", lambda found=None: session)
+    monkeypatch.setattr(app.service, "check_session", lambda s: s)
+    app.MainWindow.refresh_device(win)
+    app.MainWindow.open_choice(win, object())
+    assert len(works) == 2
+    for work in works:
+        vars(session).pop("space", None)
+        result = []
+        thread = threading.Thread(target=lambda work=work, result=result: result.append(work()))
+        thread.start()
+        thread.join(5)
+        assert result == [session] and session.space == (FREE, SIZE)
+    assert storage.on_gtk == [] and sorted(storage.elsewhere) == ["capacity", "capacity",
+                                                                  "free_space", "free_space"]
+
+
+# The tasks of the window that write to the device: after each, its free space is read again.
+WRITING = {"Syncing…", "Installing update…", "Copying the map…", "Installing {name}…",
+           "Removing {name}…", "Restoring the order…", "Installing apps…", "Saving…",
+           "Copying music…", "Removing…"}
+
+
+def test_every_task_that_writes_to_the_device_says_so():
+    """Each run_task of the window whose task writes to the device has its work wrapped in
+    writes_to_device, and only those (read in the source: the title of the task, its work
+    and its keywords)."""
+    import ast
+    import inspect
+
+    from openexpress.gui import app
+
+    found = {}
+    for node in ast.walk(ast.parse(inspect.getsource(app))):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "run_task" and node.args):
+            continue
+        title = node.args[0]
+        if (isinstance(title, ast.Call) and isinstance(title.func, ast.Attribute)
+                and title.func.attr == "format"):
+            title = title.func.value  # _("Removing {name}…").format(…)
+        if not (isinstance(title, ast.Call) and getattr(title.func, "id", "") == "_"):
+            continue  # a title given by the caller (_load): pages that read
+        text = title.args[0].value
+        work = node.args[1] if len(node.args) > 1 else None
+        writes = (isinstance(work, ast.Call)
+                  and getattr(work.func, "id", "") == "writes_to_device")
+        # device=False: a task that does not touch the device (e.g. an app forgotten in the
+        # account's list, "Removing {name}…" as well).
+        device = not any(k.arg == "device" and getattr(k.value, "value", None) is False
+                         for k in node.keywords)
+        found.setdefault(text, set()).add((writes, device))
+    assert set(found) >= WRITING
+    for text, calls in found.items():
+        for writes, device in calls:
+            assert writes is (text in WRITING and device), text
