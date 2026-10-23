@@ -382,6 +382,36 @@ def test_window_geometry(xdg):
     assert window_geometry(data) == (1200, 800, False)
 
 
+@pytest.mark.parametrize("maximized", [False, True])
+def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
+    """Ctrl+Q (app.quit) ends the program without the window's close-request: the size is
+    saved there too, as when the window is closed (decision of 23.10.2026)."""
+    from openexpress.gui.app import App, MainWindow, load_gui_settings, window_geometry
+
+    win = types.SimpleNamespace(busy=False, get_default_size=lambda: (1100, 700),
+                                is_maximized=lambda: maximized)
+    win._remember_geometry = types.MethodType(MainWindow._remember_geometry, win)
+    quits = []
+    app = types.SimpleNamespace(main_window=lambda create=True: win,
+                                quit=lambda: quits.append(1))
+    App.request_quit(app)
+    assert quits == [1]
+    assert window_geometry(load_gui_settings()) == (1100, 700, maximized)
+
+
+def test_ctrl_q_during_a_task_still_asks_the_window(xdg):
+    """While a task runs, Ctrl+Q closes the window, which refuses and explains (as before);
+    nothing quits and nothing is saved here."""
+    from openexpress.gui.app import App, load_gui_settings
+
+    closed, quits = [], []
+    win = types.SimpleNamespace(busy=True, close=lambda: closed.append(1))
+    app = types.SimpleNamespace(main_window=lambda create=True: win,
+                                quit=lambda: quits.append(1))
+    App.request_quit(app)
+    assert closed == [1] and quits == [] and "window" not in load_gui_settings()
+
+
 # --- "Do not unplug the device" while a task works with the device ----------------------------
 
 

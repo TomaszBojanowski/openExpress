@@ -4999,6 +4999,9 @@ class App(Adw.Application):
         if win is not None and win.busy:
             win.close()  # refused by close-request, which explains why
             return
+        if win is not None:
+            # quit() skips close-request: the size is saved as when the window is closed.
+            win._remember_geometry()
         self.quit()
 
     def do_activate(self):
