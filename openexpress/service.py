@@ -510,6 +510,8 @@ def _describe_step(line) -> list[tuple[str, bool]]:
     if kind == "not_uploaded":
         gate = UploadGate(str(line.get("reason") or ""))
         return [(gate.message(), False)] if gate.why() else []  # one of a newer version: none
+    if kind == "upload_skipped":
+        return []  # the row says it ("upload skipped")
     if kind == "uploads":
         known, rejected = line.get("known", 0), line.get("rejected", 0)
         errors = line.get("errors", 0)
@@ -542,6 +544,12 @@ def not_uploaded_step(gate: UploadGate) -> dict:
     return {"kind": "not_uploaded", "reason": gate.reason}
 
 
+def upload_skipped_step() -> dict:
+    """A sync that did not look at the uploads at all (`sync --download-only`): a step of the
+    summary, so that the row says "upload skipped", not "nothing to upload"."""
+    return {"kind": "upload_skipped"}
+
+
 def uploads_step(rep) -> dict:
     """What became of the uploads of a sync: a step of the summary. "known": already in
     Connect, recognised before sending or, after it was sent, by Garmin."""
@@ -566,14 +574,20 @@ def describe_counts(data: dict) -> str:
     """The numbers of a sync in one line: "8 new files, 6 uploaded · 2 received" - the new
     files on the device and how many of them were uploaded ("none uploaded"; "nothing to
     upload" when it had none; "nothing uploaded: <why>" when the upload did not take
-    place), and the files from Garmin Connect written to the device when there are any.
+    place; "upload skipped" when it was not looked at), and the files from Garmin Connect
+    written to the device when there are any.
     The window shows it under "Last sync" after when it was; the command line and the
     notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
     received = data.get("downloaded", 0)
     blocked = next((line for line in data.get("lines") or [] if isinstance(line, dict)
                     and line.get("kind") == "not_uploaded"), None)
-    if blocked is not None:
+    skipped = any(isinstance(line, dict) and line.get("kind") == "upload_skipped"
+                  for line in data.get("lines") or [])
+    if skipped:
+        # TRANSLATORS: under "Last sync": the uploads were not looked at (sync --download-only)
+        parts = [_("upload skipped")]
+    elif blocked is not None:
         # Nothing was uploaded, and why; a reason of a newer version: only that.
         row = NOT_UPLOADED_ROW.get(blocked.get("reason"))
         # TRANSLATORS: under "Last sync": nothing was uploaded

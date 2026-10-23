@@ -17,7 +17,7 @@ from openexpress import i18n, service
 
 PATTERNS = Path(__file__).resolve().parent / "data" / "last_sync"
 
-NB = " "
+NB = "\u00a0"
 NOTHING_NEW = {"No new data to upload", "Brak nowych danych do wysłania"}
 
 # name: {language: (the numbers, [(a line of the details, whether it is a warning)])}
@@ -87,6 +87,11 @@ EXPECTED = {
         "pl": ("nic nie wysłano: brak zgody na koncie", [
             (("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
              f"z{NB}urządzeń"), False)])},
+    # sync --apply --download-only: the uploads were not looked at, so not "nothing to upload"
+    # (decision of 23.10.2026); no line of its own, the row says it.
+    "format-0.6.16-upload-skipped.json": {
+        "en": ("upload skipped · 5 received", []),
+        "pl": ("wysyłanie pominięte · 5 odebranych", [])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

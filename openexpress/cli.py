@@ -541,6 +541,10 @@ def cmd_sync(args) -> int:
         print("  " + msg)
 
     summary = service.SyncSummary()
+    if up_plan is None:
+        # --download-only: the uploads were not looked at; the row says so, not "nothing to
+        # upload".
+        summary.lines.append(service.upload_skipped_step())
     with service.sync_lock():
         if up_plan is not None:
             # Another process may have synced since the plan was shown: plan again under the lock.

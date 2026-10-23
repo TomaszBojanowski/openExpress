@@ -131,6 +131,30 @@ def test_download_only_first_run_does_not_create_state(device_root, xdg, fake_cl
     assert main(["--path", str(device_root), "sync", "--apply"]) == 3
 
 
+COURSES = [{"messageid": n, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+            "metadata": {"messageurl": f"course/{n}", "messagename": f"Route {n}"}}
+           for n in (1, 2)]
+
+
+def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fake_client,
+                                                           capsys):
+    """sync --apply --download-only does not look at the uploads: its record says so
+    ("upload skipped · 2 received"), not "nothing to upload" (decision of 23.10.2026). It is
+    the shape of its pattern in tests/data/last_sync, which no real sync has made yet."""
+    import json
+
+    client = fake_client["client"]
+    client.messages = COURSES
+    client.download_message = lambda url, absolute: b"COURSE"
+    assert main(["--path", str(device_root), "sync", "--apply", "--download-only"]) == 0
+    assert "upload skipped · 2 received" in capsys.readouterr().out.splitlines()
+    record = service.load_last_sync(1234567890)
+    pattern = json.loads((Path(__file__).parent / "data/last_sync"
+                          / "format-0.6.16-upload-skipped.json").read_text(encoding="utf-8"))
+    assert sorted(record) == sorted(pattern) and record["lines"] == pattern["lines"]
+    assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 2, [])
+
+
 def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, capsys):
     assert main(["--path", str(device_root), "sync", "--apply", "--all"]) == 0
     assert _state_file(device_root).exists()
