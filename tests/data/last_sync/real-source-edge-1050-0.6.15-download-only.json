@@ -1,0 +1,15 @@
+{
+ "time": 1792790086.210088,
+ "unit_id": 3000000101,
+ "uploaded": 0,
+ "downloaded": 0,
+ "skipped_known": 0,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "upload_skipped"
+  },
+  "TrueUp: dzienne podsumowania uzgodnione z\u00a0innymi urządzeniami Garmin"
+ ]
+}

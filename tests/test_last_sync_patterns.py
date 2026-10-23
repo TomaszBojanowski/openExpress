@@ -87,6 +87,14 @@ EXPECTED = {
         "pl": ("nic nie wysłano: brak zgody na koncie", [
             (("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
              f"z{NB}urządzeń"), False)])},
+    # `sync --download-only --apply` of the Edge 1050 on 23.10.2026 (the version from source
+    # after 0.6.15, with fbd047e): nothing received; TrueUp in the words it was written in
+    # (with its hard space).
+    "real-source-edge-1050-0.6.15-download-only.json": {
+        "en": ("upload skipped", [
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)]),
+        "pl": ("wysyłanie pominięte", [
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)])},
     # sync --apply --download-only: the uploads were not looked at, so not "nothing to upload"
     # (decision of 23.10.2026); no line of its own, the row says it.
     "format-0.6.16-upload-skipped.json": {
