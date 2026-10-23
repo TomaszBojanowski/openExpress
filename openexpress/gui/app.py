@@ -4012,6 +4012,13 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("ok", _("Accept and install"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
 
+        def unlock_not_written(e) -> bool:
+            # The words of the window ("come back to this page"), not the command line's.
+            if not isinstance(e, mp.UnlockNotWritten):
+                return False
+            self.error(_("Installing {name}…").format(name=m.name), e.window_text)
+            return True
+
         def response(_d, r):
             if r != "ok":
                 return
@@ -4026,6 +4033,7 @@ class MainWindow(Adw.ApplicationWindow):
                 lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
                                         .format(name=m.name)),
                              self.load_section("maps", force=True)),
+                unlock_not_written,
             )
 
         d.connect("response", response)

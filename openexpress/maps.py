@@ -469,6 +469,26 @@ def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
                        .format(path=f.device_path, maps=", ".join(users))) from e
 
 
+class UnlockNotWritten(MapError):
+    """The map files are on the device, its unlock file could not be written. Not "install
+    the map again": that is refused while its files are there. str() is for the command
+    line, window_text for the window."""
+
+    def __init__(self, path: str, error):
+        self.path, self.error = path, error
+        super().__init__(_(
+            "The map files are on the device, but its unlock file {path} could not be written "
+            "({error}). The device may still load the map after it is unplugged; if it does "
+            "not, run openexpress maps again.").format(path=path, error=error))
+
+    @property
+    def window_text(self) -> str:
+        return _("The map files are on the device, but its unlock file {path} could not be "
+                 "written ({error}). The device may still load the map after it is unplugged; "
+                 "if it does not, come back to this page.").format(path=self.path,
+                                                                  error=self.error)
+
+
 def _write_unlock(storage: Storage, path: str, data: bytes, progress, sleep) -> str:
     """Writes an unlock file, tried again after a pause while the device refuses it. The map
     files are on the device by then and the map may not work without it: the error says so
@@ -481,11 +501,7 @@ def _write_unlock(storage: Storage, path: str, data: bytes, progress, sleep) -> 
             log.warning("map install: writing an unlock file failed (try %d of %d): %s",
                         attempt, UNLOCK_TRIES, e)
             if attempt == UNLOCK_TRIES:
-                raise MapError(_(
-                    "The map files were copied, but its unlock file {path} could not be "
-                    "written ({error}). The map may not work on the device. If it does not, "
-                    "unplug the device and install the map again; if it is listed as "
-                    "installed, remove it first.").format(path=path, error=e)) from e
+                raise UnlockNotWritten(path, e) from e
         attempt += 1
         progress(_("Writing the unlock file again ({attempt} of {tries})")
                  .format(attempt=attempt, tries=UNLOCK_TRIES))

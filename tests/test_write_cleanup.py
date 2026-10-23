@@ -276,3 +276,83 @@ def test_an_app_update_refused_leaves_the_old_app(iq_device):
     assert [name for name, _error in rep.failed] == ["Made-up Face"]
     assert prg.read_bytes() == b"OLD APP" and client.acks == []
     assert FACE  # (the fixture's own face is not part of this test)
+
+
+# --- the map whose unlock file could not be written: what the user is told (B a) -----------------
+
+WINDOW_TEXT = ("The map files are on the device, but its unlock file Garmin/Maps/abc.gma could not "
+               "be written (Cannot write Garmin/Maps/abc.gma: the device is gone). The device may "
+               "still load the map after it is unplugged; if it does not, come back to this page.")
+CLI_TEXT = ("The map files are on the device, but its unlock file Garmin/Maps/abc.gma could not "
+            "be written (Cannot write Garmin/Maps/abc.gma: the device is gone). The device may "
+            "still load the map after it is unplugged; if it does not, run openexpress maps "
+            "again.")
+
+
+def test_an_unlock_file_not_written_is_said_without_install_again(device_root):
+    """Not "install the map again" (that is refused while its files are on the device): the
+    files are there, the device may load the map once unplugged, else come back."""
+    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    with pytest.raises(maps.UnlockNotWritten) as error:
+        maps._write_unlock(Mtp(device_root, breaks=(".gma",)), "Garmin/Maps/abc.gma",
+                           b"UNLOCK DATA", lambda text: None, lambda seconds: None)
+    assert isinstance(error.value, maps.MapError)
+    assert str(error.value) == CLI_TEXT
+    assert error.value.window_text == WINDOW_TEXT
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_neither_text_says_to_install_again(device_root, language):
+    from openexpress import i18n
+
+    i18n.setup(language)
+    try:
+        error = maps.UnlockNotWritten("Garmin/Maps/abc.gma", "x")
+        for text in (str(error), error.window_text):
+            assert "install" not in text.casefold() and "zainstaluj" not in text.casefold()
+        if language == "pl":
+            assert error.window_text.endswith("wróć do tej strony.")
+    finally:
+        i18n.setup("en")
+
+
+@pytest.mark.needs_display
+def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
+    """The install of a map from the window fails on its unlock file: the error says to come
+    back to this page (not what the command line says)."""
+    import types
+
+    from gi.repository import Adw
+
+    from openexpress.gui import app
+
+    questions, errors = [], []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
+
+    def install(*args, **kwargs):
+        raise maps.UnlockNotWritten("Garmin/Maps/abc.gma",
+                                    "Cannot write Garmin/Maps/abc.gma: the device is gone")
+
+    monkeypatch.setattr(maps, "install", install)
+
+    def run_task(title, work, done=None, failed=None, **kw):
+        try:
+            done(work())
+        except Exception as e:  # noqa: BLE001 - as the window's run_task: to `failed`
+            if not (failed and failed(e)):
+                errors.append((title, str(e)))
+
+    m = maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0, is_reinstall=False,
+                          can_uninstall=True, version="2026.11", region="Test", identifier={},
+                          files=[], files_to_remove=[], hosts=[])
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(storage=None, device=types.SimpleNamespace(raw=b""),
+                                      client=types.SimpleNamespace(
+                                          http=None,
+                                          consumer=types.SimpleNamespace(url_salt="salt"))),
+        maps_cache=[m], run_task=run_task, progress=None, fraction=None, toast=None,
+        error=lambda title, text: errors.append((title, text)),
+        load_section=lambda key, force=False: None)
+    app.MainWindow._ask_install_map(win, m, 0, 0, [])
+    questions[0].emit("response", "ok")
+    assert errors == [("Installing Test Map…", WINDOW_TEXT)]
