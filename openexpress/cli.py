@@ -335,27 +335,47 @@ def cmd_whoami(args) -> int:
 
 
 def cmd_cache(args) -> int:
-    """How big the cache is, folder by folder. With --clear it is emptied (with --apply;
-    without it, only said)."""
+    """How big the cache is, part by part (all, or those of --only). With --clear those parts
+    are emptied (with --apply; without it, only said). One line of the log for each part."""
     from openexpress import cache
 
+    only = None
+    if args.only is not None:
+        names = [name.strip() for value in args.only for name in value.split(",")
+                 if name.strip()]
+        unknown = list(dict.fromkeys(name for name in names if name not in cache.CATEGORIES))
+        parts = ", ".join(cache.CATEGORIES)
+        if unknown or not names:
+            why = (_("Not a part of the cache: {names}. The parts are: {parts}.").format(
+                names=", ".join(unknown), parts=parts) if unknown else
+                _("No part of the cache named. The parts are: {parts}.").format(parts=parts))
+            _error(_("Error: {error}").format(error=why))
+            return 1
+        only = names
     if args.clear and args.apply:
         try:
-            use = cache.clear()
+            use = cache.clear(only)
         except cache.CacheError as e:
             _error(_("Error: {error}").format(error=e))
             return 1
     else:
-        use = cache.usage()
+        use = cache.usage(only)
     print(_("Cache: {path}").format(path=use.root))
     for name, size in use.sizes.items():
         print(f"  {_(cache.CATEGORY_NAMES[name])}: {human_size(size)}")
     print("  " + _("Total: {size}").format(size=human_size(use.total)))
-    log.info("cache: %s in all (%s)", applog.size(use.total),
-             ", ".join(f"{name} {applog.size(size)}" for name, size in use.sizes.items()))
+    for name, size in use.sizes.items():
+        files = use.files[name]
+        counted = f"{files} file" if files == 1 else f"{files} files"
+        if args.clear and args.apply:
+            log.info("cache: %s: cleared, %s freed (%s)", name, applog.size(size), counted)
+        elif args.clear:
+            log.info("cache: %s: %s in %s, dry run: nothing deleted", name, applog.size(size),
+                     counted)
+        else:
+            log.info("cache: %s: %s in %s", name, applog.size(size), counted)
     if args.clear and args.apply:
         print(_("Freed {size}.").format(size=human_size(use.total)))
-        log.info("cache: cleared, %s freed", applog.size(use.total))
     elif args.clear:
         print(_("Dry run: nothing was deleted. Add --apply to delete it."))
     return 0
@@ -1698,6 +1718,11 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("cache", help=_("how big the cache of downloaded maps and updates is"))
     s.add_argument("--clear", action="store_true",
                    help=_("delete what is in the cache (downloaded again when needed)"))
+    from openexpress.cache import CATEGORIES
+
+    s.add_argument("--only", action="append", metavar="PARTS",
+                   help=_("only these parts of the cache, separated by commas: {parts}")
+                   .format(parts=", ".join(CATEGORIES)))
     s.add_argument("--apply", action="store_true", help=_("really delete (with --clear)"))
     s.set_defaults(func=cmd_cache)
 

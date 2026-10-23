@@ -327,6 +327,94 @@ def test_a_cache_folder_that_is_a_link_is_left_alone(cache, tmp_path):
     assert list((cache / "images").iterdir()) == []
 
 
+# --- some parts from the command line: `cache --clear --only maps,updates [--apply]` ------------
+
+
+def _log_lines(log_file) -> list[str]:
+    """The lines of the log after "cache: ", as the command line wrote them."""
+    text = log_file.read_text(encoding="utf-8") if log_file.exists() else ""
+    return [line.split(" cache: ", 1)[1] for line in text.splitlines() if " cache: " in line]
+
+
+def test_clear_some_parts_without_apply_says_their_sizes(cache, tmp_path, capsys, log_file):
+    """Dry run of two parts: their sizes and their total, then the dry run line; nothing is
+    deleted; the log has one line for each of them."""
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    before = sorted(p for p in cache.rglob("*"))
+    assert main(["cache", "--clear", "--only", "maps,updates"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"Cache: {cache}",
+        "  Maps: 1.8 kB",
+        "  Software updates: 4.0 kB",
+        "  Total: 5.8 kB",
+        "Dry run: nothing was deleted. Add --apply to delete it."]
+    assert sorted(p for p in cache.rglob("*")) == before
+    assert _log_lines(log_file) == ["maps: 1_750 B in 3 files, dry run: nothing deleted",
+                                    "updates: 4_000 B in 1 file, dry run: nothing deleted"]
+
+
+def test_clear_some_parts_with_apply(cache, tmp_path, capsys, log_file):
+    """--apply with the parts named in any order and in two --only: only theirs go, the
+    others stay; it says how much was freed, and the log one line for each part."""
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    assert main(["cache", "--clear", "--only", "temp", "--only", " pictures ", "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"Cache: {cache}",
+        "  Pictures and icons: 30 B",
+        "  Temporary files: 119 B",
+        "  Total: 149 B",
+        "Freed 149 B."]
+    left = _left(cache)
+    assert left["images"] == left["transfer"] == left["tmp"] == []
+    assert left["maps"] and left["software"]
+    assert _log_lines(log_file) == ["pictures: cleared, 30 B freed (1 file)",
+                                    "temp: cleared, 119 B freed (2 files)"]
+
+
+def test_the_sizes_of_some_parts(cache, tmp_path, capsys, log_file):
+    """--only without --clear: the sizes of those parts alone."""
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    assert main(["cache", "--only", "pictures"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"Cache: {cache}", "  Pictures and icons: 30 B", "  Total: 30 B"]
+    assert _log_lines(log_file) == ["pictures: 30 B in 1 file"]
+
+
+@pytest.mark.parametrize("only", ["maps,images", "", ", ,"])
+def test_a_part_that_is_not_one_is_an_error_with_the_list(cache, tmp_path, capsys, only):
+    """A name that is no part (or none named): exit code 1, the parts there are, nothing
+    deleted, even with --apply."""
+    from openexpress.cli import main
+
+    filled(cache, tmp_path)
+    before = sorted(p for p in cache.rglob("*"))
+    assert main(["cache", "--clear", "--only", only, "--apply"]) == 1
+    captured = capsys.readouterr()
+    unknown = "images" if "images" in only else ""
+    assert captured.err.strip() == (
+        (f"Error: Not a part of the cache: {unknown}. " if unknown
+         else "Error: No part of the cache named. ")
+        + "The parts are: maps, updates, pictures, temp.")
+    assert captured.out == ""
+    assert sorted(p for p in cache.rglob("*")) == before
+
+
+def test_the_help_names_the_parts(capsys):
+    from openexpress.cli import main
+
+    with pytest.raises(SystemExit):
+        main(["cache", "--help"])
+    help_text = " ".join(capsys.readouterr().out.split())
+    assert "--only PARTS" in help_text
+    assert "maps, updates, pictures, temp" in help_text
+
+
 # --- clearing some parts of the cache: cache.clear(only=…) ---------------------------------------
 
 # The folders of each part, as the user knows them; and a file in each, of a known size.
