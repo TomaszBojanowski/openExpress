@@ -1637,6 +1637,88 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
     assert reads == ["apps"]  # the page is read again (read_again_after_failure)
 
 
+# --- an error without a full stop before the next sentence (review of 24.10.2026) ----------------
+
+TIMED_OUT = "Cannot mount the device: the device did not answer in time"  # as _wait says it
+
+
+@pytest.mark.parametrize(("error", "expected"), [
+    (TIMED_OUT, TIMED_OUT + "."),
+    ("It went wrong.", "It went wrong."),          # a full stop already: not a second one
+    ("Refused (AccessDenied)", "Refused (AccessDenied)."),
+    ("Is it there?", "Is it there?"),
+    ("Wait…", "Wait…"),
+])
+def test_an_error_ends_its_sentence_before_the_next_one(error, expected):
+    from openexpress.device.storage import DeviceError
+
+    assert ciq._sentence(DeviceError(error)) == expected
+
+
+def test_the_leftovers_come_in_a_sentence_of_their_own():
+    from openexpress.device.storage import DeviceError
+
+    text = ciq._with_leftovers(DeviceError("Cannot write it: the device did not answer in time"),
+                               ["GARMIN/APPS/MEDIA/A1B2C3D4.PRG"])
+    assert text == ("Cannot write it: the device did not answer in time. An unfinished file "
+                    "may have been left on the device: GARMIN/APPS/MEDIA/A1B2C3D4.PRG.")
+
+
+def test_a_failed_mount_after_a_removal_ends_its_sentence(hidden_spot):
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake, app = hidden_spot
+    st.remount_error = RemountFailed(TIMED_OUT)
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value) == ("Face It was removed, but the device could not be mounted again: "
+                                f"{TIMED_OUT}. Unplug the device and plug it in again.")
+
+
+def test_a_failed_mount_after_an_install_ends_its_sentence(hidden_apps):
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake = hidden_apps
+    st.remount_error = RemountFailed(TIMED_OUT)
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.failed == [("USB connection",
+                           f"{TIMED_OUT}. Unplug the device and plug it in again.")]
+
+
+def test_a_broken_removal_ends_the_sentence_of_its_error(hidden_spot, monkeypatch):
+    """The file deleted and the list not written, the error without a full stop."""
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+
+    def broken_list(self, storage, parent, name, data, verify_content=False):
+        raise ptp.PtpError("Sending the list failed: the device did not answer in time")
+
+    monkeypatch.setattr(ptp.Session, "send_file", broken_list)
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value).startswith(
+        "The file of Face It was deleted, but the app list on the device could not be updated: "
+        "Sending the list failed: the device did not answer in time. The device may still list")
+
+
+def test_the_full_stop_comes_in_polish_too(hidden_spot):
+    from openexpress import i18n
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake, app = hidden_spot
+    st.remount_error = RemountFailed("Nie można zamontować urządzenia: urządzenie nie "
+                                     "odpowiedziało na czas")
+    i18n.setup("pl")
+    try:
+        with pytest.raises(ciq.CiqError) as error:
+            ciq.remove(dev, st, app)
+    finally:
+        i18n.setup("en")
+    assert "nie odpowiedziało na czas. Odłącz urządzenie i\u00a0podłącz je ponownie." in str(
+        error.value)
+
+
 def test_built_in_and_fileless_apps_are_not_removed_directly(hidden_spot):
     st, dev, fake, _app = hidden_spot
     state = ciq.read_installed(dev, st)
