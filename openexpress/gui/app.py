@@ -727,7 +727,8 @@ def show_not_for_mass_storage(sec) -> None:
     and says why, as the Music page of a device without media does."""
     sec.clear()
     sec.error.set_title(sec.title)
-    sec.error.set_description(mass_storage_text())
+    # The description is markup: words with "<" or "&" would leave it empty.
+    sec.error.set_description(GLib.markup_escape_text(mass_storage_text()))
     sec.show("error")
 
 
@@ -4246,13 +4247,14 @@ class MainWindow(Adw.ApplicationWindow):
         if not s.logged_in:
             sec.clear()
             sec.error.set_title("Connect IQ")
-            sec.error.set_description(_("Sign in to manage apps."))
+            sec.error.set_description(GLib.markup_escape_text(_("Sign in to manage apps.")))
             sec.show("error")
             return
         if s.ownership_error is not None:
             sec.clear()
             sec.error.set_title("Connect IQ")
-            sec.error.set_description(str(s.ownership_error))
+            # Markup: a network error names <path>, <hex> or "<… object at …>" (escaped).
+            sec.error.set_description(GLib.markup_escape_text(str(s.ownership_error)))
             sec.show("error")
             return
 
@@ -4745,7 +4747,7 @@ class MainWindow(Adw.ApplicationWindow):
             sec = self.sections["music"]
             sec.clear()
             sec.error.set_title(pgettext("tab", "Music"))
-            sec.error.set_description(music.no_media_message())
+            sec.error.set_description(GLib.markup_escape_text(music.no_media_message()))
             sec.show("error")
             return
         # The free space too: asked of the device here, never as the page is drawn.
