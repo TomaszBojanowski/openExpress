@@ -1120,6 +1120,105 @@ def test_failed_remount_is_reported_but_the_install_counts(hidden_apps):
     assert fake_in_bin(fake) is not None
 
 
+OTHER_APP = uuid.UUID("11111111-2222-4333-8444-555555555555")
+OTHER_MESSAGE = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
+                 "metadata": {"messageurl": "y", "messagename": "Other",
+                              "appdetails": {"id": str(OTHER_APP)}}}
+REMOUNT = ("USB connection", "Cannot mount the device. Unplug the device and plug it in again.")
+
+
+def break_at_app_folder(monkeypatch, fake, n):
+    """The cable goes out as the session looks for the folder of the `n`-th app: every
+    answer of the device after that is wrong (the session breaks)."""
+    from openexpress.device import ptp
+
+    real, seen = ptp.Session.lookup, []
+
+    def lookup(self, storage, path):
+        if path.casefold().endswith("/media"):
+            seen.append(path)
+            if len(seen) == n:
+                fake.wrong_transaction = True
+        return real(self, storage, path)
+
+    monkeypatch.setattr(ptp.Session, "lookup", lookup)
+
+
+def test_a_broken_session_then_a_failed_mount_still_tells_each_app(hidden_apps, monkeypatch):
+    """The session breaks after the first app was sent, then the device is not mounted
+    again: the report says what became of each app (sent and not registered, with the file
+    left; not sent), and only then that the USB connection is to be renewed (decision of
+    23.10.2026; before, the failed mount hid the rest)."""
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake = hidden_apps
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    break_at_app_folder(monkeypatch, fake, 2)
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE, OTHER_MESSAGE], known={},
+                             direct=True)
+    assert rep.installed == [] and client.acks == []
+    assert [name for name, _e in rep.failed] == ["Face It", "Other", "USB connection"]
+    (_n, sent), (_o, not_sent), remount = rep.failed
+    assert "An unfinished file may have been left on the device: GARMIN/APPS/MEDIA/" in sent
+    assert "left on the device" not in not_sent and remount == REMOUNT
+
+
+def test_cli_tells_each_app_before_the_usb_connection(hidden_apps, apps_cli, monkeypatch,
+                                                      capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+    from openexpress.device.storage import RemountFailed
+
+    st, dev, fake = hidden_apps
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    break_at_app_folder(monkeypatch, fake, 1)
+    assert main(["--path", str(st.root), "apps", "install", "Face It", "--apply"]) == 1
+    errors = [line.strip() for line in capsys.readouterr().out.splitlines()
+              if line.strip().startswith("ERROR")]
+    assert [line.split(":")[0] for line in errors] == ["ERROR Face It", "ERROR USB connection"]
+    assert errors[-1] == "ERROR USB connection: " + REMOUNT[1]
+
+
+@pytest.mark.parametrize("broken", [True, False])
+def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatch, broken):
+    """The window's error says what was written, then each app that was not, then the USB
+    connection; with the session whole and only the mount failed, that the app was written
+    (before, only the USB connection was said)."""
+    import types
+
+    from openexpress import service
+    from openexpress.device.storage import RemountFailed
+    from openexpress.gui.app import MainWindow
+
+    st, dev, fake = hidden_apps
+    st.remount_error = RemountFailed("Cannot mount the device.")
+    if broken:
+        break_at_app_folder(monkeypatch, fake, 1)
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(ciq, "StoreApi", FakeStore)
+    FakeStore.queued = []
+    client = CountingClient()
+    client.device_messages = lambda unit_id: [FACE_MESSAGE]
+    errors = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
+        error=lambda title, text: errors.append((title, text)),
+        load_section=lambda key, force=False: None,
+        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+    MainWindow.install_apps(win, [store_app(FACE, "Face It")])
+    ((title, text),) = errors
+    lines = text.splitlines()
+    assert title == "Connect IQ" and lines[-1] == ": ".join(REMOUNT)
+    if broken:
+        assert len(lines) == 2 and lines[0].startswith("Face It: ")
+    else:
+        assert lines == [("Wrote Face It to the device; it will be installed after the device "
+                          "is unplugged."), ": ".join(REMOUNT)]
+
+
 def test_interrupted_sync_writes_nothing_over_ptp(hidden_apps):
     from openexpress.connect import ApiError
 

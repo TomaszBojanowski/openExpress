@@ -4572,7 +4572,10 @@ class MainWindow(Adw.ApplicationWindow):
         def done(rep):
             self._updated_apps = set(getattr(self, "_updated_apps", ())) | set(rep.updated_ids)
             if rep.failed:
-                self.error("Connect IQ", "\n".join(f"{n}: {e}" for n, e in rep.failed))
+                # What was written first, then each app that was not (the USB connection
+                # to renew, if any, comes last).
+                self.error("Connect IQ", "\n".join(
+                    [*MainWindow._written_apps(rep), *(f"{n}: {e}" for n, e in rep.failed)]))
             elif rep.for_phone and not rep.installed:
                 self.error(_("Queued in Garmin Connect"), self._for_phone_text(
                     rep.for_phone, rep.sandboxed, rep.sandboxed_updates))
@@ -4588,6 +4591,19 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.run_task(_("Installing apps…"), writes_to_device(work), done,
                       read_again_after_failure(self, "apps"))
+
+    @staticmethod
+    def _written_apps(rep) -> list[str]:
+        """What an install wrote, in the words of its toasts, a line for each kind: said
+        before its failures when some apps were not installed."""
+        from openexpress import ciq
+
+        written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
+        updated = [n for n in rep.installed if n in rep.updated]
+        plain = [n for n in rep.installed if n not in rep.direct]
+        return ([ciq.written_text(written)] if written else []) + (
+            [ciq.update_written_text(updated)] if updated else []) + (
+            [_("Installed {names}").format(names=", ".join(plain))] if plain else [])
 
     @staticmethod
     def _for_phone_text(names, sandboxed=(), updates=()) -> str:

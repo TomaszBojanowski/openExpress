@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.6.15\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-23 23:03+0200\n"
+"POT-Creation-Date: 2026-10-23 23:08+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -128,52 +128,52 @@ msgid "Could not delete {path}: {error}"
 msgstr ""
 
 #. TRANSLATORS: Connect IQ app types shown in app lists
-#: openexpress/ciq.py:43
+#: openexpress/ciq.py:44
 msgid "unknown"
 msgstr ""
 
-#: openexpress/ciq.py:43
+#: openexpress/ciq.py:44
 msgid "app"
 msgstr ""
 
-#: openexpress/ciq.py:43
+#: openexpress/ciq.py:44
 msgid "widget"
 msgstr ""
 
-#: openexpress/ciq.py:43
+#: openexpress/ciq.py:44
 msgid "watch face"
 msgstr ""
 
-#: openexpress/ciq.py:44
+#: openexpress/ciq.py:45
 msgid "data field"
 msgstr ""
 
-#: openexpress/ciq.py:44
+#: openexpress/ciq.py:45
 msgid "music app"
 msgstr ""
 
-#: openexpress/ciq.py:44
+#: openexpress/ciq.py:45
 msgid "activity"
 msgstr ""
 
-#: openexpress/ciq.py:170
+#: openexpress/ciq.py:171
 msgid "Not a Connect IQ configuration file"
 msgstr ""
 
-#: openexpress/ciq.py:178
+#: openexpress/ciq.py:179
 msgid "OUT.BIN does not contain an installed-apps response"
 msgstr ""
 
-#: openexpress/ciq.py:181
+#: openexpress/ciq.py:182
 #, python-brace-format
 msgid "The Connect IQ app list (OUT.BIN) is damaged: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:266
+#: openexpress/ciq.py:267
 msgid "This device does not support Connect IQ app configuration"
 msgstr ""
 
-#: openexpress/ciq.py:310
+#: openexpress/ciq.py:311
 #, python-brace-format
 msgid ""
 "Wrote {names} to the device; it will be installed after the device is "
@@ -184,7 +184,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:318
+#: openexpress/ciq.py:319
 #, python-brace-format
 msgid ""
 "Wrote the update of {names} to the device; it will be installed after the "
@@ -195,7 +195,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:330
+#: openexpress/ciq.py:331
 #, python-brace-format
 msgid ""
 "The Connect IQ app list on the device (OUT.BIN) has {count} entry that "
@@ -206,144 +206,144 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:339 openexpress/ciq.py:648 openexpress/ciq.py:1021
-#: openexpress/ciq.py:1255 openexpress/ciq.py:1275 openexpress/ciq.py:1544
+#: openexpress/ciq.py:340 openexpress/ciq.py:649 openexpress/ciq.py:1022
+#: openexpress/ciq.py:1278 openexpress/ciq.py:1298 openexpress/ciq.py:1567
 #: openexpress/cli.py:1114
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
 "ready and try again"
 msgstr ""
 
-#: openexpress/ciq.py:426
+#: openexpress/ciq.py:427
 msgid "Connect IQ apps"
 msgstr ""
 
-#: openexpress/ciq.py:437
+#: openexpress/ciq.py:438
 msgid "Connect IQ updates"
 msgstr ""
 
-#: openexpress/ciq.py:447
+#: openexpress/ciq.py:448
 msgid "Connect IQ install"
 msgstr ""
 
-#: openexpress/ciq.py:452
+#: openexpress/ciq.py:453
 #, python-brace-format
 msgid "The server refused to queue: {apps}"
 msgstr ""
 
-#: openexpress/ciq.py:471
+#: openexpress/ciq.py:472
 msgid "Connect IQ remove"
 msgstr ""
 
-#: openexpress/ciq.py:643
+#: openexpress/ciq.py:644
 msgid "no free app slots on the device"
 msgstr ""
 
-#: openexpress/ciq.py:655
+#: openexpress/ciq.py:656
 msgid "not enough Connect IQ space on the device"
 msgstr ""
 
-#: openexpress/ciq.py:661
+#: openexpress/ciq.py:662
 #, python-brace-format
 msgid "the device does not accept {datatype}"
 msgstr ""
 
-#: openexpress/ciq.py:771
+#: openexpress/ciq.py:772
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot update apps on this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:773
+#: openexpress/ciq.py:774
 msgid ""
 "The update waits in the queue in Garmin Connect and will be installed by the "
 "phone or Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:775
+#: openexpress/ciq.py:776
 msgid ""
 "The update will be queued in Garmin Connect and installed by the phone or "
 "Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:778
+#: openexpress/ciq.py:779
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot install apps on this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:780
+#: openexpress/ciq.py:781
 msgid ""
 "The app waits in the queue in Garmin Connect and will be installed by the "
 "phone or Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:782
+#: openexpress/ciq.py:783
 msgid ""
 "The app will be queued in Garmin Connect and installed by the phone or "
 "Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:788
+#: openexpress/ciq.py:789
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot remove apps from this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:790
+#: openexpress/ciq.py:791
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:914 openexpress/sync.py:629
+#: openexpress/ciq.py:915 openexpress/sync.py:629
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
 
-#: openexpress/ciq.py:952 openexpress/ciq.py:1045
+#: openexpress/ciq.py:953 openexpress/ciq.py:1056
 #, python-brace-format
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:956 openexpress/ciq.py:1181 openexpress/maps.py:450
+#: openexpress/ciq.py:957 openexpress/ciq.py:1204 openexpress/maps.py:450
 #: openexpress/updates.py:391
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr ""
 
-#: openexpress/ciq.py:986 openexpress/ciq.py:1095
+#: openexpress/ciq.py:987 openexpress/ciq.py:1108
 #, python-brace-format
 msgid "Cannot register the apps on the device: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1049
+#: openexpress/ciq.py:1060
 msgid "not enough free space on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1062
+#: openexpress/ciq.py:1073
 msgid "the app list folder was not found"
 msgstr ""
 
-#: openexpress/ciq.py:1078
+#: openexpress/ciq.py:1093
 msgid "USB connection"
 msgstr ""
 
-#: openexpress/ciq.py:1079 openexpress/ciq.py:1307
+#: openexpress/ciq.py:1094 openexpress/ciq.py:1330
 #, python-brace-format
 msgid "{error} Unplug the device and plug it in again."
 msgstr ""
 
-#: openexpress/ciq.py:1112
+#: openexpress/ciq.py:1135
 msgid "the GARMIN folder was not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1132
+#: openexpress/ciq.py:1155
 #, python-brace-format
 msgid "An unfinished file may have been left on the device: {paths}."
 msgid_plural "Unfinished files may have been left on the device: {paths}."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1165
+#: openexpress/ciq.py:1188
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), and what was "
@@ -351,7 +351,7 @@ msgid ""
 "unplug it (e.g. in Files): the device could read half a list and remove apps."
 msgstr ""
 
-#: openexpress/ciq.py:1172
+#: openexpress/ciq.py:1195
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), nor the one that "
@@ -359,58 +359,58 @@ msgid ""
 "for the device are lost. Make them again."
 msgstr ""
 
-#: openexpress/ciq.py:1195
+#: openexpress/ciq.py:1218
 #, python-brace-format
 msgid ""
 "{name} is already being removed; the device finishes it after it is "
 "unplugged."
 msgstr ""
 
-#: openexpress/ciq.py:1197
+#: openexpress/ciq.py:1220
 #, python-brace-format
 msgid ""
 "{name} is not installed yet; the device installs it after it is unplugged. "
 "Unplug the device first."
 msgstr ""
 
-#: openexpress/ciq.py:1227 openexpress/cli.py:1355
+#: openexpress/ciq.py:1250 openexpress/cli.py:1355
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
 msgstr ""
 
-#: openexpress/ciq.py:1259 openexpress/ciq.py:1573
+#: openexpress/ciq.py:1282 openexpress/ciq.py:1596
 msgid "App not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1273
+#: openexpress/ciq.py:1296
 msgid "the app folder was not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1280
+#: openexpress/ciq.py:1303
 #, python-brace-format
 msgid ""
 "{path} on the device is not the file the app list describes; nothing was "
 "deleted"
 msgstr ""
 
-#: openexpress/ciq.py:1285
+#: openexpress/ciq.py:1308
 #, python-brace-format
 msgid "The device refused to delete {path} ({reason}); nothing was changed."
 msgstr ""
 
-#: openexpress/ciq.py:1289
+#: openexpress/ciq.py:1312
 #, python-brace-format
 msgid "the device did not delete {path}"
 msgstr ""
 
-#: openexpress/ciq.py:1303
+#: openexpress/ciq.py:1326
 #, python-brace-format
 msgid ""
 "{name} was removed, but the device could not be mounted again: {error} "
 "Unplug the device and plug it in again."
 msgstr ""
 
-#: openexpress/ciq.py:1312
+#: openexpress/ciq.py:1335
 #, python-brace-format
 msgid ""
 "The file of {name} was deleted, but the app list on the device could not be "
@@ -419,88 +419,88 @@ msgid ""
 "update the list."
 msgstr ""
 
-#: openexpress/ciq.py:1316
+#: openexpress/ciq.py:1339
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1379
+#: openexpress/ciq.py:1402
 #, python-brace-format
 msgid "No OUT.BIN in {name}"
 msgstr ""
 
-#: openexpress/ciq.py:1383
+#: openexpress/ciq.py:1406
 #, python-brace-format
 msgid "Cannot read the copy of the app list {name}: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1388
+#: openexpress/ciq.py:1411
 #, python-brace-format
 msgid "No copy of the app list matches “{name}”."
 msgstr ""
 
-#: openexpress/ciq.py:1389
+#: openexpress/ciq.py:1412
 #, python-brace-format
 msgid "Several copies of the app list match “{name}”: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1418
+#: openexpress/ciq.py:1441
 msgid "Before any change, a copy of the app list of the device is made."
 msgstr ""
 
-#: openexpress/ciq.py:1419
+#: openexpress/ciq.py:1442
 msgid "No copy will be made: the device has no app list."
 msgstr ""
 
-#: openexpress/ciq.py:1438
+#: openexpress/ciq.py:1461
 #, python-brace-format
 msgid ""
 "Cannot read the app list of the device to make a copy of it: {error}. "
 "Nothing was changed."
 msgstr ""
 
-#: openexpress/ciq.py:1461
+#: openexpress/ciq.py:1484
 #, python-brace-format
 msgid ""
 "Cannot make a copy of the app list ({name}): {error}. Nothing was changed."
 msgstr ""
 
-#: openexpress/ciq.py:1517
+#: openexpress/ciq.py:1540
 #, python-brace-format
 msgid "{count} position would change ({kinds}):"
 msgid_plural "{count} positions would change ({kinds}):"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1522
+#: openexpress/ciq.py:1545
 #, python-brace-format
 msgid "{position}: {new} (now: {old})"
 msgstr ""
 
-#: openexpress/ciq.py:1527 openexpress/cli.py:1547 openexpress/gui/app.py:4889
+#: openexpress/ciq.py:1550 openexpress/cli.py:1547 openexpress/gui/app.py:4905
 #, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1529
+#: openexpress/ciq.py:1552
 #, python-brace-format
 msgid "Not in the copy, left where they are: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1530
+#: openexpress/ciq.py:1553
 #, python-brace-format
 msgid "Only in the copy, ignored: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1556 openexpress/cli.py:1153 openexpress/cli.py:1199
+#: openexpress/ciq.py:1579 openexpress/cli.py:1153 openexpress/cli.py:1199
 msgid ""
 "The app list that would be written does not match the device. Nothing was "
 "changed."
 msgstr ""
 
-#: openexpress/ciq.py:1570
+#: openexpress/ciq.py:1593
 msgid "Several entries on the device share this ID; the type is needed"
 msgstr ""
 
@@ -1301,7 +1301,7 @@ msgstr[1] ""
 msgid "removed: {name} ({type})"
 msgstr ""
 
-#: openexpress/cli.py:1176 openexpress/gui/app.py:4670
+#: openexpress/cli.py:1176 openexpress/gui/app.py:4686
 msgid "The device finishes the removal after it is unplugged."
 msgstr ""
 
@@ -1464,7 +1464,7 @@ msgstr ""
 msgid "Would remove it from your account list. Add --apply."
 msgstr ""
 
-#: openexpress/cli.py:1378 openexpress/gui/app.py:4632
+#: openexpress/cli.py:1378 openexpress/gui/app.py:4648
 #, python-brace-format
 msgid "Removed {name} from your account list."
 msgstr ""
@@ -1567,7 +1567,7 @@ msgstr ""
 msgid "Playlists: {count}"
 msgstr ""
 
-#: openexpress/cli.py:1530 openexpress/gui/app.py:4745
+#: openexpress/cli.py:1530 openexpress/gui/app.py:4761
 #, python-brace-format
 msgid "Free space: {size}"
 msgstr ""
@@ -2553,9 +2553,9 @@ msgstr ""
 #: openexpress/gui/app.py:3404 openexpress/gui/app.py:3626
 #: openexpress/gui/app.py:3883 openexpress/gui/app.py:4067
 #: openexpress/gui/app.py:4106 openexpress/gui/app.py:4505
-#: openexpress/gui/app.py:4539 openexpress/gui/app.py:4623
-#: openexpress/gui/app.py:4650 openexpress/gui/app.py:4814
-#: openexpress/gui/app.py:4910
+#: openexpress/gui/app.py:4539 openexpress/gui/app.py:4639
+#: openexpress/gui/app.py:4666 openexpress/gui/app.py:4830
+#: openexpress/gui/app.py:4926
 msgid "Cancel"
 msgstr ""
 
@@ -2635,12 +2635,12 @@ msgid "Loading Connect IQ apps…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:1279 openexpress/gui/app.py:4724
+#: openexpress/gui/app.py:1279 openexpress/gui/app.py:4740
 msgctxt "tab"
 msgid "Music"
 msgstr ""
 
-#: openexpress/gui/app.py:1280 openexpress/gui/app.py:4729
+#: openexpress/gui/app.py:1280 openexpress/gui/app.py:4745
 msgid "Reading music on the device…"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr ""
 
 #: openexpress/gui/app.py:1465 openexpress/gui/app.py:1704
 #: openexpress/gui/app.py:2085 openexpress/gui/app.py:2541
-#: openexpress/gui/app.py:4696
+#: openexpress/gui/app.py:4712
 msgid "Another operation is in progress"
 msgstr ""
 
@@ -3353,8 +3353,8 @@ msgstr ""
 msgid "Garmin map files (*.img)"
 msgstr ""
 
-#: openexpress/gui/app.py:3919 openexpress/gui/app.py:4788
-#: openexpress/gui/app.py:4846
+#: openexpress/gui/app.py:3919 openexpress/gui/app.py:4804
+#: openexpress/gui/app.py:4862
 msgid "Choose files stored on this computer"
 msgstr ""
 
@@ -3368,7 +3368,7 @@ msgstr ""
 
 #. TRANSLATORS: button
 #: openexpress/gui/app.py:3951 openexpress/gui/app.py:4169
-#: openexpress/gui/app.py:4816
+#: openexpress/gui/app.py:4832
 msgid "Copy"
 msgstr ""
 
@@ -3390,7 +3390,7 @@ msgid "openExpress did not copy this map to the device."
 msgstr ""
 
 #: openexpress/gui/app.py:3996 openexpress/gui/app.py:4103
-#: openexpress/gui/app.py:4621 openexpress/gui/app.py:4649
+#: openexpress/gui/app.py:4637 openexpress/gui/app.py:4665
 #, python-brace-format
 msgid "Remove {name}?"
 msgstr ""
@@ -3400,13 +3400,13 @@ msgid "Remove Anyway"
 msgstr ""
 
 #: openexpress/gui/app.py:3997 openexpress/gui/app.py:4107
-#: openexpress/gui/app.py:4652 openexpress/gui/app.py:4767
-#: openexpress/gui/app.py:4774
+#: openexpress/gui/app.py:4668 openexpress/gui/app.py:4783
+#: openexpress/gui/app.py:4790
 msgid "Remove"
 msgstr ""
 
 #: openexpress/gui/app.py:3999 openexpress/gui/app.py:4110
-#: openexpress/gui/app.py:4631 openexpress/gui/app.py:4674
+#: openexpress/gui/app.py:4647 openexpress/gui/app.py:4690
 #, python-brace-format
 msgid "Removing {name}…"
 msgstr ""
@@ -3673,24 +3673,24 @@ msgstr ""
 msgid "Restoring the order…"
 msgstr ""
 
-#: openexpress/gui/app.py:4577
+#: openexpress/gui/app.py:4580
 msgid "Queued in Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/app.py:4584
+#: openexpress/gui/app.py:4587 openexpress/gui/app.py:4606
 #, python-brace-format
 msgid "Installed {names}"
 msgstr ""
 
-#: openexpress/gui/app.py:4586
+#: openexpress/gui/app.py:4589
 msgid "Queued; it will be installed on the next sync"
 msgstr ""
 
-#: openexpress/gui/app.py:4589
+#: openexpress/gui/app.py:4592
 msgid "Installing apps…"
 msgstr ""
 
-#: openexpress/gui/app.py:4599
+#: openexpress/gui/app.py:4615
 #, python-brace-format
 msgid ""
 "{names}: openExpress cannot install apps on this device over USB yet. The "
@@ -3698,11 +3698,11 @@ msgid ""
 "or Garmin Express."
 msgstr ""
 
-#: openexpress/gui/app.py:4610
+#: openexpress/gui/app.py:4626
 msgid "Here you can only remove it from your account list."
 msgstr ""
 
-#: openexpress/gui/app.py:4611
+#: openexpress/gui/app.py:4627
 #, python-brace-format
 msgid ""
 "{name} cannot be removed over USB: this device shows no app files. Remove it "
@@ -3711,129 +3711,129 @@ msgid ""
 "Here you can only remove it from your account list."
 msgstr ""
 
-#: openexpress/gui/app.py:4624
+#: openexpress/gui/app.py:4640
 msgid "Remove from Account"
 msgstr ""
 
-#: openexpress/gui/app.py:4645
+#: openexpress/gui/app.py:4661
 msgid ""
 "The app will be deleted from the device over a direct USB connection; the "
 "device disappears from the file manager for a moment. The device finishes "
 "the removal after it is unplugged."
 msgstr ""
 
-#: openexpress/gui/app.py:4648
+#: openexpress/gui/app.py:4664
 msgid "The app and its settings will be deleted from the device."
 msgstr ""
 
-#: openexpress/gui/app.py:4651
+#: openexpress/gui/app.py:4667
 msgid "Remove and forget"
 msgstr ""
 
-#: openexpress/gui/app.py:4668
+#: openexpress/gui/app.py:4684
 #, python-brace-format
 msgid "Removed {name}"
 msgstr ""
 
-#: openexpress/gui/app.py:4698
+#: openexpress/gui/app.py:4714
 #, python-brace-format
 msgid "{name} enabled"
 msgstr ""
 
-#: openexpress/gui/app.py:4698
+#: openexpress/gui/app.py:4714
 #, python-brace-format
 msgid "{name} disabled"
 msgstr ""
 
-#: openexpress/gui/app.py:4710
+#: openexpress/gui/app.py:4726
 msgid "Saving…"
 msgstr ""
 
-#: openexpress/gui/app.py:4745
+#: openexpress/gui/app.py:4761
 msgid "Add to the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4748
+#: openexpress/gui/app.py:4764
 msgid "Folders…"
 msgstr ""
 
-#: openexpress/gui/app.py:4749
+#: openexpress/gui/app.py:4765
 msgid "Files…"
 msgstr ""
 
-#: openexpress/gui/app.py:4751
+#: openexpress/gui/app.py:4767
 msgid "Music on the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4751
+#: openexpress/gui/app.py:4767
 msgid "Podcasts on the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4752
+#: openexpress/gui/app.py:4768
 msgid "Audiobooks on the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4757
+#: openexpress/gui/app.py:4773
 #, python-brace-format
 msgid "{count} file · {size}"
 msgid_plural "{count} files · {size}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4761
+#: openexpress/gui/app.py:4777
 #, python-brace-format
 msgid "Show {count} file"
 msgid_plural "Show {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4770
+#: openexpress/gui/app.py:4786
 msgid "Playlists"
 msgstr ""
 
-#: openexpress/gui/app.py:4771
+#: openexpress/gui/app.py:4787
 msgid "Add Playlist…"
 msgstr ""
 
-#: openexpress/gui/app.py:4778
+#: openexpress/gui/app.py:4794
 msgid "Choose music to copy to the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4808
+#: openexpress/gui/app.py:4824
 msgid "Nothing new to copy"
 msgstr ""
 
-#: openexpress/gui/app.py:4812
+#: openexpress/gui/app.py:4828
 #, python-brace-format
 msgid "Copy {count} file?"
 msgid_plural "Copy {count} files?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4819 openexpress/gui/app.py:4915
+#: openexpress/gui/app.py:4835 openexpress/gui/app.py:4931
 msgid "Copying music…"
 msgstr ""
 
-#: openexpress/gui/app.py:4822
+#: openexpress/gui/app.py:4838
 #, python-brace-format
 msgid "Copied {count} file"
 msgid_plural "Copied {count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4828
+#: openexpress/gui/app.py:4844
 msgid "Scanning files…"
 msgstr ""
 
-#: openexpress/gui/app.py:4831
+#: openexpress/gui/app.py:4847
 msgid "Choose a playlist to add to the device"
 msgstr ""
 
-#: openexpress/gui/app.py:4833
+#: openexpress/gui/app.py:4849
 msgid "Playlists (.m3u, .m3u8)"
 msgstr ""
 
-#: openexpress/gui/app.py:4857
+#: openexpress/gui/app.py:4873
 #, python-brace-format
 msgid "{size} will be copied to the device ({count} file already there)."
 msgid_plural ""
@@ -3841,72 +3841,72 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4868
+#: openexpress/gui/app.py:4884
 #, python-brace-format
 msgid "{count} track"
 msgid_plural "{count} tracks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4870
+#: openexpress/gui/app.py:4886
 #, python-brace-format
 msgid "{count} file to copy ({size}), {already} already on the device"
 msgid_plural "{count} files to copy ({size}), {already} already on the device"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4879
+#: openexpress/gui/app.py:4895
 msgid ""
 "A playlist with this name is already on the device and will be replaced."
 msgstr ""
 
-#: openexpress/gui/app.py:4883
+#: openexpress/gui/app.py:4899
 #, python-brace-format
 msgid "{count} track cannot be added:"
 msgid_plural "{count} tracks cannot be added:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:4892
+#: openexpress/gui/app.py:4908
 msgid ""
 "openExpress installed as a Flatpak can read music only from the Music and "
 "Downloads folders."
 msgstr ""
 
-#: openexpress/gui/app.py:4905 openexpress/music.py:358
+#: openexpress/gui/app.py:4921 openexpress/music.py:358
 msgid "The playlist has no tracks that can be added."
 msgstr ""
 
-#: openexpress/gui/app.py:4908
+#: openexpress/gui/app.py:4924
 #, python-brace-format
 msgid "Add the playlist “{name}”?"
 msgstr ""
 
 #. TRANSLATORS: button that adds the playlist to the device
-#: openexpress/gui/app.py:4912
+#: openexpress/gui/app.py:4928
 msgid "Add"
 msgstr ""
 
-#: openexpress/gui/app.py:4919
+#: openexpress/gui/app.py:4935
 #, python-brace-format
 msgid "Playlist “{name}” added"
 msgstr ""
 
-#: openexpress/gui/app.py:4924
+#: openexpress/gui/app.py:4940
 msgid "Reading the playlist…"
 msgstr ""
 
-#: openexpress/gui/app.py:4931
+#: openexpress/gui/app.py:4947
 msgid "Removing…"
 msgstr ""
 
-#: openexpress/gui/app.py:5013
+#: openexpress/gui/app.py:5029
 msgid ""
 "This page could not be shown. Try again; if it happens again, report the "
 "problem with the log attached."
 msgstr ""
 
-#: openexpress/gui/app.py:5052
+#: openexpress/gui/app.py:5068
 #, python-brace-format
 msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""

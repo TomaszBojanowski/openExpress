@@ -18,6 +18,7 @@ import posixpath
 import time
 import uuid
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -1027,13 +1028,23 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
     settled: set[int] = set()  # id() of the entries of `hidden` already reported
     opened = registered = False
     register_error: Exception | None = None
+    # The error that broke the session: the device mounted again after it (RemountFailed)
+    # would hide it otherwise.
+    broken: list[DeviceError] = []
 
     def fail(h: _Hidden, error) -> None:
         settled.add(id(h))
         report.failed.append((h.name, str(error)))
 
+    def broken_off(error) -> None:
+        # What was sent is not registered and cannot be removed any more; the rest was not
+        # sent.
+        for h in hidden:
+            if id(h) not in settled:
+                fail(h, _with_leftovers(error, [h.path] if h in sent else []))
+
     try:
-        with opener as session:
+        with opener as session, _noting(broken):
             opened = True
             store = _ptp_store(session)
             for h in hidden:
@@ -1075,16 +1086,18 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
         report.for_phone += [h.name for h in hidden]
         return False
     except RemountFailed as e:
+        if broken:
+            # The session broke, then the device was not mounted again: what became of each
+            # app first, then the USB connection.
+            broken_off(broken[0])
         report.failed.append((_("USB connection"), _(
             "{error} Unplug the device and plug it in again.").format(error=e)))
         if not opened:
             report.for_phone += [h.name for h in hidden]
+        if broken:
+            return False
     except DeviceError as e:
-        # The session broke: what was sent is not registered and cannot be removed any
-        # more, the rest was not sent.
-        for h in hidden:
-            if id(h) not in settled:
-                fail(h, _with_leftovers(e, [h.path] if h in sent else []))
+        broken_off(e)  # the session broke
         return False
     if register_error is not None:
         for p in new_paths:
@@ -1101,6 +1114,16 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
         report.updated_ids += [app_id for app_id in (
             message_app_id(h.message) for h in sent if h.entry is None) if app_id is not None]
     return registered
+
+
+@contextmanager
+def _noting(errors: list):
+    """An error of the device in the block is put in `errors` and passed on."""
+    try:
+        yield
+    except DeviceError as e:
+        errors.append(e)
+        raise
 
 
 def _ptp_store(session) -> int:
