@@ -919,3 +919,82 @@ def test_the_restore_button_of_the_apps_page_starts_from_itself(narrow_window, m
     (button,) = _page_buttons(win, "apps", "Restore…")
     button.emit("clicked")
     assert started == [button]
+
+
+PRIMARY = types.SimpleNamespace(unit_id=3000000009, is_this_device=False, name="Other watch",
+                                capable=True)
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
+def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
+    """Set as Primary asks first; once Set is chosen, the button spins while the account is
+    changed, and "Changing the primary training device…" waits 500 ms."""
+    import time
+
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    questions = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
+    monkeypatch.setattr(app.service, "set_primary_training",
+                        lambda client, device, apply: time.sleep(delay))
+    s = types.SimpleNamespace(device=types.SimpleNamespace(description="Test watch"),
+                              logged_in=True, ownership_error=None, client=None)
+    overviews = []
+    win = _task_window(session=s, show_overview=lambda: overviews.append(True),
+                       _primary_training_text=app.MainWindow._primary_training_text)
+    win.set_primary_training = types.MethodType(app.MainWindow.set_primary_training, win)
+    button = Gtk.Button(label="Set as Primary")
+    app.MainWindow.confirm_primary_training(win, PRIMARY, button)
+    assert button.get_sensitive() and not _spinning(button)  # only the question so far
+    (question,) = questions
+    question.emit("response", "set")
+    seen = _while_busy(win, button)
+    _spun(seen, button, "Set as Primary", "Changing the primary training device…", text_shown)
+    assert win.toasts == ["Primary training device changed"] and overviews == [True]
+
+
+@pytest.mark.needs_display
+def test_cancel_leaves_set_as_primary_as_it_was(monkeypatch):
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    questions = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
+    s = types.SimpleNamespace(device=types.SimpleNamespace(description="Test watch"),
+                              logged_in=True, ownership_error=None, client=None)
+    win = _task_window(session=s, _primary_training_text=app.MainWindow._primary_training_text)
+    win.set_primary_training = lambda button=None: pytest.fail("set without Set")
+    button = Gtk.Button(label="Set as Primary")
+    app.MainWindow.confirm_primary_training(win, PRIMARY, button)
+    questions[0].emit("response", "cancel")
+    assert button.get_sensitive() and not _spinning(button) and not win.busy
+
+
+@pytest.mark.needs_display
+def test_set_as_primary_hands_its_own_button_on(monkeypatch):
+    """The button the device page adds when another device is the primary one goes to the
+    question with itself."""
+    from gi.repository import Adw
+
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app.service, "primary_training_status",
+                        lambda client, device, listed: PRIMARY)
+    started = []
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(client=None, device=None, account_devices=None),
+        busy=False, _action_buttons=[],
+        in_background=lambda work, done, failed=None: done(work()),
+        _primary_training_text=app.MainWindow._primary_training_text,
+        confirm_primary_training=lambda status, button=None: started.append((status, button)))
+    win._button = types.MethodType(app.MainWindow._button, win)
+    row = Adw.ActionRow()
+    app.MainWindow._show_primary_training(win, row)
+    (button,) = _suffix_buttons(row)
+    assert button.get_label() == "Set as Primary"
+    button.emit("clicked")
+    assert started == [(PRIMARY, button)]

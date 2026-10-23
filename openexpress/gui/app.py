@@ -2682,7 +2682,9 @@ class MainWindow(Adw.ApplicationWindow):
             row.set_subtitle(GLib.markup_escape_text(self._primary_training_text(status)))
             if not status.is_this_device and status.capable is True:
                 row.add_suffix(self._button(
-                    _("Set as Primary"), lambda: self.confirm_primary_training(status)))
+                    _("Set as Primary"),
+                    lambda button: self.confirm_primary_training(status, button),
+                    with_button=True))
 
         def failed(_e):
             if self.session is s:
@@ -2692,7 +2694,9 @@ class MainWindow(Adw.ApplicationWindow):
             lambda: service.primary_training_status(s.client, s.device, s.account_devices),
             done, failed)
 
-    def confirm_primary_training(self, status) -> None:
+    def confirm_primary_training(self, status, button: Gtk.Button | None = None) -> None:
+        """Set as Primary: asked first; once Set is chosen, the change runs from `button`,
+        which spins meanwhile."""
         s = self.session
         if s is None:
             return
@@ -2707,10 +2711,10 @@ class MainWindow(Adw.ApplicationWindow):
         d.add_response("set", _("Set"))
         d.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
         d.set_default_response("cancel")
-        d.connect("response", lambda _d, r: r == "set" and self.set_primary_training())
+        d.connect("response", lambda _d, r: r == "set" and self.set_primary_training(button))
         d.present(self)
 
-    def set_primary_training(self) -> None:
+    def set_primary_training(self, button: Gtk.Button | None = None) -> None:
         s = self.session
         if not s or not s.logged_in or s.ownership_error is not None:
             return
@@ -2722,7 +2726,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.run_task(_("Changing the primary training device…"),
                       lambda: service.set_primary_training(s.client, s.device, apply=True), done,
-                      device=False)
+                      device=False, button=button)
 
     def _set_device_texture(self, texture) -> None:
         self.device_picture.set_paintable(texture)

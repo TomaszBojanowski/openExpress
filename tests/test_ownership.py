@@ -806,7 +806,7 @@ def test_window_primary_training_row(device_root, device):
 
     def window_with_button(client):
         win = plain_window(client)
-        win._button = lambda label, cb: label
+        win._button = lambda label, cb, with_button=False: label
         return win
 
     window = window_with_button
@@ -1007,7 +1007,7 @@ def test_window_set_primary_training(device_root, device):
     s = service.check_session(session(device_root, device, account.client))
     events = []
 
-    def run_task(title, fn, on_done=None, on_error=None, device=True):
+    def run_task(title, fn, on_done=None, on_error=None, device=True, button=None):
         events.append(title)
         assert device is False  # an account setting: the device may be unplugged
         on_done(fn())
