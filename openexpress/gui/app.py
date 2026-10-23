@@ -63,6 +63,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     garmin_products_on_usb,
     garmin_ums,
     garmin_usb,
+    held_elsewhere_text,
     mass_storage_text,
     mtp_missing,
     no_mtp_text,
@@ -117,10 +118,6 @@ REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unpl
 # TRANSLATORS: the same, after the sentence about a PIN, which names the device already
 REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, unplug the cable "
                            "and plug it back in.")
-# TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
-# (KDE's Dolphin held a fēnix 8 through kiod6, #13)
-HELD_HINT = N_("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, "
-               "then unplug the cable and plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 # The captions of the window (a hard space before "·"): in i18n, for last_sync too.
@@ -1920,7 +1917,7 @@ class MainWindow(Adw.ApplicationWindow):
             # (after REPLUG_HINT_S in its normal mode), then other programs.
             replug = f" {_(REPLUG_HINT_AFTER_PIN)}" if normal_s >= REPLUG_HINT_S else ""
             return (_("The device is not ready"),
-                    f"{not_ready_text(state)}{replug} {_(HELD_HINT)}", False)
+                    f"{not_ready_text(state)}{replug} {held_elsewhere_text()}", False)
         if state == PRESENT and normal_s >= REPLUG_HINT_S:
             # One sentence becomes two: each with its full stop.
             text = _("This takes a moment after the cable is plugged in.")

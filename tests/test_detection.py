@@ -3587,7 +3587,7 @@ def test_device_that_never_offers_its_files(plugged):
         plugged.open()
     assert str(error.value) == (
         "The Garmin device is connected, but it does not offer its files. Check its screen: "
-        "if it is locked with a PIN or asks something, unlock it or confirm.")
+        "if it is locked with a PIN or asks something, unlock it or confirm. " + HELD_HINT)
     assert 45 <= plugged.clock.now <= 46 and plugged.opened == []
 
 
@@ -3762,8 +3762,8 @@ REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug 
 # After the sentence about a PIN, which names the device already.
 REPLUG_HINT_AFTER_PIN = "If it isn't locked and isn't asking for anything, unplug the cable and plug it back in."
 # Added once the wait ran out (#13: Dolphin's kiod6 held the device).
-HELD_HINT = ("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, "
-             "then unplug the cable and plug it back in.")
+HELD_HINT = ("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
+             "unplug the cable and plug it back in.")
 STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 

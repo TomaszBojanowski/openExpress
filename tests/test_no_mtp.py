@@ -22,7 +22,7 @@ NO_MTP_TEXT = ("openExpress reads the device over MTP through gvfs, and gvfs on 
                "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: sudo "
                "pacman -S gvfs-mtp; Debian and Ubuntu: sudo apt install gvfs-backends), log "
                "out and back in, then plug the device in again.")
-HELD = ("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, then "
+HELD = ("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
         "unplug the cable and plug it back in.")
 
 
@@ -133,13 +133,21 @@ def test_other_programs_in_polish():
         text = MainWindow._usb_notice(gio_storage.PRESENT, 46, 5)[1]
     finally:
         i18n.setup("en")
-    assert text.endswith("Urządzenie może zajmować inny program (np. Dolphin albo Nautilus): "
+    assert text.endswith("Urządzenie może zajmować inny program (np. Dolphin w\u00a0KDE): "
                          "zamknij go, a\u00a0potem odłącz kabel i\u00a0podłącz go ponownie.")
 
 
-def test_the_command_line_after_45_s_is_as_before(plugged):
-    """Only the window's page gets the sentence; the command line says what it said."""
+def test_the_command_line_after_45_s_names_other_programs_too(plugged):
+    """The same sentence as the window's page, after the PIN (decision of 24.10.2026)."""
     plugged.plug("51b4")
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open()
+    assert str(error.value) == f"{gio_storage.not_ready_text(gio_storage.PRESENT)} {HELD}"
+
+
+def test_a_device_still_starting_after_45_s_gets_no_such_sentence(plugged):
+    """In its transitional mode no program holds it over MTP yet: as before."""
+    plugged.plug("0003")
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()
     assert HELD not in str(error.value)

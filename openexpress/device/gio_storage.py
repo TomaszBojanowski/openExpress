@@ -957,6 +957,15 @@ def mtp_missing() -> bool:
     return missing
 
 
+def held_elsewhere_text() -> str:
+    """Said once the wait for a device in its normal mode ran out (the window and the command
+    line): another program may hold it over MTP, so that gvfs cannot offer it (KDE's Dolphin
+    held a fēnix 8 through kiod6, #13). Not Nautilus: it reads the device through gvfs."""
+    # TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
+    return _("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
+             "unplug the cable and plug it back in.")
+
+
 def no_mtp_title() -> str:
     # TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
     return _("No MTP support in the system (gvfs-mtp)")
@@ -1038,7 +1047,10 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                 raise
             if clock() >= deadline:
                 if isinstance(e, NotThereYet):
-                    raise NotThereYet(not_ready_text(state)) from e
+                    text = not_ready_text(state)
+                    if state == PRESENT:
+                        text = f"{text} {held_elsewhere_text()}"
+                    raise NotThereYet(text) from e
                 raise
             if not told and notify is not None:
                 notify(_("The device is starting…"))
