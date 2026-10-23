@@ -768,3 +768,31 @@ def test_the_command_line_report_still_asks_the_device(iq_device):
     text = report.build(dev, storage, False)
     assert "- Storage: 64.0 GB total, 52.1 GB free" in text.splitlines()
     assert sorted(storage.elsewhere + storage.on_gtk) == ["capacity", "free_space"]
+
+
+# --- "Storage": the device's own on its page, the computer's disk in the preferences -------------
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("language", "device_page", "preferences"), [
+    ("en", "Storage", "Storage"), ("pl", "Pamięć", "Miejsce na dysku")])
+def test_storage_is_named_for_what_it_is(iq_device, language, device_page, preferences):
+    """The group of "Device storage" on the device page is about the device ("Pamięć"); the
+    group of the cache in the preferences about the disk of the computer ("Miejsce na
+    dysku"): in English both are "Storage", in Polish each has its own name."""
+    from openexpress import i18n
+    from openexpress.gui.app import MainWindow
+
+    st, dev = iq_device
+    i18n.setup(language)
+    try:
+        win, section, _s = _overview_window(Space(st.root), dev, space=(FREE, SIZE))
+        win.show_overview()
+        titles = [g.get_title() for g in section.groups]
+        assert device_page in titles
+        assert preferences not in titles or preferences == device_page
+        prefs = types.SimpleNamespace(busy=False)
+        prefs._ask_clear_cache = types.MethodType(MainWindow._ask_clear_cache, prefs)
+        group = MainWindow._cache_group(prefs)
+        assert group.get_title() == preferences
+    finally:
+        i18n.setup("en")

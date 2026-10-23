@@ -2592,6 +2592,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         # The space as the session holds it (read with the device, or after a task that
         # wrote to it): the page asks the device nothing.
+        # TRANSLATORS: group on the device page: the device's own storage
         g = sec.group(_("Storage"))
         self.storage_row = Adw.ActionRow(title=_("Device storage"))
         self.storage_bar = Gtk.LevelBar(min_value=0, max_value=1, valign=Gtk.Align.CENTER,
@@ -3145,8 +3146,9 @@ class MainWindow(Adw.ApplicationWindow):
         with "Clear All…". The sizes are counted in the background, never on the window's
         thread; the group is about the cache of this installation alone."""
         kind = _("Flatpak") if paths.in_flatpak() else _("version from source")
-        # TRANSLATORS: group in the preferences: the cache of downloaded maps and updates
-        g = Adw.PreferencesGroup(title=_("Storage"), description=_(
+        # TRANSLATORS: group in the preferences: the cache of downloaded maps and updates,
+        # on the disk of the computer (not the device's storage of the device page)
+        g = Adw.PreferencesGroup(title=pgettext("preferences", "Storage"), description=_(
             "Only the files of this installation ({kind}); openExpress downloads them again "
             "when needed").format(kind=kind))
         parts = {}
