@@ -53,7 +53,9 @@ class Server:
 
         self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
         self.url = f"http://127.0.0.1:{self.srv.server_address[1]}"
-        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        # A short poll: shutdown() waits for it (the default of 0.5 s took most of the run).
+        threading.Thread(target=self.srv.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True).start()
 
 
 @pytest.fixture
@@ -61,6 +63,7 @@ def server():
     s = Server()
     yield s
     s.srv.shutdown()
+    s.srv.server_close()
 
 
 def unused_url():
