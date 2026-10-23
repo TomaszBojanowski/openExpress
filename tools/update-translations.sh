@@ -30,6 +30,8 @@ fi
 for po in po/*.po; do
     lang=$(basename "$po" .po)
     msgmerge --quiet --update --backup=none "$po" "$POT"
+    # Texts no code uses any more are dropped, not kept as "#~" (msgmerge has no option for it)
+    msgattrib --no-obsolete --output-file="$po" "$po"
     mkdir -p "$LOCALE/$lang/LC_MESSAGES"
     msgfmt --check --output-file="$LOCALE/$lang/LC_MESSAGES/$DOMAIN.mo" "$po"
     echo "$lang: $(msgfmt --statistics --output-file=/dev/null "$po" 2>&1)"
