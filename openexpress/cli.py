@@ -39,6 +39,11 @@ log = logging.getLogger(__name__)
 
 _human = human_size  # the name the commands and the window use
 
+# The exit code of `sync --apply` when the first sync with this program waits for a choice
+# (baseline or --all): not 2, which argparse gives a wrong command line (README, "Exit
+# codes").
+FIRST_SYNC_CHOICE = 3
+
 
 # Commands that read or write many files on the device when they are not a dry run.
 WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music"})
@@ -528,7 +533,7 @@ def cmd_sync(args) -> int:
                      "(Connect rejects duplicates)"),
             file=sys.stderr,
         )
-        return 2
+        return FIRST_SYNC_CHOICE
 
     from openexpress import last_sync, service
 

@@ -34,8 +34,9 @@ Not using Flatpak, or installing offline? See [Other ways to install](#other-way
 
 - [Features](#features) · [Supported devices](#supported-devices)
 - [Usage](#usage): [getting started](#getting-started), [window and background sync](#application-window-and-background-sync),
-  [command line](#command-line), [software updates](#software-updates), [maps of your own](#maps-of-your-own),
-  [Connect IQ apps](#connect-iq-apps), [music](#music), [sync details](#sync-details)
+  [command line](#command-line), [exit codes](#exit-codes), [software updates](#software-updates),
+  [maps of your own](#maps-of-your-own), [Connect IQ apps](#connect-iq-apps), [music](#music),
+  [sync details](#sync-details)
 - [Configuration](#configuration): [languages](#languages), [log file](#log-file), [cache](#cache),
   [privacy and security](#privacy-and-security), [Flatpak permissions](#flatpak-permissions)
 - [Other ways to install](#other-ways-to-install) · [Development](#development) · [License](#license)
@@ -186,6 +187,16 @@ command fail at once instead.
 
 While a sync, a backup or a write is running, the window shows **Do not unplug the device**
 and the command-line tool prints the same warning when it starts such an operation.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | done (also a dry run) |
+| 1 | an error or a refusal: the device, the account, a server or the network; the message says why |
+| 2 | a wrong command line: an unknown command or option, or a missing argument |
+| 3 | the first sync with this program waits for a choice: `openexpress baseline --apply` or `openexpress sync --apply --all` |
+| 130 | interrupted (Ctrl+C) |
 
 ### Software updates
 

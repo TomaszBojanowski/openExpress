@@ -107,8 +107,20 @@ def test_apply_respects_sync_lock(device_root, xdg, fake_client, monkeypatch, ca
 def test_first_sync_guard_without_candidates(device_root, xdg, fake_client, capsys):
     # Only a type with nothing to upload: the guard must still stop the first sync.
     rc = main(["--path", str(device_root), "sync", "--apply", "--type", "FIT_TYPE_99"])
-    assert rc == 2
+    assert rc == 3
     assert "baseline --apply" in capsys.readouterr().err
+    assert not _state_file(device_root).exists()
+
+
+def test_the_first_sync_choice_has_an_exit_code_of_its_own(device_root, xdg, fake_client,
+                                                           capsys):
+    """3, not 2: 2 is a wrong command line (argparse), which a script must tell apart from
+    "choose baseline or sync --all first" (decision of 23.10.2026)."""
+    assert main(["--path", str(device_root), "sync", "--apply"]) == 3
+    assert "baseline --apply" in capsys.readouterr().err
+    with pytest.raises(SystemExit) as wrong:
+        main(["--path", str(device_root), "sync", "--no-such-option"])
+    assert wrong.value.code == 2
     assert not _state_file(device_root).exists()
 
 
@@ -116,7 +128,7 @@ def test_download_only_first_run_does_not_create_state(device_root, xdg, fake_cl
     assert main(["--path", str(device_root), "sync", "--apply", "--download-only"]) == 0
     assert not _state_file(device_root).exists()
     # The guard still applies afterwards.
-    assert main(["--path", str(device_root), "sync", "--apply"]) == 2
+    assert main(["--path", str(device_root), "sync", "--apply"]) == 3
 
 
 def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, capsys):
