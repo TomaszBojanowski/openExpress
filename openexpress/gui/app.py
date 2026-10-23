@@ -4246,7 +4246,8 @@ class MainWindow(Adw.ApplicationWindow):
             title=_("Restore the order from a copy"),
             subtitle=GLib.markup_escape_text(
                 blocked or _("A copy of the app list is made before every change")))
-        row.add_suffix(self._button(_("Restore…"), self.choose_order))
+        row.add_suffix(self._button(_("Restore…"), lambda button: self.choose_order(button),
+                                    with_button=True))
         if blocked:
             row.set_tooltip_text(blocked)
             row.set_sensitive(False)
@@ -4390,8 +4391,9 @@ class MainWindow(Adw.ApplicationWindow):
         lines += ["", _("The same apps with the same flags; only the order changes."), copy_note]
         return "\n".join(lines)
 
-    def choose_order(self) -> None:
-        """Pick one of the saved copies of the app list to take the order from."""
+    def choose_order(self, button: Gtk.Button | None = None) -> None:
+        """Pick one of the saved copies of the app list to take the order from; read in a
+        task started from `button` (Restore…), which spins meanwhile."""
         from openexpress import ciq
 
         s = self.session
@@ -4452,7 +4454,7 @@ class MainWindow(Adw.ApplicationWindow):
                                             setattr(self, "_order_chosen", None)))
             d.present(self)
 
-        self.run_task(_("Reading the copies of the app list…"), work, show)
+        self.run_task(_("Reading the copies of the app list…"), work, show, button=button)
 
     def confirm_order(self, copy, plan, note: str) -> None:
         """`note`: what happens before the change (ciq.copy_note), told by choose_order with

@@ -796,3 +796,126 @@ def test_storage_is_named_for_what_it_is(iq_device, language, device_page, prefe
         assert group.get_title() == preferences
     finally:
         i18n.setup("en")
+
+
+# --- the button of a task spins, its words wait 500 ms (5406923): the other buttons ------------
+
+def _task_window(**attrs):
+    """A window as it runs a task for real: run_task and set_busy with their bar."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    win = types.SimpleNamespace(
+        busy=False, _waiting=0, _refresh_pending=False, _action_buttons=[], session=None,
+        action_bar=Gtk.ActionBar(revealed=False), progress_label=Gtk.Label(),
+        progress_bar=Gtk.ProgressBar(), busy_spinner=Gtk.Spinner(), unplug_label=Gtk.Label(),
+        banner=Adw.Banner(), errors=[], toasts=[])
+    win._update_actions = lambda *a: None
+    win.toast = win.toasts.append
+    win.error = lambda title, text: win.errors.append(text)
+    for name in ("run_task", "set_busy", "_stop_waiting", "_run_pending_refresh"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
+    for name, value in attrs.items():
+        setattr(win, name, value)
+    return win
+
+
+def _while_busy(win, button):
+    """Turns the window's loop until its task has ended; what it showed meanwhile:
+    (the bar out, its text, the button clickable, a spinner in the button) each time."""
+    import time
+
+    from gi.repository import GLib
+
+    seen = []
+    deadline = time.monotonic() + 5
+    while win.busy and time.monotonic() < deadline:
+        seen.append((win.action_bar.get_revealed(), win.progress_label.get_text(),
+                     button.get_sensitive(), _spinning(button)))
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.005)
+    return seen
+
+
+def _spun(seen, button, label, title, text_shown) -> None:
+    """The button spun and could not be clicked all along; the words of the task came only
+    after 500 ms (text_shown: the task took longer); then the button is as it was."""
+    assert seen and all(not clickable and spins for _out, _text, clickable, spins in seen)
+    shown = [text for out, text, _clickable, _spins in seen if out]
+    assert (shown != []) is text_shown
+    assert set(shown) <= {title}
+    assert button.get_label() == label and button.get_sensitive() and not _spinning(button)
+
+
+DELAYS = [(0.1, False), (0.8, True)]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
+def test_restore_order_spins_its_button(order_device, monkeypatch, delay, text_shown):
+    """Restore… reads the copies of the app list from the click with a spinning button;
+    then its question, as before."""
+    import time
+
+    from gi.repository import Gtk
+
+    from openexpress import ciq
+    from openexpress.gui import app
+
+    st, dev, backups = order_device
+    Dialog.made = []
+    monkeypatch.setattr(app.Adw, "AlertDialog", Dialog)
+    real = ciq.order_choices
+    monkeypatch.setattr(ciq, "order_choices", lambda device, state: (
+        time.sleep(delay), real(device, state, backups))[1])
+    win = _task_window(session=types.SimpleNamespace(device=dev, storage=st),
+                       _order_blocked=lambda state: None,
+                       _order_rows=app.MainWindow._order_rows)
+    button = Gtk.Button(label="Restore…")
+    app.MainWindow.choose_order(win, button)
+    seen = _while_busy(win, button)
+    _spun(seen, button, "Restore…", "Reading the copies of the app list…", text_shown)
+    assert len(Dialog.made) == 1 and win.errors == []
+
+
+def _page_buttons(win, key, label):
+    """The buttons labelled so on page `key` of the real window."""
+    from gi.repository import Gtk
+
+    out, stack = [], [win.sections[key].stack]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Gtk.Button) and w.get_label() == label:
+            out.append(w)
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    return out
+
+
+# The real window as the test of the narrowest window builds it (its pages filled).
+from test_narrow_window import narrow_window  # noqa: E402, F401 - the fixture
+
+REAL_WINDOW = [pytest.mark.needs_display,
+               # PyGObject's own (gi/events.py) while the loop turns; not our code.
+               pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")]
+
+
+@REAL_WINDOW[0]
+@REAL_WINDOW[1]
+def test_the_restore_button_of_the_apps_page_starts_from_itself(narrow_window, monkeypatch):
+    """Restore… on the Apps page of the real window hands its own button to choose_order."""
+    from test_narrow_window import _fill
+
+    from openexpress.gui.app import MainWindow
+
+    started = []
+    monkeypatch.setattr(MainWindow, "choose_order", lambda self, button=None: started.append(
+        button))
+    win = narrow_window("en")
+    _fill(win, "apps")
+    (button,) = _page_buttons(win, "apps", "Restore…")
+    button.emit("clicked")
+    assert started == [button]
