@@ -30,9 +30,30 @@ menu; see [Getting started](#getting-started).
 
 Not using Flatpak, or installing offline? See [Other ways to install](#other-ways-to-install).
 
+### System requirements
+
+openExpress reads devices that connect over MTP (most watches and bike computers) through
+gvfs, as GNOME's file manager does; the Flatpak uses the gvfs of your system. gvfs needs its
+MTP backend:
+
+- Fedora: `sudo dnf install gvfs-mtp`
+- Arch and distributions based on it (e.g. CachyOS, Manjaro): `sudo pacman -S gvfs-mtp`
+- Debian, Ubuntu: `sudo apt install gvfs-backends`
+
+GNOME comes with it; KDE Plasma and other desktops often do not. Log out and back in after
+installing it. Without it, the window says **No MTP support in the system (gvfs-mtp)** as soon
+as a device in its normal mode is plugged in, and the command line says the same. Devices in
+mass storage mode (such as the Varia RTL515) need no MTP: the system mounts them as a drive.
+
+**KDE Plasma and Dolphin:** Dolphin opens MTP devices with KDE's own MTP support (kio-mtp,
+in the `kiod6` process), not through gvfs, and can keep hold of the device: while it does,
+gvfs cannot offer it, and after 45 seconds the window says **The device is not ready**. Close
+Dolphin and any other program that shows the device's files, unplug the cable, plug it back
+in, and open the device in openExpress rather than in Dolphin.
+
 ## Contents
 
-- [Features](#features) · [Supported devices](#supported-devices)
+- [System requirements](#system-requirements) · [Features](#features) · [Supported devices](#supported-devices)
 - [Usage](#usage): [getting started](#getting-started), [window and background sync](#application-window-and-background-sync),
   [command line](#command-line), [exit codes](#exit-codes), [software updates](#software-updates),
   [maps of your own](#maps-of-your-own), [Connect IQ apps](#connect-iq-apps), [music](#music),

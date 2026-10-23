@@ -143,3 +143,17 @@ def test_the_command_line_after_45_s_is_as_before(plugged):
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()
     assert HELD not in str(error.value)
+
+
+def test_the_readme_names_the_same_packages_and_words():
+    """README, "System requirements": the same install commands as the window and the
+    command line, and the words the window shows."""
+    from pathlib import Path
+
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    section = readme.split("### System requirements", 1)[1].split("\n## ", 1)[0]
+    for command in ("sudo dnf install gvfs-mtp", "sudo pacman -S gvfs-mtp",
+                    "sudo apt install gvfs-backends"):
+        assert command in NO_MTP_TEXT and f"`{command}`" in section
+    assert f"**{NO_MTP_TITLE}**" in section and "**The device is not ready**" in section
+    assert "Dolphin" in section and "kiod6" in section
