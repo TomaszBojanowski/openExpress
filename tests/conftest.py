@@ -179,6 +179,52 @@ def no_block_devices(_empty_sys_class_block, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    """No test reaches the network: a name lookup or a connection beyond this computer is
+    refused and noted, and the test fails, also when the code under test catches the error
+    (as the command line does). The tests' own servers listen on 127.0.0.1; the display and
+    D-Bus use Unix sockets."""
+    import socket
+
+    tried = []
+    lookup, connect, connect_ex = (socket.getaddrinfo, socket.socket.connect,
+                                   socket.socket.connect_ex)
+
+    def local(host) -> bool:
+        host = str(host or "")
+        return host in ("", "localhost", "::1") or host.startswith("127.")
+
+    def getaddrinfo(host, *args, **kwargs):
+        if not local(host):
+            tried.append(str(host))
+            raise socket.gaierror(socket.EAI_NONAME, "the tests do not reach the network")
+        return lookup(host, *args, **kwargs)
+
+    def refused(sock, address) -> bool:
+        if sock.family in (socket.AF_INET, socket.AF_INET6) and not local(address[0]):
+            tried.append(str(address[0]))
+            return True
+        return False
+
+    def guarded_connect(self, address):
+        if refused(self, address):
+            raise OSError("the tests do not reach the network")
+        return connect(self, address)
+
+    def guarded_connect_ex(self, address):
+        if refused(self, address):
+            raise OSError("the tests do not reach the network")
+        return connect_ex(self, address)
+
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
+    yield
+    if tried:
+        pytest.fail("the test tried to reach the network: " + ", ".join(sorted(set(tried))))
+
+
+@pytest.fixture(autouse=True)
 def gvfs_has_mtp(monkeypatch):
     """No test asks the real gvfs which backends it has (#13): it has MTP, unless a test
     says otherwise, and nothing of it has been logged yet."""

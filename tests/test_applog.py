@@ -434,12 +434,19 @@ def test_cli_logs_start_and_end_without_arguments(log_file, device_root):
     assert "1234567890" not in "\n".join(text)  # the unit ID of the test device
 
 
-def test_subcommand_is_logged(log_file, device_root):
+def test_subcommand_is_logged(log_file, device_root, monkeypatch):
+    """The command and its subcommand, never the name given. Garmin's map server is not asked
+    (it was, 24.10.2026: conftest's no_network): its answer is made up, with no maps."""
     from openexpress.cli import main
+    from openexpress.connect import GarminClient, lower_keys
 
+    asked = []
+    monkeypatch.setattr(GarminClient, "universal_maps", lambda self, device_xml, reinstall=False: (
+        asked.append(1), lower_keys({"maps": []}))[1])
     main(["--path", str(device_root), "maps", "remove", "Some Private Name"])
     start = next(line for line in lines(log_file) if " start: " in line)
     assert "start: maps remove --path (" in start and "Private" not in start
+    assert asked == [1]
 
 
 @pytest.mark.parametrize("argv", [[], ["gui"]], ids=["no command", "gui"])
