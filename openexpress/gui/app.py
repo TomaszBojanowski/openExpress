@@ -3446,9 +3446,9 @@ class MainWindow(Adw.ApplicationWindow):
                 # A drive: the device takes the update once it is ejected (#11).
                 # TRANSLATORS: after the versions, e.g. "3.36 → 3.40 · eject the device…"
                 disconnect = _("eject the device to install it")
-                buttons.append(self._button(_("Eject"),
-                                            lambda s=self.session: self.eject_device(s),
-                                            "suggested-action"))
+                buttons.append(self._button(
+                    _("Eject"), lambda button, s=self.session: self.eject_device(s, button=button),
+                    "suggested-action", with_button=True))
             else:
                 # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
                 disconnect = _("disconnect the device to install it")
@@ -3619,9 +3619,11 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", response)
         d.present(self)
 
-    def eject_device(self, s, bike_accessory: bool = False) -> None:
+    def eject_device(self, s, bike_accessory: bool = False,
+                     button: Gtk.Button | None = None) -> None:
         """Eject the drive of a device in mass storage mode; then the cable can go out. When
-        the system refuses, why, that the cable must stay in, and Try Again."""
+        the system refuses, why, that the cable must stay in, and Try Again. `button`: the
+        Eject of the Updates page, which spins meanwhile."""
         def ejected(_result):
             done = Adw.AlertDialog(heading=_("Done"), body=ejected_text())
             done.add_response("ok", _("OK"))
@@ -3645,7 +3647,8 @@ class MainWindow(Adw.ApplicationWindow):
             d.present(self)
             return True
 
-        self.run_task(_("Ejecting the device…"), lambda: eject(s.storage), ejected, failed)
+        self.run_task(_("Ejecting the device…"), lambda: eject(s.storage), ejected, failed,
+                      button=button)
 
     def _show_installed(self, session, chosen) -> None:
         """After an update was copied: the files are on the device now. The page shows that

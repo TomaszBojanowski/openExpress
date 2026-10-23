@@ -998,3 +998,70 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
     assert button.get_label() == "Set as Primary"
     button.emit("clicked")
     assert started == [(PRIMARY, button)]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
+def test_eject_spins_its_button(monkeypatch, delay, text_shown):
+    """Eject on the Updates page of a drive: the button spins from the click while the
+    system ejects it, "Ejecting the device…" waits 500 ms; then "Done", as before."""
+    import time
+
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    dialogs = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+    monkeypatch.setattr(app, "eject", lambda storage: time.sleep(delay))
+    s = types.SimpleNamespace(storage=object())
+    win = _task_window(session=s)
+    button = Gtk.Button(label="Eject")
+    app.MainWindow.eject_device(win, s, button=button)
+    seen = _while_busy(win, button)
+    _spun(seen, button, "Eject", "Ejecting the device…", text_shown)
+    assert [d.get_heading() for d in dialogs] == ["Done"]
+
+
+@pytest.mark.needs_display
+def test_a_refused_eject_gives_the_button_back(monkeypatch):
+    """The system refuses: the button is as it was (to try again), with the question."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    dialogs = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+
+    from openexpress.device.storage import DeviceError
+
+    def refused(storage):
+        raise DeviceError("The device is busy")
+
+    monkeypatch.setattr(app, "eject", refused)
+    s = types.SimpleNamespace(storage=object())
+    win = _task_window(session=s)
+    button = Gtk.Button(label="Eject")
+    app.MainWindow.eject_device(win, s, button=button)
+    _while_busy(win, button)
+    assert [d.get_heading() for d in dialogs] == ["The device was not ejected"]
+    assert button.get_label() == "Eject" and button.get_sensitive() and not _spinning(button)
+
+
+@REAL_WINDOW[0]
+@REAL_WINDOW[1]
+def test_the_eject_button_of_the_updates_page_starts_from_itself(narrow_window, monkeypatch):
+    """Eject (an update copied to a drive) hands its own button to eject_device."""
+    from test_narrow_window import _fill
+
+    from openexpress.gui.app import MainWindow
+
+    started = []
+    monkeypatch.setattr(MainWindow, "eject_device",
+                        lambda self, s, bike_accessory=False, button=None: started.append(
+                            (s, button)))
+    win = narrow_window("en")
+    _fill(win, "updates-beta-copied-drive")
+    (button,) = _page_buttons(win, "updates", "Eject")
+    button.emit("clicked")
+    assert started == [(win.session, button)]

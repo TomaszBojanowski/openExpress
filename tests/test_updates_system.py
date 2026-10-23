@@ -309,7 +309,7 @@ def _updates_page(items, beta=False, drive=False):
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
         ejected=[], _set_update_state=lambda new, staged=(): None)
     win.confirm_update = win.asked.append
-    win.eject_device = win.ejected.append
+    win.eject_device = lambda s, button=None: win.ejected.append(s)
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
     for name in ("_updates_status", "_update_row", "_button"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
