@@ -1,4 +1,5 @@
-"""The cache of openExpress: how big it is, folder by folder (C1). Nothing is deleted."""
+"""The cache of openExpress: how big it is, part by part (C1), and clearing it, all of it or
+some parts (maps, updates, pictures, temp)."""
 
 import os
 from pathlib import Path
@@ -25,22 +26,23 @@ def cache(tmp_path) -> Path:
 
 
 def test_sizes_of_the_cache_folders(cache, tmp_path):
-    """Known sizes, a known total: files in subfolders and unfinished downloads count; a
-    folder openExpress does not make (e.g. tmp) and a symbolic link to a file outside do
-    not."""
+    """Known sizes, a known total: files in subfolders and unfinished downloads count, and
+    tmp with the temporary files; a folder openExpress does not make and a symbolic link to
+    a file outside do not."""
     from openexpress import cache as oe_cache
 
     fill(cache, {"maps/aaa": 1000, "maps/bbb.part": 500, "maps/sub/ccc": 250,
                  "images/device-006-B4532-00.png": 30,
                  "software/006-B4532-00/23.40/GUPDATE.GCD": 4000,
-                 "tmp/other": 99})
+                 "tmp/other": 99, "unknown/file": 55})
     (cache / "transfer").mkdir()
     fill(tmp_path, {"outside/big": 7777})
     os.symlink(tmp_path / "outside" / "big", cache / "maps" / "link")
     use = oe_cache.usage()
     assert use.root == cache
-    assert use.sizes == {"maps": 1750, "images": 30, "software": 4000, "transfer": 0}
-    assert use.total == 5780
+    assert use.sizes == {"maps": 1750, "updates": 4000, "pictures": 30, "temp": 99}
+    assert use.files == {"maps": 3, "updates": 1, "pictures": 1, "temp": 1}
+    assert use.total == 5879
 
 
 def test_no_cache_yet_is_nothing(cache):
@@ -48,7 +50,7 @@ def test_no_cache_yet_is_nothing(cache):
     from openexpress import cache as oe_cache
 
     use = oe_cache.usage()
-    assert use.sizes == {"maps": 0, "images": 0, "software": 0, "transfer": 0}
+    assert use.sizes == {"maps": 0, "updates": 0, "pictures": 0, "temp": 0}
     assert use.total == 0 and not cache.exists()
 
 
@@ -75,8 +77,8 @@ def test_the_flatpak_cache_is_where_xdg_cache_home_says(tmp_path, monkeypatch):
     assert use.root == sandbox / "openexpress" and use.sizes["maps"] == 123
 
 
-def test_cache_command_lists_the_four_folders_and_the_total(cache, capsys):
-    """`openexpress cache`: the folder, each of the four with its size, the total; exit
+def test_cache_command_lists_the_four_parts_and_the_total(cache, capsys):
+    """`openexpress cache`: the folder, each of the four parts with its size, the total; exit
     code 0; nothing deleted."""
     from openexpress.cli import main
 
@@ -85,9 +87,9 @@ def test_cache_command_lists_the_four_folders_and_the_total(cache, capsys):
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
         "  Maps: 1.8 kB",
-        "  Pictures: 30 B",
         "  Software updates: 4.0 kB",
-        "  Transfer: 0 B",
+        "  Pictures and icons: 30 B",
+        "  Temporary files: 0 B",
         "  Total: 5.8 kB"]
     assert (cache / "maps" / "aaa").exists()
 
@@ -252,10 +254,11 @@ def filled(cache, tmp_path) -> dict:
     that file. Returns the paths that must stay."""
     fill(cache, {"maps/aaa": 1000, "maps/bbb.part": 500, "maps/sub/ccc": 250,
                  "images/device-x.png": 30, "software/006/1/GUPDATE.GCD": 4000,
-                 "transfer/openexpress-staged": 20, "tmp/other": 99, "notes.txt": 7})
+                 "transfer/openexpress-staged": 20, "tmp/other": 99, "notes.txt": 7,
+                 "unknown/file": 55})
     fill(tmp_path, {"outside/big": 7777})
     os.symlink(tmp_path / "outside" / "big", cache / "maps" / "link")
-    return {"other": cache / "tmp" / "other", "notes": cache / "notes.txt",
+    return {"unknown": cache / "unknown" / "file", "notes": cache / "notes.txt",
             "outside": tmp_path / "outside" / "big"}
 
 
@@ -269,25 +272,25 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
     assert capsys.readouterr().out.splitlines() == [
         f"Cache: {cache}",
         "  Maps: 1.8 kB",
-        "  Pictures: 30 B",
         "  Software updates: 4.0 kB",
-        "  Transfer: 20 B",
-        "  Total: 5.8 kB",
+        "  Pictures and icons: 30 B",
+        "  Temporary files: 119 B",
+        "  Total: 5.9 kB",
         "Dry run: nothing was deleted. Add --apply to delete it."]
     assert sorted(p for p in cache.rglob("*")) == before
 
 
-def test_clear_with_apply_empties_the_four_folders(cache, tmp_path, capsys):
-    """--apply: what is in the four folders goes; the folders themselves, cache.lock and all
-    else stay (a link is removed as a link, the file it points to stays). It says how much
-    was freed."""
+def test_clear_with_apply_empties_the_folders_of_the_four_parts(cache, tmp_path, capsys):
+    """--apply: what is in the folders of the four parts goes; the folders themselves,
+    cache.lock and all else stay (a link is removed as a link, the file it points to stays).
+    It says how much was freed."""
     from openexpress.cli import main
 
     stay = filled(cache, tmp_path)
     assert main(["cache", "--clear", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[-1] == "Freed 5.8 kB." and "  Total: 5.8 kB" in out
-    for name in ("maps", "images", "software", "transfer"):
+    assert out[-1] == "Freed 5.9 kB." and "  Total: 5.9 kB" in out
+    for name in ("maps", "images", "software", "transfer", "tmp"):
         assert (cache / name).is_dir() and list((cache / name).iterdir()) == []
     assert (cache / "cache.lock").exists()
     assert all(p.exists() for p in stay.values())
@@ -322,6 +325,126 @@ def test_a_cache_folder_that_is_a_link_is_left_alone(cache, tmp_path):
     assert freed.total == 30
     assert (cache / "maps").is_symlink() and (tmp_path / "elsewhere" / "map").exists()
     assert list((cache / "images").iterdir()) == []
+
+
+# --- clearing some parts of the cache: cache.clear(only=…) ---------------------------------------
+
+# The folders of each part, as the user knows them; and a file in each, of a known size.
+PARTS = {"maps": ["maps"], "updates": ["software"], "pictures": ["images"],
+         "temp": ["transfer", "tmp"]}
+SIZES = {"maps": 1750, "updates": 4000, "pictures": 30, "temp": 119}
+
+
+def _left(cache) -> dict[str, list[str]]:
+    """What is still in each folder of the cache, as paths below it."""
+    return {name: sorted(str(p.relative_to(cache / name)) for p in (cache / name).rglob("*"))
+            for name in ("maps", "software", "images", "transfer", "tmp")
+            if (cache / name).is_dir() and not (cache / name).is_symlink()}
+
+
+@pytest.mark.parametrize("part", list(PARTS))
+def test_one_part_is_cleared_and_the_others_stay(cache, tmp_path, part):
+    """Only the folders of that part are emptied (the folders stay); every other part,
+    cache.lock and what openExpress does not keep stay as they were. What was there is
+    returned: its total is what was freed."""
+    from openexpress import cache as oe_cache
+
+    stay = filled(cache, tmp_path)
+    before = _left(cache)
+    freed = oe_cache.clear(only=[part])
+    assert freed.sizes == {part: SIZES[part]} and freed.total == SIZES[part]
+    after = _left(cache)
+    for name, files in before.items():
+        assert after[name] == ([] if name in PARTS[part] else files), name
+    assert (cache / "cache.lock").exists()
+    assert all(p.exists() for p in stay.values())
+    assert oe_cache.usage().sizes == {k: 0 if k == part else v for k, v in SIZES.items()}
+
+
+def test_some_parts_at_once_and_all_by_default(cache, tmp_path):
+    """Two parts at once (in any order, named twice): both, in the order of the parts; no
+    parts named: all four."""
+    from openexpress import cache as oe_cache
+
+    filled(cache, tmp_path)
+    freed = oe_cache.clear(only=["temp", "maps", "temp"])
+    assert list(freed.sizes) == ["maps", "temp"] and freed.total == 1750 + 119
+    assert oe_cache.usage().sizes == {"maps": 0, "updates": 4000, "pictures": 30, "temp": 0}
+    freed = oe_cache.clear()
+    assert list(freed.sizes) == ["maps", "updates", "pictures", "temp"]
+    assert freed.total == 4030 and oe_cache.usage().total == 0
+    assert (cache / "cache.lock").exists()
+
+
+def test_a_part_that_does_not_exist_is_refused(cache, tmp_path):
+    """A name that is no part of the cache: nothing is deleted."""
+    from openexpress import cache as oe_cache
+
+    filled(cache, tmp_path)
+    before = _left(cache)
+    with pytest.raises(ValueError, match="'images'"):
+        oe_cache.clear(only=["pictures", "images"])
+    assert _left(cache) == before
+
+
+@pytest.mark.parametrize("part", list(PARTS))
+def test_a_part_is_not_cleared_while_the_cache_is_in_use(cache, tmp_path, part):
+    """One lock for the whole cache: while anything uses it (a download, an install, a file
+    on its way to the device), no part is cleared, not even the pictures."""
+    from openexpress import cache as oe_cache
+
+    filled(cache, tmp_path)
+    before = _left(cache)
+    with oe_cache.using(), pytest.raises(oe_cache.CacheBusy):
+        oe_cache.clear(only=[part])
+    assert _left(cache) == before
+
+
+@pytest.mark.parametrize("part", list(PARTS))
+def test_a_folder_of_a_part_that_is_a_link_is_left_alone(cache, tmp_path, part):
+    """Every folder of the part is a link to a folder elsewhere: neither the link nor what is
+    behind it is touched, and the part counts as nothing."""
+    from openexpress import cache as oe_cache
+
+    cache.mkdir(parents=True)
+    for name in PARTS[part]:
+        fill(tmp_path, {f"elsewhere-{name}/file": 5000})
+        os.symlink(tmp_path / f"elsewhere-{name}", cache / name)
+    assert oe_cache.usage().sizes[part] == 0
+    assert oe_cache.clear(only=[part]).total == 0
+    for name in PARTS[part]:
+        assert (cache / name).is_symlink()
+        assert (tmp_path / f"elsewhere-{name}" / "file").exists()
+
+
+@pytest.mark.parametrize("part", list(PARTS))
+def test_a_link_inside_a_part_goes_as_a_link(cache, tmp_path, part):
+    """A link in a folder of the part, to a file and to a folder outside: the links go,
+    what they point to stays."""
+    from openexpress import cache as oe_cache
+
+    fill(tmp_path, {"outside/file": 10, "outside-dir/file": 20})
+    folder = cache / PARTS[part][-1]
+    folder.mkdir(parents=True)
+    os.symlink(tmp_path / "outside" / "file", folder / "to-a-file")
+    os.symlink(tmp_path / "outside-dir", folder / "to-a-folder")
+    oe_cache.clear(only=[part])
+    assert list(folder.iterdir()) == []
+    assert (tmp_path / "outside" / "file").exists()
+    assert (tmp_path / "outside-dir" / "file").exists()
+
+
+def test_the_lock_is_never_deleted(cache, tmp_path):
+    """cache.lock stays through every clearing, of each part and of all; a file of that name
+    inside a part is a file of the part (only the cache's own lock is kept)."""
+    from openexpress import cache as oe_cache
+
+    filled(cache, tmp_path)
+    fill(cache, {"tmp/cache.lock": 3})
+    for part in [*PARTS, None]:
+        oe_cache.clear(only=None if part is None else [part])
+        assert (cache / "cache.lock").is_file()
+    assert not (cache / "tmp" / "cache.lock").exists()
 
 
 # --- the "Storage" group of the preferences (C3/C4) --------------------------------------------

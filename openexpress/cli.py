@@ -348,11 +348,11 @@ def cmd_cache(args) -> int:
     else:
         use = cache.usage()
     print(_("Cache: {path}").format(path=use.root))
-    for name in cache.FOLDERS:
-        print(f"  {_(cache.FOLDER_NAMES[name])}: {human_size(use.sizes[name])}")
+    for name, size in use.sizes.items():
+        print(f"  {_(cache.CATEGORY_NAMES[name])}: {human_size(size)}")
     print("  " + _("Total: {size}").format(size=human_size(use.total)))
     log.info("cache: %s in all (%s)", applog.size(use.total),
-             ", ".join(f"{name} {applog.size(use.sizes[name])}" for name in cache.FOLDERS))
+             ", ".join(f"{name} {applog.size(size)}" for name, size in use.sizes.items()))
     if args.clear and args.apply:
         print(_("Freed {size}.").format(size=human_size(use.total)))
         log.info("cache: cleared, %s freed", applog.size(use.total))

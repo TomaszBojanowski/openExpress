@@ -1,5 +1,6 @@
 """The cache of openExpress: downloaded maps and software updates, pictures, and files staged
-for copying to the device. Everything in it can be downloaded again.
+for copying to the device. Everything in it can be downloaded again. It is counted and cleared
+in four parts (CATEGORIES), all of them or some.
 
 It is paths.cache_dir(): ~/.cache/openexpress for the version from source; in the Flatpak,
 where XDG_CACHE_HOME is ~/.var/app/<app ID>/cache, its own folder below that. Each
@@ -12,18 +13,21 @@ import fcntl
 import os
 import shutil
 import stat
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress import paths
 from openexpress.i18n import N_, _
 
-# The folders openExpress keeps in its cache, in the order they are shown; nothing else in
-# the cache folder is counted (or, later, deleted).
-FOLDERS = ("maps", "images", "software", "transfer")
+# The parts of the cache, in the order they are shown, with the folders of each (the keys are
+# those of `cache --clear --only`); nothing else in the cache folder is counted or deleted.
+CATEGORIES = {"maps": ("maps",), "updates": ("software",), "pictures": ("images",),
+              # Files on their way to the device (the Flatpak), and what older versions left.
+              "temp": ("transfer", "tmp")}
 # TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
-FOLDER_NAMES = {"maps": N_("Maps"), "images": N_("Pictures"),
-                "software": N_("Software updates"), "transfer": N_("Transfer")}
+CATEGORY_NAMES = {"maps": N_("Maps"), "updates": N_("Software updates"),
+                  "pictures": N_("Pictures and icons"), "temp": N_("Temporary files")}
 
 
 # The lock of the cache, in its folder; a clearing never deletes it. Shared while files of the
@@ -79,49 +83,73 @@ def _lock_file():
 @dataclass
 class CacheUsage:
     root: Path
-    sizes: dict[str, int]  # bytes in each of FOLDERS
+    sizes: dict[str, int]  # bytes in each part counted (CATEGORIES), in their order
+    files: dict[str, int]  # how many files in each
 
     @property
     def total(self) -> int:
         return sum(self.sizes.values())
 
 
-def usage() -> CacheUsage:
-    """How big each folder of the cache is, in bytes. A folder that is not there is 0; nothing
-    is made or changed."""
+def chosen(only: Iterable[str] | None) -> list[str]:
+    """The parts named (each once, in the order of CATEGORIES); all of them for None. A name
+    that is no part is refused (ValueError)."""
+    if only is None:
+        return list(CATEGORIES)
+    names = set(only)
+    unknown = sorted(names - set(CATEGORIES))
+    if unknown:
+        raise ValueError(f"not a part of the cache: {', '.join(map(repr, unknown))}")
+    return [name for name in CATEGORIES if name in names]
+
+
+def usage(only: Iterable[str] | None = None) -> CacheUsage:
+    """How big each part of the cache is (all, or those named), in bytes and files. A folder
+    that is not there is 0; nothing is made or changed."""
     root = paths.cache_dir()
-    return CacheUsage(root, {name: _size(root / name) for name in FOLDERS})
+    sizes, files = {}, {}
+    for name in chosen(only):
+        counted = [_count(root / folder) for folder in CATEGORIES[name]]
+        sizes[name] = sum(size for size, _n in counted)
+        files[name] = sum(n for _size, n in counted)
+    return CacheUsage(root, sizes, files)
 
 
-def clear() -> CacheUsage:
-    """Delete what is in the four folders of the cache, holding it alone (CacheBusy while it
-    is in use). The folders themselves stay, and so do cache.lock and anything else in the
-    cache folder; nothing is deleted through a symbolic link, and a folder that is a link is
-    left alone. Returns what was there: its total is what was freed."""
+def clear(only: Iterable[str] | None = None) -> CacheUsage:
+    """Delete what is in the folders of the parts named (all of them for None), holding the
+    whole cache alone: CacheBusy while anything uses it, whichever part. The folders
+    themselves stay, and so do cache.lock and anything else in the cache folder; nothing is
+    deleted through a symbolic link, and a folder that is a link is left alone. Returns what
+    was there in those parts: its total is what was freed."""
+    names = chosen(only)
     with clearing():
-        before = usage()
-        for name in FOLDERS:
-            folder = before.root / name
-            if folder.is_symlink() or not folder.is_dir():
-                continue
-            for entry in folder.iterdir():
-                try:
-                    if entry.is_dir() and not entry.is_symlink():
-                        shutil.rmtree(entry)  # removes links inside as links
-                    else:
-                        entry.unlink()
-                except OSError as e:
-                    raise CacheError(_("Could not delete {path}: {error}").format(
-                        path=entry, error=e.strerror or e)) from None
+        before = usage(names)
+        for name in names:
+            for folder_name in CATEGORIES[name]:
+                _empty(before.root / folder_name)
     return before
 
 
-def _size(folder: Path) -> int:
-    """The bytes of the regular files below `folder`. Symbolic links are neither followed nor
-    counted: a folder that is a link to elsewhere counts as nothing."""
+def _empty(folder: Path) -> None:
     if folder.is_symlink() or not folder.is_dir():
-        return 0
-    total = 0
+        return
+    for entry in folder.iterdir():
+        try:
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)  # removes links inside as links
+            else:
+                entry.unlink()
+        except OSError as e:
+            raise CacheError(_("Could not delete {path}: {error}").format(
+                path=entry, error=e.strerror or e)) from None
+
+
+def _count(folder: Path) -> tuple[int, int]:
+    """(bytes, number) of the regular files below `folder`. Symbolic links are neither
+    followed nor counted: a folder that is a link to elsewhere counts as nothing."""
+    if folder.is_symlink() or not folder.is_dir():
+        return 0, 0
+    total = number = 0
     for here, _dirs, files in os.walk(folder, followlinks=False):
         for name in files:
             try:
@@ -130,4 +158,5 @@ def _size(folder: Path) -> int:
                 continue  # gone meanwhile (e.g. a staged file just deleted)
             if stat.S_ISREG(st.st_mode):
                 total += st.st_size
-    return total
+                number += 1
+    return total, number
