@@ -13,13 +13,6 @@ PO_FILES = sorted((ROOT / "po").glob("*.po"))
 PLACEHOLDER = re.compile(r"\{\w+\}|%\(\w+\)\w|%s")
 
 
-@pytest.fixture
-def polish():
-    i18n.setup("pl")
-    yield
-    i18n.setup("en")
-
-
 def test_polish_catalog(polish):
     assert i18n.current_language() == "pl"
     assert i18n._("Install") == "Zainstaluj"

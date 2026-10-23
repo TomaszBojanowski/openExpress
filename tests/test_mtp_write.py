@@ -8,9 +8,7 @@ from pathlib import Path
 
 import pytest
 from test_updates_maps import (  # noqa: F401 - fixtures
-    FILES,
     east_with_shared_dem,
-    maps_response,
     server,
     unlock_e2,
 )

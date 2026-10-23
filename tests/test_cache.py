@@ -538,7 +538,6 @@ def test_the_lock_is_never_deleted(cache, tmp_path):
 
 # --- the "Storage" group of the preferences: a row for each part, and all of it ----------------
 
-ROWS = ["Maps", "Software updates", "Pictures and icons", "Temporary files", "All of the cache"]
 
 
 @pytest.fixture
@@ -825,7 +824,7 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
     win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
                                 set_background=lambda on, done=None: None, choose_dll=lambda: None,
                                 error=lambda title, text: None, run_task=None, toast=None)
-    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row",
+    for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
         if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -870,7 +869,7 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch):
                                 session=None, refresh_device=lambda **kw: None,
                                 logout=lambda: calls.append("logout"),
                                 login=lambda: calls.append("login"))
-    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row",
+    for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
         if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))

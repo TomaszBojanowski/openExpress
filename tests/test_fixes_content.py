@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from test_ciq_music import FACE, IQ_XML_TYPES, PRELOADED, STORE_ID, FakeClient, out_bin
-from test_updates_maps import FILES, maps_response, server, sw_response  # noqa: F401
+from test_updates_maps import maps_response, server, sw_response  # noqa: F401
 
 from openexpress import backup, ciq, maps, music, proto, updates
 from openexpress.device.storage import DeviceError, LocalStorage

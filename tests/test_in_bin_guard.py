@@ -7,7 +7,6 @@ import uuid
 
 import pytest
 from test_ciq_music import (  # noqa: F401 - the fixtures
-    FACE,
     PRELOADED,
     STORE_ID,
     FakeClient,
@@ -89,4 +88,3 @@ def test_an_install_over_the_mounted_storage_leaves_a_damaged_list_alone(device)
     media = st.root / "GARMIN/APPS/MEDIA"
     assert not media.exists() or list(media.iterdir()) == []
     assert client.acks == []
-    assert FACE  # (the fixture's own face is not part of this test)

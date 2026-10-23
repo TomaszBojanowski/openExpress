@@ -164,10 +164,6 @@ WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urzą
 
 def _dialog(monkeypatch, part, answer=None):
     """The window's question before `part` is installed; nothing is shown."""
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Adw", "1")
     from gi.repository import Adw
 
     from openexpress.gui.app import MainWindow
@@ -296,11 +292,6 @@ def _updates_page(items, beta=False, drive=False):
     """The Updates page of a window that is never shown; returns the window, the status at the
     top (icon, its styles, the texts with their styles, the buttons) and the other groups.
     `drive`: the device is in mass storage mode."""
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Adw", "1")
-
     from openexpress.gui.app import MainWindow
 
     win = types.SimpleNamespace(
@@ -980,10 +971,6 @@ def test_device_page_says_the_update_waits_for_the_device():
 
 @pytest.mark.needs_display
 def test_device_page_says_an_update_on_a_drive_waits_to_be_ejected():
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-
     items = _staged_items()
     win, MainWindow = _overview(drive=True)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
@@ -1144,10 +1131,6 @@ def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypat
 
 @pytest.mark.needs_display
 def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Adw", "1")
     from gi.repository import Adw
 
     from openexpress import maps

@@ -13,7 +13,6 @@ from test_ciq_music import (  # noqa: F401 - the fixtures
     FakeClient,
     iq_device,
     order_device,
-    out_bin,
 )
 
 from openexpress import ciq
