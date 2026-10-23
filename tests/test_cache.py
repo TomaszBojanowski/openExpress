@@ -535,133 +535,279 @@ def test_the_lock_is_never_deleted(cache, tmp_path):
     assert not (cache / "tmp" / "cache.lock").exists()
 
 
-# --- the "Storage" group of the preferences (C3/C4) --------------------------------------------
+# --- the "Storage" group of the preferences: a row for each part, and all of it ----------------
+
+ROWS = ["Maps", "Software updates", "Pictures and icons", "Temporary files", "All of the cache"]
 
 
 @pytest.fixture
 def prefs(cache, monkeypatch):
-    """A stand-in for the window around the cache group: tasks run at once; dialogs are
-    recorded instead of shown. Needs a display (widgets)."""
+    """A stand-in for the window around the storage group: a task runs at once, as run_task
+    keeps its order (the button as it was, then `done`); dialogs are recorded instead of
+    shown. Needs a display (widgets)."""
     import types
 
     from gi.repository import Adw
 
+    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
-    dialogs, errors, toasts = [], [], []
+    dialogs, errors, toasts, tasks = [], [], [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
 
-    def run_task(title, work, done, failed=None, device=True):
+    def run_task(title, work, done, failed=None, device=True, in_page=False, button=None):
+        tasks.append((title, device, button))
+        restore = app.show_working(button) if button is not None else None
         try:
             result = work()
         except Exception as e:  # noqa: BLE001 - as the window's run_task: to `failed`
+            if restore:
+                restore(True)
             if not (failed and failed(e)):
                 errors.append(str(e))
         else:
+            if restore:
+                restore(True)
             done(result)
 
     win = types.SimpleNamespace(busy=False, run_task=run_task, dialogs=dialogs, errors=errors,
-                                toast=toasts.append, toasts=toasts,
+                                toast=toasts.append, toasts=toasts, tasks=tasks,
+                                _preferences=None,
                                 error=lambda title, text: errors.append(text))
-    for name in ("_cache_group", "_ask_clear_cache", "_render_cache_row"):
+    for name in ("_cache_group", "_ask_clear_cache"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     return win
 
 
-def cache_row(group):
-    """The "Cache" row of the group and its "Clear…" button."""
+def _counted(win, group):
+    """Turns the loop until the sizes, counted in the background, are in the rows."""
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and "Counting…" in [s for _t, s, _b in storage_rows(group)]:
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.005)
+    return storage_rows(group)
+
+
+def storage_rows(group):
+    """(title, subtitle, its button) of each row of the group, in order."""
     from gi.repository import Adw, Gtk
 
-    rows, buttons = [], []
+    out = []
+
+    def buttons(widget):
+        child = widget.get_first_child()
+        while child is not None:
+            if isinstance(child, Gtk.Button):
+                yield child
+            yield from buttons(child)
+            child = child.get_next_sibling()
 
     def walk(widget):
         if isinstance(widget, Adw.ActionRow):
-            rows.append(widget)
-        if isinstance(widget, Gtk.Button) and widget.get_label() == "Clear…":
-            buttons.append(widget)
+            (button,) = buttons(widget)
+            out.append((widget.get_title(), widget.get_subtitle(), button))
+            return
         child = widget.get_first_child()
         while child is not None:
             walk(child)
             child = child.get_next_sibling()
 
     walk(group)
-    (row,), (button,) = rows, buttons
-    return row, button
+    return out
+
+
+def _button(group, title):
+    (button,) = [b for t, _s, b in storage_rows(group) if t == title]
+    return button
 
 
 @pytest.mark.needs_display
-@pytest.mark.parametrize("files, subtitle, can_clear", [
-    ({"maps/m": 5000, "images/p.png": 30}, "5.0\u00a0kB, mostly downloaded maps", True),
-    ({"images/p.png": 3000, "software/s/1/f": 1000}, "4.0\u00a0kB", True),
-    ({}, "Empty", False),
-])
-def test_the_group_shows_how_big_the_cache_is(prefs, cache, files, subtitle, can_clear):
-    """The row says how big the cache is (cache.usage(), as the command line), mostly maps
-    or not; with nothing in it, "Empty" and the button is grey."""
-    fill(cache, files)
+@pytest.mark.parametrize("flatpak", [False, True])
+def test_the_group_shows_each_part_and_all_of_it(prefs, cache, tmp_path, monkeypatch, flatpak):
+    """A row for each part, with its size and its files, and one for all of it; a part with
+    nothing in it has a grey trash. The group says which installation it is about."""
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app.paths, "in_flatpak", lambda: flatpak)
+    fill(cache, {"maps/a": 1000, "maps/b": 750, "images/p.png": 30})
     group = prefs._cache_group()
     assert group.get_title() == "Storage"
-    row, button = cache_row(group)
-    assert (row.get_title(), row.get_subtitle()) == ("Cache", subtitle)
-    assert button.get_sensitive() is can_clear
+    assert group.get_description() == (
+        "Only the files of this installation ({}); openExpress downloads them again when "
+        "needed".format("Flatpak" if flatpak else "version from source"))
+    rows = _counted(prefs, group)
+    assert [(t, s) for t, s, _b in rows] == [
+        ("Maps", "1.8\u00a0kB\u00a0· 2 files"),
+        ("Software updates", "0\u00a0B\u00a0· 0 files"),
+        ("Pictures and icons", "30\u00a0B\u00a0· 1 file"),
+        ("Temporary files", "0\u00a0B\u00a0· 0 files"),
+        ("All of the cache", "1.8\u00a0kB\u00a0· 3 files")]
+    assert [b.get_sensitive() for _t, _s, b in rows] == [True, False, True, False, True]
+    assert _button(group, "All of the cache").get_label() == "Clear All…"
 
 
 @pytest.mark.needs_display
-def test_clear_asks_first(prefs, cache):
-    """"Clear…" opens a confirmation that names the maps and their size; Cancel is the
-    default, Clear is destructive. Nothing is deleted yet."""
+def test_an_empty_cache_has_every_button_grey(prefs, cache):
+    group = prefs._cache_group()
+    rows = _counted(prefs, group)
+    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 5
+    assert not any(b.get_sensitive() for _t, _s, b in rows)
+
+
+@pytest.mark.needs_display
+def test_the_sizes_are_counted_off_the_window_thread(prefs, cache, monkeypatch):
+    """The group opens with "Counting…" and nothing to clear; the sizes come from a thread
+    of their own, not the window's."""
+    import threading
+
+    from openexpress import cache as oe_cache
+
+    threads, real = [], oe_cache.usage
+    monkeypatch.setattr(oe_cache, "usage",
+                        lambda only=None: (threads.append(threading.current_thread()),
+                                           real(only))[1])
+    fill(cache, {"maps/a": 1000})
+    group = prefs._cache_group()
+    assert [s for _t, s, _b in storage_rows(group)] == ["Counting…"] * 5
+    assert not any(b.get_sensitive() for _t, _s, b in storage_rows(group))
+    _counted(prefs, group)
+    assert threads and threading.main_thread() not in threads
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("part", "title", "freed"), [("pictures", "Pictures and icons", "30\u00a0B"),
+                                                     ("temp", "Temporary files", "119\u00a0B")])
+def test_pictures_and_temporary_files_go_without_a_question(prefs, cache, tmp_path, part, title,
+                                                           freed):
+    """The trash of pictures or of temporary files: no question; only that part goes, from
+    the trash itself (its task starts from it), and a toast says how much was freed; the
+    rows show the sizes counted again."""
+    filled(cache, tmp_path)
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    trash = _button(group, title)
+    trash.emit("clicked")
+    assert prefs.dialogs == []
+    assert prefs.tasks == [("Clearing the cache…", False, trash)]
+    assert prefs.toasts == [f"Freed {freed}."] and prefs.errors == []
+    left = _left(cache)
+    for name in PARTS[part]:
+        assert left[name] == []
+    assert left["maps"] and left["software"]
+    rows = dict((t, (s, b.get_sensitive())) for t, s, b in storage_rows(group))
+    assert rows[title] == ("0\u00a0B\u00a0· 0 files", False)
+    assert rows["Maps"][1] is True
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("title", "heading", "body"), [
+    ("Maps", "Clear the downloaded maps?",
+     "This deletes the downloaded maps (1.8\u00a0kB). They will have to be downloaded again."),
+    ("Software updates", "Clear the downloaded updates?",
+     ("This deletes the downloaded software updates (4.0\u00a0kB). They are downloaded "
+      "again when needed.")),
+])
+def test_maps_and_updates_ask_first(prefs, cache, tmp_path, title, heading, body):
+    """The trash of maps or of updates asks first, with their size; Cancel deletes nothing,
+    Clear clears that part alone, from its trash."""
     from gi.repository import Adw
 
-    fill(cache, {"maps/m": 5000, "images/p.png": 30})
-    _row, button = cache_row(prefs._cache_group())
-    button.emit("clicked")
-    (confirm,) = prefs.dialogs
-    assert confirm.get_heading() == "Clear the cache?"
-    assert confirm.get_body() == ("This deletes the downloaded maps (5.0\u00a0kB) and the other "
-                                  "files of the cache (30\u00a0B). The maps will have to be "
-                                  "downloaded again.")
-    assert confirm.get_default_response() == "cancel" and confirm.get_close_response() == "cancel"
-    assert confirm.get_response_appearance("clear") == Adw.ResponseAppearance.DESTRUCTIVE
-    assert (cache / "maps" / "m").exists()
+    filled(cache, tmp_path)
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    before = _left(cache)
+    _button(group, title).emit("clicked")
+    (question,) = prefs.dialogs
+    assert (question.get_heading(), question.get_body()) == (heading, body)
+    assert question.get_default_response() == "cancel"
+    assert question.get_response_appearance("clear") == Adw.ResponseAppearance.DESTRUCTIVE
+    question.emit("response", "cancel")
+    assert _left(cache) == before and prefs.tasks == [] and prefs.toasts == []
+    _button(group, title).emit("clicked")
+    prefs.dialogs[1].emit("response", "clear")
+    (task,) = prefs.tasks
+    assert task == ("Clearing the cache…", False, _button(group, title))
+    folder = "maps" if title == "Maps" else "software"
+    left = _left(cache)
+    assert left[folder] == [] and all(left[k] == v for k, v in before.items() if k != folder)
 
 
 @pytest.mark.needs_display
-def test_confirming_clears_and_shows_the_new_size(prefs, cache):
-    """Clear: the cache is cleared as by `cache --clear --apply`; the row says "Empty", the
-    button is grey, and a toast says how much was freed."""
-    fill(cache, {"maps/m": 5000, "images/p.png": 30})
-    row, button = cache_row(prefs._cache_group())
-    button.emit("clicked")
-    prefs.dialogs[0].emit("response", "clear")
-    assert list((cache / "maps").iterdir()) == [] and list((cache / "images").iterdir()) == []
-    assert row.get_subtitle() == "Empty" and not button.get_sensitive()
-    assert prefs.toasts == ["Freed 5.0\u00a0kB."] and prefs.errors == []
+def test_clear_all_asks_with_the_total_and_clears_everything(prefs, cache, tmp_path):
+    """"Clear All…": the question names the maps and the rest; Clear empties every part, the
+    rows then say so and every button is grey."""
+    stay = filled(cache, tmp_path)
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    _button(group, "All of the cache").emit("clicked")
+    (question,) = prefs.dialogs
+    assert question.get_heading() == "Clear the cache?"
+    assert question.get_body() == ("This deletes the downloaded maps (1.8\u00a0kB) and the other "
+                                   "files of the cache (4.1\u00a0kB). The maps will have to be "
+                                   "downloaded again.")
+    question.emit("response", "clear")
+    assert all(files == [] for files in _left(cache).values())
+    assert all(p.exists() for p in stay.values()) and (cache / "cache.lock").exists()
+    rows = storage_rows(group)
+    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 5
+    assert not any(b.get_sensitive() for _t, _s, b in rows)
+    assert prefs.toasts == ["Freed 5.9\u00a0kB."]
+
+
+@pytest.mark.needs_display
+def test_clear_all_without_maps_says_so(prefs, cache):
+    fill(cache, {"images/p.png": 30})
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    _button(group, "All of the cache").emit("clicked")
+    (question,) = prefs.dialogs
+    assert question.get_body() == ("This deletes the files of the cache (30\u00a0B). They are "
+                                   "downloaded again when needed.")
 
 
 @pytest.mark.needs_display
 def test_clearing_while_the_cache_is_in_use(prefs, cache):
-    """A download or an install holds the cache: the message says so; nothing is deleted
-    and the row still shows the size."""
+    """A download or an install holds the cache: the message says so; nothing is deleted,
+    the row still shows the size and its trash can be clicked again."""
     from openexpress import cache as oe_cache
 
-    fill(cache, {"maps/m": 5000})
-    row, button = cache_row(prefs._cache_group())
-    button.emit("clicked")
+    fill(cache, {"images/p.png": 30})
+    group = prefs._cache_group()
+    _counted(prefs, group)
     with oe_cache.using():
-        prefs.dialogs[0].emit("response", "clear")
+        _button(group, "Pictures and icons").emit("clicked")
     assert prefs.errors == [("The cache is in use (a download or an install is running). "
                              "Try again later.")]
-    assert (cache / "maps" / "m").exists() and row.get_subtitle().startswith("5.0\u00a0kB")
+    assert (cache / "images" / "p.png").exists()
+    rows = dict((t, (s, b.get_sensitive())) for t, s, b in storage_rows(group))
+    assert rows["Pictures and icons"] == ("30\u00a0B\u00a0· 1 file", True)
+    assert prefs.toasts == []
 
 
 @pytest.mark.needs_display
-def test_cancel_does_nothing(prefs, cache):
-    """Cancel: nothing deleted, no task, nothing said."""
-    fill(cache, {"maps/m": 5000})
-    _row, button = cache_row(prefs._cache_group())
-    button.emit("clicked")
-    prefs.dialogs[0].emit("response", "cancel")
-    assert (cache / "maps" / "m").exists() and prefs.errors == [] and prefs.toasts == []
+def test_the_toast_goes_to_the_open_preferences(prefs, cache):
+    """With the preferences open, the toast is shown on them (the window's own toasts are
+    under the dialog)."""
+    from gi.repository import Adw
+
+    shown = []
+    prefs._preferences = types_namespace(add_toast=lambda toast: shown.append(toast.get_title()))
+    fill(cache, {"images/p.png": 30})
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    _button(group, "Pictures and icons").emit("clicked")
+    assert shown == ["Freed 30\u00a0B."] and prefs.toasts == []
+    assert Adw.Toast  # (the real kind is built)
+
+
+def types_namespace(**kw):
+    import types
+
+    return types.SimpleNamespace(**kw)
 
 
 @pytest.mark.needs_display

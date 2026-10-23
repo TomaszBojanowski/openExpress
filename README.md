@@ -356,11 +356,15 @@ openExpress keeps a log of what it does, to make problems easier to find:
 
 ### Cache
 
-Downloaded maps and software updates, device pictures and files on their way to the device
-are kept in `~/.cache/openexpress` (the Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/cache/openexpress`;
-each installation has its own). `openexpress cache` shows how big it is, `openexpress cache --clear --apply`
-empties it, and so does Preferences → Storage → Clear… in the window; maps are then downloaded again
-when they are installed or updated. It is not cleared while a download or an install is running.
+Downloaded maps and software updates, device pictures and app icons, and files on their way to
+the device are kept in `~/.cache/openexpress` (the Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/cache/openexpress`;
+each installation has its own), in four parts: `maps`, `updates`, `pictures` and `temp`.
+`openexpress cache` shows how big each part is, `openexpress cache --clear --apply` empties all of
+them and `openexpress cache --clear --only maps,updates --apply` only those named (without
+`--apply` it says what it would free). In the window, Preferences → Storage has a row for each
+part with a trash button, and Clear All…; maps and updates ask first. Maps are then downloaded
+again when they are installed or updated. Nothing is cleared while a download, an install or a
+copy to the device is running.
 
 ### Privacy and security
 

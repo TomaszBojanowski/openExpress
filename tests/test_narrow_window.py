@@ -373,3 +373,42 @@ def test_with_an_older_libadwaita_the_updates_page_fits_too(narrow_window, monke
     win.select_section("updates")
     _iterate(0.05)
     assert _min_width(win.device_view) <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_preferences_with_the_storage_group_fit_the_narrowest_window(narrow_window,
+                                                                         monkeypatch, language):
+    """The preferences of the real window, the parts of the cache counted with sizes of all
+    kinds (gigabytes of maps, an empty part): no wider than the narrowest window."""
+    from openexpress import cache
+    from openexpress.gui.app import Adw
+
+    sizes = {"maps": 6_657_384_448, "updates": 98_298_723, "pictures": 306_702, "temp": 0}
+    files = {"maps": 128, "updates": 2, "pictures": 7, "temp": 0}
+    monkeypatch.setattr(cache, "usage", lambda only=None: cache.CacheUsage(
+        cache.paths.cache_dir(), dict(sizes), dict(files)))
+    win = narrow_window(language)
+    win.show_preferences()
+    deadline = time.monotonic() + 5
+    while win._storage.usage is None and time.monotonic() < deadline:
+        _iterate(0.01)
+    _iterate(0.05)
+    dialog = win._preferences
+    assert isinstance(dialog, Adw.PreferencesDialog)
+    # The dialog itself measures nothing (it lays out a sheet): its page is what must fit.
+    everything, _button = win._storage.everything
+    (page,) = [w for w in _descendants(dialog) if isinstance(w, Adw.PreferencesPage)
+               and everything.is_ancestor(w)]
+    texts = list(_texts(page))
+    assert any(t.startswith(("6.7\u00a0GB", "6,7\u00a0GB")) for t in texts)
+    assert ("Clear All…" if language == "en" else "Wyczyść wszystko…") in texts
+    assert _min_width(page) <= NARROWEST
+    dialog.close()
+
+
+def _descendants(widget):
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        yield from _descendants(child)
+        child = child.get_next_sibling()

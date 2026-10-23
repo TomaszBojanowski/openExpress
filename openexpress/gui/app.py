@@ -368,14 +368,15 @@ TEXT_AFTER_MS = 500
 
 
 def show_working(button: Gtk.Button):
-    """The button spins instead of showing its label and cannot be clicked; returns the
-    function that puts it back (clickable or not). The label stays under the spinner, unseen,
-    so the button keeps its width and nothing beside it moves."""
-    label = button.get_label()
-    if label is None:  # not a button with a label: it only goes grey
+    """The button spins instead of showing its label or icon and cannot be clicked; returns
+    the function that puts it back (clickable or not). The label or icon stays under the
+    spinner, unseen, so the button keeps its size and nothing beside it moves."""
+    label, icon = button.get_label(), button.get_icon_name()
+    if label is None and icon is None:  # neither: it only goes grey
         button.set_sensitive(False)
         return button.set_sensitive
-    ghost = Gtk.Label(label=label, use_underline=button.get_use_underline(), opacity=0)
+    ghost = (Gtk.Label(label=label, use_underline=button.get_use_underline(), opacity=0)
+             if label is not None else Gtk.Image(icon_name=icon, opacity=0))
     spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
     spinner.set_halign(Gtk.Align.CENTER)
     spinner.set_valign(Gtk.Align.CENTER)
@@ -385,7 +386,10 @@ def show_working(button: Gtk.Button):
     button.set_sensitive(False)
 
     def restore(sensitive: bool) -> None:
-        button.set_label(label)
+        if label is not None:
+            button.set_label(label)
+        else:
+            button.set_icon_name(icon)
         button.set_sensitive(sensitive)
 
     return restore
@@ -802,6 +806,104 @@ def render_account_row(win) -> None:
     else:
         row.set_title(GLib.markup_escape_text(auth.display))
         button.set_label(_("Log out"))
+
+
+# The question before a part of the cache is cleared: only for those that take long to download
+# again; pictures and temporary files go at once.
+CACHE_QUESTIONS = {
+    "maps": (N_("Clear the downloaded maps?"),
+             N_("This deletes the downloaded maps ({size}). They will have to be downloaded "
+                "again.")),
+    "updates": (N_("Clear the downloaded updates?"),
+                N_("This deletes the downloaded software updates ({size}). They are downloaded "
+                   "again when needed.")),
+}
+
+
+def _cache_words(size: int, files: int) -> str:
+    return caption(_human(size), ngettext("{count} file", "{count} files", files).format(
+        count=files))
+
+
+def show_cache_usage(win, use) -> None:
+    """The sizes counted (cache.usage) in the storage group of the preferences, if they are
+    still open: for each part and for all of it, its size and files, and its button clickable
+    when there is something to clear."""
+    shown = getattr(win, "_storage", None)
+    if shown is None:
+        return  # the preferences closed meanwhile
+    shown.usage = use
+    for name, (row, trash) in shown.parts.items():
+        row.set_subtitle(_cache_words(use.sizes[name], use.files[name]))
+        trash.set_sensitive(use.sizes[name] > 0)
+    row, button = shown.everything
+    row.set_subtitle(_cache_words(use.total, sum(use.files.values())))
+    button.set_sensitive(use.total > 0)
+
+
+def ask_clear_cache_part(win, name: str, button) -> None:
+    """The trash of a part of the cache: maps and updates ask first, with their size; the
+    others are cleared at once."""
+    shown = getattr(win, "_storage", None)
+    if shown is None or shown.usage is None:
+        return
+    if name not in CACHE_QUESTIONS:
+        clear_cache(win, [name], button)
+        return
+    heading, body = CACHE_QUESTIONS[name]
+    ask_to_clear(win, _(heading), _(body).format(size=_human(shown.usage.sizes[name])), [name])
+
+
+def ask_to_clear(win, heading: str, body: str, names: list[str] | None) -> None:
+    """Clear (destructive) or Cancel (the default); Clear clears those parts (None: all) from
+    their button, found when the answer comes: the handler holds no widget."""
+    d = Adw.AlertDialog(heading=heading, body=body)
+    d.add_response("cancel", _("Cancel"))
+    # TRANSLATORS: button that clears the cache
+    d.add_response("clear", _("Clear"))
+    d.set_response_appearance("clear", Adw.ResponseAppearance.DESTRUCTIVE)
+    d.set_default_response("cancel")
+    d.set_close_response("cancel")
+
+    def response(_d, r):
+        shown = getattr(win, "_storage", None)
+        if r != "clear" or shown is None:
+            return
+        button = shown.everything[1] if names is None else shown.parts[names[0]][1]
+        clear_cache(win, names, button)
+
+    d.connect("response", response)
+    d.present(win)
+
+
+def clear_cache(win, names: list[str] | None, button) -> None:
+    """Clears those parts of the cache (None: all) in a task started from `button`, as
+    `cache --clear --only … --apply` does; then the sizes counted again (in the task too) and
+    how much was freed."""
+    def work():
+        return cache.clear(names), cache.usage()
+
+    def done(result):
+        freed, now = result
+        show_cache_usage(win, now)
+        cache_toast(win, _("Freed {size}.").format(size=_human(freed.total)))
+
+    def failed(e):
+        if isinstance(e, cache.CacheError):
+            win.error(_("The cache was not cleared"), str(e))
+            return True
+        return False
+
+    win.run_task(_("Clearing the cache…"), work, done, failed, device=False, button=button)
+
+
+def cache_toast(win, text: str) -> None:
+    """A toast on the preferences while they are open (the window's own is under them)."""
+    shown = getattr(win, "_preferences", None)
+    if shown is not None:
+        shown.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
+    else:
+        win.toast(text)
 
 
 def account_changed(win, cause: Cause = Cause.ACCOUNT_CHANGED) -> None:
@@ -2867,6 +2969,7 @@ class MainWindow(Adw.ApplicationWindow):
         # keeps no widget of the preferences.
         self._preferences = dialog
         dialog.connect("closed", lambda _d: (setattr(self, "_account_row", None),
+                                             setattr(self, "_storage", None),
                                              setattr(self, "_preferences", None)))
         g = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
         sw = Adw.SwitchRow(
@@ -2948,40 +3051,48 @@ class MainWindow(Adw.ApplicationWindow):
             self.logout()
 
     def _cache_group(self) -> Adw.PreferencesGroup:
-        """The "Storage" group of the preferences: how big the cache is, and clearing it. The
-        size is counted at once (it is a few dozen files: no file is read)."""
+        """The "Storage" group of the preferences: a row for each part of the cache, with its
+        size, its files and a trash (grey while the part is empty), and one for all of it
+        with "Clear All…". The sizes are counted in the background, never on the window's
+        thread; the group is about the cache of this installation alone."""
+        kind = _("Flatpak") if paths.in_flatpak() else _("version from source")
         # TRANSLATORS: group in the preferences: the cache of downloaded maps and updates
-        g = Adw.PreferencesGroup(title=_("Storage"))
-        row = Adw.ActionRow(title=_("Cache"))
-        # Not one of the action buttons: those all come back on after a task, and this one
-        # stays grey while there is nothing to clear.
-        button = Gtk.Button(label=_("Clear…"), valign=Gtk.Align.CENTER)
+        g = Adw.PreferencesGroup(title=_("Storage"), description=_(
+            "Only the files of this installation ({kind}); openExpress downloads them again "
+            "when needed").format(kind=kind))
+        parts = {}
+        for name in cache.CATEGORIES:
+            row = Adw.ActionRow(title=_(cache.CATEGORY_NAMES[name]), subtitle=_("Counting…"))
+            trash = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
+                               tooltip_text=_("Delete these files"), sensitive=False)
+            trash.add_css_class("flat")
+            # The handler gets its button from the signal and holds none.
+            trash.connect("clicked", lambda button, name=name: ask_clear_cache_part(
+                self, name, button))
+            row.add_suffix(trash)
+            g.add(row)
+            parts[name] = (row, trash)
+        # TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
+        everything = Adw.ActionRow(title=_("All of the cache"), subtitle=_("Counting…"))
+        # TRANSLATORS: button that clears every part of the cache
+        button = Gtk.Button(label=_("Clear All…"), valign=Gtk.Align.CENTER, sensitive=False)
         button.connect("clicked", self._ask_clear_cache)
-        row.add_suffix(button)
-        self._render_cache_row(row, button, cache.usage())
-        g.add(row)
+        everything.add_suffix(button)
+        g.add(everything)
+        # Held by the window while the preferences are open (dropped when they close), so
+        # that what comes back from a thread finds the rows without holding them.
+        self._storage = types.SimpleNamespace(parts=parts, everything=(everything, button),
+                                              usage=None)
+        MainWindow.in_background(cache.usage, lambda use: show_cache_usage(self, use))
         return g
 
-    def _render_cache_row(self, row, button, use) -> None:
-        if use.total == 0:
-            # TRANSLATORS: the cache, with nothing in it
-            text = _("Empty")
-        elif use.sizes["maps"] * 2 >= use.total:
-            text = _("{size}, mostly downloaded maps").format(size=_human(use.total))
-        else:
-            text = _human(use.total)
-        row.set_subtitle(text)
-        button.set_sensitive(use.total > 0)
-
     def _ask_clear_cache(self, button) -> None:
-        """Asks first, naming the maps and their size; then clears as `cache --clear --apply`
-        does. The row is taken from the button, and held weakly while the question is open."""
-        if self.busy:
-            self.toast(_("Another operation is in progress"))
+        """"Clear All…": asks first, naming the maps and their size; then clears as
+        `cache --clear --apply` does, from the button."""
+        shown = getattr(self, "_storage", None)
+        use = shown.usage if shown is not None else None
+        if use is None:
             return
-        row = weakref.ref(button.get_ancestor(Adw.ActionRow))
-        button = weakref.ref(button)
-        use = cache.usage()
         maps, other = use.sizes["maps"], use.total - use.sizes["maps"]
         if maps:
             body = _("This deletes the downloaded maps ({maps}) and the other files of the cache "
@@ -2990,31 +3101,8 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             body = _("This deletes the files of the cache ({size}). They are downloaded again "
                      "when needed.").format(size=_human(use.total))
-        d = Adw.AlertDialog(heading=_("Clear the cache?"), body=body)
-        d.add_response("cancel", _("Cancel"))
-        # TRANSLATORS: button that clears the cache
-        d.add_response("clear", _("Clear"))
-        d.set_response_appearance("clear", Adw.ResponseAppearance.DESTRUCTIVE)
-        d.set_default_response("cancel")
-        d.set_close_response("cancel")
+        ask_to_clear(self, _("Clear the cache?"), body, None)
 
-        def done(freed):
-            if row() is not None and button() is not None:
-                self._render_cache_row(row(), button(), cache.usage())
-            self.toast(_("Freed {size}.").format(size=_human(freed.total)))
-
-        def failed(e):
-            if isinstance(e, cache.CacheError):
-                self.error(_("The cache was not cleared"), str(e))
-                return True
-            return False
-
-        def response(_d, r):
-            if r == "clear":
-                self.run_task(_("Clearing the cache…"), cache.clear, done, failed, device=False)
-
-        d.connect("response", response)
-        d.present(self)
 
     def show_shortcuts(self) -> None:
         dialog = Adw.ShortcutsDialog()

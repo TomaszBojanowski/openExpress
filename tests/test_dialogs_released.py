@@ -31,8 +31,8 @@ def _preferences_window():
     win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
                                 set_background=lambda on, done=None: None, choose_dll=lambda: None,
                                 error=lambda title, text: None, run_task=None, toast=None)
-    for name in ("_button", "_cache_group", "_ask_clear_cache", "_render_cache_row",
-                 "_account_group", "_account_action"):
+    for name in ("_button", "_cache_group", "_ask_clear_cache", "_account_group",
+                 "_account_action"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     return win
 
@@ -54,6 +54,58 @@ def test_the_preferences_are_released_once_closed(monkeypatch, xdg):
     win._action_buttons.clear()  # what the window drops as its pages are drawn again
     _settle()
     assert gone == [True]
+
+
+@pytest.mark.needs_display
+def test_the_preferences_and_the_question_of_the_cache_are_released(monkeypatch, xdg):
+    """The storage group counted (in the background), a part cleared after its question:
+    once closed, the preferences and the question are both released, and the count that
+    comes back later finds nothing to draw in."""
+    import time
+
+    from gi.repository import Adw, GLib
+
+    from openexpress import cache
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    shown, questions = [], []
+    monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
+    maps = cache.paths.cache_dir() / "maps"
+    maps.mkdir(parents=True)
+    (maps / "m").write_bytes(b"x" * 100)
+    win = _preferences_window()
+
+    def run_task(title, work, done, failed=None, device=True, in_page=False, button=None):
+        restore = app.show_working(button)
+        result = work()
+        restore(True)
+        done(result)
+
+    win.run_task = run_task
+    MainWindow.show_preferences(win)
+    dialog = shown.pop()
+    deadline = time.monotonic() + 5
+    while win._storage.usage is None and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+    (trash,) = [t for name, (_row, t) in win._storage.parts.items() if name == "maps"]
+    trash.emit("clicked")
+    question = questions.pop()
+    question.emit("response", "clear")
+    assert list(maps.iterdir()) == []
+    del trash
+    gone, asked_gone = _finalized(dialog), _finalized(question)
+    question.emit("closed")
+    dialog.emit("closed")
+    del dialog, question
+    win._action_buttons.clear()
+    MainWindow.in_background(cache.usage, lambda use: app.show_cache_usage(win, use))
+    _settle()
+    time.sleep(0.05)
+    _settle()
+    assert gone == [True] and asked_gone == [True]
+    assert getattr(win, "_storage", None) is None
 
 
 def _presented_in_a_window(monkeypatch, kind):
