@@ -1037,6 +1037,53 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
     assert [m["filename"] for m in ownmaps.recorded(dev)] == ["new-map.img"]
 
 
+class HalfCopy(LocalStorage):
+    """A device that goes half way through a copy and leaves half the file under its name
+    (as MTP may); `deletable`: that half can still be deleted."""
+
+    def __init__(self, root, deletable):
+        super().__init__(root)
+        self.deletable = deletable
+
+    def _write_file(self, real_path, local, progress=None):
+        (self.root / real_path).write_bytes(local.read_bytes()[:1000])
+        raise DeviceError(f"Cannot write {real_path}: the device is gone")
+
+    def _delete(self, real_path):
+        if not self.deletable:
+            raise DeviceError(f"Cannot delete {real_path}")
+        super()._delete(real_path)
+
+
+def page_list(win):
+    """The own maps the Maps page shows now: (file, size, map name), and which are ours."""
+    view = ownmaps.overview(win.session.device, win.session.storage, win.maps_cache)
+    return [(m.filename, m.size, m.title) for m in view.maps], sorted(view.removable)
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("deletable", "left"), [(True, False), (False, True)])
+def test_window_reads_the_page_again_after_a_failed_copy(window_device, my_map, deletable, left):
+    """The copy fails half way: the error is said as before, and the page is read again. It
+    lists what the device has now: as before, or with the half file that could not be
+    deleted (before, the page showed the device as it was until it was read again)."""
+    win, dev, root = window_device
+    target = my_map.rename(my_map.with_name("new-map.img"))
+    before, _ours = page_list(win)
+    win.session.storage = HalfCopy(root, deletable)
+    win.load_section = lambda key, force=False: win.reloads.append((key, force, page_list(win)))
+    win.add_own_map(target)
+    kind, title, text = win.shown[-1]
+    assert (kind, title) == ("error", "Cannot add the map")
+    assert text.startswith("Writing Garmin/new-map.img failed")
+    assert len(win.reloads) == 1
+    ((key, force, (shown, ours)),) = win.reloads
+    assert (key, force, ours) == ("maps", True, [])
+    assert [name for name, _size, _title in shown if name not in [b[0] for b in before]] == (
+        ["new-map.img"] if left else [])
+    assert ownmaps.recorded(dev) == []
+
+
 @pytest.mark.needs_display
 def test_window_copies_nothing_when_the_user_cancels(window_device, my_map):
     win, dev, root = window_device
@@ -1103,14 +1150,37 @@ def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
     win.confirm_remove_own(ours)
     assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
 
-    # The file was replaced meanwhile: refused, shown, nothing removed.
+    # The file was replaced meanwhile: refused, shown, nothing removed; the page is read
+    # again, as after any failed removal, and lists the same as before.
     win.answer, win.shown = "ok", []
     (root / "Garmin" / "ours.img").write_bytes(b"another file")
+    before = page_list(win)
+    win.load_section = lambda key, force=False: win.reloads.append((key, force, page_list(win)))
     win.confirm_remove_own(ours)
     kind, title, text = win.shown[-1]
     assert (kind, title) == ("error", "Cannot remove the map") and "not the same file" in text
     assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
-    assert win.reloads == []
+    assert win.reloads == [("maps", True, before)]
+
+
+@pytest.mark.needs_display
+def test_window_reads_the_page_again_after_a_failed_removal(window_device, my_map, monkeypatch):
+    """The file is still there after the delete: said, nothing taken off the list, and the
+    page is read again; it lists the same as before."""
+    win, dev, root = window_device
+    st = win.session.storage
+    ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
+    (ours,) = [m for m in ownmaps.overview(dev, st, win.maps_cache).maps if m.filename == "ours.img"]
+    monkeypatch.setattr(KeepsFiles, "refuse", False)  # says yes, keeps the file
+    win.session.storage = KeepsFiles(root)
+    before = page_list(win)
+    win.load_section = lambda key, force=False: win.reloads.append((key, force, page_list(win)))
+    win.confirm_remove_own(ours)
+    assert win.shown[-1] == ("error", "Cannot remove the map",
+                             ("Garmin/ours.img is still on the device; nothing was taken off "
+                              "the list."))
+    assert len(ownmaps.recorded(dev)) == 1
+    assert win.reloads == [("maps", True, before)]
 
 
 @pytest.mark.needs_display

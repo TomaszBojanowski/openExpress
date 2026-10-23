@@ -487,10 +487,11 @@ def writes_to_device(fn):
 def read_again_after_failure(win, key: str, failed=None):
     """The failure handler of a task that changes what page `key` (maps, apps, music) shows:
     the page is read again, as when the task went well, since a part of it may be done (the
-    files of a map without its unlock file, songs copied in part, an app list that waited and
-    is gone). `failed` says the error as before (else run_task does); its words stay over the
-    page as it is read. Not when the device was unplugged, or another one opened, meanwhile:
-    the window reads what is open on its own."""
+    files of a map without its unlock file, half an own map that could not be deleted, songs
+    copied in part, an app list that waited and is gone). `failed` says the error as before
+    (else run_task does); its words stay over the page as it is read. Not when the device
+    was unplugged, or another one opened, meanwhile: the window reads what is open on its
+    own."""
     started = win.session
 
     def handler(e) -> bool:
@@ -3915,7 +3916,8 @@ class MainWindow(Adw.ApplicationWindow):
                           _("Copying the map…"),
                           writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
                                                                transfer_progress=self.fraction)),
-                          lambda real: written(real, plan), refused))
+                          lambda real: written(real, plan),
+                          read_again_after_failure(self, "maps", refused)))
 
         self.run_task(_("Checking maps…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
@@ -3938,10 +3940,7 @@ class MainWindow(Adw.ApplicationWindow):
             return plan
 
         def refused(e):
-            shown = self._own_map_refused(e, _("Cannot remove the map"))
-            if shown and foreign:
-                self.load_section("maps", force=True)  # the page is out of date
-            return shown
+            return self._own_map_refused(e, _("Cannot remove the map"))
 
         def removed(plan):
             if plan.on_device:
@@ -3961,7 +3960,9 @@ class MainWindow(Adw.ApplicationWindow):
                   _("Remove Anyway") if foreign else _("Remove"),
                   lambda: self.run_task(
                       _("Removing {name}…").format(name=m.title or m.filename),
-                      writes_to_device(work), removed, refused),
+                      writes_to_device(work), removed,
+                      # Refused or failed, the page is read again: it may be out of date.
+                      read_again_after_failure(self, "maps", refused)),
                   destructive=True)
 
     @staticmethod
