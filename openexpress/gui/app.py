@@ -361,6 +361,36 @@ def trash_button(tooltip: str, cb) -> Gtk.Button:
     return b
 
 
+# A task started from a button: the button spins at once, and the bar at the bottom with the
+# words of the task comes only when the task takes longer than this; a quick one (a fast
+# device) shows no text that flashes and is gone.
+TEXT_AFTER_MS = 500
+
+
+def show_working(button: Gtk.Button):
+    """The button spins instead of showing its label and cannot be clicked; returns the
+    function that puts it back (clickable or not). The label stays under the spinner, unseen,
+    so the button keeps its width and nothing beside it moves."""
+    label = button.get_label()
+    if label is None:  # not a button with a label: it only goes grey
+        button.set_sensitive(False)
+        return button.set_sensitive
+    ghost = Gtk.Label(label=label, use_underline=button.get_use_underline(), opacity=0)
+    spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+    spinner.set_halign(Gtk.Align.CENTER)
+    spinner.set_valign(Gtk.Align.CENTER)
+    overlay = Gtk.Overlay(child=ghost)
+    overlay.add_overlay(spinner)
+    button.set_child(overlay)
+    button.set_sensitive(False)
+
+    def restore(sensitive: bool) -> None:
+        button.set_label(label)
+        button.set_sensitive(sensitive)
+
+    return restore
+
+
 def still_in_window(buttons: list) -> list:
     """The action buttons that are still in a window: a page that is rebuilt leaves its old
     buttons behind, and the list must not keep them and what they hold."""
@@ -1459,18 +1489,42 @@ class MainWindow(Adw.ApplicationWindow):
             self._waiting = 0
 
     def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True,
-                 in_page: bool = False) -> None:
+                 in_page: bool = False, button: Gtk.Button | None = None) -> None:
         """Run `fn()` in a thread; the result is passed back to the GUI thread.
 
         `device` is False for a task that does not touch the connected device: the user is
         then not told to keep it plugged in. `in_page`: the page shows that it loads, so the
-        bottom bar has no indicator of its own."""
+        bottom bar has no indicator of its own. `button`: the task was started from it; it
+        spins at once, the rest of the page stays as it is, and the bar with `title` comes
+        only after TEXT_AFTER_MS. It is as it was before on_done or on_error runs."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
-        self.set_busy(True, title, device=device and self.session is not None, in_page=in_page)
+        has_device = device and self.session is not None
+        restore, reveal = None, [0]
+        if button is None:
+            self.set_busy(True, title, device=has_device, in_page=in_page)
+        else:
+            self.busy = True  # no other task meanwhile
+            restore = show_working(button)
+
+            def show_bar() -> bool:
+                reveal[0] = 0
+                self.set_busy(True, title, device=has_device, in_page=in_page)
+                return False
+
+            reveal[0] = GLib.timeout_add(TEXT_AFTER_MS, show_bar)
         log.info("task: %s", fn.__qualname__.split(".<locals>")[0] if hasattr(fn, "__qualname__")
                  else "?")
+
+        def ended():
+            if reveal[0]:
+                GLib.source_remove(reveal[0])  # done before its words were due
+                reveal[0] = 0
+            collect_garbage()
+            self.set_busy(False)
+            if restore is not None:
+                restore(True)
 
         def worker():
             try:
@@ -1482,8 +1536,7 @@ class MainWindow(Adw.ApplicationWindow):
                 GLib.idle_add(finish_ok, result)
 
         def finish_ok(result):
-            collect_garbage()
-            self.set_busy(False)
+            ended()
             try:
                 if on_done:
                     on_done(result)
@@ -1493,8 +1546,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         def finish_error(e):
             log.warning("task failed: %s: %s", type(e).__name__, e)
-            collect_garbage()
-            self.set_busy(False)
+            ended()
             try:
                 if not (on_error and on_error(e)):
                     self.error(title, str(e) or e.__class__.__name__)
@@ -1530,11 +1582,17 @@ class MainWindow(Adw.ApplicationWindow):
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _button(self, label: str, cb, style: str | None = None) -> Gtk.Button:
+    def _button(self, label: str, cb, style: str | None = None,
+                with_button: bool = False) -> Gtk.Button:
+        """An action button. `with_button`: `cb` gets the button clicked (the argument of the
+        signal; the handler holds no button), e.g. to start its task from it (run_task)."""
         b = Gtk.Button(label=label, valign=Gtk.Align.CENTER)
         if style:
             b.add_css_class(style)
-        b.connect("clicked", lambda *_: cb())
+        if with_button:
+            b.connect("clicked", lambda button: cb(button))
+        else:
+            b.connect("clicked", lambda *_: cb())
         b.set_sensitive(not self.busy)
         self._action_buttons.append(b)
         return b
@@ -3505,8 +3563,9 @@ class MainWindow(Adw.ApplicationWindow):
                     self._map_subtitle(m) + "\n" + mp.cannot_install_reason(m)))
             elif m.update_available:
                 # TRANSLATORS: button
-                row.add_suffix(self._button(_("Update"), lambda m=m: self.confirm_map(m),
-                                            "suggested-action"))
+                row.add_suffix(self._button(_("Update"),
+                                            lambda button, m=m: self.confirm_map(m, button),
+                                            "suggested-action", with_button=True))
             if m.can_uninstall:
                 row.add_suffix(self._trash(_("Remove {name}").format(name=m.name),
                                            lambda m=m: self.confirm_remove(m)))
@@ -3532,7 +3591,9 @@ class MainWindow(Adw.ApplicationWindow):
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(line))
             if mp.can_install(m):
-                row.add_suffix(self._button(_("Install"), lambda m=m: self.confirm_map(m)))
+                row.add_suffix(self._button(_("Install"),
+                                            lambda button, m=m: self.confirm_map(m, button),
+                                            with_button=True))
             listbox.append(row)
             rows.append((row, f"{m.name} {m.region} {m.map_type}".casefold()))
         g.add(listbox)
@@ -3706,7 +3767,10 @@ class MainWindow(Adw.ApplicationWindow):
                  m.version, _human(m.size), m.status]
         return caption(*parts)
 
-    def confirm_map(self, m) -> None:
+    def confirm_map(self, m, button: Gtk.Button | None = None) -> None:
+        """Install or Update of a map (`button`, which spins while the space is checked):
+        refused at once when it cannot be installed, else the space is read in a task and the
+        question comes when it is done."""
         from openexpress import maps as mp
 
         if not mp.can_install(m):
@@ -3737,7 +3801,7 @@ class MainWindow(Adw.ApplicationWindow):
         def failed(_e):
             return self.session is not s  # gone meanwhile: the window says so already
 
-        self.run_task(_("Checking the space…"), work, done, failed)
+        self.run_task(_("Checking the space…"), work, done, failed, button=button)
 
     def _ask_install_map(self, m, need: int, free: int | None, removing: list[str]) -> None:
         """The question before a map is installed, with the space it needs and the space

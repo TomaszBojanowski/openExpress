@@ -50,7 +50,8 @@ class Tasks:
     def __init__(self):
         self.titles, self.errors, self.before_done = [], [], None
 
-    def __call__(self, title, fn, done=None, failed=None, device=True, in_page=False):
+    def __call__(self, title, fn, done=None, failed=None, device=True, in_page=False,
+                 button=None):
         self.titles.append(title)
         result, error = [], []
 
@@ -172,6 +173,155 @@ def test_a_device_gone_during_the_check_says_nothing(map_window, monkeypatch):
     win.tasks.before_done = lambda: setattr(win, "session", None)
     app.MainWindow.confirm_map(win, m)
     assert Question.asked == [] and win.tasks.errors == []
+
+
+def _bar_window(map_window, monkeypatch, delay):
+    """The window as it runs a task for real (run_task and set_busy with their bar), for the
+    map of map_window, whose free space takes `delay` seconds to read."""
+    import time
+
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import app
+
+    win, m, storage = map_window
+    real_free = storage.free_space
+
+    def slow_free():
+        time.sleep(delay)
+        return real_free()
+
+    monkeypatch.setattr(storage, "free_space", slow_free)
+    win.busy, win._waiting, win._refresh_pending, win._action_buttons = False, 0, False, []
+    win.action_bar, win.progress_label = Gtk.ActionBar(revealed=False), Gtk.Label()
+    win.progress_bar, win.busy_spinner = Gtk.ProgressBar(), Gtk.Spinner()
+    win.unplug_label, win.banner = Gtk.Label(), Adw.Banner()
+    win._update_actions = win.toast = lambda *a: None
+    for name in ("run_task", "set_busy", "_stop_waiting", "_run_pending_refresh",
+                 "_ask_install_map"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
+    return win, m
+
+
+def _spinning(widget) -> bool:
+    from gi.repository import Adw, Gtk
+
+    kinds = (Gtk.Spinner, Adw.Spinner) if hasattr(Adw, "Spinner") else (Gtk.Spinner,)
+    child = widget.get_first_child()
+    while child is not None:
+        if (isinstance(child, kinds) and child.get_visible()) or _spinning(child):
+            return True
+        child = child.get_next_sibling()
+    return False
+
+
+def _until_asked(win, button):
+    """Runs the window's loop until the question is asked; what it showed meanwhile:
+    (the bar out, its text, the button clickable, a spinner in the button) each time."""
+    import time
+
+    from gi.repository import GLib
+
+    seen = []
+    deadline = time.monotonic() + 5
+    while not Question.asked and time.monotonic() < deadline:
+        seen.append((win.action_bar.get_revealed(), win.progress_label.get_text(),
+                     button.get_sensitive(), _spinning(button)))
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.005)
+    return seen
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("delay", "text_shown"), [(0.1, False), (0.8, True)])
+def test_the_button_spins_and_the_text_waits_half_a_second(map_window, monkeypatch, delay,
+                                                           text_shown):
+    """From the click the button of the map spins and cannot be clicked; "Checking the
+    space…" at the bottom comes only when the check takes more than 500 ms, so on a fast
+    device no text flashes. Then the button is as it was and the question is asked."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import app
+
+    win, m = _bar_window(map_window, monkeypatch, delay)
+    button = Gtk.Button(label="Install")
+    app.MainWindow.confirm_map(win, m, button)
+    seen = _until_asked(win, button)
+    (asked,) = Question.asked
+    assert asked["heading"] == "Install Test Map?"
+    assert seen and all(not clickable and spins for _out, _text, clickable, spins in seen)
+    shown = [text for out, text, _clickable, _spins in seen if out]
+    assert (shown != []) is text_shown
+    assert set(shown) <= {"Checking the space…"}
+    assert button.get_label() == "Install" and button.get_sensitive()
+    assert not _spinning(button)
+    assert not win.action_bar.get_revealed() and not win.busy
+
+
+@pytest.mark.needs_display
+def test_the_button_comes_back_when_the_check_fails(map_window, monkeypatch):
+    """A device gone during the check: no question, no error, the button as it was."""
+    from gi.repository import Gtk
+
+    from openexpress.device.storage import DeviceError
+    from openexpress.gui import app
+
+    win, m = _bar_window(map_window, monkeypatch, 0.05)
+    storage = win.session.storage
+
+    def gone():
+        win.session = None  # the window notices the unplugging meanwhile
+        raise DeviceError("Cannot list Garmin/Maps: the device is gone")
+
+    monkeypatch.setattr(storage, "free_space", gone)
+    button = Gtk.Button(label="Install")
+    app.MainWindow.confirm_map(win, m, button)
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + 2
+    while win.busy and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.005)
+    assert Question.asked == [] and win.errors == []
+    assert button.get_label() == "Install" and button.get_sensitive()
+    assert not _spinning(button)
+
+
+@pytest.mark.needs_display
+def test_the_install_button_of_the_maps_page_starts_the_check_from_itself(server, device_root):
+    """Install and Update on the Maps page hand their own button to the check."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import app
+
+    win, section, _asked = _real_maps_page([maps_response(server)], device_root)
+    started = []
+    win.confirm_map = lambda m, button=None: started.append(button)
+    win.load_section("maps")
+    buttons = [b for g in section.groups for r in _rows(g) for b in _suffix_buttons(r)
+               if b.get_label() in ("Install", "Update")]
+    assert buttons
+    for b in buttons:
+        b.emit("clicked")
+    assert started == buttons and all(isinstance(b, Gtk.Button) for b in started)
+    assert app.TEXT_AFTER_MS == 500
+
+
+def _suffix_buttons(row):
+    from gi.repository import Gtk
+
+    out, stack = [], [row]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Gtk.Button):
+            out.append(w)
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    return out
 
 
 # --- step 3: the question before the order of the apps is restored ---------------------------
