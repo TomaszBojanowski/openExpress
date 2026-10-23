@@ -978,8 +978,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                                          to_ack, leftover, report, progress)
         if new_entries and not registered:
             try:
-                storage.write(_config_path(device, True),
-                              build_in_bin(state.listed + new_entries))
+                write_app_list(device, storage, build_in_bin(state.listed + new_entries))
             except Exception as e:
                 for p in new_paths:
                     _delete_quietly(storage, p)
@@ -1133,6 +1132,54 @@ def _with_leftovers(error, paths: list[str]) -> str:
         "An unfinished file may have been left on the device: {paths}.",
         "Unfinished files may have been left on the device: {paths}.",
         len(paths)).format(paths=", ".join(paths))
+
+
+def write_app_list(device: GarminDevice, storage: Storage, data: bytes) -> str:
+    """Write the app list for the device (IN.BIN) and read it back; returns its real path.
+    Never half a list, which the device could read as a shorter one and then drop the apps it
+    no longer names: when the write fails or reads back otherwise, what was there before is
+    written back (the list that waited, or none); when even that fails, what is there is
+    deleted and CiqError says that the changes that waited are lost; when it cannot be deleted
+    either, CiqError says to delete it before unplugging."""
+    path = _config_path(device, True)
+    before = storage.read(path) if storage.exists(path) else None
+    try:
+        return _write_list_checked(storage, path, data)
+    except Exception as e:  # noqa: BLE001 - any failure: the list is put right, then raised
+        failure = e
+    if before is not None:
+        try:
+            _write_list_checked(storage, path, before)
+        except Exception as e:  # noqa: BLE001 - then it goes (below)
+            log.warning("apps: the app list that waited could not be written back: %s",
+                        type(e).__name__)
+        else:
+            log.warning("apps: writing the app list failed; the one that waited is back")
+            raise failure
+    try:
+        if storage.exists(path):
+            storage.delete(path)
+    except Exception as e:  # noqa: BLE001 - said, with what to do
+        log.warning("apps: a half written app list could not be deleted: %s", type(e).__name__)
+        raise CiqError(_(
+            "The app list for the device could not be written ({error}), and what was written "
+            "of it could not be deleted. Delete {path} on the device before you unplug it (e.g. "
+            "in Files): the device could read half a list and remove apps.").format(
+            error=failure, path=path)) from failure
+    log.warning("apps: writing the app list failed; what was written of it is deleted")
+    if before is not None:
+        raise CiqError(_(
+            "The app list for the device could not be written ({error}), nor the one that "
+            "waited written back: it was deleted, so the changes of the apps that waited for "
+            "the device are lost. Make them again.").format(error=failure)) from failure
+    raise failure
+
+
+def _write_list_checked(storage: Storage, path: str, data: bytes) -> str:
+    real = storage.write(path, data)
+    if storage.read(real) != data:
+        raise CiqError(_("Write verification of {path} failed").format(path=real))
+    return real
 
 
 def _delete_quietly(storage: Storage, path: str) -> None:
@@ -1493,7 +1540,6 @@ def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
     nothing had to change)."""
     state = read_installed(device, storage)
     require_complete(state)
-    in_path = _config_path(device, True)
     if changes_waiting(device, storage):
         raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
                          "until it is ready and try again"))
@@ -1510,10 +1556,7 @@ def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
         raise CiqError(_("The app list that would be written does not match the device. "
                          "Nothing was changed."))
     saved = save_app_list_copy(device, storage, backup_dir)
-    real = storage.write(in_path, data)
-    if storage.read(real) != data:
-        _delete_quietly(storage, real)
-        raise CiqError(_("Write verification of {path} failed").format(path=real))
+    write_app_list(device, storage, data)
     log.info("apps order: wrote %d entries, %d moved", len(plan.entries), len(plan.moved))
     return plan, saved
 
@@ -1532,4 +1575,4 @@ def set_enabled(device: GarminDevice, storage: Storage, app_id: uuid.UUID, enabl
     log.info("apps %s: %s (type %s)", "enable" if enabled else "disable", app.name,
              app.app_type)
     save_app_list_copy(device, storage)
-    storage.write(_config_path(device, True), build_in_bin(state.listed))
+    write_app_list(device, storage, build_in_bin(state.listed))
