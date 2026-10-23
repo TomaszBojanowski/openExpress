@@ -667,7 +667,9 @@ def install_refusals(device: GarminDevice, storage: Storage, state: InstalledSta
                      targets: list[StoreApp]) -> dict[uuid.UUID, str]:
     """Why some of these store apps cannot be installed over USB: app ID -> reason. Asked
     before anything is requested in Garmin Connect, downloaded or written; it reads nothing
-    new. The apps are taken in order: one that fits uses up its slot and its space.
+    new. The apps are taken in order: one that fits uses up its slot and its space. An app
+    list that waits for the device refuses them as its writers would: a damaged one every
+    app, a readable one those written over a PTP session.
 
     The size is the one the account lists; the file that is downloaded later can differ a
     little, so the space is checked again when it is written."""
@@ -677,9 +679,14 @@ def install_refusals(device: GarminDevice, storage: Storage, state: InstalledSta
     for t in targets:
         existing = state.find(t.app_id)
         datatype = store_datatype(t)
+        over_ptp = usb_dir_state(device, storage, datatype) == DIRECT
         # An update over PTP is written next to the old file: it needs room of its own.
-        needs_room = existing is None or usb_dir_state(device, storage, datatype) == DIRECT
+        needs_room = existing is None or over_ptp
         try:
+            if state.in_bin_damaged or (state.waiting and over_ptp):
+                # The app list would be refused: one that waits cannot be read whole (no
+                # list is built from it), or a PTP session writes nothing while one waits.
+                raise CiqError(waiting_list_text())
             if existing is None:
                 _check_slot(free_slots, new)
             _check_not_leaving(existing)

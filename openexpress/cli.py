@@ -1398,6 +1398,8 @@ def cmd_apps(args) -> int:
         return 0
 
     enable = cmd == "enable"
+    # Refused also in a dry run, as with --apply: a list that waits cannot be read whole.
+    ciq.require_readable_waiting_list(state)
     print((_("Enable {name}") if enable else _("Disable {name}")).format(name=app.name))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))

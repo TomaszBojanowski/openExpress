@@ -88,3 +88,91 @@ def test_an_install_over_the_mounted_storage_leaves_a_damaged_list_alone(device)
     media = st.root / "GARMIN/APPS/MEDIA"
     assert not media.exists() or list(media.iterdir()) == []
     assert client.acks == []
+
+
+# --- nothing is requested in Garmin Connect for an install that would be refused -------------
+
+FACE_IT = uuid.UUID("a1b2c3d4-0000-4000-8000-00000000face")
+
+
+def _store_app(app_id, name):
+    return ciq.StoreApp(app_id, name, "dev", "watchface", 1000, 5, "1.0", False, False)
+
+
+class Requests:
+    """ciq.StoreApi for install_apps: what was requested in Garmin Connect is noted."""
+
+    def __init__(self):
+        self.requested = []
+
+    def queue_install(self, device, apps):
+        self.requested += [a.app_id for a in apps]
+
+
+def _client():
+    client = FakeClient()
+    client.device_messages = lambda unit_id: []
+    return client
+
+
+@pytest.mark.parametrize("kind", DAMAGED)
+def test_an_install_requests_nothing_while_a_damaged_list_waits(device, kind):
+    """The install over the mounted storage would refuse (the list cannot be read whole):
+    the app is not requested in Garmin Connect either, so it does not stay in the queue
+    of the account (review of 24.10.2026)."""
+    st, dev = device
+    (st.root / IN_BIN).write_bytes(DAMAGED[kind])
+    store = Requests()
+    rep = ciq.install_apps(dev, st, _client(), store, [_store_app(FACE_IT, "Made-up Face")])
+    assert store.requested == []
+    assert [(name, error.split(";")[0]) for name, error in rep.failed] == [
+        ("Made-up Face", WAITING)]
+    assert (st.root / IN_BIN).read_bytes() == DAMAGED[kind]
+
+
+def test_an_install_over_ptp_requests_nothing_while_any_list_waits(monkeypatch, iq_device,
+                                                                   device_root, xdg):
+    """Over a PTP session nothing is written while a list waits, readable or not: the app
+    is not requested in Garmin Connect either."""
+    from ptp_fake import FakeDevice
+    from test_ciq_music import HidingStorage
+
+    _st, dev = iq_device
+    (device_root / "GARMIN/APPS/MEDIA").rmdir()
+    fake = FakeDevice()
+    fake.add("GARMIN/Apps/OUT.BIN", (device_root / "GARMIN/APPS/OUT.BIN").read_bytes())
+    fake.add("GARMIN/Apps/Media", hidden=True)
+    st = HidingStorage(device_root, fake)
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    ciq.set_enabled(dev, st, PRELOADED, True)  # a list that reads well waits for the device
+    store = Requests()
+    rep = ciq.install_apps(dev, st, _client(), store, [_store_app(FACE_IT, "Made-up Face")])
+    assert store.requested == [] and st.sessions == 0
+    assert [(name, error.split(";")[0]) for name, error in rep.failed] == [
+        ("Made-up Face", WAITING)]
+
+
+def test_the_dry_run_of_an_install_says_the_list_is_damaged(device, apps_cli, capsys,
+                                                            device_root, monkeypatch):
+    """Not "every app on the device is kept": the install would be refused, and it says so
+    (exit code 1, as for another refusal of the dry run)."""
+    from test_ciq_music import FakeStore
+
+    st, _dev = device
+    (st.root / IN_BIN).write_bytes(DAMAGED["not a list"])
+    monkeypatch.setattr(FakeStore, "account_apps",
+                        lambda self, device, locale: [_store_app(FACE_IT, "Made-up Face")])
+    assert main(["--path", str(device_root), "apps", "install", "Made-up Face"]) == 1
+    out = capsys.readouterr().out
+    assert f"ERROR Made-up Face: {WAITING}" in out
+    assert "every app on the device is kept" not in out
+
+
+@pytest.mark.parametrize("command", ["enable", "disable"])
+def test_the_dry_run_of_a_switch_says_the_list_is_damaged(device, apps_cli, capsys,
+                                                          device_root, command):
+    st, _dev = device
+    (st.root / IN_BIN).write_bytes(DAMAGED["not a list"])
+    assert main(["--path", str(device_root), "apps", command, "Softball"]) == 1
+    assert WAITING in capsys.readouterr().err
+    assert (st.root / IN_BIN).read_bytes() == DAMAGED["not a list"]
