@@ -555,7 +555,7 @@ def _refusals_file(device: GarminDevice) -> Path:
 
 def _refusals(device: GarminDevice) -> dict:
     try:
-        data = json.loads(_refusals_file(device).read_text())
+        data = json.loads(_refusals_file(device).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
     refused = data.get("refused_dirs") if isinstance(data, dict) else None
@@ -567,9 +567,8 @@ def _remember_refusal(device: GarminDevice, path: str) -> None:
     refused = _refusals(device)
     refused[path.casefold()] = device.software_version_str
     try:
-        f = _refusals_file(device)
-        paths.make_dir(f.parent)
-        f.write_text(json.dumps({"refused_dirs": refused}, indent=1))
+        # As the other state files: at once (no half file) and readable by its owner only.
+        paths.write_private(_refusals_file(device), json.dumps({"refused_dirs": refused}, indent=1))
     except OSError as e:
         log.warning("Cannot remember that %s cannot be created: %s", path, e)
 

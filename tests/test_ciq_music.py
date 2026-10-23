@@ -2233,6 +2233,21 @@ def test_dry_runs_save_no_copy(hidden_spot, apps_cli, monkeypatch, backups, caps
     assert not backups.exists() and fake.operations == []
 
 
+def test_a_refused_folder_is_remembered_in_a_private_file(iq_device):
+    """devices/<unit ID>/ciq.json is written as the other state files are (paths.write_private:
+    at once, readable by its owner only; review of 24.10.2026), and read back."""
+    import stat
+
+    _st, dev = iq_device
+    ciq._remember_refusal(dev, "GARMIN/APPS/MEDIA")
+    ciq._remember_refusal(dev, "GARMIN/APPS")
+    f = ciq._refusals_file(dev)
+    assert stat.S_IMODE(f.stat().st_mode) == 0o600
+    version = dev.software_version_str
+    assert ciq._refusals(dev) == {"garmin/apps/media": version, "garmin/apps": version}
+    assert [p.name for p in f.parent.iterdir()] == ["ciq.json"]  # no temporary file left
+
+
 def test_nothing_to_write_saves_no_copy(no_usb_apps, backups):
     st, dev, _attempts = no_usb_apps
     ciq._remember_refusal(dev, "GARMIN/APPS/MEDIA")  # known: the folder cannot be created
