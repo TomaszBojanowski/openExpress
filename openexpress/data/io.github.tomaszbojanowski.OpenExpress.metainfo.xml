@@ -105,6 +105,26 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.15" date="2026-10-23">
+      <description>
+        <ul>
+          <li>Preferences → Storage: the cache is split into maps, software updates, pictures
+          and temporary files, each with its size and its own clear button;
+          openexpress cache --clear --only … in the CLI.</li>
+          <li>Buttons that take a moment (install a map, restore app order, set the primary
+          training device, eject) show a spinner right away instead of a flashing status
+          text.</li>
+          <li>The device page and the report no longer query the device from the window
+          thread.</li>
+          <li>Writes to the device clean up after a failed copy; the app list (IN.BIN) is read
+          back after writing and restored if the write fails.</li>
+          <li>The Maps, Apps and Music pages reload after a failed task, so the list shows the
+          real state of the device.</li>
+          <li>After a map's .gma file fails to write, the message no longer tells you to
+          reinstall.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.14" date="2026-10-23">
       <description>
         <ul>
