@@ -3704,7 +3704,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     poll()
     # 27 s in its normal mode by now: the advice to plug it in again is added (see below).
     assert shown[-1] == ("The device is not ready",
-                         f"{gio_storage.not_ready_text('present')} {REPLUG_HINT_AFTER_PIN}",
+                         f"{gio_storage.not_ready_text('present')} {REPLUG_HINT_AFTER_PIN} {HELD_HINT}",
                          False)
     assert updates[-1] == "The device is not ready" and len(updates) == 3
     # Off the bus for a moment: the page stays; only a longer absence is an unplug.
@@ -3761,6 +3761,9 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
 REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
 # After the sentence about a PIN, which names the device already.
 REPLUG_HINT_AFTER_PIN = "If it isn't locked and isn't asking for anything, unplug the cable and plug it back in."
+# Added once the wait ran out (#13: Dolphin's kiod6 held the device).
+HELD_HINT = ("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, "
+             "then unplug the cable and plug it back in.")
 STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 
@@ -3805,7 +3808,7 @@ def test_a_device_in_its_normal_mode_without_mtp_for_15_s_is_to_be_plugged_in_ag
                                    True)),
                             (100 + gio_storage.WAIT_FOR_DEVICE_S + 1,
                              ("The device is not ready",
-                              f"{gio_storage.not_ready_text('present')} {REPLUG_HINT_AFTER_PIN}",
+                              f"{gio_storage.not_ready_text('present')} {REPLUG_HINT_AFTER_PIN} {HELD_HINT}",
                               False))):
             clock.now = now
             MainWindow._poll_usb(win, clock=clock)

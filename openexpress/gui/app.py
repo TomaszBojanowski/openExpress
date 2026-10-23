@@ -117,6 +117,10 @@ REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unpl
 # TRANSLATORS: the same, after the sentence about a PIN, which names the device already
 REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, unplug the cable "
                            "and plug it back in.")
+# TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
+# (KDE's Dolphin held a fēnix 8 through kiod6, #13)
+HELD_HINT = N_("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, "
+               "then unplug the cable and plug it back in.")
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 # The captions of the window (a hard space before "·"): in i18n, for last_sync too.
@@ -1911,14 +1915,16 @@ class MainWindow(Adw.ApplicationWindow):
         if state == PRESENT and mtp_missing():
             # gvfs here has no MTP backend (#13): said at once, nothing to wait for.
             return no_mtp_title(), no_mtp_text(), False
+        if state == PRESENT and waited_s >= WAIT_FOR_DEVICE_S:
+            # The PIN (not_ready_text, which names the device), then plugging it in again
+            # (after REPLUG_HINT_S in its normal mode), then other programs.
+            replug = f" {_(REPLUG_HINT_AFTER_PIN)}" if normal_s >= REPLUG_HINT_S else ""
+            return (_("The device is not ready"),
+                    f"{not_ready_text(state)}{replug} {_(HELD_HINT)}", False)
         if state == PRESENT and normal_s >= REPLUG_HINT_S:
-            title, text, busy = MainWindow._usb_notice(state, waited_s)
-            if waited_s < WAIT_FOR_DEVICE_S:
-                # One sentence becomes two: each with its full stop.
-                text = _("This takes a moment after the cable is plugged in.")
-                return title, f"{text} {_(REPLUG_HINT)}", busy
-            # After the sentence about a PIN (not_ready_text), which names the device.
-            return title, f"{text} {_(REPLUG_HINT_AFTER_PIN)}", busy
+            # One sentence becomes two: each with its full stop.
+            text = _("This takes a moment after the cable is plugged in.")
+            return _("The device is starting…"), f"{text} {_(REPLUG_HINT)}", True
         if state == ABSENT:
             return (_("Connect your device"),
                     _("Connect your Garmin device with a USB cable. "

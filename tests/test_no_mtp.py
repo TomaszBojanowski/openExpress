@@ -1,14 +1,18 @@
 """#13 (CachyOS/KDE, fēnix 8, 0.6.15): gvfs had no MTP backend (no gvfs-mtp), and KDE's
 kiod6 (Dolphin) held the device; the window said "starting" for 45 s, then asked about a
 PIN. Now a missing MTP backend is said at once, with what to install, in the window and on
-the command line. Nothing here asks the real gvfs (conftest: it has MTP, unless a test says
-otherwise)."""
+the command line; and the page "not ready" names other programs that may hold the device.
+Nothing here asks the real gvfs (conftest: it has MTP, unless a test says otherwise)."""
 
 import logging
 import types
 
 import pytest
-from test_detection import _banner_window, plugged  # noqa: F401 - the fixture
+from test_detection import (  # noqa: F401 - the fixture
+    REPLUG_HINT_AFTER_PIN,
+    _banner_window,
+    plugged,
+)
 
 from openexpress import i18n
 from openexpress.device import gio_storage
@@ -18,6 +22,8 @@ NO_MTP_TEXT = ("openExpress reads the device over MTP through gvfs, and gvfs on 
                "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: sudo "
                "pacman -S gvfs-mtp; Debian and Ubuntu: sudo apt install gvfs-backends), log "
                "out and back in, then plug the device in again.")
+HELD = ("Another program may be holding the device (e.g. Dolphin or Nautilus): close it, then "
+        "unplug the cable and plug it back in.")
 
 
 def gvfs_offers(monkeypatch, *schemes):
@@ -103,3 +109,37 @@ def test_no_mtp_in_polish(monkeypatch):
                     "apt install gvfs-backends), wyloguj się i\u00a0zaloguj ponownie, a\u00a0potem "
                     "podłącz urządzenie jeszcze raz.")
     assert busy is False
+
+
+# --- the page "not ready": another program may hold the device ---------------------------------
+
+@pytest.mark.parametrize(("normal_s", "replug"), [(5, False), (30, True)])
+def test_the_page_not_ready_names_other_programs(normal_s, replug):
+    """After 45 s: the PIN, the advice to plug it in again (after 15 s in its normal mode),
+    then other programs (Dolphin's kiod6 held the device in #13)."""
+    from openexpress.gui.app import MainWindow
+
+    pin = gio_storage.not_ready_text(gio_storage.PRESENT)
+    expected = f"{pin} {REPLUG_HINT_AFTER_PIN} {HELD}" if replug else f"{pin} {HELD}"
+    assert MainWindow._usb_notice(gio_storage.PRESENT, 46, normal_s) == (
+        "The device is not ready", expected, False)
+
+
+def test_other_programs_in_polish():
+    from openexpress.gui.app import MainWindow
+
+    i18n.setup("pl")
+    try:
+        text = MainWindow._usb_notice(gio_storage.PRESENT, 46, 5)[1]
+    finally:
+        i18n.setup("en")
+    assert text.endswith("Urządzenie może zajmować inny program (np. Dolphin albo Nautilus): "
+                         "zamknij go, a\u00a0potem odłącz kabel i\u00a0podłącz go ponownie.")
+
+
+def test_the_command_line_after_45_s_is_as_before(plugged):
+    """Only the window's page gets the sentence; the command line says what it said."""
+    plugged.plug("51b4")
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open()
+    assert HELD not in str(error.value)
