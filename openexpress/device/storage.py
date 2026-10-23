@@ -164,9 +164,18 @@ class Storage(ABC):
         return posixpath.join(real_parent, target_name) if real_parent else target_name
 
     def write(self, path: str, data: bytes) -> str:
-        """Write a file, creating missing directories. Returns the real path."""
+        """Write a file, creating missing directories. Returns the real path. After a failure
+        the storage cleans up what the write left under the name, as write_file does
+        (_discard_partial): never half a file; the old file stays when the write never
+        started (CopyNotStarted)."""
         real = self._target(path)
-        self._write(real, data)
+        try:
+            self._write(real, data)
+        except CopyNotStarted:
+            raise
+        except BaseException:
+            self._discard_partial(real)
+            raise
         return real
 
     def write_file(self, path: str, local: Path, progress=None, keep_partial: bool = False) -> str:
@@ -293,7 +302,7 @@ class LocalStorage(Storage):
     device in mass storage mode may lose what is still in the system's cache when its cable
     goes out, and some (the Varia) reset their USB instead of being ejected."""
 
-    replaces_atomically = True  # _write_file: a temporary copy, renamed when whole
+    replaces_atomically = True  # a temporary copy, renamed when whole (_replace)
 
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -325,37 +334,39 @@ class LocalStorage(Storage):
             return f.read(count)
 
     def _write(self, real_path: str, data: bytes) -> None:
-        target = self._p(real_path)
-        with _os_errors(_("Cannot write {path}").format(path=real_path)):
-            with open(target, "wb") as f:
-                f.write(data)
-                f.flush()
-                os.fsync(f.fileno())
-            _sync_folder(target.parent)
+        """As _write_file: under a temporary name, synced, then renamed."""
+        self._replace(real_path, [data])
 
     def _write_file(self, real_path: str, local: Path, progress=None) -> None:
-        """Copied under a temporary name next to the target, synced, then renamed: the real
-        name never holds half a file, also when the copy fails or the cable goes out.
+        """Copied under a temporary name next to the target, synced, then renamed (_replace).
         `progress(done, total)` after each COPY_CHUNK bytes."""
+        with _os_errors(_("Cannot write {path}").format(path=real_path)):
+            total = Path(local).stat().st_size
+            with open(local, "rb") as src:
+                self._replace(real_path, iter(lambda: src.read(COPY_CHUNK), b""), progress,
+                              total)
+
+    def _replace(self, real_path: str, chunks, progress=None, total: int = 0) -> None:
+        """The chunks written under a temporary name next to the target, synced, then renamed
+        to it: the real name never holds half a file, also when the write fails or the cable
+        goes out, and the old file stays whole until the new one is."""
         target = self._p(real_path)
         part = target.with_name("." + target.name + PART_SUFFIX)
         try:
             with _os_errors(_("Cannot write {path}").format(path=real_path)):
-                total = Path(local).stat().st_size
-                with open(local, "rb") as src:
-                    fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o666)
-                    try:
-                        done = 0
-                        while chunk := src.read(COPY_CHUNK):
-                            view = memoryview(chunk)
-                            while view:
-                                view = view[os.write(fd, view):]
-                            done += len(chunk)
-                            if progress:
-                                progress(done, total)
-                        os.fsync(fd)
-                    finally:
-                        os.close(fd)
+                fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o666)
+                try:
+                    done = 0
+                    for chunk in chunks:
+                        view = memoryview(chunk)
+                        while view:
+                            view = view[os.write(fd, view):]
+                        done += len(chunk)
+                        if progress:
+                            progress(done, total)
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
                 os.replace(part, target)
                 _sync_folder(target.parent)
         except BaseException:

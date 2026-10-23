@@ -283,17 +283,23 @@ class GioStorage(Storage):
                 stream.close(None)
 
     def _write(self, real_path: str, data: bytes) -> None:
-        # gvfs-mtp can't write streams; it can only copy a whole local file.
+        """gvfs-mtp cannot write streams, only copy a whole local file: the bytes go to a
+        temporary file, copied as any file is (_write_file, so that what a copy cut short
+        left is known to _discard_partial). Failing before the copy: CopyNotStarted."""
         what = _("Cannot write {path}").format(path=real_path)
         with _staging():
-            fd, tmp = tempfile.mkstemp(prefix="openexpress-",
-                                       dir=_staging_dir() if in_flatpak() else None)
             try:
-                with os.fdopen(fd, "wb") as f:
-                    f.write(data)
-                self._copy_local(Path(tmp), real_path, None, what)
+                fd, tmp = tempfile.mkstemp(prefix="openexpress-",
+                                           dir=_staging_dir() if in_flatpak() else None)
             except OSError as e:
-                raise DeviceError(f"{what}: {e}") from e
+                raise CopyNotStarted(f"{what}: {e}") from e
+            try:
+                try:
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(data)
+                except OSError as e:
+                    raise CopyNotStarted(f"{what}: {e}") from e
+                self._write_file(real_path, Path(tmp))
             finally:
                 os.unlink(tmp)
 

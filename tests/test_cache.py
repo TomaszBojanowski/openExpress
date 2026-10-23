@@ -239,6 +239,7 @@ def test_staging_a_file_for_the_device_holds_the_cache(cache, monkeypatch):
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
     seen = []
     st = object.__new__(gio_storage.GioStorage)
+    st._attempts, st._size_now = {}, lambda real: None  # as __init__ makes them; nothing there
     st._copy_local = lambda local, real, progress, what: seen.append((in_use(), local.exists()))
     gio_storage.GioStorage._write(st, "GARMIN/NewFiles/x.fit", b"data")
     assert seen == [(True, True)] and not in_use()
