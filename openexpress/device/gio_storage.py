@@ -926,6 +926,51 @@ def drive_notice_text() -> str:
     return flatpak_drive_text() if drive_hidden_in_sandbox() else drive_not_mounted_text()
 
 
+def _vfs():
+    return Gio.Vfs.get_default()
+
+
+def gvfs_schemes() -> list[str]:
+    """The kinds of address GIO can open here: with gvfs, those of its backends (in the
+    Flatpak the host's, asked over D-Bus); without gvfs only local files. Nothing is asked
+    of a device."""
+    return list(_vfs().get_supported_uri_schemes() or [])
+
+
+_no_mtp_told = False  # the missing backend is written to the log once
+
+
+def mtp_missing() -> bool:
+    """Whether gvfs here has no MTP backend (no gvfs-mtp, #13), or there is no gvfs at all:
+    then no MTP device is ever offered, and there is nothing to wait for. Not known (the
+    question failed): False, so the wait and its words stay as they were."""
+    global _no_mtp_told
+    try:
+        schemes = gvfs_schemes()
+    except Exception as e:  # noqa: BLE001 - only a better message depends on it
+        log.info("gvfs: its backends could not be read (%s)", type(e).__name__)
+        return False
+    missing = "mtp" not in schemes
+    if missing and not _no_mtp_told:
+        _no_mtp_told = True
+        log.info("gvfs: no MTP backend (it offers: %s)", ", ".join(sorted(schemes)) or "-")
+    return missing
+
+
+def no_mtp_title() -> str:
+    # TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
+    return _("No MTP support in the system (gvfs-mtp)")
+
+
+def no_mtp_text() -> str:
+    """gvfs has no MTP backend (#13): what to install, in the window and on the command
+    line (the package names of Fedora, Arch and Debian)."""
+    return _("openExpress reads the device over MTP through gvfs, and gvfs on this system "
+             "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: sudo "
+             "pacman -S gvfs-mtp; Debian and Ubuntu: sudo apt install gvfs-backends), log "
+             "out and back in, then plug the device in again.")
+
+
 def not_ready_text(state: str) -> str:
     """What to tell the user when the wait for a plugged-in device ran out."""
     if state == STARTING:
@@ -983,6 +1028,10 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                     raise MassStorageNotice(not_ready_text(state)) from e
                 raise
             gone_since = None
+            if state == PRESENT and mtp_missing():
+                # gvfs here has no MTP backend (#13): the device is never offered, so it is
+                # not waited for.
+                raise NotThereYet(no_mtp_text()) from e
             if not wait:
                 if isinstance(e, NotThereYet) and state == STARTING:
                     raise NotThereYet(_("The device is starting. Try again in a moment.")) from e

@@ -179,6 +179,21 @@ def no_block_devices(_empty_sys_class_block, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def gvfs_has_mtp(monkeypatch):
+    """No test asks the real gvfs which backends it has (#13): it has MTP, unless a test
+    says otherwise, and nothing of it has been logged yet."""
+    try:
+        from openexpress.device import gio_storage
+    except (ImportError, ValueError):  # no PyGObject: nothing asks gvfs
+        return
+    import types
+
+    monkeypatch.setattr(gio_storage, "_vfs", lambda: types.SimpleNamespace(
+        get_supported_uri_schemes=lambda: ["file", "mtp"]), raising=False)
+    monkeypatch.setattr(gio_storage, "_no_mtp_told", False, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def no_drive_ejected(monkeypatch):
     """openExpress remembers the Garmin drives it ejected for as long as it runs: every test
     starts with none."""

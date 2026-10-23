@@ -64,6 +64,9 @@ from openexpress.device.gio_storage import (  # noqa: E402
     garmin_ums,
     garmin_usb,
     mass_storage_text,
+    mtp_missing,
+    no_mtp_text,
+    no_mtp_title,
     not_ejected_text,
     not_ready_text,
     own_remount,
@@ -1905,6 +1908,9 @@ class MainWindow(Adw.ApplicationWindow):
         how long a device has been on USB in its normal mode without being offered over MTP;
         from REPLUG_HINT_S on, the description adds that it may be plugged in again (an Edge
         1050 restarted with its cable in was never mounted by gvfs, 21.10.2026)."""
+        if state == PRESENT and mtp_missing():
+            # gvfs here has no MTP backend (#13): said at once, nothing to wait for.
+            return no_mtp_title(), no_mtp_text(), False
         if state == PRESENT and normal_s >= REPLUG_HINT_S:
             title, text, busy = MainWindow._usb_notice(state, waited_s)
             if waited_s < WAIT_FOR_DEVICE_S:
