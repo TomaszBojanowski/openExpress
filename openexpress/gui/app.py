@@ -484,6 +484,24 @@ def writes_to_device(fn):
     return work
 
 
+def read_again_after_failure(win, key: str, failed=None):
+    """The failure handler of a task that changes what page `key` (maps, apps, music) shows:
+    the page is read again, as when the task went well, since a part of it may be done (the
+    files of a map without its unlock file, songs copied in part, an app list that waited and
+    is gone). `failed` says the error as before (else run_task does); its words stay over the
+    page as it is read. Not when the device was unplugged, or another one opened, meanwhile:
+    the window reads what is open on its own."""
+    started = win.session
+
+    def handler(e) -> bool:
+        said = bool(failed is not None and failed(e))
+        if started is not None and win.session is started:
+            win.load_section(key, force=True)
+        return said
+
+    return handler
+
+
 def render_space(win) -> None:
     """The subtitle (and the bar) of "Device storage" from the space the session holds:
     "…" until it is read, "?" for what is not known. Nothing is asked of the device."""
@@ -4033,7 +4051,7 @@ class MainWindow(Adw.ApplicationWindow):
                 lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
                                         .format(name=m.name)),
                              self.load_section("maps", force=True)),
-                unlock_not_written,
+                read_again_after_failure(self, "maps", unlock_not_written),
             )
 
         d.connect("response", response)
@@ -4055,7 +4073,8 @@ class MainWindow(Adw.ApplicationWindow):
             writes_to_device(lambda: mp.uninstall(m, self.maps_cache, s.storage,
                                                   progress=self.progress)),
             lambda removed: (self.toast(self._removed_files(len(removed))),
-                             self.load_section("maps", force=True))))
+                             self.load_section("maps", force=True)),
+            read_again_after_failure(self, "maps")))
         d.present(self)
 
     @staticmethod
@@ -4499,7 +4518,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.run_task(_("Restoring the order…"),
                       writes_to_device(lambda: ciq.restore_order(s.device, s.storage,
-                                                                 copy.state)), done)
+                                                                 copy.state)), done,
+                      read_again_after_failure(self, "apps"))
 
     def install_apps(self, apps) -> None:
         from openexpress import ciq
@@ -4528,7 +4548,8 @@ class MainWindow(Adw.ApplicationWindow):
                 self.toast(_("Queued; it will be installed on the next sync"))
             self.load_section("apps", force=True)
 
-        self.run_task(_("Installing apps…"), writes_to_device(work), done)
+        self.run_task(_("Installing apps…"), writes_to_device(work), done,
+                      read_again_after_failure(self, "apps"))
 
     @staticmethod
     def _for_phone_text(names, sandboxed=(), updates=()) -> str:
@@ -4571,7 +4592,8 @@ class MainWindow(Adw.ApplicationWindow):
         d.connect("response", lambda _d, r: r == "forget" and self.run_task(
             _("Removing {name}…").format(name=app.name), work,
             lambda _r: (self.toast(_("Removed {name} from your account list.").format(
-                name=app.name)), self.load_section("apps", force=True)), device=False))
+                name=app.name)), self.load_section("apps", force=True)),
+            read_again_after_failure(self, "apps"), device=False))
         d.present(self)
 
     def confirm_remove_app(self, app) -> None:
@@ -4612,7 +4634,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self.load_section("apps", force=True)
 
             self.run_task(_("Removing {name}…").format(name=app.name),
-                          writes_to_device(work), done)
+                          writes_to_device(work), done, read_again_after_failure(self, "apps"))
 
         d.connect("response", response)
         d.present(self)
@@ -4645,10 +4667,12 @@ class MainWindow(Adw.ApplicationWindow):
             revert()
             return False
 
+        # Gone well, only this row changes; failed, the page is read again: the list that
+        # waited for the device (other switches) may be gone with it.
         self.run_task(_("Saving…"),
                       writes_to_device(lambda: ciq.set_enabled(s.device, s.storage, app.app_id,
                                                                enabled, app.app_type)),
-                      done, failed)
+                      done, read_again_after_failure(self, "apps", failed))
 
     # --- music ------------------------------------------------------------------------
 
@@ -4759,7 +4783,8 @@ class MainWindow(Adw.ApplicationWindow):
                                                     transfer_progress=self.fraction)),
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
-                                 self.load_section("music", force=True))))
+                                 self.load_section("music", force=True)),
+                read_again_after_failure(self, "music")))
             d.present(self)
 
         self.run_task(_("Scanning files…"), plan, confirm)
@@ -4854,7 +4879,8 @@ class MainWindow(Adw.ApplicationWindow):
                     plan, s.device, s.storage, progress=self.progress,
                     transfer_progress=self.fraction)),
                 lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
-                               self.load_section("music", force=True))))
+                               self.load_section("music", force=True)),
+                read_again_after_failure(self, "music")))
             d.present(self)
 
         self.run_task(_("Reading the playlist…"),
@@ -4867,7 +4893,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.run_task(_("Removing…"),
                       writes_to_device(lambda: music.remove(s.storage, device_paths)),
                       lambda removed: (self.toast(self._removed_files(len(removed))),
-                                       self.load_section("music", force=True)))
+                                       self.load_section("music", force=True)),
+                      read_again_after_failure(self, "music"))
 
 
 GC_INTERVAL_S = 30
