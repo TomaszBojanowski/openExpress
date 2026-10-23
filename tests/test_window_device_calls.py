@@ -717,3 +717,54 @@ def test_every_task_that_writes_to_the_device_says_so():
     for text, calls in found.items():
         for writes, device in calls:
             assert writes is (text in WRITING and device), text
+
+
+# --- step 7: the report (show_report) ------------------------------------------------------------
+
+def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
+    """The report the window shows for the device (its preview), the dialog recorded."""
+    from openexpress.gui import app
+
+    Question.asked = []
+    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    s = types.SimpleNamespace(device=dev, storage=storage, logged_in=False)
+    if space is not NOT_READ:
+        s.space = space
+    shown = []
+    win = types.SimpleNamespace(session=s, toast=lambda text: None,
+                                _report_view=lambda text: (shown.append(text), (None, None))[1])
+    app.MainWindow.show_report(win)
+    (text,) = shown
+    return text
+
+
+def test_the_report_takes_the_space_from_the_session(iq_device, monkeypatch):
+    """The space read with the device: the report says it and asks the device nothing."""
+    st, dev = iq_device
+    storage = Space(st.root)
+    text = _report_of(monkeypatch, storage, dev, space=(FREE, SIZE))
+    assert "- Storage: 64.0 GB total, 52.1 GB free" in text.splitlines()
+    assert storage.on_gtk == [] and storage.elsewhere == []
+
+
+@pytest.mark.parametrize("space", [NOT_READ, (None, None), (None, SIZE)])
+def test_a_space_not_known_is_unknown_in_the_report(iq_device, monkeypatch, space):
+    """Not read yet, or not known (it could not be asked): "unknown", and the device is not
+    asked on the window's thread instead."""
+    st, dev = iq_device
+    storage = Space(st.root)
+    text = _report_of(monkeypatch, storage, dev, space=space)
+    total = "64.0 GB" if space == (None, SIZE) else "unknown"
+    assert f"- Storage: {total} total, unknown free" in text.splitlines()
+    assert storage.on_gtk == [] and storage.elsewhere == []
+
+
+def test_the_command_line_report_still_asks_the_device(iq_device):
+    """`openexpress report` has no window and no session: it asks the device, as before."""
+    from openexpress import report
+
+    st, dev = iq_device
+    storage = Space(st.root)
+    text = report.build(dev, storage, False)
+    assert "- Storage: 64.0 GB total, 52.1 GB free" in text.splitlines()
+    assert sorted(storage.elsewhere + storage.on_gtk) == ["capacity", "free_space"]

@@ -98,7 +98,12 @@ def _size(n: int | None) -> str:
     return "unknown" if not n else human_size(n, localize=False)
 
 
-def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None) -> str:
+def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
+          space: tuple[int | None, int | None] | None = None) -> str:
+    """The report of the device. `space`: (free space, capacity) already read (the window
+    holds them with its session; None in either is "unknown"); without it they are asked of
+    the storage (the command line)."""
+    free, capacity = space if space is not None else (storage.free_space(), storage.capacity())
     datatypes = set(device.datatypes())
     features = "\n".join(f"- [{'x' if test(datatypes) else ' '}] {label}"
                          for label, test in FEATURES)
@@ -111,7 +116,7 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None)
         f"- Software: {device.software_version_str}",
         # Vendor and product ID of the USB device; never taken from the MTP address.
         f"- USB ID: {getattr(storage, 'usb_id', None) or 'unknown'}",
-        f"- Storage: {_size(storage.capacity())} total, {_size(storage.free_space())} free",
+        f"- Storage: {_size(capacity)} total, {_size(free)} free",
         f"- Data types: {len(datatypes)}, components: {len(device.update_files)}",
         "",
         "### Features declared by the device",

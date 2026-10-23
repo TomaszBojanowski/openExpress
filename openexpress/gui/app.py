@@ -4080,7 +4080,9 @@ class MainWindow(Adw.ApplicationWindow):
             text = _("Connect the device first, so that the report can describe it.")
             body_text = ""
         else:
-            body_text = report.build(s.device, s.storage, s.logged_in)
+            # The space as the session holds it: nothing is asked of the device here.
+            body_text = report.build(s.device, s.storage, s.logged_in,
+                                     space=getattr(s, "space", None) or (None, None))
             text = _("Open on GitHub starts a new issue with this report filled in; nothing is "
                      "published until you submit it. The report contains no serial number, "
                      "unit ID or e-mail.")

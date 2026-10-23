@@ -199,8 +199,10 @@ def _report_dialog(monkeypatch, device_root, connected=True):
     from openexpress.gui.app import MainWindow
 
     st = LocalStorage(device_root)
+    # The space as the window's session holds it: read when the device was opened.
     session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")),
-                                    storage=st, logged_in=True)
+                                    storage=st, logged_in=True,
+                                    space=(st.free_space(), st.capacity()))
     opened, copied, said, asked = [], [], [], []
 
     class Launcher:
