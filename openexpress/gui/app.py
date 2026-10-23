@@ -2110,7 +2110,11 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_refresh(self) -> None:
         """Refresh (the button, F5). On the start page with a device open: the list is read
         again, nothing else (decision A); without one, a detection that stays there also when
-        one device is found (decision 7). In the device view, as before."""
+        one device is found (decision 7). On the view of a device not connected: only that
+        view (_refresh_remembered). In the device view, as before."""
+        if self._on_remembered_page():
+            self._refresh_remembered()
+            return
         on_start = self._on_start_page()
         cause = Cause.REFRESH_ON_START if on_start else Cause.REFRESH_IN_VIEW
         s = self.session
@@ -2207,6 +2211,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.in_background(remember, lambda _r: None)
         if draw and (self._on_start_page() or self._on_remembered_page()):
             self._render_start()  # under the view of a remembered device, which stays
+            if self._on_remembered_page():
+                self._redraw_remembered()  # it shows what the account says now
 
     def _show_start(self) -> None:
         """The start page, as it is now, or the page shown stays (navigation.navigate_after:
@@ -2390,6 +2396,12 @@ class MainWindow(Adw.ApplicationWindow):
         (no version or part number when it says none). Nothing is opened or asked."""
         if not self._on_start_page():
             return
+        self._fill_account(entry)
+        self.navigation.push(self.remembered.page)
+
+    def _fill_account(self, entry: dict) -> None:
+        """The read-only view filled with what the account says of a device (_show_account,
+        and drawn again by _redraw_remembered)."""
         fields = devicelist.account_fields(entry)
         version = fields["software_version"]
         self.remembered.show(
@@ -2402,7 +2414,6 @@ class MainWindow(Adw.ApplicationWindow):
                                 fields["description"])
         self._remembered_unit = service.unit_id_of(entry.get("unitid"))
         self._remembered_from_account = True
-        self.navigation.push(self.remembered.page)
 
     def _show_remembered(self, known, tile=None) -> None:
         """The read-only view of a device remembered and not connected: what was known when
@@ -2412,6 +2423,12 @@ class MainWindow(Adw.ApplicationWindow):
         touched."""
         if not self._on_start_page():
             return
+        self._fill_remembered(known, tile)
+        self.navigation.push(self.remembered.page)
+
+    def _fill_remembered(self, known, tile=None) -> None:
+        """The read-only view filled for a device remembered (_show_remembered, and drawn
+        again by _redraw_remembered)."""
         last_sync = self._last_sync_text(known.unit_id)
         self.remembered.show(
             name=known.description,
@@ -2427,7 +2444,27 @@ class MainWindow(Adw.ApplicationWindow):
                                     known.description, devicelist.PICTURE_REMEMBERED)
         self._remembered_unit = known.unit_id
         self._remembered_from_account = False
-        self.navigation.push(self.remembered.page)
+
+    def _refresh_remembered(self) -> None:
+        """Refresh (F5, Ctrl+R) on the read-only view of a device not connected: only that
+        view (decision of 23.10.2026). The account's list is read again and the view drawn
+        from what it says now (_set_account, _redraw_remembered); the device open, if any,
+        is not opened again and nothing is detected."""
+        log.info("refresh: the view of a device not connected, from the account")
+        self._fetch_account()
+
+    def _redraw_remembered(self) -> None:
+        """The view of a device not connected drawn again from its entry on the start page as
+        it is now (the account's list changed): the same device, by its unit ID. No longer
+        there as one not connected (e.g. plugged in meanwhile): the view stays as it is."""
+        unit = self._remembered_unit
+        for tile, target in self._start_entries:
+            if isinstance(target, KnownDevice) and target.unit_id == unit:
+                self._fill_remembered(target, tile)
+                return
+            if isinstance(target, dict) and service.unit_id_of(target.get("unitid")) == unit:
+                self._fill_account(target)
+                return
 
     def _clear_device_pages(self) -> None:
         """Every page of the device view loaded anew: nothing kept from the device before."""

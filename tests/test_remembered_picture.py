@@ -40,7 +40,8 @@ def _window(textures=None):
         _account=None, _on_start_page=lambda: True,
         in_background=lambda fn, on_done, on_error=None: on_done(fn()))
     for name, member in vars(MainWindow).items():
-        if callable(member) and (name in ("_show_remembered", "_show_account", "_last_sync_text")
+        if callable(member) and (name in ("_show_remembered", "_show_account", "_fill_account",
+                                          "_last_sync_text")
                                  or "picture" in name or "remembered" in name):
             setattr(win, name, types.MethodType(member, win))
     return win

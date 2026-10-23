@@ -4102,7 +4102,9 @@ START_METHODS = ("show_device", "show_no_device", "_clear_device_pages", "show_c
                  "_on_popped", "_reread_connected", "_show_remembered", "_fetch_account",
                  "_set_account", "_show_account", "_last_sync_text", "logout", "_start",
                  "_want_account", "_load_tile_pictures", "_tile_picture_done",
-                 "_show_page_picture", "_on_remembered_page", "_start_summaries")
+                 "_show_page_picture", "_on_remembered_page", "_start_summaries",
+                 "_fill_account", "_fill_remembered", "_refresh_remembered",
+                 "_redraw_remembered")
 
 
 def start_stand_in(start, sections, win=None):
@@ -6241,6 +6243,44 @@ def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeyp
     back(win)
     assert names_on_the_start_page(win) == ["Test watch"]
     assert asked == [1, 1]  # logged out: nothing asked
+
+
+def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(start_window,
+                                                                              monkeypatch):
+    """F5/Ctrl+R on the read-only view of a device (here one only on the account) while
+    another is open: the account's list is read again and the view shows what it says now;
+    the device open is not opened again, nothing is detected, the view stays (decision of
+    23.10.2026; before, the open device was opened from scratch)."""
+    from openexpress.connect import GarminClient, lower_keys
+
+    win = start_window
+    later = defer_background(win)
+    asked = logged_in_everywhere(monkeypatch)
+    one_watch(win, monkeypatch)
+    win._start()
+    run_later(later)
+    back(win)
+    opened = win.session
+    win._open_tile(names_on_the_start_page(win).index("Forerunner 965"))
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert win.remembered.shown[-1]["version"] == "Software 22.26"
+    newer = [dict(d, currentFirmwareVersion="22.30") if d["unitId"] == FORERUNNER else d
+             for d in ACCOUNT_LIST]
+
+    def account_devices(client):
+        asked.append(1)
+        return lower_keys([{"unitId": TEST_WATCH, "productDisplayName": "Test watch",
+                            "partNumber": "006-B0000-00"}, *newer])
+
+    monkeypatch.setattr(GarminClient, "account_devices", account_devices)
+    detections = []
+    win.refresh_device = lambda **kw: detections.append(kw)
+    win._on_refresh()
+    run_later(later)
+    assert detections == [] and win.session is opened
+    assert asked == [1, 1]
+    assert win.navigation.stack == ["start page", "remembered view"]
+    assert win.remembered.shown[-1]["version"] == "Software 22.30"
 
 
 # --- pictures on the tiles (D5, T5) -------------------------------------------------------------
