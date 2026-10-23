@@ -90,9 +90,6 @@ class GarminDevice:
     def targets(self, datatype: str) -> list[DeviceFile]:
         return [f for f in self.files if f.datatype == datatype and f.writable]
 
-    def has_datatype_prefix(self, prefix: str) -> bool:
-        return any(f.datatype.startswith(prefix) for f in self.files)
-
 
 def _text(el: ET.Element | None, tag: str, default: str = "") -> str:
     if el is None:

@@ -81,7 +81,7 @@ def test_last_sync_is_remembered(xdg):
 def test_format_when():
     import time
 
-    from openexpress.gui.app import format_when
+    from openexpress.i18n import format_when
 
     assert format_when(time.time()).startswith("Today at ")
     assert format_when(time.time() - 86400).startswith("Yesterday at ")

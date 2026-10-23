@@ -291,8 +291,7 @@ class StartPage:
                                                       connected.list)
         self.remembered_title, self.remembered_grid, self.remembered_list = (
             remembered.title, remembered.grid, remembered.list)
-        self.account_title, self.account_grid, self.account_list = (
-            account.title, account.grid, account.list)
+        self.account_title, self.account_grid = account.title, account.grid
         # The tiles' width, from the width of the page, the same in every section.
         self.columns = _TileColumns(box, [s.grid for s in self._sections.values()])
         page.append(self.columns)

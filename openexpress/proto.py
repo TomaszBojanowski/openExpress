@@ -65,10 +65,6 @@ def first(fields: list[Field], number: int, default=None):
     return next((f.value for f in fields if f.number == number), default)
 
 
-def all_of(fields: list[Field], number: int) -> list:
-    return [f.value for f in fields if f.number == number]
-
-
 def _varint(n: int) -> bytes:
     if n < 0:
         n &= (1 << 64) - 1

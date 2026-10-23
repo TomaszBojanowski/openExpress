@@ -121,7 +121,7 @@ REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, un
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 # The captions of the window (a hard space before "·"): in i18n, for last_sync too.
-SEPARATOR, caption, format_when = i18n.SEPARATOR, i18n.caption, i18n.format_when
+SEPARATOR, caption = i18n.SEPARATOR, i18n.caption
 log = logging.getLogger(__name__)
 
 
@@ -1220,7 +1220,6 @@ class MainWindow(Adw.ApplicationWindow):
         if maximized:
             self.maximize()
         self.maps_cache = None
-        self.apps_cache = None
         self.updates_cache = None
         self.updates_beta = False  # whether Garmin offers beta versions to the open device
         # None = unknown, "current", "available", "ready" (copied, waits for the device), "failed"
@@ -2073,7 +2072,7 @@ class MainWindow(Adw.ApplicationWindow):
         """Several Garmin devices are connected: the start page shows a tile for each (never
         an address), the device pages say to choose one. Nothing is opened until one is
         chosen."""
-        self.maps_cache = self.updates_cache = self.apps_cache = None
+        self.maps_cache = self.updates_cache = None
         self.update_state = self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False
@@ -2477,7 +2476,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _clear_device_pages(self) -> None:
         """Every page of the device view loaded anew: nothing kept from the device before."""
-        self.maps_cache = self.updates_cache = self.apps_cache = None
+        self.maps_cache = self.updates_cache = None
         self.update_state = None
         self.map_state = None
         for sec in self.sections.values():
@@ -4279,7 +4278,6 @@ class MainWindow(Adw.ApplicationWindow):
         if self.session is None:
             return
         state, account, updates = result
-        self.apps_cache = result
         sec = self.sections["apps"]
         if not state.waiting:
             # No app list waits on the device any more, so no update can be waiting either.
