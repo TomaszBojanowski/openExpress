@@ -157,3 +157,33 @@ def test_the_readme_names_the_same_packages_and_words():
         assert command in NO_MTP_TEXT and f"`{command}`" in section
     assert f"**{NO_MTP_TITLE}**" in section and "**The device is not ready**" in section
     assert "Dolphin" in section and "kiod6" in section
+
+
+# --- both notices fit the narrowest window (360 px) ------------------------------------------------
+
+from test_narrow_window import NARROWEST, _iterate, _min_width, _tiles, narrow_window  # noqa: E402, F401
+
+
+@pytest.mark.needs_display
+@pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("notice", ["no MTP", "not ready"])
+def test_the_notices_fit_the_narrowest_window(narrow_window, monkeypatch, language, notice):
+    """On top of the start page and on a page of the device view (no device open), folded."""
+    from openexpress.gui.app import MainWindow
+
+    if notice == "no MTP":
+        gvfs_offers(monkeypatch, "file")
+    win = narrow_window(language)
+    words = MainWindow._usb_notice(gio_storage.PRESENT, 46, 30)
+    assert (words[0] == gio_storage.no_mtp_title()) is (notice == "no MTP")
+    win.start.set_empty(*words)
+    win.start.show(_tiles(), True)
+    for section in win.sections.values():
+        section.set_empty(*words)
+    _iterate(0.05)
+    assert _min_width(win.start.page) <= NARROWEST
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    _iterate(0.05)
+    assert _min_width(win.device_view) <= NARROWEST
