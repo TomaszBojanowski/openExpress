@@ -1,9 +1,10 @@
 """An update to install stands out on the device page (24.10.2026): the chip of the device's
 tile ("Update available", warning) under its software version, in the place of the grey
-"· update available" of that line; the row "Device software" says how many in the colour of a
-warning, with a dot of that colour before its arrow. Once installed (copied, waiting for the
-device) or with none to install: as the other rows. A beta counts as any update. All devices
-and updates are made up."""
+"· update available" of that line; the row "Device software" says it in the colour of a
+warning: of one update, the version of a system update or the name and version of another, as
+the Updates page names it; of several, how many. No dot before its arrow (removed the same
+day). Once installed (copied, waiting for the device) or with none to install: as the other
+rows. A beta counts as any update. All devices and updates are made up."""
 
 import time
 import types
@@ -138,22 +139,29 @@ def test_an_update_to_install_gives_the_device_page_the_chip_of_its_tile():
 
 
 @pytest.mark.needs_display
-def test_the_row_device_software_says_it_in_the_warning_colour_with_a_dot_before_its_arrow():
+def test_the_row_device_software_says_which_update_in_the_warning_colour_without_a_dot():
+    """One system update: its version; one other: its name and version as the Updates page
+    has them; two: how many, as before. Always the warning colour, only the arrow after the
+    words."""
     win, _section = _device_page()
-    win._set_update_state(updates.pending(_offered()), [])
-    row = win.update_row
-    assert row.get_subtitle() == "2 updates available"
-    assert "warning" in _subtitle(row).get_css_classes()
-    (dot, arrow) = _suffixes(row)
-    assert dot == ("label", "\u25cf", {"warning"})
-    assert arrow[:2] == ("icon", "go-next-symbolic")
-    assert "warning" not in arrow[2]
+    font, bundle = updates.pending(_offered())
+    assert (font.is_system, bundle.is_system) == (False, True)
+    said = []
+    for offered in ([bundle], [font], [font, bundle]):
+        win._set_update_state(offered, [])
+        row = win.update_row
+        said.append(row.get_subtitle())
+        assert "warning" in _subtitle(row).get_css_classes()
+        ((kind, icon, classes),) = _suffixes(row)  # no dot
+        assert (kind, icon) == ("icon", "go-next-symbolic") and "warning" not in classes
+    assert said == ["Version 23.40 available", "Update available: Test Font 23.40",
+                    "2 updates available"]
 
 
 @pytest.mark.needs_display
 def test_once_installed_or_with_none_the_page_is_as_before():
     """The update copied (the device installs it once disconnected), a check that finds
-    none, one that fails: no chip, no dot, the subtitle as the other rows'."""
+    none, one that fails: no chip, the subtitle as the other rows'."""
     win, section = _device_page()
 
     def shown():
@@ -161,7 +169,7 @@ def test_once_installed_or_with_none_the_page_is_as_before():
                 "warning" in _subtitle(win.update_row).get_css_classes())
 
     win._set_update_state(updates.pending(_offered()), [])
-    assert shown() == (1, 2, True)
+    assert shown() == (1, 1, True)
     items = _installed()
     win._set_update_state(updates.pending(items), updates.staged(items))
     assert win.update_state == "ready"
@@ -184,14 +192,15 @@ def test_in_polish():
     i18n.setup("pl")
     try:
         win, section = _device_page()
+        font, bundle = updates.pending(_offered())
         said = []
-        for count in (1, 2, 5):
-            win._set_update_state(updates.pending(_offered())[:1] * count, [])
+        for offered in ([bundle], [font], [font] * 2, [font] * 5):
+            win._set_update_state(offered, [])
             said.append(win.update_row.get_subtitle())
         (chip,) = _chips(section.page)
         words = chip.get_label(), win.software_label.get_label(), _tile_chip()[0]
     finally:
         i18n.setup("en")
-    assert said == ["Dostępna jest 1 aktualizacja", "Dostępne są 2 aktualizacje",
-                    "Dostępnych jest 5 aktualizacji"]
+    assert said == ["Dostępna wersja 23.40", "Dostępna aktualizacja: Test Font 23.40",
+                    "Dostępne są 2 aktualizacje", "Dostępnych jest 5 aktualizacji"]
     assert words == ("Aktualizacja dostępna", "Oprogramowanie 23.39", "Aktualizacja dostępna")

@@ -1087,6 +1087,23 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
     return row
 
 
+def updates_available(count: int, only=None) -> str:
+    """The subtitle of "Device software" with `count` updates to install: of one (`only`),
+    the version of a system update or the name and version of another, as the Updates page
+    names it; of several (or one not known), how many."""
+    if count == 1 and only is not None and only.is_system:
+        # TRANSLATORS: subtitle of the row "Device software": the one update to install is
+        # of the device's system software
+        return _("Version {version} available").format(version=only.version)
+    if count == 1 and only is not None:
+        # TRANSLATORS: subtitle of the row "Device software": the one update to install, of
+        # another part of the device (its name and version, as the server gives them)
+        return _("Update available: {name} {version}").format(name=only.title,
+                                                               version=only.version)
+    return ngettext("{count} update available", "{count} updates available",
+                    count).format(count=count)
+
+
 def row_subtitle(row) -> Gtk.Label | None:
     """The label of the subtitle of an Adw.ActionRow, which libadwaita does not give: the one
     with the style class "subtitle" (so in 1.5 as in 1.9). None when there is none."""
@@ -1190,6 +1207,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         # None = unknown, "current", "available", "ready" (copied, waits for the device), "failed"
         self.update_state: str | None = None
         self.update_count = 0
+        self.update_only = None  # the update to install when it is the only one
         self._update_check_session = None
         # None = unknown, "none" (no maps for the device), "empty" (none installed),
         # "current", "available", "failed"
@@ -2621,12 +2639,6 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
 
         g = sec.group(pgettext("tab", "Updates"))
         self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
-        # An update to install: a dot of the warning colour before the arrow; its subtitle
-        # says it (_highlight_update).
-        self.update_dot = _dot()
-        self.update_dot.add_css_class("warning")
-        self.update_dot.set_visible(False)
-        self.update_row.add_suffix(self.update_dot)
         self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
         g.add(self.update_row)
@@ -2817,9 +2829,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             version=self.session.device.software_version_str)
         self._highlight_update(self.update_state == "available")
         if self.update_state == "available":
-            self.update_row.set_subtitle(ngettext(
-                "{count} update available", "{count} updates available",
-                self.update_count).format(count=self.update_count))
+            self.update_row.set_subtitle(GLib.markup_escape_text(
+                updates_available(self.update_count, self.update_only)))
             self.software_label.set_label(version)  # the chip under it says it
         elif self.update_state == "ready":
             self.update_row.set_subtitle(
@@ -2840,11 +2851,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
 
     def _highlight_update(self, on: bool) -> None:
         """An update to install stands out on the device page (24.10.2026): the chip of its
-        tile under the version, the subtitle of "Device software" in the warning colour and a
-        dot of that colour before its arrow. Otherwise (installed, none, checking, failed) as
-        the other rows. The side panel stays as it is."""
+        tile under the version and the subtitle of "Device software" in the warning colour.
+        Otherwise (installed, none, checking, failed) as the other rows. The side panel stays
+        as it is."""
         self.update_chip.set_visible(on)
-        self.update_dot.set_visible(on)
         subtitle = row_subtitle(self.update_row)
         if subtitle is None:
             return
@@ -2858,6 +2868,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         when it is disconnected; told only when nothing else is to be installed first."""
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_count = len(new_updates)
+        self.update_only = new_updates[0] if len(new_updates) == 1 else None
         self.update_state = ("available" if new_updates else "ready" if staged else "current")
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now).

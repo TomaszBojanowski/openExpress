@@ -950,7 +950,7 @@ def _overview(items=None, drive=False):
         session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39"),
                                       mass_storage=drive),
         update_row=Adw.ActionRow(), software_label=Gtk.Label(),
-        _highlight_update=lambda on: None)  # the chip and the dot: test_update_highlight
+        _highlight_update=lambda on: None)  # the chip and the colour: test_update_highlight
     win._render_update_state = types.MethodType(MainWindow._render_update_state, win)
     return win, MainWindow
 
@@ -967,11 +967,12 @@ def test_device_page_says_the_update_waits_for_the_device():
     assert win.update_state == "ready"
     assert win.update_row.get_subtitle() == "Update ready: disconnect the device to install it"
     assert win.software_label.get_label() == "Software 23.39\u00a0· update ready to install"
-    # Something else to install first: that is said, as before.
+    # Something else to install first: that is said, as before (the one update by its name
+    # and version since 24.10.2026).
     items = _staged_items(font_on_device=False)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
-    assert (win.update_state, win.update_row.get_subtitle()) == ("available",
-                                                                 "1 update available")
+    assert (win.update_state, win.update_row.get_subtitle()) == (
+        "available", "Update available: Test Font 23.40")
 
 
 @pytest.mark.needs_display

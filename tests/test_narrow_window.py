@@ -178,6 +178,8 @@ def _fill(win, page: str) -> str:
     win.session = _session(_device(*model), drive=drive)
     win.update_state = "ready" if page == "device-update-copied" else "available"
     win.update_count = 1
+    # The one update to install: the longest name of a component ("Device software").
+    win.update_only = _updates(copied=False)[2]
     win.map_state, win.map_update_count = "available", 1
     service.record_sync(UNIT, uploaded=8, downloaded=4, skipped_known=3, errors=[], lines=[])
     for section in win.sections.values():
@@ -294,8 +296,8 @@ def test_every_page_of_the_device_view_fits_the_narrowest_window(narrow_window, 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narrow_window,
                                                                           language):
-    """The chip under the version and the dot of the row "Device software" (24.10.2026):
-    the page fits the narrowest window, the chip whole."""
+    """The chip under the version and the name of the one update in the row "Device
+    software" (24.10.2026): the page fits the narrowest window, the chip whole."""
     from openexpress.gui.app import Gtk
 
     win = narrow_window(language)
@@ -305,7 +307,9 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
     win.navigation.push(win.device_view)
     win.select_section("watch")
     _iterate(0.3)
-    assert win.update_chip.get_visible() and win.update_dot.get_visible()
+    assert win.update_chip.get_visible()
+    assert "Wi-Fi, Bluetooth and ANT+ connectivity firmware 11.20" in (
+        win.update_row.get_subtitle())
     assert win.device_view.get_width() <= NARROWEST
     assert _min_width(win.device_view) <= NARROWEST
     natural = win.update_chip.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
