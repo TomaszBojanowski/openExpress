@@ -670,7 +670,7 @@ msgstr "Urządzenie:"
 
 #: openexpress/cli.py:218
 msgid "Part number:"
-msgstr "Numer części:"
+msgstr "Numer katalogowy:"
 
 #: openexpress/cli.py:219
 msgid "Software:"
@@ -3165,7 +3165,7 @@ msgstr "Utwórz"
 
 #: openexpress/gui/app.py:2726 openexpress/gui/start.py:419
 msgid "Part number"
-msgstr "Numer części"
+msgstr "Numer katalogowy"
 
 #: openexpress/gui/app.py:2735
 msgid "Not set"
