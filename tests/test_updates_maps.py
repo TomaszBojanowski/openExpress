@@ -6,6 +6,7 @@ import threading
 
 import pytest
 import requests
+from fakes import RunNow
 
 from openexpress import applog, download, maps, updates
 from openexpress.connect import ApiError, lower_keys
@@ -908,8 +909,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         connected=Connected(),  # the devices connected, for the start page
         show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
         load_apps=None, load_music=None,  # other pages: not loaded here
-        run_task=lambda title, work, done, failed, device=True, in_page=False: run(
-            work, done, failed),
+        run_task=RunNow(),
         in_background=lambda work, done, failed=None: run(work, done, failed))
     for name in ("show_device", "show_no_device", "_clear_device_pages", "load_section",
                  "_load", "load_maps", "load_updates",

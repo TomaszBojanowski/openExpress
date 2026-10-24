@@ -1612,15 +1612,7 @@ def drive_window(watch_and_drives, monkeypatch):
                                 world=watch_and_drives, connected=Connected(),
                                 sections={"watch": types.SimpleNamespace(show=lambda s: None)})
 
-    def run_task(title, fn, done, failed):
-        try:
-            result = fn()
-        except Exception as e:  # noqa: BLE001 - as the real one: the error goes to `failed`
-            failed(e)
-        else:
-            done(result)
-
-    win.run_task = run_task
+    win.run_task = RunNow()
     win.show_device = win.show_no_device = lambda: win.built.append(win.session)
     win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
     return win
