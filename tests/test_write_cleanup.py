@@ -9,6 +9,7 @@ import posixpath
 import uuid
 
 import pytest
+from fakes import RunNow
 from test_ciq_music import FACE, STORE_ID, iq_device, out_bin  # noqa: F401 - the fixtures
 from test_sync import FakeClient
 from test_updates_system import disk_full_halfway
@@ -335,12 +336,7 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
 
     monkeypatch.setattr(maps, "install", install)
 
-    def run_task(title, work, done=None, failed=None, **kw):
-        try:
-            done(work())
-        except Exception as e:  # noqa: BLE001 - as the window's run_task: to `failed`
-            if not (failed and failed(e)):
-                errors.append((title, str(e)))
+    run_task = RunNow(error=lambda title, text: errors.append((title, text)))
 
     m = maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0, is_reinstall=False,
                           can_uninstall=True, version="2026.11", region="Test", identifier={},

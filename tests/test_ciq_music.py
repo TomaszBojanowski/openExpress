@@ -3,6 +3,7 @@ import datetime
 import uuid
 
 import pytest
+from fakes import RunNow
 
 from openexpress import ciq, music, proto
 from openexpress.device.storage import LocalStorage
@@ -1618,12 +1619,7 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
     monkeypatch.setattr(gui.Adw, "AlertDialog", Answering)
     errors, reads = [], []
 
-    def run_task(title, fn, done=None, failed=None):
-        try:
-            done(fn())
-        except Exception as e:  # noqa: BLE001 - as the window's run_task
-            if not (failed and failed(e)):
-                errors.append((title, str(e)))
+    run_task = RunNow(error=lambda title, text: errors.append((title, text)))
 
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=dev, storage=st), toast=lambda text: None,
