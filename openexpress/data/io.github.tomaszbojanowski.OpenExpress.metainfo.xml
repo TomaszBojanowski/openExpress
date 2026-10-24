@@ -105,6 +105,27 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.16" date="2026-10-24">
+      <description>
+        <ul>
+          <li>When the system has no MTP support in gvfs (gvfs-mtp missing), the app says so
+          right away with the install command, instead of waiting 45 s and pointing at the
+          watch's screen (#13). The README has a System requirements section, including a
+          note about Dolphin holding the MTP connection on KDE.</li>
+          <li>Installing an app refuses before anything is queued in Garmin Connect when the
+          app list on the device (IN.BIN) is damaged.</li>
+          <li>Error pages for Apps and Music show their text even when it contains angle
+          brackets.</li>
+          <li>Refreshing the view of a remembered device no longer reopens the connected
+          device; Ctrl+Q saves the window size; sync --download-only and sync --type describe
+          what they did; clearer messages when the PTP session breaks during an app install
+          or removal.</li>
+          <li>CLI exit codes documented in the README; code 3 means the first sync needs a
+          choice.</li>
+          <li>Dead code removed; the test suite runs 2–4× faster.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.15" date="2026-10-23">
       <description>
         <ul>
