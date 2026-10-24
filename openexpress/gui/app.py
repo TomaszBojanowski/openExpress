@@ -636,6 +636,19 @@ def remember_picture_address(device, url: str | None) -> None:
         log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
 
 
+def remember_update_found(device, found: bool) -> None:
+    """Keep with the open device (known_devices) whether the window's check of updates found
+    one to install, for its tile on the start page. Optional: a failure is only written to
+    the log."""
+    unit_id = getattr(device, "unit_id", None)
+    if not unit_id:
+        return
+    try:
+        known_devices.set_update_found(unit_id, found)
+    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
+        log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
+
+
 def open_device_kind(s, account) -> str | None:
     """The kind of the open device as its tile knows it: the same devicelist.tiles from
     devices.json and the account's list (also for D7, when no tile was shown before).
@@ -2738,6 +2751,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_count = len(new_updates)
         self.update_state = ("available" if new_updates else "ready" if staged else "current")
+        # For the tile of the device on the start page, also when it is not open: an update
+        # to install, or none (up to date, or what was found is copied now).
+        remember_update_found(getattr(getattr(self, "session", None), "device", None),
+                              bool(new_updates))
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:

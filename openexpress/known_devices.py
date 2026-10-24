@@ -5,7 +5,8 @@ GarminDevice.xml says and when the device was seen, its kind as Garmin tells it,
 address of the picture of its model as Garmin gives it (the account's list, or Garmin's
 update server for a device off the account), so that the picture can be downloaded again
 when it is no longer in the cache: a picture of the model, with neither the unit ID nor
-anything of the account in it, and only an address picture_urls allows. No address of the
+anything of the account in it, and only an address picture_urls allows; and when the
+window's check of updates last found one to install, for its tile (kept 30 days). No address of the
 device itself (an MTP address has the serial number), no GarminDevice.xml (it has it too).
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
@@ -38,6 +39,9 @@ CATEGORIES = (WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY)
 # A handheld (inReach, GPSMAP, Montana…): told by the model name only, for the icon; Garmin
 # tells no such kind that the program knows, so it is never kept here (not in CATEGORIES).
 HANDHELD = "handheld"
+# An update the window's check found for a device (the time of that check) is shown on its
+# tile for so long; an older finding counts as none (the update may be installed since).
+UPDATE_FOUND_KEPT_S = 30 * 86400
 
 
 @dataclass
@@ -51,6 +55,9 @@ class KnownDevice:
     last_seen: float
     category: str | None = None  # one of CATEGORIES; None: not known
     image_url: str | None = None  # the address of its model's picture; None: not known
+    # When the window's check last found an update for it (the time of the check); None:
+    # none found, or none since a check found it up to date or an update was installed.
+    update_found: float | None = None
 
 
 def path() -> Path:
@@ -78,7 +85,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
         entry = KnownDevice(unit_id, description, part_number, software_version, kind,
                             old.first_seen if old is not None else now, now,
                             old.category if old is not None else None,
-                            old.image_url if old is not None else None)
+                            old.image_url if old is not None else None,
+                            old.update_found if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -135,6 +143,35 @@ def set_image_url(unit_id: int, url) -> bool:
     return True
 
 
+def set_update_found(unit_id: int, found: bool, now: float | None = None) -> bool:
+    """What the window's check of updates found for a device remembered: an update (the
+    time of this check is kept), or none (what was kept goes); whether the entry changed. A
+    device that is not remembered gets no entry for it. The log names the part number."""
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable:
+            return False
+        value = (time.time() if now is None else now) if found else None
+        if entry.update_found == value:
+            return False
+        entry.update_found = value
+        _write(known)
+    if found:
+        log.info("devices: an update for %s found", entry.part_number)
+    else:
+        log.info("devices: no update waits for %s", entry.part_number)
+    return True
+
+
+def update_found_recently(found: float | None, now: float | None = None) -> float | None:
+    """When an update was found, if that was less than UPDATE_FOUND_KEPT_S ago; else None
+    (an older finding counts as none)."""
+    if found is None:
+        return None
+    return found if (time.time() if now is None else now) - found < UPDATE_FOUND_KEPT_S else None
+
+
 def forget(unit_id: int) -> bool:
     """Remove the entry of this device; whether there was one. Nothing else is deleted."""
     with _locked():
@@ -178,11 +215,14 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
         for key, value in data["devices"].items():
             category = value.get("category")
             image_url = value.get("image_url")
+            update_found = value.get("update_found")
             entry = KnownDevice(int(key), str(value["description"]), str(value["part_number"]),
                                 str(value["software_version"]), str(value["kind"]),
                                 float(value["first_seen"]), float(value["last_seen"]),
                                 category if category in CATEGORIES else None,
-                                image_url if picture_urls.allowed(image_url) else None)
+                                image_url if picture_urls.allowed(image_url) else None,
+                                float(update_found) if isinstance(update_found, int | float)
+                                and not isinstance(update_found, bool) else None)
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -196,7 +236,7 @@ def _write(known: dict[int, KnownDevice]) -> None:
     for unit_id, entry in sorted(known.items()):
         fields = asdict(entry)
         del fields["unit_id"]  # it is the key
-        for optional in ("category", "image_url"):
+        for optional in ("category", "image_url", "update_found"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         devices[str(unit_id)] = fields

@@ -397,3 +397,54 @@ def test_an_address_over_plain_http_is_kept_over_https(store):
     known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
     assert known_devices.set_image_url(VENU, "http://res.garmin.com/a.png") is True
     assert known_devices.load()[VENU].image_url == "https://res.garmin.com/a.png"
+
+
+# --- an update found by the quiet check (PLAN T9, chips) ----------------------------------------
+
+
+def test_an_update_found_is_kept_and_optional(store, caplog):
+    """When the window's check last found an update for a device is an optional field, as
+    the kind: a file without it is read as before (none found), a device without one is
+    written without the field; set_update_found keeps the time of the check that found one
+    and clears it when a check finds none; a device seen again keeps it; a value that is
+    not a number counts as none. The log names the part number, never the unit ID."""
+    import json
+
+    from openexpress import known_devices
+
+    store.parent.mkdir(parents=True)
+    store.write_text(json.dumps({"version": 1, "devices": {str(EDGE): {
+        "description": "Edge 1050", "part_number": "006-B4440-00", "software_version": "33.13",
+        "kind": "mtp", "first_seen": 1.0, "last_seen": 1.0}}}))
+    assert known_devices.load()[EDGE].update_found is None
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=2.0)
+    assert "update_found" not in json.loads(store.read_text())["devices"][str(FENIX)]
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert known_devices.set_update_found(EDGE, True, now=500.0) is True
+    assert "devices: an update for 006-B4440-00 found" in caplog.text
+    assert str(EDGE) not in caplog.text
+    assert known_devices.load()[EDGE].update_found == 500.0
+    assert known_devices.set_update_found(EDGE, True, now=600.0) is True  # checked again
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=700.0)
+    assert known_devices.load()[EDGE].update_found == 600.0
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert known_devices.set_update_found(EDGE, False) is True
+    assert "devices: no update waits for 006-B4440-00" in caplog.text
+    assert known_devices.load()[EDGE].update_found is None
+    assert "update_found" not in json.loads(store.read_text())["devices"][str(EDGE)]
+    assert known_devices.set_update_found(EDGE, False) is False  # nothing to clear
+    assert known_devices.set_update_found(3000000009, True) is False  # not remembered
+    data = json.loads(store.read_text())
+    data["devices"][str(EDGE)]["update_found"] = "soon"
+    store.write_text(json.dumps(data))
+    assert known_devices.load()[EDGE].update_found is None
+
+
+@pytest.mark.parametrize("age_days, recent", [(0, True), (29.9, True), (30.1, False)])
+def test_an_update_found_more_than_30_days_ago_counts_as_none(age_days, recent):
+    from openexpress import known_devices
+
+    now = 1_800_000_000.0
+    found = now - age_days * 86400
+    assert known_devices.update_found_recently(found, now) == (found if recent else None)
+    assert known_devices.update_found_recently(None, now) is None
