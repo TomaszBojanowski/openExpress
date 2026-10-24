@@ -201,9 +201,12 @@ def test_two_versions_stay_on_one_line():
 
     assert VERSIONS == "23.39" + app.ARROW + "23.40"  # what the window builds
     assert not re.search(r"[ \n]→|→[ \n]", VERSIONS)  # no place to break around the arrow
-    # Every arrow between two values in the window goes through the constant.
-    source = Path(app.__file__).read_text(encoding="utf-8")
-    assert not re.search(r"\} → \{", source)
+    # Every arrow between two values in the window goes through the constant, in each module
+    # of the window (gui/*.py), not only in app.py; navigation.py has no text of the window,
+    # only its line of the log ("N → M devices"), which has plain spaces anyway.
+    for module in sorted(Path(app.__file__).parent.glob("*.py")):
+        if module.name != "navigation.py":
+            assert not re.search(r"\} → \{", module.read_text(encoding="utf-8")), module.name
 
 
 @pytest.mark.needs_display
