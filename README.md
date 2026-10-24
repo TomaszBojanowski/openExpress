@@ -9,6 +9,11 @@
   maps, Connect IQ apps and music over USB.
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/start.png" width="800"
+       alt="The start page: three devices connected and one remembered, with labels such as Update available">
+</p>
+
 > **openExpress is not affiliated with, endorsed by or supported by Garmin Ltd.**
 > Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin Ltd. or its
 > subsidiaries. openExpress talks to the same Garmin services as the official Windows/macOS
@@ -86,7 +91,7 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 <p align="center">
   <img src="docs/screenshots/updates.png" width="800"
-       alt="The Updates page: a component update offered for an Edge 1050">
+       alt="The Updates page: a component update offered for a fēnix 8">
 </p>
 
 ### Not yet available
@@ -135,13 +140,12 @@ openExpress appears in your application menu. Click **Choose Installer…** in t
 the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
 the Device page (or in Preferences) to sync whenever the watch is connected.
 
-The window opens on the start page: a tile for each Garmin device connected, and for those
-seen before; a tile opens its device.
-
-<p align="center">
-  <img src="docs/screenshots/start.png" width="700"
-       alt="The start page: three devices connected and one remembered">
-</p>
+The window opens on the start page (the picture at the top): a tile for each Garmin device
+connected, and for those seen before; a tile opens its device. Up to two labels on a tile say
+what is waiting and what the device is: **Update available**, **To sync** (activities on the
+device not uploaded yet) or **Never synced** (by this installation), **USB drive**,
+**Primary** (the account's primary wearable) and **Not on your account**. The device page
+shows **Update available** under the software version too.
 
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`);
@@ -172,7 +176,7 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 
 <p align="center">
   <img src="docs/screenshots/device.png" width="700"
-       alt="The device page: sync, updates, Garmin Connect account and tools">
+       alt="The device page of a fēnix 8: an update available under its version, storage, the last sync and the updates">
 </p>
 
 ### Command line
