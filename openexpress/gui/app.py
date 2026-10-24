@@ -35,6 +35,7 @@ from openexpress import (  # noqa: E402
     paths,
     picture_urls,
     service,
+    sync,
 )
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human, _seen_at  # noqa: E402
@@ -491,6 +492,24 @@ def with_space(found):
     return found
 
 
+def with_activities(found):
+    """A device opened for the window, with its activities not uploaded yet counted in the
+    same thread (its tile's chip, PLAN T9): only for a device of the account (none for one
+    off it or whose check failed), never for a drive; a list to choose from is passed on as
+    it is (probe counted its devices)."""
+    if not isinstance(found, DeviceChoices):
+        off = (getattr(found, "mass_storage", False)
+               or getattr(found, "ownership_error", None) is not None)
+        found.to_sync = None if off else sync.activities_to_sync(found.device, found.storage)
+    return found
+
+
+def opened(found):
+    """What the thread that opens a device for the window reads besides: its free space and
+    its activities not uploaded yet."""
+    return with_activities(with_space(found))
+
+
 def render_space(win) -> None:
     """The subtitle (and the bar) of "Device storage" from the space the session holds:
     "…" until it is read, "?" for what is not known. Nothing is asked of the device."""
@@ -537,7 +556,7 @@ def refresh_space(win, s) -> None:
 def _choose(found: list):
     """The list of these devices, one entry each, without those gone since they were found;
     with one left, that one opened (D7); with none, no device."""
-    summaries = distinct_devices([probe(f) for f in found])
+    summaries = distinct_devices([probe(f, sync.activities_to_sync) for f in found])
     for s in summaries:
         if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
             known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
@@ -561,7 +580,8 @@ def connected_devices() -> list:
     """The devices connected now, one entry each, as the start page shows them while a
     device is open: GarminDevice.xml of each is read, nothing is opened or mounted and
     nothing is asked of the account."""
-    return _still_there(distinct_devices([probe(f) for f in find_all_devices()]))
+    return _still_there(distinct_devices([probe(f, sync.activities_to_sync)
+                                          for f in find_all_devices()]))
 
 
 def session_summary(s) -> DeviceSummary:
@@ -1910,7 +1930,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
         # several different devices give a list to choose from.
         self.run_task(_("Detecting the device…"),
-                      lambda: with_space(detect_devices(current_uri)), done, failed)
+                      lambda: opened(detect_devices(current_uri)), done, failed)
 
     def show_choices(self) -> None:
         """Several Garmin devices are connected: the start page shows a tile for each (never
@@ -1951,7 +1971,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             return True
 
         self.run_task(_("Opening the device…"),
-                      lambda: with_space(service.check_session(service.open_session(
+                      lambda: opened(service.check_session(service.open_session(
                           found=found))), done, failed)
 
     # --- the start page and the device view (D5, D7) ---------------------------------------

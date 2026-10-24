@@ -1106,20 +1106,25 @@ class DeviceSummary:
     software_version: str = ""
     unit_id: int | None = field(default=None, repr=False)  # in memory only, never written
     reason: str | None = None  # NOT_MOUNTED, NO_DEVICE_FILE or UNREADABLE: no details
+    # Its activities not uploaded yet (sync.ActivitiesToSync), when probe was asked to count
+    # them; None: not counted or not known.
+    to_sync: object | None = field(default=None, repr=False)
 
     @property
     def ok(self) -> bool:
         return self.reason is None
 
 
-def probe(found: FoundDevice) -> DeviceSummary:
+def probe(found: FoundDevice, count_activities=None) -> DeviceSummary:
     """Read only GarminDevice.xml of a device from find_all_devices: no session, no account,
     no server, no PTP, nothing mounted. Never raises: without details, the summary says
-    why. One log line, without the address or the unit ID."""
+    why. One log line, without the address or the unit ID. `count_activities(device,
+    storage)` (the window's sync.activities_to_sync): asked for an MTP device read, with the
+    storage open here; its result goes to the summary's `to_sync`."""
     from openexpress import applog
     from openexpress.device.xmldevice import parse
 
-    summary = _probe(found, parse)
+    summary = _probe(found, parse, count_activities)
     if summary.ok:
         applog.hide(summary.unit_id, "unit")  # as hide_device: never in the log
     log.info("device: probed %s (USB %s): %s", found.kind,
@@ -1143,7 +1148,7 @@ def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
     return out
 
 
-def _probe(found: FoundDevice, parse) -> DeviceSummary:
+def _probe(found: FoundDevice, parse, count_activities=None) -> DeviceSummary:
     if not found.mounted:
         return DeviceSummary(found, reason=NOT_MOUNTED)
     try:
@@ -1172,8 +1177,11 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
         log.debug("device: probe could not read GarminDevice.xml (%s)", type(e).__name__)
         return DeviceSummary(found, reason=UNREADABLE)
     # Without <Id> the parser gives 0: no unit ID, never one to merge entries by.
-    return DeviceSummary(found, device.description, device.part_number,
-                         device.software_version_str, device.unit_id or None)
+    summary = DeviceSummary(found, device.description, device.part_number,
+                            device.software_version_str, device.unit_id or None)
+    if count_activities is not None and found.kind == "mtp":
+        summary.to_sync = count_activities(device, storage)
+    return summary
 
 
 # --- the device to ourselves, for PTP ----------------------------------------------------

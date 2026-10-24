@@ -48,6 +48,9 @@ class DeviceSession:
     # device and again in the background after it wrote to it; None: not read yet, and
     # either one None: not known (it could not be asked).
     space: tuple[int | None, int | None] | None = None
+    # Its activities not uploaded yet (sync.ActivitiesToSync) as the window counted them in
+    # the thread that opened it; None: not counted or not known.
+    to_sync: sync.ActivitiesToSync | None = None
 
     @property
     def logged_in(self) -> bool:

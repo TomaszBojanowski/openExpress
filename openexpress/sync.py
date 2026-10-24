@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import posixpath
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -512,6 +513,77 @@ def _failure_codes(body) -> set[int]:
             except (TypeError, ValueError):
                 pass
     return codes
+
+
+# --- activities not uploaded yet (the chip "To sync" of a tile) ------------------------
+
+
+@dataclass(frozen=True)
+class ActivitiesToSync:
+    """The activities on a connected device that this installation has not uploaded yet
+    (PLAN T9, 24.10.2026): those its activity folder lists that state.json does not hold as
+    done, and the copies kept after a failed upload. Refused by Garmin and already in Connect
+    are done (as sync marks them), a failed upload is not. `count` None: the device was never
+    synced here (no state.json). The names listed stay in memory only, for again()."""
+
+    unit_id: int = field(repr=False)
+    listed: frozenset[str] = field(default=frozenset(), repr=False)
+    count: int | None = None
+
+    @property
+    def never_synced(self) -> bool:
+        return self.count is None
+
+    def again(self) -> ActivitiesToSync | None:
+        """After a sync (of the window, the background service or the command): what was
+        listed against state.json as it is now; the device is not asked again (no activity
+        is made while it is connected over USB)."""
+        try:
+            return _activities_left(self.unit_id, self.listed)
+        except Exception as e:  # noqa: BLE001 - not known, never 0: the tile shows nothing
+            log.info("activities: not counted again (%s)", type(e).__name__)
+            return None
+
+
+def activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
+    """The activities of `device` not uploaded yet: its activity folder (GarminDevice.xml)
+    listed, no file read. Not known (None) for a drive (never synced), a device without a
+    unit ID, a folder that could not be listed or a state.json that could not be read. A
+    device never synced here is not listed at all. One log line, counts only. Never raises:
+    the device opens all the same."""
+    try:
+        return _activities_to_sync(device, storage)
+    except Exception as e:  # noqa: BLE001 - not known, never 0: the tile shows nothing
+        log.info("activities: not counted (%s)", type(e).__name__)
+        return None
+
+
+def _activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
+    if storage.mass_storage or not device.unit_id:
+        return None
+    if not SyncState(device.unit_id).file.exists():
+        log.info("activities: not counted, the device was never synced here")
+        return ActivitiesToSync(device.unit_id)
+    started = time.monotonic()
+    listed = set()
+    for src in device.sources(ACTIVITY_TYPE):
+        for path, _entry in storage.walk_files(src.path):
+            if src.matches(path):
+                listed.add(posixpath.basename(path).casefold())
+    took = time.monotonic() - started
+    result = _activities_left(device.unit_id, frozenset(listed))
+    log.info("activities: %d on the device, %d not uploaded yet (listed in %.2f s)",
+             len(listed), result.count or 0, took)
+    return result
+
+
+def _activities_left(unit_id: int, listed: frozenset[str]) -> ActivitiesToSync:
+    state = SyncState(unit_id)
+    if not state.file.exists():
+        return ActivitiesToSync(unit_id, listed)
+    done = state.completed.get(ACTIVITY_TYPE, set())
+    kept = {p.name.casefold() for p in state.pending_files(ACTIVITY_TYPE)}
+    return ActivitiesToSync(unit_id, listed, len((listed | kept) - done))
 
 
 def mark_baseline(device: GarminDevice, storage: Storage, upload_config: dict,
