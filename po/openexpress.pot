@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.6.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-24 16:24+0200\n"
+"POT-Creation-Date: 2026-10-24 16:38+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -294,7 +294,7 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:921 openexpress/sync.py:719
+#: openexpress/ciq.py:921 openexpress/sync.py:731
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
@@ -1646,7 +1646,7 @@ msgid ""
 "anyway, or turn on background sync in the Flatpak window."
 msgstr ""
 
-#: openexpress/cli.py:1641 openexpress/sync.py:736
+#: openexpress/cli.py:1641 openexpress/sync.py:748
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr ""
@@ -2056,7 +2056,7 @@ msgstr ""
 #: openexpress/connect.py:140
 msgid ""
 "Internal error: this device was not checked against your Garmin account. "
-"Nothing was sent."
+"Nothing was transferred."
 msgstr ""
 
 #: openexpress/connect.py:165
@@ -4991,7 +4991,7 @@ msgstr ""
 msgid "device does not accept this type"
 msgstr ""
 
-#: openexpress/sync.py:727
+#: openexpress/sync.py:739
 msgid "not enough space on the device"
 msgstr ""
 

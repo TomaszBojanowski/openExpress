@@ -138,7 +138,7 @@ class GarminClient:
         if self.verified_unit_id is None or unit_id not in (None, self.verified_unit_id):
             raise DeviceNotVerified(
                 _("Internal error: this device was not checked against your Garmin account. "
-                  "Nothing was sent."))
+                  "Nothing was transferred."))
 
     @staticmethod
     def _prepared_url(method: str, url: str) -> str:

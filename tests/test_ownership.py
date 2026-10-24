@@ -275,7 +275,7 @@ def device(device_root):
 @pytest.mark.parametrize("name", CALL_NAMES)
 def test_unverified_client_sends_nothing(device, name):
     client = make_client([{"unitid": UNIT}])
-    with pytest.raises(DeviceNotVerified, match="Nothing was sent"):
+    with pytest.raises(DeviceNotVerified, match="Nothing was transferred"):
         account_calls(client, device)[name]()
     assert client.http.sent == []
 
@@ -384,6 +384,27 @@ def test_downloads_with_an_unverified_client_stop_at_the_first_refusal(
         sync.run_downloads(items, st, client, state=state)
     warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
     assert len(warnings) == 1 and "not checked against" in warnings[0]
+
+
+def test_the_refusal_of_downloads_does_not_say_that_something_was_sent(
+        device, device_root, tmp_path):
+    """The words of the refusal fit both ways (24.10.2026): "Nothing was transferred", not
+    "sent", in English and in Polish."""
+    from openexpress import i18n
+
+    st, state, items, client = _queue_for_an_unverified_client(device, device_root, tmp_path)
+    with pytest.raises(DeviceNotVerified) as refused:
+        sync.run_downloads(items, st, client, state=state)
+    said = str(refused.value)
+    assert "sent" not in said.casefold() and said.endswith("Nothing was transferred.")
+    i18n.setup("pl")
+    try:
+        with pytest.raises(DeviceNotVerified) as refused:
+            sync.run_downloads(items, st, client, state=state)
+    finally:
+        i18n.setup("en")
+    said = str(refused.value)
+    assert "wysłano" not in said and said.endswith("Niczego nie przesłano.")
 
 
 # --- someone else's watch: nothing is sent, nothing is written ------------------------------
