@@ -5,6 +5,7 @@ import types
 
 import pytest
 import requests
+from fakes import RunNow
 from gi.repository import GLib
 
 from openexpress import ownmaps
@@ -867,16 +868,7 @@ def own_maps_window(key="maps"):
         if win.answer == "ok":
             on_ok()
 
-    def run_task(title, work, done=None, failed=None, device=True, in_page=False):
-        win.shown.append(("task", title))
-        try:
-            result = work()
-        except Exception as e:
-            if not (failed and failed(e)):
-                raise
-            return
-        if done:
-            done(result)
+    run_task = RunNow(on_call=lambda call: win.shown.append(("task", call.title)))
 
     win._ask, win.run_task = ask, run_task
     win.reloads = []

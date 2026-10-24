@@ -7,6 +7,7 @@ import threading
 import types
 
 import pytest
+from fakes import RunNow
 
 from openexpress.device.storage import LocalStorage
 
@@ -43,34 +44,11 @@ class Counting(LocalStorage):
         return super().capacity()
 
 
-class Tasks:
+def tasks_in_a_thread() -> RunNow:
     """run_task as the window has it: the work in a thread, then `done` (or `failed`) on the
-    window's thread; `before_done` runs in between, as what may happen meanwhile."""
-
-    def __init__(self):
-        self.titles, self.errors, self.before_done = [], [], None
-
-    def __call__(self, title, fn, done=None, failed=None, device=True, in_page=False,
-                 button=None):
-        self.titles.append(title)
-        result, error = [], []
-
-        def worker():
-            try:
-                result.append(fn())
-            except Exception as e:  # noqa: BLE001
-                error.append(e)
-
-        t = threading.Thread(target=worker)
-        t.start()
-        t.join()
-        if self.before_done is not None:
-            self.before_done()
-        if error:
-            if not (failed and failed(error[0])):
-                self.errors.append(str(error[0]))
-        elif done:
-            done(result[0])
+    window's thread; `before_done` runs in between, as what may happen meanwhile; an error
+    `failed` does not take is kept in `errors`."""
+    return RunNow(thread=True, error="record")
 
 
 class Question:
@@ -108,7 +86,7 @@ def map_window(device_root, monkeypatch):
     monkeypatch.setattr(app.Adw, "AlertDialog", Question)
     storage = Counting(device_root)
     m = _map(1000, 2000)
-    tasks = Tasks()
+    tasks = tasks_in_a_thread()
     win = types.SimpleNamespace(
         maps_cache=[m], run_task=tasks, tasks=tasks, errors=[],
         error=lambda title, body: win.errors.append(title),
@@ -384,7 +362,7 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     storage = Counting(st.root)
     asked = []
     win = types.SimpleNamespace(
-        session=types.SimpleNamespace(device=dev, storage=storage), run_task=Tasks(),
+        session=types.SimpleNamespace(device=dev, storage=storage), run_task=tasks_in_a_thread(),
         error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,
         _order_rows=app.MainWindow._order_rows,
         confirm_order=lambda copy, plan, note=None: asked.append(note))
@@ -429,7 +407,7 @@ def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     win, section, _asked = _real_maps_page([maps_response(server)], device_root)
     storage = Counting(device_root)
     win.session.storage = storage
-    win.run_task = Tasks()
+    win.run_task = tasks_in_a_thread()
     plain = LocalStorage(device_root)
     title = f"{app._human(plain.free_space())} free of {app._human(plain.capacity())}"
     win.load_section("maps")
@@ -452,7 +430,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     win, section = page_window("music")
     storage = Counting(st.root)
     win.session = types.SimpleNamespace(device=dev, storage=storage)
-    win.run_task = Tasks()
+    win.run_task = tasks_in_a_thread()
     win.toast = lambda text: None
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
     for name in ("load_music", "show_music"):

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import pytest
+from fakes import RunNow
 
 
 def fill(root: Path, files: dict[str, int]) -> None:
@@ -549,26 +550,13 @@ def prefs(cache, monkeypatch):
 
     from gi.repository import Adw
 
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     dialogs, errors, toasts, tasks = [], [], [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
 
-    def run_task(title, work, done, failed=None, device=True, in_page=False, button=None):
-        tasks.append((title, device, button))
-        restore = app.show_working(button) if button is not None else None
-        try:
-            result = work()
-        except Exception as e:  # noqa: BLE001 - as the window's run_task: to `failed`
-            if restore:
-                restore(True)
-            if not (failed and failed(e)):
-                errors.append(str(e))
-        else:
-            if restore:
-                restore(True)
-            done(result)
+    run_task = RunNow(on_call=lambda call: tasks.append((call.title, call.device, call.button)),
+                      error=lambda title, text: errors.append(text))
 
     win = types.SimpleNamespace(busy=False, run_task=run_task, dialogs=dialogs, errors=errors,
                                 toast=toasts.append, toasts=toasts, tasks=tasks,

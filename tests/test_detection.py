@@ -2753,17 +2753,6 @@ NOT_EJECTED_CLI_TEXT = ("Do not unplug the cable yet: the device may not see the
                         "any program that uses the drive and eject it in the file manager.")
 
 
-def run_at_once(title, work, done, failed=None, device=True, button=None):
-    """A task of the window, run at once; an error goes to its own handler, as in the window."""
-    try:
-        result = work()
-    except Exception as e:  # as the real one: the error goes to `failed`
-        if not (failed and failed(e)):
-            raise
-    else:
-        done(result)
-
-
 def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     """The window asked, and the update was copied to the RTL515's drive: (session, the drive's
     mount, every dialog shown so far, the questions to the update server). A task runs at once;
@@ -2787,7 +2776,7 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
                                 toast=toasts.append, progress=lambda text: None, fraction=None,
                                 _show_installed=lambda session, chosen: None,
-                                run_task=run_at_once)
+                                run_task=RunNow())
     for name in ("error", "ask_to_eject", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)
@@ -2879,7 +2868,7 @@ def test_an_update_that_does_not_fit_says_so_under_its_own_heading(drive_window,
     win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
                                 toast=lambda text: None, progress=lambda text: None,
                                 fraction=None, _show_installed=lambda session, chosen: None,
-                                run_task=run_at_once)
+                                run_task=RunNow())
     for name in ("error", "ask_to_eject", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)

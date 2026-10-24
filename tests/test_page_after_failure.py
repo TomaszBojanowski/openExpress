@@ -8,6 +8,7 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import RunNow
 from test_ciq_music import FACE, PRELOADED, STORE_ID, iq_device, library  # noqa: F401
 from test_in_bin_writes import Breaking
 from test_updates_maps import FILES, _real_maps_page, maps_response, server  # noqa: F401
@@ -177,15 +178,7 @@ def _window(monkeypatch, session=None):
     win.error = lambda title, text: win.errors.append((title, text))
     win.load_section = lambda key, force=False: win.reads.append((key, force))
 
-    def run_task(title, fn, done=None, failed=None, device=True, in_page=False, button=None):
-        try:
-            result = fn()
-        except Exception as e:  # noqa: BLE001 - as the window's: any failure to `failed`
-            if not (failed and failed(e)):
-                win.errors.append((title, str(e)))
-            return
-        if done is not None:
-            done(result)
+    run_task = RunNow(error=lambda title, text: win.errors.append((title, text)))
 
     def fails(*args, **kwargs):
         if win.unplug:
