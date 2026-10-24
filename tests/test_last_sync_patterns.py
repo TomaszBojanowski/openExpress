@@ -107,6 +107,16 @@ EXPECTED = {
             ("Files from the device: activities ×3", False)]),
         "pl": ("tylko aktywności: 3 nowe pliki, 3 wysłane", [
             (f"Pliki z{NB}urządzenia: aktywności ×3", False)])},
+    # A sync of the fēnix 8 by the version from source on 24.10.2026, after 6d8cd91: one new
+    # file uploaded, and TrueUp received (counted since 6d8cd91), in the words it was written
+    # in (with its hard space).
+    "real-source-fenix-8-0.6.18-trueup-received.json": {
+        "en": ("1 new file, 1 uploaded · 1 received", [
+            ("Files from the device: segment list", False),
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)]),
+        "pl": ("1 nowy plik, 1 wysłany · 1 odebrany", [
+            (f"Pliki z{NB}urządzenia: lista segmentów", False),
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)])},
     # A sync whose device had nothing new and that wrote TrueUp from the queue (PLAN (9),
     # 24.10.2026): TrueUp counts as received, so the row does not say "nothing to upload"
     # alone; no real sync has made it yet (tests/test_fixes_ui.py: what the command writes).
