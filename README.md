@@ -10,8 +10,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/start.png" width="800"
-       alt="The start page: three devices connected and one remembered, with labels such as Update available">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/start.png">
+    <img alt="openExpress – devices page" src="docs/screenshots/start-light.png" width="800">
+  </picture>
 </p>
 
 > **openExpress is not affiliated with, endorsed by or supported by Garmin Ltd.**
