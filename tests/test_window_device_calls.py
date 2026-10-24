@@ -665,14 +665,17 @@ WRITING = {"Syncing…", "Installing update…", "Copying the map…", "Installi
 def test_every_task_that_writes_to_the_device_says_so():
     """Each run_task of the window whose task writes to the device has its work wrapped in
     writes_to_device, and only those (read in the source: the title of the task, its work
-    and its keywords)."""
+    and its keywords), in every module of the window (gui/*.py: the pages split out of
+    app.py too)."""
     import ast
-    import inspect
+    from pathlib import Path
 
     from openexpress.gui import app
 
     found = {}
-    for node in ast.walk(ast.parse(inspect.getsource(app))):
+    trees = [ast.parse(module.read_text(encoding="utf-8"))
+             for module in sorted(Path(app.__file__).parent.glob("*.py"))]
+    for node in (node for tree in trees for node in ast.walk(tree)):
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                 and node.func.attr == "run_task" and node.args):
             continue
