@@ -3,6 +3,7 @@
 All IDs here are made up. UNIT is the test watch from conftest.DEVICE_XML.
 """
 
+import dataclasses
 import json
 import types
 
@@ -328,6 +329,61 @@ def test_uploads_with_an_unverified_client_send_nothing_and_keep_no_copy(
     warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
     assert len(warnings) == 1 and "not checked against" in warnings[0]
     assert not state.pending_dir.exists() or list(state.pending_dir.rglob("*")) == []
+
+
+QUEUE = [{"messageid": 1, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+          "metadata": {"messageurl": "course/1", "messagename": "Route"}},
+         {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+          "metadata": {"messageurl": "course/7", "messagename": "Written before"}},
+         {"messageid": 9, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+          "metadata": {"messageurl": "https://files.example/9", "messagename": "Elsewhere"}}]
+
+
+def _queue_for_an_unverified_client(device, device_root, tmp_path):
+    """The queue (a course, one written by an earlier sync whose acknowledgement failed, one
+    at an absolute address), the state that remembers the one written, a client never
+    checked against the account."""
+    st = LocalStorage(device_root)
+    state = sync.SyncState(device.unit_id, base=tmp_path / "state")
+    state.save_unacked({"7"})
+    items = sync.plan_downloads(device, QUEUE)
+    assert [it.message_id for it in items] == [1, 7, 9] and not any(
+        it.unsupported or it.handled_by for it in items)
+    items[2] = dataclasses.replace(items[2], absolute=True)
+    return st, state, items, make_client([{"unitid": UNIT}])
+
+
+def test_downloads_with_an_unverified_client_fetch_write_and_acknowledge_nothing(
+        device, device_root, tmp_path):
+    """Defence in depth (run_sync checks the owner before): run_downloads given a client never
+    checked against the account sends no request (no file fetched, at Garmin's address or
+    another, no message acknowledged), writes nothing to the device and keeps the message
+    written before as not acknowledged, for a sync of the device checked."""
+    st, state, items, client = _queue_for_an_unverified_client(device, device_root, tmp_path)
+    before = tree(device_root)
+    try:
+        report = sync.run_downloads(items, st, client, state=state)
+    except DeviceNotVerified:
+        report = None
+    assert client.http.sent == []
+    assert tree(device_root) == before
+    assert sync.SyncState(device.unit_id, base=tmp_path / "state").unacked() == {"7"}
+    if report is not None:
+        assert (report.written, report.empty) == ([], [])
+
+
+def test_downloads_with_an_unverified_client_stop_at_the_first_refusal(
+        device, device_root, tmp_path, caplog):
+    """As the uploads (39bbb96): the refusal of the first request stops the downloads and is
+    raised, logged once; not one failure for each file of the queue."""
+    import logging
+
+    st, state, items, client = _queue_for_an_unverified_client(device, device_root, tmp_path)
+    with caplog.at_level(logging.INFO, logger="openexpress.sync"), \
+            pytest.raises(DeviceNotVerified):
+        sync.run_downloads(items, st, client, state=state)
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert len(warnings) == 1 and "not checked against" in warnings[0]
 
 
 # --- someone else's watch: nothing is sent, nothing is written ------------------------------

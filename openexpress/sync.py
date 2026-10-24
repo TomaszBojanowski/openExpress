@@ -691,8 +691,20 @@ def run_downloads(
     """Download queued files to the watch.
 
     With `state`, messages whose acknowledgement failed after the file was written are
-    remembered and only acknowledged next time (no duplicate file on the watch).
+    remembered and only acknowledged next time (no duplicate file on the watch). A client
+    never checked against the account (run_sync checks the owner first) stops it at its
+    first refusal, as the uploads: nothing is fetched, written or acknowledged, the messages
+    written before stay not acknowledged, and the refusal is logged once and raised.
     """
+    try:
+        return _run_downloads(items, storage, client, progress, state)
+    except DeviceNotVerified:
+        log.warning("downloads: nothing downloaded, the device was not checked against the "
+                    "account")
+        raise
+
+
+def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
     report = DownloadReport()
     unacked = state.unacked() if state is not None else set()
     initial = set(unacked)
@@ -706,7 +718,7 @@ def run_downloads(
             if mid in unacked:
                 try:
                     client.ack_message(it.message_id)
-                except Unauthorized:
+                except (Unauthorized, DeviceNotVerified):
                     raise
                 except Exception as e:  # noqa: BLE001
                     log.warning("Acknowledgement of %s failed again: %s", quiet, e)
@@ -727,7 +739,7 @@ def run_downloads(
                     raise ApiError(_("not enough space on the device"))
                 target = posixpath.join(it.target.path, it.device_name())  # type: ignore[union-attr]
                 real = storage.write(target, data)
-            except Unauthorized:
+            except (Unauthorized, DeviceNotVerified):
                 raise
             except Exception as e:  # noqa: BLE001
                 report.failed.append((label, str(e)))
@@ -741,7 +753,7 @@ def run_downloads(
             unacked.add(mid)
             try:
                 client.ack_message(it.message_id)
-            except Unauthorized:
+            except (Unauthorized, DeviceNotVerified):
                 raise
             except Exception as e:  # noqa: BLE001
                 log.warning("Acknowledgement of %s failed: %s", quiet, e)
