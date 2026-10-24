@@ -316,6 +316,21 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
     assert win.update_chip.get_width() >= natural
 
 
+@pytest.mark.parametrize("view", ["grid", "list"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_start_page_in_the_view_chosen_fits_the_narrowest_window(narrow_window, language,
+                                                                     view):
+    """T6b: nine connected (a list when automatic), three remembered, three on the account,
+    all in the view chosen: the page fits the narrowest window."""
+    win = narrow_window(language)
+    win.start.view = view
+    win.start.show(_tiles() * 3, False)
+    _iterate(0.05)
+    kinds = {type(item).__name__ for item in win.start.tiles()}
+    assert kinds == ({"DeviceRow"} if view == "list" else {"FlowBoxChild"})
+    assert _min_width(win.start.page) <= NARROWEST
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_start_page_fits_the_narrowest_window(narrow_window, language):
     win = narrow_window(language)

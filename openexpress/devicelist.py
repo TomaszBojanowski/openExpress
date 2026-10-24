@@ -27,8 +27,11 @@ CONNECTED, REMEMBERED, ON_ACCOUNT = "connected", "remembered", "on-account"
 SECTIONS = (CONNECTED, REMEMBERED, ON_ACCOUNT)  # in the order of the page
 
 # How a section of the start page shows its devices: tiles in a grid while they are few, a
-# list once they are many (counted for each section on its own).
+# list once they are many (counted for each section on its own), unless the view chosen in
+# the page's menu (T6b) is a grid or a list for all of them.
 GRID, LIST = "grid", "list"
+AUTO = "auto"
+VIEWS = (AUTO, GRID, LIST)
 GRID_MAX = 6
 
 # The start of a model name and the kind it tells, for the icon only: the last resort after
@@ -45,10 +48,13 @@ NAME_KINDS = {
 }
 
 
-def layout(count: int) -> str | None:
-    """GRID up to GRID_MAX devices, LIST beyond; None: no device, no section."""
+def layout(count: int, view: str = AUTO) -> str | None:
+    """The view chosen (GRID or LIST); automatic (AUTO, or a view not known): GRID up to
+    GRID_MAX devices, LIST beyond. None: no device, no section."""
     if count <= 0:
         return None
+    if view in (GRID, LIST):
+        return view
     return GRID if count <= GRID_MAX else LIST
 
 

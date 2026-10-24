@@ -673,3 +673,16 @@ def test_a_section_is_a_grid_up_to_six_then_a_list():
     assert devicelist.layout(0) is None
     assert [devicelist.layout(n) for n in (1, 2, 6)] == [devicelist.GRID] * 3
     assert [devicelist.layout(n) for n in (7, 8, 30)] == [devicelist.LIST] * 3
+
+
+def test_the_view_chosen_lays_out_every_section_alike():
+    """T6b: "grid" and "list" whatever the number; "auto" (and a view not known) as T6a;
+    no device, no section, in every view."""
+    from openexpress import devicelist
+
+    grid, listed, auto = devicelist.GRID, devicelist.LIST, devicelist.AUTO
+    assert [devicelist.layout(n, grid) for n in (1, 7, 30)] == [grid] * 3
+    assert [devicelist.layout(n, listed) for n in (1, 6, 7)] == [listed] * 3
+    assert [devicelist.layout(n, auto) for n in (6, 7)] == [grid, listed]
+    assert [devicelist.layout(n, "tiles") for n in (6, 7)] == [grid, listed]
+    assert {devicelist.layout(0, view) for view in (auto, grid, listed)} == {None}

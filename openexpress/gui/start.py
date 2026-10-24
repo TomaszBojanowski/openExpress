@@ -372,6 +372,9 @@ class StartPage:
     the list given to show(), whatever section it is in."""
 
     def __init__(self, on_open=None, header_start=(), header_end=(), picture_of=None):
+        # How the sections show their devices (devicelist.layout): the view chosen in the
+        # page's menu; the next show() lays them out so.
+        self.view = devicelist.AUTO
         self.header = Adw.HeaderBar()
         for widget in header_start:
             self.header.pack_start(widget)
@@ -458,7 +461,7 @@ class StartPage:
         self.columns.set_most(max(len(part) for part in parts.values()))
         for name, section in self._sections.items():
             part = parts[name]
-            mode = devicelist.layout(len(part))  # tiles while few, a list for many
+            mode = devicelist.layout(len(part), self.view)  # automatic: a list for many
             keys = (mode, [display_key(tile, how) for _key, tile, how in part])
             if keys != section.shown:  # items that show the same keep their widgets
                 section.shown = keys

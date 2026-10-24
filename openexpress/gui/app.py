@@ -195,6 +195,79 @@ def save_window_geometry(width: int, height: int, maximized: bool) -> None:
     save_gui_settings(data)
 
 
+class StartView:
+    """The section "View" of the menu of the start page (PLAN T6b, 24.10.2026): how its
+    sections show their devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1
+    devices in a section, each section on its own), a grid or a list for all of them. Kept
+    in gui.json (KEY); a change draws the start page again from what is known
+    (_render_start), the devices are not asked. All of it here, to go with the start page
+    when app.py is split further."""
+
+    KEY = "start_view"
+    ACTION = "start-view"  # win.start-view, whose state is the view
+
+    @classmethod
+    def saved(cls) -> str:
+        """The view kept in gui.json; automatic without one, or with a value of another type
+        or not known (the file is left as it is)."""
+        view = load_gui_settings().get(cls.KEY)
+        return view if isinstance(view, str) and view in devicelist.VIEWS else devicelist.AUTO
+
+    @classmethod
+    def save(cls, view: str) -> None:
+        """Kept as the window's size is: gui.json read again, its other keys stay."""
+        data = load_gui_settings()
+        data[cls.KEY] = view
+        save_gui_settings(data)
+
+    @classmethod
+    def menu(cls, main: Gio.Menu) -> Gio.Menu:
+        """The menu of the start page: "View" with its three items, one of them chosen (the
+        action's state), then the sections of the main menu."""
+        views = Gio.Menu()
+        # TRANSLATORS: items of the section "View" of the menu of the start page: how the
+        # devices are shown (automatic: tiles, a list for more than six in a section)
+        for view, words in ((devicelist.AUTO, pgettext("start view", "Automatic")),
+                            (devicelist.GRID, pgettext("start view", "Grid")),
+                            (devicelist.LIST, pgettext("start view", "List"))):
+            views.append(words, f"win.{cls.ACTION}::{view}")
+        menu = Gio.Menu()
+        # TRANSLATORS: heading of a section of the menu of the start page
+        menu.append_section(pgettext("start view", "View"), views)
+        for i in range(main.get_n_items()):
+            menu.append_item(Gio.MenuItem.new_from_model(main, i))
+        return menu
+
+    @classmethod
+    def install(cls, win) -> None:
+        """The window's action, its state the view kept, which the start page takes."""
+        view = cls.saved()
+        win.start.view = view
+        action = Gio.SimpleAction.new_stateful(cls.ACTION, GLib.VariantType.new("s"),
+                                               GLib.Variant.new_string(view))
+        action.connect("change-state", lambda act, value: cls._changed(win, act, value))
+        win.add_action(action)
+
+    @classmethod
+    def _changed(cls, win, action, value) -> None:
+        view = value.get_string()
+        if view not in devicelist.VIEWS or view == action.get_state().get_string():
+            return
+        action.set_state(value)
+        cls.choose(win, view)
+
+    @classmethod
+    def choose(cls, win, view: str) -> None:
+        """The view chosen: kept (a failure only in the log), the start page drawn in it."""
+        log.info("start page: view %s", view)
+        try:
+            cls.save(view)
+        except OSError as e:
+            log.warning("start page: the view is not kept (%s)", type(e).__name__)
+        win.start.view = view
+        win._render_start()
+
+
 def _settings_json() -> Path:
     return paths.config_dir() / "settings.json"
 
@@ -1397,10 +1470,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         # The start page is the root; the device view comes above it (D5, D7).
         refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text=_("Refresh"),
                              action_name="win.refresh")
-        start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu,
+        start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic",
+                                    menu_model=StartView.menu(menu),
                                     tooltip_text=_("Main Menu"), primary=True)
         self.start = StartPage(self._open_tile, header_start=[refresh], header_end=[start_menu],
                                picture_of=lambda part: pictures.known(self, part))
+        StartView.install(self)
         self.device_view = Adw.NavigationPage(title="openExpress", tag="device",
                                               child=self.split)
         self.navigation = Adw.NavigationView()
