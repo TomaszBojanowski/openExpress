@@ -1087,6 +1087,20 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
     return row
 
 
+def row_subtitle(row) -> Gtk.Label | None:
+    """The label of the subtitle of an Adw.ActionRow, which libadwaita does not give: the one
+    with the style class "subtitle" (so in 1.5 as in 1.9). None when there is none."""
+    child = row.get_first_child()
+    while child is not None:
+        if isinstance(child, Gtk.Label) and child.has_css_class("subtitle"):
+            return child
+        found = row_subtitle(child)
+        if found is not None:
+            return found
+        child = child.get_next_sibling()
+    return None
+
+
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -2564,6 +2578,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             justify=Gtk.Justification.CENTER)
         self.software_label.add_css_class("dim-label")
         box.append(self.software_label)
+        # An update to install: the chip of the device's tile, under its version
+        # (_highlight_update).
+        self.update_chip = Gtk.Label(label=start.update_available(), halign=Gtk.Align.CENTER,
+                                     css_classes=["oe-chip", "warning"], visible=False)
+        box.append(self.update_chip)
         hero.add(box)
         self._show_device_picture()
 
@@ -2602,6 +2621,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
 
         g = sec.group(pgettext("tab", "Updates"))
         self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
+        # An update to install: a dot of the warning colour before the arrow; its subtitle
+        # says it (_highlight_update).
+        self.update_dot = _dot()
+        self.update_dot.add_css_class("warning")
+        self.update_dot.set_visible(False)
+        self.update_row.add_suffix(self.update_dot)
         self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
         g.add(self.update_row)
@@ -2790,11 +2815,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             return
         version = _("Software {version}").format(
             version=self.session.device.software_version_str)
+        self._highlight_update(self.update_state == "available")
         if self.update_state == "available":
             self.update_row.set_subtitle(ngettext(
                 "{count} update available", "{count} updates available",
                 self.update_count).format(count=self.update_count))
-            self.software_label.set_label(caption(version, _("update available")))
+            self.software_label.set_label(version)  # the chip under it says it
         elif self.update_state == "ready":
             self.update_row.set_subtitle(
                 _("Update ready: eject the device to install it")
@@ -2811,6 +2837,21 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         else:
             self.update_row.set_subtitle(_("Checking…"))
             self.software_label.set_label(version)
+
+    def _highlight_update(self, on: bool) -> None:
+        """An update to install stands out on the device page (24.10.2026): the chip of its
+        tile under the version, the subtitle of "Device software" in the warning colour and a
+        dot of that colour before its arrow. Otherwise (installed, none, checking, failed) as
+        the other rows. The side panel stays as it is."""
+        self.update_chip.set_visible(on)
+        self.update_dot.set_visible(on)
+        subtitle = row_subtitle(self.update_row)
+        if subtitle is None:
+            return
+        if on:
+            subtitle.add_css_class("warning")
+        else:
+            subtitle.remove_css_class("warning")
 
     def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
         """`staged`: system updates copied already, waiting for the device to install them

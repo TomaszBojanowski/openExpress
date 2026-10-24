@@ -292,6 +292,27 @@ def test_every_page_of_the_device_view_fits_the_narrowest_window(narrow_window, 
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
+def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narrow_window,
+                                                                          language):
+    """The chip under the version and the dot of the row "Device software" (24.10.2026):
+    the page fits the narrowest window, the chip whole."""
+    from openexpress.gui.app import Gtk
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "device")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("watch")
+    _iterate(0.3)
+    assert win.update_chip.get_visible() and win.update_dot.get_visible()
+    assert win.device_view.get_width() <= NARROWEST
+    assert _min_width(win.device_view) <= NARROWEST
+    natural = win.update_chip.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+    assert win.update_chip.get_width() >= natural
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_start_page_fits_the_narrowest_window(narrow_window, language):
     win = narrow_window(language)
     win.start.show(_tiles(), False)

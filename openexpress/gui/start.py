@@ -263,14 +263,19 @@ def display_key(tile, how: str) -> tuple:
 MAX_CHIPS = 2
 
 
+def update_available() -> str:
+    """The words of the chip of an update to install: on the tile and on the device page."""
+    # TRANSLATORS: a chip on the tile of a device on the start page (its tooltip says when
+    # the check found it), and under the software version on the device page
+    return _("Update available")
+
+
 def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     """(words, style: "warning", "dimmed" or "accent", tooltip or None) of each chip."""
     said = []
     found = known_devices.update_found_recently(tile.update_found, now)
     if found is not None:
-        # TRANSLATORS: a chip on the tile of a device on the start page; its tooltip says
-        # when the check found it
-        said.append((_("Update available"), "warning",
+        said.append((update_available(), "warning",
                      _("Checked {when}").format(when=full_time(datetime.fromtimestamp(found)))))
     if tile.to_sync:
         count = tile.to_sync

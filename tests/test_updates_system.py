@@ -949,7 +949,8 @@ def _overview(items=None, drive=False):
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39"),
                                       mass_storage=drive),
-        update_row=Adw.ActionRow(), software_label=Gtk.Label())
+        update_row=Adw.ActionRow(), software_label=Gtk.Label(),
+        _highlight_update=lambda on: None)  # the chip and the dot: test_update_highlight
     win._render_update_state = types.MethodType(MainWindow._render_update_state, win)
     return win, MainWindow
 

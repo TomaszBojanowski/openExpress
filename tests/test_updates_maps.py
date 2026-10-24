@@ -904,6 +904,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         map_state=None, map_update_count=0, _map_check_session=None, map_row=Row(),
         update_state=None, update_count=0, _update_check_session=None, update_row=Row(),
         software_label=types.SimpleNamespace(set_label=lambda text: None),
+        _highlight_update=lambda on: None,
         _update_banner=lambda: None, _update_actions=lambda: None,
         _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation (D5)
         connected=Connected(),  # the devices connected, for the start page
