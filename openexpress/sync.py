@@ -21,7 +21,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from openexpress import applog, paths
-from openexpress.connect import ApiError, ClockSkew, GarminClient, Unauthorized
+from openexpress.connect import (
+    ApiError,
+    ClockSkew,
+    DeviceNotVerified,
+    GarminClient,
+    Unauthorized,
+)
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
 from openexpress.fit import parse_file_id
@@ -340,6 +346,18 @@ def run_uploads(
     progress: Callable[[str], None] = lambda s: None,
     wait_for_processing: bool = True,
 ) -> UploadReport:
+    """Upload the files of the plan. A client never checked against the account (run_sync
+    checks the owner first) stops it at its first refusal: nothing is sent, nothing is kept
+    for a next sync, and the refusal is logged once and raised."""
+    try:
+        return _run_uploads(plan, device, storage, client, state, progress, wait_for_processing)
+    except DeviceNotVerified:
+        log.warning("uploads: nothing uploaded, the device was not checked against the account")
+        raise
+
+
+def _run_uploads(plan, device, storage, client, state, progress,
+                 wait_for_processing) -> UploadReport:
     report = UploadReport()
     cands = plan.candidates
     unreadable: set[int] = set()
@@ -367,7 +385,7 @@ def run_uploads(
         try:
             for i in range(0, len(ids), 50):
                 matched.update(client.activity_matches(device.unit_id, ids[i : i + 50]))
-        except (Unauthorized, ClockSkew):
+        except (Unauthorized, ClockSkew, DeviceNotVerified):
             raise
         except Exception as e:  # noqa: BLE001
             log.warning("Duplicate check failed (%s); uploading everything", e)
@@ -425,7 +443,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
                 loc.url, data, is_zip=c.is_zip, last_file=last,
                 authenticated=loc.requires_auth,
             )
-        except (Unauthorized, ClockSkew):
+        except (Unauthorized, ClockSkew, DeviceNotVerified):
             raise
         # A failure with one file (network or anything else) goes to the report and the upload
         # goes on with the other files (monitoring and sleep data: with the other types, as

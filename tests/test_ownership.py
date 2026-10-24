@@ -299,6 +299,37 @@ def test_baseline_needs_the_verified_watch(device_root, device, tmp_path):
     assert not state.file.exists() and not (tmp_path / "state").exists()
 
 
+ACTIVITIES = {"datatypename": "FIT_TYPE_4", "uploadlocations": [
+    {"url": "https://up.example/activity", "requiresauthentication": True}]}
+MONITORING = {"datatypename": "FIT_TYPE_32", "uploadlocations": [
+    {"url": "https://up.example/monitor", "requiresauthentication": True}]}
+
+
+@pytest.mark.parametrize("types", [[ACTIVITIES, MONITORING], [MONITORING]],
+                         ids=["the duplicate check first", "monitoring only"])
+def test_uploads_with_an_unverified_client_send_nothing_and_keep_no_copy(
+        device_root, device, tmp_path, caplog, types):
+    """Defence in depth (review of 24.10.2026): run_sync checks the owner before uploading,
+    but run_uploads itself, given a client never checked against the account, stops at the
+    first refusal (of the duplicate check of the activities, or of the first file): nothing
+    is sent, the refusal is logged once (not "uploading everything" and one failure per
+    file), and no file is kept in pending/ for a next sync."""
+    import logging
+
+    st = LocalStorage(device_root)
+    state = sync.SyncState(device.unit_id, base=tmp_path / "state")
+    plan = sync.plan_uploads(device, st, {"datatypes": types}, state)
+    assert {c.datatype for c in plan.candidates} == {t["datatypename"] for t in types}
+    client = make_client([{"unitid": UNIT}])
+    with caplog.at_level(logging.INFO, logger="openexpress.sync"), \
+            pytest.raises(DeviceNotVerified):
+        sync.run_uploads(plan, device, st, client, state)
+    assert client.http.sent == []
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert len(warnings) == 1 and "not checked against" in warnings[0]
+    assert not state.pending_dir.exists() or list(state.pending_dir.rglob("*")) == []
+
+
 # --- someone else's watch: nothing is sent, nothing is written ------------------------------
 
 
