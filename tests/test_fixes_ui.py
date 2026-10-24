@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 import requests
+from fakes import RunNow
 
 from openexpress import cli, desktop, service
 from openexpress.cli import main
@@ -1577,11 +1578,8 @@ def page_window(key):
     toplevel = Gtk.Window()
     toplevel.set_child(section.stack)
 
-    def run_task(title, work, done, failed, device=True, in_page=False):
-        win.set_busy(True)
-        result = work()
-        win.set_busy(False)
-        done(result)
+    run_task = RunNow(on_call=lambda call: win.set_busy(True),
+                      before_done=lambda: win.set_busy(False))
 
     def set_busy(busy):
         win.busy = busy

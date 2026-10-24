@@ -7,6 +7,7 @@ import gc
 import types
 
 import pytest
+from fakes import RunNow
 
 
 def _finalized(obj) -> list:
@@ -77,13 +78,7 @@ def test_the_preferences_and_the_question_of_the_cache_are_released(monkeypatch,
     (maps / "m").write_bytes(b"x" * 100)
     win = _preferences_window()
 
-    def run_task(title, work, done, failed=None, device=True, in_page=False, button=None):
-        restore = app.show_working(button)
-        result = work()
-        restore(True)
-        done(result)
-
-    win.run_task = run_task
+    win.run_task = RunNow()
     MainWindow.show_preferences(win)
     dialog = shown.pop()
     deadline = time.monotonic() + 5
@@ -166,7 +161,7 @@ def _order_window(monkeypatch, chosen):
         _order_blocked=lambda state: None,
         _order_rows=lambda choices: [("Copy of 12.10.2026", "213 apps", True)],
         confirm_order=lambda copy, plan, note: chosen.append((copy, plan)),
-        run_task=lambda title, work, done, button=None: done(work()))
+        run_task=RunNow())
     win.choose_order = types.MethodType(MainWindow.choose_order, win)
     return win, choice
 

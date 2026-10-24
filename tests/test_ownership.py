@@ -8,6 +8,7 @@ import types
 
 import pytest
 import requests
+from fakes import RunNow
 
 from openexpress import ciq, cli, service, sync
 from openexpress.auth import store
@@ -1007,10 +1008,11 @@ def test_window_set_primary_training(device_root, device):
     s = service.check_session(session(device_root, device, account.client))
     events = []
 
-    def run_task(title, fn, on_done=None, on_error=None, device=True, button=None):
-        events.append(title)
-        assert device is False  # an account setting: the device may be unplugged
-        on_done(fn())
+    def noted(call):
+        events.append(call.title)
+        assert call.device is False  # an account setting: the device may be unplugged
+
+    run_task = RunNow(on_call=noted)
 
     win = types.SimpleNamespace(session=s, run_task=run_task, toast=events.append,
                                 show_overview=lambda: events.append("overview"))

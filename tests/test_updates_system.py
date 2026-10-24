@@ -11,6 +11,7 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import RunNow
 
 from openexpress import download, updates
 from openexpress.cli import main
@@ -1018,7 +1019,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     win.session.client = types.SimpleNamespace(http=None, software_updates=nothing)
     win.session.storage = types.SimpleNamespace(read=nothing, size=nothing)
     win.updates_beta, win.shown = False, []
-    win.run_task = lambda title, work, done, failed=None: done(work())
+    win.run_task = RunNow()
     win.error = lambda title, text: win.shown.append(title)
     win.progress = win.fraction = None
     win._update_done_text = MainWindow._update_done_text

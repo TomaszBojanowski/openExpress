@@ -332,9 +332,7 @@ def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, libra
     library.write_text("gone.mp3\n", encoding="utf-8")
     events = []
 
-    def run_task(title, fn, on_done=None, on_error=None):
-        events.append(title)
-        on_done(fn())
+    run_task = RunNow(on_call=lambda call: events.append(call.title))
 
     win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
                                 run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
@@ -879,7 +877,7 @@ def test_window_toggle_passes_the_type(twin_device):
     toasts = []
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=dev, storage=st), busy=False, toast=toasts.append,
-        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+        run_task=RunNow())
     row = types.SimpleNamespace(get_active=lambda: False)  # the switch was turned off
     MainWindow.toggle_app(win, widget, row, 0)
     assert in_bin_flags(st)[1] == ("aa", 1, True) and in_bin_flags(st)[3] == ("aa", 2, True)
@@ -1208,7 +1206,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,
-        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+        run_task=RunNow())
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     ((title, text),) = errors
     lines = text.splitlines()
@@ -2449,7 +2447,7 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: loads.append((key, force)),
-        run_task=lambda title, fn, done=None, failed=None: (tasks.append(title), done(fn())))
+        run_task=RunNow(on_call=lambda call: tasks.append(call.title)))
     MainWindow.restore_order(win, copy)
     assert tasks == ["Restoring the order…"] and loads == [("apps", True)]
     assert toasts == [("Wrote the new order to the device; it takes effect after the device is "
@@ -2472,7 +2470,7 @@ def test_window_says_so_when_the_order_is_already_the_same(order_device):
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: None,
-        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+        run_task=RunNow())
     MainWindow.restore_order(win, same)
     assert toasts == ["The apps on the device are already in this order."]
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
@@ -2746,7 +2744,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
         error=lambda title, text: pytest.fail(text),
         load_section=lambda key, force=False: None, show_device=lambda: shown.append(1),
         show_no_device=lambda: shown.append(1),
-        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+        run_task=RunNow())
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert win._updated_apps == {FACE}
     assert toasts == [("Wrote the update of Face It to the device; it will be installed after "
@@ -3143,7 +3141,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,
-        run_task=lambda title, fn, done=None, failed=None: done(fn()))
+        run_task=RunNow())
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert errors == [("Connect IQ", f"Face It: {NO_SLOT}")]
     assert store.requested == [] and client.downloads == 0

@@ -12,6 +12,7 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import RunNow
 
 from openexpress.gui.connected import Connected
 
@@ -5487,7 +5488,7 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
         # What the device's pages would read is not built here: nothing asked of a server.
         win.show_overview = win._update_banner = win._update_actions = lambda: None
         win.load_section = lambda key, force=False: None
-        win.run_task = lambda title, fn, done, failed, **kw: done(fn())
+        win.run_task = RunNow()
         win._account_wanted = False
         win.session = session(1)
         win.navigation.push(win.device_view)

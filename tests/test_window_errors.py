@@ -7,6 +7,7 @@ import sys
 import types
 
 import pytest
+from fakes import RunNow
 
 
 def _gui_log(log_file):
@@ -65,7 +66,7 @@ def _window(sections):
     win = types.SimpleNamespace(
         sections=sections, session=types.SimpleNamespace(mass_storage=False), busy=False,
         _retry_sources={}, _action_buttons=[],
-        run_task=lambda title, fn, done, failed=None, device=True, in_page=False: done(fn()))
+        run_task=RunNow())
     for name in ("load_updates", "load_maps", "load_music"):
         setattr(win, name, lambda: pytest.fail("another page"))
     win._load = types.MethodType(MainWindow._load, win)
