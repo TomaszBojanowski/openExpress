@@ -416,17 +416,21 @@ def _descendants(widget):
 
 def _tiles_with_chips():
     """Tiles with the longest pairs of chips (PLAN T9): an update with a device off the
-    account, with a drive and with the primary device."""
+    account, with a drive, with activities to sync, with a device never synced and with the
+    primary device."""
     from openexpress.devicelist import Tile
 
     found = time.time()
 
-    def tile(name, kind, on_account=True, primary=False):
+    def tile(name, kind, on_account=True, primary=False, **sync):
         return Tile(name, "006-B4440-00", "33.13", kind, True, on_account, primary, None,
-                    "006-B4440-00", None, None, update_found=found, account_known=True)
+                    "006-B4440-00", None, None, update_found=found, account_known=True,
+                    **sync)
 
     return [(tile("Edge 1050", "mtp", on_account=False), "Software 33.13"),
             (tile("Varia RTL515", "ums"), "Software 3.80"),
+            (tile("Edge 1050", "mtp", to_sync=12, synced_at=found), "Software 33.13"),
+            (tile("Edge 1050", "mtp", never_synced=True), "Software 33.13"),
             (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Software 23.39")]
 
 
@@ -452,7 +456,7 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
         while child is not None:
             stack.append(child)
             child = child.get_next_sibling()
-    assert len(chips) == 6
+    assert len(chips) == 10
     assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
 
 
@@ -494,11 +498,11 @@ class _WithoutWrapBox:
 @pytest.mark.parametrize("width", [700, 1000])
 def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypatch, width,
                                                         wrap_box):
-    """A tile asks for no more width than its chips need at least: with the longest pair as
-    many tiles share a line as without chips, and the chips go on two lines, whole (libadwaita
-    1.7: Adw.WrapBox; before it, on one line, shorter). Measured 24.10.2026: with the pair, two
-    tiles shared a line of 1000 px instead of three, and one shared a line of 700 px instead
-    of two."""
+    """A tile asks for no more width than its chips need at least: with the longest pair (an
+    update found, a device never synced) as many tiles share a line as without chips, and
+    the chips go on two lines, whole (libadwaita 1.7: Adw.WrapBox; before it, on one line,
+    shorter). Measured 24.10.2026: with the pair, two tiles shared a line of 1000 px instead
+    of three, and one shared a line of 700 px instead of two."""
     from openexpress.devicelist import Tile
     from openexpress.gui import start
 
@@ -506,12 +510,12 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
         monkeypatch.setattr(start, "Adw", _WithoutWrapBox())
     win = narrow_window("pl")
     win.set_default_size(width, 800)
-    entries = [(Tile(name, "006-B4532-00", "23.39", "mtp", True, True, False, None,
-                     "006-B4532-00", None, None), "Oprogramowanie 23.39")
-               for name in ("fēnix 8 - 47mm, Solar", "Edge 1050", "Venu 2")]
     per_line, widths = [], []
-    for said in ([], [(words, "warning", None) for words in LONGEST_PAIR]):
-        monkeypatch.setattr(start, "chips", lambda tile, now=None, said=said: said)
+    for chips in ({}, {"update_found": time.time(), "never_synced": True}):
+        entries = [(Tile(name, "006-B4532-00", "23.39", "mtp", True, True, False, None,
+                         "006-B4532-00", None, None, account_known=True, **chips),
+                    "Oprogramowanie 23.39")
+                   for name in ("fēnix 8 - 47mm, Solar", "Edge 1050", "Venu 2")]
         win.start.show(entries, False)
         _iterate(0.5)
         per_line.append(_tiles_per_line(win.start))

@@ -543,6 +543,13 @@ def new_files_step(candidates) -> dict:
             "types": dict(collections.Counter(c.datatype for c in candidates))}
 
 
+def not_uploaded(data: dict) -> dict | None:
+    """The step of a sync record (last_sync.json) that says it uploaded nothing because the
+    account did not let it (not_uploaded_step), or None."""
+    return next((line for line in data.get("lines") or [] if isinstance(line, dict)
+                 and line.get("kind") == "not_uploaded"), None)
+
+
 def not_uploaded_step(gate: UploadGate) -> dict:
     """Why a sync uploaded nothing (gate.reason: no consent, device sync off, not checked):
     a step of the summary, put into words when it is shown."""
@@ -592,8 +599,7 @@ def describe_counts(data: dict) -> str:
     notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
     received = data.get("downloaded", 0)
-    blocked = next((line for line in data.get("lines") or [] if isinstance(line, dict)
-                    and line.get("kind") == "not_uploaded"), None)
+    blocked = not_uploaded(data)
     skipped = any(isinstance(line, dict) and line.get("kind") == "upload_skipped"
                   for line in data.get("lines") or [])
     if skipped:

@@ -90,7 +90,7 @@ def test_an_update_found_gives_its_chip_until_30_days_after_the_check():
 
 def test_a_drive_the_primary_device_and_one_off_the_account():
     assert _words(_tile(kind="ums", connected=False)) == [("USB drive", "dimmed")]
-    assert _words(_tile(primary=True)) == [("Primary", "accent")]
+    assert _words(_tile(primary=True)) == [("Primary", "dimmed")]
     assert _words(_tile(on_account=False)) == [("Not on your account", "dimmed")]
 
 
@@ -103,7 +103,7 @@ def test_off_the_account_only_when_the_account_is_known_and_never_for_a_drive():
 
 def test_at_most_two_chips_the_update_first():
     words = _words(_tile(update_found=NOW, primary=True, on_account=True, kind="mtp"))
-    assert words == [("Update available", "warning"), ("Primary", "accent")]
+    assert words == [("Update available", "warning"), ("Primary", "dimmed")]
     words = _words(_tile(update_found=NOW, kind="ums", on_account=False))
     assert words == [("Update available", "warning"), ("USB drive", "dimmed")]
 
@@ -115,7 +115,7 @@ def test_the_chips_in_polish():
     try:
         assert _words(_tile(update_found=NOW, kind="ums")) == [
             ("Aktualizacja dostępna", "warning"), ("Dysk USB", "dimmed")]
-        assert _words(_tile(primary=True)) == [("Główne", "accent")]
+        assert _words(_tile(primary=True)) == [("Główne", "dimmed")]
         assert _words(_tile(on_account=False)) == [("Poza kontem", "dimmed")]
     finally:
         i18n.setup("en")

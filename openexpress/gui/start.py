@@ -17,7 +17,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist, known_devices  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
-from openexpress.i18n import _, full_time, pgettext  # noqa: E402
+from openexpress.i18n import _, full_time, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
     BIKE_ACCESSORY,
     CYCLING_COMPUTER,
@@ -255,9 +255,11 @@ def display_key(tile, how: str) -> tuple:
 
 # The chips of a tile (PLAN T9, 24.10.2026): only what the tile would not say otherwise, at
 # most MAX_CHIPS, in this order: an update to install (found by the window's check, at most
-# known_devices.UPDATE_FOUND_KEPT_S ago), a USB drive, the account's primary device, a device
-# off the account (only when the account's list is known for it; never a drive, which needs
-# no account). Colours of the theme only (the style is a class of CSS), no icons.
+# known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never synced here
+# (connected, of the account), a USB drive, the account's primary device, a device off the
+# account (only when the account's list is known for it; never a drive, which needs no
+# account). The accent only for what there is to do; colours of the theme only (the style
+# is a class of CSS), no icons.
 MAX_CHIPS = 2
 
 
@@ -270,12 +272,30 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
         # when the check found it
         said.append((_("Update available"), "warning",
                      _("Checked {when}").format(when=full_time(datetime.fromtimestamp(found)))))
+    if tile.to_sync:
+        count = tile.to_sync
+        if tile.synced_at is not None:
+            # TRANSLATORS: the tooltip of the chip "To sync": activities on the device that
+            # openExpress has not uploaded yet, since its last sync (a date and an hour)
+            tooltip = ngettext("{count} new activity since {when}",
+                               "{count} new activities since {when}", count).format(
+                count=count, when=full_time(datetime.fromtimestamp(tile.synced_at)))
+        else:
+            tooltip = ngettext("{count} new activity", "{count} new activities",
+                               count).format(count=count)
+        # TRANSLATORS: a chip on the tile of a connected device: it has activities that
+        # openExpress has not uploaded yet
+        said.append((pgettext("chip", "To sync"), "accent", tooltip))
+    elif tile.never_synced:
+        # TRANSLATORS: a chip on the tile of a connected device that openExpress on this
+        # computer has never synced
+        said.append((pgettext("chip", "Never synced"), "dimmed", None))
     if tile.kind == "ums":
         # TRANSLATORS: a chip on the tile of a device in mass storage mode
         said.append((pgettext("chip", "USB drive"), "dimmed", None))
     if tile.primary:
         # TRANSLATORS: a chip on the tile of the primary device of the Garmin account
-        said.append((_("Primary"), "accent", None))
+        said.append((_("Primary"), "dimmed", None))
     if tile.account_known and not tile.on_account and tile.kind != "ums":
         # TRANSLATORS: a chip on the tile of a device that is not on the Garmin account
         said.append((_("Not on your account"), "dimmed", None))

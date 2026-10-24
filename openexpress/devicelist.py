@@ -9,11 +9,12 @@ never names it."""
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import unicodedata
 from dataclasses import dataclass
 
-from openexpress import known_devices, picture_urls
+from openexpress import known_devices, picture_urls, service
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
 from openexpress.service import unit_id_of
@@ -71,6 +72,13 @@ class Tile:
     # Whether the account's list is known for it (logged in, and its unit ID known): only
     # then does on_account=False say that it is off the account.
     account_known: bool = False
+    # A connected device of the account (logged in), never a drive: its activities not
+    # uploaded yet (sync.activities_to_sync; None: not known, or its last sync could not
+    # upload: the account does not let it), whether it was never synced here, and when it
+    # was synced last (its last_sync.json).
+    to_sync: int | None = None
+    never_synced: bool = False
+    synced_at: float | None = None
 
 
 def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
@@ -111,8 +119,9 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
         entry = on_account.get(unit_id) if unit_id is not None else None
         if unit_id is not None:
             done.add(unit_id)
-        now.append((_tile(s.description, s.part_number, s.software_version, s.found.kind,
-                          True, known, entry, logged_in and unit_id is not None), s))
+        tile = _tile(s.description, s.part_number, s.software_version, s.found.kind, True,
+                     known, entry, logged_in and unit_id is not None)
+        now.append((dataclasses.replace(tile, **_sync_of(s, entry, logged_in)), s))
     now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
     rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id), logged_in), known)
@@ -133,6 +142,22 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
               len(now), sum(t.on_account for t, _source in result))
     return result
+
+
+def _sync_of(summary, entry: dict | None, logged_in: bool) -> dict:
+    """What the tile of a connected device says of its sync (PLAN T9): only for one of the
+    account, while logged in, counted when it was listed or opened (summary.to_sync), never
+    a drive; nothing while its last sync could not upload (no consent, device sync off in
+    Garmin Connect): a sync would not help, the device page says why."""
+    counted = getattr(summary, "to_sync", None)
+    if counted is None or entry is None or not logged_in or summary.found.kind == "ums":
+        return {}
+    if counted.never_synced:
+        return {"never_synced": True}
+    record = service.load_last_sync(summary.unit_id)
+    if record is not None and service.not_uploaded(record) is not None:
+        return {}
+    return {"to_sync": counted.count, "synced_at": record.get("time") if record else None}
 
 
 def _tile(description: str, part_number: str, version: str, kind: str | None,

@@ -589,8 +589,10 @@ def session_summary(s) -> DeviceSummary:
     d = s.device
     kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
     found = FoundDevice(str(getattr(s.storage, "device_uri", "") or ""), "", True, kind=kind)
-    return DeviceSummary(found, d.description, d.part_number, d.software_version_str,
-                         d.unit_id or None)
+    summary = DeviceSummary(found, d.description, d.part_number, d.software_version_str,
+                            d.unit_id or None)
+    summary.to_sync = getattr(s, "to_sync", None)  # as the thread that opened it counted
+    return summary
 
 
 # The target of the tile of the device open now: its view, without opening it again.
@@ -2928,6 +2930,21 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self._last_sync_monitor = Gio.File.new_for_path(str(path)).monitor_file(
             Gio.FileMonitorFlags.WATCH_MOVES, None)
         self._last_sync_monitor.connect("changed", lambda *_a: self._show_last_sync())
+        self._last_sync_monitor.connect("changed", lambda *_a: self._count_activities_again())
+
+    def _count_activities_again(self) -> None:
+        """After a sync (this window's, or one of the background service or the command line,
+        seen in last_sync.json): the activities of the devices connected counted again, from
+        what was listed against state.json as it is now (the devices are not asked); the
+        start page drawn again when it is shown."""
+        s = self.session
+        if s is not None and getattr(s, "to_sync", None) is not None:
+            s.to_sync = s.to_sync.again()
+        for summary in self.connected.devices:
+            if summary.to_sync is not None:
+                summary.to_sync = summary.to_sync.again()
+        if self._on_start_page():
+            self._show_tiles(*self._start_summaries())
 
     # --- background sync, language, setup, account ------------------------------------
 
@@ -3256,8 +3273,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             self.toast(_("Sync finished") if not summary.errors
                        else _("Sync finished with errors"))
             self._show_last_sync()
+            self._count_activities_again()
 
         def failed(e):
+            self._count_activities_again()  # what it uploaded before it stopped is done
             if isinstance(e, service.FirstSyncChoiceNeeded):
                 self.ask_first_sync()
                 return True
