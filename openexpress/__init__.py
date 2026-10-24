@@ -1,3 +1,3 @@
 """Independent Garmin Express client for Linux."""
 
-__version__ = "0.6.17"
+__version__ = "0.6.18"
