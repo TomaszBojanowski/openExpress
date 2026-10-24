@@ -716,17 +716,54 @@ def remember_picture_address(device, url: str | None) -> None:
         log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
 
 
-def remember_update_found(device, found: bool) -> None:
-    """Keep with the open device (known_devices) whether the window's check of updates found
-    one to install, for its tile on the start page. Optional: a failure is only written to
-    the log."""
+def remember_update_found(device, new_updates: list) -> None:
+    """Keep with the open device (known_devices) what the window's check of updates found to
+    install: whether there is any, for its tile on the start page, and what (update_summary),
+    for its device page; none clears both. Optional: a failure is only written to the log."""
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return
     try:
-        known_devices.set_update_found(unit_id, found)
+        known_devices.set_update_found(unit_id, bool(new_updates),
+                                       summary=update_summary(device, new_updates))
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
+
+
+def update_summary(device, new_updates: list) -> known_devices.UpdateSummary | None:
+    """What is kept of the updates found (24.10.2026): how many; of one, its name, version
+    and whether it is of the system; and the device's software now. Nothing else (no path,
+    no sum, no address). None without updates, or when the device's software is not known."""
+    software = getattr(device, "software_version_str", None)
+    if not new_updates or not isinstance(software, str):
+        return None
+    if len(new_updates) == 1:
+        u = new_updates[0]
+        title, version = getattr(u, "title", None), getattr(u, "version", None)
+        is_system = getattr(u, "is_system", None)
+        if (isinstance(title, str) and isinstance(version, str)
+                and isinstance(is_system, bool)):
+            return known_devices.UpdateSummary(1, software, title, version, is_system)
+    return known_devices.UpdateSummary(len(new_updates), software)
+
+
+def show_update_record(win) -> bool:
+    """The device page opened: what the last check of updates found for this device
+    (devices.json), when it is recent and for the software the device has now, as the state
+    of "Device software" and its chip until the check now running ends (which confirms or
+    changes it; a failed check leaves it). Only shown: the Updates page, its buttons and the
+    installs only ever use the server's answer (updates_cache). Whether there was one."""
+    device = getattr(getattr(win, "session", None), "device", None)
+    unit_id = getattr(device, "unit_id", None)
+    if not unit_id:
+        return False
+    found = known_devices.recorded_updates(known_devices.load().get(unit_id),
+                                           getattr(device, "software_version_str", None))
+    if found is None:
+        return False
+    win.update_state, win.update_count = "available", found.count
+    win.update_only = found if found.count == 1 and found.title is not None else None
+    return True
 
 
 def open_device_kind(s, account) -> str | None:
@@ -2717,8 +2754,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
         g.add(self.update_row)
+        # What the last check found, from the first frame (nothing moves when the check
+        # confirms it); the check runs all the same.
+        recorded = self.update_state is None and show_update_record(self)
         self._render_update_state()
-        if self.update_state is None:
+        if self.update_state is None or recorded:
             self._check_updates_quietly()
         if not mass_storage:
             self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), activatable=True)
@@ -2948,7 +2988,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now).
         remember_update_found(getattr(getattr(self, "session", None), "device", None),
-                              bool(new_updates))
+                              new_updates)
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:
