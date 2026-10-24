@@ -282,11 +282,37 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     return said[:MAX_CHIPS]
 
 
+class _ChipsLayout(Gtk.LayoutManager):
+    """The layout of the row of chips of a tile: it asks for no more width than its chips need
+    at least, and lays them out in the width the tile gives it. Asking for all of them on one
+    line made the tiles wider, so that fewer of them shared a line (24.10.2026)."""
+
+    __gtype_name__ = "OpenExpressChipsLayout"
+
+    def do_get_request_mode(self, widget):
+        child = widget.get_first_child()
+        return child.get_request_mode() if child is not None else Gtk.SizeRequestMode.CONSTANT_SIZE
+
+    def do_measure(self, widget, orientation, for_size):
+        child = widget.get_first_child()
+        if child is None or not child.should_layout():
+            return 0, 0, -1, -1
+        least, natural, low, high = child.measure(orientation, for_size)
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            return least, least, -1, -1
+        return least, natural, low, high
+
+    def do_allocate(self, widget, width, height, baseline):
+        child = widget.get_first_child()
+        if child is not None and child.should_layout():
+            child.allocate(width, height, baseline, None)
+
+
 def chips_row(said) -> Gtk.Widget:
     """The chips of a tile on a line in the middle, wrapped when the tile is too narrow
-    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter). Without
-    chips the line keeps the height of one: every tile is as tall, the words under the
-    names on one line."""
+    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter), never making
+    the tile wider (_ChipsLayout). Without chips the line keeps the height of one: every tile
+    is as tall, the words under the names on one line."""
     if hasattr(Adw, "WrapBox"):
         row = Adw.WrapBox(child_spacing=6, line_spacing=4, align=0.5, halign=Gtk.Align.CENTER)
     else:
@@ -299,7 +325,9 @@ def chips_row(said) -> Gtk.Widget:
     if not said:
         # A chip without words or colour: the font and padding of one, nothing to see.
         row.append(Gtk.Label(label="", css_classes=["oe-chip"]))
-    return row
+    holder = Adw.Bin(child=row)
+    holder.set_layout_manager(_ChipsLayout())
+    return holder
 
 
 class StartPage:

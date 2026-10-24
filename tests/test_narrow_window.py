@@ -454,3 +454,73 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
             child = child.get_next_sibling()
     assert len(chips) == 6
     assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
+
+
+# The longest pair of chips in either language (24.10.2026): 271 px on one line in the first
+# measurement, 309 px in GNOME's font; more than a tile has at 700 and 1000 px.
+LONGEST_PAIR = ("Aktualizacja dostępna", "Nie synchronizowano")
+
+
+def _tiles_per_line(page) -> int:
+    from gi.repository import Graphene
+
+    tops = [round(tile.compute_point(page.page, Graphene.Point())[1].y)
+            for tile in page.tiles()]
+    return tops.count(tops[0])
+
+
+def _chip_labels(widget) -> list:
+    from openexpress.gui.app import Gtk
+
+    found = []
+    for child in _descendants(widget):
+        if isinstance(child, Gtk.Label) and child.has_css_class("oe-chip") and child.get_label():
+            found.append(child)
+    return found
+
+
+class _WithoutWrapBox:
+    """libadwaita before 1.7, for the start page: everything but Adw.WrapBox."""
+
+    def __getattr__(self, name):
+        from openexpress.gui.app import Adw
+
+        if name == "WrapBox":
+            raise AttributeError(name)
+        return getattr(Adw, name)
+
+
+@pytest.mark.parametrize("wrap_box", [True, False])
+@pytest.mark.parametrize("width", [700, 1000])
+def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypatch, width,
+                                                        wrap_box):
+    """A tile asks for no more width than its chips need at least: with the longest pair as
+    many tiles share a line as without chips, and the chips go on two lines, whole (libadwaita
+    1.7: Adw.WrapBox; before it, on one line, shorter). Measured 24.10.2026: with the pair, two
+    tiles shared a line of 1000 px instead of three, and one shared a line of 700 px instead
+    of two."""
+    from openexpress.devicelist import Tile
+    from openexpress.gui import start
+
+    if not wrap_box:
+        monkeypatch.setattr(start, "Adw", _WithoutWrapBox())
+    win = narrow_window("pl")
+    win.set_default_size(width, 800)
+    entries = [(Tile(name, "006-B4532-00", "23.39", "mtp", True, True, False, None,
+                     "006-B4532-00", None, None), "Oprogramowanie 23.39")
+               for name in ("fēnix 8 - 47mm, Solar", "Edge 1050", "Venu 2")]
+    per_line, widths = [], []
+    for said in ([], [(words, "warning", None) for words in LONGEST_PAIR]):
+        monkeypatch.setattr(start, "chips", lambda tile, now=None, said=said: said)
+        win.start.show(entries, False)
+        _iterate(0.5)
+        per_line.append(_tiles_per_line(win.start))
+        widths.append(win.start.tiles()[0].get_width())
+    chips = _chip_labels(win.start.tiles()[0])
+    assert [c.get_label() for c in chips] == list(LONGEST_PAIR)
+    room = widths[0] - 24  # a tile without chips, but its margins
+    one_line = sum(c.measure(start.Gtk.Orientation.HORIZONTAL, -1)[1] for c in chips) + 6
+    assert one_line > room  # the pair does not fit on one line of the tile
+    assert per_line[1] == per_line[0] and per_line[0] == (2 if width == 700 else 3)
+    if wrap_box:
+        assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
