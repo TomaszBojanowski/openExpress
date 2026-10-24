@@ -231,11 +231,31 @@ class QuietVolumeMonitor:
                 handler(self, *values, *args)
 
 
+def stop_windows(monitor: QuietVolumeMonitor) -> None:
+    """Every handler connected to the monitor is disconnected, and a window of the program
+    among their owners has its timers removed (the USB poll, the texts told against now): a
+    window a test made does nothing once its test has ended."""
+    from gi.repository import GLib
+
+    context = GLib.MainContext.default()
+    for handler_id, (_signal, handler, _args) in list(monitor.handlers.items()):
+        win = getattr(handler, "__self__", None)
+        for name in ("_usb_poll", "_relative_timer"):
+            source_id = getattr(win, name, None)
+            source = context.find_source_by_id(source_id) if source_id else None
+            if source is not None and not source.is_destroyed():
+                source.destroy()
+        if getattr(win, "_relative_timer", None) is not None:
+            win._relative_timer = None
+        monitor.disconnect(handler_id)
+
+
 @pytest.fixture(autouse=True)
 def quiet_volume_monitor(request, monkeypatch):
     """Gio.VolumeMonitor.get() gives a QuietVolumeMonitor, one for each test: a Garmin device
-    plugged in while the tests run is neither listed nor reported to a window of the tests.
-    A test marked real_volume_monitor gets the session's."""
+    plugged in while the tests run is neither listed nor reported to a window of the tests,
+    and the windows that listened to it stop when the test ends (stop_windows). A test marked
+    real_volume_monitor gets the session's, and cleans up after itself."""
     if request.node.get_closest_marker("real_volume_monitor"):
         yield None
         return
@@ -247,6 +267,7 @@ def quiet_volume_monitor(request, monkeypatch):
     monitor = QuietVolumeMonitor()
     monkeypatch.setattr(Gio.VolumeMonitor, "get", staticmethod(lambda: monitor))
     yield monitor
+    stop_windows(monitor)
 
 
 @pytest.fixture(autouse=True)

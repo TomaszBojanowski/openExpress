@@ -1304,7 +1304,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._updated_apps: set = set()
         # A device that was just plugged in is on USB for a while before gvfs offers it.
         self._usb_state, self._usb_since = ABSENT, 0.0
-        GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
+        self._usb_poll = GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
         self._start()
 
     def _start(self) -> None:
