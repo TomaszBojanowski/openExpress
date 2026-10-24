@@ -150,6 +150,9 @@ def display_available() -> bool:
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "needs_display: makes GTK widgets; skipped when there is no display")
+    config.addinivalue_line(
+        "markers", "real_volume_monitor: the session's Gio.VolumeMonitor instead of the quiet "
+                   "one of the tests (it lists the mounts of this computer)")
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -192,6 +195,58 @@ def no_usb_devices(_empty_sys_bus_usb, monkeypatch):
     except (ImportError, ValueError):  # no PyGObject: nothing reads /sys/bus/usb
         return
     monkeypatch.setattr(gio_storage, "SYSFS_USB", _empty_sys_bus_usb)
+
+
+class QuietVolumeMonitor:
+    """Gio.VolumeMonitor of the tests: no mounts, volumes or drives, and no signal of this
+    computer; a test emits the signals it wants (`emit`), and the handlers get the monitor
+    first, as GObject's do."""
+
+    def __init__(self):
+        self.handlers: dict[int, tuple[str, object, tuple]] = {}
+        self._next = 0
+
+    def get_mounts(self):
+        return []
+
+    def get_volumes(self):
+        return []
+
+    def get_connected_drives(self):
+        return []
+
+    def connect(self, signal, handler, *args):
+        self._next += 1
+        self.handlers[self._next] = (signal, handler, args)
+        return self._next
+
+    def disconnect(self, handler_id):
+        self.handlers.pop(handler_id, None)
+
+    handler_disconnect = disconnect
+
+    def emit(self, signal, *values):
+        for name, handler, args in list(self.handlers.values()):
+            if name == signal:
+                handler(self, *values, *args)
+
+
+@pytest.fixture(autouse=True)
+def quiet_volume_monitor(request, monkeypatch):
+    """Gio.VolumeMonitor.get() gives a QuietVolumeMonitor, one for each test: a Garmin device
+    plugged in while the tests run is neither listed nor reported to a window of the tests.
+    A test marked real_volume_monitor gets the session's."""
+    if request.node.get_closest_marker("real_volume_monitor"):
+        yield None
+        return
+    try:
+        from gi.repository import Gio
+    except (ImportError, ValueError):  # no PyGObject: no volume monitor
+        yield None
+        return
+    monitor = QuietVolumeMonitor()
+    monkeypatch.setattr(Gio.VolumeMonitor, "get", staticmethod(lambda: monitor))
+    yield monitor
 
 
 @pytest.fixture(autouse=True)
