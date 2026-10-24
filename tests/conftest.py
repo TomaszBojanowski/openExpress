@@ -178,6 +178,22 @@ def no_block_devices(_empty_sys_class_block, monkeypatch):
     monkeypatch.setattr(gio_storage, "SYSFS_BLOCK", _empty_sys_class_block)
 
 
+@pytest.fixture(scope="session")
+def _empty_sys_bus_usb(tmp_path_factory):
+    return tmp_path_factory.mktemp("sys-bus-usb")
+
+
+@pytest.fixture(autouse=True)
+def no_usb_devices(_empty_sys_bus_usb, monkeypatch):
+    """/sys/bus/usb/devices is an empty folder, unless a test makes its own: a Garmin device
+    plugged into this computer while the tests run is never looked for on USB."""
+    try:
+        from openexpress.device import gio_storage
+    except (ImportError, ValueError):  # no PyGObject: nothing reads /sys/bus/usb
+        return
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", _empty_sys_bus_usb)
+
+
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     """No test reaches the network: a name lookup or a connection beyond this computer is
