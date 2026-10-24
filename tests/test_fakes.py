@@ -1,0 +1,115 @@
+"""The shared fakes of the tests (tests/fakes.py) do what the program does where it matters:
+RunNow runs a task as the window's run_task does, at once (review of 24.10.2026, "Co
+ujednolicić" 7: 36 fakes of run_task in 14 files, with 5 ways of handling an error)."""
+
+import threading
+
+import pytest
+from fakes import RunNow
+
+
+class Failed(Exception):
+    pass
+
+
+def raising(error):
+    """A work that fails with `error`."""
+    def work():
+        raise error
+    return work
+
+
+def test_the_work_runs_on_this_thread_and_done_gets_its_result():
+    run, got, threads = RunNow(), [], []
+    run("Copying…", lambda: threads.append(threading.current_thread()) or 42, got.append,
+        device=False, in_page=True)
+    assert got == [42] and threads == [threading.current_thread()]
+    assert run.titles == ["Copying…"]
+    (call,) = run.calls
+    assert (call.device, call.in_page, call.button) == (False, True, None)
+
+
+def test_with_a_thread_the_work_runs_in_another_and_done_on_this_one():
+    run, where = RunNow(thread=True), []
+    run("Copying…", lambda: where.append(threading.current_thread()) or 1,
+        lambda result: where.append(threading.current_thread()))
+    assert where[0] is not threading.current_thread()
+    assert where[1] is threading.current_thread()
+
+
+def test_an_error_of_done_is_not_given_to_failed():
+    """The window calls done outside any try: an error there is not the task's."""
+    failed = []
+
+    def done(result):
+        raise Failed("in done")
+
+    with pytest.raises(Failed, match="in done"):
+        RunNow()("Copying…", lambda: 1, done, failed.append)
+    assert failed == []
+
+
+def test_an_error_of_the_work_goes_to_failed():
+    failed = []
+    RunNow()("Copying…", raising(Failed("gone")), None,
+             lambda e: failed.append(str(e)) or True)
+    assert failed == ["gone"]
+
+
+@pytest.mark.parametrize("taken", [None, False])
+def test_an_error_failed_does_not_take_is_raised_by_default(taken):
+    failed = None if taken is None else (lambda e: False)
+    with pytest.raises(Failed, match="gone"):
+        RunNow()("Copying…", raising(Failed("gone")), None, failed)
+
+
+def test_an_error_failed_does_not_take_can_be_recorded_or_shown():
+    run = RunNow(error="record")
+    run("Copying…", raising(Failed("gone")), None, lambda e: False)
+    assert run.errors == ["gone"]
+    shown = []
+    RunNow(error=lambda title, text: shown.append((title, text)))(
+        "Copying…", raising(Failed()))
+    assert shown == [("Copying…", "Failed")]  # an error without words: its class, as the window
+
+
+def test_the_hooks_come_before_the_work_and_between_it_and_done():
+    order = []
+    run = RunNow(on_call=lambda call: order.append(("call", call.title)),
+                 before_done=lambda: order.append("before done"))
+    run("Copying…", lambda: order.append("work"), lambda result: order.append("done"))
+    assert order == [("call", "Copying…"), "work", "before done", "done"]
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_a_work_that_writes_to_the_device_is_noted_also_when_it_failed(fails):
+    from openexpress.gui.app import writes_to_device
+
+    def work():
+        if fails:
+            raise Failed("half written")
+
+    run = RunNow(error="record")
+    run("Writing…", writes_to_device(work), lambda result: None)
+    run("Reading…", lambda: None, lambda result: None)
+    assert run.written == ["Writing…"]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("fails", [False, True])
+def test_the_button_spins_during_the_work_and_is_back_before_done(fails):
+    from openexpress.gui.app import Gtk
+
+    button, seen = Gtk.Button(label="Install"), []
+
+    def work():
+        seen.append(("work", button.get_sensitive(), button.get_label()))
+        if fails:
+            raise Failed("refused")
+
+    def after(_value):
+        seen.append(("after", button.get_sensitive(), button.get_label()))
+        return True
+
+    RunNow()("Installing…", work, after, after, button=button)
+    assert seen == [("work", False, None), ("after", True, "Install")]
