@@ -5,7 +5,8 @@ import base64
 import re
 
 import pytest
-from test_sync import UPLOAD_CONFIG, FakeClient, _setup
+from fakes import SyncClient
+from test_sync import UPLOAD_CONFIG, _setup
 from test_updates_maps import maps_response, server, sw_response  # noqa: F401 - the fixture
 
 from openexpress import i18n, maps, music, sync, updates
@@ -86,7 +87,7 @@ def uploading(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
     lines = []
-    sync.run_uploads(plan, dev, st, FakeClient(), state, progress=lines.append,
+    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append,
                      wait_for_processing=False)
     return [line for line in lines if "2026-10-03" in line]
 

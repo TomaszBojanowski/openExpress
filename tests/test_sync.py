@@ -1,5 +1,6 @@
+from fakes import SyncClient
+
 from openexpress import sync
-from openexpress.connect import UploadResult
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 
@@ -18,34 +19,6 @@ UPLOAD_CONFIG = {
              "requiredconsenttypes": [{"name": "Analytics"}]}]},
     ],
 }
-
-
-class FakeClient:
-    def __init__(self, statuses=None, matches=None, messages=None):
-        self.statuses = statuses or {}
-        self.matches = matches or {}
-        self.messages = messages or []
-        self.uploads = []
-        self.acks = []
-
-    def require_verified(self, unit_id=None):
-        pass
-
-    def activity_matches(self, unit_id, ids):
-        return {i: i in self.matches for i in ids}
-
-    def upload_file(self, url, data, *, is_zip, last_file, authenticated):
-        self.uploads.append((url, len(data), last_file))
-        return UploadResult(self.statuses.get(url, 201), {}, None, None)
-
-    def poll_location(self, url, delay):
-        return 201
-
-    def download_message(self, url, absolute):
-        return b"COURSE" if "course" in url else None
-
-    def ack_message(self, mid):
-        self.acks.append(mid)
 
 
 def _setup(device_root, tmp_path):
@@ -97,7 +70,7 @@ def test_consent_flag_alone_does_not_skip_and_diagnostics_are_skipped(device_roo
 def test_upload_marks_state_and_skips_known(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
-    client = FakeClient(matches={"1100000000"},
+    client = SyncClient(matches={"1100000000"},
                         statuses={"https://up.example/monitor": 409})
     rep = sync.run_uploads(plan, dev, st, client, state)
     assert rep.already_in_connect == ["2026-10-01-10-00-00.fit"]
@@ -115,14 +88,14 @@ def test_upload_marks_state_and_skips_known(device_root, tmp_path):
 def test_failed_upload_kept_as_pending(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
-    client = FakeClient(statuses={"https://up.example/activity": 500})
+    client = SyncClient(statuses={"https://up.example/activity": 500})
     rep = sync.run_uploads(plan, dev, st, client, state)
     assert len(rep.failed) == 2
     (device_root / "GARMIN/Activity/2026-10-01-10-00-00.fit").unlink()
     again = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     pending = [c for c in again.candidates if c.device_path is None]
     assert [c.name for c in pending] == ["2026-10-01-10-00-00.fit"]
-    rep = sync.run_uploads(again, dev, st, FakeClient(), state)
+    rep = sync.run_uploads(again, dev, st, SyncClient(), state)
     assert len(rep.uploaded) == 2
     assert not state.pending_files("FIT_TYPE_4")
 
@@ -131,7 +104,7 @@ def _failed_once(device_root, tmp_path):
     """A sync whose uploads of activities failed: a copy of each waits in sync/pending."""
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
-    sync.run_uploads(plan, dev, st, FakeClient(statuses={"https://up.example/activity": 500}),
+    sync.run_uploads(plan, dev, st, SyncClient(statuses={"https://up.example/activity": 500}),
                      state)
     assert [p.name for p in state.pending_files("FIT_TYPE_4")] == [
         "2026-10-01-10-00-00.fit", "2026-10-02-10-00-00.fit"]
@@ -152,7 +125,7 @@ def test_the_copy_goes_when_connect_already_has_the_activity(device_root, tmp_pa
     upload, so the copy is not kept (it was kept for ever: the plan skips what is done)."""
     st, dev, state = _failed_once(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
-    rep = sync.run_uploads(plan, dev, st, FakeClient(matches={"1100000000"}), state)
+    rep = sync.run_uploads(plan, dev, st, SyncClient(matches={"1100000000"}), state)
     assert rep.already_in_connect == ["2026-10-01-10-00-00.fit"]
     assert not state.pending_files("FIT_TYPE_4")  # the other one was uploaded
 
@@ -163,7 +136,7 @@ def test_the_copy_goes_when_only_its_copy_is_left_and_connect_has_it(device_root
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     assert [c.name for c in plan.candidates if c.device_path is None] == [
         "2026-10-01-10-00-00.fit"]
-    rep = sync.run_uploads(plan, dev, st, FakeClient(matches={"1100000000"}), state)
+    rep = sync.run_uploads(plan, dev, st, SyncClient(matches={"1100000000"}), state)
     assert rep.already_in_connect == ["2026-10-01-10-00-00.fit"]
     assert not state.pending_files("FIT_TYPE_4")
 
@@ -174,13 +147,14 @@ def test_the_copy_goes_when_the_files_on_the_device_are_marked_as_uploaded(devic
     copy whose file is no longer on the device waits for its upload, as before."""
     st, dev, state = _failed_once(device_root, tmp_path)
     (device_root / "GARMIN/Activity/2026-10-02-10-00-00.fit").unlink()
-    sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, FakeClient())
+    sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, SyncClient(verified_unit_id=dev.unit_id))
     assert [p.name for p in state.pending_files("FIT_TYPE_4")] == ["2026-10-02-10-00-00.fit"]
 
 
 def test_baseline(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
-    assert sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, FakeClient()) == 4
+    client = SyncClient(verified_unit_id=dev.unit_id)  # the owner was checked
+    assert sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, client) == 4
     assert sync.plan_uploads(dev, st, UPLOAD_CONFIG, state).candidates == []
 
 
@@ -202,7 +176,7 @@ def test_downloads(device_root, tmp_path):
     assert [i.message_id for i in items] == [1, 2, 3, 5]
     assert items[1].unsupported  # FIT_TYPE_5 has no target on this device
     assert items[2].handled_by == "Connect IQ" and not items[2].unsupported
-    client = FakeClient()
+    client = SyncClient()
     rep = sync.run_downloads(items, st, client)
     assert len(rep.written) == 1 and len(rep.empty) == 1
     assert client.acks == [1, 5]
@@ -223,7 +197,7 @@ def test_a_file_written_but_interrupted_before_its_acknowledgement_is_not_writte
         {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
          "metadata": {"messageurl": "course/7", "messagename": "Route"}}])
 
-    class Interrupted(FakeClient):
+    class Interrupted(SyncClient):
         def ack_message(self, mid):
             raise KeyboardInterrupt
 
@@ -232,7 +206,7 @@ def test_a_file_written_but_interrupted_before_its_acknowledgement_is_not_writte
     assert len(list((device_root / "GARMIN/NewFiles").iterdir())) == 1
     again = sync.SyncState(dev.unit_id, base=tmp_path / "state")
     assert again.unacked() == {"7"}
-    client = FakeClient()
+    client = SyncClient()
     rep = sync.run_downloads(items, st, client, state=again)
     assert client.acks == [7] and rep.written == []
     assert len(list((device_root / "GARMIN/NewFiles").iterdir())) == 1  # no second file

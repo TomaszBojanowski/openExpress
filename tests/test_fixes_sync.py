@@ -3,7 +3,8 @@ import struct
 
 import pytest
 from conftest import make_fit
-from test_sync import UPLOAD_CONFIG, FakeClient
+from fakes import SyncClient
+from test_sync import UPLOAD_CONFIG
 
 from openexpress import sync
 from openexpress.connect import ApiError, ClockSkew, UploadResult
@@ -64,11 +65,11 @@ def test_damaged_activity_does_not_abort_sync(device_root, tmp_path):
     (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(_truncated_definition())
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
-    rep = sync.run_uploads(plan, dev, st, FakeClient(), state)
+    rep = sync.run_uploads(plan, dev, st, SyncClient(), state)
     assert len(rep.uploaded) == 3 and not rep.failed
 
 
-class PollFails(FakeClient):
+class PollFails(SyncClient):
     def upload_file(self, url, data, **kw):
         super().upload_file(url, data, **kw)
         return UploadResult(201, {}, "https://x/activity-service/1", 10)
@@ -95,13 +96,13 @@ def _consent_cfg():
 def test_consent_location_status_handling(device_root, tmp_path, status, done):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, _consent_cfg(), state)
-    rep = sync.run_uploads(plan, dev, st, FakeClient(statuses={MON: status}), state)
+    rep = sync.run_uploads(plan, dev, st, SyncClient(statuses={MON: status}), state)
     assert state.is_completed("FIT_TYPE_32", "M1.FIT") is done
     assert bool(rep.failed) is not done
     assert bool(state.pending_files("FIT_TYPE_32")) is not done
 
 
-class RaisingClient(FakeClient):
+class RaisingClient(SyncClient):
     def __init__(self, exc_matches=None, exc_upload=None, **kw):
         super().__init__(**kw)
         self.exc_matches, self.exc_upload = exc_matches, exc_upload
@@ -137,7 +138,7 @@ def test_clock_skew_is_not_swallowed(device_root, tmp_path):
         sync.run_uploads(plan, dev, st, client, state)
 
 
-class Conflict(FakeClient):
+class Conflict(SyncClient):
     def __init__(self, body_code=False):
         super().__init__()
         self.body_code = body_code
@@ -163,7 +164,7 @@ def test_tracker_conflict(device_root, tmp_path, body_code):
     assert state.is_completed("FIT_TYPE_32", "M2.FIT")
 
 
-class AckFails(FakeClient):
+class AckFails(SyncClient):
     fail = True
 
     def ack_message(self, mid):
@@ -215,7 +216,7 @@ def test_read_error_fails_only_that_file_and_data_is_freed(device_root, tmp_path
         return real_read(path)
 
     st.read = read
-    rep = sync.run_uploads(plan, dev, st, FakeClient(), state)
+    rep = sync.run_uploads(plan, dev, st, SyncClient(), state)
     assert sorted(label for label, _ in rep.failed) == [
         "FIT_TYPE_32/M1.FIT", "FIT_TYPE_4/2026-10-01-10-00-00.fit"]
     assert "FIT_TYPE_4/2026-10-02-10-00-00.fit" in rep.uploaded
@@ -227,12 +228,12 @@ def test_read_error_fails_only_that_file_and_data_is_freed(device_root, tmp_path
 def test_pending_files_are_read_lazily(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
-    sync.run_uploads(plan, dev, st, FakeClient(statuses={ACT: 500}), state)
+    sync.run_uploads(plan, dev, st, SyncClient(statuses={ACT: 500}), state)
     (device_root / "GARMIN/Activity/2026-10-01-10-00-00.fit").unlink()
     again = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     pending = [c for c in again.candidates if c.device_path is None]
     assert pending and pending[0].data is None
-    rep = sync.run_uploads(again, dev, st, FakeClient(), state)
+    rep = sync.run_uploads(again, dev, st, SyncClient(), state)
     assert len(rep.uploaded) == 2
 
 
@@ -391,4 +392,4 @@ def test_upload_412_still_raises(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     with pytest.raises(ApiError):
-        sync.run_uploads(plan, dev, st, FakeClient(statuses={ACT: 412}), state)
+        sync.run_uploads(plan, dev, st, SyncClient(statuses={ACT: 412}), state)

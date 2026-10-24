@@ -6,8 +6,9 @@ and the command line tell the user may still name them."""
 import logging
 
 import pytest
+from fakes import SyncClient
 from test_fixes_net import DATA, md5hex, server  # noqa: F401 - the fixture
-from test_sync import UPLOAD_CONFIG, FakeClient
+from test_sync import UPLOAD_CONFIG
 from test_upload_consent import Account
 
 from openexpress import applog, download, service, sync
@@ -36,12 +37,12 @@ def _logged(caplog) -> str:
     return "\n".join(r.getMessage() for r in caplog.records)
 
 
-class AckFails(FakeClient):
+class AckFails(SyncClient):
     def ack_message(self, mid):
         raise ConnectionError("ack failed")
 
 
-class DownloadFails(FakeClient):
+class DownloadFails(SyncClient):
     def download_message(self, url, absolute):
         raise ApiError("HTTP 500")
 
@@ -174,7 +175,7 @@ def test_the_activity_file_is_not_logged_when_its_processing_is_unconfirmed(devi
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
 
-    class Unconfirmed(FakeClient):
+    class Unconfirmed(SyncClient):
         def upload_file(self, url, data, *, is_zip, last_file, authenticated):
             return UploadResult(201, {}, "https://up.example/activity-service/1", 0)
 

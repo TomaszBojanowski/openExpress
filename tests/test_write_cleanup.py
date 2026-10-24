@@ -9,9 +9,8 @@ import posixpath
 import uuid
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, SyncClient
 from test_ciq_music import FACE, STORE_ID, iq_device, out_bin  # noqa: F401 - the fixtures
-from test_sync import FakeClient
 from test_updates_system import disk_full_halfway
 
 from openexpress import ciq, maps, music, sync, trueup
@@ -146,7 +145,7 @@ def test_a_download_cut_short_is_said_and_leaves_nothing(device_root, tmp_path):
     items = sync.plan_downloads(dev, [
         {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
          "metadata": {"messageurl": "course/7", "messagename": "Route"}}])
-    client = FakeClient()
+    client = SyncClient()
     rep = sync.run_downloads(items, st, client, state=state)
     assert len(rep.failed) == 1 and "the device is gone" in rep.failed[0][1]
     assert not rep.written and client.acks == []
