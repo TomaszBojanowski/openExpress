@@ -105,6 +105,16 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.19" date="2026-10-24">
+      <description>
+        <ul>
+          <li>The device page shows the last update found right away, without waiting for
+          the server and without the page shifting.</li>
+          <li>The "Last sync" summary also counts TrueUp data and Connect IQ apps received
+          from Garmin Connect.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.18" date="2026-10-24">
       <description>
         <ul>
