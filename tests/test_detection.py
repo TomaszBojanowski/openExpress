@@ -2294,7 +2294,8 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
     for title, subtitle in (("fēnix 8", "Over USB (MTP)\u00a0· Software 23.39"),
                             ("Garmin device", ("Over USB (MTP)\u00a0· Not mounted; choose it to "
                                                "open it")),
-                            ("Varia RTL515", "USB drive\u00a0· Software 3.36")):
+                            # a drive says it in its chip, between the name and the version
+                            ("Varia RTL515", "USB drive"), ("USB drive", "Software 3.36")):
         assert (title, subtitle) in rows
     assert not any("mtp://" in t or "0000abcdef" in t or "file:" in t for t in texts)
     assert not any("PIN" in t or "starting" in t for t in texts)
@@ -2350,7 +2351,7 @@ def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, d
     three_devices(win, monkeypatch, tmp_path, device_root)
     assert rows_of(win) == [("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
                             ("Edge 1050", "Over USB (MTP)\u00a0· Software 33.11"),
-                            ("Varia RTL515", "USB drive\u00a0· Software 3.36")]
+                            ("Varia RTL515", "Software 3.36")]  # "USB drive": its chip
 
 
 def test_four_devices_give_four_rows(choosing_window, monkeypatch, tmp_path, device_root):

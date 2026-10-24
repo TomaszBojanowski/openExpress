@@ -152,7 +152,8 @@ def test_fields_come_from_the_connected_device_first():
         "kind": "mtp", "connected": True, "on_account": True, "primary": True,
         "last_seen": NOW - 2 * DAY, "image_part_number": "006-B4532-00",
         "image_url": "https://res.garmin.com/en/products/010-02906-11/v/c1_01_md.png",
-        "category": None, "image_source": "the account"}
+        "category": None, "image_source": "the account", "update_found": None,
+        "account_known": True}
 
 
 def test_fields_of_a_device_not_connected_come_from_the_memory_first():
@@ -177,7 +178,8 @@ def test_a_device_only_on_the_account():
         "kind": None, "connected": False, "on_account": True, "primary": False,
         "last_seen": None, "image_part_number": "006-B4440-00",
         "image_url": "https://res.garmin.com/en/products/010-02890-01/V/c1_01_md.png",
-        "category": "cycling-computer", "image_source": "the account"}
+        "category": "cycling-computer", "image_source": "the account", "update_found": None,
+        "account_known": True}
 
 
 def test_a_device_not_on_the_account_has_no_account_fields():

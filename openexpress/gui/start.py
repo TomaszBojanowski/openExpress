@@ -15,7 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from openexpress import devicelist  # noqa: E402
+from openexpress import devicelist, known_devices  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.i18n import _, full_time, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
@@ -65,6 +65,24 @@ flowboxchild.oe-tile:focus:focus-visible {
 }
 flowbox.oe-wrap > flowboxchild {
   padding: 0;
+}
+label.oe-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.82em;
+  font-weight: 600;
+}
+label.oe-chip.accent {
+  color: @accent_color;
+  background-color: alpha(@accent_bg_color, 0.16);
+}
+label.oe-chip.warning {
+  color: @warning_color;
+  background-color: alpha(@warning_bg_color, 0.22);
+}
+label.oe-chip.dimmed {
+  color: alpha(currentColor, 0.75);
+  background-color: alpha(currentColor, 0.09);
 }
 """
 
@@ -231,8 +249,52 @@ class _Section:
 
 def display_key(tile, how: str) -> tuple:
     """What a tile shows: the same tile is not built again (e.g. when the account's list
-    only adds its flags to a connected device)."""
-    return tile.description, how, tile.connected
+    only adds its flags to a connected device), but it is when its chips change."""
+    return tile.description, how, tile.connected, tuple(chips(tile))
+
+
+# The chips of a tile (PLAN T9, 24.10.2026): only what the tile would not say otherwise, at
+# most MAX_CHIPS, in this order: an update to install (found by the window's check, at most
+# known_devices.UPDATE_FOUND_KEPT_S ago), a USB drive, the account's primary device, a device
+# off the account (only when the account's list is known for it; never a drive, which needs
+# no account). Colours of the theme only (the style is a class of CSS), no icons.
+MAX_CHIPS = 2
+
+
+def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
+    """(words, style: "warning", "dimmed" or "accent", tooltip or None) of each chip."""
+    said = []
+    found = known_devices.update_found_recently(tile.update_found, now)
+    if found is not None:
+        # TRANSLATORS: a chip on the tile of a device on the start page; its tooltip says
+        # when the check found it
+        said.append((_("Update available"), "warning",
+                     _("Checked {when}").format(when=full_time(datetime.fromtimestamp(found)))))
+    if tile.kind == "ums":
+        # TRANSLATORS: a chip on the tile of a device in mass storage mode
+        said.append((pgettext("chip", "USB drive"), "dimmed", None))
+    if tile.primary:
+        # TRANSLATORS: a chip on the tile of the primary device of the Garmin account
+        said.append((_("Primary"), "accent", None))
+    if tile.account_known and not tile.on_account and tile.kind != "ums":
+        # TRANSLATORS: a chip on the tile of a device that is not on the Garmin account
+        said.append((_("Not on your account"), "dimmed", None))
+    return said[:MAX_CHIPS]
+
+
+def chips_row(said) -> Gtk.Widget:
+    """The chips of a tile on a line in the middle, wrapped when the tile is too narrow
+    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter)."""
+    if hasattr(Adw, "WrapBox"):
+        row = Adw.WrapBox(child_spacing=6, line_spacing=4, align=0.5, halign=Gtk.Align.CENTER)
+    else:
+        row = Gtk.Box(spacing=6, halign=Gtk.Align.CENTER)
+    for words, style, tooltip in said:
+        label = Gtk.Label(label=words, ellipsize=Pango.EllipsizeMode.END, tooltip_text=tooltip)
+        label.add_css_class("oe-chip")
+        label.add_css_class(style)
+        row.append(label)
+    return row
 
 
 class StartPage:
@@ -508,8 +570,8 @@ def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
 
 def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
     """One tile: the picture of the device if it is known, else the icon of its kind (the
-    picture is put in its place later, in the same size), the name, how it is connected and
-    its version; framed when connected."""
+    picture is put in its place later, in the same size), the name, its chips, how it is
+    connected and its version; framed when connected."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
     image = _image(tile, picture, TILE_ICON_SIZE)
@@ -520,6 +582,9 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
                      max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
     box.append(name)
+    said = chips(tile)
+    if said:
+        box.append(chips_row(said))
     if how:
         label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER,
                           ellipsize=Pango.EllipsizeMode.END, lines=SUBTITLE_LINES,

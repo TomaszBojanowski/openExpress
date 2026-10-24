@@ -412,3 +412,45 @@ def _descendants(widget):
         yield child
         yield from _descendants(child)
         child = child.get_next_sibling()
+
+
+def _tiles_with_chips():
+    """Tiles with the longest pairs of chips (PLAN T9): an update with a device off the
+    account, with a drive and with the primary device."""
+    from openexpress.devicelist import Tile
+
+    found = time.time()
+
+    def tile(name, kind, on_account=True, primary=False):
+        return Tile(name, "006-B4440-00", "33.13", kind, True, on_account, primary, None,
+                    "006-B4440-00", None, None, update_found=found, account_known=True)
+
+    return [(tile("Edge 1050", "mtp", on_account=False), "Over USB (MTP)"),
+            (tile("Varia RTL515", "ums"), "Software 3.80"),
+            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Over USB (MTP)")]
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, language):
+    """Two chips on a tile, the longest pairs in either language: the page fits the
+    narrowest window, and in it no chip is cut short (they may go on two lines)."""
+    from openexpress.gui.app import Gtk
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    win.start.show(_tiles_with_chips(), False)
+    _iterate(0.3)
+    assert win.start.page.get_width() <= NARROWEST
+    assert _min_width(win.start.page) <= NARROWEST
+    chips = []
+    stack = [win.start.page]
+    while stack:
+        widget = stack.pop()
+        if isinstance(widget, Gtk.Label) and widget.has_css_class("oe-chip"):
+            chips.append(widget)
+        child = widget.get_first_child()
+        while child is not None:
+            stack.append(child)
+            child = child.get_next_sibling()
+    assert len(chips) == 6
+    assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []

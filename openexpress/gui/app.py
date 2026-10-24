@@ -434,9 +434,10 @@ class DeviceChoices:
 
 
 def choice_subtitle(summary) -> str:
-    """How an entry of the list is connected, and its version or why it has no details.
-    Never its address: an MTP address carries the serial number."""
-    how = _("USB drive") if summary.found.kind == "ums" else _("Over USB (MTP)")
+    """How an entry of the list is connected (an MTP device; a drive says it in its chip,
+    start.chips), and its version or why it has no details. Never its address: an MTP
+    address carries the serial number."""
+    how = "" if summary.found.kind == "ums" else _("Over USB (MTP)")
     if summary.ok:
         what = _("Software {version}").format(version=summary.software_version)
     elif summary.reason == NOT_MOUNTED:

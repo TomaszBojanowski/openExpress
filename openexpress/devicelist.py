@@ -66,6 +66,11 @@ class Tile:
     category: str | None
     # Where image_url comes from, for the log: "the account" or "the remembered address".
     image_source: str | None = None
+    # When the window's check last found an update for it (devices.json); None: none known.
+    update_found: float | None = None
+    # Whether the account's list is known for it (logged in, and its unit ID known): only
+    # then does on_account=False say that it is off the account.
+    account_known: bool = False
 
 
 def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
@@ -107,15 +112,16 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
         if unit_id is not None:
             done.add(unit_id)
         now.append((_tile(s.description, s.part_number, s.software_version, s.found.kind,
-                          True, known, entry), s))
+                          True, known, entry, logged_in and unit_id is not None), s))
     now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
-    rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id)), known)
+    rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id), logged_in), known)
             for unit_id, known in remembered.items() if unit_id not in done]
     done.update(remembered)
-    rest += [(_tile("", "", "", None, False, None, entry), entry)
+    rest += [(_tile("", "", "", None, False, None, entry, logged_in), entry)
              for unit_id, entry in on_account.items() if unit_id not in done]
-    rest += [(_tile("", "", "", None, False, None, entry), entry) for entry in account_only]
+    rest += [(_tile("", "", "", None, False, None, entry, logged_in), entry)
+             for entry in account_only]
     rest.sort(key=lambda e: (section(e[0]) != REMEMBERED, e[0].description.casefold(),
                              e[0].part_number))
 
@@ -130,9 +136,10 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
 
 
 def _tile(description: str, part_number: str, version: str, kind: str | None,
-          connected: bool, known, entry: dict | None) -> Tile:
+          connected: bool, known, entry: dict | None, account_known: bool) -> Tile:
     """One tile: what the connected device says (if connected), else what is remembered of
-    it (`known`), else what the account says (`entry`)."""
+    it (`known`), else what the account says (`entry`); `account_known`: the account's list
+    is known for it."""
     account = account_fields(entry) if entry is not None else None
     part = part_number or (known.part_number if known else "") or (
         account["part_number"] if account else "")
@@ -155,6 +162,8 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         category=(account["category"] if account else None) or (
             known.category if known else None),
         image_source=image_source,
+        update_found=known.update_found if known else None,
+        account_known=account_known,
     )
 
 
