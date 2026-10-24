@@ -105,6 +105,23 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.17" date="2026-10-24">
+      <description>
+        <ul>
+          <li>Devices page: tiles show chips for what the tile does not say otherwise:
+          "Update available", "To sync" (activities on the device not uploaded yet, counted
+          in the background after the tiles are drawn) or "Never synced", "USB drive",
+          "Primary" and "Not on your account". Tiles are as tall with chips as without, and a
+          connected device's tile shows only its software version.</li>
+          <li>Device page: an available update stands out, with the same chip under the
+          software version and the "Device software" row in the warning colour with a
+          dot.</li>
+          <li>Polish: the part number is now called "Numer katalogowy".</li>
+          <li>New screenshots; the README opens with the start page, dark or light to match
+          the reader's theme.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.16" date="2026-10-24">
       <description>
         <ul>
