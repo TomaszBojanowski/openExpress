@@ -99,9 +99,9 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | on the developer's Garmin account; tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install, remove, restoring the order; command line and window) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
+| fēnix 8 (47 mm, Solar) | on the developer's Garmin account; tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install and remove on the command line and in the window, restoring the order on the command line) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
 | epix (part 006-B3943) | read-only commands and backup tested |
-| Edge 1050 | on the same account; detected automatically; read-only commands, backup and sync plan tested; one system software update installed in the window (beta 33.12, 14 October 2026) |
+| Edge 1050 | on the same account; detected automatically; read-only commands and backup tested; a sync in the window uploaded new files and wrote files from Garmin Connect to the device (15 October 2026); one system software update installed in the window (beta 33.12, 14 October 2026) |
 | Venu 2 (part 006-B3703) | read-only commands tested; it was the first device to get software updates installed with openExpress (two components, Time Zone Map and Exercise to muscle mapping, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
@@ -165,6 +165,11 @@ It does nothing until you log in and perform the first sync
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
 
+The background service leaves devices in mass storage mode alone (such as the Varia RTL515):
+it neither opens nor syncs them, and shows no notification about them. It syncs only when,
+apart from those, exactly one Garmin device is connected; with two or more it writes a line
+in the [log](#log-file) and does nothing. A watch and a Varia: the watch is synced.
+
 <p align="center">
   <img src="docs/screenshots/device.png" width="700"
        alt="The device page: sync, updates, Garmin Connect account and tools">
@@ -176,13 +181,16 @@ account only gets a notification.
 |---|---|
 | `openexpress info` | model, software version, free space |
 | `openexpress files [--type FIT_TYPE_4]` | files on the watch by data type from `GarminDevice.xml` |
+| `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` appends the last 200 lines of the [log](#log-file), filtered |
+| `openexpress devices [--forget N] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list (its sync state stays) |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from your own copy of the official installer |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account, log out (removes the local token) |
 | `openexpress upload-config` | what data is uploaded for this watch and where (Garmin server) |
-| `openexpress sync [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch |
+| `openexpress sync [--all] [--upload-only] [--download-only] [--type TYPE]… [--include-diagnostics] [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch; `--all` uploads everything on the first sync, `--upload-only` and `--download-only` do one direction, `--type` (repeatable) only the data types named, `--include-diagnostics` also the device's diagnostics (see [Privacy and security](#privacy-and-security)) |
 | `openexpress baseline [--apply]` | marks current files as already uploaded (first run) |
 | `openexpress backup [--apply]` | local backup of watch data (default `~/Documents/Garmin/Backups`, last 3 kept) |
+| `openexpress cache [--clear] [--only maps,updates] [--apply]` | size of the cache by part (maps, updates, pictures, temp) and clearing it (see [Cache](#cache)) |
 | `openexpress updates [--reinstalls]` | watch software updates (no login needed); a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
 | `openexpress updates --install PART… [--apply]` | download with MD5 check and copy to the watch; after it is unplugged the watch may ask whether to install the update now or later, then restart |
 | `openexpress maps [--all]` | installed and available maps (TopoActive, base maps, CourseView, Ski) |
@@ -197,10 +205,11 @@ account only gets a notification.
 | `openexpress music [add PATH… \| playlist FILE.m3u \| remove TEXT…] [--apply]` | music, podcasts and audiobooks (Artist/Album layout, `.m3u8` playlists) |
 | `openexpress gui` | application window (GTK 4 + libadwaita): watch, sync, updates, maps, apps, music |
 | `openexpress watch` | background service: sync when the watch is connected, with a notification |
-| `openexpress install-desktop [--apply]` | application menu entry and systemd user service |
+| `openexpress install-desktop [--remove] [--apply]` | application menu entry and systemd user service (version from source); `--remove` removes them |
 
 All commands that change anything run **in dry-run mode by default**:
-they show the plan and do nothing without `--apply`.
+they show the plan and do nothing without `--apply`. The exceptions are `setup`, `login` and
+`logout`, which change only openExpress's own configuration and login token, at once.
 
 A Garmin device needs a moment to start after it is plugged in. Commands wait for it
 (up to 45 seconds) and the window shows that the device is starting; `--no-wait` makes a
@@ -214,8 +223,8 @@ and the command-line tool prints the same warning when it starts such an operati
 | Code | Meaning |
 |---|---|
 | 0 | done (also a dry run) |
-| 1 | an error or a refusal: the device, the account, a server or the network; the message says why |
-| 2 | a wrong command line: an unknown command or option, or a missing argument |
+| 1 | an error or a refusal: the device, the account, a server or the network, or a value the command checks itself (e.g. an unknown part in `cache --only`); the message says why |
+| 2 | a wrong command line: an unknown command or option, a value that is not one of the choices (e.g. `setup --environment`), or a missing argument |
 | 3 | the first sync with this program waits for a choice: `openexpress baseline --apply` or `openexpress sync --apply --all` |
 | 130 | interrupted (Ctrl+C) |
 
@@ -364,8 +373,9 @@ openExpress keeps a log of what it does, to make problems easier to find:
   three files of about 1 MB are kept; the file is readable only by you.
 - **Telling runs apart:** every line carries a short random marker (e.g. `cli[a3f1]`) that is
   the same for one run of the program and means nothing else. The first line of a run says
-  the version, whether it is the Flatpak or runs from source, the Python version, the
-  language of the app and the process ID; nothing about you or your computer.
+  the command, the version, whether it runs from source or is the Flatpak (with the
+  repository it was installed from and its commit), the Python version, the language of the
+  app, the locale of the C library and the process ID; nothing about you or your computer.
 - **What it contains:** which command or sync ran and how it ended, the steps of a sync
   (numbers of files by type, not their contents), app installs and removals, how the device
   was detected (including when it was mounted or unmounted), requests to Garmin's servers
@@ -416,6 +426,11 @@ copy to the device is running.
   in another letter case and `GUPDATE.TMP`, as Garmin Express does, and removes a copy that
   failed its check. Files shared by several maps (e.g. the Europe terrain model) are
   protected.
+- A write to the device that fails leaves no half-written file: what was written of it is
+  deleted, and when the copy did not start, the file that was there stays. On a device in
+  mass storage mode the new file is written beside the old one and only then takes its
+  place. The list of apps waiting for the device (`IN.BIN`) is put back as it was, or, if
+  even that fails, deleted, and the message says that the changes are lost.
 - Software updates and maps: downloaded files are verified (size, MD5);
   they are copied to the watch only after all files have been downloaded. The RGN format
   (older devices) is rejected.
@@ -439,8 +454,10 @@ copy to the device is running.
 
 ### Flatpak permissions
 
-Besides network, USB storage access through GNOME's gvfs and your Downloads/Music folders,
-the Flatpak has three permissions that weaken the sandbox:
+Besides network, USB storage access through GNOME's gvfs (`xdg-run/gvfsd`), your Downloads
+and Music folders read-only (`xdg-download:ro`, `xdg-music:ro`: the installer and music on the
+command line) and the folder Documents/Garmin for backups (`xdg-documents/Garmin:create`,
+created if missing), the Flatpak has three permissions that weaken the sandbox:
 
 - It can run commands on the host (`org.freedesktop.Flatpak`). It uses this to copy files
   to the watch with `gio copy`, because gvfs does not let sandboxed apps write to MTP
@@ -556,6 +573,12 @@ flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.gi
 ```bash
 python3 -m pytest
 ```
+
+The tests start their own hidden X server (Xvfb: `xorg-x11-server-Xvfb` on Fedora, `xvfb` on
+Debian/Ubuntu), so no window shows on the desktop; without Xvfb they use the display of the
+session. `OPENEXPRESS_TESTS_NO_DISPLAY=1` runs them without any display (the tests that need
+one are skipped), `OPENEXPRESS_TESTS_ON_SCREEN=1` on the display of the session. The tests
+never reach the network: one that tries fails.
 
 Bug reports: please include the watch model, the output of `openexpress info` and the
 command you ran. Never post `~/.config/openexpress/*.json` (your login token) or your

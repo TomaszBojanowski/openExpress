@@ -3215,8 +3215,9 @@ class MainWindow(Adw.ApplicationWindow):
         with "Clear All…". The sizes are counted in the background, never on the window's
         thread; the group is about the cache of this installation alone."""
         kind = _("Flatpak") if paths.in_flatpak() else _("version from source")
-        # TRANSLATORS: group in the preferences: the cache of downloaded maps and updates,
-        # on the disk of the computer (not the device's storage of the device page)
+        # TRANSLATORS: group in the preferences: the cache (downloaded maps and updates,
+        # pictures, temporary files) on the disk of the computer (not the device's storage of
+        # the device page)
         g = Adw.PreferencesGroup(title=pgettext("preferences", "Storage"), description=_(
             "Only the files of this installation ({kind}); openExpress downloads them again "
             "when needed").format(kind=kind))

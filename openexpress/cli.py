@@ -1682,8 +1682,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lang", metavar="LANG",
                    help=_("interface language, e.g. {examples}").format(
                        examples=", ".join(i18n.available_languages())))
+    # A device in mass storage mode is found by itself (since 0.6.4), like an MTP device.
     p.add_argument("--path",
-                   help=_("directory with device contents instead of MTP (e.g. copy, UMS)"))
+                   help=_("a folder with a copy of a device's files, instead of a connected "
+                          "device"))
     p.add_argument("--device-uri", help=_("MTP device URI, e.g. {example}").format(
         example="mtp://091e_51b4_…/"))
     p.add_argument("--no-wait", action="store_true",
@@ -1729,11 +1731,12 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("logout", help=_("remove the local token"))
     s.set_defaults(func=cmd_logout)
 
-    s = sub.add_parser("cache", help=_("how big the cache of downloaded maps and updates is"))
-    s.add_argument("--clear", action="store_true",
-                   help=_("delete what is in the cache (downloaded again when needed)"))
     from openexpress.cache import CATEGORIES
 
+    s = sub.add_parser("cache", help=_("size of the cache by part ({parts}), and clearing it")
+                       .format(parts=", ".join(CATEGORIES)))
+    s.add_argument("--clear", action="store_true",
+                   help=_("delete what is in the cache (downloaded again when needed)"))
     s.add_argument("--only", action="append", metavar="PARTS",
                    help=_("only these parts of the cache, separated by commas: {parts}")
                    .format(parts=", ".join(CATEGORIES)))
