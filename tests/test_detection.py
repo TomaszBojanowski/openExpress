@@ -2290,10 +2290,10 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
                                   "Varia RTL515", "006-B3592-03", "3.36", 3000000003)], None)
     MainWindow.show_choices(win)
     texts = _texts(win.start.page)
-    rows = list(itertools.pairwise(texts))  # a tile's name, then how it is connected
-    for title, subtitle in (("fēnix 8", "Over USB (MTP)\u00a0· Software 23.39"),
-                            ("Garmin device", ("Over USB (MTP)\u00a0· Not mounted; choose it to "
-                                               "open it")),
+    # a tile's name, then its version (the empty chip of a tile without chips skipped)
+    rows = list(itertools.pairwise(t for t in texts if t))
+    for title, subtitle in (("fēnix 8", "Software 23.39"),
+                            ("Garmin device", "Not mounted; choose it to open it"),
                             # a drive says it in its chip, between the name and the version
                             ("Varia RTL515", "USB drive"), ("USB drive", "Software 3.36")):
         assert (title, subtitle) in rows
@@ -2349,8 +2349,8 @@ def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, d
     """A1: three devices at once: three rows, each with its name and how it is connected."""
     win = choosing_window
     three_devices(win, monkeypatch, tmp_path, device_root)
-    assert rows_of(win) == [("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
-                            ("Edge 1050", "Over USB (MTP)\u00a0· Software 33.11"),
+    assert rows_of(win) == [("Test watch", "Software 23.39"),
+                            ("Edge 1050", "Software 33.11"),
                             ("Varia RTL515", "Software 3.36")]  # "USB drive": its chip
 
 
@@ -2494,7 +2494,7 @@ def test_two_devices_not_mounted_are_two_rows(choosing_window, monkeypatch, tmp_
         found.mounted = False
     win.refresh_device()
     assert win.session is None and win.built == []
-    assert rows_of(win) == [("", "Over USB (MTP)\u00a0· Not mounted; choose it to open it")] * 2
+    assert rows_of(win) == [("", "Not mounted; choose it to open it")] * 2
     assert [s.found for s in choices(win)] == [world.offered[0], edge]
 
 
@@ -2508,8 +2508,8 @@ def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatc
     usb_device(world.root, "1-2", 1, 10, "091e", "5158")
     (tmp_path / "edge" / "GARMIN" / "GarminDevice.xml").write_text("<Device><Model>")
     win.refresh_device()
-    assert rows_of(win) == [("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
-                            ("", "Over USB (MTP)\u00a0· Could not be read")]
+    assert rows_of(win) == [("Test watch", "Software 23.39"),
+                            ("", "Could not be read")]
 
 
 def test_an_mtp_device_and_two_drives_give_three_rows(choosing_window, monkeypatch):
@@ -4160,7 +4160,7 @@ def test_several_devices_connected_show_the_start_page(start_window, monkeypatch
     tiles, notice = win.start.shown[-1]
     assert [(name, on) for name, on, _how in tiles] == [("Test watch", True),
                                                        ("Edge 1050", True)]
-    assert all(how.startswith("Over USB (MTP)\u00a0· Software ") for _n, _on, how in tiles)
+    assert all(how.startswith("Software ") for _n, _on, how in tiles)
     assert notice is False
     assert win.sections["maps"].empty[0] == "Choose a device"
 
@@ -5220,8 +5220,8 @@ def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, 
         NAMED, "Edge", False, usb=edge.usb)
     win.refresh_device()
     assert [(name, how) for name, _on, how in drawn_tiles(win)] == [
-        ("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
-        ("", "Over USB (MTP)\u00a0· Not mounted; choose it to open it")]
+        ("Test watch", "Software 23.39"),
+        ("", "Not mounted; choose it to open it")]
     win.world.offered[1] = edge  # mounted now
     ran = detections(win)
     MainWindow._on_mount_added(win, None, FakeMount(NAMED))
@@ -5230,8 +5230,8 @@ def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, 
     assert ran == ["Detecting the device…"]
     assert win.session is None and win.navigation.stack == ["start page"]
     assert [(name, how) for name, _on, how in drawn_tiles(win)] == [
-        ("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
-        ("Edge 1050", "Over USB (MTP)\u00a0· Software 33.11")]
+        ("Test watch", "Software 23.39"),
+        ("Edge 1050", "Software 33.11")]
 
 
 def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
@@ -5264,8 +5264,8 @@ def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
     assert win.session is opened and win.navigation.stack == ["start page", "device view"]
     back(win)
     assert [(name, how) for name, _on, how in drawn_tiles(win)][:2] == [
-        ("Test watch", "Over USB (MTP)\u00a0· Software 23.39"),
-        ("Edge 1050", "Over USB (MTP)\u00a0· Software 33.11")]
+        ("Test watch", "Software 23.39"),
+        ("Edge 1050", "Software 33.11")]
 
 
 def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
@@ -6779,7 +6779,7 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(monkeypatch)
     rows = start.tiles()[:7]
     assert all(row.get_parent() is start.list for row in rows)
     assert [row.get_title() for row in rows] == [f"Watch {n}" for n in range(7)]
-    assert rows[0].get_subtitle() == "Over USB (MTP)\u00a0· Software 1.00"
+    assert rows[0].get_subtitle() == "Software 1.00"
     assert tile_image(rows[1]).get_icon_name() == kind_icon("watch")
     assert tile_image(rows[0]).get_icon_name() == kind_icon(None)
     remembered = start.tiles()[7:]

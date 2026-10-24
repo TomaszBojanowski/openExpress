@@ -121,17 +121,20 @@ def test_the_chips_in_polish():
         i18n.setup("en")
 
 
-def test_a_drive_says_it_in_its_chip_not_under_its_name():
-    """The words under the name of a connected drive: its version only, "USB drive" is its
-    chip; an MTP device keeps how it is connected."""
+def test_the_words_under_a_connected_device_are_its_version_only():
+    """The words under the name of a connected device: its version (or why it has none),
+    never how it is connected: a drive says it in its chip, an MTP device is the usual
+    way (24.10.2026)."""
+    from openexpress.device.gio_storage import NOT_MOUNTED
     from openexpress.gui.app import choice_subtitle
 
-    def summary(kind):
-        return types.SimpleNamespace(found=types.SimpleNamespace(kind=kind), ok=True,
-                                     software_version="3.36")
+    def summary(kind, ok=True):
+        return types.SimpleNamespace(found=types.SimpleNamespace(kind=kind), ok=ok,
+                                     software_version="3.36", reason=NOT_MOUNTED)
 
     assert choice_subtitle(summary("ums")) == "Software 3.36"
-    assert choice_subtitle(summary("mtp")) == "Over USB (MTP)\u00a0· Software 3.36"
+    assert choice_subtitle(summary("mtp")) == "Software 3.36"
+    assert choice_subtitle(summary("mtp", ok=False)) == "Not mounted; choose it to open it"
 
 
 def test_the_tiles_get_what_is_remembered_and_whether_the_account_is_known():
@@ -177,8 +180,27 @@ def test_a_tile_shows_its_chips_under_its_name_and_above_its_version():
     assert {"oe-chip", "warning"} <= set(update.get_css_classes())
     assert {"oe-chip", "dimmed"} <= set(drive.get_css_classes())
     assert update.get_tooltip_text().startswith("Checked ") and drive.get_tooltip_text() is None
-    plain = _labels(start.tile_widget(_tile(), "Over USB (MTP)"))
-    assert [label.get_label() for label in plain] == ["Edge 1050", "Over USB (MTP)"]
+    plain = _labels(start.tile_widget(_tile(), "Software 33.13"))
+    # no chip: an empty one, without colour, keeps the height of the line
+    assert [label.get_label() for label in plain] == ["Edge 1050", "", "Software 33.13"]
+    assert plain[1].get_css_classes() == ["oe-chip"]
+
+
+@pytest.mark.needs_display
+def test_a_tile_without_chips_is_as_tall_as_one_with_a_chip():
+    """An empty row of chips keeps the height of one chip (24.10.2026): tiles with a chip
+    and without are as tall, and the words under their names are on one line."""
+    from gi.repository import Gdk, Gtk
+
+    from openexpress.gui import start
+
+    start.load_css(Gdk.Display.get_default())  # the size of a chip, as in the window
+    tiles = [start.tile_widget(_tile(), "Software 33.13"),
+             start.tile_widget(_tile(primary=True), "Software 33.13"),
+             start.tile_widget(_tile(update_found=time.time()), "Software 33.13"),
+             start.tile_widget(_tile(kind="ums", connected=False), "Software 3.80")]
+    heights = [tile.measure(Gtk.Orientation.VERTICAL, 300)[1] for tile in tiles]
+    assert len(set(heights)) == 1, heights
 
 
 @pytest.mark.needs_display

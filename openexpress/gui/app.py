@@ -434,19 +434,16 @@ class DeviceChoices:
 
 
 def choice_subtitle(summary) -> str:
-    """How an entry of the list is connected (an MTP device; a drive says it in its chip,
-    start.chips), and its version or why it has no details. Never its address: an MTP
-    address carries the serial number."""
-    how = "" if summary.found.kind == "ums" else _("Over USB (MTP)")
+    """The words under a connected device: its version or why it has no details. Not how
+    it is connected: a drive says it in its chip (start.chips), MTP is the usual way. Never
+    its address: an MTP address carries the serial number."""
     if summary.ok:
-        what = _("Software {version}").format(version=summary.software_version)
-    elif summary.reason == NOT_MOUNTED:
-        what = _("Not mounted; choose it to open it")
-    elif summary.reason == NO_DEVICE_FILE:
-        what = _("No GarminDevice.xml found")
-    else:
-        what = _("Could not be read")
-    return caption(how, what)
+        return _("Software {version}").format(version=summary.software_version)
+    if summary.reason == NOT_MOUNTED:
+        return _("Not mounted; choose it to open it")
+    if summary.reason == NO_DEVICE_FILE:
+        return _("No GarminDevice.xml found")
+    return _("Could not be read")
 
 
 def detect_devices(current_uri: str | None = None):

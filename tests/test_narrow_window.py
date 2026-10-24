@@ -425,9 +425,9 @@ def _tiles_with_chips():
         return Tile(name, "006-B4440-00", "33.13", kind, True, on_account, primary, None,
                     "006-B4440-00", None, None, update_found=found, account_known=True)
 
-    return [(tile("Edge 1050", "mtp", on_account=False), "Over USB (MTP)"),
+    return [(tile("Edge 1050", "mtp", on_account=False), "Software 33.13"),
             (tile("Varia RTL515", "ums"), "Software 3.80"),
-            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Over USB (MTP)")]
+            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Software 23.39")]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

@@ -284,7 +284,9 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
 
 def chips_row(said) -> Gtk.Widget:
     """The chips of a tile on a line in the middle, wrapped when the tile is too narrow
-    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter)."""
+    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter). Without
+    chips the line keeps the height of one: every tile is as tall, the words under the
+    names on one line."""
     if hasattr(Adw, "WrapBox"):
         row = Adw.WrapBox(child_spacing=6, line_spacing=4, align=0.5, halign=Gtk.Align.CENTER)
     else:
@@ -294,6 +296,9 @@ def chips_row(said) -> Gtk.Widget:
         label.add_css_class("oe-chip")
         label.add_css_class(style)
         row.append(label)
+    if not said:
+        # A chip without words or colour: the font and padding of one, nothing to see.
+        row.append(Gtk.Label(label="", css_classes=["oe-chip"]))
     return row
 
 
@@ -582,9 +587,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
                      max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
     box.append(name)
-    said = chips(tile)
-    if said:
-        box.append(chips_row(said))
+    box.append(chips_row(chips(tile)))
     if how:
         label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER,
                           ellipsize=Pango.EllipsizeMode.END, lines=SUBTITLE_LINES,
