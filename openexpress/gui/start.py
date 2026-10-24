@@ -328,11 +328,18 @@ class _ChipsLayout(Gtk.LayoutManager):
             child.allocate(width, height, baseline, None)
 
 
-def chips_row(said) -> Gtk.Widget:
+def chips_row(said) -> Adw.Bin:
     """The chips of a tile on a line in the middle, wrapped when the tile is too narrow
     (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter), never making
     the tile wider (_ChipsLayout). Without chips the line keeps the height of one: every tile
-    is as tall, the words under the names on one line."""
+    is as tall, the words under the names on one line. Its chips can be changed alone
+    (StartPage.set_chips: the row's child)."""
+    holder = Adw.Bin(child=_chips_line(said))
+    holder.set_layout_manager(_ChipsLayout())
+    return holder
+
+
+def _chips_line(said) -> Gtk.Widget:
     if hasattr(Adw, "WrapBox"):
         row = Adw.WrapBox(child_spacing=6, line_spacing=4, align=0.5, halign=Gtk.Align.CENTER)
     else:
@@ -345,9 +352,7 @@ def chips_row(said) -> Gtk.Widget:
     if not said:
         # A chip without words or colour: the font and padding of one, nothing to see.
         row.append(Gtk.Label(label="", css_classes=["oe-chip"]))
-    holder = Adw.Bin(child=row)
-    holder.set_layout_manager(_ChipsLayout())
-    return holder
+    return row
 
 
 class StartPage:
@@ -464,6 +469,25 @@ class StartPage:
             section.grid.set_visible(mode is not None and mode != LIST)
             section.list.set_visible(mode == LIST)
         self.stack.set_visible_child_name("content")
+
+    def set_chips(self, key: int, tile) -> bool:
+        """The chips of the tile at `key` (its place in the list given to show()) as `tile`
+        says them now: only its row of chips is changed, the tile is not built again (a count
+        that came after the page was drawn). A row of the list has none. False when no item
+        has that key."""
+        for section in self._sections.values():
+            for place, item in enumerate(section.items()):
+                if getattr(item, "key", None) != key:
+                    continue
+                row = getattr(item, "chips", None)
+                if row is not None:
+                    row.set_child(_chips_line(chips(tile)))
+                mode, keys = section.shown  # what it shows, for the next show()
+                keys = list(keys)
+                keys[place] = display_key(tile, keys[place][1])
+                section.shown = (mode, keys)
+                return True
+        return False
 
     def set_picture(self, part_number: str, texture) -> None:
         """The picture of the devices of this part number, put into their tiles that are
@@ -635,7 +659,8 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
                      max_width_chars=1, tooltip_text=_name(tile))
     name.add_css_class("heading")
     box.append(name)
-    box.append(chips_row(chips(tile)))
+    row = chips_row(chips(tile))
+    box.append(row)
     if how:
         label = Gtk.Label(label=how, wrap=True, justify=Gtk.Justification.CENTER,
                           ellipsize=Pango.EllipsizeMode.END, lines=SUBTITLE_LINES,
@@ -645,6 +670,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, tooltip_text=seen_tooltip(tile))
     _mark(child, tile, image, picture)
+    child.chips = row
     child.add_css_class("card")
     child.add_css_class("oe-tile")
     if tile.connected:

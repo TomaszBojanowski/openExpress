@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import gc
 import json
 import logging
@@ -492,24 +493,6 @@ def with_space(found):
     return found
 
 
-def with_activities(found):
-    """A device opened for the window, with its activities not uploaded yet counted in the
-    same thread (its tile's chip, PLAN T9): only for a device of the account (none for one
-    off it or whose check failed), never for a drive; a list to choose from is passed on as
-    it is (probe counted its devices)."""
-    if not isinstance(found, DeviceChoices):
-        off = (getattr(found, "mass_storage", False)
-               or getattr(found, "ownership_error", None) is not None)
-        found.to_sync = None if off else sync.activities_to_sync(found.device, found.storage)
-    return found
-
-
-def opened(found):
-    """What the thread that opens a device for the window reads besides: its free space and
-    its activities not uploaded yet."""
-    return with_activities(with_space(found))
-
-
 def render_space(win) -> None:
     """The subtitle (and the bar) of "Device storage" from the space the session holds:
     "…" until it is read, "?" for what is not known. Nothing is asked of the device."""
@@ -556,7 +539,7 @@ def refresh_space(win, s) -> None:
 def _choose(found: list):
     """The list of these devices, one entry each, without those gone since they were found;
     with one left, that one opened (D7); with none, no device."""
-    summaries = distinct_devices([probe(f, sync.activities_to_sync) for f in found])
+    summaries = distinct_devices([probe(f) for f in found])
     for s in summaries:
         if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
             known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
@@ -580,8 +563,12 @@ def connected_devices() -> list:
     """The devices connected now, one entry each, as the start page shows them while a
     device is open: GarminDevice.xml of each is read, nothing is opened or mounted and
     nothing is asked of the account."""
-    return _still_there(distinct_devices([probe(f, sync.activities_to_sync)
-                                          for f in find_all_devices()]))
+    return _still_there(distinct_devices([probe(f) for f in find_all_devices()]))
+
+
+def without_sync(tile):
+    """A tile without what it says of the sync: to tell whether only that changed."""
+    return dataclasses.replace(tile, to_sync=None, never_synced=False, synced_at=None)
 
 
 def session_summary(s) -> DeviceSummary:
@@ -1932,7 +1919,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         # A Garmin device in mass storage mode too, when no MTP device is there or on its way;
         # several different devices give a list to choose from.
         self.run_task(_("Detecting the device…"),
-                      lambda: opened(detect_devices(current_uri)), done, failed)
+                      lambda: with_space(detect_devices(current_uri)), done, failed)
 
     def show_choices(self) -> None:
         """Several Garmin devices are connected: the start page shows a tile for each (never
@@ -1973,7 +1960,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             return True
 
         self.run_task(_("Opening the device…"),
-                      lambda: opened(service.check_session(service.open_session(
+                      lambda: with_space(service.check_session(service.open_session(
                           found=found))), done, failed)
 
     # --- the start page and the device view (D5, D7) ---------------------------------------
@@ -2179,6 +2166,66 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self.start.show([(tile, text) for (tile, _source), text in zip(entries, texts)],
                         notice)
         self._load_tile_pictures([tile for tile, _source in entries])
+        self._count_activities(entries)
+
+    def _count_activities(self, entries) -> None:
+        """The activities not uploaded yet of the connected devices of the account whose tiles
+        were just drawn (PLAN T9), each counted in the background, once while it stays listed
+        or open (the one open: for its session); its tile shows no chip until the count
+        comes (_activities_counted). Never a drive, a device off the account or one whose
+        check against the account failed."""
+        s = self.session
+        for tile, source in entries:
+            if not (isinstance(source, DeviceSummary) and tile.connected and tile.on_account
+                    and tile.kind == "mtp"):
+                continue
+            if s is not None and self._is_open(source):
+                if (getattr(s, "mass_storage", False)
+                        or getattr(s, "ownership_error", None) is not None):
+                    continue
+                holder, device, storage = s, s.device, s.storage
+            else:
+                holder, device, storage = source, source.device, source.storage
+            if getattr(holder, "to_sync_asked", True) or device is None or storage is None:
+                continue
+            holder.to_sync_asked = True
+            self.in_background(
+                lambda device=device, storage=storage: sync.activities_to_sync(device, storage),
+                lambda result, holder=holder: self._activities_counted(holder, result))
+
+    def _activities_counted(self, holder, result) -> None:
+        """A count of the background (_count_activities) for its device: kept, against
+        state.json as it is now (a sync may have ended meanwhile), and only the row of chips
+        of its tile changed; dropped when the device is no longer listed or open (unplugged,
+        listed anew, another one opened)."""
+        s = self.session
+        if holder is not s and not any(c is holder for c in self.connected.devices):
+            log.info("activities: the count of a device no longer listed or open is dropped")
+            return
+        holder.to_sync = result.again() if result is not None else None
+        if holder is s:  # its tile may come from the list as well
+            for c in self.connected.devices:
+                if self._is_open(c):
+                    c.to_sync = holder.to_sync
+        self._update_tile_chips()
+
+    def _update_tile_chips(self) -> None:
+        """The chips of the tiles drawn, as the devices' counts say them now: each changed row
+        of chips alone, the page not drawn again. Nothing when other tiles would be drawn now
+        (the next drawing shows them)."""
+        summaries, _notice = self._start_summaries()
+        entries = devicelist.entries(summaries, known_devices.load(), self._account,
+                                     logged_in=self._account is not None)
+        drawn = self._start_entries
+        if len(entries) != len(drawn) or any(
+                without_sync(tile) != without_sync(old)
+                for (tile, _source), (old, _target) in zip(entries, drawn, strict=True)):
+            return
+        for key, ((tile, _source), (old, target)) in enumerate(zip(entries, drawn,
+                                                                    strict=True)):
+            if start.chips(tile) != start.chips(old):
+                self.start.set_chips(key, tile)
+            drawn[key] = (tile, target)
 
     def _update_relative_timer(self) -> None:
         """A timer once a minute while the start page or the device view is shown (their
@@ -2944,7 +2991,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             if summary.to_sync is not None:
                 summary.to_sync = summary.to_sync.again()
         if self._on_start_page():
-            self._show_tiles(*self._start_summaries())
+            self._update_tile_chips()
 
     # --- background sync, language, setup, account ------------------------------------
 

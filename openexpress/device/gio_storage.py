@@ -1106,25 +1106,29 @@ class DeviceSummary:
     software_version: str = ""
     unit_id: int | None = field(default=None, repr=False)  # in memory only, never written
     reason: str | None = None  # NOT_MOUNTED, NO_DEVICE_FILE or UNREADABLE: no details
-    # Its activities not uploaded yet (sync.ActivitiesToSync), when probe was asked to count
-    # them; None: not counted or not known.
-    to_sync: object | None = field(default=None, repr=False)
+    # What probe opened of an MTP device (its GarminDevice and storage), kept in memory for
+    # the window's count of its activities in the background; None for a drive.
+    device: object | None = field(default=None, repr=False, compare=False)
+    storage: object | None = field(default=None, repr=False, compare=False)
+    # Its activities not uploaded yet (sync.ActivitiesToSync) as the window counted them,
+    # None: not counted (yet) or not known; whether a count was started.
+    to_sync: object | None = field(default=None, repr=False, compare=False)
+    to_sync_asked: bool = field(default=False, repr=False, compare=False)
 
     @property
     def ok(self) -> bool:
         return self.reason is None
 
 
-def probe(found: FoundDevice, count_activities=None) -> DeviceSummary:
+def probe(found: FoundDevice) -> DeviceSummary:
     """Read only GarminDevice.xml of a device from find_all_devices: no session, no account,
     no server, no PTP, nothing mounted. Never raises: without details, the summary says
-    why. One log line, without the address or the unit ID. `count_activities(device,
-    storage)` (the window's sync.activities_to_sync): asked for an MTP device read, with the
-    storage open here; its result goes to the summary's `to_sync`."""
+    why. One log line, without the address or the unit ID. An MTP device read keeps what
+    was opened (`device`, `storage`), for the window to count its activities later."""
     from openexpress import applog
     from openexpress.device.xmldevice import parse
 
-    summary = _probe(found, parse, count_activities)
+    summary = _probe(found, parse)
     if summary.ok:
         applog.hide(summary.unit_id, "unit")  # as hide_device: never in the log
     log.info("device: probed %s (USB %s): %s", found.kind,
@@ -1148,7 +1152,7 @@ def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
     return out
 
 
-def _probe(found: FoundDevice, parse, count_activities=None) -> DeviceSummary:
+def _probe(found: FoundDevice, parse) -> DeviceSummary:
     if not found.mounted:
         return DeviceSummary(found, reason=NOT_MOUNTED)
     try:
@@ -1179,8 +1183,8 @@ def _probe(found: FoundDevice, parse, count_activities=None) -> DeviceSummary:
     # Without <Id> the parser gives 0: no unit ID, never one to merge entries by.
     summary = DeviceSummary(found, device.description, device.part_number,
                             device.software_version_str, device.unit_id or None)
-    if count_activities is not None and found.kind == "mtp":
-        summary.to_sync = count_activities(device, storage)
+    if found.kind == "mtp":
+        summary.device, summary.storage = device, storage
     return summary
 
 

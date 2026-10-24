@@ -186,7 +186,7 @@ def _window(device, to_sync, other):
         session=session, run_task=RunNow(), progress=lambda *a: None, toast=lambda text: None,
         _show_last_sync=lambda: None, connected=Connected(devices=[other]),
         _on_start_page=lambda: True, _start_summaries=lambda: ([], False),
-        _show_tiles=lambda summaries, notice: drawn.append(summaries), drawn=drawn)
+        _update_tile_chips=lambda: drawn.append("chips"), drawn=drawn)
 
 
 def _done_all(device):
@@ -198,7 +198,7 @@ def _done_all(device):
 
 def test_counted_again_after_the_window_s_sync(device_root, monkeypatch):
     """The session and the devices listed: what was listed against state.json as the sync
-    left it; the start page drawn again; the device not asked."""
+    left it; only the rows of chips of the start page changed; the device not asked."""
     from openexpress.gui import app
 
     device, counted = _counted(device_root)
@@ -214,7 +214,7 @@ def test_counted_again_after_the_window_s_sync(device_root, monkeypatch):
     monkeypatch.setattr(service, "run_sync", run_sync)
     app.MainWindow.start_sync(win)
     assert win.session.to_sync.count == 0 and other.to_sync.count == 0
-    assert win.drawn == [[]]
+    assert win.drawn == ["chips"]
 
 
 def test_counted_again_after_a_failed_sync(device_root, monkeypatch):
@@ -258,7 +258,7 @@ def test_counted_again_when_the_background_service_synced(device_root):
 
 def test_nothing_counted_is_left_as_it_is(device_root):
     """A device without a count (a drive, one off the account) gets none after a sync; the
-    start page is not drawn while another page is shown."""
+    start page is not changed while another page is shown."""
     from openexpress.gui import app
 
     device, _counted_now = _counted(device_root)
@@ -267,3 +267,123 @@ def test_nothing_counted_is_left_as_it_is(device_root):
     win._on_start_page = lambda: False
     app.MainWindow._count_activities_again(win)
     assert win.session.to_sync is None and other.to_sync is None and win.drawn == []
+
+
+# --- counted in the background, once the tiles are drawn ------------------------------------
+
+
+@pytest.fixture
+def listed(device_root, monkeypatch):
+    """The made-up device as the window's list reads it (probe), with one of its two
+    activities uploaded."""
+    from openexpress.device import gio_storage
+
+    monkeypatch.setattr(gio_storage, "_mtp_storage", lambda uri, usb: LocalStorage(device_root))
+    found = gio_storage.FoundDevice("mtp://made-up/", "x", True,
+                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+    summary = gio_storage.probe(found)
+    state = sync.SyncState(UNIT)
+    state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")
+    state.save()
+    return summary
+
+
+def _start_window(summaries, session=None):
+    """The window's start page (the real one) with the list of `summaries`, logged in, the
+    device on the account; work in the background waits in `later`."""
+    from openexpress.gui import app, start
+    from openexpress.gui.connected import Connected
+
+    later = []
+    win = types.SimpleNamespace(
+        session=session, start=start.StartPage(None), _account=[{"unitid": UNIT}],
+        connected=Connected(devices=list(summaries), choosing=session is None),
+        _start_entries=[], _start_texts=[], later=later, _load_tile_pictures=lambda t: None,
+        in_background=lambda work, done, failed=None: later.append((work, done)))
+    for name in ("_show_tiles", "_start_summaries", "_is_open", "_count_activities",
+                 "_activities_counted", "_update_tile_chips"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name, None), win))
+    return win
+
+
+def _chips_on(item):
+    from gi.repository import Gtk
+
+    found, stack = [], [item]
+    while stack:
+        widget = stack.pop()
+        if isinstance(widget, Gtk.Label) and widget.has_css_class("oe-chip") and widget.get_label():
+            found.append(widget.get_label())
+        child = widget.get_first_child()
+        while child is not None:
+            stack.append(child)
+            child = child.get_next_sibling()
+    return found
+
+
+@pytest.mark.needs_display
+def test_the_tiles_are_drawn_before_the_count_and_its_chip_comes_after(listed):
+    """The list is drawn at once, the tile without a chip (not known yet); the count runs in
+    the background, and its result puts the chip into the same tile (the page is not drawn
+    again)."""
+    win = _start_window([listed])
+    win._show_tiles(*win._start_summaries())
+    (tile,) = win.start.tiles()
+    assert _chips_on(tile) == [] and len(win.later) == 1
+    work, done = win.later.pop()
+    done(work())
+    assert win.start.tiles() == [tile] and _chips_on(tile) == ["To sync"]
+    assert listed.to_sync.count == 1
+    win._show_tiles(*win._start_summaries())  # drawn again: counted once, the tile stays
+    assert win.later == [] and win.start.tiles() == [tile]
+
+
+@pytest.mark.needs_display
+def test_a_count_for_a_device_unplugged_meanwhile_is_dropped(listed, caplog):
+    import logging
+
+    win = _start_window([listed])
+    win._show_tiles(*win._start_summaries())
+    work, done = win.later.pop()
+    win.connected.devices = []  # unplugged: the list read again without it
+    win._show_tiles(*win._start_summaries())
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        done(work())
+    # Its tile now: only on the account, without chips.
+    assert listed.to_sync is None and [_chips_on(t) for t in win.start.tiles()] == [[]]
+    assert "activities: the count of a device no longer listed or open is dropped" in caplog.text
+
+
+@pytest.mark.needs_display
+def test_the_open_device_is_counted_for_its_session(listed):
+    """The device open now: counted once for its session, which keeps it (the tile of the
+    list and the one made of the session say the same); dropped once another is open."""
+    session = types.SimpleNamespace(
+        device=listed.device, storage=listed.storage, mass_storage=False, logged_in=True,
+        ownership_error=None, to_sync=None, to_sync_asked=False)
+    win = _start_window([listed], session=session)
+    win._show_tiles(*win._start_summaries())
+    work, done = win.later.pop()
+    done(work())
+    assert session.to_sync.count == 1 and listed.to_sync is session.to_sync
+    assert _chips_on(win.start.tiles()[0]) == ["To sync"]
+    session.to_sync_asked, session.to_sync = False, None
+    win._show_tiles(*win._start_summaries())
+    work, done = win.later.pop()
+    win.session = types.SimpleNamespace(**vars(session))  # another session meanwhile
+    done(work())
+    assert session.to_sync is None
+
+
+@pytest.mark.needs_display
+def test_no_count_for_a_device_off_the_account_or_a_drive(listed):
+    win = _start_window([listed])
+    win._account = []  # logged in, the device not on the account
+    win._show_tiles(*win._start_summaries())
+    assert win.later == []
+    off = types.SimpleNamespace(device=listed.device, storage=listed.storage,
+                                mass_storage=False, ownership_error=Exception("not yours"),
+                                to_sync=None, to_sync_asked=False)
+    win = _start_window([listed], session=off)
+    win._show_tiles(*win._start_summaries())
+    assert win.later == []

@@ -4009,11 +4009,12 @@ def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
 
 
 class FakeStartPage:
-    """The start page: what it shows is recorded (name, connected, how; the notice)."""
+    """The start page: what it shows is recorded (name, connected, how; the notice; the
+    chips of a tile changed alone)."""
 
     def __init__(self):
         self.page = "start page"
-        self.shown, self.notices, self.pictures = [], [], []
+        self.shown, self.notices, self.pictures, self.chips = [], [], [], []
 
     def show(self, entries, notice):
         self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
@@ -4023,6 +4024,10 @@ class FakeStartPage:
 
     def set_picture(self, part_number, texture):
         self.pictures.append((part_number, texture))
+
+    def set_chips(self, key, tile):
+        self.chips.append((key, tile.description))
+        return True
 
 
 class FakeNavigation:
@@ -4090,7 +4095,8 @@ START_METHODS = ("show_device", "show_no_device", "_clear_device_pages", "show_c
                  "_want_account", "_load_tile_pictures", "_tile_picture_done",
                  "_show_page_picture", "_on_remembered_page", "_start_summaries",
                  "_fill_account", "_fill_remembered", "_refresh_remembered",
-                 "_redraw_remembered")
+                 "_redraw_remembered", "_count_activities", "_activities_counted",
+                 "_update_tile_chips")
 
 
 def start_stand_in(start, sections, win=None):

@@ -49,8 +49,10 @@ class DeviceSession:
     # either one None: not known (it could not be asked).
     space: tuple[int | None, int | None] | None = None
     # Its activities not uploaded yet (sync.ActivitiesToSync) as the window counted them in
-    # the thread that opened it; None: not counted or not known.
+    # the background, once its tile was drawn; None: not counted (yet) or not known. Whether
+    # a count was started.
     to_sync: sync.ActivitiesToSync | None = None
+    to_sync_asked: bool = False
 
     @property
     def logged_in(self) -> bool:

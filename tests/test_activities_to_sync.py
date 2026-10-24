@@ -157,54 +157,69 @@ def test_counted_again_after_a_sync_without_asking_the_device(device_root):
     assert first.again().never_synced
 
 
-def test_the_list_of_devices_counts_each_mtp_device_it_reads(device_root, monkeypatch):
-    """The window's list of several devices (probe): the activities of each MTP device it
-    reads, with the same storage; a drive gets none (it is never synced)."""
+class Uncounted:
+    """sync.activities_to_sync that must not be called: the thread that reads the list or
+    opens a device does not count (it is counted in the background once drawn)."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, device, storage):
+        self.calls.append(device.unit_id)
+        return sync.ActivitiesToSync(device.unit_id, frozenset(), 0)
+
+
+def _second_device(device_root, tmp_path):
+    """A copy of the made-up device with another unit ID."""
+    import shutil
+
+    other = tmp_path / "other"
+    shutil.copytree(device_root, other)
+    xml = other / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(xml.read_text().replace("<Id>1234567890</Id>", "<Id>3000000002</Id>"))
+    return other
+
+
+def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root, tmp_path,
+                                                                     monkeypatch):
+    """The window's list (the detection's and the one read again while a device is open):
+    drawn without waiting for a count; each MTP device keeps what probe opened (its
+    GarminDevice.xml and storage), for the count in the background; a drive keeps none."""
     from openexpress.device import gio_storage
+    from openexpress.gui import app
 
-    asked = []
-
-    def count(device, storage):
-        asked.append((device.unit_id, storage))
-        return "counted"
-
+    roots = {"mtp://one/": device_root, "mtp://two/": _second_device(device_root, tmp_path)}
     monkeypatch.setattr(gio_storage, "_mtp_storage",
-                        lambda uri, usb: LocalStorage(device_root))
-    found = gio_storage.FoundDevice("mtp://made-up/", "x", True,
-                                    usb=gio_storage.GarminUsb("5158", "usb", 1, 9))
-    summary = gio_storage.probe(found, count_activities=count)
-    assert summary.ok and summary.to_sync == "counted" and asked[0][0] == 1234567890
-    assert gio_storage.probe(found).to_sync is None  # nothing asked for: nothing counted
+                        lambda uri, usb: LocalStorage(roots[uri]))
+    counted = Uncounted()
+    monkeypatch.setattr(sync, "activities_to_sync", counted)
+    found = [gio_storage.FoundDevice(uri, "x", True,
+                                     usb=gio_storage.GarminUsb(product, "usb", 1, number))
+             for uri, product, number in (("mtp://one/", "51b4", 9), ("mtp://two/", "5158", 10))]
+    choices = app._choose(found)
+    assert isinstance(choices, app.DeviceChoices)
+    monkeypatch.setattr(app, "find_all_devices", lambda: found)
+    for summaries in (choices.summaries, app.connected_devices()):
+        assert [s.to_sync for s in summaries] == [None, None]
+        assert sorted(s.device.unit_id for s in summaries) == [1234567890, 3000000002]
+        assert all(isinstance(s.storage, LocalStorage) for s in summaries)
+    assert counted.calls == []
     drive = gio_storage.FoundDevice(device_root.as_uri(), "GARMIN", True,
                                     usb=gio_storage.GarminUsb("20ee", "usb", 1, 12), kind="ums")
-    assert gio_storage.probe(drive, count_activities=count).to_sync is None
-    assert len(asked) == 1
+    summary = gio_storage.probe(drive)
+    assert summary.ok and summary.device is None and summary.storage is None
 
 
 def _session(device, storage, **fields):
     values = dict(device=device, storage=storage, mass_storage=False, ownership_error=None,
-                  to_sync=None)
+                  to_sync=None, to_sync_asked=False)
     values.update(fields)
     return types.SimpleNamespace(**values)
 
 
-def test_the_window_counts_the_device_it_opens_only_one_of_the_account(device_root):
-    from openexpress.connect import OwnershipError
-    from openexpress.gui import app
-
-    device, storage = _device(device_root)
-    _synced(device)
-    assert app.with_activities(_session(device, storage)).to_sync.count == 2
-    off = _session(device, Untouchable(), ownership_error=OwnershipError("not yours"))
-    assert app.with_activities(off).to_sync is None
-    drive = _session(device, Untouchable(), mass_storage=True)
-    assert app.with_activities(drive).to_sync is None
-    choices = app.DeviceChoices([])
-    assert app.with_activities(choices) is choices
-
-
-def test_opening_a_device_from_the_list_counts_its_activities(device_root, monkeypatch):
-    """The device chosen on the start page: counted in the thread that opens it."""
+def test_opening_a_device_from_the_list_counts_nothing_in_its_thread(device_root,
+                                                                   monkeypatch):
+    """The device chosen on the start page: its view is drawn without waiting for a count."""
     from fakes import RunNow
 
     from openexpress import service
@@ -216,14 +231,16 @@ def test_opening_a_device_from_the_list_counts_its_activities(device_root, monke
     monkeypatch.setattr(service, "open_session", lambda found: session)
     monkeypatch.setattr(service, "check_session", lambda s: s)
     monkeypatch.setattr(app, "read_space", lambda storage: (None, None))
+    counted = Uncounted()
+    monkeypatch.setattr(sync, "activities_to_sync", counted)
     win = types.SimpleNamespace(busy=False, run_task=RunNow(), show_device=lambda: None,
                                 connected=types.SimpleNamespace(stop_choosing=lambda: None))
     app.MainWindow.open_choice(win, "the device chosen")
-    assert win.session is session and session.to_sync.count == 2
+    assert win.session is session and session.to_sync is None and counted.calls == []
 
 
-def test_detecting_the_device_counts_its_activities(device_root, monkeypatch):
-    """The one device connected, found by a detection: counted in the thread that opens it."""
+def test_detecting_the_device_counts_nothing_in_its_thread(device_root, monkeypatch):
+    """The one device connected, found by a detection: drawn without waiting for a count."""
     from fakes import RunNow
 
     from openexpress.gui import app
@@ -233,9 +250,11 @@ def test_detecting_the_device_counts_its_activities(device_root, monkeypatch):
     session = _session(device, storage)
     monkeypatch.setattr(app, "detect_devices", lambda current_uri=None: session)
     monkeypatch.setattr(app, "read_space", lambda storage: (None, None))
+    counted = Uncounted()
+    monkeypatch.setattr(sync, "activities_to_sync", counted)
     win = types.SimpleNamespace(
         busy=False, session=None, run_task=RunNow(), show_device=lambda: None,
         connected=types.SimpleNamespace(found_alone=lambda: None, stop_choosing=lambda: None),
         sections={"watch": types.SimpleNamespace(show=lambda what: None)})
     app.MainWindow.refresh_device(win)
-    assert win.session is session and session.to_sync.count == 2
+    assert win.session is session and session.to_sync is None and counted.calls == []
