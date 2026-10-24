@@ -28,6 +28,10 @@ from openexpress.known_devices import (  # noqa: E402
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
 ROW_ICON_SIZE = 48  # in a row of a list (a section of many devices)
+# A row of a list as an Adw.ActionRow of the same list (measured with libadwaita 1.9): at
+# least 50 px tall, 12 px at its sides and after the picture, 6 px above and below its texts
+# and before its arrow, 3 px between the texts.
+ROW_MIN_HEIGHT, ROW_SIDE, ROW_TEXTS_AROUND, ROW_TEXTS_SPACING = 50, 12, 6, 3
 # The icon of a tile without a picture, by the kind of the device (the files in data/,
 # symbolic: in the colours of the light or dark theme); without a kind a neutral one, so
 # that a device of an unknown kind never looks like a watch.
@@ -333,22 +337,23 @@ class _ChipsLayout(Gtk.LayoutManager):
             child.allocate(width, height, baseline, None)
 
 
-def chips_row(said) -> Adw.Bin:
-    """The chips of a tile on a line in the middle, wrapped when the tile is too narrow
-    (libadwaita 1.7: Adw.WrapBox; before it, one line whose chips get shorter), never making
-    the tile wider (_ChipsLayout). Without chips the line keeps the height of one: every tile
-    is as tall, the words under the names on one line. Its chips can be changed alone
-    (StartPage.set_chips: the row's child)."""
-    holder = Adw.Bin(child=_chips_line(said))
+def chips_row(said, align: Gtk.Align = Gtk.Align.CENTER) -> Adw.Bin:
+    """The chips of a tile on a line in the middle (of a row of a list: from its start,
+    `align`), wrapped when the tile is too narrow (libadwaita 1.7: Adw.WrapBox; before it,
+    one line whose chips get shorter), never making the tile wider (_ChipsLayout). Without
+    chips the line keeps the height of one: every tile is as tall, the words under the names
+    on one line. Its chips can be changed alone (StartPage.set_chips: the row's child)."""
+    holder = Adw.Bin(child=_chips_line(said, align))
     holder.set_layout_manager(_ChipsLayout())
     return holder
 
 
-def _chips_line(said) -> Gtk.Widget:
+def _chips_line(said, align: Gtk.Align = Gtk.Align.CENTER) -> Gtk.Widget:
     if hasattr(Adw, "WrapBox"):
-        row = Adw.WrapBox(child_spacing=6, line_spacing=4, align=0.5, halign=Gtk.Align.CENTER)
+        row = Adw.WrapBox(child_spacing=6, line_spacing=4,
+                          align=0.0 if align == Gtk.Align.START else 0.5, halign=align)
     else:
-        row = Gtk.Box(spacing=6, halign=Gtk.Align.CENTER)
+        row = Gtk.Box(spacing=6, halign=align)
     for words, style, tooltip in said:
         label = Gtk.Label(label=words, ellipsize=Pango.EllipsizeMode.END, tooltip_text=tooltip)
         label.add_css_class("oe-chip")
@@ -477,16 +482,17 @@ class StartPage:
 
     def set_chips(self, key: int, tile) -> bool:
         """The chips of the tile at `key` (its place in the list given to show()) as `tile`
-        says them now: only its row of chips is changed, the tile is not built again (a count
-        that came after the page was drawn). A row of the list has none. False when no item
-        has that key."""
+        says them now: only its row of chips is changed, the tile (or the row of a list) is not
+        built again (a count that came after the page was drawn). False when no item has that
+        key."""
         for section in self._sections.values():
             for place, item in enumerate(section.items()):
                 if getattr(item, "key", None) != key:
                     continue
-                row = getattr(item, "chips", None)
-                if row is not None:
-                    row.set_child(_chips_line(chips(tile)))
+                if isinstance(item, DeviceRow):
+                    item.set_chips(chips(tile))
+                elif getattr(item, "chips", None) is not None:
+                    item.chips.set_child(_chips_line(chips(tile)))
                 mode, keys = section.shown  # what it shows, for the next show()
                 keys = list(keys)
                 keys[place] = display_key(tile, keys[place][1])
@@ -637,17 +643,60 @@ def _mark(item, tile, image, picture) -> None:
     item.has_picture = picture is not None
 
 
-def row_widget(tile, how: str, picture=None) -> Adw.ActionRow:
-    """One row of a section of many devices: what its tile would show, smaller: the picture
-    or the icon of the kind, the name, how it is connected and its version."""
-    row = Adw.ActionRow(title=GLib.markup_escape_text(_name(tile)),
-                        subtitle=GLib.markup_escape_text(how), activatable=True)
-    image = _image(tile, picture, ROW_ICON_SIZE)
-    row.add_prefix(image)
-    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-    row.set_tooltip_text(seen_tooltip(tile))
-    _mark(row, tile, image, picture)
-    return row
+class DeviceRow(Gtk.ListBoxRow):
+    """One row of a section of many devices, laid out as its tile, smaller: the picture or
+    the icon of the kind, then the name, its chips (start.chips, from the start of the line)
+    and the words under the name, then the arrow; spaced as an Adw.ActionRow of the same
+    list, which takes no widget between its title and its subtitle (24.10.2026). Opened as a
+    row of the list (row-activated: a click, Enter or Space); a screen reader hears its name,
+    chips and words. Its chips change alone (set_chips, StartPage.set_chips)."""
+
+    def __init__(self, tile, how: str, picture=None):
+        super().__init__(activatable=True, focusable=True)
+        self._title, self._subtitle = _name(tile), how
+        line = Gtk.Box(margin_start=ROW_SIDE, margin_end=ROW_SIDE,
+                       height_request=ROW_MIN_HEIGHT)
+        image = _image(tile, picture, ROW_ICON_SIZE)
+        line.append(image)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=ROW_TEXTS_SPACING,
+                        valign=Gtk.Align.CENTER, hexpand=True, margin_start=ROW_SIDE,
+                        margin_end=ROW_TEXTS_AROUND, margin_top=ROW_TEXTS_AROUND,
+                        margin_bottom=ROW_TEXTS_AROUND)
+        texts.append(Gtk.Label(label=self._title, xalign=0, wrap=True,
+                               wrap_mode=Pango.WrapMode.WORD_CHAR, css_classes=["title"]))
+        self.chips = chips_row([], Gtk.Align.START)
+        texts.append(self.chips)
+        if how:
+            texts.append(Gtk.Label(label=how, xalign=0, wrap=True,
+                                   wrap_mode=Pango.WrapMode.WORD_CHAR,
+                                   css_classes=["subtitle"]))
+        line.append(texts)
+        line.append(Gtk.Image(icon_name="go-next-symbolic", valign=Gtk.Align.CENTER))
+        self.set_child(line)
+        self.set_tooltip_text(seen_tooltip(tile))
+        _mark(self, tile, image, picture)
+        self.set_chips(chips(tile))
+
+    def get_title(self) -> str:
+        return self._title
+
+    def get_subtitle(self) -> str:
+        return self._subtitle
+
+    def set_chips(self, said) -> None:
+        """Its chips as `said` (start.chips) now; none: no line for them (no empty chip,
+        which the tiles keep for their height)."""
+        self.chips.set_child(_chips_line(said, Gtk.Align.START))
+        self.chips.set_visible(bool(said))
+        self.accessible_label = ", ".join(
+            [self._title, *(words for words, _style, _tooltip in said)]
+            + ([self._subtitle] if self._subtitle else []))
+        self.update_property([Gtk.AccessibleProperty.LABEL], [self.accessible_label])
+
+
+def row_widget(tile, how: str, picture=None) -> DeviceRow:
+    """One row of a section of many devices (DeviceRow)."""
+    return DeviceRow(tile, how, picture)
 
 
 def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:

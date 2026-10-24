@@ -485,6 +485,36 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
     assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
 
 
+@pytest.mark.parametrize("wrap_box", [True, False])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, monkeypatch,
+                                                                 language, wrap_box):
+    """Seven devices connected (a list) with the longest pairs of chips: the page fits the
+    narrowest window and every chip stays inside its row; with Adw.WrapBox (libadwaita 1.7)
+    no chip is cut short, before it they may get shorter (24.10.2026)."""
+    from openexpress.gui import start
+
+    if not wrap_box:
+        monkeypatch.setattr(start, "Adw", _WithoutWrapBox())
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    win.start.show(_tiles_with_chips() + _tiles_with_chips()[:2], False)
+    _iterate(0.3)
+    rows = win.start.tiles()
+    assert len(rows) == 7 and all(row.get_parent() is win.start.list for row in rows)
+    assert win.start.page.get_width() <= NARROWEST
+    assert _min_width(win.start.page) <= NARROWEST
+    chips = [(row, chip) for row in rows for chip in _chip_labels(row)]
+    assert len(chips) == 14
+    for row, chip in chips:
+        ok, bounds = chip.compute_bounds(row)
+        assert ok and bounds.get_x() >= 0 and bounds.get_y() >= 0
+        assert bounds.get_x() + bounds.get_width() <= row.get_width() + 0.5
+        assert bounds.get_y() + bounds.get_height() <= row.get_height() + 0.5
+    if wrap_box:
+        assert [c.get_label() for _r, c in chips if c.get_layout().is_ellipsized()] == []
+
+
 # The longest pair of chips in either language (24.10.2026): 271 px on one line in the first
 # measurement, 309 px in GNOME's font; more than a tile has at 700 and 1000 px.
 LONGEST_PAIR = ("Aktualizacja dostępna", "Nie synchronizowano")
