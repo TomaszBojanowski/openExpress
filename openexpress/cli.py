@@ -596,10 +596,13 @@ def cmd_sync(args) -> int:
             session = service.DeviceSession(st, dev, settings, client)
             errors: list[str] = []
             lines = []
+            received: list[str] = []  # written to the device: received, as in the window
             if "Connect IQ" in special:
-                lines += service._install_queued_apps(session, messages, progress, errors)
+                lines += service._install_queued_apps(session, messages, progress, errors,
+                                                      received)
             if "TrueUp" in special:
-                lines += service._trueup(session, messages, progress, errors)
+                lines += service._trueup(session, messages, progress, errors, received)
+            summary.downloaded += len(received)
             for line in lines:
                 print(line)
             for err in errors:

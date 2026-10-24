@@ -595,8 +595,8 @@ def describe_counts(data: dict) -> str:
     files on the device and how many of them were uploaded ("none uploaded"; "nothing to
     upload" when it had none; "nothing uploaded: <why>" when the upload did not take
     place; "upload skipped" when it was not looked at; "activities only: …" when only some
-    data types were), and the files from Garmin Connect written to the device when there are
-    any.
+    data types were), and what came from Garmin Connect's queue to the device when there is
+    any: its files, and since 24.10.2026 TrueUp and the Connect IQ apps written too.
     The window shows it under "Last sync" after when it was; the command line and the
     notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
@@ -833,10 +833,12 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
         out.log_errors += [f"{quiet}: written, but Garmin Connect was not notified (will retry)"
                            for quiet in drep.ack_failed_in_log]
     told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
+    received: list[str] = []  # what of them came to the device: received as the files
     if any(i.handled_by == "Connect IQ" for i in items):
-        out.lines += _install_queued_apps(s, messages, progress, out.errors)
+        out.lines += _install_queued_apps(s, messages, progress, out.errors, received)
     if any(i.handled_by == "TrueUp" for i in items):
-        out.lines += _trueup(s, messages, progress, out.errors)
+        out.lines += _trueup(s, messages, progress, out.errors, received)
+    out.downloaded += len(received)
     out.log_errors += out.errors[told:]
     skipped = [i for i in items if i.unsupported]
     if skipped:
@@ -848,7 +850,11 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     return out
 
 
-def _install_queued_apps(s, messages, progress, errors) -> list[str]:
+def _install_queued_apps(s, messages, progress, errors,
+                         received: list | None = None) -> list[str]:
+    """The Connect IQ apps of the queue written to the device: their lines for the details;
+    their names go to `received` (counted as received, as the files of the queue). An app
+    left in the queue is not received."""
     from openexpress import ciq
 
     try:
@@ -864,6 +870,8 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
         errors.append(f"Connect IQ: {e}")
         return []
     errors += [f"Connect IQ {name}: {err}" for name, err in rep.failed]
+    if received is not None:
+        received += rep.installed
     lines = []
     if rep.installed:
         lines.append(_("Installed Connect IQ apps: {names}").format(
@@ -883,7 +891,9 @@ def _install_queued_apps(s, messages, progress, errors) -> list[str]:
     return lines
 
 
-def _trueup(s, messages, progress, errors) -> list[str]:
+def _trueup(s, messages, progress, errors, received: list | None = None) -> list[str]:
+    """TrueUp of the queue written to the device: its line for the details; written, it goes
+    to `received` (counted as received, as the files of the queue)."""
     from openexpress import trueup
 
     try:
@@ -893,6 +903,8 @@ def _trueup(s, messages, progress, errors) -> list[str]:
         errors.append(f"TrueUp: {e}")
         return []
     if res.written:
+        if received is not None:
+            received.append("TrueUp")
         return [_("TrueUp: daily totals aligned with your other Garmin devices")]
     return []  # nothing to write, or not supported: in the log only (trueup.run)
 

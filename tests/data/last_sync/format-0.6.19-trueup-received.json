@@ -1,0 +1,12 @@
+{
+  "time": 1800000000.0,
+  "unit_id": 3000000001,
+  "uploaded": 0,
+  "downloaded": 1,
+  "skipped_known": 0,
+  "rejected": 0,
+  "errors": [],
+  "lines": [
+    "TrueUp: daily totals aligned with your other Garmin devices"
+  ]
+}

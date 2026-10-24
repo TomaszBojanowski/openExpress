@@ -4,5 +4,6 @@ real-*: copies of records written by real syncs (copied 23.10.2026), the unit ID
   version from source after 0.6.15 (the shape of format-0.6.16-upload-skipped.json).
 format-*: the shapes older versions wrote, with made-up numbers; and shapes of this
   version no real sync has made yet (format-0.6.16-upload-skipped.json: sync --apply
-  --download-only; format-0.6.16-only-types.json: sync --apply --type; tests/test_fixes_ui.py
-  checks both are what the command writes).
+  --download-only; format-0.6.16-only-types.json: sync --apply --type;
+  format-0.6.19-trueup-received.json: a sync with nothing new that wrote TrueUp, counted as
+  received; tests/test_fixes_ui.py checks all three are what the command writes).

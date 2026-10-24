@@ -107,6 +107,14 @@ EXPECTED = {
             ("Files from the device: activities ×3", False)]),
         "pl": ("tylko aktywności: 3 nowe pliki, 3 wysłane", [
             (f"Pliki z{NB}urządzenia: aktywności ×3", False)])},
+    # A sync whose device had nothing new and that wrote TrueUp from the queue (PLAN (9),
+    # 24.10.2026): TrueUp counts as received, so the row does not say "nothing to upload"
+    # alone; no real sync has made it yet (tests/test_fixes_ui.py: what the command writes).
+    "format-0.6.19-trueup-received.json": {
+        "en": ("nothing to upload · 1 received", [
+            ("TrueUp: daily totals aligned with your other Garmin devices", False)]),
+        "pl": ("nic do wysłania · 1 odebrany", [
+            ("TrueUp: daily totals aligned with your other Garmin devices", False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

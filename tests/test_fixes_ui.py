@@ -174,6 +174,37 @@ def test_a_sync_of_some_types_says_its_numbers_are_of_them_only(device_root, xdg
     assert record["lines"][0] == {"kind": "only_types", "types": ["FIT_TYPE_4"]}
 
 
+TRUEUP = {"messageid": 9, "messagetype": "true_up", "devicexmldatatype": "FIT_TYPE_39",
+          "metadata": {"messageurl": "trueup/9"}}
+
+
+def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake_client,
+                                                          capsys):
+    """Nothing new on the device, TrueUp from the queue written to it (PLAN (9), 24.10.2026):
+    "nothing to upload · 1 received", not "nothing to upload" alone. The record has the
+    shape of its pattern in tests/data/last_sync."""
+    import json
+
+    xml = device_root / "GARMIN/GarminDevice.xml"  # the device takes TrueUp (as a fēnix 8)
+    xml.write_text(xml.read_text().replace(
+        "</MassStorageMode>",
+        "<DataType><Name>FIT_TYPE_39</Name><File><Location><Path>Garmin/NewFiles</Path>"
+        "<FileExtension>FIT</FileExtension></Location><TransferDirection>InputToUnit"
+        "</TransferDirection></File></DataType></MassStorageMode>"))
+    assert main(["--path", str(device_root), "baseline", "--apply"]) == 0
+    client = fake_client["client"]
+    client.messages = [TRUEUP]
+    client.download_message = lambda url, absolute: b"TRUEUP"
+    capsys.readouterr()
+    assert main(["--path", str(device_root), "sync", "--apply"]) == 0
+    assert "nothing to upload · 1 received" in capsys.readouterr().out.splitlines()
+    record = service.load_last_sync(1234567890)
+    pattern = json.loads((Path(__file__).parent / "data/last_sync"
+                          / "format-0.6.19-trueup-received.json").read_text(encoding="utf-8"))
+    assert sorted(record) == sorted(pattern) and record["lines"] == pattern["lines"]
+    assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 1, [])
+
+
 def test_only_some_types_is_not_said_when_the_account_let_nothing_be_uploaded():
     """Nothing uploaded because of the account: the row says why, not which types."""
     record = {"lines": [service.only_types_step(["FIT_TYPE_4"]),
