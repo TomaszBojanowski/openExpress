@@ -7,7 +7,8 @@ nothing is filled for it and it is reported (exit code 1), so that one key never
 two translations (e.g. "Storage": "Pamięć" and, in "preferences", "Miejsce na dysku").
 
 Used by maintainers to apply batches of translations; clears the fuzzy flag of filled
-entries. Usage: tools/po-fill.py po/pl.po translations.json
+entries and keeps their other flags (python-brace-format…).
+Usage: tools/po-fill.py po/pl.po translations.json
 """
 import json
 import re
@@ -36,6 +37,16 @@ def _entry(lines):
     c = next((k for k, line in enumerate(lines[:a]) if line.startswith("msgctxt ")), None)
     context = unquote(lines[c:a]) if c is not None else None
     return context, unquote(lines[a:(p if p is not None else z)]), a, p, z
+
+
+def _without_fuzzy(line):
+    """A line of the entry with "fuzzy" taken out of its flags ("#, fuzzy,
+    python-brace-format" -> "#, python-brace-format"); None for a line of flags that had
+    nothing else. Other lines as they are."""
+    if not line.startswith("#,"):
+        return line
+    flags = [f.strip() for f in line[2:].split(",") if f.strip() and f.strip() != "fuzzy"]
+    return "#, " + ", ".join(flags) if flags else None
 
 
 def _target(key):
@@ -67,8 +78,8 @@ def main(po_path, json_path):
             continue
         context, msgid, a, _plural, z = entry
         key = wanted[(context, msgid)]
-        head = [line.replace("#, fuzzy, ", "#, ") for line in lines[:a]
-                if not line.startswith("#, fuzzy") and not line.startswith("#| ")]
+        head = [_without_fuzzy(line) for line in lines[:a] if not line.startswith("#| ")]
+        head = [line for line in head if line is not None]
         value = table[key]
         if isinstance(value, list):
             body = [f"msgstr[{n}] " + quote(v) for n, v in enumerate(value)]

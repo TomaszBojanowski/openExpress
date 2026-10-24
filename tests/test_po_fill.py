@@ -62,3 +62,39 @@ def test_a_key_with_an_empty_context_fills_only_the_entry_without_one(tmp_path):
 def test_a_msgid_without_contexts_is_filled_as_before(tmp_path):
     run, text = fill(tmp_path, {"Maps": "Mapy"})
     assert run.returncode == 0 and 'msgid "Maps"\nmsgstr "Mapy"' in text
+
+
+FUZZY = """msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+#: openexpress/cli.py:1
+#, fuzzy, python-brace-format
+#| msgid "{n} old maps"
+msgid "{n} maps"
+msgstr "{n} stare mapy"
+
+#: openexpress/cli.py:2
+#, fuzzy
+#| msgid "Old"
+msgid "New"
+msgstr "Stary"
+
+#: openexpress/cli.py:3
+#, python-brace-format, fuzzy
+msgid "{n} files"
+msgstr ""
+"""
+
+
+def test_a_filled_entry_keeps_its_other_flags_and_loses_only_fuzzy(tmp_path):
+    """A filled entry kept no line of flags at all when it was fuzzy: "#, fuzzy,
+    python-brace-format" lost python-brace-format too, which msgfmt --check and the test of
+    the placeholders need (24.10.2026)."""
+    (tmp_path / "pl.po").write_text(FUZZY, encoding="utf-8")
+    run, text = fill(tmp_path, {"{n} maps": "{n} mapy", "New": "Nowy", "{n} files": "{n} plików"})
+    assert run.returncode == 0
+    assert '#: openexpress/cli.py:1\n#, python-brace-format\nmsgid "{n} maps"\nmsgstr "{n} mapy"' in text
+    assert '#: openexpress/cli.py:2\nmsgid "New"\nmsgstr "Nowy"' in text
+    assert '#: openexpress/cli.py:3\n#, python-brace-format\nmsgid "{n} files"' in text
+    assert "fuzzy" not in text and "#|" not in text
