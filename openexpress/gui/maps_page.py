@@ -52,7 +52,9 @@ class MapsPage:
             try:
                 result = mp.check(s.client, s.device)
             except mp.MapsNotSupported:
-                return None  # the page says so; nothing is read on the device
+                # No check of Garmin's maps, which the page says; the maps of your own do not
+                # depend on it (Garmin's list: none, so their names alone are kept apart).
+                return None, ownmaps.overview(s.device, s.storage, []), (None, None)
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
             # The space too: asked of the device here, never as the page is drawn.
             return (result, ownmaps.overview(s.device, s.storage, result[0]),
@@ -67,8 +69,7 @@ class MapsPage:
                 self._render_map_state()
 
         self._load("maps", _("Checking maps…"), work,
-                   lambda r: self.show_maps(None) if r is None else self.show_maps(
-                       r[0], r[1], space=r[2]), on_error=failed)
+                   lambda r: self.show_maps(r[0], r[1], space=r[2]), on_error=failed)
 
     def show_maps(self, result, own=None, space=(None, None)) -> None:
         """`space`: the free space and the size of the device, read with the maps (none told:
@@ -82,6 +83,8 @@ class MapsPage:
             self.maps_cache = []
             self._set_map_state(None)  # the "Maps" row of the device page
             _no_maps(self, sec, mp.not_supported_text())
+            if own is not None:  # the maps of your own, whatever serves Garmin's
+                self.show_own_maps(own)
             return
         all_maps, listed = result  # the maps read, and how many the server listed
         self.maps_cache = all_maps

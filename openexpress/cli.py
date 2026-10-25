@@ -867,14 +867,24 @@ def cmd_updates(args) -> int:
     return 0
 
 
-def _load_maps(args, client):
+def _load_maps(args, client, own: bool = False):
+    """The device and Garmin's maps for it. `own`: a command on maps of your own, which works
+    whatever map service Garmin serves the device through; any other command is refused when
+    map updates for the device are not supported."""
     from openexpress import maps as mp
 
     st, dev = open_device(args)
     if args.path:  # a folder (maybe a copy): the universal map service, as before
         all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
     else:  # MapsNotSupported when Garmin serves the device's maps another way
-        all_maps, listed = mp.check(client, dev)
+        try:
+            all_maps, listed = mp.check(client, dev)
+        except mp.MapsNotSupported:
+            if not own:
+                raise
+            # A command on maps of your own does not depend on it: Garmin's maps are none,
+            # so their names alone are kept apart (ownmaps.is_garmin_name).
+            all_maps, listed = [], 0
     mp.mark_waiting(st, all_maps)
     return st, dev, all_maps, listed
 
@@ -955,7 +965,8 @@ def cmd_maps(args) -> int:
         with _own_map_hints():
             ownmaps.check_local(Path(args.file), args.name)
     client = GarminClient(Settings.load())
-    st, dev, all_maps, listed = _load_maps(args, client)
+    own = args.maps_cmd == "add" or (args.maps_cmd == "remove" and args.own)
+    st, dev, all_maps, listed = _load_maps(args, client, own=own)
     if args.maps_cmd == "add":
         return _maps_add(args, dev, st, all_maps)
     if args.maps_cmd == "remove" and args.own:
