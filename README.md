@@ -134,8 +134,11 @@ Edge 1050) work in both the Flatpak and the version from source. Since 0.6, open
 supports Garmin devices that connect as a USB drive (mass storage mode: some older Garmin
 models, and accessories such as the Varia RTL515): their information and software updates, in
 the window and on the command line, in the Flatpak and in the version from source. Both find
-such a device by themselves, an MTP device first when both are connected; `--path` is only for
-a folder without a device, such as a copy. Sync, apps, maps, music and backup are not
+such a device by themselves, an MTP device first when both are connected; the window also
+lists one that the system has not mounted yet (as on KDE, until a file manager opens it) and
+mounts it when you choose it. `--path` is only for a folder without a device, such as a copy.
+A watch in this mode switches its drive off once it is ejected: plug it in again to use it
+again. Sync, apps, maps, music and backup are not
 supported for such a device; the window and the commands say so. A car or motorcycle
 navigator that connects as a USB drive (such as an older nüvi) therefore gets its software
 updates, but no map updates. Mass storage is tested on the Varia RTL515 (on 21 October
@@ -163,8 +166,9 @@ steps and sleep come from this device), **Not on your account** and,
 when nothing else needs saying, **Synced** (synced before, nothing new to upload). **To
 sync** and **Synced** are there at once, as the last count found them (at most 7 days ago,
 and only while nothing was synced since); the count that runs then confirms or changes them.
-Labels of the account need the account's list: while you are not logged in, or it could not be
-read, a sentence under the tiles says so. The device page shows **Update available** or
+Labels of the account come from the account's list as it was last read (at most 7 days ago,
+with the same login): while you are not logged in there are none, and when the list could not
+be read a sentence under the tiles says so. The device page shows **Update available** or
 **Update ready** under the software version too, and, under the account's **Primary training
 device**, its **Primary wearable** (read only; only for a device that can be one). Its
 **Apps** and **Music** rows lead to their pages, as **Maps** does, and say how many there are

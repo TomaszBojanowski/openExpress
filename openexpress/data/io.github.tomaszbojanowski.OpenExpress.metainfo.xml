@@ -105,6 +105,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.1" date="2026-10-25">
+      <description>
+        <ul>
+          <li>A Garmin device connected as a USB drive now shows up on the start page before
+          the system mounts it, and can be mounted from the app (seen on KDE, #19).</li>
+          <li>The start page draws each tile from what it already knows about the device, so
+          tiles no longer change or shift a moment after the window opens.</li>
+          <li>Fixed: "Attach the last log" with "Open on GitHub" did not carry the log over; the
+          log now goes to the clipboard with a note to paste it.</li>
+          <li>After a USB-drive watch is ejected, the app now says so and asks to replug,
+          instead of "the device is still starting" (#19).</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-10-25">
       <description>
         <ul>
