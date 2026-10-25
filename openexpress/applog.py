@@ -119,6 +119,18 @@ def hide_device(device) -> None:
                 r"(?i)(?<![\w])(" + re.escape(folder) + r")/[^\n'\":]*")
 
 
+# The address in the text of a network error: requests names it whole ("… with url:
+# /path?query (Caused by …)", or the full address), query and all.
+_ERROR_ADDRESS = re.compile(r"(with url: |\b[a-z][a-z0-9+.-]*://)[^\s'\"()]+")
+
+
+def network_error_text(error) -> str:
+    """The text of a network error for the user and the log: without the address it names
+    (its query may carry a unit ID or the signature of a download), then filtered as every
+    line of the log is."""
+    return redact(_ERROR_ADDRESS.sub(lambda m: m.group(1) + "<address>", str(error)))
+
+
 def redact(text: str) -> str:
     """`text` without anything that identifies the user, the account or a device."""
     for value, label in sorted(_hidden.items(), key=lambda item: -len(item[0])):

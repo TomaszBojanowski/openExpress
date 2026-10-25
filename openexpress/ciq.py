@@ -17,7 +17,6 @@ import logging
 import posixpath
 import re
 import shutil
-import time
 import uuid
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -25,8 +24,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
-
-import requests
 
 from openexpress import applog, netstatus, paths, proto
 from openexpress.backup import keep_newest
@@ -445,17 +442,12 @@ class StoreApi:
         h = self.client._client_headers()
         h["Accept"] = "application/json"
         h["Authorization"] = self.client._sign(method, url)
-        started = time.monotonic()
-        try:
-            resp = self.client.http.request(method, url, headers=h, json=json_body, timeout=60)
-        except requests.RequestException:
-            netstatus.record(netstatus.CONNECT, url, None)
-            raise
-        log.info("HTTP %s %s -> %s in %.1f s", method, self.base + path, resp.status_code,
-                 time.monotonic() - started)
-        netstatus.record(netstatus.CONNECT, url, resp.status_code, resp)
+        # The client's way: a network failure is an ApiError without the address (its query
+        # names the unit ID), the log has no query, the network state is Garmin Connect's.
+        resp = self.client._request(method, url, what, service=netstatus.CONNECT, headers=h,
+                                    json=json_body, timeout=60)
         self.client._check(resp, what)
-        return lower_keys(resp.json()) if resp.content else None
+        return lower_keys(self.client._json(resp, what)) if resp.content else None
 
     def account_apps(self, device: GarminDevice, locale: str) -> list[StoreApp]:
         data = self._request("GET", "express/appstore/rest/apps/downloads",

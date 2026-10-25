@@ -2107,7 +2107,7 @@ def _run(args, service, requests) -> int:
         return 1
     except requests.RequestException as e:
         _error(_("Network error: could not reach the Garmin server ({error})").format(
-            error=e))
+            error=applog.network_error_text(e)))
         log.info("network error: %s", type(e).__name__)
         log.debug("network error", exc_info=True)
         return 1

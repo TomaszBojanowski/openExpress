@@ -219,7 +219,7 @@ def test_the_connect_iq_store_is_noted_under_garmin_connect(monkeypatch, network
     monkeypatch.setattr(requests.Session, "request",
                         lambda self, m, u, **kw: (_ for _ in ()).throw(
                             requests.ConnectionError("down")))
-    with pytest.raises(requests.ConnectionError):
+    with pytest.raises(ApiError):  # the client's way, without the address (25.10.2026)
         ciq.StoreApi(client)._request("GET", "express/x", "x")
     assert network_state.snapshot()[0][netstatus.CONNECT].kind == netstatus.NETWORK
 

@@ -146,9 +146,11 @@ class GarminClient:
         return requests.Request(method, url).prepare().url
 
     def _request(self, method: str, url: str, what: str, quiet: bool = False,
-                 **kw) -> requests.Response:
-        """Send a request; network failures become ApiError. `quiet` keeps the address out
-        of the log, for a path that names the device."""
+                 service: str | None = None, **kw) -> requests.Response:
+        """Send a request; network failures become ApiError, whose text names no address.
+        `quiet` keeps the address out of the log, for a path that names the device.
+        `service`: the service of the network state it is noted under (netstatus), for a
+        host that is not of the environment (the Connect IQ store); else by its host."""
         kw.setdefault("timeout", TIMEOUT)
         started = time.monotonic()
         # Only the host and the path go to the log: no query, no headers, no body.
@@ -159,14 +161,21 @@ class GarminClient:
         except requests.RequestException as e:
             log.warning("HTTP %s %s failed after %.1f s: %s", method, where,
                         time.monotonic() - started, type(e).__name__)
-            netstatus.record_failure(_hosts(self), url)
+            if service is None:
+                netstatus.record_failure(_hosts(self), url)
+            else:
+                netstatus.record(service, url, None)
             # Its text names the whole address, query and all (the sign-in ticket of the ticket
-            # exchange): filtered like the log before the window or the command line shows it.
+            # exchange, a unit ID): left out, and the rest filtered like the log, before the
+            # window or the command line shows it.
             raise ApiError(_("{what}: network error ({error})").format(
-                what=what, error=applog.redact(str(e)))) from e
+                what=what, error=applog.network_error_text(e))) from e
         log.info("HTTP %s %s -> %s in %.1f s", method, where, resp.status_code,
                  time.monotonic() - started)
-        netstatus.record_response(_hosts(self), url, resp)
+        if service is None:
+            netstatus.record_response(_hosts(self), url, resp)
+        else:
+            netstatus.record(service, url, resp.status_code, resp)
         return resp
 
     @staticmethod
