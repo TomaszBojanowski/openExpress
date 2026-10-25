@@ -287,13 +287,15 @@ def test_the_reason_is_only_in_the_banner():
 
 
 @pytest.mark.needs_display
-def test_the_page_of_a_remembered_device_tells_last_seen_against_now():
+def test_the_page_of_a_remembered_device_tells_last_seen_against_now(clock):
+    from datetime import timedelta
+
     from test_remembered_picture import _remembered, _window
 
     from openexpress.i18n import full_time
 
     known = _remembered()
-    known.last_seen = time.time() - 3 * 86400 - 60
+    known.last_seen = (clock.current - timedelta(days=3, minutes=1)).timestamp()
     win = _window()
     win._show_remembered(known)
     label = win.remembered.seen_label

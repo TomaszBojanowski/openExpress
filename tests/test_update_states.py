@@ -17,6 +17,7 @@ import types
 from datetime import datetime, timedelta
 
 import pytest
+from conftest import NOON
 from test_update_chips import _tile
 from test_update_record import UNIT, _check, _component, _page, _remembered, _shown, _summary
 from test_updates_system import (
@@ -34,31 +35,11 @@ from openexpress.device.storage import LocalStorage
 
 NB = "\u00a0"
 DAY = 86400.0
-# A moment of the made-up clock: noon, so that a day back is "yesterday, 12:00".
-NOON = datetime(2026, 10, 21, 12, 0)
 READY = "Update ready: disconnect the device to install it"
 
 
 def _bundle():
     return _entry("006-V0000-00", "Test Bundle", "Firmware", "Garmin", "GUPDATE.GSP", BUNDLE)
-
-
-class _Clock(datetime):
-    current = NOON
-
-    @classmethod
-    def now(cls, tz=None):
-        return cls.current
-
-
-@pytest.fixture
-def clock(monkeypatch):
-    """The window's clock (app.datetime), as the tests of the relative dates set it."""
-    from openexpress.gui import app
-
-    _Clock.current = NOON
-    monkeypatch.setattr(app, "datetime", _Clock)
-    return _Clock
 
 
 # --- devices.json: the last check that answered --------------------------------------------
@@ -297,13 +278,12 @@ def test_the_page_shows_ready_from_the_record_from_its_first_frame(device_root):
 
 
 def _found_yesterday(clock):
-    """A record of a day ago by the computer's clock (the page uses it only while recent),
-    the window's clock a day after it; and the hour of the record."""
+    """A record of yesterday at this hour by the made-up clock (the page uses it only while
+    recent); and the hour of the record."""
     _remembered()
-    found = time.time() - DAY
+    found = (clock.current - timedelta(days=1)).timestamp()
     known_devices.set_update_found(UNIT, True, now=found, summary=_summary(),
                                    software_version="23.39")
-    clock.current = datetime.fromtimestamp(found + DAY)
     return datetime.fromtimestamp(found).strftime("%H:%M")
 
 
@@ -423,11 +403,11 @@ def test_the_chips_of_ready_in_polish():
 
 
 @pytest.mark.needs_display
-def test_the_page_of_a_remembered_device_shows_the_last_check():
+def test_the_page_of_a_remembered_device_shows_the_last_check(clock):
     from test_remembered_picture import _window
 
     _remembered()
-    found = time.time() - 3 * DAY
+    found = (clock.current - timedelta(days=3)).timestamp()
     known_devices.set_update_found(UNIT, True, now=found, summary=_summary(),
                                    software_version="23.39")
     win = _window()
@@ -447,7 +427,8 @@ def test_the_page_of_a_device_only_on_the_account_asks_to_connect_it():
 
 
 @pytest.mark.needs_display
-def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monkeypatch):
+def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monkeypatch,
+                                                                         clock):
     """As on the start page and the device view: "Last seen", "Last sync" and the check of
     updates drawn again once a minute, only where the words changed; the timer runs while
     the page is shown."""
@@ -468,11 +449,9 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     def minute_timers():
         return [fn for seconds, fn in timers.values() if seconds == app.RELATIVE_REFRESH_S]
 
-    monkeypatch.setattr(app, "datetime", _Clock)
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, **kw: None)
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", add_seconds)
     monkeypatch.setattr(app.GLib, "source_remove", remove)
-    _Clock.current = NOON
     seen = (NOON - timedelta(minutes=2)).timestamp()
     known_devices.remember(UNIT, "fēnix 8 - 47mm, Solar", "006-B4532-00", "23.39", "mtp",
                            now=seen)
@@ -497,7 +476,7 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
         (tick,) = minute_timers()
         tick()
         assert changes == []  # the same words: left as they are
-        _Clock.current = NOON + timedelta(minutes=1)
+        clock.current = NOON + timedelta(minutes=1)
         tick()
         assert page.seen_label.get_label() == "Last seen 3 min ago"
         assert page.last_sync_row.get_subtitle() == f"3 min ago{NB}· 1 new file, 1 uploaded"

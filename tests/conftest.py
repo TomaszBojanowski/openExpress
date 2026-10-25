@@ -8,6 +8,7 @@ import signal
 import struct
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -475,6 +476,46 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     monkeypatch.setattr(gio_storage, "_drive_places", {})
     monkeypatch.setattr(gio_storage, "_said_0003", {})
     return folder
+
+
+# The moment of the made-up clock (`clock`): noon of a day far from a change of the clocks,
+# so that a day back is "yesterday" at the same hour, whatever the computer's clock says.
+NOON = datetime(2026, 10, 21, 12, 0)
+
+
+class _Clock(datetime):
+    """datetime with now() at the made-up moment `current` (naive, local time)."""
+
+    current = NOON
+
+    @classmethod
+    def now(cls, tz=None):
+        return cls.current if tz is None else cls.current.astimezone(tz)
+
+    @classmethod
+    def today(cls):
+        return cls.current
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    """One made-up clock for a test that tells a time against now: datetime.now() of the
+    window (gui.app), of its words (gui.words) and of i18n, and time.time(), all at
+    `clock.current` (NOON; a test moves it: clock.current += timedelta(days=2)). The
+    computer's clock then never decides the words (a day of 25 hours when the clocks go
+    back, the first minute after midnight). A moment a day back is best told by the wall
+    clock: (clock.current - timedelta(days=1)).timestamp()."""
+    import importlib
+
+    _Clock.current = NOON
+    for name in ("openexpress.i18n", "openexpress.gui.words", "openexpress.gui.app"):
+        try:
+            module = importlib.import_module(name)
+        except (ImportError, ValueError):  # no PyGObject: no window to tell the time
+            continue
+        monkeypatch.setattr(module, "datetime", _Clock)
+    monkeypatch.setattr(time, "time", lambda: _Clock.current.timestamp())
+    return _Clock
 
 
 @pytest.fixture

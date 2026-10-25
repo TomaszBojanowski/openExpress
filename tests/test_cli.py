@@ -78,10 +78,11 @@ def test_last_sync_is_remembered(xdg):
     assert service.load_last_sync(7) is None  # another watch
 
 
-def test_format_when():
-    import time
+def test_format_when(clock):
+    from datetime import timedelta
 
     from openexpress.i18n import format_when
 
-    assert format_when(time.time()).startswith("Today at ")
-    assert format_when(time.time() - 86400).startswith("Yesterday at ")
+    assert format_when(clock.current.timestamp()).startswith("Today at ")
+    yesterday = clock.current - timedelta(days=1)  # by the wall clock: a day may have 25 h
+    assert format_when(yesterday.timestamp()).startswith("Yesterday at ")
