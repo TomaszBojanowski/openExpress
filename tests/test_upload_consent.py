@@ -320,7 +320,7 @@ def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
     assert summary.downloaded == 1
     assert summary.text.splitlines() == ["2 new files, 2 uploaded · 1 received",
                                          "Files from the device: activities ×2",
-                                         "1 file from Garmin Connect: other data (FIT_TYPE_6)"]
+                                         "1 file from Garmin Connect: courses"]
     assert not any(line.endswith(".") for line in summary.text.splitlines())
 
 

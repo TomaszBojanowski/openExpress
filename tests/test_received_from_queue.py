@@ -147,8 +147,8 @@ def test_one_file_of_the_queue(device_root, xdg):
     session.client.messages = [COURSE]
     service.run_sync(session)
     record = service.load_last_sync(UNIT)
-    assert _details(record) == ["1 file from Garmin Connect: other data (FIT_TYPE_6)"]
-    assert _details(record, "pl") == [f"1 plik z{NB}Garmin Connect: inne dane (FIT_TYPE_6)"]
+    assert _details(record) == ["1 file from Garmin Connect: courses"]
+    assert _details(record, "pl") == [f"1 plik z{NB}Garmin Connect: kursy"]
 
 
 def test_no_file_from_the_queue_no_line(device_root, xdg):
@@ -209,3 +209,35 @@ def test_the_pattern_of_0_6_21_is_what_a_sync_writes():
                                 service.uploads_step(report),
                                 service.received_files_step(["FIT_TYPE_44"] * 3),
                                 service.trueup_step()]
+
+
+# Types that come from Garmin Connect's queue to a device (25.10.2026): workouts, courses,
+# schedules, goals and segments (FIT SDK), personal records and gear tracking (FIT profile;
+# both seen in the queue in the logs). Named as the other types are: what the data is, in the
+# plural for things counted.
+QUEUE_TYPES = [
+    ("FIT_TYPE_5", "workouts", "treningi"),
+    ("FIT_TYPE_6", "courses", "kursy"),
+    ("FIT_TYPE_7", "schedules", "harmonogramy"),
+    ("FIT_TYPE_11", "goals", "cele"),
+    ("FIT_TYPE_29", "personal records", "osobiste rekordy"),
+    ("FIT_TYPE_34", "segments", "segmenty"),
+    ("FIT_TYPE_87", "gear tracking", "śledzenie sprzętu"),
+]
+
+
+@pytest.mark.parametrize("datatype, english, polish", QUEUE_TYPES)
+def test_the_types_the_queue_brings_have_names(datatype, english, polish):
+    assert service.type_name(datatype) == english
+    i18n.setup("pl")
+    try:
+        assert service.type_name(datatype) == polish
+    finally:
+        i18n.setup("en")
+
+
+def test_courses_and_workouts_in_the_line_of_the_queue():
+    line = service.received_files_step(["FIT_TYPE_6", "FIT_TYPE_5", "FIT_TYPE_6"])
+    assert _details({"lines": [line]}) == ["3 files from Garmin Connect: workouts, courses ×2"]
+    assert _details({"lines": [line]}, "pl") == [
+        f"3 pliki z{NB}Garmin Connect: treningi, kursy ×2"]

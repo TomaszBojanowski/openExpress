@@ -480,17 +480,25 @@ class SyncSummary:
 # (e.g. ".../upload/hrvstatus"), or the folder the device declares for it in GarminDevice.xml
 # (e.g. "Garmin/Sleep"); where the name in the FIT profile is technical, the name says what the
 # data is, after that name and the folder the device declares. Any other type is shown as
-# "other data (NAME)". Types with the same name are counted together.
+# "other data (NAME)". Types with the same name are counted together. "queue": a type seen
+# coming from Garmin Connect's queue to a device (the logs, the download of the queue); the
+# names also say what came from there.
 TYPE_NAMES = {
     "FIT_TYPE_4": N_("activities"),             # FIT SDK: activity; upload: activity
+    "FIT_TYPE_5": N_("workouts"),               # FIT SDK: workout; queue
+    "FIT_TYPE_6": N_("courses"),                # FIT SDK: course; queue
+    "FIT_TYPE_7": N_("schedules"),              # FIT SDK: schedules
     "FIT_TYPE_9": N_("weight"),                 # FIT SDK: weight; upload: weight
-    "FIT_TYPE_20": N_("activity summary"),      # FIT SDK: activity_summary
+    "FIT_TYPE_11": N_("goals"),                 # FIT SDK: goals; queue
+    "FIT_TYPE_20": N_("activity summary"),      # FIT SDK: activity_summary; queue
     "FIT_TYPE_28": N_("daily monitoring"),      # FIT SDK: monitoring_daily
+    "FIT_TYPE_29": N_("personal records"),      # FIT profile: personal_records; queue
     "FIT_TYPE_32": N_("monitoring"),            # FIT SDK: monitoring_b
+    "FIT_TYPE_34": N_("segments"),              # FIT SDK: segment
     "FIT_TYPE_35": N_("segment list"),          # FIT SDK: segment_list; upload: segment-list
     "FIT_TYPE_38": N_("golf scorecards"),       # folder: SCORCRDS
-    "FIT_TYPE_41": N_("settings change log"),   # FIT profile: settings_change_log
-    "FIT_TYPE_44": N_("metrics"),               # upload: metrics
+    "FIT_TYPE_41": N_("settings change log"),   # FIT profile: settings_change_log; queue
+    "FIT_TYPE_44": N_("metrics"),               # upload: metrics; queue
     "FIT_TYPE_49": N_("sleep"),                 # folder: Sleep
     # FIT profile: device_monitoring ("data logged on a device level", not the wearer's
     # monitoring); upload: device-monitoring; folder: Garmin/Device
@@ -505,6 +513,7 @@ TYPE_NAMES = {
     # FIT profile: adaptive_coaching_schedule; folder: Garmin/Coach
     "FIT_TYPE_77": N_("Garmin Coach plan"),
     "FIT_TYPE_79": N_("sleep disruptions"),     # upload: sleep-disruptions
+    "FIT_TYPE_87": N_("gear tracking"),         # FIT profile: gear_tracking; queue
     "FIT_TYPE_88": N_("multi-day activities"),  # upload: multi-day-activity
     "BACKUP_PRIMARY": N_("device backup"),      # upload: backup
     "BACKUP_SUPPLEMENTARY": N_("device backup"),

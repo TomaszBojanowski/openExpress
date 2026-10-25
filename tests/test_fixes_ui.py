@@ -224,7 +224,7 @@ def test_the_command_line_names_the_files_from_garmin_connect(device_root, xdg, 
     capsys.readouterr()
     assert main(["--path", str(device_root), "sync", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert "1 file from Garmin Connect: other data (FIT_TYPE_6)" in out
+    assert "1 file from Garmin Connect: courses" in out
     assert "nothing to upload · 1 received" in out
     record = service.load_last_sync(1234567890)
     assert record["lines"] == [service.received_files_step(["FIT_TYPE_6"])]
