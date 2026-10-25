@@ -124,7 +124,7 @@ def test_cli_install_queues_it(no_list, device_root, apps_cli, capsys):
     assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
     out = capsys.readouterr().out
     assert FakeStore.queued == [["Face It"]] and apps_files(st) == []
-    assert "Face It" in out and "no Connect IQ app list yet" in out
+    assert "Face It" in out and "has not provided its Connect IQ app list yet" in out
 
 
 def test_cli_with_an_unreadable_list_is_as_before(iq_device, device_root, apps_cli, capsys):
@@ -216,9 +216,21 @@ def test_the_window_says_why_an_app_was_only_queued():
     from openexpress.gui.app import MainWindow
 
     text = MainWindow._for_phone_text(["Face It"], no_app_list=True)
-    assert text == ("Face It: the device has no Connect IQ app list yet. The app waits in the "
-                    "queue in Garmin Connect and will be installed by the phone or Garmin "
-                    "Express.")
+    assert text == ("Face It: the device has not provided its Connect IQ app list yet. The app "
+                    "waits in the queue in Garmin Connect; openExpress installs it the next time "
+                    "the device is connected with its list, or the phone may do it earlier.")
+
+
+def test_the_words_of_an_app_only_queued_in_polish():
+    i18n.setup("pl")
+    try:
+        text = ciq.no_app_list_text(["Face It"])
+    finally:
+        i18n.setup("en")
+    assert text == ("Face It: urządzenie nie udostępniło jeszcze listy aplikacji Connect IQ. "
+                    "Aplikacja czeka w\u00a0kolejce Garmin Connect; openExpress zainstaluje ją "
+                    "przy następnym podłączeniu urządzenia z\u00a0listą, a\u00a0telefon może "
+                    "zrobić to wcześniej.")
 
 
 def _descendants(widget):
