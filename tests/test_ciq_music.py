@@ -2006,7 +2006,8 @@ def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
     root = str(st.root)
     assert main(["--path", root, "apps", "order"]) == 0
     out = capsys.readouterr().out
-    assert "GARMIN-APPS 2026-01-02 (03.04.05): 7 entries, 5 positions differ from now" in out
+    # The apps to move (25.10.2026): five positions change, two apps move.
+    assert "GARMIN-APPS 2026-01-02 (03.04.05): 7 entries, 2 apps moved" in out
 
     assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 0
     out = capsys.readouterr().out.splitlines()
@@ -2392,8 +2393,9 @@ def test_order_choices_are_newest_first_with_their_differences(old_copies):
     assert [c.name for c, _plan in choices] == [
         f"GARMIN-APPS 2026-10-12 ({s})" for s in reversed(stamps)]
     rows = MainWindow._order_rows(choices)
-    assert rows[0] == ("2026-10-12 (21.19.41)", "2 positions differ from now", True)
-    assert rows[-1] == ("2026-10-12 (17.37.37)", "5 positions differ from now", True)
+    # The apps to move, not the positions that change (25.10.2026; 2 and 5 positions).
+    assert rows[0] == ("2026-10-12 (21.19.41)", "1 app moved", True)
+    assert rows[-1] == ("2026-10-12 (17.37.37)", "2 apps moved", True)
     assert not any(str(dev.unit_id) in text for row in rows for text in row[:2])
     # A copy made by the program carries the model after the time; one in the order the
     # device has now cannot be chosen.

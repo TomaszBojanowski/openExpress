@@ -34,7 +34,7 @@ from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
 from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import N_, _, ngettext
+from openexpress.i18n import N_, _, caption, ngettext
 
 log = logging.getLogger(__name__)
 
@@ -1654,6 +1654,46 @@ def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
                if key(now) != key(then)],
         only_in_copy=[a for a in copy.apps if key(a) not in on_device],
         only_on_device=[a for a in current if key(a) not in rank])
+
+
+def apps_moved(plan: OrderPlan) -> int:
+    """How many apps have to be moved to get from the order on the device to the order of
+    the copy (25.10.2026): the fewest moves, so the apps in both lists outside their longest
+    common subsequence. One app taken from the top to the bottom changes every position, but
+    is one app moved. Apps only on the device keep their place and are not counted."""
+    def key(a):
+        return a.app_id, a.app_type
+
+    now = list(plan.entries)
+    for position, before, _then in plan.moved:
+        now[position - 1] = before
+    apart = {key(a) for a in plan.only_on_device}
+    first = [key(a) for a in now if key(a) not in apart]
+    second = [key(a) for a in plan.entries if key(a) not in apart]
+    # The longest common subsequence, a row of the table at a time.
+    before_row = [0] * (len(second) + 1)
+    for a in first:
+        row = [0]
+        for j, b in enumerate(second, 1):
+            row.append(before_row[j - 1] + 1 if a == b else max(before_row[j], row[j - 1]))
+        before_row = row
+    return len(first) - before_row[-1]
+
+
+def order_difference(plan: OrderPlan) -> str:
+    """How a copy differs from the order on the device, in the words of the dialog and the
+    command line: the apps moved (apps_moved), then the apps only in the copy and those only
+    on the device, when there are any."""
+    moved = apps_moved(plan)
+    # TRANSLATORS: how a copy of the app list differs from the order on the device
+    parts = [ngettext("{count} app moved", "{count} apps moved", moved).format(count=moved)]
+    if plan.only_in_copy:
+        # TRANSLATORS: after "{count} apps moved": apps of the copy that the device has not
+        parts.append(_("{count} not on the device").format(count=len(plan.only_in_copy)))
+    if plan.only_on_device:
+        # TRANSLATORS: after "{count} apps moved": apps of the device that the copy has not
+        parts.append(_("{count} not in the copy").format(count=len(plan.only_on_device)))
+    return caption(*parts)
 
 
 def order_choices(device: GarminDevice, state: InstalledState,

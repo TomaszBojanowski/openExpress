@@ -340,6 +340,20 @@ def open_to_sync(s):
     return types.SimpleNamespace(count=count) if count is not None else None
 
 
+def order_list_at_its_top(dialog) -> None:
+    """The list of copies of "Restore the order from a copy", once shown: no row chosen
+    (Next waits for the user's choice) and scrolled to its top, its first row whole."""
+    scroller = dialog.get_extra_child()
+    if not isinstance(scroller, Gtk.ScrolledWindow):
+        return
+    box = scroller.get_child()
+    box = box.get_child() if isinstance(box, Gtk.Viewport) else box
+    if isinstance(box, Gtk.ListBox):
+        box.unselect_all()
+    adjustment = scroller.get_vadjustment()
+    adjustment.set_value(adjustment.get_lower())
+
+
 def account_pending(win) -> bool:
     """Whether the account's list is not known yet but asked: a login saved, and neither a
     list nor why there is none (logged out, an error) came yet. The tiles of the first frame
@@ -4513,11 +4527,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
         rows = []
         for copy, plan in choices:
-            n = len(plan.moved)
+            # The apps to move, not the positions that change (25.10.2026).
+            moved = ciq.apps_moved(plan)
             rows.append((ciq.copy_title(copy),
-                         ngettext("{count} position differs from now",
-                                  "{count} positions differ from now", n).format(count=n)
-                         if n else _("The same order as now"), bool(n)))
+                         ciq.order_difference(plan) if moved else _("The same order as now"),
+                         bool(moved)))
         return rows
 
     @staticmethod
@@ -4601,6 +4615,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             box.connect("row-selected", selected)
             d.connect("response", response)
             d.connect("closed", lambda _d: setattr(self, "_order_dialog", None))
+            # Shown, the list chooses its first row as it takes the focus: none is chosen
+            # until the user does, and it is at its top (25.10.2026). From the signal's
+            # dialog, not a widget held here.
+            d.connect("map", order_list_at_its_top)
             d.present(self)
 
         self.run_task(_("Reading the copies of the app list…"), work, show, button=button)

@@ -1175,12 +1175,10 @@ def _apps_order(args, dev, st, state) -> int:
         print(_("Copies of the app list (OUT.BIN); entries on the device now: {count}").format(
             count=len(state.listed)))
         for c in copies:
+            # The same measure as the window: the apps to move (25.10.2026).
             plan = ciq.plan_order(state, c.state)
-            print("  " + ngettext(
-                "{name}: {entries} entries, {count} position differs from now",
-                "{name}: {entries} entries, {count} positions differ from now",
-                len(plan.moved)).format(name=c.name, entries=len(c.state.apps),
-                                        count=len(plan.moved)))
+            print("  " + _("{name}: {entries} entries, {difference}").format(
+                name=c.name, entries=len(c.state.apps), difference=ciq.order_difference(plan)))
         print(_("Show what a copy would change: openexpress apps order --from NAME"))
         return 0
 
