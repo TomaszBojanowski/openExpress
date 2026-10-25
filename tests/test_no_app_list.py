@@ -217,8 +217,9 @@ def test_the_window_says_why_an_app_was_only_queued():
 
     text = MainWindow._for_phone_text(["Face It"], no_app_list=True)
     assert text == ("Face It: the device has not provided its Connect IQ app list yet. The app "
-                    "waits in the queue in Garmin Connect; openExpress installs it the next time "
-                    "the device is connected with its list, or the phone may do it earlier.")
+                    "waits in the queue in Garmin Connect. Once the device shows its app list, "
+                    "open the Apps page and press Install again; the phone may install it "
+                    "earlier.")
 
 
 def test_the_words_of_an_app_only_queued_in_polish():
@@ -227,10 +228,11 @@ def test_the_words_of_an_app_only_queued_in_polish():
         text = ciq.no_app_list_text(["Face It"])
     finally:
         i18n.setup("en")
+    # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
     assert text == ("Face It: urządzenie nie udostępniło jeszcze listy aplikacji Connect IQ. "
-                    "Aplikacja czeka w\u00a0kolejce Garmin Connect; openExpress zainstaluje ją "
-                    "przy następnym podłączeniu urządzenia z\u00a0listą, a\u00a0telefon może "
-                    "zrobić to wcześniej.")
+                    "Aplikacja czeka w\u00a0kolejce Garmin Connect. Gdy urządzenie pokaże listę "
+                    "aplikacji, otwórz stronę Aplikacje i\u00a0ponownie kliknij Zainstaluj; "
+                    "telefon może zainstalować ją wcześniej.")
 
 
 def _descendants(widget):

@@ -346,10 +346,11 @@ def no_apps_text() -> str:
 def no_app_list_text(names: list[str]) -> str:
     """Why apps were only queued for a device without an app list (OUT.BIN): the device
     makes it later (#14: on the second day; when exactly is not known yet)."""
-    return _("{names}: the device has not provided its Connect IQ app list yet. The app waits "
-             "in the queue in Garmin Connect; openExpress installs it the next time the device "
-             "is connected with its list, or the phone may do it earlier.").format(
-        names=", ".join(names))
+    # TRANSLATORS: "Install" is the button of the Apps page
+    return _("{app}: the device has not provided its Connect IQ app list yet. The app waits in "
+             "the queue in Garmin Connect. Once the device shows its app list, open the Apps "
+             "page and press Install again; the phone may install it earlier.").format(
+        app=", ".join(names))
 
 
 def require_complete(state: InstalledState) -> None:
