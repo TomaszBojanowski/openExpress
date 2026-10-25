@@ -175,12 +175,17 @@ def universal_serves(map_update_type, device) -> bool:
     return any(name.casefold() == wanted for name in device.datatypes())
 
 
-def check(client, device) -> tuple[list[UniversalMap], int]:
+def check(client, device, ask=None) -> tuple[list[UniversalMap], int]:
     """The maps of the device as the universal map service lists them (read_maps), once
     unit-info says that service serves it; MapsNotSupported when it does not. A failed
     unit-info fails the check: without it, which service serves the device is not known.
-    One line in the log says the way the check went (the part number only)."""
-    info = client.unit_info(device.unit_id, device.part_number) if device.unit_id else {}
+    `ask` gives unit-info's answer (the window: the one of the session, service.unit_info);
+    none: it is asked here. One line in the log says the way the check went (the part
+    number only)."""
+    if ask is not None:
+        info = ask()
+    else:
+        info = client.unit_info(device.unit_id, device.part_number) if device.unit_id else {}
     value = info.get("mapupdatetype") if isinstance(info, dict) else None
     if value is None or value == "":
         said = "none given"

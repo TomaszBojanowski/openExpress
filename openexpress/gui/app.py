@@ -338,11 +338,13 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 PICTURE_SIGNATURES = {"image/png": PNG_SIGNATURE, "image/jpeg": b"\xff\xd8\xff"}
 
 
-def picture_from_unit_info(client, device) -> str | None:
+def picture_from_unit_info(client, device, ask=None) -> str | None:
     """The address of the device's picture according to Garmin's update server. The rest of
-    the answer (unit ID, serial number…) is dropped here and goes nowhere."""
+    the answer (unit ID, serial number…) is dropped here and goes nowhere. `ask` gives the
+    answer (the one of the session, service.unit_info); none: it is asked here."""
     try:
-        info = client.unit_info(device.unit_id, device.part_number)
+        info = ask() if ask is not None else client.unit_info(device.unit_id,
+                                                              device.part_number)
     except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
         log.info("device picture: unit-info failed (%s)", type(e).__name__)
         return None
@@ -373,12 +375,14 @@ def note_segment(device, info) -> None:
                                         info.get("mapupdatetype"))
 
 
-def is_bike_accessory(client, device) -> bool:
+def is_bike_accessory(client, device, ask=None) -> bool:
     """Whether Garmin's update server files the device as a bike accessory (e.g. a Varia),
     which finishes an update once it is unplugged and switched on. Only this field of the
-    answer is read; the rest (unit ID, serial number…) goes nowhere."""
+    answer is read; the rest (unit ID, serial number…) goes nowhere. `ask` gives the answer
+    (the one of the session, service.unit_info); none: it is asked here."""
     try:
-        info = client.unit_info(device.unit_id, device.part_number)
+        info = ask() if ask is not None else client.unit_info(device.unit_id,
+                                                              device.part_number)
     except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
         log.info("software update: unit-info failed (%s)", type(e).__name__)
         return False
@@ -2890,10 +2894,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
                 # back once the cache is cleared (a Venu 2, 21.10.2026). The file stays.
                 # A drive whose kind Garmin has not told: asked once a run as well, so that
                 # the log says what unit-info tells of it (an inReach, #11).
-                self.in_background(
-                    lambda: remember_picture_address(s.device,
-                                                     picture_from_unit_info(s.client, s.device)),
-                    lambda _r: None)
+                def address():
+                    return picture_from_unit_info(s.client, s.device,
+                                                  ask=lambda: service.unit_info(s))
+
+                self.in_background(lambda: remember_picture_address(s.device, address()),
+                                   lambda _r: None)
             return
         self.device_image.set_visible(True)
         self.device_picture.set_visible(False)
@@ -2911,7 +2917,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
                 path = cached_download(s.client.http, url, name) if url else None
                 if path:
                     return path, "the account"
-            url = picture_from_unit_info(s.client, s.device)
+            url = picture_from_unit_info(s.client, s.device,
+                                         ask=lambda: service.unit_info(s))
             if not url:
                 return None, "unit-info gave no address"
             remember_picture_address(s.device, url)
@@ -3098,7 +3105,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
 
         def work():
             try:
-                result = mp.check(s.client, s.device)
+                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s))
             except mp.MapsNotSupported:
                 return None  # the row says so; nothing to read on the device
             mp.mark_waiting(s.storage, result[0])
@@ -3754,7 +3761,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         def install():
             rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress,
                               transfer_progress=self.fraction, download_progress=self.fraction)
-            return rep, mass_storage and is_bike_accessory(s.client, s.device)
+            return rep, mass_storage and is_bike_accessory(
+                s.client, s.device, ask=lambda: service.unit_info(s))
 
         def installed(result):
             rep, bike_accessory = result

@@ -7,6 +7,7 @@ import contextlib
 import fcntl
 import json
 import logging
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -53,6 +54,9 @@ class DeviceSession:
     # a count was started.
     to_sync: sync.ActivitiesToSync | None = None
     to_sync_asked: bool = False
+    # What Garmin's update server said of the device (unit-info), asked once for the
+    # session (unit_info()); it carries the unit ID and the serial number: never shown.
+    unit_info_answer: dict | None = field(default=None, repr=False)
 
     @property
     def logged_in(self) -> bool:
@@ -70,6 +74,32 @@ class DeviceSession:
     def mass_storage(self) -> bool:
         """A Garmin device in mass storage mode: never synced, nothing asked of the account."""
         return self.storage.mass_storage
+
+
+# unit-info is asked by threads of the window at the same time (the "Maps" row, the picture):
+# one asks, the others wait for its answer.
+_unit_info_lock = threading.Lock()
+
+
+def unit_info(session) -> dict:
+    """What Garmin's update server says of the open device (unit-info), asked once for the
+    session, that is for each opening of the device: the "Maps" row, the Maps page and the
+    picture use the one answer. A failed request is not kept, so the next one asks again.
+    The answer stays in memory with the session only."""
+    with _unit_info_lock:
+        answer = getattr(session, "unit_info_answer", None)
+        if answer is None:
+            device = session.device
+            answer = (session.client.unit_info(device.unit_id, device.part_number)
+                      if device.unit_id else {})
+            session.unit_info_answer = answer
+        return answer
+
+
+def forget_unit_info(session) -> None:
+    """The maps checked again by hand: the next unit_info() asks the server anew."""
+    with _unit_info_lock:
+        session.unit_info_answer = None
 
 
 class MassStorageMode(Exception):

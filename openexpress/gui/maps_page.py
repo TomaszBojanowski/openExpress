@@ -14,12 +14,20 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress import service  # noqa: E402
 from openexpress.cli import _human  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.i18n import _, caption  # noqa: E402
 
 # The window's logger: the lines of this page stay where they were before the split.
 log = logging.getLogger("openexpress.gui.app")
+
+
+def _check_again(win) -> None:
+    """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too."""
+    if win.session is not None:
+        service.forget_unit_info(win.session)
+    win.load_section("maps", force=True)
 
 
 def _no_maps(win, sec, text: str) -> None:
@@ -32,7 +40,7 @@ def _no_maps(win, sec, text: str) -> None:
     box.append(title)
     check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
     check.add_css_class("pill")
-    check.connect("clicked", lambda *_a: win.load_section("maps", force=True))
+    check.connect("clicked", lambda *_a: _check_again(win))
     box.append(check)
     sec.group().add(box)
 
@@ -50,7 +58,7 @@ class MapsPage:
             # Garmin's server, then the map folder of the device for the maps that are not
             # Garmin's (the folder and the first bytes of each such file).
             try:
-                result = mp.check(s.client, s.device)
+                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s))
             except mp.MapsNotSupported:
                 # No check of Garmin's maps, which the page says; the maps of your own do not
                 # depend on it (Garmin's list: none, so their names alone are kept apart).
@@ -102,7 +110,7 @@ class MapsPage:
         # The list is what Garmin's server said when the page was opened; a device that has
         # just been plugged in may not have named all its map files yet.
         g.set_header_suffix(self._button(
-            _("Check Again"), lambda: self.load_section("maps", force=True)))
+            _("Check Again"), lambda: _check_again(self)))
         if free is not None and total:
             used_by_maps = sum(m.size for m in installed if m.occupies)
             row = Adw.ActionRow(

@@ -860,6 +860,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
     from openexpress.gui.app import MainWindow
 
     asked = {"maps": [], "updates": []}
+    unit_infos = []  # the requests for unit-info
 
     def server(kind, answers):
         asked[kind].append(b"xml")
@@ -908,7 +909,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
     session = types.SimpleNamespace(
         client=types.SimpleNamespace(
             universal_maps=lambda raw: server("maps", maps_answers),
-            unit_info=lambda unit_id, part_number: UNIVERSAL,
+            unit_info=lambda unit_id, part_number: (unit_infos.append(unit_id), UNIVERSAL)[1],
             software_updates=lambda raw, include_reinstalls=False: server(
                 "updates", updates_answers)),
         # A device that declares no folder for maps: the Maps page has no own maps.
@@ -937,6 +938,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
                  "_check_maps_quietly", "_set_map_state", "_render_map_state",
                  "_check_updates_quietly", "_set_update_state", "_render_update_state"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    win.unit_info_calls = unit_infos
     return win, asked
 
 
@@ -948,6 +950,16 @@ def test_a_refresh_on_the_maps_page_asks_the_map_server_once(server, device_root
     # The answer of the Maps page is the row's too.
     assert (win.map_state, win.map_row.subtitle) == ("available", "1 update available")
     assert win._map_check_session is None
+
+
+def test_opening_a_device_and_its_maps_page_asks_unit_info_once(server, device_root):
+    """unit-info once for each opening of a device (25.10.2026): the "Maps" row of the device
+    page and then the Maps page use the one answer kept in the session."""
+    win, asked = _refresh_window("watch", device_root, [map_answer(server, 1, 1)] * 2,
+                                 [sw_response(server)])
+    win.show_device()  # the device page: its "Maps" row checks quietly
+    win.load_section("maps")  # then the Maps page
+    assert len(asked["maps"]) == 2 and len(win.unit_info_calls) == 1
 
 
 def test_a_refresh_on_the_maps_page_that_fails_asks_once_and_the_row_says_so(device_root):
@@ -1075,8 +1087,10 @@ def _real_maps_page(answers, device_root, unit_info=UNIVERSAL):
         return answers[min(len(asked), len(answers)) - 1]
 
     win.session = types.SimpleNamespace(
-        client=types.SimpleNamespace(universal_maps=universal_maps,
-                                     unit_info=lambda unit_id, part_number: unit_info),
+        client=types.SimpleNamespace(
+            universal_maps=universal_maps,
+            unit_info=unit_info if callable(unit_info) else (
+                lambda unit_id, part_number: unit_info)),
         # A device that declares no folder for maps: the page has no group of own maps.
         device=types.SimpleNamespace(raw=b"xml", unit_id=3000000002, part_number="006-B0000-00",
                                      targets=lambda datatype: []),
@@ -1094,6 +1108,24 @@ def _real_maps_page(answers, device_root, unit_info=UNIVERSAL):
 
 def check_again_buttons(win):
     return [b for b in win._action_buttons if b.get_label() == "Check Again"]
+
+
+@pytest.mark.needs_display
+def test_check_again_on_the_maps_page_asks_unit_info_again(server, device_root):
+    """The Maps page checked again by hand asks unit-info anew; loading it does not ask twice."""
+    calls = []
+
+    def unit_info(unit_id, part_number):
+        calls.append(unit_id)
+        return UNIVERSAL
+
+    win, _section, asked = _real_maps_page([maps_response(server)], device_root,
+                                           unit_info=unit_info)
+    win.load_section("maps")
+    assert (len(calls), len(asked)) == (1, 1)
+    (button,) = check_again_buttons(win)
+    button.emit("clicked")
+    assert (len(calls), len(asked)) == (2, 2)
 
 
 @pytest.mark.needs_display

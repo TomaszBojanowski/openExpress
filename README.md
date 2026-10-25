@@ -454,8 +454,10 @@ copy to the device is running.
 - The picture of a device that is not on the signed-in account (or when nobody is signed
   in) is looked up on Garmin's update server, and so, once each time openExpress runs, is
   what that server says of an open device in mass storage mode whose kind Garmin has not
-  told; before each map check the same request tells which map service serves the device.
-  Like the update check, that request names the device (unit ID). The answer is not
+  told. The same request tells which map service serves the device: it is made once each
+  time a device is opened, and again when its maps are checked again by hand, and its
+  answer also serves the picture. Like the update check, that request names the device
+  (unit ID). The answer is kept in memory only while the device is open and is not
   stored: only the picture is cached, and the address of the picture of the model is kept
   with the devices this installation remembers, so that the picture can be downloaded again
   after the cache is cleared. Of the answer, the log names only the map update type (which

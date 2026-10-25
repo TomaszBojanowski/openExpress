@@ -140,3 +140,71 @@ def test_cli_maps_with_path_asks_as_before(device_root, monkeypatch):
     code, asked = _cli_maps(device_root, monkeypatch, {"mapUpdateType": "LegacyRmu"},
                             "--path", str(Path(device_root)))
     assert code == 0 and asked == ["universal"]
+
+
+# --- unit-info once for each opening of a device (25.10.2026) ------------------------------
+
+def _session(client):
+    """A session as the window holds one: the client and the device it opened."""
+    import types
+
+    return types.SimpleNamespace(client=client, device=device(PPNM))
+
+
+def test_unit_info_is_asked_once_a_session_and_again_when_forgotten():
+    from openexpress import service
+
+    client = Client({"mapupdatetype": "UniversalDetect"})
+    s = _session(client)
+    assert service.unit_info(s) == service.unit_info(s) == {"mapupdatetype": "UniversalDetect"}
+    assert len(client.asked) == 1  # the second answer is the session's
+    service.forget_unit_info(s)  # "Check Again" on the Maps page
+    service.unit_info(s)
+    assert len(client.asked) == 2
+    service.unit_info(_session(client))  # another opening of the device: a new session
+    assert len(client.asked) == 3
+
+
+def test_a_failed_unit_info_is_not_kept():
+    from openexpress import service
+
+    client = Client(ApiError("Device info: network error (ConnectionError)"))
+    s = _session(client)
+    for _ in range(2):
+        with pytest.raises(ApiError):
+            service.unit_info(s)
+    assert len(client.asked) == 2  # each one asked: nothing was kept of the failure
+
+
+def test_two_threads_of_the_window_ask_unit_info_once():
+    """The "Maps" row and the picture ask in the background at the same time: one request."""
+    import threading
+    import time
+
+    from openexpress import service
+
+    class Slow(Client):
+        def unit_info(self, unit_id, part_number):
+            time.sleep(0.2)
+            return super().unit_info(unit_id, part_number)
+
+    client = Slow({"mapupdatetype": "Universal"})
+    s = _session(client)
+    threads = [threading.Thread(target=service.unit_info, args=(s,)) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(client.asked) == 1
+
+
+def test_the_picture_and_the_map_check_share_the_answer_of_the_session():
+    from openexpress import service
+    from openexpress.gui import app
+
+    client = Client({"mapupdatetype": "Universal", "graphicurl": "https://example.com/d.png"})
+    s = _session(client)
+    assert app.picture_from_unit_info(s.client, s.device, ask=lambda: service.unit_info(s)) == (
+        "https://example.com/d.png")
+    assert maps.check(s.client, s.device, ask=lambda: service.unit_info(s)) == ([], 0)
+    assert client.asked == [("unit-info", UNIT, PART), ("universal",)]
