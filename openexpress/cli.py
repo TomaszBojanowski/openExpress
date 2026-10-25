@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import collections
 import contextlib
+import importlib.util
 import json
 import logging
 import sys
@@ -1984,6 +1985,11 @@ def _main(argv: list[str] | None) -> int:
         args._parser.error(_("--key and --secret must be given together"))
     if args.lang:
         i18n.setup(args.lang)
+    if importlib.util.find_spec("gi") is None:
+        # Without PyGObject no command can open a device or a window: one line and exit
+        # code 1, not the traceback of the first import of GLib (--help and --version above).
+        _error(no_pygobject_text())
+        return 1
     import requests
 
     from openexpress import applog, service
@@ -2007,6 +2013,15 @@ def _main(argv: list[str] | None) -> int:
     finally:
         log.info("end: %s, exit code %s, %.1f s", args.cmd or "-", code,
                  time.monotonic() - started)
+
+
+def no_pygobject_text() -> str:
+    """PyGObject is not installed (a virtual environment without the system's packages):
+    what to install, with the package names of Fedora, Arch and Debian."""
+    return _("openExpress needs PyGObject with GTK 4 and libadwaita. Install them (Fedora: "
+             "sudo dnf install python3-gobject gtk4 libadwaita; Arch: sudo pacman -S "
+             "python-gobject gtk4 libadwaita; Debian and Ubuntu: sudo apt install python3-gi "
+             "gir1.2-gtk-4.0 gir1.2-adw-1), then run the command again.")
 
 
 def _command_line(args, argv) -> str:

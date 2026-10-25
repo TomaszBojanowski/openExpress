@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68"]
+# 77: the licence as an SPDX expression with license-files (PEP 639)
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -22,14 +23,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Utilities",
 ]
-dependencies = ["requests>=2.28"]
+# PyGObject: every command opens a device through GIO, `login` a window of WebKit.
+dependencies = ["requests>=2.28", "PyGObject>=3.46"]
 
 [project.urls]
 Homepage = "https://github.com/TomaszBojanowski/openExpress"
 Issues = "https://github.com/TomaszBojanowski/openExpress/issues"
 
 [project.optional-dependencies]
-gui = ["PyGObject>=3.46"]
 music = ["mutagen>=1.45"]
 test = ["pytest>=7"]
 
