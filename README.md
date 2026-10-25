@@ -117,6 +117,7 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 | Venu 2 (part 006-B3703) | read-only commands tested; it was the first device to get software updates installed with openExpress (two components, Time Zone Map and Exercise to muscle mapping, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
 | Edge 540 (part 006-B4061-00) | reported by a user in [#18](https://github.com/TomaszBojanowski/openExpress/issues/18) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): detected; sync, software updates and maps work |
 | Forerunner 55 (part 006-B3869-00) | reported by a user in [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): connects as a USB drive: software updates work, sync not yet |
+| Forerunner 920XT (part 006-B1765-00) | reported by a user in [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): connects as a USB drive: software updates work (time-zone map updated), sync not yet |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a
