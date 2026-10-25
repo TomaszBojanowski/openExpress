@@ -340,6 +340,14 @@ def open_to_sync(s):
     return types.SimpleNamespace(count=count) if count is not None else None
 
 
+def account_pending(win) -> bool:
+    """Whether the account's list is not known yet but asked: a login saved, and neither a
+    list nor why there is none (logged out, an error) came yet. The tiles of the first frame
+    say the sync from a record then (devicelist._sync_of)."""
+    return (getattr(win, "_account", None) is None and getattr(win, "_account_why", None) is None
+            and store.exists())
+
+
 def remember_sync_count(counted) -> None:
     """Keep what a count of the activities to upload found (sync.ActivitiesToSync) with the
     device, for its tile from the first frame, with the version of its sync state now; a
@@ -2567,7 +2575,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
         self.connected.drew(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
-                                     logged_in=self._account is not None)
+                                     logged_in=self._account is not None,
+                                     account_pending=account_pending(self))
         self._start_entries = [
             (tile, source if isinstance(source, KnownDevice | dict)
              else OPEN if self._is_open(source) else source.found)
@@ -2631,7 +2640,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         (the next drawing shows them)."""
         summaries, _notice = self._start_summaries()
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
-                                     logged_in=self._account is not None)
+                                     logged_in=self._account is not None,
+                                     account_pending=account_pending(self))
         drawn = self._start_entries
         if len(entries) != len(drawn) or any(
                 without_sync(tile) != without_sync(old)

@@ -280,3 +280,90 @@ def test_the_last_sync_of_the_device_page_says_the_count_from_the_record_too():
                                       ownership_error=None, to_sync=None))
     MainWindow._show_last_sync(win)
     assert win.last_sync_row.get_subtitle().endswith("\u00a0· 2 new activities to upload")
+
+
+# --- the first frame comes before the account's list (25.10.2026, seen in the window) -----------
+#
+# Opened from source a second time, the tiles of the fēnix and the Edge got "To sync" and
+# "Synced" some 300 ms after the first frame: the record was valid, but the tiles were drawn
+# before the account's list came, and without it the sync of a tile was not said at all.
+
+
+def _opened(win_of, monkeypatch, logged_in=True):
+    """A window opened on the same files as the one before: the first frame drawn while the
+    account's list is still asked (a login saved), then the list, then the count in the
+    background. The chips of the first frame, and the window."""
+    from openexpress.auth import store
+    from openexpress.gui import app
+
+    monkeypatch.setattr(store, "exists", lambda: logged_in)
+    win = win_of()
+    win._account, win._account_why = None, None
+    for name in ("_set_account", "_render_start"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
+    win._on_start_page = lambda: True
+    win._on_remembered_page = lambda: False
+    win._show_tiles(*win._start_summaries())
+    (item,) = win.start.tiles()
+    first = _chips_on(item)
+    win._set_account([{"unitid": UNIT}] if logged_in else None,
+                     why=None if logged_in else "logged-out")
+    while win.later:
+        work, done = win.later.pop()
+        done(work())
+    return first, win
+
+
+def _probed(device_root):
+    """The made-up device listed anew, as each opening of the window lists it."""
+    from openexpress.device import gio_storage
+
+    found = gio_storage.FoundDevice("mtp://made-up/", "x", True,
+                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+    return gio_storage.probe(found)
+
+
+@pytest.mark.needs_display
+def test_opened_again_the_tile_has_its_chip_before_the_account_s_list(listed, device_root,
+                                                                       monkeypatch):
+    _remember()
+    _synced()
+    first, win = _opened(lambda: _start_window([listed]), monkeypatch)
+    assert first == []  # nothing known yet the first time
+    assert _chips_on(win.start.tiles()[0]) == ["To sync"]
+    again, win = _opened(lambda: _start_window([_probed(device_root)]), monkeypatch)
+    assert again == ["To sync"]  # from the record, in the first frame
+    assert _chips_on(win.start.tiles()[0]) == ["To sync"]
+
+
+@pytest.mark.needs_display
+def test_without_a_login_the_record_gives_no_chip_in_the_first_frame(listed, device_root,
+                                                                    monkeypatch):
+    """Logged out since the record was made: nothing of the sync, as without a record."""
+    _remember()
+    _synced()
+    _opened(lambda: _start_window([listed]), monkeypatch)
+    first, win = _opened(lambda: _start_window([_probed(device_root)]), monkeypatch,
+                         logged_in=False)
+    assert first == [] and _chips_on(win.start.tiles()[0]) == []
+
+
+def test_while_the_list_is_asked_only_a_record_says_the_sync():
+    """No list yet: a recent record (made only for a device of the account) gives its chip; a
+    device never synced here (it may be off the account) and a drive say nothing yet."""
+    from openexpress import devicelist
+
+    def tile(summary):
+        (only,) = devicelist.tiles([summary], known_devices.load(), None, False,
+                                   account_pending=True)
+        return only.to_sync, only.never_synced, only.account_known
+
+    _remember()
+    assert tile(_summary()) == (None, False, False)  # never synced: said once the list comes
+    _state()
+    _synced()
+    _keep(3)
+    assert tile(_summary()) == (3, False, False)
+    assert tile(_summary(kind="ums")) == (None, False, False)
+    (plain,) = devicelist.tiles([_summary()], known_devices.load(), None, False)
+    assert (plain.to_sync, plain.never_synced) == (None, False)  # not asked: nothing

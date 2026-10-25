@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import time
 import unicodedata
 from dataclasses import dataclass
 
@@ -91,12 +92,15 @@ class Tile:
     synced_at: float | None = None
 
 
-def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
+def tiles(connected, remembered, account, logged_in: bool,
+          account_pending: bool = False) -> list[Tile]:
     """The tiles of entries(), without what they were made of."""
-    return [tile for tile, _source in entries(connected, remembered, account, logged_in)]
+    return [tile for tile, _source in entries(connected, remembered, account, logged_in,
+                                              account_pending)]
 
 
-def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile, object]]:
+def entries(connected, remembered, account, logged_in: bool,
+            account_pending: bool = False) -> list[tuple[Tile, object]]:
     """(tile, its source) in order: the source is kept outside the tile, for the window to
     act on it: the connected device's DeviceSummary (to open it), else the KnownDevice
     remembered, else its entry of the account's list (only on the account).
@@ -108,7 +112,9 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     window counts a click over the whole list.
 
     `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
-    the account's device list (keys in lower case), used only when `logged_in`. Fields:
+    the account's device list (keys in lower case), used only when `logged_in`;
+    `account_pending`: not known yet, but asked for a login saved (the first frame of the
+    window: a connected device's tile says its sync from a record, _sync_of). Fields:
     name and version from the connected device's GarminDevice.xml, else as remembered, else
     as the account says; on_account, primary, the picture address and the category only
     from the account; when it was seen only from what is remembered."""
@@ -131,7 +137,8 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
             done.add(unit_id)
         tile = _tile(s.description, s.part_number, s.software_version, s.found.kind, True,
                      known, entry, logged_in and unit_id is not None)
-        now.append((dataclasses.replace(tile, **_sync_of(s, entry, logged_in, known)), s))
+        now.append((dataclasses.replace(
+            tile, **_sync_of(s, entry, logged_in, known, account_pending)), s))
     now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
     rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id), logged_in), known)
@@ -154,15 +161,45 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     return result
 
 
-def _sync_of(summary, entry: dict | None, logged_in: bool, known=None) -> dict:
+def _sync_of(summary, entry: dict | None, logged_in: bool, known=None,
+             pending: bool = False) -> dict:
     """What the tile of a connected device says of its sync (PLAN T9): only for one of the
     account, while logged in, never a drive; counted when it was listed or opened
     (summary.to_sync), and until that count comes, from the first frame (analysis 14,
     25.10.2026): never synced here (no state.json), else what the last count found, kept
     with the device (`known`, known_devices.recorded_sync_count: recent, of the sync state it
-    has now). Nothing while its last sync could not upload (no consent, device sync off in
+    has now). While the account's list is still asked (`pending`), only that record: it is
+    made only for a device of the account (25.10.2026: the first frame came before the
+    list). Nothing while its last sync could not upload (no consent, device sync off in
     Garmin Connect): a sync would not help, the device page says why."""
-    if entry is None or not logged_in or summary.found.kind == "ums" or not summary.unit_id:
+    said = _sync_said(summary, entry, logged_in, known, pending)
+    if log.isEnabledFor(logging.DEBUG):
+        # Which way the tile got its sync, and what the record was (25.10.2026).
+        kept = getattr(known, "sync_count", None)
+        if kept is None:
+            held = "no record"
+        else:
+            same = kept.state == service.sync_stamp(summary.unit_id)
+            held = (f"a record of {(time.time() - kept.at) / 86400:.1f} days, its state "
+                    f"{'the same' if same else 'changed'}")
+        log.debug("start page: sync chip of %s: %s (%s%s)", getattr(summary, "part_number", ""),
+                  ", ".join(f"{k} {v}" for k, v in said.items() if k != "synced_at")
+                  or "none", held,
+                  "; the account's list asked" if pending and not logged_in else "")
+    return said
+
+
+def _sync_said(summary, entry: dict | None, logged_in: bool, known, pending: bool) -> dict:
+    if summary.found.kind == "ums" or not summary.unit_id:
+        return {}
+    if not logged_in:
+        if not pending or not sync.synced_here(summary.unit_id):
+            return {}
+        count = known_devices.recorded_sync_count(known, service.sync_stamp(summary.unit_id))
+        if count is None:
+            return {}
+        return _with_last_sync(summary, count)
+    if entry is None:
         return {}
     counted = getattr(summary, "to_sync", None)
     if counted is None:
@@ -175,6 +212,12 @@ def _sync_of(summary, entry: dict | None, logged_in: bool, known=None) -> dict:
         return {"never_synced": True}
     else:
         count = counted.count
+    return _with_last_sync(summary, count)
+
+
+def _with_last_sync(summary, count: int) -> dict:
+    """The count, and when the device was synced last; none while its last sync could not
+    upload."""
     record = service.load_last_sync(summary.unit_id)
     if record is not None and service.not_uploaded(record) is not None:
         return {}

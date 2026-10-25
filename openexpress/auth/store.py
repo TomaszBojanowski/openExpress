@@ -31,6 +31,11 @@ def _path():
     return paths.config_dir() / "connect_auth.json"
 
 
+def exists() -> bool:
+    """Whether a login is saved (its file is there); nothing is read."""
+    return _path().exists()
+
+
 def load() -> ConnectAuth:
     p = _path()
     if not p.exists():
