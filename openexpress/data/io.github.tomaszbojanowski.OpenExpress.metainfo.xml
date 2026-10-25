@@ -105,6 +105,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.20" date="2026-10-25">
+      <description>
+        <ul>
+          <li>Devices connected as a USB drive now say that sync, apps, maps and music are
+          not supported in this mode, instead of suggesting they don't apply to the
+          device.</li>
+          <li>Map updates are checked only for devices that Garmin serves through the
+          universal map service; other devices get a clear message instead of a wrong
+          answer. "Own maps" work on every device.</li>
+          <li>The details under "Last sync" now follow the app language instead of the
+          language used when the sync ran.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.19" date="2026-10-24">
       <description>
         <ul>
