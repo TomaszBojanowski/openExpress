@@ -105,6 +105,22 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.2" date="2026-10-26">
+      <description>
+        <ul>
+          <li>Fixed: after opening a USB-drive device from its "Not mounted" tile, the other
+          connected devices showed up as remembered until the list was refreshed.</li>
+          <li>Fixed: the "View" choice on the start page could be lost when automatic sync was
+          turned on or off.</li>
+          <li>Error messages from the Connect IQ store and from downloads no longer include the
+          request address.</li>
+          <li>When something goes wrong in the window, the log now keeps the full traceback, so
+          reports are more useful.</li>
+          <li>Running the CLI without PyGObject now says what to install instead of failing with
+          a traceback.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.1" date="2026-10-25">
       <description>
         <ul>
