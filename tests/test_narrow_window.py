@@ -361,6 +361,22 @@ def _breaks_badly(texts) -> list[str]:
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window, language):
+    """Its content, with the button "Forget Device…" at the bottom. Its title bar is not
+    measured: with the words of Sync it is 375 px wide in Polish (25.10.2026, not fixed yet)."""
+    from openexpress import known_devices
+
+    known = known_devices.remember(UNIT, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=1.0)
+    win = narrow_window(language)
+    win._fill_remembered(known)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.remembered.page)
+    _iterate(0.05)
+    assert win.remembered.forget_group.get_visible()
+    assert _min_width(win.remembered.page.get_child().get_content()) <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
 @pytest.mark.parametrize("page", ["start", *DEVICE_PAGES])
 def test_captions_break_only_where_they_should(narrow_window, language, page):
     """The window at 360 px (21.10.2026): "4,7 / GB", and a separator that may start a line.

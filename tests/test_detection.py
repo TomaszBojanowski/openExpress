@@ -4089,6 +4089,9 @@ class FakeRememberedPage:
     def set_picture(self, part_number, texture):
         return False
 
+    def allow_forget(self, on):
+        self.forgettable = on
+
 
 class FakeSection:
     def __init__(self):
@@ -4582,7 +4585,8 @@ def test_a_device_mounted_while_one_is_open_keeps_its_view(start_window, monkeyp
 @pytest.mark.needs_display
 def test_the_same_list_keeps_its_tiles():
     """The start page given the same tiles again keeps the widgets it has (nothing removed
-    and added); other tiles are built anew."""
+    and added), and so does the one left when the other goes (PLAN T7); other tiles are
+    built anew."""
     from openexpress.devicelist import Tile
     from openexpress.gui.start import StartPage
 
@@ -4598,6 +4602,8 @@ def test_the_same_list_keeps_its_tiles():
     start.show(list(entries), False)
     assert all(a is b for a, b in zip(before, start.tiles(), strict=True))
     start.show(entries[:1], False)
+    assert len(start.tiles()) == 1 and start.tiles()[0] is before[0]
+    start.show([(tile("Venu 2"), "Over USB (MTP) · Software 19.05")], False)
     assert len(start.tiles()) == 1 and start.tiles()[0] is not before[0]
 
 

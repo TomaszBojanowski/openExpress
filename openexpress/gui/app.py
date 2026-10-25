@@ -78,6 +78,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
 )
 from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.connected import Connected, unit_ids, uris  # noqa: E402
+from openexpress.gui.forget_device import ForgetDevice  # noqa: E402
 from openexpress.gui.maps_page import MapsPage  # noqa: E402
 from openexpress.gui.music_page import MusicPage  # noqa: E402
 from openexpress.gui.navigation import (  # noqa: E402
@@ -1304,7 +1305,7 @@ def task_name(fn) -> str:
     return f"MainWindow.{method}" if dot and owner in mixins else name
 
 
-class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
+class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
         self.set_size_request(*MIN_WINDOW)
@@ -1526,6 +1527,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self.navigation.add(self.start.page)  # the first one added is shown
         self.navigation.add(self.device_view)
         self.remembered = RememberedPage()  # the read-only view of a remembered device
+        self.remembered.forget_button.connect("clicked", self.ask_forget)
         self.navigation.add(self.remembered.page)
         self.navigation.connect("popped", self._on_popped)
         # The texts told against now are drawn again while the page with them is shown.
@@ -2486,6 +2488,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
                                 fields["description"])
         self._remembered_unit = service.unit_id_of(entry.get("unitid"))
         self._remembered_from_account = True
+        self.remembered.allow_forget(False)  # nothing of it is kept here
 
     def _show_remembered(self, known, tile=None) -> None:
         """The read-only view of a device remembered and not connected: what was known when
@@ -2516,6 +2519,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
                                     known.description, devicelist.PICTURE_REMEMBERED)
         self._remembered_unit = known.unit_id
         self._remembered_from_account = False
+        self.remembered.allow_forget(True)
 
     def _refresh_remembered(self) -> None:
         """Refresh (F5, Ctrl+R) on the read-only view of a device not connected: only that

@@ -251,6 +251,17 @@ class _Section:
         return found
 
 
+def _one_gone(before, after) -> int | None:
+    """The place of the one item that `after` (a section's mode and display keys) no longer
+    has of `before`, the rest the same, in the same order and laid out the same way; None
+    otherwise (the section is built again)."""
+    if before is None or before[0] != after[0] or len(before[1]) != len(after[1]) + 1:
+        return None
+    old, new = before[1], after[1]
+    place = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), len(new))
+    return place if old[:place] + old[place + 1:] == new else None
+
+
 def display_key(tile, how: str) -> tuple:
     """What a tile shows: the same tile is not built again (e.g. when the account's list
     only adds its flags to a connected device), but it is when its chips change."""
@@ -463,17 +474,24 @@ class StartPage:
             part = parts[name]
             mode = devicelist.layout(len(part), self.view)  # automatic: a list for many
             keys = (mode, [display_key(tile, how) for _key, tile, how in part])
+            built = False
             if keys != section.shown:  # items that show the same keep their widgets
+                gone = _one_gone(section.shown, keys)
+                if gone is not None:  # one device went (forgotten): only its item goes
+                    (section.list if mode == LIST else section.grid).remove(
+                        section.items()[gone])
+                else:
+                    built = True
+                    section.grid.remove_all()
+                    section.list.remove_all()
+                    for key, tile, how in part:
+                        picture = self._picture_of(tile.image_part_number)
+                        item = (row_widget(tile, how, picture) if mode == LIST
+                                else tile_widget(tile, how, picture))
+                        item.key = key
+                        (section.list if mode == LIST else section.grid).append(item)
                 section.shown = keys
-                section.grid.remove_all()
-                section.list.remove_all()
-                for key, tile, how in part:
-                    picture = self._picture_of(tile.image_part_number)
-                    item = (row_widget(tile, how, picture) if mode == LIST
-                            else tile_widget(tile, how, picture))
-                    item.key = key
-                    (section.list if mode == LIST else section.grid).append(item)
-            else:  # the same items: their places may have moved; a kind learnt since
+            if not built:  # the same items: their places may have moved; a kind learnt since
                 for item, (key, tile, _how) in zip(section.items(), part, strict=True):
                     item.key = key
                     if not item.has_picture:
@@ -573,6 +591,15 @@ class RememberedPage:
         self.tools_group.add(self.part_row)
         content.add(self.tools_group)
 
+        # Only for a device remembered here (allow_forget); the window connects it.
+        self.forget_group = Adw.PreferencesGroup(visible=False)
+        # TRANSLATORS: button at the bottom of the page of a device not connected: this
+        # computer forgets what it keeps of the device (it asks first)
+        self.forget_button = Gtk.Button(label=_("Forget Device…"), halign=Gtk.Align.CENTER,
+                                        css_classes=["destructive-action", "pill"])
+        self.forget_group.add(self.forget_button)
+        content.add(self.forget_group)
+
         view = Adw.ToolbarView(content=content)
         view.add_top_bar(header)
         view.add_top_bar(self.banner)
@@ -591,6 +618,11 @@ class RememberedPage:
         self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
         self.tools_group.set_visible(bool(part_number))
+
+    def allow_forget(self, on: bool) -> None:
+        """Whether the button "Forget Device…" is there: for a device remembered here, not one
+        only on the account."""
+        self.forget_group.set_visible(on)
 
     def show_icon(self, part_number: str, icon: str) -> None:
         """The icon of the device's kind until its picture comes; only a picture of this
