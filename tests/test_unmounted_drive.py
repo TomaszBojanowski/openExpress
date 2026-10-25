@@ -567,3 +567,98 @@ def test_the_words_in_polish():
         i18n.setup("en")
     assert said == ("Zegarek wyłączył swój dysk po wysunięciu. Odłącz kabel i\u00a0podłącz go "
                     "ponownie.")
+
+
+# --- chosen from the start page: the others stay connected (0.7.1, GNOME) -------------------
+#
+# Seen on GNOME: a Varia ejected in Files, its tile "Not mounted; choose it to open it" chosen,
+# mounted and opened; back on the start page only the Varia was connected, the fēnix and the
+# Edge (still on USB) under "Remembered". Its entry had no details, nor the address it has once
+# mounted, so the open device was none of the entries and the list was dropped (keep_if_open).
+
+FENIX, EDGE, VARIA = 3000000201, 3000000202, 3000000203
+
+
+def _three_listed():
+    from openexpress.device.gio_storage import DeviceSummary, FoundDevice, GarminUsb
+
+    return [DeviceSummary(FoundDevice("mtp://fenix/", "x", True), "fēnix 8", "006-B4532-00",
+                          "23.39", FENIX),
+            DeviceSummary(FoundDevice("mtp://edge/", "x", True), "Edge 1050", "006-B4440-00",
+                          "33.13", EDGE),
+            DeviceSummary(FoundDevice(gio_storage.UNMOUNTED_DRIVE + "/dev/sdb", "GARMIN", False,
+                                      kind="ums", usb=GarminUsb("20ee", "usb", 1, 12)),
+                          reason=gio_storage.NOT_MOUNTED)]
+
+
+def _varia_session():
+    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12)
+    storage = types.SimpleNamespace(device_uri="file:///run/media/u/GARMIN/",
+                                    label="file:///run/media/u/GARMIN/", usb=usb)
+    device = types.SimpleNamespace(unit_id=VARIA, description="Varia RTL515",
+                                   part_number="006-B3592-03", software_version_str="3.36")
+    return types.SimpleNamespace(storage=storage, device=device, mass_storage=True)
+
+
+def _start_window(monkeypatch, listed):
+    from fakes import RunNow
+
+    from openexpress.gui import app
+    from openexpress.gui.connected import Connected
+
+    session = _varia_session()
+    monkeypatch.setattr(app.service, "open_session", lambda found: session)
+    monkeypatch.setattr(app.service, "check_session", lambda s: s)
+    monkeypatch.setattr(app, "with_space", lambda s: s)
+    monkeypatch.setattr(app, "resolve_account", lambda win: None)
+    reread = []
+    win = types.SimpleNamespace(
+        busy=False, session=None, run_task=RunNow(), toast=lambda text: None,
+        connected=Connected(devices=list(listed), choosing=True),
+        pages=types.SimpleNamespace(get_visible_child_name=lambda: "overview"),
+        _clear_device_pages=lambda: None, show_overview=lambda: None,
+        load_section=lambda page: None, _show_device_view=lambda: None,
+        _reread_connected=lambda: reread.append(getattr(win, "_reread_cause", None)))
+    for name in ("open_choice", "show_device", "_is_open", "_start_summaries"):
+        setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
+    return win, reread
+
+
+def test_a_drive_mounted_from_its_tile_leaves_the_others_connected(monkeypatch):
+    from openexpress import devicelist, known_devices
+    from openexpress.gui.navigation import Cause
+
+    for unit, name, part, kind in ((FENIX, "fēnix 8", "006-B4532-00", "mtp"),
+                                   (EDGE, "Edge 1050", "006-B4440-00", "mtp"),
+                                   (VARIA, "Varia RTL515", "006-B3592-03", "ums")):
+        known_devices.remember(unit, name, part, "1.00", kind, now=1000.0,
+                               usb_product="20ee" if kind == "ums" else None)
+    listed = _three_listed()
+    win, reread = _start_window(monkeypatch, listed)
+    win.open_choice(listed[2].found)  # the tile of the Varia: mounted and opened
+    assert win.session is not None
+    summaries, _notice = win._start_summaries()  # back on the start page
+    tiles = devicelist.tiles(summaries, known_devices.load(), None, False)
+    assert sorted(t.description for t in tiles if t.connected) == [
+        "Edge 1050", "Varia RTL515", "fēnix 8"]
+    assert not [t for t in tiles if not t.connected]  # none of them "remembered"
+    # Then the list is read again whole, as Refresh does on the start page.
+    assert reread == [Cause.REFRESH_ON_START]
+    # And nothing was written as if the others had gone.
+    assert {u: k.last_seen for u, k in known_devices.load().items()} == {
+        FENIX: 1000.0, EDGE: 1000.0, VARIA: 1000.0}
+
+
+def test_a_device_chosen_with_its_details_is_opened_as_before(monkeypatch):
+    """An MTP device chosen from the list: its entry is the open one (by its unit ID), the list
+    stays, and it is not read again."""
+    listed = _three_listed()
+    win, reread = _start_window(monkeypatch, listed)
+    fenix = _varia_session()
+    fenix.device.unit_id, fenix.mass_storage = FENIX, False
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app.service, "open_session", lambda found: fenix)
+    win.open_choice(listed[0].found)
+    summaries, _notice = win._start_summaries()
+    assert summaries == listed and reread == []

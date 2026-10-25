@@ -2362,11 +2362,22 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             self.toast(_("Another operation is in progress"))
             return
 
+        mounted_now = not getattr(found, "mounted", True)  # a drive mounted once chosen
+
         def done(sess):
             log.info("device detection: the device chosen, all pages are loaded anew")
             self.connected.stop_choosing()
             self.session = sess
+            if mounted_now:
+                # Its entry had no details: the open one takes its place, so that the others
+                # stay connected (the list was dropped, 0.7.1 on GNOME).
+                self.connected.opened_in_place(found, session_summary(sess))
             self.show_device()
+            if mounted_now:
+                # Then all of them read again, as Refresh on the start page does.
+                log.info("device detection: a drive mounted from its tile, the list read again")
+                self._reread_cause = Cause.REFRESH_ON_START
+                self._reread_connected()
 
         def failed(e):
             # Unplugged meanwhile, or not readable: said, and the devices detected again.

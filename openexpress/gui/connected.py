@@ -58,6 +58,14 @@ class Connected:
         self.devices = []
         self.choosing = False
 
+    def opened_in_place(self, found, summary) -> None:
+        """The device of `found`, chosen from the list without its details (a drive mounted
+        once chosen: neither its unit ID nor the address it has now were known), is open:
+        `summary`, the open one, takes the place of its entry, so that it is one of the
+        devices connected (keep_if_open) and the others stay."""
+        self.devices = [summary if c.found is found or c.found.uri == found.uri else c
+                        for c in self.devices]
+
     def keep_if_open(self, is_open: Callable[[object], bool]) -> None:
         """A device was opened: the devices connected stay known if the open one is among
         them (chosen from the list); else the one device connected is the open one (D7), and
