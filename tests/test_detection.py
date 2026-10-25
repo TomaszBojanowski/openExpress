@@ -12,7 +12,7 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, record_sync
 
 from openexpress.gui.connected import Connected
 
@@ -4711,13 +4711,13 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
     is read from USB, nothing is asked of a server; back is the start page."""
     import time
 
-    from openexpress import service, sync
+    from openexpress import sync
     from openexpress.gui import app
 
     win = start_window
     remember_others(time.time())
     sync.SyncState(VENU).save()  # synced here before (analysis 14, a3)
-    service.record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
+    record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
     nothing_connected(win, monkeypatch)
     names = [name for name, _on, _how in drawn_tiles(win)]
     assert names == ["Test watch", "Varia RTL515", "Venu 2"]

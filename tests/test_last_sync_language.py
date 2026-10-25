@@ -10,6 +10,7 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import step_words
 from test_received_from_queue import APP, TRUEUP, UNIT, _synced_once
 
 from openexpress import ciq, i18n, last_sync, service
@@ -106,4 +107,4 @@ def test_the_pattern_of_0_6_20_is_what_the_steps_of_a_sync_write():
 def test_a_damaged_line_says_nothing(line):
     """A line whose numbers or names are not what a sync writes is left out, never shown
     half or raised."""
-    assert service.describe_lines([line]) == []
+    assert step_words([line]) == []

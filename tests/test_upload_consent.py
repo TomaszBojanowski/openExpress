@@ -3,6 +3,7 @@
 
 import pytest
 import requests
+from fakes import step_words
 from test_fixes_ui import FakeClient, fake_client  # noqa: F401 - the fixture
 
 from openexpress import service, sync
@@ -272,7 +273,7 @@ def test_window_and_background_sync_use_the_same_gate(device_root, xdg):
         summary = service.run_sync(s, first_run="all")
         assert len(client.uploads) == uploads and summary.uploaded == uploads
         assert summary.downloaded == 1
-        blocked = [line for line in service.describe_lines(summary.lines)
+        blocked = [line for line in step_words(summary.lines)
                    if line.startswith("Nothing was uploaded")]
         assert len(blocked) == (0 if uploads else 1) and summary.errors == []
         if not uploads:  # the window and the background sync keep the reason as well
@@ -302,7 +303,7 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
     assert "2 new files, 2 uploaded · 1 received" in summary.text.splitlines()
     stored = service.load_last_sync(UNIT)
     assert [service.describe_counts(stored),
-            *service.describe_lines(stored["lines"])] == summary.text.splitlines()
+            *step_words(stored["lines"])] == summary.text.splitlines()
 
 
 def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
@@ -335,13 +336,13 @@ def test_the_last_sync_is_put_into_words_when_shown(xdg):
         {"kind": "a step of a newer version"}])
     service.save_last_sync(42, summary)
     lines = service.load_last_sync(42)["lines"]
-    assert service.describe_lines(lines) == [
+    assert step_words(lines) == [
         "Written before, in words.",
         "Files from the device: activities ×4, sleep",
         "2 files were already in Garmin Connect"]  # the unknown step left out
     i18n.setup("pl")  # the language of the moment it is shown, not of the sync
     try:
-        assert service.describe_lines(lines)[1] == "Pliki z\u00a0urządzenia: aktywności ×4, sen"
+        assert step_words(lines)[1] == "Pliki z\u00a0urządzenia: aktywności ×4, sen"
     finally:
         i18n.setup("en")
 
@@ -355,5 +356,5 @@ def test_a_last_sync_of_an_older_version_is_shown_as_it_was(xdg):
         "errors": [], "lines": ["New files: FIT_TYPE_4×1",
                                 ("Uploaded 1, already in Connect 0, rejected 0, errors 0.")]}))
     data = service.load_last_sync(42)
-    assert service.describe_lines(data["lines"]) == data["lines"]
-    assert service.describe_lines(None) == []
+    assert step_words(data["lines"]) == data["lines"]
+    assert step_words(None) == []

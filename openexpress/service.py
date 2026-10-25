@@ -457,7 +457,7 @@ class SyncSummary:
     # workouts (`errors` names them for the user). Not kept in last_sync.json.
     log_errors: list[str] = field(default_factory=list)
     # What happened, in order: a text, or the numbers of a step as a dict, which is put into
-    # words only when it is shown (`describe_lines`): in the language of that moment.
+    # words only when it is shown (`describe_steps`): in the language of that moment.
     lines: list = field(default_factory=list)
 
     def record(self, unit_id: int | None = None) -> dict:
@@ -791,12 +791,6 @@ def describe_steps(lines) -> list[tuple[str, bool]]:
     return [said for line in lines or [] for said in _describe_step(line)]
 
 
-def describe_lines(lines) -> list[str]:
-    """The lines of a sync summary in words, for the window, the notification and the
-    command line alike."""
-    return [text for text, _warning in describe_steps(lines)]
-
-
 class SyncBusy(Exception):
     pass
 
@@ -871,15 +865,6 @@ def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
     from openexpress import tile_facts  # it uses this module
 
     tile_facts.note_synced(unit_id)  # for its tile
-
-
-def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int,
-                errors: list[str], lines: list) -> None:
-    """Store a sync result made outside run_sync as the last sync. `lines`: the steps as
-    SyncSummary.lines has them (a text, or the numbers of a step as a dict)."""
-    save_last_sync(unit_id, SyncSummary(uploaded=uploaded, skipped_known=skipped_known,
-                                        downloaded=downloaded, errors=list(errors),
-                                        lines=list(lines)))
 
 
 def _read_json(path) -> dict | None:

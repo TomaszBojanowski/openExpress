@@ -132,7 +132,7 @@ def login(saved=True):
     if not saved:
         store.delete()
         return None
-    if not store.exists():
+    if store.stamp() is None:
         store.save(store.ConnectAuth("token", "secret", account={"username": "made-up"}))
     return store.stamp()
 
@@ -152,3 +152,24 @@ def noted(summaries=(), account=None):
         tile_facts.note_account(account)
     for s in summaries:
         tile_facts.note_count(getattr(s, "to_sync", None))
+
+
+# --- sync records, as a sync would leave them ----------------------------------------------
+
+
+def record_sync(unit_id, uploaded, downloaded, skipped_known, errors, lines):
+    """A last sync of this device recorded (last_sync.json, as service.save_last_sync writes
+    it after a sync): the numbers and the steps (`lines`, as SyncSummary.lines has them)."""
+    from openexpress import service
+
+    service.save_last_sync(unit_id, service.SyncSummary(
+        uploaded=uploaded, skipped_known=skipped_known, downloaded=downloaded,
+        errors=list(errors), lines=list(lines)))
+
+
+def step_words(lines):
+    """The steps of a sync record in words, as the window shows them (service.describe_steps),
+    without whether each is a warning."""
+    from openexpress import service
+
+    return [text for text, _warning in service.describe_steps(lines)]

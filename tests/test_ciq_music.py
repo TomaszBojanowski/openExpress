@@ -3,7 +3,7 @@ import datetime
 import uuid
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, step_words
 
 from openexpress import ciq, music, proto
 from openexpress.device.storage import LocalStorage
@@ -685,7 +685,7 @@ def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
     s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service.describe_lines(
+    lines = step_words(
         service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == []  # not an error
     assert lines == [("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
@@ -1300,7 +1300,7 @@ def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
     s = types.SimpleNamespace(storage=st, device=dev, client=client,
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service.describe_lines(
+    lines = step_words(
         service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == [] and lines == [
         ("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
@@ -2974,7 +2974,7 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
     s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service.describe_lines(
+    lines = step_words(
         service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == [] and lines == [
         "The Flatpak has no access to USB devices; 1 Connect IQ app waits in the queue"]

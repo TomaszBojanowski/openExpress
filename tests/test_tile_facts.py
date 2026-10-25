@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML, make_fit
+from fakes import record_sync
 
 from openexpress import known_devices, service, sync, tile_facts
 from openexpress.known_devices import AccountFact, SyncedFact
@@ -219,7 +220,7 @@ def test_the_sync_holds_while_the_sync_state_is_the_same():
 def test_a_count_holds_7_days_and_for_the_sync_state_it_was_counted_against():
     _login()
     sync.SyncState(FENIX).save()
-    service.record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
+    record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     _seen()
     tile_facts.note_account([{"unitid": FENIX}])
     tile_facts.note_count(sync.ActivitiesToSync(FENIX, frozenset({"a.fit"}), 1))
@@ -236,7 +237,7 @@ def test_a_count_holds_7_days_and_for_the_sync_state_it_was_counted_against():
 def test_the_facts_are_one_object_of_the_entry():
     _login()
     sync.SyncState(FENIX).save()
-    service.record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
+    record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     _seen()
     tile_facts.note_account([{"unitid": FENIX, "primaryactivitytrackerindicator": True}])
     tile_facts.note_count(sync.ActivitiesToSync(FENIX, frozenset(), 0))
@@ -246,9 +247,9 @@ def test_the_facts_are_one_object_of_the_entry():
     assert sorted(kept) == ["description", "first_seen", "kind", "last_seen", "part_number",
                             "software_version", "tile_facts"]
     facts = kept["tile_facts"]
-    assert sorted(facts) == ["account", "sync", "synced", "update", "usb"]
+    assert sorted(facts) == ["account", "sync", "synced", "update"]  # its kind: kept["kind"]
     assert sorted(facts["update"]) == ["check", "found", "summary"]
-    assert facts["usb"] == "mtp"
+    assert kept["kind"] == "mtp"
     assert (facts["account"]["on_account"], facts["account"]["primary"]) == (True, True)
     assert (facts["synced"]["once"], facts["sync"]["count"]) == (True, 0)
 
@@ -308,7 +309,7 @@ def test_a_sync_and_a_detection_keep_what_is_known_of_the_sync():
     _seen()
     assert known_devices.load()[FENIX].synced.once is False
     sync.SyncState(FENIX).save()
-    service.record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
+    record_sync(FENIX, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     synced = known_devices.load()[FENIX].synced
     assert synced.once and synced.state == service.sync_stamp(FENIX) and synced.last
     record = service.load_last_sync(FENIX)
@@ -387,8 +388,8 @@ def four(tmp_path, monkeypatch):
         for activity in ACTIVITIES:
             state.mark_completed(sync.ACTIVITY_TYPE, activity)
         state.save()
-        service.record_sync(unit, uploaded=2, downloaded=0, skipped_known=0, errors=[],
-                            lines=[])
+        record_sync(unit, uploaded=2, downloaded=0, skipped_known=0, errors=[],
+                    lines=[])
     _login()
 
     def listed():

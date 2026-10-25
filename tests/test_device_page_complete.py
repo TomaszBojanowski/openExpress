@@ -10,6 +10,7 @@ import types
 from datetime import datetime
 
 import pytest
+from fakes import record_sync
 
 from openexpress import i18n, sync
 
@@ -325,12 +326,10 @@ def test_show_apps_puts_the_line_into_the_group_on_the_device():
 def test_the_page_of_a_remembered_device_has_the_details_of_its_last_sync():
     from test_remembered_picture import _remembered, _window
 
-    from openexpress import service
-
     known = _remembered()
     sync.SyncState(known.unit_id).save()
-    service.record_sync(known.unit_id, uploaded=1, downloaded=0, skipped_known=0,
-                        errors=["download: HTTP 404"], lines=[])
+    record_sync(known.unit_id, uploaded=1, downloaded=0, skipped_known=0,
+                errors=["download: HTTP 404"], lines=[])
     win = _window()
     win._show_remembered(known)
     row = win.remembered.last_sync_row
@@ -356,12 +355,10 @@ def test_a_remembered_device_never_synced_has_no_details():
 def test_the_details_are_drawn_once_however_often_the_page_is():
     from test_remembered_picture import _remembered, _window
 
-    from openexpress import service
-
     known = _remembered()
     sync.SyncState(known.unit_id).save()
-    service.record_sync(known.unit_id, uploaded=1, downloaded=0, skipped_known=0,
-                        errors=["download: HTTP 404"], lines=[])
+    record_sync(known.unit_id, uploaded=1, downloaded=0, skipped_known=0,
+                errors=["download: HTTP 404"], lines=[])
     win = _window()
     for _n in range(3):
         win._show_remembered(known)

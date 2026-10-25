@@ -4,6 +4,7 @@ the row "Last sync" does not say "nothing to upload" alone when something came t
 an app left in the queue (not written) is not received. All answers here are made up."""
 
 import pytest
+from fakes import step_words
 from test_upload_consent import UNIT, Account
 
 from openexpress import ciq, i18n, last_sync, service, sync
@@ -60,7 +61,7 @@ def test_trueup_written_from_the_queue_is_received(device_root, xdg):
     session.client.messages = [TRUEUP]
     summary = service.run_sync(session)
     assert (summary.uploaded, summary.downloaded) == (0, 1)
-    assert service.describe_lines(summary.lines) == [
+    assert step_words(summary.lines) == [
         "TrueUp: daily totals aligned with your other Garmin devices"]
     record = service.load_last_sync(UNIT)
     assert record["downloaded"] == 1
@@ -81,7 +82,7 @@ def test_an_app_written_from_the_queue_is_received_one_left_there_is_not(device_
     monkeypatch.setattr(ciq, "install_queued", written)
     summary = service.run_sync(session)
     assert summary.downloaded == 1
-    assert "Installed Connect IQ apps: Face It" in service.describe_lines(summary.lines)
+    assert "Installed Connect IQ apps: Face It" in step_words(summary.lines)
     monkeypatch.setattr(ciq, "install_queued", left)
     summary = service.run_sync(session)
     assert summary.downloaded == 0

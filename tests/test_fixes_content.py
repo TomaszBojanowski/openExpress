@@ -442,26 +442,6 @@ def test_plan_copy_disambiguates_duplicates(iq_device):
     assert len({d.casefold() for d in dests}) == 4
 
 
-def test_match_paths(iq_device):
-    st, dev = iq_device
-    items = [music.DeviceMedia("Music/Artist A/Album B/01 Song.mp3", 1, "track"),
-             music.DeviceMedia("Music/Other/Musical/02 Tune.mp3", 1, "track"),
-             music.DeviceMedia("Podcasts/Show/ep1.mp3", 1, "podcast")]
-    pls = ["Music/Run mix.m3u8"]
-    for bad in ["", "  ", "ab", " a "]:
-        with pytest.raises(music.MusicError):
-            music.match_paths(items, pls, [bad])
-    assert music.match_paths(items, pls, ["music"]) == ["Music/Other/Musical/02 Tune.mp3"]
-    assert music.match_paths(items, pls, ["artist a"]) == ["Music/Artist A/Album B/01 Song.mp3"]
-    assert music.match_paths(items, pls, ["SONG"]) == ["Music/Artist A/Album B/01 Song.mp3"]
-    assert music.match_paths(items, pls, ["podcasts/show"], dev) == ["Podcasts/Show/ep1.mp3"]
-    assert music.match_paths(items, pls, ["mix"]) == ["Music/Run mix.m3u8"]
-    assert music.match_paths(items, pls, ["Podcasts/Show/ep1.mp3"]) == ["Podcasts/Show/ep1.mp3"]
-    assert music.match_paths(items, pls, ["Podcasts"]) == []
-    outside = [music.DeviceMedia("GARMIN/Other/song.mp3", 1, "track")]
-    assert music.match_paths(outside, [], ["song"], dev) == []
-
-
 def test_scan_direct_file_does_not_use_parent_folders(iq_device, tmp_path):
     st, dev = iq_device
     home = tmp_path / "home" / "user"

@@ -579,8 +579,7 @@ def _write(known: dict[int, KnownDevice]) -> None:
         facts = {"update": {k: v for k, v in update.items() if v is not None},
                  "sync": entry.sync_count.to_json() if entry.sync_count else None,
                  "synced": entry.synced.to_json() if entry.synced else None,
-                 "account": entry.account.to_json() if entry.account else None,
-                 "usb": entry.kind}
+                 "account": entry.account.to_json() if entry.account else None}
         fields["tile_facts"] = {k: v for k, v in facts.items() if v not in (None, {})}
         devices[str(unit_id)] = fields
     paths.write_private(path(), json.dumps({"version": FORMAT, "devices": devices}, indent=1,

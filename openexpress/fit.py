@@ -7,7 +7,7 @@ checks (time_created in seconds since the FIT epoch).
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from openexpress.i18n import _
 
@@ -30,7 +30,8 @@ class FileId:
     file_type: int | None = None
     manufacturer: int | None = None
     product: int | None = None
-    serial_number: int | None = None
+    # The serial number of the device that made the file: never in the text of the record.
+    serial_number: int | None = field(default=None, repr=False)
     time_created: int | None = None
 
     @property

@@ -104,22 +104,17 @@ from openexpress.gui.navigation import (  # noqa: E402
 from openexpress.gui.navigation import plan as detection_plan  # noqa: E402
 from openexpress.gui.netstatus_view import (  # noqa: E402, F401 - also gui.app.<name> for the tests
     DOT,
-    NET_BAD,
     NET_COLOUR,
     NET_COLOURS,
     NET_POPOVER_WIDTH,
-    NET_ROW_COLOUR,
     NetStatusPanel,
-    _dot,
-    _paint,
     _render_net_status_later,
     _render_net_status_on_show,
-    _retry_from_net_status,
 )
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
-from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+from openexpress.gui.words import (  # noqa: E402
     checked_text,
     last_seen_text,
     last_seen_tooltip,
@@ -132,7 +127,6 @@ from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> fo
     space_text,
     to_upload_text,
     update_state_text,
-    updates_available,
 )
 from openexpress.i18n import N_, _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402

@@ -12,6 +12,7 @@ devices and files are made up."""
 import types
 
 import pytest
+from fakes import record_sync
 
 from openexpress import i18n, service, sync
 
@@ -29,7 +30,7 @@ def _state():
 def _record(**fields):
     values = dict(uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     values.update(fields)
-    service.record_sync(UNIT, **values)
+    record_sync(UNIT, **values)
 
 
 def _tile(**fields):

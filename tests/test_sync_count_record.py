@@ -13,6 +13,7 @@ import time
 import types
 
 import pytest
+from fakes import record_sync
 from test_sync_chips import UNIT, _chips_on, _start_window, listed  # noqa: F401 - the fixture
 
 from openexpress import known_devices, service, sync
@@ -33,7 +34,7 @@ def _state(*done):
 
 def _synced():
     """A sync recorded, as the window's would leave it."""
-    service.record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
+    record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
 
 
 def _keep(count, at=None, state=None):

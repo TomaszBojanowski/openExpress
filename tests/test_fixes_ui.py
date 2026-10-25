@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import RunNow
+from fakes import RunNow, step_words
 
 from openexpress import cli, desktop, service
 from openexpress.cli import main
@@ -208,7 +208,7 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
     # Since 0.6.20 the line is kept as data (format-0.6.20-details-as-data.json), in the words
     # of the pattern of 0.6.19 when shown.
     assert record["lines"] == [service.trueup_step()]
-    assert service.describe_lines(record["lines"]) == pattern["lines"]
+    assert step_words(record["lines"]) == pattern["lines"]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 1, [])
 
 
@@ -244,7 +244,7 @@ def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, c
     data = service.load_last_sync(1234567890)
     assert data["uploaded"] == 2 and data["errors"] == []
     assert service.describe_counts(data) == "2 new files, 2 uploaded"  # the window's own words
-    assert service.describe_lines(data["lines"]) == ["Files from the device: activities ×2"]
+    assert step_words(data["lines"]) == ["Files from the device: activities ×2"]
 
 
 # --- 12: errors and exit codes -----------------------------------------------------------

@@ -237,14 +237,6 @@ def test_pending_files_are_read_lazily(device_root, tmp_path):
     assert len(rep.uploaded) == 2
 
 
-def test_record_sync(xdg):
-    from openexpress import service
-
-    service.record_sync(42, 1, 2, 3, ["e"], ["line"])
-    data = service.load_last_sync(42)
-    assert data["uploaded"] == 1 and data["downloaded"] == 2 and data["lines"] == ["line"]
-
-
 # --- background service / watcher ---------------------------------------------------------
 
 

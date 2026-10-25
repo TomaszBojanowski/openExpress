@@ -4,6 +4,7 @@ the window, on the command line and in the notification of the background sync."
 from pathlib import Path
 
 import pytest
+from fakes import step_words
 from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
 from openexpress import i18n, service, sync
@@ -122,10 +123,10 @@ def test_the_details_say_why_in_full_as_before(reason, english, polish):
     for language, words in (("en", english), ("pl", polish)):
         i18n.setup(language)
         try:
-            assert service.describe_lines(_blocked(reason)["lines"]) == [words], language
+            assert step_words(_blocked(reason)["lines"]) == [words], language
         finally:
             i18n.setup("en")
-    assert service.describe_lines(_blocked("a reason of a newer version")["lines"]) == []
+    assert step_words(_blocked("a reason of a newer version")["lines"]) == []
 
 
 def test_an_older_record_of_a_blocked_sync_reads_as_before():
@@ -134,7 +135,7 @@ def test_an_older_record_of_a_blocked_sync_reads_as_before():
     data = {"uploaded": 0, "downloaded": 1, "lines": [
         "Nothing was uploaded: device sync is turned off in the Garmin account"]}
     assert service.describe_counts(data) == "nothing to upload · 1 received"
-    assert service.describe_lines(data["lines"]) == data["lines"]
+    assert step_words(data["lines"]) == data["lines"]
 
 
 @pytest.mark.parametrize(("count", "words"), [
@@ -166,7 +167,7 @@ def test_the_row_of_a_sync_in_polish():
     i18n.setup("pl")
     try:
         row = last_sync_words(data, datetime(2026, 10, 20, 10, 0))
-        details = service.describe_lines(data["lines"])
+        details = step_words(data["lines"])
     finally:
         i18n.setup("en")
     assert row == "2 dni temu\u00a0· 8 nowych plików, 6 wysłanych"  # two days back (by the date)
@@ -195,10 +196,10 @@ def test_the_details_leave_how_files_were_recognised_to_the_log():
     step = service.uploads_step(_report(uploaded=7, checked=2, server=1, failed=1))
     assert step == {"kind": "uploads", "uploaded": 7, "known": 3, "known_checked": 2,
                     "known_server": 1, "rejected": 0, "errors": 1}
-    assert service.describe_lines([step]) == [
+    assert step_words([step]) == [
         "3 files were already in Garmin Connect", "1 file could not be uploaded"]
     # Nothing already in Connect: nothing said of it.
-    assert service.describe_lines([service.uploads_step(_report(uploaded=2, rejected=1))]) == [
+    assert step_words([service.uploads_step(_report(uploaded=2, rejected=1))]) == [
         "1 file was rejected by Garmin"]
 
 
@@ -206,7 +207,7 @@ def test_the_details_in_polish():
     step = service.uploads_step(_report(uploaded=7, checked=2, server=1))
     i18n.setup("pl")
     try:
-        (line,) = service.describe_lines([step])
+        (line,) = step_words([step])
     finally:
         i18n.setup("en")
     assert line == "3 pliki były już w\u00a0Garmin Connect"
@@ -310,7 +311,7 @@ def test_trueup_says_only_what_it_wrote(monkeypatch, result, lines, errors):
     monkeypatch.setattr(trueup, "run", run)
     said_errors = []
     s = types.SimpleNamespace(device=None, storage=None, client=None)
-    assert service.describe_lines(service._trueup(s, [], lambda m: None, said_errors)) == lines
+    assert step_words(service._trueup(s, [], lambda m: None, said_errors)) == lines
     assert said_errors == errors
 
 
@@ -323,7 +324,7 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
     data = service.load_last_sync(1234567890)
     steps = [line for line in data["lines"] if isinstance(line, dict)]
     assert [step["kind"] for step in steps] == ["new_files", "uploads"]
-    words = service.describe_lines(steps)
+    words = step_words(steps)
     assert words == ["Files from the device: activities ×2"]
     assert all(line in printed for line in words)  # printed exactly as the window shows it
     assert service.describe_counts(data) == "2 new files, 2 uploaded"
@@ -336,7 +337,7 @@ def test_the_notification_says_what_the_window_shows():
     # watch.py uses .text: the numbers of the row, then the details.
     assert summary.text.splitlines() == [
         service.describe_counts({"uploaded": 1, "lines": summary.lines}),
-        *service.describe_lines(summary.lines)]
+        *step_words(summary.lines)]
     assert summary.text.splitlines() == ["1 new file, 1 uploaded", "First sync."]
 
 
@@ -348,7 +349,7 @@ def test_new_files_are_named_by_their_type():
         "FIT_TYPE_70": 1, "BACKUP_SUPPLEMENTARY": 1, "FIT_TYPE_32": 3, "WELLNESS_TYPE_1": 2,
         "FIT_TYPE_4": 2, "BACKUP_PRIMARY": 1, "FIT_TYPE_68": 1}}
     # The named types in a fixed order, the two backups counted together, then the others.
-    assert service.describe_lines([step]) == [
+    assert step_words([step]) == [
         ("Files from the device: activities ×2, monitoring ×3, HRV status, device backup ×2, "
          "other data (FIT_TYPE_70), other data (WELLNESS_TYPE_1) ×2")]
 
@@ -364,7 +365,7 @@ def test_new_files_in_polish():
                                            "FIT_TYPE_70": 1}}
     i18n.setup("pl")
     try:
-        (line,) = service.describe_lines([step])
+        (line,) = step_words([step])
     finally:
         i18n.setup("en")
     assert line == ("Pliki z\u00a0urządzenia: aktywności, sen, EKG, zaburzenia snu, kopia zapasowa "
@@ -388,12 +389,12 @@ def test_names_for_the_training_status_primary_device_and_coach_files():
     stays "other data"."""
     step = {"kind": "new_files", "types": {"FIT_TYPE_77": 2, "FIT_TYPE_70": 1, "FIT_TYPE_74": 1,
                                            "FIT_TYPE_41": 1, "FIT_TYPE_72": 1}}
-    assert service.describe_lines([step]) == [
+    assert step_words([step]) == [
         ("Files from the device: settings change log, training status data, primary training "
          "device data, Garmin Coach plan ×2, other data (FIT_TYPE_70)")]
     i18n.setup("pl")
     try:
-        (line,) = service.describe_lines([step])
+        (line,) = step_words([step])
     finally:
         i18n.setup("en")
     assert line == ("Pliki z\u00a0urządzenia: dziennik zmian ustawień, dane o\u00a0wytrenowaniu, dane "

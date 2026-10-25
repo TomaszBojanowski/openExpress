@@ -7,6 +7,7 @@ import types
 from datetime import datetime
 
 import pytest
+from fakes import record_sync
 
 from openexpress import service, sync
 from openexpress.device.storage import LocalStorage
@@ -392,7 +393,7 @@ def test_nothing_to_upload_puts_synced_into_the_same_tile_or_row(listed, view):
     state = sync.SyncState(UNIT)
     state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-02-10-00-00.fit")
     state.save()  # by a sync that recorded itself
-    service.record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
+    record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     win = _start_window([listed])
     win.start.view = view
     win._show_tiles(*win._start_summaries())

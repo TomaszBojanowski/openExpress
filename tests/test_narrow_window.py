@@ -12,6 +12,7 @@ import types
 import uuid
 
 import pytest
+from fakes import record_sync
 
 NARROWEST = 360  # gui.app.MIN_WINDOW
 FONT = "Adwaita Sans 11"
@@ -175,7 +176,7 @@ INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
 
 def _fill(win, page: str) -> str:
     """Builds `page` of the device view as the window does; returns its section."""
-    from openexpress import service, sync
+    from openexpress import sync
     from openexpress.gui.app import MainWindow
 
     drive = page.endswith("-drive")
@@ -187,7 +188,7 @@ def _fill(win, page: str) -> str:
     win.update_only = _updates(copied=False)[2]
     win.map_state, win.map_update_count = "available", 1
     sync.SyncState(UNIT).save()  # synced here before (analysis 14, a3)
-    service.record_sync(UNIT, uploaded=8, downloaded=4, skipped_known=3, errors=[], lines=[])
+    record_sync(UNIT, uploaded=8, downloaded=4, skipped_known=3, errors=[], lines=[])
     for section in win.sections.values():
         section.clear()  # a page built before in this window goes
     key = {"device": "watch"}.get(page.split("-")[0], page.split("-")[0])

@@ -48,3 +48,14 @@ def test_fit_file_id():
     assert fid.time_created_unix == 1100000000 + FIT_EPOCH_OFFSET
     with pytest.raises(FitError):
         parse_file_id(b"not a fit file at all")
+
+
+def test_the_serial_number_of_a_fit_file_is_not_in_its_repr():
+    """A FIT file names the serial number of the device that made it: kept as parsed, but
+    never in the text of the record (a log line, an error, a debugger), code audit of
+    25.10.2026. Made up."""
+    from openexpress.fit import FileId
+
+    fid = FileId(file_type=4, serial_number=3999999999)
+    assert fid.serial_number == 3999999999
+    assert "3999999999" not in repr(fid) and "serial" not in repr(fid)
