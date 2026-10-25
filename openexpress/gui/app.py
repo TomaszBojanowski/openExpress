@@ -1995,8 +1995,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         def worker():
             try:
                 result = fn()
-            except Exception as e:  # noqa: BLE001
-                log.debug("%s", traceback.format_exc())
+            except Exception as e:  # noqa: BLE001 - every failure of a task is shown
                 GLib.idle_add(finish_error, e)
             else:
                 GLib.idle_add(finish_ok, result)
@@ -2017,7 +2016,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             return False
 
         def finish_error(e):
-            log.warning("task failed: %s: %s", type(e).__name__, e)
+            # With its traceback, filtered as every line of the log: a report from the window
+            # says where it failed.
+            log.warning("task failed: %s: %s", type(e).__name__, e, exc_info=e)
             ended()
             try:
                 if not (on_error and on_error(e)):
@@ -2046,8 +2047,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         def worker():
             try:
                 result = fn()
-            except Exception as e:  # noqa: BLE001
-                log.debug("%s", traceback.format_exc())
+            except Exception as e:  # optional work: said in the log, with its traceback
+                log.info("background work %s failed: %s: %s", task_name(fn),
+                         type(e).__name__, e, exc_info=True)
                 if on_error is not None:
                     GLib.idle_add(lambda err=e: (on_error(err), False)[1])
                 return
