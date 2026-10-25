@@ -1,0 +1,52 @@
+{
+  "time": 1800000000.0,
+  "unit_id": 3000000001,
+  "uploaded": 1,
+  "downloaded": 2,
+  "skipped_known": 0,
+  "rejected": 0,
+  "errors": [],
+  "lines": [
+    {
+      "kind": "marked_known",
+      "count": 12
+    },
+    {
+      "kind": "new_files",
+      "types": {
+        "FIT_TYPE_4": 2
+      }
+    },
+    {
+      "kind": "uploads",
+      "uploaded": 1,
+      "known": 0,
+      "known_checked": 0,
+      "known_server": 0,
+      "rejected": 0,
+      "errors": 0
+    },
+    {
+      "kind": "tracker_conflict",
+      "count": 1
+    },
+    {
+      "kind": "apps_installed",
+      "names": [
+        "Face It"
+      ]
+    },
+    {
+      "kind": "apps_waiting",
+      "count": 1,
+      "flatpak": false
+    },
+    {
+      "kind": "trueup"
+    },
+    {
+      "kind": "not_accepted",
+      "count": 1
+    }
+  ]
+}

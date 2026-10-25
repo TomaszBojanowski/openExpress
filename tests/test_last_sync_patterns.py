@@ -125,6 +125,28 @@ EXPECTED = {
             ("TrueUp: daily totals aligned with your other Garmin devices", False)]),
         "pl": ("nic do wysłania · 1 odebrany", [
             ("TrueUp: daily totals aligned with your other Garmin devices", False)])},
+    # Every line of the details kept as data (0.6.20): words of the language of the moment.
+    "format-0.6.20-details-as-data.json": {
+        "en": ("2 new files, 1 uploaded · 2 received", [
+            ("Marked 12 existing files as already uploaded", False),
+            ("Files from the device: activities ×2", False),
+            ("Skipped 1 file: another device is your active tracker in Garmin Connect", False),
+            ("Installed Connect IQ apps: Face It", False),
+            (("1 Connect IQ app waits in the queue: openExpress cannot install apps on this "
+              "device over USB yet"), False),
+            ("TrueUp: daily totals aligned with your other Garmin devices", False),
+            ("Skipped 1 item from Garmin Connect (not accepted by the device)", False)]),
+        "pl": ("2 nowe pliki, 1 wysłany · 2 odebrane", [
+            ("Oznaczono 12 istniejących plików jako już wysłane", False),
+            (f"Pliki z{NB}urządzenia: aktywności ×2", False),
+            (f"Pominięto 1 plik: aktywnym urządzeniem w{NB}Garmin Connect jest inne urządzenie",
+             False),
+            ("Zainstalowane aplikacje Connect IQ: Face It", False),
+            ((f"1 aplikacja Connect IQ czeka w{NB}kolejce: nie można jeszcze instalować "
+              "aplikacji na tym urządzeniu przez USB"), False),
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False),
+            (f"Pominięto 1 element z{NB}Garmin Connect (nieobsługiwany przez urządzenie)",
+             False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

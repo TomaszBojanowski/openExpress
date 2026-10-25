@@ -566,7 +566,79 @@ def _describe_step(line) -> list[tuple[str, bool]]:
                                   "{count} files could not be uploaded",
                                   errors).format(count=errors), True))
         return said
+    if kind == "marked_known" and (n := _count(line)) is not None:
+        return [(ngettext("Marked {count} existing file as already uploaded",
+                          "Marked {count} existing files as already uploaded",
+                          n).format(count=n), False)]
+    if kind == "tracker_conflict" and (n := _count(line)) is not None:
+        return [(ngettext(
+            "Skipped {count} file: another device is your active tracker in Garmin Connect",
+            "Skipped {count} files: another device is your active tracker in Garmin Connect",
+            n).format(count=n), False)]
+    if kind == "apps_installed":
+        names = line.get("names")
+        if not (isinstance(names, list) and names and all(isinstance(n, str) for n in names)):
+            return []
+        return [(_("Installed Connect IQ apps: {names}").format(names=", ".join(names)), False)]
+    if kind == "apps_waiting" and (n := _count(line)) is not None:
+        if line.get("flatpak") is True:
+            return [(ngettext(
+                "The Flatpak has no access to USB devices; {count} Connect IQ app waits in the "
+                "queue",
+                "The Flatpak has no access to USB devices; {count} Connect IQ apps wait in the "
+                "queue", n).format(count=n), False)]
+        return [(ngettext(
+            "{count} Connect IQ app waits in the queue: openExpress cannot install apps on "
+            "this device over USB yet",
+            "{count} Connect IQ apps wait in the queue: openExpress cannot install apps on "
+            "this device over USB yet", n).format(count=n), False)]
+    if kind == "trueup":
+        return [(_("TrueUp: daily totals aligned with your other Garmin devices"), False)]
+    if kind == "not_accepted" and (n := _count(line)) is not None:
+        return [(ngettext(
+            "Skipped {count} item from Garmin Connect (not accepted by the device)",
+            "Skipped {count} items from Garmin Connect (not accepted by the device)",
+            n).format(count=n), False)]
     return []
+
+
+def _count(line: dict) -> int | None:
+    """The number of a step as a sync writes it (an int, not below zero); None otherwise."""
+    n = line.get("count")
+    return n if isinstance(n, int) and not isinstance(n, bool) and n >= 0 else None
+
+
+def marked_known_step(count: int) -> dict:
+    """The first sync marked the files on the device as uploaded already (baseline): a step
+    of the summary, put into words when it is shown, as all those below."""
+    return {"kind": "marked_known", "count": count}
+
+
+def tracker_conflict_step(count: int) -> dict:
+    """Files not uploaded because another device is the active tracker in Garmin Connect."""
+    return {"kind": "tracker_conflict", "count": count}
+
+
+def apps_installed_step(names) -> dict:
+    """The Connect IQ apps of the queue written to the device (their names, as the store
+    gives them)."""
+    return {"kind": "apps_installed", "names": list(names)}
+
+
+def apps_waiting_step(count: int, flatpak: bool) -> dict:
+    """Connect IQ apps left in the queue: the Flatpak without access to USB devices
+    (`flatpak`), or a device this program cannot install apps on over USB yet."""
+    return {"kind": "apps_waiting", "count": count, "flatpak": flatpak}
+
+
+def trueup_step() -> dict:
+    """TrueUp of the queue written to the device."""
+    return {"kind": "trueup"}
+
+
+def not_accepted_step(count: int) -> dict:
+    """Items of Garmin Connect's queue the device does not take (their data type)."""
+    return {"kind": "not_accepted", "count": count}
 
 
 def new_files_step(candidates) -> dict:
@@ -818,9 +890,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     if s.first_sync:
         if first_run == "baseline":
             n = sync.mark_baseline(s.device, s.storage, cfg, state, s.client)
-            out.lines.append(ngettext("Marked {count} existing file as already uploaded",
-                                      "Marked {count} existing files as already uploaded",
-                                      n).format(count=n))
+            out.lines.append(marked_known_step(n))
         elif first_run != "all":
             raise FirstSyncChoiceNeeded()
         state = s.state
@@ -843,11 +913,7 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
                            for label, err in rep.failed]
         out.lines.append(uploads_step(rep))
         if rep.tracker_conflict:
-            n = len(rep.tracker_conflict)
-            out.lines.append(ngettext(
-                "Skipped {count} file: another device is your active tracker in Garmin Connect",
-                "Skipped {count} files: another device is your active tracker in Garmin Connect",
-                n).format(count=n))
+            out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
     # No new file on the device: the row says it ("nothing to upload"), no line of its own.
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
@@ -872,16 +938,13 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     out.log_errors += out.errors[told:]
     skipped = [i for i in items if i.unsupported]
     if skipped:
-        out.lines.append(ngettext(
-            "Skipped {count} item from Garmin Connect (not accepted by the device)",
-            "Skipped {count} items from Garmin Connect (not accepted by the device)",
-            len(skipped)).format(count=len(skipped)))
+        out.lines.append(not_accepted_step(len(skipped)))
     state.save()
     return out
 
 
 def _install_queued_apps(s, messages, progress, errors,
-                         received: list | None = None) -> list[str]:
+                         received: list | None = None) -> list[dict]:
     """The Connect IQ apps of the queue written to the device: their lines for the details;
     their names go to `received` (counted as received, as the files of the queue). An app
     left in the queue is not received."""
@@ -904,24 +967,14 @@ def _install_queued_apps(s, messages, progress, errors,
         received += rep.installed
     lines = []
     if rep.installed:
-        lines.append(_("Installed Connect IQ apps: {names}").format(
-            names=", ".join(rep.installed)))
+        lines.append(apps_installed_step(rep.installed))
     if rep.for_phone:
-        n = len(rep.for_phone)
-        lines.append(ngettext(
-            "The Flatpak has no access to USB devices; {count} Connect IQ app waits in the "
-            "queue",
-            "The Flatpak has no access to USB devices; {count} Connect IQ apps wait in the "
-            "queue", n).format(count=n)
-            if all(name in rep.sandboxed for name in rep.for_phone) else ngettext(
-            "{count} Connect IQ app waits in the queue: openExpress cannot install apps on "
-            "this device over USB yet",
-            "{count} Connect IQ apps wait in the queue: openExpress cannot install apps on "
-            "this device over USB yet", n).format(count=n))
+        lines.append(apps_waiting_step(
+            len(rep.for_phone), flatpak=all(name in rep.sandboxed for name in rep.for_phone)))
     return lines
 
 
-def _trueup(s, messages, progress, errors, received: list | None = None) -> list[str]:
+def _trueup(s, messages, progress, errors, received: list | None = None) -> list[dict]:
     """TrueUp of the queue written to the device: its line for the details; written, it goes
     to `received` (counted as received, as the files of the queue)."""
     from openexpress import trueup
@@ -935,7 +988,7 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     if res.written:
         if received is not None:
             received.append("TrueUp")
-        return [_("TrueUp: daily totals aligned with your other Garmin devices")]
+        return [trueup_step()]
     return []  # nothing to write, or not supported: in the log only (trueup.run)
 
 

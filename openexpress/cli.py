@@ -603,8 +603,8 @@ def cmd_sync(args) -> int:
             if "TrueUp" in special:
                 lines += service._trueup(session, messages, progress, errors, received)
             summary.downloaded += len(received)
-            for line in lines:
-                print(line)
+            for text, _warning in last_sync.describe({"lines": lines}).steps:
+                print(text)
             for err in errors:
                 print("  " + _("ERROR {error}").format(error=err))
             summary.lines += lines

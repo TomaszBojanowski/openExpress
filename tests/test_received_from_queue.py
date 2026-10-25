@@ -54,7 +54,8 @@ def test_trueup_written_from_the_queue_is_received(device_root, xdg):
     session.client.messages = [TRUEUP]
     summary = service.run_sync(session)
     assert (summary.uploaded, summary.downloaded) == (0, 1)
-    assert summary.lines == ["TrueUp: daily totals aligned with your other Garmin devices"]
+    assert service.describe_lines(summary.lines) == [
+        "TrueUp: daily totals aligned with your other Garmin devices"]
     record = service.load_last_sync(UNIT)
     assert record["downloaded"] == 1
     assert _row(record) == "nothing to upload · 1 received"
@@ -73,7 +74,8 @@ def test_an_app_written_from_the_queue_is_received_one_left_there_is_not(device_
     session.client.messages = [APP]
     monkeypatch.setattr(ciq, "install_queued", written)
     summary = service.run_sync(session)
-    assert summary.downloaded == 1 and "Installed Connect IQ apps: Face It" in summary.lines
+    assert summary.downloaded == 1
+    assert "Installed Connect IQ apps: Face It" in service.describe_lines(summary.lines)
     monkeypatch.setattr(ciq, "install_queued", left)
     summary = service.run_sync(session)
     assert summary.downloaded == 0

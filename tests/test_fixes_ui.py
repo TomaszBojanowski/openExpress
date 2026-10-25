@@ -201,7 +201,11 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.19-trueup-received.json").read_text(encoding="utf-8"))
-    assert sorted(record) == sorted(pattern) and record["lines"] == pattern["lines"]
+    assert sorted(record) == sorted(pattern)
+    # Since 0.6.20 the line is kept as data (format-0.6.20-details-as-data.json), in the words
+    # of the pattern of 0.6.19 when shown.
+    assert record["lines"] == [service.trueup_step()]
+    assert service.describe_lines(record["lines"]) == pattern["lines"]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 1, [])
 
 

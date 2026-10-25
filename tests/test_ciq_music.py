@@ -685,7 +685,8 @@ def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
     s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    lines = service.describe_lines(
+        service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == []  # not an error
     assert lines == [("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
                       "this device over USB yet")]
@@ -1299,7 +1300,8 @@ def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
     s = types.SimpleNamespace(storage=st, device=dev, client=client,
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    lines = service.describe_lines(
+        service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == [] and lines == [
         ("1 Connect IQ app waits in the queue: openExpress cannot install apps on "
          "this device over USB yet")]
@@ -2964,7 +2966,8 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
     s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    lines = service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors)
+    lines = service.describe_lines(
+        service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors))
     assert errors == [] and lines == [
         "The Flatpak has no access to USB devices; 1 Connect IQ app waits in the queue"]
     assert untouched(st, dev, fake, attempts, backups, before)

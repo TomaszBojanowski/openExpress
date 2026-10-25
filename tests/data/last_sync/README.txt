@@ -8,4 +8,10 @@ format-*: the shapes older versions wrote, with made-up numbers; and shapes of t
   version no real sync has made yet (format-0.6.16-upload-skipped.json: sync --apply
   --download-only; format-0.6.16-only-types.json: sync --apply --type;
   format-0.6.19-trueup-received.json: a sync with nothing new that wrote TrueUp, counted as
-  received; tests/test_fixes_ui.py checks all three are what the command writes).
+  received; tests/test_fixes_ui.py checks all three are what the command writes;
+  format-0.6.20-details-as-data.json: every line of the details kept as a kind and its
+  numbers or names, put into words when shown (since 0.6.20; before, the lines of the
+  first sync's choice, the tracker conflict, the Connect IQ apps, TrueUp and the items the
+  device does not accept were kept as words of the moment of the sync) - a shape that
+  gathers every kind, not one real sync; tests/test_last_sync_language.py checks it is
+  what the steps of a sync write).
