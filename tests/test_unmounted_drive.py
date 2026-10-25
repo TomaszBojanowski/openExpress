@@ -351,3 +351,47 @@ def test_both_slots_without_a_medium_say_it_once(drives, monkeypatch, caplog):
     assert [m for m in caplog.messages if "Garmin" in m] == [
         ("device: a Garmin drive (USB 091e:0f1d) has no medium (removed safely?), not listed: "
          "unplug it and plug it in again")]
+
+
+# --- state (b): the drive removed safely (#19) -------------------------------------------
+#
+# After "safely remove" the Forerunner 55 keeps its mass storage interface; its drive (sdd)
+# is gone and the empty slot (sdc, 0 B) stays. The window says it is a USB drive that is not
+# mounted, to be plugged in again - never that the device is still starting.
+
+
+def _removed_safely(drives, monkeypatch):
+    usb_drive(drives, product=FR55, disk="sdc", partition=None)
+    _sized(drives, "/dev/sdc", 0)
+    _on_usb(drives, monkeypatch)
+    _monitor(monkeypatch)  # no volume: nothing to mount
+
+
+def test_removed_safely_the_usb_state_is_a_drive(drives, monkeypatch, caplog):
+    _removed_safely(drives, monkeypatch)
+    assert gio_storage.usb_state() == gio_storage.MASS_STORAGE
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.find_ums_devices() == []
+    assert ("device: a Garmin device in mass storage mode (USB 091e:0f1d) without a drive: "
+            "unplug it and plug it in again" in caplog.messages)
+
+
+@pytest.mark.parametrize("waited_s", [0.0, 50.0, 600.0])
+def test_removed_safely_the_window_says_drive_not_starting(drives, monkeypatch, waited_s):
+    from openexpress.gui.app import MainWindow
+
+    _removed_safely(drives, monkeypatch)
+    title, text, busy = MainWindow._usb_notice(gio_storage.usb_state(), waited_s)
+    assert (title, busy) == ("USB drive", False)
+    assert text == gio_storage.drive_not_mounted_text()
+    assert "drive is not mounted" in text and "plug it in again" in text
+    assert "starting" not in title + text
+
+
+def test_removed_safely_the_command_line_says_the_same(drives, monkeypatch):
+    from openexpress import service
+
+    _removed_safely(drives, monkeypatch)
+    with pytest.raises(gio_storage.NotThereYet) as refused:
+        service.open_device_or_drive()
+    assert str(refused.value) == gio_storage.drive_not_mounted_text()
