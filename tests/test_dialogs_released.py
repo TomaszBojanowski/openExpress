@@ -189,11 +189,54 @@ def test_the_choice_of_a_copy_of_the_app_list_is_released_once_closed(monkeypatc
     _settle()
     box.select_row(box.get_row_at_index(0))
     assert seen().get_response_enabled("next")  # a copy chosen: Next
-    seen().emit("response", "next")
-    assert chosen == [choice]
+    # As a click on Next says it (libadwaita 1.9): "closed" first, then "response"; the
+    # dialog is held meanwhile, as libadwaita holds it while it says them.
     dialog = seen()
-    dialog.emit("closed")  # what closing it says (after its animation, in the program)
+    dialog.emit("closed")
+    dialog.emit("response", "next")
+    assert chosen == [choice]
     dialog.force_close()
     del dialog, box
     _settle()
     assert gone == [True]
+
+
+def _turn_until(done, seconds=5.0) -> bool:
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + seconds
+    while not done() and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+    return done()
+
+
+@pytest.mark.needs_display
+def test_next_clicked_goes_on_with_the_copy_chosen(monkeypatch):
+    """The question shown in a window, a copy chosen and its button Next clicked as a user
+    does it: libadwaita says "closed" before "response" (1.9, 25.10.2026), so the copy must not
+    be taken from what "closed" lets go of. Next goes on with the copy chosen."""
+    from gi.repository import Adw, Gtk
+
+    shown, chosen = [], []
+    host = _presented_in_a_window(monkeypatch, Adw.AlertDialog)
+    host.present()
+    present = Adw.AlertDialog.present
+    monkeypatch.setattr(Adw.AlertDialog, "present",
+                        lambda self, parent: (shown.append(self), present(self, parent)))
+    win, choice = _order_window(monkeypatch, chosen)
+    try:
+        win.choose_order()
+        dialog = shown.pop()
+        assert _turn_until(dialog.get_mapped)
+        box = next(w for w in _descendants(dialog.get_extra_child())
+                   if isinstance(w, Gtk.ListBox))
+        box.select_row(box.get_row_at_index(0))
+        (button,) = [w for w in _descendants(dialog)
+                     if isinstance(w, Gtk.Button) and w.get_label() == "Next"]
+        button.emit("clicked")
+        assert _turn_until(lambda: chosen == [choice], 2)
+        assert win._order_dialog is None
+    finally:
+        host.destroy()

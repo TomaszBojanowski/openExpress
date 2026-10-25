@@ -4250,24 +4250,26 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # TRANSLATORS: button that leads to the summary of the change
             d.add_response("next", _("Next"))
             d.set_response_enabled("next", False)
-            # The window holds the dialog and the copy chosen while it is open: a handler that
-            # held the dialog, or the list, would keep both after it closed.
-            self._order_dialog, self._order_chosen = d, None
+            # The window holds the dialog while it is open: a handler that held the dialog, or
+            # the list, would keep both after it closed. The copy chosen (data, no widget)
+            # stays with the answer: a button clicked says "closed" before "response"
+            # (libadwaita 1.9), so it cannot be what "closed" lets go of.
+            self._order_dialog = d
+            picked = {"choice": None}
 
             def selected(_box, row):
-                self._order_chosen = row.choice if row is not None else None
+                picked["choice"] = row.choice if row is not None else None
                 dialog = getattr(self, "_order_dialog", None)
                 if dialog is not None:
                     dialog.set_response_enabled("next", row is not None)
 
             def response(_dialog, r):
-                if r == "next" and self._order_chosen is not None:
-                    self.confirm_order(*self._order_chosen, note)
+                if r == "next" and picked["choice"] is not None:
+                    self.confirm_order(*picked["choice"], note)
 
             box.connect("row-selected", selected)
             d.connect("response", response)
-            d.connect("closed", lambda _d: (setattr(self, "_order_dialog", None),
-                                            setattr(self, "_order_chosen", None)))
+            d.connect("closed", lambda _d: setattr(self, "_order_dialog", None))
             d.present(self)
 
         self.run_task(_("Reading the copies of the app list…"), work, show, button=button)
