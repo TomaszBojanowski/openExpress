@@ -334,6 +334,17 @@ def file_level(verbose: bool = False) -> int | None:
     return logging.DEBUG if verbose or choice == "debug" else logging.INFO
 
 
+# The `extra` of a log record whose news the program tells the user itself (the reason a sync
+# stopped, its errors): in the log file always; on the terminal of the command line not again
+# (setup's quiet_told).
+TOLD = {"told": True}
+
+
+class _NotTold(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not getattr(record, "told", False)
+
+
 def close() -> None:
     root = logging.getLogger()
     for handler in _handlers:
@@ -343,9 +354,12 @@ def close() -> None:
 
 
 def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
-          stderr_format: str = "%(levelname)s %(name)s: %(message)s") -> Path | None:
+          stderr_format: str = "%(levelname)s %(name)s: %(message)s",
+          quiet_told: bool = False) -> Path | None:
     """Send log records to stderr (as before) and to the log file. `role` names the part of
-    the program in every line: cli, gui or watch. Returns the log file, if there is one."""
+    the program in every line: cli, gui or watch. `quiet_told`: the records marked TOLD go
+    to the log file only (the command line tells their news itself). Returns the log file,
+    if there is one."""
     close()
     root = logging.getLogger()
     if stderr_level is None:
@@ -353,6 +367,8 @@ def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
     err = logging.StreamHandler(sys.stderr)
     err.setLevel(stderr_level)
     err.setFormatter(_Redacting(stderr_format))  # the same filter as the log file
+    if quiet_told:
+        err.addFilter(_NotTold())
     handlers: list[logging.Handler] = [err]
     path = None
     level = file_level(verbose)

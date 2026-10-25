@@ -839,14 +839,14 @@ def run_sync(
             summary = apply_sync(s, plan_sync(s, options, progress), progress)
     except Exception as e:
         log.warning("sync: stopped after %.1f s: %s: %s", time.monotonic() - started,
-                    type(e).__name__, e)
+                    type(e).__name__, e, extra=applog.TOLD)  # the caller tells why
         raise
     save_last_sync(s.device.unit_id, summary)
     log.info("sync: end after %.1f s: %d uploaded, %d already known, %d downloaded, %d errors",
              time.monotonic() - started, summary.uploaded, summary.skipped_known,
              summary.downloaded, len(summary.errors))
     for error in summary.log_errors:
-        log.warning("sync error: %s", error)
+        log.warning("sync error: %s", error, extra=applog.TOLD)  # in summary.errors
     return summary
 
 

@@ -482,74 +482,38 @@ def _sync_context(args):
 
 
 def cmd_sync(args) -> int:
-    from openexpress import sync
+    import dataclasses
 
-    st, dev, settings, state = _sync_context(args)
+    from openexpress import service
+
+    st, dev = open_device(args)
+    settings = Settings.load()
     print(_("{device} (software {version})").format(
         device=dev.description, version=dev.software_version_str))
-    logged_in = True
     try:
         client = make_client(settings, need_auth=True)
     except store.NotLoggedIn:
         if args.apply:
             raise
         # The upload plan can be shown without logging in; the download queue needs a token.
-        logged_in = False
         client = make_client(settings, need_auth=False)
         print(_("(not logged in: showing the upload plan only)"))
-    gate = None
-    if logged_in:
-        from openexpress import service
-
-        service.require_account_device(client, dev.unit_id)
-        if not args.download_only:
-            # Asked once, before anything could be uploaded.
-            gate = service.check_upload_allowed(client)
-
-    up_plan = None
-    if not args.download_only:
-        cfg = client.upload_settings(dev.unit_id)
-        up_plan = sync.plan_uploads(
-            dev, st, cfg, state, consent_granted=gate.granted if gate else None,
-            only_types=set(args.type) if args.type else None,
-            include_diagnostics=args.include_diagnostics,
-        )
-        counts = collections.Counter(c.datatype for c in up_plan.candidates)
-        n_up = len(up_plan.candidates)
-        print("\n" + ngettext("To upload: {count} file (already uploaded earlier: {done})",
-                              "To upload: {count} files (already uploaded earlier: {done})",
-                              n_up).format(count=n_up, done=up_plan.already_done))
-        for dt, n in sorted(counts.items()):
-            size = sum(c.size for c in up_plan.candidates if c.datatype == dt)
-            print(f"  {dt:22} {n:5}  {_human(size)}")
-        for dt, why in sorted(up_plan.skipped_types.items()):
-            print(f"  {dt:22} " + _("skipped: {reason}").format(reason=why))
-        if gate is not None and not args.apply:
-            print(gate.message(done=False) if not gate.allowed else _(
-                "Uploads are allowed: the Garmin account has the upload consent and device "
-                "sync is on."))
-
-    dl_items = []
-    messages: list[dict] = []
-    if not args.upload_only and logged_in:
-        messages = client.device_messages(dev.unit_id)
-        dl_items = sync.plan_downloads(dev, messages)
-        n_dl = sum(1 for i in dl_items if not i.unsupported)
-        print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))
-        for it in dl_items:
-            note = ("  [" + _("skipped: {reason}").format(reason=it.unsupported) + "]"
-                    if it.unsupported
-                    else f"  [{it.handled_by}]" if it.handled_by else "")
-            target = it.target.path if it.target else "-"
-            print(f"  {it.datatype:22} {it.message_name or it.message_id} -> {target}{note}")
-
+    session = service.DeviceSession(st, dev, settings, client)
+    # The sync of the window and the background service (service.run_sync), with what was
+    # asked here.
+    options = service.SyncOptions(
+        first_run="all" if args.all else None, include_diagnostics=args.include_diagnostics,
+        only_types=frozenset(args.type) if args.type else None,
+        uploads=not args.download_only, downloads=not args.upload_only)
     if not args.apply:
+        _print_sync_plan(service.plan_sync(session, dataclasses.replace(options, preview=True)))
         print("\n" + _("Dry run: nothing was uploaded or written to the device. "
                        "Add --apply to run the sync."))
         return 0
-
-    first_run = not state.file.exists()
-    if first_run and not args.all and not args.download_only:
+    try:
+        summary = service.run_sync(session, progress=lambda message: print("  " + message),
+                                   options=options)
+    except service.FirstSyncChoiceNeeded:
         print(
             "\n" + _("This is the first sync with this program. If the device also syncs "
                      "via your phone, most files are already in Connect.\n"
@@ -560,90 +524,53 @@ def cmd_sync(args) -> int:
             file=sys.stderr,
         )
         return FIRST_SYNC_CHOICE
+    return _print_sync_result(summary, dev.unit_id)
 
-    from openexpress import last_sync, service
 
-    def progress(msg: str) -> None:
-        print("  " + msg)
+def _print_sync_plan(plan) -> None:
+    """What `sync` would do (its dry run), as service.plan_sync worked it out."""
+    uploads = plan.uploads
+    if uploads is not None:
+        counts = collections.Counter(c.datatype for c in uploads.candidates)
+        n_up = len(uploads.candidates)
+        print("\n" + ngettext("To upload: {count} file (already uploaded earlier: {done})",
+                              "To upload: {count} files (already uploaded earlier: {done})",
+                              n_up).format(count=n_up, done=uploads.already_done))
+        for dt, n in sorted(counts.items()):
+            size = sum(c.size for c in uploads.candidates if c.datatype == dt)
+            print(f"  {dt:22} {n:5}  {_human(size)}")
+        for dt, why in sorted(uploads.skipped_types.items()):
+            print(f"  {dt:22} " + _("skipped: {reason}").format(reason=why))
+        if plan.gate is not None:
+            print(plan.gate.message(done=False) if not plan.gate.allowed else _(
+                "Uploads are allowed: the Garmin account has the upload consent and device "
+                "sync is on."))
+    if plan.queue is not None:
+        items = plan.queue.items
+        n_dl = sum(1 for i in items if not i.unsupported)
+        print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))
+        for it in items:
+            note = ("  [" + _("skipped: {reason}").format(reason=it.unsupported) + "]"
+                    if it.unsupported
+                    else f"  [{it.handled_by}]" if it.handled_by else "")
+            target = it.target.path if it.target else "-"
+            print(f"  {it.datatype:22} {it.message_name or it.message_id} -> {target}{note}")
 
-    summary = service.SyncSummary()
-    if up_plan is None:
-        # --download-only: the uploads were not looked at; the row says so, not "nothing to
-        # upload".
-        summary.lines.append(service.upload_skipped_step())
-    elif args.type:
-        # Only these types were looked at: the row says its numbers are of them only.
-        summary.lines.append(service.only_types_step(args.type))
-    with service.sync_lock():
-        if up_plan is not None:
-            # Another process may have synced since the plan was shown: plan again under the lock.
-            state = sync.SyncState(dev.unit_id)
-            up_plan = sync.plan_uploads(
-                dev, st, cfg, state, consent_granted=gate.granted if gate else None,
-                only_types=set(args.type) if args.type else None,
-                include_diagnostics=args.include_diagnostics,
-            )
-        if up_plan is not None and (gate is None or not gate.allowed):
-            # No consent, device sync turned off, or the check failed: nothing is uploaded.
-            # Files from Connect are still written to the device below.
-            blocked = gate or service.UploadGate(service.NOT_CHECKED)
-            print("\n" + blocked.message())
-            summary.lines.append(service.not_uploaded_step(blocked))  # the row says why too
-        elif up_plan and up_plan.candidates:
-            print("\n" + _("Uploading…"))
-            rep = sync.run_uploads(up_plan, dev, st, client, state, progress)
-            # The same steps and words as a sync in the window or in the background (the
-            # numbers come at the end, with the files from Garmin Connect).
-            steps = [service.new_files_step(up_plan.candidates), service.uploads_step(rep)]
-            for text, _warning in last_sync.describe({"lines": steps}).steps:
-                print(text)
-            summary.lines += steps
-            summary.uploaded = len(rep.uploaded)
-            summary.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
-            summary.rejected = len(rep.rejected)
-            summary.errors += [f"{label}: {err}" for label, err in rep.failed]
-            for label, err in rep.failed:
-                print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
-            for label in rep.not_confirmed:
-                print("  " + _("Warning: Connect did not confirm processing of {item}").format(
-                    item=label))
-        if up_plan is not None:
-            # Not for --download-only: the first-sync choice must stay pending until uploads run.
-            state.save()
-        if any(not i.unsupported and not i.handled_by for i in dl_items):
-            print("\n" + _("Downloading to the device…"))
-            drep = sync.run_downloads(dl_items, st, client, progress, state=state)
-            summary.downloaded = len(drep.written)  # in the numbers at the end
-            if drep.written_types:
-                # The same line as a sync in the window or in the background.
-                step = service.received_files_step(drep.written_types)
-                for text, _warning in last_sync.describe({"lines": [step]}).steps:
-                    print(text)
-                summary.lines.append(step)
-            summary.errors += [f"{label}: {err}" for label, err in drep.failed]
-            for label, err in drep.failed:
-                print("  " + _("ERROR {item}: {error}").format(item=label, error=err))
-        special = {i.handled_by for i in dl_items if i.handled_by}
-        if special:
-            session = service.DeviceSession(st, dev, settings, client)
-            errors: list[str] = []
-            lines = []
-            received: list[str] = []  # written to the device: received, as in the window
-            if "Connect IQ" in special:
-                lines += service._install_queued_apps(session, messages, progress, errors,
-                                                      received)
-            if "TrueUp" in special:
-                lines += service._trueup(session, messages, progress, errors, received)
-            summary.downloaded += len(received)
-            for text, _warning in last_sync.describe({"lines": lines}).steps:
-                print(text)
-            for err in errors:
-                print("  " + _("ERROR {error}").format(error=err))
-            summary.lines += lines
-            summary.errors += errors
-    service.save_last_sync(dev.unit_id, summary)
-    # The numbers of the row under "Last sync" in the window, from the same words.
-    print("\n" + last_sync.describe(summary.record(dev.unit_id)).counts)
+
+def _print_sync_result(summary, unit_id: int) -> int:
+    """What `sync --apply` did: its steps in the words of the details under "Last sync",
+    its errors, then the numbers of the row. 1 with errors, as the window says "Sync
+    finished with errors"."""
+    from openexpress import last_sync
+
+    told = last_sync.describe(summary.record(unit_id))
+    said = [text for text, _warning in told.steps]
+    said += ["  " + _("ERROR {error}").format(error=error) for error in summary.errors]
+    said += ["  " + _("Warning: Connect did not confirm processing of {item}").format(
+        item=label) for label in summary.not_confirmed]
+    if said:
+        print("\n" + "\n".join(said))
+    print("\n" + told.counts)
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
                               len(summary.errors)).format(count=len(summary.errors)))
@@ -1997,7 +1924,9 @@ def _main(argv: list[str] | None) -> int:
     # Before any process is started (the start line may ask flatpak-spawn) and before GTK:
     # a locale the C library cannot have (a Flatpak runtime without it) becomes C.UTF-8.
     fallback = i18n.ensure_utf8_locale()
-    applog.setup(args.cmd if args.cmd in ("gui", "watch") else "cli", args.verbose)
+    role = args.cmd if args.cmd in ("gui", "watch") else "cli"
+    # What a command tells the user itself is not printed again from the log (-v: all of it).
+    applog.setup(role, args.verbose, quiet_told=role == "cli" and not args.verbose)
     started = time.monotonic()
     log.info("start: %s (%s)", _command_line(args, argv), applog.environment())
     if fallback:
