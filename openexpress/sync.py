@@ -671,6 +671,8 @@ def plan_downloads(device: GarminDevice, messages: list[dict]) -> list[DownloadI
 @dataclass
 class DownloadReport:
     written: list[str] = field(default_factory=list)
+    # The data type of each file written now (as `written`), for the details of the sync.
+    written_types: list[str] = field(default_factory=list)
     empty: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     # Written to the watch, but Connect was not told; acknowledged on the next sync.
@@ -747,6 +749,7 @@ def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
                 continue
             progress(_("Wrote {path}").format(path=real))
             report.written.append(f"{label} -> {real}")
+            report.written_types.append(it.datatype)
             # Written: not acknowledged until Garmin Connect says so, whatever stops the sync
             # meanwhile (also Ctrl+C); the next sync then acknowledges it without writing it
             # again.

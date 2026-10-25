@@ -295,7 +295,8 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
     assert steps == [
         {"kind": "new_files", "types": {"FIT_TYPE_4": 2}},
         {"kind": "uploads", "uploaded": 2, "known": 0, "known_checked": 0, "known_server": 0,
-         "rejected": 0, "errors": 0}]
+         "rejected": 0, "errors": 0},
+        {"kind": "received_files", "types": {"FIT_TYPE_6": 1}}]  # since 25.10.2026
     # The same words in the summary and from what is stored.
     assert "Files from the device: activities ×2" in summary.text.splitlines()
     assert "2 new files, 2 uploaded · 1 received" in summary.text.splitlines()
@@ -304,9 +305,10 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
             *service.describe_lines(stored["lines"])] == summary.text.splitlines()
 
 
-def test_the_files_from_connect_are_only_counted(device_root, xdg):
+def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
     """A file from Garmin Connect written to the device: counted in the numbers
-    (" · 1 received"), with no line of its own; no line ends with a full stop."""
+    (" · 1 received"), and since 25.10.2026 a line of its own with its type (before, it had
+    none); no line ends with a full stop."""
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
     from openexpress.settings import Settings
@@ -317,7 +319,8 @@ def test_the_files_from_connect_are_only_counted(device_root, xdg):
     summary = service.run_sync(s, first_run="all")
     assert summary.downloaded == 1
     assert summary.text.splitlines() == ["2 new files, 2 uploaded · 1 received",
-                                         "Files from the device: activities ×2"]
+                                         "Files from the device: activities ×2",
+                                         "1 file from Garmin Connect: other data (FIT_TYPE_6)"]
     assert not any(line.endswith(".") for line in summary.text.splitlines())
 
 

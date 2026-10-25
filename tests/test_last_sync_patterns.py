@@ -147,6 +147,31 @@ EXPECTED = {
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False),
             (f"Pominięto 1 element z{NB}Garmin Connect (nieobsługiwany przez urządzenie)",
              False)])},
+    # Today's sync of an Edge 1050 (Flatpak 0.6.20, 25.10.2026): three metrics files and
+    # TrueUp from the queue, the files only counted.
+    "real-flatpak-edge-1050-0.6.20-trueup-metrics.json": {
+        "en": ("8 new files, 8 uploaded · 4 received", [
+            (("Files from the device: monitoring ×3, segment list, settings change log, "
+              "Garmin Coach plan ×3"), False),
+            ("TrueUp: daily totals aligned with your other Garmin devices", False)]),
+        "pl": ("8 nowych plików, 8 wysłanych · 4 odebrane", [
+            ((f"Pliki z{NB}urządzenia: monitorowanie ×3, lista segmentów, dziennik zmian "
+              "ustawień, plan Garmin Coach ×3"), False),
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin",
+             False)])},
+    # The same sync as this version writes it: the files of the queue named by their type.
+    "format-0.6.21-received-files.json": {
+        "en": ("8 new files, 8 uploaded · 4 received", [
+            (("Files from the device: monitoring ×3, segment list, settings change log, "
+              "Garmin Coach plan ×3"), False),
+            ("3 files from Garmin Connect: metrics ×3", False),
+            ("TrueUp: daily totals aligned with your other Garmin devices", False)]),
+        "pl": ("8 nowych plików, 8 wysłanych · 4 odebrane", [
+            ((f"Pliki z{NB}urządzenia: monitorowanie ×3, lista segmentów, dziennik zmian "
+              "ustawień, plan Garmin Coach ×3"), False),
+            (f"3 pliki z{NB}Garmin Connect: metryki ×3", False),
+            (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin",
+             False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

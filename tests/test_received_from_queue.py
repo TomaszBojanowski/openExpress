@@ -3,12 +3,15 @@
 the row "Last sync" does not say "nothing to upload" alone when something came to the device;
 an app left in the queue (not written) is not received. All answers here are made up."""
 
+import pytest
 from test_upload_consent import UNIT, Account
 
 from openexpress import ciq, i18n, last_sync, service, sync
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 from openexpress.settings import Settings
+
+NB = "\u00a0"
 
 TRUEUP = {"messageid": 9, "messagetype": "true_up", "devicexmldatatype": "FIT_TYPE_39",
           "metadata": {"messageurl": "trueup/9"}}
@@ -17,8 +20,11 @@ APP = {"messageid": 7, "devicexmldatatype": "IQWatchFaces",
                     "appdetails": {"id": "2a6b4b8e-9a37-4a3e-8f0f-2e7d1f0b9c11"}}}
 
 
-# The made-up device takes TrueUp and watch faces too (as the fēnix 8 does).
+# The made-up device takes TrueUp, metrics and watch faces too (as the fēnix 8 does).
 TAKES = ("<DataType><Name>FIT_TYPE_39</Name><File><Location><Path>Garmin/NewFiles</Path>"
+         "<FileExtension>FIT</FileExtension></Location><TransferDirection>InputToUnit"
+         "</TransferDirection></File></DataType>"
+         "<DataType><Name>FIT_TYPE_44</Name><File><Location><Path>Garmin/NewFiles</Path>"
          "<FileExtension>FIT</FileExtension></Location><TransferDirection>InputToUnit"
          "</TransferDirection></File></DataType>"
          "<DataType><Name>IQWatchFaces</Name><File><Location><Path>GARMIN/APPS/MEDIA</Path>"
@@ -93,3 +99,113 @@ def test_files_trueup_and_apps_are_received_together(device_root, xdg, monkeypat
     summary = service.run_sync(session)
     assert summary.downloaded == 3
     assert _row(service.load_last_sync(UNIT)) == "nothing to upload · 3 received"
+
+
+# --- the line of the files of the queue (25.10.2026) ----------------------------------------
+
+METRICS = [{"messageid": 20 + n, "devicexmldatatype": "FIT_TYPE_44",
+            "metadata": {"messageurl": f"metrics/{n}", "messagename": "Metrics"}}
+           for n in range(3)]
+COURSE = {"messageid": 5, "devicexmldatatype": "FIT_TYPE_6",
+          "metadata": {"messageurl": "course", "messagename": "A course"}}
+
+
+def _details(record, language="en"):
+    i18n.setup(language)
+    try:
+        return [text for text, _warning in last_sync.describe(record).steps]
+    finally:
+        i18n.setup("en")
+
+
+def test_the_files_of_the_queue_get_a_line_of_their_types(device_root, xdg, monkeypatch):
+    """As the sync of an Edge 1050 of 25.10.2026: three metrics files and TrueUp from the
+    queue (and here an app): one line for the three files, by their type, kept as data; TrueUp
+    and the app have their own lines and are not counted in it."""
+    session = _synced_once(device_root)
+    session.client.messages = [*METRICS, TRUEUP, APP]
+    monkeypatch.setattr(ciq, "install_queued", lambda *a, **kw: ciq.IqInstallReport(
+        installed=["Face It"]))
+    summary = service.run_sync(session)
+    assert summary.downloaded == 5
+    record = service.load_last_sync(UNIT)
+    assert service.received_files_step(["FIT_TYPE_44"] * 3) == {
+        "kind": "received_files", "types": {"FIT_TYPE_44": 3}}
+    assert [line for line in record["lines"]
+            if line.get("kind") == "received_files"] == [service.received_files_step(
+                ["FIT_TYPE_44"] * 3)]
+    assert _details(record) == [
+        "3 files from Garmin Connect: metrics ×3",
+        "Installed Connect IQ apps: Face It",
+        "TrueUp: daily totals aligned with your other Garmin devices"]
+    assert _details(record, "pl")[0] == f"3 pliki z{NB}Garmin Connect: metryki ×3"
+    assert _row(record) == "nothing to upload · 5 received"
+
+
+def test_one_file_of_the_queue(device_root, xdg):
+    session = _synced_once(device_root)
+    session.client.messages = [COURSE]
+    service.run_sync(session)
+    record = service.load_last_sync(UNIT)
+    assert _details(record) == ["1 file from Garmin Connect: other data (FIT_TYPE_6)"]
+    assert _details(record, "pl") == [f"1 plik z{NB}Garmin Connect: inne dane (FIT_TYPE_6)"]
+
+
+def test_no_file_from_the_queue_no_line(device_root, xdg):
+    """Only TrueUp from the queue, or nothing at all: no line of files."""
+    session = _synced_once(device_root)
+    for messages in ([TRUEUP], []):
+        session.client.messages = messages
+        service.run_sync(session)
+        record = service.load_last_sync(UNIT)
+        assert [line for line in record["lines"] if line.get("kind") == "received_files"] == []
+
+
+@pytest.mark.parametrize("language, words", [
+    ("en", ("6 files from Garmin Connect: activity summary, metrics ×3, other data "
+            "(FIT_TYPE_99) ×2")),
+    ("pl", (f"6 plików z{NB}Garmin Connect: podsumowanie aktywności, metryki ×3, inne dane "
+            "(FIT_TYPE_99) ×2")),
+])
+def test_the_types_are_named_as_the_files_from_the_device(language, words):
+    """Named as in "Files from the device": in the order of the names, ×N when more than one,
+    a type without a name as other data; activity summary (FIT_TYPE_20) has a name."""
+    line = service.received_files_step(["FIT_TYPE_99", "FIT_TYPE_44", "FIT_TYPE_20",
+                                        "FIT_TYPE_44", "FIT_TYPE_99", "FIT_TYPE_44"])
+    assert _details({"lines": [line]}, language) == [words]
+
+
+def test_the_plural_forms_in_polish():
+    def said(n):
+        return _details({"lines": [service.received_files_step(["FIT_TYPE_44"] * n)]}, "pl")
+
+    assert said(2) == [f"2 pliki z{NB}Garmin Connect: metryki ×2"]
+    assert said(5) == [f"5 plików z{NB}Garmin Connect: metryki ×5"]
+    assert said(22) == [f"22 pliki z{NB}Garmin Connect: metryki ×22"]
+
+
+def test_a_record_without_the_line_is_shown_as_before():
+    """A record of 0.6.20 or older (the files of the queue only counted): the same details."""
+    record = {"downloaded": 4, "lines": [service.trueup_step()]}
+    assert _details(record) == ["TrueUp: daily totals aligned with your other Garmin devices"]
+    assert _row(record) == "nothing to upload · 4 received"
+
+
+def test_the_pattern_of_0_6_21_is_what_a_sync_writes():
+    """tests/data/last_sync/format-0.6.21-received-files.json has the lines a sync writes for
+    the Edge's sync of 25.10.2026 (eight new files, three metrics files and TrueUp)."""
+    import json
+    import types
+    from pathlib import Path
+
+    pattern = json.loads((Path(__file__).parent / "data/last_sync"
+                          / "format-0.6.21-received-files.json").read_text(encoding="utf-8"))
+    report = types.SimpleNamespace(uploaded=[0] * 8, already_in_connect=[], duplicates=[],
+                                   rejected=[], failed=[])
+    candidates = [types.SimpleNamespace(datatype=t) for t, n in (
+        ("FIT_TYPE_41", 1), ("FIT_TYPE_77", 3), ("FIT_TYPE_35", 1), ("FIT_TYPE_32", 3))
+        for _ in range(n)]
+    assert pattern["lines"] == [service.new_files_step(candidates),
+                                service.uploads_step(report),
+                                service.received_files_step(["FIT_TYPE_44"] * 3),
+                                service.trueup_step()]

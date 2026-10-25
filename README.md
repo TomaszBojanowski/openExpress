@@ -363,6 +363,7 @@ replaced. Tested on a fēnix 8.
   background sync use the same words: when it was, how many new files the device had and
   how many were uploaded, and how many came from Garmin Connect. The details name the new
   files by their type (activities, sleep, HRV status, device log…; others as "other data"),
+  and the files from Garmin Connect too (TrueUp and Connect IQ apps have lines of their own),
   say how many Garmin Connect already had, and warn only when Garmin rejected a file or one
   could not be uploaded.
 

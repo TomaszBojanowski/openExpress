@@ -637,6 +637,12 @@ def cmd_sync(args) -> int:
             print("\n" + _("Downloading to the device…"))
             drep = sync.run_downloads(dl_items, st, client, progress, state=state)
             summary.downloaded = len(drep.written)  # in the numbers at the end
+            if drep.written_types:
+                # The same line as a sync in the window or in the background.
+                step = service.received_files_step(drep.written_types)
+                for text, _warning in last_sync.describe({"lines": [step]}).steps:
+                    print(text)
+                summary.lines.append(step)
             summary.errors += [f"{label}: {err}" for label, err in drep.failed]
             for label, err in drep.failed:
                 print("  " + _("ERROR {item}: {error}").format(item=label, error=err))

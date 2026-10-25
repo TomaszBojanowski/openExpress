@@ -484,6 +484,7 @@ class SyncSummary:
 TYPE_NAMES = {
     "FIT_TYPE_4": N_("activities"),             # FIT SDK: activity; upload: activity
     "FIT_TYPE_9": N_("weight"),                 # FIT SDK: weight; upload: weight
+    "FIT_TYPE_20": N_("activity summary"),      # FIT SDK: activity_summary
     "FIT_TYPE_28": N_("daily monitoring"),      # FIT SDK: monitoring_daily
     "FIT_TYPE_32": N_("monitoring"),            # FIT SDK: monitoring_b
     "FIT_TYPE_35": N_("segment list"),          # FIT SDK: segment_list; upload: segment-list
@@ -512,7 +513,8 @@ TYPE_NAMES = {
 
 
 def type_name(datatype: str) -> str:
-    """The readable name of a data type of new files, in the language of the moment."""
+    """The readable name of a data type of new files (and of the files of Garmin Connect's
+    queue), in the language of the moment."""
     known = TYPE_NAMES.get(datatype)
     return _(known) if known else _("other data ({type})").format(type=datatype)
 
@@ -542,6 +544,16 @@ def _describe_step(line) -> list[tuple[str, bool]]:
             return []
         return [(_("Files from the device: {types}").format(types=_describe_types(types)),
                  False)]
+    if kind == "received_files":
+        types = _counted_types(line)
+        if not types:
+            return []
+        n = sum(types.values())
+        # TRANSLATORS: a line of the details of "Last sync": files of Garmin Connect's queue
+        # written to the device, and their types (as "Files from the device: …" names them)
+        return [(ngettext("{count} file from Garmin Connect: {types}",
+                          "{count} files from Garmin Connect: {types}", n).format(
+            count=n, types=_describe_types(types)), False)]
     if kind == "not_uploaded":
         gate = UploadGate(str(line.get("reason") or ""))
         return [(gate.message(), False)] if gate.why() else []  # one of a newer version: none
@@ -602,6 +614,18 @@ def _describe_step(line) -> list[tuple[str, bool]]:
     return []
 
 
+def _counted_types(line: dict) -> dict[str, int]:
+    """The data types of a step and how many of each, as a sync writes them (names, and
+    numbers above zero); nothing when anything else is there."""
+    types = line.get("types")
+    if not isinstance(types, dict) or not types:
+        return {}
+    if not all(isinstance(t, str) and isinstance(n, int) and not isinstance(n, bool) and n > 0
+               for t, n in types.items()):
+        return {}
+    return types
+
+
 def _count(line: dict) -> int | None:
     """The number of a step as a sync writes it (an int, not below zero); None otherwise."""
     n = line.get("count")
@@ -634,6 +658,13 @@ def apps_waiting_step(count: int, flatpak: bool) -> dict:
 def trueup_step() -> dict:
     """TrueUp of the queue written to the device."""
     return {"kind": "trueup"}
+
+
+def received_files_step(datatypes) -> dict:
+    """The files of Garmin Connect's queue written to the device (courses, workouts,
+    metrics…), counted by data type; TrueUp and the Connect IQ apps have steps of their own
+    and are not in it."""
+    return {"kind": "received_files", "types": dict(collections.Counter(datatypes))}
 
 
 def not_accepted_step(count: int) -> dict:
@@ -922,6 +953,8 @@ def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
     if todo:
         drep = sync.run_downloads(todo, s.storage, s.client, progress, state=state)
         out.downloaded = len(drep.written)
+        if drep.written_types:
+            out.lines.append(received_files_step(drep.written_types))
         out.errors += [f"{label}: {err}" for label, err in drep.failed]
         out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
                        .format(name=label) for label in drep.ack_failed]

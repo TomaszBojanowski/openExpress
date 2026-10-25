@@ -152,7 +152,10 @@ def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fak
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.16-upload-skipped.json").read_text(encoding="utf-8"))
-    assert sorted(record) == sorted(pattern) and record["lines"] == pattern["lines"]
+    # Since 25.10.2026 the two courses also get a line of their own, after the step of the
+    # pattern (format-0.6.21-received-files.json).
+    assert sorted(record) == sorted(pattern) and record["lines"] == [
+        *pattern["lines"], service.received_files_step(["FIT_TYPE_6"] * 2)]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 2, [])
 
 
@@ -207,6 +210,24 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
     assert record["lines"] == [service.trueup_step()]
     assert service.describe_lines(record["lines"]) == pattern["lines"]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 1, [])
+
+
+def test_the_command_line_names_the_files_from_garmin_connect(device_root, xdg, fake_client,
+                                                              capsys):
+    """sync --apply: a course from the queue written to the device gets the same line as in
+    the window, printed and kept as data in the record (25.10.2026)."""
+    assert main(["--path", str(device_root), "baseline", "--apply"]) == 0
+    client = fake_client["client"]
+    client.messages = [{"messageid": 5, "devicexmldatatype": "FIT_TYPE_6",
+                        "metadata": {"messageurl": "course", "messagename": "A course"}}]
+    client.download_message = lambda url, absolute: b"COURSE"
+    capsys.readouterr()
+    assert main(["--path", str(device_root), "sync", "--apply"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "1 file from Garmin Connect: other data (FIT_TYPE_6)" in out
+    assert "nothing to upload · 1 received" in out
+    record = service.load_last_sync(1234567890)
+    assert record["lines"] == [service.received_files_step(["FIT_TYPE_6"])]
 
 
 def test_only_some_types_is_not_said_when_the_account_let_nothing_be_uploaded():

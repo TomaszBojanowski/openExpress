@@ -96,6 +96,12 @@ def test_the_pattern_of_0_6_20_is_what_the_steps_of_a_sync_write():
     {"kind": "marked_known", "count": "12"}, {"kind": "tracker_conflict"},
     {"kind": "apps_installed", "names": []}, {"kind": "apps_installed", "names": [3]},
     {"kind": "apps_waiting", "count": -1}, {"kind": "not_accepted", "count": True},
+    {"kind": "received_files"}, {"kind": "received_files", "types": {}},
+    {"kind": "received_files", "types": ["FIT_TYPE_44"]},
+    {"kind": "received_files", "types": {"FIT_TYPE_44": "3"}},
+    {"kind": "received_files", "types": {"FIT_TYPE_44": -1}},
+    {"kind": "received_files", "types": {"FIT_TYPE_44": True}},
+    {"kind": "received_files", "types": {"FIT_TYPE_44": 0}},
 ])
 def test_a_damaged_line_says_nothing(line):
     """A line whose numbers or names are not what a sync writes is left out, never shown
