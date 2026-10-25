@@ -17,6 +17,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 from openexpress import service  # noqa: E402
 from openexpress.cli import _human  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption  # noqa: E402
 
 # The window's logger: the lines of this page stay where they were before the split.
@@ -114,7 +115,7 @@ class MapsPage:
         if free is not None and total:
             used_by_maps = sum(m.size for m in installed if m.occupies)
             row = Adw.ActionRow(
-                title=_("{free} free of {total}").format(free=_human(free), total=_human(total)),
+                title=space_text(free, total),
                 subtitle=_("Maps use {size}").format(size=_human(used_by_maps)))
             row.add_suffix(Gtk.LevelBar(min_value=0, max_value=1, value=1 - free / total,
                                         valign=Gtk.Align.CENTER, width_request=120))
@@ -256,8 +257,8 @@ class MapsPage:
         lines = [(plan.title or plan.name).replace("-", "\u2011"), "",
                  caption(plan.name, _human(plan.size))]
         if plan.free is not None:
-            lines.append(_("Free space on the device: {free} (the map takes {size})").format(
-                free=_human(plan.free), size=_human(plan.size)))
+            lines.append(_("Space on the device: {space} (the map takes {size})").format(
+                space=space_text(plan.free), size=_human(plan.size)))
         return "\n".join(lines)
 
     def add_own_map(self, path) -> None:
@@ -380,8 +381,8 @@ class MapsPage:
 
         s = self.session
         body = (_("Download: {size}").format(size=_human(m.size)) + "\n"
-                + _("Space on the device: {needed} ({free} free)").format(
-                    needed=_human(need), free=_human(free)) + "\n"
+                + _("Space on the device: {needed} ({space})").format(
+                    needed=_human(need), space=space_text(free)) + "\n"
                 + _("Files: {count}").format(count=len(m.files))
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
                    if removing else "")

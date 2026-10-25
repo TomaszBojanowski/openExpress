@@ -669,7 +669,7 @@ def test_run_sync_refuses_a_garmin_drive(device_root, xdg, device):
     before = tree(device_root)
     with pytest.raises(service.MassStorageMode) as error:
         service.run_sync(ums_session(device_root, device, client))
-    assert str(error.value) == "A device in mass storage mode is not synced."
+    assert str(error.value) == "A device connected as a USB drive is not synced."
     assert client.http.sent == [] and tree(device_root) == before
     assert service.load_last_sync(UNIT) is None
 

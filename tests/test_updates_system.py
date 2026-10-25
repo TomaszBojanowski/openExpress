@@ -349,7 +349,7 @@ def test_status_when_the_software_is_up_to_date():
     assert status == {
         "icon": ("object-select-symbolic", 96, True),
         "texts": [("Software is up to date", ["title-1"]),  # a title: no full stop
-                  ("Test watch\u00a0· version 23.39", ["dim-label"])],
+                  ("Software 23.39", ["dim-label"])],
         "buttons": [("Check Again", False)]}
     assert [g.title for g in groups] == ["Advanced"]  # no list of updates; reinstalls as before
     check.emit("clicked")
@@ -361,7 +361,7 @@ def test_status_with_a_system_update():
     win, status, groups, (install, check) = _updates_page(_items(FONT_ENTRY, BUNDLE_ENTRY))
     assert status == {
         "icon": ("software-update-available-symbolic", 96, False),
-        "texts": [("Software update available", ["title-1"]),
+        "texts": [("2 updates available", ["title-1"]),  # the words of the device's row
                   (f"{VERSIONS}\u00a0· 12\u00a0B", ["dim-label"]),
                   ("Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP", ["caption", "dim-label"])],
         "buttons": [("Install", True), ("Check Again", False)]}
@@ -381,7 +381,7 @@ def test_status_with_plain_updates_only():
     assert status == {
         "icon": ("software-update-available-symbolic", 96, False),
         "texts": [("2 updates available", ["title-1"]),
-                  ("Test watch\u00a0· version 23.39", ["dim-label"])],
+                  ("Software 23.39", ["dim-label"])],
         "buttons": [("Check Again", False)]}
     (available,) = groups
     assert [r.get_title() for r in available.rows] == ["Test Font", "Test Map Data"]
@@ -412,14 +412,14 @@ def test_the_status_in_polish():
     finally:
         i18n.setup("en")
     assert [t for t, _c in current["texts"]] == ["Oprogramowanie jest aktualne",
-                                                 "Test watch\u00a0· wersja 23.39"]
+                                                 "Oprogramowanie 23.39"]
     assert current["buttons"] == [("Sprawdź ponownie", False)]
     assert [t for t, _c in system["texts"]] == [
-        "Dostępna aktualizacja oprogramowania", f"{VERSIONS}\u00a0· 12\u00a0B",
+        "Dostępne są 2 aktualizacje", f"{VERSIONS}\u00a0· 12\u00a0B",
         "Test Bundle\u00a0· Zalecana\u00a0· GUPDATE.GSP"]
     assert system["buttons"] == [("Zainstaluj", True), ("Sprawdź ponownie", False)]
     assert groups[0].title == "Dostępne aktualizacje"
-    assert plain["texts"][0][0] == "Dostępna jest 1 aktualizacja"
+    assert plain["texts"][0][0] == "Dostępna aktualizacja: Test Font 23.40"  # as on the row
     assert listed.rows[0].get_title() == "Oprogramowanie systemowe"
 
 
@@ -500,7 +500,7 @@ def test_status_with_a_beta_system_update():
     items = updates.parse_updates(lower_keys(beta_answer()))
     _win, status, _groups, _buttons = _updates_page(items, beta=True)
     assert status["texts"] == [
-        ("Software update available", ["title-1"]),
+        ("2 updates available", ["title-1"]),
         # "Beta" in the warning colour, not dimmed like the rest of the line.
         (f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B",
          [["dim-label"], ["heading", "warning"], ["dim-label"], ["dim-label"]]),
@@ -519,7 +519,7 @@ def test_status_says_beta_versions_are_offered_when_none_is_listed():
     # Up to date: the line is there as well.
     _win, status, _groups, _buttons = _updates_page([], beta=True)
     assert [t for t, _c in status["texts"]] == [
-        "Software is up to date", "Test watch\u00a0· version 23.39",
+        "Software is up to date", "Software 23.39",
         "Garmin offers beta software for this device."]
 
 
@@ -571,7 +571,7 @@ def test_beta_in_the_window_in_polish(monkeypatch):
     assert body.endswith("\n\nTo jest wersja beta.")
     assert warning == (WARNING_PL, ["heading", "warning"])
     assert [t for t, _c in status["texts"]] == [
-        "Dostępna aktualizacja oprogramowania", f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B",
+        "Dostępne są 2 aktualizacje", f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B",
         "Test Bundle\u00a0· Zalecana\u00a0· GUPDATE.GSP",
         "Garmin oferuje dla tego urządzenia oprogramowanie w\u00a0wersji beta."]
 
@@ -882,8 +882,8 @@ def test_status_of_an_update_that_waits_for_the_device():
     _win, status, groups, _buttons = _updates_page(_staged_items())
     assert status == {
         "icon": ("software-update-available-symbolic", 96, False),
-        "texts": [("Update ready to install", ["title-1"]),
-                  (f"{VERSIONS}\u00a0· disconnect the device to install it", ["dim-label"]),
+        "texts": [("Update ready: disconnect the device to install it", ["title-1"]),
+                  (VERSIONS, ["dim-label"]),  # what to do is in the title
                   ("Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP", ["caption", "dim-label"])],
         "buttons": [("Check Again", False)]}  # nothing to install: no "Install"
     # Not a component to reinstall: only the font is there.
@@ -915,8 +915,7 @@ def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(monkeypat
 def test_status_of_a_beta_that_waits_for_the_device():
     _win, status, _groups, _buttons = _updates_page(_staged_items(BETA), beta=True)
     assert status["texts"][1] == (
-        f"{VERSIONS}\u00a0· Beta\u00a0· disconnect the device to install it",
-        [["dim-label"], ["heading", "warning"], ["dim-label"], ["dim-label"]])
+        f"{VERSIONS}\u00a0· Beta", [["dim-label"], ["heading", "warning"]])
     assert status["texts"][3][0] == "Garmin offers beta software for this device."
 
 
@@ -925,7 +924,8 @@ def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
     """A device in mass storage mode takes the update once it is ejected (#11): Eject, which
     does that; an MTP device is only to be disconnected, as above."""
     win, status, _groups, buttons = _updates_page(_staged_items(), drive=True)
-    assert status["texts"][1] == (f"{VERSIONS}\u00a0· eject the device to install it", ["dim-label"])
+    assert status["texts"][:2] == [("Update ready: eject the device to install it", ["title-1"]),
+                                   (VERSIONS, ["dim-label"])]
     assert status["buttons"] == [("Eject", True), ("Check Again", False)]
     buttons[0].emit("clicked")
     assert win.ejected == [win.session]
@@ -934,7 +934,7 @@ def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
 @pytest.mark.needs_display
 def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
-    assert status["texts"][0][0] == "Update ready to install"
+    assert status["texts"][0][0] == "Update ready: disconnect the device to install it"
     (available,) = groups  # the font, to install before the device is disconnected
     assert [r.get_title() for r in available.rows] == ["Test Font"]
 
@@ -1010,7 +1010,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
 
     items = updates.parse_updates(lower_keys(server_answer()))
     win, status, _groups, _buttons = _updates_page(items)
-    assert status["texts"][0][0] == "Software update available"
+    assert status["texts"][0][0] == "2 updates available"
 
     def nothing(*_a, **_kw):
         raise AssertionError("neither the server nor the device may be asked again")
@@ -1035,7 +1035,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     dialog.emit("response", "ok")  # as if "Accept and install" was pressed
     assert [u.part_number for u in copied[0]] == ["006-V0000-00"] and win.shown == ["Done"]
     status, groups, _buttons = _read_page(win)
-    assert status["texts"][0][0] == "Update ready to install"
+    assert status["texts"][0][0] == "Update ready: disconnect the device to install it"
     assert status["buttons"] == [("Check Again", False)]
     assert [r.get_title() for r in groups[0].rows] == ["Test Font"]  # still to install
 
@@ -1053,8 +1053,8 @@ def test_ready_in_polish():
     finally:
         i18n.setup("en")
     assert [t for t, _c in status["texts"]][:2] == [
-        "Aktualizacja gotowa do instalacji",
-        f"{VERSIONS}\u00a0· Beta\u00a0· odłącz urządzenie, aby ją zainstalować"]
+        "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować",
+        f"{VERSIONS}\u00a0· Beta"]
     assert status["buttons"] == [("Sprawdź ponownie", False)]
     assert win.update_row.get_subtitle() == (
         "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować")

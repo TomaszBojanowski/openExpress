@@ -17,6 +17,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist, known_devices  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
+from openexpress.gui.words import last_seen_tooltip  # noqa: E402
 from openexpress.i18n import _, full_time, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
     BIKE_ACCESSORY,
@@ -612,15 +613,16 @@ class RememberedPage:
         self.page = Adw.NavigationPage(title=_("Devices"), tag="remembered", child=view)
 
     def show(self, name: str, version: str, part_number: str, last_seen: str,
-             last_sync: str) -> None:
+             last_sync: str, seen_tooltip: str | None = None) -> None:
         """What is known; a version or a part number not known is left out, not shown
-        empty."""
+        empty. `seen_tooltip`: when it was last seen, in full."""
         name = name or _("Garmin device")
         self.page.set_title(name)
         self.name_label.set_label(name)
         self.version_label.set_label(version)
         self.version_label.set_visible(bool(version))
         self.seen_label.set_label(last_seen)
+        self.seen_label.set_tooltip_text(seen_tooltip)
         self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
         self.tools_group.set_visible(bool(part_number))
@@ -663,7 +665,7 @@ def seen_tooltip(tile) -> str | None:
     (under its name it is told against now)."""
     if tile.connected or not tile.last_seen:
         return None
-    return _("Last seen {when}").format(when=full_time(datetime.fromtimestamp(tile.last_seen)))
+    return last_seen_tooltip(tile.last_seen)
 
 
 def _image(tile, picture, size: int) -> Gtk.Image:

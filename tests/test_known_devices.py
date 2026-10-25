@@ -237,7 +237,7 @@ def test_devices_lists_what_is_remembered(store, utc, capsys):
     assert out.splitlines() == [
         "Devices this installation has seen:",
         "  1. Varia RTL515 · 006-B3592-03 · Software 3.36 · USB drive · Last seen 2026-10-17 02:20",
-        "  2. fēnix 8 · 006-B4532-00 · Software 23.39 · Over USB (MTP) · Last seen 2026-10-17 00:00"]
+        "  2. fēnix 8 · 006-B4532-00 · Software 23.39 · MTP · Last seen 2026-10-17 00:00"]
     assert str(FENIX) not in out and "3000000003" not in out
 
 

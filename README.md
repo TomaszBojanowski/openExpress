@@ -264,8 +264,8 @@ connected device; no login is needed.
   to charge the device and not to disconnect it while copying. The question in the window
   shows both versions and links to the license (EULA).
 - **After the file is copied** the device installs it when it is disconnected. Until then
-  the page says *Update ready to install* and `openexpress updates` says that the update
-  waits for the device.
+  the page says *Update ready: disconnect the device to install it* and `openexpress
+  updates` says that the update waits for the device.
 - **A device that connects as a USB drive** is ejected first: after the copy the window
   asks to eject it (`openexpress updates --install` ejects it by itself), and says that the
   cable can be unplugged only once that has worked. Some of these devices install an update

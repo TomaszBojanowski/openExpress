@@ -178,8 +178,8 @@ def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
         if len(drives) > 1:
             # Their addresses name the user's folder, and --device-uri takes no drive.
             raise gio_storage.SeveralDevices(
-                _("Several Garmin devices are connected in mass storage mode. Connect only "
-                  "one of them."), drives) from None
+                _("Several Garmin devices are connected as USB drives. Connect only one of "
+                  "them."), drives) from None
         return gio_storage.open_ums_storage(drives[0])
     skipped = len(gio_storage.find_ums_devices())
     if skipped:
@@ -819,7 +819,7 @@ def run_sync(
     """Full sync. `first_run`: 'baseline' or 'all' for the first time."""
     if s.mass_storage:
         log.info("sync: refused, the device is in mass storage mode")
-        raise MassStorageMode(_("A device in mass storage mode is not synced."))
+        raise MassStorageMode(_("A device connected as a USB drive is not synced."))
     started = time.monotonic()
     log.info("sync: start (first run: %s, diagnostics: %s)", first_run or "-",
              include_diagnostics)

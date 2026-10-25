@@ -39,7 +39,7 @@ from openexpress import (  # noqa: E402
     sync,
 )
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human, _seen_at  # noqa: E402
+from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
@@ -114,6 +114,14 @@ from openexpress.gui.netstatus_view import (  # noqa: E402, F401 - also gui.app.
 from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    last_seen_text,
+    last_seen_tooltip,
+    software_text,
+    space_text,
+    update_state_text,
+    updates_available,
+)
 from openexpress.i18n import N_, _, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.progress import Waiting  # noqa: E402
@@ -575,26 +583,23 @@ def with_space(found):
 
 
 def render_space(win) -> None:
-    """The subtitle (and the bar) of "Device storage" from the space the session holds:
-    "…" until it is read, "?" for what is not known. Nothing is asked of the device."""
+    """The subtitle (and the bar) of "Device storage" from the space the session holds, in
+    the words of every page (space_text): "Reading…" until it is read, "Unknown" when the
+    device does not say. Nothing is asked of the device."""
     row, bar = getattr(win, "storage_row", None), getattr(win, "storage_bar", None)
     s = win.session
     if row is None or s is None:
         return
     space = getattr(s, "space", None)
     if space is None:
-        row.set_subtitle("…")
+        row.set_subtitle(space_text(None, reading=True))
         bar.set_visible(False)
         return
     free, total = space
+    row.set_subtitle(space_text(free, total))
     if free is not None and total:
-        row.set_subtitle(_("{free} free of {total}").format(free=_human(free),
-                                                             total=_human(total)))
         bar.set_value(min(1.0, max(0.0, 1 - free / total)))
-        bar.set_visible(True)
-    else:
-        row.set_subtitle(_("{size} free").format(size=_human(free)))
-        bar.set_visible(False)
+    bar.set_visible(bool(free is not None and total))
 
 
 def refresh_space(win, s) -> None:
@@ -826,7 +831,7 @@ def account_subtitle(fields: dict) -> str:
     """A device only on the account: its version as Garmin Connect knows it (if it says)."""
     seen = _("Not seen on this computer")
     version = fields["software_version"]
-    return caption(_("Software {version}").format(version=version), seen) if version else seen
+    return caption(software_text(version, from_account=True), seen) if version else seen
 
 
 def tile_subtitle(source) -> str:
@@ -841,9 +846,8 @@ def tile_subtitle(source) -> str:
 def remembered_subtitle(known, now: datetime | None = None) -> str:
     """A remembered device that is not connected: its version and when it was last seen,
     told against now as the last sync is ("Last seen 2 h ago"; in full in its tooltip)."""
-    when = i18n.relative_time(datetime.fromtimestamp(known.last_seen), now or datetime.now())
-    return caption(_("Software {version}").format(version=known.software_version),
-                   _("Last seen {when}").format(when=when))
+    return caption(software_text(known.software_version),
+                   last_seen_text(known.last_seen, now or datetime.now()))  # the window's clock
 
 
 def show_not_for_mass_storage(sec) -> None:
@@ -1205,23 +1209,6 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
     return row
 
 
-def updates_available(count: int, only=None) -> str:
-    """The subtitle of "Device software" with `count` updates to install: of one (`only`),
-    the version of a system update or the name and version of another, as the Updates page
-    names it; of several (or one not known), how many."""
-    if count == 1 and only is not None and only.is_system:
-        # TRANSLATORS: subtitle of the row "Device software": the one update to install is
-        # of the device's system software
-        return _("Version {version} available").format(version=only.version)
-    if count == 1 and only is not None:
-        # TRANSLATORS: subtitle of the row "Device software": the one update to install, of
-        # another part of the device (its name and version, as the server gives them)
-        return _("Update available: {name} {version}").format(name=only.title,
-                                                               version=only.version)
-    return ngettext("{count} update available", "{count} updates available",
-                    count).format(count=count)
-
-
 def row_subtitle(row) -> Gtk.Label | None:
     """The label of the subtitle of an Adw.ActionRow, which libadwaita does not give: the one
     with the style class "subtitle" (so in 1.5 as in 1.9). None when there is none."""
@@ -1563,7 +1550,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # that is not ready.
             return self._usb_title or _("Connect your device")
         if getattr(s, "mass_storage", False):
-            return _("Mass storage mode")  # never synced; the device page says why
+            return _("USB drive")  # never synced; the device page says why
         if not s.logged_in:
             return _("Not logged in to Garmin Connect")
         if s.ownership_error is not None:
@@ -1939,7 +1926,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see (F1).
             text = drive_notice_text()
             # TRANSLATORS: a device connected as a USB drive, not over MTP
-            return _("Mass storage mode"), text, False
+            return _("USB drive"), text, False
         if waited_s < WAIT_FOR_DEVICE_S:
             return (_("The device is starting…"),
                     _("This takes a moment after the cable is plugged in"), True)
@@ -2480,7 +2467,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         version = fields["software_version"]
         self.remembered.show(
             name=fields["description"],
-            version=_("Software {version}").format(version=version) if version else "",
+            version=software_text(version, from_account=True) if version else "",
             part_number=fields["part_number"],
             last_seen=_("Not seen on this computer"),
             last_sync=self._last_sync_text(service.unit_id_of(entry.get("unitid"))))
@@ -2509,7 +2496,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             name=known.description,
             version=_("Software {version}").format(version=known.software_version),
             part_number=known.part_number,
-            last_seen=_("Last seen {when}").format(when=_seen_at(known.last_seen)),
+            last_seen=last_seen_text(known.last_seen, datetime.now()),
+            seen_tooltip=last_seen_tooltip(known.last_seen),
             last_sync=last_sync)
         if tile is not None:
             self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
@@ -2746,12 +2734,15 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         # A Garmin device in mass storage mode is never synced and has no maps.
         mass_storage = getattr(s, "mass_storage", False)
         if mass_storage:
-            sec.group(_("Mass storage mode"), mass_storage_text())
+            # The mode is named in the explanation under the title only.
+            sec.group(_("USB drive"), mass_storage_text())
         else:
             g = sec.group(_("Sync with Garmin Connect"))
             if s.ownership_error is not None:
-                g.add(Adw.ActionRow(title=_("Sync is not available for this device"),
-                                    subtitle=GLib.markup_escape_text(str(s.ownership_error))))
+                # Why, the banner says; not here again.
+                # TRANSLATORS: subtitle of "Last sync" of a device that cannot be synced
+                g.add(Adw.ActionRow(title=_("Last sync"), subtitle=pgettext("sync",
+                                                                            "Not available")))
             else:
                 self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"))
                 self._last_sync_children = []
@@ -2954,29 +2945,19 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         """Shows self.update_state in the overview ("Watch software" row, software label)."""
         if self.session is None or not hasattr(self, "update_row"):
             return
-        version = _("Software {version}").format(
-            version=self.session.device.software_version_str)
+        version = software_text(self.session.device.software_version_str)
         self._highlight_update(self.update_state == "available")
-        if self.update_state == "available":
-            self.update_row.set_subtitle(GLib.markup_escape_text(
-                updates_available(self.update_count, self.update_only)))
-            self.software_label.set_label(version)  # the chip under it says it
-        elif self.update_state == "ready":
-            self.update_row.set_subtitle(
-                _("Update ready: eject the device to install it")
-                if getattr(self.session, "mass_storage", False)
-                else _("Update ready: disconnect the device to install it"))
+        # The words of the top of the Updates page (update_state_text); how many and which
+        # only for updates to install.
+        available = self.update_state == "available"
+        self.update_row.set_subtitle(GLib.markup_escape_text(update_state_text(
+            self.update_state, self.update_count if available else 0,
+            self.update_only if available else None,
+            mass_storage=getattr(self.session, "mass_storage", False))))
+        if self.update_state == "ready":
             self.software_label.set_label(caption(version, _("update ready to install")))
-        elif self.update_state == "current":
-            # TRANSLATORS: subtitle of the row "Device software", without a full stop
-            self.update_row.set_subtitle(_("Software is up to date"))
-            self.software_label.set_label(version)
-        elif self.update_state == "failed":
-            self.update_row.set_subtitle(_("Could not check for updates"))
-            self.software_label.set_label(version)
         else:
-            self.update_row.set_subtitle(_("Checking…"))
-            self.software_label.set_label(version)
+            self.software_label.set_label(version)  # an update to install: its chip says it
 
     def _highlight_update(self, on: bool) -> None:
         """An update to install stands out on the device page (24.10.2026): the chip of its
@@ -3582,7 +3563,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         # A system update is told at the top of the page; a second one (rare) is listed.
         system = next((u for u in new if u.is_system), None)
         self._updates_status(sec, system, len(new), beta,
-                             ready=staged[0] if staged and system is None else None)
+                             ready=staged[0] if staged and system is None else None,
+                             only=new[0] if len(new) == 1 else None)
         rest = [u for u in new if u is not system]
         if rest:
             g = sec.group(_("Available updates"))
@@ -3604,20 +3586,23 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             for u in sorted(re, key=lambda x: x.title):
                 self._update_row(exp, u, reinstall=True)
 
-    def _updates_status(self, sec, system, count: int, beta: bool = False, ready=None) -> None:
-        """The top of the Updates page: the system update when there is one, the system update
-        that is copied already (`ready`) and waits for the device to be disconnected, how many
-        other updates there are, or that the software is up to date; and whether Garmin offers
-        beta versions to the device."""
+    def _updates_status(self, sec, system, count: int, beta: bool = False, ready=None,
+                        only=None) -> None:
+        """The top of the Updates page: the state of the updates in the words of the row
+        "Device software" (update_state_text: `count` updates to install, `only` the one of
+        them; one copied already, `ready`, that waits for the device to be disconnected; or up
+        to date); under it the system update when there is one, or the version of the device;
+        and whether Garmin offers beta versions to the device."""
         from openexpress import updates as upd
 
         d = self.session.device
-        installed = caption(_("{model} · version {version}").format(
-            model=d.description, version=d.software_version_str))
+        mass_storage = getattr(self.session, "mass_storage", False)
+        installed = software_text(d.software_version_str)
         detail = None
         buttons = []
         if system is not None:
-            icon, title = "software-update-available-symbolic", _("Software update available")
+            icon = "software-update-available-symbolic"
+            title = update_state_text("available", count, only)
             versions, size = f"{d.software_version_str}{ARROW}{system.version}", _human(system.size)
             subtitle = caption(versions, size)
             if system.is_beta:
@@ -3631,30 +3616,24 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
                                         "suggested-action"))
         elif ready is not None:
-            icon, title = "software-update-available-symbolic", _("Update ready to install")
+            # What to do is in the title (as on the row "Device software"); under it the
+            # versions.
+            icon = "software-update-available-symbolic"
+            title = update_state_text("ready", mass_storage=mass_storage)
             versions = f"{d.software_version_str}{ARROW}{ready.version}"
-            if getattr(self.session, "mass_storage", False):
+            if mass_storage:
                 # A drive: the device takes the update once it is ejected (#11).
-                # TRANSLATORS: after the versions, e.g. "3.36 → 3.40 · eject the device…"
-                disconnect = _("eject the device to install it")
                 buttons.append(self._button(
                     _("Eject"), lambda button, s=self.session: self.eject_device(s, button=button),
                     "suggested-action", with_button=True))
-            else:
-                # TRANSLATORS: after the versions, e.g. "33.11 → 33.12 · disconnect the device…"
-                disconnect = _("disconnect the device to install it")
-            subtitle = caption(versions, disconnect)
-            if ready.is_beta:
-                subtitle = (versions, _("Beta"), disconnect)
+            subtitle = (versions, _("Beta"), "") if ready.is_beta else versions
             detail = caption(ready.title, ready.severity_text, ready.filename)
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
-            title = ngettext("{count} update available", "{count} updates available",
-                             count).format(count=count)
+            title = update_state_text("available", count, only)
         else:
             icon, subtitle = "object-select-symbolic", installed
-            # TRANSLATORS: title at the top of the Updates page, without a full stop
-            title = _("Software is up to date")
+            title = update_state_text("current")
         buttons.append(self._button(_("Check Again"),
                                     lambda: self.load_section("updates", force=True)))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
@@ -3683,17 +3662,19 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                     # each separator.
                     line = label("", styles, wrap=True, justify=Gtk.Justification.CENTER,
                                  max_width_chars=50)
+                    tail = f"{SEPARATOR}{GLib.markup_escape_text(after)}" if after else ""
                     line.set_markup(f"{GLib.markup_escape_text(versions)}{SEPARATOR}"
-                                    f"<b>{GLib.markup_escape_text(word)}</b>{SEPARATOR}"
-                                    f"{GLib.markup_escape_text(after)}")
+                                    f"<b>{GLib.markup_escape_text(word)}</b>{tail}")
                     box.append(line)
                     continue
                 marked = Gtk.Box()
                 marked.append(label(word, ["warning", "heading"]))
-                marked.append(label(SEPARATOR, styles))
-                box.append(wrapping_row(
-                    [label(versions + SEPARATOR, styles), marked,
-                     label(after, styles, wrap=True, justify=Gtk.Justification.CENTER)], 0))
+                parts = [label(versions + SEPARATOR, styles), marked]
+                if after:  # none after "Beta" for an update copied already
+                    marked.append(label(SEPARATOR, styles))
+                    parts.append(label(after, styles, wrap=True,
+                                       justify=Gtk.Justification.CENTER))
+                box.append(wrapping_row(parts, 0))
             elif text:
                 box.append(label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
                                  max_width_chars=50))
@@ -4146,13 +4127,14 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
     @staticmethod
     def _apps_space(state) -> str:
+        """The free slots and the free space for apps, the space in the words of every page
+        (space_text)."""
+        space = space_text(state.available_space)
         slots = state.available_slots
-        space = _human(state.available_space)
         if slots is None:
-            return _("{size} free").format(size=space)
-        return caption(ngettext("{count} free slot · {size} free",
-                                "{count} free slots · {size} free", slots).format(
-            count=slots, size=space))
+            return space
+        return caption(ngettext("{count} free slot", "{count} free slots", slots).format(
+            count=slots), space)
 
     @staticmethod
     def _waiting_note(app, updated: bool = False) -> str:

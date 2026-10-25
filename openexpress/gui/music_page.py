@@ -15,6 +15,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 
 from openexpress.cli import _human  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, ngettext, pgettext  # noqa: E402
 
 
@@ -49,7 +50,7 @@ class MusicPage:
         sec = self.sections["music"]
         # Only the kinds of media this device declares.
         kinds = music.supported_kinds(self.session.device)
-        g = sec.group(_("Add to the device"), _("Free space: {size}").format(size=_human(free)))
+        g = sec.group(_("Add to the device"), space_text(free))
         for kind in kinds:
             row = Adw.ActionRow(title=_(music.KIND_NAMES[kind]))
             row.add_suffix(self._button(_("Folders…"), lambda k=kind: self.choose_music(k, True)))

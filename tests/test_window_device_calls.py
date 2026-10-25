@@ -439,7 +439,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     win.load_music()
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]
-    assert add.get_description() == f"Free space: {free}"
+    assert add.get_description() == f"{free} free"  # as on the device page
 
 
 # --- step 6: the device page (show_overview) -----------------------------------------------------
@@ -553,13 +553,14 @@ def test_the_device_page_asks_the_device_nothing(iq_device):
 
 @pytest.mark.needs_display
 def test_the_storage_row_says_dots_until_the_space_is_read(iq_device):
-    """Not read yet: "…" (never "0 B" or "?"), then the space read in the background."""
+    """Not read yet: "Reading…" (never "0 B" or "Unknown"), then the space read in the
+    background."""
     st, dev = iq_device
     storage = Space(st.root)
     win, section, s = _overview_window(storage, dev)
     win.show_overview()
-    assert _storage_subtitle(section) == "…"
-    _turn_until(lambda: _storage_subtitle(section) != "…")
+    assert _storage_subtitle(section) == "Reading…"
+    _turn_until(lambda: _storage_subtitle(section) != "Reading…")
     assert _storage_subtitle(section) == READ
     assert storage.on_gtk == [] and sorted(storage.elsewhere) == ["capacity", "free_space"]
     assert s.space == (FREE, SIZE)
@@ -615,14 +616,14 @@ def test_a_space_read_after_the_device_was_unplugged_is_dropped(iq_device):
 
 @pytest.mark.needs_display
 def test_a_device_that_cannot_be_asked_has_an_unknown_space_and_no_error(iq_device):
-    """E.g. during a session of PTP: the space is unknown ("?"), with no error in the
-    window."""
+    """E.g. during a session of PTP: the space is unknown ("Unknown"), with no error in
+    the window."""
     st, dev = iq_device
     storage = Space(st.root, fail=True)
     win, section, s = _overview_window(storage, dev)
     win.show_overview()
-    _turn_until(lambda: _storage_subtitle(section) != "…")
-    assert _storage_subtitle(section) == "? free"
+    _turn_until(lambda: _storage_subtitle(section) != "Reading…")
+    assert _storage_subtitle(section) == "Unknown"
     assert s.space == (None, None) and win.errors == []
 
 

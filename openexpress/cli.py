@@ -88,8 +88,8 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
         raise service.MassStorageMode(mass_storage_text())
     if command in ("sync", "baseline") and not dev.datatypes():
         raise service.MassStorageMode(_(
-            "Nothing to sync: the device declares no data types (for example a device in "
-            "mass storage mode, or a copy of one)."))
+            "Nothing to sync: the device declares no data types (for example a device "
+            "connected as a USB drive, or a copy of one)."))
     if not args.path:  # a device found now; a folder given with --path may be a copy
         known_devices.seen(dev.unit_id, dev.description, dev.part_number,
                            dev.software_version_str, "ums" if st.mass_storage else "mtp")
@@ -397,7 +397,7 @@ def cmd_devices(args) -> int:
             return 0
         print(_("Devices this installation has seen:"))
         for number, d in enumerate(devices, 1):
-            how = _("USB drive") if d.kind == "ums" else _("Over USB (MTP)")
+            how = _("USB drive") if d.kind == "ums" else "MTP"  # the window's pair of names
             print(f"  {number}. " + " · ".join((
                 d.description, d.part_number,
                 _("Software {version}").format(version=d.software_version), how,

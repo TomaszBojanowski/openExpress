@@ -1317,8 +1317,8 @@ def test_several_garmin_drives(watch_and_drives, monkeypatch):
     with pytest.raises(gio_storage.SeveralDevices) as error:
         service.open_session(allow_ums=True)
     text = str(error.value)
-    assert text == ("Several Garmin devices are connected in mass storage mode. Connect only "
-                    "one of them.")
+    assert text == ("Several Garmin devices are connected as USB drives. Connect only one of "
+                    "them.")
     assert "file:" not in text and "--device-uri" not in text and MEDIA_USER not in text
     assert error.value.__cause__ is None
 
@@ -1350,7 +1350,7 @@ def test_several_garmin_drives_come_with_the_drives_found(watch_and_drives, monk
     monitor_with(monkeypatch, first, second)
     with pytest.raises(gio_storage.SeveralDevices) as error:
         service.open_session(allow_ums=True)
-    assert str(error.value) == ("Several Garmin devices are connected in mass storage mode. "
+    assert str(error.value) == ("Several Garmin devices are connected as USB drives. "
                                 "Connect only one of them.")
     assert [(d.kind, d.uri, d.usb.usb_id) for d in error.value.devices] == [
         ("ums", first.root.get_uri(), "091e:20ee"), ("ums", second.root.get_uri(), "091e:20ee")]
@@ -1771,7 +1771,7 @@ def test_device_page_of_a_garmin_drive_says_what_applies(drive_window, monkeypat
     window cannot open (step 1)."""
     texts, _calls = _drive_device_page(drive_window, monkeypatch)
     assert "Backup" not in texts
-    assert "Mass storage mode" in texts and MASS_STORAGE_TEXT in texts
+    assert "USB drive" in texts and MASS_STORAGE_TEXT in texts
     assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) not in texts
 
 
@@ -1900,7 +1900,7 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
                                  sections={"watch": types.SimpleNamespace(
                                      set_empty=lambda *notice: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
-    assert shown == [("Mass storage mode", FLATPAK_DRIVE_TEXT, False)]
+    assert shown == [("USB drive", FLATPAK_DRIVE_TEXT, False)]
 
 
 def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidden(
@@ -1916,7 +1916,7 @@ def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidde
     monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
     monitor_with(monkeypatch)  # on USB, not mounted
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
-        "Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+        "USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
     drive = drive_window.world.drive()
     monitor_with(monkeypatch, drive)  # mounted and visible: the window opens it
     assert not gio_storage.drive_hidden_in_sandbox()
@@ -1924,7 +1924,7 @@ def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidde
     shutil.rmtree(drive.root.path)  # mounted, but out of the sandbox's sight
     assert gio_storage.drive_hidden_in_sandbox()
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
-        "Mass storage mode", FLATPAK_DRIVE_TEXT, False)
+        "USB drive", FLATPAK_DRIVE_TEXT, False)
     assert "--path" not in FLATPAK_DRIVE_TEXT
 
 
@@ -2944,7 +2944,7 @@ def test_a_drive_ejected_by_openexpress_is_not_opened_again_until_unplugged(driv
     mass_storage_device(world.root, name="1-4")  # plugged in again
     assert [d.uri for d in gio_storage.find_ums_devices()] == [mount.root.get_uri()]
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)[:2] == (
-        "Mass storage mode", DRIVE_NOT_MOUNTED_TEXT)
+        "USB drive", DRIVE_NOT_MOUNTED_TEXT)
 
 
 def _drive_client(monkeypatch):
@@ -3131,7 +3131,7 @@ def test_sync_is_grey_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
         s.client.auth = object()
     win = _sync_window(s)
     win.update()
-    assert _looks(win) == (False, False, "Mass storage mode", "Mass storage mode")
+    assert _looks(win) == (False, False, "USB drive", "USB drive")
     started = []
     win.run_task = lambda *a, **kw: started.append(a)
     MainWindow.start_sync(win)
@@ -3753,9 +3753,9 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
         assert refreshed == []  # nothing to look for over MTP
         assert shown[-1][2] is False and "PIN" not in shown[-1][1]
         # The window opens such a drive once it is mounted (step 5c): no advice about --path.
-        assert shown[-1] == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+        assert shown[-1] == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
         assert "--path" not in shown[-1][1]
-    assert updates == ["Mass storage mode"]  # the Sync button says why, told once
+    assert updates == ["USB drive"]  # the Sync button says why, told once
 
 
 REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
@@ -3866,7 +3866,7 @@ def test_a_garmin_drive_gets_no_advice_to_plug_it_in_again(plugged, monkeypatch)
     for now in (0, 20, 60):
         plugged.clock.now = now
         MainWindow._poll_usb(win, clock=plugged.clock)
-        assert shown[-1] == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+        assert shown[-1] == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
 
 
 def test_the_flatpak_window_without_a_hidden_drive_speaks_as_from_source(plugged, monkeypatch):
@@ -3880,7 +3880,7 @@ def test_the_flatpak_window_without_a_hidden_drive_speaks_as_from_source(plugged
     monitor_with(monkeypatch)  # nothing mounted
     mass_storage_device(plugged.root)
     notice = MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)
-    assert notice == ("Mass storage mode", DRIVE_NOT_MOUNTED_TEXT, False)
+    assert notice == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
     assert "--path" not in notice[1]
 
 
@@ -4937,7 +4937,7 @@ def test_a_drive_left_that_is_not_mounted_is_looked_for_once(start_window, monke
             win.timers.fire()
     assert titles == ["Detecting the device…"] and win.session is None
     assert caplog.text.count("a Garmin drive is still connected, detecting in 2.5 s") == 1
-    assert win.start.notices[-1][0] == "Mass storage mode"
+    assert win.start.notices[-1][0] == "USB drive"
 
 
 # --- the navigation matrix of the start page (audit, part 3) --------------------------------
@@ -5983,7 +5983,7 @@ def test_the_account_list_comes_after_the_first_drawing_with_one_more(start_wind
     now, now_tiles = sections(win)
     assert now == [*first, ("Forerunner 965", False)]
     assert now_tiles[:4] == first_tiles  # the same names and words
-    assert now_tiles[4][2] == "Software 22.26\u00a0· Not seen on this computer"
+    assert now_tiles[4][2] == "Software 22.26 (Garmin Connect)\u00a0· Not seen on this computer"
     assert win.navigation.stack == ["start page"] and win.session is None
     assert not any(str(u) in how for _n, _on, how in now_tiles for u in (FORERUNNER, VENU))
 
@@ -6089,7 +6089,8 @@ def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
     assert win.navigation.stack == ["start page", "remembered view"]
     assert opening == [] and win.session is None
     assert win.remembered.shown[-1] == {
-        "name": "Forerunner 965", "version": "Software 22.26", "part_number": "006-B4315-00",
+        "name": "Forerunner 965", "version": "Software 22.26 (Garmin Connect)",
+        "part_number": "006-B4315-00",
         "last_seen": "Not seen on this computer",
         "last_sync": "Not synced yet with openExpress"}
 
@@ -6278,7 +6279,7 @@ def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(st
     opened = win.session
     win._open_tile(names_on_the_start_page(win).index("Forerunner 965"))
     assert win.navigation.stack == ["start page", "remembered view"]
-    assert win.remembered.shown[-1]["version"] == "Software 22.26"
+    assert win.remembered.shown[-1]["version"] == "Software 22.26 (Garmin Connect)"
     newer = [dict(d, currentFirmwareVersion="22.30") if d["unitId"] == FORERUNNER else d
              for d in ACCOUNT_LIST]
 
@@ -6295,7 +6296,7 @@ def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(st
     assert detections == [] and win.session is opened
     assert asked == [1, 1]
     assert win.navigation.stack == ["start page", "remembered view"]
-    assert win.remembered.shown[-1]["version"] == "Software 22.30"
+    assert win.remembered.shown[-1]["version"] == "Software 22.30 (Garmin Connect)"
 
 
 # --- pictures on the tiles (D5, T5) -------------------------------------------------------------
