@@ -224,7 +224,7 @@ def test_window_row_in_polish_uses_the_same_sizes(polish):
     from openexpress.gui import app
     from openexpress.i18n import _
 
-    assert app._human is __import__("openexpress.cli", fromlist=["_human"])._human
-    text = _("{free} free of {total}").format(free=app._human(6657199308),
-                                              total=app._human(7623566950))
+    assert app.human_size is __import__("openexpress.cli", fromlist=["_human"])._human
+    text = _("{free} free of {total}").format(free=app.human_size(6657199308),
+                                              total=app.human_size(7623566950))
     assert text == "6,7\u00a0GB wolne z\u00a07,6\u00a0GB"

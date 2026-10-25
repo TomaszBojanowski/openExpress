@@ -15,10 +15,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import service  # noqa: E402
-from openexpress.cli import _human  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
-from openexpress.i18n import _, caption  # noqa: E402
+from openexpress.i18n import _, caption, human_size  # noqa: E402
 
 # The window's logger: the lines of this page stay where they were before the split.
 log = logging.getLogger("openexpress.gui.app")
@@ -134,7 +133,7 @@ class MapsPage:
             used_by_maps = sum(m.size for m in installed if m.occupies)
             row = Adw.ActionRow(
                 title=space_text(free, total),
-                subtitle=_("Maps use {size}").format(size=_human(used_by_maps)))
+                subtitle=_("Maps use {size}").format(size=human_size(used_by_maps)))
             row.add_suffix(Gtk.LevelBar(min_value=0, max_value=1, value=1 - free / total,
                                         valign=Gtk.Align.CENTER, width_request=120))
             g.add(row)
@@ -174,7 +173,7 @@ class MapsPage:
         listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         listbox.add_css_class("boxed-list")
         for m in available:
-            line = caption(m.region, m.version, _human(m.size))
+            line = caption(m.region, m.version, human_size(m.size))
             if not mp.can_install(m):
                 line += "\n" + mp.cannot_install_reason(m)  # instead of the button
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
@@ -213,7 +212,7 @@ class MapsPage:
 
     @staticmethod
     def _own_map_subtitle(m, ours: bool, foreign: bool) -> str:
-        parts = [m.filename, _human(m.size)]
+        parts = [m.filename, human_size(m.size)]
         if foreign:
             parts.append(_("not copied by this installation"))
         elif not ours:  # not a map by its header: it has no remove button
@@ -273,10 +272,10 @@ class MapsPage:
         file and the space. Hyphens in the name do not break ("13-Oct-2026" stays together);
         only what is shown changes, not the name."""
         lines = [(plan.title or plan.name).replace("-", "\u2011"), "",
-                 caption(plan.name, _human(plan.size))]
+                 caption(plan.name, human_size(plan.size))]
         if plan.free is not None:
             lines.append(_("Space on the device: {space} (the map takes {size})").format(
-                space=space_text(plan.free), size=_human(plan.size)))
+                space=space_text(plan.free), size=human_size(plan.size)))
         return "\n".join(lines)
 
     def add_own_map(self, path) -> None:
@@ -289,7 +288,7 @@ class MapsPage:
             return self._own_map_refused(e, _("Cannot add the map"))
 
         def written(real, plan):
-            self.toast(_("Wrote {path} ({size}).").format(path=real, size=_human(plan.size)))
+            self.toast(_("Wrote {path} ({size}).").format(path=real, size=human_size(plan.size)))
             self.load_section("maps", force=True)
 
         def confirm(plan):
@@ -327,14 +326,14 @@ class MapsPage:
         def removed(plan):
             if plan.on_device:
                 self.toast(_("Removed {path} ({size}).").format(
-                    path=plan.path, size=_human(plan.size)))
+                    path=plan.path, size=human_size(plan.size)))
             else:
                 self.toast(_("Took {name} off the list of own maps; the file was not on the "
                              "device.").format(name=plan.name))
             self.load_section("maps", force=True)
 
         body = _("{path} ({size}) will be removed from the device.").format(
-            path=m.path, size=_human(m.size))
+            path=m.path, size=human_size(m.size))
         if foreign:
             # A statement: the heading already asks.
             body = _("openExpress did not copy this map to the device.") + "\n\n" + body
@@ -353,7 +352,7 @@ class MapsPage:
         is named like its type ("Base maps")."""
         kind = m.map_type.strip()
         parts = [kind if kind.casefold() != m.name.strip().casefold() else "",
-                 m.version, _human(m.size), m.status]
+                 m.version, human_size(m.size), m.status]
         return caption(*parts)
 
     def confirm_map(self, m, button: Gtk.Button | None = None) -> None:
@@ -398,9 +397,9 @@ class MapsPage:
         from openexpress import maps as mp
 
         s = self.session
-        body = (_("Download: {size}").format(size=_human(m.size)) + "\n"
+        body = (_("Download: {size}").format(size=human_size(m.size)) + "\n"
                 + _("Space on the device: {needed} ({space})").format(
-                    needed=_human(need), space=space_text(free)) + "\n"
+                    needed=human_size(need), space=space_text(free)) + "\n"
                 + _("Files: {count}").format(count=len(m.files))
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
                    if removing else "")

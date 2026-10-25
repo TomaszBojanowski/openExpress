@@ -1606,8 +1606,8 @@ def test_window_says_what_to_do_next_without_naming_a_command():
 
 def test_next_steps_in_polish():
     from openexpress import i18n
-    from openexpress.cli import FINISH_STEPS, FINISH_STEPS_WINDOW
     from openexpress.i18n import _
+    from openexpress.updates import FINISH_STEPS, FINISH_STEPS_WINDOW
 
     i18n.setup("pl")
     try:

@@ -20,6 +20,7 @@ from openexpress.connect import (
     OwnershipError,
     Unauthorized,
 )
+from openexpress.console import error as _error
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, human_size, ngettext, pgettext
@@ -33,6 +34,7 @@ from openexpress.settings import (
     load_consumer,
     save_consumer,
 )
+from openexpress.updates import FINISH_STEPS
 
 log = logging.getLogger(__name__)
 
@@ -739,28 +741,6 @@ class _Bar:
                   end="", file=sys.stderr, flush=True)
             if pct >= 100:
                 print(file=sys.stderr)
-
-
-# What to do after an update was copied to the device: shown after every install, because
-# the device may ask and restart also when the server does not call the update one that
-# needs a restart. Untranslated constants; show them with _(FINISH_STEPS).
-FINISH_STEPS = N_("""
-To finish the installation:
-  1. Disconnect the device from the computer.
-  2. The device installs the update by itself. It may ask whether to install it:
-     choose to install now. It may also restart; wait until it is ready again.
-  3. Reconnect it and run `openexpress updates`: the installed update
-     should no longer be listed.
-""")
-# The same for the window, which has no commands.
-FINISH_STEPS_WINDOW = N_("""
-To finish the installation:
-  1. Disconnect the device from the computer.
-  2. The device installs the update by itself. It may ask whether to install it:
-     choose to install now. It may also restart; wait until it is ready again.
-  3. Reconnect it and check for updates again: the installed update
-     should no longer be listed.
-""")
 
 
 def _beta_mark(u) -> str:
@@ -2064,13 +2044,6 @@ def _command_line(args, argv) -> str:
     given = sys.argv[1:] if argv is None else argv
     words += [a.split("=", 1)[0] for a in given if a.startswith("-")]
     return " ".join(words)
-
-
-def _error(text: str) -> None:
-    """An error message for the user. What was printed so far comes first, also when the
-    output goes to a pipe or a file (stdout is buffered then, stderr is not)."""
-    sys.stdout.flush()
-    print(text, file=sys.stderr)
 
 
 def _run(args, service, requests) -> int:

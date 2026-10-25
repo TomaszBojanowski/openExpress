@@ -117,7 +117,7 @@ def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device
     assert asked["heading"] == "Install Test Map?"
     assert asked["body"].startswith(
         "Download: 3.0\u00a0kB\n"
-        f"Space on the device: {app._human(need)} ({app._human(free)} free)\nFiles: 2")
+        f"Space on the device: {app.human_size(need)} ({app.human_size(free)} free)\nFiles: 2")
 
 
 @pytest.mark.parametrize("meanwhile", ["unplugged", "list read again without it"])
@@ -409,7 +409,7 @@ def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     win.session.storage = storage
     win.run_task = tasks_in_a_thread()
     plain = LocalStorage(device_root)
-    title = f"{app._human(plain.free_space())} free of {app._human(plain.capacity())}"
+    title = f"{app.human_size(plain.free_space())} free of {app.human_size(plain.capacity())}"
     win.load_section("maps")
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (on_device,) = [g for g in section.groups if g.get_title() == "On the device"]
@@ -435,7 +435,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
     for name in ("load_music", "show_music"):
         setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
-    free = app._human(LocalStorage(st.root).free_space())
+    free = app.human_size(LocalStorage(st.root).free_space())
     win.load_music()
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]

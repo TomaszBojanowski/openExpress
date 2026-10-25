@@ -13,10 +13,9 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress.cli import _human  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
-from openexpress.i18n import _, caption, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import _, caption, human_size, ngettext, pgettext  # noqa: E402
 
 
 def note_music_count(win, count: int | None, size: int | None) -> None:
@@ -27,7 +26,7 @@ def note_music_count(win, count: int | None, size: int | None) -> None:
     if row is not None:
         row.set_subtitle(GLib.markup_escape_text(caption(ngettext(
             "{count} file · {size}", "{count} files · {size}", count).format(
-            count=count, size=_human(size or 0)))) if count is not None else "")
+            count=count, size=human_size(size or 0)))) if count is not None else "")
 
 
 class MusicPage:
@@ -76,7 +75,7 @@ class MusicPage:
             n = len(files)
             g = sec.group(on_watch[kind], caption(
                 ngettext("{count} file · {size}", "{count} files · {size}", n).format(
-                    count=n, size=_human(sum(f.size for f in files)))))
+                    count=n, size=human_size(sum(f.size for f in files)))))
             if not files:
                 continue
             exp = Adw.ExpanderRow(title=ngettext("Show {count} file", "Show {count} files",
@@ -177,7 +176,7 @@ class MusicPage:
 
         text = ngettext("{size} will be copied to the device ({count} file already there).",
                         "{size} will be copied to the device ({count} files already there).",
-                        len(plan.already)).format(size=_human(plan.size),
+                        len(plan.already)).format(size=human_size(plan.size),
                                                   count=len(plan.already))
         replaced = music.replaced_text(plan)
         return f"{text}\n\n{replaced}" if replaced else text
@@ -190,7 +189,7 @@ class MusicPage:
         n = len(plan.copy.to_copy)
         lines.append(ngettext("{count} file to copy ({size}), {already} already on the device",
                               "{count} files to copy ({size}), {already} already on the device",
-                              n).format(count=n, size=_human(plan.copy.size),
+                              n).format(count=n, size=human_size(plan.copy.size),
                                         already=len(plan.copy.already)))
         if plan.copy.replaced:
             from openexpress import music

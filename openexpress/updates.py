@@ -34,6 +34,26 @@ SPACE_MARGIN_PART = 0.05
 # come without "isprimaryfirmware" and without "isrestartrequired". The data type does not
 # tell either: fonts and databases are "Firmware" too.
 SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
+# What to do after an update was copied to the device: shown after every install, because
+# the device may ask and restart also when the server does not call the update one that
+# needs a restart. Untranslated constants; show them with _(FINISH_STEPS).
+FINISH_STEPS = N_("""
+To finish the installation:
+  1. Disconnect the device from the computer.
+  2. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart; wait until it is ready again.
+  3. Reconnect it and run `openexpress updates`: the installed update
+     should no longer be listed.
+""")
+# The same for the window, which has no commands.
+FINISH_STEPS_WINDOW = N_("""
+To finish the installation:
+  1. Disconnect the device from the computer.
+  2. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart; wait until it is ready again.
+  3. Reconnect it and check for updates again: the installed update
+     should no longer be listed.
+""")
 # Said before a system update is installed, on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
                            "not disconnect it while copying.")

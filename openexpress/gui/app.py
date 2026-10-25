@@ -40,8 +40,8 @@ from openexpress import (  # noqa: E402
     tile_facts,
 )
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
+from openexpress.console import error as print_error  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
     DRIVE_OFF,
@@ -128,7 +128,7 @@ from openexpress.gui.words import (  # noqa: E402
     to_upload_text,
     update_state_text,
 )
-from openexpress.i18n import N_, _, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import N_, _, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.progress import Waiting  # noqa: E402
 from openexpress.settings import (  # noqa: E402
@@ -138,6 +138,7 @@ from openexpress.settings import (  # noqa: E402
     extract_url_salt_from_dll,
     save_consumer,
 )
+from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
@@ -1306,7 +1307,7 @@ CACHE_QUESTIONS = {
 
 
 def _cache_words(size: int, files: int) -> str:
-    return caption(_human(size), ngettext("{count} file", "{count} files", files).format(
+    return caption(human_size(size), ngettext("{count} file", "{count} files", files).format(
         count=files))
 
 
@@ -1336,7 +1337,7 @@ def ask_clear_cache_part(win, name: str, button) -> None:
         clear_cache(win, [name], button)
         return
     heading, body = CACHE_QUESTIONS[name]
-    ask_to_clear(win, _(heading), _(body).format(size=_human(shown.usage.sizes[name])), [name])
+    ask_to_clear(win, _(heading), _(body).format(size=human_size(shown.usage.sizes[name])), [name])
 
 
 def ask_to_clear(win, heading: str, body: str, names: list[str] | None) -> None:
@@ -1371,7 +1372,7 @@ def clear_cache(win, names: list[str] | None, button) -> None:
     def done(result):
         freed, now = result
         show_cache_usage(win, now)
-        cache_toast(win, _("Freed {size}.").format(size=_human(freed.total)))
+        cache_toast(win, _("Freed {size}.").format(size=human_size(freed.total)))
 
     def failed(e):
         if isinstance(e, cache.CacheError):
@@ -3702,10 +3703,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         if maps:
             body = _("This deletes the downloaded maps ({maps}) and the other files of the cache "
                      "({other}). The maps will have to be downloaded again.").format(
-                maps=_human(maps), other=_human(other))
+                maps=human_size(maps), other=human_size(other))
         else:
             body = _("This deletes the files of the cache ({size}). They are downloaded again "
-                     "when needed.").format(size=_human(use.total))
+                     "when needed.").format(size=human_size(use.total))
         ask_to_clear(self, _("Clear the cache?"), body, None)
 
 
@@ -3945,7 +3946,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         if system is not None:
             icon = "software-update-available-symbolic"
             title = update_state_text("available", count, only)
-            versions, size = f"{d.software_version_str}{ARROW}{system.version}", _human(system.size)
+            versions = f"{d.software_version_str}{ARROW}{system.version}"
+            size = human_size(system.size)
             subtitle = caption(versions, size)
             if system.is_beta:
                 # The versions, "Beta" and the rest apart, so that "Beta" can have the warning
@@ -4026,7 +4028,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         sec.group().add(box)
 
     def _update_row(self, parent, u, reinstall: bool = False) -> None:
-        details = caption(u.version, _human(u.size), u.severity_text, u.filename)
+        details = caption(u.version, human_size(u.size), u.severity_text, u.filename)
         # A system update says so in its title; the name the server gives it goes first.
         row = Adw.ActionRow(
             title=GLib.markup_escape_text(_("System software") if u.is_system else u.title),
@@ -4057,7 +4059,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system
                    else u.version)
         body = (f"{u.title} {version}\n"
-                + _("Size: {size}").format(size=_human(u.size)) + "\n"
+                + _("Size: {size}").format(size=human_size(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
@@ -4435,7 +4437,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(
                                     caption(self._store_type_name(a), a.version_name,
-                                            _human(a.size), a.developer)))
+                                            human_size(a.size), a.developer)))
             icons[a.app_id] = self._app_icon(row)
             row.add_suffix(self._button(_("Install"), lambda a=a: self.install_apps([a])))
             g.add(row)
@@ -4963,7 +4965,7 @@ def main(argv=None) -> int:
     if told is not None:
         # One line, before anything is built on a display that is not there.
         log.info("no display: %s", told)
-        _error(_("No display available ({details}): openExpress needs a graphical session")
+        print_error(_("No display available ({details}): openExpress needs a graphical session")
                .format(details=told))
         return 1
     install_excepthook()

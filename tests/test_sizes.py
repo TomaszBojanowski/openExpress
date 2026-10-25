@@ -79,7 +79,7 @@ def test_commands_and_window_use_the_same_function():
     from openexpress import cli
     from openexpress.gui import app
 
-    assert cli._human is human_size and app._human is human_size
+    assert cli._human is human_size and app.human_size is human_size
 
 
 def uploading(device_root, tmp_path):
