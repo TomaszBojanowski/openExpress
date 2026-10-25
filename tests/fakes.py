@@ -121,6 +121,84 @@ class SyncClient:
         self.acks.append(mid)
 
 
+
+# --- Garmin Connect as a whole sync asks it ------------------------------------------------
+
+ACTIVITY_URL = "https://up.example/activity"
+MONITORING_URL = "https://up.example/monitoring"
+# The upload settings of the test device (tests/conftest.py): its activities and monitoring.
+UPLOAD_SETTINGS = {"unittypename": "test", "datatypes": [
+    {"datatypename": "FIT_TYPE_4",
+     "uploadlocations": [{"url": ACTIVITY_URL, "requiresauthentication": True}]},
+    {"datatypename": "FIT_TYPE_32",
+     "uploadlocations": [{"url": MONITORING_URL, "requiresauthentication": True}]},
+]}
+OPT_IN = {"useroption": "opt-in", "sourcetype": "CUSTOMER", "consentenforcementstate": "HARD"}
+COURSE = {"messageid": 5, "devicexmldatatype": "FIT_TYPE_6",
+          "metadata": {"messageurl": "course/5", "messagename": "A course"}}
+# A type the test device does not declare (it takes courses only).
+NOT_TAKEN = {"messageid": 6, "devicexmldatatype": "FIT_TYPE_99",
+             "metadata": {"messageurl": "other/6", "messagename": "Something"}}
+
+
+class SyncAccount(SyncClient):
+    """Garmin Connect, logged in, as a whole sync asks it, both ways: the account lists the
+    test device; `consent` False: no upload consent; the upload settings of
+    UPLOAD_SETTINGS; the queue of `messages`; the acknowledgement of each message ID of
+    `ack_fails` fails. `asked`: what was asked of it, in order."""
+
+    UNIT = 1234567890  # the test device (tests/conftest.py)
+
+    def __init__(self, *, consent=True, ack_fails=(), **kw):
+        super().__init__(**kw)
+        self.auth = object()
+        self.consent_given = consent
+        self.ack_fails = set(ack_fails)
+        self.asked = []
+
+    def account_devices(self):
+        self.asked.append("account")
+        return [{"unitid": self.UNIT}]
+
+    def consent(self, consent_type):
+        self.asked.append("consent")
+        return OPT_IN if self.consent_given else {**OPT_IN, "useroption": "opt-out"}
+
+    def device_sync_preference(self):
+        self.asked.append("device sync")
+        return {"key": "account.deviceSync", "value": "true"}
+
+    def profile_country(self):
+        return "PL"
+
+    def upload_settings(self, unit_id):
+        self.asked.append("upload settings")
+        return UPLOAD_SETTINGS
+
+    def activity_matches(self, unit_id, ids):
+        self.asked.append("matches")
+        return super().activity_matches(unit_id, ids)
+
+    def upload_file(self, url, data, **kw):
+        self.asked.append("upload")
+        return super().upload_file(url, data, **kw)
+
+    def device_messages(self, unit_id):
+        self.asked.append("queue")
+        return self.messages
+
+    def download_message(self, url, absolute):
+        self.asked.append("download")
+        return super().download_message(url, absolute)
+
+    def ack_message(self, mid):
+        self.asked.append("acknowledge")
+        if mid in self.ack_fails:
+            from openexpress.connect import ApiError
+
+            raise ApiError("the queue did not answer", 503)
+        super().ack_message(mid)
+
 # --- what the window writes of the devices before it draws their tiles ------------------
 
 

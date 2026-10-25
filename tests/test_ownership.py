@@ -572,7 +572,8 @@ def watcher(monkeypatch):
     monkeypatch.setattr(w, "notify", lambda title, body: w.notes.append((title, body)))
     w.synced = []
     monkeypatch.setattr(watch.service, "run_sync",
-                        lambda s, **kw: w.synced.append(s) or service._run_sync(s, None, kw["progress"], False))
+                        lambda s, **kw: w.synced.append(s) or service.apply_sync(
+                            s, service.plan_sync(s, progress=kw["progress"]), kw["progress"]))
     return w
 
 

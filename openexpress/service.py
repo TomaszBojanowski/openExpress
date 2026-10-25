@@ -459,6 +459,9 @@ class SyncSummary:
     # What happened, in order: a text, or the numbers of a step as a dict, which is put into
     # words only when it is shown (`describe_steps`): in the language of that moment.
     lines: list = field(default_factory=list)
+    # The uploads Garmin Connect took without confirming that it processed them (the command
+    # line warns of them). Not kept in last_sync.json.
+    not_confirmed: list[str] = field(default_factory=list)
 
     def record(self, unit_id: int | None = None) -> dict:
         """This sync as last_sync.json keeps it (save_last_sync), to be put into words by
@@ -816,17 +819,24 @@ def run_sync(
     first_run: str | None = None,
     progress: Progress = lambda m: None,
     include_diagnostics: bool = False,
+    options: SyncOptions | None = None,
 ) -> SyncSummary:
-    """Full sync. `first_run`: 'baseline' or 'all' for the first time."""
+    """A whole sync: planned (plan_sync) and done (apply_sync) under the lock of the sync,
+    so that one process syncs at a time; its record kept (last_sync.json) and its start, end
+    and errors logged. `first_run`: 'baseline' or 'all' for the first time. `options`: what
+    the command line was asked (its first run and diagnostics with it); the window and the
+    background service ask for everything."""
+    if options is None:
+        options = SyncOptions(first_run=first_run, include_diagnostics=include_diagnostics)
     if s.mass_storage:
         log.info("sync: refused, the device is in mass storage mode")
         raise MassStorageMode(_("A device connected as a USB drive is not synced."))
     started = time.monotonic()
-    log.info("sync: start (first run: %s, diagnostics: %s)", first_run or "-",
-             include_diagnostics)
+    log.info("sync: start (first run: %s, diagnostics: %s)", options.first_run or "-",
+             options.include_diagnostics)
     try:
         with sync_lock():
-            summary = _run_sync(s, first_run, progress, include_diagnostics)
+            summary = apply_sync(s, plan_sync(s, options, progress), progress)
     except Exception as e:
         log.warning("sync: stopped after %.1f s: %s: %s", time.monotonic() - started,
                     type(e).__name__, e)
@@ -838,6 +848,165 @@ def run_sync(
     for error in summary.log_errors:
         log.warning("sync error: %s", error)
     return summary
+
+
+@dataclass(frozen=True)
+class SyncOptions:
+    """What a sync is asked to do. The window and the background service always ask for
+    all of it; the command line may be asked for less (its options)."""
+
+    first_run: str | None = None  # the first sync: "baseline" or "all"; None: not chosen
+    include_diagnostics: bool = False  # also the device's diagnostics and telemetry
+    only_types: frozenset[str] | None = None  # only these data types (sync --type)
+    uploads: bool = True  # False: the uploads are not looked at (sync --download-only)
+    downloads: bool = True  # False: Garmin Connect's queue is not (sync --upload-only)
+    # Only to be shown (the dry run of the command line): no login needed (the uploads
+    # alone then), the first sync planned without its choice, the queue read with the plan.
+    preview: bool = False
+
+
+@dataclass
+class QueuePlan:
+    """Garmin Connect's queue for the device, and what becomes of each item of it
+    (sync.DownloadItem: written to the device, handled by Connect IQ or TrueUp, or not
+    taken by the device)."""
+
+    messages: list[dict]
+    items: list[sync.DownloadItem]
+
+
+@dataclass
+class SyncPlan:
+    """What a sync will do, worked out once (plan_sync): shown by the dry run of the command
+    line, done by apply_sync. Nothing of it is written yet."""
+
+    options: SyncOptions
+    # What was uploaded before, as the plan was made against it: with the files of the
+    # baseline marked, in memory, when the first sync has one.
+    state: sync.SyncState
+    config: dict | None = None  # the device's upload settings; None: not asked
+    baseline: list | None = None  # the files the first sync marks as uploaded already
+    gate: UploadGate | None = None  # whether data may be uploaded; None: not asked
+    uploads: sync.UploadPlan | None = None  # None: the uploads are not looked at
+    queue: QueuePlan | None = None  # read with the plan for a preview only
+
+
+def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
+              progress: Progress = lambda m: None) -> SyncPlan:
+    """What a sync of the device will do, in the order it does it: the device checked
+    against the account, its upload settings, the first sync (its baseline marked in
+    memory, or the choice asked for: FirstSyncChoiceNeeded), whether the account lets data
+    be uploaded, and the files to upload. Writes nothing, uploads nothing. Garmin Connect's
+    queue is read by apply_sync, after the uploads, in the order Garmin Express syncs; a
+    preview reads it now (nothing is uploaded before it)."""
+    options = options or SyncOptions()
+    if not s.logged_in and not options.preview:
+        raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
+    if s.logged_in:
+        require_account_device(s.client, s.device.unit_id)
+    plan = SyncPlan(options, s.state)
+    if options.uploads:
+        progress(Waiting(_("Fetching configuration from the Garmin server…")))
+        plan.config = s.client.upload_settings(s.device.unit_id)
+        if not plan.state.file.exists():  # the first sync
+            if options.first_run == "baseline":
+                plan.baseline = sync.plan_baseline(s.device, s.storage, plan.config,
+                                                   plan.state)
+                sync.note_baseline(plan.baseline, plan.state)
+            elif options.first_run != "all" and not options.preview:
+                raise FirstSyncChoiceNeeded()
+        progress(_("Looking for new files on the device…"))
+        if s.logged_in:
+            plan.gate = check_upload_allowed(s.client)
+        plan.uploads = sync.plan_uploads(
+            s.device, s.storage, plan.config, plan.state, only_types=options.only_types,
+            include_diagnostics=options.include_diagnostics,
+            consent_granted=plan.gate.granted if plan.gate is not None else None)
+    if options.preview and options.downloads and s.logged_in:
+        plan.queue = plan_queue(s, progress)
+    return plan
+
+
+def plan_queue(s: DeviceSession, progress: Progress = lambda m: None) -> QueuePlan:
+    """Garmin Connect's queue for the device, and what becomes of each item of it."""
+    progress(Waiting(_("Checking for files from Garmin Connect…")))
+    messages = s.client.device_messages(s.device.unit_id)
+    return QueuePlan(messages, sync.plan_downloads(s.device, messages))
+
+
+def apply_sync(s: DeviceSession, plan: SyncPlan,
+               progress: Progress = lambda m: None) -> SyncSummary:
+    """The sync of a plan (plan_sync): its baseline written, its files uploaded, then Garmin
+    Connect's queue read and its files written to the device, with its Connect IQ apps and
+    TrueUp; state.json written. What was done, in steps (SyncSummary.lines). The record is
+    kept by run_sync."""
+    options = plan.options
+    if options.preview:
+        raise ValueError("a preview of a sync is only to be shown")
+    out = SyncSummary()
+    state = plan.state
+    if not options.uploads:
+        # The uploads were not looked at: the row says so, not "nothing to upload".
+        out.lines.append(upload_skipped_step())
+    elif options.only_types:
+        # Only these types were looked at: the row says its numbers are of them only.
+        out.lines.append(only_types_step(options.only_types))
+    if plan.baseline is not None:
+        out.lines.append(marked_known_step(
+            sync.save_baseline(s.device, plan.baseline, state, s.client)))
+    if plan.uploads is not None:
+        gate = plan.gate if plan.gate is not None else UploadGate(NOT_CHECKED)
+        if not gate.allowed:
+            # Files from Connect are still written to the device below.
+            out.lines.append(not_uploaded_step(gate))
+        elif plan.uploads.candidates:
+            out.lines.append(new_files_step(plan.uploads.candidates))
+            rep = sync.run_uploads(plan.uploads, s.device, s.storage, s.client, state,
+                                   progress)
+            out.uploaded = len(rep.uploaded)
+            out.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
+            out.rejected = len(rep.rejected)
+            out.errors += [f"{label}: {err}" for label, err in rep.failed]
+            out.log_errors += [f"{sync.log_label(label)}: {sync.log_error(label, err)}"
+                               for label, err in rep.failed]
+            out.not_confirmed += rep.not_confirmed
+            out.lines.append(uploads_step(rep))
+            if rep.tracker_conflict:
+                out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
+    # No new file on the device: the row says it ("nothing to upload"), no line of its own.
+    if options.downloads:
+        _apply_queue(s, plan_queue(s, progress), state, progress, out)
+    if plan.uploads is not None:
+        # Not without the uploads: the choice of the first sync stays to be made.
+        state.save()
+    return out
+
+
+def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None:
+    items = queue.items
+    todo = [i for i in items if not i.unsupported and not i.handled_by]
+    if todo:
+        drep = sync.run_downloads(todo, s.storage, s.client, progress, state=state)
+        out.downloaded = len(drep.written)
+        if drep.written_types:
+            out.lines.append(received_files_step(drep.written_types))
+        out.errors += [f"{label}: {err}" for label, err in drep.failed]
+        out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
+                       .format(name=label) for label in drep.ack_failed]
+        out.log_errors += [f"{quiet}: {err}" for quiet, err in drep.failed_in_log]
+        out.log_errors += [f"{quiet}: written, but Garmin Connect was not notified (will retry)"
+                           for quiet in drep.ack_failed_in_log]
+    told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
+    received: list[str] = []  # what of them came to the device: received as the files
+    if any(i.handled_by == "Connect IQ" for i in items):
+        out.lines += _install_queued_apps(s, queue.messages, progress, out.errors, received)
+    if any(i.handled_by == "TrueUp" for i in items):
+        out.lines += _trueup(s, queue.messages, progress, out.errors, received)
+    out.downloaded += len(received)
+    out.log_errors += out.errors[told:]
+    skipped = [i for i in items if i.unsupported]
+    if skipped:
+        out.lines.append(not_accepted_step(len(skipped)))
 
 
 def last_sync_path():
@@ -928,72 +1097,6 @@ def load_last_sync(unit_id: int | None = None) -> dict | None:
     if data is None or (unit_id is not None and data.get("unit_id") != unit_id):
         return None
     return data
-
-
-def _run_sync(s, first_run, progress, include_diagnostics) -> SyncSummary:
-    if not s.logged_in:
-        raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
-    require_account_device(s.client, s.device.unit_id)
-    out = SyncSummary()
-    state = s.state
-    progress(Waiting(_("Fetching configuration from the Garmin server…")))
-    cfg = s.client.upload_settings(s.device.unit_id)
-    if s.first_sync:
-        if first_run == "baseline":
-            n = sync.mark_baseline(s.device, s.storage, cfg, state, s.client)
-            out.lines.append(marked_known_step(n))
-        elif first_run != "all":
-            raise FirstSyncChoiceNeeded()
-        state = s.state
-    progress(_("Looking for new files on the device…"))
-    gate = check_upload_allowed(s.client)
-    plan = sync.plan_uploads(s.device, s.storage, cfg, state,
-                             include_diagnostics=include_diagnostics,
-                             consent_granted=gate.granted)
-    if not gate.allowed:
-        # Files from Connect are still written to the device below.
-        out.lines.append(not_uploaded_step(gate))
-    elif plan.candidates:
-        out.lines.append(new_files_step(plan.candidates))
-        rep = sync.run_uploads(plan, s.device, s.storage, s.client, state, progress)
-        out.uploaded = len(rep.uploaded)
-        out.skipped_known = len(rep.duplicates) + len(rep.already_in_connect)
-        out.rejected = len(rep.rejected)
-        out.errors += [f"{label}: {err}" for label, err in rep.failed]
-        out.log_errors += [f"{sync.log_label(label)}: {sync.log_error(label, err)}"
-                           for label, err in rep.failed]
-        out.lines.append(uploads_step(rep))
-        if rep.tracker_conflict:
-            out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
-    # No new file on the device: the row says it ("nothing to upload"), no line of its own.
-    progress(Waiting(_("Checking for files from Garmin Connect…")))
-    messages = s.client.device_messages(s.device.unit_id)
-    items = sync.plan_downloads(s.device, messages)
-    todo = [i for i in items if not i.unsupported and not i.handled_by]
-    if todo:
-        drep = sync.run_downloads(todo, s.storage, s.client, progress, state=state)
-        out.downloaded = len(drep.written)
-        if drep.written_types:
-            out.lines.append(received_files_step(drep.written_types))
-        out.errors += [f"{label}: {err}" for label, err in drep.failed]
-        out.errors += [_("{name}: written, but Garmin Connect was not notified (will retry)")
-                       .format(name=label) for label in drep.ack_failed]
-        out.log_errors += [f"{quiet}: {err}" for quiet, err in drep.failed_in_log]
-        out.log_errors += [f"{quiet}: written, but Garmin Connect was not notified (will retry)"
-                           for quiet in drep.ack_failed_in_log]
-    told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
-    received: list[str] = []  # what of them came to the device: received as the files
-    if any(i.handled_by == "Connect IQ" for i in items):
-        out.lines += _install_queued_apps(s, messages, progress, out.errors, received)
-    if any(i.handled_by == "TrueUp" for i in items):
-        out.lines += _trueup(s, messages, progress, out.errors, received)
-    out.downloaded += len(received)
-    out.log_errors += out.errors[told:]
-    skipped = [i for i in items if i.unsupported]
-    if skipped:
-        out.lines.append(not_accepted_step(len(skipped)))
-    state.save()
-    return out
 
 
 def _install_queued_apps(s, messages, progress, errors,

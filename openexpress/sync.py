@@ -606,19 +606,42 @@ def mark_baseline(device: GarminDevice, storage: Storage, upload_config: dict,
     ownership check as an upload.
     """
     client.require_verified(device.unit_id)
+    files = plan_baseline(device, storage, upload_config, state)
+    note_baseline(files, state)
+    return save_baseline(device, files, state, client)
+
+
+def plan_baseline(device: GarminDevice, storage: Storage, upload_config: dict,
+                  state: SyncState) -> list[UploadCandidate]:
+    """The files a baseline marks as uploaded already: those on the device that a sync
+    could upload, whatever consent their upload needs (not the copies kept of a failed
+    upload)."""
     plan = plan_uploads(device, storage, upload_config, state, include_consent_locations=True)
-    n = 0
-    for c in plan.candidates:
-        if c.device_path is None:
-            continue
+    return [c for c in plan.candidates if c.device_path is not None]
+
+
+def note_baseline(files: list[UploadCandidate], state: SyncState) -> None:
+    """Mark the files of a baseline in `state`, in memory: nothing is written (a plan of
+    the uploads after it is made against it)."""
+    for c in files:
         if c.multi:
             state.mark_completed(c.datatype, c.name)
-            state.drop_pending(c.datatype, c.name)
         else:
             state.mark_singleton(c.datatype, c.device_path, md5(c.data or b""))
-        n += 1
+            c.data = None
+
+
+def save_baseline(device: GarminDevice, files: list[UploadCandidate], state: SyncState,
+                  client: GarminClient) -> int:
+    """Write a baseline noted in `state` (note_baseline): the copies of its files kept of a
+    failed upload go, and state.json is written. It says "this account already has these
+    files", so it needs the same ownership check as an upload. How many files it marked."""
+    client.require_verified(device.unit_id)
+    for c in files:
+        if c.multi:
+            state.drop_pending(c.datatype, c.name)
     state.save()
-    return n
+    return len(files)
 
 
 # --- download --------------------------------------------------------------------------
