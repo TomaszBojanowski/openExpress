@@ -143,6 +143,58 @@ def no_maps_message() -> str:
     return _("No maps are available for this device.")
 
 
+# The data type a device declares when its maps come from the universal map service although
+# Garmin files it as "UniversalDetect" (the fēnix 8 and the Edge 1050 do).
+UNIVERSAL_DETECT_DATATYPE = "PreProgrammedNamedMaps"
+
+
+class MapsNotSupported(MapError):
+    """Garmin serves the maps of the device another way than the universal map service, the
+    only one this program asks: no map check."""
+
+    def __init__(self) -> None:
+        super().__init__(_("Map updates for this device aren't supported yet."))
+
+
+def not_supported_text() -> str:
+    # TRANSLATORS: subtitle of the row "Maps" and title of the Maps page, without a full stop
+    return _("Map updates for this device aren't supported yet")
+
+
+def universal_serves(map_update_type, device) -> bool:
+    """Whether the universal map service serves the device, from what unit-info says of it
+    (mapUpdateType): Universal, or UniversalDetect while the device declares the data type
+    PreProgrammedNamedMaps. Anything else (Gemini, LegacyRmu, Unknown, none given) is served
+    another way."""
+    said = map_update_type.casefold() if isinstance(map_update_type, str) else None
+    if said == "universal":
+        return True
+    if said != "universaldetect":
+        return False
+    wanted = UNIVERSAL_DETECT_DATATYPE.casefold()
+    return any(name.casefold() == wanted for name in device.datatypes())
+
+
+def check(client, device) -> tuple[list[UniversalMap], int]:
+    """The maps of the device as the universal map service lists them (read_maps), once
+    unit-info says that service serves it; MapsNotSupported when it does not. A failed
+    unit-info fails the check: without it, which service serves the device is not known.
+    One line in the log says the way the check went (the part number only)."""
+    info = client.unit_info(device.unit_id, device.part_number) if device.unit_id else {}
+    value = info.get("mapupdatetype") if isinstance(info, dict) else None
+    if value is None or value == "":
+        said = "none given"
+    else:  # a word as Garmin gives it; an answer of another shape by its type, not quoted
+        said = value[:40] if isinstance(value, str) else type(value).__name__
+    if not universal_serves(value, device):
+        log.info("maps: map update type %s for %s: map updates not supported, no map check",
+                 said, device.part_number)
+        raise MapsNotSupported()
+    log.info("maps: map update type %s for %s: asking the universal map service", said,
+             device.part_number)
+    return read_maps(client.universal_maps(device.raw))
+
+
 def _listed(response) -> list:
     """The maps as the server lists them. An answer without a list of maps (an empty body,
     another object) is an error, so that a failure is never taken for "no maps"."""

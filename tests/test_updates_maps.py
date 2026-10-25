@@ -705,9 +705,14 @@ class Row:
         self.subtitle = text
 
 
-def _overview_window(answers, device_root=None):
+# What unit-info says of the made-up device: the universal map service serves it.
+UNIVERSAL = {"mapupdatetype": "Universal"}
+
+
+def _overview_window(answers, device_root=None, unit_info=UNIVERSAL):
     """A window with the "Maps" row; the server gives `answers` in turn (an exception is
-    raised). Background work runs at once unless `later` collects it."""
+    raised), unit-info gives `unit_info`. Background work runs at once unless `later`
+    collects it."""
     import types
 
     from openexpress.gui.app import MainWindow
@@ -732,8 +737,9 @@ def _overview_window(answers, device_root=None):
         (later.append(run) if win.hold else run())
 
     session = types.SimpleNamespace(
-        client=types.SimpleNamespace(universal_maps=universal_maps),
-        device=types.SimpleNamespace(raw=b"xml"),
+        client=types.SimpleNamespace(universal_maps=universal_maps,
+                                     unit_info=lambda unit_id, part_number: unit_info),
+        device=types.SimpleNamespace(raw=b"xml", unit_id=3000000002, part_number="006-B0000-00"),
         storage=LocalStorage(device_root) if device_root else None)
     win = types.SimpleNamespace(session=session, map_state=None, map_update_count=0,
                                 _map_check_session=None, map_row=Row(), hold=False,
@@ -758,6 +764,18 @@ def test_maps_row_says_what_the_check_found(counts, state, text, server):
     win._check_maps_quietly()
     assert (win.map_state, win.map_row.subtitle) == (state, text)
     assert asked == [b"xml"] and win._map_check_session is None  # one request
+
+
+@pytest.mark.parametrize("info", [{"mapupdatetype": "Gemini"}, {"mapupdatetype": "LegacyRmu"},
+                                  {"mapupdatetype": "Unknown"}, {}])
+def test_maps_row_says_map_updates_are_not_supported_for_a_device_served_another_way(info):
+    """Garmin serves the maps of the device another way than the universal service (a nüvi,
+    25.10.2026): no map check, and the row says so."""
+    win, asked, _later = _overview_window([], unit_info=info)
+    win._check_maps_quietly()
+    assert (win.map_state, win.map_row.subtitle) == (
+        "unsupported", "Map updates for this device aren't supported yet")
+    assert asked == [] and win._map_check_session is None
 
 
 def test_maps_row_for_a_device_without_maps():
@@ -890,10 +908,12 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
     session = types.SimpleNamespace(
         client=types.SimpleNamespace(
             universal_maps=lambda raw: server("maps", maps_answers),
+            unit_info=lambda unit_id, part_number: UNIVERSAL,
             software_updates=lambda raw, include_reinstalls=False: server(
                 "updates", updates_answers)),
         # A device that declares no folder for maps: the Maps page has no own maps.
         device=types.SimpleNamespace(raw=b"xml", software_version_str="23.39",
+                                     unit_id=3000000002, part_number="006-B0000-00",
                                      targets=lambda datatype: []),
         storage=LocalStorage(device_root), ownership_error=None)
     win = types.SimpleNamespace(
@@ -1038,9 +1058,9 @@ def test_maps_page_without_maps_has_one_check_again(device_root):
     assert group.header is None  # only the button under the message
 
 
-def _real_maps_page(answers, device_root):
+def _real_maps_page(answers, device_root, unit_info=UNIVERSAL):
     """The Maps page of the real kind in a window that is never shown, loaded the way
-    MainWindow loads it; Garmin's server gives `answers` in turn."""
+    MainWindow loads it; Garmin's server gives `answers` in turn, unit-info `unit_info`."""
     import types
 
     from test_fixes_ui import page_window
@@ -1055,9 +1075,11 @@ def _real_maps_page(answers, device_root):
         return answers[min(len(asked), len(answers)) - 1]
 
     win.session = types.SimpleNamespace(
-        client=types.SimpleNamespace(universal_maps=universal_maps),
+        client=types.SimpleNamespace(universal_maps=universal_maps,
+                                     unit_info=lambda unit_id, part_number: unit_info),
         # A device that declares no folder for maps: the page has no group of own maps.
-        device=types.SimpleNamespace(raw=b"xml", targets=lambda datatype: []),
+        device=types.SimpleNamespace(raw=b"xml", unit_id=3000000002, part_number="006-B0000-00",
+                                     targets=lambda datatype: []),
         storage=LocalStorage(device_root))
     win.map_state, win.map_update_count, win._map_check_session = None, 0, None
     win.map_row = Row()
@@ -1072,6 +1094,23 @@ def _real_maps_page(answers, device_root):
 
 def check_again_buttons(win):
     return [b for b in win._action_buttons if b.get_label() == "Check Again"]
+
+
+@pytest.mark.needs_display
+def test_maps_page_says_map_updates_are_not_supported_for_a_device_served_another_way(
+        device_root):
+    """The Maps page of a device Garmin serves another way than the universal service: the
+    sentence and "Check Again", no map check; the "Maps" row of the device page follows."""
+    from test_detection import _texts
+
+    win, section, asked = _real_maps_page([], device_root,
+                                          unit_info={"mapupdatetype": "LegacyRmu"})
+    win.load_section("maps")
+    texts = [t for g in section.groups for t in _texts(g)]
+    assert "Map updates for this device aren't supported yet" in texts
+    assert "Check Again" in texts and asked == []
+    assert (win.map_state, win.map_row.subtitle) == (
+        "unsupported", "Map updates for this device aren't supported yet")
 
 
 @pytest.mark.needs_display

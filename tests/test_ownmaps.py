@@ -1194,9 +1194,11 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
     win, section = own_maps_window()
     asked, drawn = [], []
     win.session = types.SimpleNamespace(
-        client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []}),
+        client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []},
+                                     unit_info=lambda unit_id, part_number: {
+                                         "mapupdatetype": "Universal"}),
         device=numbered(device(), 4000000007), storage=LocalStorage(map_folder))
-    win.session.device.raw = b"xml"
+    win.session.device.raw, win.session.device.part_number = b"xml", "006-B0000-00"
     real = win.show_own_maps
 
     def show_maps(result, own, space=None):  # stands in for the page of Garmin's maps

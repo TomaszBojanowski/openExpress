@@ -100,7 +100,8 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
 - Map updates for devices that connect as a USB drive (mass storage mode), such as older
-  nüvi car navigators.
+  nüvi car navigators, and for devices whose maps Garmin serves another way than its
+  universal map service (the window and `openexpress maps` say so).
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see
   [Privacy and security](#privacy-and-security)).
 
@@ -453,7 +454,8 @@ copy to the device is running.
 - The picture of a device that is not on the signed-in account (or when nobody is signed
   in) is looked up on Garmin's update server, and so, once each time openExpress runs, is
   what that server says of an open device in mass storage mode whose kind Garmin has not
-  told; like the update check, that request names the device (unit ID). The answer is not
+  told; before each map check the same request tells which map service serves the device.
+  Like the update check, that request names the device (unit ID). The answer is not
   stored: only the picture is cached, and the address of the picture of the model is kept
   with the devices this installation remembers, so that the picture can be downloaded again
   after the cache is cleared. Of the answer, the log names only the map update type (which

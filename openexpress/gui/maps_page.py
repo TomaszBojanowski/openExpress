@@ -22,6 +22,21 @@ from openexpress.i18n import _, caption  # noqa: E402
 log = logging.getLogger("openexpress.gui.app")
 
 
+def _no_maps(win, sec, text: str) -> None:
+    """The Maps page without Garmin's maps: why, and a button that checks again."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                  halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
+    box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
+    title = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER)
+    title.add_css_class("title-2")
+    box.append(title)
+    check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
+    check.add_css_class("pill")
+    check.connect("clicked", lambda *_a: win.load_section("maps", force=True))
+    box.append(check)
+    sec.group().add(box)
+
+
 class MapsPage:
     """The Maps page and its tasks, for Garmin's maps and maps of your own."""
 
@@ -34,7 +49,10 @@ class MapsPage:
         def work():
             # Garmin's server, then the map folder of the device for the maps that are not
             # Garmin's (the folder and the first bytes of each such file).
-            result = mp.read_maps(s.client.universal_maps(s.device.raw))
+            try:
+                result = mp.check(s.client, s.device)
+            except mp.MapsNotSupported:
+                return None  # the page says so; nothing is read on the device
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
             # The space too: asked of the device here, never as the page is drawn.
             return (result, ownmaps.overview(s.device, s.storage, result[0]),
@@ -49,7 +67,8 @@ class MapsPage:
                 self._render_map_state()
 
         self._load("maps", _("Checking maps…"), work,
-                   lambda r: self.show_maps(r[0], r[1], space=r[2]), on_error=failed)
+                   lambda r: self.show_maps(None) if r is None else self.show_maps(
+                       r[0], r[1], space=r[2]), on_error=failed)
 
     def show_maps(self, result, own=None, space=(None, None)) -> None:
         """`space`: the free space and the size of the device, read with the maps (none told:
@@ -58,23 +77,17 @@ class MapsPage:
 
         if self.session is None:
             return
+        sec = self.sections["maps"]
+        if result is None:  # map updates for this device are not supported (maps.check)
+            self.maps_cache = []
+            self._set_map_state(None)  # the "Maps" row of the device page
+            _no_maps(self, sec, mp.not_supported_text())
+            return
         all_maps, listed = result  # the maps read, and how many the server listed
         self.maps_cache = all_maps
         self._set_map_state(result)  # the "Maps" row of the device page
-        sec = self.sections["maps"]
         if not listed:
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
-                          halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
-            box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
-            title = Gtk.Label(label=mp.no_maps_message(), wrap=True,
-                              justify=Gtk.Justification.CENTER)
-            title.add_css_class("title-2")
-            box.append(title)
-            check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
-            check.add_css_class("pill")
-            check.connect("clicked", lambda *_a: self.load_section("maps", force=True))
-            box.append(check)
-            sec.group().add(box)
+            _no_maps(self, sec, mp.no_maps_message())
             if own is not None:
                 self.show_own_maps(own)
             return

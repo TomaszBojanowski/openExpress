@@ -871,7 +871,10 @@ def _load_maps(args, client):
     from openexpress import maps as mp
 
     st, dev = open_device(args)
-    all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
+    if args.path:  # a folder (maybe a copy): the universal map service, as before
+        all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
+    else:  # MapsNotSupported when Garmin serves the device's maps another way
+        all_maps, listed = mp.check(client, dev)
     mp.mark_waiting(st, all_maps)
     return st, dev, all_maps, listed
 

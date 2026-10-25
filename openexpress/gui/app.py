@@ -3041,6 +3041,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
             text = _("No maps are installed")
         elif self.map_state == "none":
             text = mp.no_maps_message()
+        elif self.map_state == "unsupported":
+            text = mp.not_supported_text()
         elif self.map_state == "failed":
             text = _("Could not check for updates")
         else:
@@ -3048,10 +3050,16 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
         self.map_row.set_subtitle(text)
 
     def _set_map_state(self, result) -> None:
-        """From an answer of the map check: the maps read, and how many the server listed.
-        Also called by the Maps page, whose answer is the newer one."""
-        all_maps, listed = result
+        """From an answer of the map check: the maps read, and how many the server listed;
+        None when map updates for the device are not supported (maps.check). Also called by
+        the Maps page, whose answer is the newer one."""
         self._map_check_session = None  # a quiet check that is still running is out of date
+        if result is None:
+            self.map_update_count = 0
+            self.map_state = "unsupported"
+            self._render_map_state()
+            return
+        all_maps, listed = result
         self.map_update_count = sum(1 for m in all_maps if m.update_available)
         if not listed:
             self.map_state = "none"
@@ -3089,7 +3097,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, Adw.ApplicationWindow):
                 self._render_map_state()
 
         def work():
-            result = mp.read_maps(s.client.universal_maps(s.device.raw))
+            try:
+                result = mp.check(s.client, s.device)
+            except mp.MapsNotSupported:
+                return None  # the row says so; nothing to read on the device
             mp.mark_waiting(s.storage, result[0])
             return result
 
