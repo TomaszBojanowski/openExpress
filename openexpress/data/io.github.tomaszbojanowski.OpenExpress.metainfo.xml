@@ -105,6 +105,36 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.0" date="2026-10-25">
+      <description>
+        <ul>
+          <li>The app now describes a device the same way everywhere: one wording for
+          software updates, free space, USB mode and the account on the tiles, the device
+          page and the Updates page (the USB mode in the CLI too). Tiles and the device page
+          show what was last known right away, instead of popping in after a check.</li>
+          <li>A remembered device can be forgotten: "Forget Device…" on its page removes what
+          this installation kept about it; backups stay unless you choose otherwise.
+          openexpress devices --forget in the CLI does the same.</li>
+          <li>The start page tells more at a glance: "Synced" when nothing is left to upload,
+          "Unplug to install" when an update is copied and waits for the device, and a note
+          when the account could not be checked.</li>
+          <li>The device page is more complete: "Apps" and "Music" rows, the date and number
+          of backups, how many new activities wait for upload, and the "Primary wearable"
+          setting from Garmin Connect.</li>
+          <li>A remembered device's page shows what the last check and the last sync found,
+          with their dates.</li>
+          <li>The details under "Last sync" also list the files received from Garmin
+          Connect, by type.</li>
+          <li>"Restore the order from a copy" lists only copies that differ from the current
+          order and says how many apps would move; identical copies of the app list are no
+          longer kept.</li>
+          <li>Fixed: "Restore the order from a copy" on the Apps page did nothing after
+          choosing a copy and pressing "Next" (since 0.6.12).</li>
+          <li>Fixed: a watch with Connect IQ but no apps installed yet showed an error on the
+          Apps page instead of "No Connect IQ apps on the device" (#14).</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.20" date="2026-10-25">
       <description>
         <ul>
