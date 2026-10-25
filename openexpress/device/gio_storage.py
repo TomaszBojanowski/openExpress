@@ -701,8 +701,14 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
     vendor 091e with a mass storage interface, and that has a medium – listed, to be mounted
     when chosen. Without a medium (removed safely: the device turns its drive off), or with
     no volume at all, only a replug helps: not listed, said in the log. `seen`: the USB
-    places of the drives already mounted (and found or skipped), not looked at again."""
+    places of the drives already mounted (and found or skipped), not looked at again.
+
+    One entry for each USB device, judged by all of its volumes: a device may give more
+    than one block device, one of them an empty slot (a Forerunner 55: `sdc` of 0 B beside
+    `sdd`, its drive, #19). Its drive is its first block device with a medium; an empty slot
+    beside it is no drive without a medium."""
     found = []
+    places: dict[str, list] = {}  # the unmounted volumes of each Garmin drive, by USB place
     for vol in Gio.VolumeMonitor.get().get_volumes():
         mounted = getattr(vol, "get_mount", lambda: None)()
         unix = vol.get_identifier("unix-device")
@@ -710,18 +716,25 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if mounted is not None or block is None or block[0][0] != GARMIN_VID:
             continue
         ids, folder = block
-        usb = GarminUsb(ids[1], "usb", ids[2], ids[3])
-        if f"{ids[2]}-{ids[3]}" in seen or not _mass_storage_only(folder):
+        place = f"{ids[2]}-{ids[3]}"
+        if place in seen or not _mass_storage_only(folder):
             continue
-        seen.add(f"{ids[2]}-{ids[3]}")
+        places.setdefault(place, []).append((vol, unix, ids))
+    for place, volumes in places.items():
+        seen.add(place)
+        ids = volumes[0][2]
+        usb = GarminUsb(ids[1], "usb", ids[2], ids[3])
         if ejected_by_us(usb):
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
             continue
-        if not _block_size(unix):
+        with_medium = sorted(((vol, unix) for vol, unix, _ids in volumes if _block_size(unix)),
+                             key=lambda v: (len(v[1]), v[1]))  # sdc before sdd, sdz before sdaa
+        if not with_medium:
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
             continue
+        vol, unix = with_medium[0]
         log.info("device: a Garmin drive (USB %s) is not mounted, listed to be mounted",
                  usb.usb_id)
         found.append(FoundDevice(UNMOUNTED_DRIVE + unix, vol.get_name(), False, vol, usb,

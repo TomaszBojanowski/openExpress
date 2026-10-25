@@ -275,3 +275,79 @@ def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeyp
     MainWindow._poll_usb(page)
     MainWindow._poll_usb(page)
     assert detected == [app.Cause.PLUGGED]  # once
+
+
+# --- two block devices of one device (#19: a Forerunner 55 just plugged in) ---------------
+#
+# lsblk on the reporter's computer: `sdc 0B` (an empty slot) and `sdd GARMIN 25.3M`, both of
+# the one USB device. Its drive is sdd: one tile, the empty slot gives neither a tile, nor a
+# line that its drive has no medium, nor that it has no drive.
+
+FR55_SECTORS = 51_814  # 25.3 MiB in 512-byte sectors
+
+
+def _two_slots(drives, monkeypatch, volumes):
+    """The Forerunner 55 as the kernel shows it: one USB device, one mass storage interface,
+    two SCSI disks below it (no partitions: the label is on the disk); sdc without a medium,
+    sdd with the drive. `volumes`: which of them gvfs gives a volume, in this order."""
+    from test_detection import _block
+
+    usb_drive(drives, product=FR55, disk="sdc", partition=None)
+    _sized(drives, "/dev/sdc", 0)
+    interface = drives.hub / "1-4" / "1-4:1.0"
+    _block(drives, interface / "host6" / "target6:0:0" / "6:0:0:1", "sdd", None)
+    _sized(drives, "/dev/sdd", FR55_SECTORS)
+    _on_usb(drives, monkeypatch)
+    folder = drive_folder(drives)
+    made = {name: UnmountedVolume(f"/dev/{name}", folder) for name in volumes}
+    _monitor(monkeypatch, volumes=list(made.values()))
+    return made
+
+
+@pytest.mark.parametrize("volumes", [("sdd",), ("sdc", "sdd"), ("sdd", "sdc")])
+def test_an_empty_slot_beside_the_drive_gives_no_tile_and_no_warning(drives, monkeypatch, caplog,
+                                                                      volumes):
+    from openexpress import devicelist
+    from openexpress.gui import start
+
+    _two_slots(drives, monkeypatch, volumes)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        (found,) = gio_storage.find_ums_devices()
+    assert (found.uri, found.mounted, found.kind) == ("ums-volume:/dev/sdd", False, "ums")
+    said = [m for m in caplog.messages if "Garmin" in m]
+    assert said == [("device: a Garmin drive (USB 091e:0f1d) is not mounted, listed to be "
+                     "mounted")]
+    (tile,) = devicelist.tiles([gio_storage.probe(found)], {}, None, False)
+    assert [words for words, _s, _t in start.chips(tile)] == ["USB drive"]
+
+
+def test_chosen_it_mounts_the_slot_with_the_drive(drives, monkeypatch):
+    from openexpress import service
+
+    made = _two_slots(drives, monkeypatch, ("sdc", "sdd"))
+    (found,) = gio_storage.find_ums_devices()
+    storage = service._open_found(found)
+    assert (made["sdc"].asked, made["sdd"].asked) == (0, 1)
+    assert storage.read("GARMIN/GarminDevice.xml") == RTL515_XML.encode()
+
+
+def test_the_window_lists_it_once(drives, monkeypatch):
+    from openexpress.gui import app
+
+    _two_slots(drives, monkeypatch, ("sdc", "sdd"))
+    result = app.detect_devices()
+    assert isinstance(result, app.DeviceChoices)
+    (summary,) = result.summaries
+    assert summary.found.uri == "ums-volume:/dev/sdd"
+
+
+def test_both_slots_without_a_medium_say_it_once(drives, monkeypatch, caplog):
+    """Removed safely: the device turns its drive off, both slots are empty: one line, as
+    for one slot, and no line that it has no drive."""
+    _two_slots(drives, monkeypatch, ("sdc", "sdd"))
+    _sized(drives, "/dev/sdd", 0)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.find_ums_devices() == []
+    assert [m for m in caplog.messages if "Garmin" in m] == [
+        ("device: a Garmin drive (USB 091e:0f1d) has no medium (removed safely?), not listed: "
+         "unplug it and plug it in again")]
