@@ -617,9 +617,17 @@ class RememberedPage:
         content.add(hero)
 
         group = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
-        self.last_sync_row = Adw.ActionRow(title=_("Last sync"))
+        # With its details, as on the page of a connected device (analysis 14, b8).
+        self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"), enable_expansion=False)
+        self._last_sync_details = None
         group.add(self.last_sync_row)
         content.add(group)
+
+        # What the account's list in memory says of it, read only (set_account_rows).
+        self.account_group = Adw.PreferencesGroup(title=_("Garmin Connect account"),
+                                                  visible=False)
+        self.account_rows: list = []
+        content.add(self.account_group)
 
         group = Adw.PreferencesGroup(title=pgettext("tab", "Updates"))
         check = _("Connect the device to check")
@@ -677,6 +685,31 @@ class RememberedPage:
             if row.get_subtitle() != text:
                 row.set_subtitle(text)
 
+    def set_last_sync_details(self, tooltip: str | None, details) -> None:
+        """The tooltip of "Last sync" (the full date; "Never synced …") and its details
+        ((text, warning) of last_sync.describe), drawn once whatever came before."""
+        self.last_sync_row.set_tooltip_text(tooltip)
+        if self._last_sync_details is not None:
+            self.last_sync_row.remove(self._last_sync_details.get_parent()
+                                      or self._last_sync_details)
+            self._last_sync_details = None
+        self.last_sync_row.set_enable_expansion(bool(details))
+        if details:
+            self._last_sync_details = last_sync_details(details)
+            self.last_sync_row.add_row(self._last_sync_details)
+
+    def set_account_rows(self, rows) -> None:
+        """The rows of the account ((title, subtitle), read only); none: no group."""
+        for row in self.account_rows:
+            self.account_group.remove(row)
+        self.account_rows = []
+        for title, subtitle in rows:
+            row = Adw.ActionRow(title=GLib.markup_escape_text(title),
+                                subtitle=GLib.markup_escape_text(subtitle))
+            self.account_group.add(row)
+            self.account_rows.append(row)
+        self.account_group.set_visible(bool(rows))
+
     def allow_forget(self, on: bool) -> None:
         """Whether the button "Forget Device…" is there: for a device remembered here, not one
         only on the account."""
@@ -695,6 +728,29 @@ class RememberedPage:
             return False
         self.image.set_from_paintable(texture)
         return True
+
+
+def last_sync_details(said) -> Gtk.Box:
+    """The details of a last sync as one row of a few lines (the page of a connected device
+    and of a remembered one): the files, those already in Garmin Connect, then what went
+    wrong, with an icon and in the colour of warnings."""
+    details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
+                      margin_bottom=10, margin_start=12, margin_end=12)
+    for text, warning in said:
+        # Secondary, as the subtitle of a row: smaller, and dimmed unless a warning.
+        label = Gtk.Label(label=text, xalign=0, wrap=True)
+        label.add_css_class("caption")
+        if warning:  # files rejected, or that could not be uploaded or written
+            line = Gtk.Box(spacing=6)
+            icon = Gtk.Image(icon_name="dialog-warning-symbolic")
+            for widget in (icon, label):
+                widget.add_css_class("warning")
+                line.append(widget)
+            details.append(line)
+        else:
+            label.add_css_class("dim-label")
+            details.append(label)
+    return details
 
 
 def tile_image(item) -> Gtk.Image:

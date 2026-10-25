@@ -19,6 +19,17 @@ from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, ngettext, pgettext  # noqa: E402
 
 
+def note_music_count(win, count: int | None, size: int | None) -> None:
+    """How many media files the Music page found on the open device, and their size (None:
+    not read yet), kept for the session and said by the row "Music" of the device page."""
+    win.music_count = (count, size) if count is not None else None
+    row = getattr(win, "music_row", None)
+    if row is not None:
+        row.set_subtitle(GLib.markup_escape_text(caption(ngettext(
+            "{count} file · {size}", "{count} files · {size}", count).format(
+            count=count, size=_human(size or 0)))) if count is not None else "")
+
+
 class MusicPage:
     """The Music page and its tasks."""
 
@@ -48,6 +59,8 @@ class MusicPage:
             return
         items, playlists = result
         sec = self.sections["music"]
+        # The row "Music" of the device page says it from now on.
+        note_music_count(self, len(items), sum(i.size for i in items))
         # Only the kinds of media this device declares.
         kinds = music.supported_kinds(self.session.device)
         g = sec.group(_("Add to the device"), space_text(free))

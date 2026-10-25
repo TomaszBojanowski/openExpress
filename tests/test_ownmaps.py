@@ -1222,7 +1222,7 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
     win.session.device.raw, win.session.device.part_number = b"xml", "006-B0000-00"
     real = win.show_own_maps
 
-    def show_maps(result, own, space=None):  # stands in for the page of Garmin's maps
+    def show_maps(result, own, space=None, map_update_type=None):  # Garmin's maps page
         drawn.append(("maps", result))
         drawn.append(("own", [m.filename for m in own.maps]))
         real(own)
@@ -1257,7 +1257,7 @@ def test_maps_page_shows_own_maps_whatever_service_serves_garmins_maps(map_folde
     win.session.device.raw, win.session.device.part_number = b"xml", "006-B0000-00"
     real = win.show_own_maps
 
-    def show_maps(result, own, space=None):  # stands in for the page of Garmin's maps
+    def show_maps(result, own, space=None, map_update_type=None):  # Garmin's maps page
         drawn.append(("maps", result))
         drawn.append(("own", [m.filename for m in own.maps]))
         real(own)

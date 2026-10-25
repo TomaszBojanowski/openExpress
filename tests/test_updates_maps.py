@@ -898,7 +898,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         if win.map_state is None:
             win._check_maps_quietly()
 
-    def show_maps(result, own=None, space=None):
+    def show_maps(result, own=None, space=None, map_update_type=None):
         win.shown.append("maps")
         win._set_map_state(result)  # what the Maps page does for the row of the device page
 

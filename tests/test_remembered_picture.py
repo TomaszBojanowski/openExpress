@@ -47,6 +47,10 @@ def _window(textures=None):
     return win
 
 
+# The arrow of the row "Last sync" (an expander row since 25.10.2026): not the device's image.
+EXPANDER_ARROW = "adw-expander-arrow-symbolic"
+
+
 def _shown(page):
     """(icon names, paintables) of the visible images and pictures in the view's content."""
     from gi.repository import Gtk
@@ -59,7 +63,7 @@ def _shown(page):
         if isinstance(widget, Gtk.Image):
             if widget.get_storage_type() == Gtk.ImageType.PAINTABLE:
                 paintables.append(widget.get_paintable())
-            elif widget.get_icon_name():
+            elif widget.get_icon_name() and widget.get_icon_name() != EXPANDER_ARROW:
                 icons.append(widget.get_icon_name())
         elif isinstance(widget, Gtk.Picture) and widget.get_paintable() is not None:
             paintables.append(widget.get_paintable())

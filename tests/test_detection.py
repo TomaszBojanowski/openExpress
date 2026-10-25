@@ -4087,6 +4087,12 @@ class FakeRememberedPage:
     def show(self, **fields):
         self.shown.append(fields)
 
+    def set_last_sync_details(self, tooltip, details):
+        self.details = (tooltip, details)
+
+    def set_account_rows(self, rows):
+        self.account_rows = rows
+
     def show_icon(self, part_number, icon):
         self.icon = (part_number, icon)
 

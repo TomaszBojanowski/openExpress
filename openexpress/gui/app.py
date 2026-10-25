@@ -80,7 +80,7 @@ from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.connected import Connected, unit_ids, uris  # noqa: E402
 from openexpress.gui.forget_device import ForgetDevice  # noqa: E402
 from openexpress.gui.maps_page import MapsPage  # noqa: E402
-from openexpress.gui.music_page import MusicPage  # noqa: E402
+from openexpress.gui.music_page import MusicPage, note_music_count  # noqa: E402
 from openexpress.gui.navigation import (  # noqa: E402
     READ_THE_LIST,
     Cause,
@@ -351,6 +351,77 @@ def count_open_activities(win) -> None:
     s.to_sync_asked = True
     win.in_background(lambda: sync.activities_to_sync(s.device, s.storage),
                       lambda result: win._activities_counted(s, result))
+
+
+def music_kinds(device) -> list:
+    """The kinds of media the device declares (its GarminDevice.xml; nothing is read)."""
+    from openexpress import music
+
+    try:
+        return music.supported_kinds(device)
+    except Exception:  # noqa: BLE001 - a device of a test or without its XML: none known
+        return []
+
+
+def apps_count_text(count: int) -> str:
+    """The subtitle of "Apps" on the device page: the apps the Apps page lists "On the
+    device"."""
+    # TRANSLATORS: subtitle of the row "Apps" of the device page
+    return ngettext("{count} Connect IQ app", "{count} Connect IQ apps", count).format(
+        count=count)
+
+
+def note_apps_count(win, count: int | None) -> None:
+    """How many apps the Apps page found on the open device (None: not read yet), kept for
+    the session and said by the row "Apps" of the device page."""
+    win.apps_count = count
+    row = getattr(win, "apps_row", None)
+    if row is not None:
+        row.set_subtitle(apps_count_text(count) if count is not None else "")
+
+
+def backups_text(unit_id) -> str:
+    """The subtitle of "Backup" (analysis 14, b5): when the last backup of the device was
+    made and how many there are in its folder (only the backups openExpress made, not the
+    copies of the app list); none: says so."""
+    from openexpress.backup import STAMP, is_backup_dir
+
+    found = []
+    folder = paths.default_backup_dir() / str(unit_id) if unit_id else None
+    try:
+        if folder is not None and folder.is_dir():
+            found = sorted(datetime.strptime(p.name, STAMP) for p in folder.iterdir()
+                           if not p.is_symlink() and is_backup_dir(p))
+    except OSError as e:
+        log.info("backup: the folder could not be listed (%s)", type(e).__name__)
+    if not found:
+        # TRANSLATORS: subtitle of the row "Backup" of a device without one
+        return _("No backup yet")
+    # TRANSLATORS: subtitle of the row "Backup": when the last backup was made
+    return caption(_("Last on {when}").format(when=i18n.full_time(found[-1])),
+                   ngettext("{count} backup", "{count} backups", len(found)).format(
+                       count=len(found)))
+
+
+def show_backups(win) -> None:
+    """The row "Backup" as the folder of the backups is now; the folder in its tooltip
+    (that of all devices: the device's own is named after its unit ID)."""
+    row, s = getattr(win, "backup_row", None), getattr(win, "session", None)
+    if row is None or s is None:
+        return
+    row.set_subtitle(GLib.markup_escape_text(backups_text(getattr(s.device, "unit_id", None))))
+    row.set_tooltip_text(str(paths.default_backup_dir()))
+
+
+def refused_dirs_text(dirs: list[str]) -> str | None:
+    """One line on the Apps page (analysis 14, b10): the app folders the device refused to
+    create with its software now (ciq.json); None: none."""
+    if not dirs:
+        return None
+    # TRANSLATORS: {folders} are folders of the device, e.g. "garmin/apps/media"
+    return _("The device did not let openExpress create {folders} with this software "
+             "version: apps that go there stay queued in Garmin Connect.").format(
+        folders=", ".join(dirs))
 
 
 def primary_training_unknown(s) -> str:
@@ -894,6 +965,35 @@ def update_check_failed(win) -> None:
     else:
         return
     win._render_update_state()
+
+
+def last_sync_more(unit_id) -> tuple[str | None, list]:
+    """The tooltip and the details of "Last sync" of a device not connected, as its page
+    when it is: the full date and last_sync.describe's lines; "Never synced …" and none for
+    a device never synced here."""
+    if not unit_id or not sync.synced_here(unit_id):
+        return never_synced_tooltip(), []
+    data = service.load_last_sync(unit_id)
+    if not data:
+        return None, []
+    told = last_sync.describe(data)
+    return told.tooltip, told.details
+
+
+def account_rows(win, unit_id) -> list[tuple[str, str]]:
+    """What the account's list in memory says of a device not connected, read only (analysis
+    14, b8): its primary wearable, for a device that can be one. Nothing is asked."""
+    wearable = devicelist.primary_wearable(getattr(win, "_account", None), unit_id)
+    if wearable is None:
+        return []
+    return [(_("Primary wearable"), primary_wearable_text(wearable))]
+
+
+def show_remembered_more(win, unit_id) -> None:
+    """The view of a device not connected: the details of its last sync and the rows of the
+    account."""
+    win.remembered.set_last_sync_details(*last_sync_more(unit_id))
+    win.remembered.set_account_rows(account_rows(win, unit_id))
 
 
 def remembered_texts(win, known) -> dict:
@@ -2201,6 +2301,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.maps_cache = self.updates_cache = None
         self.update_state = self.map_state = None
         self.update_checked_at = self._update_record_at = None
+        self.apps_count = self.music_count = None
         for sec in self.sections.values():
             sec.loaded = False
             sec.clear()
@@ -2614,6 +2715,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             part_number=fields["part_number"],
             last_seen=_("Not seen on this computer"),
             last_sync=self._last_sync_text(service.unit_id_of(entry.get("unitid"))))
+        show_remembered_more(self, service.unit_id_of(entry.get("unitid")))
         self._show_page_picture(fields["part_number"], fields["image_url"], fields["category"],
                                 fields["description"])
         self._remembered_unit = service.unit_id_of(entry.get("unitid"))
@@ -2641,6 +2743,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             part_number=known.part_number,
             seen_tooltip=last_seen_tooltip(known.last_seen),
             **remembered_texts(self, known))
+        show_remembered_more(self, known.unit_id)
         if tile is not None:
             self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
                                     tile.description, tile.image_source)
@@ -2689,6 +2792,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.maps_cache = self.updates_cache = None
         self.update_state = None
         self.update_checked_at = self._update_record_at = None
+        self.apps_count = self.music_count = None  # read again by their pages
         self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False
@@ -2927,6 +3031,26 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             if self.map_state is None:
                 self._check_maps_quietly()
 
+        if not mass_storage:
+            # As "Maps" (analysis 14, b11): to their pages; how many only once those pages
+            # have read them (note_apps_count, note_music_count), never a read of their own.
+            # TRANSLATORS: group on the device page with the rows "Apps" and "Music"
+            g = sec.group(_("Apps and music"))
+            self.apps_row = Adw.ActionRow(title=pgettext("tab", "Apps"), activatable=True)
+            self.apps_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+            self.apps_row.connect("activated", lambda *_a: self.select_section("apps"))
+            g.add(self.apps_row)
+            note_apps_count(self, getattr(self, "apps_count", None))
+            self.music_row = None
+            if music_kinds(d):
+                self.music_row = Adw.ActionRow(title=pgettext("tab", "Music"),
+                                               activatable=True)
+                self.music_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+                self.music_row.connect("activated", lambda *_a: self.select_section("music"))
+                g.add(self.music_row)
+                count = getattr(self, "music_count", None)
+                note_music_count(self, *(count or (None, None)))
+
         if s.logged_in or not mass_storage:
             g = sec.group(_("Garmin Connect account"))
         if s.logged_in:
@@ -2952,11 +3076,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
         g = sec.group(_("Tools"))
         if not mass_storage:  # D6: no backup of a device in mass storage mode
-            row = Adw.ActionRow(title=_("Backup"),
-                                subtitle=GLib.markup_escape_text(str(paths.default_backup_dir())))
+            self.backup_row = Adw.ActionRow(title=_("Backup"))
+            show_backups(self)  # when the last one was made, how many; the folder in the tooltip
             # TRANSLATORS: button that creates a backup
-            row.add_suffix(self._button(_("Create"), self.backup))
-            g.add(row)
+            self.backup_row.add_suffix(self._button(_("Create"), self.backup))
+            g.add(self.backup_row)
         row = Adw.ActionRow(title=_("Part number"), subtitle=d.part_number,
                             subtitle_selectable=True)
         g.add(row)
@@ -3301,24 +3425,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         said = told.details
         row.set_enable_expansion(bool(said))
         if said:
-            # The details as one row of a few lines: the files, those already in Garmin
-            # Connect, then what went wrong, with an icon and in the colour of warnings.
-            details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
-                              margin_bottom=10, margin_start=12, margin_end=12)
-            for text, warning in said:
-                # Secondary, as the subtitle of a row: smaller, and dimmed unless a warning.
-                label = Gtk.Label(label=text, xalign=0, wrap=True)
-                label.add_css_class("caption")
-                if warning:  # files rejected, or that could not be uploaded or written
-                    line = Gtk.Box(spacing=6)
-                    icon = Gtk.Image(icon_name="dialog-warning-symbolic")
-                    for widget in (icon, label):
-                        widget.add_css_class("warning")
-                        line.append(widget)
-                    details.append(line)
-                else:
-                    label.add_css_class("dim-label")
-                    details.append(label)
+            details = start.last_sync_details(said)  # as on the page of a remembered device
             row.add_row(details)
             self._last_sync_children.append(details)
 
@@ -3657,9 +3764,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             _("Creating backup…"),
             lambda: run_backup(s.device, s.storage, paths.default_backup_dir(),
                                progress=self.progress),
-            lambda r: self.toast(ngettext("Copied {count} file to {path}",
-                                          "Copied {count} files to {path}",
-                                          r.files).format(count=r.files, path=r.path)),
+            lambda r: (self.toast(ngettext("Copied {count} file to {path}",
+                                           "Copied {count} files to {path}",
+                                           r.files).format(count=r.files, path=r.path)),
+                       show_backups(self)),
         )
 
     # --- sync -------------------------------------------------------------------------
@@ -4184,7 +4292,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         updates = self._updates_to_offer(updates, self._updated_apps)
         upd = {u.app_id: u for u in updates}
         icons: dict = {}
-        g = sec.group(_("On the device"), self._apps_space(state))
+        from openexpress import ciq
+
+        note_apps_count(self, len(state.store_apps))  # the row "Apps" of the device page
+        # A folder the device refused with its software now: one line (analysis 14, b10).
+        refused = refused_dirs_text(ciq.refused_dirs(self.session.device))
+        space = self._apps_space(state)
+        g = sec.group(_("On the device"), f"{space}\n{refused}" if refused else space)
         if updates:
             b = self._button(_("Update all"), lambda: self.install_apps(updates),
                              "suggested-action")

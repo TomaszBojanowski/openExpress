@@ -31,14 +31,26 @@ def _check_again(win) -> None:
     win.load_section("maps", force=True)
 
 
-def _no_maps(win, sec, text: str) -> None:
-    """The Maps page without Garmin's maps: why, and a button that checks again."""
+def map_update_type_text(word: str) -> str:
+    """Under "Map updates for this device aren't supported yet": the map update type Garmin
+    gives the device (unit-info), so that a report can name it (analysis 14, b6)."""
+    # TRANSLATORS: {type} is a word of Garmin's server, e.g. "Gemini"
+    return _("Garmin's map update type for this device: {type}").format(type=word)
+
+
+def _no_maps(win, sec, text: str, detail: str | None = None) -> None:
+    """The Maps page without Garmin's maps: why (and `detail` under it), and a button that
+    checks again."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                   halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
     box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
     title = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER)
     title.add_css_class("title-2")
     box.append(title)
+    if detail:
+        line = Gtk.Label(label=detail, wrap=True, justify=Gtk.Justification.CENTER,
+                         css_classes=["dim-label"])
+        box.append(line)
     check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
     check.add_css_class("pill")
     check.connect("clicked", lambda *_a: _check_again(win))
@@ -60,14 +72,16 @@ class MapsPage:
             # Garmin's (the folder and the first bytes of each such file).
             try:
                 result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s))
-            except mp.MapsNotSupported:
-                # No check of Garmin's maps, which the page says; the maps of your own do not
-                # depend on it (Garmin's list: none, so their names alone are kept apart).
-                return None, ownmaps.overview(s.device, s.storage, []), (None, None)
+            except mp.MapsNotSupported as e:
+                # No check of Garmin's maps, which the page says (with the map update type
+                # Garmin gives); the maps of your own do not depend on it (Garmin's list:
+                # none, so their names alone are kept apart).
+                return (None, ownmaps.overview(s.device, s.storage, []), (None, None),
+                        e.map_update_type)
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
             # The space too: asked of the device here, never as the page is drawn.
             return (result, ownmaps.overview(s.device, s.storage, result[0]),
-                    (s.storage.free_space(), s.storage.capacity()))
+                    (s.storage.free_space(), s.storage.capacity()), None)
 
         def failed(_e):
             # The "Maps" row waited for this answer (show_device): it says the check failed.
@@ -78,11 +92,14 @@ class MapsPage:
                 self._render_map_state()
 
         self._load("maps", _("Checking maps…"), work,
-                   lambda r: self.show_maps(r[0], r[1], space=r[2]), on_error=failed)
+                   lambda r: self.show_maps(r[0], r[1], space=r[2], map_update_type=r[3]),
+                   on_error=failed)
 
-    def show_maps(self, result, own=None, space=(None, None)) -> None:
+    def show_maps(self, result, own=None, space=(None, None),
+                  map_update_type: str | None = None) -> None:
         """`space`: the free space and the size of the device, read with the maps (none told:
-        the page has no row of them); nothing is asked of the device here."""
+        the page has no row of them); nothing is asked of the device here. Map updates not
+        supported (`result` None): the map update type Garmin gives, if any, is named."""
         from openexpress import maps as mp
 
         if self.session is None:
@@ -91,7 +108,8 @@ class MapsPage:
         if result is None:  # map updates for this device are not supported (maps.check)
             self.maps_cache = []
             self._set_map_state(None)  # the "Maps" row of the device page
-            _no_maps(self, sec, mp.not_supported_text())
+            _no_maps(self, sec, mp.not_supported_text(),
+                     map_update_type_text(map_update_type) if map_update_type else None)
             if own is not None:  # the maps of your own, whatever serves Garmin's
                 self.show_own_maps(own)
             return

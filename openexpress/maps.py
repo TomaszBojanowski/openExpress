@@ -150,10 +150,12 @@ UNIVERSAL_DETECT_DATATYPE = "PreProgrammedNamedMaps"
 
 class MapsNotSupported(MapError):
     """Garmin serves the maps of the device another way than the universal map service, the
-    only one this program asks: no map check."""
+    only one this program asks: no map check. `map_update_type`: the word unit-info gives
+    (e.g. "Gemini"), for the Maps page to name it; None when it gives none, or no word."""
 
-    def __init__(self) -> None:
+    def __init__(self, map_update_type: str | None = None) -> None:
         super().__init__(_("Map updates for this device aren't supported yet."))
+        self.map_update_type = map_update_type
 
 
 def not_supported_text() -> str:
@@ -194,7 +196,7 @@ def check(client, device, ask=None) -> tuple[list[UniversalMap], int]:
     if not universal_serves(value, device):
         log.info("maps: map update type %s for %s: map updates not supported, no map check",
                  said, device.part_number)
-        raise MapsNotSupported()
+        raise MapsNotSupported(value[:40] if isinstance(value, str) and value else None)
     log.info("maps: map update type %s for %s: asking the universal map service", said,
              device.part_number)
     return read_maps(client.universal_maps(device.raw))

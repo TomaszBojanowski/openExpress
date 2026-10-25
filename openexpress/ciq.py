@@ -562,6 +562,13 @@ def _refusals(device: GarminDevice) -> dict:
     return refused if isinstance(refused, dict) else {}
 
 
+def refused_dirs(device: GarminDevice) -> list[str]:
+    """The app folders the device refused to create with the software it has now (ciq.json),
+    as they were asked; with other software they are asked again."""
+    return sorted(path for path, version in _refusals(device).items()
+                  if version == device.software_version_str)
+
+
 def _remember_refusal(device: GarminDevice, path: str) -> None:
     """Remembered per software version, so the device is not asked again on every sync."""
     refused = _refusals(device)

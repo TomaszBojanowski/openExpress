@@ -101,7 +101,8 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
 - Map updates for devices that connect as a USB drive (mass storage mode), such as older
   nüvi car navigators, and for devices whose maps Garmin serves another way than its
-  universal map service (the window and `openexpress maps` say so).
+  universal map service (the window and `openexpress maps` say so; the Maps page names
+  the map update type Garmin gives the device, which helps a report).
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see
   [Privacy and security](#privacy-and-security)).
 
@@ -159,12 +160,16 @@ when nothing else needs saying, **Synced** (synced before, nothing new to upload
 of the account need the account's list: while you are not logged in, or it could not be
 read, a sentence under the tiles says so. The device page shows **Update available** or
 **Update ready** under the software version too, and, under the account's **Primary training
-device**, its **Primary wearable** (read only; only for a device that can be one).
+device**, its **Primary wearable** (read only; only for a device that can be one). Its
+**Apps** and **Music** rows lead to their pages, as **Maps** does, and say how many there are
+once those pages have read them; **Backup** says when the last backup was made and how many
+there are (the folder in its tooltip).
 
 A device seen before and not connected opens read-only: what was known of it when it was
-last seen, its last sync, and what the last check of its updates found and when (*Not
-checked since …* when that check is older than 30 days). **Forget Device…** at the bottom of that page removes what this
-installation keeps of it (what was uploaded from it, its last sync, the maps of your own
+last seen, its last sync with its details, what the last check of its updates found and
+when (*Not checked since …* when that check is older than 30 days), and, while the
+account's list is known, its **Primary wearable**. **Forget Device…** at the bottom of that
+page removes what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own
 copied to it); connected again, it is a new device, and its first sync asks again whether to
 upload everything or new data only. Files not uploaded yet go only when you tick them, its
 backups only when you ask; nothing changes on the device or on your Garmin account. From the
@@ -336,6 +341,9 @@ is stored in the file.
   one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
+- When a device refuses to create an app folder, it is not asked again until its software
+  changes; the Apps page says so in one line, and apps that go there stay queued in Garmin
+  Connect.
 
 <p align="center">
   <img src="docs/screenshots/apps.png" width="700" alt="Connect IQ apps">
