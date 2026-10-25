@@ -338,11 +338,12 @@ is stored in the file.
 - Before every change to the apps (install, update, remove, enable/disable, order) a copy of
   the device's app list is saved next to the backups, in a folder named `GARMIN-APPS <date>`.
   Nothing is changed if the copy cannot be made. No new copy is made while the apps and their
-  order are those of the newest copy, and the 10 newest copies of a device are kept: a new
-  one takes the place of the oldest (full backups keep their newest 3 the same way).
+  order are those of the newest copy; of copies with the same apps in the same order only the
+  newest is kept, and the 10 newest copies of a device are kept: a new one takes the place of
+  the oldest (full backups keep their newest 3 the same way).
 - `openexpress apps order` (in the window: **Restore the order from a copy** on the Apps
-  page) lists these copies and puts the apps and widgets back in the order of the chosen
-  one, for example after another program rearranged the widgets. It only reorders: the same
+  page, which lists only the copies in another order than now) lists these copies and puts
+  the apps and widgets back in the order of the chosen one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
 - When a device refuses to create an app folder, it is not asked again until its software

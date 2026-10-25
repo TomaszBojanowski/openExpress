@@ -16,6 +16,7 @@ import json
 import logging
 import posixpath
 import re
+import shutil
 import time
 import uuid
 from collections.abc import Callable
@@ -1520,6 +1521,34 @@ def _copy_folders(unit_dir: Path) -> list[Path]:
     return [p for *_key, p in sorted(found)]
 
 
+def _list_of(folder: Path) -> tuple | None:
+    """The apps of a copy in their order ((app ID, type) of each), None when it cannot be
+    read whole."""
+    path = _find_out_bin(folder)
+    if path is None:
+        return None
+    try:
+        state = parse_out_bin(path.read_bytes())
+    except (OSError, CiqError):
+        return None
+    return None if state.unreadable else tuple((a.app_id, a.app_type) for a in state.apps)
+
+
+def _older_same_lists(copies: list[Path]) -> list[Path]:
+    """Of the copies (oldest first), those whose apps and order a newer copy has: of each
+    series of the same list the newest stays. A copy that cannot be read is no part of one."""
+    seen, older = set(), []
+    for folder in reversed(copies):
+        listed = _list_of(folder)
+        if listed is None:
+            continue
+        if listed in seen:
+            older.append(folder)
+        else:
+            seen.add(listed)
+    return older
+
+
 def _same_list(a: bytes, b: bytes) -> bool:
     """Whether two app lists (OUT.BIN) name the same apps in the same order, whatever else
     they say (the free space, versions, on or off); one that cannot be read whole is
@@ -1542,7 +1571,8 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
     and their order can be looked up and put back. Returns the name of the copy; when the
     newest copy of this device names the same apps in the same order (_same_list), that one
     is named and no new copy is made. At most APP_LIST_COPIES_KEPT copies are kept: a new
-    one takes the place of the oldest (backup.keep_newest, as the full backups). A device
+    one takes the place of the oldest (backup.keep_newest, as the full backups), once the
+    older copies of a list a newer copy has are gone (_older_same_lists). A device
     without an app list has nothing to copy: None, and the change may go on. Raises
     `AppListCopyError` when there is a list but the copy cannot be made.
 
@@ -1581,7 +1611,12 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
             name=name, error=e.strerror or type(e).__name__)) from e
     log.info("Saved a copy of the app list: %s", folder.name)
     try:
-        removed = keep_newest(_copy_folders(unit_dir), APP_LIST_COPIES_KEPT, new=folder)
+        copies = _copy_folders(unit_dir)
+        removed = [p for p in _older_same_lists(copies) if p != folder]
+        for p in removed:
+            shutil.rmtree(p)
+        removed += keep_newest([p for p in copies if p not in removed], APP_LIST_COPIES_KEPT,
+                               new=folder)
     except OSError as e:  # the copy is made: the change may go on
         log.warning("Old copies of the app list not removed (%s)",
                     e.strerror or type(e).__name__)

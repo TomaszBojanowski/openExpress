@@ -2208,11 +2208,12 @@ def test_no_second_copy_while_the_app_list_is_unchanged(iq_device, device_root, 
         (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4")]))
     second = ciq.save_app_list_copy(dev, st, now=next(stamps))
     assert copy_names(dev, backups) == [first, second]
-    # Only the newest counts: the first state coming back is copied again.
+    # Only the newest counts: the first state coming back is copied again, and the first
+    # copy, of the same list, goes (25.10.2026: a series keeps its newest).
     (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(
         (backups / str(dev.unit_id) / first / "OUT.BIN").read_bytes())
     third = ciq.save_app_list_copy(dev, st, now=next(stamps))
-    assert copy_names(dev, backups) == [first, second, third]
+    assert copy_names(dev, backups) == [second, third]
 
 
 def test_copy_name_has_the_time_before_the_model_and_no_identifier(iq_device, backups, caplog):
@@ -2399,7 +2400,9 @@ def test_order_choices_are_newest_first_with_their_differences(old_copies):
     ciq.save_app_list_copy(dev, st, backups, now=datetime.datetime(2026, 10, 12, 22, 0, 0))
     rows = MainWindow._order_rows(ciq.order_choices(dev, state, backups))
     assert rows[0] == ("2026-10-12 (22.00.00) Test watch", "The same order as now", False)
-    assert len(rows) == 10
+    # Copies 2–8 had one list: its newest (21.19.41) stays (25.10.2026), with the first.
+    assert [title for title, _sub, _usable in rows] == [
+        "2026-10-12 (22.00.00) Test watch", "2026-10-12 (21.19.41)", "2026-10-12 (17.37.37)"]
 
 
 def test_order_summary_shows_the_first_ten_changes(order_device):

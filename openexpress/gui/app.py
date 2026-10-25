@@ -4552,12 +4552,21 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                            _("There are no copies of the app list yet. A copy is made before "
                              "every change of the apps on the device."))
                 return
+            # Only the copies that would change something (25.10.2026).
+            rows = [(row, choice) for row, choice in zip(self._order_rows(choices), choices)
+                    if row[2]]
+            if not rows:
+                d = Adw.AlertDialog(heading=_("Restore the order from a copy"),
+                                    body=_("No copy differs from the current order"))
+                d.add_response("close", _("Close"))
+                d.present(self)
+                return
             d = Adw.AlertDialog(
                 heading=_("Restore the order from a copy"),
                 body=_("Choose the copy of the app list to take the order from."))
             box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
             box.add_css_class("boxed-list")
-            for (title, subtitle, usable), choice in zip(self._order_rows(choices), choices):
+            for (title, subtitle, usable), choice in rows:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(title),
                                     subtitle=GLib.markup_escape_text(subtitle))
                 row.set_sensitive(usable)
