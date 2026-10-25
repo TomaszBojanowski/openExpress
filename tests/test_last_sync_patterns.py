@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from openexpress import i18n, service
+from openexpress import i18n, service, sync
 
 PATTERNS = Path(__file__).resolve().parent / "data" / "last_sync"
 
@@ -229,6 +229,8 @@ def _window(unit_id):
 
     from openexpress.gui.app import MainWindow
 
+    # The device synced here (its state.json: the one source of "never synced", analysis 14).
+    sync.SyncState(unit_id).save()
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id),
                                       ownership_error=None),

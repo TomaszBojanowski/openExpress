@@ -152,10 +152,12 @@ connected, and for those seen before; a tile opens its device. Up to two labels 
 what is waiting and what the device is: **Update available**, or **Unplug to install** (an
 update copied to the connected device, which installs it once unplugged; **Eject to install**
 for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
-(by this installation), **USB drive**, **Primary** (the account's primary wearable), **Not
-on your account** and, when nothing else needs saying, **Synced** (synced before, nothing new
-to upload). The device page shows **Update available** or **Update ready** under the
-software version too.
+(by this installation; the Flatpak and the version from source each keep their own),
+**USB drive**, **Primary** (the account's primary wearable), **Not on your account** and,
+when nothing else needs saying, **Synced** (synced before, nothing new to upload). Labels
+of the account need the account's list: while you are not logged in, or it could not be
+read, a sentence under the tiles says so. The device page shows **Update available** or
+**Update ready** under the software version too.
 
 A device seen before and not connected opens read-only: what was known of it when it was
 last seen, its last sync, and what the last check of its updates found and when (*Not
@@ -365,7 +367,9 @@ replaced. Tested on a fēnix 8.
   in Garmin Express.
 - **Last sync** on the Device page, `openexpress sync` and the notification of the
   background sync use the same words: when it was, how many new files the device had and
-  how many were uploaded, and how many came from Garmin Connect. The details name the new
+  how many were uploaded, and how many came from Garmin Connect. On the Device page it ends
+  with how many new activities the connected device has to upload, and says *Never synced*
+  for a device this installation has not synced yet, as its tile does. The details name the new
   files by their type (activities, sleep, HRV status, device log…; others as "other data"),
   and the files from Garmin Connect too (TrueUp and Connect IQ apps have lines of their own),
   say how many Garmin Connect already had, and warn only when Garmin rejected a file or one

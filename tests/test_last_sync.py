@@ -234,6 +234,7 @@ def test_the_window_marks_the_warnings(xdg):
 
     from openexpress.gui.app import MainWindow
 
+    sync.SyncState(A).save()  # synced here (analysis 14, a3: its state is the one source)
     service.save_last_sync(A, service.SyncSummary(
         uploaded=1, errors=["download: HTTP 404"],
         lines=[service.new_files_step([types.SimpleNamespace(datatype="FIT_TYPE_4")] * 3),
@@ -436,6 +437,7 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
 
     from openexpress.gui.app import MainWindow
 
+    sync.SyncState(A).save()  # synced here (analysis 14, a3)
     service.save_last_sync(A, service.SyncSummary(uploaded=3))
     service.save_last_sync(B, service.SyncSummary(uploaded=1))
     said = []

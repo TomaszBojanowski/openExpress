@@ -8,7 +8,7 @@ import types
 import pytest
 from test_sync_chips import UNIT, _chips_on, _start_window, listed  # noqa: F401 - a fixture
 
-from openexpress import sync
+from openexpress import service, sync
 
 # --- gui.json ---------------------------------------------------------------------------------
 
@@ -220,7 +220,8 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     assert win.later == []  # not counted again
     state = sync.SyncState(UNIT)
     state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-02-10-00-00.fit")
-    state.save()  # the other activity uploaded since
+    state.save()  # the other activity uploaded since, by a sync that recorded itself
+    service.record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     win._count_activities_again()
     assert win.start.tiles() == [row] and _chips_on(row) == ["Synced"]
     app.StartView.choose(win, "grid")

@@ -118,9 +118,13 @@ from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> fo
     checked_text,
     last_seen_text,
     last_seen_tooltip,
+    never_synced,
+    never_synced_tooltip,
+    no_sync_record,
     remembered_update_text,
     software_text,
     space_text,
+    to_upload_text,
     update_state_text,
     updates_available,
 )
@@ -302,6 +306,87 @@ def last_sync_words(data: dict, now: datetime | None = None) -> str:
     """The row under "Last sync": when, told against now ("yesterday, 23:41"), and the
     numbers of that sync (last_sync.describe). Now is the window's clock."""
     return last_sync.describe(data).row(now or datetime.now())
+
+
+def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
+                       now: datetime | None = None) -> str:
+    """The subtitle of "Last sync" (analysis 14, stage 3): "Never synced" for a device this
+    installation never synced (no state.json, the one source of it, as on its tile); else
+    its last sync (`data`, last_sync.json) or that none is recorded; then how many new
+    activities there are to upload (`to_sync`, the count of the chip "To sync"), unless its
+    last sync could not upload (as the tile, which shows no chip then)."""
+    if not unit_id or not sync.synced_here(unit_id):
+        return never_synced()
+    text = last_sync_words(data, now) if data else no_sync_record()
+    count = getattr(to_sync, "count", None)
+    if count and (not data or service.not_uploaded(data) is None):
+        text = caption(text, to_upload_text(count))
+    return text
+
+
+def refresh_last_sync_subtitle(win) -> None:
+    """The subtitle of "Last sync" of the device page drawn again where its words changed:
+    once a minute (its time told against now), and when the count of activities to upload
+    comes or changes."""
+    row, s = getattr(win, "last_sync_row", None), getattr(win, "session", None)
+    if row is None or s is None or getattr(s, "ownership_error", None) is not None:
+        return
+    text = GLib.markup_escape_text(last_sync_subtitle(
+        s.device.unit_id, getattr(win, "_last_sync_data", None), getattr(s, "to_sync", None),
+        datetime.now()))
+    if row.get_subtitle() != text:
+        row.set_subtitle(text)
+
+
+def count_open_activities(win) -> None:
+    """The device page of the open device: its activities not uploaded yet counted once, in
+    the background, also when its tile was never drawn (opened at once); under the
+    conditions of its tile: logged in, on the account, not a drive. The count is the
+    window's (_activities_counted)."""
+    s = win.session
+    if (s is None or getattr(s, "to_sync_asked", True) or s.mass_storage or not s.logged_in
+            or s.ownership_error is not None):
+        return
+    s.to_sync_asked = True
+    win.in_background(lambda: sync.activities_to_sync(s.device, s.storage),
+                      lambda result: win._activities_counted(s, result))
+
+
+def primary_training_unknown(s) -> str:
+    """The subtitle of "Primary training device" before (or instead of) asking the account:
+    "Log in to see" while not logged in, "Not available" for a device off the account (why,
+    the banner says), "Could not check" when its check against the account failed;
+    "Checking…" while it is asked."""
+    if not s.logged_in:
+        # TRANSLATORS: subtitle of "Primary training device" while not logged in
+        return _("Log in to see")
+    if isinstance(s.ownership_error, NotAccountDevice):
+        # TRANSLATORS: subtitle of "Primary training device" of a device off the account
+        return pgettext("primary training device", "Not available")
+    if s.ownership_error is not None or s.account_devices is None:
+        return _("Could not check")
+    return _("Checking…")
+
+
+def account_note(why: str | None) -> str | None:
+    """The one sentence of the start page while the account's list is not known (analysis
+    14, c4): not logged in ("logged-out"), or it could not be read ("failed"); its tiles
+    then say nothing of the account. None: known, or still asked."""
+    if why == "logged-out":
+        # TRANSLATORS: under the tiles of the start page
+        return _("Not logged in to Garmin Connect: the tiles do not show what is on your "
+                 "account or what there is to sync.")
+    if why == "failed":
+        # TRANSLATORS: under the tiles of the start page
+        return _("Your Garmin Connect account could not be read: the tiles do not show what "
+                 "is on it or what there is to sync.")
+    return None
+
+
+def show_account_note(win, entries) -> None:
+    """The sentence of account_note under the tiles drawn; none without tiles."""
+    win.start.set_account_note(account_note(getattr(win, "_account_why", None))
+                               if entries else None)
 
 
 def picture_target(name: str) -> Path | None:
@@ -1396,6 +1481,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         # The devices of the Garmin account (their entries, keys in lower case), read once
         # per start and login; None: not logged in, or not read.
         self._account: list | None = None
+        # Why the account's list is not known (account_note), None: known or still asked.
+        self._account_why: str | None = None
         self._account_wanted = False  # wanted after the detection running now
 
         # TRANSLATORS: tab title
@@ -2225,13 +2312,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                 log.info("start page: not logged in, no devices of the account")
             else:
                 log.info("start page: %d devices on the account", len(devices))
-            self._set_account(devices)
+            self._set_account(devices, why="logged-out" if devices is None else None)
 
         def failed(e):
             # Only the kind of error: its text may quote the answer.
             log.info("start page: the devices of the account could not be read (%s)",
                      type(e).__name__)
-            self._set_account(None)
+            self._set_account(None, why="failed")
 
         self.in_background(work, done, failed)
 
@@ -2241,13 +2328,19 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         asked then (resolve_account). One request, never two at once."""
         self._account_wanted = True
 
-    def _set_account(self, devices, draw: bool = True) -> None:
+    def _set_account(self, devices, draw: bool = True, why: str | None = None) -> None:
         """The account's list, however it was read (for the start page, or by the ownership
-        check of the device opened). `draw`: the start page is drawn again if it is shown
+        check of the device opened); without it, `why` (account_note: "logged-out",
+        "failed"; None: not known yet). `draw`: the start page is drawn again if it is shown
         or under a remembered device's view (False: the caller draws)."""
+        why = why if devices is None else None
         if devices == self._account:
+            if why != getattr(self, "_account_why", None):
+                # The same tiles: only the sentence under them changes.
+                self._account_why = why
+                show_account_note(self, getattr(self, "_start_entries", []))
             return
-        self._account = devices
+        self._account, self._account_why = devices, why
         if devices:
             # The kinds it tells of the devices remembered and the addresses of their
             # pictures, kept for when it is not there.
@@ -2351,6 +2444,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._start_texts = [(source, text) for (_tile, source), text in zip(entries, texts)]
         self.start.show([(tile, text) for (tile, _source), text in zip(entries, texts)],
                         notice)
+        show_account_note(self, entries)
         self._load_tile_pictures([tile for tile, _source in entries])
         self._count_activities(entries)
 
@@ -2393,6 +2487,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             for c in self.connected.devices:
                 if self._is_open(c):
                     c.to_sync = holder.to_sync
+            refresh_last_sync_subtitle(self)  # its page says the count too
         self._update_tile_chips()
 
     def _update_tile_chips(self) -> None:
@@ -2439,11 +2534,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                    for source, text in getattr(self, "_start_texts", [])):
                 self._render_start()
         elif visible is self.device_view:
-            row, data = getattr(self, "last_sync_row", None), getattr(self, "_last_sync_data", None)
-            if row is not None and data:
-                text = GLib.markup_escape_text(last_sync_words(data))
-                if row.get_subtitle() != text:
-                    row.set_subtitle(text)
+            refresh_last_sync_subtitle(self)
             if getattr(self, "update_checked_at", None) is not None:
                 self._render_update_state()
         elif visible is self.remembered.page:
@@ -2500,9 +2591,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
     def _last_sync_text(self, unit_id) -> str:
         """The last sync of a device from this computer, in the words of the device page."""
         data = service.load_last_sync(unit_id) if unit_id else None
-        if not data:
-            return _("Not synced yet with openExpress")
-        return last_sync_words(data)
+        return last_sync_subtitle(unit_id, data, now=datetime.now())
 
     def _show_account(self, entry: dict) -> None:
         """The read-only view of a device only on the account, with what the account says
@@ -2813,6 +2902,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                 self._last_sync_children = []
                 g.add(self.last_sync_row)
                 self._show_last_sync()
+                count_open_activities(self)  # how many to upload, also without the tiles
             if s.ownership_error is None:
                 g.add(self._auto_sync_row())
 
@@ -2836,15 +2926,18 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             if self.map_state is None:
                 self._check_maps_quietly()
 
-        if s.logged_in:
+        if s.logged_in or not mass_storage:
             g = sec.group(_("Garmin Connect account"))
+        if s.logged_in:
             row = Adw.ActionRow(title=GLib.markup_escape_text(s.client.auth.display))
             row.add_suffix(self._button(_("Log out"), self.logout))
             g.add(row)
-            if s.ownership_error is None and s.account_devices is not None:
-                self.primary_row = Adw.ActionRow(title=_("Primary training device"),
-                                                 subtitle=_("Checking…"))
-                g.add(self.primary_row)
+        if not mass_storage:
+            # The row stays when it cannot be read (analysis 14, c7): why, in short.
+            self.primary_row = Adw.ActionRow(title=_("Primary training device"),
+                                             subtitle=primary_training_unknown(s))
+            g.add(self.primary_row)
+            if s.logged_in and s.ownership_error is None and s.account_devices is not None:
                 self._show_primary_training(self.primary_row)
 
         g = sec.group(_("Tools"))
@@ -3179,16 +3272,21 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # row, so it stayed, and each drawing added the details once more (since 0.6.6).
             row.remove(child.get_parent() or child)
         self._last_sync_children = []
-        data = service.load_last_sync(self.session.device.unit_id)
+        s = self.session
+        unit_id = s.device.unit_id
+        data = service.load_last_sync(unit_id)
         self._last_sync_data = data  # its time told against now, again every minute
-        if not data:
-            row.set_subtitle(_("Not synced yet with openExpress"))
+        row.set_subtitle(GLib.markup_escape_text(last_sync_subtitle(
+            unit_id, data, getattr(s, "to_sync", None), datetime.now())))
+        synced = bool(unit_id) and sync.synced_here(unit_id)
+        if not synced or not data:
+            # Never synced here (the tooltip says by which installation), or no record.
+            row.set_tooltip_text(None if synced else never_synced_tooltip())
             row.set_enable_expansion(False)
             return
         # Shown as last_sync.describe tells it: the same words as the command line and the
         # notification of the background sync.
         told = last_sync.describe(data)
-        row.set_subtitle(GLib.markup_escape_text(told.row(datetime.now())))
         row.set_tooltip_text(told.tooltip)  # the full date
         said = told.details
         row.set_enable_expansion(bool(said))
@@ -3231,6 +3329,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         s = self.session
         if s is not None and getattr(s, "to_sync", None) is not None:
             s.to_sync = s.to_sync.again()
+            refresh_last_sync_subtitle(self)
         for summary in self.connected.devices:
             if summary.to_sync is not None:
                 summary.to_sync = summary.to_sync.again()
@@ -3535,6 +3634,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         store.delete()
         self.toast(_("Logged out"))
         self._account = None  # the start page lists no device of the account any more
+        self._account_why = "logged-out"  # and says so
         account_changed(self, Cause.LOGGED_OUT)
 
     def backup(self) -> None:

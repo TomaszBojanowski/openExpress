@@ -93,6 +93,37 @@ def remembered_update_text(entry, now: datetime | None = None) -> str:
     return not_checked_since(last) if last is not None else connect
 
 
+def never_synced() -> str:
+    """A device this installation has never synced (no state.json): on its tile and on its
+    page, the same words."""
+    # TRANSLATORS: a chip on the tile of a connected device that openExpress on this
+    # computer has never synced, and the subtitle of "Last sync" on its page
+    return pgettext("chip", "Never synced")
+
+
+def never_synced_tooltip() -> str:
+    """The tooltip of never_synced: the Flatpak and the version from source each keep their
+    own record."""
+    return _("Never synced by this installation of openExpress")
+
+
+def no_sync_record() -> str:
+    """"Last sync" of a device synced here before (its state.json) without a record of its
+    last sync: its files marked as uploaded alone (baseline), or a sync of a version that
+    kept no record."""
+    # TRANSLATORS: the subtitle of "Last sync" after the files of the device were marked as
+    # uploaded without a sync (or synced by an old version)
+    return _("No record of the last sync; the next sync uploads new data only")
+
+
+def to_upload_text(count: int) -> str:
+    """After the subtitle of "Last sync" of a connected device: how many activities it has
+    that openExpress has not uploaded yet, the number of the chip "To sync"."""
+    # TRANSLATORS: at the end of the subtitle of "Last sync" of a connected device
+    return ngettext("{count} new activity to upload", "{count} new activities to upload",
+                    count).format(count=count)
+
+
 def software_text(version: str, from_account: bool = False) -> str:
     """The version of the device's software, the same words everywhere: "Software 23.39";
     "Software 23.39 (Garmin Connect)" when only the account says it (it may be older than

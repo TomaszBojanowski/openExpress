@@ -17,7 +17,11 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist, known_devices  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
-from openexpress.gui.words import last_seen_tooltip  # noqa: E402
+from openexpress.gui.words import (  # noqa: E402
+    last_seen_tooltip,
+    never_synced,
+    never_synced_tooltip,
+)
 from openexpress.i18n import _, full_time, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
     BIKE_ACCESSORY,
@@ -330,9 +334,7 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
         # openExpress has not uploaded yet
         said.append((pgettext("chip", "To sync"), "accent", tooltip))
     elif tile.never_synced:
-        # TRANSLATORS: a chip on the tile of a connected device that openExpress on this
-        # computer has never synced
-        said.append((pgettext("chip", "Never synced"), "dimmed", None))
+        said.append((never_synced(), "dimmed", never_synced_tooltip()))
     if tile.kind == "ums":
         # TRANSLATORS: a chip on the tile of a device in mass storage mode
         said.append((pgettext("chip", "USB drive"), "dimmed", None))
@@ -342,9 +344,10 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     if tile.account_known and not tile.on_account and tile.kind != "ums":
         # TRANSLATORS: a chip on the tile of a device that is not on the Garmin account
         said.append((_("Not on your account"), "dimmed", None))
-    if tile.to_sync == 0 and not tile.never_synced:
+    if tile.to_sync == 0 and not tile.never_synced and tile.synced_at is not None:
         # Counted (a count of 0 comes only for a device synced here before), nothing to
-        # upload: last, it gives way to every other chip (25.10.2026).
+        # upload, and a sync recorded (files marked as uploaded alone are no sync): last, it
+        # gives way to every other chip (25.10.2026).
         # TRANSLATORS: a chip on the tile of a connected device that openExpress has synced
         # before and that has no activities to upload now
         said.append((pgettext("chip", "Synced"), "dimmed", None))
@@ -459,6 +462,11 @@ class StartPage:
             box.append(section.title)
             box.append(section.grid)
             box.append(section.list)
+        # One sentence under the tiles while the account's list is not known (analysis 14,
+        # c4): why the tiles say nothing of the account (set_account_note).
+        self.account_note = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
+                                      visible=False, css_classes=["dim-label", "caption"])
+        box.append(self.account_note)
         connected, remembered, account = self._sections.values()
         self.connected_title, self.grid, self.list = (connected.title, connected.grid,
                                                       connected.list)
@@ -489,6 +497,12 @@ class StartPage:
         self.notice.set_subtitle(description)
         self.notice_spinner.set_visible(busy)
         self.notice_icon.set_visible(not busy)
+
+    def set_account_note(self, text: str | None) -> None:
+        """The sentence under the tiles about the account (app.account_note); None: none."""
+        if text:
+            self.account_note.set_label(text)
+        self.account_note.set_visible(bool(text))
 
     def show(self, entries, notice: bool) -> None:
         """The tiles (devicelist.Tile, how the device is connected), each in its section, in

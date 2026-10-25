@@ -4032,6 +4032,7 @@ class FakeStartPage:
     def __init__(self):
         self.page = "start page"
         self.shown, self.notices, self.pictures, self.chips = [], [], [], []
+        self.account_notes = []
 
     def show(self, entries, notice):
         self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
@@ -4045,6 +4046,9 @@ class FakeStartPage:
     def set_chips(self, key, tile):
         self.chips.append((key, tile.description))
         return True
+
+    def set_account_note(self, text):
+        self.account_notes.append(text)
 
 
 class FakeNavigation:
@@ -4699,11 +4703,12 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
     is read from USB, nothing is asked of a server; back is the start page."""
     import time
 
-    from openexpress import service
+    from openexpress import service, sync
     from openexpress.gui import app
 
     win = start_window
     remember_others(time.time())
+    sync.SyncState(VENU).save()  # synced here before (analysis 14, a3)
     service.record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
     nothing_connected(win, monkeypatch)
     names = [name for name, _on, _how in drawn_tiles(win)]
@@ -4723,11 +4728,11 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
     assert (venu["name"], venu["version"], venu["part_number"]) == (
         "Venu 2", "Software 19.05", "006-B3703-00")
     assert venu["last_seen"].startswith("Last seen ")
-    assert venu["last_sync"] != "Not synced yet with openExpress" and "2" in venu["last_sync"]
+    assert venu["last_sync"] != "Never synced" and "2" in venu["last_sync"]
     back(win)
     assert win.navigation.stack == ["start page"]
     win._open_tile(names.index("Varia RTL515"))
-    assert win.remembered.shown[-1]["last_sync"] == "Not synced yet with openExpress"
+    assert win.remembered.shown[-1]["last_sync"] == "Never synced"
     assert not any(str(u) in str(f) for f in win.remembered.shown for u in (VARIA, VENU))
 
 
@@ -5827,7 +5832,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from openexpress import known_devices, netstatus
+    from openexpress import known_devices, netstatus, sync
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
@@ -5882,12 +5887,17 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         assert len(minute_timers()) == 1
         row, changes = Adw.ExpanderRow(), []
         row.connect("notify::subtitle", lambda *_a: changes.append(1))
+        # The device open, synced here before (its state.json: analysis 14, a3).
+        sync.SyncState(3000000004).save()
+        win.session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=3000000004),
+                                            ownership_error=None, to_sync=None)
         win.last_sync_row, win._last_sync_data = row, {"time": seen, "uploaded": 1}
         (tick,) = minute_timers()
         tick()
         assert row.get_subtitle() == "3 min ago\u00a0· 1 new file, 1 uploaded" and len(changes) == 1
         tick()
         assert len(changes) == 1  # the same words: left as they are
+        win.session = None
         win.close()
         assert minute_timers() == []  # closed: no timer left
     finally:
@@ -6093,7 +6103,7 @@ def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
         "name": "Forerunner 965", "version": "Software 22.26 (Garmin Connect)",
         "part_number": "006-B4315-00",
         "last_seen": "Not seen on this computer",
-        "last_sync": "Not synced yet with openExpress"}
+        "last_sync": "Never synced"}
 
 
 def test_logging_out_on_the_view_of_a_device_of_the_account_gives_the_start_page(

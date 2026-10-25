@@ -451,7 +451,7 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     """As on the start page and the device view: "Last seen", "Last sync" and the check of
     updates drawn again once a minute, only where the words changed; the timer runs while
     the page is shown."""
-    from openexpress import netstatus, service
+    from openexpress import netstatus, service, sync
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
@@ -477,6 +477,7 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     known_devices.remember(UNIT, "fēnix 8 - 47mm, Solar", "006-B4532-00", "23.39", "mtp",
                            now=seen)
     known_devices.set_update_found(UNIT, False, now=seen, software_version="23.39")
+    sync.SyncState(UNIT).save()  # synced here before (stage 3: the one source)
     monkeypatch.setattr(service, "load_last_sync",
                         lambda unit_id=None: {"time": seen, "uploaded": 1})
     win = MainWindow(None)

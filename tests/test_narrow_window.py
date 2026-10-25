@@ -170,7 +170,7 @@ INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
 
 def _fill(win, page: str) -> str:
     """Builds `page` of the device view as the window does; returns its section."""
-    from openexpress import service
+    from openexpress import service, sync
     from openexpress.gui.app import MainWindow
 
     drive = page.endswith("-drive")
@@ -181,6 +181,7 @@ def _fill(win, page: str) -> str:
     # The one update to install: the longest name of a component ("Device software").
     win.update_only = _updates(copied=False)[2]
     win.map_state, win.map_update_count = "available", 1
+    sync.SyncState(UNIT).save()  # synced here before (analysis 14, a3)
     service.record_sync(UNIT, uploaded=8, downloaded=4, skipped_known=3, errors=[], lines=[])
     for section in win.sections.values():
         section.clear()  # a page built before in this window goes
@@ -314,6 +315,22 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
     assert _min_width(win.device_view) <= NARROWEST
     natural = win.update_chip.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
     assert win.update_chip.get_width() >= natural
+
+
+@pytest.mark.parametrize("why", ["logged-out", "failed"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_sentence_about_the_account_fits_the_narrowest_window(narrow_window, language,
+                                                                  why):
+    """Analysis 14, c4 (25.10.2026): the sentence under the tiles wraps."""
+    from openexpress.gui import app
+
+    win = narrow_window(language)
+    win.start.show(_tiles(), False)
+    win._account_why = why
+    app.show_account_note(win, _tiles())
+    _iterate(0.05)
+    assert win.start.account_note.get_visible()
+    assert _min_width(win.start.page) <= NARROWEST
 
 
 @pytest.mark.parametrize("view", ["grid", "list"])

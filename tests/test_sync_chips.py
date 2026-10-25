@@ -59,9 +59,10 @@ def test_not_counted_gives_no_chip():
 
 def test_synced_before_with_nothing_to_upload_says_synced():
     """Counted, nothing to upload, and synced here before (its sync state is there: a device
-    never synced has no count): dimmed, as the primary device is, without a tooltip."""
+    never synced has no count): dimmed, as the primary device is, without a tooltip. Only
+    with a sync recorded (25.10.2026): files marked as uploaded alone give none."""
     assert _said(_tile(to_sync=0, synced_at=NOW)) == [("Synced", "dimmed", None)]
-    assert _said(_tile(to_sync=0)) == [("Synced", "dimmed", None)]
+    assert _said(_tile(to_sync=0)) == []
 
 
 def test_synced_never_comes_with_to_sync_or_never_synced():
@@ -71,7 +72,8 @@ def test_synced_never_comes_with_to_sync_or_never_synced():
 
 
 def test_a_device_never_synced_here_says_so():
-    assert _said(_tile(never_synced=True)) == [("Never synced", "dimmed", None)]
+    assert _said(_tile(never_synced=True)) == [
+        ("Never synced", "dimmed", "Never synced by this installation of openExpress")]
 
 
 def test_the_primary_device_is_dimmed_the_accent_is_for_what_to_do():
@@ -93,9 +95,9 @@ def test_synced_comes_last_and_gives_way_to_every_other_chip():
     """Last in the order, also after the primary device (decision of 25.10.2026): with the
     primary device both are there; with an update and the primary device, Synced is the one
     left out."""
-    update = dict(update_found=NOW)
-    assert _words(_tile(to_sync=0, primary=True)) == [("Primary", "dimmed"),
-                                                      ("Synced", "dimmed")]
+    update = dict(update_found=NOW, synced_at=NOW)
+    assert _words(_tile(to_sync=0, primary=True, synced_at=NOW)) == [("Primary", "dimmed"),
+                                                                     ("Synced", "dimmed")]
     assert _words(_tile(to_sync=0, **update)) == [("Update available", "warning"),
                                                   ("Synced", "dimmed")]
     assert _words(_tile(to_sync=0, primary=True, **update)) == [
@@ -115,7 +117,7 @@ def test_the_chips_in_polish(count, words):
         assert tooltip.startswith(words + " od ")
         assert _words(_tile(never_synced=True)) == [("Nie synchronizowano", "dimmed")]
         assert _words(_tile(primary=True)) == [("Główne", "dimmed")]
-        assert _words(_tile(to_sync=0)) == [("Zsynchronizowane", "dimmed")]
+        assert _words(_tile(to_sync=0, synced_at=NOW)) == [("Zsynchronizowane", "dimmed")]
     finally:
         i18n.setup("en")
 
@@ -375,7 +377,8 @@ def test_nothing_to_upload_puts_synced_into_the_same_tile_or_row(listed, view):
 
     state = sync.SyncState(UNIT)
     state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-02-10-00-00.fit")
-    state.save()
+    state.save()  # by a sync that recorded itself
+    service.record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     win = _start_window([listed])
     win.start.view = view
     win._show_tiles(*win._start_summaries())
