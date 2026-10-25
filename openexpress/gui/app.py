@@ -4356,7 +4356,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         note_apps_count(self, len(state.store_apps))  # the row "Apps" of the device page
         # A folder the device refused with its software now: one line (analysis 14, b10).
         refused = refused_dirs_text(ciq.refused_dirs(self.session.device))
-        space = self._apps_space(state)
+        # No app list yet (#14): none on the device; the account's apps can be installed.
+        space = ciq.no_apps_text() if state.no_app_list else self._apps_space(state)
         g = sec.group(_("On the device"), f"{space}\n{refused}" if refused else space)
         if updates:
             b = self._button(_("Update all"), lambda: self.install_apps(updates),
@@ -4421,6 +4422,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._load_app_icons(icons)
 
         builtin = sorted((a for a in state.apps if a.preloaded), key=lambda a: a.name)
+        if not builtin:
+            return  # none known (no app list): no group of none
         g = sec.group(_("Built-in activities and apps"),
                       _("Changes take effect after you disconnect the device."))
         search = Gtk.SearchEntry(placeholder_text=_("Search activities"), margin_bottom=12)
@@ -4673,7 +4676,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                     [*MainWindow._written_apps(rep), *(f"{n}: {e}" for n, e in rep.failed)]))
             elif rep.for_phone and not rep.installed:
                 self.error(_("Queued in Garmin Connect"), self._for_phone_text(
-                    rep.for_phone, rep.sandboxed, rep.sandboxed_updates))
+                    rep.for_phone, rep.sandboxed, rep.sandboxed_updates, rep.no_app_list))
             elif rep.installed and all(n in rep.updated for n in rep.installed):
                 self.toast(ciq.update_written_text(rep.installed))
             elif rep.installed and all(n in rep.direct for n in rep.installed):
@@ -4701,9 +4704,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             [_("Installed {names}").format(names=", ".join(plain))] if plain else [])
 
     @staticmethod
-    def _for_phone_text(names, sandboxed=(), updates=()) -> str:
+    def _for_phone_text(names, sandboxed=(), updates=(), no_app_list: bool = False) -> str:
         from openexpress import ciq
 
+        if no_app_list:
+            return ciq.no_app_list_text(names)
         if names and all(n in sandboxed for n in names):
             return ", ".join(names) + ": " + ciq.sandbox_text(
                 all(n in updates for n in names), queued=True)

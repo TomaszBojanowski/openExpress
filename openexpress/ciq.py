@@ -110,6 +110,10 @@ class InstalledState:
     # That list could not be read whole (damaged, empty, an entry cut): the apps it would
     # name are missing, so no list may be built from it (require_readable_waiting_list).
     in_bin_damaged: bool = False
+    # The device declares Connect IQ but has no app list (OUT.BIN) yet: no app was ever
+    # installed on it (#14). No apps; nothing may be written, as a list built now would name
+    # none of the device's own: new apps are only queued in Garmin Connect.
+    no_app_list: bool = False
 
     @property
     def store_apps(self) -> list[InstalledApp]:
@@ -273,8 +277,15 @@ def _config_path(device: GarminDevice, direction_input: bool) -> str:
 
 
 def read_installed(device: GarminDevice, storage: Storage) -> InstalledState:
-    """Current state; pending changes from IN.BIN (not yet applied by the watch) win."""
-    state = parse_out_bin(storage.read(_config_path(device, False)))
+    """Current state; pending changes from IN.BIN (not yet applied by the watch) win. No
+    app list (OUT.BIN) on a device that declares one: no apps (no_app_list), not an error;
+    a list that is there and cannot be read stays one."""
+    out_path = _config_path(device, False)
+    if not storage.exists(out_path):
+        log.info("apps: no OUT.BIN on the device (%s), treating as no apps", device.part_number)
+        state = InstalledState(no_app_list=True)
+    else:
+        state = parse_out_bin(storage.read(out_path))
     in_path = _config_path(device, True)
     if storage.exists(in_path):
         state.waiting = True
@@ -326,8 +337,26 @@ def update_written_text(names: list[str]) -> str:
         len(names)).format(names=", ".join(names))
 
 
+def no_apps_text() -> str:
+    """The apps on a device without an app list (OUT.BIN): none."""
+    # TRANSLATORS: on the Apps page and in `openexpress apps`, without a full stop
+    return _("No Connect IQ apps on the device")
+
+
+def no_app_list_text(names: list[str]) -> str:
+    """Why apps were only queued for a device without an app list (OUT.BIN)."""
+    return _("{names}: the device has no Connect IQ app list yet. The app waits in the queue "
+             "in Garmin Connect and will be installed by the phone or Garmin Express.").format(
+        names=", ".join(names))
+
+
 def require_complete(state: InstalledState) -> None:
-    """Refuse to change apps when the app list read from the device is incomplete."""
+    """Refuse to change apps when the app list read from the device is incomplete, or when
+    the device has none yet (a list written then would name none of its own apps)."""
+    if state.no_app_list:
+        raise CiqError(_("The device has no Connect IQ app list yet (no app was ever installed "
+                         "on it), so nothing on it can be changed. New apps are queued in "
+                         "Garmin Connect and installed by the phone or Garmin Express."))
     if state.unreadable:
         n = state.unreadable
         raise CiqError(ngettext(
@@ -520,6 +549,8 @@ class IqInstallReport:
     # of them that are new versions of apps already on the device.
     sandboxed: list[str] = field(default_factory=list)
     sandboxed_updates: list[str] = field(default_factory=list)
+    # The device has no app list yet: all of `for_phone` stay queued for that (#14).
+    no_app_list: bool = False
 
 
 # --- devices that hide the app folder ------------------------------------------------------
@@ -725,6 +756,8 @@ def install_apps(
     downloaded or written for them, and they are not failures.
     """
     state = read_installed(device, storage)
+    if state.no_app_list:
+        return _queue_only(device, client, api, targets)
     require_complete(state)
     states = {t.app_id: usb_dir_state(device, storage, store_datatype(t)) for t in targets}
     # Before the copy and before Garmin is asked for anything: an app the device has no
@@ -768,6 +801,21 @@ def install_apps(
     log.info("apps install: %s; app folder: %s; requested in Garmin Connect: %d",
              ", ".join(t.name for t in targets) or "-", applog.counts(states.values()),
              len(to_queue))
+    _log_install(report)
+    return report
+
+
+def _queue_only(device: GarminDevice, client: GarminClient, api: StoreApi,
+                targets: list[StoreApp]) -> IqInstallReport:
+    """A device without an app list: the apps are queued in Garmin Connect (unless they wait
+    there already) for the phone or Garmin Express; nothing is written to the device."""
+    waiting = queued_app_ids(client.device_messages(device.unit_id))
+    to_queue = [t for t in targets if t.app_id not in waiting]
+    if to_queue:
+        api.queue_install(device, to_queue)
+    report = IqInstallReport(for_phone=[t.name for t in targets], no_app_list=True)
+    log.info("apps install: %s; no app list on the device: queued only; requested in "
+             "Garmin Connect: %d", ", ".join(t.name for t in targets) or "-", len(to_queue))
     _log_install(report)
     return report
 
@@ -885,6 +933,17 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                   direct: bool) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
     state = read_installed(device, storage)
+    if state.no_app_list:
+        # Nothing is written: the queued apps stay for the phone or Garmin Express (#14).
+        report.no_app_list = True
+        for m in messages:
+            app_id = message_app_id(m) if is_iq_message(m) else None
+            if app_id is None or (only is not None and app_id not in only):
+                continue
+            meta = m.get("metadata") or {}
+            report.for_phone.append(meta.get("messagename") or (
+                known[app_id].name if app_id in known else str(app_id)))
+        return report, []
     require_complete(state)
     require_readable_waiting_list(state)  # the list written after the apps is built from it
     free_slots = _free_slots(device, state)

@@ -1161,6 +1161,23 @@ def _app_status(disabled: bool) -> str:
     return _("disabled") if disabled else _("enabled")
 
 
+def _apps_queue_only(args, dev, st, client, api, account) -> int:
+    """`apps install` on a device without an app list (OUT.BIN, #14): the app is queued in
+    Garmin Connect for the phone or Garmin Express; nothing is written to the device."""
+    from openexpress import ciq
+
+    target = _find_app(account, args.name)
+    print(_("Install {name} {version} ({size})").format(
+        name=target.name, version=target.version_name, size=_human(target.size)))
+    if not args.apply:
+        print("  " + ciq.no_app_list_text([target.name]))
+        print(_("Dry run. Add --apply."))
+        return 0
+    rep = ciq.install_apps(dev, st, client, api, [target])
+    print(ciq.no_app_list_text(rep.for_phone))
+    return 0
+
+
 def _apps_order(args, dev, st, state) -> int:
     """`apps order`: the saved copies of the app list, or the order of one of them put back."""
     from openexpress import ciq
@@ -1292,12 +1309,15 @@ def cmd_apps(args) -> int:
 
     if cmd == "list":
         updates = {u.app_id: u for u in api.updates(dev, state.store_apps, locale)}
-        print(ngettext("Connect IQ on {device}: {count} store app, {slots} free slots, "
-                       "{size} free",
-                       "Connect IQ on {device}: {count} store apps, {slots} free slots, "
-                       "{size} free", len(state.store_apps)).format(
-            device=dev.description, count=len(state.store_apps),
-            slots=state.available_slots, size=_human(state.available_space)))
+        if state.no_app_list:  # no app was ever installed (#14): none, not an error
+            print(ciq.no_apps_text())
+        else:
+            print(ngettext("Connect IQ on {device}: {count} store app, {slots} free slots, "
+                           "{size} free",
+                           "Connect IQ on {device}: {count} store apps, {slots} free slots, "
+                           "{size} free", len(state.store_apps)).format(
+                device=dev.description, count=len(state.store_apps),
+                slots=state.available_slots, size=_human(state.available_space)))
         if state.unreadable:
             print(ngettext("WARNING: {count} entry of the app list on the device cannot be read; "
                            "apps cannot be installed, updated or removed.",
@@ -1328,6 +1348,8 @@ def cmd_apps(args) -> int:
                        "they then appear in the list above."))
         return 0
 
+    if cmd == "install" and state.no_app_list:
+        return _apps_queue_only(args, dev, st, client, api, account)
     if cmd != "list":
         # Before anything is queued or written: the device's app list must be complete.
         ciq.require_complete(state)
