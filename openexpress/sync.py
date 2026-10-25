@@ -515,11 +515,16 @@ def _failure_codes(body) -> set[int]:
     return codes
 
 
+def state_path(unit_id: int) -> Path:
+    """The state.json of a device, as SyncState has it."""
+    return paths.device_dir(unit_id) / "sync" / "state.json"
+
+
 def synced_here(unit_id: int) -> bool:
     """Whether this installation has synced the device, or marked its files as uploaded
     (baseline): its state.json is there. Without it the device was never synced here, and
     its first sync asks how to begin (analysis 14, a3: the one source of "never synced")."""
-    return (paths.device_dir(unit_id) / "sync" / "state.json").exists()
+    return state_path(unit_id).exists()
 
 
 # --- activities not uploaded yet (the chip "To sync" of a tile) ------------------------

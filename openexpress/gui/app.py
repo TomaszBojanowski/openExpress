@@ -325,6 +325,38 @@ def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
     return text
 
 
+def open_to_sync(s):
+    """The count of activities to upload of the open device for its page: what it counted, or
+    until then what the last count found (known_devices.recorded_sync_count), as its tile
+    from the first frame; None: not known."""
+    counted = getattr(s, "to_sync", None)
+    if counted is not None:
+        return counted
+    unit_id = getattr(s.device, "unit_id", None)
+    if not unit_id or not sync.synced_here(unit_id):
+        return None
+    count = known_devices.recorded_sync_count(known_devices.load().get(unit_id),
+                                              service.sync_stamp(unit_id))
+    return types.SimpleNamespace(count=count) if count is not None else None
+
+
+def remember_sync_count(counted) -> None:
+    """Keep what a count of the activities to upload found (sync.ActivitiesToSync) with the
+    device, for its tile from the first frame, with the version of its sync state now; a
+    count not known (None, never synced) keeps what was there. Optional: a failure is only
+    written to the log."""
+    if counted is None or counted.count is None:
+        return
+    stamp = service.sync_stamp(counted.unit_id)
+    if stamp is None:
+        return
+    try:
+        known_devices.set_sync_count(counted.unit_id, known_devices.SyncCount(
+            counted.count, time.time(), stamp))
+    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
+        log.warning("devices: the count of activities not kept (%s)", type(e).__name__)
+
+
 def refresh_last_sync_subtitle(win) -> None:
     """The subtitle of "Last sync" of the device page drawn again where its words changed:
     once a minute (its time told against now), and when the count of activities to upload
@@ -333,7 +365,7 @@ def refresh_last_sync_subtitle(win) -> None:
     if row is None or s is None or getattr(s, "ownership_error", None) is not None:
         return
     text = GLib.markup_escape_text(last_sync_subtitle(
-        s.device.unit_id, getattr(win, "_last_sync_data", None), getattr(s, "to_sync", None),
+        s.device.unit_id, getattr(win, "_last_sync_data", None), open_to_sync(s),
         datetime.now()))
     if row.get_subtitle() != text:
         row.set_subtitle(text)
@@ -2585,6 +2617,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             log.info("activities: the count of a device no longer listed or open is dropped")
             return
         holder.to_sync = result.again() if result is not None else None
+        remember_sync_count(holder.to_sync)  # for its tile from the first frame next time
         if holder is s:  # its tile may come from the list as well
             for c in self.connected.devices:
                 if self._is_open(c):
@@ -3411,7 +3444,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         data = service.load_last_sync(unit_id)
         self._last_sync_data = data  # its time told against now, again every minute
         row.set_subtitle(GLib.markup_escape_text(last_sync_subtitle(
-            unit_id, data, getattr(s, "to_sync", None), datetime.now())))
+            unit_id, data, open_to_sync(s), datetime.now())))
         synced = bool(unit_id) and sync.synced_here(unit_id)
         if not synced or not data:
             # Never synced here (the tooltip says by which installation), or no record.
@@ -3446,10 +3479,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         s = self.session
         if s is not None and getattr(s, "to_sync", None) is not None:
             s.to_sync = s.to_sync.again()
+            remember_sync_count(s.to_sync)
             refresh_last_sync_subtitle(self)
         for summary in self.connected.devices:
             if summary.to_sync is not None:
                 summary.to_sync = summary.to_sync.again()
+                remember_sync_count(summary.to_sync)
         if self._on_start_page():
             self._update_tile_chips()
 

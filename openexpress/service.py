@@ -905,6 +905,22 @@ def _usable_last_sync(data: dict | None) -> dict | None:
     return data
 
 
+def sync_stamp(unit_id: int | None) -> str | None:
+    """The version of what this installation knows of the sync of a device: when its
+    state.json was written and its size, and the time of its last sync recorded. A count of
+    its activities is shown from a record only while this is the same (known_devices.
+    SyncCount). None: never synced here (no state.json)."""
+    if not unit_id:
+        return None
+    try:
+        st = sync.state_path(unit_id).stat()
+    except OSError:
+        return None
+    record = load_last_sync(unit_id)
+    when = record.get("time") if record else None
+    return f"{st.st_mtime_ns}-{st.st_size}-{when}"
+
+
 def load_last_sync(unit_id: int | None = None) -> dict | None:
     """The last sync of this device (of any device without `unit_id`). Its own file comes
     first; the shared file, which earlier versions wrote alone, counts only when it is of

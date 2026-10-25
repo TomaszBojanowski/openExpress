@@ -10,7 +10,9 @@ window's check of updates last found one to install, for its tile (kept 30 days)
 found (how many; of one, its name, version and whether it is of the system; the software of the
 device then), for its device page; and when that check last answered, with the software of the
 device then and whether an update was copied to it already (for its tile and the page of the
-device when it is not connected). No address of the device itself (an MTP address has the
+device when it is not connected); and what the window's count in the background last found
+of its activities to upload, with the version of its sync state then (for its tile from the
+first frame). No address of the device itself (an MTP address has the
 serial number), no GarminDevice.xml (it has it too).
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
@@ -47,6 +49,9 @@ HANDHELD = "handheld"
 # An update the window's check found for a device (the time of that check) is shown on its
 # tile for so long; an older finding counts as none (the update may be installed since).
 UPDATE_FOUND_KEPT_S = 30 * 86400
+# A count of the activities to upload is shown on the tile from the first frame for so long
+# (and only while the sync state is the one it was counted against).
+SYNC_COUNT_KEPT_S = 7 * 86400
 
 
 @dataclass(frozen=True)
@@ -114,6 +119,33 @@ class UpdateCheck:
         return cls(float(at), software, ready)
 
 
+@dataclass(frozen=True)
+class SyncCount:
+    """What the window's count in the background last found for a connected device of the
+    account (25.10.2026): how many activities it has to upload, when it was counted, and the
+    version of the sync state it was counted against (service.sync_stamp). For its tile from
+    the first frame; the count that runs then confirms or changes it."""
+
+    count: int
+    at: float
+    state: str
+
+    def to_json(self) -> dict:
+        return {"count": self.count, "at": self.at, "state": self.state}
+
+    @classmethod
+    def from_json(cls, value) -> SyncCount | None:
+        """None for anything else than what to_json writes (damaged, edited by hand)."""
+        if not isinstance(value, dict):
+            return None
+        count, at, state = (value.get(key) for key in ("count", "at", "state"))
+        if (isinstance(count, bool) or not isinstance(count, int) or count < 0
+                or isinstance(at, bool) or not isinstance(at, int | float)
+                or not isinstance(state, str)):
+            return None
+        return cls(count, float(at), state)
+
+
 @dataclass
 class KnownDevice:
     unit_id: int = field(repr=False)
@@ -133,6 +165,8 @@ class KnownDevice:
     update_summary: UpdateSummary | None = None
     # The last check that answered, whatever it found (UpdateCheck); None: not known.
     update_check: UpdateCheck | None = None
+    # The last count of its activities to upload (SyncCount); None: not known.
+    sync_count: SyncCount | None = None
 
 
 def path() -> Path:
@@ -163,7 +197,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             old.image_url if old is not None else None,
                             old.update_found if old is not None else None,
                             old.update_summary if old is not None else None,
-                            old.update_check if old is not None else None)
+                            old.update_check if old is not None else None,
+                            old.sync_count if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -272,6 +307,33 @@ def recorded_updates(entry: KnownDevice | None, software_version: str,
         else None
 
 
+def set_sync_count(unit_id: int, count: SyncCount) -> bool:
+    """Keep what the window's count of the activities to upload found for a device
+    remembered; whether the entry changed. A device that is not remembered gets no entry for
+    it. Nothing goes to the log (the count has its own line)."""
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable or entry.sync_count == count:
+            return False
+        entry.sync_count = count
+        _write(known)
+    return True
+
+
+def recorded_sync_count(entry: KnownDevice | None, state: str | None,
+                        now: float | None = None) -> int | None:
+    """How many activities the last count found to upload, if it was less than
+    SYNC_COUNT_KEPT_S ago and of the sync state the device has now (`state`,
+    service.sync_stamp); None otherwise."""
+    kept = entry.sync_count if entry is not None else None
+    if kept is None or state is None or kept.state != state:
+        return None
+    if (time.time() if now is None else now) - kept.at >= SYNC_COUNT_KEPT_S:
+        return None
+    return kept.count
+
+
 def recorded_check(entry: KnownDevice | None, software_version: str,
                    now: float | None = None) -> UpdateCheck | None:
     """The last check that answered for this device, if it was less than
@@ -345,7 +407,8 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 float(update_found) if isinstance(update_found, int | float)
                                 and not isinstance(update_found, bool) else None,
                                 UpdateSummary.from_json(value.get("update_summary")),
-                                UpdateCheck.from_json(value.get("update_check")))
+                                UpdateCheck.from_json(value.get("update_check")),
+                                SyncCount.from_json(value.get("sync_count")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -363,8 +426,10 @@ def _write(known: dict[int, KnownDevice]) -> None:
                                     if entry.update_summary is not None else None)
         fields["update_check"] = (entry.update_check.to_json()
                                   if entry.update_check is not None else None)
+        fields["sync_count"] = (entry.sync_count.to_json()
+                                if entry.sync_count is not None else None)
         for optional in ("category", "image_url", "update_found", "update_summary",
-                         "update_check"):
+                         "update_check", "sync_count"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         devices[str(unit_id)] = fields

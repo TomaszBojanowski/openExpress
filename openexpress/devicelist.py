@@ -14,7 +14,7 @@ import logging
 import unicodedata
 from dataclasses import dataclass
 
-from openexpress import known_devices, picture_urls, service
+from openexpress import known_devices, picture_urls, service, sync
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
 from openexpress.service import unit_id_of
@@ -131,7 +131,7 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
             done.add(unit_id)
         tile = _tile(s.description, s.part_number, s.software_version, s.found.kind, True,
                      known, entry, logged_in and unit_id is not None)
-        now.append((dataclasses.replace(tile, **_sync_of(s, entry, logged_in)), s))
+        now.append((dataclasses.replace(tile, **_sync_of(s, entry, logged_in, known)), s))
     now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
     rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id), logged_in), known)
@@ -154,20 +154,31 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     return result
 
 
-def _sync_of(summary, entry: dict | None, logged_in: bool) -> dict:
+def _sync_of(summary, entry: dict | None, logged_in: bool, known=None) -> dict:
     """What the tile of a connected device says of its sync (PLAN T9): only for one of the
-    account, while logged in, counted when it was listed or opened (summary.to_sync), never
-    a drive; nothing while its last sync could not upload (no consent, device sync off in
+    account, while logged in, never a drive; counted when it was listed or opened
+    (summary.to_sync), and until that count comes, from the first frame (analysis 14,
+    25.10.2026): never synced here (no state.json), else what the last count found, kept
+    with the device (`known`, known_devices.recorded_sync_count: recent, of the sync state it
+    has now). Nothing while its last sync could not upload (no consent, device sync off in
     Garmin Connect): a sync would not help, the device page says why."""
-    counted = getattr(summary, "to_sync", None)
-    if counted is None or entry is None or not logged_in or summary.found.kind == "ums":
+    if entry is None or not logged_in or summary.found.kind == "ums" or not summary.unit_id:
         return {}
-    if counted.never_synced:
+    counted = getattr(summary, "to_sync", None)
+    if counted is None:
+        if not sync.synced_here(summary.unit_id):
+            return {"never_synced": True}
+        count = known_devices.recorded_sync_count(known, service.sync_stamp(summary.unit_id))
+        if count is None:
+            return {}
+    elif counted.never_synced:
         return {"never_synced": True}
+    else:
+        count = counted.count
     record = service.load_last_sync(summary.unit_id)
     if record is not None and service.not_uploaded(record) is not None:
         return {}
-    return {"to_sync": counted.count, "synced_at": record.get("time") if record else None}
+    return {"to_sync": count, "synced_at": record.get("time") if record else None}
 
 
 def _tile(description: str, part_number: str, version: str, kind: str | None,
