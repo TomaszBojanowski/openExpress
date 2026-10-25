@@ -55,6 +55,21 @@ def is_backup_dir(p: Path) -> bool:
     return True
 
 
+def keep_newest(folders: list[Path], keep: int, new: Path | None = None,
+                remove: Callable[[Path], None] = shutil.rmtree) -> list[Path]:
+    """Of `folders` (oldest first) all but the newest `keep` are removed, never `new` (the one
+    just made); 0 keeps them all. The one rule for the full backups and the copies of the app
+    list. Returns those removed."""
+    removed = []
+    if keep > 0:
+        for p in folders[:-keep]:
+            if p == new:
+                continue
+            remove(p)
+            removed.append(p)
+    return removed
+
+
 def _not_a_path(name: str) -> DeviceError:
     return DeviceError(_("Nothing was backed up: the device names a folder or file '{name}' "
                          "that cannot be used as a path on this computer.").format(name=name))
@@ -125,15 +140,9 @@ def run_backup(
     except BaseException:
         shutil.rmtree(partial, ignore_errors=True)
         raise
-    removed = []
-    if keep > 0:
-        old = sorted((p for p in unit_dir.iterdir() if is_backup_dir(p)),
-                     key=lambda p: datetime.strptime(p.name, STAMP))
-        for p in old[:-keep]:
-            if p == target:
-                continue
-            shutil.rmtree(p)
-            removed.append(p)
+    old = sorted((p for p in unit_dir.iterdir() if is_backup_dir(p)),
+                 key=lambda p: datetime.strptime(p.name, STAMP))
+    removed = keep_newest(old, keep, new=target)
     log.info("backup: %d files (%s), %d old backups removed", count, applog.size(total),
              len(removed))
     return BackupResult(target, count, total, removed)

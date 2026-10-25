@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import posixpath
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -27,6 +28,7 @@ from urllib.parse import urlencode
 import requests
 
 from openexpress import applog, netstatus, paths, proto
+from openexpress.backup import keep_newest
 from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
 from openexpress.device.storage import DeviceError, RemountFailed, Storage
@@ -1403,6 +1405,10 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
 # the same flags in that order.
 
 APP_LIST_COPY_PREFIX = "GARMIN-APPS "
+# Copies of the app list kept for a device; the oldest go when a new one is made (25.10.2026).
+APP_LIST_COPIES_KEPT = 10
+# The time in the name of a copy, after the prefix.
+APP_LIST_COPY_STAMP = "%Y-%m-%d (%H.%M.%S)"
 
 
 @dataclass
@@ -1494,13 +1500,51 @@ def copy_note(has_list: bool) -> str:
     return _("No copy will be made: the device has no app list.")
 
 
+def _copy_folders(unit_dir: Path) -> list[Path]:
+    """The copies of the app list openExpress made in the device's backup folder (named
+    GARMIN-APPS and the time), oldest first; copies of the same second in the order of their
+    number. Nothing else there counts: the full backups, folders of the user's."""
+    found = []
+    if not unit_dir.is_dir():
+        return []
+    for p in unit_dir.iterdir():
+        if p.is_symlink() or not p.is_dir() or not p.name.startswith(APP_LIST_COPY_PREFIX):
+            continue
+        rest = p.name[len(APP_LIST_COPY_PREFIX):]
+        try:
+            when = datetime.strptime(rest[:21], APP_LIST_COPY_STAMP)
+        except ValueError:
+            continue
+        number = re.search(r" \((\d+)\)$", rest[21:])
+        found.append((when, int(number.group(1)) if number else 1, p.name, p))
+    return [p for *_key, p in sorted(found)]
+
+
+def _same_list(a: bytes, b: bytes) -> bool:
+    """Whether two app lists (OUT.BIN) name the same apps in the same order, whatever else
+    they say (the free space, versions, on or off); one that cannot be read whole is
+    compared byte for byte."""
+    if a == b:
+        return True
+    try:
+        first, second = parse_out_bin(a), parse_out_bin(b)
+    except CiqError:
+        return False
+    if first.unreadable or second.unreadable:
+        return False
+    return ([(x.app_id, x.app_type) for x in first.apps]
+            == [(x.app_id, x.app_type) for x in second.apps])
+
+
 def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path | None = None,
                        now: datetime | None = None) -> str | None:
     """Keep the device's current app list (OUT.BIN) before it is changed, so that the apps
     and their order can be looked up and put back. Returns the name of the copy; when the
-    newest copy of this device is the same byte for byte, that one is named and no new
-    copy is made. A device without an app list has nothing to copy: None, and the change
-    may go on. Raises `AppListCopyError` when there is a list but the copy cannot be made.
+    newest copy of this device names the same apps in the same order (_same_list), that one
+    is named and no new copy is made. At most APP_LIST_COPIES_KEPT copies are kept: a new
+    one takes the place of the oldest (backup.keep_newest, as the full backups). A device
+    without an app list has nothing to copy: None, and the change may go on. Raises
+    `AppListCopyError` when there is a list but the copy cannot be made.
 
     The copies live next to the backups, in a folder named after the unit ID. Messages
     and logs therefore name a copy by its own folder only, never by its path."""
@@ -1513,16 +1557,15 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
         raise AppListCopyError(_("Cannot read the app list of the device to make a copy of "
                                  "it: {error}. Nothing was changed.").format(error=e)) from e
     unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
-    stamp = (now or datetime.now()).strftime("%Y-%m-%d (%H.%M.%S)")
+    stamp = (now or datetime.now()).strftime(APP_LIST_COPY_STAMP)
     name = " ".join((APP_LIST_COPY_PREFIX + stamp, _model_for_name(device))).strip()
     try:
         newest = None
-        if unit_dir.is_dir():
-            for folder in sorted(unit_dir.iterdir(), reverse=True):
-                newest = _find_out_bin(folder) if folder.is_dir() else None
-                if newest is not None:
-                    break
-        if newest is not None and newest.read_bytes() == data:
+        for folder in reversed(_copy_folders(unit_dir)):
+            newest = _find_out_bin(folder)
+            if newest is not None:
+                break
+        if newest is not None and _same_list(newest.read_bytes(), data):
             return newest.relative_to(unit_dir).parts[0]
         folder, n = unit_dir / name, 1
         while folder.exists():
@@ -1537,6 +1580,15 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
                                  "Nothing was changed.").format(
             name=name, error=e.strerror or type(e).__name__)) from e
     log.info("Saved a copy of the app list: %s", folder.name)
+    try:
+        removed = keep_newest(_copy_folders(unit_dir), APP_LIST_COPIES_KEPT, new=folder)
+    except OSError as e:  # the copy is made: the change may go on
+        log.warning("Old copies of the app list not removed (%s)",
+                    e.strerror or type(e).__name__)
+    else:
+        if removed:
+            log.info("Removed %d old copies of the app list: %s", len(removed),
+                     ", ".join(p.name for p in removed))
     return folder.name
 
 
