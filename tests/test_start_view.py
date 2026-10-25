@@ -196,7 +196,8 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
         listed, monkeypatch):
     """A device counted on the start page: a change of view draws it again with its chip,
     nothing is counted or asked again; a count after a sync changes the chips of the row
-    shown then, and back in the grid the tile says the same."""
+    shown then (nothing left to upload: Synced), and back in the grid the tile says the
+    same."""
     from openexpress.device import gio_storage
     from openexpress.gui import app, start
 
@@ -221,7 +222,7 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-02-10-00-00.fit")
     state.save()  # the other activity uploaded since
     win._count_activities_again()
-    assert win.start.tiles() == [row] and _chips_on(row) == []
+    assert win.start.tiles() == [row] and _chips_on(row) == ["Synced"]
     app.StartView.choose(win, "grid")
     (tile,) = win.start.tiles()
-    assert not isinstance(tile, start.DeviceRow) and _chips_on(tile) == []
+    assert not isinstance(tile, start.DeviceRow) and _chips_on(tile) == ["Synced"]

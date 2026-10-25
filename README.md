@@ -151,7 +151,8 @@ The window opens on the start page (the picture at the top): a tile for each Gar
 connected, and for those seen before; a tile opens its device. Up to two labels on a tile say
 what is waiting and what the device is: **Update available**, **To sync** (activities on the
 device not uploaded yet) or **Never synced** (by this installation), **USB drive**,
-**Primary** (the account's primary wearable) and **Not on your account**. The device page
+**Primary** (the account's primary wearable), **Not on your account** and, when nothing
+else needs saying, **Synced** (synced before, nothing new to upload). The device page
 shows **Update available** under the software version too.
 
 A device seen before and not connected opens read-only: what was known of it when it was

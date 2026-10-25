@@ -472,22 +472,25 @@ def _descendants(widget):
 
 def _tiles_with_chips():
     """Tiles with the longest pairs of chips (PLAN T9): an update with a device off the
-    account, with a drive, with activities to sync, with a device never synced and with the
-    primary device."""
+    account, with a drive, with activities to sync, with a device never synced, with the
+    primary device and with a device synced; the primary device with a device synced."""
     from openexpress.devicelist import Tile
 
     found = time.time()
 
-    def tile(name, kind, on_account=True, primary=False, **sync):
+    def tile(name, kind, on_account=True, primary=False, update=True, **sync):
         return Tile(name, "006-B4440-00", "33.13", kind, True, on_account, primary, None,
-                    "006-B4440-00", None, None, update_found=found, account_known=True,
-                    **sync)
+                    "006-B4440-00", None, None, update_found=found if update else None,
+                    account_known=True, **sync)
 
     return [(tile("Edge 1050", "mtp", on_account=False), "Software 33.13"),
             (tile("Varia RTL515", "ums"), "Software 3.80"),
             (tile("Edge 1050", "mtp", to_sync=12, synced_at=found), "Software 33.13"),
             (tile("Edge 1050", "mtp", never_synced=True), "Software 33.13"),
-            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Software 23.39")]
+            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Software 23.39"),
+            (tile("Edge 1050", "mtp", to_sync=0, synced_at=found), "Software 33.13"),
+            (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True, update=False, to_sync=0,
+                  synced_at=found), "Software 23.39")]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
@@ -512,7 +515,7 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
         while child is not None:
             stack.append(child)
             child = child.get_next_sibling()
-    assert len(chips) == 10
+    assert len(chips) == 14
     assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
 
 
@@ -529,7 +532,7 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
         monkeypatch.setattr(start, "Adw", _WithoutWrapBox())
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
-    win.start.show(_tiles_with_chips() + _tiles_with_chips()[:2], False)
+    win.start.show(_tiles_with_chips(), False)
     _iterate(0.3)
     rows = win.start.tiles()
     assert len(rows) == 7 and all(row.get_parent() is win.start.list for row in rows)

@@ -273,8 +273,8 @@ def display_key(tile, how: str) -> tuple:
 # known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never synced here
 # (connected, of the account), a USB drive, the account's primary device, a device off the
 # account (only when the account's list is known for it; never a drive, which needs no
-# account). The accent only for what there is to do; colours of the theme only (the style
-# is a class of CSS), no icons.
+# account), and last a device synced here before with nothing to upload now. The accent only
+# for what there is to do; colours of the theme only (the style is a class of CSS), no icons.
 MAX_CHIPS = 2
 
 
@@ -319,6 +319,12 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     if tile.account_known and not tile.on_account and tile.kind != "ums":
         # TRANSLATORS: a chip on the tile of a device that is not on the Garmin account
         said.append((_("Not on your account"), "dimmed", None))
+    if tile.to_sync == 0 and not tile.never_synced:
+        # Counted (a count of 0 comes only for a device synced here before), nothing to
+        # upload: last, it gives way to every other chip (25.10.2026).
+        # TRANSLATORS: a chip on the tile of a connected device that openExpress has synced
+        # before and that has no activities to upload now
+        said.append((pgettext("chip", "Synced"), "dimmed", None))
     return said[:MAX_CHIPS]
 
 

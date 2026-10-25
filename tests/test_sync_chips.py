@@ -51,9 +51,23 @@ def test_activities_not_uploaded_give_the_chip_to_sync_with_how_many_since_when(
     assert _said(_tile(to_sync=2))[0][2] == "2 new activities"  # no sync recorded
 
 
-def test_nothing_to_sync_or_not_known_gives_no_chip():
-    assert _words(_tile(to_sync=0, synced_at=NOW)) == []
+def test_not_counted_gives_no_chip():
+    """While the count runs, or when it failed, nothing is known: no chip."""
     assert _words(_tile(to_sync=None)) == []
+    assert _words(_tile(to_sync=None, synced_at=NOW)) == []
+
+
+def test_synced_before_with_nothing_to_upload_says_synced():
+    """Counted, nothing to upload, and synced here before (its sync state is there: a device
+    never synced has no count): dimmed, as the primary device is, without a tooltip."""
+    assert _said(_tile(to_sync=0, synced_at=NOW)) == [("Synced", "dimmed", None)]
+    assert _said(_tile(to_sync=0)) == [("Synced", "dimmed", None)]
+
+
+def test_synced_never_comes_with_to_sync_or_never_synced():
+    assert _words(_tile(to_sync=2, synced_at=NOW)) == [("To sync", "accent")]
+    assert _words(_tile(never_synced=True)) == [("Never synced", "dimmed")]
+    assert _words(_tile(never_synced=True, to_sync=0)) == [("Never synced", "dimmed")]
 
 
 def test_a_device_never_synced_here_says_so():
@@ -75,6 +89,19 @@ def test_the_order_of_the_chips_at_most_two():
                                                               ("Primary", "dimmed")]
 
 
+def test_synced_comes_last_and_gives_way_to_every_other_chip():
+    """Last in the order, also after the primary device (decision of 25.10.2026): with the
+    primary device both are there; with an update and the primary device, Synced is the one
+    left out."""
+    update = dict(update_found=NOW)
+    assert _words(_tile(to_sync=0, primary=True)) == [("Primary", "dimmed"),
+                                                      ("Synced", "dimmed")]
+    assert _words(_tile(to_sync=0, **update)) == [("Update available", "warning"),
+                                                  ("Synced", "dimmed")]
+    assert _words(_tile(to_sync=0, primary=True, **update)) == [
+        ("Update available", "warning"), ("Primary", "dimmed")]
+
+
 @pytest.mark.parametrize("count, words", [(1, "1 nowa aktywność"), (3, "3 nowe aktywności"),
                                           (5, "5 nowych aktywności"), (22, "22 nowe aktywności"),
                                           (12, "12 nowych aktywności")])
@@ -88,6 +115,7 @@ def test_the_chips_in_polish(count, words):
         assert tooltip.startswith(words + " od ")
         assert _words(_tile(never_synced=True)) == [("Nie synchronizowano", "dimmed")]
         assert _words(_tile(primary=True)) == [("Główne", "dimmed")]
+        assert _words(_tile(to_sync=0)) == [("Zsynchronizowane", "dimmed")]
     finally:
         i18n.setup("en")
 
@@ -336,6 +364,30 @@ def test_the_tiles_are_drawn_before_the_count_and_its_chip_comes_after(listed):
     assert listed.to_sync.count == 1
     win._show_tiles(*win._start_summaries())  # drawn again: counted once, the tile stays
     assert win.later == [] and win.start.tiles() == [tile]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("view", ["grid", "list"])
+def test_nothing_to_upload_puts_synced_into_the_same_tile_or_row(listed, view):
+    """Both activities uploaded before: the count of 0 puts Synced into the tile (or the row
+    of a list) drawn before it, by its row of chips alone."""
+    from openexpress.gui import start
+
+    state = sync.SyncState(UNIT)
+    state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-02-10-00-00.fit")
+    state.save()
+    win = _start_window([listed])
+    win.start.view = view
+    win._show_tiles(*win._start_summaries())
+    (item,) = win.start.tiles()
+    assert isinstance(item, start.DeviceRow) is (view == "list")
+    assert _chips_on(item) == []
+    drawn = []
+    win.start.show = lambda *a, **kw: drawn.append(a)  # not drawn again
+    work, done = win.later.pop()
+    done(work())
+    assert listed.to_sync.count == 0
+    assert win.start.tiles() == [item] and _chips_on(item) == ["Synced"] and drawn == []
 
 
 @pytest.mark.needs_display
