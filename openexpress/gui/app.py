@@ -115,8 +115,10 @@ from openexpress.gui.pictures import device_picture_path, with_device_picture  #
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    checked_text,
     last_seen_text,
     last_seen_tooltip,
+    remembered_update_text,
     software_text,
     space_text,
     update_state_text,
@@ -729,16 +731,21 @@ def remember_picture_address(device, url: str | None) -> None:
         log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
 
 
-def remember_update_found(device, new_updates: list) -> None:
+def remember_update_found(device, new_updates: list, staged: list = ()) -> None:
     """Keep with the open device (known_devices) what the window's check of updates found to
     install: whether there is any, for its tile on the start page, and what (update_summary),
-    for its device page; none clears both. Optional: a failure is only written to the log."""
+    for its device page; none clears both. With it the check itself (its time, the device's
+    software, whether an update was copied already: `staged`), for its tile and the page of
+    the device when it is not connected. Optional: a failure is only written to the log."""
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return
+    software = getattr(device, "software_version_str", None)
     try:
         known_devices.set_update_found(unit_id, bool(new_updates),
-                                       summary=update_summary(device, new_updates))
+                                       summary=update_summary(device, new_updates),
+                                       software_version=software if isinstance(software, str)
+                                       else None, ready=bool(staged))
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
 
@@ -764,19 +771,52 @@ def show_update_record(win) -> bool:
     """The device page opened: what the last check of updates found for this device
     (devices.json), when it is recent and for the software the device has now, as the state
     of "Device software" and its chip until the check now running ends (which confirms or
-    changes it; a failed check leaves it). Only shown: the Updates page, its buttons and the
-    installs only ever use the server's answer (updates_cache). Whether there was one."""
+    changes it; a failed check leaves it, and says when it was: win.update_checked_at): an
+    update copied already ("ready", with the updates still to install), else updates to
+    install. Only shown: the Updates page, its buttons and the installs only ever use the
+    server's answer (updates_cache). Whether there was one."""
     device = getattr(getattr(win, "session", None), "device", None)
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return False
-    found = known_devices.recorded_updates(known_devices.load().get(unit_id),
-                                           getattr(device, "software_version_str", None))
+    entry = known_devices.load().get(unit_id)
+    software = getattr(device, "software_version_str", None)
+    found = known_devices.recorded_updates(entry, software)
+    check = known_devices.recorded_check(entry, software)
+    if check is not None and check.ready:
+        win.update_state, win.update_count, win.update_only = "ready", 0, None
+        win._update_record_at = check.at
+        if found is not None:
+            win.update_count = found.count
+        return True
     if found is None:
         return False
     win.update_state, win.update_count = "available", found.count
     win.update_only = found if found.count == 1 and found.title is not None else None
+    win._update_record_at = entry.update_found
     return True
+
+
+def update_check_failed(win) -> None:
+    """A check of updates for the open device failed: "Could not check for updates", or,
+    when "Device software" shows what the last check found (show_update_record), that with
+    when it was."""
+    if win.update_state is None:
+        win.update_state = "failed"
+    elif getattr(win, "_update_record_at", None) is not None:
+        win.update_checked_at = win._update_record_at
+    else:
+        return
+    win._render_update_state()
+
+
+def remembered_texts(win, known) -> dict:
+    """The texts of the view of a device remembered that are told against now: when it was
+    last seen, its last sync, the last check of its updates."""
+    now = datetime.now()  # the window's clock (the tests set it)
+    return {"last_seen": last_seen_text(known.last_seen, now),
+            "last_sync": win._last_sync_text(known.unit_id),
+            "update": remembered_update_text(known, now)}
 
 
 def open_device_kind(s, account) -> str | None:
@@ -1313,6 +1353,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.update_state: str | None = None
         self.update_count = 0
         self.update_only = None  # the update to install when it is the only one
+        # When the check whose answer "Device software" shows was, when it is not a check of
+        # now (a record, its check failed); None: an answer of now, or checking.
+        self.update_checked_at: float | None = None
+        self._update_record_at: float | None = None  # the time of the record shown
         self._update_check_session = None
         # None = unknown, "none" (no maps for the device), "empty" (none installed),
         # "current", "available", "failed"
@@ -1340,6 +1384,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._asked: tuple | None = None
         self._pending_cause: Cause | None = None
         self._remembered_unit: int | None = None
+        self._remembered_entry: KnownDevice | None = None  # its entry, for its texts
         self._remembered_from_account = False  # the view shows what the account says
         # The devices connected, as last known (gui/connected.py): the list to choose from
         # while there is one, the devices connected while one of them is open, what was on
@@ -2067,6 +2112,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         chosen."""
         self.maps_cache = self.updates_cache = None
         self.update_state = self.map_state = None
+        self.update_checked_at = self._update_record_at = None
         for sec in self.sections.values():
             sec.loaded = False
             sec.clear()
@@ -2368,12 +2414,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             drawn[key] = (tile, target)
 
     def _update_relative_timer(self) -> None:
-        """A timer once a minute while the start page or the device view is shown (their
-        texts are told against now); none on another page, nor while the window is not on
-        the screen or once it is closed."""
+        """A timer once a minute while the start page, the device view or the view of a device
+        not connected is shown (their texts are told against now); none on another page, nor
+        while the window is not on the screen or once it is closed."""
         visible = self.navigation.get_visible_page()
         wanted = (self.get_mapped() and not getattr(self, "_closed", False)
-                  and visible in (self.start.page, self.device_view))
+                  and visible in (self.start.page, self.device_view, self.remembered.page))
         timer = getattr(self, "_relative_timer", None)
         if wanted and timer is None:
             self._relative_timer = GLib.timeout_add_seconds(RELATIVE_REFRESH_S,
@@ -2384,7 +2430,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
     def _refresh_relative_texts(self) -> bool:
         """Once a minute: the texts told against now drawn again where they changed: the
-        tiles of the start page (all of them, once), the row of the last sync (its words)."""
+        tiles of the start page (all of them, once), the row of the last sync (its words),
+        "Device software" when it says when its check was; the view of a device not
+        connected (_refresh_remembered_texts)."""
         visible = self.navigation.get_visible_page()
         if visible is self.start.page:
             if any(tile_subtitle(source) != text
@@ -2396,6 +2444,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                 text = GLib.markup_escape_text(last_sync_words(data))
                 if row.get_subtitle() != text:
                     row.set_subtitle(text)
+            if getattr(self, "update_checked_at", None) is not None:
+                self._render_update_state()
+        elif visible is self.remembered.page:
+            self._refresh_remembered_texts()
         return True
 
     def _load_tile_pictures(self, tiles: list) -> None:
@@ -2465,6 +2517,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         and drawn again by _redraw_remembered)."""
         fields = devicelist.account_fields(entry)
         version = fields["software_version"]
+        self._remembered_entry = None  # nothing of it is kept here
         self.remembered.show(
             name=fields["description"],
             version=software_text(version, from_account=True) if version else "",
@@ -2491,14 +2544,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
     def _fill_remembered(self, known, tile=None) -> None:
         """The read-only view filled for a device remembered (_show_remembered, and drawn
         again by _redraw_remembered)."""
-        last_sync = self._last_sync_text(known.unit_id)
+        self._remembered_entry = known
         self.remembered.show(
             name=known.description,
-            version=_("Software {version}").format(version=known.software_version),
+            version=software_text(known.software_version),
             part_number=known.part_number,
-            last_seen=last_seen_text(known.last_seen, datetime.now()),
             seen_tooltip=last_seen_tooltip(known.last_seen),
-            last_sync=last_sync)
+            **remembered_texts(self, known))
         if tile is not None:
             self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
                                     tile.description, tile.image_source)
@@ -2508,6 +2560,18 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._remembered_unit = known.unit_id
         self._remembered_from_account = False
         self.remembered.allow_forget(True)
+
+    def _refresh_remembered_texts(self) -> None:
+        """Once a minute on the view of a device not connected: its texts told against now,
+        only where their words changed (of a device only on the account: its last sync)."""
+        known = getattr(self, "_remembered_entry", None)
+        if known is not None:
+            self.remembered.show_texts(**remembered_texts(self, known))
+        else:
+            row = self.remembered.last_sync_row
+            text = GLib.markup_escape_text(self._last_sync_text(self._remembered_unit))
+            if row.get_subtitle() != text:
+                row.set_subtitle(text)
 
     def _refresh_remembered(self) -> None:
         """Refresh (F5, Ctrl+R) on the read-only view of a device not connected: only that
@@ -2534,6 +2598,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         """Every page of the device view loaded anew: nothing kept from the device before."""
         self.maps_cache = self.updates_cache = None
         self.update_state = None
+        self.update_checked_at = self._update_record_at = None
         self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False
@@ -2945,45 +3010,53 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         """Shows self.update_state in the overview ("Watch software" row, software label)."""
         if self.session is None or not hasattr(self, "update_row"):
             return
-        version = software_text(self.session.device.software_version_str)
-        self._highlight_update(self.update_state == "available")
-        # The words of the top of the Updates page (update_state_text); how many and which
-        # only for updates to install.
-        available = self.update_state == "available"
-        self.update_row.set_subtitle(GLib.markup_escape_text(update_state_text(
-            self.update_state, self.update_count if available else 0,
-            self.update_only if available else None,
-            mass_storage=getattr(self.session, "mass_storage", False))))
-        if self.update_state == "ready":
-            self.software_label.set_label(caption(version, _("update ready to install")))
-        else:
-            self.software_label.set_label(version)  # an update to install: its chip says it
+        state = self.update_state
+        self._highlight_update(start.update_available() if state == "available"
+                               else start.update_ready() if state == "ready" else None)
+        # The words of the top of the Updates page (update_state_text); how many (and which)
+        # for updates to install, and those still to install besides one copied already.
+        text = update_state_text(
+            state, self.update_count if state in ("available", "ready") else 0,
+            self.update_only if state == "available" else None,
+            mass_storage=getattr(self.session, "mass_storage", False))
+        checked_at = getattr(self, "update_checked_at", None)
+        if checked_at is not None:
+            text = checked_text(text, checked_at, datetime.now())  # not a check of now
+        self.update_row.set_subtitle(GLib.markup_escape_text(text))
+        # Its chip says it; the row what to do.
+        self.software_label.set_label(software_text(self.session.device.software_version_str))
 
-    def _highlight_update(self, on: bool) -> None:
-        """An update to install stands out on the device page (24.10.2026): the chip of its
-        tile under the version and the subtitle of "Device software" in the warning colour.
-        Otherwise (installed, none, checking, failed) as the other rows. The side panel stays
-        as it is."""
-        self.update_chip.set_visible(on)
+    def _highlight_update(self, chip: str | None) -> None:
+        """An update to install, or one copied already, stands out on the device page
+        (24.10.2026, 25.10.2026): a chip under the version with these words ("Update
+        available" as on its tile, "Update ready") and the subtitle of "Device software" in
+        the warning colour. Otherwise (none, checking, failed: None) as the other rows. The
+        side panel stays as it is."""
+        if chip is not None:
+            self.update_chip.set_label(chip)
+        self.update_chip.set_visible(chip is not None)
         subtitle = row_subtitle(self.update_row)
         if subtitle is None:
             return
-        if on:
+        if chip is not None:
             subtitle.add_css_class("warning")
         else:
             subtitle.remove_css_class("warning")
 
     def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
         """`staged`: system updates copied already, waiting for the device to install them
-        when it is disconnected; told only when nothing else is to be installed first."""
+        when it is disconnected: "ready", which wins over the updates still to install
+        (25.10.2026: told after it, with how many)."""
         self._update_check_session = None  # the row has its answer (show_device may wait)
+        self.update_checked_at = self._update_record_at = None  # an answer of now
         self.update_count = len(new_updates)
         self.update_only = new_updates[0] if len(new_updates) == 1 else None
-        self.update_state = ("available" if new_updates else "ready" if staged else "current")
+        self.update_state = ("ready" if staged else "available" if new_updates else "current")
         # For the tile of the device on the start page, also when it is not open: an update
-        # to install, or none (up to date, or what was found is copied now).
+        # to install, or none (up to date, or what was found is copied now), and whether one
+        # waits for the device to install it.
         remember_update_found(getattr(getattr(self, "session", None), "device", None),
-                              new_updates)
+                              new_updates, staged)
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:
@@ -3010,10 +3083,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         def failed(_e):
             if self._update_check_session is s:
                 self._update_check_session = None
-            if self.session is not s or self.update_state is not None:
-                return
-            self.update_state = "failed"
-            self._render_update_state()
+            if self.session is s:
+                update_check_failed(self)
 
         self.in_background(work, done, failed)
 
@@ -3543,9 +3614,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # The "Device software" row waited for this answer (show_device): it says so.
             if self._update_check_session is s:
                 self._update_check_session = None
-            if self.update_state is None:
-                self.update_state = "failed"
-                self._render_update_state()
+            update_check_failed(self)
 
         self._load("updates", _("Checking for updates…"), work,
                    lambda result: self.show_updates(*result), on_error=failed)
@@ -3560,10 +3629,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         new = upd.pending(items)
         staged = upd.staged(items)
         self._set_update_state(new, staged)
-        # A system update is told at the top of the page; a second one (rare) is listed.
-        system = next((u for u in new if u.is_system), None)
+        # One copied already is told at the top of the page (it wins, as on the row "Device
+        # software"), else a system update; the others (a second system one, rare) are listed.
+        system = None if staged else next((u for u in new if u.is_system), None)
         self._updates_status(sec, system, len(new), beta,
-                             ready=staged[0] if staged and system is None else None,
+                             ready=staged[0] if staged else None,
                              only=new[0] if len(new) == 1 else None)
         rest = [u for u in new if u is not system]
         if rest:
@@ -3590,9 +3660,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                         only=None) -> None:
         """The top of the Updates page: the state of the updates in the words of the row
         "Device software" (update_state_text: `count` updates to install, `only` the one of
-        them; one copied already, `ready`, that waits for the device to be disconnected; or up
-        to date); under it the system update when there is one, or the version of the device;
-        and whether Garmin offers beta versions to the device."""
+        them; one copied already, `ready`, that waits for the device to be disconnected, with
+        the `count` still to install; or up to date); under it the system update when there is
+        one, or the version of the device; and whether Garmin offers beta versions to the
+        device."""
         from openexpress import updates as upd
 
         d = self.session.device
@@ -3616,10 +3687,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             buttons.append(self._button(_("Install"), lambda u=system: self.confirm_update(u),
                                         "suggested-action"))
         elif ready is not None:
-            # What to do is in the title (as on the row "Device software"); under it the
-            # versions.
+            # What to do is in the title (as on the row "Device software"), with how many are
+            # still to install (listed below); under it the versions.
             icon = "software-update-available-symbolic"
-            title = update_state_text("ready", mass_storage=mass_storage)
+            title = update_state_text("ready", count, mass_storage=mass_storage)
             versions = f"{d.software_version_str}{ARROW}{ready.version}"
             if mass_storage:
                 # A drive: the device takes the update once it is ejected (#11).

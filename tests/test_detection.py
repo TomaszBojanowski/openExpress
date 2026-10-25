@@ -5815,10 +5815,11 @@ def test_one_tile_stands_in_the_middle():
 
 @pytest.mark.needs_display
 def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeypatch):
-    """T9 step 1: once a minute while the start page or the device view is shown, the texts
-    told against now are drawn again: the tiles only when one of their texts changed, the
-    row of the last sync only when its words changed. No timer on the read-only view of a
-    remembered device (no such texts there), nor once the window is closed."""
+    """T9 step 1: once a minute while the start page, the device view or the read-only view
+    of a remembered device is shown (its texts too since 25.10.2026, test_update_states), the
+    texts told against now are drawn again: the tiles only when one of their texts changed,
+    the row of the last sync only when its words changed. No timer once the window is
+    closed."""
     from datetime import datetime
 
     import gi
@@ -5874,7 +5875,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         tick()
         assert len(drawn) == 2
         win.navigation.push(win.remembered.page)
-        assert minute_timers() == []  # no texts told against now there
+        assert len(minute_timers()) == 1  # its texts are told against now too
         win.navigation.pop()
         assert len(minute_timers()) == 1
         win.navigation.push(win.device_view)

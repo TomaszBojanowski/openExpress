@@ -8,7 +8,9 @@ when it is no longer in the cache: a picture of the model, with neither the unit
 anything of the account in it, and only an address picture_urls allows; and when the
 window's check of updates last found one to install, for its tile (kept 30 days), with what it
 found (how many; of one, its name, version and whether it is of the system; the software of the
-device then), for its device page. No address of the device itself (an MTP address has the
+device then), for its device page; and when that check last answered, with the software of the
+device then and whether an update was copied to it already (for its tile and the page of the
+device when it is not connected). No address of the device itself (an MTP address has the
 serial number), no GarminDevice.xml (it has it too).
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
@@ -86,6 +88,32 @@ class UpdateSummary:
         return cls(count, software, title, version, is_system)
 
 
+@dataclass(frozen=True)
+class UpdateCheck:
+    """The last check of updates of the window that answered (25.10.2026): when, the
+    software the device had then, and whether an update was copied to it already and waited
+    for the device to install it once disconnected. What it found to install is in
+    update_found and update_summary."""
+
+    at: float
+    software_version: str
+    ready: bool = False
+
+    def to_json(self) -> dict:
+        return {"at": self.at, "software_version": self.software_version, "ready": self.ready}
+
+    @classmethod
+    def from_json(cls, value) -> UpdateCheck | None:
+        """None for anything else than what to_json writes (damaged, edited by hand)."""
+        if not isinstance(value, dict):
+            return None
+        at, software, ready = (value.get(key) for key in ("at", "software_version", "ready"))
+        if (isinstance(at, bool) or not isinstance(at, int | float)
+                or not isinstance(software, str) or not isinstance(ready, bool)):
+            return None
+        return cls(float(at), software, ready)
+
+
 @dataclass
 class KnownDevice:
     unit_id: int = field(repr=False)
@@ -103,6 +131,8 @@ class KnownDevice:
     # What that check found (UpdateSummary), with update_found; None: not known (an entry
     # of an older version, or a damaged one).
     update_summary: UpdateSummary | None = None
+    # The last check that answered, whatever it found (UpdateCheck); None: not known.
+    update_check: UpdateCheck | None = None
 
 
 def path() -> Path:
@@ -132,7 +162,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             old.category if old is not None else None,
                             old.image_url if old is not None else None,
                             old.update_found if old is not None else None,
-                            old.update_summary if old is not None else None)
+                            old.update_summary if old is not None else None,
+                            old.update_check if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -190,24 +221,39 @@ def set_image_url(unit_id: int, url) -> bool:
 
 
 def set_update_found(unit_id: int, found: bool, now: float | None = None,
-                     summary: UpdateSummary | None = None) -> bool:
+                     summary: UpdateSummary | None = None, software_version: str | None = None,
+                     ready: bool = False) -> bool:
     """What the window's check of updates found for a device remembered: an update (the
-    time of this check is kept, with `summary`), or none (what was kept goes); whether the
-    entry changed. A device that is not remembered gets no entry for it. The log names the
-    part number."""
+    time of this check is kept, with `summary`), or none (what was kept goes); with the
+    device's software now (`software_version`), the check itself too (UpdateCheck: `ready`,
+    an update copied already waits for the device). Whether the entry changed. A device
+    that is not remembered gets no entry for it. The log names the part number."""
     with _locked():
         known, writable = _read()
         entry = known.get(unit_id)
         if entry is None or not writable:
             return False
-        value = (time.time() if now is None else now) if found else None
+        at = time.time() if now is None else now
+        value = at if found else None
         summary = summary if found else None
-        if (entry.update_found, entry.update_summary) == (value, summary):
+        check = (UpdateCheck(at, software_version, ready) if software_version is not None
+                 else entry.update_check)
+        if (entry.update_found, entry.update_summary, entry.update_check) == (value, summary,
+                                                                              check):
             return False
-        entry.update_found, entry.update_summary = value, summary
+        said = (entry.update_found is not None,
+                entry.update_check is not None and entry.update_check.ready)
+        entry.update_found, entry.update_summary, entry.update_check = value, summary, check
         _write(known)
-    if found:
+    if not found and said == (False, check is not None and check.ready):
+        return True  # only the time of the check is new: nothing to say
+    if found and ready:
+        log.info("devices: an update for %s found, another copied already", entry.part_number)
+    elif found:
         log.info("devices: an update for %s found", entry.part_number)
+    elif ready:
+        log.info("devices: an update for %s copied already, it waits to be installed",
+                 entry.part_number)
     else:
         log.info("devices: no update waits for %s", entry.part_number)
     return True
@@ -224,6 +270,16 @@ def recorded_updates(entry: KnownDevice | None, software_version: str,
         return None
     return entry.update_summary if entry.update_summary.software_version == software_version \
         else None
+
+
+def recorded_check(entry: KnownDevice | None, software_version: str,
+                   now: float | None = None) -> UpdateCheck | None:
+    """The last check that answered for this device, if it was less than
+    UPDATE_FOUND_KEPT_S ago and the device has the same software now; None otherwise."""
+    check = entry.update_check if entry is not None else None
+    if check is None or update_found_recently(check.at, now) is None:
+        return None
+    return check if check.software_version == software_version else None
 
 
 def update_found_recently(found: float | None, now: float | None = None) -> float | None:
@@ -288,7 +344,8 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 image_url if picture_urls.allowed(image_url) else None,
                                 float(update_found) if isinstance(update_found, int | float)
                                 and not isinstance(update_found, bool) else None,
-                                UpdateSummary.from_json(value.get("update_summary")))
+                                UpdateSummary.from_json(value.get("update_summary")),
+                                UpdateCheck.from_json(value.get("update_check")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -304,7 +361,10 @@ def _write(known: dict[int, KnownDevice]) -> None:
         del fields["unit_id"]  # it is the key
         fields["update_summary"] = (entry.update_summary.to_json()
                                     if entry.update_summary is not None else None)
-        for optional in ("category", "image_url", "update_found", "update_summary"):
+        fields["update_check"] = (entry.update_check.to_json()
+                                  if entry.update_check is not None else None)
+        for optional in ("category", "image_url", "update_found", "update_summary",
+                         "update_check"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         devices[str(unit_id)] = fields

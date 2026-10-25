@@ -228,12 +228,15 @@ def test_a_record_for_other_software_or_too_old_is_not_shown(device_root, softwa
 
 @pytest.mark.needs_display
 def test_a_failed_check_keeps_what_the_record_says(device_root):
+    """And says when it was found (25.10.2026; its words: test_update_states)."""
     from openexpress.connect import ApiError
 
     _record()
     win, _section = _page(device_root, _answer(_component()))
     _check(win, fails=ApiError("Software update check: HTTP 500", 500))
-    assert _shown(win) == (True, "Update available: Map Region Grouping file 2.31", True)
+    chip, subtitle, warning = _shown(win)
+    assert (chip, warning) == (True, True)
+    assert subtitle.startswith("Update available: Map Region Grouping file 2.31\u00a0· checked ")
 
 
 @pytest.mark.needs_display

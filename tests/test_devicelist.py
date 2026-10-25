@@ -153,7 +153,7 @@ def test_fields_come_from_the_connected_device_first():
         "last_seen": NOW - 2 * DAY, "image_part_number": "006-B4532-00",
         "image_url": "https://res.garmin.com/en/products/010-02906-11/v/c1_01_md.png",
         "category": None, "image_source": "the account", "update_found": None,
-        "account_known": True, "to_sync": None, "never_synced": False,
+        "update_ready": None, "account_known": True, "to_sync": None, "never_synced": False,
         "synced_at": None}
 
 
@@ -180,7 +180,7 @@ def test_a_device_only_on_the_account():
         "last_seen": None, "image_part_number": "006-B4440-00",
         "image_url": "https://res.garmin.com/en/products/010-02890-01/V/c1_01_md.png",
         "category": "cycling-computer", "image_source": "the account", "update_found": None,
-        "account_known": True, "to_sync": None, "never_synced": False,
+        "update_ready": None, "account_known": True, "to_sync": None, "never_synced": False,
         "synced_at": None}
 
 

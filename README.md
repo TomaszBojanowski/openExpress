@@ -149,14 +149,17 @@ the Device page (or in Preferences) to sync whenever the watch is connected.
 
 The window opens on the start page (the picture at the top): a tile for each Garmin device
 connected, and for those seen before; a tile opens its device. Up to two labels on a tile say
-what is waiting and what the device is: **Update available**, **To sync** (activities on the
-device not uploaded yet) or **Never synced** (by this installation), **USB drive**,
-**Primary** (the account's primary wearable), **Not on your account** and, when nothing
-else needs saying, **Synced** (synced before, nothing new to upload). The device page
-shows **Update available** under the software version too.
+what is waiting and what the device is: **Update available**, or **Unplug to install** (an
+update copied to the connected device, which installs it once unplugged; **Eject to install**
+for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
+(by this installation), **USB drive**, **Primary** (the account's primary wearable), **Not
+on your account** and, when nothing else needs saying, **Synced** (synced before, nothing new
+to upload). The device page shows **Update available** or **Update ready** under the
+software version too.
 
 A device seen before and not connected opens read-only: what was known of it when it was
-last seen, and its last sync. **Forget Device…** at the bottom of that page removes what this
+last seen, its last sync, and what the last check of its updates found and when (*Not
+checked since …* when that check is older than 30 days). **Forget Device…** at the bottom of that page removes what this
 installation keeps of it (what was uploaded from it, its last sync, the maps of your own
 copied to it); connected again, it is a new device, and its first sync asks again whether to
 upload everything or new data only. Files not uploaded yet go only when you tick them, its
@@ -264,8 +267,9 @@ connected device; no login is needed.
   to charge the device and not to disconnect it while copying. The question in the window
   shows both versions and links to the license (EULA).
 - **After the file is copied** the device installs it when it is disconnected. Until then
-  the page says *Update ready: disconnect the device to install it* and `openexpress
-  updates` says that the update waits for the device.
+  the page says *Update ready: disconnect the device to install it* (and how many more
+  updates are available, if any), its tile *Unplug to install*, and `openexpress updates`
+  says that the update waits for the device.
 - **A device that connects as a USB drive** is ejected first: after the copy the window
   asks to eject it (`openexpress updates --install` ejects it by itself), and says that the
   cable can be unplugged only once that has worked. Some of these devices install an update

@@ -270,12 +270,14 @@ def display_key(tile, how: str) -> tuple:
 
 
 # The chips of a tile (PLAN T9, 24.10.2026): only what the tile would not say otherwise, at
-# most MAX_CHIPS, in this order: an update to install (found by the window's check, at most
-# known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never synced here
-# (connected, of the account), a USB drive, the account's primary device, a device off the
-# account (only when the account's list is known for it; never a drive, which needs no
-# account), and last a device synced here before with nothing to upload now. The accent only
-# for what there is to do; colours of the theme only (the style is a class of CSS), no icons.
+# most MAX_CHIPS, in this order: an update copied already that the connected device installs
+# once unplugged (or ejected, a drive), else an update to install (found by the window's
+# check, at most known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never
+# synced here (connected, of the account), a USB drive, the account's primary device, a
+# device off the account (only when the account's list is known for it; never a drive, which
+# needs no account), and last a device synced here before with nothing to upload now. The
+# accent only for what there is to do; colours of the theme only (the style is a class of
+# CSS), no icons.
 MAX_CHIPS = 2
 
 
@@ -286,11 +288,31 @@ def update_available() -> str:
     return _("Update available")
 
 
+def update_ready() -> str:
+    """The words of the chip of an update copied already, under the software version on the
+    device page (the row "Device software" says what to do)."""
+    # TRANSLATORS: a chip under the software version on the device page: an update is copied
+    # to the device, which installs it once disconnected
+    return _("Update ready")
+
+
 def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     """(words, style: "warning", "dimmed" or "accent", tooltip or None) of each chip."""
     said = []
     found = known_devices.update_found_recently(tile.update_found, now)
-    if found is not None:
+    if tile.update_ready is not None:
+        # Wins over an update still to install, as on the device page (25.10.2026).
+        if tile.kind == "ums":
+            # TRANSLATORS: a chip on the tile of a USB drive: an update is copied to it, the
+            # device installs it once ejected
+            words = pgettext("chip", "Eject to install")
+        else:
+            # TRANSLATORS: a chip on the tile of a connected device: an update is copied to
+            # it, the device installs it once unplugged
+            words = pgettext("chip", "Unplug to install")
+        when = full_time(datetime.fromtimestamp(tile.update_ready))
+        said.append((words, "warning", _("Checked {when}").format(when=when)))
+    elif found is not None:
         said.append((update_available(), "warning",
                      _("Checked {when}").format(when=full_time(datetime.fromtimestamp(found)))))
     if tile.to_sync:
@@ -613,19 +635,31 @@ class RememberedPage:
         self.page = Adw.NavigationPage(title=_("Devices"), tag="remembered", child=view)
 
     def show(self, name: str, version: str, part_number: str, last_seen: str,
-             last_sync: str, seen_tooltip: str | None = None) -> None:
+             last_sync: str, seen_tooltip: str | None = None, update: str | None = None) -> None:
         """What is known; a version or a part number not known is left out, not shown
-        empty. `seen_tooltip`: when it was last seen, in full."""
+        empty. `seen_tooltip`: when it was last seen, in full; `update`: what the last check
+        of updates found (words.remembered_update_text), None: "Connect the device to
+        check"."""
         name = name or _("Garmin device")
         self.page.set_title(name)
         self.name_label.set_label(name)
         self.version_label.set_label(version)
         self.version_label.set_visible(bool(version))
-        self.seen_label.set_label(last_seen)
         self.seen_label.set_tooltip_text(seen_tooltip)
-        self.last_sync_row.set_subtitle(GLib.markup_escape_text(last_sync))
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
         self.tools_group.set_visible(bool(part_number))
+        self.show_texts(last_seen, last_sync, update)
+
+    def show_texts(self, last_seen: str, last_sync: str, update: str | None = None) -> None:
+        """The texts told against now (show; once a minute, the window): each set only when
+        its words changed."""
+        update = update or _("Connect the device to check")
+        if self.seen_label.get_label() != last_seen:
+            self.seen_label.set_label(last_seen)
+        for row, text in ((self.last_sync_row, last_sync), (self.update_row, update)):
+            text = GLib.markup_escape_text(text)
+            if row.get_subtitle() != text:
+                row.set_subtitle(text)
 
     def allow_forget(self, on: bool) -> None:
         """Whether the button "Forget Device…" is there: for a device remembered here, not one

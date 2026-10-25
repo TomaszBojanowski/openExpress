@@ -75,6 +75,10 @@ class Tile:
     image_source: str | None = None
     # When the window's check last found an update for it (devices.json); None: none known.
     update_found: float | None = None
+    # A connected device only: when the window's check last found an update copied to it
+    # already, waiting for the device to install it once unplugged, for the software it has
+    # now (known_devices.recorded_check); None: none known, or not connected.
+    update_ready: float | None = None
     # Whether the account's list is known for it (logged in, and its unit ID known): only
     # then does on_account=False say that it is off the account.
     account_known: bool = False
@@ -194,8 +198,16 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
             known.category if known else None),
         image_source=image_source,
         update_found=known.update_found if known else None,
+        update_ready=_ready_at(known, version) if connected else None,
         account_known=account_known,
     )
+
+
+def _ready_at(known, software_version: str) -> float | None:
+    """When the last check found an update copied to the connected device already, if that
+    check is recent and of the software the device has now."""
+    check = known_devices.recorded_check(known, software_version) if software_version else None
+    return check.at if check is not None and check.ready else None
 
 
 PICTURE_FROM_ACCOUNT, PICTURE_REMEMBERED = "the account", "the remembered address"

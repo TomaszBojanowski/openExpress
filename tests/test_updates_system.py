@@ -934,7 +934,8 @@ def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
 @pytest.mark.needs_display
 def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
-    assert status["texts"][0][0] == "Update ready: disconnect the device to install it"
+    assert status["texts"][0][0] == (
+        "Update ready: disconnect the device to install it\u00a0· 1 more available")
     (available,) = groups  # the font, to install before the device is disconnected
     assert [r.get_title() for r in available.rows] == ["Test Font"]
 
@@ -966,13 +967,12 @@ def test_device_page_says_the_update_waits_for_the_device():
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert win.update_state == "ready"
     assert win.update_row.get_subtitle() == "Update ready: disconnect the device to install it"
-    assert win.software_label.get_label() == "Software 23.39\u00a0· update ready to install"
-    # Something else to install first: that is said, as before (the one update by its name
-    # and version since 24.10.2026).
+    assert win.software_label.get_label() == "Software 23.39"  # its chip says it
+    # Something else to install too: ready wins, and says how many more (25.10.2026).
     items = _staged_items(font_on_device=False)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert (win.update_state, win.update_row.get_subtitle()) == (
-        "available", "Update available: Test Font 23.40")
+        "ready", "Update ready: disconnect the device to install it\u00a0· 1 more available")
 
 
 @pytest.mark.needs_display
@@ -981,7 +981,7 @@ def test_device_page_says_an_update_on_a_drive_waits_to_be_ejected():
     win, MainWindow = _overview(drive=True)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert win.update_row.get_subtitle() == "Update ready: eject the device to install it"
-    assert win.software_label.get_label() == "Software 23.39\u00a0· update ready to install"
+    assert win.software_label.get_label() == "Software 23.39"
 
 
 def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
@@ -1035,7 +1035,8 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     dialog.emit("response", "ok")  # as if "Accept and install" was pressed
     assert [u.part_number for u in copied[0]] == ["006-V0000-00"] and win.shown == ["Done"]
     status, groups, _buttons = _read_page(win)
-    assert status["texts"][0][0] == "Update ready: disconnect the device to install it"
+    assert status["texts"][0][0] == (
+        "Update ready: disconnect the device to install it\u00a0· 1 more available")
     assert status["buttons"] == [("Check Again", False)]
     assert [r.get_title() for r in groups[0].rows] == ["Test Font"]  # still to install
 
@@ -1058,8 +1059,7 @@ def test_ready_in_polish():
     assert status["buttons"] == [("Sprawdź ponownie", False)]
     assert win.update_row.get_subtitle() == (
         "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować")
-    assert win.software_label.get_label() == (
-        "Oprogramowanie 23.39\u00a0· aktualizacja gotowa do instalacji")
+    assert win.software_label.get_label() == "Oprogramowanie 23.39"
 
 
 # --- the progress bar moves while downloading ------------------------------------------------

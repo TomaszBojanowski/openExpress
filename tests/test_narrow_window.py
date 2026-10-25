@@ -473,15 +473,16 @@ def _descendants(widget):
 def _tiles_with_chips():
     """Tiles with the longest pairs of chips (PLAN T9): an update with a device off the
     account, with a drive, with activities to sync, with a device never synced, with the
-    primary device and with a device synced; the primary device with a device synced."""
+    primary device and with a device synced; the primary device with a device synced; an
+    update copied with a device never synced, and with a drive (25.10.2026)."""
     from openexpress.devicelist import Tile
 
     found = time.time()
 
-    def tile(name, kind, on_account=True, primary=False, update=True, **sync):
+    def tile(name, kind, on_account=True, primary=False, update=True, ready=False, **sync):
         return Tile(name, "006-B4440-00", "33.13", kind, True, on_account, primary, None,
                     "006-B4440-00", None, None, update_found=found if update else None,
-                    account_known=True, **sync)
+                    update_ready=found if ready else None, account_known=True, **sync)
 
     return [(tile("Edge 1050", "mtp", on_account=False), "Software 33.13"),
             (tile("Varia RTL515", "ums"), "Software 3.80"),
@@ -490,7 +491,9 @@ def _tiles_with_chips():
             (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True), "Software 23.39"),
             (tile("Edge 1050", "mtp", to_sync=0, synced_at=found), "Software 33.13"),
             (tile("fēnix 8 - 47mm, Solar", "mtp", primary=True, update=False, to_sync=0,
-                  synced_at=found), "Software 23.39")]
+                  synced_at=found), "Software 23.39"),
+            (tile("Edge 1050", "mtp", ready=True, never_synced=True), "Software 33.13"),
+            (tile("Varia RTL515", "ums", ready=True), "Software 3.80")]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
@@ -515,7 +518,7 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
         while child is not None:
             stack.append(child)
             child = child.get_next_sibling()
-    assert len(chips) == 14
+    assert len(chips) == 18
     assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
 
 
@@ -523,7 +526,7 @@ def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, languag
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, monkeypatch,
                                                                  language, wrap_box):
-    """Seven devices connected (a list) with the longest pairs of chips: the page fits the
+    """Nine devices connected (a list) with the longest pairs of chips: the page fits the
     narrowest window and every chip stays inside its row; with Adw.WrapBox (libadwaita 1.7)
     no chip is cut short, before it they may get shorter (24.10.2026)."""
     from openexpress.gui import start
@@ -535,11 +538,11 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
     win.start.show(_tiles_with_chips(), False)
     _iterate(0.3)
     rows = win.start.tiles()
-    assert len(rows) == 7 and all(row.get_parent() is win.start.list for row in rows)
+    assert len(rows) == 9 and all(row.get_parent() is win.start.list for row in rows)
     assert win.start.page.get_width() <= NARROWEST
     assert _min_width(win.start.page) <= NARROWEST
     chips = [(row, chip) for row in rows for chip in _chip_labels(row)]
-    assert len(chips) == 14
+    assert len(chips) == 18
     for row, chip in chips:
         ok, bounds = chip.compute_bounds(row)
         assert ok and bounds.get_x() >= 0 and bounds.get_y() >= 0
@@ -550,8 +553,9 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
 
 
 # The longest pair of chips in either language (24.10.2026): 271 px on one line in the first
-# measurement, 309 px in GNOME's font; more than a tile has at 700 and 1000 px.
-LONGEST_PAIR = ("Aktualizacja dostępna", "Nie synchronizowano")
+# measurement, 309 px in GNOME's font; more than a tile has at 700 and 1000 px. Since
+# 25.10.2026 an update copied ("Unplug to install") instead of one found.
+LONGEST_PAIR = ("Odłącz, aby zainstalować", "Nie synchronizowano")
 
 
 def _tiles_per_line(page) -> int:
@@ -588,7 +592,7 @@ class _WithoutWrapBox:
 def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypatch, width,
                                                         wrap_box):
     """A tile asks for no more width than its chips need at least: with the longest pair (an
-    update found, a device never synced) as many tiles share a line as without chips, and
+    update copied, a device never synced) as many tiles share a line as without chips, and
     the chips go on two lines, whole (libadwaita 1.7: Adw.WrapBox; before it, on one line,
     shorter). Measured 24.10.2026: with the pair, two tiles shared a line of 1000 px instead
     of three, and one shared a line of 700 px instead of two."""
@@ -600,7 +604,7 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
     win = narrow_window("pl")
     win.set_default_size(width, 800)
     per_line, widths = [], []
-    for chips in ({}, {"update_found": time.time(), "never_synced": True}):
+    for chips in ({}, {"update_ready": time.time(), "never_synced": True}):
         entries = [(Tile(name, "006-B4532-00", "23.39", "mtp", True, True, False, None,
                          "006-B4532-00", None, None, account_known=True, **chips),
                     "Oprogramowanie 23.39")
