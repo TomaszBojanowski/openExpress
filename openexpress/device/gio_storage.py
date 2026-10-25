@@ -900,8 +900,8 @@ def mass_storage_text() -> str:
     """What an open Garmin device in mass storage mode offers: for its pages in the window,
     and the refusal of the commands that do not apply to it."""
     return _("The device is connected in mass storage mode (as a USB drive): openExpress "
-             "shows its information and software updates; sync, apps, maps and music do "
-             "not apply to it.")
+             "shows its information and software updates; sync, apps, maps and music are "
+             "not supported in this mode.")
 
 
 def drive_not_mounted_text() -> str:

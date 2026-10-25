@@ -695,7 +695,7 @@ FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive, but this v
                       "(Flatpak) has no access to /run/media, where the system mounted it.")
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
                      "openExpress shows its information and software updates; sync, apps, "
-                     "maps and music do not apply to it.")
+                     "maps and music are not supported in this mode.")
 # Made by hand after the Varia RTL515 (17.10.2026); the unit ID is made up.
 RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
@@ -838,6 +838,23 @@ def drive_folder(drives, label="GARMIN", xml_path="GARMIN/GarminDevice.xml"):
 def monitor_with(monkeypatch, *mounts):
     monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get",
                         staticmethod(lambda: FakeMonitor(mounts=mounts)))
+
+
+def test_the_drive_text_says_what_is_not_supported_not_that_it_does_not_apply():
+    """A navigator with lifetime maps connects as a USB drive (a nüvi 52LMT, 25.10.2026): its
+    maps exist, openExpress does not handle them in this mode. The text says so, in English
+    and in Polish (no "nie dotyczą")."""
+    from openexpress import i18n
+    from openexpress.device.gio_storage import mass_storage_text
+
+    assert mass_storage_text() == MASS_STORAGE_TEXT
+    i18n.setup("pl")
+    try:
+        polish = mass_storage_text()
+    finally:
+        i18n.setup("en")
+    assert polish.endswith("nie są w\u00a0tym trybie obsługiwane.")
+    assert "dotycz" not in polish
 
 
 @pytest.mark.parametrize("xml_path, partition", [

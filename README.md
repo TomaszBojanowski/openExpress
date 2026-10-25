@@ -99,6 +99,8 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 ### Not yet available
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
+- Map updates for devices that connect as a USB drive (mass storage mode), such as older
+  nüvi car navigators.
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see
   [Privacy and security](#privacy-and-security)).
 
@@ -127,8 +129,10 @@ supports Garmin devices that connect as a USB drive (mass storage mode: some old
 models, and accessories such as the Varia RTL515): their information and software updates, in
 the window and on the command line, in the Flatpak and in the version from source. Both find
 such a device by themselves, an MTP device first when both are connected; `--path` is only for
-a folder without a device, such as a copy. Commands that do not apply to such a device (sync,
-apps, maps, music, backup) say so. Mass storage is tested on the Varia RTL515 (on 21 October
+a folder without a device, such as a copy. Sync, apps, maps, music and backup are not
+supported for such a device; the window and the commands say so. A car or motorcycle
+navigator that connects as a USB drive (such as an older nüvi) therefore gets its software
+updates, but no map updates. Mass storage is tested on the Varia RTL515 (on 21 October
 2026 also copying a component update and ejecting the drive in the window); reports from
 other devices in mass storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
