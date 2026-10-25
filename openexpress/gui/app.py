@@ -44,10 +44,12 @@ from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human  # noqa: E402
 from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
+    DRIVE_OFF,
     MASS_STORAGE,
     NO_DEVICE_FILE,
     NOT_MOUNTED,
     PRESENT,
+    STARTING,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
     DeviceSummary,
@@ -57,6 +59,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     SeveralDevices,
     distinct_devices,
     drive_notice_text,
+    drive_off_text,
     eject,
     ejected_by_us,
     ejected_drive_waits,
@@ -72,6 +75,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     no_mtp_title,
     not_ejected_text,
     not_ready_text,
+    note_drive_place,
     own_remount,
     probe,
     usb_state,
@@ -147,6 +151,9 @@ USB_POLL_S = 2
 # that it may be plugged in again (gvfs did not mount an Edge 1050 restarted with its cable
 # in; plugging it in again helped, 21.10.2026). Only the words change, not the detection.
 REPLUG_HINT_S = 15
+# The same words for a device this long on USB in its transitional mode (091e:0003): past the
+# about 19 s of a fēnix 8 starting, so that a device starting as usual gets no such advice.
+STARTING_REPLUG_HINT_S = 25
 # TRANSLATORS: added to the page while a device on USB is not offered over MTP
 REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unplug the cable and "
                  "plug it back in.")
@@ -2126,6 +2133,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # gvfs reports two mounts of one device: the pages are empty after the first.
             log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
                      where)
+            note_drive_place(garmin_ums(mount))  # a watch may switch its drive off now
             return
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
@@ -2145,6 +2153,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
                      bool(getattr(self, "busy", False)))
+            if ours and getattr(s, "mass_storage", False):
+                # Its place on USB, kept: a watch switches its drive off once it is ejected
+                # and comes back as 091e:0003 (#19).
+                note_drive_place(getattr(s.storage, "usb", None))
             self._asked = (Cause.UNPLUGGED_OPEN, open_address(s))
             self.session = None
             self._updated_apps = set()  # unplugged: the device applies what was waiting
@@ -2171,6 +2183,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                     f"{not_ready_text(state)}{replug} {held_elsewhere_text()}", False)
         if state == PRESENT and normal_s >= REPLUG_HINT_S:
             # One sentence becomes two: each with its full stop.
+            text = _("This takes a moment after the cable is plugged in.")
+            return _("The device is starting…"), f"{text} {_(REPLUG_HINT)}", True
+        if state == DRIVE_OFF:
+            # TRANSLATORS: a device connected as a USB drive, not over MTP
+            return _("USB drive"), drive_off_text(), False
+        if state == STARTING and STARTING_REPLUG_HINT_S <= waited_s < WAIT_FOR_DEVICE_S:
+            # Still in its transitional mode: one sentence becomes two, as above.
             text = _("This takes a moment after the cable is plugged in.")
             return _("The device is starting…"), f"{text} {_(REPLUG_HINT)}", True
         if state == ABSENT:

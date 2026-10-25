@@ -668,6 +668,7 @@ def find_ums_devices() -> list[FoundDevice]:
         if usb is None:
             continue
         usb_seen.add(f"{usb.bus}-{usb.address}")
+        note_drive_place(usb)
         if ejected_by_us(usb):
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
@@ -719,6 +720,8 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         place = f"{ids[2]}-{ids[3]}"
         if place in seen or not _mass_storage_only(folder):
             continue
+        with _places_lock:
+            _drive_places[folder.name] = None
         places.setdefault(place, []).append((vol, unix, ids))
     for place, volumes in places.items():
         seen.add(place)
@@ -864,6 +867,7 @@ def eject(storage) -> None:
         raise DriveNotMounted(_("The drive is not mounted any more. If it was ejected, you can "
                                 "unplug the cable."))
     what = _("Cannot eject the device")
+    note_drive_place(getattr(storage, "usb", None))  # a watch may switch its drive off
     if found.can_eject():
         _wait(lambda done: found.eject_with_operation(
             Gio.MountUnmountFlags.NONE, None, None,
@@ -933,6 +937,10 @@ ABSENT, STARTING, PRESENT = "absent", "starting", "present"
 # Only Garmin devices in mass storage mode (e.g. the Varia RTL515): the system offers them
 # as a USB drive, never over MTP, so there is nothing to wait for.
 MASS_STORAGE = "mass-storage"
+# A watch that connects as a USB drive, back on USB as 091e:0003 after its drive was
+# ejected (a Forerunner 55, #19): it switched its drive off, only plugging it in again
+# helps; nothing to wait for (_drive_places).
+DRIVE_OFF = "drive-off"
 MASS_STORAGE_CLASS = "08"  # the USB interface class
 WAIT_FOR_DEVICE_S = 45
 # Between its transitional mode and MTP the device is off the bus for a moment (about
@@ -974,6 +982,13 @@ def _mass_storage_only(base: Path) -> bool:
 
 def _garmin_on_usb() -> list[tuple[str, bool]]:
     """(USB product ID, whether it is in mass storage mode) of each Garmin device plugged in."""
+    return [(product, mass_storage) for _place, product, mass_storage in _garmin_at_places()]
+
+
+def _garmin_at_places() -> list[tuple[str, str, bool]]:
+    """_garmin_on_usb, with the place of each device on USB: the name of its folder in
+    /sys/bus/usb/devices (e.g. "1-4"), which stays when it comes back under another product
+    ID at the same port."""
     found = []
     try:
         entries = sorted(SYSFS_USB.iterdir())
@@ -982,11 +997,83 @@ def _garmin_on_usb() -> list[tuple[str, bool]]:
     for base in entries:
         try:
             if (base / "idVendor").read_text().strip().lower() == GARMIN_VID:
-                found.append(((base / "idProduct").read_text().strip().lower(),
+                found.append((base.name, (base / "idProduct").read_text().strip().lower(),
                               _mass_storage_only(base)))
         except OSError:
             continue
     return found
+
+
+# The places on USB where a Garmin drive was seen in this run of the program, or went away
+# (unmounted, ejected), with since when nothing is there (None: something is). A Garmin device
+# at such a place as 091e:0003 is that drive switched off after it was ejected (a Forerunner
+# 55, #19), not a device starting. A place is forgotten once a device in its normal mode is
+# there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
+_drive_places: dict[str, float | None] = {}
+# What the log said last of a device 091e:0003 at a place: whether its drive was switched off.
+_said_0003: dict[str, bool] = {}
+_places_lock = threading.Lock()
+
+
+def note_drive_place(usb: GarminUsb | None) -> None:
+    """A Garmin drive is (or was a moment ago) at the place of `usb` (its bus and device
+    number): seen, unmounted or ejected. Nothing when it is not on USB any more."""
+    place = _place_of(usb)
+    if place is not None:
+        with _places_lock:
+            _drive_places[place] = None
+
+
+def _place_of(usb: GarminUsb | None) -> str | None:
+    if usb is None or usb.bus is None or usb.address is None:
+        return None
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return None
+    for base in entries:
+        try:
+            if (int((base / "busnum").read_text()) == usb.bus
+                    and int((base / "devnum").read_text()) == usb.address):
+                return base.name
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def _note_places(devices: list[tuple[str, str, bool]], now: float) -> None:
+    """What is on USB now, for _drive_places (and one line in the log for each device
+    091e:0003 that comes, saying which it is)."""
+    with _places_lock:
+        here = set()
+        for place, product, mass_storage in devices:
+            here.add(place)
+            if mass_storage:
+                _drive_places[place] = None
+            elif product != STARTING_PRODUCT:
+                _drive_places.pop(place, None)
+            else:
+                drive = place in _drive_places
+                if drive:
+                    _drive_places[place] = None
+                if _said_0003.get(place) != drive:
+                    _said_0003[place] = drive
+                    if drive:
+                        log.info("USB: a Garmin device %s:%s where a Garmin drive was: its "
+                                 "drive is switched off after it was ejected, to be plugged "
+                                 "in again", GARMIN_VID, product)
+                    else:
+                        log.info("USB: a Garmin device %s:%s: in its transitional mode, "
+                                 "starting", GARMIN_VID, product)
+        for place in [p for p in _said_0003 if p not in here]:
+            del _said_0003[place]
+        for place, gone in list(_drive_places.items()):
+            if place in here:
+                continue
+            if gone is None:
+                _drive_places[place] = now
+            elif now - gone >= USB_GAP_S:
+                del _drive_places[place]
 
 
 def garmin_products_on_usb() -> list[str]:
@@ -994,17 +1081,24 @@ def garmin_products_on_usb() -> list[str]:
     return [product for product, _mass_storage in _garmin_on_usb()]
 
 
-def usb_state() -> str:
+def usb_state(clock=time.monotonic) -> str:
     """ABSENT: no Garmin device on USB; STARTING: one is there in its transitional mode;
     PRESENT: one is there in its normal mode (which says nothing about gvfs yet);
-    MASS_STORAGE: the only Garmin devices there are in mass storage mode."""
-    devices = _garmin_on_usb()
+    MASS_STORAGE: the only Garmin devices there are in mass storage mode; DRIVE_OFF: those
+    that are not are 091e:0003 where a Garmin drive was (_drive_places): switched off after
+    it was ejected."""
+    devices = _garmin_at_places()
+    _note_places(devices, clock())
     if not devices:
         return ABSENT
-    products = [product for product, mass_storage in devices if not mass_storage]
-    if not products:
+    others = [(place, product) for place, product, mass_storage in devices if not mass_storage]
+    if not others:
         return MASS_STORAGE
-    return PRESENT if any(p != STARTING_PRODUCT for p in products) else STARTING
+    if any(p != STARTING_PRODUCT for _place, p in others):
+        return PRESENT
+    with _places_lock:
+        drives = all(place in _drive_places for place, _p in others)
+    return DRIVE_OFF if drives else STARTING
 
 
 def mass_storage_text() -> str:
@@ -1013,6 +1107,13 @@ def mass_storage_text() -> str:
     return _("The device is connected in mass storage mode (as a USB drive): openExpress "
              "shows its information and software updates; sync, apps, maps and music are "
              "not supported in this mode.")
+
+
+def drive_off_text() -> str:
+    """A watch back on USB as 091e:0003 after its drive was ejected (DRIVE_OFF): the window
+    and the command line."""
+    return _("The watch has switched its drive off after it was ejected. Unplug the cable and "
+             "plug it in again.")
 
 
 def drive_not_mounted_text() -> str:
@@ -1101,6 +1202,8 @@ def not_ready_text(state: str) -> str:
                  "screen: if it is locked with a PIN or asks something, unlock it or confirm.")
     if state == MASS_STORAGE:
         return drive_notice_text()
+    if state == DRIVE_OFF:
+        return drive_off_text()
     return _("No Garmin device (MTP) found. Connect the device with a USB cable "
              "and unlock it if it asks to allow the connection.")
 
@@ -1136,6 +1239,9 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                          clock() - started, state,
                          ", ".join(f"091e:{p}" for p in garmin_products_on_usb()) or "-", wait)
                 seen = state
+            if state == DRIVE_OFF and isinstance(e, NotThereYet):
+                # Switched off after it was ejected: only plugging it in again helps.
+                raise MassStorageNotice(not_ready_text(state)) from e
             if state in (ABSENT, MASS_STORAGE):
                 if wait and told:
                     # A device we were waiting for left the bus: unplugged, or between modes.

@@ -471,6 +471,9 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     except ImportError:  # without GObject nothing opens a USB device anyway
         return folder
     monkeypatch.setattr(gio_storage, "USB_NODES", folder)
+    # Nor what an earlier test saw on USB (the places of Garmin drives, #19).
+    monkeypatch.setattr(gio_storage, "_drive_places", {})
+    monkeypatch.setattr(gio_storage, "_said_0003", {})
     return folder
 
 

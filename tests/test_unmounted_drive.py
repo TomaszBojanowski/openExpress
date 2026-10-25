@@ -9,6 +9,7 @@ listed; without gvfs there are no volumes and nothing changes. All devices are m
 
 import logging
 import os
+import types
 
 import pytest
 from test_detection import (  # noqa: F401 - the fixture
@@ -255,8 +256,6 @@ def test_without_gvfs_nothing_changes(drives, monkeypatch):
 def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeypatch):
     """No mount event comes for a drive that the system does not mount: the window's look at
     USB finds it in mass storage mode and detects once."""
-    import types
-
     from test_detection import FakeStartPage
 
     from openexpress.gui import app
@@ -395,3 +394,176 @@ def test_removed_safely_the_command_line_says_the_same(drives, monkeypatch):
     with pytest.raises(gio_storage.NotThereYet) as refused:
         service.open_device_or_drive()
     assert str(refused.value) == gio_storage.drive_not_mounted_text()
+
+
+# --- state (b) as it is: after it was ejected, the watch is on USB as 091e:0003 (#19) ------
+#
+# lsusb on the reporter's computer: after "safely remove" the Forerunner 55 is 091e:0003, and
+# 091e:0f1d once plugged in again. At the place on USB where a Garmin drive was in this run,
+# 091e:0003 is that drive switched off: the window and the command line say so at once. A
+# 091e:0003 without that (an MTP watch starting) is still a device starting.
+
+DRIVE_OFF_TEXT = ("The watch has switched its drive off after it was ejected. Unplug the cable "
+                  "and plug it in again.")
+
+
+class Clock:
+    def __init__(self, now=1000.0):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
+def _reenumerated(drives, product="0003", port="1-4", devnum=13, cls="ff"):
+    """The device at `port` gone and back as `product` (a new device number), as the kernel
+    shows it: one interface of class `cls`, no drive."""
+    import shutil
+
+    from test_detection import usb_device
+
+    shutil.rmtree(drives.hub / port, ignore_errors=True)
+    usb = usb_device(drives.hub, port, 1, devnum, "091e", product)
+    (usb / f"{port}:1.0").mkdir()
+    (usb / f"{port}:1.0" / "bInterfaceClass").write_text(f"{cls}\n")
+
+
+def _gone(drives, port="1-4"):
+    import shutil
+
+    shutil.rmtree(drives.hub / port)
+
+
+def _fr55_drive(drives, monkeypatch):
+    """The Forerunner 55 as a drive (sdd with a medium), listed once as the window lists it."""
+    _two_slots(drives, monkeypatch, ("sdd",))
+    assert [d.uri for d in gio_storage.find_ums_devices()] == ["ums-volume:/dev/sdd"]
+
+
+def test_ejected_the_watch_comes_back_as_0003_and_the_window_says_it_switched_its_drive_off(
+        drives, monkeypatch, caplog):
+    from openexpress.gui.app import MainWindow
+
+    _fr55_drive(drives, monkeypatch)
+    assert gio_storage.usb_state() == gio_storage.MASS_STORAGE
+    _reenumerated(drives)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
+        assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
+    assert [m for m in caplog.messages if "0003" in m] == [
+        ("USB: a Garmin device 091e:0003 where a Garmin drive was: its drive is switched off "
+         "after it was ejected, to be plugged in again")]
+    for waited_s in (0.0, 16.0, 50.0):
+        assert MainWindow._usb_notice(gio_storage.usb_state(), waited_s) == (
+            "USB drive", DRIVE_OFF_TEXT, False)
+
+
+def test_ejected_the_command_line_says_it_at_once(drives, monkeypatch):
+    from openexpress import service
+
+    _fr55_drive(drives, monkeypatch)
+    _reenumerated(drives)
+
+    def sleep(_s):
+        pytest.fail("waited for a device that switched its drive off")
+
+    with pytest.raises(gio_storage.MassStorageNotice) as said:
+        gio_storage.open_device_storage(wait=True, sleep=sleep)
+    assert str(said.value) == DRIVE_OFF_TEXT
+    with pytest.raises(gio_storage.MassStorageNotice) as said:
+        service.open_device_or_drive(wait=False)
+    assert str(said.value) == DRIVE_OFF_TEXT
+
+
+def test_a_drive_unmounted_while_open_is_known_by_its_place(drives, monkeypatch):
+    """The window does not look at USB while a device is open: the drive's own unmount (or
+    eject) says where it was, before the device comes back as 091e:0003."""
+    unix = usb_drive(drives, product=FR55)
+    _sized(drives, unix, FR55_SECTORS)
+    _on_usb(drives, monkeypatch)
+    _monitor(monkeypatch)
+    gio_storage.note_drive_place(gio_storage.GarminUsb(FR55, "usb", 1, 12))
+    _reenumerated(drives)
+    assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
+
+
+def test_the_window_notes_the_place_of_the_open_drive_it_sees_unmounted(drives, monkeypatch):
+    from openexpress.gui.app import MainWindow
+
+    unix = usb_drive(drives, product=FR55)
+    _sized(drives, unix, FR55_SECTORS)
+    _on_usb(drives, monkeypatch)
+    _monitor(monkeypatch)
+    folder = drive_folder(drives)
+    mount = FakeDriveMount(folder, unix)
+    shown = []
+    storage = types.SimpleNamespace(label=folder.as_uri() + "/", device_uri=folder.as_uri(),
+                                    usb=gio_storage.GarminUsb(FR55, "usb", 1, 12))
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(storage=storage, mass_storage=True,
+                                      device=types.SimpleNamespace(unit_id=3000000055)),
+        connected=None, show_no_device=lambda: shown.append(1))
+    MainWindow._on_mount_removed(win, None, mount)
+    assert shown == [1] and win.session is None
+    _reenumerated(drives)
+    assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
+
+
+def test_0003_without_a_drive_before_is_a_device_starting(drives, monkeypatch, caplog):
+    """An MTP watch starting (091e:0003 before its normal mode): as before; after 25 s (past
+    the about 19 s of a fēnix 8 starting) the page adds that it may be plugged in again,
+    after the wait it is not ready."""
+    from openexpress.gui.app import REPLUG_HINT, MainWindow
+
+    _on_usb(drives, monkeypatch, port="1-8")
+    _reenumerated(drives, port="1-8")
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.usb_state() == gio_storage.STARTING
+    assert [m for m in caplog.messages if "0003" in m] == [
+        "USB: a Garmin device 091e:0003: in its transitional mode, starting"]
+    starting = "This takes a moment after the cable is plugged in"
+    for waited_s in (5.0, 19.0, 24.9):
+        assert MainWindow._usb_notice(gio_storage.STARTING, waited_s) == (
+            "The device is starting…", starting, True)
+    assert MainWindow._usb_notice(gio_storage.STARTING, 25.0) == (
+        "The device is starting…", f"{starting}. {REPLUG_HINT}", True)
+    assert MainWindow._usb_notice(gio_storage.STARTING, 50.0) == (
+        "The device is not ready", gio_storage.not_ready_text(gio_storage.STARTING), False)
+
+
+def test_a_device_in_its_normal_mode_at_that_place_forgets_the_drive(drives, monkeypatch):
+    _fr55_drive(drives, monkeypatch)
+    gio_storage.usb_state()
+    _reenumerated(drives, product="4fdd")  # another watch there, over MTP
+    assert gio_storage.usb_state() == gio_storage.PRESENT
+    _reenumerated(drives, devnum=14)
+    assert gio_storage.usb_state() == gio_storage.STARTING
+
+
+def test_unplugged_for_longer_than_a_moment_forgets_the_drive(drives, monkeypatch):
+    clock = Clock()
+    _fr55_drive(drives, monkeypatch)
+    gio_storage.usb_state(clock=clock)
+    _gone(drives)
+    assert gio_storage.usb_state(clock=clock) == gio_storage.ABSENT
+    clock.now += 2  # off the bus a moment between its two modes: still the drive's place
+    _reenumerated(drives)
+    assert gio_storage.usb_state(clock=clock) == gio_storage.DRIVE_OFF
+    _gone(drives)
+    gio_storage.usb_state(clock=clock)
+    clock.now += gio_storage.USB_GAP_S + 1  # unplugged
+    gio_storage.usb_state(clock=clock)
+    _reenumerated(drives, devnum=15)
+    assert gio_storage.usb_state(clock=clock) == gio_storage.STARTING
+
+
+def test_the_words_in_polish():
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        said = gio_storage.drive_off_text()
+    finally:
+        i18n.setup("en")
+    assert said == ("Zegarek wyłączył swój dysk po wysunięciu. Odłącz kabel i\u00a0podłącz go "
+                    "ponownie.")

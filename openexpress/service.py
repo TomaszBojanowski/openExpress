@@ -175,7 +175,8 @@ def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
     except gio_storage.SeveralDevices:
         raise
     except DeviceError:
-        if gio_storage.usb_state() not in (gio_storage.ABSENT, gio_storage.MASS_STORAGE):
+        if gio_storage.usb_state() not in (gio_storage.ABSENT, gio_storage.MASS_STORAGE,
+                                           gio_storage.DRIVE_OFF):
             raise
         # A drive the system has not mounted is not mounted here: it is chosen (a tile).
         drives = [d for d in gio_storage.find_ums_devices() if d.mounted]
