@@ -118,6 +118,11 @@ def test_the_tiles_after_baseline_alone_say_nothing_of_the_sync():
     summary.to_sync = sync.ActivitiesToSync(UNIT, frozenset(), 0)
 
     def chips():
+        from fakes import login, noted
+
+        login()
+        summary.to_sync = summary.to_sync.again()  # as the window counts after a sync
+        noted([summary], [{"unitid": UNIT}])
         (tile,) = devicelist.tiles([summary], known_devices.load(), [{"unitid": UNIT}], True)
         return [w for w, _s, _t in _chips(tile)]
 
@@ -315,8 +320,8 @@ def test_the_row_in_polish():
 
 LOGGED_OUT = ("Not logged in to Garmin Connect: the tiles do not show what is on your "
               "account or what there is to sync.")
-FAILED = ("Your Garmin Connect account could not be read: the tiles do not show what is on "
-          "it or what there is to sync.")
+FAILED = ("Your Garmin Connect account could not be read: the tiles show only what was known "
+          "of it before.")
 
 
 def _account_window(why=None):
@@ -416,5 +421,5 @@ def test_the_notes_in_polish():
     assert said == [
         ("Nie zalogowano do Garmin Connect: kafle nie pokazują, co jest na koncie ani co jest "
          "do synchronizacji."),
-        ("Nie udało się odczytać konta Garmin Connect: kafle nie pokazują, co jest na nim ani "
-         "co jest do synchronizacji.")]
+        ("Nie udało się odczytać konta Garmin Connect: kafle pokazują tylko to, co było "
+         "o\u00a0nim wiadomo wcześniej.")]

@@ -37,6 +37,7 @@ from openexpress import (  # noqa: E402
     picture_urls,
     service,
     sync,
+    tile_facts,
 )
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.cli import FINISH_STEPS_WINDOW, _error, _human  # noqa: E402
@@ -371,29 +372,8 @@ def report_log_note(dialog) -> None:
             child = child.get_next_sibling()
 
 
-def account_pending(win) -> bool:
-    """Whether the account's list is not known yet but asked: a login saved, and neither a
-    list nor why there is none (logged out, an error) came yet. The tiles of the first frame
-    say the sync from a record then (devicelist._sync_of)."""
-    return (getattr(win, "_account", None) is None and getattr(win, "_account_why", None) is None
-            and store.exists())
-
-
-def remember_sync_count(counted) -> None:
-    """Keep what a count of the activities to upload found (sync.ActivitiesToSync) with the
-    device, for its tile from the first frame, with the version of its sync state now; a
-    count not known (None, never synced) keeps what was there. Optional: a failure is only
-    written to the log."""
-    if counted is None or counted.count is None:
-        return
-    stamp = service.sync_stamp(counted.unit_id)
-    if stamp is None:
-        return
-    try:
-        known_devices.set_sync_count(counted.unit_id, known_devices.SyncCount(
-            counted.count, time.time(), stamp))
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: the count of activities not kept (%s)", type(e).__name__)
+# What a count of the activities to upload found, kept with the device for its tile.
+remember_sync_count = tile_facts.note_count
 
 
 def refresh_last_sync_subtitle(win) -> None:
@@ -513,16 +493,17 @@ def primary_training_unknown(s) -> str:
 
 def account_note(why: str | None) -> str | None:
     """The one sentence of the start page while the account's list is not known (analysis
-    14, c4): not logged in ("logged-out"), or it could not be read ("failed"); its tiles
-    then say nothing of the account. None: known, or still asked."""
+    14, c4): not logged in ("logged-out": its tiles then say nothing of the account), or it
+    could not be read ("failed": they say what was kept of it, tile_facts). None: known, or
+    still asked."""
     if why == "logged-out":
         # TRANSLATORS: under the tiles of the start page
         return _("Not logged in to Garmin Connect: the tiles do not show what is on your "
                  "account or what there is to sync.")
     if why == "failed":
         # TRANSLATORS: under the tiles of the start page
-        return _("Your Garmin Connect account could not be read: the tiles do not show what "
-                 "is on it or what there is to sync.")
+        return _("Your Garmin Connect account could not be read: the tiles show only what "
+                 "was known of it before.")
     return None
 
 
@@ -885,9 +866,10 @@ def connected_devices() -> list:
     return _still_there(distinct_devices([probe(f) for f in find_all_devices()]))
 
 
-def without_sync(tile):
-    """A tile without what it says of the sync: to tell whether only that changed."""
-    return dataclasses.replace(tile, to_sync=None, never_synced=False, synced_at=None)
+def without_facts(tile):
+    """A tile without the facts of its chips (tile_facts.TILE_FIELDS): to tell whether only
+    they changed."""
+    return dataclasses.replace(tile, **tile_facts.TileFacts().tile_fields())
 
 
 def session_summary(s) -> DeviceSummary:
@@ -962,40 +944,10 @@ def remember_picture_address(device, url: str | None) -> None:
         log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
 
 
-def remember_update_found(device, new_updates: list, staged: list = ()) -> None:
-    """Keep with the open device (known_devices) what the window's check of updates found to
-    install: whether there is any, for its tile on the start page, and what (update_summary),
-    for its device page; none clears both. With it the check itself (its time, the device's
-    software, whether an update was copied already: `staged`), for its tile and the page of
-    the device when it is not connected. Optional: a failure is only written to the log."""
-    unit_id = getattr(device, "unit_id", None)
-    if not unit_id:
-        return
-    software = getattr(device, "software_version_str", None)
-    try:
-        known_devices.set_update_found(unit_id, bool(new_updates),
-                                       summary=update_summary(device, new_updates),
-                                       software_version=software if isinstance(software, str)
-                                       else None, ready=bool(staged))
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
-
-
-def update_summary(device, new_updates: list) -> known_devices.UpdateSummary | None:
-    """What is kept of the updates found (24.10.2026): how many; of one, its name, version
-    and whether it is of the system; and the device's software now. Nothing else (no path,
-    no sum, no address). None without updates, or when the device's software is not known."""
-    software = getattr(device, "software_version_str", None)
-    if not new_updates or not isinstance(software, str):
-        return None
-    if len(new_updates) == 1:
-        u = new_updates[0]
-        title, version = getattr(u, "title", None), getattr(u, "version", None)
-        is_system = getattr(u, "is_system", None)
-        if (isinstance(title, str) and isinstance(version, str)
-                and isinstance(is_system, bool)):
-            return known_devices.UpdateSummary(1, software, title, version, is_system)
-    return known_devices.UpdateSummary(len(new_updates), software)
+# What the window's check of updates found, kept with the open device for its tile and
+# its page when it is not connected (and what is kept of the updates found).
+remember_update_found = tile_facts.note_update_check
+update_summary = tile_facts.update_summary
 
 
 def show_update_record(win) -> bool:
@@ -2515,6 +2467,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         "failed"; None: not known yet). `draw`: the start page is drawn again if it is shown
         or under a remembered device's view (False: the caller draws)."""
         why = why if devices is None else None
+        if devices is not None:
+            # What it says of the devices remembered, for their tiles (before they are drawn).
+            tile_facts.note_account(devices)
         if devices == self._account:
             if why != getattr(self, "_account_why", None):
                 # The same tiles: only the sentence under them changes.
@@ -2614,8 +2569,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
         self.connected.drew(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
-                                     logged_in=self._account is not None,
-                                     account_pending=account_pending(self))
+                                     logged_in=self._account is not None)
         self._start_entries = [
             (tile, source if isinstance(source, KnownDevice | dict)
              else OPEN if self._is_open(source) else source.found)
@@ -2674,16 +2628,16 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._update_tile_chips()
 
     def _update_tile_chips(self) -> None:
-        """The chips of the tiles drawn, as the devices' counts say them now: each changed row
-        of chips alone, the page not drawn again. Nothing when other tiles would be drawn now
-        (the next drawing shows them)."""
+        """The chips of the tiles drawn, as the facts kept with the devices say them now (a
+        source in the background wrote them: tile_facts): each row of chips that changed
+        alone, the page not drawn again. Nothing when other tiles would be drawn now (the
+        next drawing shows them)."""
         summaries, _notice = self._start_summaries()
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
-                                     logged_in=self._account is not None,
-                                     account_pending=account_pending(self))
+                                     logged_in=self._account is not None)
         drawn = self._start_entries
         if len(entries) != len(drawn) or any(
-                without_sync(tile) != without_sync(old)
+                without_facts(tile) != without_facts(old)
                 for (tile, _source), (old, _target) in zip(entries, drawn, strict=True)):
             return
         for key, ((tile, _source), (old, target)) in enumerate(zip(entries, drawn,

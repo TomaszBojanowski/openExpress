@@ -867,6 +867,9 @@ def save_last_sync(unit_id: int, summary: SyncSummary) -> None:
     # and a sync of another device replaces it.
     _write_json(device_last_sync_path(unit_id), data)
     _write_json(last_sync_path(), data)
+    from openexpress import tile_facts  # it uses this module
+
+    tile_facts.note_synced(unit_id)  # for its tile
 
 
 def record_sync(unit_id: int, uploaded: int, downloaded: int, skipped_known: int,

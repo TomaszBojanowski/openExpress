@@ -529,11 +529,11 @@ def test_an_update_found_is_kept_and_optional(store, caplog):
         assert known_devices.set_update_found(EDGE, False) is True
     assert "devices: no update waits for 006-B4440-00" in caplog.text
     assert known_devices.load()[EDGE].update_found is None
-    assert "update_found" not in json.loads(store.read_text())["devices"][str(EDGE)]
+    assert "update" not in json.loads(store.read_text())["devices"][str(EDGE)]["tile_facts"]
     assert known_devices.set_update_found(EDGE, False) is False  # nothing to clear
     assert known_devices.set_update_found(3000000009, True) is False  # not remembered
     data = json.loads(store.read_text())
-    data["devices"][str(EDGE)]["update_found"] = "soon"
+    data["devices"][str(EDGE)]["tile_facts"]["update"] = {"found": "soon"}
     store.write_text(json.dumps(data))
     assert known_devices.load()[EDGE].update_found is None
 

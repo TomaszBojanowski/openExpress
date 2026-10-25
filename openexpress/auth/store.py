@@ -36,6 +36,17 @@ def exists() -> bool:
     return _path().exists()
 
 
+def stamp() -> str | None:
+    """The version of the login saved (when its file was written, and its size), nothing of
+    what is in it; None: none saved. What was read of the account with one login holds only
+    while that login stays saved (tile_facts)."""
+    try:
+        st = _path().stat()
+    except OSError:
+        return None
+    return f"{st.st_mtime_ns}-{st.st_size}"
+
+
 def load() -> ConnectAuth:
     p = _path()
     if not p.exists():

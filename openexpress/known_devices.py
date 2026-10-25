@@ -12,8 +12,10 @@ device then), for its device page; and when that check last answered, with the s
 device then and whether an update was copied to it already (for its tile and the page of the
 device when it is not connected); and what the window's count in the background last found
 of its activities to upload, with the version of its sync state then (for its tile from the
-first frame). No address of the device itself (an MTP address has the
-serial number), no GarminDevice.xml (it has it too).
+first frame). These, with what the account's list said of it and what is known of its sync,
+are the facts of its tile: one object of the entry, "tile_facts", which tile_facts.py alone
+writes and reads (entries written before it are read as they were). No address of the device
+itself (an MTP address has the serial number), no GarminDevice.xml (it has it too).
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
 the sync state, own maps…) stays. The unit ID is never written to the log."""
@@ -147,6 +149,70 @@ class SyncCount:
         return cls(count, float(at), state)
 
 
+@dataclass(frozen=True)
+class AccountFact:
+    """What the account's list said of a remembered device when it was last read (25.10.2026):
+    whether the account lists it, and whether it is its primary wearable; when, and the
+    version of the login saved it was read with (store.stamp)."""
+
+    on_account: bool
+    primary: bool
+    at: float
+    login: str
+
+    def to_json(self) -> dict:
+        return {"on_account": self.on_account, "primary": self.primary, "at": self.at,
+                "login": self.login}
+
+    @classmethod
+    def from_json(cls, value) -> AccountFact | None:
+        """None for anything else than what to_json writes (damaged, edited by hand)."""
+        if not isinstance(value, dict):
+            return None
+        on, primary, at, login = (value.get(k) for k in ("on_account", "primary", "at",
+                                                         "login"))
+        if (not isinstance(on, bool) or not isinstance(primary, bool)
+                or isinstance(at, bool) or not isinstance(at, int | float)
+                or not isinstance(login, str)):
+            return None
+        return cls(on, primary, float(at), login)
+
+
+@dataclass(frozen=True)
+class SyncedFact:
+    """What this installation knew of the sync of a device when it was last seen or synced
+    (25.10.2026): whether it synced it at all (its state.json is there), when its last sync
+    recorded was, and whether that one could not upload (no consent, device sync off in
+    Garmin Connect); when, and the version of its sync state then (service.sync_stamp;
+    None: never synced)."""
+
+    once: bool
+    last: float | None
+    not_uploaded: bool
+    at: float
+    state: str | None
+
+    def to_json(self) -> dict:
+        return {"once": self.once, "last": self.last, "not_uploaded": self.not_uploaded,
+                "at": self.at, "state": self.state}
+
+    @classmethod
+    def from_json(cls, value) -> SyncedFact | None:
+        """None for anything else than what to_json writes (damaged, edited by hand)."""
+        if not isinstance(value, dict):
+            return None
+        once, last, not_uploaded, at, state = (
+            value.get(k) for k in ("once", "last", "not_uploaded", "at", "state"))
+        if (not isinstance(once, bool) or not isinstance(not_uploaded, bool)
+                or isinstance(at, bool) or not isinstance(at, int | float)
+                or (last is not None and (isinstance(last, bool)
+                                          or not isinstance(last, int | float)))
+                or (state is not None and not isinstance(state, str))):
+            return None
+        return cls(once, float(last) if last is not None else None, not_uploaded, float(at),
+                   state)
+
+
 @dataclass
 class KnownDevice:
     unit_id: int = field(repr=False)
@@ -171,6 +237,12 @@ class KnownDevice:
     # The USB product ID of a drive ("0f1d"), kept when it was opened: the name of its tile
     # while it is not mounted and nothing of it can be read (analysis 15); None: not known.
     usb_product: str | None = None
+    # What the account's list said of it (AccountFact) and what is known of its sync
+    # (SyncedFact); None: not known. With update_found, update_summary, update_check and
+    # sync_count: the facts its tile shows, kept in one object, "tile_facts" (tile_facts.py
+    # writes and reads them).
+    account: AccountFact | None = None
+    synced: SyncedFact | None = None
 
 
 def path() -> Path:
@@ -192,7 +264,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
              kind: str, now: float | None = None,
              usb_product: str | None = None) -> KnownDevice:
     """Add or update the entry of a device seen now; when it was first seen stays, and its
-    USB product unless a new one is given."""
+    USB product unless a new one is given; the facts of its tile stay (tile_facts writes
+    them)."""
     with _locked():
         known, writable = _read()
         now = time.time() if now is None else now
@@ -205,7 +278,9 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             old.update_summary if old is not None else None,
                             old.update_check if old is not None else None,
                             old.sync_count if old is not None else None,
-                            usb_product or (old.usb_product if old is not None else None))
+                            usb_product or (old.usb_product if old is not None else None),
+                            old.account if old is not None else None,
+                            old.synced if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -215,16 +290,21 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
 
 def seen(unit_id: int, description: str, part_number: str, software_version: str,
          kind: str, usb_product: str | None = None) -> None:
-    """remember() for the detection: a device without a unit ID (no <Id>) is not remembered,
-    and a failure (e.g. a full disk) is only written to the log: remembering a device never
-    stops it from opening."""
+    """remember() for the detection, then what is known of its sync now, for its tile
+    (tile_facts.note_synced): a device without a unit ID (no <Id>) is not remembered, and a
+    failure (e.g. a full disk) is only written to the log: remembering a device never stops
+    it from opening."""
     if not unit_id:
         return
+    from openexpress import tile_facts  # it reads devices.json through this module
+
     try:
         remember(unit_id, description, part_number, software_version, kind,
                  usb_product=usb_product)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: not remembered (%s)", type(e).__name__)
+        return
+    tile_facts.note_synced(unit_id)
 
 
 def set_category(unit_id: int, category: str) -> bool:
@@ -329,6 +409,36 @@ def set_sync_count(unit_id: int, count: SyncCount) -> bool:
     return True
 
 
+def set_account_facts(facts: dict[int, AccountFact]) -> int:
+    """Keep what the account's list said of the devices remembered (AccountFact by unit ID);
+    how many entries changed. Devices not remembered get no entry for it."""
+    with _locked():
+        known, writable = _read()
+        changed = 0
+        for unit_id, fact in facts.items():
+            entry = known.get(unit_id)
+            if entry is not None and entry.account != fact:
+                entry.account = fact
+                changed += 1
+        if not writable or not changed:
+            return 0
+        _write(known)
+    return changed
+
+
+def set_synced(unit_id: int, fact: SyncedFact) -> bool:
+    """Keep what is known of the sync of a device remembered (SyncedFact); whether the entry
+    changed."""
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable or entry.synced == fact:
+            return False
+        entry.synced = fact
+        _write(known)
+    return True
+
+
 def recorded_sync_count(entry: KnownDevice | None, state: str | None,
                         now: float | None = None) -> int | None:
     """How many activities the last count found to upload, if it was less than
@@ -406,7 +516,9 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
         for key, value in data["devices"].items():
             category = value.get("category")
             image_url = value.get("image_url")
-            update_found = value.get("update_found")
+            facts = _tile_facts(value)
+            update = facts.get("update") if isinstance(facts.get("update"), dict) else {}
+            update_found = update.get("found")
             entry = KnownDevice(int(key), str(value["description"]), str(value["part_number"]),
                                 str(value["software_version"]), str(value["kind"]),
                                 float(value["first_seen"]), float(value["last_seen"]),
@@ -414,10 +526,12 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 image_url if picture_urls.allowed(image_url) else None,
                                 float(update_found) if isinstance(update_found, int | float)
                                 and not isinstance(update_found, bool) else None,
-                                UpdateSummary.from_json(value.get("update_summary")),
-                                UpdateCheck.from_json(value.get("update_check")),
-                                SyncCount.from_json(value.get("sync_count")),
-                                _product(value.get("usb_product")))
+                                UpdateSummary.from_json(update.get("summary")),
+                                UpdateCheck.from_json(update.get("check")),
+                                SyncCount.from_json(facts.get("sync")),
+                                _product(value.get("usb_product")),
+                                AccountFact.from_json(facts.get("account")),
+                                SyncedFact.from_json(facts.get("synced")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -426,9 +540,27 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
     return known, True
 
 
+def _tile_facts(value: dict) -> dict:
+    """The object "tile_facts" of an entry; for an entry written before it (25.10.2026), the
+    same facts from where they were then (update_found, update_summary, update_check,
+    sync_count); an entry with neither has none (not known)."""
+    facts = value.get("tile_facts")
+    if isinstance(facts, dict):
+        return facts
+    return {"update": {"found": value.get("update_found"),
+                       "summary": value.get("update_summary"),
+                       "check": value.get("update_check")},
+            "sync": value.get("sync_count")}
+
+
 def _product(value) -> str | None:
     """A USB product ID as written: four hexadecimal digits; anything else is not kept."""
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{4}", value) else None
+
+
+# The fields of an entry kept in its object "tile_facts", not at its top.
+_FACT_FIELDS = ("update_found", "update_summary", "update_check", "sync_count", "account",
+                "synced")
 
 
 def _write(known: dict[int, KnownDevice]) -> None:
@@ -436,16 +568,20 @@ def _write(known: dict[int, KnownDevice]) -> None:
     for unit_id, entry in sorted(known.items()):
         fields = asdict(entry)
         del fields["unit_id"]  # it is the key
-        fields["update_summary"] = (entry.update_summary.to_json()
-                                    if entry.update_summary is not None else None)
-        fields["update_check"] = (entry.update_check.to_json()
-                                  if entry.update_check is not None else None)
-        fields["sync_count"] = (entry.sync_count.to_json()
-                                if entry.sync_count is not None else None)
-        for optional in ("category", "image_url", "update_found", "update_summary",
-                         "update_check", "sync_count", "usb_product"):
+        for name in _FACT_FIELDS:
+            del fields[name]
+        for optional in ("category", "image_url", "usb_product"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
+        update = {"found": entry.update_found,
+                  "summary": entry.update_summary.to_json() if entry.update_summary else None,
+                  "check": entry.update_check.to_json() if entry.update_check else None}
+        facts = {"update": {k: v for k, v in update.items() if v is not None},
+                 "sync": entry.sync_count.to_json() if entry.sync_count else None,
+                 "synced": entry.synced.to_json() if entry.synced else None,
+                 "account": entry.account.to_json() if entry.account else None,
+                 "usb": entry.kind}
+        fields["tile_facts"] = {k: v for k, v in facts.items() if v not in (None, {})}
         devices[str(unit_id)] = fields
     paths.write_private(path(), json.dumps({"version": FORMAT, "devices": devices}, indent=1,
                                            ensure_ascii=False))

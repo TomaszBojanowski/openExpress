@@ -57,6 +57,21 @@ def remembered(*entries):
     return {e.unit_id: e for e in (KnownDevice(*fields) for fields in entries)}
 
 
+def with_facts(known, answer):
+    """These remembered devices with what the window writes of them (tile_facts) once the
+    account's list `answer` is read with a login saved: what it says of each one, and what
+    is known of their sync."""
+    import time
+
+    from fakes import login
+
+    from openexpress import tile_facts
+
+    facts = tile_facts.account_facts(answer, known, time.time(), login())
+    return {unit: dataclasses.replace(k, account=facts[unit], synced=tile_facts.synced_fact(unit))
+            for unit, k in known.items()}
+
+
 FENIX_SEEN = (FENIX, "fēnix 8 (remembered)", "006-B4532-00", "23.38", "mtp", NOW - 9 * DAY,
               NOW - 2 * DAY)
 EDGE_SEEN = (EDGE, "Edge 1050 (remembered)", "006-B4440-00", "33.11", "mtp", NOW - 9 * DAY,
@@ -78,7 +93,8 @@ def test_one_device_in_all_three_sources_is_one_tile():
     account; the Edge, remembered and on the account: one tile as well."""
     from openexpress import devicelist
 
-    tiles = devicelist.tiles([fenix_connected()], remembered(FENIX_SEEN, EDGE_SEEN), account(),
+    tiles = devicelist.tiles([fenix_connected()],
+                             with_facts(remembered(FENIX_SEEN, EDGE_SEEN), account()), account(),
                              logged_in=True)
     assert len(tiles) == 2
     fenix, edge = tiles
@@ -145,7 +161,8 @@ def test_fields_come_from_the_connected_device_first():
     when it was seen only from the memory."""
     from openexpress import devicelist
 
-    (fenix, _edge) = devicelist.tiles([fenix_connected("23.40")], remembered(FENIX_SEEN),
+    (fenix, _edge) = devicelist.tiles([fenix_connected("23.40")],
+                                      with_facts(remembered(FENIX_SEEN), account()),
                                       account(), logged_in=True)
     assert dataclasses.asdict(fenix) == {
         "description": "fēnix 8", "part_number": "006-B4532-00", "software_version": "23.40",
@@ -162,7 +179,7 @@ def test_fields_of_a_device_not_connected_come_from_the_memory_first():
     """Not connected: name and version as remembered, before the account's."""
     from openexpress import devicelist
 
-    edge = by_name(devicelist.tiles([], remembered(EDGE_SEEN), account(),
+    edge = by_name(devicelist.tiles([], with_facts(remembered(EDGE_SEEN), account()), account(),
                                     logged_in=True))["Edge 1050 (remembered)"]
     assert (edge.software_version, edge.kind, edge.last_seen) == ("33.11", "mtp", NOW - DAY)
     assert (edge.on_account, edge.primary, edge.category) == (True, False, "cycling-computer")
@@ -213,7 +230,9 @@ def test_connected_first_the_primary_first_then_by_name():
     venu = (VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", NOW - 9 * DAY, NOW - 4 * DAY)
     older_edge = (EDGE, "Edge 1050 (remembered)", "006-B4440-00", "33.11", "mtp",
                   NOW - 9 * DAY, NOW - 6 * DAY)
-    tiles = devicelist.tiles([varia_now, fenix_connected()], remembered(venu), account(),
+    # The fēnix connected: seen by the detection, remembered with what the account says.
+    tiles = devicelist.tiles([varia_now, fenix_connected()],
+                             with_facts(remembered(venu, FENIX_SEEN), account()), account(),
                              logged_in=True)
     assert [t.description for t in tiles] == ["fēnix 8", "Varia RTL515", "Venu 2", "Edge 1050"]
     tiles = devicelist.tiles([], remembered(venu, older_edge, VARIA_SEEN), [], logged_in=False)
@@ -327,7 +346,7 @@ def test_each_tile_comes_with_what_it_was_made_of():
     drive = connected("file:///run/media/u/GARMIN/", "Varia RTL515", "006-B3592-03", "3.36",
                       VARIA, kind="ums")
     mtp = connected("mtp://varia/", "Varia RTL515", "006-B3592-03", "3.36", VARIA)
-    known = remembered(EDGE_SEEN)
+    known = with_facts(remembered(EDGE_SEEN, FENIX_SEEN), account())
     entries = devicelist.entries([drive, mtp, fenix_connected()], known, account(),
                                  logged_in=True)
     assert [t.description for t, _ in entries] == [

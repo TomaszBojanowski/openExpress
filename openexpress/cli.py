@@ -676,7 +676,7 @@ def cmd_sync(args) -> int:
 
 
 def cmd_baseline(args) -> int:
-    from openexpress import service, sync
+    from openexpress import service, sync, tile_facts
 
     st, dev, settings, state = _sync_context(args)
     client = make_client(settings, need_auth=True)
@@ -691,6 +691,7 @@ def cmd_baseline(args) -> int:
         return 0
     with service.sync_lock():
         n = sync.mark_baseline(dev, st, cfg, sync.SyncState(dev.unit_id), client)
+    tile_facts.note_synced(dev.unit_id)  # synced here now, for its tile
     print(ngettext("Marked {count} file as already uploaded. "
                    "The next `sync` will upload only new data.",
                    "Marked {count} files as already uploaded. "

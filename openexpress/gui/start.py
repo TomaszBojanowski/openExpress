@@ -15,7 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from openexpress import devicelist, known_devices  # noqa: E402
+from openexpress import devicelist, tile_facts  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_tooltip,
@@ -277,7 +277,7 @@ def display_key(tile, how: str) -> tuple:
 # The chips of a tile (PLAN T9, 24.10.2026): only what the tile would not say otherwise, at
 # most MAX_CHIPS, in this order: an update copied already that the connected device installs
 # once unplugged (or ejected, a drive), else an update to install (found by the window's
-# check, at most known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never
+# check, at most tile_facts.UPDATE_KEPT_S ago), activities to sync or a device never
 # synced here (connected, of the account), a USB drive, the account's primary device, a
 # device off the account (only when the account's list is known for it; never a drive, which
 # needs no account), and last a device synced here before with nothing to upload now. The
@@ -302,9 +302,12 @@ def update_ready() -> str:
 
 
 def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
-    """(words, style: "warning", "dimmed" or "accent", tooltip or None) of each chip."""
+    """(words, style: "warning", "dimmed" or "accent", tooltip or None) of each chip: from
+    the facts of the tile (tile_facts.TILE_FIELDS, as tile_facts.read gave them) and what
+    the device itself shows (tile_facts.DEVICE_FIELDS), nothing else
+    (tests/test_tile_facts.py)."""
     said = []
-    found = known_devices.update_found_recently(tile.update_found, now)
+    found = tile_facts.update_still_recent(tile.update_found, now)
     if tile.update_ready is not None:
         # Wins over an update still to install, as on the device page (25.10.2026).
         if tile.kind == "ums":

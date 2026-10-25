@@ -52,8 +52,8 @@ def test_the_record_keeps_the_count_when_and_the_state_it_was_counted_against():
     entry = known_devices.load()[UNIT]
     stamp = service.sync_stamp(UNIT)
     assert entry.sync_count == known_devices.SyncCount(3, 1_800_000_000.0, stamp)
-    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
-    assert kept["sync_count"] == {"count": 3, "at": 1_800_000_000.0, "state": stamp}
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]["tile_facts"]
+    assert kept["sync"] == {"count": 3, "at": 1_800_000_000.0, "state": stamp}
     known_devices.remember(UNIT, "fēnix 8", "006-B4532-00", "23.39", "mtp")  # seen again
     assert known_devices.load()[UNIT].sync_count == entry.sync_count
 
@@ -67,7 +67,7 @@ def test_a_damaged_record_is_as_none_and_the_rest_stays(damaged):
     _state()
     _keep(3)
     data = json.loads(known_devices.path().read_text())
-    data["devices"][str(UNIT)]["sync_count"] = damaged
+    data["devices"][str(UNIT)]["tile_facts"]["sync"] = damaged
     known_devices.path().write_text(json.dumps(data))
     entry = known_devices.load()[UNIT]
     assert entry.sync_count is None and entry.description == "fēnix 8"
@@ -119,10 +119,10 @@ def _summary(to_sync=None, kind="mtp"):
 
 
 def _tile(summary, account=({"unitid": UNIT},), logged_in=True):
-    from openexpress import devicelist
+    """Its tile, once the window has written what it knows of it (fakes.noted)."""
+    from test_sync_chips import _tile_of
 
-    (tile,) = devicelist.tiles([summary], known_devices.load(), list(account), logged_in)
-    return tile
+    return _tile_of(summary, account, logged_in)
 
 
 def test_a_recent_record_gives_the_chip_before_the_count():
@@ -293,11 +293,12 @@ def _opened(win_of, monkeypatch, logged_in=True):
     """A window opened on the same files as the one before: the first frame drawn while the
     account's list is still asked (a login saved), then the list, then the count in the
     background. The chips of the first frame, and the window."""
-    from openexpress.auth import store
+    from fakes import login
+
     from openexpress.gui import app
 
-    monkeypatch.setattr(store, "exists", lambda: logged_in)
     win = win_of()
+    login(logged_in)
     win._account, win._account_why = None, None
     for name in ("_set_account", "_render_start"):
         setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
@@ -351,13 +352,15 @@ def test_without_a_login_the_record_gives_no_chip_in_the_first_frame(listed, dev
 def test_while_the_list_is_asked_only_a_record_says_the_sync():
     """No list yet: a recent record (made only for a device of the account) gives its chip; a
     device never synced here (it may be off the account) and a drive say nothing yet."""
+    from fakes import login
+
     from openexpress import devicelist
 
     def tile(summary):
-        (only,) = devicelist.tiles([summary], known_devices.load(), None, False,
-                                   account_pending=True)
+        (only,) = devicelist.tiles([summary], known_devices.load(), None, False)
         return only.to_sync, only.never_synced, only.account_known
 
+    login()  # the list is asked: a login saved
     _remember()
     assert tile(_summary()) == (None, False, False)  # never synced: said once the list comes
     _state()
@@ -365,5 +368,6 @@ def test_while_the_list_is_asked_only_a_record_says_the_sync():
     _keep(3)
     assert tile(_summary()) == (3, False, False)
     assert tile(_summary(kind="ums")) == (None, False, False)
+    login(saved=False)
     (plain,) = devicelist.tiles([_summary()], known_devices.load(), None, False)
     assert (plain.to_sync, plain.never_synced) == (None, False)  # not asked: nothing

@@ -5,17 +5,19 @@ installation remembers (known_devices) and the devices of the Garmin account
 One device is one tile. Sources are merged by the unit ID only, never by the part number (two
 watches of one model are two devices); a connected device without a unit ID (no <Id>, or not
 read) has a tile of its own. The unit ID is used only to merge: no tile holds it, and the log
-never names it."""
+never names it.
+
+What a tile says in its chips (an update, the sync, the account) comes only from the facts
+kept with the device (tile_facts.read) and from the device itself, never from the account's
+list or a count held in memory (25.10.2026)."""
 
 from __future__ import annotations
 
-import dataclasses
 import logging
-import time
 import unicodedata
 from dataclasses import dataclass
 
-from openexpress import known_devices, picture_urls, service, sync
+from openexpress import known_devices, picture_urls, tile_facts
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
 from openexpress.service import unit_id_of
@@ -74,33 +76,29 @@ class Tile:
     category: str | None
     # Where image_url comes from, for the log: "the account" or "the remembered address".
     image_source: str | None = None
-    # When the window's check last found an update for it (devices.json); None: none known.
+    # The facts its chips say, as tile_facts.read gives them (TileFacts.tile_fields), with
+    # on_account and primary: when the window's check last found an update for it; a
+    # connected device only: when it found an update copied to it already, waiting for the
+    # device to install it once unplugged.
     update_found: float | None = None
-    # A connected device only: when the window's check last found an update copied to it
-    # already, waiting for the device to install it once unplugged, for the software it has
-    # now (known_devices.recorded_check); None: none known, or not connected.
     update_ready: float | None = None
-    # Whether the account's list is known for it (logged in, and its unit ID known): only
-    # then does on_account=False say that it is off the account.
+    # Whether what the account says of it is known: only then does on_account=False say
+    # that it is off the account.
     account_known: bool = False
-    # A connected device of the account (logged in), never a drive: its activities not
-    # uploaded yet (sync.activities_to_sync; None: not known, or its last sync could not
-    # upload: the account does not let it), whether it was never synced here, and when it
-    # was synced last (its last_sync.json).
+    # A connected device of the account, never a drive: its activities not uploaded yet
+    # (None: not known, or its last sync could not upload: the account does not let it),
+    # whether it was never synced here, and when it was synced last.
     to_sync: int | None = None
     never_synced: bool = False
     synced_at: float | None = None
 
 
-def tiles(connected, remembered, account, logged_in: bool,
-          account_pending: bool = False) -> list[Tile]:
+def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
     """The tiles of entries(), without what they were made of."""
-    return [tile for tile, _source in entries(connected, remembered, account, logged_in,
-                                              account_pending)]
+    return [tile for tile, _source in entries(connected, remembered, account, logged_in)]
 
 
-def entries(connected, remembered, account, logged_in: bool,
-            account_pending: bool = False) -> list[tuple[Tile, object]]:
+def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile, object]]:
     """(tile, its source) in order: the source is kept outside the tile, for the window to
     act on it: the connected device's DeviceSummary (to open it), else the KnownDevice
     remembered, else its entry of the account's list (only on the account).
@@ -112,12 +110,12 @@ def entries(connected, remembered, account, logged_in: bool,
     window counts a click over the whole list.
 
     `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
-    the account's device list (keys in lower case), used only when `logged_in`;
-    `account_pending`: not known yet, but asked for a login saved (the first frame of the
-    window: a connected device's tile says its sync from a record, _sync_of). Fields:
+    the account's device list (keys in lower case), used only when `logged_in`. Fields:
     name and version from the connected device's GarminDevice.xml, else as remembered, else
-    as the account says; on_account, primary, the picture address and the category only
-    from the account; when it was seen only from what is remembered."""
+    as the account says; the picture address and the category from the account first; when
+    it was seen only from what is remembered; the facts of the chips (TILE_FIELDS) only from
+    what is kept with the device (tile_facts.read), or for a device only on the account from
+    its entry (tile_facts.of_account_entry)."""
     on_account: dict[int, dict] = {}
     account_only: list[dict] = []  # entries of the account without a usable unit ID
     for entry in (account or []) if logged_in else []:
@@ -139,17 +137,16 @@ def entries(connected, remembered, account, logged_in: bool,
         if unit_id is not None:
             done.add(unit_id)
         tile = _tile(s.description, s.part_number, s.software_version, s.found.kind, True,
-                     known, entry, logged_in and unit_id is not None)
-        now.append((dataclasses.replace(
-            tile, **_sync_of(s, entry, logged_in, known, account_pending)), s))
+                     known, entry)
+        now.append((tile, s))
     now.sort(key=lambda e: not e[0].primary)  # stable: otherwise in the order found
 
-    rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id), logged_in), known)
+    rest = [(_tile("", "", "", None, False, known, on_account.get(unit_id)), known)
             for unit_id, known in remembered.items() if unit_id not in done]
     done.update(remembered)
-    rest += [(_tile("", "", "", None, False, None, entry, logged_in), entry)
+    rest += [(_tile("", "", "", None, False, None, entry), entry)
              for unit_id, entry in on_account.items() if unit_id not in done]
-    rest += [(_tile("", "", "", None, False, None, entry, logged_in), entry)
+    rest += [(_tile("", "", "", None, False, None, entry), entry)
              for entry in account_only]
     rest.sort(key=lambda e: (section(e[0]) != REMEMBERED, e[0].description.casefold(),
                              e[0].part_number))
@@ -175,75 +172,21 @@ def _drive_by_product(summary, remembered) -> int | None:
     return matches[0] if len(matches) == 1 else None
 
 
-def _sync_of(summary, entry: dict | None, logged_in: bool, known=None,
-             pending: bool = False) -> dict:
-    """What the tile of a connected device says of its sync (PLAN T9): only for one of the
-    account, while logged in, never a drive; counted when it was listed or opened
-    (summary.to_sync), and until that count comes, from the first frame (analysis 14,
-    25.10.2026): never synced here (no state.json), else what the last count found, kept
-    with the device (`known`, known_devices.recorded_sync_count: recent, of the sync state it
-    has now). While the account's list is still asked (`pending`), only that record: it is
-    made only for a device of the account (25.10.2026: the first frame came before the
-    list). Nothing while its last sync could not upload (no consent, device sync off in
-    Garmin Connect): a sync would not help, the device page says why."""
-    said = _sync_said(summary, entry, logged_in, known, pending)
-    if log.isEnabledFor(logging.DEBUG):
-        # Which way the tile got its sync, and what the record was (25.10.2026).
-        kept = getattr(known, "sync_count", None)
-        if kept is None:
-            held = "no record"
-        else:
-            same = kept.state == service.sync_stamp(summary.unit_id)
-            held = (f"a record of {(time.time() - kept.at) / 86400:.1f} days, its state "
-                    f"{'the same' if same else 'changed'}")
-        log.debug("start page: sync chip of %s: %s (%s%s)", getattr(summary, "part_number", ""),
-                  ", ".join(f"{k} {v}" for k, v in said.items() if k != "synced_at")
-                  or "none", held,
-                  "; the account's list asked" if pending and not logged_in else "")
-    return said
-
-
-def _sync_said(summary, entry: dict | None, logged_in: bool, known, pending: bool) -> dict:
-    if summary.found.kind == "ums" or not summary.unit_id:
-        return {}
-    if not logged_in:
-        if not pending or not sync.synced_here(summary.unit_id):
-            return {}
-        count = known_devices.recorded_sync_count(known, service.sync_stamp(summary.unit_id))
-        if count is None:
-            return {}
-        return _with_last_sync(summary, count)
-    if entry is None:
-        return {}
-    counted = getattr(summary, "to_sync", None)
-    if counted is None:
-        if not sync.synced_here(summary.unit_id):
-            return {"never_synced": True}
-        count = known_devices.recorded_sync_count(known, service.sync_stamp(summary.unit_id))
-        if count is None:
-            return {}
-    elif counted.never_synced:
-        return {"never_synced": True}
-    else:
-        count = counted.count
-    return _with_last_sync(summary, count)
-
-
-def _with_last_sync(summary, count: int) -> dict:
-    """The count, and when the device was synced last; none while its last sync could not
-    upload."""
-    record = service.load_last_sync(summary.unit_id)
-    if record is not None and service.not_uploaded(record) is not None:
-        return {}
-    return {"to_sync": count, "synced_at": record.get("time") if record else None}
-
-
 def _tile(description: str, part_number: str, version: str, kind: str | None,
-          connected: bool, known, entry: dict | None, account_known: bool) -> Tile:
+          connected: bool, known, entry: dict | None) -> Tile:
     """One tile: what the connected device says (if connected), else what is remembered of
-    it (`known`), else what the account says (`entry`); `account_known`: the account's list
-    is known for it."""
+    it (`known`), else what the account says (`entry`); its facts from what is kept with it
+    (`known`), or for a device only on the account from `entry`."""
     account = account_fields(entry) if entry is not None else None
+    kind = kind or (known.kind if known else None)
+    if known is not None:
+        facts = tile_facts.read(known, connected=connected, kind=kind,
+                                software_version=version if connected
+                                else known.software_version)
+    elif entry is not None and not connected:
+        facts = tile_facts.of_account_entry(bool(account["primary"]))
+    else:
+        facts = tile_facts.TileFacts()
     part = part_number or (known.part_number if known else "") or (
         account["part_number"] if account else "")
     image_url, image_source = picture_address(account["image_url"] if account else None,
@@ -254,10 +197,8 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         part_number=part,
         software_version=version or (known.software_version if known else "") or (
             account["software_version"] if account else ""),
-        kind=kind or (known.kind if known else None),
+        kind=kind,
         connected=connected,
-        on_account=account is not None,
-        primary=bool(account and account["primary"]),
         last_seen=known.last_seen if known else None,
         image_part_number=part,
         image_url=image_url,
@@ -265,17 +206,8 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
         category=(account["category"] if account else None) or (
             known.category if known else None),
         image_source=image_source,
-        update_found=known.update_found if known else None,
-        update_ready=_ready_at(known, version) if connected else None,
-        account_known=account_known,
+        **facts.tile_fields(),
     )
-
-
-def _ready_at(known, software_version: str) -> float | None:
-    """When the last check found an update copied to the connected device already, if that
-    check is recent and of the software the device has now."""
-    check = known_devices.recorded_check(known, software_version) if software_version else None
-    return check.at if check is not None and check.ready else None
 
 
 PICTURE_FROM_ACCOUNT, PICTURE_REMEMBERED = "the account", "the remembered address"

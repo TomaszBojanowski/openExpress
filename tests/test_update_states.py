@@ -72,8 +72,8 @@ def test_the_last_check_is_kept_when_the_software_and_whether_one_was_copied():
     entry = known_devices.load()[UNIT]
     assert entry.update_check == known_devices.UpdateCheck(at, "23.39", True)
     assert entry.update_found is None and entry.update_summary is None
-    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
-    assert kept["update_check"] == {"at": at, "software_version": "23.39", "ready": True}
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]["tile_facts"]
+    assert kept["update"]["check"] == {"at": at, "software_version": "23.39", "ready": True}
     # Seen again: what the check said stays.
     known_devices.remember(UNIT, "fēnix 8 - 47mm, Solar", "006-B4532-00", "23.39", "mtp")
     assert known_devices.load()[UNIT].update_check == known_devices.UpdateCheck(
@@ -107,7 +107,7 @@ def test_a_damaged_record_of_the_check_is_as_none_and_the_rest_stays(damaged):
     known_devices.set_update_found(UNIT, True, now=NOON.timestamp(), summary=_summary(),
                                    software_version="23.39")
     data = json.loads(known_devices.path().read_text())
-    data["devices"][str(UNIT)]["update_check"] = damaged
+    data["devices"][str(UNIT)]["tile_facts"]["update"]["check"] = damaged
     known_devices.path().write_text(json.dumps(data))
     entry = known_devices.load()[UNIT]
     assert entry.update_check is None and entry.update_summary == _summary()

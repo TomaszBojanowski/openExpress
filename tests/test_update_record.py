@@ -57,20 +57,20 @@ def test_the_record_keeps_the_count_the_one_update_and_the_software_only():
     _record()
     entry = known_devices.load()[UNIT]
     assert entry.update_summary == _summary() and entry.update_found == NOW - DAY
-    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
-    assert kept["update_summary"] == {"count": 1, "title": "Map Region Grouping file",
-                                      "version": "2.31", "is_system": False,
-                                      "software_version": "23.39"}
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]["tile_facts"]
+    assert kept["update"]["summary"] == {"count": 1, "title": "Map Region Grouping file",
+                                         "version": "2.31", "is_system": False,
+                                         "software_version": "23.39"}
     known_devices.set_update_found(UNIT, True, now=NOW,
                                    summary=_summary(count=2, title=None, version=None,
                                                     is_system=None))
-    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
-    assert kept["update_summary"] == {"count": 2, "software_version": "23.39"}
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]["tile_facts"]
+    assert kept["update"]["summary"] == {"count": 2, "software_version": "23.39"}
     known_devices.set_update_found(UNIT, False)  # a check that found none
     entry = known_devices.load()[UNIT]
     assert entry.update_found is None and entry.update_summary is None
-    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
-    assert "update_found" not in kept and "update_summary" not in kept
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]["tile_facts"]
+    assert "found" not in kept.get("update", {}) and "summary" not in kept.get("update", {})
 
 
 @pytest.mark.parametrize("damaged", [
@@ -86,7 +86,7 @@ def test_a_damaged_record_is_as_none_and_the_rest_of_the_entry_stays(damaged):
 
     _record()
     data = json.loads(known_devices.path().read_text())
-    data["devices"][str(UNIT)]["update_summary"] = damaged
+    data["devices"][str(UNIT)]["tile_facts"]["update"]["summary"] = damaged
     known_devices.path().write_text(json.dumps(data))
     entry = known_devices.load()[UNIT]
     assert entry.update_summary is None

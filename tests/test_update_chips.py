@@ -138,17 +138,21 @@ def test_the_words_under_a_connected_device_are_its_version_only():
 
 
 def test_the_tiles_get_what_is_remembered_and_whether_the_account_is_known():
-    from openexpress import devicelist
+    from fakes import login
+
+    from openexpress import devicelist, tile_facts
     from openexpress.device.gio_storage import DeviceSummary, FoundDevice
 
     known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=100.0)
-    known_devices.set_update_found(EDGE, True, now=NOW)
+    known_devices.set_update_found(EDGE, True, now=NOW, software_version="33.13")
     fenix = 3000000001
     known_devices.remember(fenix, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=100.0)
-    known_devices.set_update_found(fenix, True, now=NOW - DAY)
+    known_devices.set_update_found(fenix, True, now=NOW - DAY, software_version="23.39")
     connected = [DeviceSummary(FoundDevice("mtp://made-up/", "Edge", True), "Edge 1050",
                                "006-B4440-00", "33.13", EDGE)]
     for logged_in in (False, True):
+        login(logged_in)
+        tile_facts.note_account([{"unitid": EDGE}])  # read with the login, if any
         tiles = {t.description: t for t in devicelist.tiles(
             connected, known_devices.load(), [{"unitid": EDGE}], logged_in)}
         assert tiles["Edge 1050"].update_found == NOW

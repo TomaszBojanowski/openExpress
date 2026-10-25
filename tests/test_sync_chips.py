@@ -141,16 +141,24 @@ def _record(lines=(), when=NOW - DAY):
 
 
 def _tile_of(summary, account=({"unitid": UNIT},), logged_in=True):
-    from openexpress import devicelist
+    """Its tile, once the window has written what it knows of it (fakes.noted), logged in
+    or not."""
+    from fakes import login, noted
 
-    (tile,) = devicelist.tiles([summary], {}, list(account), logged_in)
+    from openexpress import devicelist, known_devices
+
+    login(logged_in)
+    noted([summary], list(account) if logged_in else None)
+    (tile,) = devicelist.tiles([summary], known_devices.load(), list(account), logged_in)
     return tile
 
 
 def test_a_connected_device_of_the_account_gets_its_count_and_when_it_was_synced():
+    sync.SyncState(UNIT).save()  # counted: synced here before
     _record()
     tile = _tile_of(_summary(sync.ActivitiesToSync(UNIT, frozenset({"a.fit"}), 1)))
     assert (tile.to_sync, tile.never_synced, tile.synced_at) == (1, False, NOW - DAY)
+    sync.state_path(UNIT).unlink()  # never synced here: nothing to count
     never = _tile_of(_summary(sync.ActivitiesToSync(UNIT)))
     assert (never.to_sync, never.never_synced) == (None, True)
 
@@ -167,6 +175,7 @@ def test_nothing_of_the_sync_for_a_device_off_the_account_not_logged_in_or_a_dri
 def test_no_chip_while_the_account_does_not_let_a_sync_upload():
     """The last sync could not upload (no consent, device sync off in Garmin Connect): a sync
     would not help, so no chip; the device page says why."""
+    sync.SyncState(UNIT).save()  # counted: synced here before
     _record(lines=[{"kind": "not_uploaded", "reason": "no-consent"}])
     tile = _tile_of(_summary(sync.ActivitiesToSync(UNIT, frozenset({"a.fit"}), 1)))
     assert (tile.to_sync, tile.never_synced) == (None, False)
@@ -318,15 +327,20 @@ def listed(device_root, monkeypatch):
     return summary
 
 
-def _start_window(summaries, session=None):
+def _start_window(summaries, session=None, account=({"unitid": UNIT},)):
     """The window's start page (the real one) with the list of `summaries`, logged in, the
-    device on the account; work in the background waits in `later`."""
+    account's list read (`account`: the device on it) and written with the devices as the
+    window does (fakes.noted); work in the background waits in `later`."""
+    from fakes import login, noted
+
     from openexpress.gui import app, start
     from openexpress.gui.connected import Connected
 
+    login()
+    noted(summaries, list(account))
     later = []
     win = types.SimpleNamespace(
-        session=session, start=start.StartPage(None), _account=[{"unitid": UNIT}],
+        session=session, start=start.StartPage(None), _account=list(account),
         connected=Connected(devices=list(summaries), choosing=session is None),
         _start_entries=[], _start_texts=[], later=later, _load_tile_pictures=lambda t: None,
         in_background=lambda work, done, failed=None: later.append((work, done)))
@@ -432,8 +446,7 @@ def test_the_open_device_is_counted_for_its_session(listed):
 
 @pytest.mark.needs_display
 def test_no_count_for_a_device_off_the_account_or_a_drive(listed):
-    win = _start_window([listed])
-    win._account = []  # logged in, the device not on the account
+    win = _start_window([listed], account=[])  # logged in, the device not on the account
     win._show_tiles(*win._start_summaries())
     assert win.later == []
     off = types.SimpleNamespace(device=listed.device, storage=listed.storage,

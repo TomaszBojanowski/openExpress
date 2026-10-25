@@ -119,3 +119,36 @@ class SyncClient:
 
     def ack_message(self, mid):
         self.acks.append(mid)
+
+
+# --- what the window writes of the devices before it draws their tiles ------------------
+
+
+def login(saved=True):
+    """A login saved, as `openexpress login` saves it (made up), and its version
+    (store.stamp); `saved` False: none saved (logged out)."""
+    from openexpress.auth import store
+
+    if not saved:
+        store.delete()
+        return None
+    if not store.exists():
+        store.save(store.ConnectAuth("token", "secret", account={"username": "made-up"}))
+    return store.stamp()
+
+
+def noted(summaries=(), account=None):
+    """What the window writes of these connected devices before it draws their tiles
+    (tile_facts): each one seen by its detection, what the account's list says of them
+    (`account`, read with the login saved now; None: not read) and each count it holds
+    (summary.to_sync)."""
+    from openexpress import known_devices, tile_facts
+
+    for s in summaries:
+        if s.unit_id:
+            known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
+                               s.found.kind)
+    if account is not None:
+        tile_facts.note_account(account)
+    for s in summaries:
+        tile_facts.note_count(getattr(s, "to_sync", None))
