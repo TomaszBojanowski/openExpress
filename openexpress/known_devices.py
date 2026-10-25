@@ -24,6 +24,7 @@ import contextlib
 import fcntl
 import json
 import logging
+import re
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -167,6 +168,9 @@ class KnownDevice:
     update_check: UpdateCheck | None = None
     # The last count of its activities to upload (SyncCount); None: not known.
     sync_count: SyncCount | None = None
+    # The USB product ID of a drive ("0f1d"), kept when it was opened: the name of its tile
+    # while it is not mounted and nothing of it can be read (analysis 15); None: not known.
+    usb_product: str | None = None
 
 
 def path() -> Path:
@@ -185,8 +189,10 @@ def in_order(known: dict[int, KnownDevice]) -> list[KnownDevice]:
 
 
 def remember(unit_id: int, description: str, part_number: str, software_version: str,
-             kind: str, now: float | None = None) -> KnownDevice:
-    """Add or update the entry of a device seen now; when it was first seen stays."""
+             kind: str, now: float | None = None,
+             usb_product: str | None = None) -> KnownDevice:
+    """Add or update the entry of a device seen now; when it was first seen stays, and its
+    USB product unless a new one is given."""
     with _locked():
         known, writable = _read()
         now = time.time() if now is None else now
@@ -198,7 +204,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             old.update_found if old is not None else None,
                             old.update_summary if old is not None else None,
                             old.update_check if old is not None else None,
-                            old.sync_count if old is not None else None)
+                            old.sync_count if old is not None else None,
+                            usb_product or (old.usb_product if old is not None else None))
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -207,14 +214,15 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
 
 
 def seen(unit_id: int, description: str, part_number: str, software_version: str,
-         kind: str) -> None:
+         kind: str, usb_product: str | None = None) -> None:
     """remember() for the detection: a device without a unit ID (no <Id>) is not remembered,
     and a failure (e.g. a full disk) is only written to the log: remembering a device never
     stops it from opening."""
     if not unit_id:
         return
     try:
-        remember(unit_id, description, part_number, software_version, kind)
+        remember(unit_id, description, part_number, software_version, kind,
+                 usb_product=usb_product)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: not remembered (%s)", type(e).__name__)
 
@@ -408,13 +416,19 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 and not isinstance(update_found, bool) else None,
                                 UpdateSummary.from_json(value.get("update_summary")),
                                 UpdateCheck.from_json(value.get("update_check")),
-                                SyncCount.from_json(value.get("sync_count")))
+                                SyncCount.from_json(value.get("sync_count")),
+                                _product(value.get("usb_product")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
                     "from it", FILE_NAME)
         return {}, False
     return known, True
+
+
+def _product(value) -> str | None:
+    """A USB product ID as written: four hexadecimal digits; anything else is not kept."""
+    return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{4}", value) else None
 
 
 def _write(known: dict[int, KnownDevice]) -> None:
@@ -429,7 +443,7 @@ def _write(known: dict[int, KnownDevice]) -> None:
         fields["sync_count"] = (entry.sync_count.to_json()
                                 if entry.sync_count is not None else None)
         for optional in ("category", "image_url", "update_found", "update_summary",
-                         "update_check", "sync_count"):
+                         "update_check", "sync_count", "usb_product"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         devices[str(unit_id)] = fields

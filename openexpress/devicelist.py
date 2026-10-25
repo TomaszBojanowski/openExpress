@@ -131,6 +131,9 @@ def entries(connected, remembered, account, logged_in: bool,
     now = []
     for s in distinct_devices(list(connected)):
         unit_id = s.unit_id if s.ok else None
+        if unit_id is None:
+            # A drive not mounted, nothing of it read: remembered by its USB product.
+            unit_id = _drive_by_product(s, remembered)
         known = remembered.get(unit_id) if unit_id is not None else None
         entry = on_account.get(unit_id) if unit_id is not None else None
         if unit_id is not None:
@@ -159,6 +162,17 @@ def entries(connected, remembered, account, logged_in: bool,
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
               len(now), sum(t.on_account for t, _source in result))
     return result
+
+
+def _drive_by_product(summary, remembered) -> int | None:
+    """The unit ID of the one remembered drive with the USB product of this connected drive
+    that could not be read (not mounted, analysis 15); None when none or several have it."""
+    found, usb = summary.found, summary.found.usb
+    if found.kind != "ums" or usb is None or not usb.product:
+        return None
+    matches = [k.unit_id for k in remembered.values()
+               if k.kind == "ums" and k.usb_product == usb.product.lower()]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _sync_of(summary, entry: dict | None, logged_in: bool, known=None,

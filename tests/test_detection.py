@@ -3743,14 +3743,16 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
                                 _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                                 _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
-                                refresh_device=lambda: refreshed.append(1))
+                                refresh_device=lambda **kw: refreshed.append(kw.get("cause")))
     win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
     mass_storage_device(plugged.root)
     for now in (10, 10 + gio_storage.WAIT_FOR_DEVICE_S + 1):
         plugged.clock.now = now
         MainWindow._poll_usb(win, clock=plugged.clock)
-        assert refreshed == []  # nothing to look for over MTP
+        # Nothing over MTP; one detection, for a drive the system has not mounted (its tile,
+        # analysis 15, stage 0).
+        assert refreshed == [app.Cause.PLUGGED]
         assert shown[-1][2] is False and "PIN" not in shown[-1][1]
         # The window opens such a drive once it is mounted (step 5c): no advice about --path.
         assert shown[-1] == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)

@@ -136,8 +136,11 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     applog.hide_device(device)
     if detected:
+        usb = getattr(storage, "usb", None)
         known_devices.seen(device.unit_id, device.description, device.part_number,
-                           device.software_version_str, "ums" if storage.mass_storage else "mtp")
+                           device.software_version_str, "ums" if storage.mass_storage else "mtp",
+                           usb_product=getattr(usb, "product", None) if storage.mass_storage
+                           else None)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 
@@ -149,6 +152,8 @@ def _open_found(found) -> Storage:
     from openexpress.device import gio_storage
 
     if found.kind == "ums":
+        if not found.mounted:  # not mounted by the system (KDE): mounted now, chosen
+            found = gio_storage.mount_drive(found)
         return gio_storage.open_ums_storage(found)
     gio_storage.mount(found)
     storage = gio_storage.open_device_storage(found.uri)
@@ -172,7 +177,8 @@ def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
     except DeviceError:
         if gio_storage.usb_state() not in (gio_storage.ABSENT, gio_storage.MASS_STORAGE):
             raise
-        drives = gio_storage.find_ums_devices()
+        # A drive the system has not mounted is not mounted here: it is chosen (a tile).
+        drives = [d for d in gio_storage.find_ums_devices() if d.mounted]
         if not drives:
             raise
         if len(drives) > 1:
@@ -181,7 +187,7 @@ def open_device_or_drive(wait: bool = False, notify=None) -> Storage:
                 _("Several Garmin devices are connected as USB drives. Connect only one of "
                   "them."), drives) from None
         return gio_storage.open_ums_storage(drives[0])
-    skipped = len(gio_storage.find_ums_devices())
+    skipped = sum(1 for d in gio_storage.find_ums_devices() if d.mounted)
     if skipped:
         log.info("device: an MTP device is open, %d Garmin drive in mass storage mode skipped",
                  skipped)

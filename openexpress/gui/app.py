@@ -773,7 +773,8 @@ def detect_devices(current_uri: str | None = None):
     one device seen in both ways is one). The device open now (`current_uri`) is opened
     again when it is still there. The list asks nothing of the account."""
     found = find_all_devices()
-    if len(found) > 1:
+    if len(found) > 1 or any(not f.mounted and f.kind == "ums" for f in found):
+        # Several, or a drive the system has not mounted: a tile to choose (and mount).
         again = next((f for f in found if current_uri is not None
                       and f.uri.rstrip("/") == current_uri.rstrip("/")), None)
         if again is not None:
@@ -859,9 +860,11 @@ def _choose(found: list):
     for s in summaries:
         if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
             known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
-                               s.found.kind)
+                               s.found.kind, usb_product=s.found.usb.product
+                               if s.found.kind == "ums" and s.found.usb is not None else None)
     left = _still_there(summaries)
-    if len(left) > 1:
+    if len(left) > 1 or (left and left[0].found.kind == "ums" and not left[0].found.mounted):
+        # A drive the system has not mounted is not mounted behind the user's back: its tile.
         return DeviceChoices(left)
     if left:  # also one device found in two ways: no choice to make
         return service.check_session(service.open_session(found=left[0].found))
@@ -2271,6 +2274,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # It left its transitional mode: look for it once gvfs had a moment.
             log.info("USB: a Garmin device in its normal mode, detecting in 2.5 s")
             self._normal_since, self._replug_told = clock(), False
+            schedule_detection(self, 2500, cause=Cause.PLUGGED)
+        elif state == MASS_STORAGE and self._usb_state != MASS_STORAGE and not unplugged:
+            # A drive the system does not mount (KDE) sends no mount event: looked for once,
+            # for its tile (analysis 15, stage 0).
+            log.info("USB: a Garmin device in mass storage mode, detecting in 2.5 s")
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         elif unplugged and isinstance(detection_plan(Cause.UNPLUGGED_OPEN, left_on_usb=state,
                                                      ejected_waits=ejected_drive_waits()),

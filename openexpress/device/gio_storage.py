@@ -585,6 +585,12 @@ _BLOCK_DEVICE = re.compile(r"/dev/([A-Za-z0-9_][A-Za-z0-9_.-]*)")
 def _block_device_usb(unix_device: str | None) -> tuple[str, str, int, int] | None:
     """(idVendor, idProduct, busnum, devnum) of the USB device that holds this block device;
     None when it is not on USB or not known. Only these four attributes are read."""
+    found = _block_usb(unix_device)
+    return found[0] if found is not None else None
+
+
+def _block_usb(unix_device: str | None) -> tuple[tuple[str, str, int, int], Path] | None:
+    """_block_device_usb, with the folder of that USB device in /sys."""
     name = _BLOCK_DEVICE.fullmatch(unix_device or "")
     if name is None:
         return None
@@ -598,13 +604,30 @@ def _block_device_usb(unix_device: str | None) -> tuple[str, str, int, int] | No
     for folder in (here, *here.parents):
         if (folder / "idVendor").is_file():
             try:
-                return ((folder / "idVendor").read_text().strip().lower(),
-                        (folder / "idProduct").read_text().strip().lower(),
-                        int((folder / "busnum").read_text()),
-                        int((folder / "devnum").read_text()))
+                return (((folder / "idVendor").read_text().strip().lower(),
+                         (folder / "idProduct").read_text().strip().lower(),
+                         int((folder / "busnum").read_text()),
+                         int((folder / "devnum").read_text())), folder)
             except (OSError, ValueError):
                 return None
     return None
+
+
+def _block_size(unix_device: str | None) -> int | None:
+    """The size of a block device as the kernel tells it (sectors; 0: no medium, e.g. a
+    Garmin drive turned off after it was removed safely); None when not known."""
+    name = _BLOCK_DEVICE.fullmatch(unix_device or "")
+    if name is None:
+        return None
+    try:
+        return int((SYSFS_BLOCK / name.group(1) / "size").read_text())
+    except (OSError, ValueError):
+        return None
+
+
+# The key of a Garmin drive that is not mounted, in the place of the address it has not got
+# yet: its block device (never a folder; it has no user name in it).
+UNMOUNTED_DRIVE = "ums-volume:"
 
 
 def garmin_ums(mount) -> GarminUsb | None:
@@ -636,12 +659,15 @@ def drive_hidden_in_sandbox() -> bool:
 
 def find_ums_devices() -> list[FoundDevice]:
     """The mounted Garmin devices in mass storage mode that have GARMIN/GarminDevice.xml, in
-    any letter case. Only the folder listings on the way to that file are read."""
+    any letter case, then those that are not mounted (_unmounted_drives, `mounted` False).
+    Only the folder listings on the way to that file are read."""
     found = []
+    usb_seen: set[str] = set()  # the USB places of the drives looked at, "bus-devnum"
     for mount in Gio.VolumeMonitor.get().get_mounts():
         usb = garmin_ums(mount)
         if usb is None:
             continue
+        usb_seen.add(f"{usb.bus}-{usb.address}")
         if ejected_by_us(usb):
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
@@ -665,7 +691,79 @@ def find_ums_devices() -> list[FoundDevice]:
             continue
         found.append(FoundDevice(root.get_uri(), mount.get_name(), True, mount.get_volume(),
                                  usb, kind="ums"))
+    found += _unmounted_drives(seen=usb_seen)
     return found
+
+
+def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
+    """The Garmin drives that the system has not mounted (KDE mounts a drive only once a file
+    manager opens it, #19): a volume (gvfs) whose block device belongs to a USB device of
+    vendor 091e with a mass storage interface, and that has a medium – listed, to be mounted
+    when chosen. Without a medium (removed safely: the device turns its drive off), or with
+    no volume at all, only a replug helps: not listed, said in the log. `seen`: the USB
+    places of the drives already mounted (and found or skipped), not looked at again."""
+    found = []
+    for vol in Gio.VolumeMonitor.get().get_volumes():
+        mounted = getattr(vol, "get_mount", lambda: None)()
+        unix = vol.get_identifier("unix-device")
+        block = _block_usb(unix)
+        if mounted is not None or block is None or block[0][0] != GARMIN_VID:
+            continue
+        ids, folder = block
+        usb = GarminUsb(ids[1], "usb", ids[2], ids[3])
+        if f"{ids[2]}-{ids[3]}" in seen or not _mass_storage_only(folder):
+            continue
+        seen.add(f"{ids[2]}-{ids[3]}")
+        if ejected_by_us(usb):
+            log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
+                     "is unplugged", usb.usb_id)
+            continue
+        if not _block_size(unix):
+            log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
+                     "listed: unplug it and plug it in again", usb.usb_id)
+            continue
+        log.info("device: a Garmin drive (USB %s) is not mounted, listed to be mounted",
+                 usb.usb_id)
+        found.append(FoundDevice(UNMOUNTED_DRIVE + unix, vol.get_name(), False, vol, usb,
+                                 kind="ums"))
+    for base, product in _mass_storage_on_usb():
+        if base not in seen:
+            log.info("device: a Garmin device in mass storage mode (USB %s:%s) without a "
+                     "drive: unplug it and plug it in again", GARMIN_VID, product)
+    return found
+
+
+def _mass_storage_on_usb() -> list[tuple[str, str]]:
+    """("bus-devnum", USB product ID) of each Garmin device on USB in mass storage mode."""
+    found = []
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return found
+    for base in entries:
+        try:
+            if ((base / "idVendor").read_text().strip().lower() == GARMIN_VID
+                    and _mass_storage_only(base)):
+                place = (f"{int((base / 'busnum').read_text())}-"
+                         f"{int((base / 'devnum').read_text())}")
+                found.append((place, (base / "idProduct").read_text().strip().lower()))
+        except (OSError, ValueError):
+            continue
+    return found
+
+
+def mount_drive(dev: FoundDevice) -> FoundDevice:
+    """A Garmin drive chosen while it is not mounted, mounted as the system mounts it
+    (Gio.Volume.mount, as an MTP device is): the drive as find_ums_devices finds a mounted
+    one. DeviceError when it cannot be mounted (said as for MTP)."""
+    mount(dev)
+    mounted = dev.volume.get_mount() if dev.volume is not None else None
+    root = mounted.get_root() if mounted is not None else None
+    if root is None:
+        raise DeviceError(_("Cannot mount the device"))
+    log.info("device: mounted the Garmin drive (USB %s)",
+             dev.usb.usb_id if dev.usb is not None else "?")
+    return FoundDevice(root.get_uri(), mounted.get_name(), True, dev.volume, dev.usb, kind="ums")
 
 
 def find_all_devices() -> list[FoundDevice]:
