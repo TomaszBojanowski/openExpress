@@ -66,8 +66,8 @@ class ForgetDevice:
         d.set_close_response("cancel")
         # The window holds the question and what is ticked while it is open: a handler that
         # held the question or a tick would keep them after it closed.
-        self._forget_dialog = d
-        self._forget_choice = {"unit": unit, "name": name, "pending": False, "backups": False}
+        choice = {"unit": unit, "name": name, "pending": False, "backups": False}
+        self._forget_dialog, self._forget_choice = d, choice
         ticks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         if kept.pending:
             tick = Gtk.CheckButton(label=ngettext(
@@ -84,7 +84,9 @@ class ForgetDevice:
             ticks.append(tick)
         if ticks.get_first_child() is not None:
             d.set_extra_child(ticks)
-        d.connect("response", lambda _d, r: r == "forget" and self._forget_answered())
+        # A button clicked says "closed" before "response" (libadwaita 1.9): the answer takes
+        # the choice it was asked with (no widget in it), not what "closed" lets go of.
+        d.connect("response", lambda _d, r: r == "forget" and self._forget_answered(choice))
         d.connect("closed", lambda _d: (setattr(self, "_forget_dialog", None),
                                         setattr(self, "_forget_choice", None)))
         d.present(self)
@@ -99,12 +101,10 @@ class ForgetDevice:
         if which == "pending" and dialog is not None:
             dialog.set_response_enabled("forget", choice["pending"])
 
-    def _forget_answered(self) -> None:
-        """Forget: in the background (backups may be many files); back to the start page once
-        it is done, where its tile is gone (_on_popped draws it anew)."""
-        choice = dict(getattr(self, "_forget_choice", None) or {})
-        if not choice:
-            return
+    def _forget_answered(self, choice: dict) -> None:
+        """Forget, as `choice` says (the unit, its name, what was ticked): in the background
+        (backups may be many files); back to the start page once it is done, where its tile
+        is gone (_on_popped draws it anew)."""
         unit, name = choice["unit"], choice["name"]
 
         def work():

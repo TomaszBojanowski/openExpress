@@ -110,6 +110,12 @@ def checks(dialog):
     return found
 
 
+def answer(dialog, response):
+    """An answer as a click gives it in libadwaita 1.9: "closed" first, then "response"."""
+    dialog.emit("closed")
+    dialog.emit("response", response)
+
+
 # --- the button ----------------------------------------------------------------------------
 
 
@@ -159,7 +165,7 @@ def test_forget_asks_first_and_says_what_goes(asked):
     assert d.get_response_appearance("forget") == Adw.ResponseAppearance.DESTRUCTIVE
     assert d.get_default_response() == d.get_close_response() == "cancel"
     assert set(known_devices.load()) == {FENIX} and sync.exists()
-    d.emit("response", "cancel")
+    answer(d, "cancel")
     assert set(known_devices.load()) == {FENIX} and sync.exists()
     assert win.navigation.popped == [] and win.errors == []
 
@@ -175,7 +181,7 @@ def test_forgetting_goes_back_to_the_start_page(asked):
     last_sync_of(FENIX)
     win = window()
     win.ask_forget()
-    asked[0].emit("response", "forget")
+    answer(asked[0], "forget")
     assert set(known_devices.load()) == {EDGE}
     assert not paths.device_dir(FENIX).exists()
     assert win.toasts == ["Forgot fēnix 8."]
@@ -204,7 +210,7 @@ def test_files_not_uploaded_must_be_given_up_first(asked):
     tick.set_active(False)
     assert not d.get_response_enabled("forget")
     tick.set_active(True)
-    d.emit("response", "forget")
+    answer(d, "forget")
     assert known_devices.load() == {}
 
 
@@ -223,7 +229,7 @@ def test_the_backups_go_only_when_ticked(asked, backups, ticked):
     assert tick.get_label() == "Also delete its 2 backups"
     assert not tick.get_active() and d.get_response_enabled("forget")
     tick.set_active(ticked)
-    d.emit("response", "forget")
+    answer(d, "forget")
     assert known_devices.load() == {}
     assert (backups / str(FENIX)).exists() is not ticked
 
@@ -250,7 +256,7 @@ def test_a_sync_running_is_told_and_nothing_goes(asked):
     win = window()
     win.ask_forget()
     with service.sync_lock():
-        asked[0].emit("response", "forget")
+        answer(asked[0], "forget")
     assert win.errors == [("Forget Device",
                            "A sync is running. Forget the device once it has finished.")]
     assert set(known_devices.load()) == {FENIX}
@@ -354,6 +360,66 @@ def test_the_button_of_the_window_asks(monkeypatch, asked):
         assert win.remembered.forget_group.get_visible()
         win.remembered.forget_button.emit("clicked")
         assert [d.get_heading() for d in asked] == ["Forget fēnix 8?"]
+    finally:
+        netstatus.STATUS.remove_listener(win._net_listener)
+        win.destroy()
+
+
+def _button_labelled(widget, label):
+    """The button of a dialog with these words (its responses are buttons)."""
+    from gi.repository import Gtk
+
+    if isinstance(widget, Gtk.Button) and widget.get_label() == label:
+        return widget
+    child = widget.get_first_child()
+    while child is not None:
+        found = _button_labelled(child, label)
+        if found is not None:
+            return found
+        child = child.get_next_sibling()
+    return None
+
+
+def _turn_until(done, seconds=5.0):
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + seconds
+    while not done() and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+    return done()
+
+
+@pytest.mark.needs_display
+def test_clicking_forget_in_the_window_forgets(monkeypatch):
+    """The question shown in the window and its button Forget clicked, as libadwaita does it:
+    "closed" comes before "response" (libadwaita 1.9, 25.10.2026), so the choice must not be
+    taken from what "closed" lets go of. The device is forgotten and the window goes back to
+    the start page."""
+    from openexpress import known_devices, netstatus, paths
+    from openexpress.gui import app
+    from openexpress.gui.app import MainWindow
+
+    known = remembered(EDGE, "Venu 2", "006-B3703-00")
+    last_sync_of(EDGE)
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: None)
+    monkeypatch.setattr(MainWindow, "_update_relative_timer", lambda self: None)
+    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    win = MainWindow(None)
+    try:
+        win.present()
+        win.navigation.set_animate_transitions(False)
+        win._show_remembered(known)
+        assert win.navigation.get_visible_page() is win.remembered.page
+        win.remembered.forget_button.emit("clicked")
+        dialog = win._forget_dialog
+        assert _turn_until(lambda: dialog.get_mapped())
+        _button_labelled(dialog, "Forget").emit("clicked")
+        assert _turn_until(lambda: known_devices.load() == {})
+        assert not paths.device_dir(EDGE).exists()
+        assert _turn_until(lambda: win.navigation.get_visible_page() is win.start.page)
+        assert win._forget_dialog is None and win._forget_choice is None
     finally:
         netstatus.STATUS.remove_listener(win._net_listener)
         win.destroy()
