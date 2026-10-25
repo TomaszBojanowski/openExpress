@@ -154,6 +154,14 @@ device not uploaded yet) or **Never synced** (by this installation), **USB drive
 **Primary** (the account's primary wearable) and **Not on your account**. The device page
 shows **Update available** under the software version too.
 
+A device seen before and not connected opens read-only: what was known of it when it was
+last seen, and its last sync. **Forget Device…** at the bottom of that page removes what this
+installation keeps of it (what was uploaded from it, its last sync, the maps of your own
+copied to it); connected again, it is a new device, and its first sync asks again whether to
+upload everything or new data only. Files not uploaded yet go only when you tick them, its
+backups only when you ask; nothing changes on the device or on your Garmin account. From the
+command line: `openexpress devices --forget N`.
+
 The command-line tool is available as
 `flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`);
 in the version from source it is `openexpress <command>`.
