@@ -43,8 +43,13 @@ def _session(device, drive=False):
                                     capacity=lambda: 64_000_000_000)
     client = types.SimpleNamespace(auth=types.SimpleNamespace(display="name@example.com"),
                                    consumer=object(), http=None)
+    # On the account, its primary wearable: the row "Primary wearable" is measured too
+    # (analysis 14, stage 4; in Polish its title is long).
+    account = [{"unitid": device.unit_id, "primaryactivitytrackersettingcapable": True,
+                "primaryactivitytrackerindicator": True}]
     return types.SimpleNamespace(device=device, storage=storage, client=client, logged_in=True,
-                                 ownership_error=None, account_devices=[], mass_storage=drive)
+                                 ownership_error=None, account_devices=account,
+                                 mass_storage=drive)
 
 
 def _update(name, version, path, size, beta=False, system=False, reinstall=False,
@@ -315,6 +320,25 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
     assert _min_width(win.device_view) <= NARROWEST
     natural = win.update_chip.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
     assert win.update_chip.get_width() >= natural
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window, language):
+    """Analysis 14, stage 4: its title is long in Polish ("Podstawowe urządzenie typu
+    wearable"); it wraps."""
+    from openexpress.gui.app import Adw
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "device")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("watch")
+    _iterate(0.3)
+    title = {"en": "Primary wearable", "pl": "Podstawowe urządzenie typu wearable"}[language]
+    assert title in [w.get_title() for w in _descendants(win.device_view)
+                     if isinstance(w, Adw.ActionRow)]
+    assert _min_width(win.device_view) <= NARROWEST
 
 
 @pytest.mark.parametrize("why", ["logged-out", "failed"])

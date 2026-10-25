@@ -258,6 +258,37 @@ def section(tile: Tile) -> str:
     return REMEMBERED if tile.last_seen is not None else ON_ACCOUNT
 
 
+@dataclass(frozen=True)
+class PrimaryWearable:
+    """The account's primary wearable (Garmin Connect: "Primary wearable"; the account's list:
+    primaryActivityTrackerIndicator), for a device that can be one: whether it is this
+    device, the name of the one that is ("" when not named), and whether one is set."""
+
+    is_this_device: bool
+    name: str
+    set: bool = True
+
+
+def primary_wearable(devices: list[dict] | None, unit_id: int | None) -> PrimaryWearable | None:
+    """What the account's list (keys in lower case) says of its primary wearable, for the
+    device `unit_id`: None when the list is not known, the device is not on it, or it cannot
+    be one (primaryActivityTrackerSettingCapable not true, unless it is the one). Read only:
+    nothing is asked (analysis 14, stage 4)."""
+    entries = [e for e in devices or [] if isinstance(e, dict)]
+    this = next((e for e in entries if unit_id is not None
+                 and unit_id_of(e.get("unitid")) == unit_id), None)
+    if this is None:
+        return None
+    primary = next((e for e in entries if e.get("primaryactivitytrackerindicator") is True),
+                   None)
+    if this.get("primaryactivitytrackersettingcapable") is not True and primary is not this:
+        return None
+    if primary is None:
+        return PrimaryWearable(False, "", False)
+    name = primary.get("productdisplayname") or primary.get("displayname") or ""
+    return PrimaryWearable(primary is this, name if isinstance(name, str) else "")
+
+
 def account_fields(entry: dict) -> dict:
     """What a tile takes from one entry of the account's device list (keys in lower case);
     anything of another type than expected counts as missing."""

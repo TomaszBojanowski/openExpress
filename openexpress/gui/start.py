@@ -21,6 +21,7 @@ from openexpress.gui.words import (  # noqa: E402
     last_seen_tooltip,
     never_synced,
     never_synced_tooltip,
+    primary_wearable_tooltip,
 )
 from openexpress.i18n import _, full_time, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
@@ -339,8 +340,9 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
         # TRANSLATORS: a chip on the tile of a device in mass storage mode
         said.append((pgettext("chip", "USB drive"), "dimmed", None))
     if tile.primary:
-        # TRANSLATORS: a chip on the tile of the primary device of the Garmin account
-        said.append((_("Primary"), "dimmed", None))
+        # TRANSLATORS: a chip on the tile of the primary wearable of the Garmin account (its
+        # tooltip says what it is)
+        said.append((_("Primary"), "dimmed", primary_wearable_tooltip()))
     if tile.account_known and not tile.on_account and tile.kind != "ums":
         # TRANSLATORS: a chip on the tile of a device that is not on the Garmin account
         said.append((_("Not on your account"), "dimmed", None))

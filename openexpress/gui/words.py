@@ -124,6 +124,23 @@ def to_upload_text(count: int) -> str:
                     count).format(count=count)
 
 
+def primary_wearable_text(wearable) -> str:
+    """The subtitle of "Primary wearable" (devicelist.PrimaryWearable), in the words of
+    "Primary training device"."""
+    if not wearable.set:
+        return _("Not set")
+    if wearable.is_this_device:
+        return _("This device")
+    return wearable.name or _("Another device")
+
+
+def primary_wearable_tooltip() -> str:
+    """The tooltip of the chip "Primary" of a tile: what it is, in Garmin Connect's name."""
+    # TRANSLATORS: "Primary wearable" is the name Garmin Connect gives the setting (in Polish
+    # "Podstawowe urządzenie typu wearable")
+    return _("Primary wearable: steps and sleep in Garmin Connect come from this device")
+
+
 def software_text(version: str, from_account: bool = False) -> str:
     """The version of the device's software, the same words everywhere: "Software 23.39";
     "Software 23.39 (Garmin Connect)" when only the account says it (it may be older than

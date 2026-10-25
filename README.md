@@ -153,11 +153,13 @@ what is waiting and what the device is: **Update available**, or **Unplug to ins
 update copied to the connected device, which installs it once unplugged; **Eject to install**
 for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
 (by this installation; the Flatpak and the version from source each keep their own),
-**USB drive**, **Primary** (the account's primary wearable), **Not on your account** and,
+**USB drive**, **Primary** (the account's **Primary wearable**, as Garmin Connect names it:
+steps and sleep come from this device), **Not on your account** and,
 when nothing else needs saying, **Synced** (synced before, nothing new to upload). Labels
 of the account need the account's list: while you are not logged in, or it could not be
 read, a sentence under the tiles says so. The device page shows **Update available** or
-**Update ready** under the software version too.
+**Update ready** under the software version too, and, under the account's **Primary training
+device**, its **Primary wearable** (read only; only for a device that can be one).
 
 A device seen before and not connected opens read-only: what was known of it when it was
 last seen, its last sync, and what the last check of its updates found and when (*Not

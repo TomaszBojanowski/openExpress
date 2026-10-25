@@ -121,6 +121,7 @@ from openexpress.gui.words import (  # noqa: E402, F401 - also gui.app.<name> fo
     never_synced,
     never_synced_tooltip,
     no_sync_record,
+    primary_wearable_text,
     remembered_update_text,
     software_text,
     space_text,
@@ -2939,6 +2940,15 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             g.add(self.primary_row)
             if s.logged_in and s.ownership_error is None and s.account_devices is not None:
                 self._show_primary_training(self.primary_row)
+                # Read only, from the list the ownership check read (analysis 14, stage 4):
+                # only for a device that can be one.
+                wearable = devicelist.primary_wearable(s.account_devices, d.unit_id)
+                if wearable is not None:
+                    # TRANSLATORS: Garmin Connect's name of the setting (in Polish
+                    # "Podstawowe urządzenie typu wearable")
+                    g.add(Adw.ActionRow(title=_("Primary wearable"),
+                                        subtitle=GLib.markup_escape_text(
+                                            primary_wearable_text(wearable))))
 
         g = sec.group(_("Tools"))
         if not mass_storage:  # D6: no backup of a device in mass storage mode
