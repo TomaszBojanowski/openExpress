@@ -472,15 +472,6 @@ def cmd_upload_config(args) -> int:
     return 0
 
 
-def _sync_context(args):
-    from openexpress.sync import SyncState
-
-    st, dev = open_device(args)
-    settings = Settings.load()
-    state = SyncState(dev.unit_id)
-    return st, dev, settings, state
-
-
 def cmd_sync(args) -> int:
     import dataclasses
 
@@ -582,13 +573,12 @@ def _print_sync_result(summary, unit_id: int) -> int:
 def cmd_baseline(args) -> int:
     from openexpress import service, sync, tile_facts
 
-    st, dev, settings, state = _sync_context(args)
-    client = make_client(settings, need_auth=True)
+    st, dev = open_device(args)
+    client = make_client(Settings.load(), need_auth=True)
     service.require_account_device(client, dev.unit_id)
     cfg = client.upload_settings(dev.unit_id)
-    plan = sync.plan_uploads(dev, st, cfg, state, include_consent_locations=True)
-    n = sum(1 for c in plan.candidates if c.device_path)
     if not args.apply:
+        n = len(sync.plan_baseline(dev, st, cfg, sync.SyncState(dev.unit_id)))
         print(ngettext("Dry run: {count} file would be marked as already uploaded. Add --apply.",
                        "Dry run: {count} files would be marked as already uploaded. Add --apply.",
                        n).format(count=n))
