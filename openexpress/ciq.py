@@ -1711,12 +1711,15 @@ def copy_title(copy: AppListCopy) -> str:
 
 
 def describe_order(plan: OrderPlan, limit: int | None = 10) -> list[tuple[str, bool]]:
-    """What a change of order does, as lines for a dry run or a confirmation; the flag
-    marks the lines that list single positions."""
+    """What a change of order does, as lines for a dry run or a confirmation: first the
+    measure of the list of copies (order_difference: the apps moved, those only in the copy
+    or only on the device), then, as details, the positions that change; the flag marks the
+    lines that list single positions."""
     kinds: dict[str, int] = {}
     for _position, _now, then in plan.moved:
         kinds[then.type_name] = kinds.get(then.type_name, 0) + 1
-    lines = [(ngettext("{count} position would change ({kinds}):",
+    lines = [(order_difference(plan), False)]
+    lines += [(ngettext("{count} position would change ({kinds}):",
                        "{count} positions would change ({kinds}):", len(plan.moved)).format(
         count=len(plan.moved),
         kinds=", ".join(f"{kind}: {n}" for kind, n in sorted(kinds.items()))), False)]

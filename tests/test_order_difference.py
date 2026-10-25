@@ -182,3 +182,34 @@ def _descendants(widget):
         yield child
         yield from _descendants(child)
         child = child.get_next_sibling()
+
+
+# --- the question and `apps order --from` say the same measure first --------------------------
+
+
+def test_the_question_says_the_apps_moved_first_and_the_positions_below():
+    """"Restore this order?": the measure of the list of copies first, then the positions
+    that change, as details."""
+    from openexpress.gui.app import MainWindow
+
+    plan = _plan([STORE, *WIDGETS], [STORE, EXTRA, *WIDGETS[1:], WIDGETS[0]])
+    lines = MainWindow._order_summary(plan, "A note.").splitlines()
+    assert lines[0] == f"1 app moved{NB}· 1 not on the device"
+    assert lines[1] == "6 positions would change (widget: 6):"
+    assert lines[2] == "  2: Widget 1 (now: Widget 0)"
+    assert "Only in the copy, ignored: Only in the copy" in lines
+
+
+def test_apps_order_from_says_the_same(iq_device, device_root, backups, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([STORE, *WIDGETS]))
+    folder = backups / str(dev.unit_id) / "GARMIN-APPS 2026-10-12 (17.37.37) Test watch"
+    folder.mkdir(parents=True)
+    (folder / "OUT.BIN").write_bytes(out_bin([STORE, *WIDGETS[1:], WIDGETS[0]]))
+    assert main(["--path", str(st.root), "apps", "order", "--from", "17.37.37"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == "Order of the apps from the copy GARMIN-APPS 2026-10-12 (17.37.37) Test watch"
+    assert out[1] == "1 app moved"
+    assert out[2] == "6 positions would change (widget: 6):"

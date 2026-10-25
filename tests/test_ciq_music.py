@@ -2011,8 +2011,9 @@ def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
 
     assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[1] == "5 positions would change (widget: 5):"
-    assert out[2] == "  3: Calendar (now: Music)"
+    assert out[1] == "2 apps moved"  # the measure of the list first (25.10.2026)
+    assert out[2] == "5 positions would change (widget: 5):"
+    assert out[3] == "  3: Calendar (now: Music)"
     assert out[0] == "Order of the apps from the copy GARMIN-APPS 2026-01-02 (03.04.05)"
     assert out[-4:] == [
         "App list to be written (IN.BIN): 7 entries; the device lists 7 (OUT.BIN)",
@@ -2415,6 +2416,7 @@ def test_order_summary_shows_the_first_ten_changes(order_device):
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     text = MainWindow._order_summary(plan, ciq.app_list_copy_note(dev, st))
     assert text.splitlines() == [
+        "2 apps moved",  # the measure of the list first (25.10.2026)
         "5 positions would change (widget: 5):",
         "  3: Calendar (now: Music)", "  4: Maps (now: Calendar)", "  5: Music (now: Maps)",
         "  6: Tides (now: Moon)", "  7: Moon (now: Tides)",
@@ -2424,7 +2426,8 @@ def test_order_summary_shows_the_first_ten_changes(order_device):
     many = ciq.OrderPlan(entries=plan.entries, moved=plan.moved * 5, only_in_copy=[],
                          only_on_device=[plan.entries[0]])
     lines = MainWindow._order_summary(many, "note").splitlines()
-    assert lines[0].startswith("25 positions would change")
+    assert lines[0] == ciq.order_difference(many)
+    assert lines[1].startswith("25 positions would change")
     assert len([line for line in lines if line.startswith("  ")]) == 11
     assert "  … and 15 more" in lines and "Not in the copy, left where they are: Store" in lines
 
