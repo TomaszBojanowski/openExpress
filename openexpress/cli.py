@@ -113,30 +113,8 @@ def make_client(settings: Settings, need_auth: bool) -> GarminClient:
 # --- commands --------------------------------------------------------------------------
 
 
-def _settings_json_path() -> Path:
-    return paths.config_dir() / "settings.json"
-
-
-def _read_ui_language() -> str | None:
-    path = _settings_json_path()
-    try:
-        return json.loads(path.read_text()).get("ui_language") if path.exists() else None
-    except (OSError, ValueError):
-        return None
-
-
-def _write_ui_language(value: str) -> None:
-    """Stores "ui_language" in settings.json, keeping the other keys (it is not a Settings
-    field)."""
-    path = _settings_json_path()
-    data = json.loads(path.read_text()) if path.exists() else {}
-    data["ui_language"] = value
-    paths.write_private(path, json.dumps(data, indent=2))
-
-
 def cmd_setup(args) -> int:
     settings = Settings.load()
-    previous_ui_language = _read_ui_language()
     if args.from_installer:
         from openexpress.installer import consumer_from_installer
 
@@ -170,14 +148,10 @@ def cmd_setup(args) -> int:
         settings.environment = args.environment
     if args.locale:
         settings.chosen_locale = args.locale
-    settings.save()
-    # Settings.save() rewrites settings.json from its own fields, so ui_language goes after it.
+    settings.save()  # keeps the keys of the others, ui_language among them
     if args.ui_language:
         ui_language = "" if args.ui_language == "system" else args.ui_language
-    else:
-        ui_language = previous_ui_language
-    if ui_language is not None:
-        _write_ui_language(ui_language)
+        i18n.save_ui_language(ui_language)
     print(_("Environment: {environment}, locale: {locale}").format(
         environment=settings.environment, locale=settings.locale))
     if args.ui_language:

@@ -52,18 +52,39 @@ def _configured_language() -> str | None:
     env = os.environ.get("OPENEXPRESS_LANG")
     if env:
         return env
-    try:
-        from openexpress import paths
+    return saved_ui_language() or None
 
-        path = paths.config_dir() / "settings.json"
-        if path.exists():
-            data = json.loads(path.read_text())
-            if isinstance(data, dict):
-                value = data.get("ui_language")
-                return value if isinstance(value, str) and value else None
+
+def _settings_path() -> Path:
+    from openexpress import paths  # it imports this module
+
+    return paths.config_dir() / "settings.json"
+
+
+def saved_ui_language() -> str:
+    """The language of the interface chosen in the program ("ui_language" in
+    settings.json): its code, or "" for the system's (also when none is kept, or the file
+    cannot be read). The one reader of it, for the start, the window and the command line."""
+    try:
+        data = json.loads(_settings_path().read_text())
     except (OSError, ValueError):
-        pass
-    return None
+        return ""
+    value = data.get("ui_language") if isinstance(data, dict) else None
+    return value if isinstance(value, str) else ""
+
+
+def save_ui_language(code: str) -> None:
+    """Keep the language of the interface ("" for the system's) in settings.json, read again
+    first so that its other keys stay; a file that cannot be read is not written over
+    (ValueError, OSError). The one writer of it."""
+    from openexpress import paths
+
+    path = _settings_path()
+    data = json.loads(path.read_text()) if path.exists() else {}
+    if not isinstance(data, dict):
+        raise ValueError("settings.json is not an object")
+    data["ui_language"] = code
+    paths.write_private(path, json.dumps(data, indent=2))
 
 
 def _system_languages() -> list[str]:

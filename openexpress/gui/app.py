@@ -181,6 +181,17 @@ def save_gui_settings(data: dict) -> None:
     paths.write_private(gui_settings_path(), json.dumps(data, indent=2))
 
 
+def update_gui_settings(**changes) -> dict:
+    """Change these keys of the window's settings (gui.json), read again first so that the
+    others (the size of the window, the view of the start page, the switch of the background
+    sync, kept since by another part) stay; the settings as written. The one way to change
+    gui.json."""
+    data = load_gui_settings()
+    data.update(changes)
+    save_gui_settings(data)
+    return data
+
+
 DEFAULT_WINDOW = (1000, 740)
 MIN_WINDOW = (360, 480)
 # How often the texts told against now ("2 min ago") are looked at again, while shown.
@@ -208,10 +219,9 @@ def window_geometry(settings: dict) -> tuple[int, int, bool]:
 
 
 def save_window_geometry(width: int, height: int, maximized: bool) -> None:
-    """Stores the window state, re-reading gui.json so other saved options are kept."""
-    data = load_gui_settings()
-    data["window"] = {"width": int(width), "height": int(height), "maximized": bool(maximized)}
-    save_gui_settings(data)
+    """Stores the window state; the other saved options are kept (update_gui_settings)."""
+    update_gui_settings(window={"width": int(width), "height": int(height),
+                                "maximized": bool(maximized)})
 
 
 class StartView:
@@ -235,9 +245,7 @@ class StartView:
     @classmethod
     def save(cls, view: str) -> None:
         """Kept as the window's size is: gui.json read again, its other keys stay."""
-        data = load_gui_settings()
-        data[cls.KEY] = view
-        save_gui_settings(data)
+        update_gui_settings(**{cls.KEY: view})
 
     @classmethod
     def menu(cls, main: Gio.Menu) -> Gio.Menu:
@@ -287,23 +295,9 @@ class StartView:
         win._render_start()
 
 
-def _settings_json() -> Path:
-    return paths.config_dir() / "settings.json"
-
-
-def load_ui_language() -> str:
-    try:
-        return json.loads(_settings_json().read_text()).get("ui_language") or ""
-    except (OSError, ValueError):
-        return ""
-
-
-def save_ui_language(code: str) -> None:
-    """Store the language in settings.json, keeping the other keys."""
-    p = _settings_json()
-    data = json.loads(p.read_text()) if p.exists() else {}
-    data["ui_language"] = code
-    paths.write_private(p, json.dumps(data, indent=2))
+# The language of the interface, read and kept in one place (i18n).
+load_ui_language = i18n.saved_ui_language
+save_ui_language = i18n.save_ui_language
 
 
 def last_sync_words(data: dict, now: datetime | None = None) -> str:
@@ -3524,8 +3518,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
         def done(ok: bool, error: str) -> None:
             if ok:
-                self.gui_settings["background"] = enabled
-                save_gui_settings(self.gui_settings)
+                # gui.json read again: what was kept since the window opened (the view of
+                # the start page) stays.
+                self.gui_settings = update_gui_settings(background=enabled)
                 self.toast(_("Background sync enabled") if enabled
                            else _("Background sync disabled"))
                 if self.session is not None:
