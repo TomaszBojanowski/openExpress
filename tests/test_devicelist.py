@@ -489,6 +489,7 @@ def kinds_told(monkeypatch):
 
     monkeypatch.setattr(devicelist, "_kind_evidence", {})
     monkeypatch.setattr(devicelist, "_kind_told", set())
+    monkeypatch.setattr(devicelist, "_map_type_told", set())
 
 
 def _no_kind_lines(caplog):
@@ -533,6 +534,32 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
         ("devices: Garmin tells no kind of 006-B3703-00 (account categories: not known; "
          "unit-info segment: Fitness, connect support: Enabled)")]
     assert "SECRET123" not in caplog.text and str(VENU) not in caplog.text
+
+
+def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(kinds_told, caplog):
+    """Which map service Garmin files a model under (a nüvi 52LMT got its software update but
+    no map, 25.10.2026): the log says it, so that a report tells whether the model is one the
+    universal map service serves. The part number only, no unit ID; once for each model and
+    value; a value given as a number, or none given, is said as well."""
+    import types
+
+    from openexpress.gui import app
+
+    nuvi = types.SimpleNamespace(unit_id=3000000052, part_number="006-B1234-00")  # made up
+    venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
+    edge = types.SimpleNamespace(unit_id=EDGE, part_number="006-B4440-00")
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        app.note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu",
+                                "serialnumber": "SECRET123"})
+        app.note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu"})
+        app.note_segment(venu, {"segmenttype": "Fitness"})
+        app.note_segment(edge, {"segmenttype": "Fitness", "mapupdatetype": 4})
+    tail = " (openExpress asks the universal map service only)"
+    assert [r.getMessage() for r in caplog.records if "map update type" in r.getMessage()] == [
+        "maps: unit-info gives the map update type LegacyRmu for 006-B1234-00" + tail,
+        "maps: unit-info gives the map update type none given for 006-B3703-00" + tail,
+        "maps: unit-info gives the map update type 4 for 006-B4440-00" + tail]
+    assert "SECRET123" not in caplog.text and "3000000052" not in caplog.text
 
 
 # --- the address of a tile's picture: the account's, else the one remembered ------------------

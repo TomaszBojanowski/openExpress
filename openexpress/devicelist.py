@@ -341,6 +341,30 @@ def note_kind_evidence(part_number: str, categories: list[str] | None = None,
              known.get("segment") or "not asked", known.get("connect_support") or "not asked")
 
 
+# The map update types unit-info told in this run: (part number, value as said).
+_map_type_told: set = set()
+
+
+def note_map_update_type(part_number: str, value) -> None:
+    """Say in the log which map service Garmin files a model under (`mapUpdateType` of
+    unit-info), once for each model and value: the program asks the universal map service
+    only, and a navigator may be served by another one, so that a report tells why a device
+    gets no map. The part number only: never a unit ID or a serial number."""
+    if not part_number:
+        return
+    if value is None or value == "":
+        said = "none given"
+    elif isinstance(value, (str, int)) and not isinstance(value, bool):
+        said = str(value)[:40]
+    else:
+        said = type(value).__name__  # an answer of another shape: not quoted
+    if (part_number, said) in _map_type_told:
+        return
+    _map_type_told.add((part_number, said))
+    log.info("maps: unit-info gives the map update type %s for %s (openExpress asks the "
+             "universal map service only)", said, part_number)
+
+
 def unit_info_heard(part_number: str) -> bool:
     """Whether unit-info answered about this model in this run (note_kind_evidence)."""
     return "segment" in _kind_evidence.get(part_number, {})

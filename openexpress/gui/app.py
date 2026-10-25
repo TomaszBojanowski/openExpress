@@ -354,9 +354,10 @@ def picture_from_unit_info(client, device) -> str | None:
 def note_segment(device, info) -> None:
     """Keep the kind Garmin's update server tells in an answer the window asked for (for a
     picture, after an update, for a drive whose kind is not told): a bike accessory (e.g. a
-    Varia). Only this field and its connect support are read. A segment that tells no kind
-    the program knows goes to the log with the part number and the connect support
-    (devicelist.note_kind_evidence)."""
+    Varia). Only this field, its connect support and the map update type are read. A segment
+    that tells no kind the program knows goes to the log with the part number and the connect
+    support (devicelist.note_kind_evidence); the map update type always, once a model
+    (devicelist.note_map_update_type)."""
     segment = info.get("segmenttype") if isinstance(info, dict) else None
     bike_accessory = isinstance(segment, str) and segment.casefold() == "bikeaccessory"
     if bike_accessory:
@@ -368,6 +369,8 @@ def note_segment(device, info) -> None:
             segment=segment if isinstance(segment, str) and segment else "none given",
             kind=known_devices.BIKE_ACCESSORY if bike_accessory else None,
             connect_support=support if isinstance(support, str) and support else "none given")
+        devicelist.note_map_update_type(getattr(device, "part_number", "") or "",
+                                        info.get("mapupdatetype"))
 
 
 def is_bike_accessory(client, device) -> bool:

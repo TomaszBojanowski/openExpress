@@ -452,9 +452,10 @@ copy to the device is running.
   told; like the update check, that request names the device (unit ID). The answer is not
   stored: only the picture is cached, and the address of the picture of the model is kept
   with the devices this installation remembers, so that the picture can be downloaded again
-  after the cache is cleared. Of the answer, the log names only the market segment and the
-  connect support of a device whose kind Garmin does not tell otherwise (with its part
-  number), as it names the account's categories of such a device.
+  after the cache is cleared. Of the answer, the log names only the map update type (which
+  map service Garmin uses for the model) and, for a device whose kind Garmin does not tell
+  otherwise, the market segment and the connect support – always with the part number
+  only – as it names the account's categories of such a device.
 - The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
   the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
 
