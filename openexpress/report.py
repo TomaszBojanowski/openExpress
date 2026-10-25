@@ -54,6 +54,16 @@ def with_log(text: str, lines: list[str], crash: list[str] | None = None) -> str
     return out
 
 
+# Where the log goes in an issue opened from the window: never into the address; the issue
+# says where it is, and the window puts it in the clipboard (#18, #19).
+LOG_PLACEHOLDER = "(paste the log here — it is in your clipboard)"
+
+
+def with_log_placeholder(text: str) -> str:
+    """The report with an empty section "### Log" that says to paste the log there."""
+    return f"{text}\n### Log\n{LOG_PLACEHOLDER}\n"
+
+
 def issue_url(text: str, model: str | None) -> str | None:
     """The address of a new device report on GitHub with the title and the "Device report"
     field filled in (`report` is the id of that field in the issue form). None when the

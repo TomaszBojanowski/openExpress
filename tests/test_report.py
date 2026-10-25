@@ -254,15 +254,74 @@ def test_open_on_github_fills_in_the_report(monkeypatch, device_root, log_file):
     assert copied == [] and said == []
 
 
+def _note(dialog):
+    """The sentence under "Attach the last log": (shown, its words)."""
+    from gi.repository import Gtk
+
+    stack = [dialog.get_extra_child()]
+    while stack:
+        widget = stack.pop()
+        if isinstance(widget, Gtk.Label) and widget.get_name() == "report-log-note":
+            return widget.get_visible(), widget.get_label()
+        child = widget.get_first_child()
+        while child is not None:
+            stack.append(child)
+            child = child.get_next_sibling()
+    return None
+
+
 @pytest.mark.needs_display
 def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
+    """#18, #19: the log never goes into the address; the issue gets a section "### Log" that
+    says where it is, the log goes to the clipboard, and the dialog stays to say so (a toast
+    on the window was missed once the browser came up)."""
+    from urllib.parse import parse_qs, urlsplit
+
     _write_log(log_file, ["one", "device 3987654321"])
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    assert _note(dialog) == (False, ("The log is in the clipboard. Paste it into the issue "
+                                     "after it opens."))
     _attach_log(dialog)
     dialog.emit("response", "open")
-    assert opened == [report.issue_url(text, "Test watch")]  # the report only, never the log
+    (url,) = opened
+    filled = parse_qs(urlsplit(url).query)["report"][0]
+    assert filled == text + "\n### Log\n(paste the log here — it is in your clipboard)\n"
+    assert "device <number>" not in url and "one" not in filled.split("### Log")[1]
     assert copied == ["### Log (last 2 lines)\n```\none\ndevice <number>\n```\n"]
-    assert said == ["The log is in the clipboard: paste it into the issue"]
+    assert _note(dialog)[0] is True and said == []
+    assert not dialog.get_can_close()  # it stays open with the sentence
+
+
+@pytest.mark.needs_display
+def test_copy_with_the_log_is_as_before(monkeypatch, device_root, log_file):
+    _write_log(log_file, ["one"])
+    dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    _attach_log(dialog)
+    dialog.emit("response", "copy")
+    assert copied == [report.with_log(text, ["one"])] and said == ["Report copied"]
+    assert opened == [] and _note(dialog)[0] is False
+
+
+@pytest.mark.needs_display
+def test_the_sentence_about_the_log_in_polish(monkeypatch, device_root, log_file):
+    from openexpress import i18n
+
+    _write_log(log_file, ["one"])
+    i18n.setup("pl")
+    try:
+        dialog, _text, _opened, _copied, _said = _report_dialog(monkeypatch, device_root)
+    finally:
+        i18n.setup("en")
+    assert _note(dialog)[1] == "Log jest w\u00a0schowku. Wklej go do zgłoszenia po jego otwarciu."
+
+
+def test_the_report_alone_fits_an_address_with_room_to_spare(device_root):
+    """The report has a fixed number of lines; with the section of the log it stays well
+    under MAX_URL (the empty form and the clipboard remain for anything longer)."""
+    st = LocalStorage(device_root)
+    text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, True)
+    url = report.issue_url(report.with_log_placeholder(text), "Test watch")
+    assert url is not None and len(url) < report.MAX_URL // 2
 
 
 @pytest.mark.needs_display
@@ -305,7 +364,7 @@ def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
         "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z\u00a0wypełnionym raportem; nic nie zostanie "
         "opublikowane, dopóki go nie wyślesz. Raport nie zawiera numeru seryjnego, "
         "identyfikatora urządzenia ani adresu e-mail.")  # the same words as on the command line
-    assert said == ["Log jest w\u00a0schowku: wklej go w\u00a0zgłoszeniu"]
+    assert said == []  # the dialog says it (test_the_sentence_about_the_log_in_polish)
     assert said_too_long == ["Raport skopiowany: wklej go w\u00a0formularzu"]
 
 

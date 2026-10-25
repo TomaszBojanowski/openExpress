@@ -354,6 +354,23 @@ def order_list_at_its_top(dialog) -> None:
     adjustment.set_value(adjustment.get_lower())
 
 
+def report_log_note(dialog) -> None:
+    """The sentence of the report dialog that the log is in the clipboard, shown; found from
+    the dialog of the signal (no widget held)."""
+    stack = [dialog.get_extra_child()]
+    while stack:
+        widget = stack.pop()
+        if widget is None:
+            continue
+        if isinstance(widget, Gtk.Label) and widget.get_name() == "report-log-note":
+            widget.set_visible(True)
+            return
+        child = widget.get_first_child()
+        while child is not None:
+            stack.append(child)
+            child = child.get_next_sibling()
+
+
 def account_pending(win) -> bool:
     """Whether the account's list is not known yet but asked: a login saved, and neither a
     list nor why there is none (logged out, an error) came yet. The tiles of the first frame
@@ -4214,9 +4231,14 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
         attach.connect("toggled", lambda button: buffer.set_text(
             MainWindow._report_text(report_text, button.get_active())))
+        # Shown once "Open on GitHub" put the log in the clipboard (show_report).
+        note = Gtk.Label(label=_("The log is in the clipboard. Paste it into the issue after "
+                                 "it opens."), wrap=True, xalign=0, visible=False,
+                         name="report-log-note", css_classes=["dim-label"])
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(scroller)
         box.append(attach)
+        box.append(note)
         return box, buffer
 
     def show_report(self) -> None:
@@ -4244,37 +4266,58 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         d.add_response("open", _("Open on GitHub"))
         d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
         d.set_close_response("close")
+        # "Open on GitHub" with the log attached keeps the dialog to say where the log is
+        # (#18, #19): the dialog closes only when the answer lets it. A click says
+        # "close-attempt" before "response", Escape only "close-attempt": the closing waits
+        # for the answer, if any, in the main loop.
+        d.set_can_close(False)
+        stay = {"open": False}
 
         def shown() -> str:
             """Exactly what the preview shows."""
             return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
 
-        def response(_d, r):
+        def settle(dialog) -> bool:
+            if not stay.pop("open", False):
+                dialog.force_close()
+            return False
+
+        def response(dialog, r):
             if r == "copy":
                 self.get_clipboard().set(shown())
                 self.toast(_("Report copied"))
             elif r == "open":
-                self._open_report_form(body_text, shown() if buffer is not None else "",
-                                       s.device.description if s is not None else None)
+                attached = self._open_report_form(
+                    body_text, shown() if buffer is not None else "",
+                    s.device.description if s is not None else None)
+                if attached:
+                    stay["open"] = True
+                    report_log_note(dialog)
 
+        d.connect("close-attempt", lambda dialog: GLib.idle_add(settle, dialog))
         d.connect("response", response)
         d.present(self)
 
-    def _open_report_form(self, report_text: str, shown: str, model: str | None) -> None:
+    def _open_report_form(self, report_text: str, shown: str, model: str | None) -> bool:
         """Open a new device report on GitHub with the report filled in. The log never goes
         into the address (too long, and the address is sent to GitHub when the page opens):
-        when it is attached it goes to the clipboard. A report too long for an address goes
-        to the clipboard whole, with the empty form, as before."""
+        when it is attached the report ends with a section "### Log" that says to paste it
+        (report.with_log_placeholder), and the log goes to the clipboard; whether it did. A
+        report too long for an address goes to the clipboard whole, with the empty form, as
+        before."""
         from openexpress import report
 
-        url = report.issue_url(report_text, model) if report_text else None
+        attached = bool(report_text) and shown != report_text  # the log below the report
+        body = report.with_log_placeholder(report_text) if attached else report_text
+        url = report.issue_url(body, model) if report_text else None
         if report_text and url is None:
             self.get_clipboard().set(shown)
             self.toast(_("Report copied: paste it into the form"))
-        elif report_text and shown != report_text:  # the log is attached below the report
+            attached = False
+        elif attached:
             self.get_clipboard().set(shown[len(report_text):].lstrip("\n"))
-            self.toast(_("The log is in the clipboard: paste it into the issue"))
         Gtk.UriLauncher.new(url or report.ISSUE_URL).launch(self, None, None, None)
+        return attached
 
     def show_about(self) -> None:
         from openexpress import __version__
