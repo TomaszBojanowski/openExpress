@@ -387,8 +387,9 @@ def cmd_cache(args) -> int:
 
 
 def cmd_devices(args) -> int:
-    """The devices this installation has seen (devices.json), numbered; --forget N removes the
-    entry of one (with --apply), never its sync state. The unit ID is never shown."""
+    """The devices this installation has seen (devices.json), numbered; --forget N forgets one
+    (with --apply) and what this installation keeps of it (forget.forget_device). The unit ID
+    is never shown."""
     devices = known_devices.in_order(known_devices.load())
     if args.forget is None:
         if not devices:
@@ -407,18 +408,66 @@ def cmd_devices(args) -> int:
             "There is no device number {number} on the list (it has {count}).").format(
             number=args.forget, count=len(devices))))
         return 1
+    from openexpress import forget
+
     d = devices[args.forget - 1]
     name = f"{d.description} ({d.part_number})"
+    if d.unit_id in _connected_unit_ids():
+        _error(_("Error: {error}").format(error=_(
+            "{device} is connected: unplug it to forget it.").format(device=name)))
+        return 1
+    kept = forget.kept(d.unit_id)
+    anyway = _("Add --discard-pending to forget it anyway.")
     if not args.apply:
         print(_("Device to forget: {device}").format(device=name))
+        print(_("What this installation keeps of it goes too: what was uploaded from it, its "
+                "last sync and the maps of your own copied to it. Its next sync with this "
+                "program will be a first sync again."))
+        if kept.pending:
+            lost = str(forget.PendingFiles(kept.pending))
+            print(lost if args.discard_pending else f"{lost} {anyway}")
+        if kept.backups and args.backups:
+            print(ngettext("{count} backup of it in {path} is deleted too.",
+                           "{count} backups of it in {path} are deleted too.",
+                           kept.backups).format(count=kept.backups,
+                                                path=forget.backup_folder()))
+        elif kept.backups:
+            print(ngettext(
+                "{count} backup of it stays in {path} (add --backups to delete it too).",
+                "{count} backups of it stay in {path} (add --backups to delete them too).",
+                kept.backups).format(count=kept.backups, path=forget.backup_folder()))
         print(_("Dry run: nothing was forgotten. Add --apply to forget it."))
         return 0
-    if not known_devices.forget(d.unit_id):
+    try:
+        done = forget.forget_device(d.unit_id, discard_pending=args.discard_pending,
+                                    backups=args.backups)
+    except forget.PendingFiles as e:
+        _error(_("Error: {error}").format(error=f"{e} {anyway}"))
+        return 1
+    except OSError as e:
+        # Never the path: the device's folders are named after its unit ID.
+        log.info("devices: not forgotten (%s)", type(e).__name__)
+        _error(_("Error: {error}").format(error=_("{device} was not forgotten: {reason}").format(
+            device=name, reason=e.strerror or type(e).__name__)))
+        return 1
+    if not done:
         _error(_("Error: {error}").format(error=_("{device} was not forgotten.").format(
             device=name)))
         return 1
     print(_("Forgot {device}.").format(device=name))
+    if args.backups and kept.backups:
+        print(ngettext("Deleted {count} backup.", "Deleted {count} backups.",
+                       kept.backups).format(count=kept.backups))
     return 0
+
+
+def _connected_unit_ids() -> set[int]:
+    """The unit IDs of the devices connected now, from the GarminDevice.xml of each, as the
+    window lists them: nothing is opened or mounted, nothing is asked of the account. A
+    device whose file cannot be read names none."""
+    from openexpress.device.gio_storage import find_all_devices, probe
+
+    return {s.unit_id for s in (probe(f) for f in find_all_devices()) if s.unit_id}
 
 
 def _seen_at(ts: float) -> str:
@@ -1762,7 +1811,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("devices", help=_("the devices this installation has seen"))
     s.add_argument("--forget", type=int, metavar="N",
-                   help=_("forget device number N of the list (its sync state stays)"))
+                   help=_("forget device number N of the list and what this installation "
+                          "keeps of it (its sync state, its last sync)"))
+    s.add_argument("--discard-pending", action="store_true",
+                   help=_("with --forget: also when files of it have not been uploaded yet "
+                          "(they are lost)"))
+    s.add_argument("--backups", action="store_true",
+                   help=_("with --forget: delete its backups too"))
     s.add_argument("--apply", action="store_true", help=_("really forget (with --forget)"))
     s.set_defaults(func=cmd_devices)
 

@@ -193,7 +193,7 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 | `openexpress info` | model, software version, free space |
 | `openexpress files [--type FIT_TYPE_4]` | files on the watch by data type from `GarminDevice.xml` |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` appends the last 200 lines of the [log](#log-file), filtered |
-| `openexpress devices [--forget N] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list (its sync state stays) |
+| `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own copied to it), so that connected again it is a new device; files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from your own copy of the official installer |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account, log out (removes the local token) |

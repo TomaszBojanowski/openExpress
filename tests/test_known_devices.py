@@ -212,6 +212,12 @@ def utc():
     time.tzset()
 
 
+FORGOTTEN_WITH_IT = (
+    "What this installation keeps of it goes too: what was uploaded from it, its last sync "
+    "and the maps of your own copied to it. Its next sync with this program will be a first "
+    "sync again.")
+
+
 def two_remembered():
     from openexpress import known_devices
 
@@ -252,12 +258,14 @@ def test_forget_without_apply_forgets_nothing(store, utc, capsys):
     assert main(["devices", "--forget", "2"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Device to forget: fēnix 8 (006-B4532-00)",
+        FORGOTTEN_WITH_IT,
         "Dry run: nothing was forgotten. Add --apply to forget it."]
     assert set(known_devices.load()) == {FENIX, 3000000003}
 
 
-def test_forget_with_apply_removes_the_entry_only(store, utc, capsys):
-    """--forget N --apply: the entry goes; the device's own folder (its sync state) stays."""
+def test_forget_with_apply_removes_the_entry_and_the_sync_state(store, utc, capsys):
+    """--forget N --apply: the entry goes, and with it the device's own folder (its sync
+    state): connected again, it is a new device (PLAN T7)."""
     from openexpress import known_devices, paths
     from openexpress.cli import main
 
@@ -268,7 +276,97 @@ def test_forget_with_apply_removes_the_entry_only(store, utc, capsys):
     assert main(["devices", "--forget", "2", "--apply"]) == 0
     assert capsys.readouterr().out.strip() == "Forgot fēnix 8 (006-B4532-00)."
     assert set(known_devices.load()) == {3000000003}
-    assert sync_state.read_text() == "{}"
+    assert not paths.device_dir(FENIX).exists()
+
+
+def pending_of(unit_id, count):
+    from openexpress import paths
+
+    for n in range(count):
+        path = paths.device_dir(unit_id) / "sync" / "pending" / "FIT_TYPE_4" / f"ACT{n}.FIT"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"fit")
+
+
+def test_forget_names_the_files_not_uploaded_and_refuses_them_without_consent(
+        store, utc, capsys):
+    """Files not uploaded yet: the dry run says they would be lost; --apply alone refuses
+    (exit code 1, nothing forgotten); with --discard-pending they go."""
+    from openexpress import known_devices
+    from openexpress.cli import main
+
+    two_remembered()
+    pending_of(FENIX, 2)
+    assert main(["devices", "--forget", "2"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Device to forget: fēnix 8 (006-B4532-00)",
+        FORGOTTEN_WITH_IT,
+        ("2 files of this device have not been uploaded yet and would be lost. "
+         "Add --discard-pending to forget it anyway."),
+        "Dry run: nothing was forgotten. Add --apply to forget it."]
+    assert main(["devices", "--forget", "2", "--discard-pending"]) == 0
+    assert capsys.readouterr().out.splitlines()[2] == (
+        "2 files of this device have not been uploaded yet and would be lost.")
+    assert main(["devices", "--forget", "2", "--apply"]) == 1
+    assert capsys.readouterr().err.strip() == (
+        "Error: 2 files of this device have not been uploaded yet and would be lost. "
+        "Add --discard-pending to forget it anyway.")
+    assert set(known_devices.load()) == {FENIX, 3000000003}
+    assert main(["devices", "--forget", "2", "--discard-pending", "--apply"]) == 0
+    assert capsys.readouterr().out.strip() == "Forgot fēnix 8 (006-B4532-00)."
+    assert set(known_devices.load()) == {3000000003}
+
+
+def test_forget_keeps_the_backups_unless_asked(store, utc, capsys, backups):
+    """The backups stay, and the dry run says where (the folder above the device's, which is
+    named after the unit ID); --backups deletes them too."""
+    from openexpress import known_devices
+    from openexpress.cli import main
+
+    two_remembered()
+    for name in ("2026-10-01 (10.00.00)", "GARMIN-APPS 2026-10-03 (10.00.00) fēnix 8"):
+        (backups / str(FENIX) / name).mkdir(parents=True)
+    assert main(["devices", "--forget", "2"]) == 0
+    assert capsys.readouterr().out.splitlines()[2] == (
+        f"2 backups of it stay in {backups} (add --backups to delete them too).")
+    assert main(["devices", "--forget", "2", "--backups"]) == 0
+    assert capsys.readouterr().out.splitlines()[2] == (
+        f"2 backups of it in {backups} are deleted too.")
+    assert main(["devices", "--forget", "2", "--apply"]) == 0
+    assert (backups / str(FENIX)).is_dir()
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=SEEN_FENIX)
+    capsys.readouterr()
+    assert main(["devices", "--forget", "2", "--backups", "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Forgot fēnix 8 (006-B4532-00).", "Deleted 2 backups."]
+    assert not (backups / str(FENIX)).exists()
+
+
+@pytest.mark.parametrize("apply", [[], ["--apply"]])
+def test_a_connected_device_is_not_forgotten(store, utc, capsys, monkeypatch, apply):
+    """Connected now (its GarminDevice.xml names its unit ID): unplug it first; exit code 1,
+    nothing forgotten, also in a dry run."""
+    from openexpress import cli, known_devices
+
+    two_remembered()
+    monkeypatch.setattr(cli, "_connected_unit_ids", lambda: {FENIX})
+    assert cli.main(["devices", "--forget", "2", *apply]) == 1
+    assert capsys.readouterr().err.strip() == (
+        "Error: fēnix 8 (006-B4532-00) is connected: unplug it to forget it.")
+    assert set(known_devices.load()) == {FENIX, 3000000003}
+
+
+def test_forget_while_a_sync_runs(store, utc, capsys):
+    """A sync running holds the sync lock: an error, exit code 1, nothing forgotten."""
+    from openexpress import known_devices, service
+    from openexpress.cli import main
+
+    two_remembered()
+    with service.sync_lock():
+        assert main(["devices", "--forget", "2", "--apply"]) == 1
+    assert capsys.readouterr().err.strip() == (
+        "Error: A sync is already running in another process.")
+    assert set(known_devices.load()) == {FENIX, 3000000003}
 
 
 @pytest.mark.parametrize("number", ["3", "0"])

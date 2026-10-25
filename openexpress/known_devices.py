@@ -21,6 +21,7 @@ import fcntl
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -233,15 +234,18 @@ def update_found_recently(found: float | None, now: float | None = None) -> floa
     return found if (time.time() if now is None else now) - found < UPDATE_FOUND_KEPT_S else None
 
 
-def forget(unit_id: int) -> bool:
-    """Remove the entry of this device; whether there was one. Nothing else is deleted."""
+def forget(unit_id: int, before: Callable[[], str] | None = None) -> bool:
+    """Remove the entry of this device; whether there was one. Nothing else is deleted here:
+    `before`, when given, runs under the lock once the entry is found, deletes the rest and
+    returns words for the log line; when it raises, the entry stays."""
     with _locked():
         known, writable = _read()
         entry = known.pop(unit_id, None)
         if entry is None or not writable:
             return False
+        note = before() if before is not None else ""
         _write(known)
-    log.info("devices: forgot %s", entry.part_number)
+    log.info("devices: forgot %s%s", entry.part_number, note)
     return True
 
 

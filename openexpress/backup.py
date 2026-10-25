@@ -45,7 +45,7 @@ def backup_files(device: GarminDevice) -> list:
     ]
 
 
-def _is_backup_dir(p: Path) -> bool:
+def is_backup_dir(p: Path) -> bool:
     if not p.is_dir():
         return False
     try:
@@ -127,7 +127,7 @@ def run_backup(
         raise
     removed = []
     if keep > 0:
-        old = sorted((p for p in unit_dir.iterdir() if _is_backup_dir(p)),
+        old = sorted((p for p in unit_dir.iterdir() if is_backup_dir(p)),
                      key=lambda p: datetime.strptime(p.name, STAMP))
         for p in old[:-keep]:
             if p == target:
