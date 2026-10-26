@@ -195,11 +195,10 @@ def parse_locations(dt: dict, include_consent: bool,
     """Return (used, skipped) upload locations for an OMT data type.
 
     The requiresUserConsent flag alone does not exclude a location (it applies to e.g.
-    HRV and skin temperature). openExpress judges each location on its own: one that
-    names specific required consents is used only when `consent_granted` says each of
-    them is given, and without that function it is skipped; the other locations of the
-    data type are used all the same. `include_consent` takes them all, for marking files
-    only (nothing is uploaded then).
+    HRV and skin temperature). A location that names specific required consents is used
+    only when `consent_granted` says each of them is given, and without that function it
+    is skipped; plan_uploads then leaves out the whole data type (as Garmin Express does).
+    `include_consent` takes them all, for marking files only (nothing is uploaded then).
     """
     used, skipped = [], []
     for loc in dt.get("uploadlocations") or []:
@@ -277,12 +276,16 @@ def plan_uploads(
                 if _sources_for(device, dt):
                     plan.skipped_types[name] = _("diagnostics/telemetry (--include-diagnostics)")
                 continue
-        if not locations:
-            if skipped and _sources_for(device, dt):
+        if skipped:
+            # As Garmin Express: a consent missing for any location keeps the whole data
+            # type back, also from its locations that need no consent.
+            if _sources_for(device, dt):
                 consents = ", ".join(
                     sorted({c for s in skipped for c in s.consent_types}) or ["?"])
                 plan.skipped_types[name] = _("consent not given ({consents})").format(
                     consents=consents)
+            continue
+        if not locations:
             continue
         sources = _sources_for(device, dt)
         if not sources:

@@ -516,8 +516,9 @@ copy to the device is running.
   detected and skipped; duplicates are rejected by the server.
 - Nothing is uploaded unless the Garmin account has given the consent to upload data from
   devices and has device sync turned on; both are checked before every sync. Files from
-  Garmin Connect are still written to the device. Upload locations that need a further
-  consent are used only when that consent is given.
+  Garmin Connect are still written to the device. A data type one of whose upload
+  locations needs a further consent is not uploaded at all, to any of its locations, until
+  that consent is given (as in Garmin Express).
 - The picture of a device that is not on the signed-in account (or when nobody is signed
   in) is looked up on Garmin's update server, and so, once each time openExpress runs, is
   what that server says of an open device in mass storage mode whose kind Garmin has not

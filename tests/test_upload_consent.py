@@ -189,6 +189,40 @@ def test_without_a_consent_check_such_types_are_skipped(device_root, xdg):
     assert {c.datatype for c in result.candidates} == {"FIT_TYPE_4"}
 
 
+# A type with two locations: one without a consent and one that names a consent (made up).
+MIXED = {"datatypes": [
+    CONFIG["datatypes"][0],
+    {"datatypename": "FIT_TYPE_32", "uploadlocations": [
+        {"url": "https://up.example/wellness", "requiresauthentication": True},
+        {"url": "https://up.example/extra", "requiresauthentication": True,
+         "requiresuserconsent": True, "requiredconsenttypes": [{"name": "SPECIAL_CONSENT"}]}]},
+]}
+
+
+def test_a_type_is_not_uploaded_when_one_of_its_locations_lacks_its_consent(device_root, xdg):
+    """As Garmin Express: a consent missing for any location of a data type keeps the whole
+    type back, also from the locations that need no consent (analysis 19, point 1)."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    client = Account(consent={"DI_CONNECT_UPLOAD": OPT_IN,
+                              "SPECIAL_CONSENT": {**OPT_IN, "useroption": "opt-out"}})
+    without = sync.plan_uploads(dev, st, MIXED, sync.SyncState(UNIT),
+                                consent_granted=service.check_upload_allowed(client).granted)
+    assert {c.datatype for c in without.candidates} == {"FIT_TYPE_4"}
+    assert without.skipped_types == {"FIT_TYPE_32": "consent not given (SPECIAL_CONSENT)"}
+    unchecked = sync.plan_uploads(dev, st, MIXED, sync.SyncState(UNIT))  # not logged in
+    assert {c.datatype for c in unchecked.candidates} == {"FIT_TYPE_4"}
+
+    with_it = sync.plan_uploads(dev, st, MIXED, sync.SyncState(UNIT),
+                                consent_granted=service.check_upload_allowed(Account()).granted)
+    (monitoring,) = [c for c in with_it.candidates if c.datatype == "FIT_TYPE_32"]
+    assert [loc.url for loc in monitoring.locations] == [
+        "https://up.example/wellness", "https://up.example/extra"]
+
+
 # --- a whole sync -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("kw, text, reason, row", [
