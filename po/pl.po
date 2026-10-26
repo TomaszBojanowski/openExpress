@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 01:40+0100\n"
+"POT-Creation-Date: 2026-10-26 15:55+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2545,11 +2545,11 @@ msgid "Cannot create directory {path}"
 msgstr "Nie można utworzyć katalogu {path}"
 
 #: openexpress/device/gio_storage.py:779 openexpress/device/gio_storage.py:836
-#: openexpress/device/gio_storage.py:1500
+#: openexpress/device/gio_storage.py:1511
 msgid "Cannot mount the device"
 msgstr "Nie można zamontować urządzenia"
 
-#: openexpress/device/gio_storage.py:801 openexpress/device/gio_storage.py:1487
+#: openexpress/device/gio_storage.py:801 openexpress/device/gio_storage.py:1498
 msgid "The device is not mounted."
 msgstr "Urządzenie nie jest zamontowane."
 
@@ -2622,21 +2622,24 @@ msgstr ""
 "Urządzenie Garmin jest podłączone jako dysk USB, ale ta wersja (Flatpak) nie "
 "ma dostępu do /run/media, gdzie system je zamontował."
 
-#. TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
-#: openexpress/device/gio_storage.py:1177
+#. TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
+#. it; "kquitapp6 kiod6" is a command, not to be translated
+#: openexpress/device/gio_storage.py:1181
 msgid ""
-"Another program may be holding the device (e.g. Dolphin in KDE): close it, "
-"then unplug the cable and plug it back in."
+"KDE's MTP service may be holding the device: it keeps it after Dolphin is "
+"closed and takes it back when the cable is plugged in again. Close Dolphin "
+"and run kquitapp6 kiod6, then unplug the cable and plug it back in."
 msgstr ""
-"Urządzenie może zajmować inny program (np. Dolphin w KDE): zamknij go, "
-"a potem odłącz kabel i podłącz go ponownie."
+"Urządzenie może zajmować usługa MTP w KDE: trzyma je także po zamknięciu "
+"Dolphina i bierze z powrotem po ponownym podłączeniu kabla. Zamknij Dolphina "
+"i uruchom kquitapp6 kiod6, a potem odłącz kabel i podłącz go ponownie."
 
 #. TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
-#: openexpress/device/gio_storage.py:1183
+#: openexpress/device/gio_storage.py:1188
 msgid "No MTP support in the system (gvfs-mtp)"
 msgstr "Brak obsługi MTP w systemie (gvfs-mtp)"
 
-#: openexpress/device/gio_storage.py:1189
+#: openexpress/device/gio_storage.py:1194
 msgid ""
 "openExpress reads the device over MTP through gvfs, and gvfs on this system "
 "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: "
@@ -2649,7 +2652,7 @@ msgstr ""
 "backends), wyloguj się i zaloguj ponownie, a potem podłącz urządzenie "
 "jeszcze raz."
 
-#: openexpress/device/gio_storage.py:1198
+#: openexpress/device/gio_storage.py:1203
 msgid ""
 "The device is still starting. Wait until it shows its usual screen, or "
 "unplug it and plug it in again."
@@ -2657,7 +2660,7 @@ msgstr ""
 "Urządzenie nadal się uruchamia. Poczekaj, aż pokaże zwykły ekran, albo "
 "odłącz je i podłącz ponownie."
 
-#: openexpress/device/gio_storage.py:1201
+#: openexpress/device/gio_storage.py:1206
 msgid ""
 "The Garmin device is connected, but it does not offer its files. Check its "
 "screen: if it is locked with a PIN or asks something, unlock it or confirm."
@@ -2666,7 +2669,7 @@ msgstr ""
 "ekran: jeśli jest zablokowane kodem PIN albo o coś pyta, odblokuj je lub "
 "potwierdź."
 
-#: openexpress/device/gio_storage.py:1207
+#: openexpress/device/gio_storage.py:1212
 msgid ""
 "No Garmin device (MTP) found. Connect the device with a USB cable and unlock "
 "it if it asks to allow the connection."
@@ -2674,36 +2677,36 @@ msgstr ""
 "Nie znaleziono urządzenia Garmin (MTP). Podłącz urządzenie kablem USB "
 "i odblokuj je, jeśli poprosi o zezwolenie na połączenie."
 
-#: openexpress/device/gio_storage.py:1263
+#: openexpress/device/gio_storage.py:1268
 msgid "The device is starting. Try again in a moment."
 msgstr "Urządzenie się uruchamia. Spróbuj ponownie za chwilę."
 
-#: openexpress/device/gio_storage.py:1273 openexpress/gui/app.py:2185
+#: openexpress/device/gio_storage.py:1284 openexpress/gui/app.py:2185
 #: openexpress/gui/app.py:2192 openexpress/gui/app.py:2207
 msgid "The device is starting…"
 msgstr "Urządzenie się uruchamia…"
 
-#: openexpress/device/gio_storage.py:1287
+#: openexpress/device/gio_storage.py:1298
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 "Podłączono kilka urządzeń, wybierz jedno za pomocą --device-uri: {names}"
 
-#: openexpress/device/gio_storage.py:1306
+#: openexpress/device/gio_storage.py:1317
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr "Nie znaleziono GARMIN/GarminDevice.xml na urządzeniu {uri}"
 
-#: openexpress/device/gio_storage.py:1478
+#: openexpress/device/gio_storage.py:1489
 #, python-brace-format
 msgid "{action}: the device did not answer in time"
 msgstr "{action}: urządzenie nie odpowiedziało na czas"
 
-#: openexpress/device/gio_storage.py:1491
+#: openexpress/device/gio_storage.py:1502
 msgid "Cannot unmount the device"
 msgstr "Nie można odmontować urządzenia"
 
-#: openexpress/device/gio_storage.py:1511
+#: openexpress/device/gio_storage.py:1522
 msgid "The device was mounted again but its files are not visible."
 msgstr "Urządzenie zostało ponownie zamontowane, ale nie widać jego plików."
 

@@ -3763,9 +3763,10 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
 REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
 # After the sentence about a PIN, which names the device already.
 REPLUG_HINT_AFTER_PIN = "If it isn't locked and isn't asking for anything, unplug the cable and plug it back in."
-# Added once the wait ran out (#13: Dolphin's kiod6 held the device).
-HELD_HINT = ("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
-             "unplug the cable and plug it back in.")
+# Added once the wait ran out (#13: KDE's kmtpd, in kiod6, held the device).
+HELD_HINT = ("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
+             "and takes it back when the cable is plugged in again. Close Dolphin and run "
+             "kquitapp6 kiod6, then unplug the cable and plug it back in.")
 STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 

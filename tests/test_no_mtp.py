@@ -23,8 +23,9 @@ NO_MTP_TEXT = ("openExpress reads the device over MTP through gvfs, and gvfs on 
                "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: sudo "
                "pacman -S gvfs-mtp; Debian and Ubuntu: sudo apt install gvfs-backends), log "
                "out and back in, then plug the device in again.")
-HELD = ("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
-        "unplug the cable and plug it back in.")
+HELD = ("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
+        "and takes it back when the cable is plugged in again. Close Dolphin and run "
+        "kquitapp6 kiod6, then unplug the cable and plug it back in.")
 
 
 def gvfs_offers(monkeypatch, *schemes):
@@ -134,8 +135,10 @@ def test_other_programs_in_polish():
         text = MainWindow._usb_notice(gio_storage.PRESENT, 46, 5)[1]
     finally:
         i18n.setup("en")
-    assert text.endswith("Urządzenie może zajmować inny program (np. Dolphin w\u00a0KDE): "
-                         "zamknij go, a\u00a0potem odłącz kabel i\u00a0podłącz go ponownie.")
+    assert text.endswith("Urządzenie może zajmować usługa MTP w\u00a0KDE: trzyma je także po "
+                         "zamknięciu Dolphina i\u00a0bierze z\u00a0powrotem po ponownym "
+                         "podłączeniu kabla. Zamknij Dolphina i\u00a0uruchom kquitapp6 kiod6, "
+                         "a\u00a0potem odłącz kabel i\u00a0podłącz go ponownie.")
 
 
 def test_the_command_line_after_45_s_names_other_programs_too(plugged):
@@ -200,6 +203,11 @@ def test_the_readme_names_the_same_packages_and_words():
         assert command in NO_MTP_TEXT and f"`{command}`" in section
     assert f"**{NO_MTP_TITLE}**" in section and "**The device is not ready**" in section
     assert "Dolphin" in section and "kiod6" in section
+    # KDE's kmtpd keeps the device after Dolphin is closed and takes it back when it is plugged
+    # in again (kio-extras, 26.10.2026): only quitting kiod6 frees it.
+    flat = " ".join(section.split())  # the words, wherever the lines of the paragraph break
+    assert "`kquitapp6 kiod6`" in flat and "kmtpd from kio-extras" in flat
+    assert "kio-mtp" not in flat and "kquitapp6 kiod6" in HELD
 
 
 # --- both notices fit the narrowest window (360 px) ------------------------------------------------

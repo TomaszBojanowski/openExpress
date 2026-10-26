@@ -1171,11 +1171,16 @@ def mtp_missing() -> bool:
 
 def held_elsewhere_text() -> str:
     """Said once the wait for a device in its normal mode ran out (the window and the command
-    line): another program may hold it over MTP, so that gvfs cannot offer it (KDE's Dolphin
-    held a fēnix 8 through kiod6, #13). Not Nautilus: it reads the device through gvfs."""
-    # TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
-    return _("Another program may be holding the device (e.g. Dolphin in KDE): close it, then "
-             "unplug the cable and plug it back in.")
+    line): another program may hold it over MTP, so that gvfs cannot offer it (#13: KDE's
+    kmtpd, from kio-extras, in the kiod6 process). Once Dolphin has started it, kmtpd keeps
+    every MTP device until it is unplugged or kiod6 quits, and opens one plugged in again at
+    once: plugging the cable in again does not free it, quitting kiod6 does. Not Nautilus: it
+    reads the device through gvfs."""
+    # TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
+    # it; "kquitapp6 kiod6" is a command, not to be translated
+    return _("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
+             "and takes it back when the cable is plugged in again. Close Dolphin and run "
+             "kquitapp6 kiod6, then unplug the cable and plug it back in.")
 
 
 def no_mtp_title() -> str:

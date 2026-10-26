@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 01:42+0100\n"
+"POT-Creation-Date: 2026-10-26 15:55+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2281,11 +2281,11 @@ msgid "Cannot create directory {path}"
 msgstr ""
 
 #: openexpress/device/gio_storage.py:779 openexpress/device/gio_storage.py:836
-#: openexpress/device/gio_storage.py:1500
+#: openexpress/device/gio_storage.py:1511
 msgid "Cannot mount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:801 openexpress/device/gio_storage.py:1487
+#: openexpress/device/gio_storage.py:801 openexpress/device/gio_storage.py:1498
 msgid "The device is not mounted."
 msgstr ""
 
@@ -2344,19 +2344,21 @@ msgid ""
 "has no access to /run/media, where the system mounted it."
 msgstr ""
 
-#. TRANSLATORS: added once the wait for a device on USB ran out: another program may hold it
-#: openexpress/device/gio_storage.py:1177
+#. TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
+#. it; "kquitapp6 kiod6" is a command, not to be translated
+#: openexpress/device/gio_storage.py:1181
 msgid ""
-"Another program may be holding the device (e.g. Dolphin in KDE): close it, "
-"then unplug the cable and plug it back in."
+"KDE's MTP service may be holding the device: it keeps it after Dolphin is "
+"closed and takes it back when the cable is plugged in again. Close Dolphin "
+"and run kquitapp6 kiod6, then unplug the cable and plug it back in."
 msgstr ""
 
 #. TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
-#: openexpress/device/gio_storage.py:1183
+#: openexpress/device/gio_storage.py:1188
 msgid "No MTP support in the system (gvfs-mtp)"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1189
+#: openexpress/device/gio_storage.py:1194
 msgid ""
 "openExpress reads the device over MTP through gvfs, and gvfs on this system "
 "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: "
@@ -2364,53 +2366,53 @@ msgid ""
 "log out and back in, then plug the device in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1198
+#: openexpress/device/gio_storage.py:1203
 msgid ""
 "The device is still starting. Wait until it shows its usual screen, or "
 "unplug it and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1201
+#: openexpress/device/gio_storage.py:1206
 msgid ""
 "The Garmin device is connected, but it does not offer its files. Check its "
 "screen: if it is locked with a PIN or asks something, unlock it or confirm."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1207
+#: openexpress/device/gio_storage.py:1212
 msgid ""
 "No Garmin device (MTP) found. Connect the device with a USB cable and unlock "
 "it if it asks to allow the connection."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1263
+#: openexpress/device/gio_storage.py:1268
 msgid "The device is starting. Try again in a moment."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1273 openexpress/gui/app.py:2185
+#: openexpress/device/gio_storage.py:1284 openexpress/gui/app.py:2185
 #: openexpress/gui/app.py:2192 openexpress/gui/app.py:2207
 msgid "The device is starting…"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1287
+#: openexpress/device/gio_storage.py:1298
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1306
+#: openexpress/device/gio_storage.py:1317
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1478
+#: openexpress/device/gio_storage.py:1489
 #, python-brace-format
 msgid "{action}: the device did not answer in time"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1491
+#: openexpress/device/gio_storage.py:1502
 msgid "Cannot unmount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1511
+#: openexpress/device/gio_storage.py:1522
 msgid "The device was mounted again but its files are not visible."
 msgstr ""
 

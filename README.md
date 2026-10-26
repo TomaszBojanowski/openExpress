@@ -52,11 +52,13 @@ installing it. Without it, the window says **No MTP support in the system (gvfs-
 as a device in its normal mode is plugged in, and the command line says the same. Devices in
 mass storage mode (such as the Varia RTL515) need no MTP: the system mounts them as a drive.
 
-**KDE Plasma and Dolphin:** Dolphin opens MTP devices with KDE's own MTP support (kio-mtp,
-in the `kiod6` process), not through gvfs, and can keep hold of the device: while it does,
-gvfs cannot offer it, and after 45 seconds the window says **The device is not ready**. Close
-Dolphin and any other program that shows the device's files, unplug the cable, plug it back
-in, and open the device in openExpress rather than in Dolphin.
+**KDE Plasma and Dolphin:** Dolphin opens MTP devices through KDE's own MTP service (kmtpd
+from kio-extras, in the `kiod6` process), not through gvfs. Once started, the service keeps
+every MTP device it has opened, also after Dolphin is closed, and takes a device back as soon
+as its cable is plugged in again, so gvfs cannot offer it; after 45 seconds the window says
+**The device is not ready**. To free the device, close Dolphin, run `kquitapp6 kiod6`, then
+unplug the cable and plug it back in. Open the device in openExpress rather than in Dolphin;
+if you open it in Dolphin again, repeat these steps.
 
 ## Contents
 
