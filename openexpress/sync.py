@@ -338,6 +338,9 @@ class UploadReport:
     failed: list[tuple[str, str]] = field(default_factory=list)
     not_confirmed: list[str] = field(default_factory=list)
     tracker_conflict: list[str] = field(default_factory=list)
+    # Refused by every location, each of them one that needs a consent: neither counted nor
+    # marked, tried again by the next sync (as Garmin Express does).
+    not_taken: list[str] = field(default_factory=list)
 
 
 def _label(c: UploadCandidate) -> str:
@@ -449,10 +452,11 @@ def _run_uploads(plan, device, storage, client, state, progress,
             c.data = None
         state.save()
     log.info("uploads: %d uploaded, %d duplicates, %d already in Connect, %d rejected, "
-             "%d failed, %d not confirmed, %d for another tracker",
+             "%d failed, %d not confirmed, %d for another tracker, %d not taken by a "
+             "location that needs a consent",
              len(report.uploaded), len(report.duplicates), len(report.already_in_connect),
              len(report.rejected), len(report.failed), len(report.not_confirmed),
-             len(report.tracker_conflict))
+             len(report.tracker_conflict), len(report.not_taken))
     for label, error in report.failed:
         log.warning("upload of %s failed: %s", log_label(label), log_error(label, error))
     return report
@@ -464,6 +468,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
     ok = True
     error = ""
     outcome = "uploaded"
+    taken = False  # a location answered for good (not one that needs a consent refusing it)
     for loc in c.locations:
         try:
             res = client.upload_file(
@@ -509,6 +514,15 @@ def _upload_one(c, data, label, last, client, state, report, progress,
         else:
             ok, error = False, f"HTTP {res.status}"
             break
+        taken = True
+    if ok and not taken:
+        # No location took it: tried again from the device by the next sync, not told as an
+        # error. No copy is kept for it (the consent may never come); files of a type that
+        # must arrive in order wait with it.
+        report.not_taken.append(label)
+        if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
+            stop_types.add(c.datatype)
+        return
     if ok:
         if c.multi:
             state.mark_completed(c.datatype, c.name)

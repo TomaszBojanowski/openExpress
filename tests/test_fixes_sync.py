@@ -91,15 +91,19 @@ def _consent_cfg():
         {"url": MON, "requiresauthentication": True, "requiresuserconsent": True}]}]}
 
 
-@pytest.mark.parametrize("status,done", [(403, True), (404, True), (500, False),
-                                         (503, False), (429, False), (408, False)])
-def test_consent_location_status_handling(device_root, tmp_path, status, done):
+@pytest.mark.parametrize("status,refused", [(403, True), (404, True), (500, False),
+                                            (503, False), (429, False), (408, False)])
+def test_consent_location_status_handling(device_root, tmp_path, status, refused):
+    """A location that needs a consent refusing the file (403, 404) is no error, and the
+    file is not marked either (analysis 19, point 13): the next sync tries again from the
+    device, as Garmin Express does; no copy is kept. Other answers fail as before."""
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, _consent_cfg(), state)
     rep = sync.run_uploads(plan, dev, st, SyncClient(statuses={MON: status}), state)
-    assert state.is_completed("FIT_TYPE_32", "M1.FIT") is done
-    assert bool(rep.failed) is not done
-    assert bool(state.pending_files("FIT_TYPE_32")) is not done
+    assert not state.is_completed("FIT_TYPE_32", "M1.FIT")
+    assert bool(rep.failed) is not refused
+    assert rep.not_taken == (["FIT_TYPE_32/M1.FIT"] if refused else [])
+    assert bool(state.pending_files("FIT_TYPE_32")) is not refused
 
 
 class RaisingClient(SyncClient):

@@ -286,3 +286,32 @@ def test_trueup_flow(device_root, tmp_path):
     assert waits == [20] and c.acks == [1, 2]
     assert res.written.startswith("GARMIN/NewFiles/")
     assert (device_root / res.written).read_bytes() == b"TRUEUP"
+
+
+# --- a location that needs a consent refuses the file (analysis 19, point 13) ----------------
+# As Garmin Express: a file every location of which refused it, each one a location that
+# needs a consent, is neither counted as uploaded nor marked; the next sync tries again. A
+# file another location took is uploaded, as before.
+
+OPTIONAL = {"unittypename": "test", "datatypes": [
+    {"datatypename": "FIT_TYPE_2", "uploadlocations": [
+        {"url": "https://up.example/optional", "requiresauthentication": True,
+         "requiresuserconsent": True}]},
+    {"datatypename": "FIT_TYPE_32", "uploadlocations": [
+        {"url": "https://up.example/monitor", "requiresauthentication": True},
+        {"url": "https://up.example/optional", "requiresauthentication": True,
+         "requiresuserconsent": True}]},
+]}
+
+
+def test_a_file_only_an_optional_location_refused_is_not_counted_nor_marked(device_root,
+                                                                            tmp_path):
+    st, dev, state = _setup(device_root, tmp_path)
+    plan = sync.plan_uploads(dev, st, OPTIONAL, state)
+    client = SyncClient(statuses={"https://up.example/optional": 404})
+    rep = sync.run_uploads(plan, dev, st, client, state)
+    assert "FIT_TYPE_2/Settings.fit" not in rep.uploaded and rep.failed == []
+    assert rep.not_taken == ["FIT_TYPE_2/Settings.fit"]
+    assert "FIT_TYPE_32/M1.FIT" in rep.uploaded  # the other location took it
+    again = sync.plan_uploads(dev, st, OPTIONAL, sync.SyncState(dev.unit_id, tmp_path / "state"))
+    assert [(c.datatype, c.name) for c in again.candidates] == [("FIT_TYPE_2", "Settings.fit")]
