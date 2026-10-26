@@ -105,6 +105,22 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.4" date="2026-10-26">
+      <description>
+        <ul>
+          <li>USB-drive devices (e.g. Forerunner 55, Varia) appear on the start page on their
+          own, also when another device is open or the drive shows up late (KDE); no refresh
+          needed. (#19)</li>
+          <li>A remembered device no longer gets a second tile while its drive is not mounted.
+          (#19)</li>
+          <li>On KDE, the hint about another program holding the device now also appears in the
+          CLI, and the text now points to kquitapp6 kiod6 (kmtpd from kio-extras keeps MTP
+          devices open). (#13)</li>
+          <li>Badges look the same everywhere; grey badges are easier to read.</li>
+          <li>Logs mask device IDs also in hexadecimal form.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.3" date="2026-10-26">
       <description>
         <ul>
