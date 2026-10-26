@@ -105,6 +105,25 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.3" date="2026-10-26">
+      <description>
+        <ul>
+          <li>"openexpress sync" now runs the same sync as the window: the same steps, errors
+          and log lines. A file written to the device but not confirmed by Garmin Connect is
+          reported as an error (exit code 1), and the "another device is your active tracker"
+          and "not accepted by the device" cases are shown in the CLI too.</li>
+          <li>"sync --apply" prints progress and ends with the result as a sentence; the plan is
+          shown by the dry run, as before.</li>
+          <li>Fixed: a first sync interrupted after uploading could ask about the first sync
+          again next time.</li>
+          <li>"Attach the last log" now tells you to paste the log into the form's new "Log"
+          field, where pasting works. "report --log" prints the log ready for that field.</li>
+          <li>The log keeps a traceback only for unexpected errors; expected situations such as
+          "no device connected" take one line.</li>
+          <li>The Instinct 3 Tactical joins the list of supported devices (#21).</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.2" date="2026-10-26">
       <description>
         <ul>
