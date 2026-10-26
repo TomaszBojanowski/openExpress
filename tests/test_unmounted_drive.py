@@ -74,8 +74,8 @@ def _monitor(monkeypatch, mounts=(), volumes=()):
 
 
 def _unmounted(drives, monkeypatch, sectors=7_800_000, vendor="091e", serial=DRIVE_SERIAL,
-               uuid=None):
-    unix = usb_drive(drives, vendor=vendor, product=FR55, serial=serial)
+               uuid=None, product=FR55):
+    unix = usb_drive(drives, vendor=vendor, product=product, serial=serial)
     _sized(drives, unix, sectors)
     folder = drive_folder(drives)
     volume = UnmountedVolume(unix, folder, uuid=uuid)
@@ -816,6 +816,123 @@ def test_a_session_hides_them_also_when_they_were_not_read_for_a_list():
     from openexpress import applog
     from openexpress.device.xmldevice import parse
 
-    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12, serial=DRIVE_ID_SERIAL, volume_uuid=DRIVE_ID_UUID)
+    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12, serial=DRIVE_ID_SERIAL,
+                                volume_uuid=DRIVE_ID_UUID)
     applog.hide_device(parse(DEVICE_XML.encode()), usb)
     assert applog.redact(f"{DRIVE_ID_SERIAL} {DRIVE_ID_UUID.lower()}") == "<serial> <volume>"
+
+
+# --- which remembered device a drive not mounted is (analysis 18) ------------------------------
+#
+# 1. its USB serial is the unit ID of a remembered device in hexadecimal; 2. the USB serial
+# kept with one; 2b. the UUID of its volume kept with one; 3. the one remembered drive with its
+# USB product, unless the serial or the UUID kept with it is another. No rule "the same model".
+
+WIFE = 3003377320   # a Forerunner 55 (#19: the reporter's wife's); b303e6a8 in hexadecimal
+OTHER = 3003377337  # another Forerunner 55
+VARIA_A, VARIA_B = 3000000101, 3000000102  # two Varias of one USB product
+UUID_A, UUID_B, UUID_C = "1A2B-3C4D", "5E6F-7A8B", "9C0D-1E2F"
+
+
+def _drive_tiles():
+    """The tiles of the start page with the one drive found, not mounted."""
+    from openexpress import devicelist, known_devices
+
+    (found,) = gio_storage.find_ums_devices()
+    return [(t.description, t.software_version, t.connected)
+            for t in devicelist.tiles([gio_storage.probe(found)], known_devices.load(), None,
+                                      False)]
+
+
+def _entry_of_0_6_20(unit):
+    """devices.json as the window of 0.6.20 wrote it (#19): no USB product, no tile facts."""
+    import json
+
+    from openexpress import known_devices
+
+    known_devices.path().parent.mkdir(parents=True, exist_ok=True)
+    known_devices.path().write_text(json.dumps({"version": 1, "devices": {str(unit): {
+        "description": "Forerunner 55", "part_number": "006-B3869-00",
+        "software_version": "11.03", "kind": "ums", "first_seen": 1761400000.0,
+        "last_seen": 1761400000.0}}}))
+    assert known_devices.load()[unit].usb_product is None
+
+
+@pytest.mark.parametrize("serial", [f"{WIFE:012x}", f"{WIFE:012X}"])
+def test_an_entry_of_0_6_20_is_known_by_the_usb_serial(drives, monkeypatch, serial):
+    """#19, 0.7.3: the tile of the remembered Forerunner 55 and that of the drive not mounted
+    were two, until it was mounted. Its entry, of 0.6.20, has no USB product."""
+    _entry_of_0_6_20(WIFE)
+    _unmounted(drives, monkeypatch, serial=serial)
+    assert _drive_tiles() == [("Forerunner 55", "11.03", True)]
+
+
+def test_a_device_remembered_over_mtp_is_known_by_its_usb_serial_as_a_drive(drives, monkeypatch):
+    """A watch whose USB mode was switched to mass storage: the very same device."""
+    from openexpress import devicelist, known_devices
+
+    known_devices.remember(WIFE, "fēnix", "006-B0000-00", "1.00", "mtp")
+    _unmounted(drives, monkeypatch, serial=f"{WIFE:012x}")
+    (found,) = gio_storage.find_ums_devices()
+    (tile,) = devicelist.tiles([gio_storage.probe(found)], known_devices.load(), None, False)
+    assert (tile.description, tile.connected, tile.kind) == ("fēnix", True, "ums")
+
+
+def test_the_kept_serial_tells_which_of_two_remembered_drives_it_is(drives, monkeypatch):
+    from openexpress import known_devices
+
+    for unit, version, serial in ((WIFE, "11.03", "7ZQ1W1FE0001"),
+                                  (OTHER, "11.04", "7ZQ1W1FE0002")):
+        known_devices.remember(unit, "Forerunner 55", "006-B3869-00", version, "ums",
+                               usb_product=FR55, usb_serial=serial)
+    _unmounted(drives, monkeypatch, serial="7zq1w1fe0002")  # any letter case
+    assert _drive_tiles() == [("Forerunner 55", "11.04", True), ("Forerunner 55", "11.03", False)]
+
+
+def test_the_kept_uuid_tells_a_drive_without_a_usb_serial(drives, monkeypatch):
+    """A Varia Rearview Radar gives no USB serial (26.10.2026); its volume has a UUID."""
+    from openexpress import known_devices
+
+    for unit, version, uuid in ((VARIA_A, "3.36", UUID_A), (VARIA_B, "3.37", UUID_B)):
+        known_devices.remember(unit, "Varia RTL515", "006-B3592-03", version, "ums",
+                               usb_product="20ee", volume_uuid=uuid)
+    _unmounted(drives, monkeypatch, serial=None, uuid=UUID_B.lower(), product="20ee")
+    assert _drive_tiles() == [("Varia RTL515", "3.37", True), ("Varia RTL515", "3.36", False)]
+
+
+def test_two_varias_of_one_usb_product_with_other_uuids_are_two_tiles(drives, monkeypatch):
+    """The one Varia remembered is not the one plugged in: its volume is another."""
+    from openexpress import known_devices
+
+    known_devices.remember(VARIA_A, "Varia RTL515", "006-B3592-03", "3.36", "ums",
+                           usb_product="20ee", volume_uuid=UUID_A)
+    _unmounted(drives, monkeypatch, serial=None, uuid=UUID_C, product="20ee")
+    assert _drive_tiles() == [("", "", True), ("Varia RTL515", "3.36", False)]
+
+
+def test_another_forerunner_55_is_not_taken_for_the_remembered_one(drives, monkeypatch):
+    """The one remembered kept its USB serial: the one plugged in, with another, is another
+    watch of the same model. Its tile says nothing of the remembered one."""
+    from openexpress import devicelist, known_devices
+    from openexpress.gui import start
+
+    known_devices.remember(WIFE, "Forerunner 55", "006-B3869-00", "11.03", "ums",
+                           usb_product=FR55, usb_serial="7ZQ1W1FE0001")
+    _unmounted(drives, monkeypatch, serial="7ZQ1W1FE0002")
+    assert _drive_tiles() == [("", "", True), ("Forerunner 55", "11.03", False)]
+    (found,) = gio_storage.find_ums_devices()
+    tile = devicelist.tiles([gio_storage.probe(found)], known_devices.load(), None, False)[0]
+    assert [words for words, _s, _t in start.chips(tile)] == ["USB drive"]
+
+
+@pytest.mark.parametrize(("serial", "uuid"), [(None, None), ("7ZQ1W1FE0009", UUID_C)])
+def test_with_nothing_kept_to_say_otherwise_the_usb_product_tells_it(drives, monkeypatch,
+                                                                     serial, uuid):
+    """Rule 3: the one remembered drive with its USB product, which kept neither a serial nor
+    a UUID (opened by 0.7.1 to 0.7.3), whatever the drive gives."""
+    from openexpress import known_devices
+
+    known_devices.remember(WIFE, "Forerunner 55", "006-B3869-00", "11.03", "ums",
+                           usb_product=FR55)
+    _unmounted(drives, monkeypatch, serial=serial, uuid=uuid)
+    assert _drive_tiles() == [("Forerunner 55", "11.03", True)]

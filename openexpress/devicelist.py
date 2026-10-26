@@ -130,8 +130,8 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     for s in distinct_devices(list(connected)):
         unit_id = s.unit_id if s.ok else None
         if unit_id is None:
-            # A drive not mounted, nothing of it read: remembered by its USB product.
-            unit_id = _drive_by_product(s, remembered)
+            # A drive not mounted, nothing of it read: which remembered device it is.
+            unit_id = _remembered_drive(s, remembered)
         known = remembered.get(unit_id) if unit_id is not None else None
         entry = on_account.get(unit_id) if unit_id is not None else None
         if unit_id is not None:
@@ -161,15 +161,50 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
     return result
 
 
-def _drive_by_product(summary, remembered) -> int | None:
-    """The unit ID of the one remembered drive with the USB product of this connected drive
-    that could not be read (not mounted, analysis 15); None when none or several have it."""
+def _remembered_drive(summary, remembered) -> int | None:
+    """The unit ID of the remembered device that this connected drive is, when nothing of it
+    could be read (not mounted, analysis 18); None when that is not known. In this order:
+    1. its USB serial is the unit ID of a remembered device in hexadecimal (a fēnix 8's is,
+       26.10.2026), also one that an older version remembered without its USB product;
+    2. the USB serial kept with one remembered device; 2b. the UUID of its volume kept with
+       one (a Varia Rearview Radar gives no USB serial);
+    3. the one remembered drive with its USB product, unless the serial or the UUID kept
+       with that one is another: then it is another device of the same model.
+    No rule "the same model": without mounting, the model is only the USB product."""
     found, usb = summary.found, summary.found.usb
-    if found.kind != "ums" or usb is None or not usb.product:
+    if found.kind != "ums" or usb is None:
         return None
-    matches = [k.unit_id for k in remembered.values()
-               if k.kind == "ums" and k.usb_product == usb.product.lower()]
-    return matches[0] if len(matches) == 1 else None
+    serial = (usb.serial or "").casefold()
+    uuid = (usb.volume_uuid or "").casefold()
+    if serial:
+        try:
+            unit_id = int(serial, 16)
+        except ValueError:
+            unit_id = None
+        if unit_id in remembered:
+            log.debug("start page: a drive not read is remembered by its USB serial")
+            return unit_id
+    for kept, value, what in (("usb_serial", serial, "the USB serial kept with it"),
+                              ("volume_uuid", uuid, "the UUID of its volume")):
+        if value:
+            matches = [k.unit_id for k in remembered.values()
+                       if (getattr(k, kept) or "").casefold() == value]
+            if len(matches) == 1:
+                log.debug("start page: a drive not read is remembered by %s", what)
+                return matches[0]
+    if not usb.product:
+        return None
+    same = [k for k in remembered.values()
+            if k.kind == "ums" and k.usb_product == usb.product.lower()]
+    if len(same) != 1:
+        return None
+    other = same[0]
+    if ((serial and other.usb_serial and other.usb_serial.casefold() != serial)
+            or (uuid and other.volume_uuid and other.volume_uuid.casefold() != uuid)):
+        log.debug("start page: a drive not read has the USB product of a remembered one, "
+                  "but not its USB serial or volume: another device")
+        return None
+    return other.unit_id
 
 
 def _tile(description: str, part_number: str, version: str, kind: str | None,
