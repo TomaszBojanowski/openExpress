@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 20:49+0100\n"
+"POT-Creation-Date: 2026-10-26 20:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -592,9 +592,9 @@ msgstr ""
 msgid "Warning: {path} not found; map downloads will not work"
 msgstr ""
 
-#: openexpress/cli.py:151
+#: openexpress/cli.py:152
 #, python-brace-format
-msgid "Saved OAuth1 consumer key ({key}…) in {path}"
+msgid "Saved OAuth1 consumer key in {path}"
 msgstr ""
 
 #: openexpress/cli.py:161

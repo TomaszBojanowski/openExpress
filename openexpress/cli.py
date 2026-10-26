@@ -148,8 +148,8 @@ def cmd_setup(args) -> int:
                   file=sys.stderr)
     if consumer and (args.from_dll or args.key or args.utilities_dll):
         save_consumer(consumer)
-        print(_("Saved OAuth1 consumer key ({key}…) in {path}").format(
-            key=consumer.key[:8], path=paths.config_dir()))
+        # No part of the key is printed: it comes from the user's own installer.
+        print(_("Saved OAuth1 consumer key in {path}").format(path=paths.config_dir()))
     if args.environment:
         settings.environment = args.environment
     if args.locale:
