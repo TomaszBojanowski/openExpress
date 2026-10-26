@@ -251,3 +251,34 @@ def step_words(lines):
     from openexpress import service
 
     return [text for text, _warning in service.describe_steps(lines)]
+
+
+# --- the window's own methods on a stand-in ------------------------------------------------
+
+
+def window_methods(win, names):
+    """Binds these methods of MainWindow to the stand-in window `win` and returns it. Each is
+    looked up along MainWindow's whole MRO, as the window finds it: in app.py or in one of the
+    mixins (maps_page, music_page…), so a method moved to a mixin stays in the stand-in. A
+    name that no class of openExpress defines (renamed, removed, or only GTK's) fails at once
+    with that name, instead of a stand-in short of a method."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    missing = []
+    for name in names:
+        owner = next((cls for cls in MainWindow.__mro__ if name in vars(cls)), None)
+        if owner is None or not owner.__module__.startswith("openexpress."):
+            missing.append(name)
+            continue
+        member = vars(owner)[name]
+        if isinstance(member, staticmethod):
+            setattr(win, name, member.__func__)
+        elif isinstance(member, classmethod):
+            setattr(win, name, types.MethodType(member.__func__, MainWindow))
+        else:
+            setattr(win, name, types.MethodType(member, win))
+    assert not missing, ("MainWindow has no method " + ", ".join(missing)
+                         + " (renamed or removed?): change the stand-in to what the window has")
+    return win

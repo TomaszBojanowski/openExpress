@@ -113,3 +113,47 @@ def test_the_button_spins_during_the_work_and_is_back_before_done(fails):
 
     RunNow()("Installing…", work, after, after, button=button)
     assert seen == [("work", False, None), ("after", True, "Install")]
+
+
+# --- window_methods: the window's methods on a stand-in, wherever the window has them -----------
+
+def test_a_stand_in_gets_the_methods_of_the_mixins_too():
+    """Before the split of app.py: a method moved to a mixin stays in the stand-in."""
+    import types
+
+    from fakes import window_methods
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.maps_page import MapsPage
+
+    win = window_methods(types.SimpleNamespace(), ["show_maps", "_load", "_own_map_subtitle",
+                                                   "in_background"])
+    assert win.show_maps.__func__ is vars(MapsPage)["show_maps"]
+    assert win.show_maps.__self__ is win and win._load.__func__ is vars(MainWindow)["_load"]
+    # Static methods stay unbound, as on the window.
+    assert win._own_map_subtitle is vars(MapsPage)["_own_map_subtitle"].__func__
+    assert win.in_background is vars(MainWindow)["in_background"].__func__
+
+
+@pytest.mark.parametrize("name", ["_no_such_method", "present"])  # unknown; only GTK's
+def test_a_name_the_window_does_not_have_fails_with_that_name(name):
+    import types
+
+    from fakes import window_methods
+
+    with pytest.raises(AssertionError, match=f"MainWindow has no method {name} "):
+        window_methods(types.SimpleNamespace(), ["_load", name])
+
+
+def test_no_stand_in_picks_methods_from_the_window_class_alone():
+    """vars(MainWindow) (or its __dict__) has only what app.py defines: a method moved to a
+    mixin would leave such a stand-in without a word. window_methods walks the MRO."""
+    import re
+    from pathlib import Path
+
+    own = re.compile(r"vars\((?:app\.)?MainWindow\)|MainWindow\.__dict__")
+    here = Path(__file__).resolve()
+    found = [f"{path.name}:{number}" for path in sorted(here.parent.glob("*.py")) if path != here
+             for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+             if own.search(line)]
+    assert found == [], f"stand-ins built from MainWindow's own class: {found}"

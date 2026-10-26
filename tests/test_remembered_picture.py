@@ -7,6 +7,7 @@ import time
 import types
 
 import pytest
+from fakes import window_methods
 
 from openexpress.known_devices import KnownDevice
 
@@ -27,10 +28,17 @@ def _texture():
     return Gdk.MemoryTexture.new(2, 2, Gdk.MemoryFormat.R8G8B8A8, GLib.Bytes.new(bytes(16)), 8)
 
 
+# The view of a remembered device and its pictures (once picked by name: "picture",
+# "remembered"), found along the whole MRO (fakes.window_methods).
+REMEMBERED_METHODS = ("_show_remembered", "_show_account", "_fill_account", "_last_sync_text",
+                      "_fill_remembered", "_load_tile_pictures", "_on_remembered_page",
+                      "_redraw_remembered", "_refresh_remembered", "_refresh_remembered_texts",
+                      "_show_device_picture", "_show_page_picture", "_tile_picture_done")
+
+
 def _window(textures=None):
     """The parts of the window that open the view, with the real view in it; background work
     runs at once."""
-    from openexpress.gui.app import MainWindow
     from openexpress.gui.start import RememberedPage
 
     pushed = []
@@ -39,12 +47,7 @@ def _window(textures=None):
         pushed=pushed, _device_textures=dict(textures or {}), _pictures_asked=set(),
         _account=None, _on_start_page=lambda: True,
         in_background=lambda fn, on_done, on_error=None: on_done(fn()))
-    for name, member in vars(MainWindow).items():
-        if callable(member) and (name in ("_show_remembered", "_show_account", "_fill_account",
-                                          "_last_sync_text")
-                                 or "picture" in name or "remembered" in name):
-            setattr(win, name, types.MethodType(member, win))
-    return win
+    return window_methods(win, REMEMBERED_METHODS)
 
 
 # The arrow of the row "Last sync" (an expander row since 25.10.2026): not the device's image.

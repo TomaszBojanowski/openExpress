@@ -7,6 +7,7 @@ import time
 import types
 
 import pytest
+from fakes import window_methods
 from test_upload_consent import QUEUED, Account
 
 from openexpress import service
@@ -102,13 +103,20 @@ class _Shown:
         pass
 
 
+# The window's progress and waits and the methods they call (once picked by name: "wait",
+# "_show_", "indicator"), found along the whole MRO (fakes.window_methods).
+PROGRESS_METHODS = ("progress", "fraction", "set_busy", "_show_account", "_show_bar",
+                    "_show_device_picture", "_show_device_view", "_show_fraction",
+                    "_show_installed", "_show_last_sync", "_show_page_picture",
+                    "_show_primary_training", "_show_progress", "_show_remembered",
+                    "_show_start", "_show_tiles", "_stop_waiting", "_waiting_note")
+
+
 @pytest.fixture
 def window(monkeypatch):
     """The progress part of the window with stand-in widgets; GLib's timers are kept in
     `window.timers` (id -> (interval in ms, function)) and run only when a test calls them."""
     from gi.repository import GLib
-
-    from openexpress.gui.app import MainWindow
 
     timers = {}
     ids = itertools.count(100)
@@ -125,12 +133,7 @@ def window(monkeypatch):
         session=None, busy=True, action_bar=_Shown(), progress_label=_Label(),
         progress_bar=_Bar(), unplug_label=_Shown(), banner=_Shown(), _action_buttons=[],
         _update_actions=lambda: None, _waiting=0, timers=timers, busy_spinner=_Shown())
-    for name, member in vars(MainWindow).items():
-        if callable(member) and (name in ("progress", "fraction", "set_busy")
-                                 or "wait" in name or name.startswith("_show_")
-                                 or "indicator" in name):
-            setattr(win, name, types.MethodType(member, win))
-    return win
+    return window_methods(win, PROGRESS_METHODS)
 
 
 def _tick(win):
