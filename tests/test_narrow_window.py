@@ -251,6 +251,7 @@ def narrow_window(monkeypatch):
         i18n.setup(language)
         for name, value in changed.items():
             settings.set_property(name, value)
+        _program_style()
         win = MainWindow(None)
         windows.append(win)
         win.set_default_size(400, 800)
@@ -269,6 +270,22 @@ def narrow_window(monkeypatch):
         for name in changed:
             settings.reset_property(name)
         i18n.setup("en")
+
+
+_styled: set = set()  # the displays that have the program's own style
+
+
+def _program_style() -> None:
+    """The program's own style (start.CSS: the chips, the tiles), as the application loads it
+    before its window (App): measured without it, a chip had no padding (26.10.2026)."""
+    from gi.repository import Gdk
+
+    from openexpress.gui import start
+
+    display = Gdk.Display.get_default()
+    if display not in _styled:
+        _styled.add(display)
+        start.load_css(display)
 
 
 def _min_width(widget) -> int:
@@ -320,7 +337,9 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
     assert win.device_view.get_width() <= NARROWEST
     assert _min_width(win.device_view) <= NARROWEST
     natural = win.update_chip.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
-    assert win.update_chip.get_width() >= natural
+    # The whole chip, its padding too (get_width() is the width inside the padding).
+    ok, bounds = win.update_chip.compute_bounds(win)
+    assert ok and bounds.get_width() >= natural
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

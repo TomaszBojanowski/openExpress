@@ -62,7 +62,9 @@ SUBTITLE_LINES = 2
 # 1px edge around the tile of a connected device; the accent only under the pointer or with
 # the keyboard focus. The edge is an outline drawn inside the tile: neither its size nor the
 # layout changes. A row that wraps with a libadwaita older than 1.7 (app.wrapping_row): no
-# room around each of its widgets, as in a box.
+# room around each of its widgets, as in a box. Every chip of the window (the tiles, the rows
+# of the list view, the update on the device page) has the class oe-chip and its one shape:
+# font, padding, rounding; its style (accent, warning, dimmed) gives only its colours.
 CSS = """
 flowboxchild.oe-tile.connected {
   outline: 1px solid alpha(currentColor, 0.15);
@@ -77,7 +79,7 @@ flowbox.oe-wrap > flowboxchild {
   padding: 0;
 }
 label.oe-chip {
-  padding: 1px 8px;
+  padding: 1px 10px;
   border-radius: 999px;
   font-size: 0.82em;
   font-weight: 600;
@@ -91,8 +93,11 @@ label.oe-chip.warning {
   background-color: alpha(@warning_bg_color, 0.22);
 }
 label.oe-chip.dimmed {
-  color: alpha(currentColor, 0.75);
-  background-color: alpha(currentColor, 0.09);
+  /* libadwaita 1.7 dims every widget of the class "dimmed" (opacity 0.55): a grey chip has
+     its colours from here only, else it is fainter than the line under it (26.10.2026). */
+  opacity: 1;
+  color: alpha(currentColor, 0.8);
+  background-color: alpha(currentColor, 0.12);
 }
 """
 
