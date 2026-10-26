@@ -515,6 +515,11 @@ def cmd_sync(args) -> int:
             file=sys.stderr,
         )
         return FIRST_SYNC_CHOICE
+    except Exception as e:
+        done = service.done_before(e)
+        if done is not None:  # stopped after its uploads: what they did, then the error
+            _print_sync_steps(done, dev.unit_id)
+        raise
     return _print_sync_result(summary, dev.unit_id)
 
 
@@ -548,10 +553,9 @@ def _print_sync_plan(plan) -> None:
             print(f"  {it.datatype:22} {it.message_name or it.message_id} -> {target}{note}")
 
 
-def _print_sync_result(summary, unit_id: int) -> int:
-    """What `sync --apply` did: its steps in the words of the details under "Last sync",
-    its errors, then the numbers of the row as a sentence. 1 with errors, as the window
-    says "Sync finished with errors"."""
+def _print_sync_steps(summary, unit_id: int):
+    """The steps of a sync in the words of the details under "Last sync", its errors and
+    the uploads Connect did not confirm. Its words (last_sync.Told)."""
     from openexpress import last_sync
 
     told = last_sync.describe(summary.record(unit_id))
@@ -561,6 +565,14 @@ def _print_sync_result(summary, unit_id: int) -> int:
         item=label) for label in summary.not_confirmed]
     if said:
         print("\n" + "\n".join(said))
+    return told
+
+
+def _print_sync_result(summary, unit_id: int) -> int:
+    """What `sync --apply` did: its steps in the words of the details under "Last sync",
+    its errors, then the numbers of the row as a sentence. 1 with errors, as the window
+    says "Sync finished with errors"."""
+    told = _print_sync_steps(summary, unit_id)
     print("\n" + told.sentence)
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",

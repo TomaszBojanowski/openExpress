@@ -291,3 +291,45 @@ def test_the_numbers_after_a_sync_are_a_sentence_of_their_own(
     assert first[-3:] == [numbers, "", done]
     assert second[-3:] == [nothing, "", done]
     assert shown == row
+
+
+def test_what_was_uploaded_is_told_when_the_sync_stops_after_it(device_root, xdg,
+                                                                monkeypatch, capsys):
+    """`sync --apply` stopped by an error after its uploads (here Garmin Connect's queue
+    cannot be read): what the uploads did is printed before the error, their steps, the
+    files that failed and those Connect did not confirm; not the numbers nor "Done"."""
+    import requests
+
+    from openexpress.connect import UploadResult
+
+    account = SyncAccount(statuses={MONITORING_URL: 500}, verified_unit_id=None)
+    sent = account.upload_file
+
+    def upload_file(url, data, **kw):
+        if url == ACTIVITY_URL:  # taken, its processing not confirmed
+            sent(url, data, **kw)
+            return UploadResult(201, {}, "https://up.example/activity-service/1", 0)
+        return sent(url, data, **kw)
+
+    def offline(unit_id):
+        raise requests.ConnectionError("offline")
+
+    account.upload_file, account.device_messages = upload_file, offline
+    account.poll_location = lambda url, delay: 202
+    state = sync.SyncState(UNIT)
+    state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")
+    state.save()
+    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
+    try:
+        assert cli.main(["--path", str(device_root), "sync", "--apply"]) == 1
+    finally:
+        applog.close()
+    said = capsys.readouterr()
+    out = said.out.splitlines()
+    assert out[-5:] == [
+        "",
+        "Files from the device: activities, monitoring",
+        "1 file could not be uploaded",
+        "  ERROR FIT_TYPE_32/M1.FIT: HTTP 500",
+        "  Warning: Connect did not confirm processing of FIT_TYPE_4/2026-10-02-10-00-00.fit"]
+    assert said.err.splitlines()[-1].startswith("Network error: ")

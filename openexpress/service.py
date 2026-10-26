@@ -979,8 +979,18 @@ def apply_sync(s: DeviceSession, plan: SyncPlan,
         state.save()
     # No new file on the device: the row says it ("nothing to upload"), no line of its own.
     if options.downloads:
-        _apply_queue(s, plan_queue(s, progress), state, progress, out)
+        try:
+            _apply_queue(s, plan_queue(s, progress), state, progress, out)
+        except Exception as e:
+            e.sync_done_before = out  # what was done before it stopped (done_before)
+            raise
     return out
+
+
+def done_before(error: BaseException) -> SyncSummary | None:
+    """What a sync did before `error` stopped it after its uploads (Garmin Connect's queue,
+    a download): the command line tells it with the error. None when it stopped before."""
+    return getattr(error, "sync_done_before", None)
 
 
 def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None:
