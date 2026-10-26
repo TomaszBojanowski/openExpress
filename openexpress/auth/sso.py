@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from openexpress import applog, i18n, paths
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 from openexpress.settings import SSO_CLIENT_ID, Settings
 
@@ -43,7 +44,7 @@ class ServiceTicket:
     service: str
 
 
-class LoginCancelled(Exception):
+class LoginCancelled(UserFacingError):
     pass
 
 

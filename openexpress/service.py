@@ -26,6 +26,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
+from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, ngettext
 from openexpress.progress import Waiting
 from openexpress.settings import Settings, SetupError, load_consumer
@@ -102,7 +103,7 @@ def forget_unit_info(session) -> None:
         session.unit_info_answer = None
 
 
-class MassStorageMode(Exception):
+class MassStorageMode(UserFacingError):
     """What is refused for a Garmin device in mass storage mode."""
 
 
@@ -367,7 +368,7 @@ class PrimaryTraining:
     capable: bool | None  # whether the connected device can be one; None when unknown
 
 
-class PrimaryTrainingError(Exception):
+class PrimaryTrainingError(UserFacingError):
     """The primary training device cannot be changed to the connected device."""
 
 
@@ -794,7 +795,7 @@ def describe_steps(lines) -> list[tuple[str, bool]]:
     return [said for line in lines or [] for said in _describe_step(line)]
 
 
-class SyncBusy(Exception):
+class SyncBusy(UserFacingError):
     pass
 
 
@@ -1162,5 +1163,5 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     return []  # nothing to write, or not supported: in the log only (trueup.run)
 
 
-class FirstSyncChoiceNeeded(Exception):
+class FirstSyncChoiceNeeded(UserFacingError):
     """First sync: either 'baseline' or 'all' must be chosen."""

@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from openexpress import i18n, paths
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ UPLOAD_CONFIG_CLIENT_ID = "express-windows"
 _OLD_LOCALE_KEY = "locale"
 
 
-class SetupError(Exception):
+class SetupError(UserFacingError):
     pass
 
 

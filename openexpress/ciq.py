@@ -31,6 +31,7 @@ from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
 from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
+from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, caption, ngettext
 
 log = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ CONFIG_DATATYPE = "IQAppsConfiguration"
 SETTINGS_DATATYPE = "IQAppsSettingsFile"
 
 
-class CiqError(Exception):
+class CiqError(UserFacingError):
     pass
 
 

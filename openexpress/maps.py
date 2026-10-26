@@ -27,6 +27,7 @@ from pathlib import Path
 from openexpress import applog, cache, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ UNLOCK_TRIES = 6
 UNLOCK_PAUSE_S = 5
 
 
-class MapError(Exception):
+class MapError(UserFacingError):
     pass
 
 

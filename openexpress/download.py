@@ -16,6 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import requests
 
 from openexpress import __version__, applog, netstatus
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ log = logging.getLogger(__name__)
 CHUNK = 1024 * 1024
 
 
-class DownloadError(Exception):
+class DownloadError(UserFacingError):
     def __init__(self, message: str, status: int | None = None):
         super().__init__(message)
         self.status = status

@@ -19,12 +19,13 @@ from pathlib import Path
 from openexpress import known_devices, paths, service
 from openexpress.backup import PARTIAL_PREFIX, is_backup_dir
 from openexpress.ciq import APP_LIST_COPY_PREFIX
+from openexpress.errors import UserFacingError
 from openexpress.i18n import ngettext
 
 log = logging.getLogger(__name__)
 
 
-class PendingFiles(Exception):
+class PendingFiles(UserFacingError):
     """Files of the device whose upload failed are kept to be sent at its next sync:
     forgetting it would lose them."""
 

@@ -18,12 +18,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
 
 
-class DeviceError(Exception):
+class DeviceError(UserFacingError):
     pass
 
 

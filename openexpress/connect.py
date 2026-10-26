@@ -19,6 +19,7 @@ import requests
 from openexpress import __version__, applog, netstatus
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 from openexpress.settings import UPLOAD_CONFIG_CLIENT_ID, Consumer, Settings
 
@@ -34,7 +35,7 @@ def _hosts(client) -> dict[str, str]:
     return settings.hosts if settings is not None else {}
 
 
-class ApiError(Exception):
+class ApiError(UserFacingError):
     def __init__(self, message: str, status: int | None = None, body: str = ""):
         super().__init__(message)
         self.status = status
@@ -49,7 +50,7 @@ class ClockSkew(ApiError):
     pass
 
 
-class OwnershipError(Exception):
+class OwnershipError(UserFacingError):
     """The connected watch could not be confirmed as a device of the logged-in account."""
 
 

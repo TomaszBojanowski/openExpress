@@ -81,6 +81,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_state,
     usb_still_there,
 )
+from openexpress.errors import UserFacingError  # noqa: E402
 from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.connected import Connected, unit_ids, uris  # noqa: E402
 from openexpress.gui.forget_device import ForgetDevice  # noqa: E402
@@ -2005,9 +2006,14 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             return False
 
         def finish_error(e):
-            # With its traceback, filtered as every line of the log: a report from the window
-            # says where it failed.
-            log.warning("task failed: %s: %s", type(e).__name__, e, exc_info=e)
+            if isinstance(e, UserFacingError):
+                # A message for the user (the device not ready, a refusal, an answer of a
+                # server): one line, as the user is told.
+                log.info("task failed: %s: %s", type(e).__name__, e)
+            else:
+                # Nobody expected it: with its traceback, filtered as every line of the log,
+                # so that a report from the window says where it failed.
+                log.warning("task failed: %s: %s", type(e).__name__, e, exc_info=e)
             ended()
             try:
                 if not (on_error and on_error(e)):
@@ -2037,8 +2043,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             try:
                 result = fn()
             except Exception as e:  # optional work: said in the log, with its traceback
+                # unless it is a message for the user (as run_task)
                 log.info("background work %s failed: %s: %s", task_name(fn),
-                         type(e).__name__, e, exc_info=True)
+                         type(e).__name__, e, exc_info=not isinstance(e, UserFacingError))
                 if on_error is not None:
                     GLib.idle_add(lambda err=e: (on_error(err), False)[1])
                 return

@@ -6,10 +6,11 @@ import json
 from dataclasses import asdict, dataclass, field
 
 from openexpress import paths
+from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 
 
-class NotLoggedIn(Exception):
+class NotLoggedIn(UserFacingError):
     pass
 
 

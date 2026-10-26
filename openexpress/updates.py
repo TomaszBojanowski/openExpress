@@ -20,6 +20,7 @@ from typing import NamedTuple
 
 from openexpress import applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
+from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
 
 log = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ LOG_ITEMS = 20
 BETA_OFFERED = N_("Garmin offers beta software for this device.")
 
 
-class UpdateError(Exception):
+class UpdateError(UserFacingError):
     pass
 
 

@@ -20,6 +20,7 @@ from pathlib import Path
 from openexpress import applog
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
+from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size, ngettext
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 SPACE_MARGIN = 20 * 1024 * 1024
 
 
-class MusicError(Exception):
+class MusicError(UserFacingError):
     pass
 
 

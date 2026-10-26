@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress import paths
+from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _
 
 # The parts of the cache, in the order they are shown, with the folders of each (the keys are
@@ -36,7 +37,7 @@ CATEGORY_NAMES = {"maps": N_("Maps"), "updates": N_("Software updates"),
 LOCK_NAME = "cache.lock"
 
 
-class CacheError(Exception):
+class CacheError(UserFacingError):
     """The cache could not be cleared; the message says why."""
 
 
