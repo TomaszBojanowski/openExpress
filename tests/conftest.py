@@ -475,6 +475,7 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     # Nor what an earlier test saw on USB (the places of Garmin drives, #19).
     monkeypatch.setattr(gio_storage, "_drive_places", {})
     monkeypatch.setattr(gio_storage, "_said_0003", {})
+    monkeypatch.setattr(gio_storage, "_without_drive", frozenset())
     return folder
 
 

@@ -50,6 +50,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     NOT_MOUNTED,
     PRESENT,
     STARTING,
+    UNMOUNTED_DRIVE,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
     DeviceSummary,
@@ -60,6 +61,9 @@ from openexpress.device.gio_storage import (  # noqa: E402
     distinct_devices,
     drive_notice_text,
     drive_off_text,
+    drive_volume,
+    drives_on_usb,
+    drives_without_a_volume,
     eject,
     ejected_by_us,
     ejected_drive_waits,
@@ -143,6 +147,11 @@ from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
+# A drive may come a moment after its USB device (#19, analysis 18): a device in mass storage
+# mode that the last list found without one is looked for again every DRIVE_RETRY_S seconds,
+# at most DRIVE_RETRIES times.
+DRIVE_RETRY_S = 4
+DRIVE_RETRIES = 5
 # A device this long on USB in its normal mode without being offered over MTP: the page adds
 # that it may be plugged in again (gvfs did not mount an Edge 1050 restarted with its cable
 # in; plugging it in again helped, 21.10.2026). Only the words change, not the detection.
@@ -1193,6 +1202,51 @@ def schedule_detection(win, delay_ms: int, mount_uri: str | None = None,
     win._detect_timer = GLib.timeout_add(delay_ms, due)
 
 
+def watch_drives_while_open(win) -> None:
+    """While a device is open the window does not look at USB otherwise (_poll_usb), and a
+    Garmin drive that the system does not mount sends no mount event (KDE, #19): one that
+    comes has the list read again (Q1: the open device stays open), and so has one not
+    mounted that goes. Only /sys is read."""
+    places = drives_on_usb()
+    before = getattr(win, "_drives_while_open", None)
+    win._drives_while_open = places
+    if before is None or places == before:
+        return  # the first look: what is there is the open device's company
+    if places - before:
+        log.info("USB: a Garmin device in mass storage mode came while a device is open, the "
+                 "list of devices is read again in 2.5 s")
+        schedule_detection(win, 2500, cause=Cause.PLUGGED)
+        return
+    connected = getattr(win, "connected", None)
+    if connected is not None and any(u.startswith(UNMOUNTED_DRIVE) for u in connected.unread()):
+        log.info("USB: a Garmin device in mass storage mode went while a device is open, the "
+                 "list of devices is read again in 1.5 s")
+        schedule_detection(win, 1500, READ_THE_LIST, Cause.UNPLUGGED_OTHER)
+
+
+def look_again_for_drives(win, clock=time.monotonic) -> None:
+    """A Garmin device in mass storage mode that the last list found without a drive: gvfs
+    had no volume of it yet, or none with a medium (#19, analysis 18). Looked for again every
+    DRIVE_RETRY_S, at most DRIVE_RETRIES times for the same devices; with a device open,
+    only the list is read again (Q1)."""
+    waiting = drives_without_a_volume()
+    if not waiting:
+        win._drive_look = None
+        return
+    now = clock()
+    look = getattr(win, "_drive_look", None)
+    if look is None or look[0] != waiting:
+        win._drive_look = (waiting, 0, now)  # counted from now
+        return
+    places, tries, since = look
+    if tries >= DRIVE_RETRIES or now - since < DRIVE_RETRY_S:
+        return
+    win._drive_look = (places, tries + 1, now)
+    log.info("USB: a Garmin device in mass storage mode has no drive yet, looked for again "
+             "(%d of %d)", tries + 1, DRIVE_RETRIES)
+    schedule_detection(win, 500, cause=Cause.PLUGGED)
+
+
 def detection_due(win) -> None:
     """The scheduled detection: decided now (navigation.plan), or after the running task
     (e.g. the detection at start, during which gvfs reports the mount that is being
@@ -1641,6 +1695,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
+        # A drive that the system does not mount (KDE) sends no mount event (#19).
+        self.monitor.connect("volume-added", self._on_volume_added)
+        self.monitor.connect("volume-changed", self._on_volume_changed)
+        self.monitor.connect("volume-removed", self._on_volume_removed)
         self._watch_last_sync()
         # Apps whose update was written over PTP and waits for the device to be unplugged.
         # Kept in memory only; forgotten when the device goes away.
@@ -2111,6 +2169,52 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         else:
             log.info("mount added (%s): not a Garmin device, ignored", where)
 
+    def _on_volume_added(self, _mon, volume):
+        self._on_drive_volume(volume, "added")
+
+    def _on_volume_changed(self, _mon, volume):
+        self._on_drive_volume(volume, "changed")
+
+    def _on_volume_removed(self, _mon, volume):
+        unix = volume.get_identifier("unix-device")
+        if unix:
+            self._drive_gone(UNMOUNTED_DRIVE + unix, "removed")
+
+    def _on_drive_volume(self, volume, what: str) -> None:
+        """A volume added or changed. A Garmin drive that the system does not mount (KDE)
+        sends no mount event, and gvfs may offer its volume, or a medium in it, a moment
+        after the device is on USB (#19, analysis 18): one not mounted with a medium, not on
+        the list yet, brings a detection (with a device open: the list read again, Q1); one
+        on the list without a medium any more leaves it. A mounted one comes with its mount
+        (_on_mount_added); a drive ejected by openExpress stays closed (D3)."""
+        drive = drive_volume(volume)
+        if drive is None:
+            return
+        key, usb, medium = drive
+        if getattr(volume, "get_mount", lambda: None)() is not None or ejected_by_us(usb):
+            return
+        if not medium:
+            self._drive_gone(key, f"{what}, without a medium")
+            return
+        connected = self.connected
+        if connected.listed(key) if self.session is not None else connected.is_choice(key):
+            return  # its tile is there
+        log.info("volume %s: a Garmin drive not mounted (USB %s), detecting in 2.5 s (a device "
+                 "is open: %s)", what, usb.usb_id, self.session is not None)
+        schedule_detection(self, 2500, key, Cause.PLUGGED)
+
+    def _drive_gone(self, key: str, what: str) -> None:
+        """The volume of a drive not mounted went, or its medium did: its tile goes too."""
+        connected = self.connected
+        if self.session is not None and connected.listed(key):
+            log.info("volume %s: a Garmin drive not mounted on the list, the list of devices "
+                     "is read again in 1.5 s", what)
+            schedule_detection(self, 1500, READ_THE_LIST, Cause.UNPLUGGED_OTHER)
+        elif self.session is None and connected.is_choice(key):
+            log.info("volume %s: a Garmin drive not mounted, one of the devices to choose "
+                     "from, detecting in 1.5 s", what)
+            schedule_detection(self, 1500, cause=Cause.UNPLUGGED_CHOICE)
+
     def _on_mount_removed(self, _mon, mount):
         where = _mount_address(mount)
         if own_remount(mount):
@@ -2215,7 +2319,11 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             self._usb_state = ABSENT
             if self.session is not None:
                 self._open_unplugged = False  # a device is open again
+                if not self.busy:
+                    watch_drives_while_open(self)
+                    look_again_for_drives(self, clock)
             return True
+        self._drives_while_open = None  # looked at anew once a device is open
         # The open device was just unplugged: a device left on USB is looked for (below).
         unplugged, self._open_unplugged = getattr(self, "_open_unplugged", False), False
         connected = getattr(self, "connected", None)
@@ -2226,6 +2334,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                 log.info("USB: the Garmin devices changed while the list is shown, detecting "
                          "in 1.5 s")
                 schedule_detection(self, 1500, cause=Cause.USB_CHANGED)
+            look_again_for_drives(self, clock)
             return True
         state = usb_state()
         if state == ABSENT and self._usb_state != ABSENT:
@@ -2271,6 +2380,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         if notice[0] != self._usb_title:
             self._usb_title = notice[0]
             self._update_actions()  # the Sync button says the same as the pages
+        look_again_for_drives(self, clock)
         return True
 
     def refresh_device(self, cause: Cause | None = None, read_list: bool = False,

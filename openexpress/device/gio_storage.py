@@ -652,6 +652,38 @@ def _block_size(unix_device: str | None) -> int | None:
 UNMOUNTED_DRIVE = "ums-volume:"
 
 
+def drive_volume(volume) -> tuple[str, GarminUsb, bool] | None:
+    """For an event of a volume (gvfs: added, changed): (its key as a drive not mounted, its
+    USB device, whether it has a medium) when it is a volume of a Garmin device in mass
+    storage mode; None for any other volume. Only /sys is read, not its USB serial."""
+    unix = volume.get_identifier("unix-device")
+    block = _block_usb(unix)
+    if block is None or block[0][0] != GARMIN_VID or not _mass_storage_only(block[1]):
+        return None
+    ids = block[0]
+    return (UNMOUNTED_DRIVE + unix, GarminUsb(ids[1], "usb", ids[2], ids[3]),
+            bool(_block_size(unix)))
+
+
+# The USB places ("bus-devnum") of the Garmin devices in mass storage mode that the last list
+# found without a drive to list: gvfs had no volume of theirs yet, or none with a medium. A
+# drive may come a moment after its USB device (#19, analysis 18): the window looks for them
+# again a few times (gui/app.py, look_again_for_drives).
+_without_drive: frozenset[str] = frozenset()
+
+
+def drives_without_a_volume() -> frozenset[str]:
+    """What the last list found of _without_drive."""
+    with _places_lock:
+        return _without_drive
+
+
+def drives_on_usb() -> frozenset[str]:
+    """The USB places ("bus-devnum") of the Garmin devices in mass storage mode now. Only /sys
+    is read."""
+    return frozenset(place for place, _product in _mass_storage_on_usb())
+
+
 def garmin_ums(mount) -> GarminUsb | None:
     """Whether a Gio mount is a Garmin device in mass storage mode: a local folder on a block
     device of a USB device of vendor 091e; None if not. Its files are not read here (that is
@@ -730,7 +762,9 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
     than one block device, one of them an empty slot (a Forerunner 55: `sdc` of 0 B beside
     `sdd`, its drive, #19). Its drive is its first block device with a medium; an empty slot
     beside it is no drive without a medium."""
+    global _without_drive
     found = []
+    waiting = set()  # the places of devices in mass storage mode without a drive to list
     places: dict[str, list] = {}  # the unmounted volumes of each Garmin drive, by USB place
     for vol in Gio.VolumeMonitor.get().get_volumes():
         mounted = getattr(vol, "get_mount", lambda: None)()
@@ -759,6 +793,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if not with_medium:
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
+            waiting.add(place)  # or not yet (#19)
             continue
         vol, unix = with_medium[0]
         usb = _drive_usb(ids, volumes[0][3], vol)  # the volume of its drive: its UUID
@@ -770,6 +805,9 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if base not in seen:
             log.info("device: a Garmin device in mass storage mode (USB %s:%s) without a "
                      "drive: unplug it and plug it in again", GARMIN_VID, product)
+            waiting.add(base)  # or not yet (#19)
+    with _places_lock:
+        _without_drive = frozenset(waiting)
     return found
 
 

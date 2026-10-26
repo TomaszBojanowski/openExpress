@@ -68,7 +68,7 @@ def test_a_window_of_a_test_stops_listening_when_the_test_ends(monkeypatch):
         relative = win._relative_timer
         assert relative and context.find_source_by_id(relative) is not None
         assert {signal for signal, _h, _a in monitor.handlers.values()} == {
-            "mount-added", "mount-removed"}
+            "mount-added", "mount-removed", "volume-added", "volume-changed", "volume-removed"}
         stop_windows(monitor)
         assert monitor.handlers == {}
         assert context.find_source_by_id(win._usb_poll) is None
