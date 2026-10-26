@@ -57,6 +57,14 @@ class Told:
         return i18n.format_when(self.when)
 
     @property
+    def sentence(self) -> str:
+        """The numbers as a sentence of their own, for the end of `openexpress sync
+        --apply`: a capital letter first, a full stop at the end ("Nothing to upload.").
+        The row under "Last sync" keeps them as a part of it."""
+        counts = self.counts
+        return counts[:1].upper() + counts[1:] + ("" if counts.endswith(".") else ".")
+
+    @property
     def text(self) -> str:
         """The numbers, then the steps, a line each: the words of the command line."""
         return "\n".join([self.counts, *(text for text, _warning in self.steps)])

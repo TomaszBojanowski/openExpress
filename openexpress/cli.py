@@ -550,8 +550,8 @@ def _print_sync_plan(plan) -> None:
 
 def _print_sync_result(summary, unit_id: int) -> int:
     """What `sync --apply` did: its steps in the words of the details under "Last sync",
-    its errors, then the numbers of the row. 1 with errors, as the window says "Sync
-    finished with errors"."""
+    its errors, then the numbers of the row as a sentence. 1 with errors, as the window
+    says "Sync finished with errors"."""
     from openexpress import last_sync
 
     told = last_sync.describe(summary.record(unit_id))
@@ -561,7 +561,7 @@ def _print_sync_result(summary, unit_id: int) -> int:
         item=label) for label in summary.not_confirmed]
     if said:
         print("\n" + "\n".join(said))
-    print("\n" + told.counts)
+    print("\n" + told.sentence)
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
                               len(summary.errors)).format(count=len(summary.errors)))

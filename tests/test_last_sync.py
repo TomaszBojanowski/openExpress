@@ -328,7 +328,7 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
     assert words == ["Files from the device: activities ×2"]
     assert all(line in printed for line in words)  # printed exactly as the window shows it
     assert service.describe_counts(data) == "2 new files, 2 uploaded"
-    assert "2 new files, 2 uploaded" in printed  # the numbers of the row, then the details
+    assert "2 new files, 2 uploaded." in printed  # the numbers of the row, as a sentence
 
 
 def test_the_notification_says_what_the_window_shows():

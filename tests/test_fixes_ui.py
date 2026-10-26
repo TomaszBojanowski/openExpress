@@ -148,7 +148,7 @@ def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fak
     client.messages = COURSES
     client.download_message = lambda url, absolute: b"COURSE"
     assert main(["--path", str(device_root), "sync", "--apply", "--download-only"]) == 0
-    assert "upload skipped · 2 received" in capsys.readouterr().out.splitlines()
+    assert "Upload skipped · 2 received." in capsys.readouterr().out.splitlines()
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.16-upload-skipped.json").read_text(encoding="utf-8"))
@@ -167,7 +167,7 @@ def test_a_sync_of_some_types_says_its_numbers_are_of_them_only(device_root, xdg
 
     assert main(["--path", str(device_root), "sync", "--apply", "--all",
                  "--type", "FIT_TYPE_4"]) == 0
-    assert "activities only: 2 new files, 2 uploaded" in capsys.readouterr().out.splitlines()
+    assert "Activities only: 2 new files, 2 uploaded." in capsys.readouterr().out.splitlines()
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.16-only-types.json").read_text(encoding="utf-8"))
@@ -200,7 +200,7 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
     client.download_message = lambda url, absolute: b"TRUEUP"
     capsys.readouterr()
     assert main(["--path", str(device_root), "sync", "--apply"]) == 0
-    assert "nothing to upload · 1 received" in capsys.readouterr().out.splitlines()
+    assert "Nothing to upload · 1 received." in capsys.readouterr().out.splitlines()
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.19-trueup-received.json").read_text(encoding="utf-8"))
@@ -225,7 +225,7 @@ def test_the_command_line_names_the_files_from_garmin_connect(device_root, xdg, 
     assert main(["--path", str(device_root), "sync", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert "1 file from Garmin Connect: courses" in out
-    assert "nothing to upload · 1 received" in out
+    assert "Nothing to upload · 1 received." in out
     record = service.load_last_sync(1234567890)
     assert record["lines"] == [service.received_files_step(["FIT_TYPE_6"])]
 

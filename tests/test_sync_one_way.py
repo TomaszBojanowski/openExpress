@@ -184,7 +184,7 @@ def test_what_the_cases_tell_apart(device_root, tmp_path, monkeypatch):
 def test_the_command_line_says_each_step_in_the_words_of_the_window(
         name, device_root, tmp_path, monkeypatch, capsys):
     """After `sync --apply`: each step of the sync as the details under "Last sync" say it,
-    each error, then the numbers of the row."""
+    each error, then the numbers of the row as a sentence."""
     kept = run("cli", CASES[name], by_the_command_line, device_root, tmp_path, monkeypatch,
                monkeypatch)
     out = capsys.readouterr().out.splitlines()
@@ -193,7 +193,7 @@ def test_the_command_line_says_each_step_in_the_words_of_the_window(
         assert text in out
     for error in told.errors:
         assert "  " + "ERROR " + error in out
-    assert told.counts in out
+    assert told.sentence in out
     assert out[-1] == ("Done." if kept["outcome"] == "done" else "Done with 1 error.")
 
 
@@ -258,3 +258,36 @@ def test_the_command_line_has_the_steps_of_the_window(name, words, device_root, 
     run("cli", CASES[name], by_the_command_line, device_root, tmp_path, monkeypatch,
         monkeypatch)
     assert words in capsys.readouterr().out.splitlines()
+
+
+@pytest.mark.parametrize("lang, numbers, nothing, row, done", [
+    ("en", "2 new files, 2 uploaded · 1 received.", "Nothing to upload.", "nothing to upload",
+     "Done."),
+    ("pl", "2 nowe pliki, 2 wysłane · 1 odebrany.", "Nic do wysłania.", "nic do wysłania",
+     "Gotowe."),
+])
+def test_the_numbers_after_a_sync_are_a_sentence_of_their_own(
+        lang, numbers, nothing, row, done, device_root, xdg, monkeypatch, capsys):
+    """The end of `sync --apply`: the numbers of the sync as a sentence (a capital letter, a
+    full stop), before "Done."; the row under "Last sync" keeps them as it showed them."""
+    from openexpress import i18n
+
+    account = SyncAccount(messages=[COURSE], verified_unit_id=None)
+    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
+    state = sync.SyncState(UNIT)
+    state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")
+    state.save()
+    command = ["--lang", lang, "--path", str(device_root), "sync", "--apply"]
+    try:
+        assert cli.main(command) == 0
+        first = capsys.readouterr().out.splitlines()
+        account.messages = []
+        assert cli.main(command) == 0
+        second = capsys.readouterr().out.splitlines()
+        shown = last_sync.describe(service.load_last_sync(UNIT)).counts
+    finally:
+        applog.close()
+        i18n.setup("en")
+    assert first[-3:] == [numbers, "", done]
+    assert second[-3:] == [nothing, "", done]
+    assert shown == row

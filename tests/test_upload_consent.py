@@ -210,7 +210,7 @@ def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake
     assert client.uploads == []
     assert out.count("Nothing was uploaded: ") == 1 and text in out
     # Why, in the numbers at the end too; the queue is still served.
-    assert f"nothing uploaded: {row} · 1 received" in out and acks == [5]
+    assert f"Nothing uploaded: {row} · 1 received." in out and acks == [5]
     assert list((device_root / "GARMIN/NewFiles").iterdir())
     data = service.load_last_sync(UNIT)
     # The reason is kept, the words are made when it is shown (the window, in its language).
