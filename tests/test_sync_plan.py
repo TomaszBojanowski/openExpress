@@ -159,3 +159,13 @@ def test_a_first_sync_stopped_after_its_uploads_keeps_its_choice(by, device_root
         finally:
             applog.close()
     assert sync.synced_here(UNIT)
+
+
+@pytest.mark.parametrize("old", [{"first_run": "baseline"}, {"include_diagnostics": True}])
+def test_run_sync_takes_options_or_its_old_arguments_never_both(old, device_root, xdg):
+    """With `options` the old arguments would be left out without a word: refused before
+    anything is asked."""
+    account = SyncAccount(verified_unit_id=None)
+    with pytest.raises(ValueError):
+        service.run_sync(session(device_root, account), options=service.SyncOptions(), **old)
+    assert account.asked == [] and service.load_last_sync(UNIT) is None

@@ -824,10 +824,13 @@ def run_sync(
     """A whole sync: planned (plan_sync) and done (apply_sync) under the lock of the sync,
     so that one process syncs at a time; its record kept (last_sync.json) and its start, end
     and errors logged. `first_run`: 'baseline' or 'all' for the first time. `options`: what
-    the command line was asked (its first run and diagnostics with it); the window and the
-    background service ask for everything."""
+    the command line was asked (its first run and diagnostics with it, so never with
+    `first_run` or `include_diagnostics`); the window and the background service ask for
+    everything."""
     if options is None:
         options = SyncOptions(first_run=first_run, include_diagnostics=include_diagnostics)
+    elif first_run is not None or include_diagnostics:
+        raise ValueError("run_sync: first_run and include_diagnostics go in the options")
     if s.mass_storage:
         log.info("sync: refused, the device is in mass storage mode")
         raise MassStorageMode(_("A device connected as a USB drive is not synced."))
