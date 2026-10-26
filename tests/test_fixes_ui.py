@@ -1540,6 +1540,7 @@ def test_skipped_files_message_in_polish():
 # --- after an update is installed: what to do next ----------------------------------------------
 
 NEXT_STEP = "choose to install now"
+TURN_ON_STEP = "  2. If the device does not turn on by itself, turn it on.\n"
 
 
 @pytest.fixture
@@ -1573,9 +1574,10 @@ def test_cli_says_what_to_do_after_every_install(offered, downloads, xdg, capsys
         "",
         "To finish the installation:",
         "  1. Disconnect the device from the computer.",
-        "  2. The device installs the update by itself. It may ask whether to install it:",
-        "     choose to install now. It may also restart; wait until it is ready again.",
-        "  3. Reconnect it and run `openexpress updates`: the installed update",
+        "  2. If the device does not turn on by itself, turn it on.",
+        "  3. The device installs the update by itself. It may ask whether to install it:",
+        "     choose to install now. It may also restart. Wait until it has finished.",
+        "  4. Reconnect it and run `openexpress updates`: the installed update",
         "     should no longer be listed.",
     ]
 
@@ -1598,6 +1600,9 @@ def test_window_says_what_to_do_next_without_naming_a_command():
     assert text.startswith("Files copied to the device.\nTo finish the installation:")
     assert NEXT_STEP in text and "check for updates again" in text
     assert "openexpress updates" not in text
+    # An accessory may stay off once unplugged (e.g. a Varia): then it is turned on, and
+    # nothing promises a restart that may not come.
+    assert TURN_ON_STEP in text and "It may also restart. Wait until it has finished." in text
     # Whether the server says a restart is needed makes no difference.
     assert MainWindow._update_done_text(
         InstallReport(installed=["x"], restart_required=True)) == text
@@ -1617,6 +1622,8 @@ def test_next_steps_in_polish():
     for text in (cli_text, window_text):
         assert "wybierz instalację teraz" in text and "Może też uruchomić się ponownie" in text
         assert text.startswith("\nAby dokończyć instalację:\n  1. ") and text.endswith(".\n")
+        assert "  2. Jeśli urządzenie nie włączy się samo, włącz je.\n" in text
+        assert "Może też uruchomić się ponownie.\n     Poczekaj, aż skończy.\n  4. " in text
     assert "`openexpress updates`" in cli_text and "openexpress" not in window_text
     assert "sprawdź aktualizacje jeszcze raz" in window_text
 

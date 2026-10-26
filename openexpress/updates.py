@@ -37,22 +37,26 @@ SPACE_MARGIN_PART = 0.05
 SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
 # What to do after an update was copied to the device: shown after every install, because
 # the device may ask and restart also when the server does not call the update one that
-# needs a restart. Untranslated constants; show them with _(FINISH_STEPS).
+# needs a restart. A watch is on when it is unplugged, while an accessory may stay off (e.g.
+# a Varia) and installs the update only once turned on. A restart is only a possibility:
+# nothing promises one. Untranslated constants; show them with _(FINISH_STEPS).
 FINISH_STEPS = N_("""
 To finish the installation:
   1. Disconnect the device from the computer.
-  2. The device installs the update by itself. It may ask whether to install it:
-     choose to install now. It may also restart; wait until it is ready again.
-  3. Reconnect it and run `openexpress updates`: the installed update
+  2. If the device does not turn on by itself, turn it on.
+  3. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart. Wait until it has finished.
+  4. Reconnect it and run `openexpress updates`: the installed update
      should no longer be listed.
 """)
 # The same for the window, which has no commands.
 FINISH_STEPS_WINDOW = N_("""
 To finish the installation:
   1. Disconnect the device from the computer.
-  2. The device installs the update by itself. It may ask whether to install it:
-     choose to install now. It may also restart; wait until it is ready again.
-  3. Reconnect it and check for updates again: the installed update
+  2. If the device does not turn on by itself, turn it on.
+  3. The device installs the update by itself. It may ask whether to install it:
+     choose to install now. It may also restart. Wait until it has finished.
+  4. Reconnect it and check for updates again: the installed update
      should no longer be listed.
 """)
 # Said before a system update is installed, on the command line and in the window.

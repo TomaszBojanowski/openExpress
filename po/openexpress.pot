@@ -327,7 +327,7 @@ msgid "Writing {path}"
 msgstr ""
 
 #: openexpress/ciq.py:1030 openexpress/ciq.py:1285 openexpress/maps.py:510
-#: openexpress/updates.py:412
+#: openexpress/updates.py:416
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr ""
@@ -4533,7 +4533,7 @@ msgstr ""
 msgid "Removing old file {path}"
 msgstr ""
 
-#: openexpress/maps.py:474 openexpress/updates.py:402
+#: openexpress/maps.py:474 openexpress/updates.py:406
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr ""
@@ -5343,107 +5343,109 @@ msgstr ""
 msgid "empty TrueUp file"
 msgstr ""
 
-#: openexpress/updates.py:41
+#: openexpress/updates.py:43
 msgid ""
 "\n"
 "To finish the installation:\n"
 "  1. Disconnect the device from the computer.\n"
-"  2. The device installs the update by itself. It may ask whether to install "
+"  2. If the device does not turn on by itself, turn it on.\n"
+"  3. The device installs the update by itself. It may ask whether to install "
 "it:\n"
-"     choose to install now. It may also restart; wait until it is ready "
-"again.\n"
-"  3. Reconnect it and run `openexpress updates`: the installed update\n"
+"     choose to install now. It may also restart. Wait until it has "
+"finished.\n"
+"  4. Reconnect it and run `openexpress updates`: the installed update\n"
 "     should no longer be listed.\n"
 msgstr ""
 
-#: openexpress/updates.py:50
+#: openexpress/updates.py:53
 msgid ""
 "\n"
 "To finish the installation:\n"
 "  1. Disconnect the device from the computer.\n"
-"  2. The device installs the update by itself. It may ask whether to install "
+"  2. If the device does not turn on by itself, turn it on.\n"
+"  3. The device installs the update by itself. It may ask whether to install "
 "it:\n"
-"     choose to install now. It may also restart; wait until it is ready "
-"again.\n"
-"  3. Reconnect it and check for updates again: the installed update\n"
+"     choose to install now. It may also restart. Wait until it has "
+"finished.\n"
+"  4. Reconnect it and check for updates again: the installed update\n"
 "     should no longer be listed.\n"
 msgstr ""
 
-#: openexpress/updates.py:59
+#: openexpress/updates.py:63
 msgid ""
 "Warning: this is a device system update. Charge the device and do not "
 "disconnect it while copying."
 msgstr ""
 
-#: openexpress/updates.py:65
+#: openexpress/updates.py:69
 msgid "Garmin offers beta software for this device."
 msgstr ""
 
 #. TRANSLATORS: kind of update: a file that belongs to a map (Garmin/SID/*.sid)
-#: openexpress/updates.py:136
+#: openexpress/updates.py:140
 msgid "Map support file"
 msgstr ""
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:138
+#: openexpress/updates.py:142
 msgid "Software"
 msgstr ""
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:140
+#: openexpress/updates.py:144
 msgid "Configuration"
 msgstr ""
 
 #. TRANSLATORS: kind of update: a file that describes other updates
-#: openexpress/updates.py:142
+#: openexpress/updates.py:146
 msgid "Update information"
 msgstr ""
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:146
+#: openexpress/updates.py:150
 msgid "Critical"
 msgstr ""
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:148
+#: openexpress/updates.py:152
 msgid "Recommended"
 msgstr ""
 
 #. TRANSLATORS: importance of an update, when the server does not say
-#: openexpress/updates.py:150
+#: openexpress/updates.py:154
 msgid "Unspecified"
 msgstr ""
 
-#: openexpress/updates.py:315
+#: openexpress/updates.py:319
 #, python-brace-format
 msgid "Not in the list: {items}"
 msgstr ""
 
-#: openexpress/updates.py:328
+#: openexpress/updates.py:332
 #, python-brace-format
 msgid ""
 "The server gave a name that cannot be used as a path on this computer: "
 "'{name}'"
 msgstr ""
 
-#: openexpress/updates.py:372
+#: openexpress/updates.py:376
 #, python-brace-format
 msgid ""
 "Not enough space on the device: {need} needed and {margin} kept free, but "
 "only {free} free"
 msgstr ""
 
-#: openexpress/updates.py:384
+#: openexpress/updates.py:388
 #, python-brace-format
 msgid "{part}: the server did not provide a download URL"
 msgstr ""
 
-#: openexpress/updates.py:386
+#: openexpress/updates.py:390
 #, python-brace-format
 msgid "Downloading {name} {version} ({size})"
 msgstr ""
 
-#: openexpress/updates.py:395
+#: openexpress/updates.py:399
 #, python-brace-format
 msgid "{part}: the RGN format is not supported by openExpress"
 msgstr ""
