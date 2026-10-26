@@ -13,12 +13,14 @@ import types
 
 import pytest
 from test_detection import (  # noqa: F401 - the fixture
+    DRIVE_SERIAL,
     RTL515_XML,
     FakeDriveMount,
     FakeMonitor,
     FakeVolume,
     drive_folder,
     drives,
+    monitor_with,
     usb_drive,
 )
 
@@ -31,8 +33,8 @@ class UnmountedVolume(FakeVolume):
     """Like the volume of a drive that is not mounted: mounting it (Gio.Volume.mount) answers
     from the main loop, and then it has a mount, at `folder`."""
 
-    def __init__(self, unix_device, folder, name="GARMIN"):
-        super().__init__(None, unix_device, name)
+    def __init__(self, unix_device, folder, name="GARMIN", uuid=None):
+        super().__init__(None, unix_device, name, uuid)
         self.folder, self.mounted_at, self.asked, self.refusal = folder, None, 0, None
 
     def get_mount(self):
@@ -71,11 +73,12 @@ def _monitor(monkeypatch, mounts=(), volumes=()):
                                                          volumes=list(volumes))))
 
 
-def _unmounted(drives, monkeypatch, sectors=7_800_000, vendor="091e"):
-    unix = usb_drive(drives, vendor=vendor, product=FR55)
+def _unmounted(drives, monkeypatch, sectors=7_800_000, vendor="091e", serial=DRIVE_SERIAL,
+               uuid=None):
+    unix = usb_drive(drives, vendor=vendor, product=FR55, serial=serial)
     _sized(drives, unix, sectors)
     folder = drive_folder(drives)
-    volume = UnmountedVolume(unix, folder)
+    volume = UnmountedVolume(unix, folder, uuid=uuid)
     _monitor(monkeypatch, volumes=[volume])
     return volume, folder
 
@@ -662,3 +665,157 @@ def test_a_device_chosen_with_its_details_is_opened_as_before(monkeypatch):
     win.open_choice(listed[0].found)
     summaries, _notice = win._start_summaries()
     assert summaries == listed and reread == []
+
+
+# --- what tells one drive from another while nothing of it is read (analysis 18) ----------------
+#
+# Its USB serial (a fēnix 8's is its unit ID in hexadecimal; a Varia Rearview Radar has none,
+# 26.10.2026) and the UUID of its volume (udisks reads it without mounting: a FAT volume ID).
+# Both are as private as the unit ID: never in the log, nor in the report.
+
+DRIVE_ID_SERIAL = "7ZQ1W1FE0001"  # made up; not hexadecimal, so not a unit ID
+DRIVE_ID_UUID = "1A2B-3C4D"       # made up, in the form udisks gives a FAT volume ID
+VARIA_UNIT = 3000000003       # RTL515_XML
+
+
+def _mounted(drives, monkeypatch, serial=DRIVE_ID_SERIAL, uuid=DRIVE_ID_UUID):
+    mount = FakeDriveMount(drive_folder(drives), usb_drive(drives, serial=serial), uuid=uuid)
+    monitor_with(monkeypatch, mount)
+    return mount
+
+
+def test_an_unmounted_drive_has_its_usb_serial_and_the_uuid_of_its_volume(drives, monkeypatch):
+    _unmounted(drives, monkeypatch, serial=DRIVE_ID_SERIAL, uuid=DRIVE_ID_UUID)
+    (found,) = gio_storage.find_ums_devices()
+    assert (found.usb.serial, found.usb.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+    assert DRIVE_ID_SERIAL not in repr(found) and DRIVE_ID_UUID not in repr(found)
+
+
+def test_a_mounted_drive_has_them_too(drives, monkeypatch):
+    mount = _mounted(drives, monkeypatch)
+    usb = gio_storage.garmin_ums(mount)
+    assert (usb.serial, usb.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+    (found,) = gio_storage.find_ums_devices()
+    assert (found.usb.serial, found.usb.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+
+
+@pytest.mark.parametrize("uuid", [DRIVE_ID_UUID, None])
+def test_a_drive_without_a_usb_serial_has_none(drives, monkeypatch, uuid):
+    """A Varia Rearview Radar (26.10.2026): no serial in /sys; its volume may have a UUID."""
+    _unmounted(drives, monkeypatch, serial=None, uuid=uuid)
+    (found,) = gio_storage.find_ums_devices()
+    assert (found.usb.serial, found.usb.volume_uuid) == (None, uuid)
+
+
+def test_they_are_kept_with_the_drive_when_it_is_seen():
+    from openexpress import known_devices
+
+    known_devices.seen(VARIA_UNIT, "Varia RTL515", "006-B3592-03", "3.36", "ums",
+                       usb_product="20ee", usb_serial=DRIVE_ID_SERIAL, volume_uuid=DRIVE_ID_UUID)
+    known = known_devices.load()[VARIA_UNIT]
+    assert (known.usb_serial, known.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+    known_devices.seen(VARIA_UNIT, "Varia RTL515", "006-B3592-03", "3.37", "ums")
+    known = known_devices.load()[VARIA_UNIT]
+    assert (known.usb_serial, known.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)  # kept
+
+
+@pytest.mark.parametrize("value", [123, "", "a b", "x" * 200, ["1A2B-3C4D"]])
+def test_a_damaged_serial_or_uuid_in_the_file_is_not_kept(value):
+    import json
+
+    from openexpress import known_devices
+
+    known_devices.seen(VARIA_UNIT, "Varia RTL515", "006-B3592-03", "3.36", "ums",
+                       usb_product="20ee")
+    data = json.loads(known_devices.path().read_text())
+    data["devices"][str(VARIA_UNIT)].update(usb_serial=value, volume_uuid=value)
+    known_devices.path().write_text(json.dumps(data))
+    known = known_devices.load()[VARIA_UNIT]  # the entry stays
+    assert (known.usb_serial, known.volume_uuid, known.usb_product) == (None, None, "20ee")
+
+
+def test_opening_a_drive_keeps_them_and_logs_only_what_they_are(drives, monkeypatch, caplog):
+    from openexpress import known_devices, service
+
+    _mounted(drives, monkeypatch)
+    (found,) = gio_storage.find_ums_devices()
+    with caplog.at_level(logging.INFO):
+        service.open_session(found=found)
+    known = known_devices.load()[VARIA_UNIT]
+    assert (known.usb_product, known.usb_serial, known.volume_uuid) == (
+        "20ee", DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+    assert ("device: this drive's USB serial is not its unit ID; its volume has a UUID"
+            in caplog.messages)
+
+
+@pytest.mark.parametrize(("serial", "uuid", "line"), [
+    (f"{VARIA_UNIT:012x}", None,
+     "device: this drive's USB serial is its unit ID in hexadecimal; its volume has no UUID"),
+    (None, DRIVE_ID_UUID, "device: this drive has no USB serial; its volume has a UUID"),
+])
+def test_the_line_of_the_log_says_which_keys_a_drive_gives(drives, monkeypatch, caplog, serial,
+                                                            uuid, line):
+    from openexpress import service
+
+    _mounted(drives, monkeypatch, serial=serial, uuid=uuid)
+    (found,) = gio_storage.find_ums_devices()
+    with caplog.at_level(logging.INFO):
+        service.open_session(found=found)
+    assert line in caplog.messages
+
+
+def test_the_window_keeps_them_for_a_drive_it_lists(drives, monkeypatch):
+    """The list (app._choose) remembers each device read before anything is chosen."""
+    from openexpress import known_devices
+    from openexpress.gui import app
+
+    _mounted(drives, monkeypatch)
+    (found,) = gio_storage.find_ums_devices()
+    monkeypatch.setattr(app.service, "open_session", lambda found: "opened")
+    monkeypatch.setattr(app.service, "check_session", lambda session: session)
+    assert app._choose([found]) == "opened"
+    known = known_devices.load()[VARIA_UNIT]
+    assert (known.usb_serial, known.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+
+
+def test_the_command_line_keeps_them_too(drives, monkeypatch, capsys):
+    from openexpress import cli, known_devices, service
+
+    _mounted(drives, monkeypatch)
+    (found,) = gio_storage.find_ums_devices()
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda **kw: gio_storage.open_ums_storage(found))
+    assert cli.main(["info"]) == 0
+    known = known_devices.load()[VARIA_UNIT]
+    assert (known.usb_product, known.usb_serial, known.volume_uuid) == (
+        "20ee", DRIVE_ID_SERIAL, DRIVE_ID_UUID)
+
+
+def test_they_never_reach_the_log_nor_the_report(drives, monkeypatch, log_file):
+    from openexpress import applog, report, service
+
+    _mounted(drives, monkeypatch)
+    applog.setup("cli")
+    log = logging.getLogger("openexpress.test")
+    (found,) = gio_storage.find_ums_devices()  # hidden as soon as they are read
+    log.info("listed: %s %s %s", DRIVE_ID_SERIAL, DRIVE_ID_UUID, DRIVE_ID_UUID.lower())
+    session = service.open_session(found=found)
+    log.info("opened: %s %s", DRIVE_ID_SERIAL.lower(), DRIVE_ID_UUID)
+    text = log_file.read_text()
+    assert "listed: <serial> <volume> <volume>" in text and "opened: <serial> <volume>" in text
+    for value in (DRIVE_ID_SERIAL, DRIVE_ID_UUID):
+        assert value.casefold() not in text.casefold()
+    words = report.build(session.device, session.storage)
+    assert DRIVE_ID_SERIAL not in words and DRIVE_ID_UUID not in words
+
+
+def test_a_session_hides_them_also_when_they_were_not_read_for_a_list():
+    """applog.hide_device with the USB of the drive (service.open_session, the command line)."""
+    from conftest import DEVICE_XML
+
+    from openexpress import applog
+    from openexpress.device.xmldevice import parse
+
+    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12, serial=DRIVE_ID_SERIAL, volume_uuid=DRIVE_ID_UUID)
+    applog.hide_device(parse(DEVICE_XML.encode()), usb)
+    assert applog.redact(f"{DRIVE_ID_SERIAL} {DRIVE_ID_UUID.lower()}") == "<serial> <volume>"

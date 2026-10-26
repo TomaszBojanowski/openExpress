@@ -135,15 +135,43 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
         storage = (open_device_or_drive() if allow_ums and device_uri is None
                    else open_device_storage(device_uri))
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
-    applog.hide_device(device)
+    usb = getattr(storage, "usb", None)
+    applog.hide_device(device, usb)
     if detected:
-        usb = getattr(storage, "usb", None)
+        drive = usb if storage.mass_storage else None
+        if drive is not None:
+            log.info("device: %s", drive_keys_text(drive, device.unit_id))
         known_devices.seen(device.unit_id, device.description, device.part_number,
                            device.software_version_str, "ums" if storage.mass_storage else "mtp",
-                           usb_product=getattr(usb, "product", None) if storage.mass_storage
-                           else None)
+                           **drive_keys(drive))
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
+
+
+def drive_keys(usb) -> dict:
+    """What a drive's entry keeps of its USB device (known_devices.seen): its USB product,
+    serial and the UUID of its volume, which tell it while it is not mounted (analysis 18);
+    nothing for a device that is not a drive (None)."""
+    if usb is None:
+        return {}
+    return {"usb_product": getattr(usb, "product", None),
+            "usb_serial": getattr(usb, "serial", None),
+            "volume_uuid": getattr(usb, "volume_uuid", None)}
+
+
+def drive_keys_text(usb, unit_id) -> str:
+    """For the log, without any of them: which of those keys a drive gives, and whether its
+    USB serial is its unit ID in hexadecimal (a fēnix 8's is, 26.10.2026)."""
+    serial = getattr(usb, "serial", None)
+    try:
+        is_unit = serial is not None and unit_id is not None and int(serial, 16) == unit_id
+    except ValueError:
+        is_unit = False
+    said = ("this drive has no USB serial" if serial is None
+            else "this drive's USB serial is its unit ID in hexadecimal" if is_unit
+            else "this drive's USB serial is not its unit ID")
+    has = "has a UUID" if getattr(usb, "volume_uuid", None) else "has no UUID"
+    return f"{said}; its volume {has}"
 
 
 def _open_found(found) -> Storage:

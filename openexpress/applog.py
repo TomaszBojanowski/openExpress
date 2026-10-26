@@ -118,11 +118,22 @@ def hide_unit_id(unit_id) -> None:
             hide(form.upper(), "unit")
 
 
-def hide_device(device) -> None:
-    """Never write what is private about this device: its unit ID (hide_unit_id), and the
-    names of the files in the folders it declares for music, podcasts, audiobooks and
-    playlists."""
+def hide_usb(usb) -> None:
+    """Never write what tells a device from another of its model (gio_storage.GarminUsb):
+    its USB serial and the UUID of its volume, in either case."""
+    for value, label in ((getattr(usb, "serial", None), "serial"),
+                         (getattr(usb, "volume_uuid", None), "volume")):
+        if isinstance(value, str):
+            for form in {value, value.lower(), value.upper()}:
+                hide(form, label)
+
+
+def hide_device(device, usb=None) -> None:
+    """Never write what is private about this device: its unit ID (hide_unit_id), what its
+    USB device tells of it (`usb`, hide_usb), and the names of the files in the folders it
+    declares for music, podcasts, audiobooks and playlists."""
     hide_unit_id(device.unit_id)
+    hide_usb(usb)
     for f in device.files:
         folder = (f.path or "").strip("/")
         if f.datatype.startswith("MEDIA_") and folder:

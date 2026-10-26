@@ -85,7 +85,7 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
 
     st = open_storage(args)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    applog.hide_device(dev)
+    applog.hide_device(dev, getattr(st, "usb", None))
     command = getattr(args, "cmd", None)
     if st.mass_storage and command in NOT_ON_A_DRIVE:
         raise service.MassStorageMode(mass_storage_text())
@@ -95,7 +95,9 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
             "connected as a USB drive, or a copy of one)."))
     if not args.path:  # a device found now; a folder given with --path may be a copy
         known_devices.seen(dev.unit_id, dev.description, dev.part_number,
-                           dev.software_version_str, "ums" if st.mass_storage else "mtp")
+                           dev.software_version_str, "ums" if st.mass_storage else "mtp",
+                           **service.drive_keys(getattr(st, "usb", None) if st.mass_storage
+                                                else None))
     return st, dev
 
 

@@ -35,14 +35,14 @@ class FakeFile:
 
 
 class FakeVolume:
-    def __init__(self, uri, unix_device=None, name="volume"):
-        self.uri, self.unix_device, self.name = uri, unix_device, name
+    def __init__(self, uri, unix_device=None, name="volume", uuid=None):
+        self.uri, self.unix_device, self.name, self.uuid = uri, unix_device, name, uuid
 
     def get_activation_root(self):
         return FakeFile(self.uri) if self.uri else None
 
     def get_identifier(self, kind):
-        return self.unix_device if kind == "unix-device" else None
+        return {"unix-device": self.unix_device, "uuid": self.uuid}.get(kind)
 
     def get_name(self):
         return self.name
@@ -736,9 +736,10 @@ class FakeDriveMount:
 
     answer = staticmethod(lambda callback: gio_storage.GLib.idle_add(callback))
 
-    def __init__(self, folder, unix_device, name="GARMIN", ejectable=True):
+    def __init__(self, folder, unix_device, name="GARMIN", ejectable=True, uuid=None):
         self.root, self.name = FakeLocalFile(folder), name
-        self.volume = FakeVolume(None, unix_device, name) if unix_device != "no volume" else None
+        self.volume = (FakeVolume(None, unix_device, name, uuid) if unix_device != "no volume"
+                       else None)
         self.ejectable, self.refusal, self.ejected, self.unmounted = ejectable, None, 0, 0
 
     def get_root(self):
@@ -815,10 +816,12 @@ def _block(drives, below, disk, partition):
 
 
 def usb_drive(drives, vendor="091e", product="20ee", port="1-4", devnum=12, disk="sdb",
-              partition="sdb1"):
+              partition="sdb1", serial=DRIVE_SERIAL):
     """A USB drive as the kernel shows it: the USB device, its mass storage interface and the
-    SCSI disk below it. Its serial number is there but must never be read."""
-    usb = usb_device(drives.hub, port, 1, devnum, vendor, product, serial=DRIVE_SERIAL)
+    SCSI disk below it. Its USB serial (None: it has none, as a Varia Rearview Radar) tells one
+    drive from another, and is never shown (analysis 18)."""
+    extra = {"serial": serial} if serial is not None else {}
+    usb = usb_device(drives.hub, port, 1, devnum, vendor, product, **extra)
     interface = usb / f"{port}:1.0"
     interface.mkdir()
     (interface / "bInterfaceClass").write_text("08\n")

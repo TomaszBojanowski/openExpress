@@ -243,6 +243,12 @@ class KnownDevice:
     # writes and reads them).
     account: AccountFact | None = None
     synced: SyncedFact | None = None
+    # The USB serial of a drive and the UUID of its volume, kept when it was opened: they
+    # tell which remembered drive a drive not mounted is, when its serial is not its unit ID
+    # in hexadecimal (analysis 18; a Varia Rearview Radar gives no serial). None: not known.
+    # As private as the unit ID, as the file is.
+    usb_serial: str | None = None
+    volume_uuid: str | None = None
 
 
 def path() -> Path:
@@ -261,11 +267,11 @@ def in_order(known: dict[int, KnownDevice]) -> list[KnownDevice]:
 
 
 def remember(unit_id: int, description: str, part_number: str, software_version: str,
-             kind: str, now: float | None = None,
-             usb_product: str | None = None) -> KnownDevice:
+             kind: str, now: float | None = None, usb_product: str | None = None,
+             usb_serial: str | None = None, volume_uuid: str | None = None) -> KnownDevice:
     """Add or update the entry of a device seen now; when it was first seen stays, and its
-    USB product unless a new one is given; the facts of its tile stay (tile_facts writes
-    them)."""
+    USB product, serial and the UUID of its volume unless new ones are given; the facts of
+    its tile stay (tile_facts writes them)."""
     with _locked():
         known, writable = _read()
         now = time.time() if now is None else now
@@ -280,7 +286,11 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             old.sync_count if old is not None else None,
                             usb_product or (old.usb_product if old is not None else None),
                             old.account if old is not None else None,
-                            old.synced if old is not None else None)
+                            old.synced if old is not None else None,
+                            _identifier(usb_serial)
+                            or (old.usb_serial if old is not None else None),
+                            _identifier(volume_uuid)
+                            or (old.volume_uuid if old is not None else None))
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -289,7 +299,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
 
 
 def seen(unit_id: int, description: str, part_number: str, software_version: str,
-         kind: str, usb_product: str | None = None) -> None:
+         kind: str, usb_product: str | None = None, usb_serial: str | None = None,
+         volume_uuid: str | None = None) -> None:
     """remember() for the detection, then what is known of its sync now, for its tile
     (tile_facts.note_synced): a device without a unit ID (no <Id>) is not remembered, and a
     failure (e.g. a full disk) is only written to the log: remembering a device never stops
@@ -300,7 +311,7 @@ def seen(unit_id: int, description: str, part_number: str, software_version: str
 
     try:
         remember(unit_id, description, part_number, software_version, kind,
-                 usb_product=usb_product)
+                 usb_product=usb_product, usb_serial=usb_serial, volume_uuid=volume_uuid)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: not remembered (%s)", type(e).__name__)
         return
@@ -531,7 +542,9 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 SyncCount.from_json(facts.get("sync")),
                                 _product(value.get("usb_product")),
                                 AccountFact.from_json(facts.get("account")),
-                                SyncedFact.from_json(facts.get("synced")))
+                                SyncedFact.from_json(facts.get("synced")),
+                                _identifier(value.get("usb_serial")),
+                                _identifier(value.get("volume_uuid")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -558,6 +571,12 @@ def _product(value) -> str | None:
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{4}", value) else None
 
 
+def _identifier(value) -> str | None:
+    """A USB serial or the UUID of a volume as written: 1 to 64 printable characters without
+    a space; anything else is not kept."""
+    return value if isinstance(value, str) and re.fullmatch(r"[!-~]{1,64}", value) else None
+
+
 # The fields of an entry kept in its object "tile_facts", not at its top.
 _FACT_FIELDS = ("update_found", "update_summary", "update_check", "sync_count", "account",
                 "synced")
@@ -570,7 +589,7 @@ def _write(known: dict[int, KnownDevice]) -> None:
         del fields["unit_id"]  # it is the key
         for name in _FACT_FIELDS:
             del fields[name]
-        for optional in ("category", "image_url", "usb_product"):
+        for optional in ("category", "image_url", "usb_product", "usb_serial", "volume_uuid"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         update = {"found": entry.update_found,

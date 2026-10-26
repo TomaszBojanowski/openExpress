@@ -457,6 +457,12 @@ class GarminUsb:
     # Where the device is on USB, when known; not part of what the device is.
     bus: int | None = field(default=None, compare=False)
     address: int | None = field(default=None, compare=False)
+    # What tells a drive from another of its model while nothing of it is read (analysis
+    # 18): its USB serial (None: it gives none, as a Varia Rearview Radar) and the UUID of its
+    # volume. As private as its unit ID (a fēnix 8's serial is its unit ID): never shown, and
+    # hidden in the log as soon as they are read (applog.hide_usb).
+    serial: str | None = field(default=None, compare=False, repr=False)
+    volume_uuid: str | None = field(default=None, compare=False, repr=False)
 
     @property
     def usb_id(self) -> str:
@@ -582,15 +588,10 @@ def find_devices() -> list[FoundDevice]:
 _BLOCK_DEVICE = re.compile(r"/dev/([A-Za-z0-9_][A-Za-z0-9_.-]*)")
 
 
-def _block_device_usb(unix_device: str | None) -> tuple[str, str, int, int] | None:
-    """(idVendor, idProduct, busnum, devnum) of the USB device that holds this block device;
-    None when it is not on USB or not known. Only these four attributes are read."""
-    found = _block_usb(unix_device)
-    return found[0] if found is not None else None
-
-
 def _block_usb(unix_device: str | None) -> tuple[tuple[str, str, int, int], Path] | None:
-    """_block_device_usb, with the folder of that USB device in /sys."""
+    """(idVendor, idProduct, busnum, devnum) of the USB device that holds this block device,
+    and the folder of that USB device in /sys; None when it is not on USB or not known. Only
+    these four attributes are read here."""
     name = _BLOCK_DEVICE.fullmatch(unix_device or "")
     if name is None:
         return None
@@ -611,6 +612,27 @@ def _block_usb(unix_device: str | None) -> tuple[tuple[str, str, int, int], Path
             except (OSError, ValueError):
                 return None
     return None
+
+
+def _usb_serial(folder: Path) -> str | None:
+    """The USB serial of the USB device in this folder of /sys; None when it gives none."""
+    try:
+        return (folder / "serial").read_text().strip() or None
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _drive_usb(ids: tuple[str, str, int, int], folder: Path, volume) -> GarminUsb:
+    """The USB device of a Garmin drive, with what tells it from another of its model: its
+    USB serial and the UUID of its volume (udisks reads it without mounting), both hidden in
+    the log at once."""
+    from openexpress import applog
+
+    uuid = volume.get_identifier("uuid") if volume is not None else None
+    usb = GarminUsb(ids[1], "usb", ids[2], ids[3], serial=_usb_serial(folder),
+                    volume_uuid=uuid or None)
+    applog.hide_usb(usb)
+    return usb
 
 
 def _block_size(unix_device: str | None) -> int | None:
@@ -639,10 +661,10 @@ def garmin_ums(mount) -> GarminUsb | None:
     if not uri or not uri.lower().startswith("file://"):
         return None
     volume = mount.get_volume() if hasattr(mount, "get_volume") else None
-    ids = _block_device_usb(volume.get_identifier("unix-device") if volume is not None else None)
-    if ids is None or ids[0] != GARMIN_VID:
+    block = _block_usb(volume.get_identifier("unix-device") if volume is not None else None)
+    if block is None or block[0][0] != GARMIN_VID:
         return None
-    return GarminUsb(ids[1], "usb", ids[2], ids[3])
+    return _drive_usb(block[0], block[1], volume)
 
 
 def _hidden_in_sandbox(path: str | None) -> bool:
@@ -722,7 +744,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
             continue
         with _places_lock:
             _drive_places[folder.name] = None
-        places.setdefault(place, []).append((vol, unix, ids))
+        places.setdefault(place, []).append((vol, unix, ids, folder))
     for place, volumes in places.items():
         seen.add(place)
         ids = volumes[0][2]
@@ -731,13 +753,15 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
             continue
-        with_medium = sorted(((vol, unix) for vol, unix, _ids in volumes if _block_size(unix)),
+        with_medium = sorted(((vol, unix) for vol, unix, _ids, _f in volumes
+                              if _block_size(unix)),
                              key=lambda v: (len(v[1]), v[1]))  # sdc before sdd, sdz before sdaa
         if not with_medium:
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
             continue
         vol, unix = with_medium[0]
+        usb = _drive_usb(ids, volumes[0][3], vol)  # the volume of its drive: its UUID
         log.info("device: a Garmin drive (USB %s) is not mounted, listed to be mounted",
                  usb.usb_id)
         found.append(FoundDevice(UNMOUNTED_DRIVE + unix, vol.get_name(), False, vol, usb,

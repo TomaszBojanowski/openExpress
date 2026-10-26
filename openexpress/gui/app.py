@@ -838,8 +838,8 @@ def _choose(found: list):
     for s in summaries:
         if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
             known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
-                               s.found.kind, usb_product=s.found.usb.product
-                               if s.found.kind == "ums" and s.found.usb is not None else None)
+                               s.found.kind, **service.drive_keys(
+                                   s.found.usb if s.found.kind == "ums" else None))
     left = _still_there(summaries)
     if len(left) > 1 or (left and left[0].found.kind == "ums" and not left[0].found.mounted):
         # A drive the system has not mounted is not mounted behind the user's back: its tile.
