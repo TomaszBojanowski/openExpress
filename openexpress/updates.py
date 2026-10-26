@@ -150,6 +150,8 @@ SEVERITY_NAMES = {
     "critical": N_("Critical"),
     # TRANSLATORS: importance of an update
     "recommended": N_("Recommended"),
+    # TRANSLATORS: importance of an update
+    "optional": N_("Optional"),
     # TRANSLATORS: importance of an update, when the server does not say
     "unspecified": N_("Unspecified"),
 }

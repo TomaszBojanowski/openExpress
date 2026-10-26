@@ -883,8 +883,10 @@ def test_readable_names_of_types_and_severities(offered):
     assert firmware.title == "Test watch System Software"  # a real name is kept
     assert firmware.severity_text == "Critical"
     etyp.datatype = etyp.name = "SomethingNew"
-    etyp.severity = "Optional"
-    assert (etyp.title, etyp.severity_text) == ("SomethingNew", "Optional")  # unknown: as sent
+    etyp.severity = "Urgent"  # made up
+    assert (etyp.title, etyp.severity_text) == ("SomethingNew", "Urgent")  # unknown: as sent
+    etyp.severity = "OPTIONAL"
+    assert etyp.severity_text == "Optional"  # a name of its own, in any letter case
     etyp.name, etyp.datatype = "", "CONFIG"
     assert etyp.title == "Configuration"
 
@@ -893,8 +895,9 @@ def test_readable_names_of_types_and_severities(offered):
     i18n.setup("pl")
     try:
         pl = upd.parse_updates(answer)
-        assert (pl[0].title, pl[0].severity_text, pl[3].severity_text) == (
-            "Plik dodatkowy mapy", "Zalecana", "Krytyczna")
+        pl[1].severity = "Optional"
+        assert (pl[0].title, pl[0].severity_text, pl[1].severity_text, pl[3].severity_text) == (
+            "Plik dodatkowy mapy", "Zalecana", "Opcjonalna", "Krytyczna")
     finally:
         i18n.setup("en")
 
