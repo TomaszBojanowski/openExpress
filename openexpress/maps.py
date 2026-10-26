@@ -4,10 +4,10 @@ As in Garmin Express: the server returns
 the maps assigned to the device, the client downloads the files, activates the map
 on the server (the response contains .gma unlock files) and writes everything to the watch.
 
-As Express does, the files are written smallest first; a file other maps share is tried once
-more after a failed write and never deleted; an unlock file is tried up to six times, with a
-pause between. A map written or removed waits until the device is unplugged (mark_waiting):
-only then does the device take it in.
+openExpress writes the files smallest first. A file other maps share is tried once more
+after a failed write and is never deleted; every other file is written once. An unlock file
+is tried up to six times, with a pause between. A map written or removed waits until the
+device is unplugged (mark_waiting): only then does the device take it in.
 
 There is no license circumvention here: only what the server offers for this
 device is installed.

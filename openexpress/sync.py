@@ -188,11 +188,12 @@ def parse_locations(dt: dict, include_consent: bool,
                     ) -> tuple[list[UploadLocation], list[UploadLocation]]:
     """Return (used, skipped) upload locations for an OMT data type.
 
-    As in Express, the requiresUserConsent flag alone does not exclude a location
-    (it applies to e.g. HRV and skin temperature). A location that names specific
-    required consents is used only when `consent_granted` says each of them is given;
-    without that function such locations are skipped. `include_consent` takes them
-    all, for marking files only (nothing is uploaded then).
+    The requiresUserConsent flag alone does not exclude a location (it applies to e.g.
+    HRV and skin temperature). openExpress judges each location on its own: one that
+    names specific required consents is used only when `consent_granted` says each of
+    them is given, and without that function it is skipped; the other locations of the
+    data type are used all the same. `include_consent` takes them all, for marking files
+    only (nothing is uploaded then).
     """
     used, skipped = [], []
     for loc in dt.get("uploadlocations") or []:

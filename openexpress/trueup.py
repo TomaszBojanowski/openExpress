@@ -1,9 +1,9 @@
 """TrueUp: aligning daily totals (steps, calories, …) across several Garmin devices.
 
-Flow as in Garmin Express:
+The flow in openExpress:
   1. Connect queues a FIT_TYPE_39 `check_back` file containing the time at which
      the client should ask again. It is downloaded and acknowledged.
-  2. The client waits until that time (at most 90 s), up to 3 rounds.
+  2. openExpress waits until that time, but never longer than 90 s, for up to 3 rounds.
   3. Connect then queues a `true_up` file, which is downloaded, acknowledged
      and written to the watch.
 """

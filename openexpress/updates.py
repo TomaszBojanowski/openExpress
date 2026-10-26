@@ -407,7 +407,7 @@ def _install(
         _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,
-        # and what _clear_the_place deleted does not come back (as in Garmin Express).
+        # and what _clear_the_place deleted does not come back.
         real = storage.write_file(u.device_path, local, transfer_progress)
         ok = storage.size(real) == size
         if not ok:
@@ -422,18 +422,20 @@ def _install(
     return report
 
 
-# Left by a device that takes an update in parts (Garmin Express deletes it before it writes
-# a system update, for devices with incremental updates).
+# Left by a device that takes an update in parts. openExpress deletes it from the folder of
+# a system update before writing it, on every device.
 LEFTOVER_FILE = "GUPDATE.TMP"
 
 
 def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
-    """Before the file of an update is written, as Garmin Express does: a file at its place
-    whose name differs only in letter case is deleted, so that the new file has exactly the
-    name the server gives (an Edge 1050 did not install GUPDATE.GSP written over its own
-    GUPDATE.gsp, 21.10.2026); for a system update also a leftover GUPDATE.TMP in the same
-    folder. A file of exactly that name is replaced by the copy itself (on a drive only once
-    the new one is whole). Names compared in any letter case; the log names what is deleted."""
+    """Before the file of an update is written: a file at its place whose name differs only
+    in letter case is deleted, so that the new file has exactly the name the server gives;
+    for a system update also a leftover GUPDATE.TMP in the same folder. openExpress does both
+    on every device, over MTP and on a drive. (An Edge 1050 did not install GUPDATE.GSP
+    written over its own GUPDATE.gsp at once, 21.10.2026, but later installed that file by
+    itself: the letter case is not known to matter, the exact name is the safer choice.) A
+    file of exactly that name is replaced by the copy itself (on a drive only once the new
+    one is whole). Names compared in any letter case; the log names what is deleted."""
     parent, name = posixpath.split(u.device_path)
     real_parent = storage.resolve(parent) if parent else ""
     if real_parent is None:
