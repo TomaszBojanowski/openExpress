@@ -4193,15 +4193,24 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
     @staticmethod
     def _report_text(report_text: str, attach_log: bool) -> str:
         """The report, with the end of the log when the user asked for it."""
+        return MainWindow._report_and_log(report_text, attach_log)[0]
+
+    @staticmethod
+    def _report_and_log(report_text: str, attach_log: bool) -> tuple[str, str | None]:
+        """The report, with the end of the log when the user asked for it, and that log as
+        the "Log" field of the form takes it (None without it): read once, so that both
+        say the same."""
         from openexpress import applog, report
 
         if not attach_log:
-            return report_text
-        return report.with_log(report_text, applog.tail(report.LOG_LINES), applog.crash_tail())
+            return report_text, None
+        lines, crash = applog.tail(report.LOG_LINES), applog.crash_tail()
+        return report.with_log(report_text, lines, crash), report.form_log(lines, crash)
 
     @staticmethod
-    def _report_view(report_text: str):
+    def _report_view(report_text: str, kept: dict | None = None):
         """The preview of the report with the "attach the log" switch: (widget, text buffer).
+        `kept["log"]`: the log shown, as the form's "Log" field takes it (None: not attached).
 
         No handler here may refer to a widget of the preview: a widget that keeps itself
         alive through its own handler outlives the dialog, and Python frees it whenever it
@@ -4214,11 +4223,17 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         scroller.add_css_class("card")
         attach = Gtk.CheckButton(label=_("Attach the last log"))
         attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
-        attach.connect("toggled", lambda button: buffer.set_text(
-            MainWindow._report_text(report_text, button.get_active())))
+
+        def toggled(button):
+            text, log_for_form = MainWindow._report_and_log(report_text, button.get_active())
+            buffer.set_text(text)
+            if kept is not None:
+                kept["log"] = log_for_form
+
+        attach.connect("toggled", toggled)
         # Shown once "Open on GitHub" put the log in the clipboard (show_report).
-        note = Gtk.Label(label=_("The log is in the clipboard. Paste it into the issue after "
-                                 "it opens."), wrap=True, xalign=0, visible=False,
+        note = Gtk.Label(label=_("The log is in your clipboard. Paste it into the “Log” "
+                                 "field of the form."), wrap=True, xalign=0, visible=False,
                          name="report-log-note", css_classes=["dim-label"])
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(scroller)
@@ -4243,8 +4258,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
         buffer = None
+        kept = {"log": None}  # the log shown, for the form's "Log" field (_report_view)
         if body_text:
-            box, buffer = self._report_view(body_text)
+            box, buffer = self._report_view(body_text, kept)
             d.set_extra_child(box)
             d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))
@@ -4273,7 +4289,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                 self.toast(_("Report copied"))
             elif r == "open":
                 attached = self._open_report_form(
-                    body_text, shown() if buffer is not None else "",
+                    body_text, shown() if buffer is not None else "", kept["log"],
                     s.device.description if s is not None else None)
                 if attached:
                     stay["open"] = True
@@ -4283,24 +4299,24 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         d.connect("response", response)
         d.present(self)
 
-    def _open_report_form(self, report_text: str, shown: str, model: str | None) -> bool:
+    def _open_report_form(self, report_text: str, shown: str, log_for_form: str | None,
+                          model: str | None) -> bool:
         """Open a new device report on GitHub with the report filled in. The log never goes
-        into the address (too long, and the address is sent to GitHub when the page opens):
-        when it is attached the report ends with a section "### Log" that says to paste it
-        (report.with_log_placeholder), and the log goes to the clipboard; whether it did. A
-        report too long for an address goes to the clipboard whole, with the empty form, as
-        before."""
+        into the address (too long, and the address is sent to GitHub when the page opens),
+        nor into the report field (what is pasted into a field filled in from the address is
+        lost): when it is attached (`log_for_form`), it goes to the clipboard, for the
+        form's "Log" field; whether it did. A report too long for an address goes to the
+        clipboard whole, with the empty form, as before."""
         from openexpress import report
 
-        attached = bool(report_text) and shown != report_text  # the log below the report
-        body = report.with_log_placeholder(report_text) if attached else report_text
-        url = report.issue_url(body, model) if report_text else None
+        attached = bool(report_text) and log_for_form is not None
+        url = report.issue_url(report_text, model) if report_text else None
         if report_text and url is None:
             self.get_clipboard().set(shown)
             self.toast(_("Report copied: paste it into the form"))
             attached = False
         elif attached:
-            self.get_clipboard().set(shown[len(report_text):].lstrip("\n"))
+            self.get_clipboard().set(log_for_form)
         Gtk.UriLauncher.new(url or report.ISSUE_URL).launch(self, None, None, None)
         return attached
 

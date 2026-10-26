@@ -13,10 +13,9 @@ body:
     attributes:
       label: Device report
       description: |
-        In the window: main menu (☰) → **Report a Device or Problem…**, tick
-        **Attach the last log** → **Copy**.
-        Or in a terminal: `openexpress report --log`
-        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report --log`).
+        In the window: main menu (☰) → **Report a Device or Problem…** → **Copy**.
+        Or in a terminal: `openexpress report`
+        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report`).
         No device detected? Write the openExpress version (About openExpress) and your system instead.
       render: markdown
     validations:
@@ -28,3 +27,11 @@ body:
       placeholder: What you did, what you expected and any error you saw
     validations:
       required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste the output of report --log here if something didn't work.
+      render: shell
+    validations:
+      required: false

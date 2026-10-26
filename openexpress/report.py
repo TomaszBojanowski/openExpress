@@ -54,14 +54,16 @@ def with_log(text: str, lines: list[str], crash: list[str] | None = None) -> str
     return out
 
 
-# Where the log goes in an issue opened from the window: never into the address; the issue
-# says where it is, and the window puts it in the clipboard (#18, #19).
-LOG_PLACEHOLDER = "(paste the log here — it is in your clipboard)"
-
-
-def with_log_placeholder(text: str) -> str:
-    """The report with an empty section "### Log" that says to paste the log there."""
-    return f"{text}\n### Log\n{LOG_PLACEHOLDER}\n"
+def form_log(lines: list[str], crash: list[str] | None = None) -> str:
+    """The end of the log (and of crash.log, when there is one) for the "Log" field of the
+    issue forms, which shows it as code itself: the lines alone, without the headings and
+    code fences of with_log. An issue opened from the window never has the log in its
+    address; the window puts this in the clipboard (#18, #19)."""
+    out = "\n".join(lines) + "\n" if lines else "(no log file)\n"
+    if crash:
+        out += (f"\n# Crash log (last {len(crash)} lines of crash.log)\n"
+                + "\n".join(crash) + "\n")
+    return out
 
 
 def issue_url(text: str, model: str | None) -> str | None:

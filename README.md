@@ -448,7 +448,7 @@ openExpress keeps a log of what it does, to make problems easier to find:
   appends its last 200 lines, filtered once more. In the window, tick **Attach the last log**
   in *Report a Device or Problem…*; the preview shows exactly what will be copied. **Open on
   GitHub** puts only the report into the form and the log into the clipboard, to paste into
-  the issue: the log never goes into the address. Read it before you send it.
+  the form's “Log” field: the log never goes into the address. Read it before you send it.
 
 ### Cache
 

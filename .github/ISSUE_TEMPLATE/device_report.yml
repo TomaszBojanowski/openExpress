@@ -12,16 +12,15 @@ body:
         **Privacy:** don't paste `openexpress info` output, your `GarminDevice.xml` or files
         from `~/.config/openexpress` – they contain your device's serial number, unit ID,
         map unlock codes or login token. The report below contains none of these, and the
-        log at its end is already filtered.
+        log is already filtered.
   - type: textarea
     id: report
     attributes:
       label: Device report
       description: |
-        In the window: main menu (☰) → **Report a Device or Problem…**, tick
-        **Attach the last log** → **Copy**.
-        Or in a terminal: `openexpress report --log`
-        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report --log`).
+        In the window: main menu (☰) → **Report a Device or Problem…** → **Copy**.
+        Or in a terminal: `openexpress report`
+        (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report`).
       render: markdown
     validations:
       required: true
@@ -42,5 +41,13 @@ body:
     attributes:
       label: What didn't work?
       placeholder: What you did and any error you saw
+    validations:
+      required: false
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste the output of report --log here if something didn't work.
+      render: shell
     validations:
       required: false

@@ -272,24 +272,37 @@ def _note(dialog):
 
 @pytest.mark.needs_display
 def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
-    """#18, #19: the log never goes into the address; the issue gets a section "### Log" that
-    says where it is, the log goes to the clipboard, and the dialog stays to say so (a toast
-    on the window was missed once the browser came up)."""
+    """#18, #19: the log never goes into the address. The form has a field of its own for it
+    ("Log": pasting into the field filled in from the address loses what is pasted), so the
+    report field gets the report alone; the log goes to the clipboard as that field shows
+    it (as code: its lines alone), and the dialog stays to say where to paste it (a toast on
+    the window was missed once the browser came up)."""
     from urllib.parse import parse_qs, urlsplit
 
     _write_log(log_file, ["one", "device 3987654321"])
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
-    assert _note(dialog) == (False, ("The log is in the clipboard. Paste it into the issue "
-                                     "after it opens."))
+    assert _note(dialog) == (False, ("The log is in your clipboard. Paste it into the "
+                                     "\u201cLog\u201d field of the form."))
     _attach_log(dialog)
     dialog.emit("response", "open")
     (url,) = opened
-    filled = parse_qs(urlsplit(url).query)["report"][0]
-    assert filled == text + "\n### Log\n(paste the log here — it is in your clipboard)\n"
-    assert "device <number>" not in url and "one" not in filled.split("### Log")[1]
-    assert copied == ["### Log (last 2 lines)\n```\none\ndevice <number>\n```\n"]
+    assert parse_qs(urlsplit(url).query)["report"][0] == text
+    assert "device <number>" not in url and "### Log" not in url
+    assert copied == ["one\ndevice <number>\n"]
     assert _note(dialog)[0] is True and said == []
     assert not dialog.get_can_close()  # it stays open with the sentence
+
+
+@pytest.mark.needs_display
+def test_the_crash_log_goes_to_the_log_field_too(monkeypatch, device_root, log_file):
+    from openexpress import applog
+
+    _write_log(log_file, ["one"])
+    applog.crash_path().write_text("Fatal Python error\n", encoding="utf-8")
+    dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
+    _attach_log(dialog)
+    dialog.emit("response", "open")
+    assert copied == ["one\n\n# Crash log (last 1 lines of crash.log)\nFatal Python error\n"]
 
 
 @pytest.mark.needs_display
@@ -312,15 +325,16 @@ def test_the_sentence_about_the_log_in_polish(monkeypatch, device_root, log_file
         dialog, _text, _opened, _copied, _said = _report_dialog(monkeypatch, device_root)
     finally:
         i18n.setup("en")
-    assert _note(dialog)[1] == "Log jest w\u00a0schowku. Wklej go do zgłoszenia po jego otwarciu."
+    assert _note(dialog)[1] == ("Log jest w\u00a0schowku. Wklej go w\u00a0pole \u201eLog\u201d "
+                                "formularza.")
 
 
 def test_the_report_alone_fits_an_address_with_room_to_spare(device_root):
-    """The report has a fixed number of lines; with the section of the log it stays well
-    under MAX_URL (the empty form and the clipboard remain for anything longer)."""
+    """The report has a fixed number of lines; it stays well under MAX_URL (the empty form
+    and the clipboard remain for anything longer)."""
     st = LocalStorage(device_root)
     text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, True)
-    url = report.issue_url(report.with_log_placeholder(text), "Test watch")
+    url = report.issue_url(text, "Test watch")
     assert url is not None and len(url) < report.MAX_URL // 2
 
 
@@ -422,3 +436,26 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
             "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
             "https://github.com/") in err
     assert "Logu nie ma w adresie: wklej go w zgłoszeniu." in err
+
+
+# --- the forms on GitHub -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", ["device_report.yml", "bug_report.yml"])
+def test_the_forms_have_a_field_of_their_own_for_the_log(name):
+    """Pasting into the "Device report" field filled in from the address loses what is
+    pasted (26.10.2026): the log goes into a field of its own, which shows it as code."""
+    from pathlib import Path
+
+    yaml = pytest.importorskip("yaml")
+    path = Path(__file__).parent.parent / ".github" / "ISSUE_TEMPLATE" / name
+    form = yaml.safe_load(path.read_text(encoding="utf-8"))
+    fields = [item for item in form["body"] if item.get("id")]
+    log = fields[-1]  # the last field
+    assert (log["type"], log["id"]) == ("textarea", "log")
+    assert log["attributes"] == {
+        "label": "Log", "render": "shell",
+        "description": "Paste the output of report --log here if something didn't work."}
+    assert not log.get("validations", {}).get("required", False)
+    (field,) = [item for item in fields if item["id"] == "report"]
+    assert "log" not in field["attributes"]["description"].lower()
