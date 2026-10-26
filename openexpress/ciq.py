@@ -356,8 +356,9 @@ def require_complete(state: InstalledState) -> None:
     the device has none yet (a list written then would name none of its own apps)."""
     if state.no_app_list:
         raise CiqError(_("The device has no Connect IQ app list yet (no app was ever installed "
-                         "on it), so nothing on it can be changed. New apps are queued in "
-                         "Garmin Connect and installed by the phone or Garmin Express."))
+                         "on it), so nothing on it can be changed. New apps wait in the queue "
+                         "in Garmin Connect. The phone installs them, and once the device shows "
+                         "its app list, openExpress can too."))
     if state.unreadable:
         n = state.unreadable
         raise CiqError(ngettext(
@@ -930,7 +931,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     report = IqInstallReport()
     state = read_installed(device, storage)
     if state.no_app_list:
-        # Nothing is written: the queued apps stay for the phone or Garmin Express (#14).
+        # Nothing is written: the queued apps stay for the phone (#14). Garmin Express does
+        # not install them either, as it cannot read the apps of a device without a list.
         report.no_app_list = True
         for m in messages:
             app_id = message_app_id(m) if is_iq_message(m) else None

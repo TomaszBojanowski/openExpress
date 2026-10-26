@@ -1,10 +1,11 @@
 """A device that declares Connect IQ but has no app list (GARMIN/APPS/OUT.BIN) yet, as no app
 was ever installed on it (#14: a fēnix 8 51 mm AMOLED, 25.10.2026): that is an empty list,
 not an error. The Apps page and `openexpress apps` say "No Connect IQ apps on the device", the
-apps of the account can be installed: they are queued in Garmin Connect, for the phone or
-Garmin Express, and nothing is written to the device (a list written without the device's
-own would name none of its apps). No copy of the app list, and no error. A list that is there
-but cannot be read stays an error. All devices and apps are made up."""
+apps of the account can be installed: they are queued in Garmin Connect, for the phone, and
+nothing is written to the device (a list written without the device's own would name none of
+its apps). Garmin Express does not install them either: it cannot read the apps of a device
+without an app list. No copy of the app list, and no error. A list that is there but cannot
+be read stays an error. All devices and apps are made up."""
 
 import logging
 import types
@@ -86,8 +87,30 @@ def test_a_sync_leaves_the_queued_apps_for_the_phone(no_list, apps_cli):
 
 def test_changing_an_app_says_why_not(no_list):
     st, dev = no_list
-    with pytest.raises(ciq.CiqError, match="no Connect IQ app list"):
+    with pytest.raises(ciq.CiqError) as refused:
         ciq.set_enabled(dev, st, FACE, True)
+    # Only the phone is named: Garmin Express cannot install the first app on such a device
+    # either, as it cannot read the apps of a device without an app list.
+    assert str(refused.value) == (
+        "The device has no Connect IQ app list yet (no app was ever installed on it), so "
+        "nothing on it can be changed. New apps wait in the queue in Garmin Connect. The phone "
+        "installs them, and once the device shows its app list, openExpress can too.")
+
+
+def test_why_not_in_polish(no_list):
+    st, dev = no_list
+    i18n.setup("pl")
+    try:
+        with pytest.raises(ciq.CiqError) as refused:
+            ciq.set_enabled(dev, st, FACE, True)
+    finally:
+        i18n.setup("en")
+    # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
+    assert str(refused.value) == (
+        "Urządzenie nie ma jeszcze listy aplikacji Connect IQ (nie zainstalowano na nim żadnej "
+        "aplikacji), więc nie można na nim niczego zmienić. Nowe aplikacje czekają "
+        "w\u00a0kolejce Garmin Connect. Zainstaluje je telefon, a\u00a0gdy urządzenie będzie już "
+        "miało listę aplikacji, zrobi to także openExpress.")
 
 
 # --- the command line -----------------------------------------------------------------------
