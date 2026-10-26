@@ -46,6 +46,7 @@ class FakeDevice:
         self.free = 500 * 1024 * 1024
         self.refuse: dict[int, int] = {}  # operation -> response code
         self.refuse_names: dict[str, int] = {}  # file name -> code, at SendObjectInfo
+        self.refuse_delete_names: dict[str, int] = {}  # file name -> code, at DeleteObject
         self.supports_hidden = True
         self.delete_protected = ptp.OK  # or a refusal such as ptp.OBJECT_WRITE_PROTECTED
         self.session_open = False
@@ -213,6 +214,8 @@ class FakeDevice:
                 return ptp.OK, bytes(b ^ 0xA5 for b in obj.data)  # "encrypted"
             return ptp.OK, obj.data
         if operation == ptp.DELETE_OBJECT:
+            if obj.name in self.refuse_delete_names:
+                return (self.refuse_delete_names[obj.name],)
             if obj.protection and self.delete_protected != ptp.OK:
                 return (self.delete_protected,)
             for h in [params[0]] + [h for h, o in self.objects.items() if o.parent == params[0]]:

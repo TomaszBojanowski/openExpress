@@ -1302,6 +1302,28 @@ def waiting_text(app: InstalledApp) -> str:
              "Unplug the device first.").format(name=app.name)
 
 
+# How an app can be removed (`removal_way`): its file through the mounted storage, over a PTP
+# session (DIRECT), not here in a sandbox without USB (SANDBOXED), or not at all.
+MOUNTED, UNREACHABLE = "mounted", "unreachable"
+
+
+def removal_way(device: GarminDevice, storage: Storage, app: InstalledApp) -> str:
+    """How the app can be removed, told by its own file alone: MOUNTED when the ordinary
+    listing shows it, DIRECT when the device hides it and a PTP session reaches it,
+    SANDBOXED when only the sandbox keeps it out of reach, UNREACHABLE otherwise. The
+    settings file decides nothing: a settings file the listing shows next to an app file it
+    does not show used to send the removal through the mounted storage, which deleted the
+    settings alone and left the app on the device."""
+    path = app_file_path(device, app)
+    if path and storage.exists(path):
+        return MOUNTED
+    if removable_directly(device, storage, app):
+        return DIRECT
+    if removal_sandboxed(device, storage, app):
+        return SANDBOXED
+    return UNREACHABLE
+
+
 def removable_directly(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
     """Whether the app's file is in a folder the device hides and a PTP session can reach."""
     dt = APPTYPE_TO_DATATYPE.get(app.app_type)
@@ -1336,9 +1358,12 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
     if current is not None and (current.pending or current.pending_removal):
         current.name = app.name  # IN.BIN has no names; the caller may know it
         raise CiqError(waiting_text(current))
-    paths_ = files_on_device(device, storage, app)
-    if not paths_ and removable_directly(device, storage, app):
+    way = removal_way(device, storage, app)
+    if way == DIRECT:
         return _remove_hidden(device, storage, state, app)
+    # Through the mounted storage: the app file and its settings file. Nothing is deleted
+    # when the app file is out of reach (the callers say why first).
+    paths_ = files_on_device(device, storage, app) if way == MOUNTED else []
     removed = []
     if paths_:
         save_app_list_copy(device, storage)
@@ -1353,7 +1378,10 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
 
 def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) -> list[str]:
     """Like Garmin Express: delete the app file the device hides, then write the app list
-    without the app; every other entry keeps its place and its flags."""
+    without the app; every other entry keeps its place and its flags. The app's settings
+    file goes too, as through the mounted storage, once the list is written: a session that
+    breaks at it leaves no app listed without its file, and a refusal only stays in the
+    log."""
     in_path = _config_path(device, True)
     if storage.exists(in_path):
         raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
@@ -1362,6 +1390,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
     if listed is None:
         raise CiqError(_("App not found on the device"))
     path = app_file_path(device, listed)
+    settings_path = settings_file_path(device, listed)
     in_bin = build_in_bin(_without(state.listed, listed))
     removed: list[str] = []
     problem: str | None = None
@@ -1409,6 +1438,8 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
             if session.lookup(store, in_path) is not None:
                 raise CiqError(_("the device has not applied earlier changes yet; unplug it, "
                                  "wait until it is ready and try again"))
+            settings = (session.lookup(store, settings_path) if settings_path is not None
+                        else None)
             file = session.lookup(store, path)
             if file is not None:
                 if file.is_dir or (listed.size is not None and file.size != listed.size):
@@ -1435,6 +1466,13 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
                 left = (_ptp_delete(session, e.handle, in_path)
                         if isinstance(e, ptp.PtpWriteError) else [])
                 problem = _with_leftovers(e, left)
+            if finished and settings is not None and not settings.is_dir:
+                try:
+                    session.delete(settings.handle)
+                    removed.append(settings_path)
+                except DeviceError as e:  # the app is removed all the same
+                    log.warning("apps remove over PTP: the settings file of %s was not "
+                                "deleted (%s)", app.name, type(e).__name__)
     except RemountFailed as e:
         if finished:
             raise CiqError(_("{name} was removed, but the device could not be mounted again: "
@@ -1450,8 +1488,8 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
         raise CiqError(what_became(e)) from e
     if problem is not None:
         raise CiqError(list_left())
-    log.info("apps remove over PTP: %s, %d files deleted, app list written", app.name,
-             len(removed))
+    log.info("apps remove over PTP: %s, %d files deleted (settings: %s), app list written",
+             app.name, len(removed), "yes" if settings_path in removed else "no")
     return removed
 
 

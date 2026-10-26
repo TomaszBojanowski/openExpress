@@ -1125,8 +1125,12 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     """`apps remove` on a device that hides its app folder: over a PTP session."""
     from openexpress import ciq
 
-    print(_("Remove {name} from the device: {files}").format(
-        name=app.name, files=ciq.app_file_path(dev, app)))
+    app_file = ciq.app_file_path(dev, app)
+    print(_("Remove {name} from the device: {files}").format(name=app.name, files=app_file))
+    settings = ciq.settings_file_path(dev, app)
+    if settings:
+        print("  " + _("and its settings file, if the device has one: {path}").format(
+            path=settings))
     print("  " + _("The device does not show this file to ordinary file access. openExpress "
                    "will delete it over a direct USB connection; the device disappears from "
                    "the file manager for a moment."))
@@ -1146,7 +1150,7 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
         print(_("Dry run. Add --apply."))
         return 0
     removed = ciq.remove(dev, st, app)
-    if not removed:
+    if app_file not in removed:
         print(_("The app file was already gone; only the app list was updated."))
     if args.forget:
         api.forget(dev, [app.app_id])
@@ -1345,12 +1349,14 @@ def cmd_apps(args) -> int:
                                .format(name=app.name))
         if app.pending or app.pending_removal:
             raise ciq.CiqError(ciq.waiting_text(app))
-        paths_ = ciq.files_on_device(dev, st, app)
-        if not paths_ and ciq.removable_directly(dev, st, app):
+        # The app file alone decides the way (ciq.removal_way), as in the window.
+        way = ciq.removal_way(dev, st, app)
+        if way == ciq.DIRECT:
             return _remove_app_directly(args, dev, st, state, app, api)
+        paths_ = ciq.files_on_device(dev, st, app) if way == ciq.MOUNTED else []
         if not paths_:
             # E.g. the fēnix 8: no app files are visible over USB, so there is nothing to delete.
-            if ciq.removal_sandboxed(dev, st, app):
+            if way == ciq.SANDBOXED:
                 print(f"{app.name}: " + ciq.sandbox_removal_text())
                 if not args.forget:
                     print(_("To remove it only from your account list, use --forget."))

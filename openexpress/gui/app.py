@@ -4489,13 +4489,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             api = ciq.StoreApi(s.client)
             locale = s.settings.locale.replace("_", "-")
             state = ciq.read_installed(s.device, s.storage)
-            # Apps without visible files cannot be removed over USB (e.g. on the fēnix 8).
+            # How each app can be removed, told by its own file alone (as on the command
+            # line): an app whose file is out of reach cannot be removed over USB.
             for app in state.store_apps:
-                app.has_files = bool(ciq.files_on_device(s.device, s.storage, app))
-                app.direct_removal = (not app.has_files and ciq.removable_directly(
-                    s.device, s.storage, app))
-                app.sandboxed = (not app.has_files and ciq.removal_sandboxed(
-                    s.device, s.storage, app))
+                way = ciq.removal_way(s.device, s.storage, app)
+                app.has_files = way == ciq.MOUNTED
+                app.direct_removal = way == ciq.DIRECT
+                app.sandboxed = way == ciq.SANDBOXED
             account = api.account_apps(s.device, locale)
             ciq.name_pending(state, account)
             updates = api.updates(s.device, state.store_apps, locale)
@@ -4921,9 +4921,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         if app.has_files is False and not direct:
             self.confirm_forget_app(app)
             return
-        body = (_("The app will be deleted from the device over a direct USB connection; the "
-                  "device disappears from the file manager for a moment. The device finishes "
-                  "the removal after it is unplugged.") if direct
+        body = (_("The app and its settings will be deleted from the device over a direct "
+                  "USB connection; the device disappears from the file manager for a moment. "
+                  "The device finishes the removal after it is unplugged.") if direct
                 else _("The app and its settings will be deleted from the device."))
         d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=app.name), body=body)
         d.add_response("cancel", _("Cancel"))

@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import logging
 import uuid
 
 import pytest
@@ -1423,6 +1424,65 @@ def test_hidden_app_is_removed_like_express_does(hidden_spot):
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()  # nothing through the mounted storage
 
 
+SETTINGS_FILE = "GARMIN/APPS/SETTINGS/0A1B2C3D.SET"
+
+
+def test_a_hidden_app_is_removed_with_its_settings_file(hidden_spot):
+    """As over the mounted storage and as Garmin Express: the settings file of the app goes
+    too (its folder and extension from IQAppsSettingsFile, the name of the app's file). It
+    is deleted once the app list is written, so that a session that breaks at it leaves no
+    app listed without its file."""
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.add("GARMIN/Apps/SETTINGS/0A1B2C3D.SET", b"app settings", hidden=True)
+    assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG", SETTINGS_FILE]
+    assert fake.names("GARMIN/Apps/SETTINGS") == []
+    assert [(p[0], p[1]) for p in fake_in_bin(fake)] == [(STORE_ID, 1), (PRELOADED, 8)]
+    writes = [op for op in fake.operations if op in (ptp.DELETE_OBJECT, ptp.SEND_OBJECT_INFO)]
+    assert writes == [ptp.DELETE_OBJECT, ptp.SEND_OBJECT_INFO, ptp.DELETE_OBJECT]
+    assert st.sessions == 1
+
+
+def test_a_visible_settings_file_does_not_send_the_removal_through_the_mounted_storage(
+        hidden_spot):
+    """The app file decides the way: a settings file the ordinary listing shows used to make
+    the removal delete that file alone, leave the app on the device and say it was removed."""
+    st, dev, fake, app = hidden_spot
+    (st.root / "GARMIN/APPS/SETTINGS").mkdir(parents=True, exist_ok=True)
+    (st.root / SETTINGS_FILE).write_bytes(b"app settings")
+    fake.add("GARMIN/Apps/SETTINGS/0A1B2C3D.SET", b"app settings")
+    assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG", SETTINGS_FILE]
+    assert st.sessions == 1
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+    assert fake.names("GARMIN/Apps/SETTINGS") == []
+    assert [(p[0], p[1]) for p in fake_in_bin(fake)] == [(STORE_ID, 1), (PRELOADED, 8)]
+
+
+def test_a_refused_settings_file_still_leaves_the_app_removed(hidden_spot, caplog):
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.add("GARMIN/Apps/SETTINGS/0A1B2C3D.SET", b"app settings", hidden=True)
+    fake.refuse_delete_names["0A1B2C3D.SET"] = ptp.ACCESS_DENIED
+    with caplog.at_level(logging.WARNING, logger="openexpress.ciq"):
+        assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG"]
+    assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+    assert [(p[0], p[1]) for p in fake_in_bin(fake)] == [(STORE_ID, 1), (PRELOADED, 8)]
+    assert fake.names("GARMIN/Apps/SETTINGS") == ["0A1B2C3D.SET"]
+    assert any("settings file" in r.getMessage() and r.levelno == logging.WARNING
+               for r in caplog.records)
+
+
+def test_the_way_of_a_removal_is_told_by_the_app_file_alone(iq_device, device_root, hidden_spot):
+    """The window and the command line ask the same function."""
+    st, dev, _fake, app = hidden_spot
+    assert ciq.removal_way(dev, st, app) == ciq.DIRECT
+    (st.root / "GARMIN/APPS/SETTINGS").mkdir(parents=True, exist_ok=True)
+    (st.root / SETTINGS_FILE).write_bytes(b"app settings")
+    assert ciq.removal_way(dev, st, app) == ciq.DIRECT  # the settings file changes nothing
+
+
 def test_removal_preview_keeps_every_other_app(hidden_spot):
     st, dev, fake, app = hidden_spot
     p = ciq.preview_removal(ciq.read_installed(dev, st), app)
@@ -1733,7 +1793,9 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
     assert main(["--path", str(st.root), "apps", "remove", "Face It"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert out[0] == "Remove Face It from the device: GARMIN/APPS/MEDIA/0A1B2C3D.PRG"
-    assert out[2:] == [
+    assert out[1] == ("  and its settings file, if the device has one: "
+                      "GARMIN/APPS/SETTINGS/0A1B2C3D.SET")
+    assert out[3:] == [
         "App list to be written (IN.BIN): 2 entries; the device lists 3 (OUT.BIN)",
         "  every other app on the device is kept, in the same order and with the same flags",
         "  to be removed: Face It (watch face)",
@@ -1751,6 +1813,55 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
         "The device finishes the removal after it is unplugged.",
     ]
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []
+
+
+def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, monkeypatch):
+    """The question before a removal over PTP names the settings, as the one through the
+    mounted storage does."""
+    import types
+
+    from openexpress.gui import app as gui_app
+
+    st, dev, _fake, app = hidden_spot
+    app.has_files, app.direct_removal = False, True
+    asked = []
+
+    class AlertDialog:
+        def __init__(self, heading, body):
+            asked.append(body)
+
+        def add_response(self, *args):
+            pass
+
+        def set_response_appearance(self, *args):
+            pass
+
+        def connect(self, *args):
+            pass
+
+        def present(self, parent):
+            pass
+
+    monkeypatch.setattr(gui_app, "Adw", types.SimpleNamespace(
+        AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))
+    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st))
+    gui_app.MainWindow.confirm_remove_app(win, app)
+    assert asked == [
+        ("The app and its settings will be deleted from the device over a direct USB "
+         "connection; the device disappears from the file manager for a moment. The device "
+         "finishes the removal after it is unplugged.")]
+
+
+def test_cli_removes_a_hidden_app_and_its_settings(hidden_spot, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_spot
+    fake.add("GARMIN/Apps/SETTINGS/0A1B2C3D.SET", b"app settings", hidden=True)
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "Removed 2 files." in out and fake.names("GARMIN/Apps/SETTINGS") == []
 
 
 # --- apps that wait for the device to be unplugged ----------------------------------------

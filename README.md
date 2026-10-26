@@ -362,6 +362,8 @@ is stored in the file.
   [Flatpak permissions](#flatpak-permissions)).
 - The apps already on the device keep their order and their on/off state: the app list is
   written back exactly as the device reported it, with only the requested change.
+- Removing an app deletes its file and its settings file, on every device; the data the
+  app saved on the device stays.
 - Before every change to the apps (install, update, remove, enable/disable, order) a copy of
   the device's app list is saved next to the backups, in a folder named `GARMIN-APPS <date>`.
   Nothing is changed if the copy cannot be made. No new copy is made while the apps and their
