@@ -730,5 +730,5 @@ def test_report_log_keeps_the_markers(log_file, device_root, capsys):
     assert main(["--path", str(device_root), "info"]) == 0
     capsys.readouterr()
     assert main(["--path", str(device_root), "report", "--log"]) == 0
-    log_part = capsys.readouterr().out.split("### Log", 1)[1]
+    log_part = capsys.readouterr().out  # the log alone (report.form_log)
     assert f" cli[{applog.RUN}] INFO openexpress.cli: start: info --path (" in log_part

@@ -112,12 +112,14 @@ def test_cli_report_says_where_the_log_is_and_leaves_it_out(device_root, xdg, lo
     out = capsys.readouterr()
     assert "### Log" not in out.out and out.out.rstrip().endswith("Logged in to Garmin Connect: no")
     assert out.err.rstrip().endswith(
-        "Log file: ~/.local/state/openexpress/openexpress.log (add --log to attach its last "
-        "lines to the report)")
+        "Log file: ~/.local/state/openexpress/openexpress.log (add --log to print its last "
+        "lines for the \u201cLog\u201d field of the form)")
     assert str(tmp_path) not in out.err
 
 
-def test_cli_report_with_log_appends_the_filtered_end(device_root, xdg, log_file, capsys):
+def test_cli_report_with_log_prints_the_filtered_end(device_root, xdg, log_file, capsys):
+    """The log alone, as the "Log" field of the form takes it (the report is in the address):
+    no heading, no code fences."""
     from openexpress.cli import main
 
     assert main(["--path", str(device_root), "info"]) == 0  # something to show
@@ -127,14 +129,31 @@ def test_cli_report_with_log_appends_the_filtered_end(device_root, xdg, log_file
         f.write("old line: device 3987654321 at mtp://091e_51b4_0000abcdef12/ for a@example.org\n")
     assert main(["--path", str(device_root), "report", "--log"]) == 0
     out = capsys.readouterr()
-    report_text, log_part = out.out.split("\n### Log (last ")
-    assert "### System" in report_text
-    assert log_part.startswith("4 lines)\n```\n") and log_part.endswith("\n```\n")
+    log_part = out.out
+    assert "### " not in log_part and "```" not in log_part
+    assert len(log_part.splitlines()) == 4 and log_part.endswith("\n")
     assert "start: info --path" in log_part and "start: report --path --log" in log_part
     assert "old line: device <number> at mtp://<device>/ for <email>" in log_part
     for secret in ("3987654321", "0000abcdef12", "a@example.org", str(device_root), "1234567890"):
         assert secret not in out.out
     assert "read it before you send it" in out.err
+
+
+def test_cli_report_with_log_prints_what_the_window_puts_in_the_clipboard(
+        device_root, xdg, log_file, capsys, monkeypatch):
+    """`report --log` prints the same text as "Open on GitHub" puts in the clipboard
+    (report.form_log): ready for the "Log" field of the form, the end of crash.log after it."""
+    from openexpress import applog
+    from openexpress.cli import main
+
+    monkeypatch.setattr(applog, "tail", lambda count=200: ["one", "device <number>"])
+    monkeypatch.setattr(applog, "crash_tail", lambda count=50: ["Fatal Python error"])
+    assert main(["--path", str(device_root), "report", "--log"]) == 0
+    out = capsys.readouterr()
+    assert out.out == "one\ndevice <number>\n\n# Crash log (last 1 lines of crash.log)\nFatal Python error\n"
+    assert out.out == report.form_log(["one", "device <number>"], ["Fatal Python error"])
+    assert ("The end of the log is printed above. It is filtered, but read it before you "
+            "send it.") in out.err.splitlines()
 
 
 def test_the_report_has_plain_spaces(device_root, log_file):
@@ -405,10 +424,12 @@ def test_cli_report_with_log_keeps_the_log_out_of_the_address(device_root, xdg, 
     _write_log(log_file, ["a line of the log"])
     assert main(["--path", str(device_root), "report", "--log"]) == 0
     out = capsys.readouterr()
-    report_text = out.out.split("\n### Log (last ")[0]
+    st = LocalStorage(device_root)
+    report_text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, False)
     assert report.issue_url(report_text, "Test watch") in out.err
     assert "a line of the log" in out.out and "a%20line%20of%20the%20log" not in out.err
-    assert "The log is not in the address: paste it into the issue." in out.err
+    assert ("The log is not in the address: paste it into the \u201cLog\u201d field of the "
+            "form.") in out.err
     assert "read it before you send it" in out.err
 
 
@@ -435,7 +456,7 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
     assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
             "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
             "https://github.com/") in err
-    assert "Logu nie ma w adresie: wklej go w zgłoszeniu." in err
+    assert "Logu nie ma w adresie: wklej go w pole \u201eLog\u201d formularza." in err
 
 
 # --- the forms on GitHub -----------------------------------------------------------------------

@@ -224,7 +224,7 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 |---|---|
 | `openexpress info` | model, software version, free space |
 | `openexpress files [--type FIT_TYPE_4]` | files on the watch by data type from `GarminDevice.xml` |
-| `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` appends the last 200 lines of the [log](#log-file), filtered |
+| `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` prints the last 200 lines of the [log](#log-file) instead, filtered, for the form's “Log” field |
 | `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own copied to it), so that connected again it is a new device; files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from your own copy of the official installer |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
@@ -445,10 +445,12 @@ openExpress keeps a log of what it does, to make problems easier to find:
   terminal passes the same filter; messages meant for you (e.g. the addresses to choose
   from with `--device-uri`) and the output of commands such as `openexpress info` do not.
 - **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
-  appends its last 200 lines, filtered once more. In the window, tick **Attach the last log**
+  prints its last 200 lines instead, filtered once more, ready for the form's “Log” field
+  (the address it prints fills in the report). In the window, tick **Attach the last log**
   in *Report a Device or Problem…*; the preview shows exactly what will be copied. **Open on
   GitHub** puts only the report into the form and the log into the clipboard, to paste into
-  the form's “Log” field: the log never goes into the address. Read it before you send it.
+  the form's “Log” field: the log never goes into the address. To paste a log into a
+  comment instead, wrap it in ``` lines. Read it before you send it.
 
 ### Cache
 

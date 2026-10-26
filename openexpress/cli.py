@@ -219,12 +219,15 @@ def cmd_report(args) -> int:
         logged_in = True
     except Exception:  # noqa: BLE001 - only yes/no: a broken login never stops the report
         logged_in = False
-    report_text = text = report.build(dev, st, logged_in)
-    if args.log:
-        text = report.with_log(text, applog.tail(report.LOG_LINES), applog.crash_tail())
-    print(text, end="")
+    report_text = report.build(dev, st, logged_in)
     # An address that opens the form with the report filled in; never with the log.
     url = report.issue_url(report_text, dev.description)
+    if not args.log or url is None:  # too long for an address: the report printed as well
+        print(report_text, end="" if not args.log else "\n")
+    if args.log:
+        # The log alone, ready for the "Log" field of the form: what the window puts in the
+        # clipboard for it.
+        print(report.form_log(applog.tail(report.LOG_LINES), applog.crash_tail()), end="")
     if url:
         print("\n" + _("This report contains no serial number, unit ID or e-mail. Open this "
                        "address to start a device report with it filled in: {url}").format(
@@ -234,13 +237,14 @@ def cmd_report(args) -> int:
                        "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
               file=sys.stderr)
     if args.log:
-        print(_("The end of the log is attached. It is filtered, but read it before you "
+        print(_("The end of the log is printed above. It is filtered, but read it before you "
                 "send it."), file=sys.stderr)
         if url:
-            print(_("The log is not in the address: paste it into the issue."), file=sys.stderr)
+            print(_("The log is not in the address: paste it into the “Log” field of the "
+                    "form."), file=sys.stderr)
     else:
-        print(_("Log file: {path} (add --log to attach its last lines to the report)").format(
-            path=applog.shown_path()), file=sys.stderr)
+        print(_("Log file: {path} (add --log to print its last lines for the “Log” field of "
+                "the form)").format(path=applog.shown_path()), file=sys.stderr)
     return 0
 
 
@@ -1689,7 +1693,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
     s.add_argument("--log", action="store_true",
-                   help=_("attach the last lines of the log file (filtered)"))
+                   help=_("print the last lines of the log file instead, for the form "
+                          "(filtered)"))
     s.set_defaults(func=cmd_report)
 
     s = sub.add_parser("info", help=_("information about the connected device"))
