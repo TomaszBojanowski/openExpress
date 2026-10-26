@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 21:46+0100\n"
+"POT-Creation-Date: 2026-10-27 00:33+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -374,7 +374,7 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr "Usuń ją w telefonie, w aplikacji Connect IQ albo Garmin Connect."
 
-#: openexpress/ciq.py:988 openexpress/sync.py:791
+#: openexpress/ciq.py:988 openexpress/sync.py:808
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr "Pobieranie {name}"
@@ -1969,7 +1969,7 @@ msgstr ""
 "skrót o tej samej nazwie by go zasłonił. Użyj --force, aby mimo to "
 "zainstalować, albo włącz synchronizację w tle w oknie wersji Flatpak."
 
-#: openexpress/cli.py:1646 openexpress/sync.py:808
+#: openexpress/cli.py:1646 openexpress/sync.py:825
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr "Zapisano {path}"
@@ -5846,38 +5846,38 @@ msgstr "Nie znaleziono klucza konsumenta w {path}"
 msgid "URL signing data not found in {path}"
 msgstr "Nie znaleziono danych do podpisywania adresów URL w {path}"
 
-#: openexpress/sync.py:269
+#: openexpress/sync.py:268
 msgid "ECG (needs a Garmin Health account)"
 msgstr "EKG (wymaga konta Garmin Health)"
 
-#: openexpress/sync.py:278
+#: openexpress/sync.py:277
 msgid "diagnostics/telemetry (--include-diagnostics)"
 msgstr "diagnostyka/telemetria (--include-diagnostics)"
 
-#: openexpress/sync.py:284
+#: openexpress/sync.py:285
 #, python-brace-format
 msgid "consent not given ({consents})"
 msgstr "brak zgody ({consents})"
 
-#: openexpress/sync.py:460
+#: openexpress/sync.py:467
 #, python-brace-format
 msgid "Uploading {name} ({size})"
 msgstr "Wysyłanie {name} ({size})"
 
-#: openexpress/sync.py:482
+#: openexpress/sync.py:490
 msgid "Upload consent was revoked in Garmin Connect"
 msgstr "Zgoda na wysyłanie została wycofana w Garmin Connect"
 
-#: openexpress/sync.py:491
+#: openexpress/sync.py:499
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
 msgstr "serwer odrzucił plik (kody {codes})"
 
-#: openexpress/sync.py:718
+#: openexpress/sync.py:735
 msgid "device does not accept this type"
 msgstr "urządzenie nie obsługuje tego typu"
 
-#: openexpress/sync.py:799
+#: openexpress/sync.py:816
 msgid "not enough space on the device"
 msgstr "za mało miejsca na urządzeniu"
 

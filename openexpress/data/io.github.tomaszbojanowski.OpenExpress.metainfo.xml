@@ -105,6 +105,34 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.5" date="2026-10-27">
+      <description>
+        <ul>
+          <li>Removing a Connect IQ app from a watch that hides its app folder (e.g. fēnix 8) now
+          always removes the app, and its settings file with it. Before, when the watch showed
+          the settings file, only that file was deleted, the app stayed, and openExpress said it
+          was removed.</li>
+          <li>ECG recordings are never uploaded: they go to Garmin Health, which needs a sign-in
+          of its own. Before, a recording on the watch could stop every sync. "Last sync" and
+          openexpress sync say how many were left on the watch.</li>
+          <li>A map only partly on the watch is shown as incomplete, with Install; an update is
+          offered only for a map that is fully on the watch.</li>
+          <li>When a consent is missing for any upload location of a data type, the whole type
+          is kept back, as in Garmin Express.</li>
+          <li>A file that no upload location accepted is no longer counted as uploaded; the next
+          sync tries it again.</li>
+          <li>The log to paste into an issue is fenced with ~~~, so it also shows as code in a
+          comment.</li>
+          <li>Smaller fixes: one User-Agent for every request; "Optional" importance of updates
+          named; turning the device on added to the steps after an update; setup recognises a
+          macOS installer and says it is not the one it needs, and no longer prints part of the
+          consumer key; for a device without an app list, only the phone is named as another
+          way to get apps. (#14)</li>
+          <li>README: troubleshooting for a watch that restarts after it is unplugged, five
+          devices from reports, and setup notes.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.4" date="2026-10-26">
       <description>
         <ul>
