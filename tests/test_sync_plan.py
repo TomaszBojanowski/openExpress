@@ -131,3 +131,31 @@ def test_run_sync_plans_and_syncs_under_the_lock(device_root, xdg, monkeypatch):
     summary = service.run_sync(session(device_root, account), "all")
     assert held == ["lock", "plan"] and summary.uploaded == 3 and summary.downloaded == 1
     assert service.load_last_sync(UNIT)["uploaded"] == 3
+
+
+@pytest.mark.parametrize("by", ["window", "command line"])
+def test_a_first_sync_stopped_after_its_uploads_keeps_its_choice(by, device_root, xdg,
+                                                                 monkeypatch, capsys):
+    """"Upload everything" (sync --apply --all) on a first sync, nothing uploaded (no
+    consent), then Garmin Connect's queue cannot be read: the choice was made, so the next
+    sync is not a first sync again (state.json is written before the queue is read)."""
+    import requests
+
+    from openexpress import applog, cli
+
+    account = SyncAccount(consent=False, messages=[COURSE], verified_unit_id=None)
+
+    def offline(unit_id):
+        raise requests.ConnectionError("offline")
+
+    account.device_messages = offline
+    if by == "window":
+        with pytest.raises(requests.ConnectionError):
+            service.run_sync(session(device_root, account), "all")
+    else:
+        monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
+        try:
+            assert cli.main(["--path", str(device_root), "sync", "--apply", "--all"]) == 1
+        finally:
+            applog.close()
+    assert sync.synced_here(UNIT)

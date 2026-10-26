@@ -936,10 +936,10 @@ def plan_queue(s: DeviceSession, progress: Progress = lambda m: None) -> QueuePl
 
 def apply_sync(s: DeviceSession, plan: SyncPlan,
                progress: Progress = lambda m: None) -> SyncSummary:
-    """The sync of a plan (plan_sync): its baseline written, its files uploaded, then Garmin
-    Connect's queue read and its files written to the device, with its Connect IQ apps and
-    TrueUp; state.json written. What was done, in steps (SyncSummary.lines). The record is
-    kept by run_sync."""
+    """The sync of a plan (plan_sync): its baseline written, its files uploaded and
+    state.json written, then Garmin Connect's queue read and its files written to the
+    device, with its Connect IQ apps and TrueUp. What was done, in steps
+    (SyncSummary.lines). The record is kept by run_sync."""
     options = plan.options
     if options.preview:
         raise ValueError("a preview of a sync is only to be shown")
@@ -973,12 +973,13 @@ def apply_sync(s: DeviceSession, plan: SyncPlan,
             out.lines.append(uploads_step(rep))
             if rep.tracker_conflict:
                 out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
+        # Written before the queue is read: a first sync stopped later (the queue, a
+        # download) has made its choice all the same. Not without the uploads: then the
+        # choice of the first sync stays to be made.
+        state.save()
     # No new file on the device: the row says it ("nothing to upload"), no line of its own.
     if options.downloads:
         _apply_queue(s, plan_queue(s, progress), state, progress, out)
-    if plan.uploads is not None:
-        # Not without the uploads: the choice of the first sync stays to be made.
-        state.save()
     return out
 
 
