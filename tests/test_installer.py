@@ -124,3 +124,122 @@ def test_a_dll_missing_from_the_installer_is_named(monkeypatch, tmp_path):
 def test_an_installer_that_is_not_there(tmp_path):
     with pytest.raises(SetupError, match="File not found: .*GarminExpress.exe"):
         installer.extract_dlls(tmp_path / "GarminExpress.exe", tmp_path / "dlls")
+
+
+# --- an installer for macOS (audit of 26.10.2026) -------------------------------------------
+# Only the installer for Windows has the two DLLs. A macOS disk image used to give "does not
+# look like a Garmin Express installer" on the command line and "Consumer key not found" in
+# the window; now both say what the file is and which one is needed. The file is told by its
+# bytes, not by its name.
+
+MACOS_TEXT = ("{file} is an installer for macOS. openExpress needs the Garmin Express installer "
+              "for Windows (GarminExpress.exe); it only reads it and installs nothing.")
+
+
+def _disk_image(tmp_path: Path, name: str = "GarminExpress.dmg") -> Path:
+    """A made-up macOS disk image (UDIF): its data, then the 512-byte trailer such an image
+    ends with, which begins with "koly"."""
+    image = tmp_path / name
+    image.write_bytes(b"x\xda" + b"made-up image data " * 1000 + b"koly" + b"\0" * 508)
+    return image
+
+
+def _macos_files(tmp_path: Path) -> list[Path]:
+    """A disk image under the usual name, under another and under none; an installer
+    package (a xar archive); a raw HFS+ image and an APFS one."""
+    files = [_disk_image(tmp_path), _disk_image(tmp_path, "GarminExpress.exe"),
+             _disk_image(tmp_path, "download")]
+    package = tmp_path / "Install Garmin Express.pkg"
+    package.write_bytes(b"xar!\0\x1c\0\x01" + b"made-up package" * 100)
+    hfs = tmp_path / "4.hfs"
+    hfs.write_bytes(b"\0" * 1024 + b"H+\0\x04" + b"made-up volume" * 100)
+    apfs = tmp_path / "GarminExpress.img"
+    apfs.write_bytes(b"\0" * 32 + b"NXSB" + b"made-up container" * 100)
+    return [*files, package, hfs, apfs]
+
+
+def test_an_installer_for_macos_is_told_by_its_bytes(tmp_path):
+    for path in _macos_files(tmp_path):
+        with pytest.raises(SetupError) as refused:
+            installer.consumer_from_installer(path)
+        assert str(refused.value) == MACOS_TEXT.format(file=path.name), path.name
+
+
+def test_a_windows_program_is_read_as_before_whatever_it_ends_with(monkeypatch, tmp_path):
+    """A program for Windows (it starts with "MZ") is never taken for a disk image, even
+    with the bytes of one at its end."""
+    _stand_in_7z(monkeypatch, {"NetworkingDLL": b"made-up networking",
+                               "UtilitiesDLL": b"made-up utilities"})
+    exe = _bootstrapper(tmp_path, _cabinet(installer.MIN_CONTAINER + 10, b"p"),
+                        b"koly" + b"\0" * 508)
+    assert not installer.is_macos_installer(exe)
+    found = installer.extract_dlls(exe, tmp_path / "dlls")
+    assert sorted(found) == ["Networking.dll", "Utilities.dll"]
+
+
+def test_other_files_are_refused_as_before(tmp_path):
+    other = tmp_path / "notes.txt"
+    other.write_bytes(b"made-up notes " * 100)
+    assert not installer.is_macos_installer(other)
+    with pytest.raises(SetupError, match="notes.txt does not look like a Garmin Express "
+                                         "installer"):
+        installer.consumer_from_installer(other)
+
+
+@pytest.mark.parametrize("option", ["--from-installer", "--from-dll"])
+def test_the_command_line_says_it_is_for_macos(tmp_path, capsys, option):
+    from openexpress import paths
+    from openexpress.cli import main
+
+    image = _disk_image(tmp_path)
+    assert main(["setup", option, str(image)]) == 1
+    assert MACOS_TEXT.format(file="GarminExpress.dmg") in capsys.readouterr().err
+    assert not (paths.config_dir() / "consumer.json").exists()
+
+
+def test_the_window_says_it_is_for_macos(monkeypatch, tmp_path):
+    import types
+
+    from fakes import RunNow
+
+    from openexpress.gui import app
+
+    image = _disk_image(tmp_path)
+
+    class ChosenFile:
+        def get_path(self):
+            return str(image)
+
+    class FileDialog:
+        def __init__(self, title):
+            self.title = title
+
+        def open(self, parent, cancellable, callback):
+            callback(self, None)
+
+        def open_finish(self, result):
+            return ChosenFile()
+
+    monkeypatch.setattr(app, "Gtk", types.SimpleNamespace(FileDialog=FileDialog))
+    monkeypatch.setattr(app, "save_consumer", lambda consumer: pytest.fail("saved"))
+    run = RunNow(error="record")
+    win = types.SimpleNamespace(run_task=run, toast=lambda text: pytest.fail(text))
+    app.MainWindow.choose_dll(win)
+    assert run.errors == [MACOS_TEXT.format(file="GarminExpress.dmg")]
+
+
+def test_the_words_in_polish(tmp_path):
+    from openexpress import i18n
+
+    image = _disk_image(tmp_path)
+    i18n.setup("pl")
+    try:
+        with pytest.raises(SetupError) as refused:
+            installer.consumer_from_installer(image)
+    finally:
+        i18n.setup("en")
+    # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
+    assert str(refused.value) == (
+        "GarminExpress.dmg to instalator dla macOS. openExpress potrzebuje instalatora Garmin "
+        "Express dla Windows (GarminExpress.exe); tylko go odczytuje i\u00a0niczego nie "
+        "instaluje.")

@@ -126,6 +126,9 @@ def cmd_setup(args) -> int:
         print(_("Read the application key and download signing data from {file}").format(
             file=Path(args.from_installer).name))
     elif args.from_dll:
+        from openexpress.installer import refuse_macos_installer
+
+        refuse_macos_installer(Path(args.from_dll))
         consumer = extract_consumer_from_dll(Path(args.from_dll))
     elif args.key and args.secret:
         consumer = Consumer(args.key, args.secret)

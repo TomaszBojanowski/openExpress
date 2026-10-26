@@ -3849,9 +3849,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             title=_("Select the Garmin Express installer (GarminExpress.exe)"))
 
         def read(path: Path):
-            if path.suffix.lower() == ".exe":
-                from openexpress.installer import consumer_from_installer
+            from openexpress.installer import consumer_from_installer, refuse_macos_installer
 
+            refuse_macos_installer(path)
+            if path.suffix.lower() == ".exe":
                 return consumer_from_installer(path)
             consumer = extract_consumer_from_dll(path)
             util = path.with_name("Utilities.dll")

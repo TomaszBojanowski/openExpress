@@ -23,6 +23,14 @@ from openexpress.settings import (
 )
 
 CAB_MAGIC = b"MSCF\0\0\0\0"
+# A Windows program starts with these bytes; the installer for Windows is one.
+WINDOWS_PROGRAM = b"MZ"
+# What an installer for macOS looks like, by its bytes: a disk image (.dmg, UDIF) ends with a
+# 512-byte trailer that begins with "koly"; an installer package (.pkg) is a xar archive; a
+# disk image taken apart (e.g. by 7z) leaves an HFS+ volume (its header 1024 bytes in) or an
+# APFS container (its superblock magic 32 bytes in).
+UDIF_TRAILER = (512, b"koly")
+MACOS_STARTS = ((0, b"xar!"), (1024, b"H+\0\x04"), (1024, b"HX\0\x05"), (32, b"NXSB"))
 MIN_CONTAINER = 10 * 1024 * 1024
 COPY_CHUNK = 1024 * 1024
 # Stream names of the DLLs inside ExpressInstaller.msi
@@ -42,6 +50,36 @@ def _run_7z(archive: Path, out: Path, *members: str) -> None:
     res = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if res.returncode not in (0, 1):  # 1 = warnings, e.g. extra data after the archive
         raise SetupError(_("Extraction failed: {error}").format(error=res.stderr.strip()[-300:]))
+
+
+def is_macos_installer(path: Path) -> bool:
+    """Whether the file is an installer for macOS (a disk image or an installer package),
+    told by its bytes, not by its name. A Windows program never is."""
+    try:
+        with open(path, "rb") as f:
+            if f.read(len(WINDOWS_PROGRAM)) == WINDOWS_PROGRAM:
+                return False
+            for offset, magic in MACOS_STARTS:
+                f.seek(offset)
+                if f.read(len(magic)) == magic:
+                    return True
+            size = f.seek(0, 2)
+            back, magic = UDIF_TRAILER
+            if size < back:
+                return False
+            f.seek(size - back)
+            return f.read(len(magic)) == magic
+    except OSError:
+        return False
+
+
+def refuse_macos_installer(path: Path) -> None:
+    """Says so when the file chosen is an installer for macOS: only the one for Windows has
+    the two DLLs."""
+    if is_macos_installer(path):
+        raise SetupError(_("{file} is an installer for macOS. openExpress needs the Garmin "
+                           "Express installer for Windows (GarminExpress.exe); it only reads "
+                           "it and installs nothing.").format(file=Path(path).name))
 
 
 def _attached_container(exe: Path, dest: Path) -> Path:
@@ -95,6 +133,7 @@ def extract_dlls(installer: Path, dest: Path) -> dict[str, Path]:
     installer = Path(installer).expanduser()
     if not installer.is_file():
         raise SetupError(_("File not found: {path}").format(path=installer))
+    refuse_macos_installer(installer)
     with tempfile.TemporaryDirectory(prefix="openexpress-") as tmp:
         tmp_path = Path(tmp)
         cab = _attached_container(installer, tmp_path / "payload.cab")
