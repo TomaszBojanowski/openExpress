@@ -77,8 +77,10 @@ Garmin Express exists only for Windows and macOS. openExpress is an independent
 implementation with its own code, so Linux users can manage their watch without a
 virtual machine. How the Garmin services and the watch's file layout work was learned by
 analysing the official application, solely to make openExpress interoperate with them.
-It contains no Garmin code or data: the few values it needs to talk to
-Garmin's servers are read from **your own copy** of the official installer during setup.
+It contains no Garmin code. It does contain the names by which Garmin Express introduces
+itself to Garmin's servers (its client identifiers and the values of its client headers);
+the application key, its secret and the value that signs download addresses are read from
+**your own copy** of the official installer during setup.
 
 **Status:** beta. The main features work and are tested on the devices listed in
 [Supported devices](#supported-devices); other Garmin devices that connect over USB (MTP)
@@ -107,6 +109,11 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
   the map update type Garmin gives the device, which helps a report).
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see
   [Privacy and security](#privacy-and-security)).
+- GPS satellite data (ephemerides), which Garmin Express writes to the watch when it syncs
+  and which helps the watch find its position faster.
+- Maps on a memory card: maps are installed and updated in the device's internal memory only.
+- Installing software updates as part of a sync: they are installed only when you choose
+  to, on the Updates page or with `openexpress updates --install`.
 
 ## Supported devices
 
@@ -159,9 +166,13 @@ it is in mass storage mode.
 
 ### Getting started
 
-openExpress appears in your application menu. Click **Choose Installer…** in the banner at
-the top and select the Garmin Express installer, then **Log In**. Turn on automatic sync on
-the Device page (or in Preferences) to sync whenever the watch is connected.
+openExpress appears in your application menu. Setup needs the Garmin Express installer
+**for Windows** (`GarminExpress.exe`, a free download from
+[garmin.com](https://www.garmin.com/en-US/software/express/windows/)), also when you have
+no Windows: openExpress only reads it and installs nothing. The installer for macOS does
+not work. Click **Choose Installer…** in the banner at the top and select it (later also in
+Preferences → Setup → **Choose File…**), then **Log In**. Turn on automatic sync on the
+Device page (or in Preferences) to sync whenever the watch is connected.
 
 The window opens on the start page (the picture at the top): a tile for each Garmin device
 connected, and for those seen before; a tile opens its device. Up to two labels on a tile say
@@ -486,9 +497,8 @@ copy to the device is running.
   by `maps update/remove` (old map files indicated by the server), `maps remove --own`,
   `music remove` and `apps remove`, on the command line always after a dry run that lists
   them. Installing a software update first deletes a leftover update file of the same name
-  in another letter case and `GUPDATE.TMP`, as Garmin Express does, and removes a copy that
-  failed its check. Files shared by several maps (e.g. the Europe terrain model) are
-  protected.
+  in another letter case and `GUPDATE.TMP`, and removes a copy that failed its check. Files
+  shared by several maps (e.g. the Europe terrain model) are protected.
 - A write to the device that fails leaves no half-written file: what was written of it is
   deleted, and when the copy did not start, the file that was there stays. On a device in
   mass storage mode the new file is written beside the old one and only then takes its
@@ -516,8 +526,16 @@ copy to the device is running.
   map service Garmin uses for the model) and, for a device whose kind Garmin does not tell
   otherwise, the market segment and the connect support – always with the part number
   only – as it names the account's categories of such a device.
-- The `Garmin-Client-*` headers use the same values as Garmin Express (the server returns
-  the configuration based on them). They can be changed in `~/.config/openexpress/settings.json`.
+- openExpress identifies itself to Garmin's servers: every request carries the header
+  `User-Agent: openexpress/<version> (Linux)`; the sign-in window is a web browser with its
+  own. It uses the Garmin Express client headers so that the servers answer, but it does not
+  hide that it is a different program.
+- The `Garmin-Client-*` headers have the values of Garmin Express 7.29.1.0 for Windows (name,
+  version, platform and its version). Two headers differ from what Garmin Express sends:
+  `X-garmin-client-id` also goes to Garmin's update and map service, and in the request for
+  the upload configuration the language is written with an underscore (e.g. `pl_PL`), where
+  Garmin Express writes a hyphen (`pl-PL`). The values can be changed in
+  `~/.config/openexpress/settings.json`.
 
 ### Flatpak permissions
 
@@ -585,14 +603,16 @@ repository, keeping your setup, login and settings, add the repository as in
 Requirements:
 
 - Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0
-  (login window) and GIO/gvfs (MTP). Optional: `mutagen` (music tags), `7z` (setup),
-  `libusb-1.0` (Connect IQ apps on devices that hide their app folder; usually installed).
+  (login window), GIO/gvfs (MTP) and `7z` (7-Zip or p7zip: setup needs it to read the
+  installer). Optional: `mutagen` (music tags), `libusb-1.0` (Connect IQ apps on devices
+  that hide their app folder; usually installed).
   - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1`
   - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0`
 - Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
   openexpress uses the same connection, so the file manager can stay open.
 - The official Garmin Express installer for Windows (`GarminExpress.exe`, free download from
-  garmin.com), used once during setup. It is not installed or run.
+  [garmin.com](https://www.garmin.com/en-US/software/express/windows/)), used once during
+  setup. It is not installed or run; the installer for macOS does not work.
 
 First run:
 
@@ -653,8 +673,11 @@ libusb-1.0 and the window-width tests without the Adwaita Sans font (the widths 
 it). The tests never reach the network (one that tries fails) and need no device.
 
 Bug reports: please include the watch model, the output of `openexpress info` and the
-command you ran. Never post `~/.config/openexpress/*.json` (your login token) or your
-`GarminDevice.xml` (it contains the serial number and map unlock codes).
+command you ran. Never post the files in `~/.config/openexpress/`: `connect_auth.json` is
+your login token, and `consumer.json` holds what setup read from the Garmin Express
+installer (the application key, its secret and the value that signs download addresses).
+Do not post your `GarminDevice.xml` either (it contains the serial number and map unlock
+codes).
 
 ### Adding a translation
 
