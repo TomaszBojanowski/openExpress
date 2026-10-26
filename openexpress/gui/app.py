@@ -4352,8 +4352,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         attach.connect("toggled", toggled)
         # Shown once "Open on GitHub" put the log in the clipboard (show_report).
         note = Gtk.Label(label=_("The log is in your clipboard. Paste it into the “Log” "
-                                 "field of the form."), wrap=True, xalign=0, visible=False,
-                         name="report-log-note", css_classes=["dim-label"])
+                                 "field of the form or into a comment."), wrap=True, xalign=0,
+                         visible=False, name="report-log-note", css_classes=["dim-label"])
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(scroller)
         box.append(attach)

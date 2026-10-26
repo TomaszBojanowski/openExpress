@@ -463,12 +463,13 @@ openExpress keeps a log of what it does, to make problems easier to find:
   terminal passes the same filter; messages meant for you (e.g. the addresses to choose
   from with `--device-uri`) and the output of commands such as `openexpress info` do not.
 - **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
-  prints its last 200 lines instead, filtered once more, ready for the form's “Log” field
-  (the address it prints fills in the report). In the window, tick **Attach the last log**
-  in *Report a Device or Problem…*; the preview shows exactly what will be copied. **Open on
-  GitHub** puts only the report into the form and the log into the clipboard, to paste into
-  the form's “Log” field: the log never goes into the address. To paste a log into a
-  comment instead, wrap it in ``` lines. Read it before you send it.
+  prints its last 200 lines instead, filtered once more, ready to paste into the form's
+  “Log” field or into a comment (the address it prints fills in the report). In the window,
+  tick **Attach the last log** in *Report a Device or Problem…*; the preview shows exactly
+  what will be copied. **Open on GitHub** puts only the report into the form and the log
+  into the clipboard, to paste into the form's “Log” field or into a comment: the log never
+  goes into the address. The log comes between two `~~~` lines, so that GitHub shows it as
+  code in a comment too. Read it before you send it.
 
 ### Cache
 

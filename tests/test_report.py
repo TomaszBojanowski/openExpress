@@ -113,13 +113,13 @@ def test_cli_report_says_where_the_log_is_and_leaves_it_out(device_root, xdg, lo
     assert "### Log" not in out.out and out.out.rstrip().endswith("Logged in to Garmin Connect: no")
     assert out.err.rstrip().endswith(
         "Log file: ~/.local/state/openexpress/openexpress.log (add --log to print its last "
-        "lines for the \u201cLog\u201d field of the form)")
+        "lines for the \u201cLog\u201d field of the form or a comment)")
     assert str(tmp_path) not in out.err
 
 
 def test_cli_report_with_log_prints_the_filtered_end(device_root, xdg, log_file, capsys):
-    """The log alone, as the "Log" field of the form takes it (the report is in the address):
-    no heading, no code fences."""
+    """The log alone, to paste into the "Log" field of the form or into a comment (the
+    report is in the address): no heading, between two lines of tildes."""
     from openexpress.cli import main
 
     assert main(["--path", str(device_root), "info"]) == 0  # something to show
@@ -131,7 +131,8 @@ def test_cli_report_with_log_prints_the_filtered_end(device_root, xdg, log_file,
     out = capsys.readouterr()
     log_part = out.out
     assert "### " not in log_part and "```" not in log_part
-    assert len(log_part.splitlines()) == 4 and log_part.endswith("\n")
+    lines = log_part.splitlines()
+    assert len(lines) == 6 and lines[0] == lines[-1] == "~~~" and log_part.endswith("\n")
     assert "start: info --path" in log_part and "start: report --path --log" in log_part
     assert "old line: device <number> at mtp://<device>/ for <email>" in log_part
     for secret in ("3987654321", "0000abcdef12", "a@example.org", str(device_root), "1234567890"):
@@ -150,10 +151,46 @@ def test_cli_report_with_log_prints_what_the_window_puts_in_the_clipboard(
     monkeypatch.setattr(applog, "crash_tail", lambda count=50: ["Fatal Python error"])
     assert main(["--path", str(device_root), "report", "--log"]) == 0
     out = capsys.readouterr()
-    assert out.out == "one\ndevice <number>\n\n# Crash log (last 1 lines of crash.log)\nFatal Python error\n"
+    assert out.out == ("~~~\none\ndevice <number>\n\n# Crash log (last 1 lines of crash.log)\n"
+                       "Fatal Python error\n~~~\n")
     assert out.out == report.form_log(["one", "device <number>"], ["Fatal Python error"])
     assert ("The end of the log is printed above. It is filtered, but read it before you "
             "send it.") in out.err.splitlines()
+
+
+def test_the_log_to_paste_is_fenced_with_tildes():
+    """Pasted into a comment on GitHub, the log is a block of code too, not one paragraph
+    with its <path> and <user> eaten as tags (#19). The fence is of tildes: in the form's
+    "Log" field, which GitHub puts between backticks itself, it does not close that block
+    and shows only as two lines more."""
+    assert report.form_log(["one", "two"]) == "~~~\none\ntwo\n~~~\n"
+    assert report.form_log([]) == "~~~\n(no log file)\n~~~\n"
+
+
+def test_no_line_of_the_log_closes_its_fence():
+    """A line that begins with tildes (also after spaces) could close a fence as long as
+    them: the fence is longer than any."""
+    text = report.form_log(["~~~ made up", "a"], ["  ~~~~~ also made up"])
+    assert text.startswith("~~~~~~\n~~~ made up\na\n") and text.endswith("~~~~~~\n")
+
+
+def test_the_words_about_pasting_the_log_in_polish():
+    from openexpress import i18n
+    from openexpress.i18n import _
+
+    i18n.setup("pl")
+    try:
+        window = _("The log is in your clipboard. Paste it into the \u201cLog\u201d field of the "
+                   "form or into a comment.")
+        cli = _("The log is not in the address: paste it into the \u201cLog\u201d field of the "
+                "form or into a comment.")
+    finally:
+        i18n.setup("en")
+    # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
+    assert window == ("Log jest w\u00a0schowku. Wklej go w\u00a0pole \u201eLog\u201d formularza albo "
+                      "w\u00a0komentarz.")
+    assert cli == ("Logu nie ma w\u00a0adresie: wklej go w\u00a0pole \u201eLog\u201d formularza "
+                   "albo w\u00a0komentarz.")
 
 
 def test_the_report_has_plain_spaces(device_root, log_file):
@@ -301,13 +338,13 @@ def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, 
     _write_log(log_file, ["one", "device 3987654321"])
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     assert _note(dialog) == (False, ("The log is in your clipboard. Paste it into the "
-                                     "\u201cLog\u201d field of the form."))
+                                     "\u201cLog\u201d field of the form or into a comment."))
     _attach_log(dialog)
     dialog.emit("response", "open")
     (url,) = opened
     assert parse_qs(urlsplit(url).query)["report"][0] == text
     assert "device <number>" not in url and "### Log" not in url
-    assert copied == ["one\ndevice <number>\n"]
+    assert copied == ["~~~\none\ndevice <number>\n~~~\n"]
     assert _note(dialog)[0] is True and said == []
     assert not dialog.get_can_close()  # it stays open with the sentence
 
@@ -321,7 +358,7 @@ def test_the_crash_log_goes_to_the_log_field_too(monkeypatch, device_root, log_f
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     _attach_log(dialog)
     dialog.emit("response", "open")
-    assert copied == ["one\n\n# Crash log (last 1 lines of crash.log)\nFatal Python error\n"]
+    assert copied == ["~~~\none\n\n# Crash log (last 1 lines of crash.log)\nFatal Python error\n~~~\n"]
 
 
 @pytest.mark.needs_display
@@ -345,7 +382,7 @@ def test_the_sentence_about_the_log_in_polish(monkeypatch, device_root, log_file
     finally:
         i18n.setup("en")
     assert _note(dialog)[1] == ("Log jest w\u00a0schowku. Wklej go w\u00a0pole \u201eLog\u201d "
-                                "formularza.")
+                                "formularza albo w\u00a0komentarz.")
 
 
 def test_the_report_alone_fits_an_address_with_room_to_spare(device_root):
@@ -429,7 +466,7 @@ def test_cli_report_with_log_keeps_the_log_out_of_the_address(device_root, xdg, 
     assert report.issue_url(report_text, "Test watch") in out.err
     assert "a line of the log" in out.out and "a%20line%20of%20the%20log" not in out.err
     assert ("The log is not in the address: paste it into the \u201cLog\u201d field of the "
-            "form.") in out.err
+            "form or into a comment.") in out.err
     assert "read it before you send it" in out.err
 
 
@@ -456,7 +493,8 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
     assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
             "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
             "https://github.com/") in err
-    assert "Logu nie ma w adresie: wklej go w pole \u201eLog\u201d formularza." in err
+    assert ("Logu nie ma w adresie: wklej go w pole \u201eLog\u201d formularza albo "
+            "w komentarz.") in err
 
 
 # --- the forms on GitHub -----------------------------------------------------------------------

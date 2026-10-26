@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 20:56+0100\n"
+"POT-Creation-Date: 2026-10-26 21:06+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -789,17 +789,19 @@ msgstr ""
 
 #: openexpress/cli.py:248
 msgid ""
-"The log is not in the address: paste it into the “Log” field of the form."
-msgstr "Logu nie ma w adresie: wklej go w pole „Log” formularza."
+"The log is not in the address: paste it into the “Log” field of the form or "
+"into a comment."
+msgstr ""
+"Logu nie ma w adresie: wklej go w pole „Log” formularza albo w komentarz."
 
 #: openexpress/cli.py:251
 #, python-brace-format
 msgid ""
 "Log file: {path} (add --log to print its last lines for the “Log” field of "
-"the form)"
+"the form or a comment)"
 msgstr ""
 "Plik logu: {path} (dodaj --log, żeby wypisać jego ostatnie linie do pola "
-"„Log” formularza)"
+"„Log” formularza albo do komentarza)"
 
 #: openexpress/cli.py:274 openexpress/gui/app.py:1360
 #, python-brace-format
@@ -3792,8 +3794,9 @@ msgstr "Log jest filtrowany, ale przeczytaj go przed wysłaniem."
 
 #: openexpress/gui/app.py:4354
 msgid ""
-"The log is in your clipboard. Paste it into the “Log” field of the form."
-msgstr "Log jest w schowku. Wklej go w pole „Log” formularza."
+"The log is in your clipboard. Paste it into the “Log” field of the form or "
+"into a comment."
+msgstr "Log jest w schowku. Wklej go w pole „Log” formularza albo w komentarz."
 
 #: openexpress/gui/app.py:4368
 msgid "Connect the device first, so that the report can describe it."

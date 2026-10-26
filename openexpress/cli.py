@@ -246,10 +246,10 @@ def cmd_report(args) -> int:
                 "send it."), file=sys.stderr)
         if url:
             print(_("The log is not in the address: paste it into the “Log” field of the "
-                    "form."), file=sys.stderr)
+                    "form or into a comment."), file=sys.stderr)
     else:
         print(_("Log file: {path} (add --log to print its last lines for the “Log” field of "
-                "the form)").format(path=applog.shown_path()), file=sys.stderr)
+                "the form or a comment)").format(path=applog.shown_path()), file=sys.stderr)
     return 0
 
 

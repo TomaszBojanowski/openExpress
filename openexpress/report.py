@@ -55,15 +55,22 @@ def with_log(text: str, lines: list[str], crash: list[str] | None = None) -> str
 
 
 def form_log(lines: list[str], crash: list[str] | None = None) -> str:
-    """The end of the log (and of crash.log, when there is one) for the "Log" field of the
-    issue forms, which shows it as code itself: the lines alone, without the headings and
-    code fences of with_log. An issue opened from the window never has the log in its
-    address; the window puts this in the clipboard (#18, #19)."""
+    """The end of the log (and of crash.log, when there is one) to paste into the "Log"
+    field of the issue forms or into a comment: the lines without the headings of with_log,
+    between lines of tildes. Pasted into a comment, that is a block of code too; in the
+    "Log" field, which GitHub shows as code between backticks itself, the tildes do not
+    close that block and are only two lines more. The fence is longer than any run of
+    tildes a line begins with, so that no line of the log closes it. An issue opened from
+    the window never has the log in its address; the window puts this in the clipboard
+    (#18, #19)."""
     out = "\n".join(lines) + "\n" if lines else "(no log file)\n"
     if crash:
         out += (f"\n# Crash log (last {len(crash)} lines of crash.log)\n"
                 + "\n".join(crash) + "\n")
-    return out
+    longest = max((len(t) - len(t.lstrip("~")) for t in
+                   (line.lstrip(" ") for line in out.splitlines())), default=0)
+    fence = "~" * max(3, longest + 1)
+    return f"{fence}\n{out}{fence}\n"
 
 
 def issue_url(text: str, model: str | None) -> str | None:
