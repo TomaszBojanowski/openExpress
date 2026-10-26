@@ -9,6 +9,7 @@ import types
 
 import pytest
 from test_detection import (  # noqa: F401 - the fixture
+    NUMERIC,
     REPLUG_HINT_AFTER_PIN,
     _banner_window,
     plugged,
@@ -143,6 +144,40 @@ def test_the_command_line_after_45_s_names_other_programs_too(plugged):
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()
     assert str(error.value) == f"{gio_storage.not_ready_text(gio_storage.PRESENT)} {HELD}"
+
+
+MOUNT_FAILED = "Cannot mount the device: Unable to open MTP device “001,009”"
+
+
+def test_the_command_line_names_other_programs_also_when_mounting_fails(plugged, monkeypatch):
+    """26.10.2026, a fēnix 8 held by another process over libmtp (as KDE's kmtpd holds it):
+    gvfs offers its volume, and every mount fails at once with "Unable to open MTP device".
+    After 45 s the command line says that error and the same sentence as the window's page
+    (the window says it from the USB state, whatever the last failure was)."""
+    def mount(dev, timeout_s=30):
+        raise gio_storage.DeviceError(MOUNT_FAILED)
+
+    monkeypatch.setattr(gio_storage, "mount", mount)
+    plugged.plug("51b4")
+    plugged.offered[:] = [gio_storage.FoundDevice(
+        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open()
+    assert str(error.value) == f"{MOUNT_FAILED}. {HELD}"
+    assert plugged.clock.now >= gio_storage.WAIT_FOR_DEVICE_S
+    assert plugged.notices == ["The device is starting…"]
+
+
+def test_a_mount_error_before_the_wait_ran_out_is_said_as_it_is(plugged, monkeypatch):
+    """Without waiting (the window): the error alone, as before."""
+    monkeypatch.setattr(gio_storage, "mount", lambda dev, timeout_s=30: (_ for _ in ()).throw(
+        gio_storage.DeviceError(MOUNT_FAILED)))
+    plugged.plug("51b4")
+    plugged.offered[:] = [gio_storage.FoundDevice(
+        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+    with pytest.raises(gio_storage.DeviceError) as error:
+        plugged.open(wait=False)
+    assert str(error.value) == MOUNT_FAILED
 
 
 def test_a_device_still_starting_after_45_s_gets_no_such_sentence(plugged):

@@ -1268,6 +1268,12 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                     if state == PRESENT:
                         text = f"{text} {held_elsewhere_text()}"
                     raise NotThereYet(text) from e
+                if state == PRESENT:
+                    # On USB in its normal mode, never mounted (gvfs could not open it: another
+                    # program may hold it): the error, then the window's sentence about that.
+                    said = str(e).rstrip()
+                    raise DeviceError(f"{said}{'' if said.endswith('.') else '.'} "
+                                      f"{held_elsewhere_text()}") from e
                 raise
             if not told and notify is not None:
                 notify(_("The device is starting…"))
