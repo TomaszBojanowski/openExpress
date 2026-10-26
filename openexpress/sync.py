@@ -63,6 +63,11 @@ DIAGNOSTIC_TYPES = {
     "FIT_TYPE_52",
 }
 DIAGNOSTIC_URL_MARKERS = ("era2-intake", "/kpi/", "/ulf/", "user-behavior-log", "appstore-era")
+# ECG recordings: Garmin's upload settings send them to Garmin Health, which takes them only
+# with a sign-in of its own that openExpress does not have (with the Garmin Connect login
+# the answer is 401 or 403). Never uploaded; the files stay on the device and the summary of
+# the sync says how many there are.
+HEALTH_TYPES = frozenset({"FIT_TYPE_61"})
 
 ALREADY_EXISTS_CODES = {202, 408}
 REJECTED_HTTP = {400, 406, 413, 415}
@@ -177,6 +182,7 @@ class UploadPlan:
     candidates: list[UploadCandidate] = field(default_factory=list)
     skipped_types: dict[str, str] = field(default_factory=dict)
     already_done: int = 0
+    ecg_recordings: int = 0  # on the device, never uploaded (HEALTH_TYPES)
 
 
 def is_diagnostic(datatype: str, url: str) -> bool:
@@ -232,6 +238,16 @@ def _sources_for(device: GarminDevice, dt: dict) -> list[DeviceFile]:
     return out
 
 
+def _count_files(storage: Storage, sources) -> int:
+    """How many files of these sources the device has, each once; none are read."""
+    seen: set[str] = set()
+    for src in sources:
+        for path, _entry in storage.walk_files(src.path):
+            if src.matches(path):
+                seen.add(path.casefold())
+    return len(seen)
+
+
 def plan_uploads(
     device: GarminDevice,
     storage: Storage,
@@ -246,6 +262,12 @@ def plan_uploads(
     for dt in upload_config.get("datatypes") or []:
         name = dt.get("datatypename") or ""
         if only_types and name not in only_types:
+            continue
+        if name in HEALTH_TYPES:
+            n = _count_files(storage, _sources_for(device, dt))
+            if n:
+                plan.skipped_types[name] = _("ECG (needs a Garmin Health account)")
+                plan.ecg_recordings += n
             continue
         locations, skipped = parse_locations(dt, include_consent_locations, consent_granted)
         if not include_diagnostics:

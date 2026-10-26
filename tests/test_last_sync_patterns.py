@@ -172,6 +172,15 @@ EXPECTED = {
             (f"3 pliki z{NB}Garmin Connect: metryki ×3", False),
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin",
              False)])},
+    "format-0.7.5-ecg-not-uploaded.json": {
+        "en": ("1 new file, 1 uploaded", [
+            ("Files from the device: monitoring", False),
+            ("1 ECG recording was not uploaded: ECG recordings need a Garmin Health account",
+             False)]),
+        "pl": ("1 nowy plik, 1 wysłany", [
+            (f"Pliki z{NB}urządzenia: monitorowanie", False),
+            ("1 nagranie EKG nie zostało wysłane: nagrania EKG wymagają konta Garmin Health",
+             False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

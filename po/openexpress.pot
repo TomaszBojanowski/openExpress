@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 21:40+0100\n"
+"POT-Creation-Date: 2026-10-26 21:43+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:988 openexpress/sync.py:769
+#: openexpress/ciq.py:988 openexpress/sync.py:791
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
@@ -1702,7 +1702,7 @@ msgid ""
 "anyway, or turn on background sync in the Flatpak window."
 msgstr ""
 
-#: openexpress/cli.py:1633 openexpress/sync.py:786
+#: openexpress/cli.py:1633 openexpress/sync.py:808
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr ""
@@ -5175,7 +5175,18 @@ msgstr[1] ""
 msgid "TrueUp: daily totals aligned with your other Garmin devices"
 msgstr ""
 
-#: openexpress/service.py:659
+#: openexpress/service.py:661
+#, python-brace-format
+msgid ""
+"{count} ECG recording was not uploaded: ECG recordings need a Garmin Health "
+"account"
+msgid_plural ""
+"{count} ECG recordings were not uploaded: ECG recordings need a Garmin "
+"Health account"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/service.py:667
 #, python-brace-format
 msgid "Skipped {count} item from Garmin Connect (not accepted by the device)"
 msgid_plural ""
@@ -5184,24 +5195,24 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: under "Last sync": the uploads were not looked at (sync --download-only)
-#: openexpress/service.py:790
+#: openexpress/service.py:804
 msgid "upload skipped"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded
-#: openexpress/service.py:795
+#: openexpress/service.py:809
 msgid "nothing uploaded"
 msgstr ""
 
 #. TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
-#: openexpress/service.py:798
+#: openexpress/service.py:812
 #, python-brace-format
 msgid "{count} new file"
 msgid_plural "{count} new files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:799
+#: openexpress/service.py:813
 #, python-brace-format
 msgid "{count} uploaded"
 msgid_plural "{count} uploaded"
@@ -5209,54 +5220,54 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: after "3 new files, ": not one of them was uploaded
-#: openexpress/service.py:802
+#: openexpress/service.py:816
 msgid "none uploaded"
 msgstr ""
 
 #. TRANSLATORS: the device had no new file to upload to Garmin Connect
-#: openexpress/service.py:806
+#: openexpress/service.py:820
 msgid "nothing to upload"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": a sync of only these data types (sync --type), e.g.
 #. "activities only: 3 new files, 3 uploaded"
-#: openexpress/service.py:812
+#: openexpress/service.py:826
 #, python-brace-format
 msgid "{types} only: {numbers}"
 msgstr ""
 
-#: openexpress/service.py:815
+#: openexpress/service.py:829
 #, python-brace-format
 msgid "{count} received"
 msgid_plural "{count} received"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:839
+#: openexpress/service.py:853
 msgid "A sync is already running in another process."
 msgstr ""
 
-#: openexpress/service.py:865
+#: openexpress/service.py:879
 msgid "A device connected as a USB drive is not synced."
 msgstr ""
 
-#: openexpress/service.py:936
+#: openexpress/service.py:950
 msgid "Not logged in to Garmin Connect."
 msgstr ""
 
-#: openexpress/service.py:941
+#: openexpress/service.py:955
 msgid "Fetching configuration from the Garmin server…"
 msgstr ""
 
-#: openexpress/service.py:950
+#: openexpress/service.py:964
 msgid "Looking for new files on the device…"
 msgstr ""
 
-#: openexpress/service.py:964
+#: openexpress/service.py:978
 msgid "Checking for files from Garmin Connect…"
 msgstr ""
 
-#: openexpress/service.py:1037
+#: openexpress/service.py:1053
 #, python-brace-format
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""
@@ -5299,34 +5310,38 @@ msgstr ""
 msgid "URL signing data not found in {path}"
 msgstr ""
 
-#: openexpress/sync.py:256
+#: openexpress/sync.py:269
+msgid "ECG (needs a Garmin Health account)"
+msgstr ""
+
+#: openexpress/sync.py:278
 msgid "diagnostics/telemetry (--include-diagnostics)"
 msgstr ""
 
-#: openexpress/sync.py:262
+#: openexpress/sync.py:284
 #, python-brace-format
 msgid "consent not given ({consents})"
 msgstr ""
 
-#: openexpress/sync.py:438
+#: openexpress/sync.py:460
 #, python-brace-format
 msgid "Uploading {name} ({size})"
 msgstr ""
 
-#: openexpress/sync.py:460
+#: openexpress/sync.py:482
 msgid "Upload consent was revoked in Garmin Connect"
 msgstr ""
 
-#: openexpress/sync.py:469
+#: openexpress/sync.py:491
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
 msgstr ""
 
-#: openexpress/sync.py:696
+#: openexpress/sync.py:718
 msgid "device does not accept this type"
 msgstr ""
 
-#: openexpress/sync.py:777
+#: openexpress/sync.py:799
 msgid "not enough space on the device"
 msgstr ""
 

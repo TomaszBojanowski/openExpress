@@ -114,6 +114,8 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 - Maps on a memory card: maps are installed and updated in the device's internal memory only.
 - Installing software updates as part of a sync: they are installed only when you choose
   to, on the Updates page or with `openexpress updates --install`.
+- Uploading ECG recordings: they go to Garmin Health, which needs a sign-in of its own that
+  openExpress does not have. A sync leaves them on the watch and says how many there are.
 
 ## Supported devices
 

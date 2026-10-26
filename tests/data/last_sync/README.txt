@@ -22,3 +22,7 @@ format-*: the shapes older versions wrote, with made-up numbers; and shapes of t
   real-flatpak-edge-1050-0.6.20-trueup-metrics.json, as this version writes it: the files of
   the queue also as a line of their types (received_files), TrueUp and the Connect IQ apps
   not in it; tests/test_received_from_queue.py checks it is what a sync writes.
+  format-0.7.5-ecg-not-uploaded.json: a sync of a device with one new monitoring file and
+  one ECG recording, which is never uploaded (it needs a Garmin Health account): the line
+  ecg_not_uploaded after the uploads; tests/test_ecg_not_uploaded.py checks it is what a
+  sync writes. Synthetic: no real sync has made it yet (marked "synthetic" in it).

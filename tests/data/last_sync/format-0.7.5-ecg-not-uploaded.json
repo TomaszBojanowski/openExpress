@@ -1,0 +1,31 @@
+{
+ "synthetic": "made up (26.10.2026, with the user's consent): no real sync has written a record with ECG recordings yet",
+ "time": 1792922026.5329304,
+ "unit_id": 3000000106,
+ "uploaded": 1,
+ "downloaded": 0,
+ "skipped_known": 0,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "new_files",
+   "types": {
+    "FIT_TYPE_32": 1
+   }
+  },
+  {
+   "kind": "uploads",
+   "uploaded": 1,
+   "known": 0,
+   "known_checked": 0,
+   "known_server": 0,
+   "rejected": 0,
+   "errors": 0
+  },
+  {
+   "kind": "ecg_not_uploaded",
+   "count": 1
+  }
+ ]
+}

@@ -654,6 +654,14 @@ def _describe_step(line) -> list[tuple[str, bool]]:
             "this device over USB yet", n).format(count=n), False)]
     if kind == "trueup":
         return [(_("TrueUp: daily totals aligned with your other Garmin devices"), False)]
+    if kind == "ecg_not_uploaded" and (n := _count(line)):
+        # TRANSLATORS: a line of the details of "Last sync" and of the end of
+        # `openexpress sync --apply`
+        return [(ngettext(
+            "{count} ECG recording was not uploaded: ECG recordings need a Garmin Health "
+            "account",
+            "{count} ECG recordings were not uploaded: ECG recordings need a Garmin Health "
+            "account", n).format(count=n), False)]
     if kind == "not_accepted" and (n := _count(line)) is not None:
         return [(ngettext(
             "Skipped {count} item from Garmin Connect (not accepted by the device)",
@@ -713,6 +721,12 @@ def received_files_step(datatypes) -> dict:
     metrics…), counted by data type; TrueUp and the Connect IQ apps have steps of their own
     and are not in it."""
     return {"kind": "received_files", "types": dict(collections.Counter(datatypes))}
+
+
+def ecg_not_uploaded_step(count: int) -> dict:
+    """ECG recordings on the device, never uploaded: they need a Garmin Health account
+    (sync.HEALTH_TYPES)."""
+    return {"kind": "ecg_not_uploaded", "count": count}
 
 
 def not_accepted_step(count: int) -> dict:
@@ -1005,6 +1019,8 @@ def apply_sync(s: DeviceSession, plan: SyncPlan,
             out.lines.append(uploads_step(rep))
             if rep.tracker_conflict:
                 out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
+        if gate.allowed and plan.uploads.ecg_recordings:
+            out.lines.append(ecg_not_uploaded_step(plan.uploads.ecg_recordings))
         # Written before the queue is read: a first sync stopped later (the queue, a
         # download) has made its choice all the same. Not without the uploads: then the
         # choice of the first sync stays to be made.
