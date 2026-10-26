@@ -66,7 +66,7 @@ if you open it in Dolphin again, repeat these steps.
 - [Usage](#usage): [getting started](#getting-started), [window and background sync](#application-window-and-background-sync),
   [command line](#command-line), [exit codes](#exit-codes), [software updates](#software-updates),
   [maps of your own](#maps-of-your-own), [Connect IQ apps](#connect-iq-apps), [music](#music),
-  [sync details](#sync-details)
+  [sync details](#sync-details), [troubleshooting](#troubleshooting)
 - [Configuration](#configuration): [languages](#languages), [log file](#log-file), [cache](#cache),
   [privacy and security](#privacy-and-security), [Flatpak permissions](#flatpak-permissions)
 - [Other ways to install](#other-ways-to-install) · [Development](#development) · [License](#license)
@@ -421,6 +421,16 @@ replaced. Tested on a fēnix 8.
   and the files from Garmin Connect too (TrueUp and Connect IQ apps have lines of their own),
   say how many Garmin Connect already had, and warn only when Garmin rejected a file or one
   could not be uploaded.
+
+### Troubleshooting
+
+- **The watch restarts by itself after it is unplugged.** A fēnix 8 (software 23.39) has done
+  this a few times while taking in a change, for example a new map or a removed Connect IQ
+  app. Its error log showed the same fault each time it was read, and the same change went
+  through without a restart right after the watch had been turned off and on. This looks like
+  a fault of the watch that appears after it has been running for days, but it is not certain.
+  Before a bigger change (maps, several apps) it may help to turn the watch off and on first.
+  No data on the watch was lost.
 
 ### Upgrading from 0.3.x
 
