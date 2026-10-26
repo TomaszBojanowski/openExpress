@@ -10,6 +10,7 @@ from fakes import RunNow, step_words
 from openexpress import cli, desktop, service
 from openexpress.cli import main
 from openexpress.connect import UploadResult
+from openexpress.useragent import USER_AGENT
 
 UPLOAD_CONFIG = {
     "unittypename": "test",
@@ -1061,7 +1062,8 @@ def test_device_outside_the_account_gets_its_picture_from_unit_info(pictures):
     assert client.asked == ["unit-info"]  # the account is not asked about a foreign device
     url, options = client.http.calls[0]
     assert url == PICTURE_URL and options == {
-        "timeout": 15, "stream": True, "allow_redirects": False}
+        "headers": {"User-Agent": USER_AGENT}, "timeout": 15, "stream": True,
+        "allow_redirects": False}
     assert _cache(xdg) == ["device-006-B0000-00.png"] and win.shown == [("texture", PNG)]
 
     # The answer of unit-info went nowhere: not into the log, not into any file.

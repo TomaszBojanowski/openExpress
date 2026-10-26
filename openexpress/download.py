@@ -15,9 +15,11 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
-from openexpress import __version__, applog, netstatus
+from openexpress import applog, netstatus
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _
+from openexpress.useragent import USER_AGENT
+from openexpress.useragent import session as user_agent_session
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +157,7 @@ def fetch(
     if _valid(dest, size, md5):
         log.info("download: already in the cache (%s)", applog.size(size))
         return dest
-    http = session or requests.Session()
+    http = session or user_agent_session()
     dest.parent.mkdir(parents=True, exist_ok=True)
     part = dest.with_name(dest.name + ".part")
     errors = []
@@ -216,7 +218,7 @@ def _get(http, url, part: Path, size, progress, retry_416: bool = True) -> None:
     if size and have >= size:
         have = 0
         part.unlink(missing_ok=True)
-    headers = {"Accept": "*/*", "User-Agent": f"openexpress/{__version__}"}
+    headers = {"Accept": "*/*", "User-Agent": USER_AGENT}
     if have:
         headers["Range"] = f"bytes={have}-"
     with http.get(url, headers=headers, stream=True, timeout=(30, 300)) as resp:

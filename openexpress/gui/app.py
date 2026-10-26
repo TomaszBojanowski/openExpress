@@ -144,6 +144,7 @@ from openexpress.settings import (  # noqa: E402
     save_consumer,
 )
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
+from openexpress.useragent import USER_AGENT  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
@@ -639,8 +640,8 @@ def download_picture(http, url: str, name: str,
     deadline = clock() + PICTURE_TIMEOUT_S
     data = bytearray()
     try:
-        with http.get(url, timeout=PICTURE_TIMEOUT_S, stream=True,
-                      allow_redirects=False) as resp:
+        with http.get(url, headers={"User-Agent": USER_AGENT}, timeout=PICTURE_TIMEOUT_S,
+                      stream=True, allow_redirects=False) as resp:
             if resp.status_code != 200:
                 return None, f"HTTP {resp.status_code}"
             kind = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()

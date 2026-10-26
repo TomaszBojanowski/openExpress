@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import platform
 import time
 import uuid
 from dataclasses import dataclass
@@ -16,12 +15,14 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 
 import requests
 
-from openexpress import __version__, applog, netstatus
+from openexpress import applog, netstatus
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 from openexpress.settings import UPLOAD_CONFIG_CLIENT_ID, Consumer, Settings
+from openexpress.useragent import USER_AGENT
+from openexpress.useragent import session as user_agent_session
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ class GarminClient:
         self.settings = settings
         self.consumer = consumer
         self.auth = auth
-        self.http = session or requests.Session()
+        self.http = session or user_agent_session()
         self.session_id = str(uuid.uuid4())
         # Set by service.require_account_device(); kept in memory only.
         self.verified_unit_id: int | None = None
@@ -110,7 +111,7 @@ class GarminClient:
             "Garmin-Client-Platform-Version": s.client_platform_version,
             "Garmin-Client-SessionId": self.session_id,
             "X-garmin-client-id": "EXPRESS",
-            "User-Agent": f"openexpress/{__version__} ({platform.system()})",
+            "User-Agent": USER_AGENT,
         }
 
     def _sign(
@@ -319,7 +320,7 @@ class GarminClient:
         authenticated: bool,
     ) -> UploadResult:
         self.require_verified()
-        headers: dict[str, str] = {}
+        headers: dict[str, str] = {"User-Agent": USER_AGENT}
         files = None
         body: bytes | None = data
         if is_zip:
@@ -370,7 +371,7 @@ class GarminClient:
             if remaining <= 0:
                 break
             time.sleep(max(0.0, min(delay, remaining)))
-            h = {"Authorization": self._sign("GET", url)}
+            h = {"Authorization": self._sign("GET", url), "User-Agent": USER_AGENT}
             try:
                 resp = self.http.get(url, headers=h, timeout=TIMEOUT)
             except requests.RequestException as e:
