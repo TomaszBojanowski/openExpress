@@ -3530,7 +3530,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             self.map_state = "none"
         elif self.map_update_count:
             self.map_state = "available"
-        elif any(m.installed for m in all_maps):
+        elif any(m.installed or m.incomplete for m in all_maps):
             self.map_state = "current"
         else:
             self.map_state = "empty"

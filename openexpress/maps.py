@@ -74,27 +74,44 @@ class UniversalMap:
     # only when it is unplugged (see mark_waiting); None otherwise.
     waiting: str | None = None
 
+    # The states of the server ("installationState"): 0 not installed, 1 installed, 2 partly
+    # on the device, 3 a newer version on the device.
+
     @property
-    def installed(self) -> bool:
+    def listed(self) -> bool:
+        """The server sees the map, or a part of it, on the device."""
         return self.state in (1, 2, 3)
 
     @property
+    def installed(self) -> bool:
+        """Installed as far as the server knows: a map partly on the device is not."""
+        return self.state in (1, 3)
+
+    @property
+    def incomplete(self) -> bool:
+        """Partly on the device: shown there, to be installed again (never an update)."""
+        return self.state == 2 and self.waiting is None
+
+    @property
     def update_available(self) -> bool:
-        return self.installed and not self.is_reinstall and self.waiting is None
+        """Only for an installed map (not one partly there), with a version the device does
+        not have; never for a newer version on the device, which an update would replace
+        with the older one."""
+        return self.state == 1 and not self.is_reinstall and self.waiting is None
 
     @property
     def occupies(self) -> bool:
-        """Its files are on the device for good: installed and not waiting to be removed,
-        or written and waiting to be taken in. Only shown ("Maps use"); which files are
-        kept when a map is removed is decided by protected_files."""
-        return (self.installed and self.waiting != WAIT_REMOVE) or self.waiting == WAIT_INSTALL
+        """Its files are on the device for good: listed and not waiting to be removed, or
+        written and waiting to be taken in. Only shown ("Maps use"); which files are kept
+        when a map is removed is decided by protected_files."""
+        return (self.listed and self.waiting != WAIT_REMOVE) or self.waiting == WAIT_INSTALL
 
     @property
     def keeps_files(self) -> bool:
-        """Its files are kept when another map is removed or rewritten: installed as far as
-        the server knows, or written and waiting to be taken in. A map that looks removed
-        still counts: a shared file is kept rather than lost."""
-        return self.installed or self.waiting == WAIT_INSTALL
+        """Its files are kept when another map is removed or rewritten: listed as far as the
+        server knows (also partly), or written and waiting to be taken in. A map that looks
+        removed still counts: a shared file is kept rather than lost."""
+        return self.listed or self.waiting == WAIT_INSTALL
 
     @property
     def all_paths(self) -> list[str]:
@@ -113,6 +130,10 @@ class UniversalMap:
             return _("will be loaded after the device is unplugged")
         if self.waiting == WAIT_REMOVE:
             return _("will be removed after the device is unplugged")
+        if self.incomplete:
+            # TRANSLATORS: map status: a part of the map is on the device; it is to be
+            # installed again
+            return _("incomplete on the device")
         if self.update_available:
             # TRANSLATORS: map status
             return _("update available")
@@ -345,7 +366,7 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
             m.waiting = WAIT_INSTALL
     removed = []  # decided on the same state for every map, then marked
     for m in maps:
-        if not m.installed or m.waiting:
+        if not m.listed or m.waiting:
             continue
         own = {p.casefold() for p in m.all_paths}
         own -= protected_files(maps, m)

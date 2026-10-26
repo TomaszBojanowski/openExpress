@@ -122,7 +122,8 @@ class MapsPage:
             return
         free, total = space
         # Also the maps written or removed that the device takes in when it is unplugged.
-        installed = sorted((m for m in all_maps if m.installed or m.waiting),
+        # Also a map partly on the device (to be installed again).
+        installed = sorted((m for m in all_maps if m.listed or m.waiting),
                            key=lambda m: (m.map_type, m.name))
         g = sec.group(_("On the device"))
         # The list is what Garmin's server said when the page was opened; a device that has
@@ -145,7 +146,7 @@ class MapsPage:
                 row.set_sensitive(m.waiting != mp.WAIT_REMOVE)
                 g.add(row)
                 continue
-            if m.update_available and not mp.can_install(m):
+            if (m.update_available or m.incomplete) and not mp.can_install(m):
                 # No button: say why instead (the same reason the install would give).
                 row.set_subtitle(GLib.markup_escape_text(
                     self._map_subtitle(m) + "\n" + mp.cannot_install_reason(m)))
@@ -154,6 +155,11 @@ class MapsPage:
                 row.add_suffix(self._button(_("Update"),
                                             lambda button, m=m: self.confirm_map(m, button),
                                             "suggested-action", with_button=True))
+            elif m.incomplete:
+                # The whole map again: the question and the install are those of a new map.
+                row.add_suffix(self._button(_("Install"),
+                                            lambda button, m=m: self.confirm_map(m, button),
+                                            with_button=True))
             if m.can_uninstall:
                 row.add_suffix(self._trash(_("Remove {name}").format(name=m.name),
                                            lambda m=m: self.confirm_remove(m)))
@@ -161,7 +167,7 @@ class MapsPage:
 
         if own is not None:
             self.show_own_maps(own)  # right under the installed maps, before those to download
-        available = sorted((m for m in all_maps if not m.installed and not m.waiting),
+        available = sorted((m for m in all_maps if not m.listed and not m.waiting),
                            key=lambda m: (m.region, m.name))
         if not available:
             return

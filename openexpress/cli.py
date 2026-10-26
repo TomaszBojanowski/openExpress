@@ -905,6 +905,14 @@ def _maps_remove_own(args, dev, st, all_maps) -> int:
     return 0
 
 
+def _incomplete_maps_text(count: int) -> str:
+    """`maps update` leaves out the maps partly on the device: what to do with them."""
+    return ngettext("{count} map is incomplete on the device; install it again with "
+                    "openexpress maps install NAME.",
+                    "{count} maps are incomplete on the device; install them again with "
+                    "openexpress maps install NAME.", count).format(count=count)
+
+
 def cmd_maps(args) -> int:
     from openexpress import maps as mp
     from openexpress import ownmaps
@@ -927,7 +935,7 @@ def cmd_maps(args) -> int:
         print(mp.no_maps_message())
         return 0
     if args.maps_cmd in (None, "list"):
-        on_device = [m for m in all_maps if m.installed or m.waiting]
+        on_device = [m for m in all_maps if m.listed or m.waiting]
         shown = all_maps if args.all else on_device
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
@@ -949,9 +957,14 @@ def cmd_maps(args) -> int:
 
     if args.maps_cmd == "update":
         targets = [m for m in all_maps if m.update_available]
+        incomplete = sum(1 for m in all_maps if m.incomplete)
         if not targets:
             print(_("All installed maps are up to date."))
+            if incomplete:
+                print(_incomplete_maps_text(incomplete))
             return 0
+        if incomplete:
+            print(_incomplete_maps_text(incomplete))
     else:
         targets = [mp.find(all_maps, args.name)]
 

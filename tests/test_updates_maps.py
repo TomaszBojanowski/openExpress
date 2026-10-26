@@ -1745,3 +1745,82 @@ def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
     assert maps.space_needed(_ListingOverMtp(device_root), m, removing) == expected
     assert maps.space_needed(LocalStorage(device_root), m, removing) == m.size - sum(
         LocalStorage(device_root).size(p) or 0 for p in removing)
+
+
+# --- the states of a map the server gives (analysis 19, point 4; decision of 26.10.2026) ---
+# 1 installed, 2 partly on the device, 3 a newer version on the device. A map partly there
+# is not installed: it shows on the device as incomplete, to be installed again, never as an
+# update. A newer one on the device is installed and never an update (that would write the
+# older version).
+
+
+def _with_state(server, name, state, reinstall=False):
+    answer = maps_response(server)
+    for m in answer["maps"]:
+        if m["displayname"] == f"TopoActive {name}":
+            m["installationstate"], m["isreinstall"] = state, reinstall
+    return {m.name.split()[-1]: m for m in maps.parse_maps(answer)}
+
+
+def test_a_partial_map_is_incomplete_not_installed(server):
+    east = _with_state(server, "East", 2)["East"]
+    assert east.incomplete and east.listed
+    assert not east.installed and not east.update_available
+    assert east.status == "incomplete on the device"
+
+
+def test_a_newer_map_on_the_device_is_no_update(server):
+    east = _with_state(server, "East", 3)["East"]
+    assert east.installed and not east.incomplete and not east.update_available
+    assert east.status == "up to date"
+
+
+def test_a_partial_map_still_keeps_its_shared_file(server):
+    by_name = _with_state(server, "East", 2)
+    assert "garmin/dem.img" in maps.protected_files(list(by_name.values()), by_name["West"])
+
+
+@pytest.mark.needs_display
+def test_the_maps_page_offers_install_for_an_incomplete_map(server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    answer = maps_response(server)
+    answer["maps"][1]["installationstate"] = 2  # East
+    win, _reloads = _maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(answer))
+    on_device, available = win.sections["maps"].groups
+    rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
+    east = rows["TopoActive East"]  # on the device still: part of it takes room there
+    assert east.get_subtitle().endswith("incomplete on the device")
+    assert _buttons(east) == ["Install"]  # the whole map again, not an update
+
+
+def test_maps_update_skips_an_incomplete_map(server, device_root, xdg, monkeypatch, capsys):
+    from openexpress.cli import main
+
+    answer = maps_response(server)
+    answer["maps"][1]["installationstate"] = 2  # East: the only one without isReinstall
+    put(device_root, **{"E.img": b"old"})  # a part of it is there: not being removed
+    answer_with(monkeypatch, body=json.dumps(answer).encode())
+    assert main(["--path", str(device_root), "maps", "update"]) == 0
+    out = capsys.readouterr().out
+    assert "All installed maps are up to date." in out and "Updating map" not in out
+    assert ("1 map is incomplete on the device; install it again with openexpress maps "
+            "install NAME.") in out
+
+
+def test_the_words_of_an_incomplete_map_in_polish(server):
+    from openexpress import cli, i18n
+
+    east = _with_state(server, "East", 2)["East"]
+    i18n.setup("pl")
+    try:
+        words = east.status, cli._incomplete_maps_text(1), cli._incomplete_maps_text(5)
+    finally:
+        i18n.setup("en")
+    assert words == (
+        "niekompletna na urządzeniu",
+        ("1 mapa jest niekompletna na urządzeniu; zainstaluj ją ponownie poleceniem "
+         "openexpress maps install NAZWA."),
+        ("5 map jest niekompletnych na urządzeniu; zainstaluj je ponownie poleceniem "
+         "openexpress maps install NAZWA."))
