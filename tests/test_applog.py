@@ -649,6 +649,45 @@ def test_media_folders_come_from_the_device(log_file):
     assert "Jantar" not in log_file.read_text()
 
 
+# The USB serial of a Garmin device and its MTP address carry its unit ID in hexadecimal, 12
+# digits with leading zeros (a fēnix 8, 26.10.2026: serial == format(unit_id, "012x")). A unit
+# ID made up so that its hexadecimal form has letters between the digits, as a real one has.
+HEX_UNIT = "e5a1c3b7"
+HEX_UNIT_ID = int(HEX_UNIT, 16)  # 3852583863
+
+
+@pytest.mark.parametrize(("line", "hidden"), [
+    (f"USB serial 0000{HEX_UNIT}", "USB serial <unit>"),
+    (f"USB serial 0000{HEX_UNIT.upper()}", "USB serial <unit>"),
+    (f"bare {HEX_UNIT} and {HEX_UNIT.upper()}", "bare <unit> and <unit>"),
+    (f"lsusb: iSerial 3 0000{HEX_UNIT.upper()}", "lsusb: iSerial 3 <unit>"),
+    (f"mount of 091e_51b4_0000{HEX_UNIT} added", "mount of 091e_51b4_<unit> added"),
+    (f"volume Garmin_Edge_1050_0000{HEX_UNIT}", "volume Garmin_Edge_1050_<unit>"),
+    (f"opened mtp://091e_51b4_0000{HEX_UNIT}/Primary", "opened mtp://<device>/Primary"),
+    (f"gvfs mtp:host=091e_51b4_0000{HEX_UNIT.upper()} mounted", "gvfs mtp:host=<device> mounted"),
+    (f"device {HEX_UNIT_ID}", "device <unit>"),
+])
+def test_the_unit_id_of_a_device_is_hidden_also_in_hexadecimal(line, hidden):
+    from conftest import DEVICE_XML
+
+    from openexpress.device.xmldevice import parse
+
+    assert HEX_UNIT in applog.redact(f"USB serial 0000{HEX_UNIT}")  # not known to be one yet
+    applog.hide_device(parse(DEVICE_XML.replace("<Id>1234567890</Id>",
+                                                 f"<Id>{HEX_UNIT_ID}</Id>").encode()))
+    assert applog.redact(line) == hidden
+    assert applog.redact(hidden) == hidden  # the log attached to a report is redacted again
+
+
+def test_a_unit_id_hidden_on_its_own_is_hidden_in_hexadecimal_too(log_file):
+    """As the list of devices hides each one it reads (gio_storage.probe), before any session."""
+    applog.hide_unit_id(HEX_UNIT_ID)
+    applog.setup("cli")
+    logging.getLogger("openexpress.test").info("serial 0000%s, %s", HEX_UNIT.upper(), HEX_UNIT_ID)
+    text = log_file.read_text()
+    assert "serial <unit>, <unit>" in text and HEX_UNIT not in text.lower()
+
+
 # --- the run marker and the start line ----------------------------------------------------------
 
 

@@ -1358,7 +1358,7 @@ def probe(found: FoundDevice) -> DeviceSummary:
 
     summary = _probe(found, parse)
     if summary.ok:
-        applog.hide(summary.unit_id, "unit")  # as hide_device: never in the log
+        applog.hide_unit_id(summary.unit_id)  # as hide_device: never in the log
     log.info("device: probed %s (USB %s): %s", found.kind,
              found.usb.usb_id if found.usb is not None else "?",
              "details read" if summary.ok else summary.reason)

@@ -878,6 +878,19 @@ def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
     assert DRIVE_SERIAL not in repr(found)  # the serial number is never read
 
 
+def test_a_device_read_for_the_list_is_hidden_in_the_log_also_in_hexadecimal(drives, monkeypatch):
+    """Its USB serial and its MTP address may carry its unit ID in hexadecimal (a fēnix 8,
+    26.10.2026): probe hides that too, as a session does (applog.hide_device)."""
+    from openexpress import applog
+
+    monitor_with(monkeypatch, FakeDriveMount(drive_folder(drives), usb_drive(drives)))
+    (found,) = gio_storage.find_ums_devices()
+    summary = gio_storage.probe(found)
+    assert summary.ok
+    serial = format(summary.unit_id, "012x")
+    assert applog.redact(f"serial {serial} {serial.upper()}") == "serial <unit> <unit>"
+
+
 def test_a_pendrive_with_a_garmin_folder_is_ignored(drives, monkeypatch):
     """The same folders and file on a drive of another vendor (here a SanDisk pendrive)."""
     mount = FakeDriveMount(drive_folder(drives), usb_drive(drives, vendor="0781",

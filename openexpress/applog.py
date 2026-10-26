@@ -44,7 +44,7 @@ RUN = secrets.token_hex(2)
 _KEYS = (r"oauth_\w+|ticket|\w*token\w*|password|passwd|\w*secret\w*|signature|consumer_key|"
          r"session\w*")
 _PATTERNS = [
-    # An MTP address carries the serial number of the device.
+    # An MTP address carries the serial number of the device (a fēnix 8: its unit ID).
     (re.compile(r"mtp://[^\s/'\"]+"), "mtp://<device>"),
     (re.compile(r"mtp:host=[^\s/'\"]+"), "mtp:host=<device>"),
     # Any other address but a web one: "file:///run/media/<user>/<stick>/…" (`gio copy` puts
@@ -108,10 +108,21 @@ def hide(value, label: str) -> None:
         _hidden[text] = f"<{label}>"
 
 
+def hide_unit_id(unit_id) -> None:
+    """Never write this unit ID: in decimal, nor in hexadecimal, as a USB serial and an MTP
+    address carry it (a fēnix 8: 12 digits with leading zeros, 26.10.2026), in either case."""
+    hide(unit_id, "unit")
+    if isinstance(unit_id, int) and not isinstance(unit_id, bool) and unit_id > 0:
+        for form in (f"{unit_id:x}", f"{unit_id:012x}"):
+            hide(form, "unit")
+            hide(form.upper(), "unit")
+
+
 def hide_device(device) -> None:
-    """Never write what is private about this device: its unit ID, and the names of the
-    files in the folders it declares for music, podcasts, audiobooks and playlists."""
-    hide(device.unit_id, "unit")
+    """Never write what is private about this device: its unit ID (hide_unit_id), and the
+    names of the files in the folders it declares for music, podcasts, audiobooks and
+    playlists."""
+    hide_unit_id(device.unit_id)
     for f in device.files:
         folder = (f.path or "").strip("/")
         if f.datatype.startswith("MEDIA_") and folder:
