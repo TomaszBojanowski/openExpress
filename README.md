@@ -426,11 +426,11 @@ replaced. Tested on a fēnix 8.
 
 - **The watch restarts by itself after it is unplugged.** A fēnix 8 (software 23.39) has done
   this a few times while taking in a change, for example a new map or a removed Connect IQ
-  app. Its error log showed the same fault each time it was read, and the same change went
-  through without a restart right after the watch had been turned off and on. This looks like
-  a fault of the watch that appears after it has been running for days, but it is not certain.
-  Before a bigger change (maps, several apps) it may help to turn the watch off and on first.
-  No data on the watch was lost.
+  app; the same change went through without a restart right after the watch had been turned
+  off and on. The watch also kept memory dumps of crashes or restarts from 2025 and April 2026,
+  before openExpress was first used with it. This looks like a fault of the watch that appears
+  after it has been running for days, but it is not certain. Before a bigger change (maps,
+  several apps) it may help to turn the watch off and on first. No data on the watch was lost.
 
 ### Upgrading from 0.3.x
 
