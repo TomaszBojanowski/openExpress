@@ -13,6 +13,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+import requests
+
 from openexpress import applog, known_devices, paths, sync
 from openexpress.auth import store
 from openexpress.connect import (
@@ -64,6 +66,10 @@ class DeviceSession:
     # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
     # quitting); cleared before each wait.
     stop_waiting: threading.Event = field(default_factory=threading.Event, repr=False)
+    # The country of the account's profile, for maps restricted to one (account_country):
+    # asked once per session, and only when such a map is there.
+    account_country_code: str | None = field(default=None, repr=False)
+    account_country_asked: bool = False
 
     @property
     def logged_in(self) -> bool:
@@ -111,6 +117,24 @@ def forget_unit_info(session) -> None:
 
 class MassStorageMode(UserFacingError):
     """What is refused for a Garmin device in mass storage mode."""
+
+
+def account_country(s) -> str | None:
+    """The country of the profile of the Garmin account, for a map Garmin does not offer in
+    a country: asked once per session, and only for a device of the account (its ownership
+    checked); None without a login, for a device of another account, or when it cannot be
+    read (said in the log), so that the map is only marked."""
+    if (not s.logged_in or s.ownership_error is not None
+            or getattr(s.client, "verified_unit_id", None) is None):
+        return None
+    if not s.account_country_asked:
+        s.account_country_asked = True
+        try:
+            s.account_country_code = s.client.profile_country()
+        except (UserFacingError, requests.RequestException, ValueError) as e:
+            log.info("maps: the account's country not read (%s)", type(e).__name__)
+            s.account_country_code = None
+    return s.account_country_code
 
 
 def make_client(settings: Settings) -> GarminClient:

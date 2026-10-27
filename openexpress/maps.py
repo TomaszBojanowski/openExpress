@@ -10,7 +10,10 @@ is tried up to six times, with a pause between. A map written or removed waits u
 device is unplugged (mark_waiting): only then does the device take it in.
 
 There is no license circumvention here: only what the server offers for this
-device is installed.
+device is installed. A map Garmin does not offer in the country of the Garmin account (its
+"restriction") is not installed or updated; Garmin Express takes the country from the address
+of the computer, openExpress from the account's profile, and only marks such a map when that
+country is not known.
 """
 
 from __future__ import annotations
@@ -73,6 +76,11 @@ class UniversalMap:
     # WAIT_INSTALL or WAIT_REMOVE: written to or removed from the device, which takes it in
     # only when it is unplugged (see mark_waiting); None otherwise.
     waiting: str | None = None
+    # The country Garmin does not offer the map in ("restriction", type "Country"; upper
+    # case), and whether that is the account's country (apply_country): True, False (no
+    # restriction, or another country), None (restricted, the account's country not known).
+    restricted_in: str | None = None
+    restricted: bool | None = False
 
     # The states of the server ("installationState"): 0 not installed, 1 installed, 2 partly
     # on the device, 3 a newer version on the device.
@@ -93,11 +101,16 @@ class UniversalMap:
         return self.state == 2 and self.waiting is None
 
     @property
-    def update_available(self) -> bool:
-        """Only for an installed map (not one partly there), with a version the device does
-        not have; never for a newer version on the device, which an update would replace
+    def would_update(self) -> bool:
+        """The server has a version of an installed map (not one partly there) that the device
+        does not have; never a newer version on the device, which an update would replace
         with the older one."""
         return self.state == 1 and not self.is_reinstall and self.waiting is None
+
+    @property
+    def update_available(self) -> bool:
+        """An update to offer: not of a map Garmin does not offer in the account's country."""
+        return self.would_update and self.restricted is not True
 
     @property
     def occupies(self) -> bool:
@@ -137,9 +150,15 @@ class UniversalMap:
         if self.update_available:
             # TRANSLATORS: map status
             return _("update available")
+        if self.would_update:  # held back: not offered in the account's country
+            # TRANSLATORS: map status
+            return _("update not offered in your account's country")
         if self.installed:
             # TRANSLATORS: map status
             return _("up to date")
+        if self.restricted is True:
+            # TRANSLATORS: map status (Garmin does not offer it in the account's country)
+            return _("not offered in your account's country")
         # TRANSLATORS: map status (can be installed)
         return _("available")
 
@@ -199,13 +218,14 @@ def universal_serves(map_update_type, device) -> bool:
     return any(name.casefold() == wanted for name in device.datatypes())
 
 
-def check(client, device, ask=None) -> tuple[list[UniversalMap], int]:
+def check(client, device, ask=None, country=None) -> tuple[list[UniversalMap], int]:
     """The maps of the device as the universal map service lists them (read_maps), once
     unit-info says that service serves it; MapsNotSupported when it does not. A failed
     unit-info fails the check: without it, which service serves the device is not known.
     `ask` gives unit-info's answer (the window: the one of the session, service.unit_info);
     none: it is asked here. One line in the log says the way the check went (the part
-    number only)."""
+    number only). `country` gives the account's country, asked only when a map is
+    restricted to one (apply_restrictions); none: such a map is only marked."""
     if ask is not None:
         info = ask()
     else:
@@ -221,7 +241,55 @@ def check(client, device, ask=None) -> tuple[list[UniversalMap], int]:
         raise MapsNotSupported(value[:40] if isinstance(value, str) and value else None)
     log.info("maps: map update type %s for %s: asking the universal map service", said,
              device.part_number)
-    return read_maps(client.universal_maps(device.raw))
+    found = read_maps(client.universal_maps(device.raw))
+    apply_restrictions(found[0], country)
+    return found
+
+
+def apply_country(maps: list[UniversalMap], country: str | None) -> None:
+    """Whether each map with a restriction is not offered in `country` (the account's; None:
+    not known, the map is only marked)."""
+    for m in maps:
+        if m.restricted_in is not None:
+            m.restricted = None if not country else country.upper() == m.restricted_in
+
+
+def apply_restrictions(maps: list[UniversalMap], country=None) -> None:
+    """The account's country asked (`country()`, None: it cannot be) only when a map has a
+    restriction, and applied; one line in the log, without the country."""
+    restricted = [m for m in maps if m.restricted_in is not None]
+    if not restricted:
+        log.info("maps: 0 maps restricted by country")
+        return
+    code = country() if country is not None else None
+    apply_country(maps, code)
+    log.info("maps: %d maps restricted by country; the account's country: %s; %d apply",
+             len(restricted), "known" if code else "unknown",
+             sum(1 for m in restricted if m.restricted is True))
+
+
+def restriction_note(m: UniversalMap) -> str | None:
+    """The mark of a map restricted in a country when the account's country is not known (it
+    is neither held back nor hidden); None otherwise."""
+    if m.restricted_in is None or m.restricted is not None:
+        return None
+    # TRANSLATORS: {country} is a country code, e.g. KR
+    return _("Garmin does not offer this map in {country}").format(country=m.restricted_in)
+
+
+def _restriction(m: dict) -> str | None:
+    """The country of the restriction of a map in the server's answer (type "Country" with a
+    country; upper case); anything else is not applied, and said in the log by its kind."""
+    value = m.get("restriction")
+    if value is None:
+        return None
+    if isinstance(value, dict) and str(value.get("restrictiontype") or "").casefold() == "country":
+        country = value.get("country")
+        if isinstance(country, str) and country.strip():
+            return country.strip().upper()[:8]
+    kind = value.get("restrictiontype") if isinstance(value, dict) else type(value).__name__
+    log.info("maps: a restriction of another kind (%s), not applied", str(kind)[:40])
+    return None
 
 
 def _listed(response) -> list:
@@ -247,12 +315,16 @@ MISSING_FILE, BAD_CHECKSUM = "missing-file", "bad-checksum"
 
 
 def can_install(m: UniversalMap) -> bool:
-    """Whether the server gave a usable, checked download for every file of `m`."""
-    return m.installable and bool(m.files)
+    """Whether the server gave a usable, checked download for every file of `m`, and Garmin
+    offers it in the account's country."""
+    return m.installable and bool(m.files) and m.restricted is not True
 
 
 def cannot_install_reason(m: UniversalMap) -> str:
     """The same reason as cannot_install_message, short, for the line under the map's name."""
+    if m.restricted is True:
+        return _("Cannot be installed: Garmin does not offer this map in your account's "
+                 "country")
     if m.unavailable == BAD_CHECKSUM:
         return _("Cannot be installed: the server gave an invalid checksum for one of its "
                  "files")
@@ -261,6 +333,9 @@ def cannot_install_reason(m: UniversalMap) -> str:
 
 def cannot_install_message(m: UniversalMap) -> str:
     """Why `m` cannot be installed, the same words in the command line and the window."""
+    if m.restricted is True:
+        return _("Map '{name}' cannot be installed: Garmin does not offer it in your account's "
+                 "country ({country}).").format(name=m.name, country=m.restricted_in)
     if m.unavailable == BAD_CHECKSUM:
         return _("Map '{name}' cannot be installed: the server gave an invalid checksum for "
                  "one of its files.").format(name=m.name)
@@ -318,6 +393,8 @@ def parse_maps(response: dict) -> list[UniversalMap]:
             eula_urls=list(m.get("eulaurls") or []),
             installable=not missing and not unchecked,
             unavailable=MISSING_FILE if missing else BAD_CHECKSUM if unchecked else None,
+            restricted_in=(restricted_in := _restriction(m)),
+            restricted=None if restricted_in else False,
         ))
     return out
 

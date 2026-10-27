@@ -70,7 +70,8 @@ class MapsPage:
             # Garmin's server, then the map folder of the device for the maps that are not
             # Garmin's (the folder and the first bytes of each such file).
             try:
-                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s))
+                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s),
+                                  country=lambda: service.account_country(s))
             except mp.MapsNotSupported as e:
                 # No check of Garmin's maps, which the page says (with the map update type
                 # Garmin gives); the maps of your own do not depend on it (Garmin's list:
@@ -146,7 +147,7 @@ class MapsPage:
                 row.set_sensitive(m.waiting != mp.WAIT_REMOVE)
                 g.add(row)
                 continue
-            if (m.update_available or m.incomplete) and not mp.can_install(m):
+            if (m.would_update or m.incomplete) and not mp.can_install(m):
                 # No button: say why instead (the same reason the install would give).
                 row.set_subtitle(GLib.markup_escape_text(
                     self._map_subtitle(m) + "\n" + mp.cannot_install_reason(m)))
@@ -182,6 +183,8 @@ class MapsPage:
             line = caption(m.region, m.version, human_size(m.size))
             if not mp.can_install(m):
                 line += "\n" + mp.cannot_install_reason(m)  # instead of the button
+            elif (note := mp.restriction_note(m)) is not None:
+                line += "\n" + note  # the account's country not known: only marked
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(line))
             if mp.can_install(m):
@@ -356,10 +359,13 @@ class MapsPage:
     def _map_subtitle(m) -> str:
         """Type, version, size and status of an installed map; without the type when the map
         is named like its type ("Base maps")."""
+        from openexpress import maps as mp
+
         kind = m.map_type.strip()
         parts = [kind if kind.casefold() != m.name.strip().casefold() else "",
                  m.version, human_size(m.size), m.status]
-        return caption(*parts)
+        note = mp.restriction_note(m)  # the account's country not known: only marked
+        return caption(*parts) + ("\n" + note if note else "")
 
     def confirm_map(self, m, button: Gtk.Button | None = None) -> None:
         """Install or Update of a map (`button`, which spins while the space is checked):

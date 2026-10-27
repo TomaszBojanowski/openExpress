@@ -941,9 +941,10 @@ def _load_maps(args, client, own: bool = False):
     st, dev = open_device(args)
     if args.path:  # a folder (maybe a copy): the universal map service, as before
         all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
+        mp.apply_restrictions(all_maps)  # no account for a folder: a restricted map is marked
     else:  # MapsNotSupported when Garmin serves the device's maps another way
         try:
-            all_maps, listed = mp.check(client, dev)
+            all_maps, listed = mp.check(client, dev, country=lambda: _account_country(dev))
         except mp.MapsNotSupported:
             if not own:
                 raise
@@ -952,6 +953,26 @@ def _load_maps(args, client, own: bool = False):
             all_maps, listed = [], 0
     mp.mark_waiting(st, all_maps)
     return st, dev, all_maps, listed
+
+
+def _account_country(dev) -> str | None:
+    """The country of the Garmin account, for a map Garmin does not offer in a country: only
+    with a saved login and for a device of the account (its ownership checked first);
+    otherwise, or when it cannot be read, None and the map is only marked."""
+    import requests
+
+    from openexpress import service
+    from openexpress.errors import UserFacingError
+
+    try:
+        client = make_client(Settings.load(), need_auth=False)
+        if client.auth is None:
+            return None
+        service.require_account_device(client, dev.unit_id)
+        return client.profile_country()
+    except (UserFacingError, requests.RequestException, ValueError) as e:
+        log.info("maps: the account's country not read (%s)", type(e).__name__)
+        return None
 
 
 def _url_salt() -> str | None:
@@ -1057,6 +1078,8 @@ def cmd_maps(args) -> int:
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
             print(f"  {m.name:48} {m.version:>9}  {_human(m.size):>9}  {m.status}")
+            if (note := mp.restriction_note(m)) is not None:
+                print("    " + note)
         if not args.all:
             n = len(all_maps) - len(on_device)
             print("\n" + ngettext("{count} more map is available (openexpress maps --all).",
@@ -1074,6 +1097,10 @@ def cmd_maps(args) -> int:
     if args.maps_cmd == "update":
         targets = [m for m in all_maps if m.update_available]
         incomplete = sum(1 for m in all_maps if m.incomplete)
+        for m in all_maps:
+            if m.would_update and m.restricted is True:
+                print(_("{name}: Garmin does not offer this map in your account's country; "
+                        "not updated.").format(name=m.name))
         if not targets:
             print(_("All installed maps are up to date."))
             if incomplete:

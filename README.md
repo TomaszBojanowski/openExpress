@@ -89,6 +89,10 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 - Garmin Connect sync: new activities, sleep, HRV, metrics… are uploaded; courses, workouts
   and Connect IQ apps queued in Connect are written to the watch; TrueUp for multiple devices.
 - Watch software updates and free maps (TopoActive, CourseView, Ski…), with MD5 verification.
+  A map Garmin does not offer in the country of your Garmin account is not installed or
+  updated, and the window and `openexpress maps` say why; the country is read from the
+  account's profile (Garmin Express uses the computer's IP address), and without it (not
+  signed in, a device of another account) such a map is only marked.
 - Connect IQ apps: install, update, remove, enable/disable built-in activities – also on
   watches that hide their app folder (e.g. the fēnix 8), without reordering your widgets.
 - Music, podcasts and audiobooks with playlists.

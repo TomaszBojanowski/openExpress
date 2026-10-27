@@ -3770,7 +3770,8 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
         def work():
             try:
-                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s))
+                result = mp.check(s.client, s.device, ask=lambda: service.unit_info(s),
+                                  country=lambda: service.account_country(s))
             except mp.MapsNotSupported:
                 return None  # the row says so; nothing to read on the device
             mp.mark_waiting(s.storage, result[0])
