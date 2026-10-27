@@ -12,8 +12,8 @@ _remembered_from_account), _usb_title; show_choices clears the state of the devi
 as the device page does (update_state, update_checked_at, _update_record_at, updates_cache,
 map_state, maps_cache, map_cleanup, apps_count, music_count).
 Uses: session, connected, navigation, start, remembered, device_view, sections, _closed,
-in_background, open_choice, add_action, get_mapped, _update_actions, _update_banner,
-_render_update_state."""
+in_background, open_choice, _opening_tile, add_action, get_mapped, _update_actions,
+_update_banner, _render_update_state."""
 from __future__ import annotations
 
 import dataclasses
@@ -580,8 +580,9 @@ class StartWindow:
             self._show_remembered(target, tile)
         elif isinstance(target, dict):
             self._show_account(target)
-        else:
-            self.open_choice(target)
+        elif getattr(self, "_opening_tile", None) != index:
+            self.open_choice(target, tile=index)
+        # else its device is being opened: a second click says nothing
 
     def _last_sync_text(self, unit_id) -> str:
         """The last sync of a device from this computer, in the words of the device page."""

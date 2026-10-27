@@ -11,7 +11,8 @@ _usb_title, _usb_gone, _normal_since, _replug_told, _open_unplugged), the one ti
 detection and what it waits for (_detect_timer, _detect_causes, _detect_reasons,
 _detect_after_task, _asked, _pending_cause, _pending_reopen, _refresh_pending), the list read
 again (_reread_cause, _reread_pending), the drives looked for (_drive_look,
-_drives_while_open), _updated_apps (cleared when the device goes).
+_drives_while_open), _updated_apps (cleared when the device goes), _opening_tile (the tile
+whose device is being opened).
 Uses: busy, run_task, in_background, toast, error, connected, navigation, start, remembered,
 sections, _remembered_unit, _remembered_from_account, show_device, show_no_device,
 show_choices, _on_start_page, _on_remembered_page, _render_start, _refresh_remembered,
@@ -720,15 +721,26 @@ class DeviceDetection:
         self.run_task(_("Detecting the device…"),
                       lambda: with_space(detect_devices(current_uri)), done, failed)
 
-    def open_choice(self, found) -> None:
-        """The device chosen from the list, opened as if it were the only one."""
+    def open_choice(self, found, tile: int | None = None) -> None:
+        """The device chosen from the list, opened as if it were the only one; `tile`: the
+        place of the tile clicked, which shows the opening until it ends (StartPage
+        .set_opening; a second click on it meanwhile says nothing, _open_tile)."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
 
         mounted_now = not getattr(found, "mounted", True)  # a drive mounted once chosen
+        if tile is not None:
+            self._opening_tile = tile
+            self.start.set_opening(tile)
+
+        def opened() -> None:
+            if tile is not None:
+                self._opening_tile = None
+                self.start.set_opening(None)
 
         def done(sess):
+            opened()
             log.info("device detection: the device chosen, all pages are loaded anew")
             self.connected.stop_choosing()
             self.session = sess
@@ -744,6 +756,7 @@ class DeviceDetection:
                 self._reread_connected()
 
         def failed(e):
+            opened()
             # Unplugged meanwhile, or not readable: said, and the devices detected again.
             self.error(_("Could not open the device"), str(e) or type(e).__name__)
             self.connected.stop_choosing()

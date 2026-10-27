@@ -33,6 +33,8 @@ from openexpress.known_devices import (  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
 TILE_ICON_SIZE = 96
+# The spinner of a tile being opened, over its picture.
+TILE_SPINNER_SIZE = 32
 ROW_ICON_SIZE = 48  # in a row of a list (a section of many devices)
 # A row of a list as an Adw.ActionRow of the same list (measured with libadwaita 1.9): at
 # least 50 px tall, 12 px at its sides and after the picture, 6 px above and below its texts
@@ -428,6 +430,7 @@ class StartPage:
         # How the sections show their devices (devicelist.layout): the view chosen in the
         # page's menu; the next show() lays them out so.
         self.view = devicelist.AUTO
+        self.opening = None  # the key of the tile whose device is being opened (set_opening)
         self.header = Adw.HeaderBar()
         for widget in header_start:
             self.header.pack_start(widget)
@@ -554,6 +557,15 @@ class StartPage:
             section.grid.set_visible(mode is not None and mode != LIST)
             section.list.set_visible(mode == LIST)
         self.stack.set_visible_child_name("content")
+        self.set_opening(self.opening)  # the items built again show it too
+
+    def set_opening(self, key: int | None) -> None:
+        """The tile at `key` (its place in the list given to show()) shows that its device is
+        being opened (show_opening), the others not; None: none."""
+        self.opening = key
+        for section in self._sections.values():
+            for item in section.items():
+                show_opening(item, key is not None and getattr(item, "key", None) == key)
 
     def set_chips(self, key: int, tile) -> bool:
         """The chips of the tile at `key` (its place in the list given to show()) as `tile`
@@ -762,6 +774,28 @@ def last_sync_details(said) -> Gtk.Box:
     return details
 
 
+def _opening_spinner(size: int):
+    """The spinner of a tile or a row being opened (set_opening), hidden until then."""
+    spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+    spinner.set_size_request(size, size)
+    spinner.set_visible(False)
+    return spinner
+
+
+def show_opening(item, on: bool) -> None:
+    """A tile or a row shows whether its device is being opened: a spinner over the picture
+    of a tile, which goes pale; in a row, in place of its arrow."""
+    if item.opening.get_visible() == on:
+        return
+    item.opening.set_visible(on)
+    arrow = getattr(item, "arrow", None)
+    if arrow is not None:
+        arrow.set_visible(not on)
+    else:
+        tile_image(item).set_opacity(0.35 if on else 1.0)
+    item.update_state([Gtk.AccessibleState.BUSY], [on])
+
+
 def tile_image(item) -> Gtk.Image:
     """The image of a tile or a row: the icon, or the picture of the device in its place."""
     return item.image
@@ -829,7 +863,11 @@ class DeviceRow(Gtk.ListBoxRow):
                                    wrap_mode=Pango.WrapMode.WORD_CHAR,
                                    css_classes=["subtitle"]))
         line.append(texts)
-        line.append(Gtk.Image(icon_name="go-next-symbolic", valign=Gtk.Align.CENTER))
+        self.arrow = Gtk.Image(icon_name="go-next-symbolic", valign=Gtk.Align.CENTER)
+        line.append(self.arrow)
+        self.opening = _opening_spinner(16)  # in place of the arrow (show_opening)
+        self.opening.set_valign(Gtk.Align.CENTER)
+        line.append(self.opening)
         self.set_child(line)
         self.set_tooltip_text(seen_tooltip(tile))
         _mark(self, tile, image, picture)
@@ -864,7 +902,13 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
     image = _image(tile, picture, TILE_ICON_SIZE)
-    box.append(image)
+    # Over the picture, while the device is opened (show_opening): the tile keeps its size.
+    spinner = _opening_spinner(TILE_SPINNER_SIZE)
+    spinner.set_halign(Gtk.Align.CENTER)
+    spinner.set_valign(Gtk.Align.CENTER)
+    overlay = Gtk.Overlay(child=image)
+    overlay.add_overlay(spinner)
+    box.append(overlay)
     # max_width_chars=1: the texts never ask for more than the tile's width (they take
     # the width the grid gives the tile), so that every tile is as wide as the others.
     name = Gtk.Label(label=_name(tile), ellipsize=Pango.EllipsizeMode.END,
@@ -881,6 +925,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         label.add_css_class("caption")
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, tooltip_text=seen_tooltip(tile))
+    child.opening = spinner
     _mark(child, tile, image, picture)
     child.chips = row
     child.add_css_class("card")

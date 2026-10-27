@@ -207,6 +207,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
         self._task_lets_close = False  # the task under way lets the window close
+        self._opening_tile = None  # the tile whose device is being opened (open_choice)
         # The start page: (tile, what it opens) in the order given to the page, which hands
         # back the place of the tile clicked; what it opens (OPEN: the open device's view; a
         # FoundDevice to open; a KnownDevice or an entry of the account to show read-only) is

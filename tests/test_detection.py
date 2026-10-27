@@ -4047,12 +4047,12 @@ def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
 
 class FakeStartPage:
     """The start page: what it shows is recorded (name, connected, how; the notice; the
-    chips of a tile changed alone)."""
+    chips of a tile changed alone; the tile whose device is being opened)."""
 
     def __init__(self):
         self.page = "start page"
         self.shown, self.notices, self.pictures, self.chips = [], [], [], []
-        self.account_notes = []
+        self.account_notes, self.opening = [], []
 
     def show(self, entries, notice):
         self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
@@ -4069,6 +4069,9 @@ class FakeStartPage:
 
     def set_account_note(self, text):
         self.account_notes.append(text)
+
+    def set_opening(self, key):
+        self.opening.append(key)
 
 
 class FakeNavigation:
