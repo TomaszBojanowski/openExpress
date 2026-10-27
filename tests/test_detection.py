@@ -4723,7 +4723,7 @@ def test_a_remembered_tile_tells_the_full_date_in_its_tooltip():
     assert connected.get_tooltip_text() is None
 
 
-def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
+def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_the_window):
     """T3: a remembered device that is not connected opens its read-only view: its name,
     version, when it was seen and its last sync, as remembered. Nothing is opened, nothing
     is read from USB, nothing is asked of a server; back is the start page."""
@@ -4745,7 +4745,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch):
         raise AssertionError("a device was looked for")
 
     for name in ("find_all_devices", "probe", "usb_state", "usb_still_there"):
-        monkeypatch.setattr(app, name, no_device)
+        in_the_window(name, no_device)
     monkeypatch.setattr(app.service, "make_client", no_device)
     win._open_tile(names.index("Venu 2"))
     assert win.navigation.stack == ["start page", "remembered view"]
@@ -6102,11 +6102,10 @@ def test_the_account_list_failing_leaves_no_section(start_window, monkeypatch, c
         caplog.text)
 
 
-def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
+def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch, in_the_window):
     """T4: a tile only on the account opens the read-only view with what the account says:
     its name and version; it was never seen here and never synced from here. Nothing is
     opened or read from USB."""
-    from openexpress.gui import app
 
     win = start_window
     later = defer_background(win)
@@ -6120,7 +6119,7 @@ def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch):
         raise AssertionError("a device was looked for")
 
     for name in ("find_all_devices", "probe", "usb_state", "usb_still_there"):
-        monkeypatch.setattr(app, name, no_device)
+        in_the_window(name, no_device)
     names = [name for name, _on in sections(win)[0]]
     win._open_tile(names.index("Forerunner 965"))
     assert win.navigation.stack == ["start page", "remembered view"]
