@@ -128,9 +128,9 @@ def test_the_apps_and_music_pages_give_their_counts():
     the device"; all the files of the media)."""
     from pathlib import Path
 
-    source = Path("openexpress/gui/app.py").read_text()
+    apps = Path("openexpress/gui/apps_page.py").read_text()
     music = Path("openexpress/gui/music_page.py").read_text()
-    assert "note_apps_count(self, len(state.store_apps))" in source
+    assert "note_apps_count(self, len(state.store_apps))" in apps
     assert "note_music_count(self, len(items), sum(i.size for i in items))" in music
     from openexpress.gui import app
 
@@ -315,7 +315,7 @@ def test_the_apps_page_says_it_in_one_line():
 def test_show_apps_puts_the_line_into_the_group_on_the_device():
     from pathlib import Path
 
-    source = Path("openexpress/gui/app.py").read_text()
+    source = Path("openexpress/gui/apps_page.py").read_text()
     assert "refused_dirs_text(ciq.refused_dirs(self.session.device))" in source
 
 

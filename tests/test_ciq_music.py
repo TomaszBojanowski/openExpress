@@ -1822,6 +1822,7 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, m
     import types
 
     from openexpress.gui import app as gui_app
+    from openexpress.gui import apps_page
 
     st, dev, _fake, app = hidden_spot
     app.has_files, app.direct_removal = False, True
@@ -1843,7 +1844,7 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, m
         def present(self, parent):
             pass
 
-    monkeypatch.setattr(gui_app, "Adw", types.SimpleNamespace(
+    monkeypatch.setattr(apps_page, "Adw", types.SimpleNamespace(
         AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))
     win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st))
     gui_app.MainWindow.confirm_remove_app(win, app)
