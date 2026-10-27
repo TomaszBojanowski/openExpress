@@ -105,6 +105,24 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.6" date="2026-10-27">
+      <description>
+        <ul>
+          <li>Updating a Wellness or Vivomove device warns that the update erases the data stored
+          on it and says to sync it first.</li>
+          <li>A Connect IQ app version that asks for new permissions is installed or updated only
+          after you allow them: the window lists them and asks; on the command line add
+          --allow-permissions.</li>
+          <li>Diagnostics: an optional copy of the device's diagnostic files on this computer at
+          each connection (Preferences → Diagnostics, openexpress diagnostics). The device page
+          shows a crash the device logged in the last 30 days; hidden crash logs and memory dumps
+          are copied only on request. Nothing is sent anywhere.</li>
+          <li>Requests to Garmin's update, map and upload-configuration servers and to the
+          Connect IQ store carry the same client headers as Garmin Express.</li>
+          <li>Signing in uses the same Garmin Express client as its usual sign-in.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.5" date="2026-10-27">
       <description>
         <ul>
