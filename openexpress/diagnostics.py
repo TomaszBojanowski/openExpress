@@ -370,7 +370,7 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
                 and old.get("mtime") == mtime
                 and (where / "objects" / str(old.get("sha256"))).exists()):
             # Of the same size and time as in the copy before: not read again (each read is
-            # slow over MTP; until 27.10.2026 only the files over 64 kB were skipped).
+            # slow over MTP).
             files[path] = old
             report.unchanged += 1
             continue
@@ -566,9 +566,9 @@ def places_path(unit_id: int) -> Path:
 
 
 def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[Seen, dict]:
-    """Through the folders, as every opening did until 27.10.2026: what is there now, and the
-    note of where it is (the real paths of the files and folders found, and of the paths
-    looked for that are not there)."""
+    """Through the folders, when the places kept do not hold (seen_now): what is there now,
+    and the note of where it is (the real paths of the files and folders found, and of the
+    paths looked for that are not there)."""
     err, absent, folders = {}, [], []
     for path in ERR_LOGS:
         real = storage.resolve(path)
