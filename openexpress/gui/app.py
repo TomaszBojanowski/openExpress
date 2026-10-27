@@ -142,6 +142,7 @@ from openexpress.settings import (  # noqa: E402
     SetupError,
     extract_consumer_from_dll,
     extract_url_salt_from_dll,
+    language_tag,
     save_consumer,
 )
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
@@ -4672,7 +4673,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
 
         def work():
             api = ciq.StoreApi(s.client)
-            locale = s.settings.locale.replace("_", "-")
+            locale = language_tag(s.settings.locale)
             state = ciq.read_installed(s.device, s.storage)
             # How each app can be removed, told by its own file alone (as on the command
             # line): an app whose file is out of reach cannot be removed over USB.

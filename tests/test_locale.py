@@ -108,7 +108,7 @@ def test_garmin_s_servers_are_told_the_language_of_the_system(monkeypatch):
     client.upload_settings(1234567890)
     client._omt("GET", "Rce/x", "x")
     assert [(h["Garmin-Client-LocaleCode"], h["Accept-Language"]) for h in sent] == [
-        ("de_DE", "de-DE"), ("de-DE", "de-DE")]
+        ("de-DE", "de-DE"), ("de-DE", "de-DE")]
 
 
 def test_a_locale_saved_by_an_older_version_gives_way_to_the_system(monkeypatch, caplog):

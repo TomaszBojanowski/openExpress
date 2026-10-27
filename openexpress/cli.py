@@ -32,6 +32,7 @@ from openexpress.settings import (
     SetupError,
     extract_consumer_from_dll,
     extract_url_salt_from_dll,
+    language_tag,
     load_consumer,
     save_consumer,
 )
@@ -1325,7 +1326,7 @@ def cmd_apps(args) -> int:
 
     service.require_account_device(client, dev.unit_id)
     api = ciq.StoreApi(client)
-    locale = settings.locale.replace("_", "-")
+    locale = language_tag(settings.locale)
     state = ciq.read_installed(dev, st)
     account = api.account_apps(dev, locale)
     ciq.name_pending(state, account)

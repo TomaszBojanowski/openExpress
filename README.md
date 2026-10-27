@@ -577,10 +577,7 @@ copy to the device is running.
   own. It uses the Garmin Express client headers so that the servers answer, but it does not
   hide that it is a different program.
 - The `Garmin-Client-*` headers have the values of Garmin Express 7.29.1.0 for Windows (name,
-  version, platform and its version). Two headers differ from what Garmin Express sends:
-  `X-garmin-client-id` also goes to Garmin's update and map service, and in the request for
-  the upload configuration the language is written with an underscore (e.g. `pl_PL`), where
-  Garmin Express writes a hyphen (`pl-PL`). The values can be changed in
+  version, platform and its version). The values can be changed in
   `~/.config/openexpress/settings.json`.
 
 ### Flatpak permissions

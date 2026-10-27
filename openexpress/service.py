@@ -29,7 +29,7 @@ from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, ngettext
 from openexpress.progress import Waiting
-from openexpress.settings import Settings, SetupError, load_consumer
+from openexpress.settings import Settings, SetupError, language_tag, load_consumer
 
 log = logging.getLogger(__name__)
 
@@ -1174,7 +1174,7 @@ def _install_queued_apps(s, messages, progress, errors,
     # apps by itself, it must leave those with permissions_changed, as Garmin Express does.
     try:
         known = {a.app_id: a for a in ciq.StoreApi(s.client).account_apps(
-            s.device, s.settings.locale.replace("_", "-"))}
+            s.device, language_tag(s.settings.locale))}
     except Exception:  # noqa: BLE001 - names are only cosmetic
         known = {}
     try:

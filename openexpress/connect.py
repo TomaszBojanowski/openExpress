@@ -20,7 +20,7 @@ from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _
-from openexpress.settings import UPLOAD_CONFIG_CLIENT_ID, Consumer, Settings
+from openexpress.settings import UPLOAD_CONFIG_CLIENT_ID, Consumer, Settings, language_tag
 from openexpress.useragent import USER_AGENT
 from openexpress.useragent import session as user_agent_session
 
@@ -102,7 +102,8 @@ class GarminClient:
 
     # --- helpers ---------------------------------------------------------------------
 
-    def _client_headers(self) -> dict[str, str]:
+    def _garmin_headers(self) -> dict[str, str]:
+        """The Garmin-Client-* headers of Garmin Express, and our own User-Agent."""
         s = self.settings
         return {
             "Garmin-Client-Name": s.client_name,
@@ -110,9 +111,25 @@ class GarminClient:
             "Garmin-Client-Platform": s.client_platform,
             "Garmin-Client-Platform-Version": s.client_platform_version,
             "Garmin-Client-SessionId": self.session_id,
-            "X-garmin-client-id": "EXPRESS",
             "User-Agent": USER_AGENT,
         }
+
+    def _client_headers(self) -> dict[str, str]:
+        """The Garmin Connect API: as Garmin Express, also with its client ID (and no
+        language)."""
+        return {**self._garmin_headers(), "X-garmin-client-id": "EXPRESS"}
+
+    def _omt_headers(self) -> dict[str, str]:
+        """Garmin's update, map and upload configuration service (OMT): as Garmin Express,
+        without the client ID and with the language as a tag ("de-DE") in both headers."""
+        tag = language_tag(self.settings.locale)
+        return {**self._garmin_headers(), "Garmin-Client-LocaleCode": tag,
+                "Accept-Language": tag, "Accept": "application/json"}
+
+    def _store_headers(self) -> dict[str, str]:
+        """The Connect IQ store: as Garmin Express only its client ID (and our User-Agent);
+        the request is signed with the token besides."""
+        return {"X-garmin-client-id": "EXPRESS", "User-Agent": USER_AGENT}
 
     def _sign(
         self,
@@ -267,11 +284,8 @@ class GarminClient:
             self.settings.hosts["omt"],
             f"UploadConfigurationService/UnitUploadSettings/{unit_id}",
         )
-        h = self._client_headers()
-        h["Garmin-Client-LocaleCode"] = self.settings.locale
-        h["Accept-Language"] = self.settings.locale.replace("_", "-")
+        h = self._omt_headers()
         h["Garmin-Client-Guid"] = self.settings.client_guid
-        h["Accept"] = "application/json"
         what = _("Upload configuration")
         resp = self._request(
             "GET",
@@ -392,11 +406,7 @@ class GarminClient:
 
     def _omt(self, method: str, path: str, what: str, quiet: bool = False, **kw) -> Any:
         url = urljoin(self.settings.hosts["omt"], path)
-        h = self._client_headers()
-        h["Garmin-Client-LocaleCode"] = self.settings.locale.replace("_", "-")
-        h["Accept-Language"] = self.settings.locale.replace("_", "-")
-        h["Accept"] = "application/json"
-        resp = self._request(method, url, what, quiet=quiet, headers=h, **kw)
+        resp = self._request(method, url, what, quiet=quiet, headers=self._omt_headers(), **kw)
         self._check(resp, what)
         return lower_keys(self._json(resp, what)) if resp.content else {}
 

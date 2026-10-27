@@ -45,6 +45,12 @@ class SetupError(UserFacingError):
     pass
 
 
+def language_tag(locale: str) -> str:
+    """A language as Garmin Express names it to Garmin's services: with a hyphen ("de-DE"),
+    where the program keeps it with an underscore ("de_DE"; the sign-in page wants that)."""
+    return locale.replace("_", "-")
+
+
 @dataclass
 class Consumer:
     """From the user's own installer (setup --from-installer): kept out of repr()."""

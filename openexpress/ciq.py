@@ -444,7 +444,7 @@ class StoreApi:
         url = self.base + path
         if params:
             url += "?" + urlencode(params)
-        h = self.client._client_headers()
+        h = self.client._store_headers()
         h["Accept"] = "application/json"
         h["Authorization"] = self.client._sign(method, url)
         # The client's way: a network failure is an ApiError without the address (its query
