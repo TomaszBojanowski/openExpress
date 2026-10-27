@@ -10,7 +10,8 @@ import pytest
 
 FENIX, EDGE = 3000000001, 3000000002
 BODY = ("openExpress forgets what it keeps of this device on this computer: what was "
-        "uploaded from it, its last sync and the maps of your own copied to it. Nothing "
+        "uploaded from it, its last sync, the maps of your own copied to it and the copies "
+        "of its diagnostic files. Nothing "
         "changes on the device or on your Garmin account.\n\n"
         "Connected again, it is a new device: its first sync asks again whether to upload "
         "everything or new data only.")

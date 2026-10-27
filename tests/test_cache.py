@@ -822,7 +822,7 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
     MainWindow.show_preferences(win)
     (dialog,) = shown
     assert titles == ["Garmin Connect account", "Sync with Garmin Connect", "Language", "Setup",
-                      "Storage"]
+                      "Storage", "Diagnostics"]
     assert isinstance(dialog, Gtk.Widget)
 
 

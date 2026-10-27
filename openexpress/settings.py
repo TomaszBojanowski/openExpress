@@ -63,6 +63,9 @@ class Settings:
     client_platform: str = "Windows"
     client_platform_version: str = "10.0.19045.0"
     client_guid: str = ""
+    # A copy of the device's diagnostic files at each connection (diagnostics.py); off
+    # unless chosen, and nothing of it is ever sent.
+    diagnostics_copy: bool = False
 
     def __post_init__(self) -> None:
         self._extra: dict = {}

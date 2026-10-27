@@ -245,7 +245,8 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 | `openexpress info` | model, software version, free space |
 | `openexpress files [--type FIT_TYPE_4]` | files on the watch by data type from `GarminDevice.xml` |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` prints the last 200 lines of the [log](#log-file) instead, filtered, for the form's “Log” field |
-| `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own copied to it), so that connected again it is a new device; files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
+| `openexpress diagnostics [--crash-logs] [--dumps] [--apply]` | what the device logged as errors, its memory dumps and the copies of its diagnostic files kept on this computer; `--apply` copies the files it shows now, `--crash-logs` also reads its hidden crash logs (the device leaves the file manager for a moment), `--dumps` also copies its memory dumps; nothing is sent (see [Privacy and security](#privacy-and-security)). `openexpress setup --diagnostics-copy on` makes the window copy them at each connection |
+| `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own copied to it, the copies of its diagnostic files), so that connected again it is a new device; files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from your own copy of the official installer |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account, log out (removes the local token) |
@@ -439,6 +440,11 @@ replaced. Tested on a fēnix 8.
   before openExpress was first used with it. This looks like a fault of the watch that appears
   after it has been running for days, but it is not certain. Before a bigger change (maps,
   several apps) it may help to turn the watch off and on first. No data on the watch was lost.
+  The watch keeps only the last such error in its log and overwrites it at the next restart,
+  so to keep it, turn on **Preferences → Diagnostics → Keep a copy of the device's diagnostic
+  files on this computer**: the window then copies them each time the watch is connected,
+  before anything is written to it. After such an error the device page shows a row **Device
+  error log** (under **Backup**) for 30 days, whether the copy is on or not.
 
 ### Upgrading from 0.3.x
 
@@ -516,6 +522,22 @@ copy to the device is running.
 - **No telemetry.** Unlike Garmin Express, the program sends nothing to
   Microsoft Application Insights. Watch diagnostics (error logs, KPIs, memory
   dumps, behaviour log) are not uploaded without `--include-diagnostics`.
+- **The device's diagnostic files stay on this computer.** Each time a device is opened, the
+  window reads its error logs (`Garmin/Debug/err_log.*`) to show a recent error; of each entry
+  only the kind, the time, the error number, where the software stopped and the screen are
+  used, never the unit ID or the backtrace in it. With **Preferences → Diagnostics** turned on
+  (off by default; `openexpress setup --diagnostics-copy on`), the window also copies, once
+  per connection and through the ordinary connection, the diagnostic files the device shows:
+  `Garmin/Debug`, the folders of its diagnostic data types and its event logs. Health
+  metrics (`MetricsBackup`), settings (`Backup`), memory dumps and files of more than 4 MB are
+  only listed. The hidden crash logs of a fēnix 8 (its boot log and event logs) are read only
+  when you ask (**Copy Crash Logs**, `openexpress diagnostics --crash-logs --apply`), in a
+  session of openExpress's own, and the memory dumps (encrypted by Garmin) are copied only
+  with **Copy Memory Dumps** or `--dumps`. The copies are in the device's folder of the data
+  of openExpress (`~/.local/share/openexpress/devices/`, in the Flatpak under
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress/devices/`), readable
+  only by you; at most 30 copies and 50 MB per device, the oldest removed first. Forgetting
+  the device removes them. Nothing of them is ever sent.
 - Sync **never deletes files from the watch**. Files are deleted only when you ask for it:
   by `maps update/remove` (old map files indicated by the server), `maps remove --own`,
   `music remove` and `apps remove`, on the command line always after a dry run that lists

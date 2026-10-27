@@ -213,9 +213,9 @@ def utc():
 
 
 FORGOTTEN_WITH_IT = (
-    "What this installation keeps of it goes too: what was uploaded from it, its last sync "
-    "and the maps of your own copied to it. Its next sync with this program will be a first "
-    "sync again.")
+    "What this installation keeps of it goes too: what was uploaded from it, its last sync, "
+    "the maps of your own copied to it and the copies of its diagnostic files. Its next sync "
+    "with this program will be a first sync again.")
 
 
 def two_remembered():

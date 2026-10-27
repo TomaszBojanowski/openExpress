@@ -4,9 +4,10 @@ connected again, is a new one to it.
 Deleted: the entry in devices.json (last, so that a failure leaves the device listed, to be
 forgotten again), the device's own folder in the data folder (what was uploaded from it, the
 copies of files not uploaded yet, its last sync, the maps of your own copied to it, the apps it
-refused) and the shared last sync when it is of this device. Files not uploaded yet only with
-consent; its backups only when asked, and of them only the folders openExpress made. Never the
-cache, the window's settings or anything on the Garmin account."""
+refused, the copies of its diagnostic files) and the shared last sync when it is of this
+device. Files not uploaded yet only with consent; its backups only when asked, and of them only
+the folders openExpress made. Never the cache, the window's settings or anything on the Garmin
+account."""
 
 from __future__ import annotations
 

@@ -50,7 +50,20 @@ def _session(device, drive=False):
                 "primaryactivitytrackerindicator": True}]
     return types.SimpleNamespace(device=device, storage=storage, client=client, logged_in=True,
                                  ownership_error=None, account_devices=account,
-                                 mass_storage=drive)
+                                 mass_storage=drive, diagnostics=_device_errors())
+
+
+def _device_errors():
+    """A crash the device logged lately, its hidden crash logs and five memory dumps: the row
+    "Device error log" with both buttons (analysis 20)."""
+    from datetime import datetime
+
+    from openexpress import diagnostics
+
+    crash = diagnostics.ErrorEntry("RTL Trap", datetime(2026, 10, 20, 22, 24, 6), "0x003",
+                                   "0x10000abc", "2301", "err_log.bak")
+    return diagnostics.AtOpen([crash], crash, [("Garmin/Debug/dump/RAM.zip", 8_090_553)] * 5,
+                              True)
 
 
 def _update(name, version, path, size, beta=False, system=False, reinstall=False,
@@ -360,6 +373,22 @@ def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window
     title = {"en": "Primary wearable", "pl": "Podstawowe urządzenie typu wearable"}[language]
     assert title in [w.get_title() for w in _descendants(win.device_view)
                      if isinstance(w, Adw.ActionRow)]
+    assert _min_width(win.device_view) <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language):
+    """Analysis 20: the row under "Backup", open, with its two buttons."""
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "device")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("watch")
+    win.device_error_row.set_expanded(True)
+    _iterate(0.3)
+    assert win.device_error_row.get_title() == {"en": "Device error log",
+                                                 "pl": "Dziennik błędów urządzenia"}[language]
     assert _min_width(win.device_view) <= NARROWEST
 
 

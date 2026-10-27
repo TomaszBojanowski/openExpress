@@ -58,6 +58,9 @@ class DeviceSession:
     # What Garmin's update server said of the device (unit-info), asked once for the
     # session (unit_info()); it carries the unit ID and the serial number: never shown.
     unit_info_answer: dict | None = field(default=None, repr=False)
+    # What the window learnt of the device's error logs when it opened it, and its copy
+    # of the diagnostic files (diagnostics.at_open); None: not read.
+    diagnostics: object | None = None
 
     @property
     def logged_in(self) -> bool:

@@ -28,6 +28,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402 - imports must 
 from openexpress import (  # noqa: E402
     cache,
     devicelist,
+    diagnostics,
     download,
     i18n,
     known_devices,
@@ -471,6 +472,154 @@ def show_backups(win) -> None:
     row.set_tooltip_text(str(paths.default_backup_dir()))
 
 
+def device_error_text(entry) -> str:
+    """The subtitle of "Device error log": the kind of the error, as the device names it, and
+    when it logged it."""
+    return caption(entry.kind, i18n.full_time(entry.at)) if entry.at else entry.kind
+
+
+def device_error_details(entry) -> str:
+    """What else the device logged with the error (its number, where, on which screen)."""
+    parts = []
+    if entry.error:
+        # TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
+        parts.append(_("error {number}").format(number=entry.error))
+    if entry.program_counter:
+        # TRANSLATORS: where in its software the device stopped (a program counter)
+        parts.append(_("at {address}").format(address=entry.program_counter))
+    if entry.screen:
+        # TRANSLATORS: the number of the screen the device showed when the error came
+        parts.append(_("screen {number}").format(number=entry.screen))
+    return caption(*parts)
+
+
+def device_error_row(win, group=None) -> None:
+    """The row "Device error log" under "Backup" (analysis 20, §3.2): only when the device
+    logged an "RTL Trap" in the last 30 days (read when it was opened, the copy on or off).
+    Inside, where they apply: Copy Crash Logs (a device that hides its event logs) and Copy
+    Memory Dumps. Drawn again in its place when that changes."""
+    old = getattr(win, "device_error_row", None)
+    group = group or getattr(win, "device_error_group", None)
+    win.device_error_row, win.device_error_group = None, group
+    if old is not None and group is not None:
+        group.remove(old)
+    s = win.session
+    found = getattr(s, "diagnostics", None)
+    crash = getattr(found, "crash", None)
+    if crash is None or group is None:
+        return
+    rows = []
+    details = device_error_details(crash)
+    if details:
+        rows.append(Adw.ActionRow(title=_("What the device logged"),
+                                  subtitle=GLib.markup_escape_text(details)))
+    if found.hidden_logs:
+        r = Adw.ActionRow(title=_("Crash logs"), subtitle=_(
+            "Hidden from the file manager. While they are copied, the device leaves it for a "
+            "moment"))
+        r.add_suffix(win._button(_("Copy Crash Logs"),
+                                 lambda button: copy_crash_logs(win, button), with_button=True))
+        rows.append(r)
+    if found.dumps:
+        size = sum(n for _p, n in found.dumps)
+        r = Adw.ActionRow(title=_("Memory dumps"), subtitle=caption(
+            ngettext("{count} dump", "{count} dumps", len(found.dumps)).format(
+                count=len(found.dumps)), human_size(size),
+            # TRANSLATORS: of the memory dumps of the device: only Garmin can read them
+            _("encrypted")))
+        r.add_suffix(win._button(_("Copy Memory Dumps"),
+                                 lambda button: copy_dumps(win, button), with_button=True))
+        rows.append(r)
+    subtitle = GLib.markup_escape_text(device_error_text(crash))
+    if rows:
+        row = Adw.ExpanderRow(title=_("Device error log"), subtitle=subtitle)
+        for r in rows:
+            row.add_row(r)
+    else:
+        row = Adw.ActionRow(title=_("Device error log"), subtitle=subtitle)
+    group.add(row)
+    win.device_error_row = row
+
+
+def copy_crash_logs(win, button=None) -> None:
+    """Copy Crash Logs: one read-only session of our own (the device leaves the file manager
+    for a moment); none found: the button is not offered again."""
+    s = win.session
+    if s is None:
+        return
+
+    def work():
+        return diagnostics.copy_crash_logs(s.device, s.storage)
+
+    def done(copied):
+        if win.session is not s:
+            return
+        if copied.saved:
+            win.toast(_("Crash logs copied to this computer"))
+            return
+        win.toast(_("The device has no hidden crash logs"))
+        if s.diagnostics is not None:
+            s.diagnostics.hidden_logs = False
+        device_error_row(win)
+
+    win.run_task(_("Copying the crash logs…"), work, done, button=button)
+
+
+def copy_dumps(win, button=None) -> None:
+    """Copy Memory Dumps: through the ordinary connection, the newest first while they fit
+    within the limit of the copies."""
+    s = win.session
+    if s is None:
+        return
+
+    def work():
+        return diagnostics.copy_dumps(s.device, s.storage)
+
+    def done(copied):
+        if win.session is not s:
+            return
+        copied_count = copied.new + copied.unchanged
+        text = ngettext("{count} memory dump copied to this computer",
+                        "{count} memory dumps copied to this computer",
+                        copied_count).format(count=copied_count)
+        if copied.not_copied:
+            text = caption(text, ngettext(
+                "{count} not: over the limit of {size}", "{count} not: over the limit of {size}",
+                len(copied.not_copied)).format(count=len(copied.not_copied),
+                                               size=human_size(diagnostics.LIMIT)))
+        win.toast(text)
+
+    win.run_task(_("Copying the memory dumps…"), work, done, button=button)
+
+
+def diagnostics_group(win) -> Adw.PreferencesGroup:
+    """The "Diagnostics" group of the preferences: the copy of the device's diagnostic files
+    at each connection, off unless chosen (settings.json; the same as `setup
+    --diagnostics-copy`). A change that cannot be saved puts the switch back."""
+    g = Adw.PreferencesGroup(title=_("Diagnostics"))
+    sw = Adw.SwitchRow(title=_("Keep a copy of the device's diagnostic files on this computer"),
+                       subtitle=_("They stay on this computer; openExpress never sends them"),
+                       active=diagnostics.copy_on())
+
+    def toggled(row, _pspec):
+        wanted = row.get_active()
+        try:
+            settings = Settings.load()
+            settings.diagnostics_copy = wanted
+            settings.save()
+        except (OSError, SetupError) as e:
+            row.handler_block_by_func(toggled)
+            row.set_active(not wanted)
+            row.handler_unblock_by_func(toggled)
+            win.error(_("Diagnostics"), str(e))
+            return
+        log.info("diagnostics: the copy at each connection turned %s", "on" if wanted else "off")
+
+    sw.connect("notify::active", toggled)
+    g.add(sw)
+    return g
+
+
 def refused_dirs_text(dirs: list[str]) -> str | None:
     """One line on the Apps page (analysis 14, b10): the app folders the device refused to
     create with its software now (ciq.json); None: none."""
@@ -815,6 +964,13 @@ def with_space(found):
     passed on as it is."""
     if not isinstance(found, DeviceChoices):
         found.space = read_space(found.storage)
+        # In the task that opens the device, so before any task can write to it: what it
+        # logged as errors, and its diagnostic files copied when the copy is on (once per
+        # connection; never a session of our own).
+        try:
+            found.diagnostics = diagnostics.at_open(found.device, found.storage)
+        except Exception:  # an extra of the opening never fails it
+            log.warning("diagnostics: the error logs were not read", exc_info=True)
     return found
 
 
@@ -3273,6 +3429,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             # TRANSLATORS: button that creates a backup
             self.backup_row.add_suffix(self._button(_("Create"), self.backup))
             g.add(self.backup_row)
+        device_error_row(self, g)  # only when the device logged an error lately
         row = Adw.ActionRow(title=_("Part number"), subtitle=d.part_number,
                             subtitle_selectable=True)
         g.add(row)
@@ -3773,6 +3930,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         g.add(row)
         page.add(g)
         page.add(self._cache_group())
+        page.add(diagnostics_group(self))
         dialog.add(page)
         dialog.present(self)
 

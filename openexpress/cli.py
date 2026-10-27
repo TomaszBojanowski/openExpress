@@ -154,6 +154,8 @@ def cmd_setup(args) -> int:
         settings.environment = args.environment
     if args.locale:
         settings.chosen_locale = args.locale
+    if getattr(args, "diagnostics_copy", None):
+        settings.diagnostics_copy = args.diagnostics_copy == "on"
     settings.save()  # keeps the keys of the others, ui_language among them
     if args.ui_language:
         ui_language = "" if args.ui_language == "system" else args.ui_language
@@ -164,6 +166,72 @@ def cmd_setup(args) -> int:
         print(_("Interface language: {language}").format(
             language=i18n.LANGUAGE_NAMES.get(ui_language, ui_language) if ui_language
             else _("system language")))
+    if getattr(args, "diagnostics_copy", None):
+        print(_diagnostics_copy_text(settings.diagnostics_copy))
+    return 0
+
+
+def _diagnostics_copy_text(on: bool) -> str:
+    return (_("Copy of the device's diagnostic files at each connection: on") if on
+            else _("Copy of the device's diagnostic files at each connection: off"))
+
+
+def cmd_diagnostics(args) -> int:
+    """`diagnostics`: what the device logged as errors, its memory dumps and the copies kept
+    on this computer; with --apply the files it shows copied now, with --crash-logs also its
+    hidden crash logs (a session of our own), with --dumps also its memory dumps. Nothing is
+    ever sent."""
+    from openexpress import diagnostics
+
+    st, dev = open_device(args)
+    print(_diagnostics_copy_text(diagnostics.copy_on()))
+    entries = diagnostics.read_errors(st)
+    print(_("Error logs on the device:"))
+    for e in entries:
+        print(f"  {e.words()} ({e.source})")
+    if not entries:
+        print("  " + _("no entries"))
+    dumps = diagnostics.dumps_on_device(st)
+    if dumps:
+        print(_("Memory dumps on the device: {count}, {size} (encrypted; copied only with "
+                "--dumps)").format(count=len(dumps),
+                                   size=_human(sum(size for _p, size in dumps))))
+    crashes = diagnostics.boot_log_crashes(dev.unit_id)
+    if crashes:
+        print(_("Crashes in the copied boot log:"))
+        for line in crashes:
+            print("  " + line)
+    print(_("Copies on this computer: {copies}").format(
+        copies=diagnostics.copies_text(dev.unit_id)))
+    # Not the folder itself: it is named after the unit ID, and this is pasted into reports.
+    print("  " + _("in the folder of the device under {folder}").format(
+        folder=paths.data_dir() / "devices"))
+    if not args.apply:
+        print(_("Dry run. Add --apply to copy the files the device shows now."))
+        if args.crash_logs:
+            print(_("With --apply, --crash-logs also reads its hidden crash logs in a session "
+                    "of its own: the device leaves the file manager for a moment."))
+        return 0
+    done = diagnostics.copy_files(dev, st)
+    print(ngettext("Copied: {count} new file ({size}), {unchanged} unchanged, {listed} only "
+                   "listed.",
+                   "Copied: {count} new files ({size}), {unchanged} unchanged, {listed} only "
+                   "listed.", done.new).format(count=done.new, size=_human(done.new_bytes),
+                                               unchanged=done.unchanged, listed=done.listed))
+    if args.dumps:
+        dumped = diagnostics.copy_dumps(dev, st)
+        print(_("Memory dumps copied: {count} new ({size}).").format(
+            count=dumped.new, size=_human(dumped.new_bytes)))
+        if dumped.not_copied:
+            print(_("Not copied, over the limit of {size}: {names}").format(
+                size=_human(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
+    if args.crash_logs:
+        hidden = diagnostics.copy_crash_logs(dev, st)
+        print(ngettext("Crash logs: {count} file read ({new} new).",
+                       "Crash logs: {count} files read ({new} new).",
+                       hidden.new + hidden.unchanged).format(
+            count=hidden.new + hidden.unchanged, new=hidden.new) if hidden.saved
+              else _("The device has no hidden crash logs."))
     return 0
 
 
@@ -407,7 +475,8 @@ def cmd_devices(args) -> int:
     if not args.apply:
         print(_("Device to forget: {device}").format(device=name))
         print(_("What this installation keeps of it goes too: what was uploaded from it, its "
-                "last sync and the maps of your own copied to it. Its next sync with this "
+                "last sync, the maps of your own copied to it and the copies of its diagnostic "
+                "files. Its next sync with this "
                 "program will be a first sync again."))
         if kept.pending:
             lost = str(forget.PendingFiles(kept.pending))
@@ -1764,6 +1833,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--locale", help=_("e.g. {example}").format(example="pl_PL"))
     s.add_argument("--ui-language", choices=i18n.available_languages() + ["system"],
                    help=_("language of this program (\"system\": follow the system locale)"))
+    s.add_argument("--diagnostics-copy", choices=("on", "off"),
+                   help=_("copy the device's diagnostic files to this computer at each "
+                          "connection in the window (never sent)"))
     s.set_defaults(func=cmd_setup, _parser=s)
 
     s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
@@ -1780,6 +1852,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--type", help=_("e.g. {example} (activities)").format(example="FIT_TYPE_4"))
     s.add_argument("--limit", type=int, default=0, help=_("show only the last N files"))
     s.set_defaults(func=cmd_files)
+
+    s = sub.add_parser("diagnostics",
+                       help=_("the device's error logs and their copy on this computer"))
+    s.add_argument("--apply", action="store_true",
+                   help=_("copy the diagnostic files the device shows now"))
+    s.add_argument("--crash-logs", action="store_true",
+                   help=_("also read the hidden crash logs (the device leaves the file "
+                          "manager for a moment)"))
+    s.add_argument("--dumps", action="store_true", help=_("also copy the memory dumps"))
+    s.set_defaults(func=cmd_diagnostics)
 
     s = sub.add_parser("login", help=_("log in to Garmin Connect"))
     s.add_argument("--manual", action="store_true", help=_("log in using a regular browser"))
