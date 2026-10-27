@@ -26,11 +26,11 @@ from openexpress.device.gio_storage import (  # noqa: E402
 )
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
+from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
 OPEN_RETRIES = 3
 OPEN_RETRY_DELAY_S = 5
-APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 
 
 class Watcher(Gio.Application):

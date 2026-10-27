@@ -152,8 +152,8 @@ from openexpress.gui.window_tasks import (  # noqa: E402, F401 - also gui.app.<n
 )
 from openexpress.i18n import N_, _, human_size, pgettext  # noqa: E402, F401 - human_size also gui.app.human_size for the tests
 from openexpress.known_devices import KnownDevice  # noqa: E402
+from openexpress.paths import APP_ID  # noqa: E402
 
-APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
 # The captions of the window (a hard space before "·"): in i18n, for last_sync too.
 SEPARATOR, caption = i18n.SEPARATOR, i18n.caption

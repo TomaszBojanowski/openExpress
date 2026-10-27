@@ -9,8 +9,8 @@ from pathlib import Path
 
 from openexpress import i18n
 from openexpress.i18n import N_
+from openexpress.paths import APP_ID as DESKTOP_ID
 
-DESKTOP_ID = "io.github.tomaszbojanowski.OpenExpress"
 SERVICE = "openexpress-watch.service"
 
 NAME = "openExpress"

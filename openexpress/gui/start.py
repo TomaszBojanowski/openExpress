@@ -30,8 +30,8 @@ from openexpress.known_devices import (  # noqa: E402
     HANDHELD,
     WATCH,
 )
+from openexpress.paths import APP_ID  # noqa: E402
 
-APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 TILE_ICON_SIZE = 96
 ROW_ICON_SIZE = 48  # in a row of a list (a section of many devices)
 # A row of a list as an Adw.ActionRow of the same list (measured with libadwaita 1.9): at
