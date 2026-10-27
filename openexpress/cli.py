@@ -394,6 +394,122 @@ def cmd_whoami(args) -> int:
     return 0
 
 
+def cmd_status(args) -> int:
+    """What this installation knows now, in one look: the login, the Garmin devices connected
+    (name, USB mode, whether they are on the account), the last sync of each and what the
+    last check of its updates found. Only the devices' GarminDevice.xml and the files this
+    installation keeps are read; with --online the account's device list and Garmin's update
+    server are asked as well (as `openexpress updates` does), and nothing of them is kept."""
+    from datetime import datetime
+
+    from openexpress.device import gio_storage
+
+    try:
+        auth = store.load()
+    except store.NotLoggedIn:
+        auth = None
+    print(_("Garmin Connect: logged in as {account}").format(account=auth.display)
+          if auth is not None else _("Garmin Connect: not logged in"))
+    summaries = gio_storage.distinct_devices(
+        [gio_storage.probe(f) for f in gio_storage.find_all_devices()])
+    if not summaries:
+        print(_("No Garmin device is connected."))
+        return 0
+    print(ngettext("Connected: {count} device", "Connected: {count} devices",
+                   len(summaries)).format(count=len(summaries)))
+    client, listed = None, None
+    if args.online:
+        settings = Settings.load()
+        client = make_client(settings, need_auth=True) if auth is not None \
+            else GarminClient(settings)
+        if auth is not None:
+            from openexpress.service import unit_id_of
+
+            listed = {unit_id_of(d.get("unitid")) for d in client.account_devices()}
+    known = known_devices.load()
+    now = datetime.fromtimestamp(time.time())
+    for s in summaries:
+        _print_status(s, known.get(s.unit_id) if s.unit_id else None, listed, client, now)
+    return 0
+
+
+def _print_status(s, entry, listed, client, now) -> None:
+    """One device of `openexpress status`: its line, its last sync (not of a drive) and its
+    updates (`client`: asked of the update server now; None: what the last check found)."""
+    from openexpress import last_sync, service, sync, tile_facts
+    from openexpress.gui import words
+
+    drive = s.found.kind == "ums"
+    how = _("USB drive") if drive else "MTP"  # the window's pair of names
+    if not s.ok:
+        print(" · ".join((_("Garmin device"), how, _("its details were not read"))))
+        return
+    parts = [known_devices.shown_name(s.description, entry.model_name if entry else None), how]
+    if not drive:
+        on = (s.unit_id in listed if listed is not None else
+              tile_facts.read(entry, connected=True, kind=s.found.kind,
+                              software_version=s.software_version).on_account)
+        parts.append(_("on your account") if on else _("not on your account")
+                     if on is False else _("account not known"))
+    print(" · ".join(parts))
+    if not drive:
+        data = service.load_last_sync(s.unit_id)
+        text = (words.never_synced() if not sync.synced_here(s.unit_id) else
+                last_sync.describe(data).row(now) if data is not None else
+                _("No record of the last sync; the next sync uploads new data only"))
+        print("  " + _("Last sync: {text}").format(text=text))
+    text = (_status_updates_online(client, s) if client is not None
+            else _status_updates(entry, s.software_version, now))
+    print("  " + _("Device software: {text}").format(text=text))
+
+
+def _status_updates(entry, software: str, now) -> str:
+    """What the last check of updates kept with the device found, while it holds (recent, of
+    the software it has now)."""
+    from openexpress.gui import words
+
+    at = now.timestamp()
+    if entry is not None:
+        found = known_devices.recorded_updates(entry, software, at)
+        if found is not None:
+            only = found if found.count == 1 and found.title is not None else None
+            return words.checked_text(words.updates_available(found.count, only),
+                                      entry.update_found, now)
+        check = known_devices.recorded_check(entry, software, at)
+        if check is not None and check.ready:
+            return words.checked_text(_("an update is ready: unplug the device to install it"),
+                                      check.at, now)
+        if check is not None and entry.update_found is None:
+            return words.checked_text(_("Software is up to date"), check.at, now)
+        last = entry.update_check.at if entry.update_check is not None else entry.update_found
+        if last is not None:
+            return words.not_checked_since(last)
+    return _("not checked yet (openexpress status --online checks it)")
+
+
+def _status_updates_online(client, s) -> str:
+    """The updates of the device as Garmin's update server offers them now."""
+    from openexpress import updates as upd
+    from openexpress.device import gio_storage
+    from openexpress.gui import words
+
+    try:
+        device, storage = s.device, s.storage
+        if device is None or storage is None:  # a drive: probe keeps nothing of it
+            storage = gio_storage.open_ums_storage(s.found)
+            device = parse(storage.read("GARMIN/GarminDevice.xml"))
+        items = upd.mark_present(storage, upd.parse_updates(client.software_updates(device.raw)),
+                                 upd.component_count(device))
+    except (ApiError, DeviceError) as e:
+        return _("could not be checked: {error}").format(error=e)
+    new, staged = upd.pending(items), upd.staged(items)
+    if staged:
+        return _("an update is ready: unplug the device to install it")
+    if new:
+        return words.updates_available(len(new), new[0] if len(new) == 1 else None)
+    return _("Software is up to date")
+
+
 def cmd_cache(args) -> int:
     """How big the cache is, part by part (all, or those of --only). With --clear those parts
     are emptied (with --apply; without it, only said). One line of the log for each part."""
@@ -2011,6 +2127,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("with --forget: delete its backups too"))
     s.add_argument("--apply", action="store_true", help=_("really forget (with --forget)"))
     s.set_defaults(func=cmd_devices)
+
+    s = sub.add_parser("status", help=_("the login, the devices connected, their last sync and "
+                                        "updates, from what this installation knows"))
+    s.add_argument("--online", action="store_true",
+                   help=_("also ask Garmin Connect and Garmin's update server now"))
+    s.set_defaults(func=cmd_status)
 
     s = sub.add_parser("whoami", help=_("logged-in account"))
     s.add_argument("--check", action="store_true", help=_("verify the token with the server"))
