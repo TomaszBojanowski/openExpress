@@ -336,7 +336,8 @@ class LibusbTransport:
 
     @classmethod
     def from_fd(cls, fd: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
-        """Use a device file descriptor opened by someone else (the USB portal)."""
+        """Use a device file descriptor opened by someone else (open_node: the node in
+        /dev/bus/usb that a Flatpak with --device=usb may open)."""
         lib = load_libusb()
         if not hasattr(lib, "libusb_set_option") or not hasattr(lib, "libusb_wrap_sys_device"):
             raise UsbUnavailable(_("This libusb cannot use a device opened by the system."))
