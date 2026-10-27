@@ -679,7 +679,7 @@ def drive_volume(volume) -> tuple[str, GarminUsb, bool] | None:
 # The USB places ("bus-devnum") of the Garmin devices in mass storage mode that the last list
 # found without a drive to list: gvfs had no volume of theirs yet, or none with a medium. A
 # drive may come a moment after its USB device (#19, analysis 18): the window looks for them
-# again a few times (gui/app.py, look_again_for_drives).
+# again a few times (gui/detection.py, look_again_for_drives).
 _without_drive: frozenset[str] = frozenset()
 
 
@@ -1312,7 +1312,8 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
             state = usb_state()
             if state != seen:
                 # ABSENT: no Garmin on USB; STARTING: 091e:0003; PRESENT: on USB, not mounted;
-                # MASS_STORAGE: only Garmin devices in mass storage mode.
+                # MASS_STORAGE: only Garmin devices in mass storage mode; DRIVE_OFF: 091e:0003
+                # where a Garmin drive was.
                 log.info("device: not available after %.1f s, USB state: %s (%s), waiting: %s",
                          clock() - started, state,
                          ", ".join(f"091e:{p}" for p in garmin_products_on_usb()) or "-", wait)
