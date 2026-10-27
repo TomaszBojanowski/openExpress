@@ -14,7 +14,8 @@ from openexpress.cli import main
 from openexpress.connect import GarminClient
 from openexpress.settings import Settings
 
-SIGN_IN = "https://sso.garmin.com/mobile/sso/{}/sign-in?clientId=GarminExpress_WIN_Default"
+SIGN_IN = ("https://sso.garmin.com/mobile/sso/{}/sign-in"
+           "?clientId=GarminExpress_WIN_ShowLegalTerms")
 GERMAN = ["de_DE.UTF-8", "de_DE", "de.UTF-8", "de", "C"]  # as GLib lists them
 
 

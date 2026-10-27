@@ -312,3 +312,24 @@ def test_the_repr_of_the_installer_key_shows_no_secret():
     assert c == Consumer("key-made-up-1", "sec-made-up-2", "salt-made-up-3")
     assert asdict(c) == {"key": "key-made-up-1", "secret": "sec-made-up-2",
                          "url_salt": "salt-made-up-3"}
+
+
+def test_the_sign_in_page_is_the_one_for_signing_in_without_a_new_account():
+    """Point 10 of package 3: Garmin Express signs in to Garmin Connect with the client that
+    shows the terms and no way to create an account (GarminExpress_WIN_Default it gives only to
+    sign-ins that may create one); the address has no other parameter."""
+    from urllib.parse import parse_qs, urlsplit
+
+    parts = urlsplit(sso.sign_in_url(Settings()))
+    assert parts.path == "/mobile/sso/en_US/sign-in"
+    assert parse_qs(parts.query) == {"clientId": ["GarminExpress_WIN_ShowLegalTerms"]}
+
+
+def test_the_manual_sign_in_prints_the_same_address(monkeypatch, capsys):
+    monkeypatch.setattr("builtins.input", lambda prompt="": (
+        "https://sso.garmin.com/sso/embed?ticket=ST-1-made-up&service=https%3A%2F%2Fx"))
+    st = sso.login_manual(Settings())
+    assert st.ticket == "ST-1-made-up"
+    out = capsys.readouterr().out.splitlines()
+    assert ("   https://sso.garmin.com/mobile/sso/en_US/sign-in"
+            "?clientId=GarminExpress_WIN_ShowLegalTerms") in out

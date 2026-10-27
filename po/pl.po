@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 01:48+0100\n"
+"POT-Creation-Date: 2026-10-27 01:52+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -6217,22 +6217,22 @@ msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""
 "{name}: zapisano, ale nie powiadomiono Garmin Connect (ponowna próba później)"
 
-#: openexpress/settings.py:96
+#: openexpress/settings.py:99
 #, python-brace-format
 msgid "The settings file {path} is damaged ({error}); fix or delete it."
 msgstr "Plik ustawień {path} jest uszkodzony ({error}); popraw go lub usuń."
 
-#: openexpress/settings.py:99
+#: openexpress/settings.py:102
 #, python-brace-format
 msgid "The settings file {path} is damaged; fix or delete it."
 msgstr "Plik ustawień {path} jest uszkodzony; popraw go lub usuń."
 
-#: openexpress/settings.py:107
+#: openexpress/settings.py:110
 #, python-brace-format
 msgid "Unknown environment: {name}"
 msgstr "Nieznane środowisko: {name}"
 
-#: openexpress/settings.py:146
+#: openexpress/settings.py:149
 msgid ""
 "openExpress is not set up yet. First run: openexpress setup --from-"
 "installer /path/to/GarminExpress.exe"
@@ -6240,7 +6240,7 @@ msgstr ""
 "openExpress nie jest jeszcze skonfigurowany. Najpierw uruchom: openexpress "
 "setup --from-installer /ścieżka/do/GarminExpress.exe"
 
-#: openexpress/settings.py:154
+#: openexpress/settings.py:157
 #, python-brace-format
 msgid ""
 "The saved client key in {path} is damaged. Run again: openexpress setup --"
@@ -6249,12 +6249,12 @@ msgstr ""
 "Zapisany klucz aplikacji w {path} jest uszkodzony. Uruchom ponownie: "
 "openexpress setup --from-installer /ścieżka/do/GarminExpress.exe"
 
-#: openexpress/settings.py:189
+#: openexpress/settings.py:192
 #, python-brace-format
 msgid "Consumer key not found in {path}"
 msgstr "Nie znaleziono klucza konsumenta w {path}"
 
-#: openexpress/settings.py:201
+#: openexpress/settings.py:204
 #, python-brace-format
 msgid "URL signing data not found in {path}"
 msgstr "Nie znaleziono danych do podpisywania adresów URL w {path}"

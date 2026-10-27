@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 01:48+0100\n"
+"POT-Creation-Date: 2026-10-27 01:52+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5662,40 +5662,40 @@ msgstr ""
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""
 
-#: openexpress/settings.py:96
+#: openexpress/settings.py:99
 #, python-brace-format
 msgid "The settings file {path} is damaged ({error}); fix or delete it."
 msgstr ""
 
-#: openexpress/settings.py:99
+#: openexpress/settings.py:102
 #, python-brace-format
 msgid "The settings file {path} is damaged; fix or delete it."
 msgstr ""
 
-#: openexpress/settings.py:107
+#: openexpress/settings.py:110
 #, python-brace-format
 msgid "Unknown environment: {name}"
 msgstr ""
 
-#: openexpress/settings.py:146
+#: openexpress/settings.py:149
 msgid ""
 "openExpress is not set up yet. First run: openexpress setup --from-"
 "installer /path/to/GarminExpress.exe"
 msgstr ""
 
-#: openexpress/settings.py:154
+#: openexpress/settings.py:157
 #, python-brace-format
 msgid ""
 "The saved client key in {path} is damaged. Run again: openexpress setup --"
 "from-installer /path/to/GarminExpress.exe"
 msgstr ""
 
-#: openexpress/settings.py:189
+#: openexpress/settings.py:192
 #, python-brace-format
 msgid "Consumer key not found in {path}"
 msgstr ""
 
-#: openexpress/settings.py:201
+#: openexpress/settings.py:204
 #, python-brace-format
 msgid "URL signing data not found in {path}"
 msgstr ""

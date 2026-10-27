@@ -34,7 +34,10 @@ ENVIRONMENTS: dict[str, dict[str, str]] = {
     },
 }
 
-SSO_CLIENT_ID = "GarminExpress_WIN_Default"
+# The client of Garmin Express's ordinary sign-in to Garmin Connect: the terms, no way to
+# create an account. GarminExpress_WIN_Default it gives only to sign-ins that may create
+# one (point 10 of package 3).
+SSO_CLIENT_ID = "GarminExpress_WIN_ShowLegalTerms"
 UPLOAD_CONFIG_CLIENT_ID = "express-windows"
 
 # Up to 0.6.1 settings.json got "locale": "pl_PL" on the first start, chosen or not: now ignored.
