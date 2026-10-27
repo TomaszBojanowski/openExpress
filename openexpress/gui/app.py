@@ -1818,6 +1818,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.map_state: str | None = None
         self.map_update_count = 0
         self._map_check_session = None
+        # The old files Garmin's cleanup rules would take, from the maps read for the device
+        # open (maps_page.load_maps); only shown in the questions before a map changes.
+        self.map_cleanup: list = []
         self._action_buttons: list[Gtk.Widget] = []
         self._retry_sources: dict[str, int] = {}
         self._refresh_pending = False
@@ -2664,6 +2667,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         an address), the device pages say to choose one. Nothing is opened until one is
         chosen."""
         self.maps_cache = self.updates_cache = None
+        self.map_cleanup = []
         self.update_state = self.map_state = None
         self.update_checked_at = self._update_record_at = None
         self.apps_count = self.music_count = None
@@ -3171,6 +3175,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
     def _clear_device_pages(self) -> None:
         """Every page of the device view loaded anew: nothing kept from the device before."""
         self.maps_cache = self.updates_cache = None
+        self.map_cleanup = []
         self.update_state = None
         self.update_checked_at = self._update_record_at = None
         self.apps_count = self.music_count = None  # read again by their pages

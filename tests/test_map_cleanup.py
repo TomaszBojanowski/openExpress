@@ -236,3 +236,28 @@ def test_the_words_in_polish():
         i18n.setup("en")
     assert lines == ["Stare pliki, które Garmin zaleca usunąć:", "GARMIN/OLD1.GMA",
                      "openExpress na razie ich nie usuwa."]
+
+
+@pytest.mark.needs_display
+def test_a_device_change_forgets_the_old_files_of_the_maps_before(monkeypatch):
+    """The plan belongs to the maps of the device that was open: with the rest of the state of
+    the maps (maps_cache, map_state) it goes when another device is opened or none is, so
+    that no question about a map could name the old files of another device."""
+    from openexpress import netstatus
+    from openexpress.gui import app
+
+    monkeypatch.setattr(app.MainWindow, "refresh_device", lambda self, cause=None: None)
+    monkeypatch.setattr(app.MainWindow, "_show_start", lambda self: None)
+    asked = []  # the account is not asked here (show_choices would ask it in the background)
+    monkeypatch.setattr(app.MainWindow, "_fetch_account", lambda self: asked.append(1))
+    win = app.MainWindow(None)
+    try:
+        assert win.map_cleanup == []  # nothing before the first page of maps
+        old = [mp.CleanupFile("GARMIN/OLD1.GMA", 3)]
+        for change in (win._clear_device_pages, win.show_choices):
+            win.map_cleanup, win.maps_cache = list(old), []
+            change()
+            assert (win.map_cleanup, win.maps_cache) == ([], None)
+    finally:
+        netstatus.STATUS.remove_listener(win._net_listener)
+        win.destroy()
