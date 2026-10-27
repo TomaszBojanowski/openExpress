@@ -134,7 +134,7 @@ def show_cache_usage(win, use) -> None:
         trash.set_sensitive(use.sizes[name] > 0)
     row, button = shown.everything
     row.set_subtitle(_cache_words(use.total, sum(use.files.values())))
-    button.set_sensitive(use.total > 0)
+    button.set_sensitive(use.total > use.kept[0])  # the pictures of devices remembered stay
 
 
 def ask_clear_cache_part(win, name: str, button) -> None:
@@ -438,14 +438,18 @@ class Preferences:
         use = shown.usage if shown is not None else None
         if use is None:
             return
-        maps, other = use.sizes["maps"], use.total - use.sizes["maps"]
+        # The pictures of the devices remembered stay (cache.kept_pictures).
+        maps = use.sizes["maps"]
+        other = use.total - maps - use.kept[0]
         if maps:
             body = _("This deletes the downloaded maps ({maps}) and the other files of the cache "
-                     "({other}). The maps will have to be downloaded again.").format(
+                     "({other}). The maps will have to be downloaded again. The pictures of the "
+                     "devices openExpress remembers stay.").format(
                 maps=human_size(maps), other=human_size(other))
         else:
             body = _("This deletes the files of the cache ({size}). They are downloaded again "
-                     "when needed.").format(size=human_size(use.total))
+                     "when needed. The pictures of the devices openExpress remembers stay."
+                     ).format(size=human_size(other))
         ask_to_clear(self, _("Clear the cache?"), body, None)
 
     def show_shortcuts(self) -> None:

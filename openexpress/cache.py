@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+import logging
 import os
 import shutil
 import stat
@@ -20,6 +21,8 @@ from pathlib import Path
 from openexpress import paths
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _
+
+log = logging.getLogger(__name__)
 
 # The parts of the cache, in the order they are shown, with the folders of each (the keys are
 # those of `cache --clear --only`); nothing else in the cache folder is counted or deleted.
@@ -86,6 +89,9 @@ class CacheUsage:
     root: Path
     sizes: dict[str, int]  # bytes in each part counted (CATEGORIES), in their order
     files: dict[str, int]  # how many files in each
+    # (bytes, files) of the pictures a clearing of all of the cache keeps (kept_pictures);
+    # counted with all of it only, inside "pictures".
+    kept: tuple[int, int] = (0, 0)
 
     @property
     def total(self) -> int:
@@ -104,37 +110,79 @@ def chosen(only: Iterable[str] | None) -> list[str]:
     return [name for name in CATEGORIES if name in names]
 
 
+def device_picture_name(part_number: str) -> str:
+    """The name of the product picture of a model in the folder of pictures (the window
+    keeps it there: gui/pictures.device_picture_path)."""
+    safe = "".join(c for c in part_number if c.isalnum() or c in "-_") or "unknown"
+    return f"device-{safe}.png"
+
+
+def kept_pictures() -> set[str]:
+    """The pictures a clearing of all of the cache keeps: those of the devices this
+    installation remembers (devices.json). A device not on the account may have its picture
+    from nowhere else any more (unit-info gives none for some); the trash of the pictures
+    (--only pictures) still deletes them."""
+    from openexpress import known_devices
+
+    return {device_picture_name(d.part_number) for d in known_devices.load().values()
+            if d.part_number}
+
+
+def _kept_files(folder: Path, names: set[str]) -> list[Path]:
+    """Those of `names` that are regular files in `folder` (a link is not kept)."""
+    return [folder / name for name in sorted(names)
+            if (folder / name).is_file() and not (folder / name).is_symlink()]
+
+
 def usage(only: Iterable[str] | None = None) -> CacheUsage:
-    """How big each part of the cache is (all, or those named), in bytes and files. A folder
-    that is not there is 0; nothing is made or changed."""
+    """How big each part of the cache is (all, or those named), in bytes and files, and for
+    all of it what a clearing keeps. A folder that is not there is 0; nothing is made or
+    changed."""
     root = paths.cache_dir()
     sizes, files = {}, {}
     for name in chosen(only):
         counted = [_count(root / folder) for folder in CATEGORIES[name]]
         sizes[name] = sum(size for size, _n in counted)
         files[name] = sum(n for _size, n in counted)
-    return CacheUsage(root, sizes, files)
+    kept = (0, 0)
+    if only is None:
+        found = _kept_files(root / CATEGORIES["pictures"][0], kept_pictures())
+        kept = (sum(p.lstat().st_size for p in found), len(found))
+    return CacheUsage(root, sizes, files, kept)
 
 
 def clear(only: Iterable[str] | None = None) -> CacheUsage:
-    """Delete what is in the folders of the parts named (all of them for None), holding the
-    whole cache alone: CacheBusy while anything uses it, whichever part. The folders
-    themselves stay, and so do cache.lock and anything else in the cache folder; nothing is
-    deleted through a symbolic link, and a folder that is a link is left alone. Returns what
-    was there in those parts: its total is what was freed."""
+    """Delete what is in the folders of the parts named (all of them for None, but the
+    pictures of the devices remembered: kept_pictures), holding the whole cache alone:
+    CacheBusy while anything uses it, whichever part. The folders themselves stay, and so do
+    cache.lock and anything else in the cache folder; nothing is deleted through a symbolic
+    link, and a folder that is a link is left alone. Returns what was deleted in those parts:
+    its total is what was freed."""
     names = chosen(only)
+    keep = kept_pictures() if only is None else set()
     with clearing():
-        before = usage(names)
+        before = usage(only)
         for name in names:
             for folder_name in CATEGORIES[name]:
-                _empty(before.root / folder_name)
-    return before
+                _empty(before.root / folder_name, keep if name == "pictures" else set())
+    kept_bytes, kept_number = before.kept
+    if only is None:
+        log.info("cache: pictures: %d of the devices remembered kept", kept_number)
+    sizes, files = dict(before.sizes), dict(before.files)
+    if "pictures" in sizes:
+        sizes["pictures"] -= kept_bytes
+        files["pictures"] -= kept_number
+    return CacheUsage(before.root, sizes, files)
 
 
-def _empty(folder: Path) -> None:
+def _empty(folder: Path, keep: set[str]) -> None:
+    """Delete what is in `folder`, but the regular files named in `keep`."""
     if folder.is_symlink() or not folder.is_dir():
         return
+    kept = set(_kept_files(folder, keep))
     for entry in folder.iterdir():
+        if entry in kept:
+            continue
         try:
             if entry.is_dir() and not entry.is_symlink():
                 shutil.rmtree(entry)  # removes links inside as links

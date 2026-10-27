@@ -278,7 +278,8 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
         "  Pictures and icons: 30 B",
         "  Temporary files: 119 B",
         "  Total: 5.9 kB",
-        "Dry run: nothing was deleted. Add --apply to delete it."]
+        "Dry run: nothing was deleted. Add --apply to delete it.",
+        KEPT_LINE]
     assert sorted(p for p in cache.rglob("*")) == before
 
 
@@ -291,7 +292,7 @@ def test_clear_with_apply_empties_the_folders_of_the_four_parts(cache, tmp_path,
     stay = filled(cache, tmp_path)
     assert main(["cache", "--clear", "--apply"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[-1] == "Freed 5.9 kB." and "  Total: 5.9 kB" in out
+    assert out[-2:] == ["Freed 5.9 kB.", KEPT_LINE] and "  Total: 5.9 kB" in out
     for name in ("maps", "images", "software", "transfer", "tmp"):
         assert (cache / name).is_dir() and list((cache / name).iterdir()) == []
     assert (cache / "cache.lock").exists()
@@ -736,7 +737,8 @@ def test_clear_all_asks_with_the_total_and_clears_everything(prefs, cache, tmp_p
     assert question.get_heading() == "Clear the cache?"
     assert question.get_body() == ("This deletes the downloaded maps (1.8\u00a0kB) and the other "
                                    "files of the cache (4.1\u00a0kB). The maps will have to be "
-                                   "downloaded again.")
+                                   "downloaded again. The pictures of the devices openExpress "
+                                   "remembers stay.")
     question.emit("response", "clear")
     assert all(files == [] for files in _left(cache).values())
     assert all(p.exists() for p in stay.values()) and (cache / "cache.lock").exists()
@@ -754,7 +756,8 @@ def test_clear_all_without_maps_says_so(prefs, cache):
     _button(group, "All of the cache").emit("clicked")
     (question,) = prefs.dialogs
     assert question.get_body() == ("This deletes the files of the cache (30\u00a0B). They are "
-                                   "downloaded again when needed.")
+                                   "downloaded again when needed. The pictures of the devices "
+                                   "openExpress remembers stay.")
 
 
 @pytest.mark.needs_display
@@ -878,3 +881,109 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
     assert calls == ["logout", "login"]
     shown[0].emit("closed")  # the preferences closed: the window keeps no widget of them
     assert getattr(win, "_account_row", None) is None
+
+
+# --- clearing all of it keeps the pictures of the devices remembered (27.10.2026) --------------
+# A device not on the account may have its picture from nowhere else any more (unit-info gives
+# none for some, the epix): clearing all of the cache keeps the pictures of the devices this
+# installation remembers; the trash of the pictures (--only pictures) still deletes them.
+
+KEPT_LINE = ("The pictures of the remembered devices stay; to delete them too: openexpress cache "
+             "--clear --only pictures --apply")
+
+
+def _remembered_with_pictures(cache):
+    """A remembered device with its picture (10 B), the picture of a model not remembered
+    (20 B), an icon of an app (30 B) and a map (100 B)."""
+    from openexpress import known_devices
+
+    known_devices.remember(3000000007, "Test watch", "006-B0007-00", "1.00", "mtp", now=1.0)
+    fill(cache, {"images/device-006-B0007-00.png": 10, "images/device-006-B0008-00.png": 20,
+                 "images/app-icon.png": 30, "maps/m": 100})
+    return cache / "images" / "device-006-B0007-00.png"
+
+
+def test_the_name_of_a_device_picture_is_one_for_the_window_and_the_cache():
+    from openexpress import cache as oe_cache
+    from openexpress.gui import pictures
+
+    assert pictures.device_picture_path("006-B0007-00").name == (
+        oe_cache.device_picture_name("006-B0007-00")) == "device-006-B0007-00.png"
+
+
+def test_clearing_all_keeps_the_pictures_of_the_remembered_devices(cache, log_file):
+    from openexpress import applog
+    from openexpress import cache as oe_cache
+
+    kept = _remembered_with_pictures(cache)
+    assert oe_cache.usage().kept == (10, 1)
+    applog.setup("cli")
+    freed = oe_cache.clear(None)
+    applog.close()
+    assert sorted(p.name for p in (cache / "images").iterdir()) == [kept.name]
+    assert list((cache / "maps").iterdir()) == []
+    assert freed.total == 150 and freed.sizes["pictures"] == 50 and freed.files["pictures"] == 2
+    assert "cache: pictures: 1 of the devices remembered kept" in log_file.read_text()
+
+
+def test_the_trash_of_the_pictures_deletes_them_too(cache):
+    from openexpress import cache as oe_cache
+
+    _remembered_with_pictures(cache)
+    freed = oe_cache.clear(["pictures"])
+    assert list((cache / "images").iterdir()) == [] and freed.total == 60
+    assert oe_cache.usage(["pictures"]).kept == (0, 0)  # only clearing all keeps them
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_the_command_line_says_the_pictures_stay(cache, capsys, apply):
+    from openexpress.cli import main
+
+    kept = _remembered_with_pictures(cache)
+    assert main(["cache", "--clear", *(["--apply"] if apply else [])]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[-1] == KEPT_LINE
+    assert out[-2] == ("Freed 150 B." if apply else
+                       "Dry run: nothing was deleted. Add --apply to delete it.")
+    assert kept.exists()
+
+
+def test_the_command_line_with_only_pictures_says_nothing_of_them(cache, capsys):
+    from openexpress.cli import main
+
+    kept = _remembered_with_pictures(cache)
+    assert main(["cache", "--clear", "--only", "pictures", "--apply"]) == 0
+    assert KEPT_LINE not in capsys.readouterr().out and not kept.exists()
+
+
+@pytest.mark.needs_display
+def test_clear_all_in_the_window_says_the_pictures_stay(prefs, cache):
+    kept = _remembered_with_pictures(cache)
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    _button(group, "All of the cache").emit("clicked")
+    (question,) = prefs.dialogs
+    assert question.get_body() == (
+        "This deletes the downloaded maps (100\u00a0B) and the other files of the cache "
+        "(50\u00a0B). The maps will have to be downloaded again. The pictures of the devices "
+        "openExpress remembers stay.")
+    question.emit("response", "clear")
+    assert kept.exists() and prefs.toasts == ["Freed 150\u00a0B."]
+    rows = dict((t, (s, b.get_sensitive())) for t, s, b in storage_rows(group))
+    assert rows["Pictures and icons"] == ("10\u00a0B\u00a0· 1 file", True)  # its trash still
+    assert rows["All of the cache"] == ("10\u00a0B\u00a0· 1 file", False)  # nothing more to clear
+
+
+@pytest.mark.needs_display
+def test_clear_all_without_maps_in_the_window_says_the_pictures_stay(prefs, cache):
+    from openexpress import known_devices
+
+    known_devices.remember(3000000007, "Test watch", "006-B0007-00", "1.00", "mtp", now=1.0)
+    fill(cache, {"images/device-006-B0007-00.png": 10, "images/p.png": 30})
+    group = prefs._cache_group()
+    _counted(prefs, group)
+    _button(group, "All of the cache").emit("clicked")
+    (question,) = prefs.dialogs
+    assert question.get_body() == ("This deletes the files of the cache (30\u00a0B). They are "
+                                   "downloaded again when needed. The pictures of the devices "
+                                   "openExpress remembers stay.")

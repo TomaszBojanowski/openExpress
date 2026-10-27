@@ -438,6 +438,9 @@ def cmd_cache(args) -> int:
         print(_("Freed {size}.").format(size=human_size(use.total)))
     elif args.clear:
         print(_("Dry run: nothing was deleted. Add --apply to delete it."))
+    if args.clear and only is None:
+        print(_("The pictures of the remembered devices stay; to delete them too: openexpress "
+                "cache --clear --only pictures --apply"))
     return 0
 
 

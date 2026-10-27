@@ -35,8 +35,7 @@ Use = Callable[[object, str], None]
 
 def device_picture_path(part_number: str) -> Path:
     """Cached product picture of a watch model (the picture never changes for a model)."""
-    safe = "".join(c for c in part_number if c.isalnum() or c in "-_") or "unknown"
-    return paths.cache_dir() / "images" / f"device-{safe}.png"
+    return paths.cache_dir() / "images" / cache.device_picture_name(part_number)
 
 
 def store(win) -> dict:
