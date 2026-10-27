@@ -157,7 +157,7 @@ class ReportDialog:
         nor into the report field (what is pasted into a field filled in from the address is
         lost): when it is attached (`log_for_form`), it goes to the clipboard, for the
         form's "Log" field; whether it did. A report too long for an address goes to the
-        clipboard whole, with the empty form, as before."""
+        clipboard whole, with the empty form."""
         from openexpress import report
 
         attached = bool(report_text) and log_for_form is not None
