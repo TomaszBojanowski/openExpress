@@ -60,7 +60,6 @@ class MusicPage:
         sec = self.sections["music"]
         # The row "Music" of the device page says it from now on.
         note_music_count(self, len(items), sum(i.size for i in items))
-        # Only the kinds of media this device declares.
         kinds = music.supported_kinds(self.session.device)
         g = sec.group(_("Add to the device"), space_text(free))
         for kind in kinds:
