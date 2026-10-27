@@ -398,14 +398,14 @@ def test_the_window_gives_the_note_with_the_tiles_drawn():
 
 
 def test_logging_out_says_it_on_the_start_page(monkeypatch, in_the_window):
-    from openexpress.gui import app
+    from openexpress.auth import store
     from openexpress.gui.app import MainWindow
 
     win = types.SimpleNamespace(_account=[{"unitid": 1}], _account_why=None, toasts=[])
     win.toast = win.toasts.append
     changed = []
     in_the_window("account_changed", lambda w, cause: changed.append(cause))
-    monkeypatch.setattr(app.store, "delete", lambda: None)
+    monkeypatch.setattr(store, "delete", lambda: None)
     MainWindow.logout(win)
     assert (win._account, win._account_why) == (None, "logged-out") and changed
 

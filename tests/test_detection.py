@@ -5361,11 +5361,12 @@ def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, mon
 def login_finished(win, monkeypatch):
     """The login window gives a ticket and the login task finishes (the exchange of the
     ticket stands in: nothing leaves the test)."""
+    from openexpress.auth import sso
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     tickets = []
-    monkeypatch.setattr(app.sso, "create_login_window",
+    monkeypatch.setattr(sso, "create_login_window",
                         lambda settings, on_ticket, **kw: (tickets.append(on_ticket),
                                                            types.SimpleNamespace(
                                                                present=lambda: None))[1])

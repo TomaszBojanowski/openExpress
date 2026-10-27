@@ -27,6 +27,18 @@ def unit_ids(summaries) -> frozenset[int]:
     return frozenset(u for c in summaries if (u := getattr(c, "unit_id", None)))
 
 
+def open_address(s) -> str | None:
+    """The address of the open device (compared in memory only), or None."""
+    if s is None:
+        return None
+    return str(getattr(getattr(s, "storage", None), "device_uri", "") or "")
+
+
+def open_unit(s) -> int | None:
+    """The unit ID of the open device (compared in memory only, never shown), or None."""
+    return getattr(getattr(s, "device", None), "unit_id", None) or None
+
+
 @dataclass
 class Connected:
     devices: list = field(default_factory=list)
