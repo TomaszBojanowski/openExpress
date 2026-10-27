@@ -218,9 +218,9 @@ def drive_keys_text(usb, unit_id) -> str:
 
 
 def _open_found(found) -> Storage:
-    """The storage of the device chosen from a list: a Garmin drive as it was found; an MTP
-    device by its address, as with --device-uri, mounted first when it is not (the user
-    chose it; a list mounts nothing)."""
+    """The storage of the device chosen from a list: a Garmin drive, mounted first when the
+    system has not mounted it (KDE); an MTP device by its address, as with --device-uri,
+    mounted first when it is not (the user chose it; a list mounts nothing)."""
     from openexpress.device import gio_storage
 
     if found.kind == "ums":
@@ -1161,7 +1161,7 @@ _LAST_SYNC_COUNTS = ("uploaded", "downloaded", "skipped_known", "rejected")
 def _usable_last_sync(data: dict | None) -> dict | None:
     """The record as it is, or None when a field has a value of another type than the
     program writes (only a file edited by hand has one): shown as no sync, not as a row
-    that cannot be drawn. A field left out reads as before."""
+    that cannot be drawn. A field left out reads as its default (0, an empty list)."""
     if data is None:
         return None
     when = data.get("time", 0.0)
