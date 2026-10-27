@@ -104,7 +104,7 @@ class Status:
         with self._lock:
             self._last[service] = result
             if result.kind == OK:
-                self._answered[service] = result.at  # the last good answer
+                self._answered[service] = result.at
             listeners = list(self._listeners)
         for fn in listeners:
             fn()
