@@ -34,20 +34,47 @@ def _called(node: ast.Call) -> str | None:
     return func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
 
 
-def direct_in_the_window(tree: ast.AST) -> list[str]:
-    """The names a source replaces in gui.app itself: setattr(app, "name", …) with any alias
-    of the module, setattr("openexpress.gui.app.name", …) and
-    setattr(openexpress.gui.app, "name", …)."""
-    aliases, found = _aliases(tree), []
+def _names_of(arg: ast.AST, loops: dict) -> list[str]:
+    """The names an argument stands for: a string, or the variable of a loop over strings
+    it is in (for name in ("a", "b"): …); a name made otherwise stands as its text in <>."""
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return [arg.value]
+    if id(arg) in loops:
+        return loops[id(arg)]
+    return [f"<{ast.unparse(arg)}>"]
+
+
+def _loops(tree: ast.AST) -> dict[int, list[str]]:
+    """Each use of the variable of a loop over a tuple or a list of strings, inside that
+    loop, with those strings (by the id of the use)."""
+    out = {}
     for node in ast.walk(tree):
-        if not (isinstance(node, ast.Call) and _called(node) == "setattr" and node.args):
+        if (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
+                and isinstance(node.iter, (ast.Tuple, ast.List))
+                and all(isinstance(e, ast.Constant) and isinstance(e.value, str)
+                        for e in node.iter.elts)):
+            strings = [e.value for e in node.iter.elts]
+            for statement in node.body:
+                for use in ast.walk(statement):
+                    if isinstance(use, ast.Name) and use.id == node.target.id:
+                        out[id(use)] = strings
+    return out
+
+
+def direct_in_the_window(tree: ast.AST) -> list[str]:
+    """The names a source replaces in gui.app itself: setattr(app, "name", …) (or delattr)
+    with any alias of the module, also with the name in a variable,
+    setattr("openexpress.gui.app.name", …) and setattr(openexpress.gui.app, "name", …)."""
+    aliases, found, loops = _aliases(tree), [], _loops(tree)
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and _called(node) in ("setattr", "delattr")
+                and node.args):
             continue
         target = node.args[0]
-        named = (len(node.args) > 1 and isinstance(node.args[1], ast.Constant)
-                 and isinstance(node.args[1].value, str))
-        if named and ((isinstance(target, ast.Name) and target.id in aliases)
-                      or (isinstance(target, ast.Attribute) and ast.unparse(target) == WINDOW)):
-            found.append(node.args[1].value)
+        if (len(node.args) > 1
+                and ((isinstance(target, ast.Name) and target.id in aliases)
+                     or (isinstance(target, ast.Attribute) and ast.unparse(target) == WINDOW))):
+            found += _names_of(node.args[1], loops)
         elif (isinstance(target, ast.Constant) and isinstance(target.value, str)
               and target.value.startswith(WINDOW + ".")):
             found.append(target.value[len(WINDOW) + 1:].split(".")[0])
@@ -57,12 +84,12 @@ def direct_in_the_window(tree: ast.AST) -> list[str]:
 def through_the_fixture(tree: ast.AST) -> list[str]:
     """The names a source replaces through in_the_window("name", …) or
     replace_in_window(monkeypatch, "name", …)."""
-    found = []
+    found, loops = [], _loops(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and _called(node) in WAYS:
             args = node.args[1:] if _called(node) == "replace_in_window" else node.args
-            if args and isinstance(args[0], ast.Constant) and isinstance(args[0].value, str):
-                found.append(args[0].value)
+            if args:
+                found += _names_of(args[0], loops)
     return found
 
 
@@ -105,8 +132,9 @@ def _window_modules() -> dict[str, ast.Module]:
 
 
 def test_the_guard_sees_every_way_of_replacing_a_name():
-    """The guard itself: the three forms of a direct replacement are seen, and the tests'
-    replacements through the fixture are found (24 names on 27.10.2026)."""
+    """The guard itself: every form of a direct replacement is seen (a name written out or
+    in the variable of a loop, setattr and delattr), and the tests' replacements through the
+    fixture are found, also in a loop (24 names on 27.10.2026, 26 with the loops)."""
     planted = ast.parse(
         "from openexpress.gui import app as gui_app\n"
         "import openexpress.gui.app\n"
@@ -115,9 +143,16 @@ def test_the_guard_sees_every_way_of_replacing_a_name():
         "    monkeypatch.setattr('openexpress.gui.app.Gtk.FileDialog', None)\n"
         "    monkeypatch.setattr(openexpress.gui.app, 'clear_cache', None)\n"
         "    in_the_window('Adw', None)\n"
-        "    replace_in_window(monkeypatch, 'save_consumer', None)\n")
-    assert direct_in_the_window(planted) == ["eject", "Gtk", "clear_cache"]
-    assert through_the_fixture(planted) == ["Adw", "save_consumer"]
+        "    replace_in_window(monkeypatch, 'save_consumer', None)\n"
+        "    for name in ('probe', 'usb_state'):\n"
+        "        monkeypatch.setattr(gui_app, name, None)\n"
+        "    for each in ('garmin_usb',):\n"
+        "        in_the_window(each, None)\n"
+        "    monkeypatch.delattr(gui_app, 'Gdk')\n"
+        "    monkeypatch.setattr(gui_app, 'x' + 'y', None)\n")
+    assert sorted(direct_in_the_window(planted)) == sorted(
+        ["eject", "Gtk", "clear_cache", "probe", "usb_state", "Gdk", "<'x' + 'y'>"])
+    assert sorted(through_the_fixture(planted)) == ["Adw", "garmin_usb", "save_consumer"]
     found = _by_name(through_the_fixture)
     assert len(found) >= 20
     assert {"account_client", "datetime", "Adw", "Gtk", "eject", "save_consumer",
