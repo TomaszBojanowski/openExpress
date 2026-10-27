@@ -243,3 +243,120 @@ def test_the_words_in_polish(tmp_path):
         "GarminExpress.dmg to instalator dla macOS. openExpress potrzebuje instalatora Garmin "
         "Express dla Windows (GarminExpress.exe); tylko go odczytuje i\u00a0niczego nie "
         "instaluje.")
+
+
+# --- which installer, said in full (a remark on Reddit, 27.10.2026) ----------------------------
+# Every place that asks for the installer says which one: the one for Windows, a free download
+# from garmin.com, and that openExpress only reads it (no Windows needed).
+
+NOT_SET_UP = ("openExpress is not set up yet. It needs the Garmin Express installer for Windows "
+              "(GarminExpress.exe, a free download from garmin.com), and only reads it. First "
+              "run: openexpress setup --from-installer /path/to/GarminExpress.exe")
+BANNER = ("One-time setup: choose the Garmin Express installer for Windows (GarminExpress.exe "
+          "from garmin.com). openExpress only reads it.")
+
+
+def test_without_the_setup_it_says_which_installer_is_needed():
+    from openexpress import settings
+
+    with pytest.raises(SetupError) as refused:
+        settings.load_consumer()
+    assert str(refused.value) == NOT_SET_UP
+
+
+def test_the_help_of_setup_says_which_installer(capsys):
+    from openexpress import cli
+
+    with pytest.raises(SystemExit):
+        cli.main(["setup", "--help"])
+    said = " ".join(capsys.readouterr().out.split())
+    assert ("read the needed data from the Garmin Express installer for Windows "
+            "(GarminExpress.exe from garmin.com); it is only read, nothing is installed") in said
+
+
+def _banner_of_the_setup() -> dict:
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    said = {}
+    banner = types.SimpleNamespace(set_title=lambda text: said.update(title=text),
+                                   set_button_label=lambda text: said.update(button=text),
+                                   set_revealed=lambda on: said.update(revealed=on))
+    win = types.SimpleNamespace(banner=banner, session=types.SimpleNamespace(
+        mass_storage=False, client=types.SimpleNamespace(consumer=None)))
+    MainWindow._update_banner(win)
+    return said
+
+
+def test_the_banner_of_the_setup_says_which_installer():
+    assert _banner_of_the_setup() == {"title": BANNER, "button": "Choose Installer…",
+                                      "revealed": True}
+
+
+def test_the_banner_of_the_setup_in_polish():
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        said = _banner_of_the_setup()
+    finally:
+        i18n.setup("en")
+    assert said["title"] == (
+        "Jednorazowa konfiguracja: wybierz instalator Garmin Express dla Windows "
+        "(GarminExpress.exe z garmin.com). openExpress tylko go odczytuje.")
+
+
+def test_the_choice_of_the_file_says_which_installer(in_the_window):
+    import types
+
+    from openexpress.gui import app
+
+    titles = []
+
+    class FileDialog:
+        def __init__(self, title):
+            titles.append(title)
+
+        def open(self, parent, cancellable, callback):
+            pass  # nothing chosen
+
+    in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
+    app.MainWindow.choose_dll(types.SimpleNamespace())
+    assert titles == ["Select the Garmin Express installer for Windows (GarminExpress.exe)"]
+
+
+@pytest.mark.needs_display
+def test_the_preferences_say_which_installer(monkeypatch):
+    import types
+
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: None)
+    groups, add = [], Adw.PreferencesPage.add
+    monkeypatch.setattr(Adw.PreferencesPage, "add",
+                        lambda page, group: groups.append(group) or add(page, group))
+    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                                error=lambda title, text: None, run_task=None, toast=None)
+    for name in ("_button", "_cache_group", "_ask_clear_cache", "_account_group",
+                 "_account_action"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    MainWindow.show_preferences(win)
+    (setup,) = [g for g in groups if g.get_title() == "Setup"]
+    rows = []
+
+    def walk(widget):
+        if isinstance(widget, Adw.ActionRow):
+            rows.append((widget.get_title(), widget.get_subtitle()))
+        child = widget.get_first_child()
+        while child is not None:
+            walk(child)
+            child = child.get_next_sibling()
+
+    walk(setup)
+    assert rows == [("Garmin Express installer for Windows",
+                     ("GarminExpress.exe from garmin.com: the application key is read from it "
+                      "again, nothing is installed"))]

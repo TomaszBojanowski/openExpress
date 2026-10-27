@@ -571,7 +571,9 @@ class DevicePage:
             # A Garmin device in mass storage mode needs neither the setup nor the account.
             self.banner.set_revealed(False)
         elif s is not None and s.client.consumer is None:
-            self.banner.set_title(_("openExpress needs a one-time setup"))
+            self.banner.set_title(_("One-time setup: choose the Garmin Express installer for "
+                                    "Windows (GarminExpress.exe from garmin.com). openExpress "
+                                    "only reads it."))
             self.banner.set_button_label(_("Choose Installer…"))
             self._banner_kind = "setup"
             self.banner.set_revealed(True)

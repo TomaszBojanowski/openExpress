@@ -363,8 +363,9 @@ class Preferences:
 
         g = Adw.PreferencesGroup(title=_("Setup"))
         row = Adw.ActionRow(
-            title=_("Garmin Express installer"),
-            subtitle=_("Read the application key again from the official installer"))
+            title=_("Garmin Express installer for Windows"),
+            subtitle=_("GarminExpress.exe from garmin.com: the application key is read from it "
+                       "again, nothing is installed"))
         row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
         g.add(row)
         page.add(g)
@@ -458,7 +459,7 @@ class Preferences:
 
     def choose_dll(self) -> None:
         dialog = Gtk.FileDialog(
-            title=_("Select the Garmin Express installer (GarminExpress.exe)"))
+            title=_("Select the Garmin Express installer for Windows (GarminExpress.exe)"))
 
         def read(path: Path):
             from openexpress.installer import consumer_from_installer, refuse_macos_installer

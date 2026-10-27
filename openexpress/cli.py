@@ -1887,7 +1887,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("setup", help=_("configuration: OAuth1 key, environment, locale"))
     s.add_argument("--from-installer", metavar="GarminExpress.exe",
-                   help=_("read the needed data from the official Garmin Express installer"))
+                   help=_("read the needed data from the Garmin Express installer for Windows "
+                          "(GarminExpress.exe from garmin.com); it is only read, nothing is "
+                          "installed"))
     s.add_argument("--from-dll", help=_("path to Networking.dll from Garmin Express"))
     s.add_argument("--utilities-dll",
                    help=_("path to Utilities.dll (default: next to Networking.dll)"))

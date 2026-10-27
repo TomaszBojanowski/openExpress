@@ -146,8 +146,9 @@ def load_consumer() -> Consumer:
     path = consumer_path()
     if not path.exists():
         raise SetupError(_(
-            "openExpress is not set up yet. First run: "
-            "openexpress setup --from-installer /path/to/GarminExpress.exe"
+            "openExpress is not set up yet. It needs the Garmin Express installer for Windows "
+            "(GarminExpress.exe, a free download from garmin.com), and only reads it. First "
+            "run: openexpress setup --from-installer /path/to/GarminExpress.exe"
         ))
     try:
         data = json.loads(path.read_text())
