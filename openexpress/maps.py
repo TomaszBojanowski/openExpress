@@ -22,6 +22,7 @@ import base64
 import hashlib
 import logging
 import posixpath
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -45,6 +46,25 @@ UNLOCK_PAUSE_S = 5
 
 class MapError(UserFacingError):
     pass
+
+
+@dataclass(frozen=True)
+class CleanupRule:
+    """A rule of the map service for old files ("directoriesToRemove"): a folder of the
+    device, one on its memory card, a pattern of file names and what it is for."""
+
+    path: str | None
+    external_path: str | None
+    file_match: str | None
+    description: str | None
+
+
+@dataclass(frozen=True)
+class CleanupFile:
+    """A file a cleanup rule would take (cleanup_plan)."""
+
+    path: str
+    size: int
 
 
 @dataclass
@@ -81,6 +101,9 @@ class UniversalMap:
     # restriction, or another country), None (restricted, the account's country not known).
     restricted_in: str | None = None
     restricted: bool | None = False
+    # The cleanup rules of the answer, for every map as Garmin Express keeps them (only
+    # shown: cleanup_plan).
+    cleanup_rules: tuple[CleanupRule, ...] = ()
 
     # The states of the server ("installationState"): 0 not installed, 1 installed, 2 partly
     # on the device, 3 a newer version on the device.
@@ -306,8 +329,117 @@ def _listed(response) -> list:
 def read_maps(response: dict) -> tuple[list[UniversalMap], int]:
     """The maps in the server's answer, and how many maps the answer listed: a map without
     anything to install is listed, but not read. Zero means the server has no maps for the
-    device."""
-    return parse_maps(response), len(_listed(response))
+    device. The cleanup rules of the answer go with every map."""
+    maps = parse_maps(response)
+    rules = _cleanup_rules(response)
+    for m in maps:
+        m.cleanup_rules = rules
+    return maps, len(_listed(response))
+
+
+def _text(value, limit: int = 200) -> str | None:
+    return value.strip()[:limit] if isinstance(value, str) and value.strip() else None
+
+
+def _cleanup_rules(response) -> tuple[CleanupRule, ...]:
+    listed = response.get("directoriestoremove") if isinstance(response, dict) else None
+    rules = tuple(CleanupRule(_text(r.get("path")), _text(r.get("externalpath")),
+                              _text(r.get("filematch")), _text(r.get("description")))
+                  for r in listed or [] if isinstance(r, dict)) if isinstance(listed,
+                                                                               list) else ()
+    if not rules:
+        log.info("maps: 0 cleanup rules")
+    for n, r in enumerate(rules, 1):
+        # Garmin's own words of what to remove; the log filter masks what it masks anywhere.
+        log.info("maps: cleanup rule %d: folder %r, memory card %r, files %r, description %r",
+                 n, *(v[:80] if v else v for v in (r.path, r.external_path, r.file_match,
+                                                   r.description)))
+    return rules
+
+
+# A pattern of a cleanup rule read as whole file names: these characters only, "*" any run
+# of them (Garmin Express reads the rest as a regular expression, anywhere in the name).
+_PATTERN = re.compile(r"[A-Za-z0-9._\- *]+")
+
+
+def _rule_matcher(pattern: str | None):
+    if not pattern or not _PATTERN.fullmatch(pattern) or not pattern.strip("* "):
+        return None
+    regex = "".join(".*" if c == "*" else re.escape(c) for c in pattern)
+    return re.compile(regex, re.IGNORECASE)
+
+
+def _rule_folder(path: str | None) -> str | None:
+    if not path:
+        return None
+    parts = path.replace("\\", "/").strip("/").split("/")
+    if not parts or any(p in ("", ".", "..") for p in parts):
+        return None
+    return "/".join(parts)
+
+
+def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[CleanupFile]:
+    """The files the cleanup rules of the answer would take, read safely: whole names only,
+    only in a folder of the files of the maps of the answer (or the device's map folder),
+    only with the extension of such a file, and never a file the server names for a map,
+    a map of your own, a map file the server does not know (it has the header of one),
+    GarminDevice.xml or an update. Only shown: nothing is deleted. A folder that cannot be
+    read gives no plan."""
+    from openexpress import ownmaps
+
+    rules = maps[0].cleanup_rules if maps else ()
+    if not rules:
+        return []
+    named = {p.casefold() for m in maps for p in m.all_paths}
+    folders = {posixpath.dirname(p) for p in named}
+    own_folder = ownmaps.map_dir(device)
+    if own_folder:
+        folders.add(own_folder.casefold())
+    extensions = {posixpath.splitext(p)[1] for p in named} - {"", ".xml"}
+    found: dict[str, CleanupFile] = {}
+    skipped = 0
+    try:
+        own = {o.path.casefold() for o in ownmaps.list_own(device, storage, maps)}
+        copied = {str(r.get("filename", "")).casefold() for r in ownmaps.recorded(device)}
+        for rule in rules:
+            match, folder = _rule_matcher(rule.file_match), _rule_folder(rule.path)
+            why = ("pattern" if match is None else "memory card" if folder is None
+                   and rule.external_path and not rule.path else "folder"
+                   if folder is None or folder.casefold() not in folders else None)
+            if why is not None:
+                skipped += 1
+                log.info("maps: a cleanup rule was skipped (%s)", why)
+                continue
+            real = storage.resolve(folder)
+            if real is None:
+                continue
+            for entry in storage.listdir(real):
+                path = f"{real}/{entry.name}"
+                low = entry.name.casefold()
+                if (entry.is_dir or not match.fullmatch(entry.name)
+                        or posixpath.splitext(low)[1] not in extensions
+                        or path.casefold() in named or path.casefold() in own
+                        or low in copied or low == "garmindevice.xml"
+                        or low.startswith("gupdate.")
+                        or (low.endswith(".img") and ownmaps.read_title(
+                            storage.read_start(path, ownmaps.HEADER_SIZE)) is not None)):
+                    continue
+                found.setdefault(path.casefold(), CleanupFile(path, entry.size))
+    except DeviceError as e:
+        log.info("maps: the cleanup rules could not be checked (%s)", type(e).__name__)
+        return []
+    log.info("maps: %d cleanup rules, %d files match (%d rules skipped)", len(rules),
+             len(found), skipped)
+    return sorted(found.values(), key=lambda f: f.path.casefold())
+
+
+def cleanup_lines(files: list[CleanupFile]) -> list[str]:
+    """What the questions and the command line say of `files`: a heading, the files and that
+    openExpress leaves them (stage 1); nothing without files."""
+    if not files:
+        return []
+    return [_("Old files Garmin asks to remove:"), *(f.path for f in files),
+            _("openExpress does not remove these files yet.")]
 
 
 # Why a map cannot be installed: a file without a usable download, or one whose MD5 the

@@ -551,7 +551,11 @@ copy to the device is running.
   `music remove` and `apps remove`, on the command line always after a dry run that lists
   them. Installing a software update first deletes a leftover update file of the same name
   in another letter case and `GUPDATE.TMP`, and removes a copy that failed its check. Files
-  shared by several maps (e.g. the Europe terrain model) are protected.
+  shared by several maps (e.g. the Europe terrain model) are protected. When Garmin's map
+  service asks for old files to be cleaned up (`directoriesToRemove`), the question before a
+  map is installed, updated or removed and `openexpress maps install/update/remove` list the
+  files that would match (whole names, never a map of the answer or a map of your own);
+  openExpress does not remove them yet.
 - A write to the device that fails leaves no half-written file: what was written of it is
   deleted, and when the copy did not start, the file that was there stays. On a device in
   mass storage mode the new file is written beside the old one and only then takes its

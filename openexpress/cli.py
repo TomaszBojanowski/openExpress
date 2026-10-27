@@ -1111,6 +1111,15 @@ def cmd_maps(args) -> int:
     else:
         targets = [mp.find(all_maps, args.name)]
 
+    # The old files Garmin's cleanup rules would take (point 8, stage 1): listed with the
+    # plan, in a dry run and with --apply, and never removed.
+    cleanup = mp.cleanup_lines(mp.cleanup_plan(st, dev, all_maps))
+    if cleanup:
+        print(cleanup[0])
+        for path in cleanup[1:-1]:
+            print(f"  - {path}")
+        print(cleanup[-1])
+
     for m in targets:
         if args.maps_cmd == "remove":
             if not m.can_uninstall:

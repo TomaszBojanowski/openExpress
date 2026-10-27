@@ -77,11 +77,13 @@ class MapsPage:
                 # Garmin gives); the maps of your own do not depend on it (Garmin's list:
                 # none, so their names alone are kept apart).
                 return (None, ownmaps.overview(s.device, s.storage, []), (None, None),
-                        e.map_update_type)
+                        e.map_update_type, [])
             mp.mark_waiting(s.storage, result[0])  # written or removed, not taken in yet
-            # The space too: asked of the device here, never as the page is drawn.
+            # The space too: asked of the device here, never as the page is drawn; and the
+            # old files Garmin's cleanup rules would take (only shown in the questions).
             return (result, ownmaps.overview(s.device, s.storage, result[0]),
-                    (s.storage.free_space(), s.storage.capacity()), None)
+                    (s.storage.free_space(), s.storage.capacity()), None,
+                    mp.cleanup_plan(s.storage, s.device, result[0]))
 
         def failed(_e):
             # The "Maps" row waited for this answer (show_device): it says the check failed.
@@ -91,9 +93,11 @@ class MapsPage:
                 self.map_state = "failed"
                 self._render_map_state()
 
-        self._load("maps", _("Checking maps…"), work,
-                   lambda r: self.show_maps(r[0], r[1], space=r[2], map_update_type=r[3]),
-                   on_error=failed)
+        def done(r):
+            self.map_cleanup = r[4]  # for the questions before a map is installed or removed
+            self.show_maps(r[0], r[1], space=r[2], map_update_type=r[3])
+
+        self._load("maps", _("Checking maps…"), work, done, on_error=failed)
 
     def show_maps(self, result, own=None, space=(None, None),
                   map_update_type: str | None = None) -> None:
@@ -416,7 +420,8 @@ class MapsPage:
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
                    if removing else "")
                 + "".join("\n\n" + _("License: {url}").format(url=e) for e in m.eula_urls)
-                + "\n\n" + _("Copying large maps over USB can take tens of minutes."))
+                + "\n\n" + _("Copying large maps over USB can take tens of minutes.")
+                + _cleanup_paragraph(self))
         heading = (_("Update {name}?") if m.installed else _("Install {name}?")).format(
             name=m.name)
         d = Adw.AlertDialog(heading=heading, body=body)
@@ -458,7 +463,7 @@ class MapsPage:
         files = mp.removal_list(self.maps_cache, m, rewriting=False)
         d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=m.name),
                             body=_("These files will be removed from the device:") + "\n"
-                            + "\n".join(files))
+                            + "\n".join(files) + _cleanup_paragraph(self))
         d.add_response("cancel", _("Cancel"))
         d.add_response("ok", _("Remove"))
         d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -470,3 +475,12 @@ class MapsPage:
                              self.load_section("maps", force=True)),
             read_again_after_failure(self, "maps")))
         d.present(self)
+
+
+def _cleanup_paragraph(win) -> str:
+    """The old files Garmin's cleanup rules would take, at the end of a question before a map
+    is installed, updated or removed (point 8, stage 1: shown, never removed); "" without."""
+    from openexpress import maps as mp
+
+    lines = mp.cleanup_lines(getattr(win, "map_cleanup", None) or [])
+    return "\n\n" + "\n".join(lines) if lines else ""
