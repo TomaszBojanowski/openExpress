@@ -691,7 +691,7 @@ class DevicePage:
                 # Not "loading" for good: the page says so, and is read again when it is
                 # chosen again (or with Try again).
                 log_unexpected(f"showing the page {key}", sys.exc_info())
-                traceback.print_exc()  # stderr, as before
+                traceback.print_exc()  # to stderr too
                 sec.loaded = False
                 sec.clear()
                 self._action_buttons = still_in_window(self._action_buttons)
@@ -1023,7 +1023,8 @@ class DevicePage:
         self.in_background(work, done)
 
     def _render_update_state(self) -> None:
-        """Shows self.update_state in the overview ("Watch software" row, software label)."""
+        """Shows self.update_state in the overview: the "Device software" row, the chip under
+        the version (_highlight_update) and the software label."""
         if self.session is None or not hasattr(self, "update_row"):
             return
         state = self.update_state
@@ -1043,11 +1044,10 @@ class DevicePage:
         self.software_label.set_label(software_text(self.session.device.software_version_str))
 
     def _highlight_update(self, chip: str | None) -> None:
-        """An update to install, or one copied already, stands out on the device page
-        (24.10.2026, 25.10.2026): a chip under the version with these words ("Update
-        available" as on its tile, "Update ready") and the subtitle of "Device software" in
-        the warning colour. Otherwise (none, checking, failed: None) as the other rows. The
-        side panel stays as it is."""
+        """An update to install, or one copied already, stands out on the device page: a
+        chip under the version with these words ("Update available" as on its tile, "Update
+        ready") and the subtitle of "Device software" in the warning colour. Otherwise (none,
+        checking, failed: None) as the other rows. The side panel stays as it is."""
         if chip is not None:
             self.update_chip.set_label(chip)
         self.update_chip.set_visible(chip is not None)
@@ -1062,7 +1062,7 @@ class DevicePage:
     def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
         """`staged`: system updates copied already, waiting for the device to install them
         when it is disconnected: "ready", which wins over the updates still to install
-        (25.10.2026: told after it, with how many)."""
+        (those are told after it, with how many)."""
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_checked_at = self._update_record_at = None  # an answer of now
         self.update_count = len(new_updates)
