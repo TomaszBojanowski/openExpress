@@ -534,7 +534,8 @@ class StartPage:
             built = False
             if keys != section.shown:  # items that show the same keep their widgets
                 gone = _one_gone(section.shown, keys)
-                if gone is not None:  # one device went (forgotten): only its item goes
+                # One device went (forgotten or unplugged): only its item goes.
+                if gone is not None:
                     (section.list if mode == LIST else section.grid).remove(
                         section.items()[gone])
                 else:
