@@ -61,8 +61,11 @@ class DeviceSession:
     # session (unit_info()); it carries the unit ID and the serial number: never shown.
     unit_info_answer: dict | None = field(default=None, repr=False)
     # What the window learnt of the device's error logs when it opened it, and its copy
-    # of the diagnostic files (diagnostics.at_open); None: not read.
+    # of the diagnostic files (diagnostics.at_open); None: not read. They are read in the
+    # background once its page is shown: set when that is done (a task that writes to the
+    # device waits for it); None: not started.
     diagnostics: object | None = None
+    diagnostics_reading: threading.Event | None = field(default=None, repr=False)
     # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
     # quitting); cleared before each wait.
     stop_waiting: threading.Event = field(default_factory=threading.Event, repr=False)

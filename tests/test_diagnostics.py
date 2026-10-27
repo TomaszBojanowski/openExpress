@@ -10,6 +10,7 @@ import os
 import stat
 import types
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
@@ -398,16 +399,127 @@ def test_without_access_to_usb_it_says_why(device):
 # --- the window -----------------------------------------------------------------------------
 
 
-def test_the_window_reads_them_in_the_task_that_opens_the_device(device, clock):
-    """with_space runs in the opening task, before the window has the session: no task can
-    write to the device before the copy."""
+# Point 10 (27.10.2026): the first opening of a watch took 4.5-5 s, 3.7-4.4 s of it reading
+# its diagnostics, and its tile said nothing meanwhile. The device page now comes first, the
+# diagnostics are read in the background after it, and a task that writes to the device waits
+# for them, so that the copy is still of the device before any change.
+
+
+def test_the_opening_does_not_wait_for_them(device, monkeypatch):
+    """with_space (the task that opens the device) reads its free space only."""
     from openexpress.gui.app import with_space
 
     st, dev = device
-    copy_on()
+    monkeypatch.setattr(diagnostics, "at_open", lambda *a: pytest.fail("read in the opening"))
     session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None)
-    assert with_space(session) is session
+    assert with_space(session) is session and session.diagnostics is None
+
+
+def _reading_window(session, in_the_window):
+    """A window with `session` open, its work in the background kept to be run by the test,
+    and the row of the device's errors noted when it is drawn."""
+    background, drawn = [], []
+    in_the_window("device_error_row",
+                  lambda win, group=None: drawn.append(win.session.diagnostics))
+    win = types.SimpleNamespace(session=session, in_background=lambda fn, done, failed=None:
+                                background.append((fn, done)))
+    return win, background, drawn
+
+
+def test_they_are_read_in_the_background_once_the_page_is_shown(device, clock, in_the_window):
+    from openexpress.gui.device_page import read_diagnostics
+
+    st, dev = device
+    copy_on()
+    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
+                                    diagnostics_reading=None)
+    win, background, drawn = _reading_window(session, in_the_window)
+    read_diagnostics(win)
+    read_diagnostics(win)  # shown again: read once
+    (work, done), = background
+    reading = session.diagnostics_reading
+    assert not reading.is_set() and session.diagnostics is None
+    done(work())
+    assert reading.is_set()
     assert session.diagnostics.crash is not None and session.diagnostics.copied.saved
+    assert drawn == [session.diagnostics]  # the row of the errors drawn with them
+
+
+def test_they_are_kept_but_not_drawn_for_a_device_no_longer_open(device, clock, in_the_window):
+    from openexpress.gui.device_page import read_diagnostics
+
+    st, dev = device
+    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
+                                    diagnostics_reading=None)
+    win, background, drawn = _reading_window(session, in_the_window)
+    read_diagnostics(win)
+    win.session = None  # unplugged meanwhile
+    (work, done), = background
+    done(work())
+    assert session.diagnostics is not None and drawn == []
+
+
+def test_a_failure_still_lets_the_tasks_go_on(device, in_the_window):
+    from openexpress.gui.device_page import read_diagnostics
+
+    st, dev = device
+    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
+                                    diagnostics_reading=None)
+    win, background, _drawn = _reading_window(session, in_the_window)
+    in_the_window("diagnostics", types.SimpleNamespace(
+        at_open=lambda device, storage: (_ for _ in ()).throw(OSError("gone"))))
+    read_diagnostics(win)
+    (work, _done), = background
+    with pytest.raises(OSError):
+        work()
+    assert session.diagnostics_reading.is_set()
+
+
+@pytest.mark.parametrize("writes", [True, False])
+def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
+    """Only a task that writes to the device waits until they are read; one that only reads
+    it does not."""
+    import threading
+    import time
+
+    from openexpress.gui import app
+    from openexpress.gui.tasks import writes_to_device
+
+    monkeypatch.setattr(app.GLib, "idle_add", lambda fn, *args: fn(*args))
+    in_the_window("refresh_space", lambda win, session: None)
+    reading = threading.Event()
+    session = types.SimpleNamespace(diagnostics_reading=reading)
+    order = []
+    win = types.SimpleNamespace(busy=False, session=session, _task_lets_close=False,
+                                set_busy=lambda busy, *a, **kw: None,
+                                _run_pending_refresh=lambda: None)
+
+    def work():
+        order.append("work")
+
+    app.MainWindow.run_task(win, "Saving…", writes_to_device(work) if writes else work,
+                            lambda result: order.append("done"))
+    time.sleep(0.3)  # long enough for a task that does not wait
+    assert order == ([] if writes else ["work", "done"])
+    reading.set()
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and len(order) < 2:
+        time.sleep(0.01)
+    assert order == ["work", "done"]
+
+
+def test_files_unchanged_in_size_and_time_are_not_read_again(device, clock):
+    """Before, only files over 64 kB were taken from the copy before: every small one was
+    read again at each opening."""
+    st, dev = device
+    first = diagnostics.copy_files(dev, st)
+    st.reads.clear()
+    again = diagnostics.copy_files(dev, st)
+    assert st.reads == [] and again.unchanged == first.new and not again.saved
+    changed = st.root / "GARMIN" / "Debug" / "SNS_ERR.TXT"
+    changed.write_text("sensor hub history, longer")
+    later = diagnostics.copy_files(dev, st)
+    assert [Path(p).name for p in st.reads] == ["SNS_ERR.TXT"] and later.new == 1
 
 
 def _window(found):

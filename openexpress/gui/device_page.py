@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import threading
 import traceback
 import types
 from datetime import datetime
@@ -269,6 +270,32 @@ def device_error_row(win, group=None) -> None:
         row = Adw.ActionRow(title=_("Device error log"), subtitle=subtitle)
     group.add(row)
     win.device_error_row = row
+
+
+def read_diagnostics(win) -> None:
+    """What the open device logged as errors, and its diagnostic files copied when the copy
+    is on (diagnostics.at_open: once per connection, never a session of our own), read in
+    the background once its page is shown, not in the opening (3.7-4.4 s of 4.5-5 s on a
+    watch, 27.10.2026). A task that writes to the device waits for it
+    (window_tasks.wait_for_the_diagnostics); the row "Device error log" is drawn with it."""
+    s = win.session
+    if (s is None or getattr(s, "diagnostics", None) is not None
+            or getattr(s, "diagnostics_reading", None) is not None):
+        return
+    reading = s.diagnostics_reading = threading.Event()
+
+    def work():
+        try:
+            return diagnostics.at_open(s.device, s.storage)
+        finally:
+            reading.set()  # also when it failed: the tasks go on
+
+    def done(found) -> None:
+        s.diagnostics = found
+        if win.session is s:
+            device_error_row(win)
+
+    win.in_background(work, done)
 
 
 def copy_crash_logs(win, button=None) -> None:
@@ -564,6 +591,7 @@ class DevicePage:
         self.connected.keep_if_open(lambda c: self._is_open(c))
         resolve_account(self)
         self._show_device_view()
+        read_diagnostics(self)
 
     def _update_banner(self) -> None:
         s = self.session

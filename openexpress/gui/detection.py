@@ -24,7 +24,7 @@ from dataclasses import dataclass
 
 from gi.repository import GLib
 
-from openexpress import diagnostics, known_devices, service
+from openexpress import known_devices, service
 from openexpress.device.gio_storage import (
     ABSENT,
     DRIVE_OFF,
@@ -135,16 +135,10 @@ def detect_devices(current_uri: str | None = None):
 def with_space(found):
     """A device opened for the window, with its free space and capacity read in the same
     thread (the device page and the report then ask it nothing); a list to choose from is
-    passed on as it is."""
+    passed on as it is. Its diagnostics come after its page is shown
+    (device_page.read_diagnostics)."""
     if not isinstance(found, DeviceChoices):
         found.space = read_space(found.storage)
-        # In the task that opens the device, so before any task can write to it: what it
-        # logged as errors, and its diagnostic files copied when the copy is on (once per
-        # connection; never a session of our own).
-        try:
-            found.diagnostics = diagnostics.at_open(found.device, found.storage)
-        except Exception:  # an extra of the opening never fails it
-            log.warning("diagnostics: the error logs were not read", exc_info=True)
     return found
 
 

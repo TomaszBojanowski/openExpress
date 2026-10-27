@@ -4396,10 +4396,11 @@ def test_back_draws_the_list_at_once_never_one_tile_of_two(start_window, monkeyp
     win = start_window
     later = defer_background(win)
     two_and_one_open(win, monkeypatch, tmp_path, device_root, "Edge 1050")
+    opened = list(later)  # the diagnostics of the device opened (read_diagnostics)
     drawn = len(win.start.shown)
     back(win)
     assert drawn_names(win, drawn) == [["Test watch", "Edge 1050"]]
-    assert later == []
+    assert later == opened  # nothing more
 
 
 def test_refresh_on_the_start_page_reads_the_list_only(start_window, monkeypatch, tmp_path,

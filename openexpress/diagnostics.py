@@ -352,10 +352,12 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
             report.listed += 1
             continue
         old = before.get(path)
-        if (isinstance(old, dict) and size > 64 * 1024 and mtime and old.get("size") == size
+        if (isinstance(old, dict) and mtime and old.get("size") == size
                 and old.get("mtime") == mtime
                 and (where / "objects" / str(old.get("sha256"))).exists()):
-            files[path] = old  # a big file as it was: not read again
+            # Of the same size and time as in the copy before: not read again (each read is
+            # slow over MTP; until 27.10.2026 only the files over 64 kB were skipped).
+            files[path] = old
             report.unchanged += 1
             continue
         data = storage.read(path)

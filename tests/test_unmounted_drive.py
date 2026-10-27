@@ -618,6 +618,7 @@ def _start_window(monkeypatch, listed):
     reread = []
     win = types.SimpleNamespace(
         busy=False, session=None, run_task=RunNow(), toast=lambda text: None,
+        in_background=lambda fn, done, failed=None: None,  # the diagnostics, not read here
         connected=Connected(devices=list(listed), choosing=True),
         pages=types.SimpleNamespace(get_visible_child_name=lambda: "overview"),
         _clear_device_pages=lambda: None, show_overview=lambda: None,

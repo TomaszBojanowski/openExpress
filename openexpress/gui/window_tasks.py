@@ -134,6 +134,24 @@ def show_working(button: Gtk.Button):
     return restore
 
 
+# How long a task that writes to the device waits for its diagnostics at most.
+DIAGNOSTICS_WAIT_S = 120
+
+
+def wait_for_the_diagnostics(session, fn) -> None:
+    """A work that writes to the device (writes_to_device) waits, in its thread, until the
+    device's diagnostics are read (device_page.read_diagnostics, in the background after its
+    page is shown), so that their copy is of the device before any change; any other work
+    goes on at once."""
+    reading = getattr(session, "diagnostics_reading", None)
+    if reading is None or reading.is_set() or not getattr(fn, "writes_to_device", False):
+        return
+    log.info("task: waits until the diagnostics of the device are read")
+    if not reading.wait(DIAGNOSTICS_WAIT_S):
+        log.info("task: the diagnostics still not read after %d s, it goes on",
+                 DIAGNOSTICS_WAIT_S)
+
+
 def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | None]:
     """(free space, capacity) of the device, asked of it: never on the window's thread. The
     capacity is asked only when it is not given (it does not change). What cannot be asked
@@ -351,6 +369,7 @@ class TaskRunner:
 
         def worker():
             try:
+                wait_for_the_diagnostics(started, fn)
                 result = fn()
             except Exception as e:  # noqa: BLE001 - every failure of a task is shown
                 GLib.idle_add(finish_error, e)
