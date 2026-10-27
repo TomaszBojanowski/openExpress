@@ -8,8 +8,10 @@ row_subtitle), the free space of the device read again after a task that writes 
 collection of reference cycles after it (collect_garbage) and an error nobody expected, in
 the log (log_unexpected).
 
-Has: busy and _waiting (a task runs; a wait moves the bar), _action_buttons (the buttons of
-the pages still in the window), the space of the session (session.space, refresh_space).
+Has: busy and _waiting (a task runs; a wait moves the bar), _task_lets_close (the task under
+way lets the window close: lets_the_window_close, gui/tasks.py), _action_buttons (the
+buttons of the pages still in the window), the space of the session (session.space,
+refresh_space).
 Uses: session, toasts, banner, the bar as _build_layout made it (action_bar, busy_spinner,
 progress_bar, progress_label, unplug_label, stop_wait_button), storage_row and storage_bar
 (the device page), _update_actions, _run_pending_refresh."""
@@ -28,6 +30,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress.errors import UserFacingError  # noqa: E402
+from openexpress.gui.tasks import WindowClosed  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
 from openexpress.progress import TimedWait, Waiting  # noqa: E402
@@ -317,6 +320,8 @@ class TaskRunner:
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
+        # The window may close during it (_on_close_request).
+        self._task_lets_close = bool(getattr(fn, "lets_the_window_close", False))
         has_device = device and self.session is not None
         started = self.session
         restore, reveal = None, [0]
@@ -339,6 +344,7 @@ class TaskRunner:
                 GLib.source_remove(reveal[0])  # done before its words were due
                 reveal[0] = 0
             collect_garbage()
+            self._task_lets_close = False
             self.set_busy(False)
             if restore is not None:
                 restore(True)
@@ -367,6 +373,9 @@ class TaskRunner:
             return False
 
         def finish_error(e):
+            if isinstance(e, WindowClosed):  # stopped as the window closed: nothing to tell
+                ended()
+                return False
             if isinstance(e, UserFacingError):
                 # A message for the user (the device not ready, a refusal, an answer of a
                 # server): one line, as the user is told.

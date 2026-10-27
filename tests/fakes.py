@@ -8,16 +8,18 @@ Call = namedtuple("Call", "title fn done failed device in_page button")
 
 
 class RunNow:
-    """run_task of the window (TaskRunner, gui/window_tasks.py), run at once: the work on this thread (or, with
-    `thread=True`, in another, waited for), then `done(result)` outside any try, as the
-    window calls it; an error of the work goes to `failed(error)`, and one it does not take
-    to `error`: "raise" (the default: an error nobody expected fails the test), "record"
-    (its words in `errors`) or a function (title, words), as the window's `error`. A
-    `button` spins during the work and is back before done or failed, as in the window; a
-    work marked writes_to_device is noted in `written` (the window reads the free space
-    again then). Every call is kept in `calls` (`titles` for their titles); `on_call(call)`
-    runs before the work and `before_done()` between it and done or failed. Unlike the
-    window: no check of `busy`, no bar, no pending refresh afterwards."""
+    """run_task of the window (TaskRunner, gui/window_tasks.py), run at once: the work on
+    this thread (or, with `thread=True`, in another, waited for), then `done(result)`
+    outside any try, as the window calls it; an error of the work goes to `failed(error)`,
+    and one it does not take to `error`: "raise" (the default: an error nobody expected
+    fails the test), "record" (its words in `errors`) or a function (title, words), as the
+    window's `error`. WindowClosed (the work stopped as the window closed) ends the task
+    without done, failed or error, as in the window. A `button` spins during the work and
+    is back before done or failed, as in the window; a work marked writes_to_device is noted
+    in `written` (the window reads the free space again then). Every call is kept in
+    `calls` (`titles` for their titles); `on_call(call)` runs before the work and
+    `before_done()` between it and done or failed. Unlike the window: no check of `busy`,
+    no bar, no pending refresh afterwards."""
 
     def __init__(self, error="raise", thread=False, on_call=None, before_done=None):
         self.error, self.thread = error, thread
@@ -59,8 +61,12 @@ class RunNow:
             self.before_done()
         if restore is not None:
             restore(True)
+        from openexpress.gui.tasks import WindowClosed
+
         try:
-            if raised:
+            if raised and isinstance(raised[0], WindowClosed):
+                pass  # stopped as the window closed: nothing to tell
+            elif raised:
                 self._failed(title, raised[0], failed)
             elif done is not None:
                 done(result[0])

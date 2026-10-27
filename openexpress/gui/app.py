@@ -205,6 +205,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._detect_after_task = False
         self._last_sync_children: list[Gtk.Widget] = []
         self._close_dialog = None
+        self._task_lets_close = False  # the task under way lets the window close
         # The start page: (tile, what it opens) in the order given to the page, which hands
         # back the place of the tile clicked; what it opens (OPEN: the open device's view; a
         # FoundDevice to open; a KnownDevice or an entry of the account to show read-only) is
@@ -478,7 +479,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.split.set_show_content(True)
 
     def _on_close_request(self, _win) -> bool:
-        if not self.busy:
+        if not self.busy or self._task_lets_close:
             self._remember_geometry()
             netstatus.STATUS.remove_listener(self._net_listener)
             self._closed = True
@@ -562,7 +563,7 @@ class App(Adw.Application):
     def request_quit(self) -> None:
         win = self.main_window(create=False)
         if win is not None and win.busy:
-            win.close()  # refused by close-request, which explains why
+            win.close()  # close-request refuses and says why, unless the task lets it close
             return
         if win is not None:
             # quit() skips close-request: the size is saved as when the window is closed.

@@ -269,7 +269,7 @@ def test_open_on_github_keeps_the_report_open_only_with_the_log(click, device_ro
 def test_closing_while_a_task_runs_asks_to_wait(click):
     from openexpress.gui.app import MainWindow
 
-    win = _window(busy=True, _close_dialog=None)
+    win = _window(busy=True, _close_dialog=None, _task_lets_close=False)
     assert MainWindow._on_close_request(win, None) is True  # the window stays
     assert win._close_dialog is not None
     click("OK", until=lambda: win._close_dialog is None and not click.shown[-1].get_mapped())

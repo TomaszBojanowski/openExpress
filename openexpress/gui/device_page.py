@@ -17,7 +17,7 @@ in_background, progress, toast, _button, the loading of the other pages (load_up
 load_maps, load_apps, load_music), select_section, refresh_device, _poll_usb, _retry_sources,
 _show_start, _show_device_view, _on_start_page, _is_open, _update_tile_chips,
 _activities_counted, _update_actions, _ownership_title, _auto_sync_row, login, logout,
-choose_dll."""
+choose_dll, _closed (a backup stops once the window is closed)."""
 from __future__ import annotations
 
 import logging
@@ -60,7 +60,11 @@ from openexpress.gui.pictures import (  # noqa: E402
 )
 from openexpress.gui.preferences import resolve_account  # noqa: E402
 from openexpress.gui.start import kind_icon  # noqa: E402
-from openexpress.gui.tasks import writes_to_device  # noqa: E402
+from openexpress.gui.tasks import (  # noqa: E402
+    lets_the_window_close,
+    stop_when_closed,
+    writes_to_device,
+)
 from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     log_unexpected,
@@ -1191,10 +1195,12 @@ class DevicePage:
         s = self.session
         if not s:
             return
+        # Closing the window stops it, and its unfinished copy is removed.
         self.run_task(
             _("Creating backup…"),
-            lambda: run_backup(s.device, s.storage, paths.default_backup_dir(),
-                               progress=self.progress),
+            lets_the_window_close(
+                lambda: run_backup(s.device, s.storage, paths.default_backup_dir(),
+                                   progress=stop_when_closed(self, self.progress))),
             lambda r: (self.toast(ngettext("Copied {count} file to {path}",
                                            "Copied {count} files to {path}",
                                            r.files).format(count=r.files, path=r.path)),
