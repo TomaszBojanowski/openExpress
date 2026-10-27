@@ -537,8 +537,9 @@ copy to the device is running.
   used, never the unit ID or the backtrace in it. Where it found them and the device's other
   diagnostic files is kept (`diagnostic-places.json`, the paths only, in the device's folder
   named below), so that the next openings read them there without looking through the
-  device's folders; when one is gone, or something it looked for in vain is there now, it
-  looks through them again. With **Preferences → Diagnostics** turned on
+  device's folders; when one is gone, or the device has other software, it looks through
+  them again (what was not there is looked for again only then). With **Preferences →
+  Diagnostics** turned on
   (off by default; `openexpress setup --diagnostics-copy on`), the window also copies, once
   per connection and through the ordinary connection, the diagnostic files the device shows:
   `Garmin/Debug`, the folders of its diagnostic data types and its event logs. Health

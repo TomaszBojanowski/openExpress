@@ -70,6 +70,7 @@ class Device(LocalStorage):
         self.sessions = 0
         self.reads = []
         self.lists = []
+        self.infos = []
         self.blocked = False
 
     def _read(self, real_path):
@@ -79,6 +80,10 @@ class Device(LocalStorage):
     def _list(self, real_path):
         self.lists.append(real_path)
         return super()._list(real_path)
+
+    def info(self, real_path):
+        self.infos.append(real_path)
+        return super().info(real_path)
 
     def usb_blocked(self):
         return self.blocked
@@ -749,6 +754,7 @@ def _connected_again(st):
     st.usb.address += 1  # plugged in again: a new connection (at_open is once per connection)
     st.lists.clear()
     st.reads.clear()
+    st.infos.clear()
 
 
 def _same(a, b):
@@ -788,9 +794,23 @@ def test_a_place_gone_is_looked_for_again(device, clock):
     assert st.lists == []  # the note made anew holds
 
 
-def test_a_place_not_there_before_is_looked_for_once_it_is(device, clock):
+def test_the_places_not_there_are_not_asked_about_again(device, clock):
+    """A path looked for in vain (the event logs, err_log.txt…) is kept as not there: the next
+    openings ask the device about the places found only (on a Venu 2, 4 of its 9 questions
+    were about paths it does not have, 27.10.2026)."""
+    st, dev = device
+    diagnostics.at_open(dev, st)
+    absent = json.loads(diagnostics.places_path(UNIT).read_text())["absent"]
+    assert "GARMIN/EVNTLOGS" in absent
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert st.infos and not set(st.infos) & set(absent) and st.lists == []
+
+
+def test_a_place_not_there_before_is_looked_for_with_other_software(device, clock):
     """Event logs the device did not show at first (a hidden folder, Copy Crash Logs offered)
-    and shows now: looked through again, and the button is no longer offered."""
+    and shows now: not seen while the note holds; with other software on the device, looked
+    through again, and the button is no longer offered."""
     st, dev = device
     first = diagnostics.at_open(dev, st)
     assert first.hidden_logs
@@ -798,7 +818,11 @@ def test_a_place_not_there_before_is_looked_for_once_it_is(device, clock):
     events.mkdir()
     (events / "E1.TXT").write_text("events")
     _connected_again(st)
-    again = diagnostics.at_open(dev, st)
+    assert diagnostics.at_open(dev, st).hidden_logs and st.lists == []
+    newer = parse(st.read("GARMIN/GarminDevice.xml").replace(
+        b"<SoftwareVersion>2339<", b"<SoftwareVersion>2340<"))
+    _connected_again(st)
+    again = diagnostics.at_open(newer, st)
     assert st.lists and not again.hidden_logs
 
 

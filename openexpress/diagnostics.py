@@ -605,8 +605,9 @@ def _strings(value) -> list[str]:
 def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
                    with_files: bool) -> Seen | None:
     """What is at the places kept now, each read alone, nothing listed; None when the note
-    no longer holds: a path gone, one looked for before and there now, other software on
-    the device, the files a copy takes not looked for yet, or a damaged note."""
+    no longer holds: a path gone, other software on the device, the files a copy takes not
+    looked for yet, or a damaged note. The paths looked for in vain are not asked about (on
+    a Venu 2, 4 of 9 questions, 27.10.2026): one there now is seen with other software."""
     try:
         if note.get("software_version") != device.software_version_str:
             return None
@@ -615,7 +616,8 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
             return None
         err_logs, dumps = _strings(note["err_logs"]), _strings(note["dumps"])
         files = _strings(kept_files) if with_files else []
-        absent, folders = _strings(note["absent"]), _strings(note["folders"])
+        folders = _strings(note["folders"])
+        _strings(note["absent"])  # kept with the note, not asked about
         event_logs = note["event_logs"]
         if not isinstance(event_logs, bool):
             return None
@@ -628,8 +630,6 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
             entries[path] = storage.info(path)
         return entries[path]
 
-    if any(at(path) is not None for path in absent):
-        return None
     if any(at(path) is None or not at(path).is_dir for path in folders):
         return None
     if any(at(path) is None or at(path).is_dir for path in (*err_logs, *dumps, *files)):
