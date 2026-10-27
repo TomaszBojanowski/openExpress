@@ -305,7 +305,7 @@ class AppsPage:
 
         rows = []
         for copy, plan in choices:
-            # The apps to move, not the positions that change (25.10.2026).
+            # The apps to move, not the positions that change.
             moved = ciq.apps_moved(plan)
             rows.append((ciq.copy_title(copy),
                          ciq.order_difference(plan) if moved else _("The same order as now"),
@@ -344,7 +344,7 @@ class AppsPage:
                            _("There are no copies of the app list yet. A copy is made before "
                              "every change of the apps on the device."))
                 return
-            # Only the copies that would change something (25.10.2026).
+            # Only the copies that would change something.
             rows = [(row, choice) for row, choice in zip(self._order_rows(choices), choices)
                     if row[2]]
             if not rows:
