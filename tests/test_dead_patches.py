@@ -167,5 +167,5 @@ def _asks_the_time(path: Path) -> bool:
 
 def test_the_clock_stands_in_every_module_of_the_window_that_asks_the_time():
     asking = {f"openexpress.gui.{p.stem}" for p in GUI.glob("*.py") if _asks_the_time(p)}
-    assert "openexpress.gui.app" in asking  # the guard itself sees them
+    assert "openexpress.gui.start_window" in asking  # the guard itself sees them
     assert sorted(asking - _clock_modules()) == []

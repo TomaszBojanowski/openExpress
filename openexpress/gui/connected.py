@@ -15,6 +15,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from openexpress.device.gio_storage import DeviceSummary, FoundDevice
+
 
 def uris(summaries) -> frozenset[str]:
     """The addresses of these entries, without the trailing slash."""
@@ -37,6 +39,17 @@ def open_address(s) -> str | None:
 def open_unit(s) -> int | None:
     """The unit ID of the open device (compared in memory only, never shown), or None."""
     return getattr(getattr(s, "device", None), "unit_id", None) or None
+
+
+def session_summary(s) -> DeviceSummary:
+    """The open device as an entry of the start page (never its address in a label)."""
+    d = s.device
+    kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
+    found = FoundDevice(str(getattr(s.storage, "device_uri", "") or ""), "", True, kind=kind)
+    summary = DeviceSummary(found, d.description, d.part_number, d.software_version_str,
+                            d.unit_id or None)
+    summary.to_sync = getattr(s, "to_sync", None)  # as the thread that opened it counted
+    return summary
 
 
 @dataclass
