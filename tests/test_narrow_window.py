@@ -197,6 +197,12 @@ def _fill(win, page: str) -> str:
     drive = page.endswith("-drive")
     model = INREACH if drive else EDGE if page.startswith(("device", "updates")) else FENIX
     win.session = _session(_device(*model), drive=drive)
+    if page == "device-off-account":
+        # Not on the account, no picture from unit-info: Get Picture From Account offered.
+        from openexpress.connect import NotAccountDevice
+
+        win.session.ownership_error = NotAccountDevice("not on the account")
+        win.account_picture_offer = win.session
     win.update_state = "ready" if page == "device-update-copied" else "available"
     win.update_count = 1
     # The one update to install: the longest name of a component ("Device software").
@@ -309,7 +315,8 @@ def _min_width(widget) -> int:
     return widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
 
 
-DEVICE_PAGES = ["device", "device-update-copied", "updates-beta", "updates-beta-drive",
+DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "updates-beta",
+                "updates-beta-drive",
                 "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
                 "music"]
 

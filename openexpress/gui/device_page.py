@@ -11,7 +11,8 @@ device_error_group, device_image, device_picture, device_title), the state of it
 _update_check_session, updates_cache) and of its maps (map_state, map_update_count, maps_cache,
 map_cleanup, _map_check_session), the counts of the Apps and Music pages (apps_count,
 music_count), "Last sync" (_last_sync_data, _last_sync_children, _last_sync_monitor),
-_banner_kind, _action_buttons.
+_banner_kind, _action_buttons, Get Picture From Account (account_picture_row,
+account_picture_offer).
 Uses: session, sections, pages, banner, start, connected, _account, busy, run_task,
 in_background, progress, toast, _button, the loading of the other pages (load_updates,
 load_maps, load_apps, load_music), select_section, refresh_device, _poll_usb, _retry_sources,
@@ -291,6 +292,85 @@ def show_device_name(win, s) -> None:
     title = getattr(win, "device_title", None)
     if win.session is s and title is not None:
         title.set_label(device_name(s))
+
+
+# Why the picture work found no picture: unit-info gave no address of one.
+NO_ADDRESS = "unit-info gave no address"
+
+
+def offers_account_picture(s) -> bool:
+    """Whether the page may offer Get Picture From Account: a device not on the account
+    (the ownership check said so), the user logged in, not a drive."""
+    return (s is not None and s.logged_in and isinstance(s.ownership_error, NotAccountDevice)
+            and not getattr(s, "mass_storage", False))
+
+
+def account_picture_row(win, s):
+    """The row "Device picture" of the group of the account, with Get Picture From Account:
+    shown once the picture work found none (show_account_picture_offer)."""
+    row = Adw.ActionRow(
+        title=_("Device picture"),
+        subtitle=_("Garmin's update server has none. Getting it sends the Unit ID of this "
+                   "device to your Garmin Connect account."),
+        visible=getattr(win, "account_picture_offer", None) is s)
+    row.add_suffix(win._button(_("Get Picture From Account"),
+                               lambda button: get_picture_from_account(win, button),
+                               with_button=True))
+    win.account_picture_row = row
+    return row
+
+
+def show_account_picture_offer(win, s) -> None:
+    """Offer Get Picture From Account for `s`, the open device (its row, when it is built)."""
+    win.account_picture_offer = s
+    row = getattr(win, "account_picture_row", None)
+    if row is not None:
+        row.set_visible(True)
+
+
+def _no_account_picture_offer(win) -> None:
+    win.account_picture_offer = None
+    row = getattr(win, "account_picture_row", None)
+    if row is not None:
+        row.set_visible(False)
+
+
+def get_picture_from_account(win, button=None) -> None:
+    """Get Picture From Account: the one request that names this device, which is not on the
+    account, to the user's Garmin Connect account (device-info), on this click only. The
+    picture goes into the cache as any other, its address is kept with the device, and the
+    button is not offered again once the account has answered."""
+    s = win.session
+    if s is None:
+        return
+    part = s.device.part_number
+
+    def work():
+        url = s.client.device_image_url_off_account(s.device.unit_id)
+        if not url:
+            return None, "the account gave no address"
+        remember_picture_address(s.device, url)
+        path, why = download_picture(s.client.http, url, device_picture_path(part).name)
+        return (path, "") if path else (None, f"download refused: {why}")
+
+    def done(result):
+        path, why = result
+        texture = load_texture(path) if path else None
+        _no_account_picture_offer(win)
+        if texture is None:
+            log.info("device picture: none from the account, asked on request (%s)",
+                     why or "the file is not a picture")
+            win.toast(_("Your Garmin Connect account has no picture of this device"))
+            return
+        log.info("device picture: from the account, asked on request")
+        pictures.keep(win, part, texture)
+        start_page = getattr(win, "start", None)
+        if start_page is not None:
+            start_page.set_picture(part, texture)  # its tile on the start page as well
+        if win.session is s:
+            win._set_device_texture(texture)
+
+    win.run_task(_("Getting the picture…"), work, done, device=False, button=button)
 
 
 def read_diagnostics(win) -> None:
@@ -861,6 +941,8 @@ class DevicePage:
                     g.add(Adw.ActionRow(title=_("Primary wearable"),
                                         subtitle=GLib.markup_escape_text(
                                             primary_wearable_text(wearable))))
+        if offers_account_picture(s):
+            g.add(account_picture_row(self, s))
 
         g = sec.group(_("Tools"))
         if not mass_storage:  # D6: no backup of a device in mass storage mode
@@ -996,7 +1078,7 @@ class DevicePage:
             url = picture_from_unit_info(s.client, s.device,
                                          ask=lambda: service.unit_info(s))
             if not url:
-                return None, "unit-info gave no address"
+                return None, NO_ADDRESS
             remember_picture_address(s.device, url)
             path, why = download_picture(s.client.http, url, name)
             return (path, "unit-info") if path else (None, f"download refused: {why}")
@@ -1011,6 +1093,8 @@ class DevicePage:
                     # Still the icon (a picture in the cache returns before this work);
                     # unit-info may have told the kind meanwhile (a bike accessory).
                     self.device_image.set_from_icon_name(device_view_icon(self, s))
+                    if path is None and source == NO_ADDRESS and offers_account_picture(s):
+                        show_account_picture_offer(self, s)
                 return
             log.info("device picture: from %s", source)
             pictures.keep(self, part, texture)

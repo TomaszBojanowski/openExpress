@@ -588,7 +588,11 @@ copy to the device is running.
   after the cache is cleared. Of the answer, the log names only the map update type (which
   map service Garmin uses for the model) and, for a device whose kind Garmin does not tell
   otherwise, the market segment and the connect support – always with the part number
-  only – as it names the account's categories of such a device.
+  only – as it names the account's categories of such a device. When that server gives no
+  picture of a device that is not on your account, its page offers **Get Picture From
+  Account**: only that click asks your Garmin Connect account for the picture, and that
+  request sends the device's unit ID to your account. Nothing else asks the account about a
+  device that is not on it.
 - openExpress identifies itself to Garmin's servers: every request carries the header
   `User-Agent: openexpress/<version> (Linux)`; the sign-in window is a web browser with its
   own. It uses the Garmin Express client headers so that the servers answer, but it does not

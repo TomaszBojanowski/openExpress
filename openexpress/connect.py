@@ -458,6 +458,16 @@ class GarminClient:
     def device_image_url(self, unit_id: int) -> str | None:
         """Product picture of the watch, from the device registered in Garmin Connect."""
         self.require_verified(unit_id)
+        return self._device_info_image(unit_id)
+
+    def device_image_url_off_account(self, unit_id: int) -> str | None:
+        """The product picture Garmin Connect gives for a device that is not on the account,
+        asked only when the user asks for it on the device page ("Get Picture From
+        Account"): the request names the device's unit ID to the account, which nothing the
+        program does on its own may do."""
+        return self._device_info_image(unit_id)
+
+    def _device_info_image(self, unit_id: int) -> str | None:
         what = _("Device info")
         r = self._connect("GET", f"device-service/deviceservice/device-info/{unit_id}", what)
         body = lower_keys(self._json(r, what))
