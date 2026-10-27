@@ -4,8 +4,9 @@
 work in the background (in_background), toasts and error messages, the action buttons. The
 functions: the widgets of a page (still_in_window, wrapping_row, trash_button, show_working,
 row_subtitle), the free space of the device read again after a task that writes to it
-(read_space, render_space, refresh_space), the name of a task in the log (task_name) and the
-collection of reference cycles after it (collect_garbage).
+(read_space, render_space, refresh_space), the name of a task in the log (task_name), the
+collection of reference cycles after it (collect_garbage) and an error nobody expected, in
+the log (log_unexpected).
 
 Has: busy and _waiting (a task runs; a wait moves the bar), _action_buttons (the buttons of
 the pages still in the window), the space of the session (session.space, refresh_space).
@@ -215,6 +216,12 @@ def collect_garbage() -> bool:
     """Free reference cycles now. Always called on the GTK thread; True keeps a timer going."""
     gc.collect()
     return True
+
+
+def log_unexpected(what: str, exc_info) -> None:
+    """An exception the window did not expect: to the log as ERROR, with its traceback
+    (filtered, as every line), as the command line writes one."""
+    log.error("unexpected error %s: %s", what, exc_info[0].__name__, exc_info=exc_info)
 
 
 class TaskRunner:

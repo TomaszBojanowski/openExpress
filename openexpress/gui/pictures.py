@@ -4,10 +4,10 @@ in the window (`win._device_textures`, never None in it); the tiles and those pa
 cache or the account's address of the picture in the background (with_device_picture), the
 device view reads the cache at once and asks its own sources (the account by unit ID,
 unit-info) itself - all of them keep what they found here. Below: a picture downloaded into
-the cache (download_picture, cached_download) and read (load_texture), the address of the
-picture and the kind of the device from Garmin's update server (picture_from_unit_info,
-note_segment, is_bike_accessory), moved here from gui/app.py; their lines of the log are the
-window's, as before.
+the cache (download_picture, cached_download) and read (load_texture, cached_texture), the
+address of the picture and the kind of the device from Garmin's update server
+(picture_from_unit_info, note_segment, is_bike_accessory), moved here from gui/app.py; their
+lines of the log are the window's, as before.
 
 Has: win._device_textures, win._pictures_asked, win._pictures_waiting.
 Uses: win.in_background."""
@@ -254,3 +254,10 @@ def load_texture(path: Path):
         return Gdk.Texture.new_from_filename(str(path))
     except GLib.Error:
         return None
+
+
+def cached_texture(part: str):
+    """The picture of a part number in the cache, read now; None: no file, or not a
+    picture. The one reader of the cache for every view."""
+    path = device_picture_path(part)
+    return load_texture(path) if path.exists() else None

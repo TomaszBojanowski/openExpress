@@ -5,9 +5,10 @@ Preferences is a mixin of MainWindow (gui/app.py), without __init__ of its own.
 
 Has: _preferences, _account_row and _storage (while the preferences are open; cleared when
 they close), gui_settings, _account and _account_why (after a logout), session (dropped when
-the account changes).
+the account changes), _account_wanted (resolve_account, after a detection).
 Uses: busy, run_task, error, toast, _button, refresh_device, show_overview, _want_account,
-get_application; TaskRunner.in_background (gui/window_tasks.py)."""
+_set_account, _fetch_account, get_application; TaskRunner.in_background
+(gui/window_tasks.py)."""
 from __future__ import annotations
 
 import logging
@@ -211,6 +212,24 @@ def account_changed(win, cause: Cause = Cause.ACCOUNT_CHANGED) -> None:
     reopen = open_address(win.session) or None
     win.session = None
     win.refresh_device(cause=cause, reopen=reopen)
+
+
+def resolve_account(win) -> None:
+    """After a detection: the account's devices for the start page from the device just
+    opened (its ownership check read them, also when it is not on the account), else, if
+    they are wanted, asked now."""
+    s = win.session
+    listed = getattr(s, "account_devices", None) if s is not None else None
+    if listed is None and s is not None:
+        listed = getattr(getattr(s, "ownership_error", None), "devices", None)
+    if listed is not None:
+        win._account_wanted = False
+        # Not asked again; kept as any list of the account is, with the kinds it tells (Q4).
+        # The caller draws the page shown, after deciding where the user goes.
+        win._set_account(listed, draw=False)
+    elif getattr(win, "_account_wanted", False):
+        win._account_wanted = False
+        win._fetch_account()
 
 
 class Preferences:
