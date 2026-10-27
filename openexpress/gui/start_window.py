@@ -67,8 +67,8 @@ class StartView:
     sections show their devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1
     devices in a section, each section on its own), a grid or a list for all of them. Kept
     in gui.json (KEY); a change draws the start page again from what is known
-    (_render_start), the devices are not asked. All of it here, to go with the start page
-    when app.py is split further."""
+    (_render_start), the devices are not asked. All of it in this class, next to the start
+    page of the window."""
 
     KEY = "start_view"
     ACTION = "start-view"  # win.start-view, whose state is the view

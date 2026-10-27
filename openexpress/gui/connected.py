@@ -7,8 +7,10 @@ mounts of those already listed bring nothing new, the start page draws their til
 `usb_when_listed` is what was on USB when the list was made, so that a device plugged in or
 out without a mount event is noticed. `drawn` is what the start page last showed, and may be
 older than `devices` (they are read again without drawing while another page is shown): it
-tells whether the user saw the devices connected now. Nothing here opens, mounts or asks
-anything; addresses are compared in memory only."""
+tells whether the user saw the devices connected now. Next to it: the addresses and unit
+IDs of entries (uris, unit_ids), those of the open device (open_address, open_unit) and the
+open device as an entry of the start page (session_summary). Nothing here opens, mounts or
+asks anything; addresses are compared in memory only."""
 
 from __future__ import annotations
 

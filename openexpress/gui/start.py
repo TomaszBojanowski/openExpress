@@ -509,7 +509,8 @@ class StartPage:
         self.notice_icon.set_visible(not busy)
 
     def set_account_note(self, text: str | None) -> None:
-        """The sentence under the tiles about the account (app.account_note); None: none."""
+        """The sentence under the tiles about the account (start_window.account_note);
+        None: none."""
         if text:
             self.account_note.set_label(text)
         self.account_note.set_visible(bool(text))

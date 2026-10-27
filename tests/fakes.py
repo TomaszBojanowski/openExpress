@@ -8,7 +8,7 @@ Call = namedtuple("Call", "title fn done failed device in_page button")
 
 
 class RunNow:
-    """run_task of the window (gui/app.py), run at once: the work on this thread (or, with
+    """run_task of the window (TaskRunner, gui/window_tasks.py), run at once: the work on this thread (or, with
     `thread=True`, in another, waited for), then `done(result)` outside any try, as the
     window calls it; an error of the work goes to `failed(error)`, and one it does not take
     to `error`: "raise" (the default: an error nobody expected fails the test), "record"

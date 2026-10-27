@@ -14,7 +14,7 @@ import uuid
 import pytest
 from fakes import record_sync
 
-NARROWEST = 360  # gui.app.MIN_WINDOW
+NARROWEST = 360  # the width of gui_settings.MIN_WINDOW
 FONT = "Adwaita Sans 11"
 # The widest common title bar: three buttons of the window (as on Fedora's GNOME, which the
 # window was measured on); GNOME's own default has only "close".
