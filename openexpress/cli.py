@@ -41,7 +41,7 @@ from openexpress.updates import FINISH_STEPS
 log = logging.getLogger(__name__)
 
 
-_human = human_size  # the name the commands and the window use
+_human = human_size  # the name the commands use
 
 # The exit code of `sync --apply` when the first sync with this program waits for a choice
 # (baseline or --all): not 2, which argparse gives a wrong command line (README, "Exit
@@ -942,7 +942,7 @@ def _load_maps(args, client, own: bool = False):
     from openexpress import maps as mp
 
     st, dev = open_device(args)
-    if args.path:  # a folder (maybe a copy): the universal map service, as before
+    if args.path:  # a folder (maybe a copy): the universal map service
         all_maps, listed = mp.read_maps(client.universal_maps(dev.raw))
         mp.apply_restrictions(all_maps)  # no account for a folder: a restricted map is marked
     else:  # MapsNotSupported when Garmin serves the device's maps another way
@@ -1280,7 +1280,7 @@ def _apps_order(args, dev, st, state) -> int:
         print(_("Copies of the app list (OUT.BIN); entries on the device now: {count}").format(
             count=len(state.listed)))
         for c in copies:
-            # The same measure as the window: the apps to move (25.10.2026).
+            # The same measure as the window: the apps to move.
             plan = ciq.plan_order(state, c.state)
             print("  " + _("{name}: {entries} entries, {difference}").format(
                 name=c.name, entries=len(c.state.apps), difference=ciq.order_difference(plan)))
@@ -1874,7 +1874,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lang", metavar="LANG",
                    help=_("interface language, e.g. {examples}").format(
                        examples=", ".join(i18n.available_languages())))
-    # A device in mass storage mode is found by itself (since 0.6.4), like an MTP device.
+    # A device in mass storage mode is found by itself, like an MTP device.
     p.add_argument("--path",
                    help=_("a folder with a copy of a device's files, instead of a connected "
                           "device"))
