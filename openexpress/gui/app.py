@@ -28,13 +28,11 @@ from openexpress import (  # noqa: E402
     cache,
     devicelist,
     diagnostics,
-    download,
     i18n,
     known_devices,
     last_sync,
     netstatus,
     paths,
-    picture_urls,
     service,
     sync,
     tile_facts,
@@ -126,7 +124,19 @@ from openexpress.gui.netstatus_view import (  # noqa: E402, F401 - also gui.app.
     _render_net_status_later,
     _render_net_status_on_show,
 )
-from openexpress.gui.pictures import device_picture_path, with_device_picture  # noqa: E402
+from openexpress.gui.pictures import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    PNG_SIGNATURE,
+    bike_accessory_text,
+    cached_download,
+    device_picture_path,
+    download_picture,
+    is_bike_accessory,
+    load_texture,
+    note_segment,
+    picture_from_unit_info,
+    picture_target,
+    with_device_picture,
+)
 from openexpress.gui.report_dialog import ReportDialog  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage, kind_icon  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
@@ -156,7 +166,6 @@ from openexpress.settings import (  # noqa: E402
     save_consumer,
 )
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
-from openexpress.useragent import USER_AGENT  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
@@ -624,102 +633,7 @@ def show_account_note(win, entries) -> None:
                                if entries else None)
 
 
-def picture_target(name: str) -> Path | None:
-    """cache/images/<name>, the name from a server (an app ID, a part number): None when it
-    is no plain file name or would leave the cache (nothing is saved then)."""
-    images = paths.cache_dir() / "images"
-    if not paths.is_safe_component(name) or not paths.is_inside(images / name, images):
-        log.info("picture: a name from the server is no file name here, not saved")
-        return None
-    return images / name
-
-
-def cached_download(http, url: str, name: str) -> Path | None:
-    """Downloads a small file (picture, icon) once into the cache."""
-    target = picture_target(name)
-    if target is None:
-        return None
-    if target.exists() and target.stat().st_size:
-        return target
-    try:
-        url = download.secure_url(url)  # HTTPS only, as every download
-    except download.DownloadError:
-        log.info("picture: not an HTTPS address, not asked")
-        return None
-    try:
-        resp = http.get(url, timeout=20)
-        if not resp.ok or not resp.content:
-            return None
-    except Exception:  # noqa: BLE001 - pictures are optional
-        return None
-    with cache.using():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(resp.content)
-    return target
-
-
 DEVICE_PICTURE_SIZE = 180
-
-
-# A picture of a device model is taken only from an address picture_urls allows, as a PNG or
-# a JPEG (its type and its first bytes agree), small and quickly, or the generic icon stays.
-PICTURE_MAX_BYTES = 2 * 1024 * 1024
-PICTURE_TIMEOUT_S = 15
-PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-PICTURE_SIGNATURES = {"image/png": PNG_SIGNATURE, "image/jpeg": b"\xff\xd8\xff"}
-
-
-def picture_from_unit_info(client, device, ask=None) -> str | None:
-    """The address of the device's picture according to Garmin's update server. The rest of
-    the answer (unit ID, serial number…) is dropped here and goes nowhere. `ask` gives the
-    answer (the one of the session, service.unit_info); none: it is asked here."""
-    try:
-        info = ask() if ask is not None else client.unit_info(device.unit_id,
-                                                              device.part_number)
-    except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
-        log.info("device picture: unit-info failed (%s)", type(e).__name__)
-        return None
-    note_segment(device, info)
-    url = info.get("graphicurl") if isinstance(info, dict) else None
-    return url if isinstance(url, str) and url else None
-
-
-def note_segment(device, info) -> None:
-    """Keep the kind Garmin's update server tells in an answer the window asked for (for a
-    picture, after an update, for a drive whose kind is not told): a bike accessory (e.g. a
-    Varia). Only this field, its connect support and the map update type are read. A segment
-    that tells no kind the program knows goes to the log with the part number and the connect
-    support (devicelist.note_kind_evidence); the map update type always, once a model
-    (devicelist.note_map_update_type)."""
-    segment = info.get("segmenttype") if isinstance(info, dict) else None
-    bike_accessory = isinstance(segment, str) and segment.casefold() == "bikeaccessory"
-    if bike_accessory:
-        known_devices.set_category(device.unit_id, known_devices.BIKE_ACCESSORY)
-    if isinstance(info, dict):
-        support = info.get("connectsupport")
-        devicelist.note_kind_evidence(
-            getattr(device, "part_number", "") or "",
-            segment=segment if isinstance(segment, str) and segment else "none given",
-            kind=known_devices.BIKE_ACCESSORY if bike_accessory else None,
-            connect_support=support if isinstance(support, str) and support else "none given")
-        devicelist.note_map_update_type(getattr(device, "part_number", "") or "",
-                                        info.get("mapupdatetype"))
-
-
-def is_bike_accessory(client, device, ask=None) -> bool:
-    """Whether Garmin's update server files the device as a bike accessory (e.g. a Varia),
-    which finishes an update once it is unplugged and switched on. Only this field of the
-    answer is read; the rest (unit ID, serial number…) goes nowhere. `ask` gives the answer
-    (the one of the session, service.unit_info); none: it is asked here."""
-    try:
-        info = ask() if ask is not None else client.unit_info(device.unit_id,
-                                                              device.part_number)
-    except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
-        log.info("software update: unit-info failed (%s)", type(e).__name__)
-        return False
-    note_segment(device, info)
-    segment = info.get("segmenttype") if isinstance(info, dict) else None
-    return isinstance(segment, str) and segment.casefold() == "bikeaccessory"
 
 
 def data_loss_text(session) -> str:
@@ -737,72 +651,6 @@ def data_loss_text(session) -> str:
                                "{count} activities on the device have not been uploaded yet.",
                                count).format(count=count)
     return text
-
-
-def bike_accessory_text() -> str:
-    """After an update was saved on a bike accessory: how the device finishes it."""
-    return _("Unplug the device and turn it on — it installs the update on its own and won't "
-             "work for a short while. The lights flash and may briefly go dark during the "
-             "install; when it's done, a light flashes green and the main light comes on.")
-
-
-def download_picture(http, url: str, name: str,
-                     clock=time.monotonic) -> tuple[Path | None, str]:
-    """Download a device picture into the cache: (file, "") or (None, why not). The file
-    keeps its name whether it is a PNG or a JPEG: GTK reads a picture by its content."""
-    target = picture_target(name)
-    if target is None:
-        return None, "not a file name"
-    url = picture_urls.upgraded(url)  # plain HTTP over HTTPS, as every download
-    why = picture_urls.refusal(url)  # the host at most, never the whole address
-    if why is not None:
-        said = picture_urls.query_said(url)  # whether it has a query, never what
-        return None, f"{why}; {said}" if said else why
-    deadline = clock() + PICTURE_TIMEOUT_S
-    data = bytearray()
-    try:
-        with http.get(url, headers={"User-Agent": USER_AGENT}, timeout=PICTURE_TIMEOUT_S,
-                      stream=True, allow_redirects=False) as resp:
-            if resp.status_code != 200:
-                return None, f"HTTP {resp.status_code}"
-            kind = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-            signature = PICTURE_SIGNATURES.get(kind)
-            if signature is None:
-                return None, "not a PNG or JPEG"
-            length = resp.headers.get("Content-Length") or ""
-            if length.isdigit() and int(length) > PICTURE_MAX_BYTES:
-                return None, "too large"
-            for chunk in resp.iter_content(64 * 1024):
-                data += chunk
-                if len(data) > PICTURE_MAX_BYTES:
-                    return None, "too large"
-                if clock() > deadline:
-                    return None, "timeout"
-    except Exception as e:  # noqa: BLE001 - pictures are optional
-        return None, "timeout" if "Timeout" in type(e).__name__ else "network error"
-    if not bytes(data).startswith(signature):
-        return None, "not a PNG or JPEG"
-    try:
-        with cache.using():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            partial = target.with_name(target.name + ".part")
-            partial.write_bytes(data)
-            partial.replace(target)  # never a half-written picture in the cache
-    except OSError:
-        return None, "cannot write the cache"
-    return target, ""
-
-
-def load_texture(path: Path):
-    """Picture as a texture, None when the file is no picture GTK can read (GTK reads PNG,
-    JPEG and TIFF itself and other formats, e.g. GIF, through its own loaders). The size is
-    left to the image that shows it: Gtk.Image fits a paintable to its pixel size."""
-    from gi.repository import Gdk
-
-    try:
-        return Gdk.Texture.new_from_filename(str(path))
-    except GLib.Error:
-        return None
 
 
 def trash_button(tooltip: str, cb) -> Gtk.Button:
