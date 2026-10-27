@@ -292,11 +292,13 @@ def replace_in_window(monkeypatch, name, value):
     e.g. "eject" or "Adw") in every module of the window (openexpress.gui.*) that holds the
     same object under it, never in gui.app alone: code moved out of gui/app.py (analysis 17)
     looks the name up in its new module, and a replacement in gui.app alone would do nothing
-    there, without failing (guard 3, test_dead_patches). The object is the one of gui.app;
-    a name gui.app does not hold must be one object in all the modules that hold it. A name
-    no module of the window holds fails at once. The tests ask for it through the fixture
-    in_the_window; a helper that gets `monkeypatch` calls it itself. Returns the names of the
-    modules it replaced the name in."""
+    there, without failing (guard 3, test_dead_patches). Every module that holds the name
+    must hold the same object (that of gui.app, when gui.app holds it): one that holds
+    another would keep it and its code would never see the replacement, so that fails,
+    naming it, before anything is replaced. A name no module of the window holds fails at
+    once. The tests ask for it through the fixture in_the_window; a helper that gets
+    `monkeypatch` calls it itself. Returns the names of the modules it replaced the name
+    in."""
     import importlib
     import pkgutil
 
@@ -307,16 +309,11 @@ def replace_in_window(monkeypatch, name, value):
     holders = [m for m in modules if name in vars(m)]
     assert holders, f"no module of the window holds {name!r}"
     app = importlib.import_module("openexpress.gui.app")
-    if name in vars(app):
-        original = vars(app)[name]
-    else:
-        objects = {id(vars(m)[name]) for m in holders}
-        assert len(objects) == 1, (
-            f"{name!r} is not one object in the modules of the window: say which")
-        original = vars(holders[0])[name]
-    replaced = []
+    original = vars(app)[name] if name in vars(app) else vars(holders[0])[name]
+    others = sorted(m.__name__ for m in holders if vars(m)[name] is not original)
+    assert not others, (
+        f"{name!r} is another object in {', '.join(others)} than in the other modules of "
+        "the window: the code there would not see the replacement")
     for module in holders:
-        if vars(module)[name] is original:
-            monkeypatch.setattr(module, name, value)
-            replaced.append(module.__name__)
-    return replaced
+        monkeypatch.setattr(module, name, value)
+    return [module.__name__ for module in holders]

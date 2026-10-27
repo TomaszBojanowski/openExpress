@@ -158,3 +158,35 @@ def test_no_stand_in_picks_methods_from_the_window_class_alone():
              for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
              if own.search(line)]
     assert found == [], f"stand-ins built from MainWindow's own class: {found}"
+
+
+# --- replace_in_window: never a module skipped without a word ------------------------------
+
+
+# Where each name is held: a module given another object, and one that keeps its own.
+PLACES = {"Adw": ("report_dialog", "apps_page"),  # gui.app holds it
+          "space_text": ("maps_page", "window_tasks")}  # gui.app does not
+
+
+def test_a_name_held_as_another_object_somewhere_fails():
+    """A module of the window that holds the name as another object would keep it, and the
+    code there would never see the replacement: replace_in_window says which, and replaces
+    nothing (it used to skip such a module without a word). The names are written out, so
+    that guard 3 (test_dead_patches) sees them."""
+    import importlib
+
+    from fakes import replace_in_window
+
+    for name in ("Adw", "space_text"):
+        other, unchanged = PLACES[name]
+        module = importlib.import_module(f"openexpress.gui.{other}")
+        setting, replacing = pytest.MonkeyPatch(), pytest.MonkeyPatch()
+        try:
+            setting.setattr(module, name, object())  # not the object of the others
+            with pytest.raises(AssertionError, match=rf"openexpress\.gui\.{other}"):
+                replace_in_window(replacing, name, "a replacement")
+            kept = vars(importlib.import_module(f"openexpress.gui.{unchanged}"))[name]
+            assert kept != "a replacement", name  # nothing replaced
+        finally:
+            replacing.undo()
+            setting.undo()
