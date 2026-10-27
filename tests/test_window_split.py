@@ -5,7 +5,7 @@ import logging
 import types
 
 
-def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(monkeypatch, caplog):
+def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(caplog, in_the_window):
     """The line "task: MainWindow.add_music" of the log names the method that made the work
     of the task; a method of a mixin (MusicPage, MapsPage, …) is still MainWindow's there."""
     from openexpress.gui import app
@@ -13,7 +13,7 @@ def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(monkeypatch, c
     mixins = [c for c in app.MainWindow.__mro__[1:] if c.__module__.startswith("openexpress.")]
     assert mixins  # the window has at least one
     started = []
-    monkeypatch.setattr(app, "threading", types.SimpleNamespace(
+    in_the_window("threading", types.SimpleNamespace(
         Thread=lambda target, daemon: types.SimpleNamespace(start=lambda: started.append(1))))
     win = types.SimpleNamespace(busy=False, session=None, set_busy=lambda *a, **kw: None)
     for cls in [app.MainWindow, *mixins]:

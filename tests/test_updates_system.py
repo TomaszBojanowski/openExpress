@@ -897,14 +897,13 @@ def test_status_of_an_update_that_waits_for_the_device():
 
 
 @pytest.mark.needs_display
-def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(monkeypatch):
+def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(in_the_window):
     """Without Adw.WrapBox (libadwaita before 1.7): "Beta" in bold, and a hard space before
     each separator, so that a separator never starts a line; the buttons in a FlowBox."""
     from gi.repository import Gtk
 
-    from openexpress.gui import app
 
-    monkeypatch.setattr(app, "WRAP_BOX", None)
+    in_the_window("WRAP_BOX", None)
     win, _status, _groups, _shown = _updates_page(
         updates.parse_updates(lower_keys(beta_answer())))
     (box,) = win.sections["updates"].groups[0].rows

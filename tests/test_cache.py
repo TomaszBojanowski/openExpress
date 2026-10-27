@@ -835,7 +835,7 @@ def _descendants(widget):
 
 
 @pytest.mark.needs_display
-def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch):
+def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_window):
     """The group "Garmin Connect account", first in the preferences: who is logged in with
     Log out, or "Not logged in" with Log In. The button goes the way of the device view
     (MainWindow.logout / login, so Q3 decides where the user goes), and the row follows a
@@ -850,7 +850,7 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch):
     shown, calls = [], []
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
     client = types.SimpleNamespace(auth=types.SimpleNamespace(display="someone"))
-    monkeypatch.setattr(app, "account_client", lambda: client)
+    in_the_window("account_client", lambda: client)
     win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
                                 set_background=lambda on, done=None: None, choose_dll=lambda: None,
                                 error=lambda title, text: None, run_task=None, toast=None,

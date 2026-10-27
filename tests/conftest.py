@@ -526,6 +526,16 @@ def clock(monkeypatch):
 
 
 @pytest.fixture
+def in_the_window(monkeypatch):
+    """in_the_window(name, value): the name replaced in every module of the window that holds
+    it (fakes.replace_in_window), not in gui.app alone; no test replaces a name in gui.app
+    itself (guard 3, test_dead_patches)."""
+    from fakes import replace_in_window
+
+    return functools.partial(replace_in_window, monkeypatch)
+
+
+@pytest.fixture
 def device_root(tmp_path) -> Path:
     root = tmp_path / "device"
     g = root / "GARMIN"

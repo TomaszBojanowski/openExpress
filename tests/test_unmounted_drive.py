@@ -12,6 +12,7 @@ import os
 import types
 
 import pytest
+from fakes import replace_in_window
 from test_detection import (  # noqa: F401 - the fixture
     DRIVE_SERIAL,
     RTL515_XML,
@@ -612,8 +613,8 @@ def _start_window(monkeypatch, listed):
     session = _varia_session()
     monkeypatch.setattr(app.service, "open_session", lambda found: session)
     monkeypatch.setattr(app.service, "check_session", lambda s: s)
-    monkeypatch.setattr(app, "with_space", lambda s: s)
-    monkeypatch.setattr(app, "resolve_account", lambda win: None)
+    replace_in_window(monkeypatch, "with_space", lambda s: s)
+    replace_in_window(monkeypatch, "resolve_account", lambda win: None)
     reread = []
     win = types.SimpleNamespace(
         busy=False, session=None, run_task=RunNow(), toast=lambda text: None,

@@ -627,7 +627,8 @@ def test_a_device_that_cannot_be_asked_has_an_unknown_space_and_no_error(iq_devi
     assert s.space == (None, None) and win.errors == []
 
 
-def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, monkeypatch):
+def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, monkeypatch,
+                                                                     in_the_window):
     """refresh_device and open_choice: the device found is opened with its free space and
     size read in the task's thread, never on the window's."""
     from openexpress.gui import app
@@ -640,7 +641,7 @@ def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, 
         busy=False, session=None, _asked=None, sections={"watch": types.SimpleNamespace(
             show=lambda key: None)},
         run_task=lambda title, fn, done=None, failed=None, **kw: works.append(fn))
-    monkeypatch.setattr(app, "detect_devices", lambda current_uri=None: session)
+    in_the_window("detect_devices", lambda current_uri=None: session)
     monkeypatch.setattr(app.service, "open_session", lambda found=None: session)
     monkeypatch.setattr(app.service, "check_session", lambda s: s)
     app.MainWindow.refresh_device(win)
@@ -985,7 +986,7 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
-def test_eject_spins_its_button(monkeypatch, delay, text_shown):
+def test_eject_spins_its_button(monkeypatch, delay, text_shown, in_the_window):
     """Eject on the Updates page of a drive: the button spins from the click while the
     system ejects it, "Ejecting the device…" waits 500 ms; then "Done", as before."""
     import time
@@ -996,7 +997,7 @@ def test_eject_spins_its_button(monkeypatch, delay, text_shown):
 
     dialogs = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
-    monkeypatch.setattr(app, "eject", lambda storage: time.sleep(delay))
+    in_the_window("eject", lambda storage: time.sleep(delay))
     s = types.SimpleNamespace(storage=object())
     win = _task_window(session=s)
     button = Gtk.Button(label="Eject")
@@ -1007,7 +1008,7 @@ def test_eject_spins_its_button(monkeypatch, delay, text_shown):
 
 
 @pytest.mark.needs_display
-def test_a_refused_eject_gives_the_button_back(monkeypatch):
+def test_a_refused_eject_gives_the_button_back(monkeypatch, in_the_window):
     """The system refuses: the button is as it was (to try again), with the question."""
     from gi.repository import Adw, Gtk
 
@@ -1021,7 +1022,7 @@ def test_a_refused_eject_gives_the_button_back(monkeypatch):
     def refused(storage):
         raise DeviceError("The device is busy")
 
-    monkeypatch.setattr(app, "eject", refused)
+    in_the_window("eject", refused)
     s = types.SimpleNamespace(storage=object())
     win = _task_window(session=s)
     button = Gtk.Button(label="Eject")

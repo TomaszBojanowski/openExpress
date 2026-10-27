@@ -12,7 +12,7 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, record_sync
+from fakes import RunNow, record_sync, replace_in_window
 
 from openexpress.gui.connected import Connected
 
@@ -311,9 +311,9 @@ def unplug_window(monkeypatch, usb):
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
-    monkeypatch.setattr(app, "usb_state", lambda: usb[0])
-    monkeypatch.setattr(app, "own_remount", lambda mount: False)
-    monkeypatch.setattr(app, "garmin_usb", lambda mount: True)
+    replace_in_window(monkeypatch, "usb_state", lambda: usb[0])
+    replace_in_window(monkeypatch, "own_remount", lambda mount: False)
+    replace_in_window(monkeypatch, "garmin_usb", lambda mount: True)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
     pages = {"watch": Page(), "apps": Page()}
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
@@ -372,7 +372,7 @@ def test_the_second_mount_of_an_unplugged_device_changes_nothing(monkeypatch, ca
     ]
 
 
-def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog):
+def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog, in_the_window):
     from openexpress import applog
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
@@ -380,8 +380,8 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog)
     garmin = {NUMERIC}
     remounted = set()
     timers = []
-    monkeypatch.setattr(app, "garmin_usb", lambda m: m.uri in garmin)
-    monkeypatch.setattr(app, "own_remount", lambda m: m.uri in remounted)
+    in_the_window("garmin_usb", lambda m: m.uri in garmin)
+    in_the_window("own_remount", lambda m: m.uri in remounted)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = types.SimpleNamespace(session=session, busy=False, show_device=lambda: None,
@@ -480,7 +480,7 @@ class Timers:
 
 
 @pytest.fixture
-def detecting(tmp_path, monkeypatch):
+def detecting(tmp_path, monkeypatch, in_the_window):
     """A window with the real detection code. Its tasks wait until the test finishes them;
     each started task is one `open_session`, and each `show_device` builds every page anew.
     The open device is on USB at bus 1, device 40 (a made-up /sys)."""
@@ -492,8 +492,8 @@ def detecting(tmp_path, monkeypatch):
     timers = Timers()
     monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
     monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
-    monkeypatch.setattr(app, "garmin_usb", lambda m: True)
-    monkeypatch.setattr(app, "own_remount", lambda m: False)
+    in_the_window("garmin_usb", lambda m: True)
+    in_the_window("own_remount", lambda m: False)
     win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, tasks=[],
                                 built=[], reads=[], connected=Connected(),
                                 sections={"watch": types.SimpleNamespace(show=lambda s: None)})
@@ -1712,10 +1712,9 @@ def drive_session(drive_window, monkeypatch):
     return service.check_session(service.open_session(allow_ums=True))
 
 
-def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatch):
+def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatch, in_the_window):
     """Not from the account, also when logged in: by unit-info, as for an MTP device that
     the account does not list."""
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     s, asked = drive_session(drive_window, monkeypatch), []
@@ -1724,8 +1723,8 @@ def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatc
         device_image_url=lambda unit_id: asked.append(("account", unit_id)),
         unit_info=lambda unit_id, part: asked.append(("unit-info", unit_id, part))
         or {"graphicurl": "https://res.garmin.com/rtl515.png"})
-    monkeypatch.setattr(app, "download_picture",
-                        lambda http, url, name: asked.append(("download", url)) or (None, "test"))
+    in_the_window("download_picture",
+                  lambda http, url, name: asked.append(("download", url)) or (None, "test"))
     works, hidden = [], types.SimpleNamespace(set_visible=lambda visible: None)
     win = types.SimpleNamespace(session=s, device_image=hidden, device_picture=hidden,
                                 in_background=lambda work, done: works.append(work))
@@ -3363,7 +3362,8 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
     assert win.session is session and shown == [] and started == []  # the device stays open
 
 
-def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypatch, caplog):
+def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypatch, caplog,
+                                                            in_the_window):
     import shutil
 
     from openexpress import watch
@@ -3393,7 +3393,7 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
     monkeypatch.setattr(watch, "garmin_usb", lambda mount: True)
-    monkeypatch.setattr(app, "garmin_usb", lambda mount: True)
+    in_the_window("garmin_usb", lambda mount: True)
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     watch.Watcher().on_mount(None, FakeMount(NUMERIC))
     assert timers == [1500] and len(started) == 1
@@ -5501,7 +5501,7 @@ def test_a_device_mounted_on_an_empty_start_page_opens_its_view(start_window, mo
 
 
 @pytest.mark.needs_display
-def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
+def test_refresh_in_the_device_view_keeps_the_view(monkeypatch, in_the_window):
     """The real window, one device open in its view: the Refresh button in the header of
     the view finds the same device again (the one open is asked for again); the view stays,
     nothing goes back to the start page."""
@@ -5523,8 +5523,7 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch):
 
     asked = []
     found = session(2)
-    monkeypatch.setattr(app, "detect_devices",
-                        lambda current_uri=None: (asked.append(current_uri), found)[1])
+    in_the_window("detect_devices", lambda current_uri=None: (asked.append(current_uri), found)[1])
     win = MainWindow(None)
     try:
         # What the device's pages would read is not built here: nothing asked of a server.
@@ -5845,7 +5844,8 @@ def test_one_tile_stands_in_the_middle():
 
 
 @pytest.mark.needs_display
-def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeypatch):
+def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeypatch,
+                                                                         in_the_window):
     """T9 step 1: once a minute while the start page, the device view or the read-only view
     of a remembered device is shown (its texts too since 25.10.2026, test_update_states), the
     texts told against now are drawn again: the tiles only when one of their texts changed,
@@ -5882,7 +5882,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
     def minute_timers():
         return [fn for seconds, fn in timers.values() if seconds == app.RELATIVE_REFRESH_S]
 
-    monkeypatch.setattr(app, "datetime", Clock)
+    in_the_window("datetime", Clock)
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, **kw: None)
     monkeypatch.setattr(app.GLib, "timeout_add_seconds", add_seconds)
     monkeypatch.setattr(app.GLib, "source_remove", remove)
@@ -5980,9 +5980,8 @@ class FakeAccountClient:
 def with_account(monkeypatch, client):
     """The client the start page asks for the account's devices (opening a device keeps
     its own)."""
-    from openexpress.gui import app
 
-    monkeypatch.setattr(app, "account_client", lambda: client)
+    replace_in_window(monkeypatch, "account_client", lambda: client)
     return client
 
 
@@ -6347,7 +6346,7 @@ def fake_pictures(monkeypatch):
     from openexpress.gui import app
 
     fakes = types.SimpleNamespace(downloads=[], answers={})
-    monkeypatch.setattr(app, "load_texture", lambda path: f"texture of {path.name}")
+    replace_in_window(monkeypatch, "load_texture", lambda path: f"texture of {path.name}")
 
     def download(http, url, name):
         fakes.downloads.append(url)
@@ -6358,7 +6357,7 @@ def fake_pictures(monkeypatch):
         target.write_bytes(PNG)
         return target, ""
 
-    monkeypatch.setattr(app, "download_picture", download)
+    replace_in_window(monkeypatch, "download_picture", download)
     return fakes
 
 
@@ -6574,12 +6573,11 @@ def test_the_ownership_check_keeps_the_kind_of_a_remembered_device(start_window,
     assert known_devices.load()[3000000002].category == "cycling-computer"
 
 
-def test_tiles_without_a_picture_ask_nothing(start_window, monkeypatch):
+def test_tiles_without_a_picture_ask_nothing(start_window, monkeypatch, in_the_window):
     """Tiles whose devices have no picture: the icon of their kind, and nothing is asked
     (no unit-info, no download)."""
     import time
 
-    from openexpress.gui import app
 
     def asked(*_a, **_k):
         raise AssertionError("asked for a tile")
@@ -6587,7 +6585,7 @@ def test_tiles_without_a_picture_ask_nothing(start_window, monkeypatch):
     win = start_window
     later = defer_background(win)
     fakes = fake_pictures(monkeypatch)
-    monkeypatch.setattr(app, "picture_from_unit_info", asked)
+    in_the_window("picture_from_unit_info", asked)
     remember_others(time.time())
     nothing_connected(win, monkeypatch)
     run_later(later)
@@ -6815,21 +6813,20 @@ def seven_watches():
 
 
 @pytest.mark.needs_display
-def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(monkeypatch):
+def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_window):
     """T6a: seven devices connected: their section is a list, not tiles; each row has the
     name, the words and the icon its tile would have (the kind, else the neutral one), and
     nothing is asked for the pictures (no unit-info, no download). A click on a row opens
     that device, as a click on its tile. Two remembered devices stay tiles."""
     from openexpress import known_devices
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow, Section
     from openexpress.gui.start import StartPage, kind_icon, tile_image
 
     def asked(*_a, **_k):
         raise AssertionError("asked for a picture")
 
-    monkeypatch.setattr(app, "picture_from_unit_info", asked)
-    monkeypatch.setattr(app, "download_picture", asked)
+    in_the_window("picture_from_unit_info", asked)
+    in_the_window("download_picture", asked)
     known_devices.remember(3000000101, "Watch 1", "006-B0001-00", "1.00", "mtp", now=1.0)
     known_devices.set_category(3000000101, "watch")
     known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=2.0)

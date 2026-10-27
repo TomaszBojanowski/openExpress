@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import RunNow, step_words
+from fakes import RunNow, replace_in_window, step_words
 
 from openexpress import cli, desktop, service
 from openexpress.cli import main
@@ -1017,13 +1017,12 @@ def _unit_info(url=PICTURE_URL):
 
 def _picture_window(client, logged_in=False, ownership_error=None, monkeypatch=None):
     """A window that shows a picture as a (file, size) pair instead of a GTK texture."""
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     if monkeypatch is not None:
-        monkeypatch.setattr(app, "load_texture",
-                            lambda path: ("texture", path.read_bytes())
-                            if path.read_bytes().startswith(PNG[:8]) else None)
+        replace_in_window(monkeypatch, "load_texture",
+                          lambda path: ("texture", path.read_bytes())
+                          if path.read_bytes().startswith(PNG[:8]) else None)
     device = types.SimpleNamespace(unit_id=SECRET_UNIT, part_number="006-B0000-00")
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=device, client=client, logged_in=logged_in,
@@ -1110,11 +1109,10 @@ def test_a_cache_file_that_is_no_picture_is_not_kept(pictures):
 
 
 @pytest.mark.needs_display
-def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictures):
+def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictures, in_the_window):
     """One store: the picture the device view read from the cache is there at once for a
     tile of that part number built later, with nothing read again in the background."""
     from openexpress.devicelist import Tile
-    from openexpress.gui import app
     from openexpress.gui import pictures as store
     from openexpress.gui.app import Gdk, GLib
     from openexpress.gui.start import StartPage, tile_image
@@ -1125,7 +1123,7 @@ def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictur
     (folder / "device-006-B0000-00.png").write_bytes(PNG)
     texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
                                     12)
-    monkeypatch.setattr(app, "load_texture", lambda path: texture)
+    in_the_window("load_texture", lambda path: texture)
     win = _picture_window(PictureClient(unit_info=_unit_info()))
     win.show()
     assert win.shown == [texture] and win.jobs == []
@@ -1135,11 +1133,11 @@ def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictur
     assert tile_image(start.tiles()[0]).get_paintable() is texture
 
 
-def test_account_is_the_first_source_and_unit_info_the_fallback(pictures, monkeypatch):
+def test_account_is_the_first_source_and_unit_info_the_fallback(pictures, monkeypatch,
+                                                                in_the_window):
     xdg, log_file, monkeypatch = pictures
-    from openexpress.gui import app
 
-    monkeypatch.setattr(app, "cached_download", lambda http, url, name: _save(xdg, name))
+    in_the_window("cached_download", lambda http, url, name: _save(xdg, name))
     client = PictureClient(account_url="https://connect.example/picture.png",
                            unit_info=_unit_info())
     win = _picture_window(client, logged_in=True, monkeypatch=monkeypatch)

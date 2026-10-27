@@ -16,7 +16,8 @@ LAST = {"fēnix 8": ["Update available", "Primary"], "Edge 1050": ["Synced"],
 
 
 @pytest.mark.needs_display
-def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, monkeypatch):
+def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, monkeypatch,
+                                                                         in_the_window):
     from openexpress import netstatus
     from openexpress.gui import app
 
@@ -36,7 +37,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     # The real window, from its own start: the same devices detected; the account's list and
     # the counts are held back, so that the first frame has only what was kept.
     detected, asked, counted, frames = [], [], [], []
-    monkeypatch.setattr(app, "detect_devices", lambda current_uri=None: (
+    in_the_window("detect_devices", lambda current_uri=None: (
         detected.append(current_uri), app.DeviceChoices(four()))[1])
     monkeypatch.setattr(app.MainWindow, "_fetch_account", lambda self: asked.append(1))
     monkeypatch.setattr(app.MainWindow, "_count_activities",

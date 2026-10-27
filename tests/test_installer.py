@@ -197,7 +197,7 @@ def test_the_command_line_says_it_is_for_macos(tmp_path, capsys, option):
     assert not (paths.config_dir() / "consumer.json").exists()
 
 
-def test_the_window_says_it_is_for_macos(monkeypatch, tmp_path):
+def test_the_window_says_it_is_for_macos(tmp_path, in_the_window):
     import types
 
     from fakes import RunNow
@@ -220,8 +220,8 @@ def test_the_window_says_it_is_for_macos(monkeypatch, tmp_path):
         def open_finish(self, result):
             return ChosenFile()
 
-    monkeypatch.setattr(app, "Gtk", types.SimpleNamespace(FileDialog=FileDialog))
-    monkeypatch.setattr(app, "save_consumer", lambda consumer: pytest.fail("saved"))
+    in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
+    in_the_window("save_consumer", lambda consumer: pytest.fail("saved"))
     run = RunNow(error="record")
     win = types.SimpleNamespace(run_task=run, toast=lambda text: pytest.fail(text))
     app.MainWindow.choose_dll(win)

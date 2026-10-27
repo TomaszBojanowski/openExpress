@@ -8,7 +8,7 @@ devices here are made up."""
 import types
 
 import pytest
-from fakes import window_methods
+from fakes import replace_in_window, window_methods
 from test_detection import drives, usb_drive  # noqa: F401 - the fixture
 from test_unmounted_drive import FR55, Clock, UnmountedVolume, _monitor, _on_usb, _sized
 
@@ -94,12 +94,11 @@ VOLUME_METHODS = ("_on_volume_added", "_on_volume_changed", "_on_volume_removed"
 
 def _window(monkeypatch, session=None, listed=(), choosing=False):
     """The parts of the window that hear the volumes; the detections asked are recorded."""
-    from openexpress.gui import app
     from openexpress.gui.connected import Connected
 
     asked = []
-    monkeypatch.setattr(app, "schedule_detection",
-                        lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
+    replace_in_window(monkeypatch, "schedule_detection",
+                      lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
     win = types.SimpleNamespace(session=session, busy=False,
                                 connected=Connected(devices=list(listed), choosing=choosing))
     return window_methods(win, VOLUME_METHODS), asked
@@ -203,7 +202,7 @@ def test_a_volume_not_on_the_list_that_goes_away_brings_nothing(drives, monkeypa
 
 @pytest.mark.needs_display
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
-def test_the_window_hears_the_volumes_of_gvfs(drives, monkeypatch):
+def test_the_window_hears_the_volumes_of_gvfs(drives, monkeypatch, in_the_window):
     """The real window: the three signals of the volume monitor are heard."""
     from conftest import stop_windows
     from gi.repository import Gio
@@ -212,8 +211,8 @@ def test_the_window_hears_the_volumes_of_gvfs(drives, monkeypatch):
 
     asked = []
     monkeypatch.setattr(app.MainWindow, "refresh_device", lambda self, cause=None: None)
-    monkeypatch.setattr(app, "schedule_detection",
-                        lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
+    in_the_window("schedule_detection",
+                  lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
     volume, key = _drive(drives, monkeypatch)
     monitor = Gio.VolumeMonitor.get()
     win = app.MainWindow(None)
@@ -231,13 +230,12 @@ def _polled(monkeypatch, session=None, listed=()):
     """The parts of the window that look at USB every few seconds (MainWindow._poll_usb)."""
     from test_detection import FakeStartPage
 
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
     from openexpress.gui.connected import Connected
 
     asked = []
-    monkeypatch.setattr(app, "schedule_detection",
-                        lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
+    replace_in_window(monkeypatch, "schedule_detection",
+                      lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
     page = types.SimpleNamespace(
         session=session, busy=False, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
         _usb_title="", _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,

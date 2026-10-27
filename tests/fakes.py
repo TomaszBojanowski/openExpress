@@ -282,3 +282,41 @@ def window_methods(win, names):
     assert not missing, ("MainWindow has no method " + ", ".join(missing)
                          + " (renamed or removed?): change the stand-in to what the window has")
     return win
+
+
+# --- a name of the window replaced where the window looks it up -----------------------------
+
+
+def replace_in_window(monkeypatch, name, value):
+    """Replace `name` (a function, a class, a module or a constant the window's code reads,
+    e.g. "eject" or "Adw") in every module of the window (openexpress.gui.*) that holds the
+    same object under it, never in gui.app alone: code moved out of gui/app.py (analysis 17)
+    looks the name up in its new module, and a replacement in gui.app alone would do nothing
+    there, without failing (guard 3, test_dead_patches). The object is the one of gui.app;
+    a name gui.app does not hold must be one object in all the modules that hold it. A name
+    no module of the window holds fails at once. The tests ask for it through the fixture
+    in_the_window; a helper that gets `monkeypatch` calls it itself. Returns the names of the
+    modules it replaced the name in."""
+    import importlib
+    import pkgutil
+
+    import openexpress.gui as gui
+
+    modules = [importlib.import_module(f"openexpress.gui.{m.name}")
+               for m in pkgutil.iter_modules(gui.__path__)]
+    holders = [m for m in modules if name in vars(m)]
+    assert holders, f"no module of the window holds {name!r}"
+    app = importlib.import_module("openexpress.gui.app")
+    if name in vars(app):
+        original = vars(app)[name]
+    else:
+        objects = {id(vars(m)[name]) for m in holders}
+        assert len(objects) == 1, (
+            f"{name!r} is not one object in the modules of the window: say which")
+        original = vars(holders[0])[name]
+    replaced = []
+    for module in holders:
+        if vars(module)[name] is original:
+            monkeypatch.setattr(module, name, value)
+            replaced.append(module.__name__)
+    return replaced

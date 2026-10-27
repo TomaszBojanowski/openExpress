@@ -1816,13 +1816,12 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []
 
 
-def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, monkeypatch):
+def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, in_the_window):
     """The question before a removal over PTP names the settings, as the one through the
     mounted storage does."""
     import types
 
     from openexpress.gui import app as gui_app
-    from openexpress.gui import apps_page
 
     st, dev, _fake, app = hidden_spot
     app.has_files, app.direct_removal = False, True
@@ -1844,7 +1843,7 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, m
         def present(self, parent):
             pass
 
-    monkeypatch.setattr(apps_page, "Adw", types.SimpleNamespace(
+    in_the_window("Adw", types.SimpleNamespace(
         AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))
     win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st))
     gui_app.MainWindow.confirm_remove_app(win, app)

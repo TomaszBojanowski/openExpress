@@ -49,11 +49,11 @@ def test_the_apps_page_shows_an_ownership_error_with_brackets():
 
 
 @pytest.mark.needs_display
-def test_a_page_not_for_a_drive_shows_its_words_with_brackets(monkeypatch):
+def test_a_page_not_for_a_drive_shows_its_words_with_brackets(in_the_window):
     from openexpress.gui import app
 
     words = "A drive <made up> & its words"
-    monkeypatch.setattr(app, "mass_storage_text", lambda: words)
+    in_the_window("mass_storage_text", lambda: words)
     section = _section("maps")
     app.show_not_for_mass_storage(section)
     assert words in _shown(section)

@@ -7,7 +7,7 @@ import time
 import types
 
 import pytest
-from fakes import window_methods
+from fakes import replace_in_window, window_methods
 
 from openexpress.known_devices import KnownDevice
 
@@ -153,8 +153,8 @@ def _fake_download(monkeypatch):
         target.write_bytes(_texture().save_to_png_bytes().get_data())
         return target, ""
 
-    monkeypatch.setattr(app, "download_picture", download)
-    monkeypatch.setattr(app, "account_client", lambda: types.SimpleNamespace(http=object()))
+    replace_in_window(monkeypatch, "download_picture", download)
+    replace_in_window(monkeypatch, "account_client", lambda: types.SimpleNamespace(http=object()))
     return downloads
 
 
@@ -174,10 +174,9 @@ class _Unasked:
 
 def _tile_with_an_address_not_allowed(monkeypatch):
     from openexpress import devicelist
-    from openexpress.gui import app
 
     http = _Unasked()
-    monkeypatch.setattr(app, "account_client", lambda: types.SimpleNamespace(http=http))
+    replace_in_window(monkeypatch, "account_client", lambda: types.SimpleNamespace(http=http))
     (tile,) = devicelist.tiles([], {}, [dict(_account_entry(), imageurl=OTHER_BUCKET_URL)],
                                True)
     assert (tile.image_url, tile.image_source) == (OTHER_BUCKET_URL, "the account")

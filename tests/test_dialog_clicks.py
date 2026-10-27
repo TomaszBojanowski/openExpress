@@ -175,9 +175,8 @@ def test_ejecting_after_an_update_was_saved(click, words, ejected):
     click(words, until=lambda: len(asked) == ejected and not click.shown[-1].get_mapped())
 
 
-def test_trying_again_to_eject(click, monkeypatch):
+def test_trying_again_to_eject(click, in_the_window):
     from openexpress.device.storage import DeviceError
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     tries = []
@@ -186,7 +185,7 @@ def test_trying_again_to_eject(click, monkeypatch):
         tries.append(1)
         raise DeviceError("The system refused to eject it.")
 
-    monkeypatch.setattr(app, "eject", refuse)
+    in_the_window("eject", refuse)
     win = _window(run_task=RunNow())
     win.eject_device = lambda s, bike_accessory=False, button=None: MainWindow.eject_device(
         win, s, bike_accessory, button)
@@ -226,11 +225,11 @@ def test_choosing_the_first_sync(click, words, started):
 
 
 @pytest.mark.parametrize(("words", "cleared"), [("Clear", [["maps"]]), ("Cancel", [])])
-def test_clearing_a_part_of_the_cache(click, monkeypatch, words, cleared):
+def test_clearing_a_part_of_the_cache(click, words, cleared, in_the_window):
     from openexpress.gui import app
 
     got = []
-    monkeypatch.setattr(app, "clear_cache", lambda win, names, button: got.append(names))
+    in_the_window("clear_cache", lambda win, names, button: got.append(names))
     win = _window(_storage=types.SimpleNamespace(parts={"maps": (None, object())},
                                                  everything=(None, object())))
     app.ask_to_clear(win, "Clear the downloaded maps?", "They take 1 GB.", ["maps"])

@@ -181,7 +181,7 @@ def _second_device(device_root, tmp_path):
 
 
 def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root, tmp_path,
-                                                                     monkeypatch):
+                                                                     monkeypatch, in_the_window):
     """The window's list (the detection's and the one read again while a device is open):
     drawn without waiting for a count; each MTP device keeps what probe opened (its
     GarminDevice.xml and storage), for the count in the background; a drive keeps none."""
@@ -198,7 +198,7 @@ def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root
              for uri, product, number in (("mtp://one/", "51b4", 9), ("mtp://two/", "5158", 10))]
     choices = app._choose(found)
     assert isinstance(choices, app.DeviceChoices)
-    monkeypatch.setattr(app, "find_all_devices", lambda: found)
+    in_the_window("find_all_devices", lambda: found)
     for summaries in (choices.summaries, app.connected_devices()):
         assert [s.to_sync for s in summaries] == [None, None]
         assert sorted(s.device.unit_id for s in summaries) == [1234567890, 3000000002]
@@ -218,7 +218,7 @@ def _session(device, storage, **fields):
 
 
 def test_opening_a_device_from_the_list_counts_nothing_in_its_thread(device_root,
-                                                                   monkeypatch):
+                                                                   monkeypatch, in_the_window):
     """The device chosen on the start page: its view is drawn without waiting for a count."""
     from fakes import RunNow
 
@@ -230,7 +230,7 @@ def test_opening_a_device_from_the_list_counts_nothing_in_its_thread(device_root
     session = _session(device, storage, logged_in=True)
     monkeypatch.setattr(service, "open_session", lambda found: session)
     monkeypatch.setattr(service, "check_session", lambda s: s)
-    monkeypatch.setattr(app, "read_space", lambda storage: (None, None))
+    in_the_window("read_space", lambda storage: (None, None))
     counted = Uncounted()
     monkeypatch.setattr(sync, "activities_to_sync", counted)
     win = types.SimpleNamespace(busy=False, run_task=RunNow(), show_device=lambda: None,
@@ -239,7 +239,7 @@ def test_opening_a_device_from_the_list_counts_nothing_in_its_thread(device_root
     assert win.session is session and session.to_sync is None and counted.calls == []
 
 
-def test_detecting_the_device_counts_nothing_in_its_thread(device_root, monkeypatch):
+def test_detecting_the_device_counts_nothing_in_its_thread(device_root, monkeypatch, in_the_window):
     """The one device connected, found by a detection: drawn without waiting for a count."""
     from fakes import RunNow
 
@@ -248,8 +248,8 @@ def test_detecting_the_device_counts_nothing_in_its_thread(device_root, monkeypa
     device, storage = _device(device_root)
     _synced(device)
     session = _session(device, storage)
-    monkeypatch.setattr(app, "detect_devices", lambda current_uri=None: session)
-    monkeypatch.setattr(app, "read_space", lambda storage: (None, None))
+    in_the_window("detect_devices", lambda current_uri=None: session)
+    in_the_window("read_space", lambda storage: (None, None))
     counted = Uncounted()
     monkeypatch.setattr(sync, "activities_to_sync", counted)
     win = types.SimpleNamespace(

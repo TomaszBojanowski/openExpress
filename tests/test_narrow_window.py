@@ -527,13 +527,12 @@ def test_the_line_of_the_last_sync_keeps_its_separators_too(language):
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 @pytest.mark.parametrize("page", [p for p in DEVICE_PAGES if p.startswith("updates")])
-def test_with_an_older_libadwaita_the_updates_page_fits_too(narrow_window, monkeypatch,
-                                                            language, page):
+def test_with_an_older_libadwaita_the_updates_page_fits_too(narrow_window,
+                                                            language, page, in_the_window):
     """Without Adw.WrapBox (libadwaita before 1.7) a FlowBox lets the beta line and the row of
     buttons go on to the next line."""
-    from openexpress.gui import app
 
-    monkeypatch.setattr(app, "WRAP_BOX", None)
+    in_the_window("WRAP_BOX", None)
     win = narrow_window(language)
     _fill(win, page)
     win.navigation.set_animate_transitions(False)
