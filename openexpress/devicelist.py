@@ -63,7 +63,9 @@ def layout(count: int, view: str = AUTO) -> str | None:
 
 @dataclass(frozen=True)
 class Tile:
-    description: str  # "" for a connected device whose GarminDevice.xml was not read
+    # "" when nothing names it: a connected device not read and not known as a remembered
+    # drive (_remembered_drive).
+    description: str
     part_number: str
     software_version: str
     kind: str | None  # "mtp" or "ums" (connected or remembered); None: only on the account
