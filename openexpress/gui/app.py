@@ -156,8 +156,6 @@ from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
 USB_POLL_S = 2
-# The captions of the window (a hard space before "·"): in i18n, for last_sync too.
-SEPARATOR, caption = i18n.SEPARATOR, i18n.caption
 log = logging.getLogger(__name__)
 
 
@@ -190,7 +188,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._update_record_at: float | None = None  # the time of the record shown
         self._update_check_session = None
         # None = unknown, "none" (no maps for the device), "empty" (none installed),
-        # "current", "available", "failed"
+        # "current", "available", "unsupported" (map updates not supported for it), "failed"
         self.map_state: str | None = None
         self.map_update_count = 0
         self._map_check_session = None
@@ -229,8 +227,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._reread_pending = False
         # Why the list is read again (navigation.Cause), for where the user goes after it.
         self._reread_cause: Cause | None = None
-        # The devices of the Garmin account (their entries, keys in lower case), read once
-        # per start and login; None: not logged in, or not read.
+        # The devices of the Garmin account (their entries, keys in lower case): read at
+        # start, at login and on Refresh, or taken from the ownership check of the device
+        # opened; None: not logged in, or not read.
         self._account: list | None = None
         # Why the account's list is not known (account_note), None: known or still asked.
         self._account_why: str | None = None
