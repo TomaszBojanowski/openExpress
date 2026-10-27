@@ -7,7 +7,6 @@ import gc
 import logging
 import os
 import sys
-import threading
 import time
 import traceback
 import types
@@ -25,7 +24,6 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import (  # noqa: E402
-    cache,
     devicelist,
     diagnostics,
     i18n,
@@ -79,7 +77,6 @@ from openexpress.device.gio_storage import (  # noqa: E402
     usb_state,
     usb_still_there,
 )
-from openexpress.errors import UserFacingError  # noqa: E402
 from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.apps_page import (  # noqa: E402, F401 - also gui.app.<name> for the tests
     AppsPage,
@@ -157,8 +154,17 @@ from openexpress.gui.updates_page import (  # noqa: E402, F401 - also gui.app.<n
     update_check_failed,
 )
 from openexpress.gui.window_tasks import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    TEXT_AFTER_MS,
     WRAP_BOX,
+    TaskRunner,
+    collect_garbage,
+    read_space,
+    refresh_space,
+    render_space,
+    row_subtitle,
+    show_working,
     still_in_window,
+    stop_waiting,
     wrapping_row,
 )
 from openexpress.gui.words import (  # noqa: E402
@@ -171,13 +177,11 @@ from openexpress.gui.words import (  # noqa: E402
     primary_wearable_text,
     remembered_update_text,
     software_text,
-    space_text,
     to_upload_text,
     update_state_text,
 )
 from openexpress.i18n import N_, _, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
-from openexpress.progress import TimedWait, Waiting  # noqa: E402
 
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 USB_POLL_S = 2
@@ -206,8 +210,6 @@ log = logging.getLogger(__name__)
 
 # How often the texts told against now ("2 min ago") are looked at again, while shown.
 RELATIVE_REFRESH_S = 60
-WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
-LONG_WAIT_S = 20  # after this, the label says that the wait can take a while
 
 
 class StartView:
@@ -393,23 +395,6 @@ def show_backups(win) -> None:
     row.set_tooltip_text(str(paths.default_backup_dir()))
 
 
-def show_stop_waiting(win, visible: bool) -> None:
-    """Stop Waiting on the bar at the bottom, shown only while TrueUp waits."""
-    button = getattr(win, "stop_wait_button", None)
-    if button is not None:
-        button.set_visible(visible)
-
-
-def stop_waiting(win) -> None:
-    """Stop Waiting: the wait for TrueUp ends at its next step; the sync then ends as usual
-    and writes nothing of TrueUp."""
-    stop = getattr(getattr(win, "session", None), "stop_waiting", None)
-    if stop is not None:
-        stop.set()
-        log.info("TrueUp: the wait stopped by the user")
-    show_stop_waiting(win, False)
-
-
 def device_error_text(entry) -> str:
     """The subtitle of "Device error log": the kind of the error, as the device names it, and
     when it logged it."""
@@ -571,45 +556,6 @@ def show_account_note(win, entries) -> None:
 DEVICE_PICTURE_SIZE = 180
 
 
-def trash_button(tooltip: str, cb) -> Gtk.Button:
-    b = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text=tooltip, valign=Gtk.Align.CENTER)
-    b.add_css_class("flat")
-    b.connect("clicked", lambda *_a: cb())
-    return b
-
-
-# A task started from a button: the button spins at once, and the bar at the bottom with the
-# words of the task comes only when the task takes longer than this; a quick one (a fast
-# device) shows no text that flashes and is gone.
-TEXT_AFTER_MS = 500
-
-
-def show_working(button: Gtk.Button):
-    """The button spins instead of showing its label or icon and cannot be clicked; returns
-    the function that puts it back (clickable or not). The label or icon stays under the
-    spinner, unseen, so the button keeps its size and nothing beside it moves."""
-    label, icon = button.get_label(), button.get_icon_name()
-    if label is None and icon is None:  # neither: it only goes grey
-        button.set_sensitive(False)
-        return button.set_sensitive
-    ghost = (Gtk.Label(label=label, use_underline=button.get_use_underline(), opacity=0)
-             if label is not None else Gtk.Image(icon_name=icon, opacity=0))
-    spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
-    spinner.set_halign(Gtk.Align.CENTER)
-    spinner.set_valign(Gtk.Align.CENTER)
-    overlay = Gtk.Overlay(child=ghost)
-    overlay.add_overlay(spinner)
-    button.set_child(overlay)
-    button.set_sensitive(False)
-
-    def restore(sensitive: bool) -> None:
-        if label is not None:
-            button.set_label(label)
-        else:
-            button.set_icon_name(icon)
-        button.set_sensitive(sensitive)
-
-    return restore
 
 
 # The pages that do not apply to a Garmin device in mass storage mode.
@@ -657,22 +603,6 @@ def detect_devices(current_uri: str | None = None):
         return _choose(e.devices)
 
 
-def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | None]:
-    """(free space, capacity) of the device, asked of it: never on the window's thread. The
-    capacity is asked only when it is not given (it does not change). What cannot be asked
-    (e.g. while a session of PTP holds the device) is not known, None: no error."""
-    def ask(question: str):
-        try:
-            return getattr(storage, question)()
-        except Exception as e:  # noqa: BLE001 - unknown, said as such on the device page
-            log.info("device storage: %s not read (%s), not known", question,
-                     type(e).__name__)
-            return None
-
-    free = ask("free_space")
-    return free, capacity if capacity is not None else ask("capacity")
-
-
 def with_space(found):
     """A device opened for the window, with its free space and capacity read in the same
     thread (the device page and the report then ask it nothing); a list to choose from is
@@ -687,46 +617,6 @@ def with_space(found):
         except Exception:  # an extra of the opening never fails it
             log.warning("diagnostics: the error logs were not read", exc_info=True)
     return found
-
-
-def render_space(win) -> None:
-    """The subtitle (and the bar) of "Device storage" from the space the session holds, in
-    the words of every page (space_text): "Reading…" until it is read, "Unknown" when the
-    device does not say. Nothing is asked of the device."""
-    row, bar = getattr(win, "storage_row", None), getattr(win, "storage_bar", None)
-    s = win.session
-    if row is None or s is None:
-        return
-    space = getattr(s, "space", None)
-    if space is None:
-        row.set_subtitle(space_text(None, reading=True))
-        bar.set_visible(False)
-        return
-    free, total = space
-    row.set_subtitle(space_text(free, total))
-    if free is not None and total:
-        bar.set_value(min(1.0, max(0.0, 1 - free / total)))
-    bar.set_visible(bool(free is not None and total))
-
-
-def refresh_space(win, s) -> None:
-    """The free space of the device of session `s` read again in the background (its
-    capacity only while it is not known), then the subtitle of "Device storage" alone put
-    right. An answer that comes after the device was unplugged, or another one opened, is
-    dropped."""
-    if s is None:
-        return
-    known = getattr(s, "space", None)
-    capacity = known[1] if known is not None else None
-
-    def got(space):
-        if win.session is not s:
-            log.info("device storage: read after the device was closed, not shown")
-            return
-        s.space = space
-        render_space(win)
-
-    MainWindow.in_background(lambda: read_space(s.storage, capacity), got)
 
 
 def _choose(found: list):
@@ -1209,20 +1099,6 @@ def visible_view(win) -> View:
     return View(Page.DEVICE)
 
 
-def row_subtitle(row) -> Gtk.Label | None:
-    """The label of the subtitle of an Adw.ActionRow, which libadwaita does not give: the one
-    with the style class "subtitle" (so in 1.5 as in 1.9). None when there is none."""
-    child = row.get_first_child()
-    while child is not None:
-        if isinstance(child, Gtk.Label) and child.has_css_class("subtitle"):
-            return child
-        found = row_subtitle(child)
-        if found is not None:
-            return found
-        child = child.get_next_sibling()
-    return None
-
-
 class Section:
     """One page of the window: shows a placeholder, a spinner, an error or the content."""
 
@@ -1283,17 +1159,8 @@ class Section:
         return g
 
 
-def task_name(fn) -> str:
-    """The name of a task in the log: the method that made its work ("MainWindow.add_music"),
-    also when the method is in a mixin of the window (NetStatusPanel, MusicPage, …)."""
-    name = fn.__qualname__.split(".<locals>")[0] if hasattr(fn, "__qualname__") else "?"
-    owner, dot, method = name.partition(".")
-    mixins = {c.__name__ for c in MainWindow.__mro__[1:] if c.__module__.startswith("openexpress.")}
-    return f"MainWindow.{method}" if dot and owner in mixins else name
-
-
-class MainWindow(MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences, NetStatusPanel,
-                 ForgetDevice, ReportDialog, Adw.ApplicationWindow):
+class MainWindow(TaskRunner, MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences,
+                 NetStatusPanel, ForgetDevice, ReportDialog, Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
         self.set_size_request(*MIN_WINDOW)
@@ -1636,169 +1503,7 @@ class MainWindow(MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences, NetSta
         except OSError as e:
             log.warning("Could not save the window size: %s", e)
 
-    # --- helpers ----------------------------------------------------------------------
-
-    def toast(self, text: str) -> None:
-        self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
-
-    def error(self, title: str, text: str) -> None:
-        d = Adw.AlertDialog(heading=title, body=text)
-        d.add_response("ok", _("OK"))
-        d.present(self)
-
-    def set_busy(self, busy: bool, text: str = "", device: bool = False,
-                 in_page: bool = False) -> None:
-        """A task starts or ends. Its indicator is the spinner until it tells its progress,
-        then the bar (`_show_bar`, one way); none for a page that shows it loads (`in_page`)."""
-        self._stop_waiting()
-        self.busy = busy
-        self.action_bar.set_revealed(busy)
-        self.progress_label.set_text(text)
-        self.unplug_label.set_visible(busy and device)
-        self.progress_bar.set_fraction(0)
-        self.progress_bar.set_visible(False)
-        show_stop_waiting(self, False)
-        self.busy_spinner.set_visible(busy and not in_page)
-        self._action_buttons = still_in_window(self._action_buttons)
-        for b in self._action_buttons:
-            b.set_sensitive(not busy)
-        self.banner.set_sensitive(not busy)
-        self._update_actions()
-
-    def progress(self, text: str) -> None:
-        GLib.idle_add(self._show_progress, text)
-
-    def fraction(self, done: int, total: int | None) -> None:
-        if total:
-            GLib.idle_add(self._show_fraction, min(1.0, done / total))
-
-    def _show_bar(self) -> None:
-        """The task tells its progress: the bar instead of the spinner, until the task ends."""
-        self.busy_spinner.set_visible(False)
-        self.progress_bar.set_visible(True)
-
-    def _show_progress(self, text: str) -> bool:
-        """A step moves the bar once. A wait for a server (`Waiting`), whose length nobody
-        knows, keeps it moving until the next step, and after a while the label says so."""
-        self._stop_waiting()
-        self._show_bar()
-        self.progress_label.set_text(text)
-        if isinstance(text, TimedWait):
-            # Its length is known: the bar shows how much has passed, and it can be stopped.
-            self.progress_bar.set_fraction(text.done)
-            stop = getattr(self.session, "stop_waiting", None)
-            show_stop_waiting(self, text.done < 1 and stop is not None and not stop.is_set())
-            return False
-        show_stop_waiting(self, False)
-        self.progress_bar.pulse()
-        if isinstance(text, Waiting):
-            until = time.monotonic() + LONG_WAIT_S
-            told = []
-
-            def pulse() -> bool:
-                self.progress_bar.pulse()
-                if not told and time.monotonic() >= until:
-                    told.append(True)
-                    self.progress_label.set_text(f"{text} {_('This can take a few minutes.')}")
-                return True
-
-            self._waiting = GLib.timeout_add(WAIT_PULSE_MS, pulse)
-        return False
-
-    def _show_fraction(self, fraction: float) -> bool:
-        self._stop_waiting()
-        self._show_bar()
-        self.progress_bar.set_fraction(fraction)
-        return False
-
-    def _stop_waiting(self) -> None:
-        if self._waiting:
-            GLib.source_remove(self._waiting)
-            self._waiting = 0
-
-    def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True,
-                 in_page: bool = False, button: Gtk.Button | None = None) -> None:
-        """Run `fn()` in a thread; the result is passed back to the GUI thread.
-
-        `device` is False for a task that does not touch the connected device: the user is
-        then not told to keep it plugged in. `in_page`: the page shows that it loads, so the
-        bottom bar has no indicator of its own. `button`: the task was started from it; it
-        spins at once, the rest of the page stays as it is, and the bar with `title` comes
-        only after TEXT_AFTER_MS. It is as it was before on_done or on_error runs. A task
-        whose work writes to the device (writes_to_device): once it ends (also when it failed:
-        a part may be written), its free space is read again in the background."""
-        if self.busy:
-            self.toast(_("Another operation is in progress"))
-            return
-        has_device = device and self.session is not None
-        started = self.session
-        restore, reveal = None, [0]
-        if button is None:
-            self.set_busy(True, title, device=has_device, in_page=in_page)
-        else:
-            self.busy = True  # no other task meanwhile
-            restore = show_working(button)
-
-            def show_bar() -> bool:
-                reveal[0] = 0
-                self.set_busy(True, title, device=has_device, in_page=in_page)
-                return False
-
-            reveal[0] = GLib.timeout_add(TEXT_AFTER_MS, show_bar)
-        log.info("task: %s", task_name(fn))
-
-        def ended():
-            if reveal[0]:
-                GLib.source_remove(reveal[0])  # done before its words were due
-                reveal[0] = 0
-            collect_garbage()
-            self.set_busy(False)
-            if restore is not None:
-                restore(True)
-
-        def worker():
-            try:
-                result = fn()
-            except Exception as e:  # noqa: BLE001 - every failure of a task is shown
-                GLib.idle_add(finish_error, e)
-            else:
-                GLib.idle_add(finish_ok, result)
-
-        def written() -> None:
-            if getattr(fn, "writes_to_device", False) and started is not None \
-                    and self.session is started:
-                refresh_space(self, started)
-
-        def finish_ok(result):
-            ended()
-            try:
-                if on_done:
-                    on_done(result)
-            finally:
-                written()
-                self._run_pending_refresh()
-            return False
-
-        def finish_error(e):
-            if isinstance(e, UserFacingError):
-                # A message for the user (the device not ready, a refusal, an answer of a
-                # server): one line, as the user is told.
-                log.info("task failed: %s: %s", type(e).__name__, e)
-            else:
-                # Nobody expected it: with its traceback, filtered as every line of the log,
-                # so that a report from the window says where it failed.
-                log.warning("task failed: %s: %s", type(e).__name__, e, exc_info=e)
-            ended()
-            try:
-                if not (on_error and on_error(e)):
-                    self.error(title, str(e) or e.__class__.__name__)
-            finally:
-                written()
-                self._run_pending_refresh()
-            return False
-
-        # Not a daemon thread: the process must not exit while the watch is being written.
-        threading.Thread(target=worker, daemon=False).start()
+    # --- the refresh that waited for a task ---------------------------------------
 
     def _run_pending_refresh(self) -> None:
         if self._refresh_pending and not self.busy:
@@ -1809,59 +1514,6 @@ class MainWindow(MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences, NetSta
         elif getattr(self, "_reread_pending", False) and not self.busy:
             self._reread_pending = False
             self._reread_connected()
-
-    @staticmethod
-    def in_background(fn, on_done, on_error=None) -> None:
-        """Run optional work (pictures, status checks) without blocking the window."""
-        def worker():
-            try:
-                result = fn()
-            except Exception as e:  # optional work: said in the log, with its traceback
-                # unless it is a message for the user (as run_task)
-                log.info("background work %s failed: %s: %s", task_name(fn),
-                         type(e).__name__, e, exc_info=not isinstance(e, UserFacingError))
-                if on_error is not None:
-                    GLib.idle_add(lambda err=e: (on_error(err), False)[1])
-                return
-            GLib.idle_add(lambda: (on_done(result), False)[1])
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _button(self, label: str, cb, style: str | None = None,
-                with_button: bool = False) -> Gtk.Button:
-        """An action button. `with_button`: `cb` gets the button clicked (the argument of the
-        signal; the handler holds no button), e.g. to start its task from it (run_task)."""
-        b = Gtk.Button(label=label, valign=Gtk.Align.CENTER)
-        if style:
-            b.add_css_class(style)
-        if with_button:
-            b.connect("clicked", lambda button: cb(button))
-        else:
-            b.connect("clicked", lambda *_: cb())
-        b.set_sensitive(not self.busy)
-        self._action_buttons.append(b)
-        return b
-
-    def _trash(self, tooltip: str, cb) -> Gtk.Button:
-        b = trash_button(tooltip, cb)
-        b.set_sensitive(not self.busy)
-        self._action_buttons.append(b)
-        return b
-
-    @staticmethod
-    def _removed_files(count: int) -> str:
-        return ngettext("Removed {count} file", "Removed {count} files", count).format(count=count)
-
-    @staticmethod
-    def _search_filter(entry: Gtk.SearchEntry, rows: list[tuple[Gtk.Widget, str]],
-                       expander: Adw.ExpanderRow | None = None) -> None:
-        def changed(e):
-            text = e.get_text().casefold()
-            for row, haystack in rows:
-                row.set_visible(text in haystack)
-            if expander is not None and text:
-                expander.set_expanded(True)
-        entry.connect("search-changed", changed)
 
     # --- device ----------------------------------------------------------------------
 
@@ -3349,45 +3001,7 @@ class MainWindow(MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences, NetSta
         if self._on_start_page():
             self._update_tile_chips()
 
-    # --- the storage group of the preferences, backup ---------------------------
-
-    def _cache_group(self) -> Adw.PreferencesGroup:
-        """The "Storage" group of the preferences: a row for each part of the cache, with its
-        size, its files and a trash (grey while the part is empty), and one for all of it
-        with "Clear All…". The sizes are counted in the background, never on the window's
-        thread; the group is about the cache of this installation alone."""
-        kind = _("Flatpak") if paths.in_flatpak() else _("version from source")
-        # TRANSLATORS: group in the preferences: the cache (downloaded maps and updates,
-        # pictures, temporary files) on the disk of the computer (not the device's storage of
-        # the device page)
-        g = Adw.PreferencesGroup(title=pgettext("preferences", "Storage"), description=_(
-            "Only the files of this installation ({kind}); openExpress downloads them again "
-            "when needed").format(kind=kind))
-        parts = {}
-        for name in cache.CATEGORIES:
-            row = Adw.ActionRow(title=_(cache.CATEGORY_NAMES[name]), subtitle=_("Counting…"))
-            trash = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
-                               tooltip_text=_("Delete these files"), sensitive=False)
-            trash.add_css_class("flat")
-            # The handler gets its button from the signal and holds none.
-            trash.connect("clicked", lambda button, name=name: ask_clear_cache_part(
-                self, name, button))
-            row.add_suffix(trash)
-            g.add(row)
-            parts[name] = (row, trash)
-        # TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
-        everything = Adw.ActionRow(title=_("All of the cache"), subtitle=_("Counting…"))
-        # TRANSLATORS: button that clears every part of the cache
-        button = Gtk.Button(label=_("Clear All…"), valign=Gtk.Align.CENTER, sensitive=False)
-        button.connect("clicked", self._ask_clear_cache)
-        everything.add_suffix(button)
-        g.add(everything)
-        # Held by the window while the preferences are open (dropped when they close), so
-        # that what comes back from a thread finds the rows without holding them.
-        self._storage = types.SimpleNamespace(parts=parts, everything=(everything, button),
-                                              usage=None)
-        MainWindow.in_background(cache.usage, lambda use: show_cache_usage(self, use))
-        return g
+    # --- backup -----------------------------------------------------------------
 
     def backup(self) -> None:
         from openexpress.backup import run_backup
@@ -3451,12 +3065,6 @@ class MainWindow(MapsPage, MusicPage, AppsPage, UpdatesPage, Preferences, NetSta
 
 
 GC_INTERVAL_S = 30
-
-
-def collect_garbage() -> bool:
-    """Free reference cycles now. Always called on the GTK thread; True keeps a timer going."""
-    gc.collect()
-    return True
 
 
 def collect_garbage_on_the_gtk_thread() -> None:

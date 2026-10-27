@@ -125,6 +125,7 @@ def test_a_stand_in_gets_the_methods_of_the_mixins_too():
 
     from openexpress.gui.app import MainWindow
     from openexpress.gui.maps_page import MapsPage
+    from openexpress.gui.window_tasks import TaskRunner
 
     win = window_methods(types.SimpleNamespace(), ["show_maps", "_load", "_own_map_subtitle",
                                                    "in_background"])
@@ -132,7 +133,7 @@ def test_a_stand_in_gets_the_methods_of_the_mixins_too():
     assert win.show_maps.__self__ is win and win._load.__func__ is vars(MainWindow)["_load"]
     # Static methods stay unbound, as on the window.
     assert win._own_map_subtitle is vars(MapsPage)["_own_map_subtitle"].__func__
-    assert win.in_background is vars(MainWindow)["in_background"].__func__
+    assert win.in_background is vars(TaskRunner)["in_background"].__func__
 
 
 @pytest.mark.parametrize("name", ["_no_such_method", "present"])  # unknown; only GTK's

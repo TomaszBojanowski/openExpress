@@ -1,19 +1,18 @@
 """The preferences of the window and what they change: the Garmin Connect account (log in, log
 out, the key from Garmin Express's installer), the sync in the background, the language, the
 cache (its parts, counted and cleared), the copy of the diagnostic files; the shortcuts.
-Preferences is a mixin of MainWindow (gui/app.py), without __init__ of its own. The storage
-group of the preferences (_cache_group) is still the window's (gui/app.py).
+Preferences is a mixin of MainWindow (gui/app.py), without __init__ of its own.
 
-Has: _preferences and _account_row (while the preferences are open; cleared when they close,
-with _storage, which _cache_group makes), gui_settings, _account and _account_why (after a
-logout), session (dropped when the account changes).
-Uses: busy, run_task, error, toast, _button, _cache_group and _storage (the storage group, in
-gui/app.py until stage 7 of analysis 17), refresh_device, show_overview, _want_account,
-get_application."""
+Has: _preferences, _account_row and _storage (while the preferences are open; cleared when
+they close), gui_settings, _account and _account_why (after a logout), session (dropped when
+the account changes).
+Uses: busy, run_task, error, toast, _button, refresh_device, show_overview, _want_account,
+get_application; TaskRunner.in_background (gui/window_tasks.py)."""
 from __future__ import annotations
 
 import logging
 import traceback
+import types
 from pathlib import Path
 
 import gi
@@ -23,12 +22,13 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import cache, diagnostics, i18n, service  # noqa: E402
+from openexpress import cache, diagnostics, i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.gui.connected import open_address  # noqa: E402
 from openexpress.gui.gui_settings import update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
-from openexpress.i18n import N_, _, caption, human_size, ngettext  # noqa: E402
+from openexpress.gui.window_tasks import TaskRunner  # noqa: E402
+from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
     SetupError,
@@ -360,6 +360,44 @@ class Preferences:
             self.login()
         else:
             self.logout()
+
+    def _cache_group(self) -> Adw.PreferencesGroup:
+        """The "Storage" group of the preferences: a row for each part of the cache, with its
+        size, its files and a trash (grey while the part is empty), and one for all of it
+        with "Clear All…". The sizes are counted in the background, never on the window's
+        thread; the group is about the cache of this installation alone."""
+        kind = _("Flatpak") if paths.in_flatpak() else _("version from source")
+        # TRANSLATORS: group in the preferences: the cache (downloaded maps and updates,
+        # pictures, temporary files) on the disk of the computer (not the device's storage of
+        # the device page)
+        g = Adw.PreferencesGroup(title=pgettext("preferences", "Storage"), description=_(
+            "Only the files of this installation ({kind}); openExpress downloads them again "
+            "when needed").format(kind=kind))
+        parts = {}
+        for name in cache.CATEGORIES:
+            row = Adw.ActionRow(title=_(cache.CATEGORY_NAMES[name]), subtitle=_("Counting…"))
+            trash = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
+                               tooltip_text=_("Delete these files"), sensitive=False)
+            trash.add_css_class("flat")
+            # The handler gets its button from the signal and holds none.
+            trash.connect("clicked", lambda button, name=name: ask_clear_cache_part(
+                self, name, button))
+            row.add_suffix(trash)
+            g.add(row)
+            parts[name] = (row, trash)
+        # TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
+        everything = Adw.ActionRow(title=_("All of the cache"), subtitle=_("Counting…"))
+        # TRANSLATORS: button that clears every part of the cache
+        button = Gtk.Button(label=_("Clear All…"), valign=Gtk.Align.CENTER, sensitive=False)
+        button.connect("clicked", self._ask_clear_cache)
+        everything.add_suffix(button)
+        g.add(everything)
+        # Held by the window while the preferences are open (dropped when they close), so
+        # that what comes back from a thread finds the rows without holding them.
+        self._storage = types.SimpleNamespace(parts=parts, everything=(everything, button),
+                                              usage=None)
+        TaskRunner.in_background(cache.usage, lambda use: show_cache_usage(self, use))
+        return g
 
     def _ask_clear_cache(self, button) -> None:
         """"Clear All…": asks first, naming the maps and their size; then clears as
