@@ -18,7 +18,7 @@ import posixpath
 import re
 import shutil
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -140,6 +140,9 @@ class StoreApp:
     version_name: str
     has_settings: bool
     permissions_changed: bool
+    # The permissions the version in the store asks for (the store's names, e.g.
+    # "Positioning"); with permissions_changed, those the user has to allow first.
+    permissions: tuple[str, ...] = ()
 
     @property
     def app_type(self) -> int:
@@ -502,6 +505,12 @@ class StoreApi:
 
 
 def _store_app(a: dict) -> StoreApp:
+    listed = a.get("permissions")
+    # Read leniently: the shape of an item is not known from a real answer yet.
+    permissions = tuple(str(p) for p in listed) if isinstance(listed, list) else ()
+    if a.get("permissionschanged"):
+        log.debug("apps: %s asks for new permissions: %d (%s)", a.get("name") or "?",
+                  len(permissions), ", ".join(permissions) or "-")
     return StoreApp(
         app_id=uuid.UUID(a.get("appid")),
         name=a.get("name") or "?",
@@ -512,7 +521,55 @@ def _store_app(a: dict) -> StoreApp:
         version_name=a.get("latestversionname") or "",
         has_settings=bool(a.get("hassettings")),
         permissions_changed=bool(a.get("permissionschanged")),
+        permissions=permissions,
     )
+
+
+# What each permission of a Connect IQ app lets it do, in our words; a name not listed here
+# is shown as the store gives it.
+PERMISSION_WORDS = {
+    "ant": N_("ANT radio"),
+    "background": N_("running in the background (may use more battery)"),
+    "bluetoothlowenergy": N_("Bluetooth Low Energy"),
+    "communications": N_("the internet, through the phone"),
+    "complicationpublisher": N_("offering data to watch faces and other apps"),
+    "complicationsubscriber": N_("reading data that other apps offer"),
+    "datafieldalert": N_("alerts during an activity"),
+    "fit": N_("activity files (FIT)"),
+    "fitcontributor": N_("adding its own data to activity files"),
+    "notifications": N_("showing notifications"),
+    "persistedcontent": N_("saved courses, routes, waypoints and workouts"),
+    "persistedlocations": N_("saving locations on the device"),
+    "positioning": N_("GPS location"),
+    "pushnotification": N_("push notifications"),
+    "sensor": N_("sensors (heart rate, ANT+ sensors, compass)"),
+    "sensorhistory": N_("history of heart rate, pressure, temperature and altitude"),
+    "sensorlogging": N_("recording sensor data"),
+    "steps": N_("step counts"),
+    "userprofile": N_("your Garmin Connect profile"),
+}
+
+
+def permission_text(name: str) -> str:
+    """The words for one permission of the store (any letter case); an unknown one as it is."""
+    words = PERMISSION_WORDS.get(name.casefold())
+    return _(words) if words else name
+
+
+def permissions_text(app: StoreApp) -> str:
+    """What an app with new permissions asks for: a sentence and a line for each."""
+    if not app.permissions:
+        return _("{name} {version} needs other permissions than before; the Connect IQ store "
+                 "does not say which.").format(name=app.name, version=app.version_name)
+    return "\n".join([_("{name} {version} needs these permissions:").format(
+        name=app.name, version=app.version_name),
+        *("• " + permission_text(p) for p in app.permissions)])
+
+
+def needs_consent(apps: list[StoreApp]) -> list[StoreApp]:
+    """The apps that may be installed or updated only once the user allows their new
+    permissions (as Garmin Express asks before each such install and update)."""
+    return [a for a in apps if a.permissions_changed]
 
 
 # --- install / remove ----------------------------------------------------------------
@@ -548,6 +605,8 @@ class IqInstallReport:
     sandboxed_updates: list[str] = field(default_factory=list)
     # The device has no app list yet: all of `for_phone` stay queued for that (#14).
     no_app_list: bool = False
+    # Apps with new permissions that were not allowed: nothing was done for them.
+    needs_consent: list[str] = field(default_factory=list)
 
 
 # --- devices that hide the app folder ------------------------------------------------------
@@ -745,13 +804,28 @@ def install_apps(
     api: StoreApi,
     targets: list[StoreApp],
     progress: Callable[[str], None] = lambda s: None,
+    allowed: Collection[uuid.UUID] = (),
 ) -> IqInstallReport:
     """Queue the apps in Garmin Connect (unless they already wait there) and install over
     USB those the device accepts.
 
     Apps whose folder the device does not offer are only queued (`for_phone`): nothing is
-    downloaded or written for them, and they are not failures.
+    downloaded or written for them, and they are not failures. Apps with new permissions
+    that are not in `allowed` are set aside before anything else (`needs_consent`): they
+    are not requested, downloaded or written.
     """
+    asking = [t for t in needs_consent(targets) if t.app_id not in set(allowed)]
+    targets = [t for t in targets if t not in asking]
+    report = _install_apps(device, storage, client, api, targets, progress)
+    report.needs_consent = [t.name for t in asking]
+    if asking:
+        log.info("apps install: %d set aside, their new permissions not allowed", len(asking))
+    return report
+
+
+def _install_apps(device, storage, client, api, targets, progress) -> IqInstallReport:
+    if not targets:
+        return IqInstallReport()
     state = read_installed(device, storage)
     if state.no_app_list:
         return _queue_only(device, client, api, targets)

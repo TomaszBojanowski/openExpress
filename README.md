@@ -382,6 +382,10 @@ is stored in the file.
   the chosen one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
+- An app whose version in the store asks for other permissions than before is installed or
+  updated only once you allow them: the window lists them and asks, and `openexpress apps
+  install` / `apps update` need `--allow-permissions`. A sync installs only what already
+  waits in the queue, so it asks nothing.
 - When a device refuses to create an app folder, it is not asked again until its software
   changes; the Apps page says so in one line, and apps that go there stay queued in Garmin
   Connect.

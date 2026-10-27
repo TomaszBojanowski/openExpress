@@ -1209,6 +1209,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,
         run_task=RunNow())
+    win._install_apps = lambda apps, allowed=(): MainWindow._install_apps(win, apps, allowed)
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     ((title, text),) = errors
     lines = text.splitlines()
@@ -2866,6 +2867,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
         load_section=lambda key, force=False: None, show_device=lambda: shown.append(1),
         show_no_device=lambda: shown.append(1),
         run_task=RunNow())
+    win._install_apps = lambda apps, allowed=(): MainWindow._install_apps(win, apps, allowed)
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert win._updated_apps == {FACE}
     assert toasts == [("Wrote the update of Face It to the device; it will be installed after "
@@ -3264,6 +3266,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,
         run_task=RunNow())
+    win._install_apps = lambda apps, allowed=(): MainWindow._install_apps(win, apps, allowed)
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     assert errors == [("Connect IQ", f"Face It: {NO_SLOT}")]
     assert store.requested == [] and client.downloads == 0

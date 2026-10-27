@@ -1165,6 +1165,10 @@ def _install_queued_apps(s, messages, progress, errors,
     left in the queue is not received."""
     from openexpress import ciq
 
+    # A sync installs only what already waits in the queue (asked for by the phone, the store
+    # or `apps install`, each with its own consent) and never asks the store for updates:
+    # nothing here needs the consent to new permissions (point 5). Should it ever update
+    # apps by itself, it must leave those with permissions_changed, as Garmin Express does.
     try:
         known = {a.app_id: a for a in ciq.StoreApi(s.client).account_apps(
             s.device, s.settings.locale.replace("_", "-"))}

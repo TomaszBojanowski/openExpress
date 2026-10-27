@@ -1095,13 +1095,39 @@ def _apps_queue_only(args, dev, st, client, api, account) -> int:
     target = _find_app(account, args.name)
     print(_("Install {name} {version} ({size})").format(
         name=target.name, version=target.version_name, size=_human(target.size)))
+    targets, _skipped, allowed = _apps_consent(args, [target])
     if not args.apply:
-        print("  " + ciq.no_app_list_text([target.name]))
+        if targets:
+            print("  " + ciq.no_app_list_text([target.name]))
         print(_("Dry run. Add --apply."))
-        return 0
-    rep = ciq.install_apps(dev, st, client, api, [target])
+        return 0 if targets else 1
+    if not targets:
+        return 1
+    rep = ciq.install_apps(dev, st, client, api, targets, allowed=allowed)
     print(ciq.no_app_list_text(rep.for_phone))
     return 0
+
+
+def _apps_consent(args, targets):
+    """The apps with new permissions among `targets`: what they ask for, and whether
+    --allow-permissions allows them. Returns the apps to go on with, those set aside and the
+    IDs allowed."""
+    from openexpress import ciq
+
+    asking = ciq.needs_consent(targets)
+    allow = getattr(args, "allow_permissions", False)
+    for a in asking:
+        for line in ciq.permissions_text(a).splitlines():
+            print("  " + line)
+        if allow:
+            print("  " + _("{name}: needs new permissions; allowed with "
+                           "--allow-permissions.").format(name=a.name))
+        else:
+            print("  " + _("{name}: needs new permissions; nothing is done for it. Add "
+                           "--allow-permissions to allow them.").format(name=a.name))
+    skipped = [] if allow else asking
+    return ([t for t in targets if t not in skipped], skipped,
+            {a.app_id for a in asking} if allow else set())
 
 
 def _apps_order(args, dev, st, state) -> int:
@@ -1257,6 +1283,7 @@ def cmd_apps(args) -> int:
         for a in state.store_apps:
             upd = updates.get(a.app_id)
             note = ("  " + _("update available: {version}").format(version=upd.version_name)
+                    + (" " + _("(permissions changed)") if upd.permissions_changed else "")
                     if upd else "")
             if a.pending:
                 note = "  " + _("will be installed after the device is unplugged")
@@ -1300,6 +1327,11 @@ def cmd_apps(args) -> int:
             msg = (_("Update {name} {version} ({size})") if a.app_id in installed_ids
                    else _("Install {name} {version} ({size})"))
             print(msg.format(name=a.name, version=a.version_name, size=_human(a.size)) + flag)
+        targets, skipped, allowed = _apps_consent(args, targets)
+        if not targets:
+            if not args.apply:
+                print(_("Dry run. Add --apply."))
+            return 1
         waiting = ciq.queued_app_ids(client.device_messages(dev.unit_id))
         for a in targets:
             if a.app_id in waiting:
@@ -1343,9 +1375,9 @@ def cmd_apps(args) -> int:
                 if over_usb:
                     print(ciq.app_list_copy_note(dev, st))
                 print(_("Dry run. Add --apply."))
-            return 1 if refused else 0
+            return 1 if refused or skipped else 0
         rep = ciq.install_apps(dev, st, client, api, targets,
-                               progress=lambda s: print("  " + s))
+                               progress=lambda s: print("  " + s), allowed=allowed)
         written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
         updated = [n for n in rep.installed if n in rep.updated]
         installed = [n for n in rep.installed if n not in rep.direct]
@@ -1372,7 +1404,7 @@ def cmd_apps(args) -> int:
                 names=", ".join(for_phone)))
         if not rep.installed and not rep.failed and not rep.for_phone:
             print(_("The server has not queued the app yet; run `openexpress sync` in a moment."))
-        return 0 if not rep.failed else 1
+        return 0 if not rep.failed and not skipped else 1
 
     app = _find_app(state.apps, args.name, APP_TYPE_OPTIONS.get(getattr(args, "type", None)))
     if cmd == "remove":
@@ -1854,6 +1886,9 @@ def build_parser() -> argparse.ArgumentParser:
         a = asub.add_parser(name, help=helptext)
         a.add_argument("name", help=_("app name (or part of it) or app id"))
         a.add_argument("--apply", action="store_true")
+        if name == "install":
+            a.add_argument("--allow-permissions", action="store_true",
+                           help=_("also allow the new permissions an app asks for"))
         if name == "remove":
             a.add_argument("--forget", action="store_true",
                            help=_("also remove it from the app list in your Garmin account"))
@@ -1862,6 +1897,8 @@ def build_parser() -> argparse.ArgumentParser:
                            help=_("which entry, when an app and a widget share a name"))
     a = asub.add_parser("update", help=_("update installed apps"))
     a.add_argument("--apply", action="store_true")
+    a.add_argument("--allow-permissions", action="store_true",
+                   help=_("also allow the new permissions an app asks for"))
     a = asub.add_parser("order", help=_("put the apps back in the order of a saved app list"))
     a.add_argument("--from", dest="source", metavar="COPY",
                    help=_("a copy of the app list: part of its folder name, or a path"))

@@ -132,7 +132,9 @@ def _apps():
     account = [StoreApp(uuid.uuid4(), "Garmin Coach Training Plans Companion",
                         "Garmin Ltd or its subsidiaries", "watch-app", 238_504, 3, "3.0.2",
                         False, False)]
-    return state, account, [types.SimpleNamespace(app_id=weather.app_id, version_name="4.2.0")]
+    # The update asks for new permissions: the longest line of an app (point 5).
+    return state, account, [types.SimpleNamespace(app_id=weather.app_id, version_name="4.2.0",
+                                                  permissions_changed=True)]
 
 
 def _music():

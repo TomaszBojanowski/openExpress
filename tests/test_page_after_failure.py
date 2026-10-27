@@ -186,11 +186,13 @@ def _window(monkeypatch, session=None):
         raise DeviceError(GONE)
 
     win.run_task, win.fails = run_task, fails
+    win._install_apps = lambda apps, allowed=(): MainWindow._install_apps(win, apps, allowed)
     return win
 
 
 APP = types.SimpleNamespace(name="Face It", app_id=FACE, app_type=4, has_files=True,
-                            direct_removal=False, sandboxed=False, disabled=True)
+                            direct_removal=False, sandboxed=False, disabled=True,
+                            permissions_changed=False)
 
 
 def _account(monkeypatch, store=None):

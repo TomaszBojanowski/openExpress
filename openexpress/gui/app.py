@@ -4571,6 +4571,10 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             if a.app_id in upd:
                 sub = caption(sub, _("update {version}").format(
                     version=upd[a.app_id].version_name))
+                if getattr(upd[a.app_id], "permissions_changed", False):
+                    # TRANSLATORS: in the line of an app whose update asks for permissions
+                    # the user has to allow first
+                    sub = caption(sub, _("new permissions"))
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(sub))
             icons[a.app_id] = self._app_icon(row)
@@ -4605,7 +4609,9 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(
                                     caption(self._store_type_name(a), a.version_name,
-                                            human_size(a.size), a.developer)))
+                                            human_size(a.size), a.developer,
+                                            *([_("new permissions")] if a.permissions_changed
+                                              else []))))
             icons[a.app_id] = self._app_icon(row)
             row.add_suffix(self._button(_("Install"), lambda a=a: self.install_apps([a])))
             g.add(row)
@@ -4848,6 +4854,54 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
                       read_again_after_failure(self, "apps"))
 
     def install_apps(self, apps) -> None:
+        """Install or update these apps; those with new permissions only once the user
+        allows them (one question for all of them, as Garmin Express asks before each)."""
+        from openexpress import ciq
+
+        asking = ciq.needs_consent(apps)
+        if asking:
+            self.confirm_permissions(apps, asking)
+            return
+        self._install_apps(apps)
+
+    def confirm_permissions(self, apps, asking) -> None:
+        from openexpress import ciq
+
+        count = len(asking)
+        others = [a for a in apps if a not in asking]
+        allowed = {a.app_id for a in asking}
+        body = "\n\n".join([*(ciq.permissions_text(a) for a in asking), ngettext(
+            "openExpress installs it only if you allow them.",
+            "openExpress installs them only if you allow them.", count)])
+        d = Adw.AlertDialog(heading=ngettext("Allow New Permissions?",
+                                             "Allow New Permissions for {count} Apps?",
+                                             count).format(count=count), body=body)
+        d.add_response("cancel", _("Cancel"))
+        if others:
+            # TRANSLATORS: answer to the question about new permissions: skip the apps that
+            # ask for them and install or update only the others
+            d.add_response("others", _("Skip These Apps"))
+        d.add_response("allow", _("Allow"))
+        d.set_response_appearance("allow", Adw.ResponseAppearance.SUGGESTED)
+        d.set_close_response("cancel")
+
+        # The choice is data of this closure, not of the dialog: a click says "closed" before
+        # "response" (libadwaita 1.9).
+        def response(_d, r):
+            if r == "allow":
+                self._install_apps(apps, allowed)
+            elif r == "others":
+                self._install_apps(others)
+
+        def closed(_d):
+            self._permissions_dialog = None
+
+        d.connect("response", response)
+        d.connect("closed", closed)
+        self._permissions_dialog = d  # held while open (the signals do not hold it)
+        d.present(self)
+
+    def _install_apps(self, apps, allowed=()) -> None:
         from openexpress import ciq
 
         s = self.session
@@ -4855,9 +4909,12 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         def work():
             service.require_account_device(s.client, s.device.unit_id)
             return ciq.install_apps(s.device, s.storage, s.client, ciq.StoreApi(s.client),
-                                    apps, progress=self.progress)
+                                    apps, progress=self.progress, allowed=allowed)
 
         def done(rep):
+            if rep.needs_consent:  # only by a mistake of the program: it asked first
+                log.warning("apps: %d not installed, their new permissions not allowed",
+                            len(rep.needs_consent))
             self._updated_apps = set(getattr(self, "_updated_apps", ())) | set(rep.updated_ids)
             if rep.failed:
                 # What was written first, then each app that was not (the USB connection
