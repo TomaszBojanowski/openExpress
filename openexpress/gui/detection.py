@@ -148,15 +148,21 @@ def with_space(found):
     return found
 
 
+def _note_seen(summaries: list) -> None:
+    """Each device whose GarminDevice.xml was read, noted as seen now (devices.json): in a
+    detection, before anything is chosen, and when the list is read again."""
+    for s in summaries:
+        if s.ok:
+            known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
+                               s.found.kind, **service.drive_keys(
+                                   s.found.usb if s.found.kind == "ums" else None))
+
+
 def _choose(found: list):
     """The list of these devices, one entry each, without those gone since they were found;
     with one left, that one opened (D7); with none, no device."""
     summaries = distinct_devices([probe(f) for f in found])
-    for s in summaries:
-        if s.ok:  # its GarminDevice.xml was read: remembered before anything is chosen
-            known_devices.seen(s.unit_id, s.description, s.part_number, s.software_version,
-                               s.found.kind, **service.drive_keys(
-                                   s.found.usb if s.found.kind == "ums" else None))
+    _note_seen(summaries)
     left = _still_there(summaries)
     if len(left) > 1 or (left and left[0].found.kind == "ums" and not left[0].found.mounted):
         # A drive the system has not mounted is not mounted behind the user's back: its tile.
@@ -175,9 +181,11 @@ def _still_there(summaries: list) -> list:
 
 def connected_devices() -> list:
     """The devices connected now, one entry each, as the start page shows them while a
-    device is open: GarminDevice.xml of each is read, nothing is opened or mounted and
-    nothing is asked of the account."""
-    return _still_there(distinct_devices([probe(f) for f in find_all_devices()]))
+    device is open: GarminDevice.xml of each is read (and each noted as seen), nothing is
+    opened or mounted and nothing is asked of the account."""
+    summaries = distinct_devices([probe(f) for f in find_all_devices()])
+    _note_seen(summaries)
+    return _still_there(summaries)
 
 
 def _mount_address(mount) -> str:
