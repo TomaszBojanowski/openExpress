@@ -801,6 +801,9 @@ def cmd_updates(args) -> int:
         print(_("License (EULA): {url}").format(url=e))
     if any(u.is_system for u in chosen):
         print(_(upd.SYSTEM_UPDATE_WARNING))
+    if _loses_data_on_update(client, dev):
+        print(_(upd.DATA_LOSS_WARNING_DRIVE if getattr(st, "mass_storage", False)
+                else upd.DATA_LOSS_WARNING_CLI))
     if not args.apply:
         print("\n" + _("Dry run: nothing was downloaded or written. Add --apply "
                        "(this means you accept the licenses above)."))
@@ -814,6 +817,22 @@ def cmd_updates(args) -> int:
     if n:
         print(_(FINISH_STEPS))
     return 0
+
+
+def _loses_data_on_update(client, dev) -> bool:
+    """Whether Garmin files the device (unit-info, asked here once) as a kind that loses the
+    data it holds when its software is updated (point 6 of package 3). A failed request only
+    means no warning."""
+    from openexpress import updates as upd
+
+    if not dev.unit_id:
+        return False
+    try:
+        info = client.unit_info(dev.unit_id, dev.part_number)
+    except ApiError as e:  # only for a warning; the text may quote the answer
+        log.info("updates: unit-info failed (%s), no data-loss check", type(e).__name__)
+        return False
+    return upd.loses_data_on_update(info)
 
 
 def _load_maps(args, client, own: bool = False):

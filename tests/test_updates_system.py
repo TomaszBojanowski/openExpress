@@ -55,6 +55,8 @@ def offered(device_root, monkeypatch):
     answer = lower_keys(server_answer())  # as GarminClient returns it
     monkeypatch.setattr(GarminClient, "software_updates",
                         lambda self, raw, include_reinstalls=False: answer)
+    # An install asks the kind of device (the data-loss warning): an ordinary one.
+    monkeypatch.setattr(GarminClient, "unit_info", lambda self, unit_id, part_number: {})
     return device_root
 
 
@@ -460,6 +462,7 @@ def offered_beta(device_root, monkeypatch):
         found = lower_keys(beta_answer(bundle_state))
         monkeypatch.setattr(GarminClient, "software_updates",
                             lambda self, raw, include_reinstalls=False: found)
+        monkeypatch.setattr(GarminClient, "unit_info", lambda self, unit_id, part_number: {})
         return device_root
 
     return answer
@@ -536,6 +539,7 @@ def test_the_page_learns_from_the_answer_whether_beta_versions_are_offered(devic
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(
             storage=LocalStorage(device_root), device=types.SimpleNamespace(raw=b"<Device/>"),
+            unit_info_answer={},  # asked when the device was opened
             client=types.SimpleNamespace(
                 software_updates=lambda raw, include_reinstalls=False: lower_keys(beta_answer()))),
         show_updates=lambda items, beta=False: shown.append(([u.part_number for u in items], beta)))

@@ -831,6 +831,8 @@ def offered(device_root, monkeypatch):
         ("006-B0000-00", "Test watch System Software", "Firmware", "GUPDATE.GCD", b"fw", "Critical"))
     monkeypatch.setattr(GarminClient, "software_updates",
                         lambda self, raw, include_reinstalls=False: answer)
+    # An install asks the kind of device (the data-loss warning): an ordinary one.
+    monkeypatch.setattr(GarminClient, "unit_info", lambda self, unit_id, part_number: {})
     return device_root, answer
 
 

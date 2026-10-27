@@ -306,6 +306,10 @@ connected device; no login is needed.
 - **Before a system update** is copied, the window and `openexpress updates --install` warn
   to charge the device and not to disconnect it while copying. The question in the window
   shows both versions and links to the license (EULA).
+- **Devices that lose their data on an update:** before every update of a device that Garmin
+  files as one of these kinds (Wellness and Vivomove), the window and `openexpress updates
+  --install` warn that the update erases the data stored on it and say to sync it first. The
+  update is not held back. No such device has been tried yet.
 - **After the file is copied** the device installs it when it is disconnected. Until then
   the page says *Update ready: disconnect the device to install it* (and how many more
   updates are available, if any), its tile *Unplug to install*, and `openexpress updates`

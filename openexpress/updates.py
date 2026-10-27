@@ -62,6 +62,21 @@ To finish the installation:
 # Said before a system update is installed, on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
                            "not disconnect it while copying.")
+# The kinds of device (the "segmenttype" of unit-info) that Garmin marks as losing the data
+# they hold when their software is updated. Garmin Express holds such an update back while a
+# sync of the device runs; openExpress says so before every update and suggests to sync first.
+DATA_LOST_SEGMENTS = frozenset({"wellness", "vivomove"})
+# Said before every update of such a device: in the window, on the command line, and for a
+# device connected as a USB drive, which openExpress does not sync.
+DATA_LOSS_WARNING = N_("Warning: installing an update erases the data stored on this device. "
+                       "Sync it with Garmin Connect first, or the data not uploaded yet is lost.")
+DATA_LOSS_WARNING_CLI = N_("Warning: installing an update erases the data stored on this "
+                           "device. Sync it first (openexpress sync --apply), or the data not "
+                           "uploaded yet is lost.")
+DATA_LOSS_WARNING_DRIVE = N_("Warning: installing an update erases the data stored on this "
+                             "device. openExpress does not sync a device connected as a USB "
+                             "drive: sync it with the Garmin Connect app first, or the data not "
+                             "uploaded yet is lost.")
 # The offered updates named one by one in the log, at most.
 LOG_ITEMS = 20
 # Said when the server offers beta versions to the device ("accesslevel" of the answer, e.g.
@@ -284,6 +299,13 @@ def parse_updates(response: dict) -> list[SoftwareUpdate]:
             )
         )
     return out
+
+
+def loses_data_on_update(info) -> bool:
+    """Whether Garmin's update server files the device (the answer of unit-info) as a kind that
+    loses the data it holds when its software is updated. Only that one field is read."""
+    segment = info.get("segmenttype") if isinstance(info, dict) else None
+    return isinstance(segment, str) and segment.casefold() in DATA_LOST_SEGMENTS
 
 
 def beta_offered(response: dict) -> bool:

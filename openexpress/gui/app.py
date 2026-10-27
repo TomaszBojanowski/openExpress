@@ -40,7 +40,7 @@ from openexpress import (  # noqa: E402
     tile_facts,
 )
 from openexpress.auth import sso, store  # noqa: E402
-from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
+from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.console import error as print_error  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     ABSENT,
@@ -616,6 +616,23 @@ def is_bike_accessory(client, device, ask=None) -> bool:
     note_segment(device, info)
     segment = info.get("segmenttype") if isinstance(info, dict) else None
     return isinstance(segment, str) and segment.casefold() == "bikeaccessory"
+
+
+def data_loss_text(session) -> str:
+    """The warning before an update of a device that loses its data on one (point 6 of
+    package 3): a drive is not synced by openExpress; otherwise how many activities wait to be
+    uploaded, when the window has counted them."""
+    from openexpress import updates as upd
+
+    if getattr(session, "mass_storage", False):
+        return _(upd.DATA_LOSS_WARNING_DRIVE)
+    text = _(upd.DATA_LOSS_WARNING)
+    count = getattr(getattr(session, "to_sync", None), "count", None)
+    if count:
+        text += " " + ngettext("{count} activity on the device has not been uploaded yet.",
+                               "{count} activities on the device have not been uploaded yet.",
+                               count).format(count=count)
+    return text
 
 
 def bike_accessory_text() -> str:
@@ -4005,6 +4022,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
             answer = s.client.software_updates(s.device.raw, include_reinstalls=True)
             items = upd.mark_present(s.storage, upd.parse_updates(answer),
                                      upd.component_count(s.device))
+            # The kind of device, for the question before an update (it asks no server):
+            # usually known already from opening the device.
+            try:
+                service.unit_info(s)
+            except ApiError as e:  # only for a warning; the text may quote the answer
+                log.info("software update: unit-info failed (%s), no data-loss check",
+                         type(e).__name__)
             return items, upd.beta_offered(answer)
 
         def failed(_e):
@@ -4199,10 +4223,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         elif u.eula_url:
             below.append(Gtk.Label(label=_("License: {url}").format(url=u.eula_url), wrap=True,
                                    justify=Gtk.Justification.CENTER))
-        if u.is_system:
+        warnings = [_(upd.SYSTEM_UPDATE_WARNING)] if u.is_system else []
+        # Read from the answer kept with the session: the question asks no server.
+        if upd.loses_data_on_update(getattr(s, "unit_info_answer", None)):
+            warnings.append(data_loss_text(s))
+        for text in warnings:
             # In the warning colour of the theme and in bold.
-            warning = Gtk.Label(label=_(upd.SYSTEM_UPDATE_WARNING), wrap=True,
-                                justify=Gtk.Justification.CENTER)
+            warning = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER)
             warning.add_css_class("warning")
             warning.add_css_class("heading")
             below.append(warning)

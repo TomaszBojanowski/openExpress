@@ -2968,7 +2968,8 @@ def _drive_client(monkeypatch):
     from openexpress import cli
 
     monkeypatch.setattr(cli, "GarminClient", lambda settings: types.SimpleNamespace(
-        http=None, software_updates=lambda raw, include_reinstalls=False: varia_answer()))
+        http=None, software_updates=lambda raw, include_reinstalls=False: varia_answer(),
+        unit_info=lambda unit_id, part_number: {"segmenttype": "BikeAccessory"}))
 
 
 def test_cli_ejects_a_drive_after_writing_an_update(watch_and_drives, monkeypatch, capsys):
