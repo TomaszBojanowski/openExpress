@@ -288,9 +288,9 @@ class StartWindow:
 
     def _fetch_account(self) -> None:
         """Read the devices of the Garmin account in the background, if one is logged in;
-        when they change, the start page (if shown) is drawn once more, which adds the
-        section "On the account" without touching the other tiles. Not logged in, or an
-        error: no such section, one line in the log."""
+        when they change, the start page (if shown) is drawn once more: the section "On the
+        account" comes, and the tiles whose words and chips stay the same keep their widgets.
+        Not logged in, or an error: no such section, one line in the log."""
         def work():
             client = account_client()
             if client.auth is None:
@@ -421,9 +421,10 @@ class StartWindow:
         return bool(uri) and summary.found.uri.rstrip("/") == uri
 
     def _show_tiles(self, summaries: list, notice: bool) -> None:
-        """The tiles of these devices, then of those remembered and not connected (from
-        devices.json, the only thing read here); what each one opens is kept here, not in
-        the tile: OPEN, the FoundDevice to open, or the KnownDevice to show read-only."""
+        """The tiles of these devices, then of those remembered and not connected
+        (devices.json, the only thing read here) and of those only on the account; what each
+        one opens is kept here, not in the tile: OPEN, the FoundDevice to open, or the
+        KnownDevice or the account's entry to show read-only."""
         self.connected.drew(summaries)
         entries = devicelist.entries(summaries, known_devices.load(), self._account,
                                      logged_in=self._account is not None)
