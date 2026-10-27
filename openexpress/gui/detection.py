@@ -504,7 +504,7 @@ class DeviceDetection:
             # gvfs reports two mounts of one device: the pages are empty after the first.
             log.info("mount removed (%s): a Garmin device, no device is open, nothing to do",
                      where)
-            note_drive_place(garmin_ums(mount))  # a watch may switch its drive off now
+            note_drive_place(garmin_ums(mount))  # a watch may go into Garmin USB mode now
             return
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
@@ -525,8 +525,8 @@ class DeviceDetection:
                      where, "the open device" if ours else "a Garmin device",
                      bool(getattr(self, "busy", False)))
             if ours and getattr(s, "mass_storage", False):
-                # Its place on USB, kept: a watch switches its drive off once it is ejected
-                # and comes back as 091e:0003 (#19).
+                # Its place on USB, kept: a watch goes into its Garmin USB mode once it is
+                # ejected and comes back as 091e:0003 (#19).
                 note_drive_place(getattr(s.storage, "usb", None))
             self._asked = (Cause.UNPLUGGED_OPEN, open_address(s))
             self.session = None

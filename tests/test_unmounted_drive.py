@@ -404,11 +404,12 @@ def test_removed_safely_the_command_line_says_the_same(drives, monkeypatch):
 #
 # lsusb on the reporter's computer: after "safely remove" the Forerunner 55 is 091e:0003, and
 # 091e:0f1d once plugged in again. At the place on USB where a Garmin drive was in this run,
-# 091e:0003 is that drive switched off: the window and the command line say so at once. A
+# 091e:0003 is that watch in its Garmin USB mode (Garmin's own protocol, which openExpress does
+# not use), not a drive switched off: the window and the command line say so at once. A
 # 091e:0003 without that (an MTP watch starting) is still a device starting.
 
-DRIVE_OFF_TEXT = ("The watch has switched its drive off after it was ejected. Unplug the cable "
-                  "and plug it in again.")
+DRIVE_OFF_TEXT = ("After it was ejected, the watch switched to its Garmin USB mode, which "
+                  "openExpress does not use. Unplug the cable and plug it in again.")
 
 
 class Clock:
@@ -444,7 +445,7 @@ def _fr55_drive(drives, monkeypatch):
     assert [d.uri for d in gio_storage.find_ums_devices()] == ["ums-volume:/dev/sdd"]
 
 
-def test_ejected_the_watch_comes_back_as_0003_and_the_window_says_it_switched_its_drive_off(
+def test_ejected_the_watch_comes_back_as_0003_and_the_window_says_it_is_in_garmin_usb_mode(
         drives, monkeypatch, caplog):
     from openexpress.gui.app import MainWindow
 
@@ -455,8 +456,8 @@ def test_ejected_the_watch_comes_back_as_0003_and_the_window_says_it_switched_it
         assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
         assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
     assert [m for m in caplog.messages if "0003" in m] == [
-        ("USB: a Garmin device 091e:0003 where a Garmin drive was: its drive is switched off "
-         "after it was ejected, to be plugged in again")]
+        ("USB: a Garmin device 091e:0003 where a Garmin drive was: in its Garmin USB mode "
+         "after its drive was ejected, to be plugged in again")]
     for waited_s in (0.0, 16.0, 50.0):
         assert MainWindow._usb_notice(gio_storage.usb_state(), waited_s) == (
             "USB drive", DRIVE_OFF_TEXT, False)
@@ -469,7 +470,7 @@ def test_ejected_the_command_line_says_it_at_once(drives, monkeypatch):
     _reenumerated(drives)
 
     def sleep(_s):
-        pytest.fail("waited for a device that switched its drive off")
+        pytest.fail("waited for a watch in its Garmin USB mode")
 
     with pytest.raises(gio_storage.MassStorageNotice) as said:
         gio_storage.open_device_storage(wait=True, sleep=sleep)
@@ -569,8 +570,8 @@ def test_the_words_in_polish():
         said = gio_storage.drive_off_text()
     finally:
         i18n.setup("en")
-    assert said == ("Zegarek wyłączył swój dysk po wysunięciu. Odłącz kabel i\u00a0podłącz go "
-                    "ponownie.")
+    assert said == ("Po wysunięciu zegarek przeszedł w\u00a0tryb Garmin USB, z\u00a0którego "
+                    "openExpress nie korzysta. Odłącz kabel i\u00a0podłącz go ponownie.")
 
 
 # --- chosen from the start page: the others stay connected (0.7.1, GNOME) -------------------

@@ -940,7 +940,7 @@ def eject(storage) -> None:
         raise DriveNotMounted(_("The drive is not mounted any more. If it was ejected, you can "
                                 "unplug the cable."))
     what = _("Cannot eject the device")
-    note_drive_place(getattr(storage, "usb", None))  # a watch may switch its drive off
+    note_drive_place(getattr(storage, "usb", None))  # a watch may go into Garmin USB mode
     if found.can_eject():
         _wait(lambda done: found.eject_with_operation(
             Gio.MountUnmountFlags.NONE, None, None,
@@ -1011,8 +1011,9 @@ ABSENT, STARTING, PRESENT = "absent", "starting", "present"
 # as a USB drive, never over MTP, so there is nothing to wait for.
 MASS_STORAGE = "mass-storage"
 # A watch that connects as a USB drive, back on USB as 091e:0003 after its drive was
-# ejected (a Forerunner 55, #19): it switched its drive off, only plugging it in again
-# helps; nothing to wait for (_drive_places).
+# ejected (a Forerunner 55, #19): it is in its Garmin USB mode (Garmin's own protocol, which
+# openExpress does not use), not a drive switched off, whatever the name of this state says;
+# only plugging it in again helps, nothing to wait for (_drive_places).
 DRIVE_OFF = "drive-off"
 MASS_STORAGE_CLASS = "08"  # the USB interface class
 WAIT_FOR_DEVICE_S = 45
@@ -1079,11 +1080,11 @@ def _garmin_at_places() -> list[tuple[str, str, bool]]:
 
 # The places on USB where a Garmin drive was seen in this run of the program, or went away
 # (unmounted, ejected), with since when nothing is there (None: something is). A Garmin device
-# at such a place as 091e:0003 is that drive switched off after it was ejected (a Forerunner
-# 55, #19), not a device starting. A place is forgotten once a device in its normal mode is
-# there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
+# at such a place as 091e:0003 is that watch in its Garmin USB mode after its drive was ejected
+# (a Forerunner 55, #19), not a device starting. A place is forgotten once a device in its
+# normal mode is there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
 _drive_places: dict[str, float | None] = {}
-# What the log said last of a device 091e:0003 at a place: whether its drive was switched off.
+# What the log said last of a device 091e:0003 at a place: whether it was in Garmin USB mode.
 _said_0003: dict[str, bool] = {}
 _places_lock = threading.Lock()
 
@@ -1132,8 +1133,8 @@ def _note_places(devices: list[tuple[str, str, bool]], now: float) -> None:
                 if _said_0003.get(place) != drive:
                     _said_0003[place] = drive
                     if drive:
-                        log.info("USB: a Garmin device %s:%s where a Garmin drive was: its "
-                                 "drive is switched off after it was ejected, to be plugged "
+                        log.info("USB: a Garmin device %s:%s where a Garmin drive was: in its "
+                                 "Garmin USB mode after its drive was ejected, to be plugged "
                                  "in again", GARMIN_VID, product)
                     else:
                         log.info("USB: a Garmin device %s:%s: in its transitional mode, "
@@ -1158,8 +1159,8 @@ def usb_state(clock=time.monotonic) -> str:
     """ABSENT: no Garmin device on USB; STARTING: one is there in its transitional mode;
     PRESENT: one is there in its normal mode (which says nothing about gvfs yet);
     MASS_STORAGE: the only Garmin devices there are in mass storage mode; DRIVE_OFF: those
-    that are not are 091e:0003 where a Garmin drive was (_drive_places): switched off after
-    it was ejected."""
+    that are not are 091e:0003 where a Garmin drive was (_drive_places): in Garmin USB mode
+    after it was ejected."""
     devices = _garmin_at_places()
     _note_places(devices, clock())
     if not devices:
@@ -1185,8 +1186,8 @@ def mass_storage_text() -> str:
 def drive_off_text() -> str:
     """A watch back on USB as 091e:0003 after its drive was ejected (DRIVE_OFF): the window
     and the command line."""
-    return _("The watch has switched its drive off after it was ejected. Unplug the cable and "
-             "plug it in again.")
+    return _("After it was ejected, the watch switched to its Garmin USB mode, which "
+             "openExpress does not use. Unplug the cable and plug it in again.")
 
 
 def drive_not_mounted_text() -> str:
@@ -1319,7 +1320,7 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                          ", ".join(f"091e:{p}" for p in garmin_products_on_usb()) or "-", wait)
                 seen = state
             if state == DRIVE_OFF and isinstance(e, NotThereYet):
-                # Switched off after it was ejected: only plugging it in again helps.
+                # In Garmin USB mode after it was ejected: only plugging it in again helps.
                 raise MassStorageNotice(not_ready_text(state)) from e
             if state in (ABSENT, MASS_STORAGE):
                 if wait and told:
