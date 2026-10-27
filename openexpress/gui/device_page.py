@@ -46,7 +46,7 @@ from openexpress import (  # noqa: E402
     sync,
     tile_facts,
 )
-from openexpress.connect import NotAccountDevice, OwnershipError  # noqa: E402
+from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice, mass_storage_text  # noqa: E402
 from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.apps_page import note_apps_count  # noqa: E402
@@ -370,7 +370,24 @@ def get_picture_from_account(win, button=None) -> None:
         if win.session is s:
             win._set_device_texture(texture)
 
-    win.run_task(_("Getting the picture…"), work, done, device=False, button=button)
+    def failed(e) -> bool:
+        if not isinstance(e, ApiError):
+            return False  # anything else: said as by every task
+        # The server's own words are no help here; the button stays for a later try.
+        log.info("device picture: the account refused, asked on request (HTTP %s)",
+                 e.status if e.status is not None else "none")
+        win.error(_("Device picture"), account_picture_refused_text(e.status))
+        return True
+
+    win.run_task(_("Getting the picture…"), work, done, failed, device=False, button=button)
+
+
+def account_picture_refused_text(status: int | None) -> str:
+    """Why Get Picture From Account got no answer, in short: HTTP 404, the account does not
+    know the device (an epix not on it, 27.10.2026); anything else, try later."""
+    if status == 404:
+        return _("Garmin Connect does not know this device, so it has no picture of it.")
+    return _("Garmin Connect could not be asked for the picture. Try again later.")
 
 
 def read_diagnostics(win) -> None:

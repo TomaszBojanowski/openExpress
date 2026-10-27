@@ -36,6 +36,8 @@ class OffAccountClient(PictureClient):
 
     def device_image_url_off_account(self, unit_id):
         self.asked.append(("account, off it", unit_id))
+        if isinstance(self.off_account_url, Exception):
+            raise self.off_account_url
         return self.off_account_url
 
 
@@ -93,12 +95,14 @@ def _clicking_window(client, monkeypatch):
     win = _off_account(_picture_window(client, logged_in=True, monkeypatch=monkeypatch))
     win.show()
     _finish(win)
-    shown_tiles, toasts, rows = [], [], []
+    shown_tiles, toasts, rows, errors = [], [], [], []
     win.start = types.SimpleNamespace(set_picture=lambda part, texture: shown_tiles.append(
         (part, texture)))
     win.toast = toasts.append
     win.account_picture_row = types.SimpleNamespace(set_visible=rows.append)
+    win.error = lambda title, text: errors.append((title, text))
     win.run_task = RunNow()
+    win.errors = errors
     return win, shown_tiles, toasts, rows
 
 
@@ -132,3 +136,26 @@ def test_the_account_without_a_picture_says_so(pictures):
     get_picture_from_account(win)
     assert toasts == [NONE_TEXT] and rows == [False]  # not offered again
     assert _cache(xdg) == [] and win.shown == [] and shown_tiles == []
+
+
+# The account, asked about an epix not on it, answered HTTP 404 with a JSON {"error": …}
+# (27.10.2026): the window says so in a short sentence, never the server's words, and the
+# button stays (a try later may answer).
+UNKNOWN_TEXT = "Garmin Connect does not know this device, so it has no picture of it."
+REFUSED_TEXT = "Garmin Connect could not be asked for the picture. Try again later."
+
+
+@pytest.mark.parametrize(("status", "words"), [(404, UNKNOWN_TEXT), (500, REFUSED_TEXT),
+                                               (None, REFUSED_TEXT)])
+def test_a_refusal_of_the_account_is_said_in_short(pictures, status, words):
+    from openexpress.connect import ApiError
+    from openexpress.gui.device_page import get_picture_from_account
+
+    xdg, _log, monkeypatch = pictures
+    refusal = ApiError(f"Device info: HTTP {status}", status, '{"error": "made up"}')
+    client = OffAccountClient(off_account_url=refusal)
+    win, shown_tiles, toasts, rows = _clicking_window(client, monkeypatch)
+    get_picture_from_account(win)
+    assert win.errors == [("Device picture", words)]
+    assert rows == [] and win.account_picture_offer is win.session  # the button stays
+    assert _cache(xdg) == [] and toasts == [] and shown_tiles == []
