@@ -49,7 +49,6 @@ MONITORING_TYPES = {"FIT_TYPE_32", "FIT_TYPE_33"}
 SLEEP_TYPES = {"FIT_TYPE_49", "FIT_TYPE_50", "FIT_TYPE_51", "FIT_TYPE_52",
                "FIT_TYPE_53", "FIT_TYPE_54", "FIT_TYPE_55"}
 
-# Connect queue types that this version does not install yet.
 # Queue items handled by dedicated modules instead of a plain file download.
 SPECIAL_DOWNLOAD_PREFIXES = {"IQ": "Connect IQ"}
 SPECIAL_DOWNLOAD_TYPES = {"FIT_TYPE_39": "TrueUp"}
