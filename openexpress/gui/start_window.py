@@ -631,7 +631,7 @@ class StartWindow:
         again by _redraw_remembered)."""
         self._remembered_entry = known
         self.remembered.show(
-            name=known.description,
+            name=known.shown_name,
             version=software_text(known.software_version),
             part_number=known.part_number,
             seen_tooltip=last_seen_tooltip(known.last_seen),

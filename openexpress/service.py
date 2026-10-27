@@ -109,7 +109,17 @@ def unit_info(session) -> dict:
             answer = (session.client.unit_info(device.unit_id, device.part_number)
                       if device.unit_id else {})
             session.unit_info_answer = answer
+            note_model_name(device, answer)
         return answer
+
+
+def note_model_name(device, answer) -> None:
+    """The name unit-info gives the model of a device whose GarminDevice.xml names it in
+    capitals only ("EPIX"), kept for the window (known_devices.shown_name)."""
+    model = answer.get("devicemodel") if isinstance(answer, dict) else None
+    description = getattr(device, "description", "") or ""
+    if device.unit_id and description.isupper() and model:
+        known_devices.set_model_name(device.unit_id, model)
 
 
 def forget_unit_info(session) -> None:

@@ -227,8 +227,10 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
     image_url, image_source = picture_address(account["image_url"] if account else None,
                                               known.image_url if known else None)
     return Tile(
-        description=description or (known.description if known else "") or (
-            account["description"] if account else ""),
+        description=known_devices.shown_name(
+            description or (known.description if known else "") or (
+                account["description"] if account else ""),
+            known.model_name if known else None),
         part_number=part,
         software_version=version or (known.software_version if known else "") or (
             account["software_version"] if account else ""),

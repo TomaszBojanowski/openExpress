@@ -6,12 +6,12 @@ __init__ of its own; Section is one page of the side panel.
 
 Has: the rows of the device page (software_label, update_row, update_chip, map_row, apps_row,
 music_row, storage_row, storage_bar, last_sync_row, primary_row, backup_row, device_error_row,
-device_error_group, device_image, device_picture), the state of its updates (update_state,
-update_count, update_only, update_checked_at, _update_record_at, _update_check_session,
-updates_cache) and of its maps (map_state, map_update_count, maps_cache, map_cleanup,
-_map_check_session), the counts of the Apps and Music pages (apps_count, music_count), "Last
-sync" (_last_sync_data, _last_sync_children, _last_sync_monitor), _banner_kind,
-_action_buttons.
+device_error_group, device_image, device_picture, device_title), the state of its updates
+(update_state, update_count, update_only, update_checked_at, _update_record_at,
+_update_check_session, updates_cache) and of its maps (map_state, map_update_count, maps_cache,
+map_cleanup, _map_check_session), the counts of the Apps and Music pages (apps_count,
+music_count), "Last sync" (_last_sync_data, _last_sync_children, _last_sync_monitor),
+_banner_kind, _action_buttons.
 Uses: session, sections, pages, banner, start, connected, _account, busy, run_task,
 in_background, progress, toast, _button, the loading of the other pages (load_updates,
 load_maps, load_apps, load_music), select_section, refresh_device, _poll_usb, _retry_sources,
@@ -270,6 +270,27 @@ def device_error_row(win, group=None) -> None:
         row = Adw.ActionRow(title=_("Device error log"), subtitle=subtitle)
     group.add(row)
     win.device_error_row = row
+
+
+def device_name(s) -> str:
+    """The name of the open device on its page: the name Garmin gives its model when its
+    GarminDevice.xml names it in capitals only ("EPIX"), from the session's unit-info or as
+    remembered (known_devices.shown_name); else that name."""
+    d = s.device
+    answer = getattr(s, "unit_info_answer", None)
+    model = known_devices.garmin_name(
+        answer.get("devicemodel") if isinstance(answer, dict) else None)
+    if model is None and d.unit_id:
+        known = known_devices.load().get(d.unit_id)
+        model = known.model_name if known is not None else None
+    return known_devices.shown_name(d.description, model)
+
+
+def show_device_name(win, s) -> None:
+    """The name on the page of `s` as it is known now, while it is still the open one."""
+    title = getattr(win, "device_title", None)
+    if win.session is s and title is not None:
+        title.set_label(device_name(s))
 
 
 def read_diagnostics(win) -> None:
@@ -717,9 +738,16 @@ class DevicePage:
         self.device_picture.set_size_request(DEVICE_PICTURE_SIZE, DEVICE_PICTURE_SIZE)
         box.append(self.device_image)
         box.append(self.device_picture)
-        title = Gtk.Label(label=d.description, wrap=True, justify=Gtk.Justification.CENTER)
+        name = device_name(s)
+        title = Gtk.Label(label=name, wrap=True, justify=Gtk.Justification.CENTER)
         title.add_css_class("title-1")
         box.append(title)
+        self.device_title = title
+        if d.description.isupper() and name == d.description:
+            # Named in capitals only, Garmin's name of it not known yet: unit-info has it
+            # (asked once for the session, as for the picture and the maps).
+            self.in_background(lambda: service.unit_info(s),
+                               lambda _answer: show_device_name(self, s))
         # It wraps, as the name above it: the window gets as narrow as MIN_WINDOW.
         self.software_label = Gtk.Label(
             label=_("Software {version}").format(version=d.software_version_str), wrap=True,

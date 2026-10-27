@@ -43,7 +43,7 @@ class ForgetDevice:
                  if unit is not None and not self._remembered_from_account else None)
         if known is None:
             return
-        name = known.description or _("Garmin device")
+        name = known.shown_name or _("Garmin device")
         if self._connected_now(unit):
             self.error(self._forget_title(), _(
                 "{device} is connected: unplug it to forget it.").format(device=name))

@@ -249,6 +249,38 @@ class KnownDevice:
     # As private as the unit ID, as the file is.
     usb_serial: str | None = None
     volume_uuid: str | None = None
+    # The name Garmin gives its model (unit-info, garmin_name), kept for a device whose
+    # GarminDevice.xml names it in capitals only ("EPIX"); None: not known.
+    model_name: str | None = None
+
+    @property
+    def shown_name(self) -> str:
+        """Its name as the window shows it (shown_name)."""
+        return shown_name(self.description, self.model_name)
+
+
+# The longest name of a model kept from unit-info.
+MODEL_NAME_MAX = 80
+
+
+def garmin_name(model) -> str | None:
+    """The name of a model as unit-info gives it (devicemodel, "epix™ (Gen 2) — Sapphire
+    Edition | 47 mm"), as the window shows it: without ™ and ®, with " — " and " | " as
+    ", " ("epix (Gen 2), Sapphire Edition, 47 mm"); None for none, or a name too long."""
+    if not isinstance(model, str):
+        return None
+    name = model.replace("\u2122", "").replace("\u00ae", "")
+    name = name.replace(" \u2014 ", ", ").replace(" | ", ", ")
+    name = name.strip()
+    while "  " in name:
+        name = name.replace("  ", " ")
+    return name if name and len(name) <= MODEL_NAME_MAX else None
+
+
+def shown_name(description: str, model_name: str | None) -> str:
+    """The name of a device in the window: the name Garmin gives its model when its
+    GarminDevice.xml names it in capitals only ("EPIX"), else that name as it is."""
+    return model_name if model_name and description.isupper() else description
 
 
 def path() -> Path:
@@ -290,7 +322,8 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
                             _identifier(usb_serial)
                             or (old.usb_serial if old is not None else None),
                             _identifier(volume_uuid)
-                            or (old.volume_uuid if old is not None else None))
+                            or (old.volume_uuid if old is not None else None),
+                            old.model_name if old is not None else None)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -316,6 +349,23 @@ def seen(unit_id: int, description: str, part_number: str, software_version: str
         log.warning("devices: not remembered (%s)", type(e).__name__)
         return
     tile_facts.note_synced(unit_id)
+
+
+def set_model_name(unit_id: int, name: str) -> bool:
+    """Keep the name Garmin gives the model of a device remembered (garmin_name); whether it
+    changed. A device that is not remembered gets no entry for it."""
+    name = garmin_name(name)
+    if name is None:
+        return False
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable or entry.model_name == name:
+            return False
+        entry.model_name = name
+        _write(known)
+    log.info("devices: the name of %s from unit-info kept", entry.part_number)
+    return True
 
 
 def set_category(unit_id: int, category: str) -> bool:
@@ -544,7 +594,8 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                                 AccountFact.from_json(facts.get("account")),
                                 SyncedFact.from_json(facts.get("synced")),
                                 _identifier(value.get("usb_serial")),
-                                _identifier(value.get("volume_uuid")))
+                                _identifier(value.get("volume_uuid")),
+                                garmin_name(value.get("model_name")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -589,7 +640,8 @@ def _write(known: dict[int, KnownDevice]) -> None:
         del fields["unit_id"]  # it is the key
         for name in _FACT_FIELDS:
             del fields[name]
-        for optional in ("category", "image_url", "usb_product", "usb_serial", "volume_uuid"):
+        for optional in ("category", "image_url", "usb_product", "usb_serial", "volume_uuid",
+                         "model_name"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         update = {"found": entry.update_found,
