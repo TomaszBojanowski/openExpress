@@ -264,7 +264,6 @@ class UpdatesPage:
         # may take it only once the drive is ejected (#11), so the cable may go out only then.
         mass_storage = getattr(s, "mass_storage", False)
         chosen = upd.select(self.updates_cache, [u.part_number])
-        # A system update: from which version of the device software to which.
         version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system
                    else u.version)
         body = (f"{u.title} {version}\n"
