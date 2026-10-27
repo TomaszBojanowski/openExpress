@@ -2,8 +2,9 @@
 Garmin Connect "Primary wearable" / "Podstawowe urządzenie typu wearable", the device that
 steps and sleep come from. The chip "Primary" of a tile says so in its tooltip; the device page
 has the row "Primary wearable" under "Primary training device", from the account's list it
-has already (no request of its own), without a button, and only for a device that can be one.
-All devices and accounts are made up."""
+has already (no request of its own), and only for a device that can be one; its Set as Primary
+(27.10.2026) is tested with the account in test_ownership. All devices and accounts are made
+up."""
 
 import types
 
@@ -144,14 +145,15 @@ def test_the_page_says_which_device_is_the_primary_wearable_under_the_training_d
 
 
 @pytest.mark.needs_display
-def test_the_row_offers_nothing_to_do():
+def test_the_row_offers_set_as_primary_when_another_device_is_it():
     from gi.repository import Adw, Gtk
 
     _win, section, _texts = _page(account=_account(VENU))
     (row,) = [w for g in section.groups for w in _descendants(g)
               if isinstance(w, Adw.ActionRow) and w.get_title() == "Primary wearable"]
     assert not row.get_activatable()
-    assert [w for w in _descendants(row) if isinstance(w, Gtk.Button)] == []
+    assert [w.get_label() for w in _descendants(row) if isinstance(w, Gtk.Button)
+            and w.get_label()] == ["Set as Primary"]
 
 
 def _descendants(widget):

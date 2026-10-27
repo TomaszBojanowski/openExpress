@@ -294,6 +294,60 @@ def show_device_name(win, s) -> None:
         title.set_label(device_name(s))
 
 
+def primary_wearable_row(win, wearable):
+    """The row "Primary wearable" of the group of the account (devicelist.PrimaryWearable,
+    from the account's list the ownership check read), with Set as Primary when this device
+    is not the one (the list gives one only for a device that can be it)."""
+    # TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
+    # wearable")
+    row = Adw.ActionRow(title=_("Primary wearable"),
+                        subtitle=GLib.markup_escape_text(primary_wearable_text(wearable)))
+    if not wearable.is_this_device:
+        row.add_suffix(win._button(
+            _("Set as Primary"), lambda button: confirm_primary_wearable(win, wearable, button),
+            with_button=True))
+    return row
+
+
+def confirm_primary_wearable(win, wearable, button=None) -> None:
+    """Set as Primary on the row "Primary wearable": asked first; once Set is chosen, the
+    change runs from `button`, which spins meanwhile."""
+    s = win.session
+    if s is None:
+        return
+    d = Adw.AlertDialog(
+        heading=_("Change the primary wearable?"),
+        body=_("Steps and sleep in Garmin Connect come from the primary wearable.\n\n"
+               "Current: {old}\nNew: {new}").format(old=primary_wearable_text(wearable),
+                                                   new=device_name(s)))
+    d.add_response("cancel", _("Cancel"))
+    # TRANSLATORS: button that makes this device the primary training device
+    d.add_response("set", _("Set"))
+    d.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
+    d.set_default_response("cancel")
+    d.connect("response", lambda _d, r: r == "set" and set_primary_wearable(win, button))
+    d.present(win)
+
+
+def set_primary_wearable(win, button=None) -> None:
+    """The change of the primary wearable on the account (service.set_primary_wearable,
+    read back); its list then goes to the tiles too (their chip "Primary")."""
+    s = win.session
+    if not s or not s.logged_in or s.ownership_error is not None:
+        return
+
+    def done(change) -> None:
+        win.toast(_("Primary wearable changed"))
+        if win.session is s:
+            s.account_devices = change.devices
+            win._set_account(change.devices)
+            win.show_overview()
+
+    win.run_task(_("Changing the primary wearable…"),
+                 lambda: service.set_primary_wearable(s.client, s.device, apply=True), done,
+                 device=False, button=button)
+
+
 # Why the picture work found no picture: unit-info gave no address of one.
 NO_ADDRESS = "unit-info gave no address"
 
@@ -953,11 +1007,7 @@ class DevicePage:
                 # only for a device that can be one.
                 wearable = devicelist.primary_wearable(s.account_devices, d.unit_id)
                 if wearable is not None:
-                    # TRANSLATORS: Garmin Connect's name of the setting (in Polish
-                    # "Podstawowe urządzenie typu wearable")
-                    g.add(Adw.ActionRow(title=_("Primary wearable"),
-                                        subtitle=GLib.markup_escape_text(
-                                            primary_wearable_text(wearable))))
+                    g.add(primary_wearable_row(self, wearable))
         if offers_account_picture(s):
             g.add(account_picture_row(self, s))
 

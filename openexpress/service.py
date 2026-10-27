@@ -496,6 +496,73 @@ def set_primary_training(client: GarminClient, device: GarminDevice,
     return before
 
 
+@dataclass
+class WearableStatus:
+    """The account's primary wearable, seen from the connected device (from the account's
+    device list: primaryActivityTrackerIndicator, primaryActivityTrackerSettingCapable)."""
+
+    set: bool  # the account has one
+    name: str  # its model name from the list; "" when it gives none
+    is_this_device: bool
+    capable: bool | None  # whether the connected device can be one; None when unknown
+
+
+@dataclass
+class WearableChange:
+    before: WearableStatus
+    devices: list[dict]  # the account's list as it is now (read back after a change)
+
+
+class PrimaryWearableError(UserFacingError):
+    """The primary wearable cannot be changed to the connected device."""
+
+
+def primary_wearable_status(client: GarminClient, device: GarminDevice,
+                            devices: list[dict] | None = None) -> WearableStatus:
+    """Which device is the primary wearable, from the account's device list (the ownership
+    check is run here without `devices`). Changes nothing on the account."""
+    if devices is None:
+        devices = require_account_device(client, device.unit_id)
+    entries = [d for d in devices if isinstance(d, dict)]
+    this = next((d for d in entries if unit_id_of(d.get("unitid")) == device.unit_id), None)
+    primary = next((d for d in entries if d.get("primaryactivitytrackerindicator") is True),
+                   None)
+    name = (primary.get("productdisplayname") or primary.get("displayname") or "") if primary \
+        else ""
+    capable = this.get("primaryactivitytrackersettingcapable") if this is not None else None
+    return WearableStatus(primary is not None, name if isinstance(name, str) else "",
+                          primary is not None and primary is this,
+                          capable if isinstance(capable, bool) else None)
+
+
+def set_primary_wearable(client: GarminClient, device: GarminDevice,
+                         apply: bool = False) -> WearableChange:
+    """Make the connected device the account's primary wearable. Without `apply` nothing is
+    changed, but the same refusals are raised. The ownership check is always made anew, and
+    after the change the account's list is read back: an accepted request that changed
+    nothing is reported as an error."""
+    devices = require_account_device(client, device.unit_id)
+    before = primary_wearable_status(client, device, devices)
+    if before.is_this_device:
+        return WearableChange(before, devices)
+    if before.capable is False:
+        raise PrimaryWearableError(
+            _("{device} cannot be a primary wearable.").format(device=device.description))
+    if before.capable is None:
+        # Like the ownership check: never assume in favour of a change.
+        raise PrimaryWearableError(
+            _("Could not tell whether {device} can be a primary wearable. Nothing was "
+              "changed.").format(device=device.description))
+    if apply:
+        client.set_primary_wearable(device.unit_id)
+        devices = require_account_device(client, device.unit_id)
+        if not primary_wearable_status(client, device, devices).is_this_device:
+            raise PrimaryWearableError(
+                _("Garmin Connect accepted the request, but the primary wearable did not "
+                  "change."))
+    return WearableChange(before, devices)
+
+
 def check_session(s: DeviceSession) -> DeviceSession:
     """For the window: run the ownership check and keep the refusal instead of raising.
 

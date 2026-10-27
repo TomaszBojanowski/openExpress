@@ -1607,8 +1607,11 @@ def cmd_primary(args) -> int:
 
     _st, dev = open_device(args)
     client = make_client(Settings.load(), need_auth=True)
+    wearable = args.wearable or getattr(args, "set_wearable", False)
     if args.primary_cmd == "set":
-        return _primary_set(client, dev, args.apply)
+        return (_primary_set_wearable if wearable else _primary_set)(client, dev, args.apply)
+    if wearable:
+        return _primary_wearable(client, dev)
     status = service.primary_training_status(client, dev)
     if status.unit_id is None:
         print(_("No primary training device is set for this Garmin account."))
@@ -1649,6 +1652,52 @@ def _primary_set(client, dev, apply: bool) -> int:
         old=old, new=dev.description))
     print(_("To change it back, connect {old} and run `openexpress primary set --apply`, "
             "or change it in Garmin Connect.").format(old=old))
+    return 0
+
+
+def _primary_wearable(client, dev) -> int:
+    from openexpress import service
+
+    status = service.primary_wearable_status(client, dev)
+    if not status.set:
+        print(_("No primary wearable is set for this Garmin account."))
+    elif status.is_this_device:
+        print(_("Primary wearable: {name} (this device)").format(
+            name=status.name or dev.description))
+    else:
+        print(_("Primary wearable: {name}").format(
+            name=status.name or _("a device that is not on the account's list")))
+        print(_("The connected device ({device}) is not the primary wearable.").format(
+            device=dev.description))
+    if status.capable is False:
+        print(_("The connected device cannot be a primary wearable."))
+    return 0
+
+
+def _primary_set_wearable(client, dev, apply: bool) -> int:
+    from openexpress import service
+
+    before = service.set_primary_wearable(client, dev, apply=apply).before
+    old = before.name or _("a device that is not on the account's list")
+    if before.is_this_device:
+        print(_("{device} is already the primary wearable.").format(device=dev.description))
+        return 0
+    if not apply:
+        if not before.set:
+            print(_("No primary wearable is set for this Garmin account."))
+        else:
+            print(_("Primary wearable: {name}").format(name=old))
+        print(_("Would change it to: {device}").format(device=dev.description))
+        print(_("Dry run. Add --apply."))
+        return 0
+    if not before.set:
+        print(_("Primary wearable set to {device}.").format(device=dev.description))
+        return 0
+    print(_("Primary wearable changed from {old} to {new}.").format(
+        old=old, new=dev.description))
+    print(_("To change it back, connect {old} and run "
+            "`openexpress primary set --wearable --apply`, or change it in Garmin Connect."
+            ).format(old=old))
     return 0
 
 
@@ -2022,8 +2071,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("primary",
                        help=_("show the primary training device of the Garmin account"))
+    wearable_help = _("the primary wearable (steps and sleep in Garmin Connect) instead of the "
+                      "primary training device")
+    s.add_argument("--wearable", action="store_true", help=wearable_help)
     psub = s.add_subparsers(dest="primary_cmd")
     m = psub.add_parser("set", help=_("make the connected device the primary training device"))
+    m.add_argument("--wearable", dest="set_wearable", action="store_true", help=wearable_help)
     m.add_argument("--apply", action="store_true")
     s.set_defaults(func=cmd_primary)
 

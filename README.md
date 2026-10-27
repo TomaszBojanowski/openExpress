@@ -195,7 +195,8 @@ Labels of the account come from the account's list as it was last read (at most 
 with the same login): while you are not logged in there are none, and when the list could not
 be read a sentence under the tiles says so. The device page shows **Update available** or
 **Update ready** under the software version too, and, under the account's **Primary training
-device**, its **Primary wearable** (read only; only for a device that can be one). Its
+device**, its **Primary wearable** (only for a device that can be one; **Set as Primary**
+makes it this device, after a question). Its
 **Apps** and **Music** rows lead to their pages, as **Maps** does, and say how many there are
 once those pages have read them; **Backup** says when the last backup was made and how many
 there are (the folder in its tooltip).
@@ -269,7 +270,7 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 | `openexpress apps [--builtin]` | Connect IQ apps on the watch and in your Garmin account, available updates |
 | `openexpress apps install/update/remove/enable/disable … [--apply]` | install, update, remove, enable or disable apps and built-in activities |
 | `openexpress apps order [--from COPY] [--apply]` | put apps and widgets back in the order of a saved copy of the app list |
-| `openexpress primary [set --apply]` | show the account's primary training device, or make the connected device the primary one |
+| `openexpress primary [--wearable] [set [--wearable] --apply]` | show the account's primary training device (with `--wearable` its primary wearable), or make the connected device the primary one |
 | `openexpress music [add PATH… \| playlist FILE.m3u \| remove TEXT…] [--apply]` | music, podcasts and audiobooks (Artist/Album layout, `.m3u8` playlists) |
 | `openexpress gui` | application window (GTK 4 + libadwaita): watch, sync, updates, maps, apps, music |
 | `openexpress watch` | background service: sync when the watch is connected, with a notification |

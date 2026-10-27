@@ -243,6 +243,7 @@ def account_calls(client, device):
         "device_messages": lambda: client.device_messages(device.unit_id),
         "primary_training_device": lambda: client.primary_training_device(),
         "set_primary_training_device": lambda: client.set_primary_training_device(device.unit_id),
+        "set_primary_wearable": lambda: client.set_primary_wearable(device.unit_id),
         "activity_matches": lambda: client.activity_matches(device.unit_id, ["1"]),
         "activity_matches_empty": lambda: client.activity_matches(device.unit_id, []),
         "device_image_url": lambda: client.device_image_url(device.unit_id),
@@ -262,7 +263,8 @@ def account_calls(client, device):
 
 
 CALL_NAMES = sorted(account_calls(None, types.SimpleNamespace(unit_id=0)))
-NEEDS_THIS_WATCH = {"set_primary_training_device", "device_messages", "activity_matches", "activity_matches_empty",
+NEEDS_THIS_WATCH = {"set_primary_training_device", "set_primary_wearable", "device_messages",
+                    "activity_matches", "activity_matches_empty",
                     "device_image_url", "store_account_apps", "store_updates",
                     "store_queue_install", "store_forget"}
 
@@ -1137,3 +1139,246 @@ def test_window_set_primary_training(device_root, device):
     win.session = refused
     MainWindow.set_primary_training(win)
     assert events == []  # a device of another account: nothing is even started
+
+
+# --- primary wearable: changing it (Garmin Connect's "primary activity tracker", 27.10.2026) ----
+# The account's device list says which device it is (primaryActivityTrackerIndicator) and which
+# may be one (primaryActivityTrackerSettingCapable); a PUT of `true` to the device's
+# primary-activity-tracker makes it the one (analysis 01). Only a device on the account, only
+# when asked, and the list is read back.
+
+WEARABLE_PATH = f"device-service/deviceservice/device-info/{UNIT}/primary-activity-tracker"
+
+
+class FakeWearables:
+    """Garmin's side of the setting: the account's list as it is now; a PUT applies it."""
+
+    def __init__(self, primary=OTHER, capable=True, put_status=200, applies=True,
+                 on_account=True):
+        self.primary, self.capable, self.put_status = primary, capable, put_status
+        self.applies, self.on_account, self.puts = applies, on_account, []
+        self.client = make_client()
+        self.client.http.handlers[DEVICES_PATH] = self.devices
+        self.client.http.handlers["/primary-activity-tracker"] = self.put
+
+    def devices(self, method, kw):
+        assert method == "GET"
+        this = {"unitid": UNIT, "productdisplayname": "Test watch",
+                "primaryactivitytrackerindicator": self.primary == UNIT}
+        if self.capable != "missing":
+            this["primaryactivitytrackersettingcapable"] = self.capable
+        other = {"unitid": OTHER, "productdisplayname": "Other watch",
+                 "primaryactivitytrackersettingcapable": True,
+                 "primaryactivitytrackerindicator": self.primary == OTHER}
+        return response(body=[this, other] if self.on_account else [other])
+
+    def put(self, method, kw):
+        assert method == "PUT"
+        self.puts.append((kw["data"], kw["headers"].get("Content-Type"),
+                          "Authorization" in kw["headers"]))
+        if isinstance(self.put_status, Exception):
+            raise self.put_status
+        if self.put_status == 200 and self.applies:
+            self.primary = UNIT
+        return response(self.put_status, b"")
+
+    @property
+    def methods(self):
+        return [r["method"] for r in self.client.http.sent]
+
+
+def test_set_primary_wearable_dry_run_changes_nothing(device):
+    account = FakeWearables(OTHER)
+    change = service.set_primary_wearable(account.client, device)
+    assert (change.before.set, change.before.name, change.before.is_this_device) == (
+        True, "Other watch", False)
+    assert account.puts == [] and account.methods == ["GET"]  # the device list only
+
+
+def test_set_primary_wearable_apply(device):
+    account = FakeWearables(OTHER)
+    change = service.set_primary_wearable(account.client, device, apply=True)
+    assert change.before.name == "Other watch" and account.primary == UNIT
+    # One PUT of a JSON true, signed; then the list is read back (and given to the window).
+    assert account.puts == [("true", "application/json", True)]
+    assert account.methods == ["GET", "PUT", "GET"]
+    assert account.client.http.sent[1]["url"].endswith(WEARABLE_PATH)
+    this = next(d for d in change.devices if d["unitid"] == UNIT)
+    assert this["primaryactivitytrackerindicator"] is True
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_set_primary_wearable_already_this_device(device, apply):
+    account = FakeWearables(UNIT)
+    assert service.set_primary_wearable(account.client, device, apply=apply).before.is_this_device
+    assert account.puts == []
+
+
+@pytest.mark.parametrize("capable, message", [
+    (False, "cannot be a primary wearable"), (None, "Could not tell whether"),
+    ("true", "Could not tell whether"), ("missing", "Could not tell whether")])
+@pytest.mark.parametrize("apply", [False, True])
+def test_set_primary_wearable_refuses_without_the_capability(device, capable, message, apply):
+    account = FakeWearables(OTHER, capable=capable)
+    with pytest.raises(service.PrimaryWearableError, match=message):
+        service.set_primary_wearable(account.client, device, apply=apply)
+    assert account.puts == [] and account.primary == OTHER
+
+
+def test_set_primary_wearable_refuses_a_device_off_the_account(device):
+    account = FakeWearables(OTHER, on_account=False)
+    with pytest.raises(NotAccountDevice):
+        service.set_primary_wearable(account.client, device, apply=True)
+    assert account.methods == ["GET"] and account.puts == []
+
+
+@pytest.mark.parametrize("failure", [500, 403, 404, requests.ConnectionError("offline")],
+                         ids=["http500", "http403", "http404", "network"])
+def test_set_primary_wearable_failed_request_is_an_error(device, failure):
+    account = FakeWearables(OTHER, put_status=failure)
+    with pytest.raises(ApiError):
+        service.set_primary_wearable(account.client, device, apply=True)
+    assert account.primary == OTHER and len(account.puts) == 1
+
+
+def test_set_primary_wearable_accepted_but_not_applied_is_an_error(device):
+    account = FakeWearables(OTHER, applies=False)
+    with pytest.raises(service.PrimaryWearableError, match="did not change"):
+        service.set_primary_wearable(account.client, device, apply=True)
+
+
+@pytest.mark.parametrize("primary, lines", [
+    (UNIT, ["Primary wearable: Test watch (this device)"]),
+    (OTHER, ["Primary wearable: Other watch",
+             "The connected device (Test watch) is not the primary wearable."]),
+    (None, ["No primary wearable is set for this Garmin account."]),
+], ids=["this", "other", "unset"])
+def test_cli_primary_wearable(device_root, xdg, cli_client, capsys, primary, lines):
+    account = FakeWearables(primary)
+    cli_client["client"] = account.client
+    assert main(["--path", str(device_root), "primary", "--wearable"]) == 0
+    assert capsys.readouterr().out.splitlines() == lines
+    assert account.methods == ["GET"]  # nothing is changed on the account
+
+
+def test_cli_primary_wearable_says_when_the_device_cannot_be_one(device_root, xdg, cli_client,
+                                                                capsys):
+    cli_client["client"] = FakeWearables(OTHER, capable=False).client
+    assert main(["--path", str(device_root), "primary", "--wearable"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == \
+        "The connected device cannot be a primary wearable."
+
+
+@pytest.mark.parametrize("argv, primary, lines, puts", [
+    (["primary", "set", "--wearable"], OTHER,
+     ["Primary wearable: Other watch", "Would change it to: Test watch",
+      "Dry run. Add --apply."], 0),
+    (["primary", "set", "--wearable"], None,
+     ["No primary wearable is set for this Garmin account.",
+      "Would change it to: Test watch", "Dry run. Add --apply."], 0),
+    (["primary", "set", "--wearable", "--apply"], OTHER,
+     ["Primary wearable changed from Other watch to Test watch.",
+      ("To change it back, connect Other watch and run "
+       "`openexpress primary set --wearable --apply`, or change it in Garmin Connect.")], 1),
+    (["primary", "set", "--wearable", "--apply"], None,
+     ["Primary wearable set to Test watch."], 1),
+    (["primary", "set", "--wearable", "--apply"], UNIT,
+     ["Test watch is already the primary wearable."], 0),
+], ids=["dry", "dry-unset", "apply", "apply-unset", "apply-already"])
+def test_cli_primary_set_wearable(device_root, xdg, cli_client, capsys, argv, primary, lines,
+                                  puts):
+    account = FakeWearables(primary)
+    cli_client["client"] = account.client
+    before = tree(device_root)
+    assert main(["--path", str(device_root), *argv]) == 0
+    assert capsys.readouterr().out.splitlines() == lines
+    assert len(account.puts) == puts
+    assert tree(device_root) == before  # nothing is ever written to the device
+
+
+def test_cli_primary_set_wearable_refusal(device_root, xdg, cli_client, capsys):
+    account = FakeWearables(OTHER, capable=False)
+    cli_client["client"] = account.client
+    assert main(["--path", str(device_root), "primary", "set", "--wearable", "--apply"]) == 1
+    assert "Test watch cannot be a primary wearable." in capsys.readouterr().err
+    assert account.puts == []
+
+
+def _wearable_window(account, device):
+    import types
+
+    from fakes import RunNow
+
+    from openexpress import devicelist
+
+    devices = service.require_account_device(account.client, UNIT)
+    account.client.http.sent.clear()
+    calls = {"toasts": [], "accounts": [], "overviews": 0}
+    win = types.SimpleNamespace(
+        session=types.SimpleNamespace(device=device, client=account.client, logged_in=True,
+                                      ownership_error=None, account_devices=devices,
+                                      unit_info_answer=None),
+        run_task=RunNow(), toast=calls["toasts"].append,
+        _set_account=lambda devices: calls["accounts"].append(devices),
+        show_overview=lambda: calls.update(overviews=calls["overviews"] + 1),
+        _button=lambda label, cb, style=None, with_button=False: _labelled_button(label))
+    return win, devicelist.primary_wearable(devices, UNIT), calls
+
+
+def _labelled_button(label):
+    from gi.repository import Gtk
+
+    return Gtk.Button(label=label)
+
+
+@pytest.mark.needs_display
+def test_the_row_offers_set_as_primary_only_when_it_can(device):
+    from gi.repository import Gtk
+
+    from openexpress.gui.device_page import primary_wearable_row
+
+    def buttons(row):
+        out, todo = [], [row]
+        while todo:
+            w = todo.pop()
+            if isinstance(w, Gtk.Button) and w.get_label():
+                out.append(w.get_label())
+            child = w.get_first_child()
+            while child is not None:
+                todo.append(child)
+                child = child.get_next_sibling()
+        return out
+
+    win, wearable, _calls = _wearable_window(FakeWearables(OTHER), device)
+    row = primary_wearable_row(win, wearable)
+    assert (row.get_title(), row.get_subtitle()) == ("Primary wearable", "Other watch")
+    assert buttons(row) == ["Set as Primary"]
+    win, wearable, _calls = _wearable_window(FakeWearables(UNIT), device)
+    assert buttons(primary_wearable_row(win, wearable)) == []  # it is the one already
+
+
+@pytest.mark.needs_display
+def test_set_as_primary_wearable_asks_first_then_sets(device, monkeypatch):
+    from gi.repository import Adw
+
+    from openexpress.gui.device_page import confirm_primary_wearable
+
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    account = FakeWearables(OTHER)
+    win, wearable, calls = _wearable_window(account, device)
+    confirm_primary_wearable(win, wearable)
+    (question,) = asked
+    assert question.get_heading() == "Change the primary wearable?"
+    assert question.get_body() == ("Steps and sleep in Garmin Connect come from the primary "
+                                   "wearable.\n\nCurrent: Other watch\nNew: Test watch")
+    assert question.get_default_response() == "cancel"
+    question.emit("response", "cancel")
+    assert account.puts == [] and account.client.http.sent == []  # nothing asked
+    confirm_primary_wearable(win, wearable)
+    asked[-1].emit("response", "set")
+    assert account.puts == [("true", "application/json", True)]
+    assert win.run_task.titles == ["Changing the primary wearable…"]
+    assert calls["toasts"] == ["Primary wearable changed"] and calls["overviews"] == 1
+    (devices,) = calls["accounts"]  # the tiles' chip "Primary" from the list read back
+    assert next(d for d in devices if d["unitid"] == UNIT)["primaryactivitytrackerindicator"]

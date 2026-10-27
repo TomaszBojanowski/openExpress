@@ -548,6 +548,15 @@ class GarminClient:
                       data=json.dumps({"deviceId": unit_id}),
                       headers={"Content-Type": "application/json"})
 
+    def set_primary_wearable(self, unit_id: int) -> None:
+        """Make this device the account's primary wearable (Garmin Connect's "primary activity
+        tracker": its steps and sleep count). Changes the account. Any 2xx answer counts as
+        accepted; callers read the account's device list back to confirm."""
+        self.require_verified(unit_id)
+        path = f"device-service/deviceservice/device-info/{unit_id}/primary-activity-tracker"
+        self._connect("PUT", path, _("Primary wearable"), data=json.dumps(True),
+                      headers={"Content-Type": "application/json"})
+
     def device_messages(self, unit_id: int) -> list[dict]:
         self.require_verified(unit_id)
         what = _("Connect file queue")
