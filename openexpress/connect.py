@@ -453,7 +453,7 @@ class GarminClient:
             json={"garminDeviceXml": device_xml.decode("utf-8"), "installedMaps": identifiers},
         )
 
-    # --- download (Connect queue -> device) -------------------------------------------
+    # --- the account's devices --------------------------------------------------------
 
     def device_image_url(self, unit_id: int) -> str | None:
         """Product picture of the watch, from the device registered in Garmin Connect."""
