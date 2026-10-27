@@ -105,6 +105,24 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.7" date="2026-10-27">
+      <description>
+        <ul>
+          <li>TrueUp waits as Garmin Express does: the whole delay Garmin Connect asks for when it
+          is under five minutes, 90 s otherwise, at most three times. The window and the command
+          line show how much of the wait has passed; Stop Waiting in the window, or Ctrl+C during
+          the wait on the command line, stops it, the sync ends as usual and TrueUp comes with
+          the next sync.</li>
+          <li>A map Garmin does not offer in the country of your Garmin account is not installed
+          or updated, and the reason is shown with the country's name. The country comes from the
+          account's profile, not from the computer's IP address; without it (not signed in, a
+          device of another account) such a map is only marked.</li>
+          <li>When Garmin's map service asks for old files to be cleaned up, the question before a
+          map is installed, updated or removed and openexpress maps install/update/remove list
+          the files that would match; openExpress does not remove them yet.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.6" date="2026-10-27">
       <description>
         <ul>
