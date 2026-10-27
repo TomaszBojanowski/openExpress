@@ -582,8 +582,10 @@ class DeviceDetection:
         return _("The device is not ready"), not_ready_text(state), False
 
     def _poll_usb(self, clock=time.monotonic) -> bool:
-        """Every few seconds while no device is open: is a Garmin device on USB that gvfs
-        does not offer yet? Only /sys is read; nothing is sent to the device."""
+        """Every few seconds: while no device is open, is a Garmin device on USB that gvfs
+        does not offer yet? While one is open, only the Garmin drives that come or go
+        (watch_drives_while_open, look_again_for_drives). Only /sys is read; nothing is sent
+        to the device."""
         if self.session is not None or self.busy:
             self._usb_state = ABSENT
             if self.session is not None:
@@ -773,7 +775,8 @@ class DeviceDetection:
         """Refresh (the button, F5). On the start page with a device open: the list is read
         again, nothing else (decision A); without one, a detection that stays there also when
         one device is found (decision 7). On the view of a device not connected: only that
-        view (_refresh_remembered). In the device view, as before."""
+        view (_refresh_remembered). In the device view: the device detected anew, the open
+        one opened again (refresh_device)."""
         if self._on_remembered_page():
             self._refresh_remembered()
             return
