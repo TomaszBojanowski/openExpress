@@ -83,7 +83,7 @@ def test_the_words_of_a_grey_chip_stand_out_from_the_line_under_them(scheme):
 # Every chip of the window has the class "oe-chip" (the tiles, the rows of the list view, the
 # chip of an update on the device page) and one shape: its font size, padding and rounding
 # are of that class alone; a style ("warning", "accent", "dimmed") gives only its colours.
-SHAPE = {"padding": "1px 10px", "border-radius": "999px", "font-size": "0.82em",
+SHAPE = {"padding": "1px 11px", "border-radius": "999px", "font-size": "0.9em",
          "font-weight": "600"}
 
 

@@ -81,9 +81,9 @@ flowbox.oe-wrap > flowboxchild {
   padding: 0;
 }
 label.oe-chip {
-  padding: 1px 10px;
+  padding: 1px 11px;
   border-radius: 999px;
-  font-size: 0.82em;
+  font-size: 0.9em;
   font-weight: 600;
 }
 label.oe-chip.accent {
