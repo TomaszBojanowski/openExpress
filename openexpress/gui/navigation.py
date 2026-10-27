@@ -17,7 +17,7 @@ from enum import Enum
 from openexpress.device.gio_storage import MASS_STORAGE, PRESENT
 
 # A trigger that asks only for the list of devices connected to be read again (another
-# device than the open one went away); never an address. The same as the window's.
+# device than the open one went away); never an address.
 READ_THE_LIST = "read the list of devices again"
 
 
@@ -128,8 +128,8 @@ Plan = Nothing | ReadList | Detect | CheckOpen
 # Causes that come by the window's timer, with the triggers so far (`reasons`).
 _TIMED = (Cause.PLUGGED, Cause.UNPLUGGED_OTHER, Cause.UNPLUGGED_CHOICE, Cause.USB_CHANGED)
 # Causes whose detection runs with the device open still open: if it is found again, the
-# page shown stays (the window's "reopening"). Those of the timer, and Refresh and the
-# like; the others drop the open device first, or open the one chosen.
+# page shown stays. Those of the timer, and Refresh and the like; the others drop the open
+# device first, or open the one chosen.
 _REOPENING = (*_TIMED, Cause.REFRESH_IN_VIEW)
 
 
