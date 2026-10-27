@@ -316,7 +316,8 @@ class LocalStorage(Storage):
 
     A write counts only once it is on the disk (fsync of the file and of its folder): a
     device in mass storage mode may lose what is still in the system's cache when its cable
-    goes out, and some (the Varia) reset their USB instead of being ejected."""
+    goes out. Ejected, it stays on USB with its medium, not mounted (a Varia, 21.10.2026: no
+    reset of its USB), so an update written to it is followed by an eject."""
 
     replaces_atomically = True  # a temporary copy, renamed when whole (_replace)
 
