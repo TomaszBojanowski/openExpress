@@ -254,6 +254,17 @@ class GioStorage(Storage):
                 pass
         return out
 
+    def info(self, real_path: str) -> Entry | None:
+        try:
+            info = self._f(real_path).query_info(_ATTRS, Gio.FileQueryInfoFlags.NONE, None)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.NOT_FOUND):
+                return None
+            raise _err(e, _("Cannot read {path}").format(path=real_path)) from e
+        mtime = info.get_modification_date_time()
+        return Entry(info.get_name(), info.get_file_type() == Gio.FileType.DIRECTORY,
+                     info.get_size(), mtime.to_unix() if mtime else 0.0)
+
     def _read(self, real_path: str) -> bytes:
         try:
             _ok, data, _etag = self._f(real_path).load_contents(None)

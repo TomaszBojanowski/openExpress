@@ -60,7 +60,7 @@ def err_log(*entries) -> bytes:
 
 class Device(LocalStorage):
     """A device over MTP at a place on USB; `fake` answers a session of our own; `reads`
-    counts the files read through the ordinary connection."""
+    counts the files read and `lists` the folders listed through the ordinary connection."""
 
     def __init__(self, root, fake=None, address=5):
         super().__init__(root)
@@ -69,11 +69,16 @@ class Device(LocalStorage):
         self.fake = fake
         self.sessions = 0
         self.reads = []
+        self.lists = []
         self.blocked = False
 
     def _read(self, real_path):
         self.reads.append(real_path)
         return super()._read(real_path)
+
+    def _list(self, real_path):
+        self.lists.append(real_path)
+        return super()._list(real_path)
 
     def usb_blocked(self):
         return self.blocked
@@ -730,3 +735,94 @@ def test_the_row_in_polish():
                               "na chwilę z\u00a0niego zniknie"), ["Skopiuj dzienniki awarii"]),
         ("Zrzuty pamięci", "1 zrzut\u00a0· 8,1\u00a0MB\u00a0· zawartość zaszyfrowana",
          ["Skopiuj zrzuty pamięci"])]
+
+
+# --- the places of the diagnostic files, kept for the next openings (27.10.2026) --------------
+# Over MTP each listing of a folder is a round trip: looking through the diagnostic folders took
+# 4-5 s on a Venu 2, even with no file to read. The first opening looks as before and keeps
+# where it found the files and folders (in the device's folder); the next ones
+# read those paths only, without listing; a path gone, one not there before that is there now,
+# or other software on the device: looked through again, and the note made anew.
+
+
+def _connected_again(st):
+    st.usb.address += 1  # plugged in again: a new connection (at_open is once per connection)
+    st.lists.clear()
+    st.reads.clear()
+
+
+def _same(a, b):
+    assert (a.entries, a.crash, a.dumps, a.hidden_logs) == (b.entries, b.crash, b.dumps,
+                                                            b.hidden_logs)
+
+
+@pytest.mark.parametrize("copy", [True, False])
+def test_a_second_opening_reads_the_places_kept_without_listing(device, clock, copy):
+    st, dev = device
+    copy_on(copy)
+    first = diagnostics.at_open(dev, st)
+    assert st.lists  # the first one looks through the folders
+    assert diagnostics.places_path(UNIT).exists()
+    _connected_again(st)
+    again = diagnostics.at_open(dev, st)
+    assert st.lists == []
+    _same(again, first)
+    if copy:
+        assert again.copied.unchanged == first.copied.new and not again.copied.saved
+    # Only the error logs are read again, as at each opening.
+    assert sorted(Path(p).name for p in st.reads) == ["err_log.bak", "err_log.txt"]
+
+
+def test_a_place_gone_is_looked_for_again(device, clock):
+    st, dev = device
+    copy_on()
+    diagnostics.at_open(dev, st)
+    (st.root / "GARMIN" / "Debug" / "SNS_ERR.TXT").unlink()
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert st.lists  # looked through again
+    kept = diagnostics.places_path(UNIT).read_text()
+    assert "SNS_ERR.TXT" not in kept
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert st.lists == []  # the note made anew holds
+
+
+def test_a_place_not_there_before_is_looked_for_once_it_is(device, clock):
+    """Event logs the device did not show at first (a hidden folder, Copy Crash Logs offered)
+    and shows now: looked through again, and the button is no longer offered."""
+    st, dev = device
+    first = diagnostics.at_open(dev, st)
+    assert first.hidden_logs
+    events = st.root / "GARMIN" / "EVNTLOGS"
+    events.mkdir()
+    (events / "E1.TXT").write_text("events")
+    _connected_again(st)
+    again = diagnostics.at_open(dev, st)
+    assert st.lists and not again.hidden_logs
+
+
+def test_other_software_on_the_device_is_looked_for_again(device, clock):
+    st, dev = device
+    diagnostics.at_open(dev, st)
+    newer = parse(st.read("GARMIN/GarminDevice.xml").replace(
+        b"<SoftwareVersion>2339<", b"<SoftwareVersion>2340<"))
+    assert newer.software_version_str != dev.software_version_str
+    _connected_again(st)
+    diagnostics.at_open(newer, st)
+    assert st.lists
+
+
+def test_the_copy_turned_on_looks_for_the_files_it_needs(device, clock):
+    """Kept with the copy off, the note has no diagnostic files to copy: the first opening
+    with the copy on looks through the folders for them."""
+    st, dev = device
+    copy_on(False)
+    diagnostics.at_open(dev, st)
+    copy_on()
+    _connected_again(st)
+    found = diagnostics.at_open(dev, st)
+    assert st.lists and found.copied.saved
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert st.lists == []

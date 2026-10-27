@@ -140,12 +140,22 @@ def parse_err_log(data: bytes, source: str = "") -> list[ErrorEntry]:
     return out
 
 
-def read_errors(storage: Storage) -> list[ErrorEntry]:
+def read_errors(storage: Storage, at: dict[str, int] | None = None) -> list[ErrorEntry]:
     """The entries of the device's error logs, read now through the ordinary connection,
     newest first. Missing files are no entries; a file that cannot be read is said in the
-    log."""
+    log. `at`: where they are already known (real path: size, Seen), read there without
+    looking for them."""
     out: list[ErrorEntry] = []
-    for path in ERR_LOGS:
+    for real, size in (at or {}).items():
+        name = posixpath.basename(real)
+        if size > ERR_LOG_MAX:
+            log.info("diagnostics: %s is %s, not read", name, applog.size(size))
+            continue
+        try:
+            out += parse_err_log(storage.read_at(real), name)
+        except DeviceError as e:
+            log.info("diagnostics: %s not read (%s)", name, type(e).__name__)
+    for path in ERR_LOGS if at is None else ():
         name = posixpath.basename(path)
         try:
             size = storage.size(path)
@@ -220,9 +230,11 @@ def _type_folders(device: GarminDevice, storage: Storage) -> list[str]:
     return out
 
 
-def _visible_files(device: GarminDevice, storage: Storage) -> dict[str, tuple[int, float]]:
-    """The diagnostic files the device shows: path → (size, time)."""
-    roots = [DEBUG, *_type_folders(device, storage), *EVENT_LOGS]
+def _visible_files(device: GarminDevice, storage: Storage,
+                   roots: list[str] | None = None) -> dict[str, tuple[int, float]]:
+    """The diagnostic files the device shows: path → (size, time); in `roots` when they are
+    known already."""
+    roots = [DEBUG, *_type_folders(device, storage), *EVENT_LOGS] if roots is None else roots
     found: dict[str, tuple[int, float]] = {}
     seen: set[str] = set()
     for root in roots:
@@ -335,13 +347,15 @@ def rotate(where: Path, copies: int = COPIES_KEPT, limit: int = LIMIT) -> tuple[
     return len(snaps), _object_bytes(where)
 
 
-def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = None) -> Copied:
+def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = None,
+               found: dict[str, tuple[int, float]] | None = None) -> Copied:
     """Copy the diagnostic files the device shows (through the ordinary connection, never a
     session of its own): the content not kept yet, a new copy only when something changed.
-    Memory dumps, health metrics, settings and big files are only listed."""
+    Memory dumps, health metrics, settings and big files are only listed. `found`: those
+    files already known (Seen.files), not looked for again."""
     now = now or datetime.now()
     where = folder(device.unit_id)
-    found = _visible_files(device, storage)
+    found = _visible_files(device, storage) if found is None else found
     last = _last(where, "files")
     before = last.get("files", {})
     report = Copied()
@@ -360,7 +374,7 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
             files[path] = old
             report.unchanged += 1
             continue
-        data = storage.read(path)
+        data = storage.read_at(path)  # a real path, as listed
         sha, stored = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
         report.new_bytes += len(data) if stored else 0
@@ -427,12 +441,15 @@ def hidden_logs_known_absent(unit_id: int) -> bool:
     return _state(folder(unit_id)).get("crash_logs") == "none"
 
 
-def may_have_hidden_logs(storage: Storage) -> bool:
+def may_have_hidden_logs(storage: Storage, shown: bool | None = None) -> bool:
     """The rule of "Copy Crash Logs" (analysis 20, §3.2): a device over MTP whose event logs
     the ordinary connection does not show (a fēnix 8 hides them, a Venu 2 and an Edge 1050
-    show them, and the copy takes them as they are)."""
+    show them, and the copy takes them as they are). `shown`: whether it shows them, when
+    that is known already (Seen.event_logs)."""
     if storage.mass_storage or not getattr(storage, "device_uri", ""):
         return False
+    if shown is not None:
+        return not shown
     return not any(storage.exists(p) for p in EVENT_LOGS)
 
 
@@ -526,6 +543,127 @@ def boot_log_crashes(unit_id: int) -> list[str]:
 
 
 @dataclass
+class Seen:
+    """The diagnostic files of a device as they are now (seen_now): its error logs (real
+    path: size), its memory dumps (path, size), the files a copy takes (real path: (size,
+    time); None: not looked for, the copy off) and whether it shows its event logs."""
+
+    err_logs: dict[str, int]
+    dumps: list[tuple[str, int]]
+    files: dict[str, tuple[int, float]] | None
+    event_logs: bool
+
+
+# Where a device keeps its diagnostic files, as an opening found them by looking through its
+# folders: in the device's folder (not with the copies, made only when the copy is on), so
+# that the next openings read those paths only. Over MTP each listing of a folder is a round
+# trip: looking through them took 4-5 s on a Venu 2, even with no file to read (27.10.2026).
+PLACES = "diagnostic-places.json"
+
+
+def places_path(unit_id: int) -> Path:
+    return paths.device_dir(unit_id) / PLACES
+
+
+def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[Seen, dict]:
+    """Through the folders, as every opening did until 27.10.2026: what is there now, and the
+    note of where it is (the real paths of the files and folders found, and of the paths
+    looked for that are not there)."""
+    err, absent, folders = {}, [], []
+    for path in ERR_LOGS:
+        real = storage.resolve(path)
+        entry = storage.info(real) if real is not None else None
+        if entry is None or entry.is_dir:
+            absent.append(path)
+        else:
+            err[real] = entry.size
+    for path in (DEBUG, DUMPS, *EVENT_LOGS):
+        real = storage.resolve(path)
+        (folders.append(real) if real is not None else absent.append(path))
+    events = [real for path in EVENT_LOGS if (real := storage.resolve(path)) is not None]
+    dumps = [(path, e.size) for path, e in storage.walk_files(DUMPS)]
+    files = None
+    if with_files:
+        types = _type_folders(device, storage)
+        folders += types
+        roots = [r for r in (storage.resolve(DEBUG), *types, *events) if r is not None]
+        files = _visible_files(device, storage, roots)
+    note = {"software_version": device.software_version_str, "err_logs": sorted(err),
+            "dumps": [path for path, _size in dumps],
+            "files": sorted(files) if files is not None else None,
+            "folders": sorted(set(folders)), "absent": sorted(set(absent)),
+            "event_logs": bool(events)}
+    return Seen(err, dumps, files, bool(events)), note
+
+
+def _strings(value) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValueError("not a list of paths")
+    return value
+
+
+def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
+                   with_files: bool) -> Seen | None:
+    """What is at the places kept now, each read alone, nothing listed; None when the note
+    no longer holds: a path gone, one looked for before and there now, other software on
+    the device, the files a copy takes not looked for yet, or a damaged note."""
+    try:
+        if note.get("software_version") != device.software_version_str:
+            return None
+        kept_files = note.get("files")
+        if with_files and kept_files is None:
+            return None
+        err_logs, dumps = _strings(note["err_logs"]), _strings(note["dumps"])
+        files = _strings(kept_files) if with_files else []
+        absent, folders = _strings(note["absent"]), _strings(note["folders"])
+        event_logs = note["event_logs"]
+        if not isinstance(event_logs, bool):
+            return None
+    except (KeyError, ValueError):
+        return None
+    entries: dict[str, object] = {}
+
+    def at(path: str):
+        if path not in entries:
+            entries[path] = storage.info(path)
+        return entries[path]
+
+    if any(at(path) is not None for path in absent):
+        return None
+    if any(at(path) is None or not at(path).is_dir for path in folders):
+        return None
+    if any(at(path) is None or at(path).is_dir for path in (*err_logs, *dumps, *files)):
+        return None
+    return Seen({path: at(path).size for path in err_logs},
+                [(path, at(path).size) for path in dumps],
+                {path: (at(path).size, at(path).mtime) for path in files}
+                if with_files else None, event_logs)
+
+
+def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
+    """The diagnostic files of the device now: at the places kept for it when they still
+    hold (read alone, nothing listed), else looked for through its folders, and the places
+    kept anew. `with_files`: also the files a copy takes."""
+    where = places_path(device.unit_id) if device.unit_id else None
+    note = _load(where) if where is not None else {}
+    seen = _at_the_places(note, device, storage, with_files) if note else None
+    if seen is not None:
+        log.info("diagnostics: read at the places kept (%d files), no folder listed",
+                 len(seen.err_logs) + len(seen.dumps) + len(seen.files or {}))
+        return seen
+    held_before = bool(note)
+    seen, note = _look(device, storage, with_files)
+    if where is not None:
+        paths.make_dir(where.parent)
+        paths.write_private(where, json.dumps(note, indent=1, sort_keys=True))
+    log.info("diagnostics: looked through the folders (%s); %d files, %d folders kept",
+             "the places kept before no longer hold" if held_before else "no places kept yet",
+             len(note["err_logs"]) + len(note["dumps"]) + len(note["files"] or []),
+             len(note["folders"]))
+    return seen
+
+
+@dataclass
 class AtOpen:
     """What the window learns of the device's errors when it opens it."""
 
@@ -565,20 +703,26 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     if key is not None and key in _done:
         return _done[key]
     now = now or datetime.now()
-    entries = read_errors(storage)
+    copying = copy_on()
     try:
-        dumps = dumps_on_device(storage)
-        hidden = (may_have_hidden_logs(storage)
-                  and not hidden_logs_known_absent(device.unit_id))
+        seen = seen_now(device, storage, with_files=copying)
     except DeviceError as e:
         log.info("diagnostics: the folders not listed (%s)", type(e).__name__)
+        seen = None
+    entries = read_errors(storage, at=seen.err_logs if seen is not None else None)
+    if seen is not None:
+        dumps = seen.dumps
+        hidden = (may_have_hidden_logs(storage, shown=seen.event_logs)
+                  and not hidden_logs_known_absent(device.unit_id))
+    else:
         dumps, hidden = [], False
     found = AtOpen(entries, last_crash(entries, now), dumps, hidden)
     if found.crash is not None:
         log.info("diagnostics: the device logged %s", found.crash.words())
-    if copy_on():
+    if copying:
         try:
-            found.copied = copy_files(device, storage, now)
+            found.copied = copy_files(device, storage, now,
+                                      found=seen.files if seen is not None else None)
         except (DeviceError, OSError) as e:
             log.info("diagnostics: the copy failed (%s: %s)", type(e).__name__, e)
     if key is not None:

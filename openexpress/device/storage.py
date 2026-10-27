@@ -112,6 +112,21 @@ class Storage(ABC):
     def exists(self, path: str) -> bool:
         return self.resolve(path) is not None
 
+    def info(self, real_path: str) -> Entry | None:
+        """The entry of the file or folder at this real path (in its letter case, as listed
+        before), without listing the folders above it where the storage can tell it alone
+        (over MTP each listing is a round trip); None: not there."""
+        parent, name = posixpath.split(real_path)
+        try:
+            return next((e for e in self._list(parent) if e.name == name), None)
+        except DeviceError:
+            return None
+
+    def read_at(self, real_path: str) -> bytes:
+        """The file at this real path (in its letter case, as listed before), not looked
+        for again."""
+        return self._read(real_path)
+
     def listdir(self, path: str) -> list[Entry]:
         real = self.resolve(path)
         if real is None:
@@ -328,6 +343,17 @@ class LocalStorage(Storage):
     def _read(self, real_path: str) -> bytes:
         with _os_errors(_("Cannot read {path}").format(path=real_path)):
             return self._p(real_path).read_bytes()
+
+    def info(self, real_path: str) -> Entry | None:
+        p = self._p(real_path)
+        try:
+            st = p.stat()
+        except FileNotFoundError:
+            return None
+        except OSError as e:
+            raise DeviceError(f"{_('Cannot read {path}').format(path=real_path)}: "
+                              f"{e.strerror or e}") from e
+        return Entry(p.name, p.is_dir(), st.st_size, st.st_mtime)
 
     def _read_start(self, real_path: str, count: int) -> bytes:
         with _os_errors(_("Cannot read {path}").format(path=real_path)), \
