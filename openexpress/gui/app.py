@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import dataclasses
 import gc
-import json
 import logging
 import os
 import sys
@@ -90,6 +89,16 @@ from openexpress.errors import UserFacingError  # noqa: E402
 from openexpress.gui import pictures, start  # noqa: E402
 from openexpress.gui.connected import Connected, unit_ids, uris  # noqa: E402
 from openexpress.gui.forget_device import ForgetDevice  # noqa: E402
+from openexpress.gui.gui_settings import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    DEFAULT_WINDOW,
+    MIN_WINDOW,
+    gui_settings_path,
+    load_gui_settings,
+    save_gui_settings,
+    save_window_geometry,
+    update_gui_settings,
+    window_geometry,
+)
 from openexpress.gui.maps_page import MapsPage  # noqa: E402
 from openexpress.gui.music_page import MusicPage, note_music_count  # noqa: E402
 from openexpress.gui.navigation import (  # noqa: E402
@@ -176,66 +185,10 @@ SEPARATOR, caption = i18n.SEPARATOR, i18n.caption
 log = logging.getLogger(__name__)
 
 
-def gui_settings_path() -> Path:
-    return paths.config_dir() / "gui.json"
-
-
-def load_gui_settings() -> dict:
-    """The window's own settings; {} when there are none, or when the file is not an
-    object (edited by hand): the defaults then, never a window that does not start."""
-    p = gui_settings_path()
-    try:
-        data = json.loads(p.read_text()) if p.exists() else {}
-    except ValueError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def save_gui_settings(data: dict) -> None:
-    paths.write_private(gui_settings_path(), json.dumps(data, indent=2))
-
-
-def update_gui_settings(**changes) -> dict:
-    """Change these keys of the window's settings (gui.json), read again first so that the
-    others (the size of the window, the view of the start page, the switch of the background
-    sync, kept since by another part) stay; the settings as written. The one way to change
-    gui.json."""
-    data = load_gui_settings()
-    data.update(changes)
-    save_gui_settings(data)
-    return data
-
-
-DEFAULT_WINDOW = (1000, 740)
-MIN_WINDOW = (360, 480)
 # How often the texts told against now ("2 min ago") are looked at again, while shown.
 RELATIVE_REFRESH_S = 60
-MAX_WINDOW = 10000
 WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
 LONG_WAIT_S = 20  # after this, the label says that the wait can take a while
-
-
-def window_geometry(settings: dict) -> tuple[int, int, bool]:
-    """Saved window size and maximized state, validated (falls back to the defaults)."""
-    saved = settings.get("window")
-    if not isinstance(saved, dict):
-        return (*DEFAULT_WINDOW, False)
-
-    def size(key: str, default: int, minimum: int) -> int:
-        value = saved.get(key)
-        if isinstance(value, bool) or not isinstance(value, int):
-            return default
-        return max(minimum, min(MAX_WINDOW, value))
-
-    return (size("width", DEFAULT_WINDOW[0], MIN_WINDOW[0]),
-            size("height", DEFAULT_WINDOW[1], MIN_WINDOW[1]),
-            saved.get("maximized") is True)
-
-
-def save_window_geometry(width: int, height: int, maximized: bool) -> None:
-    """Stores the window state; the other saved options are kept (update_gui_settings)."""
-    update_gui_settings(window={"width": int(width), "height": int(height),
-                                "maximized": bool(maximized)})
 
 
 class StartView:
