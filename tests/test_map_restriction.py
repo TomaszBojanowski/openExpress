@@ -12,6 +12,7 @@ import logging
 import types
 
 import pytest
+from test_country_names import countries  # noqa: F401 - a fixture of these tests
 from test_updates_maps import _maps_window, maps_response
 
 from openexpress import maps as mp
@@ -21,6 +22,12 @@ from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 
 BASE = "https://maps.example"
+
+
+@pytest.fixture(autouse=True)
+def made_up_countries(countries):
+    """The names of the countries from a made-up list (KR: South Korea), not the system's."""
+
 REASON = "Cannot be installed: Garmin does not offer this map in your account's country"
 
 
@@ -63,7 +70,7 @@ def test_a_map_restricted_in_the_account_country_cannot_be_installed(device_root
     assert mp.cannot_install_reason(japan) == REASON
     assert mp.cannot_install_message(japan) == (
         "Map 'TopoActive Japan' cannot be installed: Garmin does not offer it in your "
-        "account's country (KR).")
+        "account's country (South Korea).")
     assert japan.status == "not offered in your account's country"
     assert mp.restriction_note(japan) is None  # said by the reason, not marked besides
 
@@ -87,7 +94,7 @@ def test_without_the_country_a_restricted_map_is_only_marked():
     mp.apply_country(maps, None)
     japan, east = by_name(maps)["TopoActive Japan"], by_name(maps)["TopoActive East"]
     assert mp.can_install(japan) and east.update_available  # neither held back
-    assert mp.restriction_note(japan) == "Garmin does not offer this map in KR"
+    assert mp.restriction_note(japan) == "Garmin does not offer this map in this country: South Korea"
     assert japan.status == "available" and east.status == "update available"
 
 
@@ -215,7 +222,7 @@ def test_the_maps_page_has_no_button_for_a_map_not_offered_in_the_account_countr
 def test_with_the_country_not_known_the_maps_page_marks_the_map(device_root):
     rows = _page_rows(device_root, None)
     japan_line, japan_buttons = rows["TopoActive Japan"]
-    assert japan_line.endswith("\nGarmin does not offer this map in KR")
+    assert japan_line.endswith("\nGarmin does not offer this map in this country: South Korea")
     assert japan_buttons == ["Install"]
     assert "Update" in rows["TopoActive East"][1]
 
@@ -256,7 +263,7 @@ def test_cli_lists_a_map_with_the_country_not_known_as_marked(cli_maps, capsys):
     out = capsys.readouterr().out.splitlines()
     japan = next(i for i, line in enumerate(out) if "TopoActive Japan" in line)
     assert out[japan].endswith("available")
-    assert out[japan + 1] == "    Garmin does not offer this map in KR"
+    assert out[japan + 1] == "    Garmin does not offer this map in this country: South Korea"
 
 
 def test_cli_refuses_to_install_a_map_not_offered_in_the_account_country(cli_maps, capsys):
@@ -265,7 +272,7 @@ def test_cli_refuses_to_install_a_map_not_offered_in_the_account_country(cli_map
     cli_maps.country = "KR"
     assert main(["maps", "install", "Japan"]) == 1
     assert ("Map 'TopoActive Japan' cannot be installed: Garmin does not offer it in your "
-            "account's country (KR).") in capsys.readouterr().err
+            "account's country (South Korea).") in capsys.readouterr().err
 
 
 def test_cli_update_says_what_it_does_not_update(cli_maps, capsys):
@@ -316,9 +323,9 @@ def test_the_words_in_polish():
                  japan.status, east.status)
     finally:
         i18n.setup("en")
-    assert note == "Garmin nie oferuje tej mapy w\u00a0kraju KR"
+    assert note == "Garmin nie oferuje tej mapy w\u00a0tym kraju: Korea Południowa"
     assert words == (
         "Nie można zainstalować: Garmin nie oferuje tej mapy w\u00a0kraju konta",
         ("Nie można zainstalować mapy „TopoActive Japan”: Garmin nie oferuje jej w\u00a0kraju "
-         "konta (KR)."),
+         "konta (Korea Południowa)."),
         "niedostępna w\u00a0kraju konta", "aktualizacja niedostępna w\u00a0kraju konta")

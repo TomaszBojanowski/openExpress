@@ -31,7 +31,7 @@ from openexpress import applog, cache, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
-from openexpress.i18n import _, human_size
+from openexpress.i18n import _, country_name, human_size
 
 log = logging.getLogger(__name__)
 
@@ -273,8 +273,9 @@ def restriction_note(m: UniversalMap) -> str | None:
     is neither held back nor hidden); None otherwise."""
     if m.restricted_in is None or m.restricted is not None:
         return None
-    # TRANSLATORS: {country} is a country code, e.g. KR
-    return _("Garmin does not offer this map in {country}").format(country=m.restricted_in)
+    # TRANSLATORS: {country} is the name of a country, e.g. South Korea
+    return _("Garmin does not offer this map in this country: {country}").format(
+        country=country_name(m.restricted_in))
 
 
 def _restriction(m: dict) -> str | None:
@@ -335,7 +336,8 @@ def cannot_install_message(m: UniversalMap) -> str:
     """Why `m` cannot be installed, the same words in the command line and the window."""
     if m.restricted is True:
         return _("Map '{name}' cannot be installed: Garmin does not offer it in your account's "
-                 "country ({country}).").format(name=m.name, country=m.restricted_in)
+                 "country ({country}).").format(name=m.name,
+                                                country=country_name(m.restricted_in))
     if m.unavailable == BAD_CHECKSUM:
         return _("Map '{name}' cannot be installed: the server gave an invalid checksum for "
                  "one of its files.").format(name=m.name)

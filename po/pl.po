@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 02:25+0100\n"
+"POT-Creation-Date: 2026-10-27 02:37+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -474,7 +474,7 @@ msgstr "Pobieranie {name}"
 msgid "Writing {path}"
 msgstr "Zapisywanie {path}"
 
-#: openexpress/ciq.py:1104 openexpress/ciq.py:1359 openexpress/maps.py:608
+#: openexpress/ciq.py:1104 openexpress/ciq.py:1359 openexpress/maps.py:610
 #: openexpress/updates.py:440
 #, python-brace-format
 msgid "Write verification of {path} failed"
@@ -1645,7 +1645,7 @@ msgstr "Żadna aplikacja nie pasuje do „{query}”"
 msgid "Several entries match: {names}. Choose one with --type."
 msgstr "Pasuje kilka wpisów: {names}. Wybierz jeden opcją --type."
 
-#: openexpress/cli.py:1206 openexpress/maps.py:411
+#: openexpress/cli.py:1206 openexpress/maps.py:413
 #, python-brace-format
 msgid "Ambiguous name, matches: {names}"
 msgstr "Niejednoznaczna nazwa, pasują: {names}"
@@ -2667,7 +2667,7 @@ msgstr "{what}: błąd sieci ({error})"
 #: openexpress/connect.py:206 openexpress/connect.py:320
 #: openexpress/connect.py:472 openexpress/connect.py:487
 #: openexpress/connect.py:500 openexpress/connect.py:528
-#: openexpress/connect.py:552 openexpress/maps.py:300
+#: openexpress/connect.py:552 openexpress/maps.py:301
 #: openexpress/service.py:445
 #, python-brace-format
 msgid "{what}: unexpected response from the server"
@@ -2717,7 +2717,7 @@ msgstr "Informacje o urządzeniu"
 msgid "Software update check"
 msgstr "Sprawdzanie aktualizacji oprogramowania"
 
-#: openexpress/connect.py:441 openexpress/maps.py:301
+#: openexpress/connect.py:441 openexpress/maps.py:302
 msgid "Map check"
 msgstr "Sprawdzanie map"
 
@@ -5275,19 +5275,19 @@ msgid "."
 msgstr ","
 
 #. TRANSLATORS: a length of time in seconds
-#: openexpress/i18n.py:351
+#: openexpress/i18n.py:389
 #, python-brace-format
 msgid "{seconds} s"
 msgstr "{seconds} s"
 
 #. TRANSLATORS: a length of time in minutes
-#: openexpress/i18n.py:354
+#: openexpress/i18n.py:392
 #, python-brace-format
 msgid "{minutes} min"
 msgstr "{minutes} min"
 
 #. TRANSLATORS: a length of time in minutes and seconds
-#: openexpress/i18n.py:356
+#: openexpress/i18n.py:394
 #, python-brace-format
 msgid "{minutes} min {seconds} s"
 msgstr "{minutes} min {seconds} s"
@@ -5391,29 +5391,29 @@ msgstr "Aktualizacje map dla tego urządzenia nie są jeszcze obsługiwane."
 msgid "Map updates for this device aren't supported yet"
 msgstr "Aktualizacje map dla tego urządzenia nie są jeszcze obsługiwane"
 
-#. TRANSLATORS: {country} is a country code, e.g. KR
+#. TRANSLATORS: {country} is the name of a country, e.g. South Korea
 #: openexpress/maps.py:277
 #, python-brace-format
-msgid "Garmin does not offer this map in {country}"
-msgstr "Garmin nie oferuje tej mapy w kraju {country}"
+msgid "Garmin does not offer this map in this country: {country}"
+msgstr "Garmin nie oferuje tej mapy w tym kraju: {country}"
 
-#: openexpress/maps.py:326
+#: openexpress/maps.py:327
 msgid ""
 "Cannot be installed: Garmin does not offer this map in your account's country"
 msgstr "Nie można zainstalować: Garmin nie oferuje tej mapy w kraju konta"
 
-#: openexpress/maps.py:329
+#: openexpress/maps.py:330
 msgid ""
 "Cannot be installed: the server gave an invalid checksum for one of its files"
 msgstr ""
 "Nie można zainstalować: serwer podał nieprawidłową sumę kontrolną jednego "
 "z jej plików"
 
-#: openexpress/maps.py:331
+#: openexpress/maps.py:332
 msgid "Cannot be installed: the server did not provide all of its files"
 msgstr "Nie można zainstalować: serwer nie podał wszystkich jej plików"
 
-#: openexpress/maps.py:337
+#: openexpress/maps.py:338
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: Garmin does not offer it in your account's "
@@ -5422,7 +5422,7 @@ msgstr ""
 "Nie można zainstalować mapy „{name}”: Garmin nie oferuje jej w kraju konta "
 "({country})."
 
-#: openexpress/maps.py:340
+#: openexpress/maps.py:342
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: the server gave an invalid checksum for "
@@ -5431,19 +5431,19 @@ msgstr ""
 "Nie można zainstalować mapy „{name}”: serwer podał nieprawidłową sumę "
 "kontrolną jednego z jej plików."
 
-#: openexpress/maps.py:342
+#: openexpress/maps.py:344
 #, python-brace-format
 msgid ""
 "Map '{name}' cannot be installed: the server did not provide all of its files"
 msgstr ""
 "Nie można zainstalować mapy „{name}”: serwer nie podał wszystkich jej plików"
 
-#: openexpress/maps.py:410
+#: openexpress/maps.py:412
 #, python-brace-format
 msgid "No map named '{name}'"
 msgstr "Brak mapy o nazwie „{name}”"
 
-#: openexpress/maps.py:457
+#: openexpress/maps.py:459
 #, python-brace-format
 msgid ""
 "Map '{name}' is on the device already and will be loaded after the device is "
@@ -5452,31 +5452,31 @@ msgstr ""
 "Mapa {name} jest już na urządzeniu i zostanie wczytana po odłączeniu. "
 "Najpierw odłącz urządzenie."
 
-#: openexpress/maps.py:530 openexpress/music.py:274 openexpress/ownmaps.py:236
+#: openexpress/maps.py:532 openexpress/music.py:274 openexpress/ownmaps.py:236
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr "Za mało miejsca na urządzeniu: potrzeba {need}, wolne {free}"
 
-#: openexpress/maps.py:538
+#: openexpress/maps.py:540
 #, python-brace-format
 msgid "Downloading {path} ({size})"
 msgstr "Pobieranie {path} ({size})"
 
-#: openexpress/maps.py:548
+#: openexpress/maps.py:550
 msgid "Activating the map on the Garmin server"
 msgstr "Aktywacja mapy na serwerze Garmin"
 
-#: openexpress/maps.py:567
+#: openexpress/maps.py:569
 #, python-brace-format
 msgid "Removing old file {path}"
 msgstr "Usuwanie starego pliku {path}"
 
-#: openexpress/maps.py:572 openexpress/updates.py:430
+#: openexpress/maps.py:574 openexpress/updates.py:430
 #, python-brace-format
 msgid "Copying to the device: {path}"
 msgstr "Kopiowanie na urządzenie: {path}"
 
-#: openexpress/maps.py:625
+#: openexpress/maps.py:627
 #, python-brace-format
 msgid ""
 "Cannot write {path}, which other maps on the device also use ({maps}). "
@@ -5485,7 +5485,7 @@ msgstr ""
 "Nie można zapisać {path}, którego używają też inne mapy na urządzeniu "
 "({maps}). Zainstaluj mapę ponownie."
 
-#: openexpress/maps.py:638
+#: openexpress/maps.py:640
 #, python-brace-format
 msgid ""
 "The map files are on the device, but its unlock file {path} could not be "
@@ -5496,7 +5496,7 @@ msgstr ""
 "odblokowania {path} ({error}). Urządzenie może mimo to wczytać mapę po "
 "odłączeniu; jeśli tego nie zrobi, uruchom ponownie openexpress maps."
 
-#: openexpress/maps.py:644
+#: openexpress/maps.py:646
 #, python-brace-format
 msgid ""
 "The map files are on the device, but its unlock file {path} could not be "
@@ -5507,17 +5507,17 @@ msgstr ""
 "odblokowania {path} ({error}). Urządzenie może mimo to wczytać mapę po "
 "odłączeniu; jeśli tego nie zrobi, wróć do tej strony."
 
-#: openexpress/maps.py:664
+#: openexpress/maps.py:666
 #, python-brace-format
 msgid "Writing the unlock file again ({attempt} of {tries})"
 msgstr "Ponawianie zapisu pliku odblokowującego ({attempt} z {tries})"
 
-#: openexpress/maps.py:685
+#: openexpress/maps.py:687
 #, python-brace-format
 msgid "Map '{name}' cannot be removed"
 msgstr "Nie można usunąć mapy „{name}”"
 
-#: openexpress/maps.py:695
+#: openexpress/maps.py:697
 #, python-brace-format
 msgid "Removing {path}"
 msgstr "Usuwanie {path}"

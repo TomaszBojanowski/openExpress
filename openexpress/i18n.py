@@ -341,6 +341,44 @@ def decimal(number: str) -> str:
     return number.replace(".", separator)
 
 
+# The ISO 3166 list of countries of the system's iso-codes (also in the Flatpak's GNOME
+# runtime), with its translations in the "iso_3166-1" domain.
+ISO_3166_1 = Path("/usr/share/iso-codes/json/iso_3166-1.json")
+
+
+@functools.cache
+def _countries() -> dict[str, str]:
+    try:
+        data = json.loads(ISO_3166_1.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entries = data.get("3166-1") if isinstance(data, dict) else None
+    return {e["alpha_2"].upper(): e.get("common_name") or e["name"]
+            for e in entries or [] if isinstance(e, dict)
+            and isinstance(e.get("alpha_2"), str) and isinstance(e.get("name"), str)}
+
+
+@functools.cache
+def _country_translation(language: str):
+    try:
+        return gettext.translation("iso_3166-1", languages=[language])
+    except OSError:
+        return None
+
+
+def country_name(code: str) -> str:
+    """The name of a country (its ISO 3166 code) in the program's language; the code itself
+    when the system has no list of countries or no such country."""
+    name = _countries().get(code.upper())
+    if name is None:
+        return code
+    language = current_language()
+    if language == SOURCE_LANGUAGE:
+        return name
+    translation = _country_translation(language)
+    return translation.gettext(name) if translation is not None else name
+
+
 def duration_text(seconds: float) -> str:
     """A length of time as the user reads it: "45 s", "3 min", "3 min 20 s" (whole seconds;
     a hard space between a number and its unit, as in human_size)."""
