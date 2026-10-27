@@ -377,6 +377,26 @@ def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, language):
+    """Point 3 of package 3: the bar at the bottom while TrueUp waits, with Stop Waiting."""
+    import threading
+
+    from openexpress.gui.app import Gtk
+    from openexpress.progress import TimedWait
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "device")
+    win.session.stop_waiting = threading.Event()
+    win.set_busy(True, "Sync", device=True)
+    win._show_progress(TimedWait("Waiting 3 min 20 s for Garmin Connect to prepare TrueUp (the "
+                                 "daily totals of all your devices)…", seconds=200, done=0.3))
+    _iterate(0.1)
+    assert win.stop_wait_button.get_visible()
+    assert win.action_bar.measure(Gtk.Orientation.HORIZONTAL, -1)[0] <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language):
     """Analysis 20: the row under "Backup", open, with its two buttons."""
     win = narrow_window(language)

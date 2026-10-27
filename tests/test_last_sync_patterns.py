@@ -181,6 +181,14 @@ EXPECTED = {
             (f"Pliki z{NB}urządzenia: monitorowanie", False),
             ("1 nagranie EKG nie zostało wysłane: nagrania EKG wymagają konta Garmin Health",
              False)])},
+    # The wait for TrueUp stopped by the user (0.7.7; made up, as no real sync has had one).
+    "format-0.7.7-trueup-stopped.json": {
+        "en": ("1 new file, 1 uploaded", [
+            ("Files from the device: monitoring", False),
+            ("TrueUp: waiting stopped; it comes with the next sync", False)]),
+        "pl": ("1 nowy plik, 1 wysłany", [
+            (f"Pliki z{NB}urządzenia: monitorowanie", False),
+            (f"TrueUp: czekanie przerwane; przyjdzie z{NB}następną synchronizacją", False)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

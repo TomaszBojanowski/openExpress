@@ -136,7 +136,7 @@ from openexpress.gui.words import (  # noqa: E402
 )
 from openexpress.i18n import N_, _, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
-from openexpress.progress import Waiting  # noqa: E402
+from openexpress.progress import TimedWait, Waiting  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
     SetupError,
@@ -471,6 +471,23 @@ def show_backups(win) -> None:
         return
     row.set_subtitle(GLib.markup_escape_text(backups_text(getattr(s.device, "unit_id", None))))
     row.set_tooltip_text(str(paths.default_backup_dir()))
+
+
+def show_stop_waiting(win, visible: bool) -> None:
+    """Stop Waiting on the bar at the bottom, shown only while TrueUp waits."""
+    button = getattr(win, "stop_wait_button", None)
+    if button is not None:
+        button.set_visible(visible)
+
+
+def stop_waiting(win) -> None:
+    """Stop Waiting: the wait for TrueUp ends at its next step; the sync then ends as usual
+    and writes nothing of TrueUp."""
+    stop = getattr(getattr(win, "session", None), "stop_waiting", None)
+    if stop is not None:
+        stop.set()
+        log.info("TrueUp: the wait stopped by the user")
+    show_stop_waiting(win, False)
 
 
 def device_error_text(entry) -> str:
@@ -1975,6 +1992,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.action_bar = Gtk.ActionBar(revealed=False)
         self.action_bar.pack_start(self.busy_spinner)
         self.action_bar.set_center_widget(box)
+        # Only while TrueUp waits for Garmin Connect (a wait of known length): nothing is
+        # written to the device meanwhile.
+        # TRANSLATORS: button on the bar at the bottom: stop waiting for TrueUp
+        self.stop_wait_button = Gtk.Button(label=_("Stop Waiting"), valign=Gtk.Align.CENTER,
+                                           visible=False)
+        self.stop_wait_button.connect("clicked", lambda _b: stop_waiting(self))
+        self.action_bar.pack_end(self.stop_wait_button)
         content_view.add_bottom_bar(self.action_bar)
 
         self.content_page = Adw.NavigationPage(title=self.sections["watch"].title,
@@ -2124,6 +2148,7 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)
         self.progress_bar.set_visible(False)
+        show_stop_waiting(self, False)
         self.busy_spinner.set_visible(busy and not in_page)
         self._action_buttons = still_in_window(self._action_buttons)
         for b in self._action_buttons:
@@ -2149,6 +2174,13 @@ class MainWindow(MapsPage, MusicPage, NetStatusPanel, ForgetDevice, Adw.Applicat
         self._stop_waiting()
         self._show_bar()
         self.progress_label.set_text(text)
+        if isinstance(text, TimedWait):
+            # Its length is known: the bar shows how much has passed, and it can be stopped.
+            self.progress_bar.set_fraction(text.done)
+            stop = getattr(self.session, "stop_waiting", None)
+            show_stop_waiting(self, text.done < 1 and stop is not None and not stop.is_set())
+            return False
+        show_stop_waiting(self, False)
         self.progress_bar.pulse()
         if isinstance(text, Waiting):
             until = time.monotonic() + LONG_WAIT_S

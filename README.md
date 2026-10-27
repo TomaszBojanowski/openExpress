@@ -290,7 +290,7 @@ and the command-line tool prints the same warning when it starts such an operati
 | 1 | an error or a refusal: the device, the account, a server or the network, or a value the command checks itself (e.g. an unknown part in `cache --only`); the message says why |
 | 2 | a wrong command line: an unknown command or option, a value that is not one of the choices (e.g. `setup --environment`), or a missing argument |
 | 3 | the first sync with this program waits for a choice: `openexpress baseline --apply` or `openexpress sync --apply --all` |
-| 130 | interrupted (Ctrl+C) |
+| 130 | interrupted (Ctrl+C); not while `sync` waits for TrueUp, which Ctrl+C only stops (the sync then ends with 0) |
 
 ### Software updates
 
@@ -414,8 +414,12 @@ replaced. Tested on a fēnix 8.
   is written to the watch. `openexpress baseline` therefore needs a login now. Features
   without the account (backup, software updates, maps, music) work with any watch.
 - **TrueUp** (`FIT_TYPE_39`): when you own several Garmin devices, Connect asks the client to
-  check back after a short delay (at most 90 s) and then sends adjusted daily totals, which
-  are written to the watch.
+  check back after a delay and then sends adjusted daily totals, which are written to the
+  watch. As in Garmin Express, openExpress waits the whole delay when it is under five
+  minutes and 90 s otherwise, at most three times; the window and the command line show how
+  much of the wait has passed. **Stop Waiting** in the window, or Ctrl+C on the command line
+  during the wait, stops it: the sync ends as usual (on the command line with exit code 0),
+  nothing of TrueUp is written, and it comes with the next sync.
 - **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
   installed during sync, except on devices that hide their app folder: there they stay
   queued until you run `apps install` or use the window (see

@@ -46,8 +46,13 @@ def test_trueup_reports_its_wait_for_connect_as_a_wait(device_root):
     seen = []
     trueup.run(dev, LocalStorage(device_root), client, [check], progress=seen.append,
                sleep=lambda s: None, now=lambda: now)
-    assert seen == [TRUEUP_WAIT, "TrueUp: writing daily totals to the device"]
-    assert [isinstance(m, Waiting) for m in seen] == [True, False]
+    # The wait of a known length (20 s here) is told step by step besides (test_trueup_wait).
+    from openexpress.progress import TimedWait
+
+    assert [m for m in seen if not isinstance(m, TimedWait)] == [
+        TRUEUP_WAIT, "TrueUp: writing daily totals to the device"]
+    assert [isinstance(m, Waiting) for m in seen if not isinstance(m, TimedWait)] == [True, False]
+    assert len([m for m in seen if isinstance(m, TimedWait)]) == 11
 
 
 def test_a_sync_reports_its_waits_for_the_server_as_waits(device_root, xdg):
@@ -132,7 +137,8 @@ def window(monkeypatch):
     win = types.SimpleNamespace(
         session=None, busy=True, action_bar=_Shown(), progress_label=_Label(),
         progress_bar=_Bar(), unplug_label=_Shown(), banner=_Shown(), _action_buttons=[],
-        _update_actions=lambda: None, _waiting=0, timers=timers, busy_spinner=_Shown())
+        _update_actions=lambda: None, _waiting=0, timers=timers, busy_spinner=_Shown(),
+        stop_wait_button=_Shown())
     return window_methods(win, PROGRESS_METHODS)
 
 
@@ -192,6 +198,35 @@ def test_after_20_s_of_waiting_the_label_says_it_can_take_a_while(window, monkey
     window.progress(Waiting("Checking for files from Garmin Connect…"))
     assert _tick(window) is True
     assert window.progress_label.text == "Checking for files from Garmin Connect…"
+
+
+def test_a_wait_of_known_length_fills_the_bar_and_can_be_stopped(window):
+    """Point 3 of package 3: TrueUp's wait has a known length: the bar shows how much of it
+    has passed (no moving back and forth, no note after 20 s), and Stop Waiting is offered
+    while it lasts."""
+    import threading
+
+    from openexpress.gui.app import stop_waiting
+    from openexpress.progress import TimedWait
+
+    text = "Waiting 3 min 20 s for Garmin Connect to prepare TrueUp…"
+    window.session = types.SimpleNamespace(stop_waiting=threading.Event())
+    window.progress(TimedWait(text, seconds=200, done=0.4))
+    assert window.progress_bar.fraction == 0.4 and window.timers == {}
+    assert window.progress_label.text == text and window.stop_wait_button.visible
+    stop_waiting(window)
+    assert window.session.stop_waiting.is_set() and not window.stop_wait_button.visible
+    window.progress(TimedWait(text, seconds=200, done=0.5))  # the step that was under way
+    assert not window.stop_wait_button.visible
+    window.session.stop_waiting.clear()
+    window.progress(TimedWait(text, seconds=200, done=1.0))
+    assert not window.stop_wait_button.visible  # over
+    window.progress(TimedWait(text, seconds=200, done=0.1))
+    window.progress("TrueUp: writing daily totals to the device")  # another step
+    assert not window.stop_wait_button.visible
+    window.progress(TimedWait(text, seconds=200, done=0.1))
+    window.set_busy(False)
+    assert not window.stop_wait_button.visible
 
 
 # --- one busy indicator: the spinner until the bar has something to show ------------------------

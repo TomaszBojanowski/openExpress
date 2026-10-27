@@ -43,6 +43,7 @@ class Watcher(Gio.Application):
         self.running = False
         self.pending = False
         self.quit_requested = False
+        self._session = None  # the session being synced
         self._lock = threading.Lock()
 
     def do_startup(self):
@@ -80,8 +81,11 @@ class Watcher(Gio.Application):
                 return
             self.quit_requested = True
             busy = self.running
+            session = self._session
         if busy:
             log.info("Quitting after the current sync finishes")
+            if session is not None:
+                session.stop_waiting.set()  # no wait for TrueUp: nothing is written meanwhile
         else:
             self.release()
 
@@ -152,7 +156,11 @@ class Watcher(Gio.Application):
                           _("In progress…"))
             # Its progress names the files and the courses: not logged (the sync logs its
             # numbers itself).
-            summary = service.run_sync(s, progress=lambda _message: None)
+            self._session = s  # its wait for TrueUp stops when the service quits
+            try:
+                summary = service.run_sync(s, progress=lambda _message: None)
+            finally:
+                self._session = None
             # The words of the row under "Last sync", as last_sync.describe tells them.
             body = last_sync.describe(summary.record(s.device.unit_id)).notification
             GLib.idle_add(self.notify, _("Sync finished"), body)

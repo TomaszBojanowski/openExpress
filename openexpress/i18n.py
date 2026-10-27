@@ -341,6 +341,21 @@ def decimal(number: str) -> str:
     return number.replace(".", separator)
 
 
+def duration_text(seconds: float) -> str:
+    """A length of time as the user reads it: "45 s", "3 min", "3 min 20 s" (whole seconds;
+    a hard space between a number and its unit, as in human_size)."""
+    total = max(0, round(seconds))
+    minutes, rest = divmod(total, 60)
+    if not minutes:
+        # TRANSLATORS: a length of time in seconds
+        return _("{seconds}\u00a0s").format(seconds=rest)
+    if not rest:
+        # TRANSLATORS: a length of time in minutes
+        return _("{minutes}\u00a0min").format(minutes=minutes)
+    # TRANSLATORS: a length of time in minutes and seconds
+    return _("{minutes}\u00a0min {seconds}\u00a0s").format(minutes=minutes, seconds=rest)
+
+
 def human_size(n: int | None, localize: bool = True) -> str:
     """A size as the user reads it, like GNOME Files writes it: powers of 1000, the units
     B, kB, MB and GB, one decimal ("699.4 kB"), with the decimal separator of the program's

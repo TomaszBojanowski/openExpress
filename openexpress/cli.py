@@ -581,8 +581,7 @@ def cmd_sync(args) -> int:
                        "Add --apply to run the sync."))
         return 0
     try:
-        summary = service.run_sync(session, progress=lambda message: print("  " + message),
-                                   options=options)
+        summary = service.run_sync(session, progress=_SyncProgress(), options=options)
     except service.FirstSyncChoiceNeeded:
         print(
             "\n" + _("This is the first sync with this program. If the device also syncs "
@@ -705,6 +704,34 @@ def cmd_backup(args) -> int:
     for p in res.removed:
         print(_("Removed old backup {path}").format(path=p))
     return 0
+
+
+class _SyncProgress:
+    """The progress of `sync --apply`: each step on a line of its own. A wait of known length
+    (TrueUp) is one line on stderr that fills in place on a terminal, and only its first line
+    elsewhere; a step after an unfinished one (a wait stopped) starts on a new line."""
+
+    def __init__(self):
+        self.open = False
+
+    def __call__(self, message: str) -> None:
+        from openexpress.progress import TimedWait
+
+        if isinstance(message, TimedWait):
+            if not sys.stderr.isatty():
+                if message.done == 0:
+                    print("  " + message)
+                return
+            print(f"\r  {message} {int(message.done * 100):3d}%", end="", file=sys.stderr,
+                  flush=True)
+            self.open = message.done < 1
+            if not self.open:
+                print(file=sys.stderr)
+            return
+        if self.open:
+            print(file=sys.stderr)
+            self.open = False
+        print("  " + message)
 
 
 class _Bar:

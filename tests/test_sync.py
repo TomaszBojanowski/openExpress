@@ -283,7 +283,7 @@ def test_trueup_flow(device_root, tmp_path):
     waits = []
     c = Client()
     res = trueup.run(dev, st, c, [check], sleep=waits.append, now=lambda: now)
-    assert waits == [20] and c.acks == [1, 2]
+    assert waits == [2.0] * 10 and c.acks == [1, 2]  # 20 s in ten told steps
     assert res.written.startswith("GARMIN/NewFiles/")
     assert (device_root / res.written).read_bytes() == b"TRUEUP"
 

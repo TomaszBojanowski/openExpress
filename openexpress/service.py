@@ -61,6 +61,9 @@ class DeviceSession:
     # What the window learnt of the device's error logs when it opened it, and its copy
     # of the diagnostic files (diagnostics.at_open); None: not read.
     diagnostics: object | None = None
+    # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
+    # quitting); cleared before each wait.
+    stop_waiting: threading.Event = field(default_factory=threading.Event, repr=False)
 
     @property
     def logged_in(self) -> bool:
@@ -657,6 +660,10 @@ def _describe_step(line) -> list[tuple[str, bool]]:
             "this device over USB yet", n).format(count=n), False)]
     if kind == "trueup":
         return [(_("TrueUp: daily totals aligned with your other Garmin devices"), False)]
+    if kind == "trueup_stopped":
+        # TRANSLATORS: a line of the details of "Last sync" and of the end of
+        # `openexpress sync --apply`
+        return [(_("TrueUp: waiting stopped; it comes with the next sync"), False)]
     if kind == "ecg_not_uploaded" and (n := _count(line)):
         # TRANSLATORS: a line of the details of "Last sync" and of the end of
         # `openexpress sync --apply`
@@ -717,6 +724,11 @@ def apps_waiting_step(count: int, flatpak: bool) -> dict:
 def trueup_step() -> dict:
     """TrueUp of the queue written to the device."""
     return {"kind": "trueup"}
+
+
+def trueup_stopped_step() -> dict:
+    """The wait for TrueUp stopped by the user: nothing of it written."""
+    return {"kind": "trueup_stopped"}
 
 
 def received_files_step(datatypes) -> dict:
@@ -1201,12 +1213,17 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     to `received` (counted as received, as the files of the queue)."""
     from openexpress import trueup
 
+    stop = getattr(s, "stop_waiting", None)
+    if stop is not None:
+        stop.clear()  # a stop meant for an earlier wait
     try:
-        res = trueup.run(s.device, s.storage, s.client, messages, progress)
+        res = trueup.run(s.device, s.storage, s.client, messages, progress, stop=stop)
     except Exception as e:  # noqa: BLE001
         log.warning("TrueUp failed: %s: %s", type(e).__name__, e)
         errors.append(f"TrueUp: {e}")
         return []
+    if res.stopped:
+        return [trueup_stopped_step()]
     if res.written:
         if received is not None:
             received.append("TrueUp")
