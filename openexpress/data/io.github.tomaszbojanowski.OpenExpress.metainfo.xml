@@ -105,6 +105,26 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.9" date="2026-10-28">
+      <description>
+        <ul>
+          <li>Get Picture From Account on the page of a device that is not on your account, when
+          Garmin's update server has no picture of it: only that click asks your account for the
+          picture.</li>
+          <li>Primary wearable: set from the device page (Set as Primary, after a question) and on
+          the command line (openexpress primary --wearable shows it, primary set --wearable sets
+          it).</li>
+          <li>openexpress status: the sign-in, the devices connected, their last sync and updates,
+          from what this installation knows; --online asks the servers too.</li>
+          <li>Opening a device no longer looks for diagnostic files that were not there last
+          time.</li>
+          <li>A watch back on USB after its drive was ejected is now said to be in its Garmin USB
+          mode.</li>
+          <li>Comments and docstrings brought up to date; no change in behaviour.</li>
+          <li>README reviewed as a whole.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.8" date="2026-10-27">
       <description>
         <ul>
