@@ -1575,7 +1575,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
 # the same flags in that order.
 
 APP_LIST_COPY_PREFIX = "GARMIN-APPS "
-# Copies of the app list kept for a device; the oldest go when a new one is made (25.10.2026).
+# Copies of the app list kept for a device; the oldest go when a new one is made.
 APP_LIST_COPIES_KEPT = 10
 # The time in the name of a copy, after the prefix.
 APP_LIST_COPY_STAMP = "%Y-%m-%d (%H.%M.%S)"
