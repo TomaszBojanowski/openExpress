@@ -304,7 +304,7 @@ def test_the_banner_of_the_setup_in_polish():
         i18n.setup("en")
     assert said["title"] == (
         "Jednorazowa konfiguracja: wybierz instalator Garmin Express dla Windows "
-        "(GarminExpress.exe z garmin.com). openExpress tylko go odczytuje.")
+        "(GarminExpress.exe z\u00a0garmin.com). openExpress tylko go odczytuje.")
 
 
 def test_the_choice_of_the_file_says_which_installer(in_the_window):
