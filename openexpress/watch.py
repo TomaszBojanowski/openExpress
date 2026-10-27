@@ -35,7 +35,8 @@ OPEN_RETRY_DELAY_S = 5
 
 class Watcher(Gio.Application):
     def __init__(self, delay_s: int = 5):
-        # Same ID as the GUI: notifications get the app icon and name.
+        # The GUI's ID with ".Watch" (its own launcher: desktop.files): notifications get
+        # the app icon and name.
         # Unique: a second start (autostart + GUI switch) just exits.
         super().__init__(application_id=APP_ID + ".Watch",
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
