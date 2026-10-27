@@ -32,7 +32,7 @@ flatpak install --user openexpress io.github.tomaszbojanowski.OpenExpress
 ```
 
 Updates then come with `flatpak update`. The GNOME runtime comes from Flathub, hence the
-first line; skip it if you already have Flathub. openExpress then appears in your application
+first line; it does nothing when you already have Flathub for your user. openExpress then appears in your application
 menu; see [Getting started](#getting-started).
 
 Not using Flatpak, or installing offline? See [Other ways to install](#other-ways-to-install).
@@ -50,7 +50,8 @@ MTP backend:
 GNOME comes with it; KDE Plasma and other desktops often do not. Log out and back in after
 installing it. Without it, the window says **No MTP support in the system (gvfs-mtp)** as soon
 as a device in its normal mode is plugged in, and the command line says the same. Devices in
-mass storage mode (such as the Varia RTL515) need no MTP: the system mounts them as a drive.
+mass storage mode (such as the Varia RTL515) need no MTP: they connect as a drive (when the
+system has not mounted it, openExpress mounts it once you choose it).
 
 **KDE Plasma and Dolphin:** Dolphin opens MTP devices through KDE's own MTP service (kmtpd
 from kio-extras, in the `kiod6` process), not through gvfs. Once started, the service keeps
@@ -62,7 +63,8 @@ if you open it in Dolphin again, repeat these steps.
 
 ## Contents
 
-- [System requirements](#system-requirements) · [Features](#features) · [Supported devices](#supported-devices)
+- [System requirements](#system-requirements) · [Features](#features) ([not yet available](#not-yet-available)) ·
+  [Supported devices](#supported-devices) ([USB modes](#usb-modes-mtp-and-mass-storage))
 - [Usage](#usage): [getting started](#getting-started), [window and background sync](#application-window-and-background-sync),
   [command line](#command-line), [exit codes](#exit-codes), [software updates](#software-updates),
   [maps of your own](#maps-of-your-own), [Connect IQ apps](#connect-iq-apps), [music](#music),
@@ -87,7 +89,8 @@ the application key, its secret and the value that signs download addresses are 
 should work, but are untested – reports are welcome. Developed on Fedora/GNOME.
 
 - Garmin Connect sync: new activities, sleep, HRV, metrics… are uploaded; courses, workouts
-  and Connect IQ apps queued in Connect are written to the watch; TrueUp for multiple devices.
+  and Connect IQ apps queued in Connect are written to the watch (on watches that hide their
+  app folder, apps wait until you install them); TrueUp for multiple devices.
 - Watch software updates and free maps (TopoActive, CourseView, Ski…), with MD5 verification.
   A map Garmin does not offer in the country of your Garmin account is not installed or
   updated, and the window and `openexpress maps` say why; the country is read from the
@@ -96,6 +99,8 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 - Connect IQ apps: install, update, remove, enable/disable built-in activities – also on
   watches that hide their app folder (e.g. the fēnix 8), without reordering your widgets.
 - Music, podcasts and audiobooks with playlists.
+- Backups; showing and setting the primary training device and the primary wearable;
+  copies of the device's diagnostic files, kept on this computer.
 - GTK 4 / libadwaita window, command-line tool and background sync with notifications.
 - No telemetry. English and Polish, translatable with gettext.
 
@@ -125,20 +130,23 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 | Device | Status |
 |---|---|
-| fēnix 8 (47 mm, Solar) | on the developer's Garmin account; tested by the developer: sign-in, sync (upload, TrueUp), software update download, map install, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install and remove on the command line and in the window, restoring the order on the command line) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update |
+| fēnix 8 (47 mm, Solar) | on the developer's Garmin account; tested by the developer: sign-in, sync (upload, files from Garmin Connect, TrueUp), software update download, map install and removal (also in the window), setting the primary training device, copying its diagnostic files, maps of your own (added from the command line and the window, removed in the window; also in the Flatpak), copying music and playlists, Connect IQ apps in the version from source (install and remove on the command line and in the window, restoring the order on the command line) and in the Flatpak with its USB permission (install and remove in the window, 15 October 2026). **Not yet tested on the watch:** updating a Connect IQ app, installing a software update. Also reported by a user in [#13](https://github.com/TomaszBojanowski/openExpress/issues/13) (CachyOS, KDE Plasma, Flatpak 0.6.15): it works once gvfs-mtp is installed and Dolphin's MTP service no longer holds the watch (see [System requirements](#system-requirements)); map downloads and copying work |
 | fēnix 8 (51 mm, AMOLED; part 006-B4536-00) | reported by a user in [#14](https://github.com/TomaszBojanowski/openExpress/issues/14) (Fedora 44, KDE on Wayland, Flatpak 0.6.19): it opens in the window; before its first Connect IQ app it has no app list (`GARMIN/APPS/OUT.BIN`), which 0.6.19 showed as an error on the Apps page; now that is no apps, and apps from the account are queued in Garmin Connect |
-| epix (part 006-B3943) | read-only commands and backup tested |
-| Edge 1050 | on the same account; detected automatically; read-only commands and backup tested; a sync in the window uploaded new files and wrote files from Garmin Connect to the device (15 October 2026); one system software update installed in the window (beta 33.12, 14 October 2026) |
+| epix (part 006-B3943) | read-only commands and backup tested; it is not registered to the account used for testing, so sync and Connect IQ apps are refused with a message, and the window says why |
+| Edge 1050 | on the same account; detected automatically; read-only commands and backup tested; a sync in the window uploaded new files and wrote files from Garmin Connect to the device (15 October 2026); one system software update installed in the window (beta 33.12, 14 October 2026); made the primary training device and back (12 October 2026) |
 | Venu 2 (part 006-B3703) | read-only commands tested; it was the first device to get software updates installed with openExpress (two components, Time Zone Map and Exercise to muscle mapping, 13 October 2026). The watch was not registered to the Garmin Connect account used for testing, so nothing that needs the account (sync, Connect IQ apps) was tested on it |
 | fēnix 8 (47 mm, AMOLED; part 006-B4536-00) | reported by a user in [#4](https://github.com/TomaszBojanowski/openExpress/issues/4) (Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1): detected; sign-in, checking for software updates and Garmin maps (install, update or remove) work; the watch is in Garmin's beta program |
 | fēnix 7 (Sapphire Dual Power; part 006-B3909-00) | reported by a user in [#6](https://github.com/TomaszBojanowski/openExpress/issues/6) (Fedora 44, GNOME on Wayland, Flatpak 0.6.2): detected; sign-in, checking for software updates, installing a system software update, Garmin maps (install, update or remove) and maps of your own work |
-| Edge 1040 (part 006-B3843-00) | reported by a user in [#8](https://github.com/TomaszBojanowski/openExpress/issues/8) (Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1): detected; checking for software updates, installing a Garmin map (Trailforks) and installing and removing Connect IQ apps work; sync not tried |
+| Edge 1040 (part 006-B3843-00) | reported by a user in [#8](https://github.com/TomaszBojanowski/openExpress/issues/8) (Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1): detected; checking for software updates, installing a Garmin map (Trailforks) and installing and removing Connect IQ apps work; sync not tried. In [#10](https://github.com/TomaszBojanowski/openExpress/issues/10) (Ubuntu 26.04, KDE on X11, Flatpak 0.6.7) map updates worked too, and the sign-in window closed the program because the system's language was missing in the Flatpak; since 0.6.12 openExpress handles that (see [The Flatpak and the language of your system](#the-flatpak-and-the-language-of-your-system)) |
 | Varia RTL515 (part 006-B3592-03) | reported by a user in [#9](https://github.com/TomaszBojanowski/openExpress/issues/9) (Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4): detected as a USB drive; sign-in and checking for software updates work. Also tested by the developer (Fedora 44, GNOME on Wayland, 0.7.4): shown on the start page as the remembered Varia before its drive is mounted. |
 | inReach Mini 2 (part 006-B3968-00) | reported by a user in [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) (Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4): connects as a USB drive: software updates work (the device installs one once its drive is ejected properly), sync not yet ([#12](https://github.com/TomaszBojanowski/openExpress/issues/12)) |
+| zūmo 595LM | reported by a user in [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) (the command line only, in a container on a home server, also built for ARM on a Raspberry Pi; a version before 0.6.20): detected; software updates and map updates worked; the device itself has no Garmin Connect sync or Connect IQ apps |
 | Edge 540 (part 006-B4061-00) | reported by a user in [#18](https://github.com/TomaszBojanowski/openExpress/issues/18) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): detected; sync, software updates and maps work |
 | Forerunner 55 (part 006-B3869-00) | reported by a user in [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): connects as a USB drive: software updates work, sync not yet |
 | Forerunner 920XT (part 006-B1765-00) | reported by a user in [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) (Fedora 44, KDE on Wayland, Flatpak 0.6.20): connects as a USB drive: software updates work (time-zone map updated), sync not yet |
 | Instinct 3 – 45mm Tactical (part 006-B4585-00) | reported by a user in [#21](https://github.com/TomaszBojanowski/openExpress/issues/21) (Kubuntu 26.04, KDE on Wayland, Flatpak 0.7.0): detected; sync works, also of an activity with GPS. With Stealth mode on, the watch keeps no GPS track of an activity, so only its totals reach Garmin Connect |
+| fēnix 7X (Sapphire Solar) | reported on Reddit (Fedora): software and map updates work |
+| fēnix 7S (Sapphire) | reported on Reddit (SteamOS on a Steam Deck): map install works |
 | Other Garmin watches and bike computers connecting over USB (MTP) | expected to work, **untested** |
 
 Tried openExpress with another device? Please send a
@@ -151,20 +159,22 @@ contains no serial number, unit ID or e-mail. Nothing is published until you sub
 ### USB modes: MTP and mass storage
 
 Devices that connect over MTP (most watches and bike computers, such as the fēnix 8 and the
-Edge 1050) work in both the Flatpak and the version from source. Since 0.6, openExpress also
-supports Garmin devices that connect as a USB drive (mass storage mode: some older Garmin
-models, and accessories such as the Varia RTL515): their information and software updates, in
+Edge 1050) work in both the Flatpak and the version from source. openExpress also supports
+Garmin devices that connect as a USB drive (mass storage mode: some watches, such as the
+Forerunner 55, older models, the inReach Mini 2 and accessories such as the Varia RTL515): their information and software updates, in
 the window and on the command line, in the Flatpak and in the version from source. Both find
-such a device by themselves, an MTP device first when both are connected; the window also
-lists one that the system has not mounted yet (as on KDE, until a file manager opens it) and
-mounts it when you choose it. `--path` is only for a folder without a device, such as a copy.
-A watch in this mode switches its drive off once it is ejected: plug it in again to use it
-again. Sync, apps, maps, music and backup are not
-supported for such a device; the window and the commands say so. A car or motorcycle
-navigator that connects as a USB drive (such as an older nüvi) therefore gets its software
-updates, but no map updates. Mass storage is tested on the Varia RTL515 (on 21 October
-2026 also copying a component update and ejecting the drive in the window); reports from
-other devices in mass storage mode are welcome. If you are not sure which mode your device
+such a device by themselves. The window gives it a tile of its own, also when the system has
+not mounted it yet (as on KDE, until a file manager opens it), and mounts it when you choose
+it; when an MTP device is connected too, the command line opens the MTP device. `--path` is only for a folder without a device, such as a copy.
+Once its drive is ejected, a watch in this mode switches to its Garmin USB mode, which
+openExpress does not use: unplug the cable and plug it in again to use it again. Sync, apps, maps, music and backup are not
+supported for such a device; the window and the commands say so (the window just has no
+**Backup** row). A car or motorcycle
+navigator that connects as a USB drive (such as an older nüvi) should therefore get its
+software updates, but no map updates. Mass storage is tested by the developer on the Varia RTL515 (on 21
+October 2026 also copying a component update and ejecting the drive in the window), and users
+report software updates working on an inReach Mini 2, a Forerunner 55 and a Forerunner 920XT
+(see the table); reports from other devices in mass storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
 it is in mass storage mode.
 
@@ -176,12 +186,15 @@ openExpress appears in your application menu. Setup needs the Garmin Express ins
 **for Windows** (`GarminExpress.exe`, a free download from
 [garmin.com](https://www.garmin.com/en-US/software/express/windows/)), also when you have
 no Windows: openExpress only reads it and installs nothing. The installer for macOS does
-not work. Click **Choose Installer…** in the banner at the top and select it (later also in
-Preferences → Setup → **Choose File…**), then **Log In**. Turn on automatic sync on the
+not work. Connect the watch and open it: its page has a banner at the top. Click **Choose
+Installer…** there and select the installer (at any time also in Preferences → Setup →
+**Choose File…**), then **Log In** in the same banner (or in Preferences). Turn on automatic sync on the
 Device page (or in Preferences) to sync whenever the watch is connected.
 
-The window opens on the start page (the picture at the top): a tile for each Garmin device
-connected, and for those seen before; a tile opens its device. Up to two labels on a tile say
+With one Garmin device connected, the window opens on its page; otherwise on the start page
+(the picture at the top), which is also one step back from a device page: a tile for each
+Garmin device connected, for those seen before and, once you are logged in, for the other
+devices of your Garmin account; a tile opens its device. Up to two labels on a tile say
 what is waiting and what the device is: **Update available**, or **Unplug to install** (an
 update copied to the connected device, which installs it once unplugged; **Eject to install**
 for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
@@ -192,8 +205,9 @@ when nothing else needs saying, **Synced** (synced before, nothing new to upload
 sync** and **Synced** are there at once, as the last count found them (at most 7 days ago,
 and only while nothing was synced since); the count that runs then confirms or changes them.
 Labels of the account come from the account's list as it was last read (at most 7 days ago,
-with the same login): while you are not logged in there are none, and when the list could not
-be read a sentence under the tiles says so. The device page shows **Update available** or
+with the same login). While you are not logged in the tiles show neither these labels nor
+**To sync**, **Never synced** or **Synced**, and a sentence under the tiles says so; it also
+says when the list could not be read (the tiles then keep what was known before). The device page shows **Update available** or
 **Update ready** under the software version too, and, under the account's **Primary training
 device**, its **Primary wearable** (only for a device that can be one; **Set as Primary**
 makes it this device, after a question). Its
@@ -206,9 +220,9 @@ last seen, its last sync with its details, what the last check of its updates fo
 when (*Not checked since …* when that check is older than 30 days), and, while the
 account's list is known, its **Primary wearable**. **Forget Device…** at the bottom of that
 page removes what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own
-copied to it); connected again, it is a new device, and its first sync asks again whether to
-upload everything or new data only. Files not uploaded yet go only when you tick them, its
-backups only when you ask; nothing changes on the device or on your Garmin account. From the
+copied to it and the copies of its diagnostic files); connected again, it is a new device, and its first sync asks again whether to
+upload everything or new data only. While files of it are not uploaded yet, it is forgotten
+only once you tick that they are discarded; its backups go only when you tick that too; nothing changes on the device or on your Garmin account. From the
 command line: `openexpress devices --forget N`.
 
 The command-line tool is available as
@@ -227,9 +241,14 @@ systemctl --user daemon-reload
 systemctl --user enable --now openexpress-watch.service
 ```
 
+This is for the version from source. In the Flatpak, turn on **Sync in the background** in
+Preferences, or **Sync automatically when connected** on the device page; `install-desktop`
+does nothing there.
+
 The background service syncs the watch every time it is connected and shows a notification.
-It does nothing until you log in and perform the first sync
-(in the application window or with `openexpress baseline`/`sync`). The window and the service
+Until you log in it does nothing, and until the device's first sync (in the window, or with
+`openexpress baseline --apply` or `openexpress sync --apply --all`) it only shows a
+notification asking for it. The window and the service
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
 
@@ -247,35 +266,46 @@ in the [log](#log-file) and does nothing. A watch and a Varia: the watch is sync
 
 | Command | Description |
 |---|---|
-| `openexpress info` | model, software version, free space |
-| `openexpress files [--type FIT_TYPE_4]` | files on the watch by data type from `GarminDevice.xml` |
+| `openexpress info [--json]` | model, part number, software version, unit ID, storage and free space, data types and components, Connect IQ limits; `--json` as JSON |
+| `openexpress files [--type FIT_TYPE_4] [--limit N]` | files on the watch by data type from `GarminDevice.xml`; with `--type` (or `-v`) each file, `--limit N` only the last N |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, unit IDs or e-mail; `--log` prints the last 200 lines of the [log](#log-file) instead, filtered, for the form's “Log” field |
-| `openexpress diagnostics [--crash-logs] [--dumps] [--apply]` | what the device logged as errors, its memory dumps and the copies of its diagnostic files kept on this computer; `--apply` copies the files it shows now, `--crash-logs` also reads its hidden crash logs (the device leaves the file manager for a moment), `--dumps` also copies its memory dumps; nothing is sent (see [Privacy and security](#privacy-and-security)). `openexpress setup --diagnostics-copy on` makes the window copy them at each connection |
-| `openexpress status [--online]` | the login, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each and the updates its last check found; nothing is asked of a server without `--online` |
+| `openexpress diagnostics [--crash-logs] [--dumps] [--apply]` | what the device logged as errors, its memory dumps and the copies of its diagnostic files kept on this computer; `--apply` copies the files it shows now; with it, `--crash-logs` also reads its hidden crash logs (the device leaves the file manager for a moment) and `--dumps` also copies its memory dumps; nothing is sent (see [Privacy and security](#privacy-and-security)). `openexpress setup --diagnostics-copy on` makes the window copy them at each connection |
+| `openexpress status [--online]` | the login, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each and what the window's last check of its updates found; `--online` also asks Garmin Connect and Garmin's update server now (nothing of the answers is kept); without it nothing is asked of a server |
 | `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it (what was uploaded from it, its last sync, the maps of your own copied to it, the copies of its diagnostic files), so that connected again it is a new device; files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
-| `openexpress setup --from-installer GarminExpress.exe` | one-time setup from the Garmin Express installer for Windows (only read, nothing installed) |
+| `openexpress setup --from-installer GarminExpress.exe` | one-time setup from the Garmin Express installer for Windows (only read, nothing installed); instead of it `--from-dll Networking.dll [--utilities-dll Utilities.dll]` or `--key KEY --secret SECRET` |
+| `openexpress setup [--ui-language en\|pl\|system] [--diagnostics-copy on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the language asked of Garmin's servers (by default the program's), Garmin's servers; without options it shows them |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account, log out (removes the local token) |
-| `openexpress upload-config` | what data is uploaded for this watch and where (Garmin server) |
-| `openexpress sync [--all] [--upload-only] [--download-only] [--type TYPE]… [--include-diagnostics] [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch; `--all` uploads everything on the first sync, `--upload-only` and `--download-only` do one direction, `--type` (repeatable) only the data types named, `--include-diagnostics` also the device's diagnostics (see [Privacy and security](#privacy-and-security)) |
+| `openexpress upload-config [--json]` | what data is uploaded for this watch and where (Garmin server) |
+| `openexpress sync [--all] [--upload-only] [--download-only] [--type TYPE]… [--include-diagnostics] [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch; `--all` uploads everything on the first sync, `--upload-only` and `--download-only` do one direction, `--type` (repeatable) uploads only the data types named (files from Garmin Connect are still written), `--include-diagnostics` also the device's diagnostics (see [Privacy and security](#privacy-and-security)) |
 | `openexpress baseline [--apply]` | marks current files as already uploaded (first run) |
-| `openexpress backup [--apply]` | local backup of watch data (default `~/Documents/Garmin/Backups`, last 3 kept) |
+| `openexpress backup [--dest DIR] [--keep N] [--apply]` | local backup of watch data (default `Garmin/Backups` in your Documents folder, or `--dest`; the newest 3 kept, or `--keep N`) |
 | `openexpress cache [--clear] [--only maps,updates] [--apply]` | size of the cache by part (maps, updates, pictures, temp) and clearing it (see [Cache](#cache)) |
-| `openexpress updates [--reinstalls]` | watch software updates (no login needed); a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
-| `openexpress updates --install PART… [--apply]` | download with MD5 check and copy to the watch; after it is unplugged the watch may ask whether to install the update now or later, then restart |
-| `openexpress maps [--all]` | installed and available maps (TopoActive, base maps, CourseView, Ski) |
+| `openexpress updates [--reinstalls]` | watch software updates (no login needed); `--reinstalls` also lists what can be installed again; a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
+| `openexpress updates --install PART…\|all [--apply]` | download with MD5 check and copy to the watch; after it is unplugged the watch may ask whether to install the update now or later, then restart |
+| `openexpress maps [--all]` | installed maps and maps of your own; `--all` also those available for download (TopoActive, base maps, CourseView, Ski) |
 | `openexpress maps install NAME [--apply]` | install a map assigned to the watch (download, activation, write) |
 | `openexpress maps update [--apply]`, `maps remove NAME [--apply]` | update and remove maps |
 | `openexpress maps add FILE.img [--name NAME] [--apply]` | copy a map of your own (e.g. made from OpenStreetMap data) to the device; never overwrites a file |
 | `openexpress maps remove --own NAME [--apply]` | remove a map of your own that was copied with `maps add` |
 | `openexpress apps [--builtin]` | Connect IQ apps on the watch and in your Garmin account, available updates |
-| `openexpress apps install/update/remove/enable/disable … [--apply]` | install, update, remove, enable or disable apps and built-in activities |
-| `openexpress apps order [--from COPY] [--apply]` | put apps and widgets back in the order of a saved copy of the app list |
-| `openexpress primary [--wearable] [set [--wearable] --apply]` | show the account's primary training device (with `--wearable` its primary wearable), or make the connected device the primary one |
-| `openexpress music [add PATH… \| playlist FILE.m3u \| remove TEXT…] [--apply]` | music, podcasts and audiobooks (Artist/Album layout, `.m3u8` playlists) |
+| `openexpress apps install NAME [--allow-permissions] [--apply]` | install an app from your Garmin account; `--allow-permissions` allows the new permissions it asks for |
+| `openexpress apps update [--allow-permissions] [--apply]` | update every installed app that has an update |
+| `openexpress apps remove NAME [--forget] [--apply]` | remove an app; `--forget` also from your Garmin account's app list |
+| `openexpress apps enable\|disable NAME [--type TYPE] [--apply]` | turn an app or a built-in activity on or off; `--type` (app, widget, watch-face, data-field, music-app, activity) picks the entry when two share a name |
+| `openexpress apps order [--from COPY] [--all] [--apply]` | put apps and widgets back in the order of a saved copy of the app list; without `--from` it lists the copies with how many apps each would move, `--all` lists every position that would change |
+| `openexpress primary [--wearable]`, `primary set [--wearable] [--apply]` | the account's primary training device, with `--wearable` its primary wearable (steps and sleep); `set` makes the connected device the primary training device, `set --wearable` the primary wearable |
+| `openexpress music` | music, podcasts and audiobooks on the device, playlists, free space |
+| `openexpress music add PATH… [--as track\|podcast\|audiobook] [--playlist NAME] [--apply]` | copy files (music as Artist/Album, podcasts and audiobooks by album); `--playlist` also makes a playlist of them |
+| `openexpress music playlist FILE.m3u [--name NAME] [--apply]`, `music remove TEXT… [--apply]` | write a playlist as `.m3u8`; remove files whose name, artist or album folder matches TEXT (at least 3 characters) |
 | `openexpress gui` | application window (GTK 4 + libadwaita): watch, sync, updates, maps, apps, music |
 | `openexpress watch` | background service: sync when the watch is connected, with a notification |
-| `openexpress install-desktop [--remove] [--apply]` | application menu entry and systemd user service (version from source); `--remove` removes them |
+| `openexpress install-desktop [--remove] [--force] [--apply]` | application menu entry and systemd user service (version from source; in the Flatpak it does nothing); `--remove` removes them, `--force` installs them also when the Flatpak is installed |
+
+Before the command: `--lang LANG` (the language of this run), `-v` (more detail), `--no-wait`
+(see below), `--device-uri URI` (one MTP device when several are connected), `--path DIR` (a
+folder with a copy of a device's files instead of a device) and `--version`. `openexpress`
+without a command opens the window.
 
 All commands that change anything run **in dry-run mode by default**:
 they show the plan and do nothing without `--apply`. The exceptions are `setup`, `login` and
@@ -294,22 +324,23 @@ and the command-line tool prints the same warning when it starts such an operati
 |---|---|
 | 0 | done (also a dry run) |
 | 1 | an error or a refusal: the device, the account, a server or the network, or a value the command checks itself (e.g. an unknown part in `cache --only`); the message says why |
-| 2 | a wrong command line: an unknown command or option, a value that is not one of the choices (e.g. `setup --environment`), or a missing argument |
+| 2 | a wrong command line: an unknown command or option, a value that is not one of the choices or not a number (e.g. `setup --environment`, `devices --forget`), `--key` without `--secret`, or a missing argument |
 | 3 | the first sync with this program waits for a choice: `openexpress baseline --apply` or `openexpress sync --apply --all` |
-| 130 | interrupted (Ctrl+C); not while `sync` waits for TrueUp, which Ctrl+C only stops (the sync then ends with 0) |
+| 130 | interrupted (Ctrl+C); not while `sync` waits for TrueUp, which Ctrl+C only stops (the sync then ends as usual) |
 
 ### Software updates
 
 The Updates page (and `openexpress updates`) asks Garmin's update server what is new for the
 connected device; no login is needed.
 
-- **Status:** the top of the page says whether a system software update is available (with
-  the installed and the new version), how many other updates there are, or that the software
-  is up to date.
+- **Status:** the top of the page says what is waiting: the new system version (with the
+  installed one beside it), the name of the only update, how many updates there are, an update
+  copied already that waits for the device, or that the software is up to date.
 - **System updates are recognised by their file** (`GUPDATE.GSP`, `GUPDATE.GCD`) as well as
   by what the server says: the server does not always mark them.
 - **Beta versions** that Garmin offers to a device in its beta program are marked *Beta* in
-  the window and `[BETA]` on the command line.
+  the window (for a system update at the top of the page and in the question) and `[BETA]`
+  on the command line.
 - **Before a system update** is copied, the window and `openexpress updates --install` warn
   to charge the device and not to disconnect it while copying. The question in the window
   shows both versions and links to the license (EULA).
@@ -317,22 +348,25 @@ connected device; no login is needed.
   files as one of these kinds (Wellness and Vivomove), the window and `openexpress updates
   --install` warn that the update erases the data stored on it and say to sync it first. The
   update is not held back. No such device has been tried yet.
-- **After the file is copied** the device installs it when it is disconnected. Until then
-  the page says *Update ready: disconnect the device to install it* (and how many more
-  updates are available, if any), its tile *Unplug to install*, and `openexpress updates`
-  says that the update waits for the device.
+- **After a system update is copied** the device installs it when it is disconnected. Until
+  then the page says *Update ready: disconnect the device to install it* (and how many more
+  updates are available, if any), its tile *Unplug to install* (*Eject to install* for a USB
+  drive), and `openexpress updates` says that the update waits for the device. A copied
+  component is listed as already on the device; the device takes it in when it is
+  disconnected too.
 - **A device that connects as a USB drive** is ejected first: after the copy the window
   asks to eject it (`openexpress updates --install` ejects it by itself), and says that the
   cable can be unplugged only once that has worked. Some of these devices install an update
-  only after a clean eject. Until it is unplugged, openExpress does not open the ejected
-  drive again.
+  only after a clean eject. Until it is unplugged, the window does not open a drive it
+  ejected again.
 
 <p align="center">
   <img src="docs/screenshots/updates-beta.png" width="700"
        alt="The Updates page: a beta system update offered for an Edge 1050">
 </p>
 
-Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026).
+Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026) and
+reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2.
 
 <p align="center">
   <img src="docs/screenshots/update-confirm.png" width="700"
@@ -347,8 +381,9 @@ openExpress lists these files on the Maps page and in `openexpress maps`, with t
 is stored in the file.
 
 - **Adding:** *Add Map…* on the Maps page, or `openexpress maps add FILE.img --apply`. The
-  file keeps its name on the device; `--name` gives it another one (letters, digits, spaces
-  and `. _ - ( )`, ending in `.img`).
+  file keeps its name on the device; the name may have letters, digits, spaces and
+  `. _ - ( )`, must start with a letter or digit and end in `.img`. `--name` gives it another
+  one; in the window, rename the file first.
 - **Nothing is overwritten:** a file that is already on the device is never replaced, and
   names that Garmin's own maps use are refused. Garmin's maps cannot be replaced or removed
   this way.
@@ -356,8 +391,9 @@ is stored in the file.
   `openexpress maps remove --own NAME --apply` for a map this installation copied. A map
   that was copied by hand or by another installation (the Flatpak and the version from
   source keep separate lists) can be removed in the window after an extra question.
-- **Where it works:** on devices that have a folder for maps (e.g. the fēnix 8); a Venu 2
-  has none. Tested on a fēnix 8 with a map from BBBike.org. openExpress checks that the file
+- **Where it works:** on devices that have a folder for maps (e.g. the fēnix 8), not on one
+  in mass storage mode; a Venu 2 has none. Tested on a fēnix 8 with a map from BBBike.org,
+  and reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)). openExpress checks that the file
   is a Garmin map file, not what is in the map.
 
 <p align="center">
@@ -389,6 +425,10 @@ is stored in the file.
   the chosen one, for example after another program rearranged the widgets. It only reorders: the same
   apps, the same settings.
 - An app that already waits in Garmin's queue for the device is not requested a second time.
+- **Remove and forget** in the window (`apps remove --forget`) also removes the app from your
+  Garmin account's app list; **Remove** leaves it there.
+- A device that has no app list yet (`GARMIN/APPS/OUT.BIN`, before its first app) shows *No
+  Connect IQ apps on the device*; its apps are only queued in Garmin Connect ([#14](https://github.com/TomaszBojanowski/openExpress/issues/14)).
 - An app whose version in the store asks for other permissions than before is installed or
   updated only once you allow them: the window lists them and asks, and `openexpress apps
   install` / `apps update` need `--allow-permissions`. A sync installs only what already
@@ -403,10 +443,13 @@ is stored in the file.
 
 ### Music
 
-The Music page (*Files…*, *Folders…*, *Add Playlist…*) and `openexpress music` copy music,
-podcasts and audiobooks to the folders the device declares, as Artist/Album, and write
-playlists as `.m3u8`. Before copying, openExpress says which files on the device will be
-replaced. Tested on a fēnix 8.
+The Music page (*Files…*, *Folders…*, *Add Playlist…*) and `openexpress music` copy music
+(as Artist/Album), podcasts and audiobooks (by album) to the folders the device declares,
+and write playlists as `.m3u8`. Files already on the device with the same size are skipped;
+before copying, openExpress says which files on the device will be replaced. Files and
+playlists can be removed (the trash button, `openexpress music remove`). In the Flatpak, the
+tracks of a playlist can be read only from the Music and Downloads folders. Tested on a
+fēnix 8.
 
 <p align="center">
   <img src="docs/screenshots/music.png" width="700" alt="Music">
@@ -417,14 +460,14 @@ replaced. Tested on a fēnix 8.
 - The watch must be registered to the Garmin account you are signed in to. Before every sync
   and every Connect IQ operation the account's device list is fetched from Garmin Connect;
   if the watch is not on it, or the list cannot be fetched, nothing is uploaded and nothing
-  is written to the watch. `openexpress baseline` therefore needs a login now. Features
+  is written to the watch. `openexpress baseline` needs a login too. Features
   without the account (backup, software updates, maps, music) work with any watch.
 - **TrueUp** (`FIT_TYPE_39`): when you own several Garmin devices, Connect asks the client to
   check back after a delay and then sends adjusted daily totals, which are written to the
   watch. As in Garmin Express, openExpress waits the whole delay when it is under five
   minutes and 90 s otherwise, at most three times; the window and the command line show how
   much of the wait has passed. **Stop Waiting** in the window, or Ctrl+C on the command line
-  during the wait, stops it: the sync ends as usual (on the command line with exit code 0),
+  during the wait, stops it: the sync ends as usual,
   nothing of TrueUp is written, and it comes with the next sync.
 - **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
   installed during sync, except on devices that hide their app folder: there they stay
@@ -432,14 +475,16 @@ replaced. Tested on a fēnix 8.
   [Connect IQ apps](#connect-iq-apps)). New watch faces are installed but not activated, like
   in Garmin Express.
 - **Last sync** on the Device page, `openexpress sync` and the notification of the
-  background sync use the same words: when it was, how many new files the device had and
-  how many were uploaded, and how many came from Garmin Connect. On the Device page it ends
+  background sync use the same words for how many new files the device had, how many were
+  uploaded and how many came from Garmin Connect; the row on the Device page also says when
+  it was. On the Device page it ends
   with how many new activities the connected device has to upload, and says *Never synced*
   for a device this installation has not synced yet, as its tile does. The details name the new
   files by their type (activities, sleep, HRV status, device log…; others as "other data"),
   and the files from Garmin Connect too (TrueUp and Connect IQ apps have lines of their own),
-  say how many Garmin Connect already had, and warn only when Garmin rejected a file or one
-  could not be uploaded.
+  say how many Garmin Connect already had, and warn when Garmin rejected a file, a file could
+  not be uploaded, or another step failed (a file from Garmin Connect, a Connect IQ app,
+  TrueUp).
 
 ### Troubleshooting
 
@@ -451,16 +496,14 @@ replaced. Tested on a fēnix 8.
   after it has been running for days, but it is not certain. Before a bigger change (maps,
   several apps) it may help to turn the watch off and on first. No data on the watch was lost.
   The watch keeps only the last such error in its log and overwrites it at the next restart,
-  so to keep it, turn on **Preferences → Diagnostics → Keep a copy of the device's diagnostic
-  files on this computer**: the window then copies them each time the watch is connected,
-  before anything is written to it. After such an error the device page shows a row **Device
+  sometimes already when it is unplugged, so to keep it, turn on **Preferences → Diagnostics
+  → Keep a copy of the device's diagnostic files on this computer**: the window then copies
+  them each time it opens the watch after it was connected, before anything is written to it. After such an error the device page shows a row **Device
   error log** (under **Backup**) for 30 days, whether the copy is on or not.
-
-### Upgrading from 0.3.x
-
-- `sync --include-consent` was removed. Whether data may be uploaded is now read from the
-  Garmin account before every sync (see [Privacy and security](#privacy-and-security));
-  upload locations that need a consent are used exactly when the account has given it.
+- **The watch is not found after the computer slept.** Watches (seen on a fēnix 8 and a Venu
+  2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
+  again.
+- **An Edge 1050 restarts each time it is unplugged.** It always does.
 
 ## Configuration
 
@@ -473,6 +516,9 @@ locale; you can override it:
 - for one command: `openexpress --lang pl …` or `OPENEXPRESS_LANG=pl`,
 - permanently: `openexpress setup --ui-language pl` (`system` restores the default).
 
+Garmin's sign-in page and the answers of its servers use the same language; `openexpress
+setup --locale de_DE` sets another one for them.
+
 ### Log file
 
 openExpress keeps a log of what it does, to make problems easier to find:
@@ -480,7 +526,9 @@ openExpress keeps a log of what it does, to make problems easier to find:
 - **Where:** `~/.local/state/openexpress/openexpress.log`; in the Flatpak
   `~/.var/app/io.github.tomaszbojanowski.OpenExpress/.local/state/openexpress/openexpress.log`.
   The command-line tool, the window and the background sync write to the same file. At most
-  three files of about 1 MB are kept; the file is readable only by you.
+  three files of about 1 MB are kept; the file is readable only by you. Next to it,
+  `crash.log` keeps Python's trace of a crash of the window; its end goes with the log into a
+  report.
 - **Telling runs apart:** every line carries a short random marker (e.g. `cli[a3f1]`) that is
   the same for one run of the program and means nothing else. The first line of a run says
   the command, the version, whether it runs from source or is the Flatpak (with the
@@ -503,9 +551,9 @@ openExpress keeps a log of what it does, to make problems easier to find:
 - **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
   prints its last 200 lines instead, filtered once more, ready to paste into the form's
   “Log” field or into a comment (the address it prints fills in the report). In the window,
-  tick **Attach the last log** in *Report a Device or Problem…*; the preview shows exactly
-  what will be copied. **Open on GitHub** puts only the report into the form and the log
-  into the clipboard, to paste into the form's “Log” field or into a comment: the log never
+  tick **Attach the last log** in *Report a Device or Problem…*; the preview shows the report
+  with the log, as **Copy** copies it. **Open on GitHub** puts only the report into the form
+  and the same log lines into the clipboard, to paste into the form's “Log” field or into a comment: the log never
   goes into the address. The log comes between two `~~~` lines, so that GitHub shows it as
   code in a comment too. Read it before you send it.
 
@@ -518,7 +566,7 @@ each installation has its own), in four parts: `maps`, `updates`, `pictures` and
 them except the pictures of the devices openExpress remembers (`--only pictures` deletes those
 too) and `openexpress cache --clear --only maps,updates --apply` only those named (without
 `--apply` it says what it would free). In the window, Preferences → Storage has a row for each
-part with a trash button, and Clear All…; maps and updates ask first. Maps are then downloaded
+part with a trash button, and **Clear All…**; maps, updates and **Clear All…** ask first. Maps are then downloaded
 again when they are installed or updated. Nothing is cleared while a download, an install or a
 copy to the device is running.
 
@@ -530,15 +578,23 @@ copy to the device is running.
   (permissions 0600): `~/.config/openexpress/connect_auth.json`, or in the Flatpak
   `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/connect_auth.json`.
   `openexpress logout` removes that file.
+- Besides the login, this installation keeps what it knows of each device in
+  `~/.local/share/openexpress` (Flatpak:
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress`), readable only by
+  you: the devices it has seen (name, part number, unit ID, software version, what the last
+  update check found), the names of the files already uploaded, the last sync, copies of
+  files whose upload failed until they are uploaded, and the list of your own maps.
+  **Forget Device…** removes what it keeps of a device.
 - **No telemetry.** Unlike Garmin Express, the program sends nothing to
   Microsoft Application Insights. Watch diagnostics (error logs, KPIs, memory
   dumps, behaviour log) are not uploaded without `--include-diagnostics`.
-- **The device's diagnostic files stay on this computer.** Each time a device is opened, the
-  window reads its error logs (`Garmin/Debug/err_log.*`) to show a recent error; of each entry
+- **The device's diagnostic files stay on this computer.** Once per connection, when a device
+  is opened, the window reads its error logs (`Garmin/Debug/err_log.*`) to show a recent error; of each entry
   only the kind, the time, the error number, where the software stopped and the screen are
   used, never the unit ID or the backtrace in it. Where it found them and the device's other
-  diagnostic files is kept (`diagnostic-places.json`, the paths only, in the device's folder
-  named below), so that the next openings read them there without looking through the
+  diagnostic files is kept (`diagnostic-places.json`: the paths, the device's software version
+  and whether its event logs are visible, nothing of the files themselves, in the device's
+  folder named below), so that the next openings read them there without looking through the
   device's folders; when one is gone, or the device has other software, it looks through
   them again (what was not there is looked for again only then). With **Preferences →
   Diagnostics** turned on
@@ -549,16 +605,18 @@ copy to the device is running.
   only listed. The hidden crash logs of a fēnix 8 (its boot log and event logs) are read only
   when you ask (**Copy Crash Logs**, `openexpress diagnostics --crash-logs --apply`), in a
   session of openExpress's own, and the memory dumps (encrypted by Garmin) are copied only
-  with **Copy Memory Dumps** or `--dumps`. The copies are in the device's folder of the data
+  with **Copy Memory Dumps** or `openexpress diagnostics --dumps --apply`. The copies are in the device's folder of the data
   of openExpress (`~/.local/share/openexpress/devices/`, in the Flatpak under
   `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress/devices/`), readable
   only by you; at most 30 copies and 50 MB per device, the oldest removed first. Forgetting
-  the device removes them. Nothing of them is ever sent.
+  the device removes them. These copies are never sent (`sync --include-diagnostics`
+  uploads the device's diagnostic files from the device itself).
 - Sync **never deletes files from the watch**. Files are deleted only when you ask for it:
-  by `maps update/remove` (old map files indicated by the server), `maps remove --own`,
-  `music remove` and `apps remove`, on the command line always after a dry run that lists
-  them. Installing a software update first deletes a leftover update file of the same name
-  in another letter case and `GUPDATE.TMP`, and removes a copy that failed its check. Files
+  by `maps install/update/remove` (old map files indicated by the server), `maps remove
+  --own`, `music remove` and `apps remove`; on the command line only with `--apply` (without
+  it, a dry run lists them). Before writing a software update, openExpress deletes a file of
+  the same name in another letter case and, for a system update, a leftover `GUPDATE.TMP` in
+  its folder; it removes a copy that failed its check. Files
   shared by several maps (e.g. the Europe terrain model) are protected. When Garmin's map
   service asks for old files to be cleaned up (`directoriesToRemove`), the question before a
   map is installed, updated or removed and `openexpress maps install/update/remove` list the
@@ -585,10 +643,12 @@ copy to the device is running.
   told. The same request tells which map service serves the device: it is made once each
   time a device is opened, and again when its maps are checked again by hand, and its
   answer also serves the picture. Like the update check, that request names the device
-  (unit ID). The answer is kept in memory only while the device is open and is not
-  stored: only the picture is cached, and the address of the picture of the model is kept
-  with the devices this installation remembers, so that the picture can be downloaded again
-  after the cache is cleared. Of the answer, the log names only the map update type (which
+  (unit ID). The answer is kept in memory only while the device is open. Of it, only the
+  picture is cached, and three things are kept with the devices this installation
+  remembers: the address of the model's picture (so that the picture can be downloaded
+  again after the cache is cleared), Garmin's name of the model when the device gives it in
+  capitals only, and whether the device is a bike accessory. Its market segment also tells
+  whether an update erases the device's data. Of the answer, the log names only the map update type (which
   map service Garmin uses for the model) and, for a device whose kind Garmin does not tell
   otherwise, the market segment and the connect support – always with the part number
   only – as it names the account's categories of such a device. When that server gives no
@@ -601,12 +661,16 @@ copy to the device is running.
   own. It uses the Garmin Express client headers so that the servers answer, but it does not
   hide that it is a different program.
 - The `Garmin-Client-*` headers have the values of Garmin Express 7.29.1.0 for Windows (name,
-  version, platform and its version). The values can be changed in
-  `~/.config/openexpress/settings.json`.
+  version, platform and its version), with a random session ID and the language of the
+  program. The request for the upload configuration also carries a random ID made once for
+  this installation (`client_guid` in `settings.json`). The values can be changed in
+  `~/.config/openexpress/settings.json` (Flatpak:
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/settings.json`).
 
 ### Flatpak permissions
 
-Besides network, USB storage access through GNOME's gvfs (`xdg-run/gvfsd`), your Downloads
+Besides network, the usual permissions of a window (Wayland, X11 as a fallback, the GPU),
+access to devices through GNOME's gvfs (`--talk-name=org.gtk.vfs.*`, `xdg-run/gvfsd`), your Downloads
 and Music folders read-only (`xdg-download:ro`, `xdg-music:ro`: the installer and music on the
 command line) and the folder Documents/Garmin for backups (`xdg-documents/Garmin:create`,
 created if missing), the Flatpak has three permissions that weaken the sandbox:
@@ -616,10 +680,10 @@ created if missing), the Flatpak has three permissions that weaken the sandbox:
   devices, and to read which repository the Flatpak was installed from
   (`flatpak info --show-origin`, for the device report and the log; it changes nothing).
 - It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of
-  `/dev`). It uses this only for Connect IQ apps on devices that hide their app folder
-  (e.g. the fēnix 8): installing, updating and removing such apps needs a direct USB
-  connection, and the device disappears from the file manager for a moment while it is
-  used.
+  `/dev`). It uses this only for two things that need a direct USB connection: Connect IQ
+  apps on devices that hide their app folder (e.g. the fēnix 8: installing, updating and
+  removing them), and reading the hidden crash logs of such a device when you ask. The
+  device disappears from the file manager for a moment while it is used.
 - It can read and write the drives the system mounts under `/run/media` and `/media`
   (`--filesystem=/run/media`, `--filesystem=/media`): every removable drive mounted there
   (USB sticks, memory cards, external disks), not only Garmin devices. It uses this only for
@@ -627,10 +691,11 @@ created if missing), the Flatpak has three permissions that weaken the sandbox:
 
 If you prefer not to grant the first one, use the [version from source](#from-source)
 (writing to the watch then works without it). The second one can be turned off with
-`flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; Flatpak
-older than 1.16 ignores it. Without it, on devices that hide their app folder, installs and
+`flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`; a Flatpak
+older than 1.16 does not know this permission and runs as without it. Without it, on devices that hide their app folder, installs and
 updates are only queued in Garmin Connect, from where the phone or Garmin Express installs
-them, apps are removed on the phone, and nothing is written to the device. The third one can
+them, apps are removed on the phone, nothing is written to the device, and the hidden crash logs
+cannot be read. The third one can
 be turned off with `flatpak override --user --nofilesystem=/run/media --nofilesystem=/media
 io.github.tomaszbojanowski.OpenExpress`; the window then says that it has no access to the
 drive, and devices in mass storage mode are left to the version from source.
@@ -669,10 +734,10 @@ repository, keeping your setup, login and settings, add the repository as in
 
 Requirements:
 
-- Linux with Python 3.11+, `requests`, PyGObject with GTK 4, libadwaita, WebKitGTK 6.0
+- Linux with Python 3.11+, `requests`, PyGObject 3.46+ with GTK 4, libadwaita 1.5+, WebKitGTK 6.0
   (login window), GIO/gvfs (MTP) and `7z` (7-Zip or p7zip: setup needs it to read the
   installer). Optional: `mutagen` (music tags), `libusb-1.0` (Connect IQ apps on devices
-  that hide their app folder; usually installed).
+  that hide their app folder, and their hidden crash logs; usually installed).
   - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1`
   - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0`
 - Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
@@ -687,6 +752,7 @@ First run:
 git clone https://github.com/TomaszBojanowski/openExpress.git
 cd openExpress
 pip install --user .                 # or run without installing: python3 -m openexpress …
+                                     # (where pip refuses with "externally-managed-environment")
 
 # 1. One-time setup from the official installer (downloaded from garmin.com)
 openexpress setup --from-installer ~/Downloads/GarminExpress.exe
@@ -718,7 +784,7 @@ Building the Flatpak needs `flatpak-builder` with Flatpak 1.16 or newer; older v
 refuse `--device=usb` with "Unknown device type usb":
 
 ```bash
-flatpak install --user flathub org.gnome.Sdk//50
+flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50
 flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.tomaszbojanowski.OpenExpress.yml
 ```
 
@@ -739,16 +805,20 @@ quietly when something is missing: the translation tests without gettext, the PT
 libusb-1.0 and the window-width tests without the Adwaita Sans font (the widths are measured in
 it). The tests never reach the network (one that tries fails) and need no device.
 
-Bug reports: please include the watch model, the output of `openexpress info` and the
-command you ran. Never post the files in `~/.config/openexpress/`: `connect_auth.json` is
+Bug reports: please send the device report (main menu ☰ → **Report a Device or Problem…**, or
+`openexpress report`; it has no serial number, unit ID or e-mail), the command you ran and,
+if something failed, the output of `openexpress report --log`. Do not post the output of
+`openexpress info`: it shows the unit ID. Never post the files in `~/.config/openexpress/`
+(Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/`): `connect_auth.json` is
 your login token, and `consumer.json` holds what setup read from the Garmin Express
 installer (the application key, its secret and the value that signs download addresses).
-Do not post your `GarminDevice.xml` either (it contains the serial number and map unlock
-codes).
+Do not post your `GarminDevice.xml` either (it contains the unit ID, the serial number and
+map unlock codes).
 
 ### Adding a translation
 
-Translations use GNU gettext (`xgettext`, `msgmerge`, `msgfmt` from the `gettext` package).
+Translations use GNU gettext (`xgettext`, `msginit`, `msgmerge`, `msgattrib`, `msgfmt` from the
+`gettext` package).
 
 ```bash
 tools/update-translations.sh de      # creates po/de.po from the template
