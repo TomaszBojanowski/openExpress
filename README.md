@@ -534,7 +534,11 @@ copy to the device is running.
 - **The device's diagnostic files stay on this computer.** Each time a device is opened, the
   window reads its error logs (`Garmin/Debug/err_log.*`) to show a recent error; of each entry
   only the kind, the time, the error number, where the software stopped and the screen are
-  used, never the unit ID or the backtrace in it. With **Preferences → Diagnostics** turned on
+  used, never the unit ID or the backtrace in it. Where it found them and the device's other
+  diagnostic files is kept (`diagnostic-places.json`, the paths only, in the device's folder
+  named below), so that the next openings read them there without looking through the
+  device's folders; when one is gone, or something it looked for in vain is there now, it
+  looks through them again. With **Preferences → Diagnostics** turned on
   (off by default; `openexpress setup --diagnostics-copy on`), the window also copies, once
   per connection and through the ordinary connection, the diagnostic files the device shows:
   `Garmin/Debug`, the folders of its diagnostic data types and its event logs. Health

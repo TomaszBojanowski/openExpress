@@ -105,6 +105,37 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.8" date="2026-10-27">
+      <description>
+        <ul>
+          <li>A device's page comes at once: its diagnostic files are read in the background
+          after it (a Venu 2 took 4–5 s before its page appeared, now under a second), and files
+          of the same size and time as in the copy before are not read again. A task that writes
+          to the device waits for them, so that the copy still shows the device before any
+          change. While a device opens, its tile shows a spinner; a second click on it does
+          nothing.</li>
+          <li>A device whose GarminDevice.xml gives its name in capitals only is shown with the
+          name Garmin gives its model: “EPIX” becomes “epix (Gen 2), Sapphire Edition,
+          47 mm”.</li>
+          <li>The setup says which installer it needs: Garmin Express for Windows
+          (GarminExpress.exe from garmin.com), which openExpress only reads: in the window, in
+          the help of openexpress setup and when openExpress is not set up yet.</li>
+          <li>Clearing all of the cache (Clear All… in Preferences, openexpress cache --clear)
+          keeps the pictures of the devices openExpress remembers: a device not on your account
+          may have no other source of its picture. The trash of “Pictures and icons”
+          (--only pictures) still deletes them.</li>
+          <li>The window can be closed during a backup: the backup stops, and its unfinished copy
+          is removed.</li>
+          <li>The keyboard shortcuts open with Ctrl+/ as well as Ctrl+?, which needs Shift on
+          many keyboards.</li>
+          <li>A device plugged in while others are connected is noted as seen as well, so that
+          once it is unplugged its tile says when it was last seen.</li>
+          <li>The chips on the tiles and the device page are a little bigger.</li>
+          <li>The code of the window is split into modules, with no change in what it
+          does.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.7" date="2026-10-27">
       <description>
         <ul>
