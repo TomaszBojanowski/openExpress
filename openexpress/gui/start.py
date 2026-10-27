@@ -61,7 +61,7 @@ SUBTITLE_LINES = 2
 # The program's own style (loaded once per display). The tiles of the start page: a quiet
 # 1px edge around the tile of a connected device; the accent only under the pointer or with
 # the keyboard focus. The edge is an outline drawn inside the tile: neither its size nor the
-# layout changes. A row that wraps with a libadwaita older than 1.7 (app.wrapping_row): no
+# layout changes. A row that wraps with a libadwaita older than 1.7 (window_tasks.wrapping_row): no
 # room around each of its widgets, as in a box. Every chip of the window (the tiles, the rows
 # of the list view, the update on the device page) has the class oe-chip and its one shape:
 # font, padding, rounding; its style (accent, warning, dimmed) gives only its colours.
