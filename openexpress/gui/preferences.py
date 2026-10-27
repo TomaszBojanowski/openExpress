@@ -232,6 +232,18 @@ def resolve_account(win) -> None:
         win._fetch_account()
 
 
+# The keys of the actions, as App.do_startup binds them; the menu and the window of
+# shortcuts show the first. Ctrl+? needs Shift where "?" does (as on a Polish keyboard), so
+# Ctrl+/ comes first.
+KEYS = {"win.sync": ["<Control>s"], "win.refresh": ["<Control>r", "F5"],
+        "app.preferences": ["<Control>comma"],
+        "app.shortcuts": ["<Control>slash", "<Control>question"], "app.quit": ["<Control>q"]}
+# The window of shortcuts, in this order.
+SHORTCUTS = ((N_("Sync"), "win.sync"), (N_("Refresh"), "win.refresh"),
+             (N_("Preferences"), "app.preferences"),
+             (N_("Keyboard Shortcuts"), "app.shortcuts"), (N_("Quit"), "app.quit"))
+
+
 class Preferences:
     def _background_enabled(self) -> bool:
         from openexpress import background
@@ -436,13 +448,11 @@ class Preferences:
         ask_to_clear(self, _("Clear the cache?"), body, None)
 
     def show_shortcuts(self) -> None:
+        """The window of shortcuts: each as the first of the keys App.do_startup binds."""
         dialog = Adw.ShortcutsDialog()
         section = Adw.ShortcutsSection(title=_("General"))
-        for title, accel in ((_("Sync"), "<Control>s"), (_("Refresh"), "<Control>r"),
-                             (_("Preferences"), "<Control>comma"),
-                             (_("Keyboard Shortcuts"), "<Control>question"),
-                             (_("Quit"), "<Control>q")):
-            section.add(Adw.ShortcutsItem(title=title, accelerator=accel))
+        for title, action in SHORTCUTS:
+            section.add(Adw.ShortcutsItem(title=_(title), accelerator=KEYS[action][0]))
         dialog.add(section)
         dialog.present(self)
 

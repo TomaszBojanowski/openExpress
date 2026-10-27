@@ -106,6 +106,7 @@ from openexpress.gui.pictures import (  # noqa: E402, F401 - also gui.app.<name>
     with_device_picture,
 )
 from openexpress.gui.preferences import (  # noqa: E402, F401 - also gui.app.<name> for the tests
+    KEYS,
     Preferences,
     account_changed,
     account_client,
@@ -547,11 +548,7 @@ class App(Adw.Application):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", cb)
             self.add_action(action)
-        for action, accels in (("app.quit", ["<Control>q"]),
-                               ("app.preferences", ["<Control>comma"]),
-                               ("app.shortcuts", ["<Control>question"]),
-                               ("win.refresh", ["<Control>r", "F5"]),
-                               ("win.sync", ["<Control>s"])):
+        for action, accels in KEYS.items():
             self.set_accels_for_action(action, accels)
 
     def main_window(self, create: bool = True) -> MainWindow | None:
