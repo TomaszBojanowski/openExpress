@@ -181,8 +181,9 @@ def folder(unit_id: int) -> Path:
 class Copied:
     """What one copy did."""
 
-    new: int = 0  # files whose content was not kept yet
-    new_bytes: int = 0
+    new: int = 0  # files new or changed since the copy before (the content not kept yet, for
+    # the crash logs and the dumps)
+    new_bytes: int = 0  # what was stored now
     unchanged: int = 0
     listed: int = 0  # listed only: dumps, personal and big files
     saved: bool = False  # a new copy was written (nothing changed: none)
@@ -358,13 +359,14 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
             report.unchanged += 1
             continue
         data = storage.read(path)
-        sha, new = _keep(where, data)
+        sha, stored = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
-        if new:
-            report.new += 1
-            report.new_bytes += len(data)
-        else:
+        report.new_bytes += len(data) if stored else 0
+        # Unchanged: as in the copy before (not merely the content of another file).
+        if isinstance(old, dict) and old.get("sha256") == sha:
             report.unchanged += 1
+        else:
+            report.new += 1
     if files != last.get("files") or listed != last.get("listed"):
         _save(where, "files", files, listed, now, device.software_version_str)
         report.saved = True

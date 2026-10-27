@@ -233,13 +233,17 @@ def test_the_copy_takes_what_the_device_shows_and_lists_the_rest(device, clock, 
 
 def test_a_second_copy_keeps_only_what_changed(device, clock):
     st, dev = device
-    diagnostics.copy_files(dev, st)
+    (st.root / "GARMIN" / "Debug" / "empty.log").write_bytes(b"")  # as err_log.txt
+    first = diagnostics.copy_files(dev, st)
+    # Unchanged means as in the copy before, not the same content as another file.
+    assert (first.new, first.unchanged) == (6, 0)
     again = diagnostics.copy_files(dev, st)
     assert not again.saved and again.new == 0 and again.copies == 1
     (st.root / "GARMIN" / "Debug" / "err_log.txt").write_bytes(err_log(POWERDOWN))
     changed = diagnostics.copy_files(dev, st)
     assert changed.saved and changed.new == 1 and changed.copies == 2
     assert len(list((diagnostics.folder(UNIT) / "objects").iterdir())) == 6
+    assert changed.unchanged == 5
 
 
 def test_once_per_connection_and_never_a_session_of_our_own(device, clock):
