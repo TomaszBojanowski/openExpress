@@ -118,17 +118,22 @@ def test_the_button_spins_during_the_work_and_is_back_before_done(fails):
 # --- window_methods: the window's methods on a stand-in, wherever the window has them -----------
 
 def test_a_stand_in_gets_the_methods_of_the_mixins_too():
-    """Before the split of app.py: a method moved to a mixin stays in the stand-in."""
+    """A stand-in gets a method from the mixin that has it (moved out of app.py in the
+    split) as well as one MainWindow defines itself."""
     import types
 
     from fakes import window_methods
 
+    from openexpress.gui.app import MainWindow
     from openexpress.gui.device_page import DevicePage
     from openexpress.gui.maps_page import MapsPage
     from openexpress.gui.window_tasks import TaskRunner
 
     win = window_methods(types.SimpleNamespace(), ["show_maps", "_load", "_own_map_subtitle",
-                                                   "in_background"])
+                                                   "in_background", "_update_actions",
+                                                   "_ownership_title"])
+    assert win._update_actions.__func__ is MainWindow.__dict__["_update_actions"]
+    assert win._ownership_title is MainWindow.__dict__["_ownership_title"].__func__
     assert win.show_maps.__func__ is vars(MapsPage)["show_maps"]
     assert win.show_maps.__self__ is win and win._load.__func__ is vars(DevicePage)["_load"]
     # Static methods stay unbound, as on the window.
