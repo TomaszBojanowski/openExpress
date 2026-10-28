@@ -331,7 +331,8 @@ def test_proto_rejects_truncated_fixed_and_field_zero():
         proto.decode(bytes([1 << 3 | proto.I64]) + b"\x00" * 7)
     with pytest.raises(proto.ProtoError):
         proto.decode(bytes([0 << 3 | proto.VARINT, 1]))
-    assert proto.first(proto.decode(bytes([1 << 3 | proto.I32]) + b"abcd"), 1) == b"abcd"
+    fields = proto.decode(bytes([1 << 3 | proto.I32]) + b"abcd")
+    assert {f.number: f.value for f in fields}[1] == b"abcd"
 
 
 # --- 4. updates / maps write failures -------------------------------------------------
