@@ -131,6 +131,9 @@ class Answering:
         if signal == "response":
             handler(self, Answering.answer)
 
+    def get_response_enabled(self, response):
+        return True
+
     def __getattr__(self, name):
         return lambda *a, **kw: None
 

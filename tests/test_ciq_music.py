@@ -1674,6 +1674,9 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
         def connect(self, signal, handler):
             handler(self, "ok")
 
+        def get_response_enabled(self, response):
+            return True
+
         def __getattr__(self, name):
             return lambda *a, **kw: None
 
@@ -1842,6 +1845,9 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, i
 
         def present(self, parent):
             pass
+
+        def __getattr__(self, name):  # the rest of the dialog's setters
+            return lambda *a, **kw: None
 
     in_the_window("Adw", types.SimpleNamespace(
         AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))

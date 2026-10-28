@@ -21,6 +21,7 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.
 from openexpress import service  # noqa: E402
 from openexpress.gui.pictures import cached_download, load_texture  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size, ngettext  # noqa: E402
 from openexpress.settings import language_tag  # noqa: E402
@@ -559,22 +560,20 @@ class AppsPage:
         from openexpress import ciq
 
         s = self.session
-        d = Adw.AlertDialog(
-            heading=_("Remove {name}?").format(name=app.name),
-            body=self._forget_text(app))
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("forget", _("Remove from Account"))
 
         def work():
             service.require_account_device(s.client, s.device.unit_id)
             ciq.StoreApi(s.client).forget(s.device, [app.app_id])
 
-        d.connect("response", lambda _d, r: r == "forget" and self.run_task(
-            _("Removing {name}…").format(name=app.name), work,
-            lambda _r: (self.toast(_("Removed {name} from your account list.").format(
-                name=app.name)), self.load_section("apps", force=True)),
-            read_again_after_failure(self, "apps"), device=False))
-        d.present(self)
+        def forget():
+            self.run_task(
+                _("Removing {name}…").format(name=app.name), work,
+                lambda _r: (self.toast(_("Removed {name} from your account list.").format(
+                    name=app.name)), self.load_section("apps", force=True)),
+                read_again_after_failure(self, "apps"), device=False)
+
+        confirm(self, "app-forget", _("Remove {name}?").format(name=app.name),
+                self._forget_text(app), Answer("forget", _("Remove from Account"), forget))
 
     def confirm_remove_app(self, app) -> None:
         from openexpress import ciq
@@ -588,21 +587,13 @@ class AppsPage:
                   "USB connection; the device disappears from the file manager for a moment. "
                   "The device finishes the removal after it is unplugged.") if direct
                 else _("The app and its settings will be deleted from the device."))
-        d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=app.name), body=body)
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("forget", _("Remove and forget"))
-        d.add_response("ok", _("Remove"))
-        d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
 
-        def response(_d, r):
-            if r == "cancel":
-                return
-
+        def remove(forget: bool):
             def work():
-                if r == "forget":
+                if forget:
                     service.require_account_device(s.client, s.device.unit_id)
                 removed = ciq.remove(s.device, s.storage, app)
-                if r == "forget":
+                if forget:
                     ciq.StoreApi(s.client).forget(s.device, [app.app_id])
                 return removed
 
@@ -616,8 +607,9 @@ class AppsPage:
             self.run_task(_("Removing {name}…").format(name=app.name),
                           writes_to_device(work), done, read_again_after_failure(self, "apps"))
 
-        d.connect("response", response)
-        d.present(self)
+        confirm(self, "app-remove", _("Remove {name}?").format(name=app.name), body,
+                Answer("forget", _("Remove and forget"), lambda: remove(True)),
+                Answer("ok", _("Remove"), lambda: remove(False), look="destructive"))
 
     def toggle_app(self, app, row, handler_id: int) -> None:
         from openexpress import ciq

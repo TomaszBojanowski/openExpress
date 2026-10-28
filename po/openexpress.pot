@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 00:22+0100\n"
+"POT-Creation-Date: 2026-10-28 15:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1532,7 +1532,7 @@ msgstr ""
 
 #. TRANSLATORS: state of a Connect IQ app or built-in activity on the watch
 #. TRANSLATORS: state of a Connect IQ app
-#: openexpress/cli.py:1339 openexpress/gui/apps_page.py:139
+#: openexpress/cli.py:1339 openexpress/gui/apps_page.py:140
 msgid "disabled"
 msgstr ""
 
@@ -1581,7 +1581,7 @@ msgstr ""
 msgid "Order of the apps from the copy {name}"
 msgstr ""
 
-#: openexpress/cli.py:1415 openexpress/gui/apps_page.py:427
+#: openexpress/cli.py:1415 openexpress/gui/apps_page.py:428
 msgid "The apps on the device are already in this order."
 msgstr ""
 
@@ -1601,7 +1601,7 @@ msgstr ""
 msgid "Copy of the current app list: {name}"
 msgstr ""
 
-#: openexpress/cli.py:1429 openexpress/gui/apps_page.py:425
+#: openexpress/cli.py:1429 openexpress/gui/apps_page.py:426
 msgid ""
 "Wrote the new order to the device; it takes effect after the device is "
 "unplugged."
@@ -1651,7 +1651,7 @@ msgstr[1] ""
 msgid "removed: {name} ({type})"
 msgstr ""
 
-#: openexpress/cli.py:1474 openexpress/gui/apps_page.py:612
+#: openexpress/cli.py:1474 openexpress/gui/apps_page.py:603
 msgid "The device finishes the removal after it is unplugged."
 msgstr ""
 
@@ -1814,7 +1814,7 @@ msgstr ""
 msgid "Would remove it from your account list. Add --apply."
 msgstr ""
 
-#: openexpress/cli.py:1689 openexpress/gui/apps_page.py:574
+#: openexpress/cli.py:1689 openexpress/gui/apps_page.py:571
 #, python-brace-format
 msgid "Removed {name} from your account list."
 msgstr ""
@@ -3040,7 +3040,7 @@ msgctxt "tab"
 msgid "Apps"
 msgstr ""
 
-#: openexpress/gui/app.py:250 openexpress/gui/apps_page.py:110
+#: openexpress/gui/app.py:250 openexpress/gui/apps_page.py:111
 msgid "Loading Connect IQ apps…"
 msgstr ""
 
@@ -3113,9 +3113,9 @@ msgstr ""
 msgid "Not logged in to Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/app.py:452 openexpress/gui/apps_page.py:638
+#: openexpress/gui/app.py:452 openexpress/gui/apps_page.py:630
 #: openexpress/gui/detection.py:731 openexpress/gui/device_page.py:796
-#: openexpress/gui/window_tasks.py:339
+#: openexpress/gui/window_tasks.py:434
 msgid "Another operation is in progress"
 msgstr ""
 
@@ -3130,7 +3130,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/gui/app.py:494 openexpress/gui/updates_page.py:357
-#: openexpress/gui/window_tasks.py:254
+#: openexpress/gui/window_tasks.py:330 openexpress/gui/window_tasks.py:349
 msgid "OK"
 msgstr ""
 
@@ -3140,7 +3140,7 @@ msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""
 
 #. TRANSLATORS: subtitle of the row "Apps" of the device page
-#: openexpress/gui/apps_page.py:50
+#: openexpress/gui/apps_page.py:51
 #, python-brace-format
 msgid "{count} Connect IQ app"
 msgid_plural "{count} Connect IQ apps"
@@ -3148,199 +3148,199 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: {folders} are folders of the device, e.g. "garmin/apps/media"
-#: openexpress/gui/apps_page.py:69
+#: openexpress/gui/apps_page.py:70
 #, python-brace-format
 msgid ""
 "The device did not let openExpress create {folders} with this software "
 "version: apps that go there stay queued in Garmin Connect."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:83
+#: openexpress/gui/apps_page.py:84
 msgid "Sign in to manage apps."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:130 openexpress/gui/maps_page.py:133
+#: openexpress/gui/apps_page.py:131 openexpress/gui/maps_page.py:133
 msgid "On the device"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:132
+#: openexpress/gui/apps_page.py:133
 msgid "Update all"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:151
+#: openexpress/gui/apps_page.py:152
 #, python-brace-format
 msgid "update {version}"
 msgstr ""
 
 #. TRANSLATORS: in the line of an app whose update asks for permissions
 #. the user has to allow first
-#: openexpress/gui/apps_page.py:156 openexpress/gui/apps_page.py:192
+#: openexpress/gui/apps_page.py:157 openexpress/gui/apps_page.py:193
 msgid "new permissions"
 msgstr ""
 
 #. TRANSLATORS: button
-#: openexpress/gui/apps_page.py:161 openexpress/gui/maps_page.py:160
+#: openexpress/gui/apps_page.py:162 openexpress/gui/maps_page.py:160
 msgid "Update"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:165 openexpress/gui/maps_page.py:169
+#: openexpress/gui/apps_page.py:166 openexpress/gui/maps_page.py:169
 #: openexpress/gui/maps_page.py:222
 #, python-brace-format
 msgid "Remove {name}"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:168
+#: openexpress/gui/apps_page.py:169
 msgid "Order"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:171 openexpress/gui/apps_page.py:340
-#: openexpress/gui/apps_page.py:343 openexpress/gui/apps_page.py:351
-#: openexpress/gui/apps_page.py:357
+#: openexpress/gui/apps_page.py:172 openexpress/gui/apps_page.py:341
+#: openexpress/gui/apps_page.py:344 openexpress/gui/apps_page.py:352
+#: openexpress/gui/apps_page.py:358
 msgid "Restore the order from a copy"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:173
+#: openexpress/gui/apps_page.py:174
 msgid "A copy of the app list is made before every change"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:174
+#: openexpress/gui/apps_page.py:175
 msgid "Restore…"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:183
+#: openexpress/gui/apps_page.py:184
 msgid "In your Garmin account"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:184
+#: openexpress/gui/apps_page.py:185
 msgid "Apps you added in the Connect IQ store (website or phone)."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:185
+#: openexpress/gui/apps_page.py:186
 msgid ""
 "Add apps in the Connect IQ store (website or phone); they will show up here."
 msgstr ""
 
 #. TRANSLATORS: button
-#: openexpress/gui/apps_page.py:195 openexpress/gui/maps_page.py:165
+#: openexpress/gui/apps_page.py:196 openexpress/gui/maps_page.py:165
 #: openexpress/gui/maps_page.py:195 openexpress/gui/updates_page.py:169
 #: openexpress/gui/updates_page.py:248
 msgid "Install"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:202
+#: openexpress/gui/apps_page.py:203
 msgid "Built-in activities and apps"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:203
+#: openexpress/gui/apps_page.py:204
 msgid "Changes take effect after you disconnect the device."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:204
+#: openexpress/gui/apps_page.py:205
 msgid "Search activities"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:206
+#: openexpress/gui/apps_page.py:207
 #, python-brace-format
 msgid "Show {count} item"
 msgid_plural "Show {count} items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/apps_page.py:268
+#: openexpress/gui/apps_page.py:269
 #, python-brace-format
 msgid "{count} free slot"
 msgid_plural "{count} free slots"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/apps_page.py:276
+#: openexpress/gui/apps_page.py:277
 msgid "Will be installed after the device is unplugged"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:278
+#: openexpress/gui/apps_page.py:279
 msgid "Will be removed after the device is unplugged"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:280
+#: openexpress/gui/apps_page.py:281
 msgid "Will be updated after the device is unplugged"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:294
+#: openexpress/gui/apps_page.py:295
 msgid "The app list on the device has entries that cannot be read"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:296
+#: openexpress/gui/apps_page.py:297
 msgid ""
 "The device has not applied earlier changes yet. Unplug it, wait until it is "
 "ready and try again."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:311
+#: openexpress/gui/apps_page.py:312
 msgid "The same order as now"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:321
+#: openexpress/gui/apps_page.py:322
 msgid "The same apps with the same flags; only the order changes."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:344
+#: openexpress/gui/apps_page.py:345
 msgid ""
 "There are no copies of the app list yet. A copy is made before every change "
 "of the apps on the device."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:352
+#: openexpress/gui/apps_page.py:353
 msgid "No copy differs from the current order"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:353 openexpress/gui/report_dialog.py:117
+#: openexpress/gui/apps_page.py:354 openexpress/gui/report_dialog.py:117
 #: openexpress/gui/updates_page.py:370
 msgid "Close"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:358
+#: openexpress/gui/apps_page.py:359
 msgid "Choose the copy of the app list to take the order from."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:372 openexpress/gui/apps_page.py:412
-#: openexpress/gui/apps_page.py:458 openexpress/gui/apps_page.py:565
-#: openexpress/gui/apps_page.py:592 openexpress/gui/device_page.py:323
+#: openexpress/gui/apps_page.py:373 openexpress/gui/apps_page.py:413
+#: openexpress/gui/apps_page.py:459 openexpress/gui/device_page.py:323
 #: openexpress/gui/device_page.py:1070 openexpress/gui/device_page.py:1455
 #: openexpress/gui/forget_device.py:62 openexpress/gui/maps_page.py:240
 #: openexpress/gui/maps_page.py:428 openexpress/gui/maps_page.py:467
 #: openexpress/gui/music_page.py:133 openexpress/gui/music_page.py:229
 #: openexpress/gui/preferences.py:157 openexpress/gui/updates_page.py:297
+#: openexpress/gui/window_tasks.py:297
 msgid "Cancel"
 msgstr ""
 
 #. TRANSLATORS: button that leads to the summary of the change
-#: openexpress/gui/apps_page.py:374
+#: openexpress/gui/apps_page.py:375
 msgid "Next"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:402
+#: openexpress/gui/apps_page.py:403
 msgid "Reading the copies of the app list…"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:410
+#: openexpress/gui/apps_page.py:411
 msgid "Restore this order?"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:413
+#: openexpress/gui/apps_page.py:414
 msgid "Restore the Order"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:430
+#: openexpress/gui/apps_page.py:431
 msgid "Restoring the order…"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:453
+#: openexpress/gui/apps_page.py:454
 msgid "openExpress installs it only if you allow them."
 msgid_plural "openExpress installs them only if you allow them."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/apps_page.py:455
+#: openexpress/gui/apps_page.py:456
 #, python-brace-format
 msgid "Allow New Permissions?"
 msgid_plural "Allow New Permissions for {count} Apps?"
@@ -3349,32 +3349,32 @@ msgstr[1] ""
 
 #. TRANSLATORS: answer to the question about new permissions: skip the apps that
 #. ask for them and install or update only the others
-#: openexpress/gui/apps_page.py:462
+#: openexpress/gui/apps_page.py:463
 msgid "Skip These Apps"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:463
+#: openexpress/gui/apps_page.py:464
 msgid "Allow"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:504
+#: openexpress/gui/apps_page.py:505
 msgid "Queued in Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:511 openexpress/gui/apps_page.py:530
+#: openexpress/gui/apps_page.py:512 openexpress/gui/apps_page.py:531
 #, python-brace-format
 msgid "Installed {names}"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:513
+#: openexpress/gui/apps_page.py:514
 msgid "Queued; it will be installed on the next sync"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:516
+#: openexpress/gui/apps_page.py:517
 msgid "Installing apps…"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:541
+#: openexpress/gui/apps_page.py:542
 #, python-brace-format
 msgid ""
 "{names}: openExpress cannot install apps on this device over USB yet. The "
@@ -3382,11 +3382,11 @@ msgid ""
 "or Garmin Express."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:552
+#: openexpress/gui/apps_page.py:553
 msgid "Here you can only remove it from your account list."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:553
+#: openexpress/gui/apps_page.py:554
 #, python-brace-format
 msgid ""
 "{name} cannot be removed over USB: this device shows no app files. Remove it "
@@ -3395,59 +3395,59 @@ msgid ""
 "Here you can only remove it from your account list."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:563 openexpress/gui/apps_page.py:591
-#: openexpress/gui/maps_page.py:353 openexpress/gui/maps_page.py:464
-#, python-brace-format
-msgid "Remove {name}?"
-msgstr ""
-
-#: openexpress/gui/apps_page.py:566
-msgid "Remove from Account"
-msgstr ""
-
-#: openexpress/gui/apps_page.py:573 openexpress/gui/apps_page.py:616
+#: openexpress/gui/apps_page.py:570 openexpress/gui/apps_page.py:607
 #: openexpress/gui/maps_page.py:356 openexpress/gui/maps_page.py:471
 #, python-brace-format
 msgid "Removing {name}…"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:587
+#: openexpress/gui/apps_page.py:575 openexpress/gui/apps_page.py:610
+#: openexpress/gui/maps_page.py:353 openexpress/gui/maps_page.py:464
+#, python-brace-format
+msgid "Remove {name}?"
+msgstr ""
+
+#: openexpress/gui/apps_page.py:576
+msgid "Remove from Account"
+msgstr ""
+
+#: openexpress/gui/apps_page.py:586
 msgid ""
 "The app and its settings will be deleted from the device over a direct USB "
 "connection; the device disappears from the file manager for a moment. The "
 "device finishes the removal after it is unplugged."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:590
+#: openexpress/gui/apps_page.py:589
 msgid "The app and its settings will be deleted from the device."
 msgstr ""
 
-#: openexpress/gui/apps_page.py:593
+#: openexpress/gui/apps_page.py:601
+#, python-brace-format
+msgid "Removed {name}"
+msgstr ""
+
+#: openexpress/gui/apps_page.py:611
 msgid "Remove and forget"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:594 openexpress/gui/maps_page.py:354
+#: openexpress/gui/apps_page.py:612 openexpress/gui/maps_page.py:354
 #: openexpress/gui/maps_page.py:468 openexpress/gui/music_page.py:86
 #: openexpress/gui/music_page.py:93
 msgid "Remove"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:610
-#, python-brace-format
-msgid "Removed {name}"
-msgstr ""
-
-#: openexpress/gui/apps_page.py:640
+#: openexpress/gui/apps_page.py:632
 #, python-brace-format
 msgid "{name} enabled"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:640
+#: openexpress/gui/apps_page.py:632
 #, python-brace-format
 msgid "{name} disabled"
 msgstr ""
 
-#: openexpress/gui/apps_page.py:652
+#: openexpress/gui/apps_page.py:644
 msgid "Saving…"
 msgstr ""
 
@@ -4833,11 +4833,11 @@ msgstr ""
 msgid "The device was not ejected"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:310
+#: openexpress/gui/window_tasks.py:405
 msgid "This can take a few minutes."
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:458
+#: openexpress/gui/window_tasks.py:553
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"

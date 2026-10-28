@@ -15,11 +15,13 @@ from openexpress import ciq, service
 
 pytestmark = pytest.mark.needs_display
 
+ESCAPE = "Escape"  # not a button: the dialog closed as Escape closes it (Adw.Dialog.close)
+
 
 @pytest.fixture
 def click(monkeypatch):
-    """click(words): the newest dialog shown, its button with these words clicked, the loop
-    turned until it is gone (or `until`)."""
+    """click(words): the newest dialog shown, its button with these words clicked (ESCAPE:
+    closed as Escape closes it), the loop turned until it is gone (or `until`)."""
     from gi.repository import Adw, Gtk
 
     host = Gtk.Window()
@@ -32,9 +34,12 @@ def click(monkeypatch):
     def answer(words, until=None):
         dialog = shown[-1]
         assert _turn_until(dialog.get_mapped)
-        button = _button_labelled(dialog, words)
-        assert button is not None, f"no button {words!r}"
-        button.emit("clicked")
+        if words == ESCAPE:
+            dialog.close()
+        else:
+            button = _button_labelled(dialog, words)
+            assert button is not None, f"no button {words!r}"
+            button.emit("clicked")
         assert _turn_until(until or (lambda: not dialog.get_mapped()))
         return dialog
 
@@ -87,7 +92,7 @@ APP = types.SimpleNamespace(name="Face It", app_id=uuid.UUID(int=7), has_files=T
 
 @pytest.mark.parametrize(("words", "done"), [
     ("Remove", ["remove"]), ("Remove and forget", ["owner", "remove", "forget"]),
-    ("Cancel", [])])
+    ("Cancel", []), (ESCAPE, [])])
 def test_removing_an_app(click, app_calls, words, done):
     from openexpress.gui.app import MainWindow
 
@@ -98,7 +103,7 @@ def test_removing_an_app(click, app_calls, words, done):
 
 
 @pytest.mark.parametrize(("words", "done"), [
-    ("Remove from Account", ["owner", "forget"]), ("Cancel", [])])
+    ("Remove from Account", ["owner", "forget"]), ("Cancel", []), (ESCAPE, [])])
 def test_removing_an_app_from_the_account(click, app_calls, words, done):
     from openexpress.gui.app import MainWindow
 
