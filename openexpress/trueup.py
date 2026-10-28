@@ -50,6 +50,10 @@ def _find(messages: list[dict], kind: str) -> dict | None:
 
 
 def _fetch(client: GarminClient, m: dict) -> bytes | None:
+    """The file of a TrueUp message, acknowledged at once: fetched, acknowledged, then
+    written, as Garmin Express does it (analysis 03, TrueUp). A check_back is only a request
+    to ask again; a true_up written in vain afterwards is lost for Garmin Connect (run says
+    so in the log)."""
     meta = m["metadata"]
     data = client.download_message(meta.get("messageurl") or "", bool(meta.get("absolute")))
     client.ack_message(m.get("messageid"))
@@ -148,7 +152,13 @@ def run(
         return result
     t = targets[0]
     name = f"{t.basename + '_' if t.basename else ''}{uuid.uuid4()}.{t.extension or 'FIT'}"
-    result.written = storage.write_checked(posixpath.join(t.path, name), data)
+    try:
+        result.written = storage.write_checked(posixpath.join(t.path, name), data)
+    except Exception as e:
+        log.warning("TrueUp: Garmin Connect was told it was received before it was written, "
+                    "as Garmin Express does, and writing it failed (%s): this TrueUp is lost",
+                    type(e).__name__)
+        raise
     log.info("TrueUp: wrote %s to %s (waited %.0f s)", applog.size(len(data)), t.path,
              result.waited_s)
     return result

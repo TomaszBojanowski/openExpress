@@ -507,3 +507,36 @@ def test_a_trueup_of_the_wrong_size_is_deleted(device_root):
     with pytest.raises(DeviceError, match="Write verification"):
         trueup.run(dev, st, Client(), [true_up])
     assert _files_in(st, "Garmin/NewFiles") == []
+
+
+def test_a_trueup_not_written_after_it_was_acknowledged_is_said_in_the_log(device_root,
+                                                                          caplog):
+    """As Garmin Express: fetched, acknowledged, then written (step 2, A4). Written in vain,
+    it is lost for Garmin Connect: one WARNING says so."""
+    import logging
+
+    dev = _trueup_device(device_root)
+    true_up = {"messageid": 2, "messagetype": "true_up", "devicexmldatatype": "FIT_TYPE_39",
+               "metadata": {"messageurl": "tu"}}
+    steps = []
+
+    class Client:
+        def download_message(self, url, absolute):
+            steps.append("fetch")
+            return b"TRUEUP DATA"
+
+        def ack_message(self, mid):
+            steps.append("acknowledge")
+
+    class Watching(Mtp):
+        def _write(self, real_path, data):
+            steps.append("write")
+            super()._write(real_path, data)
+
+    with caplog.at_level(logging.WARNING, logger="openexpress.trueup"), \
+            pytest.raises(DeviceError, match="the device is gone"):
+        trueup.run(dev, Watching(device_root, breaks=(".FIT",)), Client(), [true_up])
+    assert steps == ["fetch", "acknowledge", "write"]
+    assert [r.getMessage() for r in caplog.records if r.name == "openexpress.trueup"] == [(
+        "TrueUp: Garmin Connect was told it was received before it was written, as Garmin "
+        "Express does, and writing it failed (DeviceError): this TrueUp is lost")]

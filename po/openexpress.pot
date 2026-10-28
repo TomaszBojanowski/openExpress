@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 16:56+0100\n"
+"POT-Creation-Date: 2026-10-28 16:58+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6007,34 +6007,34 @@ msgstr ""
 msgid "device does not accept this type"
 msgstr ""
 
-#: openexpress/trueup.py:75
+#: openexpress/trueup.py:79
 msgid "Stopped waiting for TrueUp; Garmin Connect sends it with the next sync."
 msgstr ""
 
-#: openexpress/trueup.py:81
+#: openexpress/trueup.py:85
 #, python-brace-format
 msgid ""
 "Waiting {time} for Garmin Connect to prepare TrueUp (the daily totals of all "
 "your devices)…"
 msgstr ""
 
-#: openexpress/trueup.py:115
+#: openexpress/trueup.py:119
 msgid "the device does not support TrueUp"
 msgstr ""
 
-#: openexpress/trueup.py:122
+#: openexpress/trueup.py:126
 msgid "TrueUp: waiting for Garmin Connect…"
 msgstr ""
 
-#: openexpress/trueup.py:140
+#: openexpress/trueup.py:144
 msgid "Connect has not prepared TrueUp data yet"
 msgstr ""
 
-#: openexpress/trueup.py:143
+#: openexpress/trueup.py:147
 msgid "TrueUp: writing daily totals to the device"
 msgstr ""
 
-#: openexpress/trueup.py:146
+#: openexpress/trueup.py:150
 msgid "empty TrueUp file"
 msgstr ""
 
