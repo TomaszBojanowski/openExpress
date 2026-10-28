@@ -96,7 +96,7 @@ FACE_IT = uuid.UUID("a1b2c3d4-0000-4000-8000-00000000face")
 
 
 def _store_app(app_id, name):
-    return ciq.StoreApp(app_id, name, "dev", "watchface", 1000, 5, "1.0", False, False)
+    return ciq.StoreApp(app_id, name, "dev", "watchface", 1000, 5, "1.0", False)
 
 
 class Requests:

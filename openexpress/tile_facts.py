@@ -23,7 +23,7 @@ tile is the account's entry itself, and says only whether it is the primary wear
 Each fact holds for so long, and only while what it was told against stays the same; past
 that it is not known: no chip, never the contrary of the fact.
 - an update found or copied: UPDATE_KEPT_S (30 days), and the same software of the device;
-- a count: SYNC_COUNT_KEPT_S (7 days), and the same sync state (service.sync_stamp);
+- a count: known_devices.SYNC_COUNT_KEPT_S (7 days), and the same sync state (service.sync_stamp);
 - the sync: the same sync state;
 - the account: ACCOUNT_KEPT_S (7 days), and the same login saved (store.stamp)."""
 
@@ -40,7 +40,6 @@ from openexpress.known_devices import AccountFact, KnownDevice, SyncCount, Synce
 log = logging.getLogger(__name__)
 
 UPDATE_KEPT_S = known_devices.UPDATE_FOUND_KEPT_S
-SYNC_COUNT_KEPT_S = known_devices.SYNC_COUNT_KEPT_S
 ACCOUNT_KEPT_S = 7 * 86400
 
 # The fields of a tile (devicelist.Tile) that come from read(), and what the chips of a tile

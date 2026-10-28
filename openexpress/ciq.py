@@ -69,7 +69,6 @@ class InstalledApp:
     version: int | None = None
     filename: str = ""
     size: int | None = None
-    native_id: int | None = None
     favorite: bool = False
     # Only listed in IN.BIN: written to the watch but not yet confirmed in OUT.BIN.
     pending: bool = False
@@ -138,7 +137,6 @@ class StoreApp:
     size: int
     latest_version: int
     version_name: str
-    has_settings: bool
     permissions_changed: bool
     # The permissions the version in the store asks for (the store's names, e.g.
     # "Positioning"); with permissions_changed, those the user has to allow first.
@@ -211,7 +209,7 @@ def parse_out_bin(data: bytes) -> InstalledState:
             version=_int(a, 5),
             filename=_bytes(a, 6, b"").decode("utf-8", "replace"),
             size=_int(a, 7),
-            native_id=_int(a, 8),
+            # Field 8, the app's native ID on the device, is not used.
             favorite=bool(_int(a, 9, 0)),
         ))
     return state
@@ -541,7 +539,6 @@ def _store_app(a: dict) -> StoreApp:
         size=int(a.get("size") or 0),
         latest_version=int(a.get("latestinternalversionnumber") or 0),
         version_name=a.get("latestversionname") or "",
-        has_settings=bool(a.get("hassettings")),
         permissions_changed=bool(a.get("permissionschanged")),
         permissions=permissions,
     )

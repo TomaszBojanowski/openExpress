@@ -449,7 +449,7 @@ def test_sync_reports_an_unreadable_app_list_without_failing(iq_device, device_r
 
 
 def store_app(app_id, name, store_type="watchface"):
-    return ciq.StoreApp(app_id, name, "dev", store_type, 1000, 5, "1.0", False, False)
+    return ciq.StoreApp(app_id, name, "dev", store_type, 1000, 5, "1.0", False)
 
 
 def test_preview_in_bin_for_a_new_watch_face(iq_device):

@@ -12,7 +12,6 @@ account."""
 from __future__ import annotations
 
 import json
-import logging
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,8 +21,6 @@ from openexpress.backup import PARTIAL_PREFIX, is_backup_dir
 from openexpress.ciq import APP_LIST_COPY_PREFIX
 from openexpress.errors import OrdinaryStop
 from openexpress.i18n import ngettext
-
-log = logging.getLogger(__name__)
 
 
 class PendingFiles(OrdinaryStop):
