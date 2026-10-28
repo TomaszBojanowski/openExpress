@@ -563,6 +563,16 @@ def device_root(tmp_path) -> Path:
 @pytest.fixture(autouse=True)
 def plain_http_to_the_test_servers(monkeypatch):
     """The program downloads over HTTPS only; the tests' local servers speak plain HTTP."""
+    from urllib.parse import urlsplit
+
     from openexpress import download
 
-    monkeypatch.setattr(download, "PLAIN_HTTP_HOSTS", frozenset({"127.0.0.1", "localhost"}))
+    real = download.secure_url
+
+    def secure_url(url):
+        parts = urlsplit(url)
+        if parts.scheme == "http" and parts.hostname in {"127.0.0.1", "localhost"}:
+            return url
+        return real(url)
+
+    monkeypatch.setattr(download, "secure_url", secure_url)
