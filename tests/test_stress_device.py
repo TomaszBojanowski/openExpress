@@ -226,3 +226,31 @@ def test_the_short_time_limit_is_for_its_run_only(stress, device):
                         "--short-timeout", "0.05"]) == 0
     assert ("unmount", 0.05) in device.asked
     assert gio_storage.UNMOUNT_TIMEOUT_S == before == 30.0
+
+
+def test_the_summary_says_how_the_device_settled(stress):
+    """After an unmount stopped at its time limit (step 4, §10): which answer came, how the
+    device settled, whether it was mounted again or did not come back; from the log lines of
+    gio_storage."""
+    import logging
+
+    limits = stress.Limits()
+    log = logging.getLogger(gio_storage.__name__)
+    for level, line in (
+            (logging.WARNING, ("gio: unmount: no answer in 0.001 s, cancelled; its answer: "
+                               "cancelled (our wait ended, gvfs may go on)")),
+            (logging.INFO, ("PTP: the unmount did not finish in time: seeing how the device "
+                            "settles")),
+            (logging.INFO, "PTP: the device is unmounted (after 2.1 s)"),
+            (logging.INFO, "PTP: mounting the device again (try 1 of 3)"),
+            (logging.INFO, "PTP: the device is mounted (after 2.0 s)"),
+            (logging.INFO, "PTP: the device is not settled (after 15.0 s)"),
+            (logging.INFO, "PTP: the device did not come back")):
+        limits.handle(log.makeRecord(log.name, level, __file__, 1, line, (), None))
+    assert dict(limits.seen) == {
+        "unmount: cancelled, its answer: cancelled": 1,
+        "PTP: the device settled unmounted": 1,
+        "PTP: mounted again (try 1)": 1,
+        "PTP: the device settled mounted": 1,
+        "PTP: the device did not settle": 1,
+        "PTP: the device did not come back": 1}

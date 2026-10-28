@@ -226,24 +226,44 @@ class Summary:
         return said
 
 
+SETTLED = {"mounted": "PTP: the device settled mounted",
+           "unmounted": "PTP: the device settled unmounted",
+           "between": "PTP: the device settled mounted without its files",
+           "not settled": "PTP: the device did not settle"}
+
+
 class Limits(logging.Handler):
-    """What the waits of gio_storage said when an operation reached its time limit."""
+    """What gio_storage said when an operation reached its time limit: the answer that came
+    after the cancel, and after an unmount for PTP that did not finish in time how the device
+    settled, whether it was mounted again and whether it came back."""
 
     def __init__(self):
-        super().__init__(logging.WARNING)
+        super().__init__(logging.INFO)
         self.seen: Counter = Counter()
 
     def emit(self, record):
         said = record.getMessage()
-        name = said.split(":", 2)[1].strip() if said.startswith("gio: ") else None
-        if name is None:
-            return
+        if said.startswith("gio: "):
+            self._gio(said)
+        elif said.startswith("PTP: the device is ") and " (after " in said:
+            state = said.removeprefix("PTP: the device is ").split(" (after ", 1)[0]
+            self.seen[SETTLED.get(state, f"PTP: the device is {state}")] += 1
+        elif said.startswith("PTP: mounting the device again (try "):
+            tried = said.removeprefix("PTP: mounting the device again (try ").split(" ", 1)[0]
+            self.seen[f"PTP: mounted again (try {tried})"] += 1
+        elif said == "PTP: the device did not come back":
+            self.seen["PTP: the device did not come back"] += 1
+
+    def _gio(self, said):
+        name = said.split(":", 2)[1].strip()
         if "ended all the same" in said:
             self.seen[f"{name}: ended all the same after the cancel"] += 1
         elif "given up" in said:
             self.seen[f"{name}: no answer even after the cancel"] += 1
         elif "cancelled" in said:
-            self.seen[f"{name}: cancelled"] += 1
+            answer = said.split("its answer: ", 1)[1].split(" (", 1)[0] \
+                if "its answer: " in said else "?"
+            self.seen[f"{name}: cancelled, its answer: {answer}"] += 1
 
 
 @contextlib.contextmanager
@@ -343,7 +363,7 @@ def ptp_part(storage, summary: Summary, short: bool) -> None:
         raise
     except gio_storage.GioTimedOut as e:
         if short:
-            summary.limits["PTP: the unmount stopped at its limit, the device mounted again"] += 1
+            summary.limits["PTP: the unmount stopped at its limit"] += 1
         else:
             summary.error("PTP: the unmount timed out", str(e))
     except RemountFailed as e:
