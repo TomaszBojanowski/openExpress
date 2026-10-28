@@ -1433,6 +1433,10 @@ class DevicePage:
                 self.show_device()
             return False
 
+        # Stop Waiting pressed during the previous sync of this session: not for this one.
+        stop = getattr(s, "stop_waiting", None)
+        if stop is not None:
+            stop.clear()
         self.run_task(_("Syncing…"),
                       writes_to_device(lambda: service.run_sync(s, first_run, self.progress)),
                       done, failed)

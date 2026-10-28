@@ -139,24 +139,27 @@ def test_the_duration_in_words():
 # --- the sync and the session ----------------------------------------------------------------
 
 
-def test_the_sync_clears_and_passes_the_stop_of_its_session(watch, monkeypatch):
+def test_the_sync_passes_the_stop_of_its_session_as_it_is(watch, monkeypatch):
+    """A stop asked during this sync (the background service quitting during the uploads)
+    ends the wait at once; one left from an earlier sync of the window is cleared when the
+    window starts a sync (test_trueup_stop.py). Until 28.10.2026 the service cleared it
+    here, and the quit was lost."""
     from openexpress import service
 
     dev, st = watch
     stop = threading.Event()
-    stop.set()  # left over from a wait stopped before
+    stop.set()  # asked during the uploads
     got = []
 
     def run(device, storage, client, messages, progress, stop=None):
         got.append(stop.is_set())
-        stop.set()  # stopped now
         return trueup.TrueUpResult(stopped=True)
 
     monkeypatch.setattr(trueup, "run", run)
     s = types.SimpleNamespace(device=dev, storage=st, client=None, stop_waiting=stop)
     errors = []
     assert service._trueup(s, [CHECK], lambda m: None, errors) == [{"kind": "trueup_stopped"}]
-    assert got == [False] and errors == []
+    assert got == [True] and errors == []
 
 
 def test_a_session_has_its_own_stop():

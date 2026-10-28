@@ -157,7 +157,11 @@ class Watcher(Gio.Application):
                           _("In progress…"))
             # Its progress names the files and the courses: not logged (the sync logs its
             # numbers itself).
-            self._session = s  # its wait for TrueUp stops when the service quits
+            with self._lock:
+                self._session = s  # its wait for TrueUp stops when the service quits
+                if self.quit_requested:
+                    # Asked while the session was being opened (request_quit had none).
+                    s.stop_waiting.set()
             try:
                 summary = service.run_sync(s, progress=lambda _message: None)
             finally:

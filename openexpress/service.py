@@ -1320,9 +1320,10 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     to `received` (counted as received, as the files of the queue)."""
     from openexpress import trueup
 
+    # Passed on as it is: a stop asked during this sync (the background service quitting
+    # during the uploads) ends the wait at once. The window clears one left from its
+    # previous sync when a sync starts (start_sync).
     stop = getattr(s, "stop_waiting", None)
-    if stop is not None:
-        stop.clear()  # a stop meant for an earlier wait
     try:
         res = trueup.run(s.device, s.storage, s.client, messages, progress, stop=stop)
     except Exception as e:  # noqa: BLE001
