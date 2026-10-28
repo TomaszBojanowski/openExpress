@@ -186,6 +186,11 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         code = proc.wait()
     except OSError as e:
         proc.kill()
+        try:
+            proc.wait(5)  # reaped: not left behind as a zombie
+        except subprocess.TimeoutExpired:
+            log.warning("host copy: gio copy did not end 5 s after it was killed")
+        reader.join(5)
         raise DeviceError(f"{what}: {e}") from e
     finally:
         watchdog.cancel()

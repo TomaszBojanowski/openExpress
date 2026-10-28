@@ -314,3 +314,27 @@ def test_write_file_passes_the_progress_on_and_reports_the_end(host, monkeypatch
     st._write_file("GARMIN/map.img", host.local, lambda done, total: seen.append((done, total)))
     assert seen == [(1_000_000, SIZE), (2_100_000_000, SIZE), (3_300_000_000, SIZE),
                     (SIZE, SIZE)]  # the end is reported once the copy has succeeded
+
+
+def test_a_copy_whose_output_cannot_be_read_is_ended_and_reaped(host, monkeypatch):
+    """The output of `gio copy` cannot be read: the process is killed and waited for, so
+    that it is not left behind as a zombie (step 3 after the audit of 0.7.9)."""
+
+    class Unreadable(FakeProcess):
+        def __init__(self):
+            import io
+
+            # No descriptor: reading it fails (EBADF), as a broken pipe would.
+            self.stdout = types.SimpleNamespace(fileno=lambda: -1)
+            self.stderr, self.code, self.killed = io.BytesIO(b""), -9, False
+            self.waited = []
+
+        def wait(self, timeout=None):
+            self.waited.append(timeout)
+            return self.code
+
+    broken = Unreadable()
+    monkeypatch.setattr(gio_storage.subprocess, "Popen", lambda cmd, **kw: broken)
+    with pytest.raises(DeviceError, match="Cannot write map.img"):
+        copy_with_progress(host)
+    assert broken.killed and broken.waited == [5]
