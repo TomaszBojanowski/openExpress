@@ -12,9 +12,10 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gtk  # noqa: E402 - imports must follow gi.require_version
+from gi.repository import Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import forget, known_devices, service  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
 
 # The window's logger, as the pages split from it use.
@@ -57,46 +58,36 @@ class ForgetDevice:
                  "upload everything or new data only.")
         if kept.pending:
             body += "\n\n" + str(forget.PendingFiles(kept.pending))
-        # TRANSLATORS: question before forgetting a device; {name} is its model
-        d = Adw.AlertDialog(heading=_("Forget {name}?").format(name=name), body=body)
-        d.add_response("cancel", _("Cancel"))
-        # TRANSLATORS: button that forgets a device (in the question "Forget …?")
-        d.add_response("forget", _("Forget"))
-        d.set_response_appearance("forget", Adw.ResponseAppearance.DESTRUCTIVE)
-        d.set_default_response("cancel")
-        d.set_close_response("cancel")
-        # The window holds the question and what is ticked while it is open: a handler that
-        # held the question or a tick would keep them after it closed.
+        # What is ticked (data, no widget) goes with the ticks and the answer; the window
+        # holds the question while it is open (keep_as): a handler that held the question or
+        # a tick would keep them after it closed. "closed" comes before the answer.
         choice = {"unit": unit, "name": name, "pending": False, "backups": False}
-        self._forget_dialog, self._forget_choice = d, choice
         ticks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         if kept.pending:
             tick = Gtk.CheckButton(label=ngettext(
                 "Discard the file not uploaded yet", "Discard the {count} files not uploaded yet",
                 kept.pending).format(count=kept.pending))
-            tick.connect("toggled", lambda button: self._forget_ticked("pending", button))
+            tick.connect("toggled",
+                         lambda button: self._forget_ticked(choice, "pending", button))
             ticks.append(tick)
-            d.set_response_enabled("forget", False)
         if kept.backups:
             tick = Gtk.CheckButton(label=ngettext(
                 "Also delete its backup", "Also delete its {count} backups",
                 kept.backups).format(count=kept.backups))
-            tick.connect("toggled", lambda button: self._forget_ticked("backups", button))
+            tick.connect("toggled",
+                         lambda button: self._forget_ticked(choice, "backups", button))
             ticks.append(tick)
-        if ticks.get_first_child() is not None:
-            d.set_extra_child(ticks)
-        # A button clicked says "closed" before "response" (libadwaita 1.9): the answer takes
-        # the choice it was asked with (no widget in it), not what "closed" lets go of.
-        d.connect("response", lambda _d, r: r == "forget" and self._forget_answered(choice))
-        d.connect("closed", lambda _d: (setattr(self, "_forget_dialog", None),
-                                        setattr(self, "_forget_choice", None)))
-        d.present(self)
+        confirm(self, "forget-device",
+                # TRANSLATORS: question before forgetting a device; {name} is its model
+                _("Forget {name}?").format(name=name), body,
+                # TRANSLATORS: button that forgets a device (in the question "Forget …?")
+                Answer("forget", _("Forget"), lambda: self._forget_answered(choice),
+                       look="destructive", enabled=not kept.pending),
+                default="cancel", extra=ticks if ticks.get_first_child() is not None else None,
+                keep_as="_forget_dialog")
 
-    def _forget_ticked(self, which: str, button) -> None:
+    def _forget_ticked(self, choice: dict, which: str, button) -> None:
         """A tick of the question changed (read from the signal's button)."""
-        choice = getattr(self, "_forget_choice", None)
-        if choice is None:
-            return
         choice[which] = button.get_active()
         dialog = getattr(self, "_forget_dialog", None)
         if which == "pending" and dialog is not None:

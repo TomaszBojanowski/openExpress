@@ -14,6 +14,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size, ngettext, pgettext  # noqa: E402
 
@@ -122,29 +123,28 @@ class MusicPage:
             tracks = music.scan(paths_, s.device, forced_kind=None if kind == "track" else kind)
             return music.plan_copy(tracks, s.device, s.storage)
 
-        def confirm(p):
-            if not p.to_copy:
-                self.toast(_("Nothing new to copy"))
-                return
-            n = len(p.to_copy)
-            d = Adw.AlertDialog(
-                heading=ngettext("Copy {count} file?", "Copy {count} files?", n).format(count=n),
-                body=self._copy_summary(p))
-            d.add_response("cancel", _("Cancel"))
-            # TRANSLATORS: button
-            d.add_response("ok", _("Copy"))
-            d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-            d.connect("response", lambda _d, r: r == "ok" and self.run_task(
+        def copy(p):
+            self.run_task(
                 _("Copying music…"),
                 writes_to_device(lambda: music.copy(p, s.storage, progress=self.progress,
                                                     transfer_progress=self.fraction)),
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
                                  self.load_section("music", force=True)),
-                read_again_after_failure(self, "music")))
-            d.present(self)
+                read_again_after_failure(self, "music"))
 
-        self.run_task(_("Scanning files…"), plan, confirm)
+        def ask_copy(p):
+            if not p.to_copy:
+                self.toast(_("Nothing new to copy"))
+                return
+            n = len(p.to_copy)
+            confirm(self, "music-copy",
+                    ngettext("Copy {count} file?", "Copy {count} files?", n).format(count=n),
+                    self._copy_summary(p),
+                    # TRANSLATORS: button
+                    Answer("ok", _("Copy"), lambda: copy(p), look="suggested"))
+
+        self.run_task(_("Scanning files…"), plan, ask_copy)
 
     def choose_playlist(self) -> None:
         dialog = Gtk.FileDialog(title=_("Choose a playlist to add to the device"))
@@ -218,30 +218,28 @@ class MusicPage:
 
         s = self.session
 
-        def confirm(plan):
-            summary = self._playlist_summary(plan, in_flatpak())
-            if not plan.device_paths:
-                self.error(_("The playlist has no tracks that can be added."), summary)
-                return
-            d = Adw.AlertDialog(
-                heading=_("Add the playlist “{name}”?").format(name=plan.name),
-                body=summary)
-            d.add_response("cancel", _("Cancel"))
-            # TRANSLATORS: button that adds the playlist to the device
-            d.add_response("ok", _("Add"))
-            d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-            d.connect("response", lambda _d, r: r == "ok" and self.run_task(
+        def add(plan):
+            self.run_task(
                 _("Copying music…"),
                 writes_to_device(lambda: music.add_playlist(
                     plan, s.device, s.storage, progress=self.progress,
                     transfer_progress=self.fraction)),
                 lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
                                self.load_section("music", force=True)),
-                read_again_after_failure(self, "music")))
-            d.present(self)
+                read_again_after_failure(self, "music"))
+
+        def ask_add(plan):
+            summary = self._playlist_summary(plan, in_flatpak())
+            if not plan.device_paths:
+                self.error(_("The playlist has no tracks that can be added."), summary)
+                return
+            confirm(self, "playlist-add", _("Add the playlist “{name}”?").format(name=plan.name),
+                    summary,
+                    # TRANSLATORS: button that adds the playlist to the device
+                    Answer("ok", _("Add"), lambda: add(plan), look="suggested"))
 
         self.run_task(_("Reading the playlist…"),
-                      lambda: music.plan_playlist(path, s.device, s.storage), confirm)
+                      lambda: music.plan_playlist(path, s.device, s.storage), ask_add)
 
     def remove_music(self, device_paths) -> None:
         from openexpress import music

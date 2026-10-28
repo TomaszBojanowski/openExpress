@@ -28,7 +28,7 @@ from openexpress.auth import sso, store  # noqa: E402
 from openexpress.gui.connected import open_address  # noqa: E402
 from openexpress.gui.gui_settings import update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
-from openexpress.gui.window_tasks import TaskRunner  # noqa: E402
+from openexpress.gui.window_tasks import Answer, TaskRunner, confirm  # noqa: E402
 from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
@@ -153,23 +153,16 @@ def ask_clear_cache_part(win, name: str, button) -> None:
 def ask_to_clear(win, heading: str, body: str, names: list[str] | None) -> None:
     """Clear (destructive) or Cancel (the default); Clear clears those parts (None: all) from
     their button, found when the answer comes: the handler holds no widget."""
-    d = Adw.AlertDialog(heading=heading, body=body)
-    d.add_response("cancel", _("Cancel"))
-    # TRANSLATORS: button that clears the cache
-    d.add_response("clear", _("Clear"))
-    d.set_response_appearance("clear", Adw.ResponseAppearance.DESTRUCTIVE)
-    d.set_default_response("cancel")
-    d.set_close_response("cancel")
-
-    def response(_d, r):
+    def clear():
         shown = getattr(win, "_storage", None)
-        if r != "clear" or shown is None:
+        if shown is None:
             return
         button = shown.everything[1] if names is None else shown.parts[names[0]][1]
         clear_cache(win, names, button)
 
-    d.connect("response", response)
-    d.present(win)
+    confirm(win, "cache-clear", heading, body,
+            # TRANSLATORS: button that clears the cache
+            Answer("clear", _("Clear"), clear, look="destructive"), default="cancel")
 
 
 def clear_cache(win, names: list[str] | None, button) -> None:

@@ -869,6 +869,27 @@ def test_refusals_carry_a_hint_for_the_place_they_are_shown_in(map_folder, my_ma
         assert e.text(window=True) == f"{e} {WINDOW_HINT}" and "--" not in e.text(window=True)
 
 
+@pytest.fixture(autouse=True)
+def answered_at_once(in_the_window):
+    """The questions of own_maps_window (its `answer` set): recorded in its `shown` and
+    answered with `answer` ("ok": its one answer; anything else: cancelled), nothing shown.
+    The questions of any other window are asked as the window asks them."""
+    from openexpress.gui import window_tasks
+
+    real = window_tasks.confirm
+
+    def confirm(parent, name, heading, body, *answers, **kw):
+        if not hasattr(parent, "answer"):
+            return real(parent, name, heading, body, *answers, **kw)
+        (one,) = answers
+        parent.shown.append(("ask", heading, body, one.label, one.look == "destructive"))
+        if parent.answer == "ok":
+            one.run()
+        return None
+
+    in_the_window("confirm", confirm)
+
+
 def own_maps_window(key="maps"):
     """The Maps page of the real kind in a window that is never shown, with the window's own
     code for own maps; what it would show the user is recorded instead."""
@@ -882,16 +903,8 @@ def own_maps_window(key="maps"):
     win.toast = lambda text: win.shown.append(("toast", text))
     win.fraction = lambda done, total: None
     win.maps_cache = []
-    win.answer = "ok"  # what the user picks in a confirmation
-
-    def ask(heading, body, label, on_ok, destructive=False):
-        win.shown.append(("ask", heading, body, label, destructive))
-        if win.answer == "ok":
-            on_ok()
-
-    run_task = RunNow(on_call=lambda call: win.shown.append(("task", call.title)))
-
-    win._ask, win.run_task = ask, run_task
+    win.answer = "ok"  # what the user picks in a confirmation (answered_at_once)
+    win.run_task = RunNow(on_call=lambda call: win.shown.append(("task", call.title)))
     win.reloads = []
     win.load_section = lambda key, force=False: win.reloads.append((key, force))
     for name in ("show_own_maps", "add_own_map", "confirm_remove_own", "_own_map_refused",

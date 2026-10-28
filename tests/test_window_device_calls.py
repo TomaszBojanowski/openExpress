@@ -329,14 +329,21 @@ def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeyp
 
 
 class Dialog:
-    """Adw.AlertDialog as choose_order uses it: its list and its handlers are kept."""
+    """Adw.AlertDialog as choose_order uses it: its list, its handlers and which answers are
+    enabled are kept."""
 
     def __init__(self, **kw):
-        self.kw, self.handlers, self.extra = kw, {}, None
+        self.kw, self.handlers, self.extra, self.disabled = kw, {}, None, set()
         Dialog.made.append(self)
 
     def set_extra_child(self, widget):
         self.extra = widget
+
+    def set_response_enabled(self, response, enabled):
+        (self.disabled.discard if enabled else self.disabled.add)(response)
+
+    def get_response_enabled(self, response):
+        return response not in self.disabled
 
     def connect(self, signal, handler):
         self.handlers[signal] = handler

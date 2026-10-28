@@ -21,7 +21,7 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.
 from openexpress import service  # noqa: E402
 from openexpress.gui.pictures import cached_download, load_texture  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
-from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm, inform  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size, ngettext  # noqa: E402
 from openexpress.settings import language_tag  # noqa: E402
@@ -30,18 +30,17 @@ from openexpress.settings import language_tag  # noqa: E402
 log = logging.getLogger("openexpress.gui.app")
 
 
-def order_list_at_its_top(dialog) -> None:
+def order_list_at_its_top(box) -> bool:
     """The list of copies of "Restore the order from a copy", once shown: no row chosen
-    (Next waits for the user's choice) and scrolled to its top, its first row whole."""
-    scroller = dialog.get_extra_child()
-    if not isinstance(scroller, Gtk.ScrolledWindow):
-        return
-    box = scroller.get_child()
-    box = box.get_child() if isinstance(box, Gtk.Viewport) else box
-    if isinstance(box, Gtk.ListBox):
-        box.unselect_all()
-    adjustment = scroller.get_vadjustment()
-    adjustment.set_value(adjustment.get_lower())
+    (Next waits for the user's choice) and scrolled to its top, its first row whole. Run
+    when the window is idle after the dialog is shown: the list chooses its first row as it
+    takes the focus then (25.10.2026). False: once."""
+    box.unselect_all()
+    scroller = box.get_ancestor(Gtk.ScrolledWindow)
+    if scroller is not None:
+        adjustment = scroller.get_vadjustment()
+        adjustment.set_value(adjustment.get_lower())
+    return False
 
 
 def apps_count_text(count: int) -> str:
@@ -349,14 +348,9 @@ class AppsPage:
             rows = [(row, choice) for row, choice in zip(self._order_rows(choices), choices)
                     if row[2]]
             if not rows:
-                d = Adw.AlertDialog(heading=_("Restore the order from a copy"),
-                                    body=_("No copy differs from the current order"))
-                d.add_response("close", _("Close"))
-                d.present(self)
+                inform(self, "order-none-differs", _("Restore the order from a copy"),
+                       _("No copy differs from the current order"), label=_("Close"))
                 return
-            d = Adw.AlertDialog(
-                heading=_("Restore the order from a copy"),
-                body=_("Choose the copy of the app list to take the order from."))
             box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
             box.add_css_class("boxed-list")
             for (title, subtitle, usable), choice in rows:
@@ -369,16 +363,9 @@ class AppsPage:
             scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER,
                                           propagate_natural_height=True, max_content_height=360)
             scroller.set_child(box)
-            d.set_extra_child(scroller)
-            d.add_response("cancel", _("Cancel"))
-            # TRANSLATORS: button that leads to the summary of the change
-            d.add_response("next", _("Next"))
-            d.set_response_enabled("next", False)
-            # The window holds the dialog while it is open: a handler that held the dialog, or
-            # the list, would keep both after it closed. The copy chosen (data, no widget)
-            # stays with the answer: a button clicked says "closed" before "response"
-            # (libadwaita 1.9), so it cannot be what "closed" lets go of.
-            self._order_dialog = d
+            # The window holds the dialog while it is open (keep_as): a handler that held the
+            # dialog, or the list, would keep both after it closed. The copy chosen (data, no
+            # widget) stays with the answer: "closed" comes before it.
             picked = {"choice": None}
 
             def selected(_box, row):
@@ -387,18 +374,17 @@ class AppsPage:
                 if dialog is not None:
                     dialog.set_response_enabled("next", row is not None)
 
-            def response(_dialog, r):
-                if r == "next" and picked["choice"] is not None:
+            def chosen():
+                if picked["choice"] is not None:
                     self.confirm_order(*picked["choice"], note)
 
             box.connect("row-selected", selected)
-            d.connect("response", response)
-            d.connect("closed", lambda _d: setattr(self, "_order_dialog", None))
-            # Shown, the list chooses its first row as it takes the focus: none is chosen
-            # until the user does, and it is at its top (25.10.2026). From the signal's
-            # dialog, not a widget held here.
-            d.connect("map", order_list_at_its_top)
-            d.present(self)
+            confirm(self, "order-choose", _("Restore the order from a copy"),
+                    _("Choose the copy of the app list to take the order from."),
+                    # TRANSLATORS: button that leads to the summary of the change
+                    Answer("next", _("Next"), chosen, enabled=False),
+                    extra=scroller, keep_as="_order_dialog")
+            GLib.idle_add(order_list_at_its_top, box)
 
         self.run_task(_("Reading the copies of the app list…"), work, show, button=button)
 
@@ -407,14 +393,10 @@ class AppsPage:
         the copies it read: the question asks the device nothing."""
         from openexpress import ciq
 
-        d = Adw.AlertDialog(
-            heading=_("Restore this order?"),
-            body=ciq.copy_title(copy) + "\n\n" + self._order_summary(plan, note))
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("ok", _("Restore the Order"))
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        d.connect("response", lambda _d, r: r == "ok" and self.restore_order(copy))
-        d.present(self)
+        confirm(self, "order-restore", _("Restore this order?"),
+                ciq.copy_title(copy) + "\n\n" + self._order_summary(plan, note),
+                Answer("ok", _("Restore the Order"), lambda: self.restore_order(copy),
+                       look="suggested"))
 
     def restore_order(self, copy) -> None:
         from openexpress import ciq
@@ -453,33 +435,17 @@ class AppsPage:
         body = "\n\n".join([*(ciq.permissions_text(a) for a in asking), ngettext(
             "openExpress installs it only if you allow them.",
             "openExpress installs them only if you allow them.", count)])
-        d = Adw.AlertDialog(heading=ngettext("Allow New Permissions?",
-                                             "Allow New Permissions for {count} Apps?",
-                                             count).format(count=count), body=body)
-        d.add_response("cancel", _("Cancel"))
-        if others:
+        # The choice is data of these closures, not of the dialog: "closed" comes before the
+        # answer.
+        answers = [Answer(
             # TRANSLATORS: answer to the question about new permissions: skip the apps that
             # ask for them and install or update only the others
-            d.add_response("others", _("Skip These Apps"))
-        d.add_response("allow", _("Allow"))
-        d.set_response_appearance("allow", Adw.ResponseAppearance.SUGGESTED)
-        d.set_close_response("cancel")
-
-        # The choice is data of this closure, not of the dialog: a click says "closed" before
-        # "response" (libadwaita 1.9).
-        def response(_d, r):
-            if r == "allow":
-                self._install_apps(apps, allowed)
-            elif r == "others":
-                self._install_apps(others)
-
-        def closed(_d):
-            self._permissions_dialog = None
-
-        d.connect("response", response)
-        d.connect("closed", closed)
-        self._permissions_dialog = d  # held while open (the signals do not hold it)
-        d.present(self)
+            "others", _("Skip These Apps"), lambda: self._install_apps(others))] if others else []
+        answers.append(Answer("allow", _("Allow"), lambda: self._install_apps(apps, allowed),
+                              look="suggested"))
+        confirm(self, "app-permissions", ngettext(
+            "Allow New Permissions?", "Allow New Permissions for {count} Apps?",
+            count).format(count=count), body, *answers, keep_as="_permissions_dialog")
 
     def _install_apps(self, apps, allowed=()) -> None:
         from openexpress import ciq

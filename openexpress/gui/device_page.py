@@ -317,18 +317,13 @@ def confirm_primary_wearable(win, wearable, button=None) -> None:
     s = win.session
     if s is None:
         return
-    d = Adw.AlertDialog(
-        heading=_("Change the primary wearable?"),
-        body=_("Steps and sleep in Garmin Connect come from the primary wearable.\n\n"
-               "Current: {old}\nNew: {new}").format(old=primary_wearable_text(wearable),
-                                                   new=device_name(s)))
-    d.add_response("cancel", _("Cancel"))
-    # TRANSLATORS: button that makes this device the primary training device
-    d.add_response("set", _("Set"))
-    d.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
-    d.set_default_response("cancel")
-    d.connect("response", lambda _d, r: r == "set" and set_primary_wearable(win, button))
-    d.present(win)
+    confirm(win, "primary-wearable", _("Change the primary wearable?"),
+            _("Steps and sleep in Garmin Connect come from the primary wearable.\n\n"
+              "Current: {old}\nNew: {new}").format(old=primary_wearable_text(wearable),
+                                                  new=device_name(s)),
+            # TRANSLATORS: button that makes this device the primary training device
+            Answer("set", _("Set"), lambda: set_primary_wearable(win, button), look="suggested"),
+            default="cancel")
 
 
 def set_primary_wearable(win, button=None) -> None:
@@ -1064,18 +1059,14 @@ class DevicePage:
         if s is None:
             return
         current = self._primary_training_text(status)
-        d = Adw.AlertDialog(
-            heading=_("Change the primary training device?"),
-            body=_("The primary training device is the main source of performance and "
-                   "training data in Garmin Connect.\n\nCurrent: {old}\nNew: {new}").format(
-                old=current, new=s.device.description))
-        d.add_response("cancel", _("Cancel"))
-        # TRANSLATORS: button that makes this device the primary training device
-        d.add_response("set", _("Set"))
-        d.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("cancel")
-        d.connect("response", lambda _d, r: r == "set" and self.set_primary_training(button))
-        d.present(self)
+        confirm(self, "primary-training", _("Change the primary training device?"),
+                _("The primary training device is the main source of performance and "
+                  "training data in Garmin Connect.\n\nCurrent: {old}\nNew: {new}").format(
+                    old=current, new=s.device.description),
+                # TRANSLATORS: button that makes this device the primary training device
+                Answer("set", _("Set"), lambda: self.set_primary_training(button),
+                       look="suggested"),
+                default="cancel")
 
     def set_primary_training(self, button: Gtk.Button | None = None) -> None:
         s = self.session

@@ -345,9 +345,7 @@ class TaskRunner:
         self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
 
     def error(self, title: str, text: str) -> None:
-        d = Adw.AlertDialog(heading=title, body=text)
-        d.add_response("ok", _("OK"))
-        d.present(self)
+        inform(self, "error", title, text)
 
     def set_busy(self, busy: bool, text: str = "", device: bool = False,
                  in_page: bool = False) -> None:

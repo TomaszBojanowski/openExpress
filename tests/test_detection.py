@@ -2829,7 +2829,7 @@ def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, 
     s, mount, dialogs, asked = installed_on_a_drive(drive_window, monkeypatch, segment)
     (question,) = dialogs[1:]
     assert (question.get_heading(), question.get_body()) == ("Update saved", EJECT_FIRST_TEXT)
-    assert [question.get_response_label(r) for r in ("later", "eject")] == ["Later", "Eject"]
+    assert [question.get_response_label(r) for r in ("cancel", "eject")] == ["Later", "Eject"]
     assert mount.ejected == 0  # only when asked to
     question.emit("response", "eject")
     assert (mount.ejected, mount.unmounted) == (1, 0)
@@ -2846,7 +2846,7 @@ def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, 
 def test_a_drive_not_ejected_is_never_said_to_be_safe_to_unplug(drive_window, monkeypatch):
     """"Later": the drive stays mounted, and nothing says that the cable can go out."""
     s, mount, dialogs, _asked = installed_on_a_drive(drive_window, monkeypatch)
-    dialogs[1].emit("response", "later")
+    dialogs[1].emit("response", "cancel")  # Later
     assert len(dialogs) == 2 and mount.ejected == 0
     assert not gio_storage.ejected_by_us(s.storage.usb)
     assert all("You can unplug" not in d.get_body() for d in dialogs)
@@ -2862,7 +2862,7 @@ def test_a_failed_eject_says_so_and_offers_to_try_again(drive_window, monkeypatc
     (failed,) = dialogs[2:]
     assert failed.get_heading() == "The device was not ejected"
     assert failed.get_body() == "Cannot eject the device: Target is busy\n\n" + NOT_EJECTED_TEXT
-    assert [failed.get_response_label(r) for r in ("close", "retry")] == ["Close", "Try Again"]
+    assert [failed.get_response_label(r) for r in ("cancel", "retry")] == ["Close", "Try Again"]
     assert not gio_storage.ejected_by_us(s.storage.usb)
     assert all("You can unplug" not in d.get_body() for d in dialogs)
     mount.refusal = None  # the program let go of the drive

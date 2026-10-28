@@ -16,6 +16,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 
 from openexpress import service  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size  # noqa: E402
 
@@ -232,18 +233,6 @@ class MapsPage:
             parts.append(_("not recognised as a map; remove it in the file manager"))
         return caption(*parts)
 
-    def _ask(self, heading: str, body: str, label: str, on_ok, destructive: bool = False) -> None:
-        """A confirmation with Cancel and one other button; `on_ok` runs when that is chosen."""
-        d = Adw.AlertDialog(heading=heading, body=body)
-        if hasattr(d, "set_prefer_wide_layout"):
-            d.set_prefer_wide_layout(True)  # room for the name of a map on one line
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("ok", label)
-        d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE if destructive
-                                  else Adw.ResponseAppearance.SUGGESTED)
-        d.connect("response", lambda _d, r: r == "ok" and on_ok())
-        d.present(self)
-
     def _own_map_refused(self, e, what: str) -> bool:
         """Show a refusal of ownmaps.py under the title `what` (what could not be done), with
         the hint for the window; True when it was one."""
@@ -304,18 +293,22 @@ class MapsPage:
             self.toast(_("Wrote {path} ({size}).").format(path=real, size=human_size(plan.size)))
             self.load_section("maps", force=True)
 
-        def confirm(plan):
-            self._ask(_("Copy this map to the device?"), self._add_map_text(plan), _("Copy"),
-                      lambda: self.run_task(
-                          _("Copying the map…"),
-                          writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
-                                                               transfer_progress=self.fraction)),
-                          lambda real: written(real, plan),
-                          read_again_after_failure(self, "maps", refused)))
+        def copy(plan):
+            self.run_task(
+                _("Copying the map…"),
+                writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
+                                                     transfer_progress=self.fraction)),
+                lambda real: written(real, plan), read_again_after_failure(self, "maps", refused))
+
+        def ask_copy(plan):
+            # Wide: room for the name of a map on one line.
+            confirm(self, "own-map-add", _("Copy this map to the device?"),
+                    self._add_map_text(plan),
+                    Answer("ok", _("Copy"), lambda: copy(plan), look="suggested"), wide=True)
 
         self.run_task(_("Checking maps…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
-                      confirm, refused)
+                      ask_copy, refused)
 
     def confirm_remove_own(self, m, foreign: bool = False) -> None:
         """`foreign`: a map this installation did not copy; asked about more strongly, and
@@ -350,14 +343,16 @@ class MapsPage:
         if foreign:
             # A statement: the heading already asks.
             body = _("openExpress did not copy this map to the device.") + "\n\n" + body
-        self._ask(_("Remove {name}?").format(name=m.title or m.filename), body,
-                  _("Remove Anyway") if foreign else _("Remove"),
-                  lambda: self.run_task(
-                      _("Removing {name}…").format(name=m.title or m.filename),
-                      writes_to_device(work), removed,
-                      # Refused or failed, the page is read again: it may be out of date.
-                      read_again_after_failure(self, "maps", refused)),
-                  destructive=True)
+        def remove():
+            self.run_task(
+                _("Removing {name}…").format(name=m.title or m.filename),
+                writes_to_device(work), removed,
+                # Refused or failed, the page is read again: it may be out of date.
+                read_again_after_failure(self, "maps", refused))
+
+        confirm(self, "own-map-remove", _("Remove {name}?").format(name=m.title or m.filename),
+                body, Answer("ok", _("Remove Anyway") if foreign else _("Remove"), remove,
+                             look="destructive"), wide=True)
 
     @staticmethod
     def _map_subtitle(m) -> str:
@@ -424,11 +419,6 @@ class MapsPage:
                 + _cleanup_paragraph(self))
         heading = (_("Update {name}?") if m.installed else _("Install {name}?")).format(
             name=m.name)
-        d = Adw.AlertDialog(heading=heading, body=body)
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("ok", _("Accept and install"))
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-
         def unlock_not_written(e) -> bool:
             # The words of the window ("come back to this page"), not the command line's.
             if not isinstance(e, mp.UnlockNotWritten):
@@ -436,9 +426,7 @@ class MapsPage:
             self.error(_("Installing {name}…").format(name=m.name), e.window_text)
             return True
 
-        def response(_d, r):
-            if r != "ok":
-                return
+        def install():
             self.run_task(
                 _("Installing {name}…").format(name=m.name),
                 writes_to_device(lambda: mp.install(
@@ -453,28 +441,27 @@ class MapsPage:
                 read_again_after_failure(self, "maps", unlock_not_written),
             )
 
-        d.connect("response", response)
-        d.present(self)
+        confirm(self, "map-install", heading, body,
+                Answer("ok", _("Accept and install"), install, look="suggested"))
 
     def confirm_remove(self, m) -> None:
         from openexpress import maps as mp
 
         s = self.session
         files = mp.removal_list(self.maps_cache, m, rewriting=False)
-        d = Adw.AlertDialog(heading=_("Remove {name}?").format(name=m.name),
-                            body=_("These files will be removed from the device:") + "\n"
-                            + "\n".join(files) + _cleanup_paragraph(self))
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("ok", _("Remove"))
-        d.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
-        d.connect("response", lambda _d, r: r == "ok" and self.run_task(
-            _("Removing {name}…").format(name=m.name),
-            writes_to_device(lambda: mp.uninstall(m, self.maps_cache, s.storage,
-                                                  progress=self.progress)),
-            lambda removed: (self.toast(self._removed_files(len(removed))),
-                             self.load_section("maps", force=True)),
-            read_again_after_failure(self, "maps")))
-        d.present(self)
+        def remove():
+            self.run_task(
+                _("Removing {name}…").format(name=m.name),
+                writes_to_device(lambda: mp.uninstall(m, self.maps_cache, s.storage,
+                                                      progress=self.progress)),
+                lambda removed: (self.toast(self._removed_files(len(removed))),
+                                 self.load_section("maps", force=True)),
+                read_again_after_failure(self, "maps"))
+
+        confirm(self, "map-remove", _("Remove {name}?").format(name=m.name),
+                _("These files will be removed from the device:") + "\n" + "\n".join(files)
+                + _cleanup_paragraph(self),
+                Answer("ok", _("Remove"), remove, look="destructive"))
 
 
 def _cleanup_paragraph(win) -> str:

@@ -141,6 +141,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402, F401 - also gui.app.<n
     WRAP_BOX,
     TaskRunner,
     collect_garbage,
+    inform,
     log_unexpected,
     read_space,
     refresh_space,
@@ -487,14 +488,11 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             self._update_relative_timer()  # no timer left once the window is closed
             return False
         if self._close_dialog is None:
-            d = Adw.AlertDialog(
-                heading=_("An operation is in progress"),
-                body=_("Wait until it finishes before closing openExpress, so that no files "
-                       "on the device are left half-written."))
-            d.add_response("ok", _("OK"))
-            d.connect("response", lambda *_a: setattr(self, "_close_dialog", None))
-            self._close_dialog = d
-            d.present(self)
+            self._close_dialog = inform(
+                self, "close-busy", _("An operation is in progress"),
+                _("Wait until it finishes before closing openExpress, so that no files "
+                  "on the device are left half-written."),
+                then=lambda: setattr(self, "_close_dialog", None))
         return True
 
 

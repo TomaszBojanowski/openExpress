@@ -237,13 +237,14 @@ def test_the_backups_go_only_when_ticked(asked, backups, ticked):
 
 @pytest.mark.needs_display
 def test_the_question_is_let_go_once_closed(asked):
-    """The window holds the question and the choice while it is open, and no longer."""
+    """The window holds the question while it is open, and no longer (what is ticked goes
+    with the ticks and the answer, not with the window)."""
     remembered()
     win = window()
     win.ask_forget()
     assert win._forget_dialog is asked[0]
     asked[0].emit("closed")
-    assert win._forget_dialog is None and win._forget_choice is None
+    assert win._forget_dialog is None and not hasattr(win, "_forget_choice")
 
 
 # --- refusals ----------------------------------------------------------------------------------
@@ -420,7 +421,7 @@ def test_clicking_forget_in_the_window_forgets(monkeypatch):
         assert _turn_until(lambda: known_devices.load() == {})
         assert not paths.device_dir(EDGE).exists()
         assert _turn_until(lambda: win.navigation.get_visible_page() is win.start.page)
-        assert win._forget_dialog is None and win._forget_choice is None
+        assert win._forget_dialog is None
     finally:
         netstatus.STATUS.remove_listener(win._net_listener)
         win.destroy()

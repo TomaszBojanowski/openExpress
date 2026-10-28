@@ -266,7 +266,7 @@ def test_without_a_copy_that_differs_one_sentence_and_close(iq_device, device_ro
     assert errors == [] and dialog.extra is None
     assert dialog.kw == {"heading": "Restore the order from a copy",
                          "body": "No copy differs from the current order"}
-    assert dialog.responses == [("close", "Close")]
+    assert dialog.responses == [("ok", "Close")]
 
 
 @pytest.mark.needs_display
@@ -292,7 +292,7 @@ def test_the_sentence_in_polish(iq_device, device_root, backups, monkeypatch):
     finally:
         i18n.setup("en")
     assert dialog.kw["body"] == "Żadna kopia nie różni się od obecnej kolejności"
-    assert dialog.responses == [("close", "Zamknij")]
+    assert dialog.responses == [("ok", "Zamknij")]
 
 
 # --- a series of the same list keeps its newest copy --------------------------------------------

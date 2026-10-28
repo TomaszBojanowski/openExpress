@@ -9,7 +9,6 @@ _activities_counted
 _add_map_text
 _app_icon
 _apps_space
-_ask
 _ask_clear_cache
 _ask_install_map
 _auto_sync_row

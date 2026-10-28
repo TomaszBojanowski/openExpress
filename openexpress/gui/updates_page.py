@@ -30,7 +30,14 @@ from openexpress.device.gio_storage import (  # noqa: E402
 )
 from openexpress.gui.pictures import bike_accessory_text, is_bike_accessory  # noqa: E402
 from openexpress.gui.tasks import writes_to_device  # noqa: E402
-from openexpress.gui.window_tasks import WRAP_BOX, still_in_window, wrapping_row  # noqa: E402
+from openexpress.gui.window_tasks import (  # noqa: E402
+    WRAP_BOX,
+    Answer,
+    confirm,
+    inform,
+    still_in_window,
+    wrapping_row,
+)
 from openexpress.gui.words import software_text, update_state_text  # noqa: E402
 from openexpress.i18n import SEPARATOR, _, caption, human_size, ngettext  # noqa: E402
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
@@ -272,7 +279,6 @@ class UpdatesPage:
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
                 + ("\n\n" + _("This is a beta version.") if u.is_beta else ""))
-        d = Adw.AlertDialog(heading=_("Install update?"), body=body)
         # Below the text: the license, then the warning, right above the buttons.
         below = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         if u.eula_url.casefold().startswith("https://"):
@@ -292,11 +298,6 @@ class UpdatesPage:
             warning.add_css_class("warning")
             warning.add_css_class("heading")
             below.append(warning)
-        if below.get_first_child() is not None:
-            d.set_extra_child(below)
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("ok", _("Accept and install"))
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
 
         def install():
             rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress,
@@ -317,35 +318,23 @@ class UpdatesPage:
             self.error(_("Update not installed"), str(e) or type(e).__name__)
             return True
 
-        def response(_d, r):
-            if r != "ok":
-                return
-            self.run_task(_("Installing update…"), writes_to_device(install), installed,
-                          failed)
-
-        d.connect("response", response)
-        d.present(self)
+        confirm(self, "update-install", _("Install update?"), body,
+                Answer("ok", _("Accept and install"),
+                       lambda: self.run_task(_("Installing update…"), writes_to_device(install),
+                                             installed, failed), look="suggested"),
+                extra=below if below.get_first_child() is not None else None)
 
     def ask_to_eject(self, s, bike_accessory: bool = False) -> None:
         """After an update was saved on a Garmin drive: it is to be ejected first; that the
         cable can go out is said only once it is (eject_device)."""
-        d = Adw.AlertDialog(heading=_("Update saved"),
-                            body=_("Eject the device before you unplug the cable: until then "
-                                   "it may not see the update."))
-        # TRANSLATORS: button; the device is ejected later
-        d.add_response("later", _("Later"))
-        # TRANSLATORS: button that ejects the device (its USB drive)
-        d.add_response("eject", _("Eject"))
-        d.set_response_appearance("eject", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("eject")
-        d.set_close_response("later")
-
-        def response(_d, r):
-            if r == "eject":
-                self.eject_device(s, bike_accessory)
-
-        d.connect("response", response)
-        d.present(self)
+        confirm(self, "eject-ask", _("Update saved"),
+                _("Eject the device before you unplug the cable: until then "
+                  "it may not see the update."),
+                # TRANSLATORS: button that ejects the device (its USB drive)
+                Answer("eject", _("Eject"), lambda: self.eject_device(s, bike_accessory),
+                       look="suggested"),
+                # TRANSLATORS: button; the device is ejected later
+                cancel=_("Later"), default="eject")
 
     def eject_device(self, s, bike_accessory: bool = False,
                      button: Gtk.Button | None = None) -> None:
@@ -353,26 +342,20 @@ class UpdatesPage:
         the system refuses, why, that the cable must stay in, and Try Again. `button`: the
         Eject of the Updates page, which spins meanwhile."""
         def ejected(_result):
-            done = Adw.AlertDialog(heading=_("Done"), body=ejected_text())
-            done.add_response("ok", _("OK"))
-            if bike_accessory:
-                # As Garmin Express does for such a device: how it finishes the update.
-                done.connect("response", lambda *_a: self.error(_("Finish the update"),
-                                                                bike_accessory_text()))
-            done.present(self)
+            # For a bike accessory, as Garmin Express does: how it finishes the update.
+            inform(self, "ejected", _("Done"), ejected_text(),
+                   then=(lambda: self.error(_("Finish the update"), bike_accessory_text()))
+                   if bike_accessory else None)
 
         def failed(e) -> bool:
             if isinstance(e, DriveNotMounted):
                 self.error(_("The device is not mounted"), str(e))
                 return True
-            d = Adw.AlertDialog(heading=_("The device was not ejected"),
-                                body=f"{e}\n\n{not_ejected_text()}")
-            d.add_response("close", _("Close"))
-            d.add_response("retry", _("Try Again"))
-            d.set_response_appearance("retry", Adw.ResponseAppearance.SUGGESTED)
-            d.connect("response", lambda _d, r: r == "retry"
-                      and self.eject_device(s, bike_accessory))
-            d.present(self)
+            confirm(self, "eject-retry", _("The device was not ejected"),
+                    f"{e}\n\n{not_ejected_text()}",
+                    Answer("retry", _("Try Again"), lambda: self.eject_device(s, bike_accessory),
+                           look="suggested"),
+                    cancel=_("Close"))
             return True
 
         self.run_task(_("Ejecting the device…"), lambda: eject(s.storage), ejected, failed,
