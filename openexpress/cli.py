@@ -18,7 +18,6 @@ from openexpress.connect import (
     ApiError,
     ClockSkew,
     GarminClient,
-    OwnershipError,
     Unauthorized,
 )
 from openexpress.console import error as _error
@@ -2270,17 +2269,6 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _domain_errors() -> tuple:
-    from openexpress.ciq import CiqError
-    from openexpress.download import DownloadError
-    from openexpress.maps import MapError
-    from openexpress.music import MusicError
-    from openexpress.proto import ProtoError
-    from openexpress.updates import UpdateError
-
-    return (CiqError, DownloadError, MapError, MusicError, ProtoError, UpdateError)
-
-
 def _lang_from_argv(argv: list[str]) -> str | None:
     """Finds --lang before parsing, so that the help texts are already translated."""
     for i, arg in enumerate(argv):
@@ -2383,12 +2371,8 @@ def _run(args, service, requests) -> int:
 
     from openexpress.auth.sso import LoginCancelled
     from openexpress.device.gio_storage import MassStorageNotice
-    from openexpress.errors import OrdinaryStop
+    from openexpress.errors import OrdinaryStop, UserFacingError
 
-    user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
-                   service.MassStorageMode,
-                   Unauthorized, service.SyncBusy,
-                   service.PrimaryTrainingError) + _domain_errors()
     try:
         return args.func(args)
     except MassStorageNotice as e:
@@ -2408,7 +2392,9 @@ def _run(args, service, requests) -> int:
         log.info("stopped: %s", e.log_reason)
         _error(_("Error: {error}").format(error=e))
         return 1
-    except user_errors as e:
+    except (Unauthorized, ClockSkew) as e:
+        # Answers of a server that say what to do (log in again, set the clock): before
+        # ApiError, which they are.
         log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
         _error(_("Error: {error}").format(error=e))
         return 1
@@ -2417,6 +2403,13 @@ def _run(args, service, requests) -> int:
         _error(_("Server error: {error}").format(error=e))
         if args.verbose and e.body:
             print(applog.redact(e.body), file=sys.stderr)  # the server's own words: filtered
+        return 1
+    except UserFacingError as e:
+        # A message for the user (the device not ready, a refusal…): one line, no traceback,
+        # whatever its class. An error of our own reading (ProtoError, FitError) is not one:
+        # it is unexpected below, with its traceback, as in the window.
+        log.info("error: %s: %s", type(e).__name__, e)  # shown to the user below
+        _error(_("Error: {error}").format(error=e))
         return 1
     except requests.RequestException as e:
         _error(_("Network error: could not reach the Garmin server ({error})").format(
