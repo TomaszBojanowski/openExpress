@@ -60,9 +60,6 @@ class _NoMd5:
 # Download without an MD5 check: only when the caller says so, never because the server's
 # value is missing or could not be read (that is refused).
 NO_MD5 = _NoMd5()
-# Hosts that may be asked over plain HTTP: none in the program (every address is asked over
-# HTTPS); the tests add their local server.
-PLAIN_HTTP_HOSTS: frozenset[str] = frozenset()
 
 
 def secure_url(url: str) -> str:
@@ -72,8 +69,6 @@ def secure_url(url: str) -> str:
     if parts.scheme == "https":
         return url
     if parts.scheme == "http":
-        if parts.hostname in PLAIN_HTTP_HOSTS:
-            return url
         return urlunsplit(("https", *parts[1:]))
     raise DownloadError(_("Refusing to download {url}: files are downloaded only over HTTPS")
                         .format(url=_short(url)))
