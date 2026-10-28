@@ -69,6 +69,8 @@ from openexpress.gui.tasks import (  # noqa: E402
 )
 from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
+    Answer,
+    confirm,
     log_unexpected,
     refresh_space,
     render_space,
@@ -1446,16 +1448,11 @@ class DevicePage:
                       done, failed)
 
     def ask_first_sync(self) -> None:
-        d = Adw.AlertDialog(
-            heading=_("First sync"),
-            body=_("If the device also syncs via your phone, most data is already "
-                   "in Garmin Connect. You can mark the current files as uploaded "
-                   "and upload only new ones, or upload everything (Connect skips duplicates)."),
-        )
-        d.add_response("cancel", _("Cancel"))
-        d.add_response("all", _("Upload everything"))
-        d.add_response("baseline", _("New data only"))
-        d.set_response_appearance("baseline", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("baseline")
-        d.connect("response", lambda _d, r: r != "cancel" and self.start_sync(r))
-        d.present(self)
+        confirm(self, "first-sync", _("First sync"),
+                _("If the device also syncs via your phone, most data is already "
+                  "in Garmin Connect. You can mark the current files as uploaded "
+                  "and upload only new ones, or upload everything (Connect skips duplicates)."),
+                Answer("all", _("Upload everything"), lambda: self.start_sync("all")),
+                Answer("baseline", _("New data only"), lambda: self.start_sync("baseline"),
+                       look="suggested"),
+                default="baseline")

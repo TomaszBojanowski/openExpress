@@ -216,7 +216,8 @@ def test_making_the_device_the_primary_training_device(click, words, changed):
 
 
 @pytest.mark.parametrize(("words", "started"), [
-    ("New data only", ["baseline"]), ("Upload everything", ["all"]), ("Cancel", [])])
+    ("New data only", ["baseline"]), ("Upload everything", ["all"]), ("Cancel", []),
+    (ESCAPE, [])])
 def test_choosing_the_first_sync(click, words, started):
     from openexpress.gui.app import MainWindow
 
