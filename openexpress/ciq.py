@@ -1065,20 +1065,18 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if not data:
                     _acknowledge(client, device, m)
                     continue
-                # An update over PTP is written next to the old file, which the device
-                # replaces only later: it needs room of its own, like a new app.
-                if existing is None or over_ptp:
-                    _check_space(state, new_size, len(data))
+                # An update is written next to the old file, which the device replaces only
+                # later: it needs room of its own, like a new app.
+                _check_space(state, new_size, len(data))
                 targets = _check_accepted(device, dt)
-                # New apps get 8 random hex characters. An update through the mounted storage
-                # overwrites the existing file; over PTP it gets a new name too, like Garmin
-                # Express does: the old file is the device's own and is left alone, and the
-                # device replaces the app itself once it is unplugged.
+                # Every app file gets 8 random hex characters, an update too, over PTP and
+                # through the mounted storage alike, as Garmin Express names the app files
+                # of the queue: the old file is the device's own and is left alone (a write
+                # that fails can only spoil the new one), and the device replaces the app
+                # itself once it is unplugged.
                 filename = uuid.uuid4().hex[:8].upper()
                 while existing is not None and filename == existing.filename:
                     filename = uuid.uuid4().hex[:8].upper()
-                if existing is not None and existing.filename and not over_ptp:
-                    filename = existing.filename
                 path = posixpath.join(targets[0].path,
                                       f"{filename}.{targets[0].extension or 'PRG'}")
                 entry = None
@@ -1091,21 +1089,16 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                         disabled=app_type == 3, version=store.latest_version if store else None,
                         filename=filename, size=len(data),
                     )
-                    new_size += len(data)
+                new_size += len(data)  # a new app, or an update's file next to the old one
                 if over_ptp:
-                    if existing is not None:
-                        new_size += len(data)
                     hidden.append(_Hidden(m, name, dt, path, data, entry))
                     continue
                 progress(_("Writing {path}").format(path=path))
                 try:
-                    real = storage.write(path, data)
-                    if storage.size(real) != len(data):
-                        raise CiqError(_("Write verification of {path} failed").format(path=real))
+                    # Of another size, the new file is deleted: it is ours, under a new name.
+                    real = storage.write_checked(path, data, error=CiqError)
                 except Exception:
-                    if existing is None:
-                        _delete_quietly(storage, path)
-                        new_size -= len(data)
+                    new_size -= len(data)
                     raise
                 if entry is not None:
                     new_entries.append(entry)

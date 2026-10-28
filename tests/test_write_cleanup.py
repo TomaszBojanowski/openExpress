@@ -259,13 +259,51 @@ class Downloads:
 
 def test_an_app_update_cut_short_leaves_no_half_app(iq_device):
     """The update of an app over the mounted storage stops half way: the failure is in the
-    report, no half app file stays under its name, and the update stays in the queue."""
+    report, no half file is left, the app's own file is as it was (an update goes under a
+    new name, as Garmin Express writes it: step 2 of the audit of 0.7.9) and the update
+    stays in the queue."""
     st, dev = iq_device
     prg, messages = _app_to_update(st)
     client = Downloads()
     rep = ciq.install_queued(dev, Mtp(st.root, breaks=(".PRG",)), client, messages, known={})
     assert [name for name, _error in rep.failed] == ["Made-up Face"]
-    assert not prg.exists() and client.acks == []
+    assert prg.read_bytes() == b"OLD APP" and client.acks == []
+    assert _files_in(st, "GARMIN/APPS/MEDIA") == ["ABCD1234.PRG"]
+
+
+class ShortApps(Mtp):
+    """A device that keeps one byte less of an app file than it is given, and says nothing."""
+
+    def _write(self, real_path, data):
+        super()._write(real_path, data[:-1] if real_path.upper().endswith(".PRG") else data)
+
+
+def test_an_app_update_of_the_wrong_size_leaves_the_old_app(iq_device):
+    st, dev = iq_device
+    prg, messages = _app_to_update(st)
+    client = Downloads()
+    rep = ciq.install_queued(dev, ShortApps(st.root), client, messages, known={})
+    assert [name for name, _error in rep.failed] == ["Made-up Face"]
+    assert "Write verification" in rep.failed[0][1]
+    assert prg.read_bytes() == b"OLD APP" and client.acks == []
+    assert _files_in(st, "GARMIN/APPS/MEDIA") == ["ABCD1234.PRG"]
+
+
+def test_an_app_update_goes_next_to_the_old_file_under_a_new_name(iq_device):
+    """As Garmin Express writes every app file of the queue: a new name of 8 hex characters,
+    the old file left alone, the app list as it was (no IN.BIN); the device replaces the app
+    once it is unplugged."""
+    st, dev = iq_device
+    prg, messages = _app_to_update(st)
+    client = Downloads()
+    rep = ciq.install_queued(dev, Mtp(st.root), client, messages, known={})
+    assert rep.installed == ["Made-up Face"] and rep.failed == [] and client.acks == [9]
+    assert prg.read_bytes() == b"OLD APP"
+    (new,) = [n for n in _files_in(st, "GARMIN/APPS/MEDIA") if n != "ABCD1234.PRG"]
+    stem, dot, ext = new.partition(".")
+    assert len(stem) == 8 and stem == stem.upper() and int(stem, 16) >= 0 and ext == "PRG"
+    assert (st.root / "GARMIN/APPS/MEDIA" / new).read_bytes() == b"NEW APP, A LONGER FILE"
+    assert st.resolve("GARMIN/APPS/IN.BIN") is None
 
 
 def test_an_app_update_refused_leaves_the_old_app(iq_device):
