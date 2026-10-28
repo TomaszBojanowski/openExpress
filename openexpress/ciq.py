@@ -459,7 +459,7 @@ class StoreApi:
                              _("Connect IQ apps"),
                              params={"unitId": device.unit_id, "locale": locale,
                                      "sku": device.part_number}, unit_id=device.unit_id)
-        return [_store_app(a) for a in data or []]
+        return _store_apps(data)
 
     def updates(self, device: GarminDevice, installed: list[InstalledApp],
                 locale: str) -> list[StoreApp]:
@@ -470,8 +470,7 @@ class StoreApi:
                              _("Connect IQ updates"), json_body=body, unit_id=device.unit_id)
         # The server also lists apps that are already current; keep only newer versions.
         current = {a.app_id: a.version or 0 for a in installed}
-        return [u for u in (_store_app(a) for a in data or [])
-                if u.latest_version > current.get(u.app_id, -1)]
+        return [u for u in _store_apps(data) if u.latest_version > current.get(u.app_id, -1)]
 
     def queue_install(self, device: GarminDevice, apps: list[StoreApp]) -> None:
         body = {"apps": [{"appId": str(a.app_id), "internalVersionNumber": a.latest_version}
@@ -502,6 +501,29 @@ class StoreApi:
                 "unitId": device.unit_id}
         self._request("POST", "express/appstore/rest/apps/removeInstalledApps",
                       _("Connect IQ remove"), json_body=body, unit_id=device.unit_id)
+
+
+def _has_app_id(item) -> bool:
+    """Whether an item of the store's answer has an app ID that is a UUID."""
+    if not isinstance(item, dict) or not isinstance(item.get("appid"), str):
+        return False
+    try:
+        uuid.UUID(item["appid"])
+    except ValueError:
+        return False
+    return True
+
+
+def _store_apps(data) -> list[StoreApp]:
+    """The apps of an answer of the store. An item without an app ID is left out, with one
+    line in the log, so that one item cannot fail the whole list (and the Apps page)."""
+    items = data or []
+    good = [item for item in items if _has_app_id(item)]
+    if len(good) < len(items):
+        n = len(items) - len(good)
+        log.warning("apps: %d item%s of the store's answer left out: no app ID", n,
+                    "" if n == 1 else "s")
+    return [_store_app(item) for item in good]
 
 
 def _store_app(a: dict) -> StoreApp:
@@ -1063,6 +1085,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
                 if not data:
+                    # No content (204, 404): only acknowledged, as Garmin Express does.
+                    log.info("apps: Garmin Connect sent no file for %s: taken off the queue, "
+                             "nothing written", name)
                     _acknowledge(client, device, m)
                     continue
                 # An update is written next to the old file, which the device replaces only
