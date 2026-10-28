@@ -233,8 +233,8 @@ def test_window_copies_exactly_what_it_shows(log_file):
     from openexpress.gui.app import MainWindow
 
     _write_log(log_file, ["one", "device 3987654321"])
-    assert MainWindow._report_text("### Device\n", False) == "### Device\n"  # the default
-    assert MainWindow._report_text("### Device\n", True) == (
+    assert MainWindow._report_and_log("### Device\n", False)[0] == "### Device\n"  # the default
+    assert MainWindow._report_and_log("### Device\n", True)[0] == (
         "### Device\n\n### Log (last 2 lines)\n```\none\ndevice <number>\n```\n")
 
 

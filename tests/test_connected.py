@@ -156,11 +156,11 @@ def test_for_start_with_a_device_open():
 
 def test_drew_and_changed_since_drawn():
     c = Connected()
-    assert not c.changed_since_drawn([])
+    assert uris([]) == c.drawn
     c.drew(two())
     assert c.drawn == {WATCH.rstrip("/"), EDGE.rstrip("/")}
-    assert not c.changed_since_drawn([entry(EDGE), entry(WATCH)])  # the order aside
-    assert c.changed_since_drawn([entry(WATCH)])
+    assert uris([entry(EDGE), entry(WATCH)]) == c.drawn  # the order aside
+    assert uris([entry(WATCH)]) != c.drawn
 
 
 def test_drawn_stays_older_than_the_devices_read_again():
@@ -168,7 +168,7 @@ def test_drawn_stays_older_than_the_devices_read_again():
     c.reread(two())
     c.drew(c.devices)
     c.reread([entry(WATCH, "Test watch")])  # read again while another page is shown
-    assert c.changed_since_drawn(c.devices) and len(c.drawn) == 2
+    assert uris(c.devices) != c.drawn and len(c.drawn) == 2
 
 
 def test_a_list_a_choice_and_the_device_opened():
@@ -183,7 +183,7 @@ def test_a_list_a_choice_and_the_device_opened():
     assert c.listed(WATCH) and c.listed(EDGE) and not c.is_choice(WATCH)
     shown, notice = c.for_start(entry(EDGE, "Edge 1050 (open)"), opens(EDGE))
     assert [d.description for d in shown] == ["Test watch", "Edge 1050"] and notice is False
-    assert not c.changed_since_drawn(shown)
+    assert uris(shown) == c.drawn
 
 
 def test_the_moment_after_a_failed_choice():
