@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 16:35+0100\n"
+"POT-Creation-Date: 2026-10-28 16:44+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -414,7 +414,8 @@ msgstr ""
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:1104 openexpress/ciq.py:1359 openexpress/maps.py:742
+#: openexpress/ciq.py:1104 openexpress/ciq.py:1359
+#: openexpress/device/storage.py:236 openexpress/maps.py:742
 #: openexpress/updates.py:440
 #, python-brace-format
 msgid "Write verification of {path} failed"
@@ -2639,30 +2640,30 @@ msgid "flatpak-spawn is not available"
 msgstr ""
 
 #: openexpress/device/gio_storage.py:233 openexpress/device/gio_storage.py:250
-#: openexpress/device/storage.py:338
+#: openexpress/device/storage.py:384
 #, python-brace-format
 msgid "Cannot list {path}"
 msgstr ""
 
 #: openexpress/device/gio_storage.py:264 openexpress/device/gio_storage.py:273
-#: openexpress/device/gio_storage.py:278 openexpress/device/storage.py:345
-#: openexpress/device/storage.py:355 openexpress/device/storage.py:360
+#: openexpress/device/gio_storage.py:278 openexpress/device/storage.py:391
+#: openexpress/device/storage.py:401 openexpress/device/storage.py:406
 #, python-brace-format
 msgid "Cannot read {path}"
 msgstr ""
 
 #: openexpress/device/gio_storage.py:301 openexpress/device/gio_storage.py:322
-#: openexpress/device/storage.py:371 openexpress/device/storage.py:384
+#: openexpress/device/storage.py:417 openexpress/device/storage.py:430
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:420 openexpress/device/storage.py:408
+#: openexpress/device/gio_storage.py:420 openexpress/device/storage.py:454
 #, python-brace-format
 msgid "Cannot delete {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:426 openexpress/device/storage.py:412
+#: openexpress/device/gio_storage.py:426 openexpress/device/storage.py:458
 #, python-brace-format
 msgid "Cannot create directory {path}"
 msgstr ""
@@ -2900,16 +2901,22 @@ msgstr ""
 msgid "Cannot write {path}: it is a directory"
 msgstr ""
 
-#: openexpress/device/storage.py:264
+#: openexpress/device/storage.py:255 openexpress/maps.py:664
+#: openexpress/music.py:274 openexpress/ownmaps.py:236
+#, python-brace-format
+msgid "Not enough space on the device: {need} needed, {free} free"
+msgstr ""
+
+#: openexpress/device/storage.py:310
 msgid "Refusing to delete the root of the device storage"
 msgstr ""
 
-#: openexpress/device/storage.py:283
+#: openexpress/device/storage.py:329
 #, python-brace-format
 msgid "Invalid file name: '{path}'"
 msgstr ""
 
-#: openexpress/device/storage.py:328 openexpress/device/storage.py:336
+#: openexpress/device/storage.py:374 openexpress/device/storage.py:382
 #, python-brace-format
 msgid "Not a directory: {path}"
 msgstr ""
@@ -5155,11 +5162,6 @@ msgstr ""
 msgid ""
 "Map '{name}' is on the device already and will be loaded after the device is "
 "unplugged. Unplug the device first."
-msgstr ""
-
-#: openexpress/maps.py:664 openexpress/music.py:274 openexpress/ownmaps.py:236
-#, python-brace-format
-msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr ""
 
 #: openexpress/maps.py:672

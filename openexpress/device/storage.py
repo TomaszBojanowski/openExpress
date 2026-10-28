@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress.errors import UserFacingError
-from openexpress.i18n import _
+from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
 
@@ -209,6 +209,52 @@ class Storage(ABC):
                 self._discard_partial(real)
             raise
         return real
+
+    def write_checked(self, path: str, data: bytes, *, error: type[Exception] = DeviceError) -> str:
+        """write, then the size of the file on the device checked: another size (or one not
+        known) deletes what was written and raises `error` (the error class of the caller,
+        e.g. CiqError). Returns the real path."""
+        real = self.write(path, data)
+        self._check_written(real, len(data), error, keep=False)
+        return real
+
+    def write_file_checked(self, path: str, local: Path, progress=None, *,
+                           keep_partial: bool = False,
+                           error: type[Exception] = DeviceError) -> str:
+        """write_file, then its size on the device checked against the local file's: another
+        size (or one not known) deletes what was written, unless `keep_partial` (a file other
+        maps use, never deleted), and raises `error`. Returns the real path."""
+        real = self.write_file(path, local, progress, keep_partial=keep_partial)
+        self._check_written(real, Path(local).stat().st_size, error, keep=keep_partial)
+        return real
+
+    def _check_written(self, real: str, size: int, error: type[Exception], keep: bool) -> None:
+        if self.size(real) == size:
+            return
+        if not keep:
+            self.delete_quietly(real)
+        raise error(_("Write verification of {path} failed").format(path=real))
+
+    def delete_quietly(self, path: str) -> bool:
+        """Delete `path` after a failure that is said already: a failure of the deletion goes
+        to the log only (one WARNING). Whether it was deleted."""
+        try:
+            self.delete(path)
+        except Exception as e:  # noqa: BLE001 - cleanup after a failure: that one is reported
+            log.warning("Cannot delete %s: %s", path, e)
+            return False
+        return True
+
+    def require_space(self, need: int, margin: int, *,
+                      error: type[Exception] = DeviceError) -> int | None:
+        """Room on the device for `need` bytes and `margin` kept free, or `error` saying how
+        much is needed and free. The free space, or None when it is not known (then nothing
+        is checked)."""
+        free = self.free_space()
+        if free is not None and need + margin > free:
+            raise error(_("Not enough space on the device: {need} needed, {free} free")
+                        .format(need=human_size(need), free=human_size(free)))
+        return free
 
     def _discard_partial(self, real_path: str) -> None:  # noqa: B027 - nothing by default
         """What a copy that started and failed left under the name. Nothing here: a drive
