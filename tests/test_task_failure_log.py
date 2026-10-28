@@ -129,3 +129,90 @@ def test_the_errors_that_are_a_message_for_the_user_have_one_base(index):
 
     error = _messages_for_the_user()[index]
     assert issubclass(error, UserFacingError), error.__name__
+
+
+# --- an ordinary stop is one line of INFO, not a failure (review of the log, 28.10.2026) ---------
+
+def _ordinary_stops():
+    from openexpress import cache, forget, service
+    from openexpress.auth import sso
+    from openexpress.device import gio_storage
+
+    return [service.FirstSyncChoiceNeeded, service.SyncBusy, gio_storage.MassStorageNotice,
+            sso.LoginCancelled, forget.PendingFiles, cache.CacheBusy]
+
+
+def test_a_first_sync_that_waits_for_its_choice_is_no_failure_in_the_log(device_root, xdg,
+                                                                          log_file):
+    """The service is asked to sync a device for the first time without the choice: one line
+    of INFO says what it waits for; no WARNING, nothing "stopped" or "failed"."""
+    from fakes import SyncAccount
+
+    from openexpress import applog, service
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    st = LocalStorage(device_root)
+    s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(),
+                              SyncAccount(verified_unit_id=None))
+    applog.setup("gui")
+    with pytest.raises(service.FirstSyncChoiceNeeded):
+        service.run_sync(s)
+    applog.close()
+    lines = _lines(log_file, " sync: ")
+    assert [line for line in lines if " WARNING " in line] == []
+    assert not any("stopped" in line or "failed" in line for line in lines)
+    (said,) = _lines(log_file, "sync: waiting for the first-sync choice")
+    assert " INFO " in said
+
+
+@pytest.mark.parametrize("index", range(6))
+def test_an_ordinary_stop_of_a_task_is_one_line_of_info(monkeypatch, log_file, index):
+    """A task of the window, or work in the background, that ends in an ordinary stop: one
+    line of INFO with what it waits for; no "failed", no traceback. The user is told as
+    before."""
+    from openexpress import applog
+    from openexpress.errors import OrdinaryStop, UserFacingError
+    from openexpress.gui import app
+
+    stop = _ordinary_stops()[index]
+    assert issubclass(stop, OrdinaryStop) and issubclass(stop, UserFacingError)
+    assert stop.log_reason  # what the line of the log says
+
+    from openexpress import forget
+
+    # PendingFiles makes its own words from the number of files.
+    made = stop(2) if stop is forget.PendingFiles else stop("Made-up words for the user.")
+
+    def work():
+        raise made
+
+    _at_once(monkeypatch)
+    told = _run(work)
+    applog.setup("gui")
+    app.MainWindow.in_background(work, lambda result: None, lambda error: None)
+    applog.close()
+    text = log_file.read_text()
+    assert "failed" not in text and "Traceback" not in text and " WARNING " not in text
+    said = _lines(log_file, f": {stop.log_reason}")
+    assert len(said) == 2 and all(" INFO " in line for line in said)
+    assert told == [str(made)]
+
+
+def test_an_ordinary_stop_on_the_command_line_is_no_error_in_the_log(log_file, capsys):
+    import types
+
+    from openexpress import applog, cli, service
+
+    def busy(_args):
+        raise service.SyncBusy("A sync is already running in another process.")
+
+    applog.setup("cli")
+    code = cli._run(types.SimpleNamespace(func=busy, verbose=False), service, object())
+    applog.close()
+    assert code == 1
+    assert "A sync is already running in another process." in capsys.readouterr().err
+    assert "error:" not in log_file.read_text()
+    (said,) = _lines(log_file, "stopped: another sync is running")
+    assert " INFO " in said

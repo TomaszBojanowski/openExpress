@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openexpress import paths
-from openexpress.errors import UserFacingError
+from openexpress.errors import OrdinaryStop, UserFacingError
 from openexpress.i18n import N_, _
 
 log = logging.getLogger(__name__)
@@ -44,8 +44,10 @@ class CacheError(UserFacingError):
     """The cache could not be cleared; the message says why."""
 
 
-class CacheBusy(CacheError):
+class CacheBusy(CacheError, OrdinaryStop):
     """The cache is in use (a download or an install is running): it is not cleared now."""
+
+    log_reason = "the cache is in use"
 
 
 @contextlib.contextmanager

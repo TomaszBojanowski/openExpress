@@ -20,15 +20,17 @@ from pathlib import Path
 from openexpress import known_devices, paths, service
 from openexpress.backup import PARTIAL_PREFIX, is_backup_dir
 from openexpress.ciq import APP_LIST_COPY_PREFIX
-from openexpress.errors import UserFacingError
+from openexpress.errors import OrdinaryStop
 from openexpress.i18n import ngettext
 
 log = logging.getLogger(__name__)
 
 
-class PendingFiles(UserFacingError):
+class PendingFiles(OrdinaryStop):
     """Files of the device whose upload failed are kept to be sent at its next sync:
     forgetting it would lose them."""
+
+    log_reason = "waiting for a choice about the files not uploaded yet"
 
     def __init__(self, count: int):
         super().__init__(ngettext(

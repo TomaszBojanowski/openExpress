@@ -2381,6 +2381,7 @@ def _run(args, service, requests) -> int:
 
     from openexpress.auth.sso import LoginCancelled
     from openexpress.device.gio_storage import MassStorageNotice
+    from openexpress.errors import OrdinaryStop
 
     user_errors = (DeviceError, SetupError, store.NotLoggedIn, ClockSkew, OwnershipError,
                    service.MassStorageMode,
@@ -2397,6 +2398,12 @@ def _run(args, service, requests) -> int:
         # The sign-in window closed, or an address without a ticket: the user's choice, not
         # a fault of the program (one line, no traceback).
         log.info("login: not signed in (%s)", type(e).__name__)
+        _error(_("Error: {error}").format(error=e))
+        return 1
+    except OrdinaryStop as e:
+        # Not an error (another sync running, a choice to make…): the user is told as
+        # before, the log says what it waits for.
+        log.info("stopped: %s", e.log_reason)
         _error(_("Error: {error}").format(error=e))
         return 1
     except user_errors as e:

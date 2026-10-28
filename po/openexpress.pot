@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 16:29+0100\n"
+"POT-Creation-Date: 2026-10-28 16:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -117,12 +117,12 @@ msgstr ""
 msgid "Temporary files"
 msgstr ""
 
-#: openexpress/cache.py:71
+#: openexpress/cache.py:73
 msgid ""
 "The cache is in use (a download or an install is running). Try again later."
 msgstr ""
 
-#: openexpress/cache.py:192
+#: openexpress/cache.py:194
 #, python-brace-format
 msgid "Could not delete {path}: {error}"
 msgstr ""
@@ -998,8 +998,8 @@ msgstr ""
 
 #: openexpress/cli.py:528 openexpress/cli.py:535 openexpress/cli.py:581
 #: openexpress/cli.py:590 openexpress/cli.py:620 openexpress/cli.py:625
-#: openexpress/cli.py:629 openexpress/cli.py:2400 openexpress/cli.py:2404
-#: openexpress/cli.py:2426
+#: openexpress/cli.py:629 openexpress/cli.py:2401 openexpress/cli.py:2407
+#: openexpress/cli.py:2411 openexpress/cli.py:2433
 #, python-brace-format
 msgid "Error: {error}"
 msgstr ""
@@ -2479,17 +2479,17 @@ msgid ""
 "gi gir1.2-gtk-4.0 gir1.2-adw-1), then run the command again."
 msgstr ""
 
-#: openexpress/cli.py:2408
+#: openexpress/cli.py:2415
 #, python-brace-format
 msgid "Server error: {error}"
 msgstr ""
 
-#: openexpress/cli.py:2413
+#: openexpress/cli.py:2420
 #, python-brace-format
 msgid "Network error: could not reach the Garmin server ({error})"
 msgstr ""
 
-#: openexpress/cli.py:2419
+#: openexpress/cli.py:2426
 msgid "Interrupted."
 msgstr ""
 
@@ -2630,102 +2630,102 @@ msgstr ""
 msgid "Garmin;Fenix;Connect;sync;"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:119
+#: openexpress/device/gio_storage.py:120
 msgid "the Flatpak is missing the permission to copy files to the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:136
+#: openexpress/device/gio_storage.py:137
 msgid "flatpak-spawn is not available"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:232 openexpress/device/gio_storage.py:249
+#: openexpress/device/gio_storage.py:233 openexpress/device/gio_storage.py:250
 #: openexpress/device/storage.py:338
 #, python-brace-format
 msgid "Cannot list {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:263 openexpress/device/gio_storage.py:272
-#: openexpress/device/gio_storage.py:277 openexpress/device/storage.py:345
+#: openexpress/device/gio_storage.py:264 openexpress/device/gio_storage.py:273
+#: openexpress/device/gio_storage.py:278 openexpress/device/storage.py:345
 #: openexpress/device/storage.py:355 openexpress/device/storage.py:360
 #, python-brace-format
 msgid "Cannot read {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:300 openexpress/device/gio_storage.py:321
+#: openexpress/device/gio_storage.py:301 openexpress/device/gio_storage.py:322
 #: openexpress/device/storage.py:371 openexpress/device/storage.py:384
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:419 openexpress/device/storage.py:408
+#: openexpress/device/gio_storage.py:420 openexpress/device/storage.py:408
 #, python-brace-format
 msgid "Cannot delete {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:425 openexpress/device/storage.py:412
+#: openexpress/device/gio_storage.py:426 openexpress/device/storage.py:412
 #, python-brace-format
 msgid "Cannot create directory {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:852 openexpress/device/gio_storage.py:909
-#: openexpress/device/gio_storage.py:1586
+#: openexpress/device/gio_storage.py:853 openexpress/device/gio_storage.py:910
+#: openexpress/device/gio_storage.py:1589
 msgid "Cannot mount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:874 openexpress/device/gio_storage.py:1573
+#: openexpress/device/gio_storage.py:875 openexpress/device/gio_storage.py:1576
 msgid "The device is not mounted."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:907
+#: openexpress/device/gio_storage.py:908
 msgid "Mounting the device timed out"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:940
+#: openexpress/device/gio_storage.py:941
 msgid ""
 "The drive is not mounted any more. If it was ejected, you can unplug the "
 "cable."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:942
+#: openexpress/device/gio_storage.py:943
 msgid "Cannot eject the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:989
+#: openexpress/device/gio_storage.py:990
 msgid "The device is ejected. You can unplug the cable."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:995
+#: openexpress/device/gio_storage.py:996
 msgid ""
 "Do not unplug the cable yet: the device may not see the update. Close any "
 "program that uses the drive and try again, or eject it in the file manager."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:997
+#: openexpress/device/gio_storage.py:998
 msgid ""
 "Do not unplug the cable yet: the device may not see the update. Close any "
 "program that uses the drive and eject it in the file manager."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1181
+#: openexpress/device/gio_storage.py:1184
 msgid ""
 "The device is connected in mass storage mode (as a USB drive): openExpress "
 "shows its information and software updates; sync, apps, maps and music are "
 "not supported in this mode."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1189
+#: openexpress/device/gio_storage.py:1192
 msgid ""
 "After it was ejected, the watch switched to its Garmin USB mode, which "
 "openExpress does not use. Unplug the cable and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1196
+#: openexpress/device/gio_storage.py:1199
 msgid ""
 "The Garmin device is connected, but its drive is not mounted. Open it in the "
 "file manager, or unplug the cable and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1203
+#: openexpress/device/gio_storage.py:1206
 msgid ""
 "The Garmin device is connected as a USB drive, but this version (Flatpak) "
 "has no access to /run/media, where the system mounted it."
@@ -2733,7 +2733,7 @@ msgstr ""
 
 #. TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
 #. it; "kquitapp6 kiod6" is a command, not to be translated
-#: openexpress/device/gio_storage.py:1255
+#: openexpress/device/gio_storage.py:1258
 msgid ""
 "KDE's MTP service may be holding the device: it keeps it after Dolphin is "
 "closed and takes it back when the cable is plugged in again. Close Dolphin "
@@ -2741,11 +2741,11 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
-#: openexpress/device/gio_storage.py:1262
+#: openexpress/device/gio_storage.py:1265
 msgid "No MTP support in the system (gvfs-mtp)"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1268
+#: openexpress/device/gio_storage.py:1271
 msgid ""
 "openExpress reads the device over MTP through gvfs, and gvfs on this system "
 "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: "
@@ -2753,53 +2753,53 @@ msgid ""
 "log out and back in, then plug the device in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1277
+#: openexpress/device/gio_storage.py:1280
 msgid ""
 "The device is still starting. Wait until it shows its usual screen, or "
 "unplug it and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1280
+#: openexpress/device/gio_storage.py:1283
 msgid ""
 "The Garmin device is connected, but it does not offer its files. Check its "
 "screen: if it is locked with a PIN or asks something, unlock it or confirm."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1286
+#: openexpress/device/gio_storage.py:1289
 msgid ""
 "No Garmin device (MTP) found. Connect the device with a USB cable and unlock "
 "it if it asks to allow the connection."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1343
+#: openexpress/device/gio_storage.py:1346
 msgid "The device is starting. Try again in a moment."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1359 openexpress/gui/detection.py:556
+#: openexpress/device/gio_storage.py:1362 openexpress/gui/detection.py:556
 #: openexpress/gui/detection.py:563 openexpress/gui/detection.py:578
 msgid "The device is starting…"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1373
+#: openexpress/device/gio_storage.py:1376
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1392
+#: openexpress/device/gio_storage.py:1395
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1564
+#: openexpress/device/gio_storage.py:1567
 #, python-brace-format
 msgid "{action}: the device did not answer in time"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1577
+#: openexpress/device/gio_storage.py:1580
 msgid "Cannot unmount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1597
+#: openexpress/device/gio_storage.py:1600
 msgid "The device was mounted again but its files are not visible."
 msgstr ""
 
@@ -2992,7 +2992,7 @@ msgstr ""
 msgid "No file_id message"
 msgstr ""
 
-#: openexpress/forget.py:35
+#: openexpress/forget.py:37
 #, python-brace-format
 msgid ""
 "{count} file of this device has not been uploaded yet and would be lost."
@@ -4829,7 +4829,7 @@ msgstr ""
 msgid "This can take a few minutes."
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:550
+#: openexpress/gui/window_tasks.py:558
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"
@@ -5910,23 +5910,23 @@ msgstr ""
 msgid "A device connected as a USB drive is not synced."
 msgstr ""
 
-#: openexpress/service.py:1069
+#: openexpress/service.py:1072
 msgid "Not logged in to Garmin Connect."
 msgstr ""
 
-#: openexpress/service.py:1074
+#: openexpress/service.py:1077
 msgid "Fetching configuration from the Garmin server…"
 msgstr ""
 
-#: openexpress/service.py:1083
+#: openexpress/service.py:1086
 msgid "Looking for new files on the device…"
 msgstr ""
 
-#: openexpress/service.py:1097
+#: openexpress/service.py:1100
 msgid "Checking for files from Garmin Connect…"
 msgstr ""
 
-#: openexpress/service.py:1172
+#: openexpress/service.py:1175
 #, python-brace-format
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""

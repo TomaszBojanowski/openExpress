@@ -19,7 +19,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from openexpress import applog, i18n, paths
-from openexpress.errors import UserFacingError
+from openexpress.errors import OrdinaryStop
 from openexpress.i18n import _
 from openexpress.settings import SSO_CLIENT_ID, Settings
 
@@ -44,8 +44,8 @@ class ServiceTicket:
     service: str
 
 
-class LoginCancelled(UserFacingError):
-    pass
+class LoginCancelled(OrdinaryStop):
+    log_reason = "sign-in cancelled"
 
 
 def sign_in_url(settings: Settings) -> str:

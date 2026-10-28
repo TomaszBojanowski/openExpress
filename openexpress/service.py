@@ -28,7 +28,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
-from openexpress.errors import UserFacingError
+from openexpress.errors import OrdinaryStop, UserFacingError
 from openexpress.i18n import N_, _, ngettext
 from openexpress.progress import Waiting
 from openexpress.settings import Settings, SetupError, language_tag, load_consumer
@@ -956,8 +956,8 @@ def describe_steps(lines) -> list[tuple[str, bool]]:
     return [said for line in lines or [] for said in _describe_step(line)]
 
 
-class SyncBusy(UserFacingError):
-    pass
+class SyncBusy(OrdinaryStop):
+    log_reason = "another sync is running"
 
 
 @contextlib.contextmanager
@@ -1002,6 +1002,9 @@ def run_sync(
     try:
         with sync_lock():
             summary = apply_sync(s, plan_sync(s, options, progress), progress)
+    except OrdinaryStop as e:
+        log.info("sync: %s", e.log_reason)  # the caller tells the user
+        raise
     except Exception as e:
         log.warning("sync: stopped after %.1f s: %s: %s", time.monotonic() - started,
                     type(e).__name__, e, extra=applog.TOLD)  # the caller tells why
@@ -1335,5 +1338,7 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     return []  # nothing to write, or not supported: in the log only (trueup.run)
 
 
-class FirstSyncChoiceNeeded(UserFacingError):
+class FirstSyncChoiceNeeded(OrdinaryStop):
     """First sync: either 'baseline' or 'all' must be chosen."""
+
+    log_reason = "waiting for the first-sync choice"

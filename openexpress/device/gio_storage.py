@@ -36,6 +36,7 @@ from openexpress.device.storage import (  # noqa: E402
     Storage,
     UmsStorage,
 )
+from openexpress.errors import OrdinaryStop  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import in_flatpak  # noqa: E402
 
@@ -1026,10 +1027,12 @@ class NotThereYet(DeviceError):
     """gvfs does not offer a Garmin device, or its files cannot be seen yet."""
 
 
-class MassStorageNotice(NotThereYet):
+class MassStorageNotice(NotThereYet, OrdinaryStop):
     """A Garmin device in mass storage mode is on USB, but its drive is not mounted or is
     out of the Flatpak's sight: a notice, not an error (the command line writes no "Error:"
     before it; the exit code stays 1)."""
+
+    log_reason = "a notice about the USB mode of the device"
 
 
 class SeveralDevices(DeviceError):

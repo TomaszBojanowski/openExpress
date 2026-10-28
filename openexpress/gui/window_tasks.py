@@ -32,7 +32,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress.errors import UserFacingError  # noqa: E402
+from openexpress.errors import OrdinaryStop, UserFacingError  # noqa: E402
 from openexpress.gui.tasks import WindowClosed  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
@@ -487,7 +487,11 @@ class TaskRunner:
             if isinstance(e, WindowClosed):  # stopped as the window closed: nothing to tell
                 ended()
                 return False
-            if isinstance(e, UserFacingError):
+            if isinstance(e, OrdinaryStop):
+                # Not a failure (the choice of the first sync, another sync running…): what it
+                # waits for, in one line.
+                log.info("task %s: %s", task_name(fn), e.log_reason)
+            elif isinstance(e, UserFacingError):
                 # A message for the user (the device not ready, a refusal, an answer of a
                 # server): one line, as the user is told.
                 log.info("task failed: %s: %s", type(e).__name__, e)
@@ -514,9 +518,13 @@ class TaskRunner:
             try:
                 result = fn()
             except Exception as e:  # optional work: said in the log, with its traceback
-                # unless it is a message for the user (as run_task)
-                log.info("background work %s failed: %s: %s", task_name(fn),
-                         type(e).__name__, e, exc_info=not isinstance(e, UserFacingError))
+                # unless it is a message for the user, and as what it waits for when it is an
+                # ordinary stop (as run_task)
+                if isinstance(e, OrdinaryStop):
+                    log.info("background work %s: %s", task_name(fn), e.log_reason)
+                else:
+                    log.info("background work %s failed: %s: %s", task_name(fn),
+                             type(e).__name__, e, exc_info=not isinstance(e, UserFacingError))
                 if on_error is not None:
                     GLib.idle_add(lambda err=e: (on_error(err), False)[1])
                 return
