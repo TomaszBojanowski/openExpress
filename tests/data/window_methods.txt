@@ -78,7 +78,6 @@ _render_net_status
 _render_start
 _render_update_state
 _report_and_log
-_report_text
 _report_view
 _reread_connected
 _run_pending_refresh

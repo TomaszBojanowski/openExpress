@@ -572,9 +572,8 @@ def remember_picture_address(device, url: str | None) -> None:
 
 
 # What the window's check of updates found, kept with the open device for its tile and
-# its page when it is not connected (and what is kept of the updates found).
+# its page when it is not connected.
 remember_update_found = tile_facts.note_update_check
-update_summary = tile_facts.update_summary
 
 
 def show_update_record(win) -> bool:

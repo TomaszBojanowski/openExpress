@@ -141,7 +141,3 @@ class Connected:
     def drew(self, summaries) -> None:
         """The start page drew the tiles of these devices."""
         self.drawn = uris(summaries)
-
-    def changed_since_drawn(self, summaries) -> bool:
-        """Whether these devices differ from those the start page drew last."""
-        return uris(summaries) != self.drawn

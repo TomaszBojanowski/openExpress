@@ -41,11 +41,6 @@ def report_log_note(dialog) -> None:
 
 class ReportDialog:
     @staticmethod
-    def _report_text(report_text: str, attach_log: bool) -> str:
-        """The report, with the end of the log when the user asked for it."""
-        return ReportDialog._report_and_log(report_text, attach_log)[0]
-
-    @staticmethod
     def _report_and_log(report_text: str, attach_log: bool) -> tuple[str, str | None]:
         """The report, with the end of the log when the user asked for it, and that log as
         the "Log" field of the form takes it (None without it): read once, so that both
