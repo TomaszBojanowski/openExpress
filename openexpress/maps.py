@@ -659,10 +659,7 @@ def _install(
         raise MapError(cannot_install_message(m))
     removing = removal_list(all_maps, m, rewriting=True)
     need = space_needed(storage, m, removing)
-    free = storage.free_space()
-    if free is not None and need + SPACE_MARGIN > free:
-        raise MapError(_("Not enough space on the device: {need} needed, {free} free")
-                       .format(need=human_size(need), free=human_size(free)))
+    storage.require_space(need, SPACE_MARGIN, error=MapError)
 
     files = write_order(m)
     local: dict[str, Path] = {}
@@ -734,13 +731,8 @@ def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,
     """Writes one file and checks its size. What a failed write leaves is cleaned up by the
     storage itself, unless `keep` (a file other maps use: never deleted); a file of the
     wrong size is deleted here, unless `keep`."""
-    real = storage.write_file(f.device_path, local, transfer_progress, keep_partial=keep)
-    ok = storage.size(real) == f.size
-    if not ok:
-        if not keep:
-            _delete_quietly(storage, real)
-        raise MapError(_("Write verification of {path} failed").format(path=real))
-    return real
+    return storage.write_file_checked(f.device_path, local, transfer_progress,
+                                      keep_partial=keep, error=MapError)
 
 
 def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
@@ -832,9 +824,3 @@ def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
     log.info("map removal: %s, %d files removed", m.name, len(removed))
     return removed
 
-
-def _delete_quietly(storage: Storage, path: str) -> None:
-    try:
-        storage.delete(path)
-    except Exception as e:  # noqa: BLE001
-        log.warning("Cannot delete %s: %s", path, e)

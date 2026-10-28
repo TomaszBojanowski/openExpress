@@ -438,3 +438,72 @@ def test_how_many_songs_were_copied_in_polish(count, words):
     finally:
         i18n.setup("en")
     assert said == words
+
+
+# --- files from Garmin Connect and TrueUp checked by their size (step 2, decision 1) -------------
+
+class ShortFit(LocalStorage):
+    """A device that keeps one byte less of a FIT file than it is given, and says nothing."""
+
+    def _write(self, real_path, data):
+        super()._write(real_path, data[:-1] if real_path.upper().endswith(".FIT") else data)
+
+
+class Full(LocalStorage):
+    """A device with 1.5 MB free."""
+
+    def free_space(self):
+        return 1_500_000
+
+
+def _course():
+    return {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
+            "metadata": {"messageurl": "course/7", "messagename": "Route"}}
+
+
+def test_a_file_from_connect_of_the_wrong_size_is_deleted_and_not_acknowledged(device_root,
+                                                                               tmp_path):
+    st = ShortFit(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    items = sync.plan_downloads(dev, [_course()])
+    client = SyncClient()
+    rep = sync.run_downloads(items, st, client,
+                             state=sync.SyncState(dev.unit_id, base=tmp_path / "state"))
+    assert len(rep.failed) == 1 and "Write verification" in rep.failed[0][1]
+    assert not rep.written and client.acks == []  # it comes again with the next sync
+    assert _files_in(st, items[0].target.path) == []
+
+
+def test_no_room_for_a_file_from_connect_is_said_as_everywhere(device_root, tmp_path):
+    """The words of maps, music and own maps (decision 3: already in Polish)."""
+    st = Full(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    items = sync.plan_downloads(dev, [_course()])
+    class Big(SyncClient):
+        def download_message(self, url, absolute):
+            return b"\x00" * 600_000
+
+    client = Big()
+    rep = sync.run_downloads(items, st, client,
+                             state=sync.SyncState(dev.unit_id, base=tmp_path / "state"))
+    assert [error for _label, error in rep.failed] == [
+        "Not enough space on the device: 600.0\u00a0kB needed, 1.5\u00a0MB free"]
+    assert client.acks == []
+
+
+def test_a_trueup_of_the_wrong_size_is_deleted(device_root):
+    dev = _trueup_device(device_root)
+    true_up = {"messageid": 2, "messagetype": "true_up", "devicexmldatatype": "FIT_TYPE_39",
+               "metadata": {"messageurl": "tu"}}
+
+    class Client:
+        def download_message(self, url, absolute):
+            return b"TRUEUP DATA"
+
+        def ack_message(self, mid):
+            pass
+
+    st = ShortFit(device_root)
+    with pytest.raises(DeviceError, match="Write verification"):
+        trueup.run(dev, st, Client(), [true_up])
+    assert _files_in(st, "Garmin/NewFiles") == []

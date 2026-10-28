@@ -19,7 +19,7 @@ from pathlib import Path
 from openexpress import applog, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import _, human_size
+from openexpress.i18n import _
 from openexpress.maps import SPACE_MARGIN, MapError
 
 log = logging.getLogger(__name__)
@@ -231,10 +231,7 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
             name=name), "reserved")
     if storage.resolve(path) is not None:  # whatever it is, and whatever its case
         raise _taken(name)
-    free = storage.free_space()
-    if free is not None and size + SPACE_MARGIN > free:
-        raise MapError(_("Not enough space on the device: {need} needed, {free} free")
-                       .format(need=human_size(size), free=human_size(free)))
+    free = storage.require_space(size, SPACE_MARGIN, error=MapError)
     return AddPlan(local, name, path, title, size, free)
 
 

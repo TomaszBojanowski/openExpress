@@ -52,6 +52,8 @@ SLEEP_TYPES = {"FIT_TYPE_49", "FIT_TYPE_50", "FIT_TYPE_51", "FIT_TYPE_52",
 # Queue items handled by dedicated modules instead of a plain file download.
 SPECIAL_DOWNLOAD_PREFIXES = {"IQ": "Connect IQ"}
 SPECIAL_DOWNLOAD_TYPES = {"FIT_TYPE_39": "TrueUp"}
+# The room kept free on the device besides a file from Garmin Connect's queue.
+DOWNLOAD_MARGIN = 1024 * 1024
 
 DOWNLOAD_NAME_PREFIX = {"FIT_TYPE_6": "course", "FIT_TYPE_5": "workout", "FIT_TYPE_11": "goal"}
 
@@ -810,11 +812,10 @@ def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
                     client.ack_message(it.message_id)
                     report.empty.append(label)
                     continue
-                free = storage.free_space()
-                if free is not None and free < len(data) + 1024 * 1024:
-                    raise ApiError(_("not enough space on the device"))
+                storage.require_space(len(data), DOWNLOAD_MARGIN, error=ApiError)
                 target = posixpath.join(it.target.path, it.device_name())  # type: ignore[union-attr]
-                real = storage.write(target, data)
+                # Of another size, it is deleted and not acknowledged: it comes again.
+                real = storage.write_checked(target, data)
             except (Unauthorized, DeviceNotVerified):
                 raise
             except Exception as e:  # noqa: BLE001

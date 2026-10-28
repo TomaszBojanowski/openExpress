@@ -148,7 +148,7 @@ def run(
         return result
     t = targets[0]
     name = f"{t.basename + '_' if t.basename else ''}{uuid.uuid4()}.{t.extension or 'FIT'}"
-    result.written = storage.write(posixpath.join(t.path, name), data)
+    result.written = storage.write_checked(posixpath.join(t.path, name), data)
     log.info("TrueUp: wrote %s to %s (waited %.0f s)", applog.size(len(data)), t.path,
              result.waited_s)
     return result

@@ -110,8 +110,8 @@ def test_a_system_update_is_copied_last_and_asks_for_a_restart(device_root, tmp_
     storage = LocalStorage(device_root)
     write = storage.write_file
     monkeypatch.setattr(storage, "write_file",
-                        lambda path, local, progress=None: copied.append(path) or write(
-                            path, local, progress))
+                        lambda path, local, progress=None, **kw: copied.append(path) or write(
+                            path, local, progress, **kw))
     report = updates.install(items, storage)
     assert copied == ["Garmin/Font/006-D0000-00.fnt", "Garmin/GUPDATE.GSP"]
     assert report.restart_required

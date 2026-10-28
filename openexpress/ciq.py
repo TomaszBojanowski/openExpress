@@ -1122,7 +1122,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 write_app_list(device, storage, build_in_bin(state.listed + new_entries))
             except Exception as e:
                 for p in new_paths:
-                    _delete_quietly(storage, p)
+                    storage.delete_quietly(p)
                 report.failed += [(name, str(e)) for _m, name in to_ack]
                 raise CiqError(_("Cannot register the apps on the device: {error}")
                                .format(error=e)) from e
@@ -1241,7 +1241,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
         return False
     if register_error is not None:
         for p in new_paths:
-            _delete_quietly(storage, p)
+            storage.delete_quietly(p)
         report.failed += [(name, str(register_error)) for _m, name in to_ack]
         report.failed += [(h.name, str(register_error)) for h in sent]
         to_ack.clear()
@@ -1351,13 +1351,6 @@ def _write_list_checked(storage: Storage, path: str, data: bytes) -> str:
     if storage.read(real) != data:
         raise CiqError(_("Write verification of {path} failed").format(path=real))
     return real
-
-
-def _delete_quietly(storage: Storage, path: str) -> None:
-    try:
-        storage.delete(path)
-    except Exception as e:  # noqa: BLE001
-        log.warning("Cannot delete %s: %s", path, e)
 
 
 def waiting_text(app: InstalledApp) -> str:

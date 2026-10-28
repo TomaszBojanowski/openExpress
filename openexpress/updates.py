@@ -432,12 +432,10 @@ def _install(
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,
         # and what _clear_the_place deleted does not come back.
-        real = storage.write_file(u.device_path, local, transfer_progress)
-        ok = storage.size(real) == size
-        if not ok:
-            # A truncated firmware file must not stay where the watch would install it.
-            _delete_quietly(storage, real)
-            raise UpdateError(_("Write verification of {path} failed").format(path=real))
+        # A truncated firmware file must not stay where the watch would install it: one of
+        # another size is deleted.
+        real = storage.write_file_checked(u.device_path, local, transfer_progress,
+                                          error=UpdateError)
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
         # The whole path from the device's folder, as mark_present names it (#11).
@@ -485,8 +483,3 @@ def install(*args, **kwargs) -> InstallReport:
         return _install(*args, **kwargs)
 
 
-def _delete_quietly(storage: Storage, path: str) -> None:
-    try:
-        storage.delete(path)
-    except Exception as e:  # noqa: BLE001 - cleanup after a failure: that one is reported
-        log.warning("Cannot delete %s: %s", path, e)

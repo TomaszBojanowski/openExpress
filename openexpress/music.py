@@ -275,10 +275,7 @@ def copied_before_text(count: int) -> str:
 
 def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lambda s: None,
          transfer_progress=None) -> list[str]:
-    free = storage.free_space()
-    if free is not None and plan.size + SPACE_MARGIN > free:
-        raise MusicError(_("Not enough space on the device: {need} needed, {free} free")
-                         .format(need=human_size(plan.size), free=human_size(free)))
+    storage.require_space(plan.size, SPACE_MARGIN, error=MusicError)
     written = []
     for t, dest in plan.to_copy:
         progress(_("Copying {path}").format(path=dest))
