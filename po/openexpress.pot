@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 16:47+0100\n"
+"POT-Creation-Date: 2026-10-28 16:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2901,7 +2901,7 @@ msgid "Cannot write {path}: it is a directory"
 msgstr ""
 
 #: openexpress/device/storage.py:255 openexpress/maps.py:664
-#: openexpress/music.py:274 openexpress/ownmaps.py:236
+#: openexpress/music.py:280 openexpress/ownmaps.py:236
 #, python-brace-format
 msgid "Not enough space on the device: {need} needed, {free} free"
 msgstr ""
@@ -4218,7 +4218,7 @@ msgstr ""
 msgid "Playlist “{name}” added"
 msgstr ""
 
-#: openexpress/gui/music_page.py:234 openexpress/music.py:359
+#: openexpress/gui/music_page.py:234 openexpress/music.py:371
 msgid "The playlist has no tracks that can be added."
 msgstr ""
 
@@ -5270,20 +5270,27 @@ msgid_plural "{count} files on the device will be replaced."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/music.py:278
+#: openexpress/music.py:272
+#, python-brace-format
+msgid "{count} file was copied before it."
+msgid_plural "{count} files were copied before it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/music.py:284
 #, python-brace-format
 msgid "Copying {path}"
 msgstr ""
 
-#: openexpress/music.py:290 openexpress/music.py:330
+#: openexpress/music.py:302 openexpress/music.py:342
 msgid "This device does not support playlists"
 msgstr ""
 
-#: openexpress/music.py:338
+#: openexpress/music.py:350
 msgid "file not found"
 msgstr ""
 
-#: openexpress/music.py:344
+#: openexpress/music.py:356
 msgid "format not supported by the device"
 msgstr ""
 

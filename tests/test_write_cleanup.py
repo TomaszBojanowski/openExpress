@@ -389,3 +389,52 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
     app.MainWindow._ask_install_map(win, m, 0, 0, [])
     questions[0].emit("response", "ok")
     assert errors == [("Installing Test Map…", WINDOW_TEXT)]
+
+
+# --- music: a file of the wrong size stops the copy (step 2 of the audit of 0.7.9) ---------------
+
+class ShortSong(LocalStorage):
+    """A device that keeps one byte less of the file named `short`, and says nothing."""
+
+    def __init__(self, root, short):
+        super().__init__(root)
+        self.short = short
+
+    def _write_file(self, real_path, local, progress=None):
+        super()._write_file(real_path, local, progress)
+        if real_path.endswith(self.short):
+            target = self._p(real_path)
+            target.write_bytes(target.read_bytes()[:-1])
+
+
+def test_a_song_of_the_wrong_size_stops_the_copy_and_is_deleted(iq_device, tmp_path):
+    """As with maps: the rest is not copied, the file of the wrong size is deleted, and the
+    message says how many files were copied before it."""
+    st, dev = iq_device
+    album = tmp_path / "lib" / "Artist A" / "Album B"
+    album.mkdir(parents=True)
+    for name in ("01 One", "02 Two", "03 Three"):
+        (album / f"{name}.mp3").write_bytes(b"ID3" + b"\x00" * 100)
+    plan = music.plan_copy(music.scan([tmp_path / "lib"], dev), dev, st)
+    assert [posixpath.basename(dest) for _t, dest in plan.to_copy] == [
+        "01 One.mp3", "02 Two.mp3", "03 Three.mp3"]
+    with pytest.raises(music.MusicError) as said:
+        music.copy(plan, ShortSong(st.root, "02 Two.mp3"))
+    assert str(said.value) == ("Write verification of Music/Artist A/Album B/02 Two.mp3 "
+                               "failed. 1 file was copied before it.")
+    assert _files_in(st, "Music/Artist A/Album B") == ["01 One.mp3"]
+
+
+@pytest.mark.parametrize(("count", "words"), [
+    (1, "Przed nim skopiowano 1 plik."), (2, "Przed nim skopiowano 2 pliki."),
+    (5, "Przed nim skopiowano 5 plików."), (22, "Przed nim skopiowano 22 pliki."),
+    (0, "Przed nim skopiowano 0 plików.")])
+def test_how_many_songs_were_copied_in_polish(count, words):
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        said = music.copied_before_text(count)
+    finally:
+        i18n.setup("en")
+    assert said == words

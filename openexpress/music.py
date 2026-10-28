@@ -267,6 +267,12 @@ def plan_copy(tracks: list[Track], device: GarminDevice, storage: Storage) -> Co
     return plan
 
 
+def copied_before_text(count: int) -> str:
+    """After a file of the wrong size: how many files were copied before it."""
+    return ngettext("{count} file was copied before it.", "{count} files were copied before it.",
+                    count).format(count=count)
+
+
 def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lambda s: None,
          transfer_progress=None) -> list[str]:
     free = storage.free_space()
@@ -276,7 +282,13 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lam
     written = []
     for t, dest in plan.to_copy:
         progress(_("Copying {path}").format(path=dest))
-        real = storage.write_file(dest, t.local, transfer_progress)
+        try:
+            real = storage.write_file_checked(dest, t.local, transfer_progress,
+                                              error=MusicError)
+        except MusicError as e:
+            # Of the wrong size: deleted, and the rest is not copied, as with maps.
+            log.info("music: stopped after %d files: one of the wrong size", len(written))
+            raise MusicError(f"{e}. {copied_before_text(len(written))}") from e
         written.append(real)
     # Counts and sizes only: file names are the user's own.
     log.info("music: %d files copied (%s)", len(written), applog.size(plan.size))
