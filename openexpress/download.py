@@ -52,16 +52,6 @@ def tokenize(url: str, salt: str, now: int | None = None) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
 
 
-class _NoMd5:
-    def __repr__(self) -> str:
-        return "NO_MD5"
-
-
-# Download without an MD5 check: only when the caller says so, never because the server's
-# value is missing or could not be read (that is refused).
-NO_MD5 = _NoMd5()
-
-
 def secure_url(url: str) -> str:
     """The address to ask: HTTPS as it is; plain HTTP over HTTPS instead (Garmin lists its
     fallback map hosts so, the same hosts it gives over HTTPS); anything else refused."""
@@ -126,25 +116,22 @@ def fetch(
     urls: list[str],
     dest: Path,
     size: int | None,
-    md5: str | _NoMd5 | None,
+    md5: str | None,
     session: requests.Session | None = None,
     progress: Callable[[int, int | None], None] | None = None,
 ) -> Path:
     """Download a file to `dest` (with resume), trying each URL in turn, over HTTPS only.
 
     A finished file with the correct size and MD5 is not downloaded again. Without an MD5
-    nothing is downloaded, unless `md5` is NO_MD5 (the caller knows there is none).
+    nothing is downloaded.
     """
-    if md5 is NO_MD5:
-        md5 = None
-    elif not md5:
+    if not md5:
         raise DownloadError(_("The server gave no MD5 checksum for this file, so it was not "
                               "downloaded"))
-    else:
-        given, md5 = md5, normalize_md5(md5)
-        if md5 is None:
-            raise DownloadError(_("Invalid MD5 checksum from the server: {value}")
-                                .format(value=given))
+    given, md5 = md5, normalize_md5(md5)
+    if md5 is None:
+        raise DownloadError(_("Invalid MD5 checksum from the server: {value}")
+                            .format(value=given))
     # Every address checked before any is asked; one asked twice (HTTP and HTTPS) once.
     urls = list(dict.fromkeys(secure_url(u) for u in urls))
     if not size:

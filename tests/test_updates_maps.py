@@ -96,7 +96,8 @@ def test_fetch_resume_and_verify(server, tmp_path):
     with pytest.raises(download.DownloadError):
         download.fetch([server + "/fw/aux.gcd"], tmp_path / "x", 300, md5hex(b"other"))
     # the first URL fails, the second works
-    download.fetch([server + "/missing", server + "/fw/aux.gcd"], tmp_path / "y", 300, download.NO_MD5)
+    download.fetch([server + "/missing", server + "/fw/aux.gcd"], tmp_path / "y", 300,
+                   md5hex(FILES["/fw/aux.gcd"]))
 
 
 def sw_response(base):

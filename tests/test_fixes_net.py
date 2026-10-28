@@ -226,7 +226,7 @@ def ranged(ignore_start=False, content_range=True, wrong_start=False):
 def test_size_zero_without_part(server, tmp_path):
     server.routes["/f"] = (200, {}, DATA)
     dest = tmp_path / "f.bin"
-    download.fetch([server.url + "/f"], dest, 0, download.NO_MD5)
+    download.fetch([server.url + "/f"], dest, 0, md5hex(DATA))
     assert dest.read_bytes() == DATA
     assert ranges(server) == [None]  # one request, nothing downloaded twice
 
@@ -244,7 +244,7 @@ def test_resume_checks_content_range(server, tmp_path, kw, asked):
     server.routes["/f"] = ranged(**kw)
     dest = tmp_path / "f.bin"
     dest.with_name("f.bin.part").write_bytes(DATA[:1000])
-    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
+    download.fetch([server.url + "/f"], dest, None, md5hex(DATA))
     assert dest.read_bytes() == DATA
     assert ranges(server) == asked
 
@@ -270,7 +270,7 @@ def test_416_with_complete_part(server, tmp_path):
     # A .part longer than the file: deleted and downloaded again without Range.
     dest.unlink()
     part.write_bytes(DATA + b"junk")
-    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
+    download.fetch([server.url + "/f"], dest, None, md5hex(DATA))
     assert dest.read_bytes() == DATA
     assert not part.exists()
     assert ranges(server)[1:] == [f"bytes={len(DATA) + 4}-", None]
@@ -476,14 +476,6 @@ def test_a_download_without_an_md5_is_refused_before_any_request(tmp_path, md5):
         download.fetch(["https://download.garmin.com/f"], tmp_path / "f.bin", 4, md5,
                        session=session)
     assert session.asked == []
-
-
-def test_a_download_without_a_check_is_said_so(server, tmp_path):
-    """Without an MD5 only when the caller says so: download.NO_MD5."""
-    server.routes["/f"] = (200, {}, DATA)
-    dest = tmp_path / "f.bin"
-    download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
-    assert dest.read_bytes() == DATA
 
 
 def test_http_is_asked_over_https(tmp_path):

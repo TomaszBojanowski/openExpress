@@ -205,7 +205,7 @@ def test_downloads_are_noted_and_a_refused_address_is_no_sign_in(tmp_path, netwo
     for status, state in ((403, netstatus.ONLINE), (502, netstatus.SERVER_PROBLEM)):
         network_state.clear()
         with pytest.raises(download.DownloadError):
-            download.fetch(["https://download.garmin.com/a.img"], tmp_path / "a", None, download.NO_MD5,
+            download.fetch(["https://download.garmin.com/a.img"], tmp_path / "a", None, "0" * 32,
                            session=Http(status))
         assert network_state.state() == state
 

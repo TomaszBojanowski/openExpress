@@ -61,7 +61,7 @@ def test_a_failed_download_does_not_show_the_signed_address(tmp_path):
             raise _refused_like_requests(url)
 
     with pytest.raises(download.DownloadError) as said:
-        download.fetch([url], tmp_path / "a", None, download.NO_MD5, session=Broken())
+        download.fetch([url], tmp_path / "a", None, "0" * 32, session=Broken())
     text = str(said.value)
     assert "https://download.garmin.com/a.img: " in text  # which file, without its query
     assert SIGNATURE not in text and "garmindlm" not in text and "?" not in text
