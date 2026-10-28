@@ -3255,6 +3255,26 @@ def test_failed_unmount_opens_nothing(exclusive, monkeypatch):
     assert events == []  # still mounted: no USB access and no second mount
 
 
+def _settling_fast(monkeypatch):
+    """The device is watched after an unmount that did not finish: in a fraction of a
+    second here."""
+    for name, value in (("SETTLED_S", 0.05), ("SETTLE_POLL_S", 0.01), ("SETTLE_LIMIT_S", 0.5)):
+        monkeypatch.setattr(gio_storage, name, value, raising=False)
+
+
+def _seen_mounted_once_mounted_again(monkeypatch, st, events):
+    """What the session sees of the device after an unmount that did not finish: unmounted
+    (no mount in the volume monitor), until it is mounted again (the made-up _remount of
+    `exclusive`); then its mount and its files."""
+    shown = []
+    remount = gio_storage._remount
+    monkeypatch.setattr(gio_storage, "_remount",
+                        lambda uri, storage: (remount(uri, storage), shown.append(True)))
+    monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(
+        lambda: FakeMonitor(mounts=[FakeMount(NUMERIC)] if shown else [])))
+    monkeypatch.setattr(st, "exists", lambda path: bool(shown))
+
+
 def _unmount_without_an_answer(monkeypatch):
     """The unmount gets no answer: at its time limit (here 0.2 s) it is cancelled."""
     from gio_fake import GioOp
@@ -3262,20 +3282,28 @@ def _unmount_without_an_answer(monkeypatch):
     monkeypatch.setattr(gio_storage, "CANCEL_WAIT_S", 0.1, raising=False)
     monkeypatch.setattr(gio_storage, "_unmount", lambda uri: gio_storage._wait(
         GioOp("never").start, 0.2, "Cannot unmount the device"))
+    _settling_fast(monkeypatch)
 
 
 def test_an_unmount_that_timed_out_is_followed_by_a_mount(exclusive, monkeypatch, caplog):
     """gvfs may unmount the device all the same after the cancel (step 4 after the audit of
-    0.7.9, A8): it is mounted again (or found mounted), and nothing of the session runs."""
+    0.7.9, A8): once it is seen unmounted it is mounted again, and nothing of the session runs
+    (the race itself: test_unmount_race.py)."""
     st, _fake, events = exclusive
     _unmount_without_an_answer(monkeypatch)
+    _seen_mounted_once_mounted_again(monkeypatch, st, events)
     with caplog.at_level(logging.INFO, logger="openexpress"), \
             pytest.raises(gio_storage.DeviceError) as error, st.exclusive_ptp():
         pytest.fail("the block must not run")
     assert str(error.value) == "Cannot unmount the device: the device did not answer in time"
     assert events == [("mount", NUMERIC, False)]  # no USB, no session
-    assert "PTP: the unmount did not end: mounting the device again" in [
-        r.getMessage() for r in caplog.records]
+    said = [r.getMessage() for r in caplog.records if r.getMessage().startswith("PTP:")]
+    assert said[:4] == [
+        "PTP: unmounting the device from gvfs",
+        "PTP: the unmount did not finish in time: seeing how the device settles",
+        said[2], "PTP: mounting the device again (try 1 of 3)"]
+    assert said[2].startswith("PTP: the device is unmounted (after ")
+    assert said[4].startswith("PTP: the device is mounted (after ")
 
 
 def test_a_device_not_mounted_again_then_says_so(exclusive, monkeypatch):
@@ -3295,12 +3323,15 @@ def test_a_device_not_mounted_again_then_says_so(exclusive, monkeypatch):
 
 
 def test_an_unmount_stopped_by_ctrl_c_is_followed_by_a_mount(exclusive, monkeypatch):
+    """As at the time limit: mounted again once it is seen unmounted."""
     st, _fake, events = exclusive
 
     def interrupted(uri):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(gio_storage, "_unmount", interrupted)
+    _settling_fast(monkeypatch)
+    _seen_mounted_once_mounted_again(monkeypatch, st, events)
     with pytest.raises(KeyboardInterrupt), st.exclusive_ptp():
         pytest.fail("the block must not run")
     assert events == [("mount", NUMERIC, False)]
@@ -3319,6 +3350,7 @@ def test_ctrl_c_stays_ctrl_c_when_mounting_again_fails(exclusive, monkeypatch, c
 
     monkeypatch.setattr(gio_storage, "_unmount", interrupted)
     monkeypatch.setattr(gio_storage, "_remount", refused)
+    _settling_fast(monkeypatch)
     with caplog.at_level(logging.WARNING, logger="openexpress"), \
             pytest.raises(KeyboardInterrupt), st.exclusive_ptp():
         pytest.fail("the block must not run")

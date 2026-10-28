@@ -850,22 +850,28 @@ def _mass_storage_on_usb() -> list[tuple[str, str]]:
 MOUNT_SHOWN_S = 5.0  # how long a drive just mounted may take to be shown by the volume monitor
 
 
+def _turn_main_context() -> None:
+    """In the main thread outside a main loop (the command line) the volume monitor gets its
+    signals only while the global default context turns: turned here, without waiting. In a
+    worker thread nothing: the main thread handles them (the window's)."""
+    if threading.current_thread() is threading.main_thread():
+        context = GLib.MainContext.default()
+        for _turn in range(100):
+            if not context.iteration(False):
+                break
+
+
 def _shown_mount(volume, sleep=time.sleep):
     """The mount of a volume just mounted. The volume monitor shows it once it has its
     signal, which the main thread handles (the window's, or ours on the command line), while
     the answer to the mount comes to the thread that waited for it: so it may come a moment
     later. None when it is not shown within MOUNT_SHOWN_S."""
     started = time.monotonic()
-    on_main = threading.current_thread() is threading.main_thread()
     while True:
         mounted = volume.get_mount() if volume is not None else None
         if mounted is not None or time.monotonic() - started >= MOUNT_SHOWN_S:
             break
-        if on_main:  # nobody else handles the signals of the monitor here
-            context = GLib.MainContext.default()
-            for _turn in range(100):
-                if not context.iteration(False):
-                    break
+        _turn_main_context()
         sleep(0.1)
     waited = time.monotonic() - started
     if mounted is not None and waited >= 0.1:
@@ -1557,6 +1563,13 @@ UNMOUNT_TIMEOUT_S = 30.0
 CANCEL_WAIT_S = 5.0  # for the answer of an operation cancelled at its time limit
 
 
+class DeviceNotBack(RemountFailed):
+    """After an unmount that did not finish in time the device did not come back. The text
+    says what to do, so the callers do not add it again."""
+
+    says_replug = True
+
+
 class GioTimedOut(DeviceError):
     """A Gio operation that did not answer within its time limit: it was cancelled, and its
     answer was the cancel, an error, or none at all. gvfs may still be at it."""
@@ -1702,6 +1715,78 @@ def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
     raise RemountFailed(_("The device was mounted again but its files are not visible."))
 
 
+# --- the device as it really is, after an unmount that did not finish in time ------------
+#
+# An unmount cancelled at its time limit answers "cancelled" at once, but gvfs may go on: in
+# the live test of 28.10.2026 (Edge 1050, a time limit of 1 ms) the device was found mounted
+# ("mounted already"), and then the unmount took effect and left it without a mount. So the
+# device is watched until it settles, and mounted again only once it is seen unmounted.
+
+MOUNTED, UNMOUNTED, BETWEEN = "mounted", "unmounted", "between"
+SETTLE_POLL_S = 0.25
+SETTLED_S = 2.0  # the same state this long: settled
+SETTLE_LIMIT_S = 15.0
+MOUNT_BACK_TRIES = 3
+
+
+def _device_state(uri: str, storage: Storage) -> str:
+    """MOUNTED: the volume monitor shows its mount and its GarminDevice.xml is seen;
+    UNMOUNTED: no mount of it; BETWEEN: a mount, but no files."""
+    key = _key(uri)
+    if not any(m.get_root() is not None and _key(m.get_root().get_uri()) == key
+               for m in Gio.VolumeMonitor.get().get_mounts()):
+        return UNMOUNTED
+    try:
+        seen = storage.exists("GARMIN/GarminDevice.xml")
+    except (DeviceError, GLib.Error):
+        seen = False
+    return MOUNTED if seen else BETWEEN
+
+
+def _settled_state(uri: str, storage: Storage, sleep=time.sleep) -> tuple[str | None, float]:
+    """The state of the device once it has stayed the same for SETTLED_S (looked at every
+    SETTLE_POLL_S), and how long that took; None when it does not settle within
+    SETTLE_LIMIT_S."""
+    started = time.monotonic()
+    state, since = None, started
+    while True:
+        _turn_main_context()  # the signals of the monitor, on the command line
+        now_state, now = _device_state(uri, storage), time.monotonic()
+        if now_state != state:
+            state, since = now_state, now
+        elif now - since >= SETTLED_S:
+            return state, now - started
+        if now - started >= SETTLE_LIMIT_S:
+            return None, now - started
+        sleep(SETTLE_POLL_S)
+
+
+def _mount_back(uri: str, storage: Storage, sleep=time.sleep) -> None:
+    """After an unmount that did not finish in time: the device is left as it settles when it
+    is mounted; mounted again (at most MOUNT_BACK_TRIES times) only once it is seen
+    unmounted: "mounted already" from gvfs may be the state before the unmount finishes.
+    DeviceNotBack when it does not come back."""
+    log.info("PTP: the unmount did not finish in time: seeing how the device settles")
+    tries = 0
+    while True:
+        state, took = _settled_state(uri, storage, sleep)
+        log.info("PTP: the device is %s (after %.1f s)", state or "not settled", took)
+        if state == MOUNTED:
+            return
+        if tries == MOUNT_BACK_TRIES:
+            break
+        tries += 1
+        if state == UNMOUNTED:
+            log.info("PTP: mounting the device again (try %d of %d)", tries, MOUNT_BACK_TRIES)
+            try:
+                _remount(uri, storage)
+            except RemountFailed as e:
+                log.info("PTP: mounting again failed: %s", e)
+    log.info("PTP: the device did not come back")
+    raise DeviceNotBack(_("The device did not come back after an unmount that did not finish "
+                          "in time. Unplug it and plug it in again."))
+
+
 @contextmanager
 def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | None = None):
     _quiet_until[_key(uri)] = float("inf")
@@ -1713,11 +1798,11 @@ def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | 
         try:
             _unmount(uri)
         except (GioTimedOut, KeyboardInterrupt) as stopped:
-            # Cancelled, gvfs may unmount it all the same: mounted again (or found mounted), so
-            # that it is not left without a mount. A refusal leaves it mounted: nothing to do.
-            log.info("PTP: the unmount did not end: mounting the device again")
+            # Cancelled, gvfs may unmount it all the same, now or a moment later: seen as it
+            # settles, mounted again if it is unmounted, so that it is not left without a
+            # mount. A refusal leaves it mounted: nothing to do.
             try:
-                _remount(uri, storage)
+                _mount_back(uri, storage)
             except RemountFailed:
                 if not isinstance(stopped, KeyboardInterrupt):
                     raise  # the callers say it: unplug the device and plug it in again

@@ -34,7 +34,10 @@ class CopyNotStarted(DeviceError):
 
 
 class RemountFailed(DeviceError):
-    """The device was not mounted again after a PTP session."""
+    """The device was not mounted again after a PTP session. `says_replug`: the text says
+    itself to unplug the device and plug it in again."""
+
+    says_replug = False
 
 
 @dataclass(frozen=True)

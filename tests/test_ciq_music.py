@@ -1121,6 +1121,23 @@ def test_failed_remount_is_reported_but_the_install_counts(hidden_apps):
     assert fake_in_bin(fake) is not None
 
 
+NOT_BACK = ("The device did not come back after an unmount that did not finish in time. "
+            "Unplug it and plug it in again.")
+
+
+def test_a_device_not_back_is_told_to_be_replugged_once(hidden_apps):
+    """The unmount for the session did not finish in time and the device did not come back
+    (step 4 after the audit of 0.7.9, A8, §10): its error says what to do; the app waits for
+    the phone, as when no session could be had."""
+    from openexpress.device import gio_storage
+
+    st, dev, fake = hidden_apps
+    st.open_error = gio_storage.DeviceNotBack(NOT_BACK)
+    rep = ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={}, direct=True)
+    assert rep.failed == [("USB connection", NOT_BACK)]
+    assert rep.for_phone == ["Face It"]
+
+
 OTHER_APP = uuid.UUID("11111111-2222-4333-8444-555555555555")
 OTHER_MESSAGE = {"messageid": 8, "devicexmldatatype": "IQWatchFaces",
                  "metadata": {"messageurl": "y", "messagename": "Other",
@@ -1567,6 +1584,16 @@ def test_failed_remount_after_a_removal(hidden_spot):
     assert str(error.value) == ("Face It was removed, but the device could not be mounted again: "
                                 "Cannot mount the device. Unplug the device and plug it in again.")
     assert fake_in_bin(fake) is not None
+
+
+def test_a_removal_whose_device_did_not_come_back_says_it_once(hidden_spot):
+    from openexpress.device import gio_storage
+
+    st, dev, fake, app = hidden_spot
+    st.open_error = gio_storage.DeviceNotBack(NOT_BACK)
+    with pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
+    assert str(error.value) == NOT_BACK
 
 
 def break_removal(monkeypatch, fake, where):

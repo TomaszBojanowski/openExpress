@@ -1255,8 +1255,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
             # The session broke, then the device was not mounted again: what became of each
             # app first, then the USB connection.
             broken_off(broken[0])
-        report.failed.append((_("USB connection"), _(
-            "{error} Unplug the device and plug it in again.").format(error=_sentence(e))))
+        report.failed.append((_("USB connection"), _replug(e)))
         if not opened:
             report.for_phone += [h.name for h in hidden]
         if broken:
@@ -1312,6 +1311,14 @@ def _ptp_delete(session, handle: int | None, path: str) -> list[str]:
         log.warning("Cannot delete the unfinished file %s on the device: %s", path, e)
         return [path]
     return []
+
+
+def _replug(error) -> str:
+    """The device was not mounted again: the error, then what to do, unless it says that
+    itself (DeviceNotBack)."""
+    if getattr(error, "says_replug", False):
+        return _sentence(error)
+    return _("{error} Unplug the device and plug it in again.").format(error=_sentence(error))
 
 
 def _sentence(error) -> str:
@@ -1566,7 +1573,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
         # What became of the app first, then the USB connection to renew.
         said = (what_became(ended[0]) if ended else list_left() if problem is not None
                 else None)
-        usb = _("{error} Unplug the device and plug it in again.").format(error=_sentence(e))
+        usb = _replug(e)
         raise CiqError(usb if said is None else said + "\n" + usb) from e
     except DeviceError as e:
         # The session broke (or could not start); the device is mounted again.
