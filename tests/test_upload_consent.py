@@ -6,7 +6,7 @@ import requests
 from fakes import step_words
 from test_fixes_ui import FakeClient, fake_client  # noqa: F401 - the fixture
 
-from openexpress import service, sync
+from openexpress import last_sync, service, sync
 from openexpress.cli import main
 from openexpress.connect import ApiError, ClockSkew, Unauthorized
 
@@ -311,7 +311,8 @@ def test_window_and_background_sync_use_the_same_gate(device_root, xdg):
                    if line.startswith("Nothing was uploaded")]
         assert len(blocked) == (0 if uploads else 1) and summary.errors == []
         if not uploads:  # the window and the background sync keep the reason as well
-            assert summary.counts == "nothing uploaded: device sync is off in the account · 1 received"
+            told = last_sync.describe(summary.record())
+            assert told.counts == "nothing uploaded: device sync is off in the account · 1 received"
 
 
 # --- the last sync: numbers kept, words made when shown -----------------------------------------
@@ -333,11 +334,12 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
          "rejected": 0, "errors": 0},
         {"kind": "received_files", "types": {"FIT_TYPE_6": 1}}]  # since 25.10.2026
     # The same words in the summary and from what is stored.
-    assert "Files from the device: activities ×2" in summary.text.splitlines()
-    assert "2 new files, 2 uploaded · 1 received" in summary.text.splitlines()
+    text = last_sync.describe(summary.record()).text
+    assert "Files from the device: activities ×2" in text.splitlines()
+    assert "2 new files, 2 uploaded · 1 received" in text.splitlines()
     stored = service.load_last_sync(UNIT)
     assert [service.describe_counts(stored),
-            *step_words(stored["lines"])] == summary.text.splitlines()
+            *step_words(stored["lines"])] == text.splitlines()
 
 
 def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
@@ -353,10 +355,11 @@ def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
     s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
     summary = service.run_sync(s, first_run="all")
     assert summary.downloaded == 1
-    assert summary.text.splitlines() == ["2 new files, 2 uploaded · 1 received",
-                                         "Files from the device: activities ×2",
-                                         "1 file from Garmin Connect: courses"]
-    assert not any(line.endswith(".") for line in summary.text.splitlines())
+    text = last_sync.describe(summary.record()).text
+    assert text.splitlines() == ["2 new files, 2 uploaded · 1 received",
+                                 "Files from the device: activities ×2",
+                                 "1 file from Garmin Connect: courses"]
+    assert not any(line.endswith(".") for line in text.splitlines())
 
 
 def test_the_last_sync_is_put_into_words_when_shown(xdg):

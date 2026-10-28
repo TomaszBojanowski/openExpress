@@ -338,4 +338,5 @@ def test_the_notification_of_the_background_sync_says_what_the_row_says(monkeypa
         "3 new files, 1 uploaded", "Files from the device: activities ×3",
         "1 file was rejected by Garmin", "1 file could not be uploaded",
         "Errors: FIT_TYPE_4/2026-10-01-10-00-00.fit: HTTP 500"]
-    assert summary.counts == told.counts and summary.text == told.text
+    unnamed = last_sync.describe(summary.record())
+    assert unnamed.counts == told.counts and unnamed.text == told.text

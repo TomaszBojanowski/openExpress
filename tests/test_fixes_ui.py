@@ -861,18 +861,18 @@ def test_nothing_can_be_said_without_a_size_or_an_md5(offered):
     root, answer = offered
     st = LocalStorage(root)
     u = upd.parse_updates(answer)[0]
-    assert upd.is_on_device(st, u)
+    assert upd.mark_present(st, [u])[0].on_device
     for change in ({"md5": None}, {"md5": "not-an-md5"}, {"size": None}, {"size": 0}):
         other = upd.parse_updates(answer)[0]
         for name, value in change.items():
             setattr(other, name, value)
-        assert not upd.is_on_device(st, other), change
+        assert not upd.mark_present(st, [other])[0].on_device, change
 
     def broken(path):
         raise DeviceError("the device went away")
 
     st.read = broken
-    assert not upd.is_on_device(st, u)  # not known to be there: offered as before
+    assert not upd.mark_present(st, [u])[0].on_device  # not known to be there: offered as before
 
 
 def test_readable_names_of_types_and_severities(offered):

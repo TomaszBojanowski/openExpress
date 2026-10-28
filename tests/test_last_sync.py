@@ -7,7 +7,7 @@ import pytest
 from fakes import step_words
 from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
-from openexpress import i18n, service, sync
+from openexpress import i18n, last_sync, service, sync
 from openexpress.cli import main
 
 
@@ -334,11 +334,13 @@ def test_the_command_line_says_what_the_window_shows(device_root, xdg, fake_clie
 def test_the_notification_says_what_the_window_shows():
     summary = service.SyncSummary(uploaded=1, lines=[
         "First sync.", service.new_files_step([]), service.uploads_step(_report(uploaded=1))])
-    # watch.py uses .text: the numbers of the row, then the details.
-    assert summary.text.splitlines() == [
+    # Without errors the notification of watch.py is this text: the numbers of the row, then
+    # the details.
+    text = last_sync.describe(summary.record()).text
+    assert text.splitlines() == [
         service.describe_counts({"uploaded": 1, "lines": summary.lines}),
         *step_words(summary.lines)]
-    assert summary.text.splitlines() == ["1 new file, 1 uploaded", "First sync."]
+    assert text.splitlines() == ["1 new file, 1 uploaded", "First sync."]
 
 
 # --- the types of new files ------------------------------------------------------------------
