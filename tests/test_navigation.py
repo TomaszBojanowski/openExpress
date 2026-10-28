@@ -200,6 +200,14 @@ PLANS = [
     ("P-own-mount", Cause.PLUGGED, (W + "/",), WATCH_LABEL, (W,), False, CheckOpen()),
     ("P-own-mount-moved", Cause.PLUGGED, (W + "/",), WATCH_LABEL, (W,), True,
      Detect()),
+    # A drive's own mount as Gio gives it, without "/" at the end.
+    ("P-own-drive-mount", Cause.PLUGGED, (V,), V + "/", (V,), False, CheckOpen()),
+    # Another drive whose name starts as the open one's (udisks mounts a second "GARMIN" as
+    # "GARMIN1"): not the open drive's mount, whichever of the two is open.
+    ("P-drive-of-the-same-start-plugged", Cause.PLUGGED, (V + "1",), V + "/", (V,), False,
+     ReadList()),
+    ("P-drive-of-the-same-start-open", Cause.PLUGGED, (V,), V + "1/", (V + "1",), False,
+     ReadList()),
     # Its own mount and another device's: at the same place on USB the list is read again;
     # at another place it is opened again, and the list read after that.
     ("P-own-and-new-mount", Cause.PLUGGED, (W + "/", E + "/"), WATCH_LABEL, (W,), False,
