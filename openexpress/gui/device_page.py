@@ -1423,7 +1423,9 @@ class DevicePage:
             self._count_activities_again()
 
         def failed(e):
-            self._count_activities_again()  # what it uploaded before it stopped is done
+            # What it uploaded before it stopped is done: kept in its record (run_sync).
+            self._show_last_sync()
+            self._count_activities_again()
             if isinstance(e, service.FirstSyncChoiceNeeded):
                 self.ask_first_sync()
                 return True

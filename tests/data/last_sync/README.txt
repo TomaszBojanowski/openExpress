@@ -26,3 +26,7 @@ format-*: the shapes older versions wrote, with made-up numbers; and shapes of t
   one ECG recording, which is never uploaded (it needs a Garmin Health account): the line
   ecg_not_uploaded after the uploads; tests/test_ecg_not_uploaded.py checks it is what a
   sync writes. Synthetic: no real sync has made it yet (marked "synthetic" in it).
+  format-0.7.10-stopped.json: a sync stopped after its uploads (Garmin Connect's queue did
+  not answer): its record kept with the error that stopped it, as one of its errors (kept in
+  the words of the moment of the sync, as every error); tests/test_stopped_sync.py checks it
+  is what a sync writes. Synthetic: no real sync has made it yet (marked "synthetic" in it).

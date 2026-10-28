@@ -189,6 +189,15 @@ EXPECTED = {
         "pl": ("1 nowy plik, 1 wysłany", [
             (f"Pliki z{NB}urządzenia: monitorowanie", False),
             (f"TrueUp: czekanie przerwane; przyjdzie z{NB}następną synchronizacją", False)])},
+    # A sync stopped after its uploads (0.7.10; made up, as no real sync has kept one): the
+    # error that stopped it among its errors, in the words of the moment of the sync.
+    "format-0.7.10-stopped.json": {
+        "en": ("2 new files, 2 uploaded", [
+            ("Files from the device: activities, monitoring", False),
+            ("The sync stopped before the end: Connect file queue: HTTP 503", True)]),
+        "pl": ("2 nowe pliki, 2 wysłane", [
+            (f"Pliki z{NB}urządzenia: aktywności, monitorowanie", False),
+            ("The sync stopped before the end: Connect file queue: HTTP 503", True)])},
     "format-0.6.13-warnings.json": {
         "en": ("3 new files, 1 uploaded", [
             ("Files from the device: activities ×3", False),

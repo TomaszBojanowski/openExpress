@@ -711,7 +711,7 @@ def cmd_sync(args) -> int:
             file=sys.stderr,
         )
         return FIRST_SYNC_CHOICE
-    except Exception as e:
+    except (Exception, KeyboardInterrupt) as e:
         done = service.done_before(e)
         if done is not None:  # stopped after its uploads: what they did, then the error
             _print_sync_steps(done, dev.unit_id)

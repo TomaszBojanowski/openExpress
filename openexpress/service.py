@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 import requests
@@ -1005,9 +1005,17 @@ def run_sync(
     except OrdinaryStop as e:
         log.info("sync: %s", e.log_reason)  # the caller tells the user
         raise
+    except KeyboardInterrupt as e:
+        log.info("sync: interrupted after %.1f s (Ctrl+C)", time.monotonic() - started)
+        # TRANSLATORS: under "Last sync", in its details: Ctrl+C on the command line
+        _keep_stopped(s.device.unit_id, e, _("The sync was interrupted before the end (Ctrl+C)"))
+        raise
     except Exception as e:
         log.warning("sync: stopped after %.1f s: %s: %s", time.monotonic() - started,
                     type(e).__name__, e, extra=applog.TOLD)  # the caller tells why
+        # TRANSLATORS: under "Last sync", in its details: the error that stopped the sync
+        _keep_stopped(s.device.unit_id, e, _("The sync stopped before the end: {error}").format(
+            error=_stop_text(e)))
         raise
     save_last_sync(s.device.unit_id, summary)
     log.info("sync: end after %.1f s: %d uploaded, %d already known, %d downloaded, %d errors",
@@ -1151,10 +1159,39 @@ def apply_sync(s: DeviceSession, plan: SyncPlan,
     if options.downloads:
         try:
             _apply_queue(s, plan_queue(s, progress), state, progress, out)
-        except Exception as e:
+        except (Exception, KeyboardInterrupt) as e:  # Ctrl+C too: the uploads are done
             e.sync_done_before = out  # what was done before it stopped (done_before)
             raise
     return out
+
+
+def _stop_text(error: Exception) -> str:
+    """The error that stopped a sync, as the record keeps it: its words, those of a network
+    error without the address it names."""
+    if isinstance(error, requests.RequestException):
+        return applog.network_error_text(error)
+    return str(error) or type(error).__name__
+
+
+def _keep_stopped(unit_id: int, error: BaseException, why: str) -> None:
+    """A sync stopped after its uploads: its record kept with what it did (done_before) and
+    `why` it stopped, as one of its errors, so that "Last sync" and the tiles tell this sync,
+    whose files are in Garmin Connect. Stopped before its uploads: nothing was done, and the
+    record of the sync before stays. The summary of the error is left as it is (the command
+    line prints it)."""
+    done = done_before(error)
+    if done is None:
+        return
+    kept = replace(done, errors=[*done.errors, why])
+    try:
+        save_last_sync(unit_id, kept)
+    except Exception as e:  # noqa: BLE001 - the error that stopped the sync is the one told
+        log.warning("sync: the record of the stopped sync could not be kept: %s: %s",
+                    type(e).__name__, e)
+        return
+    log.info("sync: the record of the stopped sync kept: %d uploaded, %d already known, "
+             "%d downloaded, %d errors", kept.uploaded, kept.skipped_known, kept.downloaded,
+             len(kept.errors))
 
 
 def done_before(error: BaseException) -> SyncSummary | None:
