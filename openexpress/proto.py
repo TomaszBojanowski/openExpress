@@ -61,10 +61,6 @@ def decode(data: bytes) -> list[Field]:
     return out
 
 
-def first(fields: list[Field], number: int, default=None):
-    return next((f.value for f in fields if f.number == number), default)
-
-
 def _varint(n: int) -> bytes:
     if n < 0:
         n &= (1 << 64) - 1
@@ -85,7 +81,3 @@ def enc_varint(number: int, value: int | bool) -> bytes:
 
 def enc_bytes(number: int, value: bytes) -> bytes:
     return _varint(number << 3 | LEN) + _varint(len(value)) + value
-
-
-def enc_str(number: int, value: str) -> bytes:
-    return enc_bytes(number, value.encode("utf-8"))

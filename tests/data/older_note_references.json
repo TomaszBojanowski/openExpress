@@ -31,7 +31,6 @@
  "tests/test_ciq_music.py": 10,
  "tests/test_dead_patches.py": 2,
  "tests/test_detection.py": 29,
- "tests/test_device.py": 2,
  "tests/test_device_page_complete.py": 2,
  "tests/test_devicelist.py": 3,
  "tests/test_diagnostics.py": 5,

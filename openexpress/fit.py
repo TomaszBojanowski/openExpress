@@ -1,4 +1,4 @@
-"""Minimal FIT parser: reads the file_id message (file type, creation time).
+"""Minimal FIT parser: reads the creation time from the file_id message.
 
 Enough to derive the activity identifier Garmin Connect uses for duplicate
 checks (time_created in seconds since the FIT epoch).
@@ -7,17 +7,13 @@ checks (time_created in seconds since the FIT epoch).
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from openexpress.i18n import _
 
 FIT_EPOCH_OFFSET = 631065600  # 1989-12-31T00:00:00Z as Unix time
 
 _MESG_FILE_ID = 0
-_FIELD_TYPE = 0
-_FIELD_MANUFACTURER = 1
-_FIELD_PRODUCT = 2
-_FIELD_SERIAL = 3
 _FIELD_TIME_CREATED = 4
 
 
@@ -27,16 +23,7 @@ class FitError(Exception):
 
 @dataclass
 class FileId:
-    file_type: int | None = None
-    manufacturer: int | None = None
-    product: int | None = None
-    # The serial number of the device that made the file: never in the text of the record.
-    serial_number: int | None = field(default=None, repr=False)
     time_created: int | None = None
-
-    @property
-    def time_created_unix(self) -> int | None:
-        return None if self.time_created is None else self.time_created + FIT_EPOCH_OFFSET
 
 
 @dataclass
@@ -135,13 +122,7 @@ def parse_file_id(data: bytes) -> FileId:
     v = find_message(data, _MESG_FILE_ID)
     if v is None:
         raise FitError(_("No file_id message"))
-    return FileId(
-        file_type=v.get(_FIELD_TYPE),
-        manufacturer=v.get(_FIELD_MANUFACTURER),
-        product=v.get(_FIELD_PRODUCT),
-        serial_number=v.get(_FIELD_SERIAL),
-        time_created=v.get(_FIELD_TIME_CREATED),
-    )
+    return FileId(time_created=v.get(_FIELD_TIME_CREATED))
 
 
 MESG_CALLBACK_DELAY = 197  # Garmin-internal message used by TrueUp
