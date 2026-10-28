@@ -847,12 +847,38 @@ def _mass_storage_on_usb() -> list[tuple[str, str]]:
     return found
 
 
+MOUNT_SHOWN_S = 5.0  # how long a drive just mounted may take to be shown by the volume monitor
+
+
+def _shown_mount(volume, sleep=time.sleep):
+    """The mount of a volume just mounted. The volume monitor shows it once it has its
+    signal, which the main thread handles (the window's, or ours on the command line), while
+    the answer to the mount comes to the thread that waited for it: so it may come a moment
+    later. None when it is not shown within MOUNT_SHOWN_S."""
+    started = time.monotonic()
+    on_main = threading.current_thread() is threading.main_thread()
+    while True:
+        mounted = volume.get_mount() if volume is not None else None
+        if mounted is not None or time.monotonic() - started >= MOUNT_SHOWN_S:
+            break
+        if on_main:  # nobody else handles the signals of the monitor here
+            context = GLib.MainContext.default()
+            for _turn in range(100):
+                if not context.iteration(False):
+                    break
+        sleep(0.1)
+    waited = time.monotonic() - started
+    if mounted is not None and waited >= 0.1:
+        log.debug("device: the mount of the drive was shown after %.1f s", waited)
+    return mounted
+
+
 def mount_drive(dev: FoundDevice) -> FoundDevice:
     """A Garmin drive chosen while it is not mounted, mounted as the system mounts it
     (Gio.Volume.mount, as an MTP device is): the drive as find_ums_devices finds a mounted
     one. DeviceError when it cannot be mounted (said as for MTP)."""
     mount(dev)
-    mounted = dev.volume.get_mount() if dev.volume is not None else None
+    mounted = _shown_mount(dev.volume)
     root = mounted.get_root() if mounted is not None else None
     if root is None:
         raise DeviceError(_("Cannot mount the device"))

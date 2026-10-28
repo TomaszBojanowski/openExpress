@@ -9,6 +9,7 @@ listed; without gvfs there are no volumes and nothing changes. All devices are m
 
 import logging
 import os
+import threading
 import types
 
 import pytest
@@ -75,11 +76,11 @@ def _monitor(monkeypatch, mounts=(), volumes=()):
 
 
 def _unmounted(drives, monkeypatch, sectors=7_800_000, vendor="091e", serial=DRIVE_SERIAL,
-               uuid=None, product=FR55):
+               uuid=None, product=FR55, volume_class=None):
     unix = usb_drive(drives, vendor=vendor, product=product, serial=serial)
     _sized(drives, unix, sectors)
     folder = drive_folder(drives)
-    volume = UnmountedVolume(unix, folder, uuid=uuid)
+    volume = (volume_class or UnmountedVolume)(unix, folder, uuid=uuid)
     _monitor(monkeypatch, volumes=[volume])
     return volume, folder
 
@@ -156,6 +157,31 @@ def test_choosing_it_mounts_it_and_opens_the_drive(drives, monkeypatch):
     assert storage.mass_storage and storage.root == folder
     assert storage.read("GARMIN/GarminDevice.xml") == RTL515_XML.encode()
     assert storage.usb_id == "091e:0f1d"
+
+
+class ShownLater(UnmountedVolume):
+    """As the volume of a drive the system mounts: its mount is shown once the volume monitor
+    has its signal, which the window's thread handles, while the answer to the mount goes to
+    the thread that waits for it (step 4 after the audit of 0.7.9, A8). Here it is shown
+    0.3 s after the answer."""
+
+    def mount_finish(self, _result):
+        shown = FakeDriveMount(self.folder, self.unix_device)
+        self.later = threading.Timer(0.3, lambda: setattr(self, "mounted_at", shown))
+        self.later.start()
+        return True
+
+
+def test_a_mounted_drive_is_waited_for_until_the_monitor_shows_it(drives, monkeypatch):
+    from openexpress import service
+
+    volume, folder = _unmounted(drives, monkeypatch, volume_class=ShownLater)
+    (found,) = gio_storage.find_ums_devices()
+    try:
+        storage = service._open_found(found)
+    finally:
+        volume.later.join(5)
+    assert storage.mass_storage and storage.root == folder
 
 
 def test_a_mount_refused_says_so(drives, monkeypatch):
