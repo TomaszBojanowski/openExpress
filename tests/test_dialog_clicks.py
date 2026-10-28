@@ -540,7 +540,7 @@ def test_escape_in_every_dialog_does_nothing(click, monkeypatch, in_the_window, 
     import logging
 
     ctx = types.SimpleNamespace(effects=[], monkeypatch=monkeypatch, in_the_window=in_the_window)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         OPENERS[name](ctx)
         assert click.shown, f"{name}: no dialog shown"
         before, shown = list(ctx.effects), len(click.shown)

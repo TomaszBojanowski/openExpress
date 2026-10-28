@@ -26,8 +26,6 @@ from openexpress.i18n import _
 from openexpress.useragent import USER_AGENT
 
 log = logging.getLogger(__name__)
-# The window's logger: the lines of the functions moved from gui/app.py stay where they were.
-window_log = logging.getLogger("openexpress.gui.app")
 
 # use(texture, source): source is "memory", "the cache" or "the account"
 Use = Callable[[object, str], None]
@@ -99,7 +97,7 @@ def picture_target(name: str) -> Path | None:
     is no plain file name or would leave the cache (nothing is saved then)."""
     images = paths.cache_dir() / "images"
     if not paths.is_safe_component(name) or not paths.is_inside(images / name, images):
-        window_log.info("picture: a name from the server is no file name here, not saved")
+        log.info("picture: a name from the server is no file name here, not saved")
         return None
     return images / name
 
@@ -114,7 +112,7 @@ def cached_download(http, url: str, name: str) -> Path | None:
     try:
         url = download.secure_url(url)  # HTTPS only, as every download
     except download.DownloadError:
-        window_log.info("picture: not an HTTPS address, not asked")
+        log.info("picture: not an HTTPS address, not asked")
         return None
     try:
         resp = http.get(url, timeout=20)
@@ -144,7 +142,7 @@ def picture_from_unit_info(client, device, ask=None) -> str | None:
         info = ask() if ask is not None else client.unit_info(device.unit_id,
                                                               device.part_number)
     except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
-        window_log.info("device picture: unit-info failed (%s)", type(e).__name__)
+        log.info("device picture: unit-info failed (%s)", type(e).__name__)
         return None
     note_segment(device, info)
     url = info.get("graphicurl") if isinstance(info, dict) else None
@@ -182,7 +180,7 @@ def is_bike_accessory(client, device, ask=None) -> bool:
         info = ask() if ask is not None else client.unit_info(device.unit_id,
                                                               device.part_number)
     except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
-        window_log.info("software update: unit-info failed (%s)", type(e).__name__)
+        log.info("software update: unit-info failed (%s)", type(e).__name__)
         return False
     note_segment(device, info)
     segment = info.get("segmenttype") if isinstance(info, dict) else None

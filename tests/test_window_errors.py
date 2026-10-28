@@ -42,7 +42,9 @@ def test_an_exception_in_a_callback_of_the_window_is_logged_with_its_traceback(l
     while context.iteration(False):
         pass
     text = "\n".join(_lines(log_file))
-    assert "ERROR openexpress.gui.app: unexpected error in the window: RuntimeError" in text
+    # Written by log_unexpected, under its own module (review of 28.10.2026).
+    assert ("ERROR openexpress.gui.window_tasks: unexpected error in the window: "
+            "RuntimeError") in text
     assert "Traceback" in text and "made-up failure" in text
     assert told == [RuntimeError]  # and on to stderr, as before
 
@@ -95,7 +97,7 @@ def test_a_page_that_cannot_be_drawn_says_so_and_loads_anew(log_file, monkeypatc
                                            "happens again, report the problem with the log "
                                            "attached.")
     text = "\n".join(_lines(log_file))
-    assert ("ERROR openexpress.gui.app: unexpected error showing the page apps: "
+    assert ("ERROR openexpress.gui.window_tasks: unexpected error showing the page apps: "
             "RuntimeError") in text
     assert "Traceback" in text and "made-up failure" in text
 

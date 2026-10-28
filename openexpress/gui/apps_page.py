@@ -26,8 +26,7 @@ from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size, ngettext  # noqa: E402
 from openexpress.settings import language_tag  # noqa: E402
 
-# The window's logger: the lines of this page stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 def order_list_at_its_top(box) -> bool:

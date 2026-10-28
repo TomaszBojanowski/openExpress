@@ -18,8 +18,7 @@ from openexpress import forget, known_devices, service  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
 
-# The window's logger, as the pages split from it use.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 class ForgetDevice:

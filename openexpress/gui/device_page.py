@@ -90,8 +90,7 @@ from openexpress.gui.words import (  # noqa: E402
 from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
-# The window's logger: the lines of the device view stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 def last_sync_words(data: dict, now: datetime | None = None) -> str:

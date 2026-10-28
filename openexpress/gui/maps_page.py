@@ -20,8 +20,7 @@ from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, caption, human_size  # noqa: E402
 
-# The window's logger: the lines of this page stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 def _check_again(win) -> None:

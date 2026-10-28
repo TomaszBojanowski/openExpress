@@ -81,9 +81,7 @@ from openexpress.gui.navigation import plan as detection_plan
 from openexpress.gui.window_tasks import read_space
 from openexpress.i18n import N_, _
 
-# The window's logger: the lines of the detection and of navigation stay where they were
-# before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 # A drive may come a moment after its USB device (#19, analysis 18): a device in mass storage
 # mode that the last list found without one is looked for again every DRIVE_RETRY_S seconds,

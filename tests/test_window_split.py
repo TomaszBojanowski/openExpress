@@ -21,8 +21,26 @@ def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(caplog, in_the
             pass
 
         work.__qualname__ = f"{cls.__name__}.a_task_of_the_page.<locals>.work"
-        with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+        with caplog.at_level(logging.INFO, logger="openexpress.gui"):
             app.MainWindow.run_task(win, "Copying…", work)
     tasks = [r.getMessage() for r in caplog.records if r.getMessage().startswith("task: ")]
     assert tasks == ["task: MainWindow.a_task_of_the_page"] * (1 + len(mixins))
     assert len(started) == 1 + len(mixins)
+
+
+def test_each_module_of_the_window_logs_under_its_own_name():
+    """Every getLogger of openexpress/gui/*.py takes __name__: a line of the log names the
+    module that wrote it, not the window's module (review of 28.10.2026)."""
+    import ast
+    from pathlib import Path
+
+    import openexpress.gui as gui
+
+    named = []
+    for path in sorted(Path(gui.__file__).parent.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "getLogger"
+                    and not (len(node.args) == 1 and isinstance(node.args[0], ast.Name)
+                             and node.args[0].id == "__name__")):
+                named.append(f"{path.name}:{node.lineno}")
+    assert named == []

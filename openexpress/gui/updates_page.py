@@ -42,8 +42,7 @@ from openexpress.gui.words import software_text, update_state_text  # noqa: E402
 from openexpress.i18n import SEPARATOR, _, caption, human_size, ngettext  # noqa: E402
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
 
-# The window's logger: the lines of this page stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 # Between two versions ("23.39 → 23.40"): no-break spaces keep them on one line.
 ARROW = "\u00a0→\u00a0"
 

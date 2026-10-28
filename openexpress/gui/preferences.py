@@ -38,8 +38,7 @@ from openexpress.settings import (  # noqa: E402
     save_consumer,
 )
 
-# The window's logger: the lines of the preferences stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 # The language of the interface, read and kept in one place (i18n).

@@ -38,8 +38,7 @@ from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
 from openexpress.progress import TimedWait, Waiting  # noqa: E402
 
-# The window's logger: the lines of the tasks stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
 LONG_WAIT_S = 20  # after this, the label says that the wait can take a while

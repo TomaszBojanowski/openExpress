@@ -54,8 +54,7 @@ from openexpress.gui.words import (
 from openexpress.i18n import _, caption, pgettext
 from openexpress.known_devices import KnownDevice
 
-# The window's logger: the lines of the start page stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 # How often the texts told against now ("2 min ago") are looked at again, while shown.

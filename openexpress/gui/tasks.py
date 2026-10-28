@@ -5,7 +5,7 @@ again."""
 import functools
 import logging
 
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 def writes_to_device(fn):

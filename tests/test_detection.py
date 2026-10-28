@@ -360,7 +360,7 @@ def test_the_second_mount_of_an_unplugged_device_changes_nothing(monkeypatch, ca
     from openexpress.gui.app import MainWindow
 
     win = unplug_window(monkeypatch, [gio_storage.ABSENT])
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
         MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))  # gvfs: the other mount
     assert len(win.built) == 1 and win.session is None
@@ -388,7 +388,7 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog,
                                 show_no_device=lambda: None)
     stick = "file:///run/media/someone/STICK/"
 
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
         MainWindow._on_mount_added(win, None, FakeMount(stick))
         remounted.add(NUMERIC)
@@ -430,7 +430,7 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
         run_task=lambda title, fn, done, failed: tasks.append(done),
         show_device=lambda: shown.append(win.session),
         show_no_device=lambda: shown.append(win.session))
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow.refresh_device(win)  # a task is running: later
         win.busy = False
         MainWindow.refresh_device(win)
@@ -542,7 +542,7 @@ def test_a_mount_event_during_the_first_detection_does_not_load_the_pages_again(
     from openexpress.gui.app import MainWindow
 
     win = detecting
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         win.refresh_device()  # at start
         # gvfs reports the mount that is being opened; the timer fires before the end.
         MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
@@ -605,7 +605,7 @@ def test_the_same_address_at_a_new_place_on_usb_is_detected_again(detecting, tmp
     # same, but the device number on USB is new.
     shutil.rmtree(tmp_path / "sys" / "1-4")
     usb_device(tmp_path / "sys", "1-4", 1, 41, "091e", "51b4")
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
         win.timers.fire()
     assert len(win.tasks) == 1 and len(win.reads) == 1  # detected anew, nothing read
@@ -1659,7 +1659,7 @@ def test_window_detects_a_garmin_drive_when_it_is_mounted(drive_window, caplog):
     pendrive = FakeDriveMount(drive_folder(world.drives, label="STICK"),
                               usb_drive(world.drives, vendor="0781", product="5581", port="1-6",
                                         devnum=14, disk="sdd", partition="sdd1"), name="STICK")
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, pendrive)
         assert win.timers.live == {}
         MainWindow._on_mount_added(win, None, world.drive())
@@ -1804,7 +1804,7 @@ def test_window_after_a_garmin_drive_is_unplugged(drive_window, monkeypatch, cap
         link.unlink()
     monitor_with(monkeypatch)
     caplog.clear()  # only what the unplug writes
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_removed(win, None, drive)
     assert win.session is None and win.built[-1] is None and win._updated_apps == set()
     assert [r.getMessage() for r in caplog.records] == [
@@ -1834,7 +1834,7 @@ def test_a_second_mount_event_of_the_open_drive_reloads_nothing(drive_window, mo
     opened = win.session
     assert opened is not None and opened.mass_storage and win.built == [opened]
     caplog.clear()  # only what the second event writes
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, drive)  # within the same 2 s
         win.timers.fire()
     assert win.session is opened and win.built == [opened]
@@ -3819,7 +3819,7 @@ def test_a_device_in_its_normal_mode_without_mtp_for_15_s_is_to_be_plugged_in_ag
     win, shown, _refreshed = _banner_window(monkeypatch)
     clock = plugged.clock
     plugged.plug("5158")
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         for now, notice in ((100, ("The device is starting…", STARTING_TEXT, True)),
                             (114.9, ("The device is starting…", STARTING_TEXT, True)),
                             (115, ("The device is starting…", f"{STARTING_TEXT}. {REPLUG_HINT}",
@@ -3842,7 +3842,7 @@ def test_plugging_it_in_again_starts_the_15_s_anew(plugged, monkeypatch, caplog)
     win, shown, _refreshed = _banner_window(monkeypatch)
     clock = plugged.clock
     poll = lambda: MainWindow._poll_usb(win, clock=clock)  # noqa: E731
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         plugged.plug("5158")
         clock.now = 0
         poll()
@@ -4485,7 +4485,7 @@ def test_a_mount_removed_that_is_not_on_the_list_reads_nothing(start_window, mon
     back(win)
     run_later(later)
     drawn = len(win.start.shown)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_removed(win, None, FakeMount(gone, name="other"))
     assert not win.timers.live and later == []
     assert "not a device on the list, ignored" in caplog.text
@@ -4514,7 +4514,7 @@ def test_two_mounts_removed_for_one_device_read_the_list_once(start_window, monk
     for f in (win.world.root / "1-2").iterdir():
         f.unlink()
     (win.world.root / "1-2").rmdir()
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_removed(win, None, FakeMount(NAMED))
         MainWindow._on_mount_removed(win, None, FakeMount(NAMED))  # gvfs: the other mount
     assert reads == [] and later == []
@@ -4937,7 +4937,7 @@ def test_the_open_device_unplugged_with_another_connected_opens_the_other(
         left = "Varia RTL515" if opened == "Test watch" else "Test watch"
     gone = win.session.device.description
     assert win.navigation.stack == ["start page", "device view"]
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         if variant == "a drive open, an mtp left":
             unplug_drive(win, monkeypatch, drive, "sdb")
         else:
@@ -4965,7 +4965,7 @@ def test_a_drive_left_that_is_not_mounted_is_looked_for_once(start_window, monke
     win.refresh_device()
     assert win.session.device.description == "Test watch"
     titles = detections(win)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         unplug_mtp(win, world.offered[0], world.root / "garmin51b4")
         for _ in range(3):  # the poll goes on every few seconds
             win._poll_usb()
@@ -5215,7 +5215,7 @@ def test_the_device_shown_plugged_in_while_another_one_is_open_gives_the_start_p
     assert win.navigation.stack == ["start page", "remembered view"]
     ran = detections(win)
     world.offered[:] = [watch, edge]  # then gvfs mounts the test watch
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
         win.timers.fire()
     assert ran == []  # no detection: the list read again
@@ -5261,7 +5261,7 @@ def test_a_mount_removed_after_a_failed_choice_plans_no_detection(start_window, 
     assert [c.description for c in win.connected.devices] == ["Test watch", "Edge 1050"]
     watch = next(f for f in win.world.offered if f.uri == NUMERIC)
     win.world.offered.remove(watch)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_removed(win, None, FakeMount(NUMERIC))
     assert win.timers.live == {} and len(running) == 1
     assert "one of the devices to choose from" not in caplog.text
@@ -5318,7 +5318,7 @@ def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
     assert win.navigation.stack == ["start page", "device view"]
     win.world.offered[1] = edge  # mounted now
     ran = detections(win)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         MainWindow._on_mount_added(win, None, FakeMount(NAMED))
         win.timers.fire()
     assert ran == []
@@ -5478,7 +5478,7 @@ def test_the_mounts_reported_at_the_start_bring_no_detection_on_the_start_page(
     win.refresh_device()
     ran = detections(win)
     mounts_reported_at_start(win)
-    with caplog.at_level(logging.INFO, logger="openexpress.gui.app"):
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         win.timers.fire()
     assert ran == []
     assert "device detection: mount of a device already listed, nothing to do" in caplog.text

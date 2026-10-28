@@ -12,7 +12,7 @@ from test_forget_window import _button_labelled, _turn_until
 
 pytestmark = pytest.mark.needs_display
 
-LOGGER = "openexpress.gui.app"
+LOGGER = "openexpress.gui"
 
 
 @pytest.fixture

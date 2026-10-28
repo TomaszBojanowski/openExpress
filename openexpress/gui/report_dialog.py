@@ -19,8 +19,7 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
-# The window's logger: the lines of the report stay where they were before the split.
-log = logging.getLogger("openexpress.gui.app")
+log = logging.getLogger(__name__)
 
 
 def report_log_note(dialog) -> None:
