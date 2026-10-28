@@ -201,6 +201,11 @@ def md5hex(b):
     return hashlib.md5(b).hexdigest()
 
 
+def ranges(server):
+    """The Range header of each request the server got, in order (None: from the start)."""
+    return [headers.get("Range") for _command, _path, headers in server.requests]
+
+
 def ranged(ignore_start=False, content_range=True, wrong_start=False):
     def route(h):
         rng = h.headers.get("Range")
@@ -223,16 +228,25 @@ def test_size_zero_without_part(server, tmp_path):
     dest = tmp_path / "f.bin"
     download.fetch([server.url + "/f"], dest, 0, download.NO_MD5)
     assert dest.read_bytes() == DATA
+    assert ranges(server) == [None]  # one request, nothing downloaded twice
 
 
-@pytest.mark.parametrize("kw", [{}, {"ignore_start": True}, {"content_range": False},
-                                {"wrong_start": True}])
-def test_resume_checks_content_range(server, tmp_path, kw):
+# The part kept is resumed with one request from its end; a server that answers it with the
+# whole file is taken at its word, one whose answer cannot be placed is asked again from
+# the start.
+@pytest.mark.parametrize("kw, asked", [
+    ({}, ["bytes=1000-"]),
+    ({"ignore_start": True}, ["bytes=1000-"]),
+    ({"content_range": False}, ["bytes=1000-", None]),
+    ({"wrong_start": True}, ["bytes=1000-", None]),
+])
+def test_resume_checks_content_range(server, tmp_path, kw, asked):
     server.routes["/f"] = ranged(**kw)
     dest = tmp_path / "f.bin"
     dest.with_name("f.bin.part").write_bytes(DATA[:1000])
     download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
     assert dest.read_bytes() == DATA
+    assert ranges(server) == asked
 
 
 def test_invalid_md5_is_an_error(server, tmp_path):
@@ -252,12 +266,14 @@ def test_416_with_complete_part(server, tmp_path):
     part.write_bytes(DATA)
     download.fetch([server.url + "/f"], dest, None, md5hex(DATA))
     assert dest.read_bytes() == DATA
+    assert ranges(server) == [f"bytes={len(DATA)}-"]  # the part was whole: nothing more asked
     # A .part longer than the file: deleted and downloaded again without Range.
     dest.unlink()
     part.write_bytes(DATA + b"junk")
     download.fetch([server.url + "/f"], dest, None, download.NO_MD5)
     assert dest.read_bytes() == DATA
     assert not part.exists()
+    assert ranges(server)[1:] == [f"bytes={len(DATA) + 4}-", None]
 
 
 # --- 6/7. paths -------------------------------------------------------------------------
