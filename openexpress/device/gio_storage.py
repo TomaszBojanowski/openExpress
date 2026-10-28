@@ -1562,6 +1562,14 @@ class GioTimedOut(DeviceError):
     answer was the cancel, an error, or none at all. gvfs may still be at it."""
 
 
+def _answer_code(e: GLib.Error) -> str:
+    """The code of an answer of Gio, for the log (e.g. "cancelled", "failed")."""
+    if e.domain == "g-io-error-quark":
+        with suppress(ValueError):
+            return Gio.IOErrorEnum(e.code).value_nick
+    return f"{e.domain} {e.code}"
+
+
 def _ms(seconds: float) -> int:
     return max(1, round(seconds * 1000))
 
@@ -1642,8 +1650,12 @@ def _wait(start, timeout_s: float, what: str, name: str = "operation") -> None:
         log.warning("gio: %s: no answer in %g s, cancelled; it ended all the same after "
                     "%.1f s", name, timeout_s, took)
         return
-    log.warning("gio: %s: no answer in %g s, cancelled", name, timeout_s)
-    if answer.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED):
+    cancelled_only = answer.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)
+    # A cancel ends our wait at once; gvfs may go on (it did: an unmount cancelled at its time
+    # limit took effect afterwards, the live test of 28.10.2026).
+    log.warning("gio: %s: no answer in %g s, cancelled; its answer: %s%s", name, timeout_s,
+                _answer_code(answer), " (our wait ended, gvfs may go on)" if cancelled_only else "")
+    if cancelled_only:
         raise GioTimedOut(_("{action}: the device did not answer in time").format(action=what))
     raise GioTimedOut(f"{what}: {answer.message}")  # what really happened, as _err says it
 

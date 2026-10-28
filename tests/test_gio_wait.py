@@ -248,8 +248,10 @@ def test_a_time_limit_cancels_the_operation_and_waits_for_its_answer(kind, fast,
     assert isinstance(timed_out, gio_storage.GioTimedOut)
     assert op.was_cancelled and op.cancellable.is_cancelled()
     assert op.delivered == ("cancelled", threading.current_thread().name)  # waited for
-    assert f"gio: {kind}: no answer in {LIMIT:g} s, cancelled" in [
-        r.getMessage() for r in caplog.records]
+    # Which answer came after the cancel: "cancelled" only ends our wait (step 2c of the live
+    # test, 28.10.2026: gvfs went on and unmounted the device later).
+    assert (f"gio: {kind}: no answer in {LIMIT:g} s, cancelled; its answer: cancelled (our "
+            "wait ended, gvfs may go on)") in [r.getMessage() for r in caplog.records]
 
 
 def test_an_answer_after_the_cancel_that_says_done_is_a_success(fast, caplog):
@@ -263,12 +265,15 @@ def test_an_answer_after_the_cancel_that_says_done_is_a_success(fast, caplog):
                            "the same after ")
 
 
-def test_an_error_after_the_cancel_says_what_happened(fast):
+def test_an_error_after_the_cancel_says_what_happened(fast, caplog):
     dev = _found(GioOp("on cancel", on_cancel="error", delay_s=0.05, strict=True))
-    with pytest.raises(gio_storage.GioTimedOut) as error:
+    with caplog.at_level(logging.WARNING, logger=LOGGER), \
+            pytest.raises(gio_storage.GioTimedOut) as error:
         gio_storage.mount(dev)
     assert str(error.value) == "Cannot mount the device: made-up refusal"
     assert not dev.mounted
+    assert [r.getMessage() for r in caplog.records] == [
+        f"gio: mount: no answer in {LIMIT:g} s, cancelled; its answer: failed"]
 
 
 def test_no_answer_even_after_the_cancel_gives_up(fast, caplog):
