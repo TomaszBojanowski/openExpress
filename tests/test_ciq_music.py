@@ -3418,3 +3418,32 @@ def test_replaced_files_in_polish(iq_device, songs):
     assert counts == ["1 plik na urządzeniu zostanie zastąpiony.",
                       "2 pliki na urządzeniu zostaną zastąpione.",
                       "5 plików na urządzeniu zostanie zastąpionych."]
+
+
+def test_cli_update_through_the_mounted_storage_announces_no_app_list(iq_device, device_root,
+                                                                     apps_cli, monkeypatch,
+                                                                     capsys):
+    """An update of an app whose folder is in sight (an Edge 1050) goes next to the app's file
+    under a new name and leaves the app list as it is: the dry run says nothing of an IN.BIN
+    to be written, and --apply writes none (seen on the Edge, 28.10.2026). Over PTP the list
+    is written again as it is: test_cli_update_of_a_hidden_app."""
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    store_message = {"messageid": 8, "devicexmldatatype": "IQWatchApps",
+                     "metadata": {"messageurl": "y", "messagename": "Connect IQ Store",
+                                  "appdetails": {"id": str(STORE_ID)}}}
+    monkeypatch.setattr(FakeStore, "updates", lambda self, device, installed, locale: [
+        store_app(STORE_ID, "Connect IQ Store", "watch-app")])
+    apps_cli.device_messages = lambda unit_id: [store_message]
+    before = apps_files(st)
+    assert main(["--path", str(device_root), "apps", "update"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[0].startswith("Update Connect IQ Store")
+    assert "IN.BIN" not in out
+    assert "Before any change, a copy of the app list of the device is made." in out
+    assert apps_files(st) == before
+
+    assert main(["--path", str(device_root), "apps", "update", "--apply"]) == 0
+    assert st.resolve("GARMIN/APPS/IN.BIN") is None
+    assert set(before) < set(apps_files(st))  # the new file next to the old one

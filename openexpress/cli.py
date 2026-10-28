@@ -1616,7 +1616,9 @@ def cmd_apps(args) -> int:
         # What --apply would refuse before it asks Garmin for anything, by app ID.
         refused = ciq.install_refusals(dev, st, state, over_usb)
         over_usb = [a for a in over_usb if a.app_id not in refused]
-        if over_usb:
+        # The app list is written for a new app, and over PTP for an update too; an update
+        # through the mounted storage leaves it as it is (it goes next to the app's file).
+        if any(state.find(a.app_id) is None or dirs[a.app_id] == ciq.DIRECT for a in over_usb):
             _print_in_bin_preview(ciq.preview_in_bin(state, over_usb))
         if not args.apply:
             for a in targets:
