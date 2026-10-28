@@ -5,8 +5,9 @@ work in the background (in_background), toasts and error messages, the action bu
 functions: the widgets of a page (still_in_window, wrapping_row, trash_button, show_working,
 row_subtitle), the free space of the device read again after a task that writes to it
 (read_space, render_space, refresh_space), the name of a task in the log (task_name), the
-collection of reference cycles after it (collect_garbage) and an error nobody expected, in
-the log (log_unexpected).
+collection of reference cycles after it (collect_garbage), an error nobody expected, in
+the log (log_unexpected), and the questions and messages of the window, which close as
+Cancel (confirm, Answer, inform).
 
 Has: busy and _waiting (a task runs; a wait moves the bar), _task_lets_close (the task under
 way lets the window close: lets_the_window_close, gui/tasks.py), _action_buttons (the
@@ -21,6 +22,8 @@ import gc
 import logging
 import threading
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import gi
 
@@ -243,6 +246,98 @@ def log_unexpected(what: str, exc_info) -> None:
     """An exception the window did not expect: to the log as ERROR, with its traceback
     (filtered, as every line), as the command line writes one."""
     log.error("unexpected error %s: %s", what, exc_info[0].__name__, exc_info=exc_info)
+
+
+@dataclass(frozen=True)
+class Answer:
+    """A button of a question (confirm): its response id, never "cancel"; what it runs once
+    chosen; its look ("suggested", "destructive" or None); whether it can be chosen yet."""
+
+    id: str
+    label: str
+    run: Callable[[], object]
+    look: str | None = None
+    enabled: bool = True
+
+
+LOOKS = {"suggested": Adw.ResponseAppearance.SUGGESTED,
+         "destructive": Adw.ResponseAppearance.DESTRUCTIVE}
+
+
+def _keep(parent, attribute: str, dialog) -> None:
+    """`parent.<attribute>` holds the dialog while it is open (set before it is shown, let go
+    once it is closed, unless the attribute holds another dialog by then)."""
+    setattr(parent, attribute, dialog)
+
+    def closed(shown):
+        if getattr(parent, attribute, None) is shown:
+            setattr(parent, attribute, None)
+
+    dialog.connect("closed", closed)
+
+
+def confirm(parent, name: str, heading: str, body: str, *answers: Answer,
+            cancel: str | None = None, default: str | None = None, extra=None,
+            wide: bool = False, keep_as: str | None = None) -> Adw.AlertDialog:
+    """A question shown over `parent`: Cancel (`cancel`: its label) and `answers`, in this
+    order. Closed in any way (Escape, the system) it is cancelled: nothing runs. A chosen
+    answer runs its own `run`, and only while it is enabled. `default`: the answer of Enter.
+    `extra`: a widget below the text. `wide`: the wide layout. `keep_as`: see _keep;
+    libadwaita says "closed" before the answer (1.9), so an answer takes its data from its
+    own closure, never from that attribute. One line in the log: the dialog's `name` and
+    the answer's id, or "cancelled"."""
+    ids = [a.id for a in answers]
+    if not answers or "cancel" in ids or len(set(ids)) != len(ids):
+        raise ValueError(f"dialog {name}: answers {ids}")
+    if default is not None and default not in ("cancel", *ids):
+        raise ValueError(f"dialog {name}: no answer {default}")
+    d = Adw.AlertDialog(heading=heading, body=body)
+    if wide and hasattr(d, "set_prefer_wide_layout"):
+        d.set_prefer_wide_layout(True)
+    d.add_response("cancel", cancel if cancel is not None else _("Cancel"))
+    for a in answers:
+        d.add_response(a.id, a.label)
+        if a.look is not None:
+            d.set_response_appearance(a.id, LOOKS[a.look])
+        if not a.enabled:
+            d.set_response_enabled(a.id, False)
+    d.set_close_response("cancel")
+    if default is not None:
+        d.set_default_response(default)
+    if extra is not None:
+        d.set_extra_child(extra)
+    runs = {a.id: a.run for a in answers}
+
+    def response(dialog, r):
+        run = runs.get(r) if r in runs and dialog.get_response_enabled(r) else None
+        log.info("dialog %s: %s", name, r if run is not None else "cancelled")
+        if run is not None:
+            run()
+
+    d.connect("response", response)
+    if keep_as is not None:
+        _keep(parent, keep_as, d)
+    d.present(parent)
+    return d
+
+
+def inform(parent, name: str, heading: str, body: str, *, label: str | None = None,
+           then: Callable[[], object] | None = None) -> Adw.AlertDialog:
+    """A message shown over `parent` with one button (`label`: its words, OK by default):
+    nothing to cancel, so `then` runs once it is closed in any way, by the button or Escape.
+    One line in the log: the dialog's `name`."""
+    d = Adw.AlertDialog(heading=heading, body=body)
+    d.add_response("ok", label if label is not None else _("OK"))
+    d.set_close_response("ok")
+
+    def response(_dialog, r):
+        log.info("dialog %s: %s", name, r)
+        if then is not None:
+            then()
+
+    d.connect("response", response)
+    d.present(parent)
+    return d
 
 
 class TaskRunner:
