@@ -992,7 +992,6 @@ def opened_drive(drives, monkeypatch, label="GARMIN"):
 def test_a_garmin_drive_opens_as_mass_storage(drives, monkeypatch, label):
     from openexpress.device import storage
     from openexpress.device.xmldevice import parse
-    from openexpress.gui.app import _on_mount
 
     mount, st = opened_drive(drives, monkeypatch, label)
     assert isinstance(st, storage.UmsStorage) and isinstance(st, storage.LocalStorage)
@@ -1004,9 +1003,6 @@ def test_a_garmin_drive_opens_as_mass_storage(drives, monkeypatch, label):
     assert st.device_uri == uri and st.label == uri + "/"
     assert st.root == drives.media / label
     assert parse(st.read("GARMIN/GarminDevice.xml")).description == "Varia RTL515"
-    # The window tells by the label which mount the open device is on.
-    assert _on_mount(st, uri) and _on_mount(st, uri + "/")
-    assert not _on_mount(st, uri + "1") and not _on_mount(st, (drives.media / "OTHER").as_uri())
 
 
 def test_only_a_garmin_drive_is_mass_storage(tmp_path):

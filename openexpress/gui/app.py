@@ -46,7 +46,6 @@ from openexpress.gui.detection import (  # noqa: E402, F401 - also gui.app.<name
     DeviceChoices,
     DeviceDetection,
     _choose,
-    _on_mount,
     connected_devices,
     detect_devices,
     detection_due,

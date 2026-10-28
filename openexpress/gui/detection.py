@@ -204,11 +204,6 @@ def _same_device(old, new) -> str:
     return "another device than the open one"
 
 
-def _on_mount(storage, mount_uri: str) -> bool:
-    """Whether the open storage is on this mount (full addresses, compared in memory)."""
-    return str(getattr(storage, "label", "")).startswith(mount_uri.rstrip("/") + "/")
-
-
 def _cause_of(reason: str | None) -> Cause:
     """Why a trigger of the timer came, when its caller did not say."""
     if reason == READ_THE_LIST:
