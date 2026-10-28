@@ -1,3 +1,4 @@
 from openexpress.cli import main
 
-raise SystemExit(main())
+if __name__ == "__main__":  # python3 -m openexpress; an import runs nothing
+    raise SystemExit(main())
