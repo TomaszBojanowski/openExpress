@@ -3255,6 +3255,77 @@ def test_failed_unmount_opens_nothing(exclusive, monkeypatch):
     assert events == []  # still mounted: no USB access and no second mount
 
 
+def _unmount_without_an_answer(monkeypatch):
+    """The unmount gets no answer: at its time limit (here 0.2 s) it is cancelled."""
+    from gio_fake import GioOp
+
+    monkeypatch.setattr(gio_storage, "CANCEL_WAIT_S", 0.1, raising=False)
+    monkeypatch.setattr(gio_storage, "_unmount", lambda uri: gio_storage._wait(
+        GioOp("never").start, 0.2, "Cannot unmount the device"))
+
+
+def test_an_unmount_that_timed_out_is_followed_by_a_mount(exclusive, monkeypatch, caplog):
+    """gvfs may unmount the device all the same after the cancel (step 4 after the audit of
+    0.7.9, A8): it is mounted again (or found mounted), and nothing of the session runs."""
+    st, _fake, events = exclusive
+    _unmount_without_an_answer(monkeypatch)
+    with caplog.at_level(logging.INFO, logger="openexpress"), \
+            pytest.raises(gio_storage.DeviceError) as error, st.exclusive_ptp():
+        pytest.fail("the block must not run")
+    assert str(error.value) == "Cannot unmount the device: the device did not answer in time"
+    assert events == [("mount", NUMERIC, False)]  # no USB, no session
+    assert "PTP: the unmount did not end: mounting the device again" in [
+        r.getMessage() for r in caplog.records]
+
+
+def test_a_device_not_mounted_again_then_says_so(exclusive, monkeypatch):
+    """The unmount did not end, and mounting again failed too: the device may be left
+    without a mount, which the callers say (unplug the device and plug it in again)."""
+    from openexpress.device.storage import RemountFailed
+
+    st, _fake, _events = exclusive
+    _unmount_without_an_answer(monkeypatch)
+
+    def refused(uri, storage):
+        raise RemountFailed("Cannot mount the device: made-up refusal")
+
+    monkeypatch.setattr(gio_storage, "_remount", refused)
+    with pytest.raises(RemountFailed), st.exclusive_ptp():
+        pytest.fail("the block must not run")
+
+
+def test_an_unmount_stopped_by_ctrl_c_is_followed_by_a_mount(exclusive, monkeypatch):
+    st, _fake, events = exclusive
+
+    def interrupted(uri):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(gio_storage, "_unmount", interrupted)
+    with pytest.raises(KeyboardInterrupt), st.exclusive_ptp():
+        pytest.fail("the block must not run")
+    assert events == [("mount", NUMERIC, False)]
+
+
+def test_ctrl_c_stays_ctrl_c_when_mounting_again_fails(exclusive, monkeypatch, caplog):
+    from openexpress.device.storage import RemountFailed
+
+    st, _fake, _events = exclusive
+
+    def interrupted(uri):
+        raise KeyboardInterrupt
+
+    def refused(uri, storage):
+        raise RemountFailed("Cannot mount the device: made-up refusal")
+
+    monkeypatch.setattr(gio_storage, "_unmount", interrupted)
+    monkeypatch.setattr(gio_storage, "_remount", refused)
+    with caplog.at_level(logging.WARNING, logger="openexpress"), \
+            pytest.raises(KeyboardInterrupt), st.exclusive_ptp():
+        pytest.fail("the block must not run")
+    assert "PTP: the device was not mounted again after Ctrl+C" in [
+        r.getMessage() for r in caplog.records]
+
+
 def test_quiet_time_ends(exclusive, monkeypatch):
     st, _fake, _events = exclusive
     with st.exclusive_ptp():

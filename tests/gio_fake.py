@@ -23,9 +23,14 @@ def answer_as_gio(callback, delay_s: float = 0.0):
     return source
 
 
+GIO_ERRORS = {"cancelled": (Gio.IOErrorEnum.CANCELLED, "Operation was cancelled"),
+              "already mounted": (Gio.IOErrorEnum.ALREADY_MOUNTED, "Location is already mounted")}
+
+
 def gio_error(word: str, message: str = "made-up refusal") -> GLib.Error:
-    code = Gio.IOErrorEnum.CANCELLED if word == "cancelled" else Gio.IOErrorEnum.FAILED
-    text = "Operation was cancelled" if word == "cancelled" else message
+    """The GLib.Error of an answer: "cancelled", "already mounted", or any other word: a
+    refusal with `message`."""
+    code, text = GIO_ERRORS.get(word, (Gio.IOErrorEnum.FAILED, message))
     return GLib.Error.new_literal(Gio.io_error_quark(), text, code)
 
 
@@ -35,8 +40,8 @@ class GioOp:
     when: "at once" (within start: Gio never does that, but _wait copes), "next turn",
     "before" (`delay_s` after it began), "on cancel" (only once cancelled, `delay_s` after the
     cancel), "never" (the cancel ignored).
-    says: "done" or "error" (`message`); `on_cancel`: "done" (too late to cancel), "cancelled"
-    or "error".
+    says: "done", "error" (`message`) or "already mounted"; `on_cancel`: "done" (too late to
+    cancel), "cancelled" or "error".
     `strict`: an operation begun without a Gio.Cancellable fails at once.
 
     `delivered` is what it really gave, once its answer ran: (word, name of the thread), or

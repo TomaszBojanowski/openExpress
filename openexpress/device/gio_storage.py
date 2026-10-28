@@ -1659,12 +1659,23 @@ def _unmount(uri: str) -> None:
         UNMOUNT_TIMEOUT_S, _("Cannot unmount the device"), "unmount")
 
 
+def _mounted_again(location, res) -> None:
+    """The answer of mounting the device again: mounted already is as good (something else
+    mounted it, or an unmount that did not end left it mounted)."""
+    try:
+        location.mount_enclosing_volume_finish(res)
+    except GLib.Error as e:
+        if not e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.ALREADY_MOUNTED):
+            raise
+        log.info("PTP: the device is mounted already")
+
+
 def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
     location = Gio.File.new_for_uri(uri)
     try:
         _wait(lambda done, cancellable: location.mount_enclosing_volume(
             Gio.MountMountFlags.NONE, None, cancellable,
-            lambda f, res: done(lambda: f.mount_enclosing_volume_finish(res))),
+            lambda f, res: done(lambda: _mounted_again(f, res))),
             MOUNT_TIMEOUT_S, _("Cannot mount the device"), "mount again")
     except DeviceError as e:
         raise RemountFailed(str(e)) from e
@@ -1687,7 +1698,19 @@ def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | 
     started = time.monotonic()
     try:
         log.info("PTP: unmounting the device from gvfs")
-        _unmount(uri)
+        try:
+            _unmount(uri)
+        except (GioTimedOut, KeyboardInterrupt) as stopped:
+            # Cancelled, gvfs may unmount it all the same: mounted again (or found mounted), so
+            # that it is not left without a mount. A refusal leaves it mounted: nothing to do.
+            log.info("PTP: the unmount did not end: mounting the device again")
+            try:
+                _remount(uri, storage)
+            except RemountFailed:
+                if not isinstance(stopped, KeyboardInterrupt):
+                    raise  # the callers say it: unplug the device and plug it in again
+                log.warning("PTP: the device was not mounted again after Ctrl+C")
+            raise
         try:
             transport = (ptp.LibusbTransport.open_node(node) if node is not None
                          else ptp.LibusbTransport.open(bus, address))

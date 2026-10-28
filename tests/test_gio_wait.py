@@ -331,3 +331,14 @@ def test_no_source_of_the_wait_is_left_in_the_default_context(fast, monkeypatch)
     worker.join(3)
     settle(worker)
     assert "error" not in said and added == []
+
+
+def test_mounting_again_a_device_already_mounted_is_fine(monkeypatch, caplog):
+    """After a PTP session, or after an unmount that did not end, the device may be mounted
+    already: that is what mounting it again is for, not a failure."""
+    op = GioOp("next turn", says="already mounted")
+    monkeypatch.setattr(gio_storage, "Gio", GioWith(gio_storage.Gio, Location(op)))
+    with caplog.at_level(logging.INFO, logger=LOGGER):
+        gio_storage._remount(URI, Visible(), sleep=lambda s: None)
+    assert op.delivered[0] == "already mounted"
+    assert "PTP: the device is mounted already" in [r.getMessage() for r in caplog.records]
