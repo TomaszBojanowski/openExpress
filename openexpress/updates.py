@@ -209,11 +209,6 @@ def presence(storage: Storage, u: SoftwareUpdate) -> Presence:
         return Presence("not compared (cannot be read)", real)
 
 
-def is_on_device(storage: Storage, u: SoftwareUpdate) -> bool:
-    """Whether the file of this update is on the device already: same size and same MD5."""
-    return presence(storage, u).why == MATCHES
-
-
 def _where(u: SoftwareUpdate, found: Presence) -> str:
     """The place of an update's file for the log: the server's path, and the file on the
     device too when its name has another letter case (its folder's case is the device's

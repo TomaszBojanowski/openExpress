@@ -609,20 +609,6 @@ class SyncSummary:
                 "downloaded": self.downloaded, "skipped_known": self.skipped_known,
                 "rejected": self.rejected, "errors": self.errors, "lines": self.lines}
 
-    @property
-    def counts(self) -> str:
-        """The numbers of this sync, as under "Last sync" (last_sync.describe)."""
-        from openexpress import last_sync
-
-        return last_sync.describe(self.record()).counts
-
-    @property
-    def text(self) -> str:
-        """The numbers and the steps, as last_sync.describe tells them."""
-        from openexpress import last_sync
-
-        return last_sync.describe(self.record()).text
-
 
 # Readable names of the data types of new files. A name is given only where it is plain from
 # the FIT SDK (the file type by its number), the upload address the server gives for the type
