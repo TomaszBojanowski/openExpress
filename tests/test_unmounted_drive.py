@@ -14,6 +14,7 @@ import types
 
 import pytest
 from fakes import replace_in_window
+from gio_fake import answer_as_gio
 from test_detection import (  # noqa: F401 - the fixture
     DRIVE_SERIAL,
     RTL515_XML,
@@ -44,7 +45,7 @@ class UnmountedVolume(FakeVolume):
 
     def mount(self, flags, operation, cancellable, callback):
         self.asked += 1
-        gio_storage.GLib.idle_add(lambda: callback(self, "mounted") and False)
+        answer_as_gio(lambda: callback(self, "mounted"))
 
     def mount_finish(self, _result):
         if self.refusal:

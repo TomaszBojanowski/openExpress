@@ -909,36 +909,16 @@ def open_ums_storage(dev: FoundDevice) -> UmsStorage:
     return st
 
 
-def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
+def mount(dev: FoundDevice, timeout_s: float | None = None) -> None:
+    """Mount the volume of a device found not mounted (as the file manager does)."""
     if dev.mounted or dev.volume is None:
         return
-    loop = GLib.MainLoop()
-    error: list[GLib.Error] = []
-    finished: list[bool] = []
-    timed_out: list[bool] = []
-
-    def done(vol, res):
-        finished.append(True)
-        try:
-            vol.mount_finish(res)
-        except GLib.Error as e:
-            error.append(e)
-        loop.quit()
-
-    def on_timeout():
-        timed_out.append(True)
-        loop.quit()
-        return False
-
-    dev.volume.mount(Gio.MountMountFlags.NONE, None, None, done)
-    source = GLib.timeout_add_seconds(timeout_s, on_timeout)
-    loop.run()
-    if not timed_out:
-        GLib.source_remove(source)
-    if not finished:
-        raise DeviceError(_("Mounting the device timed out"))
-    if error:
-        raise _err(error[0], _("Cannot mount the device"))
+    volume = dev.volume
+    _wait(lambda done, cancellable: volume.mount(
+        Gio.MountMountFlags.NONE, None, cancellable,
+        lambda vol, res: done(lambda: vol.mount_finish(res))),
+        MOUNT_TIMEOUT_S if timeout_s is None else timeout_s, _("Cannot mount the device"),
+        "mount")
     dev.mounted = True
 
 
@@ -951,7 +931,7 @@ def mount(dev: FoundDevice, timeout_s: int = 30) -> None:
 # place, ejected from the system and from the Flatpak, 21.10.2026): until it leaves that place
 # openExpress does not open it again, also when something mounts it again.
 
-EJECT_TIMEOUT_S = 60
+EJECT_TIMEOUT_S = 60.0
 _ejected: list[GarminUsb] = []  # where on USB the drives ejected by us are
 _ejected_lock = threading.Lock()
 
@@ -974,15 +954,15 @@ def eject(storage) -> None:
     what = _("Cannot eject the device")
     note_drive_place(getattr(storage, "usb", None))  # a watch may go into Garmin USB mode
     if found.can_eject():
-        _wait(lambda done: found.eject_with_operation(
-            Gio.MountUnmountFlags.NONE, None, None,
+        _wait(lambda done, cancellable: found.eject_with_operation(
+            Gio.MountUnmountFlags.NONE, None, cancellable,
             lambda m, res: done(lambda: m.eject_with_operation_finish(res))),
-            EJECT_TIMEOUT_S, what)
+            EJECT_TIMEOUT_S, what, "eject")
     else:  # a drive that the system can only unmount
-        _wait(lambda done: found.unmount_with_operation(
-            Gio.MountUnmountFlags.NONE, None, None,
+        _wait(lambda done, cancellable: found.unmount_with_operation(
+            Gio.MountUnmountFlags.NONE, None, cancellable,
             lambda m, res: done(lambda: m.unmount_with_operation_finish(res))),
-            EJECT_TIMEOUT_S, what)
+            EJECT_TIMEOUT_S, what, "eject (unmount)")
     usb = getattr(storage, "usb", None)
     if usb is not None:
         with _ejected_lock:
@@ -1570,34 +1550,102 @@ def own_remount(mount) -> bool:
     return False
 
 
-def _wait(start, timeout_s: int, what: str) -> None:
-    """Run one asynchronous Gio operation to its end. `start(done)` begins it and
-    `done(finish)` is called with a function that raises GLib.Error on failure."""
-    loop = GLib.MainLoop()
-    result: list = []
+# --- one asynchronous Gio operation, waited for ------------------------------------------
+
+MOUNT_TIMEOUT_S = 30.0
+UNMOUNT_TIMEOUT_S = 30.0
+CANCEL_WAIT_S = 5.0  # for the answer of an operation cancelled at its time limit
+
+
+class GioTimedOut(DeviceError):
+    """A Gio operation that did not answer within its time limit: it was cancelled, and its
+    answer was the cancel, an error, or none at all. gvfs may still be at it."""
+
+
+def _ms(seconds: float) -> int:
+    return max(1, round(seconds * 1000))
+
+
+def _wait(start, timeout_s: float, what: str, name: str = "operation") -> None:
+    """Run one asynchronous Gio operation to its end. `start(done, cancellable)` begins it and
+    `done(finish)` is called with a function that raises GLib.Error on failure. `name` says
+    the operation in the log.
+
+    Gio gives the answer in the main context that was the default of the thread when the
+    operation began. A worker thread waits on a context of its own, pushed for the wait: its
+    answer and its time limit need nothing of the main thread (the window holds the global
+    default context while it runs), and no callback of the main thread runs here. The main
+    thread (the command line) waits on the global default context, where PyGObject wakes it on
+    Ctrl+C.
+
+    At its time limit the operation is cancelled and its answer, which Gio always gives, is
+    waited for up to CANCEL_WAIT_S. Done all the same is a success: that is what happened. A
+    cancel, an error or no answer at all is GioTimedOut."""
+    own = threading.current_thread() is not threading.main_thread()
+    context = GLib.MainContext.new() if own else GLib.MainContext.default()
+    loop = GLib.MainLoop(context)
+    cancellable = Gio.Cancellable()
+    answers: list = []  # None: done; or the GLib.Error
+    cancelled: list[bool] = []
+    sources: list = []
+    started = time.monotonic()
 
     def done(finish):
         try:
             finish()
-            result.append(None)
+            answers.append(None)
         except GLib.Error as e:
-            result.append(e)
+            answers.append(e)
         loop.quit()
 
-    def on_timeout():
-        result.append(TimeoutError())
-        loop.quit()
+    def at_the_limit():
+        if not answers:  # an answer in the same turn of the loop comes first
+            cancelled.append(True)
+            cancellable.cancel()  # Gio answers all the same: cancelled, or done if too late
+            grace = GLib.timeout_source_new(_ms(CANCEL_WAIT_S))
+            grace.set_callback(lambda *_a: loop.quit() or False)
+            sources.append(grace)
+            grace.attach(context)
         return False
 
-    start(done)
-    source = GLib.timeout_add_seconds(timeout_s, on_timeout)
-    loop.run()
-    if not isinstance(result[0], TimeoutError):
-        GLib.source_remove(source)
-    if isinstance(result[0], TimeoutError):
-        raise DeviceError(_("{action}: the device did not answer in time").format(action=what))
-    if result[0] is not None:
-        raise _err(result[0], what)
+    timer = GLib.timeout_source_new(_ms(timeout_s))
+    timer.set_callback(lambda *_a: at_the_limit())
+    sources.append(timer)
+    if own:
+        context.push_thread_default()
+    try:
+        timer.attach(context)
+        start(done, cancellable)
+        if not answers:  # an answer given within start() needs no loop
+            loop.run()
+    except BaseException:
+        cancellable.cancel()  # e.g. Ctrl+C on the command line: no answer waited for
+        raise
+    finally:
+        for source in sources:
+            source.destroy()
+        if own:
+            context.pop_thread_default()
+    took = time.monotonic() - started
+    if not cancelled:
+        log.debug("gio: %s answered in %.1f s (%s)", name, took,
+                  "own context" if own else "main loop of this thread")
+        if answers[0] is not None:
+            raise _err(answers[0], what)
+        return
+    if not answers:
+        log.warning("gio: %s: no answer in %g s, cancelled; no answer %g s after the cancel "
+                    "either, given up", name, timeout_s, CANCEL_WAIT_S)
+        raise GioTimedOut(_("{action}: the device did not answer in time").format(action=what))
+    answer = answers[0]
+    if answer is None:
+        log.warning("gio: %s: no answer in %g s, cancelled; it ended all the same after "
+                    "%.1f s", name, timeout_s, took)
+        return
+    log.warning("gio: %s: no answer in %g s, cancelled", name, timeout_s)
+    if answer.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED):
+        raise GioTimedOut(_("{action}: the device did not answer in time").format(action=what))
+    raise GioTimedOut(f"{what}: {answer.message}")  # what really happened, as _err says it
 
 
 def _unmount(uri: str) -> None:
@@ -1605,19 +1653,19 @@ def _unmount(uri: str) -> None:
                   if _key(m.get_root().get_uri()) == _key(uri)), None)
     if found is None:
         raise DeviceError(_("The device is not mounted."))
-    _wait(lambda done: found.unmount_with_operation(
-        Gio.MountUnmountFlags.NONE, None, None,
+    _wait(lambda done, cancellable: found.unmount_with_operation(
+        Gio.MountUnmountFlags.NONE, None, cancellable,
         lambda m, res: done(lambda: m.unmount_with_operation_finish(res))),
-        30, _("Cannot unmount the device"))
+        UNMOUNT_TIMEOUT_S, _("Cannot unmount the device"), "unmount")
 
 
 def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
     location = Gio.File.new_for_uri(uri)
     try:
-        _wait(lambda done: location.mount_enclosing_volume(
-            Gio.MountMountFlags.NONE, None, None,
+        _wait(lambda done, cancellable: location.mount_enclosing_volume(
+            Gio.MountMountFlags.NONE, None, cancellable,
             lambda f, res: done(lambda: f.mount_enclosing_volume_finish(res))),
-            30, _("Cannot mount the device"))
+            MOUNT_TIMEOUT_S, _("Cannot mount the device"), "mount again")
     except DeviceError as e:
         raise RemountFailed(str(e)) from e
     # Right after mounting gvfs may not list the files yet.

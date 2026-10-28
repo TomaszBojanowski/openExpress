@@ -154,6 +154,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "real_volume_monitor: the session's Gio.VolumeMonitor instead of the quiet "
                    "one of the tests (it lists the mounts of this computer)")
+    config.addinivalue_line(
+        "markers", f"stress: a long stress test; run only with {STRESS}=1")
+
+
+# The long stress tests (e.g. of gio_storage._wait) run only when asked for:
+#   OPENEXPRESS_TESTS_STRESS=1      also the tests marked `stress`; a short version of each is
+#                                   in the ordinary run.
+STRESS = "OPENEXPRESS_TESTS_STRESS"
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -161,6 +169,8 @@ def pytest_runtest_setup(item):
     # Before any fixture: a fixture (e.g. window_device) may make the widgets.
     if item.get_closest_marker("needs_display") and not display_available():
         pytest.skip("no display")
+    if item.get_closest_marker("stress") and os.environ.get(STRESS) != "1":
+        pytest.skip(f"a long stress test: {STRESS}=1 runs it")
 
 
 # --- no disk of the computer running the tests is a Garmin device ---------------------------

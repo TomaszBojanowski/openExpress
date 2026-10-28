@@ -800,7 +800,9 @@ a display also need WebKitGTK 6.0. They start their own hidden X server (Xvfb:
 `xorg-x11-server-Xvfb` on Fedora, `xvfb` on Debian/Ubuntu), so no window shows on the desktop
 and `xvfb-run` is not needed; without Xvfb they use the display of the session.
 `OPENEXPRESS_TESTS_NO_DISPLAY=1` runs them without any display (the tests that need one are
-skipped), `OPENEXPRESS_TESTS_ON_SCREEN=1` on the display of the session. Some tests are skipped
+skipped), `OPENEXPRESS_TESTS_ON_SCREEN=1` on the display of the session.
+`OPENEXPRESS_TESTS_STRESS=1` also runs the long stress tests (a short version of each is in
+the ordinary run). Some tests are skipped
 quietly when something is missing: the translation tests without gettext, the PTP test without
 libusb-1.0 and the window-width tests without the Adwaita Sans font (the widths are measured in
 it). The tests never reach the network (one that tries fails) and need no device.

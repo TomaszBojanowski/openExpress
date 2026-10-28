@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 17:54+0100\n"
+"POT-Creation-Date: 2026-10-28 21:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -228,8 +228,8 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:377 openexpress/ciq.py:745 openexpress/ciq.py:1162
-#: openexpress/ciq.py:1447 openexpress/ciq.py:1499 openexpress/ciq.py:1904
+#: openexpress/ciq.py:377 openexpress/ciq.py:767 openexpress/ciq.py:1187
+#: openexpress/ciq.py:1472 openexpress/ciq.py:1524 openexpress/ciq.py:1929
 #: openexpress/cli.py:1407
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
@@ -244,210 +244,210 @@ msgstr ""
 msgid "Connect IQ updates"
 msgstr ""
 
-#: openexpress/ciq.py:480
+#: openexpress/ciq.py:479
 msgid "Connect IQ install"
 msgstr ""
 
-#: openexpress/ciq.py:485
+#: openexpress/ciq.py:484
 #, python-brace-format
 msgid "The server refused to queue: {apps}"
 msgstr ""
 
-#: openexpress/ciq.py:504
+#: openexpress/ciq.py:503
 msgid "Connect IQ remove"
 msgstr ""
 
-#: openexpress/ciq.py:531
+#: openexpress/ciq.py:553
 msgid "ANT radio"
 msgstr ""
 
-#: openexpress/ciq.py:532
+#: openexpress/ciq.py:554
 msgid "running in the background (may use more battery)"
 msgstr ""
 
-#: openexpress/ciq.py:533
+#: openexpress/ciq.py:555
 msgid "Bluetooth Low Energy"
 msgstr ""
 
-#: openexpress/ciq.py:534
+#: openexpress/ciq.py:556
 msgid "the internet, through the phone"
 msgstr ""
 
-#: openexpress/ciq.py:535
+#: openexpress/ciq.py:557
 msgid "offering data to watch faces and other apps"
 msgstr ""
 
-#: openexpress/ciq.py:536
+#: openexpress/ciq.py:558
 msgid "reading data that other apps offer"
 msgstr ""
 
-#: openexpress/ciq.py:537
+#: openexpress/ciq.py:559
 msgid "alerts during an activity"
 msgstr ""
 
-#: openexpress/ciq.py:538
+#: openexpress/ciq.py:560
 msgid "activity files (FIT)"
 msgstr ""
 
-#: openexpress/ciq.py:539
+#: openexpress/ciq.py:561
 msgid "adding its own data to activity files"
 msgstr ""
 
-#: openexpress/ciq.py:540
+#: openexpress/ciq.py:562
 msgid "showing notifications"
 msgstr ""
 
-#: openexpress/ciq.py:541
+#: openexpress/ciq.py:563
 msgid "saved courses, routes, waypoints and workouts"
 msgstr ""
 
-#: openexpress/ciq.py:542
+#: openexpress/ciq.py:564
 msgid "saving locations on the device"
 msgstr ""
 
-#: openexpress/ciq.py:543
+#: openexpress/ciq.py:565
 msgid "GPS location"
 msgstr ""
 
-#: openexpress/ciq.py:544
+#: openexpress/ciq.py:566
 msgid "push notifications"
 msgstr ""
 
-#: openexpress/ciq.py:545
+#: openexpress/ciq.py:567
 msgid "sensors (heart rate, ANT+ sensors, compass)"
 msgstr ""
 
-#: openexpress/ciq.py:546
+#: openexpress/ciq.py:568
 msgid "history of heart rate, pressure, temperature and altitude"
 msgstr ""
 
-#: openexpress/ciq.py:547
+#: openexpress/ciq.py:569
 msgid "recording sensor data"
 msgstr ""
 
-#: openexpress/ciq.py:548
+#: openexpress/ciq.py:570
 msgid "step counts"
 msgstr ""
 
-#: openexpress/ciq.py:549
+#: openexpress/ciq.py:571
 msgid "your Garmin Connect profile"
 msgstr ""
 
-#: openexpress/ciq.py:562
+#: openexpress/ciq.py:584
 #, python-brace-format
 msgid ""
 "{name} {version} needs other permissions than before; the Connect IQ store "
 "does not say which."
 msgstr ""
 
-#: openexpress/ciq.py:564
+#: openexpress/ciq.py:586
 #, python-brace-format
 msgid "{name} {version} needs these permissions:"
 msgstr ""
 
-#: openexpress/ciq.py:740
+#: openexpress/ciq.py:762
 msgid "no free app slots on the device"
 msgstr ""
 
-#: openexpress/ciq.py:752
+#: openexpress/ciq.py:774
 msgid "not enough Connect IQ space on the device"
 msgstr ""
 
-#: openexpress/ciq.py:758
+#: openexpress/ciq.py:780
 #, python-brace-format
 msgid "the device does not accept {datatype}"
 msgstr ""
 
-#: openexpress/ciq.py:907
+#: openexpress/ciq.py:929
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot update apps on this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:909
+#: openexpress/ciq.py:931
 msgid ""
 "The update waits in the queue in Garmin Connect and will be installed by the "
 "phone or Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:911
+#: openexpress/ciq.py:933
 msgid ""
 "The update will be queued in Garmin Connect and installed by the phone or "
 "Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:914
+#: openexpress/ciq.py:936
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot install apps on this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:916
+#: openexpress/ciq.py:938
 msgid ""
 "The app waits in the queue in Garmin Connect and will be installed by the "
 "phone or Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:918
+#: openexpress/ciq.py:940
 msgid ""
 "The app will be queued in Garmin Connect and installed by the phone or "
 "Garmin Express."
 msgstr ""
 
-#: openexpress/ciq.py:924
+#: openexpress/ciq.py:946
 msgid ""
 "The Flatpak has no access to USB devices, so it cannot remove apps from this "
 "device."
 msgstr ""
 
-#: openexpress/ciq.py:926
+#: openexpress/ciq.py:948
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:1062 openexpress/sync.py:809
+#: openexpress/ciq.py:1084 openexpress/sync.py:809
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
 
-#: openexpress/ciq.py:1096 openexpress/ciq.py:1196
+#: openexpress/ciq.py:1121 openexpress/ciq.py:1221
 #, python-brace-format
 msgid "Writing {path}"
 msgstr ""
 
-#: openexpress/ciq.py:1127 openexpress/ciq.py:1248
+#: openexpress/ciq.py:1152 openexpress/ciq.py:1273
 #, python-brace-format
 msgid "Cannot register the apps on the device: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1200
+#: openexpress/ciq.py:1225
 msgid "not enough free space on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1213
+#: openexpress/ciq.py:1238
 msgid "the app list folder was not found"
 msgstr ""
 
-#: openexpress/ciq.py:1233
+#: openexpress/ciq.py:1258
 msgid "USB connection"
 msgstr ""
 
-#: openexpress/ciq.py:1234 openexpress/ciq.py:1544
+#: openexpress/ciq.py:1259 openexpress/ciq.py:1569
 #, python-brace-format
 msgid "{error} Unplug the device and plug it in again."
 msgstr ""
 
-#: openexpress/ciq.py:1276
+#: openexpress/ciq.py:1301
 msgid "the GARMIN folder was not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1303
+#: openexpress/ciq.py:1328
 #, python-brace-format
 msgid "An unfinished file may have been left on the device: {paths}."
 msgid_plural "Unfinished files may have been left on the device: {paths}."
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1336
+#: openexpress/ciq.py:1361
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), and what was "
@@ -455,7 +455,7 @@ msgid ""
 "unplug it (e.g. in Files): the device could read half a list and remove apps."
 msgstr ""
 
-#: openexpress/ciq.py:1343
+#: openexpress/ciq.py:1368
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), nor the one that "
@@ -463,35 +463,35 @@ msgid ""
 "for the device are lost. Make them again."
 msgstr ""
 
-#: openexpress/ciq.py:1352 openexpress/device/storage.py:236
+#: openexpress/ciq.py:1377 openexpress/device/storage.py:236
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr ""
 
-#: openexpress/ciq.py:1359
+#: openexpress/ciq.py:1384
 #, python-brace-format
 msgid ""
 "{name} is already being removed; the device finishes it after it is "
 "unplugged."
 msgstr ""
 
-#: openexpress/ciq.py:1361
+#: openexpress/ciq.py:1386
 #, python-brace-format
 msgid ""
 "{name} is not installed yet; the device installs it after it is unplugged. "
 "Unplug the device first."
 msgstr ""
 
-#: openexpress/ciq.py:1413 openexpress/cli.py:1665
+#: openexpress/ciq.py:1438 openexpress/cli.py:1665
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
 msgstr ""
 
-#: openexpress/ciq.py:1451 openexpress/ciq.py:1933
+#: openexpress/ciq.py:1476 openexpress/ciq.py:1958
 msgid "App not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1464
+#: openexpress/ciq.py:1489
 #, python-brace-format
 msgid ""
 "The file of {name} was deleted, but the app list on the device could not be "
@@ -500,12 +500,12 @@ msgid ""
 "update the list."
 msgstr ""
 
-#: openexpress/ciq.py:1473
+#: openexpress/ciq.py:1498
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1483
+#: openexpress/ciq.py:1508
 #, python-brace-format
 msgid ""
 "It is not known whether the file of {name} was deleted: {error} The device "
@@ -513,82 +513,82 @@ msgid ""
 "connect the device and remove the app again."
 msgstr ""
 
-#: openexpress/ciq.py:1487
+#: openexpress/ciq.py:1512
 #, python-brace-format
 msgid "{name} was not removed: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1497
+#: openexpress/ciq.py:1522
 msgid "the app folder was not found on the device"
 msgstr ""
 
-#: openexpress/ciq.py:1506
+#: openexpress/ciq.py:1531
 #, python-brace-format
 msgid ""
 "{path} on the device is not the file the app list describes; nothing was "
 "deleted"
 msgstr ""
 
-#: openexpress/ciq.py:1512
+#: openexpress/ciq.py:1537
 #, python-brace-format
 msgid "The device refused to delete {path} ({reason}); nothing was changed."
 msgstr ""
 
-#: openexpress/ciq.py:1517
+#: openexpress/ciq.py:1542
 #, python-brace-format
 msgid "the device did not delete {path}"
 msgstr ""
 
-#: openexpress/ciq.py:1538
+#: openexpress/ciq.py:1563
 #, python-brace-format
 msgid ""
 "{name} was removed, but the device could not be mounted again: {error} "
 "Unplug the device and plug it in again."
 msgstr ""
 
-#: openexpress/ciq.py:1616
+#: openexpress/ciq.py:1641
 #, python-brace-format
 msgid "No OUT.BIN in {name}"
 msgstr ""
 
-#: openexpress/ciq.py:1620
+#: openexpress/ciq.py:1645
 #, python-brace-format
 msgid "Cannot read the copy of the app list {name}: {error}"
 msgstr ""
 
-#: openexpress/ciq.py:1625
+#: openexpress/ciq.py:1650
 #, python-brace-format
 msgid "No copy of the app list matches “{name}”."
 msgstr ""
 
-#: openexpress/ciq.py:1626
+#: openexpress/ciq.py:1651
 #, python-brace-format
 msgid "Several copies of the app list match “{name}”: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1655
+#: openexpress/ciq.py:1680
 msgid "Before any change, a copy of the app list of the device is made."
 msgstr ""
 
-#: openexpress/ciq.py:1656
+#: openexpress/ciq.py:1681
 msgid "No copy will be made: the device has no app list."
 msgstr ""
 
-#: openexpress/ciq.py:1742
+#: openexpress/ciq.py:1767
 #, python-brace-format
 msgid ""
 "Cannot read the app list of the device to make a copy of it: {error}. "
 "Nothing was changed."
 msgstr ""
 
-#: openexpress/ciq.py:1764
+#: openexpress/ciq.py:1789
 #, python-brace-format
 msgid ""
 "Cannot make a copy of the app list ({name}): {error}. Nothing was changed."
 msgstr ""
 
 #. TRANSLATORS: how a copy of the app list differs from the order on the device
-#: openexpress/ciq.py:1844
+#: openexpress/ciq.py:1869
 #, python-brace-format
 msgid "{count} app moved"
 msgid_plural "{count} apps moved"
@@ -596,30 +596,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: after "{count} apps moved": apps of the copy that the device has not
-#: openexpress/ciq.py:1847
+#: openexpress/ciq.py:1872
 #, python-brace-format
 msgid "{count} not on the device"
 msgstr ""
 
 #. TRANSLATORS: after "{count} apps moved": apps of the device that the copy has not
-#: openexpress/ciq.py:1850
+#: openexpress/ciq.py:1875
 #, python-brace-format
 msgid "{count} not in the copy"
 msgstr ""
 
-#: openexpress/ciq.py:1877
+#: openexpress/ciq.py:1902
 #, python-brace-format
 msgid "{count} position would change ({kinds}):"
 msgid_plural "{count} positions would change ({kinds}):"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1882
+#: openexpress/ciq.py:1907
 #, python-brace-format
 msgid "{position}: {new} (now: {old})"
 msgstr ""
 
-#: openexpress/ciq.py:1887 openexpress/cli.py:1910
+#: openexpress/ciq.py:1912 openexpress/cli.py:1910
 #: openexpress/gui/music_page.py:208
 #, python-brace-format
 msgid "… and {count} more"
@@ -627,23 +627,23 @@ msgid_plural "… and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py:1889
+#: openexpress/ciq.py:1914
 #, python-brace-format
 msgid "Not in the copy, left where they are: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1890
+#: openexpress/ciq.py:1915
 #, python-brace-format
 msgid "Only in the copy, ignored: {names}"
 msgstr ""
 
-#: openexpress/ciq.py:1916 openexpress/cli.py:1450 openexpress/cli.py:1496
+#: openexpress/ciq.py:1941 openexpress/cli.py:1450 openexpress/cli.py:1496
 msgid ""
 "The app list that would be written does not match the device. Nothing was "
 "changed."
 msgstr ""
 
-#: openexpress/ciq.py:1930
+#: openexpress/ciq.py:1955
 msgid "Several entries on the device share this ID; the type is needed"
 msgstr ""
 
@@ -1117,14 +1117,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
-#: openexpress/cli.py:650 openexpress/i18n.py:170 openexpress/netstatus.py:218
+#: openexpress/cli.py:650 openexpress/i18n.py:171 openexpress/netstatus.py:218
 #, python-brace-format
 msgctxt "date and hour"
 msgid "{date} {time}"
 msgstr ""
 
 #. TRANSLATORS: strftime format of a date in the popover of the server state button
-#: openexpress/cli.py:651 openexpress/i18n.py:168 openexpress/netstatus.py:209
+#: openexpress/cli.py:651 openexpress/i18n.py:169 openexpress/netstatus.py:209
 #: openexpress/netstatus.py:240
 msgid "%Y-%m-%d"
 msgstr ""
@@ -2637,94 +2637,90 @@ msgstr ""
 msgid "flatpak-spawn is not available"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:233 openexpress/device/gio_storage.py:250
+#: openexpress/device/gio_storage.py:238 openexpress/device/gio_storage.py:255
 #: openexpress/device/storage.py:384
 #, python-brace-format
 msgid "Cannot list {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:264 openexpress/device/gio_storage.py:273
-#: openexpress/device/gio_storage.py:278 openexpress/device/storage.py:391
+#: openexpress/device/gio_storage.py:269 openexpress/device/gio_storage.py:278
+#: openexpress/device/gio_storage.py:283 openexpress/device/storage.py:391
 #: openexpress/device/storage.py:401 openexpress/device/storage.py:406
 #, python-brace-format
 msgid "Cannot read {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:301 openexpress/device/gio_storage.py:322
+#: openexpress/device/gio_storage.py:306 openexpress/device/gio_storage.py:327
 #: openexpress/device/storage.py:417 openexpress/device/storage.py:430
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:420 openexpress/device/storage.py:454
+#: openexpress/device/gio_storage.py:425 openexpress/device/storage.py:454
 #, python-brace-format
 msgid "Cannot delete {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:426 openexpress/device/storage.py:458
+#: openexpress/device/gio_storage.py:431 openexpress/device/storage.py:458
 #, python-brace-format
 msgid "Cannot create directory {path}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:853 openexpress/device/gio_storage.py:910
-#: openexpress/device/gio_storage.py:1589
+#: openexpress/device/gio_storage.py:884 openexpress/device/gio_storage.py:920
+#: openexpress/device/gio_storage.py:1668
 msgid "Cannot mount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:875 openexpress/device/gio_storage.py:1576
+#: openexpress/device/gio_storage.py:906 openexpress/device/gio_storage.py:1655
 msgid "The device is not mounted."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:908
-msgid "Mounting the device timed out"
-msgstr ""
-
-#: openexpress/device/gio_storage.py:941
+#: openexpress/device/gio_storage.py:952
 msgid ""
 "The drive is not mounted any more. If it was ejected, you can unplug the "
 "cable."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:943
+#: openexpress/device/gio_storage.py:954
 msgid "Cannot eject the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:990
+#: openexpress/device/gio_storage.py:1001
 msgid "The device is ejected. You can unplug the cable."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:996
+#: openexpress/device/gio_storage.py:1007
 msgid ""
 "Do not unplug the cable yet: the device may not see the update. Close any "
 "program that uses the drive and try again, or eject it in the file manager."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:998
+#: openexpress/device/gio_storage.py:1009
 msgid ""
 "Do not unplug the cable yet: the device may not see the update. Close any "
 "program that uses the drive and eject it in the file manager."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1184
+#: openexpress/device/gio_storage.py:1195
 msgid ""
 "The device is connected in mass storage mode (as a USB drive): openExpress "
 "shows its information and software updates; sync, apps, maps and music are "
 "not supported in this mode."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1192
+#: openexpress/device/gio_storage.py:1203
 msgid ""
 "After it was ejected, the watch switched to its Garmin USB mode, which "
 "openExpress does not use. Unplug the cable and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1199
+#: openexpress/device/gio_storage.py:1210
 msgid ""
 "The Garmin device is connected, but its drive is not mounted. Open it in the "
 "file manager, or unplug the cable and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1206
+#: openexpress/device/gio_storage.py:1217
 msgid ""
 "The Garmin device is connected as a USB drive, but this version (Flatpak) "
 "has no access to /run/media, where the system mounted it."
@@ -2732,7 +2728,7 @@ msgstr ""
 
 #. TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
 #. it; "kquitapp6 kiod6" is a command, not to be translated
-#: openexpress/device/gio_storage.py:1258
+#: openexpress/device/gio_storage.py:1269
 msgid ""
 "KDE's MTP service may be holding the device: it keeps it after Dolphin is "
 "closed and takes it back when the cable is plugged in again. Close Dolphin "
@@ -2740,11 +2736,11 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
-#: openexpress/device/gio_storage.py:1265
+#: openexpress/device/gio_storage.py:1276
 msgid "No MTP support in the system (gvfs-mtp)"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1271
+#: openexpress/device/gio_storage.py:1282
 msgid ""
 "openExpress reads the device over MTP through gvfs, and gvfs on this system "
 "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: "
@@ -2752,53 +2748,54 @@ msgid ""
 "log out and back in, then plug the device in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1280
+#: openexpress/device/gio_storage.py:1291
 msgid ""
 "The device is still starting. Wait until it shows its usual screen, or "
 "unplug it and plug it in again."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1283
+#: openexpress/device/gio_storage.py:1294
 msgid ""
 "The Garmin device is connected, but it does not offer its files. Check its "
 "screen: if it is locked with a PIN or asks something, unlock it or confirm."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1289
+#: openexpress/device/gio_storage.py:1300
 msgid ""
 "No Garmin device (MTP) found. Connect the device with a USB cable and unlock "
 "it if it asks to allow the connection."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1346
+#: openexpress/device/gio_storage.py:1357
 msgid "The device is starting. Try again in a moment."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1362 openexpress/gui/detection.py:556
+#: openexpress/device/gio_storage.py:1373 openexpress/gui/detection.py:556
 #: openexpress/gui/detection.py:563 openexpress/gui/detection.py:578
 msgid "The device is starting…"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1376
+#: openexpress/device/gio_storage.py:1387
 #, python-brace-format
 msgid "Several devices connected, choose one with --device-uri: {names}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1395
+#: openexpress/device/gio_storage.py:1406
 #, python-brace-format
 msgid "GARMIN/GarminDevice.xml not found on device {uri}"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1567
+#: openexpress/device/gio_storage.py:1639
+#: openexpress/device/gio_storage.py:1647
 #, python-brace-format
 msgid "{action}: the device did not answer in time"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1580
+#: openexpress/device/gio_storage.py:1659
 msgid "Cannot unmount the device"
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1600
+#: openexpress/device/gio_storage.py:1679
 msgid "The device was mounted again but its files are not visible."
 msgstr ""
 
@@ -4937,12 +4934,12 @@ msgstr ""
 msgid "{size} free"
 msgstr ""
 
-#: openexpress/i18n.py:145
+#: openexpress/i18n.py:146
 msgid "just now"
 msgstr ""
 
 #. TRANSLATORS: how long ago, in minutes
-#: openexpress/i18n.py:149
+#: openexpress/i18n.py:150
 #, python-brace-format
 msgid "{n} min ago"
 msgid_plural "{n} min ago"
@@ -4950,7 +4947,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: how long ago, in hours
-#: openexpress/i18n.py:154
+#: openexpress/i18n.py:155
 #, python-brace-format
 msgid "{n} h ago"
 msgid_plural "{n} h ago"
@@ -4958,49 +4955,49 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a moment of yesterday, e.g. "yesterday, 23:41"
-#: openexpress/i18n.py:157
+#: openexpress/i18n.py:158
 #, python-brace-format
 msgid "yesterday, {time}"
 msgstr ""
 
 #. TRANSLATORS: how long ago, in days (two to six)
-#: openexpress/i18n.py:161
+#: openexpress/i18n.py:162
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/i18n.py:181
+#: openexpress/i18n.py:182
 #, python-brace-format
 msgid "Today at {time}"
 msgstr ""
 
-#: openexpress/i18n.py:183
+#: openexpress/i18n.py:184
 #, python-brace-format
 msgid "Yesterday at {time}"
 msgstr ""
 
 #. TRANSLATORS: the decimal separator of your language, one character: "." or ","
-#: openexpress/i18n.py:338
+#: openexpress/i18n.py:339
 msgctxt "decimal separator"
 msgid "."
 msgstr ""
 
 #. TRANSLATORS: a length of time in seconds
-#: openexpress/i18n.py:389
+#: openexpress/i18n.py:390
 #, python-brace-format
 msgid "{seconds} s"
 msgstr ""
 
 #. TRANSLATORS: a length of time in minutes
-#: openexpress/i18n.py:392
+#: openexpress/i18n.py:393
 #, python-brace-format
 msgid "{minutes} min"
 msgstr ""
 
 #. TRANSLATORS: a length of time in minutes and seconds
-#: openexpress/i18n.py:394
+#: openexpress/i18n.py:395
 #, python-brace-format
 msgid "{minutes} min {seconds} s"
 msgstr ""
@@ -5948,41 +5945,41 @@ msgstr ""
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""
 
-#: openexpress/settings.py:99
+#: openexpress/settings.py:122
 #, python-brace-format
 msgid "The settings file {path} is damaged ({error}); fix or delete it."
 msgstr ""
 
-#: openexpress/settings.py:102
+#: openexpress/settings.py:125
 #, python-brace-format
 msgid "The settings file {path} is damaged; fix or delete it."
 msgstr ""
 
-#: openexpress/settings.py:110
+#: openexpress/settings.py:133
 #, python-brace-format
 msgid "Unknown environment: {name}"
 msgstr ""
 
-#: openexpress/settings.py:149
+#: openexpress/settings.py:168
 msgid ""
 "openExpress is not set up yet. It needs the Garmin Express installer for "
 "Windows (GarminExpress.exe, a free download from garmin.com), and only reads "
 "it. First run: openexpress setup --from-installer /path/to/GarminExpress.exe"
 msgstr ""
 
-#: openexpress/settings.py:158
+#: openexpress/settings.py:177
 #, python-brace-format
 msgid ""
 "The saved client key in {path} is damaged. Run again: openexpress setup --"
 "from-installer /path/to/GarminExpress.exe"
 msgstr ""
 
-#: openexpress/settings.py:193
+#: openexpress/settings.py:212
 #, python-brace-format
 msgid "Consumer key not found in {path}"
 msgstr ""
 
-#: openexpress/settings.py:205
+#: openexpress/settings.py:224
 #, python-brace-format
 msgid "URL signing data not found in {path}"
 msgstr ""

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from fakes import RunNow, record_sync, replace_in_window
+from gio_fake import answer_as_gio
 
 from openexpress.gui.connected import Connected
 
@@ -734,7 +735,7 @@ class FakeDriveMount:
     It is ejected (or unmounted, when it cannot be ejected) as Gio does it: the answer comes
     later, from the main loop (`answer`); with `refusal` set the system refuses with it."""
 
-    answer = staticmethod(lambda callback: gio_storage.GLib.idle_add(callback))
+    answer = staticmethod(answer_as_gio)
 
     def __init__(self, folder, unix_device, name="GARMIN", ejectable=True, uuid=None):
         self.root, self.name = FakeLocalFile(folder), name
@@ -776,9 +777,9 @@ def ejects_at_once(monkeypatch):
     tests have made-up timers, which gio_storage._wait would hand its own timeout."""
     monkeypatch.setattr(FakeDriveMount, "answer", staticmethod(lambda callback: callback()))
 
-    def wait(start, timeout_s, what):
+    def wait(start, timeout_s, what, name="operation"):
         answers = []
-        start(answers.append)
+        start(answers.append, None)
         try:
             answers[0]()
         except gio_storage.GLib.Error as e:
