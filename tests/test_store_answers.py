@@ -1,5 +1,5 @@
-"""Answers of the Connect IQ store and queue that are not what we expect (step 3 after the audit
-of 0.7.9): an item of the store's list without a proper app ID is left out with one line in
+"""Answers of the Connect IQ store and queue that are not what we expect: an item of the
+store's list without a proper app ID is left out with one line in
 the log, the others are shown (before, one such item failed the whole list, and the Apps
 page with it); an app of the queue whose package is empty (204/404) is taken off the queue
 and nothing is written, as Garmin Express does, now with a line in the log (before, without

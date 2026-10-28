@@ -1,4 +1,4 @@
-"""gio_storage._wait under load (step 4 after the audit of 0.7.9, A8; design §9a).
+"""gio_storage._wait under load.
 
 Made-up Gio operations, drawn with a fixed seed: they answer at once, in the next turn, before
 the time limit, only once cancelled, or never; they say done or an error, and after a cancel

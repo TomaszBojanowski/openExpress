@@ -1664,8 +1664,8 @@ def _wait(start, timeout_s: float, what: str, name: str = "operation") -> None:
                     "%.1f s", name, timeout_s, took)
         return
     cancelled_only = answer.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)
-    # A cancel ends our wait at once; gvfs may go on (it did: an unmount cancelled at its time
-    # limit took effect afterwards, the live test of 28.10.2026).
+    # A cancel ends our wait at once; gvfs may go on (an unmount cancelled at its time limit
+    # has been seen to take effect afterwards).
     log.warning("gio: %s: no answer in %g s, cancelled; its answer: %s%s", name, timeout_s,
                 _answer_code(answer), " (our wait ended, gvfs may go on)" if cancelled_only else "")
     if cancelled_only:
@@ -1685,8 +1685,10 @@ def _unmount(uri: str) -> None:
 
 
 def _mounted_again(location, res) -> None:
-    """The answer of mounting the device again: mounted already is as good (something else
-    mounted it, or an unmount that did not end left it mounted)."""
+    """The answer of mounting the device again. "Mounted already" counts as mounted: after a
+    session the unmount has finished, so something else has mounted the device; after an
+    unmount that did not finish in time this is asked only once the device was seen
+    unmounted, and its state is looked at again afterwards (_mount_back)."""
     try:
         location.mount_enclosing_volume_finish(res)
     except GLib.Error as e:
@@ -1717,10 +1719,10 @@ def _remount(uri: str, storage: Storage, sleep=time.sleep) -> None:
 
 # --- the device as it really is, after an unmount that did not finish in time ------------
 #
-# An unmount cancelled at its time limit answers "cancelled" at once, but gvfs may go on: in
-# the live test of 28.10.2026 (Edge 1050, a time limit of 1 ms) the device was found mounted
-# ("mounted already"), and then the unmount took effect and left it without a mount. So the
-# device is watched until it settles, and mounted again only once it is seen unmounted.
+# An unmount cancelled at its time limit answers "cancelled" at once, but gvfs may go on: an
+# Edge 1050 was found mounted ("mounted already"), and then the unmount took effect and left
+# it without a mount. So the device is watched until it settles, and mounted again only once
+# it is seen unmounted.
 
 MOUNTED, UNMOUNTED, BETWEEN = "mounted", "unmounted", "between"
 SETTLE_POLL_S = 0.25

@@ -1,5 +1,5 @@
-"""tools/stress_device.py, the stress test of the waits for gvfs on a real device (step 4 after
-the audit of 0.7.9, A8; design §9b), without a device: it refuses to start while openExpress
+"""tools/stress_device.py, the stress test of the waits for gvfs on a real device, without a
+device: it refuses to start while openExpress
 runs and before it touches a device, it lets only devices other than the Edge 1050 have at most
 5 cycles, it only reads (its PTP session, its storage, no network), its summary, and its short
 time limit is for its run only. The device, its folders and its answers are made up."""
@@ -229,7 +229,7 @@ def test_the_short_time_limit_is_for_its_run_only(stress, device):
 
 
 def test_the_summary_says_how_the_device_settled(stress):
-    """After an unmount stopped at its time limit (step 4, §10): which answer came, how the
+    """After an unmount stopped at its time limit: which answer came, how the
     device settled, whether it was mounted again or did not come back; from the log lines of
     gio_storage."""
     import logging

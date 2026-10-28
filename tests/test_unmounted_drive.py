@@ -163,7 +163,7 @@ def test_choosing_it_mounts_it_and_opens_the_drive(drives, monkeypatch):
 class ShownLater(UnmountedVolume):
     """As the volume of a drive the system mounts: its mount is shown once the volume monitor
     has its signal, which the window's thread handles, while the answer to the mount goes to
-    the thread that waits for it (step 4 after the audit of 0.7.9, A8). Here it is shown
+    the thread that waits for it. Here it is shown
     0.3 s after the answer."""
 
     def mount_finish(self, _result):

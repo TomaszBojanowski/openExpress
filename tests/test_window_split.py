@@ -30,7 +30,7 @@ def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(caplog, in_the
 
 def test_each_module_of_the_window_logs_under_its_own_name():
     """Every getLogger of openexpress/gui/*.py takes __name__: a line of the log names the
-    module that wrote it, not the window's module (review of 28.10.2026)."""
+    module that wrote it, not the window's module."""
     import ast
     from pathlib import Path
 

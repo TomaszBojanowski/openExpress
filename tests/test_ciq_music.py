@@ -1126,9 +1126,9 @@ NOT_BACK = ("The device did not come back after an unmount that did not finish i
 
 
 def test_a_device_not_back_is_told_to_be_replugged_once(hidden_apps):
-    """The unmount for the session did not finish in time and the device did not come back
-    (step 4 after the audit of 0.7.9, A8, §10): its error says what to do; the app waits for
-    the phone, as when no session could be had."""
+    """The unmount for the session did not finish in time and the device did not come back:
+    its error says what to do; the app waits for the phone, as when no session could be
+    had."""
     from openexpress.device import gio_storage
 
     st, dev, fake = hidden_apps
@@ -3452,7 +3452,7 @@ def test_cli_update_through_the_mounted_storage_announces_no_app_list(iq_device,
                                                                      capsys):
     """An update of an app whose folder is in sight (an Edge 1050) goes next to the app's file
     under a new name and leaves the app list as it is: the dry run says nothing of an IN.BIN
-    to be written, and --apply writes none (seen on the Edge, 28.10.2026). Over PTP the list
+    to be written, and --apply writes none (as an Edge 1050 does). Over PTP the list
     is written again as it is: test_cli_update_of_a_hidden_app."""
     from openexpress.cli import main
 

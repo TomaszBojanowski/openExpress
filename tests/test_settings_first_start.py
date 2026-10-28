@@ -1,4 +1,4 @@
-"""The first start (step 3 after the audit of 0.7.9): settings.json does not exist yet, and the
+"""The first start: settings.json does not exist yet, and the
 window, the background service and the command line (or two devices the window opens at
 once) load the settings at the same moment. Each made a client GUID of its own and wrote
 it, so that the program told Garmin two GUIDs; now the first one writes it under a lock and

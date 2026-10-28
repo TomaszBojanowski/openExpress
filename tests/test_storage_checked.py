@@ -1,5 +1,5 @@
-"""One write check, one quiet deletion and one check of the room on the device, in Storage
-(step 2 of the audit of 0.7.9): what is written is checked by its size on the device, a file
+"""One write check, one quiet deletion and one check of the room on the device, in Storage:
+what is written is checked by its size on the device, a file
 of another size is deleted (unless it is one other maps use), and the error is the caller's
 own class. All data is made up."""
 

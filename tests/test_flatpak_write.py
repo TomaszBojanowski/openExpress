@@ -318,7 +318,7 @@ def test_write_file_passes_the_progress_on_and_reports_the_end(host, monkeypatch
 
 def test_a_copy_whose_output_cannot_be_read_is_ended_and_reaped(host, monkeypatch):
     """The output of `gio copy` cannot be read: the process is killed and waited for, so
-    that it is not left behind as a zombie (step 3 after the audit of 0.7.9)."""
+    that it is not left behind as a zombie."""
 
     class Unreadable(FakeProcess):
         def __init__(self):

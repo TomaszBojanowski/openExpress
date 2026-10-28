@@ -33,7 +33,7 @@ def order_list_at_its_top(box) -> bool:
     """The list of copies of "Restore the order from a copy", once shown: no row chosen
     (Next waits for the user's choice) and scrolled to its top, its first row whole. Run
     when the window is idle after the dialog is shown: the list chooses its first row as it
-    takes the focus then (25.10.2026). False: once."""
+    takes the focus then. False: once."""
     box.unselect_all()
     scroller = box.get_ancestor(Gtk.ScrolledWindow)
     if scroller is not None:
@@ -364,7 +364,7 @@ class AppsPage:
             scroller.set_child(box)
             # The window holds the dialog while it is open (keep_as): a handler that held the
             # dialog, or the list, would keep both after it closed. The copy chosen (data, no
-            # widget) stays with the answer: "closed" comes before it.
+            # widget) stays with the answer (confirm says why).
             picked = {"choice": None}
 
             def selected(_box, row):
@@ -434,8 +434,7 @@ class AppsPage:
         body = "\n\n".join([*(ciq.permissions_text(a) for a in asking), ngettext(
             "openExpress installs it only if you allow them.",
             "openExpress installs them only if you allow them.", count)])
-        # The choice is data of these closures, not of the dialog: "closed" comes before the
-        # answer.
+        # The choice is data of these closures, not of the dialog (confirm says why).
         answers = [Answer(
             # TRANSLATORS: answer to the question about new permissions: skip the apps that
             # ask for them and install or update only the others

@@ -2,7 +2,7 @@
 A question closed in any way is cancelled and runs nothing; an answer runs only its own
 work. The dialogs are shown in a real window, their buttons clicked and Escape is
 Adw.Dialog.close(): libadwaita then says "closed", and "response" after it, once (1.9, seen
-on Xvfb 28.10.2026). A "closed" said by a test alone gives the close response as well, so
+on Xvfb). A "closed" said by a test alone gives the close response as well, so
 the tests do not say it themselves."""
 
 import logging

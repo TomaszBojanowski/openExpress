@@ -1,4 +1,4 @@
-"""Waiting for one asynchronous Gio operation (step 4 after the audit of 0.7.9, A8).
+"""Waiting for one asynchronous Gio operation.
 
 A worker thread of the window waited on the global default main context, which the window's
 thread holds while it runs: so the window's thread gave the answer and the time limit, a busy
@@ -248,8 +248,8 @@ def test_a_time_limit_cancels_the_operation_and_waits_for_its_answer(kind, fast,
     assert isinstance(timed_out, gio_storage.GioTimedOut)
     assert op.was_cancelled and op.cancellable.is_cancelled()
     assert op.delivered == ("cancelled", threading.current_thread().name)  # waited for
-    # Which answer came after the cancel: "cancelled" only ends our wait (step 2c of the live
-    # test, 28.10.2026: gvfs went on and unmounted the device later).
+    # Which answer came after the cancel: "cancelled" only ends our wait, gvfs may go on and
+    # unmount the device later.
     assert (f"gio: {kind}: no answer in {LIMIT:g} s, cancelled; its answer: cancelled (our "
             "wait ended, gvfs may go on)") in [r.getMessage() for r in caplog.records]
 

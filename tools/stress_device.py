@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Stress test of the waits for gvfs on a real device. It ONLY READS (step 4 after the audit of
-0.7.9, A8). Not part of a release; run by hand from the folder of the project:
+"""Stress test of the waits for gvfs on a real device. It ONLY READS. Not part of a release;
+run by hand from the folder of the project:
 
     python3 tools/stress_device.py [--cycles N] [--short-timeout S] [--path cli|window|both]
                                    [--device-uri URI] [--settle S]
@@ -20,9 +20,8 @@ cancelled at its time limit.
 It never writes to the device or to the account: its PTP session allows only reading calls,
 its storage refuses every write, and the network is closed to it. It refuses to start while a
 window or the background service of openExpress runs, or any other openexpress process, and
-gives a device other than the Edge 1050 at most 5 cycles (the fēnix 8 crashed after long work,
-analysis 20), the Edge 1050 at most 200. Exit code: 0 no errors, 1 errors in the cycles, 2
-refused."""
+gives a device other than the Edge 1050 at most 5 cycles (the fēnix 8 has crashed after long
+work), the Edge 1050 at most 200. Exit code: 0 no errors, 1 errors in the cycles, 2 refused."""
 
 from __future__ import annotations
 
@@ -545,7 +544,7 @@ def run(args) -> int:
 
 def _cycles(args, uri, storage, device) -> int:
     if device.part_number == FENIX_8:
-        print("Warning: the fēnix 8 crashed (RTL Trap) after long work (analysis 20). This "
+        print("Warning: the fēnix 8 has crashed (RTL Trap) after long work. This "
               f"test only reads, at most {MOST_ELSEWHERE} cycles. Ctrl+C within "
               f"{WARNING_PAUSE_S} s stops it.", flush=True)
         try:

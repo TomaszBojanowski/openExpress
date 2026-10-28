@@ -1316,7 +1316,7 @@ def _ptp_delete(session, handle: int | None, path: str) -> list[str]:
 def _replug(error) -> str:
     """The device was not mounted again: the error, then what to do, unless it says that
     itself (DeviceNotBack)."""
-    if getattr(error, "says_replug", False):
+    if error.says_replug:
         return _sentence(error)
     return _("{error} Unplug the device and plug it in again.").format(error=_sentence(error))
 

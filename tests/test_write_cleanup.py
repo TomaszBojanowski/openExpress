@@ -260,7 +260,7 @@ class Downloads:
 def test_an_app_update_cut_short_leaves_no_half_app(iq_device):
     """The update of an app over the mounted storage stops half way: the failure is in the
     report, no half file is left, the app's own file is as it was (an update goes under a
-    new name, as Garmin Express writes it: step 2 of the audit of 0.7.9) and the update
+    new name, as Garmin Express writes it) and the update
     stays in the queue."""
     st, dev = iq_device
     prg, messages = _app_to_update(st)
@@ -391,7 +391,7 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
     assert errors == [("Installing Test Map…", WINDOW_TEXT)]
 
 
-# --- music: a file of the wrong size stops the copy (step 2 of the audit of 0.7.9) ---------------
+# --- music: a file of the wrong size stops the copy ----------------------------------------------
 
 class ShortSong(LocalStorage):
     """A device that keeps one byte less of the file named `short`, and says nothing."""
@@ -440,7 +440,7 @@ def test_how_many_songs_were_copied_in_polish(count, words):
     assert said == words
 
 
-# --- files from Garmin Connect and TrueUp checked by their size (step 2, decision 1) -------------
+# --- files from Garmin Connect and TrueUp checked by their size ---------------------------------
 
 class ShortFit(LocalStorage):
     """A device that keeps one byte less of a FIT file than it is given, and says nothing."""
@@ -475,7 +475,7 @@ def test_a_file_from_connect_of_the_wrong_size_is_deleted_and_not_acknowledged(d
 
 
 def test_no_room_for_a_file_from_connect_is_said_as_everywhere(device_root, tmp_path):
-    """The words of maps, music and own maps (decision 3: already in Polish)."""
+    """The words of maps, music and own maps (already in Polish)."""
     st = Full(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     items = sync.plan_downloads(dev, [_course()])
@@ -511,7 +511,7 @@ def test_a_trueup_of_the_wrong_size_is_deleted(device_root):
 
 def test_a_trueup_not_written_after_it_was_acknowledged_is_said_in_the_log(device_root,
                                                                           caplog):
-    """As Garmin Express: fetched, acknowledged, then written (step 2, A4). Written in vain,
+    """As Garmin Express: fetched, acknowledged, then written. Written in vain,
     it is lost for Garmin Connect: one WARNING says so."""
     import logging
 

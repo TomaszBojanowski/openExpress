@@ -1,5 +1,5 @@
-"""The errors of the command line (step 3 after the audit of 0.7.9, A6): every error that is a
-message for the user (errors.UserFacingError) is told as it is and logged in one line, without
+"""The errors of the command line: every error that is a message for the user
+(errors.UserFacingError) is told as it is and logged in one line, without
 a traceback; only an error nobody expected has its traceback in the log. Before, the command
 line listed the expected errors by hand, and those it forgot (the primary wearable, the copy
 of the diagnostics) were logged as unexpected. A ProtoError (our reading of a server's answer

@@ -269,7 +269,7 @@ def _keep(parent, attribute: str, dialog) -> None:
     setattr(parent, attribute, dialog)
 
     def closed(shown):
-        if getattr(parent, attribute, None) is shown:
+        if getattr(parent, attribute) is shown:
             setattr(parent, attribute, None)
 
     dialog.connect("closed", closed)
@@ -517,14 +517,16 @@ class TaskRunner:
         def worker():
             try:
                 result = fn()
-            except Exception as e:  # optional work: said in the log, with its traceback
-                # unless it is a message for the user, and as what it waits for when it is an
-                # ordinary stop (as run_task)
+            except Exception as e:
+                # Said in the log as run_task says it, at INFO: the work is optional.
                 if isinstance(e, OrdinaryStop):
                     log.info("background work %s: %s", task_name(fn), e.log_reason)
-                else:
+                elif isinstance(e, UserFacingError):
                     log.info("background work %s failed: %s: %s", task_name(fn),
-                             type(e).__name__, e, exc_info=not isinstance(e, UserFacingError))
+                             type(e).__name__, e)
+                else:  # nobody expected it: with its traceback
+                    log.info("background work %s failed: %s: %s", task_name(fn),
+                             type(e).__name__, e, exc_info=e)
                 if on_error is not None:
                     GLib.idle_add(lambda err=e: (on_error(err), False)[1])
                 return

@@ -3286,9 +3286,9 @@ def _unmount_without_an_answer(monkeypatch):
 
 
 def test_an_unmount_that_timed_out_is_followed_by_a_mount(exclusive, monkeypatch, caplog):
-    """gvfs may unmount the device all the same after the cancel (step 4 after the audit of
-    0.7.9, A8): once it is seen unmounted it is mounted again, and nothing of the session runs
-    (the race itself: test_unmount_race.py)."""
+    """gvfs may unmount the device all the same after the cancel: once it is seen unmounted
+    it is mounted again, and nothing of the session runs (the race itself:
+    test_unmount_race.py)."""
     st, _fake, events = exclusive
     _unmount_without_an_answer(monkeypatch)
     _seen_mounted_once_mounted_again(monkeypatch, st, events)

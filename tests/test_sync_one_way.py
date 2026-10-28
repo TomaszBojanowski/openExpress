@@ -244,7 +244,7 @@ def test_what_the_command_line_tells_is_not_repeated_on_its_terminal(
     assert cli.main(["--path", str(device_root), "sync", "--apply"]) == 3
     err = capsys.readouterr().err
     assert "baseline --apply" in err and "WARNING" not in err
-    # An ordinary stop: one line of INFO in the log, no "stopped after" (28.10.2026).
+    # An ordinary stop: one line of INFO in the log, no "stopped after".
     log = log_file.read_text()
     assert "INFO openexpress.service: sync: waiting for the first-sync choice" in log
     assert "FirstSyncChoiceNeeded" not in log

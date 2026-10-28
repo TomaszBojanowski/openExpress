@@ -1,6 +1,6 @@
 """Made-up asynchronous Gio operations that answer as Gio does: once, always (also when
-cancelled), in the main context that was the default of the thread when the operation began
-(step 4 after the audit of 0.7.9, A8). Imported by the tests as `from gio_fake import …`."""
+cancelled), in the main context that was the default of the thread when the operation began.
+Imported by the tests as `from gio_fake import …`."""
 
 import threading
 
@@ -143,7 +143,7 @@ class WindowCallbacks:
 
 class GvfsDevice:
     """An MTP device in gvfs as gio_storage sees it, for an unmount that goes on after its
-    cancel (the live test 2c of step 4, 28.10.2026). Its unmount and its mount answer through
+    cancel, as gvfs lets it. Its unmount and its mount answer through
     D-Bus: a cancel ends the wait at once ("cancelled"), while gvfs goes on and the unmount
     takes effect `unmount_takes_s` after it began, unless `cancel_stops` (gvfs honoured the
     cancel). The volume monitor (`get_mounts`) shows a change once the main thread has had

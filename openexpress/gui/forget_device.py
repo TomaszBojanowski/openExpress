@@ -59,7 +59,7 @@ class ForgetDevice:
             body += "\n\n" + str(forget.PendingFiles(kept.pending))
         # What is ticked (data, no widget) goes with the ticks and the answer; the window
         # holds the question while it is open (keep_as): a handler that held the question or
-        # a tick would keep them after it closed. "closed" comes before the answer.
+        # a tick would keep them after it closed (confirm says why the ticks are data).
         choice = {"unit": unit, "name": name, "pending": False, "backups": False}
         ticks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         if kept.pending:

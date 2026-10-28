@@ -42,7 +42,7 @@ def test_an_exception_in_a_callback_of_the_window_is_logged_with_its_traceback(l
     while context.iteration(False):
         pass
     text = "\n".join(_lines(log_file))
-    # Written by log_unexpected, under its own module (review of 28.10.2026).
+    # Written by log_unexpected, under its own module.
     assert ("ERROR openexpress.gui.window_tasks: unexpected error in the window: "
             "RuntimeError") in text
     assert "Traceback" in text and "made-up failure" in text

@@ -1,4 +1,4 @@
-"""A sync stopped after its uploads keeps its record (step 3 after the audit of 0.7.9, A7):
+"""A sync stopped after its uploads keeps its record:
 its files are in Garmin Connect and state.json is written, so last_sync.json says what it did
 and why it stopped, in a line of its errors; before, it kept the record of the sync before,
 and the row "Last sync" and the tiles told that one. Ctrl+C on the command line likewise. A
@@ -6,6 +6,7 @@ sync stopped before its uploads did nothing and keeps no record. All answers are
 
 import json
 import shutil
+import threading
 import types
 
 import pytest
@@ -145,7 +146,7 @@ def test_the_window_shows_the_record_of_a_stopped_sync(monkeypatch):
 
     monkeypatch.setattr(service, "run_sync", run_sync)
     s = types.SimpleNamespace(mass_storage=False, logged_in=True, ownership_error=None,
-                              stop_waiting=None)
+                              stop_waiting=threading.Event())
     win = types.SimpleNamespace(
         session=s, run_task=RunNow(error="record"), progress=lambda *a: None,
         toast=lambda text: None, _show_last_sync=lambda: shown.append("last sync"),

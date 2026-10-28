@@ -282,7 +282,7 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
     assert MainWindow._on_close_request(win, None) is True  # asked again, as before
 
 
-# --- Escape in every dialog of the window (step 1 of the audit of 0.7.9) ------------------------
+# --- Escape in every dialog of the window -------------------------------------------------------
 #
 # Each dialog is opened by the window's own code (OPENERS: its name in the log, as confirm() and
 # inform() are given it) and closed as Escape closes it. A question then does nothing at all; a

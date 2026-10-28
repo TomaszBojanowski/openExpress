@@ -1,6 +1,6 @@
 """openexpress/__main__.py runs the program only as `python3 -m openexpress`: importing it
-(as a tool that imports every module of the package does) runs nothing (28.10.2026: such an
-import opened the window). The program itself is never started here: cli.main is a
+(as a tool that imports every module of the package does) runs nothing (such an import has
+opened the window). The program itself is never started here: cli.main is a
 stand-in while the module is imported."""
 
 import importlib

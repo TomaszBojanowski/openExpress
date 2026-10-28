@@ -3,6 +3,7 @@
 (sync.activities_to_sync), counted again after a sync without asking the device. All devices
 and files are made up."""
 
+import threading
 import types
 from datetime import datetime
 
@@ -220,7 +221,8 @@ def _window(device, to_sync, other):
     from openexpress.gui.connected import Connected
 
     session = types.SimpleNamespace(device=device, storage=Untouchable(), logged_in=True,
-                                    mass_storage=False, ownership_error=None, to_sync=to_sync)
+                                    mass_storage=False, ownership_error=None, to_sync=to_sync,
+                                    stop_waiting=threading.Event())
     drawn = []
     return types.SimpleNamespace(
         session=session, run_task=RunNow(), progress=lambda *a: None, toast=lambda text: None,

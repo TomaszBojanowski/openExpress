@@ -1,4 +1,4 @@
-"""The stop of the wait for TrueUp (step 3 after the audit of 0.7.9, A5): a stop asked during a
+"""The stop of the wait for TrueUp: a stop asked during a
 sync reaches the wait for TrueUp. Before, the service cleared it just before the wait, so that
 the background service, asked to quit during the uploads, still waited for TrueUp to the end;
 and a quit asked before the background service kept its session was not passed on at all.

@@ -1,5 +1,5 @@
-"""An unmount for a PTP session that goes on after its cancel (step 4 after the audit of 0.7.9,
-A8, §10; found by the live test 2c of 28.10.2026 on the Edge 1050 with a time limit of 1 ms).
+"""An unmount for a PTP session that goes on after its cancel (seen on an Edge 1050 whose
+unmounts had a time limit of 1 ms).
 
 The cancel at the time limit ends our wait at once ("cancelled"), while gvfs finishes the
 unmount a moment later. Before, the device was mounted again at once: gvfs said "mounted
@@ -31,7 +31,7 @@ SETTLED = 0.2  # SETTLED_S of these tests: the unmount takes effect well within 
 @pytest.fixture
 def gvfs(monkeypatch):
     """A made-up device in gvfs, as gio_storage sees it, with times of a fraction of a
-    second (the unmount gets 1 ms, as in the live test)."""
+    second (the unmount gets 1 ms)."""
     made = []
     for name, value in (("UNMOUNT_TIMEOUT_S", 0.001), ("MOUNT_TIMEOUT_S", 1.0),
                         ("CANCEL_WAIT_S", 0.2), ("SETTLED_S", SETTLED),

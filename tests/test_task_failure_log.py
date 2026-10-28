@@ -131,7 +131,7 @@ def test_the_errors_that_are_a_message_for_the_user_have_one_base(index):
     assert issubclass(error, UserFacingError), error.__name__
 
 
-# --- an ordinary stop is one line of INFO, not a failure (review of the log, 28.10.2026) ---------
+# --- an ordinary stop is one line of INFO, not a failure -----------------------------------------
 
 def _ordinary_stops():
     from openexpress import cache, forget, service

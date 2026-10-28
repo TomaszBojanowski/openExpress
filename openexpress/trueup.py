@@ -51,7 +51,7 @@ def _find(messages: list[dict], kind: str) -> dict | None:
 
 def _fetch(client: GarminClient, m: dict) -> bytes | None:
     """The file of a TrueUp message, acknowledged at once: fetched, acknowledged, then
-    written, as Garmin Express does it (analysis 03, TrueUp). A check_back is only a request
+    written, as Garmin Express does it. A check_back is only a request
     to ask again; a true_up written in vain afterwards is lost for Garmin Connect (run says
     so in the log)."""
     meta = m["metadata"]
