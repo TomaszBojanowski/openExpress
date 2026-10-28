@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import configparser
+import contextlib
+import fcntl
 import os
 import subprocess
 import tempfile
@@ -152,6 +154,21 @@ def _make_private(root: Path) -> None:
     except FileExistsError:
         return  # made by another process in the meantime: left as it is
     os.chmod(root, PRIVATE_DIR)  # the umask cuts mkdir's mode; this folder was just made
+
+
+@contextlib.contextmanager
+def settings_locked():
+    """One writer of settings.json at a time, in any process and any thread (each opens the
+    lock file of its own); the system lets go of it when the process ends. Reading alone
+    needs no lock: the file is replaced whole (write_private)."""
+    folder = config_dir()
+    make_dir(folder)
+    with open(folder / "settings.lock", "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def write_private(path: Path, data: str | bytes) -> None:

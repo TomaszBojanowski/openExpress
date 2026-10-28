@@ -90,6 +90,29 @@ class Settings:
 
     @classmethod
     def load(cls) -> Settings:
+        s, data = cls._read()
+        if s.client_guid and _OLD_LOCALE_KEY not in data:
+            return s
+        # The first start (no client GUID yet), or the key of an older version: written once,
+        # under the lock, from the file read again under it. The window, the background
+        # service and the command line (or two devices the window opens at once) may load
+        # the settings at the same moment, and each would make a GUID of its own.
+        with paths.settings_locked():
+            s, data = cls._read()
+            old_locale = _OLD_LOCALE_KEY in data
+            if old_locale:
+                log.info("settings: the locale saved by an older version (%r) is no longer used; "
+                         "now %s (%s)", data[_OLD_LOCALE_KEY], s.locale,
+                         "chosen" if s.chosen_locale
+                         else "as the program" if i18n.chosen_language() else "as the system")
+            if not s.client_guid or old_locale:
+                s.client_guid = s.client_guid or str(uuid.uuid4())
+                s._write()  # without the old key, so that it is told once
+        return s
+
+    @classmethod
+    def _read(cls) -> tuple[Settings, dict]:
+        """The settings as the file has them, and the file as it was read."""
         path = paths.config_dir() / "settings.json"
         data: object = {}
         if path.exists():
@@ -108,18 +131,14 @@ class Settings:
                     if k not in cls.__dataclass_fields__ and k != _OLD_LOCALE_KEY}
         if s.environment not in ENVIRONMENTS:
             raise SetupError(_("Unknown environment: {name}").format(name=s.environment))
-        old_locale = _OLD_LOCALE_KEY in data
-        if old_locale:
-            log.info("settings: the locale saved by an older version (%r) is no longer used; "
-                     "now %s (%s)", data[_OLD_LOCALE_KEY], s.locale,
-                     "chosen" if s.chosen_locale
-                     else "as the program" if i18n.chosen_language() else "as the system")
-        if not s.client_guid or old_locale:
-            s.client_guid = s.client_guid or str(uuid.uuid4())
-            s.save()  # without the old key, so that it is told once
-        return s
+        return s, data
 
     def save(self) -> None:
+        with paths.settings_locked():
+            self._write()
+
+    def _write(self) -> None:
+        """settings.json written; the caller holds the lock (paths.settings_locked)."""
         path = paths.config_dir() / "settings.json"
         data = dict(self._extra)
         try:

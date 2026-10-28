@@ -80,11 +80,12 @@ def save_ui_language(code: str) -> None:
     from openexpress import paths
 
     path = _settings_path()
-    data = json.loads(path.read_text()) if path.exists() else {}
-    if not isinstance(data, dict):
-        raise ValueError("settings.json is not an object")
-    data["ui_language"] = code
-    paths.write_private(path, json.dumps(data, indent=2))
+    with paths.settings_locked():  # not over a client GUID written in the meantime
+        data = json.loads(path.read_text()) if path.exists() else {}
+        if not isinstance(data, dict):
+            raise ValueError("settings.json is not an object")
+        data["ui_language"] = code
+        paths.write_private(path, json.dumps(data, indent=2))
 
 
 def _system_languages() -> list[str]:
