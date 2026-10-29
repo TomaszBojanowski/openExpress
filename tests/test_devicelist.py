@@ -402,11 +402,11 @@ def test_a_tile_only_on_the_account_comes_with_its_entry():
     assert str(FORERUNNER) not in repr(tile)
 
 
-# --- the kind of a device (T5.1) -----------------------------------------------------------------
+# --- the kind of a device ------------------------------------------------------------------------
 
 
 def test_the_kind_of_a_device_comes_from_garmin_only():
-    """T5.1, from what Garmin says only: a cycling computer by the account's category
+    """From what Garmin says only: a cycling computer by the account's category
     DEDICATED_BIKE_COMPUTER, a watch by the account's hasOpticalHeartRate, a bike accessory as
     remembered (from unit-info's segmenttype); anything else none (the neutral icon). Never
     by the name: a remembered "Edge 1050" not on the account stays without a kind."""

@@ -382,7 +382,7 @@ def test_forget_a_number_not_on_the_list(store, utc, capsys, number):
     assert set(known_devices.load()) == {FENIX, 3000000003}
 
 
-# --- the kind of a device (T5.1) ---------------------------------------------------------------
+# --- the kind of a device ----------------------------------------------------------------------
 
 
 def test_the_kind_is_kept_and_optional(store, caplog):

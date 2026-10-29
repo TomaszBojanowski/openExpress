@@ -537,7 +537,7 @@ class _Widget:
     def set_visible(self, visible):
         self.visible = visible
 
-    def set_from_icon_name(self, name):  # the device view's icon of the kind (T5.2)
+    def set_from_icon_name(self, name):  # the device view's icon of the kind
         self.icon = name
 
     def set_text(self, text):

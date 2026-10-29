@@ -5,11 +5,7 @@ story of the work ("review of", "seen live"); no string names the analyses, audi
 or private notes, nor a "live test". A fact about a device, a server or another program stays,
 with that program's own version ("libadwaita 1.9", "firmware 23.39"). Dates and the like in
 other strings are data (the window shows dates as 21.10.2026), so only comments and
-docstrings are looked at for those.
-
-Older comments still have such words: their number per file is in
-tests/data/older_note_references.json, and it may only go down (when a file is cleaned, its
-number there is lowered or the file taken out)."""
+docstrings are looked at for those. No file has an exception."""
 
 import ast
 import io
@@ -19,24 +15,23 @@ import tokenize
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OLDER = ROOT / "tests" / "data" / "older_note_references.json"
 DATE = re.compile(r"\b\d{1,2}\.\d{1,2}\.20\d\d\b")
 NOTES = re.compile("|".join((
-    r"\b[Aa]nalys[ie]s \d+", r"\baudit\b", r"\bA[1-9]\b", r"\blive test", r"§\s?\d+",
+    r"\b[Aa]nalys[ie]s\s+\d+", r"\baudit\b", r"\bA[1-9]\b", r"\blive test", r"§\s?\d+",
     r"\b[Dd]ecision \d+", r"user's consent", r"\bPLAN(?:-archiwum)?\.md\b", r"\bAGENTS\.md\b",
     r"openexpress-private")))
 _MONTHS = ("January|February|March|April|May|June|July|August|September|October|November|"
            "December")
 # Looked for in comments, docstrings and the lines of the pattern files only. A label is a
-# capital and a number (no S: Amazon S3, the Approach S70; no X: X11), not a file name
-# (E2.img), not a code of ruff (E402) and not the F5 key. A version of openExpress has three
+# capital and a number, maybe with a part after a dot (T5.1); no S (Amazon S3, the Approach
+# S70) and no X (X11); not a file name (E2.img), not a code of ruff (E402), not the F5 key. A version of openExpress has three
 # parts, so "0.5 s" is none, nor is the version in the name of a pattern file
 # (format-0.6.20-…) or a part of 127.0.0.1. A commit is 7 hexadecimal digits, with a letter
 # and a digit among them.
 WHEN = (
     DATE,
     re.compile(rf"\b(?:\d{{1,2}} )?(?:{_MONTHS}) (?:\d{{1,2}}, )?20\d\d\b"),
-    re.compile(r"(?<![\w.-])(?!F5\b)[BCDEFKNPQTU][1-9]\d?[a-z]?(?!\w|\.\w)"),
+    re.compile(r"(?<![\w.-])(?!F5\b)[BCDEFKNPQTU][1-9]\d?[a-z]?(?:\.\d+)?(?!\w|\.\w)"),
     re.compile(r"(?<![\w&/])#\d{1,3}\b"),
     re.compile(r"(?<![\w.-])(?=[0-9a-f]{0,6}[a-f])(?=[0-9a-f]{0,6}\d)[0-9a-f]{7}(?![\w-])"),
     re.compile(r"\b(?:[Ss]teps?|[Ss]tages?|[Pp]oints?|[Pp]ackages?|[Pp]arts?|[Aa]reas?) "
@@ -103,18 +98,8 @@ def _found() -> dict[str, list[str]]:
 
 
 def test_no_dates_or_notes_in_what_the_repository_says():
-    older = json.loads(OLDER.read_text(encoding="utf-8"))
-    new = {name: refs for name, refs in _found().items() if len(refs) > older.get(name, 0)}
-    assert new == {}, "say why, not when nor where in the notes: " + json.dumps(new, indent=1)
-
-
-def test_the_older_ones_only_go_down():
-    """A file cleaned of some of them: its number in the list is lowered with it."""
     found = _found()
-    older = json.loads(OLDER.read_text(encoding="utf-8"))
-    lower = {name: (count, len(found.get(name, ()))) for name, count in older.items()
-             if len(found.get(name, ())) < count}
-    assert lower == {}, f"lower these numbers in {OLDER.name} (listed, found): {lower}"
+    assert found == {}, "say why, not when nor where in the notes: " + json.dumps(found, indent=1)
 
 
 def _words(tmp_path, text: str, name: str = "made_up.py") -> list[str]:
@@ -132,7 +117,7 @@ def test_dates_are_looked_for_in_comments_and_docstrings_only(tmp_path):
 
 
 def test_what_tells_when_in_a_comment_or_a_docstring(tmp_path):
-    assert _words(tmp_path, '"""As on 18 October 2026 (#19, Q1): T6b of D7."""\n'
+    assert _words(tmp_path, '"""As on 18 October 2026 (#19, Q1): T6b of D7, T5.1."""\n'
                             '# since 0.6.6, after 1c55104 (step 0, point 8 of package 3)\n'
                             '# the review of the window; seen live; the reporter\'s computer\n'
                             '# code moved out of app.py in the split; v0.7.9\n'
@@ -140,7 +125,12 @@ def test_what_tells_when_in_a_comment_or_a_docstring(tmp_path):
         "0.6.6", "1c55104", "step 0", "point 8", "package 3",
         "review of", "seen live", "reporter",
         "moved out of", "the split", "v0.7.9",
-        "18 October 2026", "#19", "Q1", "T6b", "D7"]
+        "18 October 2026", "#19", "Q1", "T6b", "D7", "T5.1"]
+
+
+def test_an_analysis_named_across_a_line_break(tmp_path):
+    assert _words(tmp_path, '"""The rule of the analysis\n    14: one source."""\n') == [
+        "analysis\n    14"]
 
 
 def test_what_is_not_history(tmp_path):
