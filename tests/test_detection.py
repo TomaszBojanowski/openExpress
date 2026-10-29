@@ -107,17 +107,23 @@ def identify(uri, unix_device="unset", **kw):
     return gio_storage.garmin_usb(FakeMount(uri), FakeMonitor(volumes=volumes), **kw)
 
 
+def identified(usb):
+    """What the program uses of a device identified: its USB product and its place on USB
+    (None: not known); None for no device."""
+    return usb and (usb.product, usb.bus, usb.address)
+
+
 # --- the USB device decides ------------------------------------------------------------------
 
 
 def test_numeric_address(sysfs):
     usb = identify(NUMERIC, "/dev/bus/usb/001/031")
-    assert usb == gio_storage.GarminUsb("51b4", "usb") and usb.usb_id == "091e:51b4"
+    assert identified(usb) == ("51b4", 1, 31) and usb.usb_id == "091e:51b4"
 
 
 def test_address_made_of_usb_strings(sysfs):
     usb = identify(NAMED, "/dev/bus/usb/001/028")
-    assert usb == gio_storage.GarminUsb("5158", "usb") and usb.usb_id == "091e:5158"
+    assert identified(usb) == ("5158", 1, 28) and usb.usb_id == "091e:5158"
 
 
 @pytest.mark.parametrize("uri", [PHONE, PHONE_NUMERIC, "mtp://Garmin_lookalike_000000000000/",
@@ -129,7 +135,7 @@ def test_device_of_another_vendor_is_not_garmin(sysfs, uri):
 
 def test_unmounted_volume(sysfs):
     vol = FakeVolume(NAMED, "/dev/bus/usb/001/028")
-    assert gio_storage.garmin_usb(vol, FakeMonitor()) == gio_storage.GarminUsb("5158", "usb")
+    assert identified(gio_storage.garmin_usb(vol, FakeMonitor())) == ("5158", 1, 28)
     assert gio_storage.garmin_usb(FakeVolume(None), FakeMonitor()) is None
 
 
@@ -155,7 +161,7 @@ def test_serial_is_never_read(sysfs):
 
 
 def test_usb_address_form(sysfs):
-    assert identify("mtp://[usb:001,028]/") == gio_storage.GarminUsb("5158", "usb")
+    assert identified(identify("mtp://[usb:001,028]/")) == ("5158", 1, 28)
     assert identify("mtp://[usb:001,031]/").usb_id == "091e:51b4"
     assert identify("mtp://[usb:002,007]/") is None  # the phone
     assert identify("mtp://[usb:009,099]/") is None  # no such device
@@ -187,10 +193,10 @@ def test_usb_address_form_without_sysfs(no_sysfs):
 
 
 @pytest.mark.parametrize("uri, expected", [
-    (NUMERIC, ("51b4", "uri")),
-    ("mtp://091E_4F67_0000ABCDEF56/", ("4f67", "uri")),
-    (NAMED, (None, "uri")),
-    ("mtp://GARMIN_fenix_0000abcdef12/", (None, "uri")),
+    (NUMERIC, ("51b4", None, None)),
+    ("mtp://091E_4F67_0000ABCDEF56/", ("4f67", None, None)),
+    (NAMED, (None, None, None)),
+    ("mtp://GARMIN_fenix_0000abcdef12/", (None, None, None)),
     (PHONE, None),
     (PHONE_NUMERIC, None),
     ("mtp://Not_Garmin_0000abcdef12/", None),
@@ -198,7 +204,7 @@ def test_usb_address_form_without_sysfs(no_sysfs):
 ])
 def test_fallback_uses_the_start_of_the_host_name(no_sysfs, uri, expected):
     usb = identify(uri, "/dev/bus/usb/001/031")
-    assert (usb and (usb.product, usb.source)) == expected
+    assert identified(usb) == expected
     if usb and usb.product is None:
         assert usb.usb_id == "091e:unknown"
 
@@ -206,14 +212,14 @@ def test_fallback_uses_the_start_of_the_host_name(no_sysfs, uri, expected):
 @pytest.mark.parametrize("unix_device", ["unset", None, "", "/dev/sdb1", "/dev/bus/usb/001",
                                          "/dev/bus/usb/009/099"])
 def test_fallback_when_the_volume_does_not_lead_to_a_usb_device(sysfs, unix_device):
-    assert identify(NUMERIC, unix_device) == gio_storage.GarminUsb("51b4", "uri")
-    assert identify(NAMED, unix_device) == gio_storage.GarminUsb(None, "uri")
+    assert identified(identify(NUMERIC, unix_device)) == ("51b4", None, None)
+    assert identified(identify(NAMED, unix_device)) == (None, None, None)
     assert identify(PHONE, unix_device) is None
 
 
 def test_unreadable_sysfs_entries_are_skipped(sysfs):
     (sysfs / "1-8" / "idProduct").unlink()
-    assert identify(NUMERIC, "/dev/bus/usb/001/031") == gio_storage.GarminUsb("51b4", "uri")
+    assert identified(identify(NUMERIC, "/dev/bus/usb/001/031")) == ("51b4", None, None)
 
 
 # --- callers ---------------------------------------------------------------------------------
@@ -872,7 +878,8 @@ def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
     mount = FakeDriveMount(drive_folder(drives, xml_path=xml_path),
                            usb_drive(drives, partition=partition))
     usb = gio_storage.garmin_ums(mount)
-    assert usb == gio_storage.GarminUsb("20ee", "usb") and usb.usb_id == "091e:20ee"
+    assert (usb.product, usb.serial, usb.volume_uuid) == ("20ee", DRIVE_SERIAL, None)
+    assert usb.usb_id == "091e:20ee"
     assert (usb.bus, usb.address) == (1, 12)
     monitor_with(monkeypatch, mount)
     found = gio_storage.find_ums_devices()
@@ -996,7 +1003,8 @@ def test_a_garmin_drive_opens_as_mass_storage(drives, monkeypatch, label):
     mount, st = opened_drive(drives, monkeypatch, label)
     assert isinstance(st, storage.UmsStorage) and isinstance(st, storage.LocalStorage)
     assert st.mass_storage is True
-    assert st.usb == gio_storage.GarminUsb("20ee", "usb") and st.usb_id == "091e:20ee"
+    assert (st.usb.product, st.usb.serial, st.usb.volume_uuid) == ("20ee", DRIVE_SERIAL, None)
+    assert st.usb_id == "091e:20ee"
     assert (st.usb.bus, st.usb.address) == (1, 12)
     # The address as Gio gives it (" " stays "%20"); the folder is the one it names.
     uri = mount.root.get_uri()
@@ -2177,9 +2185,9 @@ def test_two_mtp_devices_known_by_their_usb_device_are_both_listed(choosing_wind
                           volumes=[FakeVolume(NAMED, "/dev/bus/usb/001/028", "Edge 1050"),
                                    FakeVolume(NUMERIC, "/dev/bus/usb/001/031", "091e 51b4")])
     monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(lambda: monitor))
-    assert [(d.kind, d.uri, d.usb.usb_id, d.usb.source)
+    assert [(d.kind, d.uri, d.usb.usb_id, d.usb.bus, d.usb.address)
             for d in gio_storage.find_all_devices()] == [
-        ("mtp", NAMED, "091e:5158", "usb"), ("mtp", NUMERIC, "091e:51b4", "usb")]
+        ("mtp", NAMED, "091e:5158", 1, 28), ("mtp", NUMERIC, "091e:51b4", 1, 31)]
     win.refresh_device()
     assert win.shown_choices == [[("mtp", "Edge 1050"), ("mtp", "Test watch")]]
 
