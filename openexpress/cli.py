@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 _human = human_size  # the name the commands use
 
 # The exit code of `sync --apply` when the first sync with this program waits for a choice
-# (baseline or --all): not 2, which argparse gives a wrong command line (README, "Exit
+# (baseline or --all): not 2, which argparse gives a wrong command line (docs/cli.md, "Exit
 # codes").
 FIRST_SYNC_CHOICE = 3
 

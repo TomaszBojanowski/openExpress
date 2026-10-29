@@ -57,7 +57,7 @@
   <url type="homepage">https://github.com/TomaszBojanowski/openExpress</url>
   <url type="bugtracker">https://github.com/TomaszBojanowski/openExpress/issues</url>
   <url type="vcs-browser">https://github.com/TomaszBojanowski/openExpress</url>
-  <url type="translate">https://github.com/TomaszBojanowski/openExpress#adding-a-translation</url>
+  <url type="translate">https://github.com/TomaszBojanowski/openExpress/blob/main/CONTRIBUTING.md#adding-a-translation</url>
   <screenshots>
     <screenshot type="default">
       <caption>The start page: the devices connected and those seen before, with labels such as Update available</caption>

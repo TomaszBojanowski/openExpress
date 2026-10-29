@@ -6,8 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing openExpress! Reports for devices that are not yet in the README are
-        the most valuable help right now – **also when everything works**.
+        Thanks for testing openExpress! Reports for devices that are not yet in the
+        [list of supported devices](https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md)
+        are the most valuable help right now – **also when everything works**.
 
         **Privacy:** don't paste `openexpress info` output, your `GarminDevice.xml` or files
         from `~/.config/openexpress` – they contain your device's serial number, unit ID,
