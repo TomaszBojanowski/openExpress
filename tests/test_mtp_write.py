@@ -1,7 +1,7 @@
 """Writing to a device over MTP (GioStorage): what a failed write leaves on the device. A copy
 that never started touched nothing (the old file stays); one that started and broke off
-leaves half a file, which the storage itself removes (review of 498f8f2). Here GioStorage
-works on a local folder (file://) and the Flatpak's host copy is faked: no device."""
+leaves half a file, which the storage itself removes. Here GioStorage works on a local folder
+(file://) and the Flatpak's host copy is faked: no device."""
 
 import subprocess
 from pathlib import Path
@@ -142,7 +142,7 @@ def test_a_map_file_whose_copy_never_started_keeps_the_old_file(server, device_r
 def test_a_map_file_that_broke_off_leaves_no_half_but_a_shared_one_stays(server, device_root,
                                                                          xdg, flatpak):
     """Guards, a map over MTP: its own file broken off is removed by the storage; a file
-    other maps use, broken off twice, stays (it is never deleted: decision of 0.5.0)."""
+    other maps use, broken off twice, stays (it is never deleted)."""
     all_maps, east = east_with_shared_dem(server, device_root)
     own = device_root / "GARMIN" / "E2.img"
 
@@ -170,7 +170,7 @@ def test_a_map_file_that_broke_off_leaves_no_half_but_a_shared_one_stays(server,
 
 
 def test_the_caller_never_deletes_what_a_failed_write_left(device_root, tmp_path, monkeypatch):
-    """Cleaning up after a failed write is the storage's own business: updates no longer
+    """Cleaning up after a failed write is the storage's own business: updates never
     deletes the file under the name (a storage that leaves something there means to)."""
     class LeavesIt(LocalStorage):
         replaces_atomically = False  # as MTP, for the space
@@ -207,7 +207,7 @@ def test_a_drive_removes_its_temporary_copy_when_the_rename_fails(device_root, t
     assert not [p for p in old.parent.iterdir() if p.name.endswith(PART_SUFFIX)]
 
 
-# --- clean up only on evidence that the target was touched (review, after 0.6.0) --------------
+# --- clean up only on evidence that the target was touched ------------------------------------
 
 
 def refuses_untouched(src, dst):

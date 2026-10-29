@@ -1,7 +1,7 @@
 """What the log never names: the courses and workouts of the Garmin Connect queue (names given
 by the user, often places), the files of activities, and the signed addresses of downloads.
-The log goes with `report --log` into public reports (review of 22.10.2026). What the window
-and the command line tell the user may still name them."""
+The log goes with `report --log` into public reports. What the window and the command line
+tell the user may still name them."""
 
 import logging
 

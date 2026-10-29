@@ -45,7 +45,7 @@ def _session(device, drive=False):
     client = types.SimpleNamespace(auth=types.SimpleNamespace(display="name@example.com"),
                                    consumer=object(), http=None)
     # On the account, its primary wearable: the row "Primary wearable" is measured too
-    # (analysis 14, stage 4; in Polish its title is long).
+    # (in Polish its title is long).
     account = [{"unitid": device.unit_id, "primaryactivitytrackersettingcapable": True,
                 "primaryactivitytrackerindicator": True}]
     return types.SimpleNamespace(device=device, storage=storage, client=client, logged_in=True,
@@ -55,7 +55,7 @@ def _session(device, drive=False):
 
 def _device_errors():
     """A crash the device logged lately, its hidden crash logs and five memory dumps: the row
-    "Device error log" with both buttons (analysis 20)."""
+    "Device error log" with both buttons."""
     from datetime import datetime
 
     from openexpress import diagnostics
@@ -145,7 +145,7 @@ def _apps():
     account = [StoreApp(uuid.uuid4(), "Garmin Coach Training Plans Companion",
                         "Garmin Ltd or its subsidiaries", "watch-app", 238_504, 3, "3.0.2",
                         False)]
-    # The update asks for new permissions: the longest line of an app (point 5).
+    # The update asks for new permissions: the longest line of an app.
     return state, account, [types.SimpleNamespace(app_id=weather.app_id, version_name="4.2.0",
                                                   permissions_changed=True)]
 
@@ -208,7 +208,7 @@ def _fill(win, page: str) -> str:
     # The one update to install: the longest name of a component ("Device software").
     win.update_only = _updates(copied=False)[2]
     win.map_state, win.map_update_count = "available", 1
-    sync.SyncState(UNIT).save()  # synced here before (analysis 14, a3)
+    sync.SyncState(UNIT).save()  # synced here before
     record_sync(UNIT, uploaded=8, downloaded=4, skipped_known=3, errors=[], lines=[])
     for section in win.sections.values():
         section.clear()  # a page built before in this window goes
@@ -298,7 +298,7 @@ _styled: set = set()  # the displays that have the program's own style
 
 def _program_style() -> None:
     """The program's own style (start.CSS: the chips, the tiles), as the application loads it
-    before its window (App): measured without it, a chip had no padding (26.10.2026)."""
+    before its window (App): measured without it, a chip would have no padding."""
     from gi.repository import Gdk
 
     from openexpress.gui import start
@@ -326,9 +326,9 @@ DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "updates
 def test_every_page_of_the_device_view_fits_the_narrowest_window(narrow_window, language,
                                                                   page):
     """The page with its title bar, the side panel folded: no wider than the window can get
-    (wider, and libadwaita cuts it off). Measured 21.10.2026: the line of the software version
-    ("· update ready to install"), the beta line of the Updates page and its row of buttons,
-    and "No maps are available for this device." did not wrap."""
+    (wider, and libadwaita cuts it off). What has to wrap for it: "No maps are available for
+    this device.", the line of the software version ("· update ready to install"), the beta
+    line of the Updates page and its row of buttons."""
     win = narrow_window(language)
     key = _fill(win, page)
     win.navigation.set_animate_transitions(False)
@@ -343,7 +343,7 @@ def test_every_page_of_the_device_view_fits_the_narrowest_window(narrow_window, 
 def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narrow_window,
                                                                           language):
     """The chip under the version and the name of the one update in the row "Device
-    software" (24.10.2026): the page fits the narrowest window, the chip whole."""
+    software": the page fits the narrowest window, the chip whole."""
     from openexpress.gui.app import Gtk
 
     win = narrow_window(language)
@@ -366,8 +366,7 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window, language):
-    """Analysis 14, stage 4: its title is long in Polish ("Podstawowe urządzenie typu
-    wearable"); it wraps."""
+    """Its title is long in Polish ("Podstawowe urządzenie typu wearable"); it wraps."""
     from openexpress.gui.app import Adw
 
     win = narrow_window(language)
@@ -385,7 +384,7 @@ def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, language):
-    """Point 3 of package 3: the bar at the bottom while TrueUp waits, with Stop Waiting."""
+    """The bar at the bottom while TrueUp waits, with Stop Waiting."""
     import threading
 
     from openexpress.gui.app import Gtk
@@ -405,7 +404,7 @@ def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, lang
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language):
-    """Analysis 20: the row under "Backup", open, with its two buttons."""
+    """The row under "Backup", open, with its two buttons."""
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
     _fill(win, "device")
@@ -423,7 +422,7 @@ def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language)
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_sentence_about_the_account_fits_the_narrowest_window(narrow_window, language,
                                                                   why):
-    """Analysis 14, c4 (25.10.2026): the sentence under the tiles wraps."""
+    """The sentence under the tiles wraps."""
     from openexpress.gui import app
 
     win = narrow_window(language)
@@ -439,7 +438,7 @@ def test_the_sentence_about_the_account_fits_the_narrowest_window(narrow_window,
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_start_page_in_the_view_chosen_fits_the_narrowest_window(narrow_window, language,
                                                                      view):
-    """T6b: nine connected (a list when automatic), three remembered, three on the account,
+    """Nine connected (a list when automatic), three remembered, three on the account,
     all in the view chosen: the page fits the narrowest window."""
     win = narrow_window(language)
     win.start.view = view
@@ -482,7 +481,7 @@ def _breaks_badly(texts) -> list[str]:
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window, language):
     """Its content, with the button "Forget Device…" at the bottom. Its title bar is not
-    measured: with the words of Sync it is 375 px wide in Polish (25.10.2026, not fixed yet)."""
+    measured: with the words of Sync it is 375 px wide in Polish (not fixed yet)."""
     from openexpress import known_devices
 
     known = known_devices.remember(UNIT, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=1.0)
@@ -498,7 +497,7 @@ def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window
 @pytest.mark.parametrize("language", ["en", "pl"])
 @pytest.mark.parametrize("page", ["start", *DEVICE_PAGES])
 def test_captions_break_only_where_they_should(narrow_window, language, page):
-    """The window at 360 px (21.10.2026): "4,7 / GB", and a separator that may start a line.
+    """The window at 360 px: no "4,7 / GB", and no separator at the start of a line.
     A size keeps its number and unit together, and "·" stays with the part before it (a hard
     space before it, a plain one after)."""
     win = narrow_window(language)
@@ -589,10 +588,10 @@ def _descendants(widget):
 
 
 def _tiles_with_chips():
-    """Tiles with the longest pairs of chips (PLAN T9): an update with a device off the
-    account, with a drive, with activities to sync, with a device never synced, with the
-    primary device and with a device synced; the primary device with a device synced; an
-    update copied with a device never synced, and with a drive (25.10.2026)."""
+    """Tiles with the longest pairs of chips: an update with a device off the account, with a
+    drive, with activities to sync, with a device never synced, with the primary device and
+    with a device synced; the primary device with a device synced; an update copied with a
+    device never synced, and with a drive."""
     from openexpress.devicelist import Tile
 
     found = time.time()
@@ -646,7 +645,7 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
                                                                  language, wrap_box):
     """Nine devices connected (a list) with the longest pairs of chips: the page fits the
     narrowest window and every chip stays inside its row; with Adw.WrapBox (libadwaita 1.7)
-    no chip is cut short, before it they may get shorter (24.10.2026)."""
+    no chip is cut short, before it they may get shorter."""
     from openexpress.gui import start
 
     if not wrap_box:
@@ -670,9 +669,9 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
         assert [c.get_label() for _r, c in chips if c.get_layout().is_ellipsized()] == []
 
 
-# The longest pair of chips in either language (24.10.2026): 271 px on one line in the first
-# measurement, 309 px in GNOME's font; more than a tile has at 700 and 1000 px. Since
-# 25.10.2026 an update copied ("Unplug to install") instead of one found.
+# The longest pair of chips in either language: 271 px on one line in one measurement,
+# 309 px in GNOME's font; more than a tile has at 700 and 1000 px. Its update is one copied
+# ("Unplug to install"), not one found.
 LONGEST_PAIR = ("Odłącz, aby zainstalować", "Nie synchronizowano")
 
 
@@ -712,8 +711,8 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
     """A tile asks for no more width than its chips need at least: with the longest pair (an
     update copied, a device never synced) as many tiles share a line as without chips, and
     the chips go on two lines, whole (libadwaita 1.7: Adw.WrapBox; before it, on one line,
-    shorter). Measured 24.10.2026: with the pair, two tiles shared a line of 1000 px instead
-    of three, and one shared a line of 700 px instead of two."""
+    shorter). Asking for the pair's whole width, two tiles would share a line of 1000 px
+    instead of three, and one a line of 700 px instead of two."""
     from openexpress.devicelist import Tile
     from openexpress.gui import start
 

@@ -1,7 +1,6 @@
 """A device whose GarminDevice.xml names it in capitals only ("EPIX") is shown as Garmin names
-its model: the field devicemodel of unit-info without ™ and ®, with " — " and " | " as ", "
-(the user, 27.10.2026). The name below is the one unit-info gave for an epix (Gen 2); every
-device here is made up."""
+its model: the field devicemodel of unit-info without ™ and ®, with " — " and " | " as ", ".
+The name below is the one unit-info gave for an epix (Gen 2); every device here is made up."""
 
 import types
 

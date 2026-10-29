@@ -78,7 +78,7 @@ def _unescaped(raw: str) -> str:
 def test_no_polish_one_letter_word_is_left_at_the_end_of_a_line():
     """Polish typography: after w, z, i, o, u and a (also at the start of a sentence) a hard
     space (U+00A0), so that a text that wraps never leaves one at the end of a line (the
-    window at 360 px, 21.10.2026: "…oprogramowanie w / wersji beta")."""
+    window at 360 px: "…oprogramowanie w / wersji beta")."""
     left = [(e["msgid"], value) for e in _entries(ROOT / "po" / "pl.po")
             for key, value in e.items()
             if key.startswith("msgstr") and ONE_LETTER_WORD.search(_unescaped(value))]

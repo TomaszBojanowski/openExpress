@@ -1,7 +1,7 @@
 """A damaged app list waiting for the device (IN.BIN) is never replaced by one built from it:
 read as empty, it would leave out every app from the store, which the device may then
-remove (review of 22.10.2026, point 2). set_enabled and an install over the mounted storage
-refuse as the other writers of the list do, with the same words. All data is made up."""
+remove. set_enabled and an install over the mounted storage refuse as the other writers of
+the list do, with the same words. All data is made up."""
 
 import uuid
 
@@ -119,7 +119,7 @@ def _client():
 def test_an_install_requests_nothing_while_a_damaged_list_waits(device, kind):
     """The install over the mounted storage would refuse (the list cannot be read whole):
     the app is not requested in Garmin Connect either, so it does not stay in the queue
-    of the account (review of 24.10.2026)."""
+    of the account."""
     st, dev = device
     (st.root / IN_BIN).write_bytes(DAMAGED[kind])
     store = Requests()

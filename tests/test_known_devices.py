@@ -1,5 +1,5 @@
-"""What this installation remembers of the Garmin devices it has seen (D1): devices.json in
-the data folder. All unit IDs here are made up."""
+"""What this installation remembers of the Garmin devices it has seen: devices.json in the
+data folder. All unit IDs here are made up."""
 
 import calendar
 import logging
@@ -110,7 +110,7 @@ def test_the_flatpak_keeps_its_own_file(tmp_path, monkeypatch):
     assert known_devices.path() == sandbox / "openexpress" / "devices.json"
 
 
-# --- the lock of devices.json (D2) ------------------------------------------------------------
+# --- the lock of devices.json -----------------------------------------------------------------
 
 HOLDER = """
 import sys
@@ -189,7 +189,7 @@ def test_the_lock_goes_with_the_process(store, tmp_path):
     assert set(known_devices.load()) == {EDGE}
 
 
-# --- `openexpress devices` (D4) -----------------------------------------------------------------
+# --- `openexpress devices` ----------------------------------------------------------------------
 
 SEEN_FENIX = float(calendar.timegm((2026, 10, 17, 0, 0, 0)))  # UTC
 SEEN_VARIA = float(calendar.timegm((2026, 10, 17, 2, 20, 0)))
@@ -265,7 +265,7 @@ def test_forget_without_apply_forgets_nothing(store, utc, capsys):
 
 def test_forget_with_apply_removes_the_entry_and_the_sync_state(store, utc, capsys):
     """--forget N --apply: the entry goes, and with it the device's own folder (its sync
-    state): connected again, it is a new device (PLAN T7)."""
+    state): connected again, it is a new device."""
     from openexpress import known_devices, paths
     from openexpress.cli import main
 
@@ -497,7 +497,7 @@ def test_an_address_over_plain_http_is_kept_over_https(store):
     assert known_devices.load()[VENU].image_url == "https://res.garmin.com/a.png"
 
 
-# --- an update found by the quiet check (PLAN T9, chips) ----------------------------------------
+# --- an update found by the quiet check (chips) -------------------------------------------------
 
 
 def test_an_update_found_is_kept_and_optional(store, caplog):

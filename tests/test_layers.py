@@ -1,6 +1,6 @@
-"""The layers of the program (code audit of 25.10.2026): the window and its pages import
-nothing of the command line (cli.py), which itself starts the window; what both use (texts,
-sizes, a line on stderr) lives in modules of their own."""
+"""The layers of the program: the window and its pages import nothing of the command line
+(cli.py), which itself starts the window; what both use (texts, sizes, a line on stderr) lives
+in modules of their own."""
 
 import ast
 from pathlib import Path

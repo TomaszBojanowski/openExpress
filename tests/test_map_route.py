@@ -1,5 +1,5 @@
-"""Which map service Garmin serves a device through (mapUpdateType of unit-info, 25.10.2026):
-the universal one, which is the only one asked, serves a device filed as Universal, or as
+"""Which map service Garmin serves a device through (mapUpdateType of unit-info): the
+universal one, which is the only one asked, serves a device filed as Universal, or as
 UniversalDetect while it declares the data type PreProgrammedNamedMaps. A device served
 another way (Gemini, LegacyRmu, Unknown, none given) gets "not supported yet" and no map
 check. All data here is made up."""
@@ -142,7 +142,7 @@ def test_cli_maps_with_path_asks_as_before(device_root, monkeypatch):
     assert code == 0 and asked == ["universal"]
 
 
-# --- unit-info once for each opening of a device (25.10.2026) ------------------------------
+# --- unit-info once for each opening of a device -------------------------------------------
 
 def _session(client):
     """A session as the window holds one: the client and the device it opened."""

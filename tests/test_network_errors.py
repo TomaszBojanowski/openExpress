@@ -1,9 +1,9 @@
-"""Network errors say neither the address nor the device (code audit of 25.10.2026): the text
-of a requests error names the whole address, query and all. The Connect IQ store asked with
-the unit ID and the part number in its query and passed that text on, unfiltered (the command
-line printed it, the window showed it); a failed download put the signed address of a file
-(its garmindlm signature) into the error the user sees. Both now go the way of the client:
-ApiError (DownloadError), the address left out, filtered as the log. All made up."""
+"""Network errors say neither the address nor the device: the text of a requests error names
+the whole address, query and all. The Connect IQ store is asked with the unit ID and the part
+number in its query, and a download with the signed address of a file (its garmindlm
+signature); passed on unfiltered, that text would be printed by the command line and shown in
+the window. Both go the way of the client: ApiError (DownloadError), the address left out,
+filtered as the log. All made up."""
 
 import types
 from urllib.parse import urlsplit

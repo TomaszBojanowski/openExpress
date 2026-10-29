@@ -1,9 +1,9 @@
 """The details of "Last sync" in the language of the moment they are shown, not of the moment
-of the sync (25.10.2026): a sync keeps each line as a kind and its numbers or names, put into
-words when shown. Before, the lines of the first sync's choice, the tracker conflict, the
-Connect IQ apps, TrueUp and the items the device does not accept were kept as words: a sync
-in Polish showed TrueUp in Polish in an English window. A record of an older version keeps
-its words. All data here is made up."""
+of the sync: a sync keeps each line as a kind and its numbers or names, put into words when
+shown. Kept as words, the lines of the first sync's choice, the tracker conflict, the Connect
+IQ apps, TrueUp and the items the device does not accept would stay in the language of the
+sync: a sync in Polish would show TrueUp in Polish in an English window. A record of an older
+version keeps its words. All data here is made up."""
 
 import json
 import types
@@ -68,7 +68,7 @@ def test_details_are_put_into_words_in_the_language_they_are_shown_in(
 
 
 def test_a_record_of_an_older_version_keeps_its_words():
-    """A line kept as words (a sync of 0.6.19 in Polish) is shown as it was written."""
+    """A line kept as words (a sync of an older version in Polish) is shown as it was written."""
     record = {"time": 1800000000.0, "uploaded": 0, "downloaded": 1, "lines": [
         f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin"]}
     for language in ("en", "pl"):

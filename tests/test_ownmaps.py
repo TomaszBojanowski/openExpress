@@ -1008,7 +1008,7 @@ def test_reloading_the_page_keeps_one_add_button_and_greys_it_while_busy():
 
 @pytest.mark.needs_display
 def test_own_map_rows_do_not_keep_themselves_alive():
-    """The rule since 0.4.2: a handler of a widget must not hold the widget or its siblings."""
+    """The rule: a handler of a widget must not hold the widget or its siblings."""
     import gc
     import weakref
 
@@ -1092,7 +1092,7 @@ def page_list(win):
 def test_window_reads_the_page_again_after_a_failed_copy(window_device, my_map, deletable, left):
     """The copy fails half way: the error is said as before, and the page is read again. It
     lists what the device has now: as before, or with the half file that could not be
-    deleted (before, the page showed the device as it was until it was read again)."""
+    deleted (the page is not left showing the device as it was before the copy)."""
     win, dev, root = window_device
     target = my_map.rename(my_map.with_name("new-map.img"))
     before, _ours = page_list(win)

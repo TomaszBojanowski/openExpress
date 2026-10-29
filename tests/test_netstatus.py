@@ -219,7 +219,7 @@ def test_the_connect_iq_store_is_noted_under_garmin_connect(monkeypatch, network
     monkeypatch.setattr(requests.Session, "request",
                         lambda self, m, u, **kw: (_ for _ in ()).throw(
                             requests.ConnectionError("down")))
-    with pytest.raises(ApiError):  # the client's way, without the address (25.10.2026)
+    with pytest.raises(ApiError):  # the client's way, without the address
         ciq.StoreApi(client)._request("GET", "express/x", "x")
     assert network_state.snapshot()[0][netstatus.CONNECT].kind == netstatus.NETWORK
 
@@ -598,7 +598,7 @@ def test_today_has_only_the_hour_in_polish(polish):
                     f"ostatnia odpowiedź o\u00a0{hour}")
 
 
-# --- the tidier popover (18.10.2026) ------------------------------------------------------------
+# --- a tidy popover -----------------------------------------------------------------------------
 
 @pytest.mark.needs_display
 def test_a_good_row_has_its_dot_and_time_but_no_word(network_state):

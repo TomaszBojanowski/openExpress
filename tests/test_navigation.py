@@ -1,8 +1,8 @@
 """Where the user goes after a detection (openexpress/gui/navigation.py): the start page's
-navigation matrix as the window behaves today, one row per situation, with a short id. Rows
-whose id ends in "-Q" and the number of a decision (AGENTS.md) are today's behaviour that
-this decision is to change; the change will show in this table. No display, no GTK;
-the addresses and unit IDs are made up."""
+navigation matrix as the window behaves, one row per situation, with a short id. A row whose
+id ends in "-Q" and the number of a decision would be behaviour that this decision is to
+change, and the change would show in this table; there is none. No display, no GTK; the
+addresses and unit IDs are made up."""
 
 import re
 
@@ -58,19 +58,19 @@ NAVIGATION = [
     # --- a device plugged in (mounted) -----------------------------------------------------
     ("N0-plug-on-S", Cause.PLUGGED, S, NONE, seen(W, open=W), ShowDevice()),
     ("N0-plug-same-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W), ShowDevice()),
-    # Q1: on a remembered device's view nothing moves but that very device plugged in: one
+    # On a remembered device's view nothing moves but that very device plugged in: one
     # other device is opened in the background, two give the list, under the view.
     ("N0-plug-other-on-R", Cause.PLUGGED, R, NONE, seen(W, open=W), Stay(redraw_start=True)),
     ("N0-plug-two-on-R", Cause.PLUGGED, R, NONE, seen(W, E), Stay(redraw_start=True)),
     # A device without a unit ID is never the one shown.
     ("N0-plug-same-without-id-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W, ids=False),
      Stay(redraw_start=True)),
-    # Decision 3: the very device shown comes with another one, or while another one is
-    # open: the start page with its tile; the device open stays open.
+    # The very device shown comes with another one, or while another one is open: the
+    # start page with its tile; the device open stays open.
     ("N0-plug-same-and-other-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, E), ShowStart()),
     ("N1-plug-same-on-R-while-open", Cause.PLUGGED, R_WATCH, seen(E, open=E),
      seen(W, E, open=E), ShowStart()),
-    # Q1: with a device open, plugging in another does not change the view: the open one
+    # With a device open, plugging in another does not change the view: the open one
     # stays open, the list is read again (on the start page the tiles of both).
     ("N1-plug-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, E, open=W),
      Stay(redraw_start=True)),
@@ -97,7 +97,7 @@ NAVIGATION = [
     ("N2-unplug-other-on-R", Cause.UNPLUGGED_OTHER, R, seen(W, E, open=W), seen(W, open=W),
      Stay()),
     ("U2-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E), seen(W, open=W), ShowDevice()),
-    # Q1: on a remembered device's view the one left opens, the view stays.
+    # On a remembered device's view the one left opens, the view stays.
     ("U2-R", Cause.UNPLUGGED_CHOICE, R, seen(W, E), seen(W, open=W), Stay(redraw_start=True)),
     ("U3-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E, V), seen(W, E), Stay(redraw_start=True)),
     ("N2-usb-changed-on-S", Cause.USB_CHANGED, S, seen(W, E), seen(W, E),
@@ -121,12 +121,12 @@ NAVIGATION = [
      Stay(redraw_start=True)),
     # --- the account ------------------------------------------------------------------------
     ("N1-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
-    # Q3: a change of account never moves the user: the start page stays, as after Refresh
+    # A change of account never moves the user: the start page stays, as after Refresh
     # there.
     ("N1-login-back-on-S", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
     ("N1-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
-    # Q3: the device open before the change is opened again, also with two plugged in.
+    # The device open before the change is opened again, also with two plugged in.
     ("N2-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
      Stay()),
     ("N2-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
@@ -136,8 +136,8 @@ NAVIGATION = [
     ("N1-logged-out-on-D", Cause.LOGGED_OUT, D, seen(W, open=W), seen(W, open=W), Stay()),
     ("N1-logged-out-on-R", Cause.LOGGED_OUT, R, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
-    # The exception to Q3: logged out on the view of a device of the account, which has
-    # nothing to show without it: the start page.
+    # The exception to "a change of account never moves the user": logged out on the view
+    # of a device of the account, which has nothing to show without it: the start page.
     ("N0-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, NONE, NONE, ShowStart()),
     ("N1-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, seen(W, open=W),
      seen(W, open=W), ShowStart()),
@@ -171,10 +171,10 @@ PLANS = [
     ("P-account", Cause.ACCOUNT_CHANGED, (), None, (), False, Detect()),
     ("P-choice-failed", Cause.CHOICE_FAILED, (), None, (W, E), False, Detect()),
     ("P-unplugged-open", Cause.UNPLUGGED_OPEN, (), None, (), False, Nothing()),
-    # The open device unplugged while another Garmin device is connected (audit 22.10.2026,
-    # point 1; seen live with 0.6.11): what is left on USB is looked for, a drive as well as
-    # a device in its normal mode. The plan knows only what is left, not what was open: an
-    # MTP device left after an MTP device or after a drive is the same row.
+    # The open device unplugged while another Garmin device is connected: what is left on
+    # USB is looked for, a drive as well as a device in its normal mode. The plan knows only
+    # what is left, not what was open: an MTP device left after an MTP device or after a
+    # drive is the same row.
     ("P-unplugged-open-mtp-a-drive-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
      Detect()),
     ("P-unplugged-open-mtp-another-mtp-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
@@ -183,14 +183,14 @@ PLANS = [
      Detect()),
     ("P-unplugged-open-nothing-left", Cause.UNPLUGGED_OPEN, (), None, (), False, Nothing()),
     # One still starting: looked for once in its normal mode (the USB poll); a drive ejected
-    # by openExpress is neither opened nor listed until it is unplugged (D3).
+    # by openExpress is neither opened nor listed until it is unplugged.
     ("P-unplugged-open-one-starting-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
      Nothing()),
     ("P-unplugged-open-an-ejected-drive-left", Cause.UNPLUGGED_OPEN, (), None, (), False,
      Nothing()),
     ("P-chosen", Cause.CHOSEN, (), None, (W, E), False, Nothing()),
     ("P-new-mount-none-open", Cause.PLUGGED, (E + "/",), None, (), False, Detect()),
-    # Q1: the device open stays open (not opened again), no list: the list is read again.
+    # The device open stays open (not opened again), no list: the list is read again.
     ("P-new-mount-while-open", Cause.PLUGGED, (E + "/",), WATCH_LABEL, (W,), False,
      ReadList()),
     ("P-usb-changed-while-open", Cause.USB_CHANGED, (None,), WATCH_LABEL, (W,), False,
@@ -214,17 +214,17 @@ PLANS = [
      ReadList()),
     ("P-own-and-new-mount-moved", Cause.PLUGGED, (W + "/", E + "/"), WATCH_LABEL, (W,), True,
      Detect(read_list=True)),
-    # Q2: mounts of devices already listed bring no detection, whether one is open or not.
+    # Mounts of devices already listed bring no detection, whether one is open or not.
     ("P-start-mounts-listed", Cause.PLUGGED, (W + "/", E + "/"), None, (W, E), False,
      Nothing()),
     ("P-listed-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False, Nothing()),
     # A device listed without its details (e.g. not mounted yet): its mount is looked at.
     ("P-unread-mount-on-the-list", Cause.PLUGGED, (E + "/",), None, (W, E), False,
      Detect()),
-    # With a device open too (Q1): the list is read again, its tile may get its details.
+    # With a device open too: the list is read again, its tile may get its details.
     ("P-unread-mount-on-the-list-while-open", Cause.PLUGGED, (E + "/",), WATCH_LABEL, (W, E),
      False, ReadList()),
-    # After 1c55104: another device unplugged, its two mounts removed: the list read once.
+    # Another device unplugged, its two mounts removed: the list read once.
     ("P-read-the-list", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, READ_THE_LIST), WATCH_LABEL,
      (W, E), False, ReadList()),
     ("P-read-the-list-and-a-listed-mount", Cause.UNPLUGGED_OTHER, (READ_THE_LIST, E + "/"),

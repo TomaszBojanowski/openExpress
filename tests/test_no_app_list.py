@@ -1,5 +1,5 @@
 """A device that declares Connect IQ but has no app list (GARMIN/APPS/OUT.BIN) yet, as no app
-was ever installed on it (#14: a fēnix 8 51 mm AMOLED, 25.10.2026): that is an empty list,
+was ever installed on it (a fēnix 8 51 mm AMOLED): that is an empty list,
 not an error. The Apps page and `openexpress apps` say "No Connect IQ apps on the device", the
 apps of the account can be installed: they are queued in Garmin Connect, for the phone, and
 nothing is written to the device (a list written without the device's own would name none of

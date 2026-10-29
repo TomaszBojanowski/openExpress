@@ -2,9 +2,9 @@
 noted whenever the window reads what is connected and finds its GarminDevice.xml: in a
 detection (detection._choose) and also when the list of the devices connected is read
 again (detection.connected_devices: a device plugged in while others are connected, the
-start page shown or a device open). Before, only the detection and the opening noted it, so
-a Varia plugged in for a minute next to a watch, then unplugged, said "Last seen 8 h ago"
-(27.10.2026). Every device here is made up."""
+start page shown or a device open). Noted only by the detection and the opening, a Varia
+plugged in for a minute next to a watch, then unplugged, would say "Last seen 8 h ago".
+Every device here is made up."""
 
 from openexpress import known_devices
 from openexpress.device import gio_storage

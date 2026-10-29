@@ -1,8 +1,8 @@
-"""The settings of the window (gui.json) and the language of the interface (code audit of
-25.10.2026): each change reads the file again and changes only its own keys. The switch of
-the background sync wrote back what the window had read when it started, so a view of the
-start page chosen since was lost. The language of the interface is read and kept by one
-pair of functions (i18n), for the window, the command line and the start alike."""
+"""The settings of the window (gui.json) and the language of the interface: each change reads
+the file again and changes only its own keys. A switch of the background sync that wrote back
+what the window had read when it started would lose a view of the start page chosen since.
+The language of the interface is read and kept by one pair of functions (i18n), for the
+window, the command line and the start alike."""
 
 import json
 import types

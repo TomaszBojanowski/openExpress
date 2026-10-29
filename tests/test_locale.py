@@ -113,7 +113,8 @@ def test_garmin_s_servers_are_told_the_language_of_the_system(monkeypatch):
 
 
 def test_a_locale_saved_by_an_older_version_gives_way_to_the_system(monkeypatch, caplog):
-    """Up to 0.6.1 every settings.json got "locale": "pl_PL" on the first start, chosen or not."""
+    """An older version gave every settings.json "locale": "pl_PL" on the first start, chosen
+    or not."""
     system(monkeypatch, GERMAN)
     paths.write_private(settings_file(), json.dumps({
         "environment": "production", "locale": "pl_PL", "client_guid": str(uuid.uuid4()),
@@ -151,7 +152,7 @@ def test_a_locale_chosen_with_setup_wins_and_is_kept(monkeypatch, capsys):
     assert saved["chosen_locale"] == "fr_FR" and "locale" not in saved
 
 
-# --- a locale the system has and the Flatpak's runtime has not (#10) --------------------------
+# --- a locale the system has and the Flatpak's runtime has not --------------------------------
 
 CATEGORIES = ("LC_ALL", "LC_CTYPE", "LC_MESSAGES", "LC_NUMERIC", "LC_TIME", "LC_COLLATE",
               "LC_MONETARY")
@@ -187,8 +188,8 @@ def not_in_the_runtime(monkeypatch):
 @pytest.mark.parametrize("language", ["en_US:en", None])
 def test_a_locale_the_runtime_lacks_gives_c_utf_8_to_the_program(monkeypatch, language):
     """GTK would fall back to "C" (ASCII), and GLib could then convert no name with a
-    character outside ASCII: flatpak-spawn failed and the sign-in window took the program
-    down (#10). LC_ALL=C.UTF-8 for the program and the processes it starts; LANGUAGE stays,
+    character outside ASCII: flatpak-spawn would fail and the sign-in window take the program
+    down. LC_ALL=C.UTF-8 for the program and the processes it starts; LANGUAGE stays,
     Python's own locale stays as it was, and so does the language for Garmin."""
     import locale
     import os

@@ -1,9 +1,9 @@
-"""How much a copy of the app list differs from the order on the device (25.10.2026): the
-fewest apps to move to get from the order now to the order of the copy (those outside the
-longest common subsequence, of the apps in both lists), not the positions that change: one
-app taken from the top to the bottom moves every position, but is one app moved. Apps only
-in the copy, or only on the device, are said apart. The dialog that lists the copies opens at
-its top, its first row whole, none chosen. All apps and copies are made up."""
+"""How much a copy of the app list differs from the order on the device: the fewest apps to
+move to get from the order now to the order of the copy (those outside the longest common
+subsequence, of the apps in both lists), not the positions that change: one app taken from
+the top to the bottom moves every position, but is one app moved. Apps only in the copy, or
+only on the device, are said apart. The dialog that lists the copies opens at its top, its
+first row whole, none chosen. All apps and copies are made up."""
 
 import types
 import uuid

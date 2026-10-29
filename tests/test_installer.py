@@ -126,10 +126,10 @@ def test_an_installer_that_is_not_there(tmp_path):
         installer.extract_dlls(tmp_path / "GarminExpress.exe", tmp_path / "dlls")
 
 
-# --- an installer for macOS (audit of 26.10.2026) -------------------------------------------
-# Only the installer for Windows has the two DLLs. A macOS disk image used to give "does not
-# look like a Garmin Express installer" on the command line and "Consumer key not found" in
-# the window; now both say what the file is and which one is needed. The file is told by its
+# --- an installer for macOS -----------------------------------------------------------------
+# Only the installer for Windows has the two DLLs. For a macOS disk image the command line and
+# the window both say what the file is and which one is needed, not that it "does not look
+# like a Garmin Express installer" or "Consumer key not found". The file is told by its
 # bytes, not by its name.
 
 MACOS_TEXT = ("{file} is an installer for macOS. openExpress needs the Garmin Express installer "
@@ -245,7 +245,7 @@ def test_the_words_in_polish(tmp_path):
         "instaluje.")
 
 
-# --- which installer, said in full (a remark on Reddit, 27.10.2026) ----------------------------
+# --- which installer, said in full -------------------------------------------------------------
 # Every place that asks for the installer says which one: the one for Windows, a free download
 # from garmin.com, and that openExpress only reads it (no Windows needed).
 

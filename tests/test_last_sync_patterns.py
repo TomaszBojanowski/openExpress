@@ -4,8 +4,8 @@ words, in English and in Polish: the row (when, then the numbers) and the detail
 none twice, none against the row. The window shows what last_sync.describe gives, also when
 it shows a sync again (the file changes: the background service, or a sync of its own).
 
-The rule (AGENTS.md): every change of this row comes with a new record of a real sync here
-and its exact words below."""
+The rule: every change of this row comes with a new record of a real sync here and its exact
+words below."""
 
 import json
 from datetime import datetime, timedelta
@@ -22,8 +22,8 @@ NOTHING_NEW = {"No new data to upload", "Brak nowych danych do wysłania"}
 
 # name: {language: (the numbers, [(a line of the details, whether it is a warning)])}
 EXPECTED = {
-    # Today's sync of an Edge 1050 (Flatpak 0.6.13): the record has two steps, the window
-    # showed them twice, under "No new data to upload" of the sync before.
+    # A sync of an Edge 1050 (real-flatpak-edge-1050-0.6.13.json): the record has two steps,
+    # shown once each, not under "No new data to upload" of the sync before.
     "real-flatpak-edge-1050-0.6.13.json": {
         "en": ("16 new files, 12 uploaded", [
             (("Files from the device: monitoring ×2, segment list, Garmin Coach plan ×9, "
@@ -87,29 +87,28 @@ EXPECTED = {
         "pl": ("nic nie wysłano: brak zgody na koncie", [
             (("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
              f"z{NB}urządzeń"), False)])},
-    # `sync --download-only --apply` of the Edge 1050 on 23.10.2026 (the version from source
-    # after 0.6.15, with fbd047e): nothing received; TrueUp in the words it was written in
-    # (with its hard space).
+    # `sync --download-only --apply` of the Edge 1050 by the version from source
+    # (real-source-edge-1050-0.6.15-download-only.json): nothing received; TrueUp in the
+    # words it was written in (with its hard space).
     "real-source-edge-1050-0.6.15-download-only.json": {
         "en": ("upload skipped", [
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)]),
         "pl": ("wysyłanie pominięte", [
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)])},
-    # sync --apply --download-only: the uploads were not looked at, so not "nothing to upload"
-    # (decision of 23.10.2026); no line of its own, the row says it.
+    # sync --apply --download-only: the uploads were not looked at, so not "nothing to
+    # upload"; no line of its own, the row says it.
     "format-0.6.16-upload-skipped.json": {
         "en": ("upload skipped · 5 received", []),
         "pl": ("wysyłanie pominięte · 5 odebranych", [])},
     # sync --apply --type FIT_TYPE_4: the numbers are of the activities only, and the row says
-    # so (23.10.2026); no line of its own.
+    # so; no line of its own.
     "format-0.6.16-only-types.json": {
         "en": ("activities only: 3 new files, 3 uploaded", [
             ("Files from the device: activities ×3", False)]),
         "pl": ("tylko aktywności: 3 nowe pliki, 3 wysłane", [
             (f"Pliki z{NB}urządzenia: aktywności ×3", False)])},
-    # A sync of the fēnix 8 by the version from source on 24.10.2026, after 6d8cd91: one new
-    # file uploaded, and TrueUp received (counted since 6d8cd91), in the words it was written
-    # in (with its hard space).
+    # A sync of the fēnix 8 by the version from source: one new file uploaded, and TrueUp
+    # received (counted in the row), in the words it was written in (with its hard space).
     "real-source-fenix-8-0.6.18-trueup-received.json": {
         "en": ("1 new file, 1 uploaded · 1 received", [
             ("Files from the device: segment list", False),
@@ -117,15 +116,16 @@ EXPECTED = {
         "pl": ("1 nowy plik, 1 wysłany · 1 odebrany", [
             (f"Pliki z{NB}urządzenia: lista segmentów", False),
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False)])},
-    # A sync whose device had nothing new and that wrote TrueUp from the queue (PLAN (9),
-    # 24.10.2026): TrueUp counts as received, so the row does not say "nothing to upload"
-    # alone; no real sync has made it yet (tests/test_fixes_ui.py: what the command writes).
+    # A sync whose device had nothing new and that wrote TrueUp from the queue: TrueUp counts
+    # as received, so the row does not say "nothing to upload" alone; no real sync has made it
+    # yet (tests/test_fixes_ui.py: what the command writes).
     "format-0.6.19-trueup-received.json": {
         "en": ("nothing to upload · 1 received", [
             ("TrueUp: daily totals aligned with your other Garmin devices", False)]),
         "pl": ("nic do wysłania · 1 odebrany", [
             ("TrueUp: daily totals aligned with your other Garmin devices", False)])},
-    # Every line of the details kept as data (0.6.20): words of the language of the moment.
+    # Every line of the details kept as data (format-0.6.20-details-as-data.json): words of
+    # the language of the moment.
     "format-0.6.20-details-as-data.json": {
         "en": ("2 new files, 1 uploaded · 2 received", [
             ("Marked 12 existing files as already uploaded", False),
@@ -147,8 +147,8 @@ EXPECTED = {
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin", False),
             (f"Pominięto 1 element z{NB}Garmin Connect (nieobsługiwany przez urządzenie)",
              False)])},
-    # Today's sync of an Edge 1050 (Flatpak 0.6.20, 25.10.2026): three metrics files and
-    # TrueUp from the queue, the files only counted.
+    # A sync of an Edge 1050 (real-flatpak-edge-1050-0.6.20-trueup-metrics.json): three
+    # metrics files and TrueUp from the queue, the files only counted.
     "real-flatpak-edge-1050-0.6.20-trueup-metrics.json": {
         "en": ("8 new files, 8 uploaded · 4 received", [
             (("Files from the device: monitoring ×3, segment list, settings change log, "
@@ -181,7 +181,8 @@ EXPECTED = {
             (f"Pliki z{NB}urządzenia: monitorowanie", False),
             ("1 nagranie EKG nie zostało wysłane: nagrania EKG wymagają konta Garmin Health",
              False)])},
-    # The wait for TrueUp stopped by the user (0.7.7; made up, as no real sync has had one).
+    # The wait for TrueUp stopped by the user (format-0.7.7-trueup-stopped.json; made up, as
+    # no real sync has had one).
     "format-0.7.7-trueup-stopped.json": {
         "en": ("1 new file, 1 uploaded", [
             ("Files from the device: monitoring", False),
@@ -189,8 +190,9 @@ EXPECTED = {
         "pl": ("1 nowy plik, 1 wysłany", [
             (f"Pliki z{NB}urządzenia: monitorowanie", False),
             (f"TrueUp: czekanie przerwane; przyjdzie z{NB}następną synchronizacją", False)])},
-    # A sync stopped after its uploads (0.7.10; made up, as no real sync has kept one): the
-    # error that stopped it among its errors, in the words of the moment of the sync.
+    # A sync stopped after its uploads (format-0.7.10-stopped.json; made up, as no real sync
+    # has kept one): the error that stopped it among its errors, in the words of the moment
+    # of the sync.
     "format-0.7.10-stopped.json": {
         "en": ("2 new files, 2 uploaded", [
             ("Files from the device: activities, monitoring", False),
@@ -255,7 +257,7 @@ def _window(unit_id):
 
     from openexpress.gui.app import MainWindow
 
-    # The device synced here (its state.json: the one source of "never synced", analysis 14).
+    # The device synced here (its state.json: the one source of "never synced").
     sync.SyncState(unit_id).save()
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id),
@@ -295,9 +297,9 @@ def _put(record, when):
 @pytest.mark.needs_display
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)
 def test_from_the_file_to_the_screen(xdg, language):
-    """As on 23.10.2026: the device page showed the sync before (its words "Brak nowych
-    danych do wysłania"), then the Edge's sync was written and shown again by the device
-    page and by the change of the file: the row shows that sync alone, once."""
+    """The device page shows the sync before (its words "Brak nowych danych do wysłania"),
+    then the Edge's sync is written and shown again by the device page and by the change of
+    the file: the row shows that sync alone, once."""
     now = datetime.now()
     before = _record("real-source-edge-1050-0.6.3.json")
     today = _record("real-flatpak-edge-1050-0.6.13.json")

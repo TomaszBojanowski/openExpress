@@ -1,6 +1,6 @@
-"""#13 (CachyOS/KDE, fēnix 8, 0.6.15): gvfs had no MTP backend (no gvfs-mtp), and KDE's
-kiod6 (Dolphin) held the device; the window said "starting" for 45 s, then asked about a
-PIN. Now a missing MTP backend is said at once, with what to install, in the window and on
+"""A fēnix 8 on CachyOS/KDE: gvfs without an MTP backend (no gvfs-mtp), and KDE's kiod6
+(Dolphin) holding the device, would leave the window saying "starting" for 45 s, then asking
+about a PIN. A missing MTP backend is said at once, with what to install, in the window and on
 the command line; and the page "not ready" names other programs that may hold the device.
 Nothing here asks the real gvfs (conftest: it has MTP, unless a test says otherwise)."""
 
@@ -118,7 +118,7 @@ def test_no_mtp_in_polish(monkeypatch):
 @pytest.mark.parametrize(("normal_s", "replug"), [(5, False), (30, True)])
 def test_the_page_not_ready_names_other_programs(normal_s, replug):
     """After 45 s: the PIN, the advice to plug it in again (after 15 s in its normal mode),
-    then other programs (Dolphin's kiod6 held the device in #13)."""
+    then other programs (Dolphin's kiod6 may hold the device)."""
     from openexpress.gui.app import MainWindow
 
     pin = gio_storage.not_ready_text(gio_storage.PRESENT)
@@ -142,7 +142,7 @@ def test_other_programs_in_polish():
 
 
 def test_the_command_line_after_45_s_names_other_programs_too(plugged):
-    """The same sentence as the window's page, after the PIN (decision of 24.10.2026)."""
+    """The same sentence as the window's page, after the PIN."""
     plugged.plug("51b4")
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()
@@ -153,10 +153,10 @@ MOUNT_FAILED = "Cannot mount the device: Unable to open MTP device “001,009”
 
 
 def test_the_command_line_names_other_programs_also_when_mounting_fails(plugged, monkeypatch):
-    """26.10.2026, a fēnix 8 held by another process over libmtp (as KDE's kmtpd holds it):
-    gvfs offers its volume, and every mount fails at once with "Unable to open MTP device".
-    After 45 s the command line says that error and the same sentence as the window's page
-    (the window says it from the USB state, whatever the last failure was)."""
+    """A fēnix 8 held by another process over libmtp (as KDE's kmtpd holds it): gvfs offers its
+    volume, and every mount fails at once with "Unable to open MTP device". After 45 s the
+    command line says that error and the same sentence as the window's page (the window says
+    it from the USB state, whatever the last failure was)."""
     def mount(dev, timeout_s=30):
         raise gio_storage.DeviceError(MOUNT_FAILED)
 
@@ -204,7 +204,7 @@ def test_the_readme_names_the_same_packages_and_words():
     assert f"**{NO_MTP_TITLE}**" in section and "**The device is not ready**" in section
     assert "Dolphin" in section and "kiod6" in section
     # KDE's kmtpd keeps the device after Dolphin is closed and takes it back when it is plugged
-    # in again (kio-extras, 26.10.2026): only quitting kiod6 frees it.
+    # in again (kio-extras): only quitting kiod6 frees it.
     flat = " ".join(section.split())  # the words, wherever the lines of the paragraph break
     assert "`kquitapp6 kiod6`" in flat and "kmtpd from kio-extras" in flat
     assert "kio-mtp" not in flat and "kquitapp6 kiod6" in HELD

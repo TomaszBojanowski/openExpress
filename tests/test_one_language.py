@@ -1,10 +1,10 @@
-"""One language for what the window says of a device (analysis 14, stage 1, 25.10.2026): the
-state of the updates in one text for the row "Device software" and the top of the Updates
-page; "Software X" for the version everywhere; one caption of the free space ("Unknown",
-"Reading…" for what is not known yet); one pair of names for the USB mode ("USB drive",
-"MTP"), "mass storage mode" only in the sentence that explains it; the reason a device cannot
-be used with the account only in the banner; "Last seen" told against now with the full date
-in the tooltip; a version known only from the account says so. All data here is made up."""
+"""One language for what the window says of a device: the state of the updates in one text
+for the row "Device software" and the top of the Updates page; "Software X" for the version
+everywhere; one caption of the free space ("Unknown", "Reading…" for what is not known yet);
+one pair of names for the USB mode ("USB drive", "MTP"), "mass storage mode" only in the
+sentence that explains it; the reason a device cannot be used with the account only in the
+banner; "Last seen" told against now with the full date in the tooltip; a version known only
+from the account says so. All data here is made up."""
 
 import re
 import time
@@ -35,7 +35,7 @@ def _row_text(items, drive=False):
     return win.update_row.get_subtitle()
 
 
-# --- a1, a5: the state of the updates in one text ------------------------------------------
+# --- the state of the updates in one text --------------------------------------------------
 
 
 OTHER = _entry("006-D0002-00", "Test Map Data", "Etyp", "Garmin\\SID", "DA00200.sid", b"sid")
@@ -91,7 +91,7 @@ def test_the_words_of_the_update_state():
         "Update ready: eject the device to install it")
 
 
-# --- a6, c6: the free space in one caption -------------------------------------------------
+# --- the free space in one caption ---------------------------------------------------------
 
 
 def test_the_free_space_in_one_caption():
@@ -169,7 +169,7 @@ def test_the_question_before_a_map_says_the_space_in_the_same_words(monkeypatch)
                       f"Space on the device: 1.5{NB}MB (2.1{NB}GB free)"]
 
 
-# --- a7, d7: the USB mode -----------------------------------------------------------------
+# --- the USB mode -------------------------------------------------------------------------
 
 
 def test_mass_storage_mode_is_named_only_in_the_sentence_that_explains_it():
@@ -268,7 +268,7 @@ def test_the_sync_button_and_the_notice_of_a_drive_say_usb_drive():
     assert MainWindow._sync_blocked(win) == "USB drive"
 
 
-# --- a8: the reason a device cannot be used with the account, only in the banner ---------
+# --- the reason a device cannot be used with the account, only in the banner -------------
 
 
 @pytest.mark.needs_display
@@ -283,7 +283,7 @@ def test_the_reason_is_only_in_the_banner():
     assert not any(str(error) in sub or str(error) in title for title, sub in texts)
 
 
-# --- a4: "Last seen" told against now, the full date in the tooltip ------------------------
+# --- "Last seen" told against now, the full date in the tooltip ----------------------------
 
 
 @pytest.mark.needs_display
@@ -305,7 +305,7 @@ def test_the_page_of_a_remembered_device_tells_last_seen_against_now(clock):
         f"Last seen {full_time(datetime.fromtimestamp(known.last_seen))}")
 
 
-# --- c5: a version known only from the account ---------------------------------------------
+# --- a version known only from the account -------------------------------------------------
 
 
 def test_a_version_known_only_from_the_account_says_so():
@@ -326,7 +326,7 @@ def test_the_page_of_a_device_only_on_the_account_says_where_its_version_comes_f
     assert win.remembered.version_label.get_label() == "Software 33.12 (Garmin Connect)"
 
 
-# --- d5 ---------------------------------------------------------------------------------------
+# --- personal records as Garmin Connect names them --------------------------------------------
 
 
 def test_personal_records_in_polish_as_garmin_connect_names_them():

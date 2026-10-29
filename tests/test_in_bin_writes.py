@@ -1,9 +1,9 @@
 """The app list waiting for the device (IN.BIN) is never left half written: a list cut short
-may read as a shorter one, and the device would drop the apps it no longer names (review of
-22.10.2026, risk A). Each write is read back; when it fails, what was there before is written
-back (the list that waited, or none); when even that fails, what is there is deleted and the
-error says so. The three writers: an install over the mounted storage, the order restored from
-a copy, an app switched on or off. All data is made up."""
+may read as a shorter one, and the device would drop the apps it no longer names. Each write
+is read back; when it fails, what was there before is written back (the list that waited, or
+none); when even that fails, what is there is deleted and the error says so. The three
+writers: an install over the mounted storage, the order restored from a copy, an app switched
+on or off. All data is made up."""
 
 import pytest
 from test_ciq_music import (  # noqa: F401 - the fixtures

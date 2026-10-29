@@ -37,9 +37,9 @@ def _sync(new, uploaded, received=0):
             "lines": [{"kind": "new_files", "types": {"FIT_TYPE_4": new}}] if new else []}
 
 
-# Every row the window, the command line and the notification can show (PLAN, 21.10.2026):
-# the files on the device are new ones, "0 uploaded" is "none uploaded", and nothing new on
-# the device is "nothing to upload" (it was "no new files", also next to files received).
+# Every row the window, the command line and the notification can show: the files on the
+# device are new ones, "0 uploaded" is "none uploaded", and nothing new on the device is
+# "nothing to upload" (not "no new files", also next to files received).
 ROWS = [
     (_sync(8, 6), "8 new files, 6 uploaded", "8 nowych plików, 6 wysłanych"),
     (_sync(8, 6, 2), "8 new files, 6 uploaded · 2 received",
@@ -84,7 +84,7 @@ def _blocked(reason, received=0):
 
 
 # The row when nothing was uploaded: why, the same for every reason the upload is blocked
-# (PLAN, 22.10.2026; it was "no new files", though the device was not even asked).
+# (not "no new files": the device was not even asked).
 BLOCKED_ROWS = [
     (_blocked("no-consent"), "nothing uploaded: no consent in the account",
      "nic nie wysłano: brak zgody na koncie"),
@@ -130,7 +130,7 @@ def test_the_details_say_why_in_full_as_before(reason, english, polish):
 
 
 def test_an_older_record_of_a_blocked_sync_reads_as_before():
-    """Before 22.10.2026 the reason was kept as the words of that moment: they stay the
+    """An older record keeps the reason as the words of that moment: they stay the
     details, and the row has no reason to tell."""
     data = {"uploaded": 0, "downloaded": 1, "lines": [
         "Nothing was uploaded: device sync is turned off in the Garmin account"]}
@@ -235,7 +235,7 @@ def test_the_window_marks_the_warnings(xdg):
 
     from openexpress.gui.app import MainWindow
 
-    sync.SyncState(A).save()  # synced here (analysis 14, a3: its state is the one source)
+    sync.SyncState(A).save()  # synced here (its state is the one source)
     service.save_last_sync(A, service.SyncSummary(
         uploaded=1, errors=["download: HTTP 404"],
         lines=[service.new_files_step([types.SimpleNamespace(datatype="FIT_TYPE_4")] * 3),
@@ -440,7 +440,7 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
 
     from openexpress.gui.app import MainWindow
 
-    sync.SyncState(A).save()  # synced here (analysis 14, a3)
+    sync.SyncState(A).save()  # synced here
     service.save_last_sync(A, service.SyncSummary(uploaded=3))
     service.save_last_sync(B, service.SyncSummary(uploaded=1))
     said = []

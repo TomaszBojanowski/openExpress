@@ -312,7 +312,7 @@ MONITORING = {"datatypename": "FIT_TYPE_32", "uploadlocations": [
                          ids=["the duplicate check first", "monitoring only"])
 def test_uploads_with_an_unverified_client_send_nothing_and_keep_no_copy(
         device_root, device, tmp_path, caplog, types):
-    """Defence in depth (review of 24.10.2026): run_sync checks the owner before uploading,
+    """Defence in depth: run_sync checks the owner before uploading,
     but run_uploads itself, given a client never checked against the account, stops at the
     first refusal (of the duplicate check of the activities, or of the first file): nothing
     is sent, the refusal is logged once (not "uploading everything" and one failure per
@@ -376,7 +376,7 @@ def test_downloads_with_an_unverified_client_fetch_write_and_acknowledge_nothing
 
 def test_downloads_with_an_unverified_client_stop_at_the_first_refusal(
         device, device_root, tmp_path, caplog):
-    """As the uploads (39bbb96): the refusal of the first request stops the downloads and is
+    """As the uploads: the refusal of the first request stops the downloads and is
     raised, logged once; not one failure for each file of the queue."""
     import logging
 
@@ -390,7 +390,7 @@ def test_downloads_with_an_unverified_client_stop_at_the_first_refusal(
 
 def test_the_refusal_of_downloads_does_not_say_that_something_was_sent(
         device, device_root, tmp_path):
-    """The words of the refusal fit both ways (24.10.2026): "Nothing was transferred", not
+    """The words of the refusal fit both ways: "Nothing was transferred", not
     "sent", in English and in Polish."""
     from openexpress import i18n
 
@@ -648,7 +648,7 @@ def ums_session(device_root, device, client):
 
 def test_watcher_does_not_sync_a_garmin_drive(device_root, xdg, device, watcher, monkeypatch):
     """Even when it gets a drive (e.g. the MTP device left between the event and the
-    opening): no sync, no request, no notification (D4), nothing written."""
+    opening): no sync, no request, no notification, nothing written."""
     sync.SyncState(UNIT).save()  # synced before: the watcher would sync it at once
     client = make_client([{"unitid": UNIT}])
     monkeypatch.setattr(watcher, "_open_session", lambda: ums_session(device_root, device, client))
@@ -1141,11 +1141,11 @@ def test_window_set_primary_training(device_root, device):
     assert events == []  # a device of another account: nothing is even started
 
 
-# --- primary wearable: changing it (Garmin Connect's "primary activity tracker", 27.10.2026) ----
+# --- primary wearable: changing it (Garmin Connect's "primary activity tracker") ----------------
 # The account's device list says which device it is (primaryActivityTrackerIndicator) and which
 # may be one (primaryActivityTrackerSettingCapable); a PUT of `true` to the device's
-# primary-activity-tracker makes it the one (analysis 01). Only a device on the account, only
-# when asked, and the list is read back.
+# primary-activity-tracker makes it the one. Only a device on the account, only when asked,
+# and the list is read back.
 
 WEARABLE_PATH = f"device-service/deviceservice/device-info/{UNIT}/primary-activity-tracker"
 
