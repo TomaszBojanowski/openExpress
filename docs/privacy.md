@@ -36,7 +36,8 @@ the application key, its secret and the value that signs download addresses are 
   them again (what was not there is looked for again only then). With **Preferences →
   Diagnostics** turned on
   (off by default; `openexpress setup --diagnostics-copy on`), the window also copies, once
-  per connection and through the ordinary connection, the diagnostic files the device shows:
+  per connection, before anything is written to the device, and through the ordinary
+  connection, the diagnostic files the device shows:
   `Garmin/Debug`, the folders of its diagnostic data types and its event logs. Health
   metrics (`MetricsBackup`), settings (`Backup`), memory dumps and files of more than 4 MB are
   only listed. The hidden crash logs of a fēnix 8 (its boot log and event logs) are read only

@@ -54,7 +54,9 @@ openexpress sync --apply
 The easiest way is the window: `openexpress gui`, then click **Choose Installer…** in the
 banner at the top and **Log In**.
 
-**The Flatpak and the version from source are separate installations:** each keeps its own
+## The Flatpak and the version from source
+
+They are separate installations: each keeps its own
 setup (the key from the Garmin Express installer), login, settings and sync state: its own
 last syncs, uploaded files and list of your own maps. After switching from one to the other,
 choose the installer and log in again. The first sync of each device then starts anew: the

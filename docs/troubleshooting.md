@@ -9,9 +9,10 @@
   several apps) it may help to turn the watch off and on first. No data on the watch was lost.
   The watch keeps only the last such error in its log and overwrites it at the next restart,
   sometimes already when it is unplugged, so to keep it, turn on **Preferences → Diagnostics
-  → Keep a copy of the device's diagnostic files on this computer**: the window then copies
-  them each time it opens the watch after it was connected, before anything is written to it. After such an error the device page shows a row **Device
-  error log** (under **Backup**) for 30 days, whether the copy is on or not.
+  → Keep a copy of the device's diagnostic files on this computer** (what is copied and when:
+  [Privacy and security](privacy.md#privacy-and-security)). After such an error the device
+  page shows a row **Device error log** (under **Backup**) for 30 days, whether the copy is on
+  or not.
 - **The watch is not found after the computer slept.** Watches (seen on a fēnix 8 and a Venu
   2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
   again.
@@ -86,9 +87,14 @@ flatpak update
 
 ## Reporting a problem
 
-Bug reports: please send the device report (main menu ☰ → **Report a Device or Problem…**, or
-`openexpress report`; it has no serial number, unit ID or e-mail), the command you ran and,
-if something failed, the output of `openexpress report --log`. Do not post the output of
+A [device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) says how openExpress works with your device, also when everything
+works. In the window: main menu (☰) → **Report a Device or Problem…**
+→ **Open on GitHub** opens the form with the report and a title filled in; or run
+`openexpress report`, which prints the report and an address that does the same. The report
+contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
+
+For a bug, send the device report with the command you ran and, if something failed, the
+output of `openexpress report --log` (see [Log file](#log-file)). Do not post the output of
 `openexpress info`: it shows the unit ID. Never post the files in `~/.config/openexpress/`
 (Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/`): `connect_auth.json` is
 your login token, and `consumer.json` holds what setup read from the Garmin Express

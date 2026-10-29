@@ -23,10 +23,7 @@
 
 Tried openExpress with another device? Please send a
 [device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) –
-also when everything works. In the window: main menu (☰) → **Report a Device or Problem…**
-→ **Open on GitHub** opens the form with the report and a title filled in; or run
-`openexpress report`, which prints the report and an address that does the same. The report
-contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
+also when everything works: [Reporting a problem](troubleshooting.md#reporting-a-problem).
 
 ## USB modes: MTP and mass storage
 

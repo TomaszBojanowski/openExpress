@@ -30,8 +30,9 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 ## Not yet available
 
 - Connect IQ app settings (the settings form is rendered by apps.garmin.com).
-- Map updates for devices that connect as a USB drive (mass storage mode), such as older
-  nüvi car navigators, and for devices whose maps Garmin serves another way than its
+- Map updates for devices that connect as a USB drive
+  ([USB modes](devices.md#usb-modes-mtp-and-mass-storage)), and for devices whose maps Garmin
+  serves another way than its
   universal map service (the window and `openexpress maps` say so; the Maps page names
   the map update type Garmin gives the device, which helps a report).
 - Checking the privacy-policy consents before a sync (the upload consent is checked, see
@@ -64,7 +65,7 @@ devices of your Garmin account; a tile opens its device. Up to two labels on a t
 what is waiting and what the device is: **Update available**, or **Unplug to install** (an
 update copied to the connected device, which installs it once unplugged; **Eject to install**
 for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
-(by this installation; the Flatpak and the version from source each keep their own),
+(by this installation: [each keeps its own](install.md#the-flatpak-and-the-version-from-source)),
 **USB drive**, **Primary** (the account's **Primary wearable**, as Garmin Connect names it:
 steps and sleep come from this device), **Not on your account** and,
 when nothing else needs saying, **Synced** (synced before, nothing new to upload). **To
@@ -182,8 +183,9 @@ is stored in the file.
   this way.
 - **Removing:** the remove button on the Maps page, or
   `openexpress maps remove --own NAME --apply` for a map this installation copied. A map
-  that was copied by hand or by another installation (the Flatpak and the version from
-  source keep separate lists) can be removed in the window after an extra question.
+  that was copied by hand or by another installation
+  ([each keeps its own list](install.md#the-flatpak-and-the-version-from-source)) can be
+  removed in the window after an extra question.
 - **Where it works:** on devices that have a folder for maps (e.g. the fēnix 8), not on one
   in mass storage mode; a Venu 2 has none. Tested on a fēnix 8 with a map from BBBike.org,
   and reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)). openExpress checks that the file
@@ -263,9 +265,9 @@ fēnix 8.
   during the wait, stops it: the sync ends as usual,
   nothing of TrueUp is written, and it comes with the next sync.
 - **Connect IQ** apps queued for the watch (e.g. chosen in the store on your phone) are
-  installed during sync, except on devices that hide their app folder: there they stay
-  queued until you run `apps install` or use the window (see
-  [Connect IQ apps](#connect-iq-apps)). New watch faces are installed but not activated, like
+  installed during sync, except on devices that hide their app folder, where they stay
+  queued ([Connect IQ apps](#connect-iq-apps)). New watch faces are installed but not
+  activated, like
   in Garmin Express.
 - **Last sync** on the Device page, `openexpress sync` and the notification of the
   background sync use the same words for how many new files the device had, how many were
