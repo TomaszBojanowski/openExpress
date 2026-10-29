@@ -1,7 +1,9 @@
-"""A fēnix 8 with gvfs lacking its MTP backend (gvfs-mtp): said at once, with what to install,
-in the window and on the command line, not after 45 s of "starting" and a PIN. The page "not
-ready" names programs that may hold the device (KDE's kiod6). Nothing asks the real gvfs
-(conftest: with MTP unless a test says otherwise)."""
+"""A fēnix 8 with gvfs lacking its MTP backend (gvfs-mtp), or held by KDE's MTP daemon
+(kmtpd, in kiod6, which Dolphin starts) so that gvfs cannot offer it: either would leave the
+window saying "starting" for 45 s, then asking about a PIN. A missing backend is said at once,
+with what to install, in the window and on the command line; the page "not ready" names the
+programs that may hold the device. Nothing asks the real gvfs (conftest: with MTP unless a
+test says otherwise)."""
 
 import logging
 import types

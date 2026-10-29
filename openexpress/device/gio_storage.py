@@ -770,7 +770,8 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
     found = []
     waiting = set()  # the places of devices in mass storage mode without a drive to list
     places: dict[str, list] = {}  # the unmounted volumes of each Garmin drive, by USB place
-    # KDE mounts a drive only once a file manager opens it.
+    # KDE mounts a drive only once a file manager opens it. The volumes come from gvfs
+    # (Gio.VolumeMonitor): the Flatpak needs no new permission to see them.
     for vol in Gio.VolumeMonitor.get().get_volumes():
         mounted = getattr(vol, "get_mount", lambda: None)()
         unix = vol.get_identifier("unix-device")
