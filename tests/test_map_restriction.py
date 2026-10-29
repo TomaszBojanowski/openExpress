@@ -400,6 +400,102 @@ def test_cli_without_a_login_asks_the_account_nothing_and_says_no_error(
     assert "the account's country not read" not in log_file.read_text()
 
 
+def test_cli_checks_the_owner_again_on_each_run(saved_login, capsys):
+    from test_ownership import DEVICES_PATH
+
+    from openexpress.cli import main
+
+    assert main(["maps", "--all"]) == 0
+    assert main(["maps", "--all"]) == 0
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, DEVICES_PATH, LOCATION]
+
+
+def test_cli_asks_the_account_nothing_when_no_map_is_restricted(saved_login, capsys):
+    from test_ownership import response
+
+    from openexpress.cli import main
+
+    saved_login.routes["api/maps/universal/update"] = response(body=answer(restricted=()))
+    assert main(["maps", "--all"]) == 0
+    assert account_asked(saved_login) == []
+
+
+def test_cli_without_the_key_nor_the_login_lists_the_maps_and_asks_the_account_nothing(
+        saved_login, capsys, log_file):
+    from openexpress.auth import store
+    from openexpress.cli import main
+    from openexpress.settings import consumer_path
+
+    store.delete()
+    consumer_path().unlink()
+    assert main(["maps", "--all"]) == 0
+    _line, after = japan_lines(capsys.readouterr().out)
+    assert after == "    Garmin does not offer this map in this country: South Korea"
+    assert account_asked(saved_login) == []
+    assert "maps: the account's country not read (SetupError)" in log_file.read_text()
+
+
+@pytest.mark.parametrize(("devices", "location", "asked", "said"), [
+    ("another account", None, ["devices"], "NotAccountDevice"),
+    (None, 500, ["devices", "location"], "ApiError"),
+    (401, None, ["devices"], "Unauthorized"),
+    ("offline", None, ["devices"], "OwnershipUnknown"),
+])
+def test_cli_marks_the_map_when_the_country_cannot_be_read_and_says_why_in_the_log(
+        saved_login, capsys, log_file, devices, location, asked, said):
+    import requests
+    from test_ownership import DEVICES_PATH, OTHER, response
+
+    from openexpress.cli import main
+
+    if devices == "offline":
+        saved_login.routes[DEVICES_PATH] = requests.ConnectionError("offline")
+    elif devices == 401:
+        saved_login.routes[DEVICES_PATH] = response(401, b"")
+    elif devices is not None:
+        saved_login.routes[DEVICES_PATH] = response(body=[{"unitid": OTHER}])
+    if location is not None:
+        saved_login.routes[LOCATION] = response(location, b"")
+    assert main(["maps", "--all"]) == 0
+    _line, after = japan_lines(capsys.readouterr().out)
+    assert after == "    Garmin does not offer this map in this country: South Korea"
+    paths = {"devices": DEVICES_PATH, "location": LOCATION}
+    assert account_asked(saved_login) == [paths[a] for a in asked]
+    assert f"maps: the account's country not read ({said})" in log_file.read_text()
+
+
+def window_session(device_root):
+    from openexpress.device.storage import LocalStorage
+
+    return service.check_session(service.open_session(storage=LocalStorage(device_root)))
+
+
+def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
+        saved_login, device_root):
+    from test_ownership import DEVICES_PATH
+
+    s = window_session(device_root)
+    assert service.account_country(s) == "KR" and service.account_country(s) == "KR"
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
+    again = window_session(device_root)  # the device opened again: a new session
+    assert service.account_country(again) == "KR"
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION] * 2
+
+
+def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_logged_out(
+        saved_login, device_root):
+    from test_ownership import DEVICES_PATH, OTHER, response
+
+    from openexpress.auth import store
+
+    saved_login.routes[DEVICES_PATH] = response(body=[{"unitid": OTHER}])
+    assert service.account_country(window_session(device_root)) is None
+    assert account_asked(saved_login) == [DEVICES_PATH]
+    store.delete()
+    assert service.account_country(window_session(device_root)) is None
+    assert account_asked(saved_login) == [DEVICES_PATH]
+
+
 def test_the_words_in_polish():
     from openexpress import i18n
 
