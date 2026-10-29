@@ -1,8 +1,7 @@
-"""A fēnix 8 on CachyOS/KDE: gvfs without an MTP backend (no gvfs-mtp), and KDE's kiod6
-(Dolphin) holding the device, would leave the window saying "starting" for 45 s, then asking
-about a PIN. A missing MTP backend is said at once, with what to install, in the window and on
-the command line; and the page "not ready" names other programs that may hold the device.
-Nothing here asks the real gvfs (conftest: it has MTP, unless a test says otherwise)."""
+"""A fēnix 8 with gvfs lacking its MTP backend (gvfs-mtp): said at once, with what to install,
+in the window and on the command line, not after 45 s of "starting" and a PIN. The page "not
+ready" names programs that may hold the device (KDE's kiod6). Nothing asks the real gvfs
+(conftest: with MTP unless a test says otherwise)."""
 
 import logging
 import types
@@ -45,7 +44,7 @@ def test_an_mtp_backend_missing_from_gvfs_is_seen(monkeypatch, schemes, missing)
 
 
 def test_a_question_that_fails_is_not_taken_for_no_mtp(monkeypatch):
-    """Not known: as before (the wait and its words)."""
+    """Not known: taken as MTP there, so the window waits with its usual words."""
     def broken():
         raise RuntimeError("no session bus")
 
@@ -63,8 +62,8 @@ def test_the_command_line_says_it_at_once(plugged, monkeypatch):
 
 
 def test_a_device_still_starting_is_waited_for_then_told(plugged, monkeypatch):
-    """In its transitional mode (091e:0003) it may still come as a USB drive: waited for as
-    before; once it is in its normal mode, said at once."""
+    """In its transitional mode (091e:0003) it may still come as a USB drive: waited for; once
+    it is in its normal mode, said at once."""
     gvfs_offers(monkeypatch, "file", "sftp")
     plugged.plug("0003")
     plugged.steps[10] = lambda: plugged.plug("51b4")
@@ -172,7 +171,7 @@ def test_the_command_line_names_other_programs_also_when_mounting_fails(plugged,
 
 
 def test_a_mount_error_before_the_wait_ran_out_is_said_as_it_is(plugged, monkeypatch):
-    """Without waiting (the window): the error alone, as before."""
+    """Without waiting (the window): the error alone, without the sentence of other programs."""
     monkeypatch.setattr(gio_storage, "mount", lambda dev, timeout_s=30: (_ for _ in ()).throw(
         gio_storage.DeviceError(MOUNT_FAILED)))
     plugged.plug("51b4")
@@ -184,7 +183,7 @@ def test_a_mount_error_before_the_wait_ran_out_is_said_as_it_is(plugged, monkeyp
 
 
 def test_a_device_still_starting_after_45_s_gets_no_such_sentence(plugged):
-    """In its transitional mode no program holds it over MTP yet: as before."""
+    """In its transitional mode no program holds it over MTP yet: none named."""
     plugged.plug("0003")
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()

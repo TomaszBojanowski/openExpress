@@ -312,11 +312,10 @@ MONITORING = {"datatypename": "FIT_TYPE_32", "uploadlocations": [
                          ids=["the duplicate check first", "monitoring only"])
 def test_uploads_with_an_unverified_client_send_nothing_and_keep_no_copy(
         device_root, device, tmp_path, caplog, types):
-    """Defence in depth: run_sync checks the owner before uploading,
-    but run_uploads itself, given a client never checked against the account, stops at the
+    """run_uploads itself, given a client never checked against the account, stops at the
     first refusal (of the duplicate check of the activities, or of the first file): nothing
-    is sent, the refusal is logged once (not "uploading everything" and one failure per
-    file), and no file is kept in pending/ for a next sync."""
+    is sent, the refusal is logged once (not one failure per file), and no file is kept in
+    pending/ for a next sync."""
     import logging
 
     st = LocalStorage(device_root)

@@ -1090,9 +1090,9 @@ def page_list(win):
 @pytest.mark.needs_display
 @pytest.mark.parametrize(("deletable", "left"), [(True, False), (False, True)])
 def test_window_reads_the_page_again_after_a_failed_copy(window_device, my_map, deletable, left):
-    """The copy fails half way: the error is said as before, and the page is read again. It
-    lists what the device has now: as before, or with the half file that could not be
-    deleted (the page is not left showing the device as it was before the copy)."""
+    """The copy fails half way: the error is said, and the page is read again. It lists what
+    the device has now: what it had before the copy, or that with the half file that could not
+    be deleted."""
     win, dev, root = window_device
     target = my_map.rename(my_map.with_name("new-map.img"))
     before, _ours = page_list(win)
@@ -1177,7 +1177,7 @@ def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
     assert (root / "Garmin" / "ours.img").exists() and len(ownmaps.recorded(dev)) == 1
 
     # The file was replaced meanwhile: refused, shown, nothing removed; the page is read
-    # again, as after any failed removal, and lists the same as before.
+    # again, as after any failed removal, and lists what it listed before the removal.
     win.answer, win.shown = "ok", []
     (root / "Garmin" / "ours.img").write_bytes(b"another file")
     before = page_list(win)
@@ -1192,7 +1192,7 @@ def test_window_removal_can_be_cancelled_and_refused(window_device, my_map):
 @pytest.mark.needs_display
 def test_window_reads_the_page_again_after_a_failed_removal(window_device, my_map, monkeypatch):
     """The file is still there after the delete: said, nothing taken off the list, and the
-    page is read again; it lists the same as before."""
+    page is read again; it lists what it listed before the removal."""
     win, dev, root = window_device
     st = win.session.storage
     ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)

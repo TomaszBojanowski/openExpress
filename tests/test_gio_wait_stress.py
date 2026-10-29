@@ -1,17 +1,9 @@
-"""gio_storage._wait under load.
+"""gio_storage._wait under load, in worker threads, then the main thread.
 
-Made-up Gio operations, drawn with a fixed seed: they answer at once, in the next turn, before
-the time limit, only once cancelled, or never; they say done or an error, and after a cancel
-done (too late to cancel), cancelled or an error. Four worker threads wait for them while the
-main thread holds the global default context and turns it (the window between events: a
-Gio.Application holds it all the time), turns it by hand without holding it, holds it without
-turning it (a busy window's thread), or has let it go (the window's loop has ended); then the
-main thread waits itself (the command line). After each wait: it ended in time, it says what
-the operation really gave, the answer came to the thread that waited, no source of the wait is
-left and none was added to the global default context, and the context of the worker is
-taken off; at the end: no callback of the window ran in
-a worker. The short run is in the ordinary tests; the long one only with
-OPENEXPRESS_TESTS_STRESS=1 (seed: OPENEXPRESS_STRESS_SEED, 2026 by default)."""
+Made-up Gio operations (gio_fake.py), drawn with a fixed seed, answer at once, later, only
+once cancelled, or never. Each wait ends in time with what the operation gave, in its own
+thread, leaving no source or pushed context; no window callback runs in a worker. The long
+run needs OPENEXPRESS_TESTS_STRESS=1."""
 
 import os
 import random
@@ -33,6 +25,10 @@ BOUND = LIMIT + GRACE + SLACK
 WORKERS = 4
 WHAT = "Cannot do it"
 NOT_IN_TIME = f"{WHAT}: the device did not answer in time"
+# The main thread while the workers wait: holds the global default context and turns it (the
+# window between events: a Gio.Application holds it all the time), turns it by hand without
+# holding it, holds it without turning it (a busy window's thread), or has let it go (the
+# window's loop has ended).
 MODES = ("idle", "turned", "busy", "ended")
 
 

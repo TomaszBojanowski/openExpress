@@ -42,7 +42,7 @@ def test_unit_info_keeps_the_name_of_a_device_named_in_capitals():
     session, asked = _session("EPIX")
     service.unit_info(session)
     service.unit_info(session)
-    assert asked == [PART]  # asked once, as before
+    assert asked == [PART]  # asked once: the session keeps the answer
     assert known_devices.load()[UNIT].model_name == SHOWN
     known_devices.remember(UNIT, "EPIX", PART, "27.18", "mtp", now=2.0)  # seen again
     entry = known_devices.load()[UNIT]

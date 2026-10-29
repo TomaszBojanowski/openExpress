@@ -1,10 +1,7 @@
-"""A map Garmin does not offer in a country ("restriction" of the map service: a type
-"Country" and the country). Garmin Express takes the country from the address of the
-computer; openExpress from the profile of the Garmin account, asked only when a map has such
-a restriction and only for a device of the account. A map not offered in the account's
-country is not installed or updated, with the reason shown; when the country is not known
-(no login, a device of another account, a folder given with --path) the map is only marked.
-Every map, answer and country here is made up."""
+"""A map Garmin does not offer in a country (the map service's "Country" restriction). Garmin
+Express takes the country from the computer's address, openExpress from the account's
+profile, asked only for a restricted map on a device of the account. Such a map is not
+installed or updated; with the country unknown, only marked. All data is made up."""
 
 import html
 import json

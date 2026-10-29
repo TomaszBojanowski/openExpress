@@ -1,10 +1,7 @@
-"""When a device was last seen (devices.json, "Last seen …" on its tile once it is gone) is
-noted whenever the window reads what is connected and finds its GarminDevice.xml: in a
-detection (detection._choose) and also when the list of the devices connected is read
-again (detection.connected_devices: a device plugged in while others are connected, the
-start page shown or a device open). Noted only by the detection and the opening, a Varia
-plugged in for a minute next to a watch, then unplugged, would say "Last seen 8 h ago".
-Every device here is made up."""
+"""When a device was last seen (devices.json; "Last seen …" on its tile once it is gone) is
+noted each time the window finds its GarminDevice.xml: in a detection (detection._choose),
+and when the list of connected devices is read again (detection.connected_devices). Every
+device here is made up."""
 
 from openexpress import known_devices
 from openexpress.device import gio_storage
@@ -27,6 +24,9 @@ def test_the_list_read_again_notes_when_a_device_was_seen(in_the_window, clock):
 
     known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=1000.0)
     summary = _drive(in_the_window)
+    # Read again when a device is plugged in next to others, the start page is shown or a
+    # device is open. Not noted here, a Varia plugged in for a minute next to a watch would
+    # say "Last seen 8 h ago".
     assert detection.connected_devices() == [summary]
     entry = known_devices.load()[VARIA]
     assert entry.last_seen == clock.current.timestamp()

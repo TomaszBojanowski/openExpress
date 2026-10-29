@@ -386,9 +386,9 @@ def test_forget_a_number_not_on_the_list(store, utc, capsys, number):
 
 
 def test_the_kind_is_kept_and_optional(store, caplog):
-    """The kind is an optional field: a file without it is read as before (no kind), a
-    device without a kind is written without the field; set_category keeps it, a device
-    seen again keeps it, an unknown value counts as none. The log names the part number."""
+    """The kind is an optional field: a file without it reads as no kind, a device without a
+    kind is written without the field; set_category keeps it, a device seen again keeps it,
+    an unknown value counts as none. The log names the part number."""
     import json
 
     from openexpress import known_devices
@@ -420,11 +420,10 @@ NEWER_PICTURE = "https://static.garmincdn.com/pumac/venu2.jpg"
 
 
 def test_the_address_of_a_picture_is_kept_and_optional(store, caplog):
-    """The address of the picture of a model (Garmin's: from the account, or its update
-    server for a device off the account) is an optional field, as the kind: a file without it
-    is read as before, a device without one is written without the field; set_image_url keeps
-    it, a newer address replaces it, a device seen again keeps it. The log names the part
-    number and the host, never the unit ID or the whole address."""
+    """The address of a model's picture: an optional field (a file without it reads as none, a
+    device without one is written without it), kept by set_image_url, replaced by a newer one,
+    kept when the device is seen again. The log names the part number and the host, never the
+    unit ID or the whole address."""
     import json
 
     from openexpress import known_devices
@@ -501,11 +500,10 @@ def test_an_address_over_plain_http_is_kept_over_https(store):
 
 
 def test_an_update_found_is_kept_and_optional(store, caplog):
-    """When the window's check last found an update for a device is an optional field, as
-    the kind: a file without it is read as before (none found), a device without one is
-    written without the field; set_update_found keeps the time of the check that found one
-    and clears it when a check finds none; a device seen again keeps it; a value that is
-    not a number counts as none. The log names the part number, never the unit ID."""
+    """When the window's check last found an update: an optional field (a file without it
+    reads as none found, a device without one is written without it), kept by
+    set_update_found and cleared when a check finds none, kept when the device is seen again,
+    none when not a number. The log names the part number, never the unit ID."""
     import json
 
     from openexpress import known_devices

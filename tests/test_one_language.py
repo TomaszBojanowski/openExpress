@@ -1,10 +1,7 @@
-"""One language for what the window says of a device: the state of the updates in one text
-for the row "Device software" and the top of the Updates page; "Software X" for the version
-everywhere; one caption of the free space ("Unknown", "Reading…" for what is not known yet);
-one pair of names for the USB mode ("USB drive", "MTP"), "mass storage mode" only in the
-sentence that explains it; the reason a device cannot be used with the account only in the
-banner; "Last seen" told against now with the full date in the tooltip; a version known only
-from the account says so. All data here is made up."""
+"""One language for what the window says of a device: the state of the updates, the version
+("Software X"), the free space, the USB mode ("USB drive", "MTP"), the reason a device cannot
+be used with the account (only in the banner), "Last seen" and a version known only from the
+account. All data here is made up."""
 
 import re
 import time

@@ -1,10 +1,8 @@
-"""The window as narrow as it gets (MIN_WINDOW: 360 px), with the side panel folded: every page
-of the device view and the start page fit in it, in English and in Polish, which is longer.
+"""The window at its narrowest (MIN_WINDOW: 360 px), side panel folded: every page of the
+device view and the start page fit, in English and in the longer Polish.
 
-The real window is built (never shown on the desktop: the tests have their own hidden display)
-and filled with stand-ins: an Edge 1050 with a beta update, long names of components, a few
-maps, apps and music. Nothing asks a device or a server: detection, loading and the requests
-in the background are replaced by nothing. The width is measured in GNOME's font."""
+The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
+update, long component names, maps, apps and music. Nothing asks a device or a server."""
 
 import re
 import time
@@ -15,7 +13,7 @@ import pytest
 from fakes import record_sync
 
 NARROWEST = 360  # the width of gui_settings.MIN_WINDOW
-FONT = "Adwaita Sans 11"
+FONT = "Adwaita Sans 11"  # GNOME's: the widths are measured in it
 # The widest common title bar: three buttons of the window (as on Fedora's GNOME, which the
 # window was measured on); GNOME's own default has only "close".
 DECORATION = "appmenu:minimize,maximize,close"
@@ -711,8 +709,7 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
     """A tile asks for no more width than its chips need at least: with the longest pair (an
     update copied, a device never synced) as many tiles share a line as without chips, and
     the chips go on two lines, whole (libadwaita 1.7: Adw.WrapBox; before it, on one line,
-    shorter). Asking for the pair's whole width, two tiles would share a line of 1000 px
-    instead of three, and one a line of 700 px instead of two."""
+    shorter)."""
     from openexpress.devicelist import Tile
     from openexpress.gui import start
 
@@ -735,6 +732,7 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
     room = widths[0] - 24  # a tile without chips, but its margins
     one_line = sum(c.measure(start.Gtk.Orientation.HORIZONTAL, -1)[1] for c in chips) + 6
     assert one_line > room  # the pair does not fit on one line of the tile
+    # Asking for the pair's whole width, two tiles would share a line of 1000 px, one of 700 px.
     assert per_line[1] == per_line[0] and per_line[0] == (2 if width == 700 else 3)
     if wrap_box:
         assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []

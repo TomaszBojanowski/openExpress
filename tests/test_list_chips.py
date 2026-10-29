@@ -1,8 +1,7 @@
-"""Chips in the list of a section of many devices (more than devicelist.GRID_MAX): a row is
-laid out as its tile, the name, its chips, the words under the name, with the same chips
-(start.chips: the words, the classes, the order, at most two), changed in place when a count
-comes; a row is reached and opened from the keyboard and tells a screen reader its name, chips
-and words. All devices are made up."""
+"""Chips in the list of a section of many devices (more than devicelist.GRID_MAX): a row shows
+the chips of its tile (start.chips: words, classes, order, at most two), changed in place when
+a count comes; it opens from the keyboard and tells a screen reader its name, chips and
+words. All devices are made up."""
 
 import dataclasses
 import time

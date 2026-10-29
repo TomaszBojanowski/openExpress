@@ -1,13 +1,9 @@
-"""Waiting for one asynchronous Gio operation.
+"""Waiting for one asynchronous Gio operation (gio_storage._wait).
 
-A worker thread of the window waited on the global default main context, which the window's
-thread holds while it runs: so the window's thread gave the answer and the time limit, a busy
-window's thread held them up, and once its loop had ended a waiting worker ran the window's
-callbacks itself. At the time limit the operation went on in gvfs, uncancelled, and its late
-answer was lost. Now a worker waits on a context of its own, the time limit is there too, and
-the operation is cancelled at it and its answer waited for; the command line (the main thread)
-waits on the global default context, where Ctrl+C wakes it. mount() waits as every other
-operation. All operations are made up (gio_fake.py)."""
+A worker thread waits on a context of its own; at the time limit the operation is cancelled
+(else it goes on in gvfs) and its answer waited for. The command line (the main thread) waits
+on the global default context, where Ctrl+C wakes it. All operations are made up
+(gio_fake.py)."""
 
 import logging
 import threading

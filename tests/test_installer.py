@@ -1,7 +1,7 @@
 """Reading the installer of Garmin Express (setup --from-installer) up to its two DLLs: the
 container attached to the bootstrapper, the MSI in it, the streams of the DLLs, and what is
-said when one is missing. No installer of Garmin's is needed and no Garmin data is used:
-the files are made up, and 7z is stood in for where it would run."""
+said when one is missing. No installer or data of Garmin's is used: the files are made up,
+and 7z is stood in for."""
 
 import struct
 import subprocess

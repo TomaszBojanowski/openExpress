@@ -1,11 +1,7 @@
-"""A device that declares Connect IQ but has no app list (GARMIN/APPS/OUT.BIN) yet, as no app
-was ever installed on it (a fēnix 8 51 mm AMOLED): that is an empty list,
-not an error. The Apps page and `openexpress apps` say "No Connect IQ apps on the device", the
-apps of the account can be installed: they are queued in Garmin Connect, for the phone, and
-nothing is written to the device (a list written without the device's own would name none of
-its apps). Garmin Express does not install them either: it cannot read the apps of a device
-without an app list. No copy of the app list, and no error. A list that is there but cannot
-be read stays an error. All devices and apps are made up."""
+"""A device that declares Connect IQ but has no app list yet (GARMIN/APPS/OUT.BIN; a fēnix 8
+51 mm AMOLED with no app ever installed): an empty list, not an error. The apps of the account
+are queued in Garmin Connect for the phone, and nothing is written to the device. All devices
+and apps are made up."""
 
 import logging
 import types
@@ -52,7 +48,7 @@ def test_a_list_that_cannot_be_read_stays_an_error(iq_device, device_root):
 
 
 def test_a_read_that_fails_stays_an_error(iq_device, monkeypatch):
-    """The file is there, the device does not give it (an MTP error): as before."""
+    """The file is there, but the device does not give it (an MTP error)."""
     st, dev = iq_device
 
     def broken(path):
@@ -75,6 +71,7 @@ def test_installing_from_the_account_queues_it_and_writes_nothing(no_list, apps_
     rep = ciq.install_apps(dev, st, apps_cli, FakeStore(apps_cli), [store_app(FACE, "Face It")])
     assert FakeStore.queued == [["Face It"]]  # in Garmin Connect's queue
     assert rep.for_phone == ["Face It"] and rep.installed == [] and rep.no_app_list
+    # A list written without the device's own would name none of its apps.
     assert apps_files(st) == before and apps_cli.downloads == 0 and apps_cli.acks == []
 
 

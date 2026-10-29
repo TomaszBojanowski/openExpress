@@ -1,7 +1,7 @@
 """The window started where no display can be opened (e.g. the Flatpak with GDK_BACKEND=x11 on
-Wayland without an X11 socket): one line saying so, on stderr and in the log, and an exit code
-that is not 0; no GTK criticals, no traceback. Run in a process of its own, without a display:
-nothing is opened, no device is looked for."""
+Wayland without an X11 socket): one line saying so, on stderr and in the log, exit code 1, no
+GTK criticals, no traceback. Run in a process of its own without a display: nothing is
+opened, no device is looked for."""
 
 import os
 import subprocess

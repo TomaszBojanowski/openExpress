@@ -1,11 +1,8 @@
-"""The row "Last sync", from the file to the screen, on records of real syncs and on the shapes
-older versions wrote (tests/data/last_sync/, the unit IDs made up). For each one the exact
-words, in English and in Polish: the row (when, then the numbers) and the details,
-none twice, none against the row. The window shows what last_sync.describe gives, also when
-it shows a sync again (the file changes: the background service, or a sync of its own).
+"""The row "Last sync" and its details, from the file to the screen, on records of real syncs
+and on shapes older versions wrote (tests/data/last_sync/, unit IDs made up): the exact
+English and Polish words, no line twice, none against the row.
 
-The rule: every change of this row comes with a new record of a real sync here and its exact
-words below."""
+Every change of this row comes with a new record here and its exact words below."""
 
 import json
 from datetime import datetime, timedelta

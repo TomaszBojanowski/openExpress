@@ -1,7 +1,7 @@
-"""A damaged app list waiting for the device (IN.BIN) is never replaced by one built from it:
-read as empty, it would leave out every app from the store, which the device may then
-remove. set_enabled and an install over the mounted storage refuse as the other writers of
-the list do, with the same words. All data is made up."""
+"""A damaged app list waiting for the device (IN.BIN) is never replaced: read as empty, it
+would leave out every app from the store, which the device may then remove. set_enabled and
+an install over the mounted storage refuse with the same words as the other writers of the
+list. All data is made up."""
 
 import uuid
 
@@ -58,7 +58,7 @@ def test_a_damaged_waiting_list_is_not_replaced_when_an_app_is_switched(device, 
 
 
 def test_a_waiting_list_that_reads_well_is_still_changed(device):
-    """As before: a switch before the device applied the list goes into that list."""
+    """A switch made before the device applied the list goes into that list."""
     st, dev = device
     ciq.set_enabled(dev, st, PRELOADED, True)
     ciq.set_enabled(dev, st, OUR_APP, False)  # the list waits: read, changed, written again

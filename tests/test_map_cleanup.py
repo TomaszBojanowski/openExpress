@@ -1,10 +1,7 @@
 """The cleanup rules of the map service ("directoriesToRemove": a folder, a pattern of file
 names, a description). Garmin Express deletes every file that matches, as a regular
-expression, anywhere in the name. openExpress only reads them, says them in the log and
-shows, before a map is installed, updated or removed, which files a safe reading of them
-would take: whole names only, only in a folder of the maps of the answer, only with the
-extension of a map file, never a file of a map of the answer, a map of your own or a map file
-the server does not know. Nothing is deleted. Every rule and file is made up."""
+expression, anywhere in the name. openExpress logs the rules and shows, before a map changes,
+what a safe reading would take; it deletes nothing. Every rule and file is made up."""
 
 import json
 import logging

@@ -1,9 +1,6 @@
-"""The details of "Last sync" in the language of the moment they are shown, not of the moment
-of the sync: a sync keeps each line as a kind and its numbers or names, put into words when
-shown. Kept as words, the lines of the first sync's choice, the tracker conflict, the Connect
-IQ apps, TrueUp and the items the device does not accept would stay in the language of the
-sync: a sync in Polish would show TrueUp in Polish in an English window. A record of an older
-version keeps its words. All data here is made up."""
+"""The details of "Last sync" in the language they are shown in, not that of the sync: a sync
+keeps each line as a kind and its numbers or names, put into words when shown, so a sync in
+Polish does not show TrueUp in Polish in an English window. All data here is made up."""
 
 import json
 import types

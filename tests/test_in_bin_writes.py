@@ -1,9 +1,7 @@
-"""The app list waiting for the device (IN.BIN) is never left half written: a list cut short
-may read as a shorter one, and the device would drop the apps it no longer names. Each write
-is read back; when it fails, what was there before is written back (the list that waited, or
-none); when even that fails, what is there is deleted and the error says so. The three
-writers: an install over the mounted storage, the order restored from a copy, an app switched
-on or off. All data is made up."""
+"""The app list waiting for the device (IN.BIN) is never left half written: the device would
+drop the apps a list cut short no longer names. Each write is read back; on failure the list
+there before (or none) is written back; failing that, the file is deleted and the error says
+so. All data is made up."""
 
 import pytest
 from test_ciq_music import (  # noqa: F401 - the fixtures
@@ -111,7 +109,7 @@ def test_a_list_that_reads_back_otherwise_counts_as_not_written(iq_device):
 
 
 def test_a_switch_that_goes_well_is_read_back(iq_device):
-    """As before: the list is written whole, and nothing else changes."""
+    """The list is written whole and read back, and nothing else changes."""
     st, dev = iq_device
     ciq.set_enabled(dev, Breaking(st.root, breaks=0), PRELOADED, True)
     flags = {p[0]: p[2] for p in ciq.parse_in_bin(waiting(st))}
