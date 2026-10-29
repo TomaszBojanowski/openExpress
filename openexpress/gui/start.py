@@ -1,4 +1,4 @@
-"""The start page of the window: the Garmin devices as tiles (D5). The root of the window's
+"""The start page of the window: the Garmin devices as tiles. The root of the window's
 navigation; the view of one device comes above it, with the back arrow to this page.
 
 The page only shows what it is given (devicelist.Tile and how the device is connected) and
@@ -51,7 +51,7 @@ KIND_ICONS = {
 }
 DEVICE_ICON = f"{APP_ID}-device-symbolic"
 # One width for every tile, in every section (never fitted to the longest text of a
-# section), from the width of the page (T9 step 0): as many tiles on a line as fit at least
+# section), from the width of the page: as many tiles on a line as fit at least
 # MIN_TILE_WIDTH each, TILE_SPACING between them, sharing the line out; three in a window
 # 1000 px wide (where Adw.Clamp gives the page about 760 px), one filling the line in a
 # narrow window. A longer name is cut short; the line under it takes at most two lines.
@@ -281,10 +281,10 @@ def display_key(tile, how: str) -> tuple:
     return tile.description, how, tile.connected, tuple(chips(tile))
 
 
-# The chips of a tile (PLAN T9, 24.10.2026): only what the tile would not say otherwise, at
-# most MAX_CHIPS, in this order: an update copied already that the connected device installs
-# once unplugged (or ejected, a drive), else an update to install (found by the window's
-# check, at most tile_facts.UPDATE_KEPT_S ago), activities to sync or a device never
+# The chips of a tile: only what the tile would not say otherwise, at most MAX_CHIPS, in
+# this order: an update copied already that the connected device installs once unplugged
+# (or ejected, a drive), else an update to install (found by the window's check, at most
+# tile_facts.UPDATE_KEPT_S ago), activities to sync or a device never
 # synced here (connected, of the account), a USB drive, the account's primary device, a
 # device off the account (only when the account's list is known for it; never a drive, which
 # needs no account), and last a device synced here before with nothing to upload now. The
@@ -316,7 +316,7 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     said = []
     found = tile_facts.update_still_recent(tile.update_found, now)
     if tile.update_ready is not None:
-        # Wins over an update still to install, as on the device page (25.10.2026).
+        # Wins over an update still to install, as on the device page.
         if tile.kind == "ums":
             # TRANSLATORS: a chip on the tile of a USB drive: an update is copied to it, the
             # device installs it once ejected
@@ -359,7 +359,7 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
     if tile.to_sync == 0 and not tile.never_synced and tile.synced_at is not None:
         # Counted (a count of 0 comes only for a device synced here before), nothing to
         # upload, and a sync recorded (files marked as uploaded alone are no sync): last, it
-        # gives way to every other chip (25.10.2026).
+        # gives way to every other chip.
         # TRANSLATORS: a chip on the tile of a connected device that openExpress has synced
         # before and that has no activities to upload now
         said.append((pgettext("chip", "Synced"), "dimmed", None))
@@ -369,7 +369,7 @@ def chips(tile, now: float | None = None) -> list[tuple[str, str, str | None]]:
 class _ChipsLayout(Gtk.LayoutManager):
     """The layout of the row of chips of a tile: it asks for no more width than its chips need
     at least, and lays them out in the width the tile gives it. Asking for all of them on one
-    line made the tiles wider, so that fewer of them shared a line (24.10.2026)."""
+    line would make the tiles wider, so that fewer of them share a line."""
 
     __gtype_name__ = "OpenExpressChipsLayout"
 
@@ -475,8 +475,8 @@ class StartPage:
             box.append(section.title)
             box.append(section.grid)
             box.append(section.list)
-        # One sentence under the tiles while the account's list is not known (analysis 14,
-        # c4): why the tiles say nothing of the account (set_account_note).
+        # One sentence under the tiles while the account's list is not known: why the tiles
+        # say nothing of the account (set_account_note).
         self.account_note = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
                                       visible=False, css_classes=["dim-label", "caption"])
         box.append(self.account_note)
@@ -639,7 +639,7 @@ class RememberedPage:
         content.add(hero)
 
         group = Adw.PreferencesGroup(title=_("Sync with Garmin Connect"))
-        # With its details, as on the page of a connected device (analysis 14, b8).
+        # With its details, as on the page of a connected device.
         self.last_sync_row = Adw.ExpanderRow(title=_("Last sync"), enable_expansion=False)
         self._last_sync_details = None
         group.add(self.last_sync_row)
@@ -840,9 +840,9 @@ class DeviceRow(Gtk.ListBoxRow):
     """One row of a section of many devices, laid out as its tile, smaller: the picture or
     the icon of the kind, then the name, its chips (start.chips, from the start of the line)
     and the words under the name, then the arrow; spaced as an Adw.ActionRow of the same
-    list, which takes no widget between its title and its subtitle (24.10.2026). Opened as a
-    row of the list (row-activated: a click, Enter or Space); a screen reader hears its name,
-    chips and words. Its chips change alone (set_chips, StartPage.set_chips)."""
+    list, which takes no widget between its title and its subtitle. Opened as a row of the
+    list (row-activated: a click, Enter or Space); a screen reader hears its name, chips and
+    words. Its chips change alone (set_chips, StartPage.set_chips)."""
 
     def __init__(self, tile, how: str, picture=None):
         super().__init__(activatable=True, focusable=True)

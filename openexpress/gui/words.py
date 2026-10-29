@@ -1,6 +1,6 @@
-"""The window's words for what it knows of a device, one function for each fact (analysis of
-25.10.2026): every page that says a fact says it in these words. Without GTK, so that a test
-or the command line can use them too."""
+"""The window's words for what it knows of a device, one function for each fact: every page
+that says a fact says it in these words. Without GTK, so that a test or the command line can
+use them too."""
 from __future__ import annotations
 
 from datetime import datetime

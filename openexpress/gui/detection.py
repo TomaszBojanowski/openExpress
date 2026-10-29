@@ -83,14 +83,14 @@ from openexpress.i18n import N_, _
 
 log = logging.getLogger(__name__)
 
-# A drive may come a moment after its USB device (#19, analysis 18): a device in mass storage
-# mode that the last list found without one is looked for again every DRIVE_RETRY_S seconds,
-# at most DRIVE_RETRIES times.
+# A drive may come a moment after its USB device: a device in mass storage mode that the last
+# list found without one is looked for again every DRIVE_RETRY_S seconds, at most DRIVE_RETRIES
+# times.
 DRIVE_RETRY_S = 4
 DRIVE_RETRIES = 5
 # A device this long on USB in its normal mode without being offered over MTP: the page adds
 # that it may be plugged in again (gvfs did not mount an Edge 1050 restarted with its cable
-# in; plugging it in again helped, 21.10.2026). Only the words change, not the detection.
+# in; plugging it in again helped). Only the words change, not the detection.
 REPLUG_HINT_S = 15
 # The same words for a device this long on USB in its transitional mode (091e:0003): past the
 # about 19 s of a fēnix 8 starting, so that a device starting as usual gets no such advice.
@@ -111,9 +111,9 @@ class DeviceChoices:
 
 
 def detect_devices(current_uri: str | None = None):
-    """The window's detection: a session on the one device connected, as before, or
-    DeviceChoices when several different ones are (MTP devices and Garmin drives alike;
-    one device seen in both ways is one). The device open now (`current_uri`) is opened
+    """The window's detection: a session on the one device connected, or DeviceChoices
+    when several different ones are (MTP devices and Garmin drives alike; one device seen
+    in both ways is one). The device open now (`current_uri`) is opened
     again when it is still there. The list asks nothing of the account."""
     found = find_all_devices()
     if len(found) > 1 or any(not f.mounted and f.kind == "ums" for f in found):
@@ -153,7 +153,7 @@ def _note_seen(summaries: list) -> None:
 
 def _choose(found: list):
     """The list of these devices, one entry each, without those gone since they were found;
-    with one left, that one opened (D7); with none, no device."""
+    with one left, that one opened; with none, no device."""
     summaries = distinct_devices([probe(f) for f in found])
     _note_seen(summaries)
     left = _still_there(summaries)
@@ -250,9 +250,9 @@ def schedule_detection(win, delay_ms: int, mount_uri: str | None = None,
 
 def watch_drives_while_open(win) -> None:
     """While a device is open the window does not look at USB otherwise (_poll_usb), and a
-    Garmin drive that the system does not mount sends no mount event (KDE, #19): one that
-    comes has the list read again (Q1: the open device stays open), and so has one not
-    mounted that goes. Only /sys is read."""
+    Garmin drive that the system does not mount sends no mount event (KDE): one that comes
+    has the list read again (the open device stays open), and so has one not mounted that
+    goes. Only /sys is read."""
     places = drives_on_usb()
     before = getattr(win, "_drives_while_open", None)
     win._drives_while_open = places
@@ -272,9 +272,9 @@ def watch_drives_while_open(win) -> None:
 
 def look_again_for_drives(win, clock=time.monotonic) -> None:
     """A Garmin device in mass storage mode that the last list found without a drive: gvfs
-    had no volume of it yet, or none with a medium (#19, analysis 18). Looked for again every
-    DRIVE_RETRY_S, at most DRIVE_RETRIES times for the same devices; with a device open,
-    only the list is read again (Q1)."""
+    had no volume of it yet, or none with a medium. Looked for again every DRIVE_RETRY_S, at
+    most DRIVE_RETRIES times for the same devices; with a device open, only the list is read
+    again."""
     waiting = drives_without_a_volume()
     if not waiting:
         win._drive_look = None
@@ -332,7 +332,7 @@ def detection_due(win) -> None:
         log.info("device detection: %d mount(s) of devices already on the list, ignored",
                  what.ignored)
     if isinstance(what, ReadList):
-        # Another device came or went, or one listed was mounted: the open one stays (Q1).
+        # Another device came or went, or one listed was mounted: the open one stays.
         only_gone = bool(causes) and all(c is Cause.UNPLUGGED_OTHER for c in causes)
         win._reread_cause = Cause.UNPLUGGED_OTHER if only_gone else cause
         win._reread_connected()
@@ -445,10 +445,10 @@ class DeviceDetection:
     def _on_drive_volume(self, volume, what: str) -> None:
         """A volume added or changed. A Garmin drive that the system does not mount (KDE)
         sends no mount event, and gvfs may offer its volume, or a medium in it, a moment
-        after the device is on USB (#19, analysis 18): one not mounted with a medium, not on
-        the list yet, brings a detection (with a device open: the list read again, Q1); one
-        on the list without a medium any more leaves it. A mounted one comes with its mount
-        (_on_mount_added); a drive ejected by openExpress stays closed (D3)."""
+        after the device is on USB: one not mounted with a medium, not on the list yet,
+        brings a detection (with a device open: the list read again); one on the list without
+        a medium any more leaves it. A mounted one comes with its mount (_on_mount_added); a
+        drive ejected by openExpress stays closed."""
         drive = drive_volume(volume)
         if drive is None:
             return
@@ -519,7 +519,7 @@ class DeviceDetection:
                      bool(getattr(self, "busy", False)))
             if ours and getattr(s, "mass_storage", False):
                 # Its place on USB, kept: a watch goes into its Garmin USB mode once it is
-                # ejected and comes back as 091e:0003 (#19).
+                # ejected and comes back as 091e:0003.
                 note_drive_place(getattr(s.storage, "usb", None))
             self._asked = (Cause.UNPLUGGED_OPEN, open_address(s))
             self.session = None
@@ -535,9 +535,9 @@ class DeviceDetection:
         """(title, description, busy) of the placeholder while no device is open. `normal_s`:
         how long a device has been on USB in its normal mode without being offered over MTP;
         from REPLUG_HINT_S on, the description adds that it may be plugged in again (an Edge
-        1050 restarted with its cable in was never mounted by gvfs, 21.10.2026)."""
+        1050 restarted with its cable in was never mounted by gvfs)."""
         if state == PRESENT and mtp_missing():
-            # gvfs here has no MTP backend (#13): said at once, nothing to wait for.
+            # gvfs here has no MTP backend: said at once, nothing to wait for.
             return no_mtp_title(), no_mtp_text(), False
         if state == PRESENT and waited_s >= WAIT_FOR_DEVICE_S:
             # The PIN (not_ready_text, which names the device), then plugging it in again
@@ -565,7 +565,7 @@ class DeviceDetection:
                 # TRANSLATORS: title while a drive ejected by openExpress is still plugged in
                 return _("Device ejected"), ejected_text(), False
             # The window opens such a drive once the system mounts it, so with none open it
-            # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see (F1).
+            # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see.
             text = drive_notice_text()
             # TRANSLATORS: a device connected as a USB drive, not over MTP
             return _("USB drive"), text, False
@@ -619,15 +619,15 @@ class DeviceDetection:
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         elif state == MASS_STORAGE and self._usb_state != MASS_STORAGE and not unplugged:
             # A drive the system does not mount (KDE) sends no mount event: looked for once,
-            # for its tile (analysis 15, stage 0).
+            # for its tile.
             log.info("USB: a Garmin device in mass storage mode, detecting in 2.5 s")
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         elif unplugged and isinstance(detection_plan(Cause.UNPLUGGED_OPEN, left_on_usb=state,
                                                      ejected_waits=ejected_drive_waits()),
                                       Detect):
-            # A Garmin drive left after the open device went (a Varia next to an Edge,
-            # 22.10.2026): mounted already, it sends no event, so it is looked for as one in
-            # its normal mode is, above.
+            # A Garmin drive left after the open device went (a Varia next to an Edge):
+            # mounted already, it sends no event, so it is looked for as one in its normal
+            # mode is, above.
             log.info("USB: the open device unplugged, a Garmin drive is still connected, "
                      "detecting in 2.5 s")
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
@@ -741,7 +741,7 @@ class DeviceDetection:
             self.session = sess
             if mounted_now:
                 # Its entry had no details: the open one takes its place, so that the others
-                # stay connected (the list was dropped, 0.7.1 on GNOME).
+                # stay connected (without this, on GNOME, the list is dropped).
                 self.connected.opened_in_place(found, session_summary(sess))
             self.show_device()
             if mounted_now:
@@ -766,10 +766,10 @@ class DeviceDetection:
 
     def _on_refresh(self) -> None:
         """Refresh (the button, F5). On the start page with a device open: the list is read
-        again, nothing else (decision A); without one, a detection that stays there also when
-        one device is found (decision 7). On the view of a device not connected: only that
-        view (_refresh_remembered). In the device view: the device detected anew, the open
-        one opened again (refresh_device)."""
+        again, nothing else; without one, a detection that stays there also when one device
+        is found. On the view of a device not connected: only that view (_refresh_remembered).
+        In the device view: the device detected anew, the open one opened again
+        (refresh_device)."""
         if self._on_remembered_page():
             self._refresh_remembered()
             return
@@ -790,7 +790,7 @@ class DeviceDetection:
     def _reread_connected(self) -> None:
         """Read the devices connected again (their GarminDevice.xml only: nothing opened,
         nothing asked of the account), while one is open; the list is replaced whole and
-        drawn once, the old tiles stay until then. Never opens a device view (D7). After the
+        drawn once, the old tiles stay until then. Never opens a device view. After the
         running task, if one runs."""
         if self.busy:
             self._reread_pending = True
@@ -811,7 +811,7 @@ class DeviceDetection:
                     self._render_start()
                 return
             # The open device stays open; the user goes to the start page only from the view
-            # of a remembered device that came now (decision 3).
+            # of a remembered device that came now.
             decision = decided(self, cause, before, seen_open(s, found))
             if isinstance(decision, ShowStart):
                 self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped

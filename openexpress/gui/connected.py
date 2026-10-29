@@ -95,8 +95,8 @@ class Connected:
 
     def keep_if_open(self, is_open: Callable[[object], bool]) -> None:
         """A device was opened: the devices connected stay known if the open one is among
-        them (chosen from the list); else the one device connected is the open one (D7), and
-        its tile comes from the session."""
+        them (chosen from the list); else the one device connected is the open one, and its
+        tile comes from the session."""
         if not any(is_open(c) for c in self.devices):
             self.devices = []
 

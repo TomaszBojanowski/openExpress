@@ -5,8 +5,7 @@ asked of a server; addresses are compared in memory only and never written to th
 nor is a unit ID. `before` is what the user saw (the devices on the start page and the
 device open when the detection started), not what is known now; `after` is what the
 detection found. The table in tests/test_navigation.py is the source of truth: each row
-is one situation of the window, with today's outcome, and the rows marked with a decision
-(Q1-Q3 in the notes) are those that are to change."""
+is one situation of the window, with its outcome."""
 
 from __future__ import annotations
 
@@ -142,16 +141,16 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     the address of the open device's storage (None: none open); `listed`: the addresses of
     the devices connected, and `unread`: those of them listed without their details (e.g.
     not mounted yet), all without the trailing slash; `open_moved`: whether the open device
-    is no longer at its place on USB (asked only when it matters). A device open stays open
-    (Q1): another device mounted or seen on USB only has the list read again.
+    is no longer at its place on USB (asked only when it matters). A device open stays open:
+    another device mounted or seen on USB only has the list read again.
     `left_on_usb`, for the open device unplugged: what is on USB once it is gone (the state of
     gio_storage.usb_state()), and `ejected_waits`: whether a drive ejected by openExpress is
     still there."""
     if cause not in _TIMED:
         if cause is Cause.UNPLUGGED_OPEN:
-            # Another Garmin device left is looked for (D7): one in its normal mode, and a
-            # drive, which sends no event as it is mounted already; not one still starting
-            # (looked for once in its normal mode), nor a drive ejected by openExpress (D3).
+            # Another Garmin device left is looked for: one in its normal mode, and a drive,
+            # which sends no event as it is mounted already; not one still starting (looked
+            # for once in its normal mode), nor a drive ejected by openExpress.
             if left_on_usb == PRESENT or (left_on_usb == MASS_STORAGE and not ejected_waits):
                 return Detect()
             return Nothing()
@@ -168,8 +167,8 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     rest = [r for r in reasons if r != READ_THE_LIST]
     if open_label is not None and read_the_list and not rest:
         return ReadList()
-    # Mounts of devices already listed with their details bring nothing new (Q2), whether
-    # one is open or not: gvfs reports them as the window starts, and twice for one device.
+    # Mounts of devices already listed with their details bring nothing new, whether one
+    # is open or not: gvfs reports them as the window starts, and twice for one device.
     # One listed without them (not mounted yet, not readable) is looked at: its tile may
     # get its details now.
     skipped = listed - unread
@@ -182,7 +181,7 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
     if open_label is None:
         return Detect(ignored=ignored)
     # Another device mounted, or seen on USB (a trigger without an address): the open one
-    # stays open, the list is read again (Q1).
+    # stays open, the list is read again.
     others = [r for r in rest if r is None or not on_open(r)]
     if len(others) < len(rest) and open_moved():
         # Its own mount too, at another place on USB (the same address): opened again,
@@ -200,12 +199,12 @@ def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> De
         # Only the list was read again: the start page is drawn if shown, nothing moves.
         return Stay(redraw_start=visible.page is Page.START)
     if visible.page is Page.REMEMBERED:
-        # Q1: other devices coming or going move nothing; the start page is drawn under the
+        # Other devices coming or going move nothing; the start page is drawn under the
         # view (one device opened in the background, or the list). The very device shown
         # (by its unit ID; one without is never it) brings its view, opened alone, or the
         # start page with its tile (with another device, or while another one is open).
         if cause is Cause.LOGGED_OUT and visible.from_account:
-            return ShowStart()  # without the account the view has nothing to show (Q3)
+            return ShowStart()  # without the account the view has nothing to show
         shown = visible.shown_unit_id
         if shown is not None and shown == after.open_unit:
             return ShowDevice()
@@ -221,7 +220,7 @@ def navigate_after(cause: Cause, visible: View, before: Seen, after: Seen) -> De
         return ShowStart()  # the device shown is gone
     if visible.page is Page.DEVICE:
         return Stay()
-    # Refresh on the start page and a change of account (Q3) never move the user.
+    # Refresh on the start page and a change of account never move the user.
     stays = cause in (Cause.REFRESH_ON_START, Cause.ACCOUNT_CHANGED, Cause.LOGGED_OUT) or (
         cause in _REOPENING and before.open is not None)
     if stays:

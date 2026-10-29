@@ -62,12 +62,11 @@ RELATIVE_REFRESH_S = 60
 
 
 class StartView:
-    """The section "View" of the menu of the start page (PLAN T6b, 24.10.2026): how its
-    sections show their devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1
-    devices in a section, each section on its own), a grid or a list for all of them. Kept
-    in gui.json (KEY); a change draws the start page again from what is known
-    (_render_start), the devices are not asked. All of it in this class, next to the start
-    page of the window."""
+    """The section "View" of the menu of the start page: how its sections show their
+    devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1 devices in a section, each
+    section on its own), a grid or a list for all of them. Kept in gui.json (KEY); a change
+    draws the start page again from what is known (_render_start), the devices are not
+    asked. All of it in this class, next to the start page of the window."""
 
     KEY = "start_view"
     ACTION = "start-view"  # win.start-view, whose state is the view
@@ -133,10 +132,9 @@ class StartView:
 
 
 def account_note(why: str | None) -> str | None:
-    """The one sentence of the start page while the account's list is not known (analysis
-    14, c4): not logged in ("logged-out": its tiles then say nothing of the account), or it
-    could not be read ("failed": they say what was kept of it, tile_facts). None: known, or
-    still asked."""
+    """The one sentence of the start page while the account's list is not known: not logged
+    in ("logged-out": its tiles then say nothing of the account), or it could not be read
+    ("failed": they say what was kept of it, tile_facts). None: known, or still asked."""
     if why == "logged-out":
         # TRANSLATORS: under the tiles of the start page
         return _("Not logged in to Garmin Connect: the tiles do not show what is on your "
@@ -210,8 +208,8 @@ def last_sync_more(unit_id) -> tuple[str | None, list]:
 
 
 def account_rows(win, unit_id) -> list[tuple[str, str]]:
-    """What the account's list in memory says of a device not connected, read only (analysis
-    14, b8): its primary wearable, for a device that can be one. Nothing is asked."""
+    """What the account's list in memory says of a device not connected, read only: its
+    primary wearable, for a device that can be one. Nothing is asked."""
     wearable = devicelist.primary_wearable(getattr(win, "_account", None), unit_id)
     if wearable is None:
         return []
@@ -258,7 +256,7 @@ def remembered_subtitle(known, now: datetime | None = None) -> str:
 
 
 class StartWindow:
-    # --- the start page and the remembered devices (D7) -----------------------------
+    # --- the start page and the remembered devices ----------------------------------
 
     def show_choices(self) -> None:
         """Several Garmin devices are connected: the start page shows a tile for each (never
@@ -362,7 +360,7 @@ class StartWindow:
         return self.navigation.get_visible_page() is self.remembered.page
 
     def _show_device_view(self) -> None:
-        """The view of the device open now, above the start page (D7), or the page shown
+        """The view of the device open now, above the start page, or the page shown
         stays (navigation.navigate_after: e.g. after Refresh on the start page, or a
         detection that found the device open again)."""
         cause, open_before = _take_asked(self, Cause.CHOSEN)
@@ -443,9 +441,9 @@ class StartWindow:
 
     def _count_activities(self, entries) -> None:
         """The activities not uploaded yet of the connected devices of the account whose tiles
-        were just drawn (PLAN T9), each counted in the background, once while it stays listed
-        or open (the one open: for its session); its tile shows no chip until the count
-        comes (_activities_counted). Never a drive, a device off the account or one whose
+        were just drawn, each counted in the background, once while it stays listed or open
+        (the one open: for its session); its tile shows no chip until the count comes
+        (_activities_counted). Never a drive, a device off the account or one whose
         check against the account failed."""
         s = self.session
         for tile, source in entries:
@@ -662,9 +660,9 @@ class StartWindow:
 
     def _refresh_remembered(self) -> None:
         """Refresh (F5, Ctrl+R) on the read-only view of a device not connected: only that
-        view (decision of 23.10.2026). The account's list is read again and the view drawn
-        from what it says now (_set_account, _redraw_remembered); the device open, if any,
-        is not opened again and nothing is detected."""
+        view. The account's list is read again and the view drawn from what it says now
+        (_set_account, _redraw_remembered); the device open, if any, is not opened again and
+        nothing is detected."""
         log.info("refresh: the view of a device not connected, from the account")
         self._fetch_account()
 
