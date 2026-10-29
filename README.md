@@ -5,13 +5,18 @@
 <h1 align="center">openExpress</h1>
 
 <p align="center">
-  An unofficial Linux app for Garmin watches: sync with Garmin Connect, software updates,
-  maps, Connect IQ apps and music over USB.
+  An unofficial Linux app for Garmin watches and bike computers: sync with Garmin Connect,
+  software updates, maps, Connect IQ apps and music over USB.
+</p>
+
+<p align="center">
+  Featured in <a href="https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/">the5krunner's Indie Spotlight</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/TomaszBojanowski/openExpress/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/TomaszBojanowski/openExpress?label=release"></a>
   <a href="LICENSE"><img alt="License: GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue"></a>
+  <a href="https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/"><img alt="Featured in the5krunner" src="https://img.shields.io/badge/featured%20in-the5krunner-orange"></a>
 </p>
 
 <p align="center">
@@ -25,8 +30,6 @@
 > Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin Ltd. or its
 > subsidiaries. openExpress talks to the same Garmin services as the official Windows/macOS
 > app; Garmin may change them at any time. Use at your own risk.
-
-Featured in [the5krunner's Indie Spotlight](https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/).
 
 ## What it is
 
