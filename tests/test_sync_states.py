@@ -44,7 +44,7 @@ def _chips(tile):
     return start.chips(tile)
 
 
-# --- a3: one source for "never synced" -------------------------------------------------------
+# --- one source for "never synced" -----------------------------------------------------------
 
 
 def test_synced_here_is_whether_the_device_has_its_state():
@@ -154,7 +154,7 @@ def test_never_synced_in_polish():
     assert record == ("Brak zapisu ostatniej synchronizacji; następna wyśle tylko nowe dane")
 
 
-# --- b2: how many activities there are to upload -------------------------------------------
+# --- how many activities there are to upload -----------------------------------------------
 
 
 def _counted(count):
@@ -252,7 +252,7 @@ def test_a_drive_one_not_logged_in_or_off_the_account_is_not_counted(fields):
     assert asked == []
 
 
-# --- c3 ---------------------------------------------------------------------------------------
+# --- the tooltip of the chip "Never synced" ---------------------------------------------------
 
 
 def test_the_chip_never_synced_says_by_which_installation():
@@ -260,7 +260,7 @@ def test_the_chip_never_synced_says_by_which_installation():
     assert tooltip == "Never synced by this installation of openExpress"
 
 
-# --- c7: the row of the primary training device stays --------------------------------------
+# --- the row of the primary training device stays ------------------------------------------
 
 
 def _page_texts(**session):
@@ -310,7 +310,7 @@ def test_the_row_in_polish():
     assert _primary(off_texts, title) == ["Niedostępne"]
 
 
-# --- c4: the account's list not known ------------------------------------------------------
+# --- the account's list not known ----------------------------------------------------------
 
 
 LOGGED_OUT = ("Not logged in to Garmin Connect: the tiles do not show what is on your "

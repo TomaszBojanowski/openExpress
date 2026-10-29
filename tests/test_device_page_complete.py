@@ -66,7 +66,7 @@ def _rows(section):
     return found
 
 
-# --- b11: the rows "Apps" and "Music" ---------------------------------------------------------
+# --- the rows "Apps" and "Music" --------------------------------------------------------------
 
 
 @pytest.mark.needs_display
@@ -145,7 +145,7 @@ def test_the_counts_in_polish():
     assert said == ["1 aplikacja Connect IQ", "2 aplikacje Connect IQ", "5 aplikacji Connect IQ"]
 
 
-# --- b5: the backup ---------------------------------------------------------------------------
+# --- the backup -------------------------------------------------------------------------------
 
 
 def _backup(backups, stamp, unit=UNIT):
@@ -206,7 +206,7 @@ def test_the_backup_words_in_polish(backups):
     assert none == "Jeszcze bez kopii"
 
 
-# --- b6: the map update type ------------------------------------------------------------------
+# --- the map update type ----------------------------------------------------------------------
 
 
 def test_maps_not_supported_carries_the_type_garmin_gives():
@@ -270,7 +270,7 @@ def test_the_map_update_type_in_polish():
     assert said == "Typ aktualizacji map tego urządzenia u\u00a0Garmina: Gemini"
 
 
-# --- b10: a folder the device refused ---------------------------------------------------------
+# --- a folder the device refused --------------------------------------------------------------
 
 
 def _ciq_device(software="23.39"):
@@ -316,7 +316,7 @@ def test_show_apps_puts_the_line_into_the_group_on_the_device():
     assert "refused_dirs_text(ciq.refused_dirs(self.session.device))" in source
 
 
-# --- b8: the page of a remembered device ------------------------------------------------------
+# --- the page of a remembered device ----------------------------------------------------------
 
 
 @pytest.mark.needs_display
