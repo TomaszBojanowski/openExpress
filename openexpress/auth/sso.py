@@ -6,7 +6,7 @@ the `ticket` and `service` parameters from them. The password is entered
 only on Garmin's page; the program never sees it.
 
 The log tells what the window runs on (WebKit, GTK, the graphics) and each step of the page
-by its host only: the ticket is in the address, never in the log (issue #10).
+by its host only: the ticket is in the address, never in the log.
 """
 
 from __future__ import annotations
@@ -132,7 +132,7 @@ def _host(url: str | None) -> str:
 def window_environment(win) -> str:
     """What the sign-in window runs on, for the log: the versions of WebKit and GTK, the
     display and the renderer (once it is realized), the session and the desktop, the runtime,
-    the locale GTK set with its character set (#10), the makers of the graphics cards,
+    the locale GTK set with its character set, the makers of the graphics cards,
     WebKit's hardware acceleration and the variables that change the drawing. Nothing of the
     user, no address."""
     import gi

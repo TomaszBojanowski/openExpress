@@ -683,8 +683,8 @@ def drive_volume(volume) -> tuple[str, GarminUsb, bool] | None:
 
 # The USB places ("bus-devnum") of the Garmin devices in mass storage mode that the last list
 # found without a drive to list: gvfs had no volume of theirs yet, or none with a medium. A
-# drive may come a moment after its USB device (#19, analysis 18): the window looks for them
-# again a few times (gui/detection.py, look_again_for_drives).
+# drive may come a moment after its USB device: the window looks for them again a few times
+# (gui/detection.py, look_again_for_drives).
 _without_drive: frozenset[str] = frozenset()
 
 
@@ -716,8 +716,8 @@ def garmin_ums(mount) -> GarminUsb | None:
 
 
 def _hidden_in_sandbox(path: str | None) -> bool:
-    """A drive that gvfs reports mounted, whose folder the Flatpak cannot see (F1: no access
-    to /run/media or /media, e.g. the permission was turned off)."""
+    """A drive that gvfs reports mounted, whose folder the Flatpak cannot see (no access to
+    /run/media or /media, e.g. the permission was turned off)."""
     return path is not None and in_flatpak() and not os.path.isdir(path)
 
 
@@ -746,7 +746,7 @@ def find_ums_devices() -> list[FoundDevice]:
         root = mount.get_root()
         path = root.get_path()
         if _hidden_in_sandbox(path):
-            # gvfs tells the sandbox about the mount, but its folder is not in it (F1).
+            # gvfs tells the sandbox about the mount, but its folder is not in it.
             log.info("device: a Garmin drive (USB %s) is not visible in the Flatpak, skipped",
                      usb.usb_id)
             continue
@@ -768,7 +768,7 @@ def find_ums_devices() -> list[FoundDevice]:
 
 def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
     """The Garmin drives that the system has not mounted (KDE mounts a drive only once a file
-    manager opens it, #19): a volume (gvfs) whose block device belongs to a USB device of
+    manager opens it): a volume (gvfs) whose block device belongs to a USB device of
     vendor 091e with a mass storage interface, and that has a medium – listed, to be mounted
     when chosen. Without a medium (removed safely: the device turns its drive off), or with
     no volume at all, only a replug helps: not listed, said in the log. `seen`: the USB
@@ -776,7 +776,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
 
     One entry for each USB device, judged by all of its volumes: a device may give more
     than one block device, one of them an empty slot (a Forerunner 55: `sdc` of 0 B beside
-    `sdd`, its drive, #19). Its drive is its first block device with a medium; an empty slot
+    `sdd`, its drive). Its drive is its first block device with a medium; an empty slot
     beside it is no drive without a medium."""
     global _without_drive
     found = []
@@ -809,7 +809,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if not with_medium:
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
-            waiting.add(place)  # or not yet (#19)
+            waiting.add(place)  # or not yet
             continue
         vol, unix = with_medium[0]
         usb = _drive_usb(ids, volumes[0][3], vol)  # the volume of its drive: its UUID
@@ -821,7 +821,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if base not in seen:
             log.info("device: a Garmin device in mass storage mode (USB %s:%s) without a "
                      "drive: unplug it and plug it in again", GARMIN_VID, product)
-            waiting.add(base)  # or not yet (#19)
+            waiting.add(base)  # or not yet
     with _places_lock:
         _without_drive = frozenset(waiting)
     return found
@@ -930,11 +930,11 @@ def mount(dev: FoundDevice, timeout_s: float | None = None) -> None:
 # --- a Garmin drive ejected by openExpress -------------------------------------------------
 #
 # A Garmin device in mass storage mode may take a file written to it only once the computer
-# lets go of its drive (#11: an inReach Mini 2 installed its update only after it was ejected,
-# although the file was synced to the disk). So after a write the drive is ejected before the
-# cable may go out. Ejected, the drive stays on USB, not mounted (the Varia RTL515 keeps its
-# place, ejected from the system and from the Flatpak, 21.10.2026): until it leaves that place
-# openExpress does not open it again, also when something mounts it again.
+# lets go of its drive (an inReach Mini 2 installs its update only once it is ejected, although
+# the file is synced to the disk). So after a write the drive is ejected before the cable may
+# go out. Ejected, the drive stays on USB, not mounted (the Varia RTL515 keeps its place,
+# ejected from the system and from the Flatpak): until it leaves that place openExpress does
+# not open it again, also when something mounts it again.
 
 EJECT_TIMEOUT_S = 60.0
 _ejected: list[GarminUsb] = []  # where on USB the drives ejected by us are
@@ -1028,7 +1028,7 @@ ABSENT, STARTING, PRESENT = "absent", "starting", "present"
 # as a USB drive, never over MTP, so there is nothing to wait for.
 MASS_STORAGE = "mass-storage"
 # A watch that connects as a USB drive, back on USB as 091e:0003 after its drive was
-# ejected (a Forerunner 55, #19): it is in its Garmin USB mode (Garmin's own protocol, which
+# ejected (a Forerunner 55): it is in its Garmin USB mode (Garmin's own protocol, which
 # openExpress does not use), not a drive switched off, whatever the name of this state says;
 # only plugging it in again helps, nothing to wait for (_drive_places).
 DRIVE_OFF = "drive-off"
@@ -1100,7 +1100,7 @@ def _garmin_at_places() -> list[tuple[str, str, bool]]:
 # The places on USB where a Garmin drive was seen in this run of the program, or went away
 # (unmounted, ejected), with since when nothing is there (None: something is). A Garmin device
 # at such a place as 091e:0003 is that watch in its Garmin USB mode after its drive was ejected
-# (a Forerunner 55, #19), not a device starting. A place is forgotten once a device in its
+# (a Forerunner 55), not a device starting. A place is forgotten once a device in its
 # normal mode is there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
 _drive_places: dict[str, float | None] = {}
 # What the log said last of a device 091e:0003 at a place: whether it was in Garmin USB mode.
@@ -1246,7 +1246,7 @@ _no_mtp_told = False  # the missing backend is written to the log once
 
 
 def mtp_missing() -> bool:
-    """Whether gvfs here has no MTP backend (no gvfs-mtp, #13), or there is no gvfs at all:
+    """Whether gvfs here has no MTP backend (no gvfs-mtp), or there is no gvfs at all:
     then no MTP device is ever offered, and there is nothing to wait for. Not known (the
     question failed): False, so the wait and its words stay as they were."""
     global _no_mtp_told
@@ -1264,7 +1264,7 @@ def mtp_missing() -> bool:
 
 def held_elsewhere_text() -> str:
     """Said once the wait for a device in its normal mode ran out (the window and the command
-    line): another program may hold it over MTP, so that gvfs cannot offer it (#13: KDE's
+    line): another program may hold it over MTP, so that gvfs cannot offer it (KDE's
     kmtpd, from kio-extras, in the kiod6 process). Once Dolphin has started it, kmtpd keeps
     every MTP device until it is unplugged or kiod6 quits, and opens one plugged in again at
     once: plugging the cable in again does not free it, quitting kiod6 does. Not Nautilus: it
@@ -1282,7 +1282,7 @@ def no_mtp_title() -> str:
 
 
 def no_mtp_text() -> str:
-    """gvfs has no MTP backend (#13): what to install, in the window and on the command
+    """gvfs has no MTP backend: what to install, in the window and on the command
     line (the package names of Fedora, Arch and Debian)."""
     return _("openExpress reads the device over MTP through gvfs, and gvfs on this system "
              "has no MTP support. Install it (Fedora: sudo dnf install gvfs-mtp; Arch: sudo "
@@ -1354,8 +1354,8 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                 raise
             gone_since = None
             if state == PRESENT and mtp_missing():
-                # gvfs here has no MTP backend (#13): the device is never offered, so it is
-                # not waited for.
+                # gvfs here has no MTP backend: the device is never offered, so it is not
+                # waited for.
                 raise NotThereYet(no_mtp_text()) from e
             if not wait:
                 if isinstance(e, NotThereYet) and state == STARTING:
@@ -1462,7 +1462,7 @@ def probe(found: FoundDevice) -> DeviceSummary:
 def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
     """One entry per device. Entries with the same unit ID are one device seen in two ways
     (over MTP and as a drive, while it switches): the MTP entry stays, in the place of the
-    first (D1). Entries without details cannot be told apart and are each kept."""
+    first. Entries without details cannot be told apart and are each kept."""
     out: list[DeviceSummary] = []
     for s in summaries:
         seen = next((i for i, o in enumerate(out)

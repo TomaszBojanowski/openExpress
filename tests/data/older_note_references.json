@@ -1,10 +1,7 @@
 {
  "openexpress/applog.py": 3,
- "openexpress/auth/sso.py": 2,
  "openexpress/ciq.py": 5,
  "openexpress/cli.py": 9,
- "openexpress/device/gio_storage.py": 17,
- "openexpress/device/storage.py": 1,
  "openexpress/devicelist.py": 7,
  "openexpress/diagnostics.py": 9,
  "openexpress/forget.py": 1,
