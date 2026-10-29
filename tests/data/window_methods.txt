@@ -35,6 +35,7 @@ _forget_text
 _forget_ticked
 _forget_title
 _highlight_update
+_init_state
 _install_actions
 _install_apps
 _is_open

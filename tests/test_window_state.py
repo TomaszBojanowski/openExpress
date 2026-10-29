@@ -51,8 +51,6 @@ def test_the_names_are_found():
     assert {"session", "busy", "connected", "start", "sections", "map_row"} <= names
 
 
-@pytest.mark.xfail(strict=True, reason="the window makes some attributes where it first needs "
-                                       "them")
 def test_every_attribute_the_window_names_is_there_once_it_is_built(window):
     missing = sorted(name for name in named_on_the_window()
                      if name not in vars(window) and not hasattr(type(window), name))

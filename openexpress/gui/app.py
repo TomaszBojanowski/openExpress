@@ -164,17 +164,63 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
                  Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
+        self._init_state()
         self.set_size_request(*MIN_WINDOW)
+        width, height, maximized = window_geometry(self.gui_settings)
+        self.set_default_size(width, height)
+        if maximized:
+            self.maximize()
+
+        # TRANSLATORS: tab title
+        self.sections = {s.key: s for s in (
+            Section("watch", pgettext("tab", "Device"), "preferences-system-time-symbolic",
+                    _("Detecting the device…")),
+            # TRANSLATORS: tab title
+            Section("updates", pgettext("tab", "Updates"), "software-update-available-symbolic",
+                    _("Checking for updates…")),
+            # TRANSLATORS: tab title
+            Section("maps", pgettext("tab", "Maps"), "mark-location-symbolic",
+                    _("Checking maps…")),
+            # TRANSLATORS: tab title (Connect IQ apps)
+            Section("apps", pgettext("tab", "Apps"), "view-app-grid-symbolic",
+                    _("Loading Connect IQ apps…")),
+            # TRANSLATORS: tab title
+            Section("music", pgettext("tab", "Music"), "audio-x-generic-symbolic",
+                    _("Reading music on the device…")),
+        )}
+        for sec in self.sections.values():
+            sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
+
+        self._build_layout()
+        self._install_actions()
+        # The dot follows the answers to the program's own requests; the listener holds the
+        # window only weakly and runs in the request's thread, so it hands over to GTK.
+        ref = weakref.ref(self)
+        self._net_listener = lambda: GLib.idle_add(_render_net_status_later, ref)
+        netstatus.STATUS.add_listener(self._net_listener)
+
+        self.connect("close-request", self._on_close_request)
+        self.monitor = Gio.VolumeMonitor.get()
+        self.monitor.connect("mount-added", self._on_mount_added)
+        self.monitor.connect("mount-removed", self._on_mount_removed)
+        # A drive that the system does not mount (KDE) sends no mount event.
+        self.monitor.connect("volume-added", self._on_volume_added)
+        self.monitor.connect("volume-changed", self._on_volume_changed)
+        self.monitor.connect("volume-removed", self._on_volume_removed)
+        self._watch_last_sync()
+        self._usb_poll = GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
+        self._start()
+
+    def _init_state(self) -> None:
+        """Every attribute of the window, with the value it has before anything is shown: its
+        state as it starts, and None for each widget, made by the layout (_build_layout) or by
+        the page that shows it. The one place where an attribute of the window is first set."""
         self.session: service.DeviceSession | None = None
         # What the pages show while no device is open; the Sync button says the same.
         self._usb_title = ""
         self.busy = False
         self._waiting = 0  # GLib timer that moves the bar during a wait for a server
         self.gui_settings = load_gui_settings()
-        width, height, maximized = window_geometry(self.gui_settings)
-        self.set_default_size(width, height)
-        if maximized:
-            self.maximize()
         self.maps_cache = None
         self.updates_cache = None
         self.updates_beta = False  # whether Garmin offers beta versions to the open device
@@ -234,51 +280,58 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # Why the account's list is not known (account_note), None: known or still asked.
         self._account_why: str | None = None
         self._account_wanted = False  # wanted after the detection running now
-
-        # TRANSLATORS: tab title
-        self.sections = {s.key: s for s in (
-            Section("watch", pgettext("tab", "Device"), "preferences-system-time-symbolic",
-                    _("Detecting the device…")),
-            # TRANSLATORS: tab title
-            Section("updates", pgettext("tab", "Updates"), "software-update-available-symbolic",
-                    _("Checking for updates…")),
-            # TRANSLATORS: tab title
-            Section("maps", pgettext("tab", "Maps"), "mark-location-symbolic",
-                    _("Checking maps…")),
-            # TRANSLATORS: tab title (Connect IQ apps)
-            Section("apps", pgettext("tab", "Apps"), "view-app-grid-symbolic",
-                    _("Loading Connect IQ apps…")),
-            # TRANSLATORS: tab title
-            Section("music", pgettext("tab", "Music"), "audio-x-generic-symbolic",
-                    _("Reading music on the device…")),
-        )}
-        for sec in self.sections.values():
-            sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
-
-        self._build_layout()
-        self._install_actions()
-        # The dot follows the answers to the program's own requests; the listener holds the
-        # window only weakly and runs in the request's thread, so it hands over to GTK.
-        ref = weakref.ref(self)
-        self._net_listener = lambda: GLib.idle_add(_render_net_status_later, ref)
-        netstatus.STATUS.add_listener(self._net_listener)
-
-        self.connect("close-request", self._on_close_request)
-        self.monitor = Gio.VolumeMonitor.get()
-        self.monitor.connect("mount-added", self._on_mount_added)
-        self.monitor.connect("mount-removed", self._on_mount_removed)
-        # A drive that the system does not mount (KDE) sends no mount event.
-        self.monitor.connect("volume-added", self._on_volume_added)
-        self.monitor.connect("volume-changed", self._on_volume_changed)
-        self.monitor.connect("volume-removed", self._on_volume_removed)
-        self._watch_last_sync()
         # Apps whose update was written over PTP and waits for the device to be unplugged.
         # Kept in memory only; forgotten when the device goes away.
         self._updated_apps: set = set()
         # A device that was just plugged in is on USB for a while before gvfs offers it.
         self._usb_state, self._usb_since = ABSENT, 0.0
-        self._usb_poll = GLib.timeout_add_seconds(USB_POLL_S, self._poll_usb)
-        self._start()
+        # Since when the USB state has been normal, and whether a replug was told
+        # (detection._poll_usb); whether the open device was unplugged, the device to open
+        # again, and the drives watched while a device is open or looked for again.
+        self._usb_gone = None
+        self._normal_since = 0.0
+        self._replug_told = False
+        self._open_unplugged = False
+        self._pending_reopen = None
+        self._drives_while_open = None
+        self._drive_look = None
+        # The start page's texts told against now, and their timer.
+        self._start_texts: list = []
+        self._relative_timer = None
+        # The window is closing (_on_close_request).
+        self._closed = False
+
+        # Made by __init__ and the layout.
+        self.sections: dict = {}
+        self.split = self.sidebar_header = self.nav = None
+        self.net_icon = self.net_label = self.net_button = None
+        self.net_heading_dot = self.net_heading = self.net_retry = None
+        self.net_rows: dict = {}
+        self.content_header = self.refresh_button = self.sync_button = None
+        self.sync_icon_button = self.banner = self.pages = None
+        self.progress_bar = self.progress_label = self.busy_spinner = None
+        self.unplug_label = self.action_bar = self.stop_wait_button = None
+        self.content_page = self.start = self.device_view = None
+        self.navigation = self.remembered = self.toasts = None
+        self._net_listener = self.monitor = self._usb_poll = None
+        self._last_sync_monitor = None
+
+        # The device page, made as it is shown (show_overview): its rows and what they say.
+        self.device_title = self.device_image = self.device_picture = None
+        self.software_label = self.update_chip = self.update_row = None
+        self.map_row = self.apps_row = self.music_row = None
+        self.storage_row = self.storage_bar = self.backup_row = None
+        self.primary_row = self.last_sync_row = None
+        self._banner_kind = ""
+        self._last_sync_data = None
+        self.apps_count = self.music_count = None
+        self.account_picture_offer = self.account_picture_row = None
+        self.device_error_group = self.device_error_row = None
+        # The pictures of devices drawn and asked for (pictures.py).
+        self._device_textures = self._pictures_asked = self._pictures_waiting = None
+        # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device.
+        self._preferences = self._account_row = self._storage = None
+        self._order_dialog = self._forget_dialog = None
 
     def _start(self) -> None:
         """What the window does as it opens: the detection, and the account's devices for

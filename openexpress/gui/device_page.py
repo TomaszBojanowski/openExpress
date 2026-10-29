@@ -1168,7 +1168,7 @@ class DevicePage:
     def _render_update_state(self) -> None:
         """Shows self.update_state in the overview: the "Device software" row, the chip under
         the version (_highlight_update) and the software label."""
-        if self.session is None or not hasattr(self, "update_row"):
+        if self.session is None or getattr(self, "update_row", None) is None:
             return
         state = self.update_state
         self._highlight_update(start.update_available() if state == "available"
@@ -1249,7 +1249,7 @@ class DevicePage:
 
     def _render_map_state(self) -> None:
         """Shows self.map_state in the overview (the "Maps" row)."""
-        if self.session is None or not hasattr(self, "map_row"):
+        if self.session is None or getattr(self, "map_row", None) is None:
             return
         from openexpress import maps as mp
 
@@ -1330,7 +1330,7 @@ class DevicePage:
         self.in_background(work, done, failed)
 
     def _show_last_sync(self) -> None:
-        if (not hasattr(self, "last_sync_row") or self.session is None
+        if (getattr(self, "last_sync_row", None) is None or self.session is None
                 or self.session.ownership_error is not None):
             return
         row = self.last_sync_row
