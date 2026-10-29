@@ -3,8 +3,8 @@
 - **The watch restarts by itself after it is unplugged.** A fēnix 8 (software 23.39) has done
   this a few times while taking in a change, for example a new map or a removed Connect IQ
   app; the same change went through without a restart right after the watch had been turned
-  off and on. The watch also kept memory dumps of crashes or restarts from 2025 and April 2026,
-  before openExpress was first used with it. This looks like a fault of the watch that appears
+  off and on. The watch also kept memory dumps of crashes or restarts from before
+  openExpress was first used with it. This looks like a fault of the watch that appears
   after it has been running for days, but it is not certain. Before a bigger change (maps,
   several apps) it may help to turn the watch off and on first. No data on the watch was lost.
   The watch keeps only the last such error in its log and overwrites it at the next restart,
@@ -16,6 +16,16 @@
   2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
   again.
 - **An Edge 1050 restarts each time it is unplugged.** It always does.
+
+## KDE Plasma and Dolphin
+
+**KDE Plasma and Dolphin:** Dolphin opens MTP devices through KDE's own MTP service (kmtpd
+from kio-extras, in the `kiod6` process), not through gvfs. Once started, the service keeps
+every MTP device it has opened, also after Dolphin is closed, and takes a device back as soon
+as its cable is plugged in again, so gvfs cannot offer it; after 45 seconds the window says
+**The device is not ready**. To free the device, close Dolphin, run `kquitapp6 kiod6`, then
+unplug the cable and plug it back in. Open the device in openExpress rather than in Dolphin;
+if you open it in Dolphin again, repeat these steps.
 
 ## Signing in
 

@@ -1,5 +1,9 @@
 # Command line
 
+The command-line tool is available as
+`flatpak run io.github.tomaszbojanowski.OpenExpress <command>` (for example `sync` or `maps`);
+in the version from source it is `openexpress <command>`.
+
 | Command | Description |
 |---|---|
 | `openexpress info [--json]` | model, part number, software version, unit ID, storage and free space, data types and components, Connect IQ limits; `--json` as JSON |

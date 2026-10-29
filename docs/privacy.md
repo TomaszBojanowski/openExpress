@@ -1,5 +1,14 @@
 # Privacy and security
 
+Garmin Express exists only for Windows and macOS. openExpress is an independent
+implementation with its own code, so Linux users can manage their watch without a
+virtual machine. How the Garmin services and the watch's file layout work was learned by
+analysing the official application, solely to make openExpress interoperate with them.
+It contains no Garmin code. It does contain the names by which Garmin Express introduces
+itself to Garmin's servers (its client identifiers and the values of its client headers);
+the application key, its secret and the value that signs download addresses are read from
+**your own copy** of the official installer during setup.
+
 - The password is entered only on Garmin's page; openExpress never sees or stores it. What
   is stored locally after signing in is an OAuth1 token and, next to it, your user name,
   e-mail address, profile number and account identifier, in one file readable only by you

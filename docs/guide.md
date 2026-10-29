@@ -1,5 +1,60 @@
 # Usage
 
+## What openExpress does
+
+**Status:** beta. The main features work and are tested on the devices listed in
+[Supported devices](../README.md#supported-devices); other Garmin devices that connect over USB (MTP)
+should work, but are untested – reports are welcome. Developed on Fedora/GNOME.
+
+- Garmin Connect sync: new activities, sleep, HRV, metrics… are uploaded; courses, workouts
+  and Connect IQ apps queued in Connect are written to the watch (on watches that hide their
+  app folder, apps wait until you install them); TrueUp for multiple devices.
+- Watch software updates and free maps (TopoActive, CourseView, Ski…), with MD5 verification.
+  A map Garmin does not offer in the country of your Garmin account is not installed or
+  updated, and the window and `openexpress maps` say why; the country is read from the
+  account's profile (Garmin Express uses the computer's IP address), and without it (not
+  signed in, a device of another account) such a map is only marked.
+- Connect IQ apps: install, update, remove, enable/disable built-in activities – also on
+  watches that hide their app folder (e.g. the fēnix 8), without reordering your widgets.
+- Music, podcasts and audiobooks with playlists.
+- Backups; showing and setting the primary training device and the primary wearable;
+  copies of the device's diagnostic files, kept on this computer.
+- GTK 4 / libadwaita window, command-line tool and background sync with notifications.
+- No telemetry. English and Polish, translatable with gettext.
+
+<p align="center">
+  <img src="screenshots/updates.png" width="800"
+       alt="The Updates page: a component update offered for a fēnix 8">
+</p>
+
+## Not yet available
+
+- Connect IQ app settings (the settings form is rendered by apps.garmin.com).
+- Map updates for devices that connect as a USB drive (mass storage mode), such as older
+  nüvi car navigators, and for devices whose maps Garmin serves another way than its
+  universal map service (the window and `openexpress maps` say so; the Maps page names
+  the map update type Garmin gives the device, which helps a report).
+- Checking the privacy-policy consents before a sync (the upload consent is checked, see
+  [Privacy and security](privacy.md#privacy-and-security)).
+- GPS satellite data (ephemerides), which Garmin Express writes to the watch when it syncs
+  and which helps the watch find its position faster.
+- Maps on a memory card: maps are installed and updated in the device's internal memory only.
+- Installing software updates as part of a sync: they are installed only when you choose
+  to, on the Updates page or with `openexpress updates --install`.
+- Uploading ECG recordings: they go to Garmin Health, which needs a sign-in of its own that
+  openExpress does not have. A sync leaves them on the watch and says how many there are.
+
+## Setup
+
+openExpress appears in your application menu. Setup needs the Garmin Express installer
+**for Windows** (`GarminExpress.exe`, a free download from
+[garmin.com](https://www.garmin.com/en-US/software/express/windows/)), also when you have
+no Windows: openExpress only reads it and installs nothing. The installer for macOS does
+not work. Connect the watch and open it: its page has a banner at the top. Click **Choose
+Installer…** there and select the installer (at any time also in Preferences → Setup →
+**Choose File…**), then **Log In** in the same banner (or in Preferences). Turn on automatic sync on the
+Device page (or in Preferences) to sync whenever the watch is connected.
+
 ## The start page and the device page
 
 With one Garmin device connected, the window opens on its page; otherwise on the start page
@@ -103,7 +158,7 @@ connected device; no login is needed.
        alt="The Updates page: a beta system update offered for an Edge 1050">
 </p>
 
-Installing a system update was tested on an Edge 1050 (beta 33.12, 14 October 2026) and
+Installing a system update was tested on an Edge 1050 (beta 33.12) and
 reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2.
 
 <p align="center">
