@@ -1,13 +1,12 @@
 """Forgetting a device: what this installation keeps of it goes, so that the device, connected
 again, is a new one to it.
 
-Deleted: the entry in devices.json (last, so that a failure leaves the device listed, to be
-forgotten again), the device's own folder in the data folder (what was uploaded from it, the
-copies of files not uploaded yet, its last sync, the maps of your own copied to it, the apps it
-refused, the copies of its diagnostic files) and the shared last sync when it is of this
-device. Files not uploaded yet only with consent; its backups only when asked, and of them only
-the folders openExpress made. Never the cache, the window's settings or anything on the Garmin
-account."""
+Deleted: the entry in devices.json, the device's own folder in the data folder (what was
+uploaded from it, the copies of files not uploaded yet, its last sync, the maps of your own
+copied to it, the apps it refused, the copies of its diagnostic files) and the shared last
+sync when it is of this device. Files not uploaded yet only with consent; its backups only
+when asked, and of them only the folders openExpress made. Never the cache, the window's
+settings or anything on the Garmin account."""
 
 from __future__ import annotations
 
@@ -60,6 +59,8 @@ def forget_device(unit_id: int, discard_pending: bool = False, backups: bool = F
     devices.json. Raises PendingFiles without `discard_pending` when files of it have not
     been uploaded yet, and OSError when something cannot be deleted: the entry stays then."""
     with service.sync_lock():
+        # The entry goes last, so that a failure leaves the device listed, to be forgotten
+        # again.
         return known_devices.forget(
             unit_id, before=lambda: _delete(unit_id, discard_pending, backups))
 

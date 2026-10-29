@@ -1,14 +1,9 @@
 """TrueUp: aligning daily totals (steps, calories, …) across several Garmin devices.
 
-The flow in openExpress:
-  1. Connect queues a FIT_TYPE_39 `check_back` file containing the time at which
-     the client should ask again. It is downloaded and acknowledged.
-  2. openExpress waits as Garmin Express does: the whole time when it is under 300 s, 90 s
-     when it is longer, for up to 3 rounds; in ten steps, each told (a wait of known length).
-     The wait can be stopped (the window's Stop Waiting, Ctrl+C on the command line, the
-     background service quitting): then nothing more is asked or written.
-  3. Connect then queues a `true_up` file, which is downloaded, acknowledged
-     and written to the watch.
+Connect queues a FIT_TYPE_39 `check_back` file with the time to ask again; it is downloaded
+and acknowledged, and openExpress waits (wait_for) and asks again. Connect then queues a
+`true_up` file, which is downloaded, acknowledged and written to the watch. A stopped wait
+asks and writes nothing more.
 """
 
 from __future__ import annotations
@@ -33,6 +28,9 @@ log = logging.getLogger(__name__)
 DATATYPE = "FIT_TYPE_39"
 CHECK_BACK = "check_back"
 TRUE_UP = "true_up"
+# The wait, as Garmin Express does it: the whole delay when it is under LONG_DELAY_S, else
+# LONG_DELAY_WAIT_S, for up to MAX_ROUNDS rounds; in WAIT_STEPS steps, each told (a wait of
+# known length).
 MAX_ROUNDS = 3
 LONG_DELAY_S = 300  # from this delay on, Garmin Express waits only…
 LONG_DELAY_WAIT_S = 90  # …this long
@@ -109,7 +107,7 @@ def run(
     progress: Callable[[str], None] = lambda s: None,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], float] = time.time,
-    stop=None,
+    stop=None,  # set by the window's Stop Waiting, or the background service quitting
 ) -> TrueUpResult:
     """`stop`: a threading.Event that stops the wait when it is set (its wait() is a step of
     the wait); without it the wait sleeps. Ctrl+C during the wait stops it the same way."""

@@ -1,9 +1,8 @@
-"""The last sync in words, one way for all who tell it: a record of a sync (last_sync.json, as
-service.save_last_sync writes it, and as older versions wrote it) is put into words by
-describe() alone, and what it gives is shown as it is: the row "Last sync" of the device page
-(its subtitle, the full date of its tooltip, its details), the tiles of the start page, the
-numbers at the end of `openexpress sync` and the notification of the background sync. No
-caller puts a record into words itself.
+"""The last sync in words: describe() alone puts a record of a sync (last_sync.json, as
+service.save_last_sync writes it, and as older versions wrote it) into words, and every
+caller shows what it gives as it is: the row "Last sync" of the device page (subtitle,
+tooltip, details), the tiles of the start page, the numbers at the end of `openexpress sync`
+and the notification of the background sync.
 
 tests/test_last_sync_patterns.py checks it from the file to the screen on records of real
 syncs (tests/data/last_sync/): every change of the row comes with a new one."""

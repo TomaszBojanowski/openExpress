@@ -1,31 +1,27 @@
-"""The facts the tile of a device says (its chips), kept with the device: one object for each
-device in devices.json, "tile_facts" of its entry (known_devices), and the one way they are
-written and read.
+"""The facts the tile of a device says (its chips), kept with the device as the object
+"tile_facts" of its entry in devices.json (known_devices), and the one way they are written
+and read.
 
-The facts: what the last check of updates found (an update to install, one copied already,
-when it was checked, the software of the device then); the last count of its activities to
-upload (how many, the version of its sync state then); whether this installation synced it
-and when it last did (and whether that sync could not upload); what the account's list said of
-it (on the account, its primary wearable); how it is connected over USB (the entry's kind).
+Each fact holds for so long, and only while what it was told against stays the same; past
+that it is not known: no chip, never the contrary of the fact.
+- what the last check of updates found (an update to install, one copied already, when it
+  was checked): UPDATE_KEPT_S (30 days), and the same software of the device;
+- the last count of its activities to upload: known_devices.SYNC_COUNT_KEPT_S (7 days), and
+  the same sync state (service.sync_stamp);
+- whether this installation synced it, when it last did and whether that sync could not
+  upload: the same sync state;
+- what the account's list said of it (on the account, its primary wearable): ACCOUNT_KEPT_S
+  (7 days), and the same login saved (store.stamp).
 
 Written by this module only, after each source: the window's check of updates
 (note_update_check), the count in the background (note_count), the account's list
 (note_account), a sync (note_synced, from service.save_last_sync) and a detection
-(known_devices.seen, with synced_fact); forgetting the device removes its entry, and its
-facts with it (known_devices.forget).
+(known_devices.seen, with synced_fact); forgetting the device removes them with its entry.
 
 Read by read() only: the tile is drawn from what it gives and from what the device itself
-shows (connected or not, its name, its software, its USB kind). No session, no account's list,
+shows (connected or not, its name, its software, its USB kind); no session, no account's list,
 no count held in memory. A device only on the account (never seen here) has no entry: its
-tile is the account's entry itself, and says only whether it is the primary wearable
-(of_account_entry).
-
-Each fact holds for so long, and only while what it was told against stays the same; past
-that it is not known: no chip, never the contrary of the fact.
-- an update found or copied: UPDATE_KEPT_S (30 days), and the same software of the device;
-- a count: known_devices.SYNC_COUNT_KEPT_S (7 days), and the same sync state (service.sync_stamp);
-- the sync: the same sync state;
-- the account: ACCOUNT_KEPT_S (7 days), and the same login saved (store.stamp)."""
+tile says only whether it is the primary wearable (of_account_entry)."""
 
 from __future__ import annotations
 
@@ -136,10 +132,8 @@ def _account(entry: KnownDevice, login: str | None, now: float) -> AccountFact |
 
 def _sync(entry: KnownDevice, account: AccountFact | None, login: str | None,
           now: float) -> dict:
-    """What a connected device's tile says of its sync: for a device of the account (or
-    while whose it is is not known, with a login saved); never synced here only when the
-    account has it; nothing while its last sync could not upload (no consent, device sync
-    off in Garmin Connect): a sync would not help, the device page says why."""
+    """What a connected device's tile says of its sync, as fields of TileFacts: for a device
+    of the account, or one not known to be off it while a login is saved; {} otherwise."""
     on = account.on_account if account is not None else None
     if on is False or (on is None and login is None):
         return {}
@@ -148,8 +142,10 @@ def _sync(entry: KnownDevice, account: AccountFact | None, login: str | None,
     if synced is None or synced.state != state:
         return {}
     if not synced.once:
-        return {"never_synced": True} if on else {}
+        return {"never_synced": True} if on else {}  # said only when the account has it
     if synced.not_uploaded:
+        # No consent, or device sync off in Garmin Connect: a sync would not help, and the
+        # device page says why.
         return {}
     count = known_devices.recorded_sync_count(entry, state, now)
     if count is None:

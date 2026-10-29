@@ -193,14 +193,9 @@ def is_diagnostic(datatype: str, url: str) -> bool:
 def parse_locations(dt: dict, include_consent: bool,
                     consent_granted: Callable[[str], bool] | None = None,
                     ) -> tuple[list[UploadLocation], list[UploadLocation]]:
-    """Return (used, skipped) upload locations for an OMT data type.
-
-    The requiresUserConsent flag alone does not exclude a location (it applies to e.g.
-    HRV and skin temperature). A location that names specific required consents is used
-    only when `consent_granted` says each of them is given, and without that function it
-    is skipped; plan_uploads then leaves out the whole data type (as Garmin Express does).
-    `include_consent` takes them all, for marking files only (nothing is uploaded then).
-    """
+    """Return (used, skipped) upload locations for an OMT data type. A location that names
+    required consents is used only when `consent_granted` says each is given (skipped without
+    that function); `include_consent` takes them all, for marking files only."""
     used, skipped = [], []
     for loc in dt.get("uploadlocations") or []:
         ul = UploadLocation(
@@ -212,6 +207,8 @@ def parse_locations(dt: dict, include_consent: bool,
         )
         if not ul.url:
             continue
+        # The requiresUserConsent flag alone keeps no location back (it is set for e.g. HRV
+        # and skin temperature).
         ok = (include_consent or not ul.consent_types
               or (consent_granted is not None
                   and all(consent_granted(c) for c in ul.consent_types)))
@@ -573,11 +570,10 @@ def synced_here(unit_id: int) -> bool:
 
 @dataclass(frozen=True)
 class ActivitiesToSync:
-    """The activities on a connected device that this installation has not uploaded yet:
-    those its activity folder lists that state.json does not hold as done, and the copies
-    kept after a failed upload. Refused by Garmin and already in Connect are done (as sync
-    marks them), a failed upload is not. `count` None: the device was never synced here (no
-    state.json). The names listed stay in memory only, for again()."""
+    """The activities on a connected device that this installation has not uploaded yet: those
+    its activity folder lists that state.json does not hold as done, and the copies kept
+    after a failed upload. `count` None: the device was never synced here (no state.json).
+    The names listed stay in memory only, for again()."""
 
     unit_id: int = field(repr=False)
     listed: frozenset[str] = field(default=frozenset(), repr=False)
@@ -599,11 +595,10 @@ class ActivitiesToSync:
 
 
 def activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
-    """The activities of `device` not uploaded yet: its activity folder (GarminDevice.xml)
-    listed, no file read. Not known (None) for a drive (never synced), a device without a
-    unit ID, a folder that could not be listed or a state.json that could not be read. A
-    device never synced here is not listed at all. One log line, counts only. Never raises:
-    the device opens all the same."""
+    """The activities of `device` not uploaded yet, from its activity folder (GarminDevice.xml)
+    listed, no file read. None when not known: a drive, a device without a unit ID, or a
+    folder or state.json that could not be read. A device never synced here is not listed.
+    Never raises: the device opens all the same."""
     try:
         return _activities_to_sync(device, storage)
     except Exception as e:  # noqa: BLE001 - not known, never 0: the tile shows nothing
@@ -612,7 +607,7 @@ def activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSy
 
 
 def _activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
-    if storage.mass_storage or not device.unit_id:
+    if storage.mass_storage or not device.unit_id:  # a drive is never synced
         return None
     if not SyncState(device.unit_id).file.exists():
         log.info("activities: not counted, the device was never synced here")
@@ -634,6 +629,8 @@ def _activities_left(unit_id: int, listed: frozenset[str]) -> ActivitiesToSync:
     state = SyncState(unit_id)
     if not state.file.exists():
         return ActivitiesToSync(unit_id, listed)
+    # Done as a sync marks them: also those refused by Garmin and already in Connect, not a
+    # failed upload.
     done = state.completed.get(ACTIVITY_TYPE, set())
     kept = {p.name.casefold() for p in state.pending_files(ACTIVITY_TYPE)}
     return ActivitiesToSync(unit_id, listed, len((listed | kept) - done))
@@ -766,17 +763,16 @@ def run_downloads(
     progress: Callable[[str], None] = lambda s: None,
     state: SyncState | None = None,
 ) -> DownloadReport:
-    """Download queued files to the watch.
-
-    With `state`, messages whose acknowledgement failed after the file was written are
-    remembered and only acknowledged next time (no duplicate file on the watch). A client
-    never checked against the account (run_sync checks the owner first) stops it at its
-    first refusal, as the uploads: nothing is fetched, written or acknowledged, the messages
-    written before stay not acknowledged, and the refusal is logged once and raised.
-    """
+    """Download the queued files to the watch and return the report. With `state`, a message
+    whose file was written but not acknowledged is kept in it and only acknowledged next
+    time (no duplicate file on the watch). Raises DeviceNotVerified at the first refusal of
+    a client never checked against the account: nothing more is fetched, written or
+    acknowledged."""
     try:
         return _run_downloads(items, storage, client, progress, state)
     except DeviceNotVerified:
+        # As the uploads (run_sync checks the owner first): the messages written before stay
+        # not acknowledged, and the refusal is logged once.
         log.warning("downloads: nothing downloaded, the device was not checked against the "
                     "account")
         raise

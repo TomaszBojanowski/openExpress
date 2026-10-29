@@ -136,8 +136,8 @@ def is_inside(path: Path, folder: Path) -> bool:
 def make_dir(path: Path) -> None:
     """Makes `path` and the folders above it. The app's own folder for the settings, the data
     or the log (the login, what came from the device, what was done), when it is made here,
-    is its owner's alone. Folders that exist keep their mode; those above the app's
-    (~/.config, …) get the usual one. The cache and the backups are made as before."""
+    is its owner's alone; the cache, the backups and the folders above the app's (~/.config,
+    …) get the usual mode. Folders that exist keep theirs."""
     for root in (config_dir(), data_dir(), state_dir()):
         if path == root or root in path.parents:
             _make_private(root)

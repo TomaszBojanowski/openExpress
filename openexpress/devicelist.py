@@ -1,13 +1,10 @@
-"""The tiles of the start page: one list made of the devices connected now, the devices this
-installation remembers (known_devices) and the devices of the Garmin account
-(GarminClient.account_devices). Data in, data out: nothing is asked of a device or a server.
+"""The tiles of the start page: one list of the devices connected now, those this installation
+remembers (known_devices) and those of the Garmin account (GarminClient.account_devices). Data
+in, data out: nothing is asked of a device or a server.
 
-One device is one tile. Sources are merged by the unit ID only, never by the part number (two
-watches of one model are two devices); a connected device without a unit ID (no <Id>, or not
-read) has a tile of its own. The unit ID is used only to merge: no tile holds it, and the log
-never names it.
-
-What a tile says in its chips (an update, the sync, the account) comes only from the facts
+One device is one tile: sources are merged by the unit ID only, never by the part number (two
+watches of one model are two devices), and a connected device without one has a tile of its
+own. No tile holds the unit ID, and the log never names it. Chips come only from the facts
 kept with the device (tile_facts.read) and from the device itself, never from the account's
 list or a count held in memory."""
 
@@ -101,23 +98,14 @@ def tiles(connected, remembered, account, logged_in: bool) -> list[Tile]:
 
 
 def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile, object]]:
-    """(tile, its source) in order: the source is kept outside the tile, for the window to
-    act on it: the connected device's DeviceSummary (to open it), else the KnownDevice
-    remembered, else its entry of the account's list (only on the account).
-
-    The tiles, in order: the devices connected now first (the primary one first among
-    them), then those remembered, then those only on the account, each section by name
-    (case ignored, then part number), so that the order does not change from one plug-in to
-    the next; when a device was seen is only shown. The sections follow each other: the
-    window counts a click over the whole list.
-
-    `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
-    the account's device list (keys in lower case), used only when `logged_in`. Fields:
-    name and version from the connected device's GarminDevice.xml, else as remembered, else
-    as the account says; the picture address and the category from the account first; when
-    it was seen only from what is remembered; the facts of the chips (TILE_FIELDS) only from
-    what is kept with the device (tile_facts.read), or for a device only on the account from
-    its entry (tile_facts.of_account_entry)."""
+    """The tiles of the start page as (tile, source) pairs, in order: the devices connected
+    now (the primary one first), then those remembered, then those only on the account, each
+    section by name (case ignored), then part number. The source is what the window acts on:
+    the connected DeviceSummary, the KnownDevice, or the account's entry; `account` counts
+    only when `logged_in`."""
+    # `connected`: DeviceSummary list (probe); `remembered`: known_devices.load(); `account`:
+    # the account's device list (keys in lower case). What each field of a tile comes from:
+    # _tile.
     on_account: dict[int, dict] = {}
     account_only: list[dict] = []  # entries of the account without a usable unit ID
     for entry in (account or []) if logged_in else []:
@@ -150,12 +138,14 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
              for unit_id, entry in on_account.items() if unit_id not in done]
     rest += [(_tile("", "", "", None, False, None, entry), entry)
              for entry in account_only]
+    # By name, not by when a device was seen (that is only shown): the order does not change
+    # from one plug-in to the next.
     rest.sort(key=lambda e: (section(e[0]) != REMEMBERED, e[0].description.casefold(),
                              e[0].part_number))
 
     result = now + rest
     # The start page groups them by section; kept in that order so that the list reads the
-    # same as the page.
+    # same as the page, and the window counts a click over the whole list.
     order = [SECTIONS.index(section(tile)) for tile, _source in result]
     assert order == sorted(order), "the tiles are not in the order of the sections"
     log.debug("start page: %d tiles (%d connected, %d on the account)", len(result),
@@ -165,20 +155,17 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
 
 def _remembered_drive(summary, remembered) -> int | None:
     """The unit ID of the remembered device that this connected drive is, when nothing of it
-    could be read (not mounted); None when that is not known. In this order:
-    1. its USB serial is the unit ID of a remembered device in hexadecimal (a fēnix 8's is),
-       also one that an older version remembered without its USB product;
-    2. the USB serial kept with one remembered device; 2b. the UUID of its volume kept with
-       one (a Varia Rearview Radar gives no USB serial);
-    3. the one remembered drive with its USB product, unless the serial or the UUID kept
-       with that one is another: then it is another device of the same model.
-    No rule "the same model": without mounting, the model is only the USB product."""
+    could be read (not mounted); None when that is not known. Tried in order: its USB serial
+    as a unit ID in hexadecimal, the USB serial or the volume UUID kept with one remembered
+    device, the one remembered drive with its USB product."""
     found, usb = summary.found, summary.found.usb
     if found.kind != "ums" or usb is None:
         return None
     serial = (usb.serial or "").casefold()
     uuid = (usb.volume_uuid or "").casefold()
     if serial:
+        # A fēnix 8's USB serial is its unit ID in hexadecimal: this finds also a device
+        # remembered without its USB product.
         try:
             unit_id = int(serial, 16)
         except ValueError:
@@ -186,6 +173,7 @@ def _remembered_drive(summary, remembered) -> int | None:
         if unit_id in remembered:
             log.debug("start page: a drive not read is remembered by its USB serial")
             return unit_id
+    # The volume's UUID for a drive without a USB serial (a Varia Rearview Radar gives none).
     for kept, value, what in (("usb_serial", serial, "the USB serial kept with it"),
                               ("volume_uuid", uuid, "the UUID of its volume")):
         if value:
@@ -196,6 +184,9 @@ def _remembered_drive(summary, remembered) -> int | None:
                 return matches[0]
     if not usb.product:
         return None
+    # Without mounting, the model is only the USB product: no rule "the same model". The one
+    # remembered drive with this product is this one, unless the serial or the UUID kept with
+    # it is another: then it is another device of the same model.
     same = [k for k in remembered.values()
             if k.kind == "ums" and k.usb_product == usb.product.lower()]
     if len(same) != 1:
@@ -229,6 +220,8 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
     image_url, image_source = picture_address(account["image_url"] if account else None,
                                               known.image_url if known else None)
     return Tile(
+        # Name and version: the connected device's GarminDevice.xml, else as remembered, else
+        # as the account says.
         description=known_devices.shown_name(
             description or (known.description if known else "") or (
                 account["description"] if account else ""),
@@ -238,7 +231,7 @@ def _tile(description: str, part_number: str, version: str, kind: str | None,
             account["software_version"] if account else ""),
         kind=kind,
         connected=connected,
-        last_seen=known.last_seen if known else None,
+        last_seen=known.last_seen if known else None,  # only from what is remembered
         image_part_number=part,
         image_url=image_url,
         # The account's word first, else what is remembered (also offline).
@@ -254,10 +247,10 @@ PICTURE_FROM_ACCOUNT, PICTURE_REMEMBERED = "the account", "the remembered addres
 
 def picture_address(account_url: str | None, remembered_url: str | None):
     """(address, where it comes from) of a tile's picture: the account's, which is the newer
-    word; the one remembered with the device when the account gives none it may download
-    (none for a device off the account, or offline; one in a bucket on S3 that is not
-    allowed). With neither allowed, the account's, so that the log says why there is no
-    picture."""
+    word; the one remembered with the device when the account gives none it may download.
+    With neither allowed, the account's, so that the log says why there is no picture."""
+    # The account gives none for a device off the account or offline, and may give one in a
+    # bucket on S3 that is not allowed.
     if (remembered_url and not picture_urls.allowed(picture_urls.upgraded(account_url))
             and picture_urls.allowed(remembered_url)):
         return remembered_url, PICTURE_REMEMBERED
@@ -395,9 +388,8 @@ def note_kind_evidence(part_number: str, categories: list[str] | None = None,
                        connect_support: str | None = None) -> None:
     """Keep what Garmin said of the kind of a model (`categories` of the account's list,
     `segment` and `connect_support` of unit-info; `kind`: what the program made of it).
-    While Garmin tells no kind of it, one line in the log says all of it, once for each new
-    piece: so that a report tells the signal Garmin gives for such a device (an inReach).
-    The part number only: never a unit ID or a serial number."""
+    While Garmin tells no kind of it, the log says all of it in one line, once for each new
+    piece; the line names the part number only."""
     if not part_number:
         return
     known = _kind_evidence.setdefault(part_number, {})
@@ -417,6 +409,7 @@ def note_kind_evidence(part_number: str, categories: list[str] | None = None,
         return
     _kind_told.add(told)
     said = known.get("categories")
+    # So that a report tells the signal Garmin gives for such a device (an inReach).
     log.info("devices: Garmin tells no kind of %s (account categories: %s; unit-info "
              "segment: %s, connect support: %s)", part_number,
              ("none" if said == () else ", ".join(said)) if said is not None else "not known",
@@ -429,9 +422,8 @@ _map_type_told: set = set()
 
 def note_map_update_type(part_number: str, value) -> None:
     """Say in the log which map service Garmin files a model under (`mapUpdateType` of
-    unit-info), once for each model and value: the program asks the universal map service
-    only, and a navigator may be served by another one, so that a report tells why a device
-    gets no map. The part number only: never a unit ID or a serial number."""
+    unit-info), once for each model and value; the line names the part number only, never a
+    unit ID or a serial number."""
     if not part_number:
         return
     if value is None or value == "":
@@ -443,6 +435,8 @@ def note_map_update_type(part_number: str, value) -> None:
     if (part_number, said) in _map_type_told:
         return
     _map_type_told.add((part_number, said))
+    # The program asks the universal map service only, and a navigator may be served by
+    # another one: so that a report tells why a device gets no map.
     log.info("maps: unit-info gives the map update type %s for %s (openExpress asks the "
              "universal map service only)", said, part_number)
 

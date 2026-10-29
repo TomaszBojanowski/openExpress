@@ -133,10 +133,10 @@ class MassStorageMode(UserFacingError):
 
 
 def account_country(s) -> str | None:
-    """The country of the profile of the Garmin account, for a map Garmin does not offer in
-    a country: asked once per session, and only for a device of the account (its ownership
-    checked); None without a login, for a device of another account, or when it cannot be
-    read (said in the log), so that the map is only marked."""
+    """The country code of the Garmin account's profile, for a map Garmin does not offer in a
+    country: asked once per session (left in `s.account_country_code`). None without a login,
+    for a device not checked as the account's, or when it cannot be read (said in the log),
+    so that the map is only marked."""
     if (not s.logged_in or s.ownership_error is not None
             or getattr(s.client, "verified_unit_id", None) is None):
         return None
@@ -275,15 +275,11 @@ def unit_id_of(value) -> int | None:
 
 
 def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
-    """Allow account operations on this watch only if the account lists it.
-
-    Returns the account's device list that was fetched for the check.
-
-    Asks Garmin Connect every time (no cache, no override). Raises NotAccountDevice
-    when the watch is not on the list and OwnershipUnknown when the list cannot be
-    fetched: the watch is never assumed to be the user's. An expired login or a wrong
-    clock is raised as such, so the user gets the usual advice.
-    """
+    """Allow account operations on this watch only if the account lists it: returns the
+    account's device list fetched for the check (asked every time, no cache, no override).
+    Raises NotAccountDevice when the watch is not on it, OwnershipUnknown when it cannot be
+    fetched, Unauthorized and ClockSkew as they are. Leaves `client.verified_unit_id` set on
+    success, None otherwise."""
     if client.verified_unit_id != unit_id:
         client.verified_unit_id = None
     # While the same watch is checked again, tasks sharing the client (pictures, icons)
@@ -293,8 +289,9 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
         try:
             devices = client.account_devices()
         except (Unauthorized, ClockSkew):
-            raise
+            raise  # an expired login or a wrong clock as such: the user gets the usual advice
         except ApiError as e:
+            # The watch is never assumed to be the user's.
             raise OwnershipUnknown(
                 _("Could not check whether this device belongs to your Garmin account "
                   "({error}). Nothing was synced.").format(error=e)) from e
@@ -338,13 +335,10 @@ NOT_UPLOADED_ROW = {
 
 
 def consent_granted(body: dict | None, consent_type: str, country=lambda: None) -> bool:
-    """Whether an answer of the consent service means "granted".
-
-    Granted when the server does not enforce the consent at all, or when the user opted
-    in and the consent has not expired. An opt-out is never granted. An upload consent
-    that only comes from the account's defaults counts when the account's country is
-    known and is not China, where a default is not enough; `country` returns that code.
-    """
+    """Whether an answer of the consent service means "granted": when the server does not
+    enforce the consent, or when the user opted in and it has not expired; an opt-out never.
+    An upload consent only from the account's defaults counts when the account's country,
+    returned by `country`, is known and not China, where a default is not enough."""
     if not isinstance(body, dict):
         return False
     option = str(body.get("useroption") or "").lower()
@@ -891,16 +885,13 @@ def _new_files(data: dict) -> int:
 
 
 def describe_counts(data: dict) -> str:
-    """The numbers of a sync in one line: "8 new files, 6 uploaded · 2 received" - the new
-    files on the device and how many of them were uploaded ("none uploaded"; "nothing to
-    upload" when it had none; "nothing uploaded: <why>" when the upload did not take
-    place; "upload skipped" when it was not looked at; "activities only: …" when only some
-    data types were), and what came from Garmin Connect's queue to the device when there is
-    any: its files, TrueUp and the Connect IQ apps written (a record of an older version
-    counts only the files).
-    The window shows it under "Last sync" after when it was; the command line and the
-    notification put it before the details."""
+    """The numbers of a sync in one line: the new files on the device and how many were
+    uploaded, then what came from Garmin Connect's queue, if anything ("8 new files, 6
+    uploaded · 2 received"). The window shows it under "Last sync" after when it was; the
+    command line and the notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
+    # Its files, TrueUp and the Connect IQ apps written (a record of an older version counts
+    # only the files).
     received = data.get("downloaded", 0)
     blocked = not_uploaded(data)
     skipped = any(isinstance(line, dict) and line.get("kind") == "upload_skipped"
@@ -970,12 +961,12 @@ def run_sync(
     include_diagnostics: bool = False,
     options: SyncOptions | None = None,
 ) -> SyncSummary:
-    """A whole sync: planned (plan_sync) and done (apply_sync) under the lock of the sync,
-    so that one process syncs at a time; its record kept (last_sync.json) and its start, end
-    and errors logged. `first_run`: 'baseline' or 'all' for the first time. `options`: what
-    the command line was asked (its first run and diagnostics with it, so never with
-    `first_run` or `include_diagnostics`); the window and the background service ask for
-    everything."""
+    """A whole sync: planned (plan_sync) and done (apply_sync) under the sync lock, one process
+    at a time; returns its summary. Leaves its record (last_sync.json, also of a sync
+    stopped after its uploads) and logs its start, end and errors. `first_run`: 'baseline' or
+    'all' for the first sync; `options` (the command line's) hold it and the diagnostics
+    instead (ValueError with both)."""
+    # The window and the background service ask for everything.
     if options is None:
         options = SyncOptions(first_run=first_run, include_diagnostics=include_diagnostics)
     elif first_run is not None or include_diagnostics:
@@ -1056,12 +1047,10 @@ class SyncPlan:
 
 def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
               progress: Progress = lambda m: None) -> SyncPlan:
-    """What a sync of the device will do, in the order it does it: the device checked
-    against the account, its upload settings, the first sync (its baseline marked in
-    memory, or the choice asked for: FirstSyncChoiceNeeded), whether the account lets data
-    be uploaded, and the files to upload. Writes nothing, uploads nothing. Garmin Connect's
-    queue is read by apply_sync, after the uploads, in the order Garmin Express syncs; a
-    preview reads it now (nothing is uploaded before it)."""
+    """What a sync of the device will do (a SyncPlan), in the order it does it: the device
+    checked against the account, its upload settings, the first sync (its baseline marked in
+    memory, or the choice asked for: FirstSyncChoiceNeeded), whether the account lets data be
+    uploaded, and the files to upload. Writes and uploads nothing."""
     options = options or SyncOptions()
     if not s.logged_in and not options.preview:
         raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
@@ -1085,6 +1074,8 @@ def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
             s.device, s.storage, plan.config, plan.state, only_types=options.only_types,
             include_diagnostics=options.include_diagnostics,
             consent_granted=plan.gate.granted if plan.gate is not None else None)
+    # Garmin Connect's queue is read by apply_sync, after the uploads, in the order Garmin
+    # Express syncs; a preview reads it now (nothing is uploaded before it).
     if options.preview and options.downloads and s.logged_in:
         plan.queue = plan_queue(s, progress)
     return plan
@@ -1161,14 +1152,14 @@ def _stop_text(error: Exception) -> str:
 
 
 def _keep_stopped(unit_id: int, error: BaseException, why: str) -> None:
-    """A sync stopped after its uploads: its record kept with what it did (done_before) and
-    `why` it stopped, as one of its errors, so that "Last sync" and the tiles tell this sync,
-    whose files are in Garmin Connect. Stopped before its uploads: nothing was done, and the
-    record of the sync before stays. The summary of the error is left as it is (the command
-    line prints it)."""
+    """Keeps the record of a sync stopped after its uploads: what it did (done_before), with
+    `why` it stopped as one of its errors, so that "Last sync" and the tiles tell this sync,
+    whose files are in Garmin Connect. Stopped before its uploads, nothing was done and the
+    record of the sync before stays."""
     done = done_before(error)
     if done is None:
         return
+    # A copy: the summary on the error stays as it is (the command line prints it).
     kept = replace(done, errors=[*done.errors, why])
     try:
         save_last_sync(unit_id, kept)

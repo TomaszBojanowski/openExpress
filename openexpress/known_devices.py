@@ -1,21 +1,21 @@
 """What this installation remembers of the Garmin devices it has seen, for devices that are
 not connected now: devices.json in the data folder (~/.local/share/openexpress; in the
-Flatpak below XDG_DATA_HOME, ~/.var/app/<app ID>/data). One entry per unit ID, with what
-GarminDevice.xml says and when the device was seen, its kind as Garmin tells it, and the
-address of the picture of its model as Garmin gives it (the account's list, or Garmin's
-update server for a device off the account), so that the picture can be downloaded again
-when it is no longer in the cache: a picture of the model, with neither the unit ID nor
-anything of the account in it, and only an address picture_urls allows; and when the
-window's check of updates last found one to install, for its tile (kept 30 days), with what it
-found (how many; of one, its name, version and whether it is of the system; the software of the
-device then), for its device page; and when that check last answered, with the software of the
-device then and whether an update was copied to it already (for its tile and the page of the
-device when it is not connected); and what the window's count in the background last found
-of its activities to upload, with the version of its sync state then (for its tile from the
-first frame). These, with what the account's list said of it and what is known of its sync,
-are the facts of its tile: one object of the entry, "tile_facts", which tile_facts.py alone
-writes and reads (entries written before it are read as they were). No address of the device
-itself (an MTP address has the serial number), no GarminDevice.xml (it has it too).
+Flatpak below XDG_DATA_HOME, ~/.var/app/<app ID>/data).
+
+One entry per unit ID: what GarminDevice.xml says, when the device was seen, its kind as
+Garmin tells it, and the address of its model's picture as Garmin gives it (the account's
+list, or Garmin's update server for a device off the account), to download the picture again
+once it is out of the cache: only an address picture_urls allows, of a picture of the model,
+with neither the unit ID nor anything of the account in it. No address of the device itself
+(an MTP address has the serial number), no GarminDevice.xml (it has it too).
+
+The facts of its tile are one object of the entry, "tile_facts", which tile_facts.py alone
+writes and reads: what the window's check of updates last found to install (kept 30 days;
+UpdateSummary for its device page) and when that check last answered (UpdateCheck, for its
+tile and its device page while it is not connected), what the count in the background last
+found to upload (SyncCount), what the account's list said of it (AccountFact) and what is
+known of its sync (SyncedFact). An entry without that object is read from the fields at its
+top where older files kept them.
 
 Forgetting a device removes its entry and nothing else: its own folder (devices/<unit ID>/:
 the sync state, own maps…) stays. The unit ID is never written to the log."""
@@ -43,7 +43,7 @@ FILE_NAME = "devices.json"
 LOCK_NAME = "devices.lock"
 FORMAT = 1
 # The kinds of device, as Garmin tells them (never guessed from a name): kept so that the start
-# page knows them offline. An optional field: files without it are read as before.
+# page knows them offline. An optional field: an entry without it has no kind (not known).
 WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY = "watch", "cycling-computer", "bike-accessory"
 CATEGORIES = (WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY)
 # A handheld (inReach, GPSMAP, Montana…): told by the model name only, for the icon; Garmin
@@ -180,16 +180,15 @@ class AccountFact:
 
 @dataclass(frozen=True)
 class SyncedFact:
-    """What this installation knew of the sync of a device when it was last seen or synced:
-    whether it synced it at all (its state.json is there), when its last sync recorded was,
-    and whether that one could not upload (no consent, device sync off in Garmin Connect);
-    when, and the version of its sync state then (service.sync_stamp; None: never synced)."""
+    """What this installation knew of the sync of a device when it was last seen or synced,
+    and when (`at`)."""
 
-    once: bool
-    last: float | None
+    once: bool  # it synced it at all (its state.json is there)
+    last: float | None  # when its last sync recorded was
+    # That last sync could not upload (no consent, device sync off in Garmin Connect).
     not_uploaded: bool
     at: float
-    state: str | None
+    state: str | None  # its sync state's version then (service.sync_stamp); None: never synced
 
     def to_json(self) -> dict:
         return {"once": self.once, "last": self.last, "not_uploaded": self.not_uploaded,
@@ -384,10 +383,10 @@ def set_category(unit_id: int, category: str) -> bool:
 
 
 def set_image_url(unit_id: int, url) -> bool:
-    """Keep the address of the picture of a device remembered, as Garmin gives it (a newer one
-    replaces the one before); whether it changed. Only an address picture_urls allows, kept
-    as it is asked (plain HTTP over HTTPS); a device that is not remembered gets no entry for
-    it. The log names the host, and whether the address has a query, only."""
+    """Keep the address of the picture of a device remembered, as Garmin gives it, in place
+    of the one before; whether it changed. Only an address picture_urls allows, kept as it is
+    asked (plain HTTP over HTTPS); a device not remembered gets no entry. The log names the
+    host and whether the address has a query, only."""
     url = picture_urls.upgraded(url)
     if not picture_urls.allowed(url):
         return False
@@ -406,11 +405,11 @@ def set_image_url(unit_id: int, url) -> bool:
 def set_update_found(unit_id: int, found: bool, now: float | None = None,
                      summary: UpdateSummary | None = None, software_version: str | None = None,
                      ready: bool = False) -> bool:
-    """What the window's check of updates found for a device remembered: an update (the
-    time of this check is kept, with `summary`), or none (what was kept goes); with the
-    device's software now (`software_version`), the check itself too (UpdateCheck: `ready`,
-    an update copied already waits for the device). Whether the entry changed. A device
-    that is not remembered gets no entry for it. The log names the part number."""
+    """Keep what the window's check of updates found for a device remembered; whether the
+    entry changed. `found`: the time of this check is kept, with `summary`; else both go.
+    With `software_version` (the device's now), the check itself is kept too (UpdateCheck;
+    `ready`: an update copied already waits for the device). A device not remembered gets no
+    entry."""
     with _locked():
         known, writable = _read()
         entry = known.get(unit_id)
