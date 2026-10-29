@@ -112,10 +112,10 @@ class ReportDialog:
         d.add_response("open", _("Open on GitHub"))
         d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
         d.set_close_response("close")
-        # "Open on GitHub" with the log attached keeps the dialog to say where the log is
-        # (#18, #19): the dialog closes only when the answer lets it. A click says
-        # "close-attempt" before "response", Escape only "close-attempt": the closing waits
-        # for the answer, if any, in the main loop.
+        # "Open on GitHub" with the log attached keeps the dialog to say where the log is:
+        # the dialog closes only when the answer lets it. A click says "close-attempt"
+        # before "response", Escape only "close-attempt": the closing waits for the answer,
+        # if any, in the main loop.
         d.set_can_close(False)
         stay = {"open": False}
 

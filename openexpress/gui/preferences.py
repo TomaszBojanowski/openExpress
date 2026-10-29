@@ -197,9 +197,8 @@ def cache_toast(win, text: str) -> None:
 def account_changed(win, cause: Cause = Cause.ACCOUNT_CHANGED) -> None:
     """A change of account (login, logout, the key from the installer): the session made
     with the old one is dropped and the devices detected again. The device open before is
-    opened again when it is still there, also among several, and the page shown stays
-    (Q3), but for the view of a device of the account after a logout (`cause`
-    LOGGED_OUT)."""
+    opened again when it is still there, also among several, and the page shown stays, but
+    for the view of a device of the account after a logout (`cause` LOGGED_OUT)."""
     render_account_row(win)
     reopen = open_address(win.session) or None
     win.session = None
@@ -216,7 +215,7 @@ def resolve_account(win) -> None:
         listed = getattr(getattr(s, "ownership_error", None), "devices", None)
     if listed is not None:
         win._account_wanted = False
-        # Not asked again; kept as any list of the account is, with the kinds it tells (Q4).
+        # Not asked again; kept as any list of the account is, with the kinds it tells.
         # The caller draws the page shown, after deciding where the user goes.
         win._set_account(listed, draw=False)
     elif getattr(win, "_account_wanted", False):

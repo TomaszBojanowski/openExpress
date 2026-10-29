@@ -267,7 +267,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.monitor = Gio.VolumeMonitor.get()
         self.monitor.connect("mount-added", self._on_mount_added)
         self.monitor.connect("mount-removed", self._on_mount_removed)
-        # A drive that the system does not mount (KDE) sends no mount event (#19).
+        # A drive that the system does not mount (KDE) sends no mount event.
         self.monitor.connect("volume-added", self._on_volume_added)
         self.monitor.connect("volume-changed", self._on_volume_changed)
         self.monitor.connect("volume-removed", self._on_volume_removed)
@@ -392,7 +392,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         breakpoint.add_setter(self.sync_icon_button, "visible", True)
         self.add_breakpoint(breakpoint)
 
-        # The start page is the root; the device view comes above it (D5, D7).
+        # The start page is the root; the device view comes above it.
         refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text=_("Refresh"),
                              action_name="win.refresh")
         start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic",

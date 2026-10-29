@@ -32,7 +32,7 @@ def _check_again(win) -> None:
 
 def map_update_type_text(word: str) -> str:
     """Under "Map updates for this device aren't supported yet": the map update type Garmin
-    gives the device (unit-info), so that a report can name it (analysis 14, b6)."""
+    gives the device (unit-info), so that a report can name it."""
     # TRANSLATORS: {type} is a word of Garmin's server, e.g. "Gemini"
     return _("Garmin's map update type for this device: {type}").format(type=word)
 
@@ -465,7 +465,7 @@ class MapsPage:
 
 def _cleanup_paragraph(win) -> str:
     """The old files Garmin's cleanup rules would take, at the end of a question before a map
-    is installed, updated or removed (point 8, stage 1: shown, never removed); "" without."""
+    is installed, updated or removed (shown, never removed); "" without."""
     from openexpress import maps as mp
 
     lines = mp.cleanup_lines(getattr(win, "map_cleanup", None) or [])

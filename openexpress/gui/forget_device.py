@@ -1,5 +1,5 @@
-"""Forgetting a device from the read-only view of a device remembered and not connected (PLAN
-T7): its button "Forget Device…", the question and what follows. ForgetDevice is a mixin of
+"""Forgetting a device from the read-only view of a device remembered and not connected: its
+button "Forget Device…", the question and what follows. ForgetDevice is a mixin of
 MainWindow (gui/app.py), without __init__ of its own; what it uses of the window
 (_remembered_unit, connected, session, navigation, toast, error, in_background) is the
 window's. What goes is forget.forget_device's to decide."""

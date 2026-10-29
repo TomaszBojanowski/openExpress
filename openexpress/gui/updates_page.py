@@ -48,9 +48,9 @@ ARROW = "\u00a0→\u00a0"
 
 
 def data_loss_text(session) -> str:
-    """The warning before an update of a device that loses its data on one (point 6 of
-    package 3): a drive is not synced by openExpress; otherwise how many activities wait to be
-    uploaded, when the window has counted them."""
+    """The warning before an update of a device that loses its data on one: a drive is not
+    synced by openExpress; otherwise how many activities wait to be uploaded, when the window
+    has counted them."""
     from openexpress import updates as upd
 
     if getattr(session, "mass_storage", False):
@@ -181,7 +181,7 @@ class UpdatesPage:
             title = update_state_text("ready", count, mass_storage=mass_storage)
             versions = f"{d.software_version_str}{ARROW}{ready.version}"
             if mass_storage:
-                # A drive: the device takes the update once it is ejected (#11).
+                # A drive: the device takes the update once it is ejected.
                 buttons.append(self._button(
                     _("Eject"), lambda button, s=self.session: self.eject_device(s, button=button),
                     "suggested-action", with_button=True))
@@ -267,7 +267,7 @@ class UpdatesPage:
 
         s = self.session
         # A drive: the copy is on the disk once written (LocalStorage syncs it), but the device
-        # may take it only once the drive is ejected (#11), so the cable may go out only then.
+        # may take it only once the drive is ejected, so the cable may go out only then.
         mass_storage = getattr(s, "mass_storage", False)
         chosen = upd.select(self.updates_cache, [u.part_number])
         version = (f"{s.device.software_version_str}{ARROW}{u.version}" if u.is_system

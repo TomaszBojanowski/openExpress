@@ -101,11 +101,11 @@ def last_sync_words(data: dict, now: datetime | None = None) -> str:
 
 def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
                        now: datetime | None = None) -> str:
-    """The subtitle of "Last sync" (analysis 14, stage 3): "Never synced" for a device this
-    installation never synced (no state.json, the one source of it, as on its tile); else
-    its last sync (`data`, last_sync.json) or that none is recorded; then how many new
-    activities there are to upload (`to_sync`, the count of the chip "To sync"), unless its
-    last sync could not upload (as the tile, which shows no chip then)."""
+    """The subtitle of "Last sync": "Never synced" for a device this installation never
+    synced (no state.json, the one source of it, as on its tile); else its last sync (`data`,
+    last_sync.json) or that none is recorded; then how many new activities there are to upload
+    (`to_sync`, the count of the chip "To sync"), unless its last sync could not upload (as the
+    tile, which shows no chip then)."""
     if not unit_id or not sync.synced_here(unit_id):
         return never_synced()
     text = last_sync_words(data, now) if data else no_sync_record()
@@ -173,9 +173,9 @@ def music_kinds(device) -> list:
 
 
 def backups_text(unit_id) -> str:
-    """The subtitle of "Backup" (analysis 14, b5): when the last backup of the device was
-    made and how many there are in its folder (only the backups openExpress made, not the
-    copies of the app list); none: says so."""
+    """The subtitle of "Backup": when the last backup of the device was made and how many
+    there are in its folder (only the backups openExpress made, not the copies of the app
+    list); none: says so."""
     from openexpress.backup import STAMP, is_backup_dir
 
     found = []
@@ -227,8 +227,8 @@ def device_error_details(entry) -> str:
 
 
 def device_error_row(win, group=None) -> None:
-    """The row "Device error log" under "Backup" (analysis 20, §3.2): only when the device
-    logged an "RTL Trap" in the last 30 days (read when it was opened, the copy on or off).
+    """The row "Device error log" under "Backup": only when the device logged an "RTL Trap"
+    in the last 30 days (read when it was opened, the copy on or off).
     Inside, where they apply: Copy Crash Logs (a device that hides its event logs) and Copy
     Memory Dumps. Drawn again in its place when that changes."""
     old = getattr(win, "device_error_row", None)
@@ -434,7 +434,7 @@ def get_picture_from_account(win, button=None) -> None:
 
 def account_picture_refused_text(status: int | None) -> str:
     """Why Get Picture From Account got no answer, in short: HTTP 404, the account does not
-    know the device (an epix not on it, 27.10.2026); anything else, try later."""
+    know the device (an epix not on it); anything else, try later."""
     if status == 404:
         return _("Garmin Connect does not know this device, so it has no picture of it.")
     return _("Garmin Connect could not be asked for the picture. Try again later.")
@@ -444,7 +444,7 @@ def read_diagnostics(win) -> None:
     """What the open device logged as errors, and its diagnostic files copied when the copy
     is on (diagnostics.at_open: once per connection, never a session of our own), read in
     the background once its page is shown, not in the opening (3.7-4.4 s of 4.5-5 s on a
-    watch, 27.10.2026). A task that writes to the device waits for it
+    watch). A task that writes to the device waits for it
     (window_tasks.wait_for_the_diagnostics); the row "Device error log" is drawn with it."""
     s = win.session
     if (s is None or getattr(s, "diagnostics", None) is not None
@@ -608,8 +608,8 @@ def show_update_record(win) -> bool:
 
 def open_device_kind(s, account) -> str | None:
     """The kind of the open device as its tile knows it: the same devicelist.tiles from
-    devices.json and the account's list (also for D7, when no tile was shown before).
-    Nothing is asked."""
+    devices.json and the account's list (also for the one device connected, opened at once
+    with no tile shown before). Nothing is asked."""
     d = s.device
     unit_id = getattr(d, "unit_id", None) or None
     if unit_id is None:
@@ -739,8 +739,8 @@ class DevicePage:
         self._show_start()
 
     def show_device(self) -> None:
-        """The device open now (self.session) in every page, and its view (D7,
-        _show_device_view); without one, show_no_device."""
+        """The device open now (self.session) in every page, and its view
+        (_show_device_view); without one, show_no_device."""
         if self.session is None:
             self.show_no_device()
             return
@@ -754,7 +754,7 @@ class DevicePage:
             self._update_check_session = self.session
         self.show_overview()
         self.load_section(page)
-        # Else the one device (D7): its tile comes from the session.
+        # Else the one device: its tile comes from the session.
         self.connected.keep_if_open(lambda c: self._is_open(c))
         resolve_account(self)
         self._show_device_view()
@@ -876,7 +876,7 @@ class DevicePage:
         hero = sec.group()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER,
                       margin_bottom=12)
-        # Until its picture comes: the icon its tile shows (T5.1), not the program's.
+        # Until its picture comes: the icon its tile shows, not the program's.
         self.device_image = Gtk.Image(icon_name=device_view_icon(self, s), pixel_size=128,
                                       height_request=DEVICE_PICTURE_SIZE)
         self.device_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, can_shrink=True,
@@ -966,8 +966,8 @@ class DevicePage:
                 self._check_maps_quietly()
 
         if not mass_storage:
-            # As "Maps" (analysis 14, b11): to their pages; how many only once those pages
-            # have read them (note_apps_count, note_music_count), never a read of their own.
+            # As "Maps": to their pages; how many only once those pages have read them
+            # (note_apps_count, note_music_count), never a read of their own.
             # TRANSLATORS: group on the device page with the rows "Apps" and "Music"
             g = sec.group(_("Apps and music"))
             self.apps_row = Adw.ActionRow(title=pgettext("tab", "Apps"), activatable=True)
@@ -992,14 +992,14 @@ class DevicePage:
             row.add_suffix(self._button(_("Log out"), self.logout))
             g.add(row)
         if not mass_storage:
-            # The row stays when it cannot be read (analysis 14, c7): why, in short.
+            # The row stays when it cannot be read: why, in short.
             self.primary_row = Adw.ActionRow(title=_("Primary training device"),
                                              subtitle=primary_training_unknown(s))
             g.add(self.primary_row)
             if s.logged_in and s.ownership_error is None and s.account_devices is not None:
                 self._show_primary_training(self.primary_row)
-                # Read only, from the list the ownership check read (analysis 14, stage 4):
-                # only for a device that can be one.
+                # Read only, from the list the ownership check read: only for a device that
+                # can be one.
                 wearable = devicelist.primary_wearable(s.account_devices, d.unit_id)
                 if wearable is not None:
                     g.add(primary_wearable_row(self, wearable))
@@ -1007,7 +1007,7 @@ class DevicePage:
             g.add(account_picture_row(self, s))
 
         g = sec.group(_("Tools"))
-        if not mass_storage:  # D6: no backup of a device in mass storage mode
+        if not mass_storage:  # no backup of a device in mass storage mode
             self.backup_row = Adw.ActionRow(title=_("Backup"))
             show_backups(self)  # when the last one was made, how many; the folder in the tooltip
             # TRANSLATORS: button that creates a backup
@@ -1107,9 +1107,9 @@ class DevicePage:
                     getattr(s, "mass_storage", False) and kind_untold(s.device)):
                 # Off the account its address comes only from unit-info, while it is
                 # connected: asked now for the address alone, so that the picture can come
-                # back once the cache is cleared (a Venu 2, 21.10.2026). The file stays.
+                # back once the cache is cleared (a Venu 2). The file stays.
                 # A drive whose kind Garmin has not told: asked once a run as well, so that
-                # the log says what unit-info tells of it (an inReach, #11).
+                # the log says what unit-info tells of it (an inReach).
                 def address():
                     return picture_from_unit_info(s.client, s.device,
                                                   ask=lambda: service.unit_info(s))
@@ -1335,7 +1335,7 @@ class DevicePage:
         row = self.last_sync_row
         for child in self._last_sync_children:
             # With the row the list put around it: the box alone is no child of the expander
-            # row, so it stayed, and each drawing added the details once more (since 0.6.6).
+            # row, so it would stay, and each drawing would add the details once more.
             row.remove(child.get_parent() or child)
         self._last_sync_children = []
         s = self.session

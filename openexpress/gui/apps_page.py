@@ -60,8 +60,8 @@ def note_apps_count(win, count: int | None) -> None:
 
 
 def refused_dirs_text(dirs: list[str]) -> str | None:
-    """One line on the Apps page (analysis 14, b10): the app folders the device refused to
-    create with its software now (ciq.json); None: none."""
+    """One line on the Apps page: the app folders the device refused to create with its
+    software now (ciq.json); None: none."""
     if not dirs:
         return None
     # TRANSLATORS: {folders} are folders of the device, e.g. "garmin/apps/media"
@@ -122,9 +122,9 @@ class AppsPage:
         from openexpress import ciq
 
         note_apps_count(self, len(state.store_apps))  # the row "Apps" of the device page
-        # A folder the device refused with its software now: one line (analysis 14, b10).
+        # A folder the device refused with its software now: one line.
         refused = refused_dirs_text(ciq.refused_dirs(self.session.device))
-        # No app list yet (#14): none on the device; the account's apps can be installed.
+        # No app list yet: none on the device; the account's apps can be installed.
         space = ciq.no_apps_text() if state.no_app_list else self._apps_space(state)
         g = sec.group(_("On the device"), f"{space}\n{refused}" if refused else space)
         if updates:
