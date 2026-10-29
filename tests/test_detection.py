@@ -12,7 +12,7 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, record_sync, replace_in_window, window_methods
+from fakes import RunNow, record_sync, replace_in_window, start_section, window_methods
 from fakes import window as stand_in
 from gio_fake import answer_as_gio
 
@@ -5691,17 +5691,19 @@ def test_the_remembered_section_only_with_remembered_devices():
 
     start = StartPage()
     start.show([(tile("fēnix 8", True), "Over USB (MTP) · Software 23.39")], False)
-    assert start.connected_title.get_visible()
-    assert not start.remembered_title.get_visible()
+    assert start_section(start, "connected").title.get_visible()
+    assert not start_section(start, "remembered").title.get_visible()
     start.show([(tile("fēnix 8", True), "x"), (tile("Venu 2", False), "y")], False)
-    assert start.remembered_title.get_visible() and start.remembered_title.get_label() == (
+    remembered_section = start_section(start, "remembered")
+    assert remembered_section.title.get_visible() and remembered_section.title.get_label() == (
         "Remembered")
     connected, remembered = start.tiles()
-    assert connected.get_parent() is start.grid
-    assert remembered.get_parent() is start.remembered_grid
+    assert connected.get_parent() is start_section(start, "connected").grid
+    assert remembered.get_parent() is start_section(start, "remembered").grid
     assert connected.has_css_class("connected") and not remembered.has_css_class("connected")
     start.show([(tile("Venu 2", False), "y")], True)
-    assert not start.connected_title.get_visible() and start.remembered_title.get_visible()
+    connected_section = start_section(start, "connected")
+    assert not connected_section.title.get_visible() and remembered_section.title.get_visible()
 
 
 @pytest.mark.needs_display
@@ -5714,9 +5716,12 @@ def test_the_tile_grids_start_where_the_headings_do():
     from openexpress.gui.start import StartPage
 
     start = StartPage()
-    grids = (start.grid, start.remembered_grid, start.account_grid)
+    remembered_section = start_section(start, "remembered")
+    account_section = start_section(start, "on-account")
+    connected_section = start_section(start, "connected")
+    grids = (connected_section.grid, remembered_section.grid, account_section.grid)
     assert [g.get_halign() for g in grids] == [Gtk.Align.FILL] * 3
-    titles = (start.connected_title, start.remembered_title, start.account_title)
+    titles = (connected_section.title, remembered_section.title, account_section.title)
     assert all(title.get_xalign() == 0 for title in titles)
 
 
@@ -5767,7 +5772,8 @@ def test_tiles_have_one_width_in_every_section():
         columns, width = start.columns.layout
         assert columns == 3
         assert width - 12 <= widths[0] <= width  # the tile's own CSS edge aside
-        rows = {round(t.compute_bounds(start.grid)[1].get_y()) for t in tiles[:3]}
+        connected_section = start_section(start, "connected")
+        rows = {round(t.compute_bounds(connected_section.grid)[1].get_y()) for t in tiles[:3]}
         assert len(rows) == 1  # the three connected ones on one line
     finally:
         win.destroy()
@@ -5824,8 +5830,9 @@ def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
         turn(0.5)  # the width from the page comes a frame later
         assert start.columns.layout[0] == per_line
         assert len({t.get_width() for t in tiles}) == 1  # also the remembered one
-        box = start.connected_title.get_parent()
-        left, _top, right = bounds(start.connected_title, box)  # the heading spans the page
+        box = start_section(start, "connected").title.get_parent()
+        connected_section = start_section(start, "connected")
+        left, _top, right = bounds(connected_section.title, box)  # the heading spans the page
         connected = [bounds(t, box) for t in tiles[:3]]
         assert len({top for _x, top, _r in connected}) == 3 // per_line  # lines
         assert all(x == left for x, _top, _r in connected[::per_line])  # under the heading
@@ -5946,11 +5953,11 @@ def test_a_wide_window_with_two_tiles_a_section_has_two_columns_in_the_middle():
         assert start.columns.layout[0] == 2
         tiles = start.tiles()
         assert len({t.get_width() for t in tiles}) == 1 and tiles[0].get_width() <= 300
-        box = start.connected_title.get_parent()
+        box = start_section(start, "connected").title.get_parent()
         left, right = _left_right(box, nav)
         assert abs(left - right) <= 1, (left, right)
-        for title, first in ((start.connected_title, tiles[0]),
-                             (start.remembered_title, tiles[2])):
+        for title, first in ((start_section(start, "connected").title, tiles[0]),
+                             (start_section(start, "remembered").title, tiles[2])):
             assert _left_right(title, nav)[0] == _left_right(first, nav)[0]
         assert _left_right(tiles[1], nav)[1] == right  # the second column ends the block
     finally:
@@ -5969,7 +5976,7 @@ def test_one_tile_stands_in_the_middle():
         assert tile.get_width() <= 300
         left, right = _left_right(tile, nav)
         assert abs(left - right) <= 1, (left, right)
-        assert _left_right(start.connected_title, nav)[0] == left
+        assert _left_right(start_section(start, "connected").title, nav)[0] == left
     finally:
         win.destroy()
 
@@ -6316,17 +6323,17 @@ def test_the_account_section_adds_tiles_without_touching_the_others():
              (tile("Venu 2", False, 1.0), "Software 19.05 · Last seen")]
     start = StartPage()
     start.show(first, False)
-    assert not start.account_title.get_visible()
+    assert not start_section(start, "on-account").title.get_visible()
     before = start.tiles()
     # The account's list adds a device and its flags to the connected one.
     start.show([(tile("fēnix 8", True, None, on_account=True), "Over USB (MTP)"), first[1],
                 (tile("Forerunner 965", False, None, on_account=True),
                  "Software 22.26 · Not seen on this computer")], False)
-    assert start.account_title.get_visible()
-    assert start.account_title.get_label() == "On the account"
+    assert start_section(start, "on-account").title.get_visible()
+    assert start_section(start, "on-account").title.get_label() == "On the account"
     after = start.tiles()
     assert after[0] is before[0] and after[1] is before[1] and len(after) == 3
-    assert after[2].get_parent() is start.account_grid
+    assert after[2].get_parent() is start_section(start, "on-account").grid
 
 
 # --- the account's list asked once --------------------------------------------------------------
@@ -6967,10 +6974,12 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_windo
     win.connected.listing(seven_watches(), None)
     MainWindow.show_choices(win)
     assert later == []  # nothing to read: no file in the cache, no address
-    assert not start.grid.get_visible() and start.grid.get_first_child() is None
-    assert start.list.get_visible()
+    connected_section = start_section(start, "connected")
+    assert not connected_section.grid.get_visible()
+    assert connected_section.grid.get_first_child() is None
+    assert start_section(start, "connected").list.get_visible()
     rows = start.tiles()[:7]
-    assert all(row.get_parent() is start.list for row in rows)
+    assert all(row.get_parent() is start_section(start, "connected").list for row in rows)
     assert [row.get_title() for row in rows] == [f"Watch {n}" for n in range(7)]
     assert rows[0].get_subtitle() == "Software 1.00"
     assert tile_image(rows[1]).get_icon_name() == kind_icon("watch")
@@ -6978,10 +6987,11 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_windo
     remembered = start.tiles()[7:]
     assert len(remembered) == 2
     # Tiles there: the empty list of that section is hidden, not only empty.
-    assert start.remembered_grid.get_visible() and not start.remembered_list.get_visible()
-    assert all(t.get_parent() is start.remembered_grid for t in remembered)
-    start.list.emit("row-activated", rows[3])
-    start.remembered_grid.emit("child-activated", remembered[1])
+    remembered_section = start_section(start, "remembered")
+    assert remembered_section.grid.get_visible() and not remembered_section.list.get_visible()
+    assert all(t.get_parent() is start_section(start, "remembered").grid for t in remembered)
+    start_section(start, "connected").list.emit("row-activated", rows[3])
+    start_section(start, "remembered").grid.emit("child-activated", remembered[1])
     assert opened == [3, 8]  # the places in the whole list, as for tiles
     assert win._start_entries[3][1].uri == "mtp://watch-3/"  # the device of that row
 
@@ -7012,8 +7022,9 @@ def test_a_click_gives_the_place_the_tile_had_in_the_list_shown():
     assert opened == [2, 3, 0, 1]
     # Drawn again with one tile less before them: the tiles kept know their new places.
     start.show(entries[1:], False)
-    item = next(i for i in start.tiles() if i.get_parent() is start.account_grid)
-    start.account_grid.emit("child-activated", item)
+    account_section = start_section(start, "on-account")
+    item = next(i for i in start.tiles() if i.get_parent() is account_section.grid)
+    start_section(start, "on-account").grid.emit("child-activated", item)
     assert opened[-1] == 1
 
 
@@ -7076,13 +7087,15 @@ def test_a_row_gets_its_picture_like_a_tile():
     entries = [(tile(n), "x") for n in range(7)]
     six = StartPage()
     six.show(entries[:6], False)  # six: tiles, the empty list hidden
-    assert six.grid.get_visible() and not six.list.get_visible()
-    assert six.list.get_first_child() is None
+    six_tiles = start_section(six, "connected")
+    assert six_tiles.grid.get_visible() and not six_tiles.list.get_visible()
+    assert six_tiles.list.get_first_child() is None
     textures = {}  # the window's store, which the page reads
     start = StartPage(picture_of=textures.get)
     start.show(entries, False)
     rows = start.tiles()
-    assert len(rows) == 7 and all(row.get_parent() is start.list for row in rows)
+    connected_section = start_section(start, "connected")
+    assert len(rows) == 7 and all(row.get_parent() is connected_section.list for row in rows)
     texture = Gdk.MemoryTexture.new(4, 4, Gdk.MemoryFormat.R8G8B8, GLib.Bytes.new(bytes(48)),
                                     12)
     textures["006-B0002-00"] = texture  # kept by the window, then given to the page

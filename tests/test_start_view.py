@@ -6,7 +6,7 @@ again from what is known, the devices are not asked. All devices are made up."""
 import types
 
 import pytest
-from fakes import record_sync
+from fakes import record_sync, start_section
 from test_sync_chips import UNIT, _chips_on, _start_window, listed  # noqa: F401 - a fixture
 
 from openexpress import sync
@@ -73,15 +73,18 @@ def test_the_view_chosen_lays_out_the_sections_and_a_click_opens_the_same_device
     start.show(_entries(3, 1), False)
     rows = start.tiles()
     assert all(isinstance(row, DeviceRow) for row in rows)
-    assert [row.get_parent() for row in rows] == [start.list] * 3 + [start.remembered_list]
-    assert not start.grid.get_visible() and start.list.get_visible()
-    start.list.emit("row-activated", rows[1])
-    start.remembered_list.emit("row-activated", rows[3])
+    remembered_section = start_section(start, "remembered")
+    connected_section = start_section(start, "connected")
+    assert [row.get_parent() for row in rows] == ([connected_section.list] * 3
+                                                  + [remembered_section.list])
+    assert not connected_section.grid.get_visible() and connected_section.list.get_visible()
+    start_section(start, "connected").list.emit("row-activated", rows[1])
+    start_section(start, "remembered").list.emit("row-activated", rows[3])
     assert opened == [1, 3]
     start.view = "grid"
     start.show(_entries(7, 1), False)
     assert all(isinstance(t, Gtk.FlowBoxChild) for t in start.tiles())
-    assert start.grid.get_visible() and not start.list.get_visible()
+    assert connected_section.grid.get_visible() and not connected_section.list.get_visible()
     start.view = "auto"
     start.show(_entries(7, 1), False)
     assert [type(t).__name__ for t in start.tiles()] == ["DeviceRow"] * 7 + ["FlowBoxChild"]

@@ -7,6 +7,7 @@ import dataclasses
 import time
 
 import pytest
+from fakes import start_section
 
 NOW = time.time()
 
@@ -69,7 +70,8 @@ def _page(on_open=None):
     entries = _entries()
     start.show(entries, False)
     rows = start.tiles()
-    assert len(rows) == 7 and all(row.get_parent() is start.list for row in rows)
+    connected_section = start_section(start, "connected")
+    assert len(rows) == 7 and all(row.get_parent() is connected_section.list for row in rows)
     return start, entries, rows
 
 
@@ -138,7 +140,7 @@ def test_a_row_is_opened_from_the_keyboard_and_tells_what_it_shows():
         row = rows[3]
         assert row.get_focusable() and row.get_activatable()
         assert row.grab_focus()
-        start.list.emit("activate-cursor-row")
+        start_section(start, "connected").list.emit("activate-cursor-row")
         assert opened == [3]
         assert row.accessible_label == ("Watch 3, Never synced, Primary, Software 1.03")
     finally:

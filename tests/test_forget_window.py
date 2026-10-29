@@ -7,6 +7,7 @@ import json
 import types
 
 import pytest
+from fakes import start_section
 from fakes import window as stand_in
 
 FENIX, EDGE = 3000000001, 3000000002
@@ -344,7 +345,8 @@ def test_a_section_laid_out_anew_without_it_is_built_again():
     page.show(rest[1:], notice=False)
     after = page.tiles()
     assert not set(after) & set(before)
-    assert page.remembered_grid.get_visible() and not page.remembered_list.get_visible()
+    remembered_section = start_section(page, "remembered")
+    assert remembered_section.grid.get_visible() and not remembered_section.list.get_visible()
 
 
 @pytest.mark.needs_display

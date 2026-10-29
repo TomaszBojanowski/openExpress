@@ -481,12 +481,6 @@ class StartPage:
         self.account_note = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
                                       visible=False, css_classes=["dim-label", "caption"])
         box.append(self.account_note)
-        connected, remembered, account = self._sections.values()
-        self.connected_title, self.grid, self.list = (connected.title, connected.grid,
-                                                      connected.list)
-        self.remembered_title, self.remembered_grid, self.remembered_list = (
-            remembered.title, remembered.grid, remembered.list)
-        self.account_title, self.account_grid = account.title, account.grid
         # The tiles' width, from the width of the page, the same in every section.
         self.columns = _TileColumns(box, [s.grid for s in self._sections.values()])
         page.append(self.columns)

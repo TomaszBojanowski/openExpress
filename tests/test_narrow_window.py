@@ -10,7 +10,7 @@ import types
 import uuid
 
 import pytest
-from fakes import record_sync
+from fakes import record_sync, start_section
 
 NARROWEST = 360  # the width of gui_settings.MIN_WINDOW
 FONT = "Adwaita Sans 11"  # GNOME's: the widths are measured in it
@@ -657,7 +657,8 @@ def test_a_list_with_the_longest_chips_fits_the_narrowest_window(narrow_window, 
     win.start.show(_tiles_with_chips(), False)
     _iterate(0.3)
     rows = win.start.tiles()
-    assert len(rows) == 9 and all(row.get_parent() is win.start.list for row in rows)
+    connected_section = start_section(win.start, "connected")
+    assert len(rows) == 9 and all(row.get_parent() is connected_section.list for row in rows)
     assert win.start.page.get_width() <= NARROWEST
     assert _min_width(win.start.page) <= NARROWEST
     chips = [(row, chip) for row in rows for chip in _chip_labels(row)]

@@ -255,6 +255,12 @@ def step_words(lines):
 # --- the window's own methods on a stand-in ------------------------------------------------
 
 
+def start_section(start, key):
+    """A section of the start page (gui.start.StartPage) by its key, as devicelist names the
+    sections ("connected", "remembered", "on-account"): its title, grid and list."""
+    return start._sections[key]
+
+
 def window(**changes):
     """A stand-in for the window without GTK: every attribute the real window has, with the
     value it has before anything is shown (MainWindow._init_state), then `changes`. None of
