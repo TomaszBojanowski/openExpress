@@ -1021,6 +1021,31 @@ def test_no_ptp_session_keeps_the_old_behaviour(hidden_apps, monkeypatch):
     assert fake.operations == []
 
 
+def test_sync_does_not_try_to_create_a_hidden_folder(hidden_apps, monkeypatch):
+    """The sync installs without a PTP session: an app for a folder the device only hides
+    stays queued, and the folder is not asked for. No copy of the app list is made and no
+    refusal is kept, so the Apps page does not say the device refused the folder."""
+    st, dev, fake = hidden_apps
+    monkeypatch.setattr(LocalStorage, "_mkdir", lambda self, p: pytest.fail("mkdir was tried"))
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert (rep.installed, rep.failed, rep.for_phone) == ([], [], ["Face It"])
+    assert ciq.refused_dirs(dev) == [] and ciq.app_list_copies(dev) == []
+    assert client.downloads == 0 and client.acks == [] and st.sessions == 0
+
+
+def test_sync_creates_a_missing_folder_also_when_ptp_is_there(hidden_apps):
+    """No app of the device has a file out of sight: the folder is missing, not hidden, and
+    the sync creates it as on any device."""
+    st, dev, fake = hidden_apps
+    (st.root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([(PRELOADED, 8, "Softball", True, "")]))
+    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    client = CountingClient()
+    rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
+    assert (rep.installed, rep.failed, rep.for_phone) == (["Face It"], [], [])
+    assert (st.root / "GARMIN/APPS/MEDIA").is_dir() and st.sessions == 0
+
+
 def test_usb_device_cannot_be_opened(hidden_apps):
     from openexpress.device import ptp
 

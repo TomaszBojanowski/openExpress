@@ -975,7 +975,7 @@ def install_queued(
     if leftover:
         # The PTP session did not find their folder either: the old way, creating it.
         again, _none = _install_pass(device, storage, client, leftover, known, only, progress,
-                                     direct=False)
+                                     direct=False, ptp_tried=True)
         report.installed += again.installed
         report.direct += again.direct
         report.updated += again.updated
@@ -1005,7 +1005,7 @@ def _free_slots(device: GarminDevice, state: InstalledState) -> int | None:
 
 
 def _install_pass(device, storage, client, messages, known, only, progress,
-                  direct: bool) -> tuple[IqInstallReport, list[dict]]:
+                  direct: bool, ptp_tried: bool = False) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
     state = read_installed(device, storage)
     if state.no_app_list:
@@ -1055,8 +1055,16 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if existing is None:
                     _check_slot(free_slots, len(new_entries) + len(hidden))
                 _check_not_leaving(existing)
-                over_ptp = direct and usb_dir_state(device, storage, dt) == DIRECT
-                if not over_ptp and not prepare_app_dir(device, storage, dt):
+                where = usb_dir_state(device, storage, dt)
+                over_ptp = direct and where == DIRECT
+                # A folder the device only hides (an app of its own has a file there, out of
+                # sight) is not asked for without a PTP session: the request is pointless and
+                # its refusal would be kept as if the folder could not be had. Once a session
+                # did not find it, it is created the old way.
+                folder_hidden = (not over_ptp and not ptp_tried and where == DIRECT
+                                 and _hides_app_files(device, storage))
+                if folder_hidden or (not over_ptp
+                                     and not prepare_app_dir(device, storage, dt)):
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
                     if usb_dir_state(device, storage, dt) == SANDBOXED:
