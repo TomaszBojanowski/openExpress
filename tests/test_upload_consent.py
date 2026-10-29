@@ -254,7 +254,7 @@ def test_blocked_sync_uploads_nothing_but_still_downloads(device_root, xdg, fake
     assert client.asked.count(("consent", "DI_CONNECT_UPLOAD")) == 1
 
 
-def test_allowed_sync_uploads_as_before(device_root, xdg, fake_client, capsys):
+def test_a_sync_allowed_by_the_account_asks_consent_first_and_uploads(device_root, xdg, fake_client, capsys):
     client = fake_client["client"] = Account()
     assert main(["--path", str(device_root), "sync", "--apply", "--all"]) == 0
     assert len(client.uploads) == 2 and "Nothing was uploaded" not in capsys.readouterr().out

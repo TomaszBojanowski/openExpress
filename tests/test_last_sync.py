@@ -119,7 +119,7 @@ def test_every_row_of_a_sync_that_uploaded_nothing(data, english, polish):
      ("Nie wysłano danych: nie udało się sprawdzić zgody na przesyłanie. Spróbuj ponownie "
       "później")),
 ])
-def test_the_details_say_why_in_full_as_before(reason, english, polish):
+def test_the_details_say_in_full_why_nothing_was_uploaded(reason, english, polish):
     for language, words in (("en", english), ("pl", polish)):
         i18n.setup(language)
         try:
@@ -129,7 +129,7 @@ def test_the_details_say_why_in_full_as_before(reason, english, polish):
     assert step_words(_blocked("a reason of a newer version")["lines"]) == []
 
 
-def test_an_older_record_of_a_blocked_sync_reads_as_before():
+def test_an_older_record_of_a_blocked_sync_keeps_its_words_as_the_details():
     """An older record keeps the reason as the words of that moment: they stay the
     details, and the row has no reason to tell."""
     data = {"uploaded": 0, "downloaded": 1, "lines": [

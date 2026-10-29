@@ -579,7 +579,7 @@ def test_a_mount_with_another_address_reads_the_list_again(detecting):
     assert win.rereads == [win.session]
 
 
-def test_no_open_device_is_detected_as_before(detecting):
+def test_a_mount_with_no_device_open_runs_a_detection(detecting):
     from openexpress.gui.app import MainWindow
 
     win = detecting
@@ -588,7 +588,7 @@ def test_no_open_device_is_detected_as_before(detecting):
     assert len(win.tasks) == 1 and win.reads == []
 
 
-def test_an_open_device_that_does_not_answer_is_detected_as_before(detecting):
+def test_a_mount_of_an_open_device_that_does_not_answer_runs_a_detection(detecting):
     from openexpress.gui.app import MainWindow
 
     win = detecting
@@ -3408,7 +3408,7 @@ def test_the_usb_node_of_a_device(usb_nodes):
     assert gio_storage.usb_node(None) is None
 
 
-def test_flatpak_without_access_to_usb_stays_as_before(exclusive, monkeypatch):
+def test_flatpak_without_access_to_usb_opens_no_ptp_session_and_unmounts_nothing(exclusive, monkeypatch):
     st, _fake, events = exclusive
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
     assert st.usb_blocked() and st.exclusive_ptp() is None
@@ -3416,7 +3416,7 @@ def test_flatpak_without_access_to_usb_stays_as_before(exclusive, monkeypatch):
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="root may write any file")
-def test_flatpak_with_a_node_it_may_not_write_stays_as_before(exclusive, usb_nodes,
+def test_flatpak_with_a_usb_node_it_may_not_write_opens_no_ptp_session(exclusive, usb_nodes,
                                                                monkeypatch):
     st, _fake, events = exclusive
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
@@ -3613,7 +3613,7 @@ def test_usb_state_ignores_a_garmin_in_mass_storage_mode(plugged):
 
 
 @pytest.mark.parametrize("classes", [("08", "ff"), ("06",), ("ff",), (None,), ()])
-def test_a_garmin_with_other_interfaces_is_waited_for_as_before(plugged, classes):
+def test_a_garmin_with_other_or_unreadable_interfaces_is_waited_for(plugged, classes):
     """Not only mass storage, or interfaces whose class cannot be read: waited for as a
     device in its normal mode."""
     mass_storage_device(plugged.root, product="51b4", classes=classes)

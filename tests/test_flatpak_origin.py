@@ -139,7 +139,7 @@ def test_the_report_says_where_the_flatpak_came_from(monkeypatch, device_root, o
         f"- openExpress: {__version__} ({words})")
 
 
-def test_outside_the_flatpak_the_report_is_as_before(monkeypatch, device_root):
+def test_outside_the_flatpak_the_report_says_source_and_asks_no_origin(monkeypatch, device_root):
     from openexpress import __version__, report
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse

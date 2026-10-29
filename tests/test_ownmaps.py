@@ -283,7 +283,7 @@ def maps_cli(device_root, xdg, monkeypatch):
     return device_root
 
 
-def test_maps_command_without_own_maps_reads_as_before(maps_cli, capsys):
+def test_maps_command_without_own_maps_has_no_own_maps_section(maps_cli, capsys):
     (maps_cli / "GARMIN" / "Listed.img").write_bytes(img_header(b"Of Garmin"))
     (maps_cli / "GARMIN" / "gmaptz.img").write_bytes(img_header(b"Time zones"))
     assert main(["--path", str(maps_cli), "maps"]) == 0
@@ -776,7 +776,7 @@ def test_a_file_that_changed_after_the_plan_is_not_deleted(map_folder, my_map):
     assert [m["filename"] for m in ownmaps.recorded(dev)] == ["mine.img"]
 
 
-def test_remove_without_own_works_on_garmins_maps_as_before(added, capsys):
+def test_remove_without_own_works_on_garmins_maps_only(added, capsys):
     (added / "GARMIN" / "Listed.img").write_bytes(img_header(b"Of Garmin"))
     assert main(["--path", str(added), "maps", "remove", "Somewhere"]) == 0
     out = capsys.readouterr().out

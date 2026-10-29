@@ -147,7 +147,7 @@ def test_cli_install_queues_it(no_list, device_root, apps_cli, capsys):
     assert "Face It" in out and "has not provided its Connect IQ app list yet" in out
 
 
-def test_cli_with_an_unreadable_list_is_as_before(iq_device, device_root, apps_cli, capsys):
+def test_cli_install_with_an_unreadable_list_fails_and_says_so(iq_device, device_root, apps_cli, capsys):
     from openexpress.cli import main
 
     damaged_out_bin(device_root, "truncated")

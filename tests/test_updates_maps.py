@@ -1202,7 +1202,7 @@ def test_update_files_report_their_progress(server, device_root, xdg):
     assert (device_root / "GARMIN/GUPDATE.GSP").read_bytes() == FILES["/fw/GUPDATE.GSP"]
 
 
-def test_update_install_without_a_progress_function_works_as_before(server, device_root, xdg):
+def test_update_install_without_a_progress_function_passes_none_to_each_write(server, device_root, xdg):
     ReportingStorage.seen = []
     items = updates.select(updates.parse_updates(sw_response(server)), ["all"])
     updates.install(items, ReportingStorage(device_root))
@@ -1697,7 +1697,7 @@ def _files_map(paths, size=10_000):
                              hosts=[])
 
 
-def _space_as_before(storage, m, removing):
+def _space_with_one_size_per_file(storage, m, removing):
     """The space a map needs, worked out with one size() for each file: what space_needed
     gives, listing each folder once."""
     freed = sum(storage.size(p) or 0 for p in removing)
@@ -1718,7 +1718,7 @@ def test_the_space_a_map_needs_lists_each_folder_once(device_root):
     (folder / "Old1.img").write_bytes(b"o" * 70)
     m = _files_map([f"Garmin/Maps/Map{n}.img" for n in range(10)])
     removing = ["Garmin/Maps/Old0.img", "Garmin/Maps/Old1.img"]
-    expected = _space_as_before(LocalStorage(device_root), m, removing)
+    expected = _space_with_one_size_per_file(LocalStorage(device_root), m, removing)
     storage = _ListingOverMtp(device_root)
     assert maps.space_needed(storage, m, removing) == expected
     assert sorted(storage.listed) == sorted(["", "Garmin", "Garmin/Maps"])
@@ -1743,7 +1743,7 @@ def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
         (device_root / name).write_bytes(b"x" * size)
     (device_root / "Garmin/Maps/Folder.img").mkdir(parents=True, exist_ok=True)
     m = _files_map(paths, size=100_000)
-    expected = _space_as_before(_ListingOverMtp(device_root), m, removing)
+    expected = _space_with_one_size_per_file(_ListingOverMtp(device_root), m, removing)
     assert maps.space_needed(_ListingOverMtp(device_root), m, removing) == expected
     assert maps.space_needed(LocalStorage(device_root), m, removing) == m.size - sum(
         LocalStorage(device_root).size(p) or 0 for p in removing)

@@ -3379,7 +3379,7 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
     assert (st.root / TWO).read_bytes() == songs[1].read_bytes()  # the new content
 
 
-def test_music_add_without_a_replaced_file_reads_as_before(iq_device, device_root, songs, capsys):
+def test_music_add_without_a_replaced_file_says_nothing_of_replacing(iq_device, device_root, songs, capsys):
     from openexpress.cli import main
 
     assert main(["--path", str(device_root), "music", "add", *map(str, songs)]) == 0

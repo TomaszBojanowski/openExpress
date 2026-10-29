@@ -269,7 +269,7 @@ def test_without_a_copy_that_differs_one_sentence_and_close(iq_device, device_ro
 
 
 @pytest.mark.needs_display
-def test_without_any_copy_the_dialog_is_as_before(iq_device, device_root, backups, monkeypatch):
+def test_without_any_copy_an_error_says_there_are_none_yet(iq_device, device_root, backups, monkeypatch):
     st, dev = iq_device
     _list(device_root, out_bin(APPS))
     made, errors = _dialog_of(monkeypatch, st, dev, backups)

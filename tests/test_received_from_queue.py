@@ -185,7 +185,7 @@ def test_the_plural_forms_in_polish():
     assert said(22) == [f"22 pliki z{NB}Garmin Connect: metryki ×22"]
 
 
-def test_a_record_without_the_line_is_shown_as_before():
+def test_a_record_without_the_received_files_line_shows_its_downloaded_count():
     """A record written without that line (the files of the queue only counted): the same
     details."""
     record = {"downloaded": 4, "lines": [service.trueup_step()]}

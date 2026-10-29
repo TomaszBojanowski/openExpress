@@ -363,7 +363,7 @@ def test_the_crash_log_goes_to_the_log_field_too(monkeypatch, device_root, log_f
 
 
 @pytest.mark.needs_display
-def test_copy_with_the_log_is_as_before(monkeypatch, device_root, log_file):
+def test_copy_puts_the_report_and_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
     _write_log(log_file, ["one"])
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     _attach_log(dialog)

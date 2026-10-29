@@ -34,7 +34,7 @@ def test_the_command_table_names_every_command():
     assert missing == []
 
 
-def test_the_command_table_names_the_options_the_review_found_missing():
+def test_the_command_table_names_the_main_options():
     table = _section("### Command line")
     wanted = {"sync": ["--all", "--upload-only", "--download-only", "--type",
                        "--include-diagnostics"],

@@ -165,7 +165,7 @@ def test_an_installer_for_macos_is_told_by_its_bytes(tmp_path):
         assert str(refused.value) == MACOS_TEXT.format(file=path.name), path.name
 
 
-def test_a_windows_program_is_read_as_before_whatever_it_ends_with(monkeypatch, tmp_path):
+def test_a_windows_program_is_never_taken_for_a_disk_image(monkeypatch, tmp_path):
     """A program for Windows (it starts with "MZ") is never taken for a disk image, even
     with the bytes of one at its end."""
     _stand_in_7z(monkeypatch, {"NetworkingDLL": b"made-up networking",
@@ -177,7 +177,7 @@ def test_a_windows_program_is_read_as_before_whatever_it_ends_with(monkeypatch, 
     assert sorted(found) == ["Networking.dll", "Utilities.dll"]
 
 
-def test_other_files_are_refused_as_before(tmp_path):
+def test_other_files_are_refused_as_not_a_garmin_express_installer(tmp_path):
     other = tmp_path / "notes.txt"
     other.write_bytes(b"made-up notes " * 100)
     assert not installer.is_macos_installer(other)

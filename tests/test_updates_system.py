@@ -777,7 +777,7 @@ def test_the_log_names_twenty_updates_at_most(device_root, caplog):
             in line and "006-D0021-00" not in line)
 
 
-def test_the_log_without_offers_looks_as_before(device_root, caplog):
+def test_the_log_without_offers_says_zero_offered(device_root, caplog):
     with caplog.at_level(logging.INFO, logger="openexpress.updates"):
         updates.mark_present(LocalStorage(device_root), [], 168)
         updates.mark_present(LocalStorage(device_root), [])  # the count not known

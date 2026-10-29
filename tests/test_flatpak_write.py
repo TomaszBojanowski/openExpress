@@ -291,7 +291,7 @@ def test_a_copy_that_takes_too_long_is_stopped(host, monkeypatch):
     assert stuck.killed and "timed out" in str(error.value)
 
 
-def test_without_a_progress_function_the_copy_runs_as_before(flatpak, tmp_path, monkeypatch):
+def test_without_a_progress_function_the_copy_runs_without_gio_progress(flatpak, tmp_path, monkeypatch):
     st, calls = flatpak
     monkeypatch.setattr(gio_storage.subprocess, "Popen",
                         lambda *a, **k: pytest.fail("-p without anyone to tell"))

@@ -135,7 +135,7 @@ def test_cli_maps_asks_the_universal_service_for_a_device_it_serves(device_root,
     assert code == 0 and asked == ["unit-info", "universal"]
 
 
-def test_cli_maps_with_path_asks_as_before(device_root, monkeypatch):
+def test_cli_maps_with_path_asks_the_universal_service_without_unit_info(device_root, monkeypatch):
     """A folder given with --path (maybe a copy): the universal service, without unit-info."""
     code, asked = _cli_maps(device_root, monkeypatch, {"mapUpdateType": "LegacyRmu"},
                             "--path", str(Path(device_root)))

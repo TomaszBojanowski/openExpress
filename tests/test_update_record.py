@@ -239,7 +239,7 @@ def test_a_failed_check_keeps_what_the_record_says(device_root):
 
 
 @pytest.mark.needs_display
-def test_without_a_record_the_page_checks_as_before_and_the_tile_keeps_its_chip(device_root):
+def test_without_a_summary_the_page_says_checking_and_the_tile_keeps_its_chip(device_root):
     """An entry of an older version (update_found, no summary): "Checking…", then the answer;
     the tile's chip needs update_found alone."""
     from test_update_chips import _tile

@@ -88,7 +88,7 @@ def test_the_window_says_it_at_once_and_logs_it_once(plugged, monkeypatch, caplo
     assert lines == ["gvfs: no MTP backend (it offers: file, sftp)"]
 
 
-def test_with_mtp_the_window_waits_as_before():
+def test_with_mtp_the_window_says_the_device_is_starting():
     from openexpress.gui.app import MainWindow
 
     assert MainWindow._usb_notice(gio_storage.PRESENT, 10)[0] == "The device is starting…"

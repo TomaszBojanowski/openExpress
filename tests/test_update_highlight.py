@@ -156,7 +156,7 @@ def test_the_row_device_software_says_which_update_in_the_warning_colour_without
 
 
 @pytest.mark.needs_display
-def test_once_installed_or_with_none_the_page_is_as_before():
+def test_a_copied_update_is_ready_and_none_found_or_a_failed_check_shows_no_chip():
     """The update copied (the device installs it once disconnected): the chip "Update
     ready" and the warning colour; a check that finds none, one that fails: no
     chip, the subtitle as the other rows'."""

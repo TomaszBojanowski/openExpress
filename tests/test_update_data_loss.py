@@ -95,7 +95,7 @@ def test_cli_says_nothing_of_the_data_for_another_kind(offered, monkeypatch, cap
     assert "erases" not in capsys.readouterr().out
 
 
-def test_cli_installs_as_before_when_unit_info_fails(offered, monkeypatch, capsys, caplog):
+def test_cli_installs_without_a_data_warning_when_unit_info_fails(offered, monkeypatch, capsys, caplog):
     def fails(self, unit_id, part_number):
         raise ApiError("Device info: HTTP 503")
 

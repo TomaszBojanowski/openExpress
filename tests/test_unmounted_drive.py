@@ -679,7 +679,7 @@ def test_a_drive_mounted_from_its_tile_leaves_the_others_connected(monkeypatch):
         FENIX: 1000.0, EDGE: 1000.0, VARIA: 1000.0}
 
 
-def test_a_device_chosen_with_its_details_is_opened_as_before(monkeypatch):
+def test_an_mtp_device_chosen_from_the_list_is_opened_and_the_list_stays(monkeypatch):
     """An MTP device chosen from the list: its entry is the open one (by its unit ID), the list
     stays, and it is not read again."""
     listed = _three_listed()

@@ -59,7 +59,7 @@ def test_a_key_with_an_empty_context_fills_only_the_entry_without_one(tmp_path):
     assert 'msgstr "Miejsce na dysku"' in text
 
 
-def test_a_msgid_without_contexts_is_filled_as_before(tmp_path):
+def test_a_msgid_without_contexts_gets_its_translation(tmp_path):
     run, text = fill(tmp_path, {"Maps": "Mapy"})
     assert run.returncode == 0 and 'msgid "Maps"\nmsgstr "Mapy"' in text
 

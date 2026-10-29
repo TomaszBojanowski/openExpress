@@ -101,7 +101,7 @@ def test_a_backup_stops_once_the_window_is_closed(device_root, backups, log_file
     assert "task: stopped, the window was closed" in log_file.read_text()
 
 
-def test_a_backup_left_alone_still_ends_as_before(device_root, backups):
+def test_a_backup_with_the_window_open_makes_its_copy_and_says_so(device_root, backups):
     from openexpress.gui.app import MainWindow
 
     storage = LocalStorage(device_root)

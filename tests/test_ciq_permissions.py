@@ -80,7 +80,7 @@ def test_an_app_with_new_permissions_is_not_requested_without_consent(iq_device,
     assert not st.exists("GARMIN/APPS/IN.BIN")
 
 
-def test_allowed_it_is_installed_as_before(iq_device, store):
+def test_an_allowed_app_with_new_permissions_is_requested_and_installed(iq_device, store):
     st, dev = iq_device
     rep = ciq.install_apps(dev, st, _client(), store, [FACE_IT], allowed={FACE})
     assert rep.installed == ["Face It"] and rep.needs_consent == []

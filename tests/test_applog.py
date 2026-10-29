@@ -247,7 +247,7 @@ def test_log_can_be_turned_off(log_file, monkeypatch, capsys):
     assert not log_file.exists() and "only on stderr" in capsys.readouterr().err
 
 
-def test_stderr_is_as_before(log_file, capsys):
+def test_stderr_has_warnings_for_the_cli_and_bare_info_lines_for_the_watcher(log_file, capsys):
     applog.setup("cli")
     log = logging.getLogger("openexpress.test")
     log.info("quiet")
