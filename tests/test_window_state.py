@@ -46,6 +46,23 @@ def named_on_the_window() -> set[str]:
     return names
 
 
+def named_in_strings() -> set[str]:
+    """The attributes the window's code names in a string: the question kept on the window by
+    confirm(..., keep_as="name") and setattr(self or win, "name", ...)."""
+    names = set()
+    for path in sorted(GUI.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            names |= {k.value.value for k in node.keywords
+                      if k.arg == "keep_as" and isinstance(k.value, ast.Constant)}
+            if (isinstance(node.func, ast.Name) and node.func.id == "setattr"
+                    and len(node.args) >= 2 and isinstance(node.args[0], ast.Name)
+                    and node.args[0].id in ("self", "win") and isinstance(node.args[1], ast.Constant)):
+                names.add(node.args[1].value)
+    return names
+
+
 def test_the_names_are_found():
     names = named_on_the_window()
     assert {"session", "busy", "connected", "start", "sections", "map_row"} <= names
@@ -55,6 +72,12 @@ def test_every_attribute_the_window_names_is_there_once_it_is_built(window):
     missing = sorted(name for name in named_on_the_window()
                      if name not in vars(window) and not hasattr(type(window), name))
     assert missing == []
+
+
+@pytest.mark.xfail(strict=True, reason="a question kept by name is made where it is asked")
+def test_every_attribute_named_in_a_string_is_there_once_it_is_built(window):
+    assert {"_order_dialog", "_close_dialog"} <= named_in_strings()
+    assert sorted(name for name in named_in_strings() if name not in vars(window)) == []
 
 
 def test_the_stand_in_has_every_attribute_of_the_real_window(window):
