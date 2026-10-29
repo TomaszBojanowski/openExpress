@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import collections
 import contextlib
+import dataclasses
 import importlib.util
 import json
 import logging
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from openexpress import __version__, applog, i18n, known_devices, paths
@@ -1708,102 +1710,97 @@ def cmd_apps(args) -> int:
     return 0
 
 
-def cmd_primary(args) -> int:
+@dataclasses.dataclass(frozen=True)
+class _PrimaryRole:
+    """One primary role of the account on the command line: how it is read and changed
+    (service) and whether the account has one set; `words`, what is said of it."""
+
+    read: Callable  # (client, device) -> its status
+    change: Callable  # (client, device, apply) -> its status before
+    is_set: Callable  # status -> whether the account has one
+    words: dict[str, str]
+
+
+def _primary_role(wearable: bool) -> _PrimaryRole:
+    """The primary training device, or with `wearable` the primary wearable; its words in
+    the language of now."""
     from openexpress import service
 
+    if not wearable:
+        return _PrimaryRole(
+            service.primary_training_status,
+            lambda client, dev, apply: service.set_primary_training(client, dev, apply=apply),
+            lambda status: status.unit_id is not None, {
+                "none": _("No primary training device is set for this Garmin account."),
+                "this": _("Primary training device: {name} (this device)"),
+                "other": _("Primary training device: {name}"),
+                "unlisted": _("a device that is not on the account's list"),
+                "not_it": _("The connected device ({device}) is not the primary training "
+                            "device."),
+                "cannot": _("The connected device cannot be a primary training device."),
+                "already": _("{device} is already the primary training device."),
+                "would": _("Would change it to: {device}"),
+                "set": _("Primary training device set to {device}."),
+                "changed": _("Primary training device changed from {old} to {new}."),
+                "back": _("To change it back, connect {old} and run `openexpress primary set "
+                          "--apply`, or change it in Garmin Connect."),
+            })
+    return _PrimaryRole(
+        service.primary_wearable_status,
+        lambda client, dev, apply: service.set_primary_wearable(client, dev,
+                                                                apply=apply).before,
+        lambda status: status.set, {
+            "none": _("No primary wearable is set for this Garmin account."),
+            "this": _("Primary wearable: {name} (this device)"),
+            "other": _("Primary wearable: {name}"),
+            "unlisted": _("a device that is not on the account's list"),
+            "not_it": _("The connected device ({device}) is not the primary wearable."),
+            "cannot": _("The connected device cannot be a primary wearable."),
+            "already": _("{device} is already the primary wearable."),
+            "would": _("Would change it to: {device}"),
+            "set": _("Primary wearable set to {device}."),
+            "changed": _("Primary wearable changed from {old} to {new}."),
+            "back": _("To change it back, connect {old} and run "
+                      "`openexpress primary set --wearable --apply`, or change it in Garmin "
+                      "Connect."),
+        })
+
+
+def cmd_primary(args) -> int:
     _st, dev = open_device(args)
     client = make_client(Settings.load(), need_auth=True)
-    wearable = args.wearable or getattr(args, "set_wearable", False)
+    role = _primary_role(args.wearable or getattr(args, "set_wearable", False))
     if args.primary_cmd == "set":
-        return (_primary_set_wearable if wearable else _primary_set)(client, dev, args.apply)
-    if wearable:
-        return _primary_wearable(client, dev)
-    status = service.primary_training_status(client, dev)
-    if status.unit_id is None:
-        print(_("No primary training device is set for this Garmin account."))
+        return _primary_set(client, dev, args.apply, role)
+    words, status = role.words, role.read(client, dev)
+    if not role.is_set(status):
+        print(words["none"])
     elif status.is_this_device:
-        print(_("Primary training device: {name} (this device)").format(
-            name=status.name or dev.description))
+        print(words["this"].format(name=status.name or dev.description))
     else:
-        print(_("Primary training device: {name}").format(
-            name=status.name or _("a device that is not on the account's list")))
-        print(_("The connected device ({device}) is not the primary training device.").format(
-            device=dev.description))
+        print(words["other"].format(name=status.name or words["unlisted"]))
+        print(words["not_it"].format(device=dev.description))
     if status.capable is False:
-        print(_("The connected device cannot be a primary training device."))
+        print(words["cannot"])
     return 0
 
 
-def _primary_set(client, dev, apply: bool) -> int:
-    from openexpress import service
-
-    before = service.set_primary_training(client, dev, apply=apply)
-    old = before.name or _("a device that is not on the account's list")
+def _primary_set(client, dev, apply: bool, role: _PrimaryRole) -> int:
+    words, before = role.words, role.change(client, dev, apply)
+    old = before.name or words["unlisted"]
     if before.is_this_device:
-        print(_("{device} is already the primary training device.").format(
-            device=dev.description))
+        print(words["already"].format(device=dev.description))
         return 0
     if not apply:
-        if before.unit_id is None:
-            print(_("No primary training device is set for this Garmin account."))
-        else:
-            print(_("Primary training device: {name}").format(name=old))
-        print(_("Would change it to: {device}").format(device=dev.description))
+        print(words["other"].format(name=old) if role.is_set(before) else words["none"])
+        print(words["would"].format(device=dev.description))
         print(_("Dry run. Add --apply."))
         return 0
-    if before.unit_id is None:
-        print(_("Primary training device set to {device}.").format(device=dev.description))
+    if not role.is_set(before):
+        print(words["set"].format(device=dev.description))
         return 0
-    print(_("Primary training device changed from {old} to {new}.").format(
-        old=old, new=dev.description))
-    print(_("To change it back, connect {old} and run `openexpress primary set --apply`, "
-            "or change it in Garmin Connect.").format(old=old))
-    return 0
-
-
-def _primary_wearable(client, dev) -> int:
-    from openexpress import service
-
-    status = service.primary_wearable_status(client, dev)
-    if not status.set:
-        print(_("No primary wearable is set for this Garmin account."))
-    elif status.is_this_device:
-        print(_("Primary wearable: {name} (this device)").format(
-            name=status.name or dev.description))
-    else:
-        print(_("Primary wearable: {name}").format(
-            name=status.name or _("a device that is not on the account's list")))
-        print(_("The connected device ({device}) is not the primary wearable.").format(
-            device=dev.description))
-    if status.capable is False:
-        print(_("The connected device cannot be a primary wearable."))
-    return 0
-
-
-def _primary_set_wearable(client, dev, apply: bool) -> int:
-    from openexpress import service
-
-    before = service.set_primary_wearable(client, dev, apply=apply).before
-    old = before.name or _("a device that is not on the account's list")
-    if before.is_this_device:
-        print(_("{device} is already the primary wearable.").format(device=dev.description))
-        return 0
-    if not apply:
-        if not before.set:
-            print(_("No primary wearable is set for this Garmin account."))
-        else:
-            print(_("Primary wearable: {name}").format(name=old))
-        print(_("Would change it to: {device}").format(device=dev.description))
-        print(_("Dry run. Add --apply."))
-        return 0
-    if not before.set:
-        print(_("Primary wearable set to {device}.").format(device=dev.description))
-        return 0
-    print(_("Primary wearable changed from {old} to {new}.").format(
-        old=old, new=dev.description))
-    print(_("To change it back, connect {old} and run "
-            "`openexpress primary set --wearable --apply`, or change it in Garmin Connect."
-            ).format(old=old))
+    print(words["changed"].format(old=old, new=dev.description))
+    print(words["back"].format(old=old))
     return 0
 
 
