@@ -80,25 +80,22 @@ def open_storage(args) -> Storage:
 
 
 def open_device(args) -> tuple[Storage, GarminDevice]:
-    from openexpress import applog, service
+    from openexpress import service
     from openexpress.device.gio_storage import mass_storage_text
 
-    st = open_storage(args)
-    dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    applog.hide_device(dev, getattr(st, "usb", None))
     command = getattr(args, "cmd", None)
-    if st.mass_storage and command in NOT_ON_A_DRIVE:
-        raise service.MassStorageMode(mass_storage_text())
-    if command in ("sync", "baseline") and not dev.datatypes():
-        raise service.MassStorageMode(_(
-            "Nothing to sync: the device declares no data types (for example a device "
-            "connected as a USB drive, or a copy of one)."))
-    if not args.path:  # a device found now; a folder given with --path may be a copy
-        known_devices.seen(dev.unit_id, dev.description, dev.part_number,
-                           dev.software_version_str, "ums" if st.mass_storage else "mtp",
-                           **service.drive_keys(getattr(st, "usb", None) if st.mass_storage
-                                                else None))
-    return st, dev
+
+    def refuse(st, dev):
+        if st.mass_storage and command in NOT_ON_A_DRIVE:
+            raise service.MassStorageMode(mass_storage_text())
+        if command in ("sync", "baseline") and not dev.datatypes():
+            raise service.MassStorageMode(_(
+                "Nothing to sync: the device declares no data types (for example a device "
+                "connected as a USB drive, or a copy of one)."))
+
+    st = open_storage(args)
+    # A device found now is remembered; a folder given with --path may be a copy.
+    return st, service.read_device(st, found_now=not args.path, refuse=refuse)
 
 
 def make_client(settings: Settings, need_auth: bool) -> GarminClient:

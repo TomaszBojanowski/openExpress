@@ -194,18 +194,31 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
 
         storage = (open_device_or_drive() if allow_ums and device_uri is None
                    else open_device_storage(device_uri))
+    device = read_device(storage, found_now=detected)
+    settings = Settings.load()
+    return DeviceSession(storage, device, settings, make_client(settings))
+
+
+def read_device(storage: Storage, found_now: bool, refuse=None) -> GarminDevice:
+    """The device in `storage` (its GarminDevice.xml), opened as the command line and the
+    window open it: what is private about it hidden in the log at once (applog.hide_device);
+    then `refuse(storage, device)`, which raises for what a command does not do with it;
+    then, for a device found now (not a folder given by hand, which may be a copy), which
+    keys a drive gives said in the log without them, and the device remembered with them
+    (known_devices.seen)."""
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     usb = getattr(storage, "usb", None)
     applog.hide_device(device, usb)
-    if detected:
+    if refuse is not None:
+        refuse(storage, device)
+    if found_now:
         drive = usb if storage.mass_storage else None
         if drive is not None:
             log.info("device: %s", drive_keys_text(drive, device.unit_id))
         known_devices.seen(device.unit_id, device.description, device.part_number,
                            device.software_version_str, "ums" if storage.mass_storage else "mtp",
                            **drive_keys(drive))
-    settings = Settings.load()
-    return DeviceSession(storage, device, settings, make_client(settings))
+    return device
 
 
 def drive_keys(usb) -> dict:

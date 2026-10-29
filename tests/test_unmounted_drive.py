@@ -818,7 +818,6 @@ def test_the_command_line_keeps_them_too(drives, monkeypatch, capsys):
         "20ee", DRIVE_ID_SERIAL, DRIVE_ID_UUID)
 
 
-@pytest.mark.xfail(strict=True, reason="the command line writes no line of drive keys")
 @pytest.mark.parametrize(("serial", "uuid", "line"), [
     (DRIVE_ID_SERIAL, DRIVE_ID_UUID,
      "device: this drive's USB serial is not its unit ID; its volume has a UUID"),
