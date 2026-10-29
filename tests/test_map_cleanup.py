@@ -8,6 +8,7 @@ import logging
 import types
 
 import pytest
+from fakes import window as stand_in
 from test_ownmaps import img_header
 from test_updates_maps import maps_response
 
@@ -182,9 +183,9 @@ def _questions(monkeypatch, device, ask):
     maps, _listed = mp.read_maps(answer(rule("OLD*.gma")))
     shown = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: shown.append(self))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(storage=st, device=dev),
-                                maps_cache=maps, map_cleanup=mp.cleanup_plan(st, dev, maps),
-                                _removed_files=MainWindow._removed_files)
+    win = stand_in(session=types.SimpleNamespace(storage=st, device=dev),
+                   maps_cache=maps, map_cleanup=mp.cleanup_plan(st, dev, maps),
+                   _removed_files=MainWindow._removed_files)
     ask(win, maps)
     (dialog,) = shown
     return dialog.get_body()
@@ -212,7 +213,7 @@ def test_the_page_keeps_the_plan_of_its_maps(device, monkeypatch):
     works = []
     client = types.SimpleNamespace(unit_info=lambda unit_id, part_number: {
         "mapupdatetype": "Universal"}, universal_maps=lambda raw: answer(rule("OLD*.gma")))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(
+    win = stand_in(session=types.SimpleNamespace(
         client=client, device=dev, storage=st, unit_info_answer=None),
         _load=lambda key, text, work, done, on_error=None: works.append((work, done)),
         show_maps=lambda *a, **kw: None)

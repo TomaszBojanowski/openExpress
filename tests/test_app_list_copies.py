@@ -8,6 +8,7 @@ import types
 import uuid
 
 import pytest
+from fakes import window as stand_in
 from test_ciq_music import PRELOADED, STORE_ID, copy_names, iq_device, out_bin  # noqa: F401
 
 from openexpress import ciq, proto
@@ -220,7 +221,7 @@ def _dialog_of(monkeypatch, st, dev, backups):
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     errors = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), run_task=RunNow(),
         error=lambda title, text: errors.append(text), _order_blocked=lambda state: None,
         _order_rows=app.MainWindow._order_rows, confirm_order=lambda *a: None)

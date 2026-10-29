@@ -7,7 +7,8 @@ import threading
 import types
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, window_methods
+from fakes import window as stand_in
 
 from openexpress.device.storage import LocalStorage
 
@@ -87,7 +88,7 @@ def map_window(device_root, monkeypatch):
     storage = Counting(device_root)
     m = _map(1000, 2000)
     tasks = tasks_in_a_thread()
-    win = types.SimpleNamespace(
+    win = stand_in(
         maps_cache=[m], run_task=tasks, tasks=tasks, errors=[],
         error=lambda title, body: win.errors.append(title),
         progress=lambda text: None, fraction=lambda done, total: None,
@@ -319,9 +320,9 @@ def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeyp
     copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     storage = Counting(st.root)
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=storage),
-                                _order_summary=app.MainWindow._order_summary,
-                                restore_order=lambda copy: None)
+    win = stand_in(session=types.SimpleNamespace(device=dev, storage=storage),
+                   _order_summary=app.MainWindow._order_summary,
+                   restore_order=lambda copy: None)
     app.MainWindow.confirm_order(win, copy, plan, NOTE)
     assert storage.on_gtk == []
     (asked,) = Question.asked
@@ -368,7 +369,7 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     storage = Counting(st.root)
     asked = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=storage), run_task=tasks_in_a_thread(),
         error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,
         _order_rows=app.MainWindow._order_rows,
@@ -644,7 +645,7 @@ def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, 
     storage = Space(st.root)
     session = types.SimpleNamespace(device=dev, storage=storage)
     works = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=False, session=None, _asked=None, sections={"watch": types.SimpleNamespace(
             show=lambda key: None)},
         run_task=lambda title, fn, done=None, failed=None, **kw: works.append(fn))
@@ -721,9 +722,9 @@ def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
     if space is not NOT_READ:
         s.space = space
     shown = []
-    win = types.SimpleNamespace(session=s, toast=lambda text: None,
-                                _report_view=lambda text, kept=None: (shown.append(text),
-                                                                      (None, None))[1])
+    win = stand_in(session=s, toast=lambda text: None,
+                   _report_view=lambda text, kept=None: (shown.append(text),
+                                                         (None, None))[1])
     app.MainWindow.show_report(win)
     (text,) = shown
     return text
@@ -781,8 +782,7 @@ def test_storage_is_named_for_what_it_is(iq_device, language, device_page, prefe
         titles = [g.get_title() for g in section.groups]
         assert device_page in titles
         assert preferences not in titles or preferences == device_page
-        prefs = types.SimpleNamespace(busy=False)
-        prefs._ask_clear_cache = types.MethodType(MainWindow._ask_clear_cache, prefs)
+        prefs = window_methods(stand_in(busy=False), ["_ask_clear_cache"])
         group = MainWindow._cache_group(prefs)
         assert group.get_title() == preferences
     finally:
@@ -797,7 +797,7 @@ def _task_window(**attrs):
 
     from openexpress.gui import app
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=False, _waiting=0, _refresh_pending=False, _action_buttons=[], session=None,
         action_bar=Gtk.ActionBar(revealed=False), progress_label=Gtk.Label(),
         progress_bar=Gtk.ProgressBar(), busy_spinner=Gtk.Spinner(), unplug_label=Gtk.Label(),
@@ -936,7 +936,7 @@ def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
     overviews = []
     win = _task_window(session=s, show_overview=lambda: overviews.append(True),
                        _primary_training_text=app.MainWindow._primary_training_text)
-    win.set_primary_training = types.MethodType(app.MainWindow.set_primary_training, win)
+    window_methods(win, ["set_primary_training"])
     button = Gtk.Button(label="Set as Primary")
     app.MainWindow.confirm_primary_training(win, PRIMARY, button)
     assert button.get_sensitive() and not _spinning(button)  # only the question so far
@@ -976,13 +976,13 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
     monkeypatch.setattr(app.service, "primary_training_status",
                         lambda client, device, listed: PRIMARY)
     started = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(client=None, device=None, account_devices=None),
         busy=False, _action_buttons=[],
         in_background=lambda work, done, failed=None: done(work()),
         _primary_training_text=app.MainWindow._primary_training_text,
         confirm_primary_training=lambda status, button=None: started.append((status, button)))
-    win._button = types.MethodType(app.MainWindow._button, win)
+    window_methods(win, ["_button"])
     row = Adw.ActionRow()
     app.MainWindow._show_primary_training(win, row)
     (button,) = _suffix_buttons(row)

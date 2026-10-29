@@ -6,6 +6,7 @@ is. All texts are made up."""
 import types
 
 import pytest
+from fakes import window as stand_in
 
 NETWORK = ("Cannot check the device on your account: network error (HTTPSConnectionPool: "
            "<urllib3.connection.HTTPSConnection object at 0x7f0000000000>: failed to resolve "
@@ -40,7 +41,7 @@ def test_the_apps_page_shows_an_ownership_error_with_brackets():
     from openexpress.gui.app import MainWindow
 
     section = _section("apps")
-    win = types.SimpleNamespace(
+    win = stand_in(
         sections={"apps": section},
         session=types.SimpleNamespace(logged_in=True, ownership_error=OwnershipUnknown(NETWORK)))
     MainWindow.load_apps(win)
@@ -67,7 +68,7 @@ def test_the_music_page_without_media_shows_its_words_with_brackets(monkeypatch)
     monkeypatch.setattr(music, "supported_kinds", lambda device: [])
     monkeypatch.setattr(music, "no_media_message", lambda: words)
     section = _section("music")
-    win = types.SimpleNamespace(sections={"music": section},
-                                session=types.SimpleNamespace(device=None))
+    win = stand_in(sections={"music": section},
+                   session=types.SimpleNamespace(device=None))
     MainWindow.load_music(win)
     assert words in _shown(section)

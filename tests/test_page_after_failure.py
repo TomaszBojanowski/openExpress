@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fakes import RunNow
+from fakes import window as stand_in
 from test_ciq_music import FACE, PRELOADED, STORE_ID, iq_device, library  # noqa: F401
 from test_in_bin_writes import Breaking
 from test_updates_maps import FILES, _real_maps_page, maps_response, server  # noqa: F401
@@ -170,7 +171,7 @@ def _window(monkeypatch, session=None):
 
     monkeypatch.setattr(app.Adw, "AlertDialog", Answering)
     Answering.answer = "ok"
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session or types.SimpleNamespace(**SESSION), busy=False, errors=[],
         toasts=[], reads=[], unplug=False, maps_cache=[], _updated_apps=set(),
         progress=lambda text: None, fraction=lambda done, total=None: None,

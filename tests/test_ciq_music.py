@@ -5,6 +5,7 @@ import uuid
 
 import pytest
 from fakes import RunNow, step_words
+from fakes import window as stand_in
 
 from openexpress import ciq, music, proto
 from openexpress.device.storage import LocalStorage
@@ -212,8 +213,8 @@ def test_music_page_on_a_device_without_media(device_root):
         clear=lambda: shown.append("clear"), show=shown.append,
         error=types.SimpleNamespace(set_title=lambda t: shown.append(("title", t)),
                                     set_description=lambda d: shown.append(("text", d))))
-    win = types.SimpleNamespace(session=session, sections={"music": section},
-                                _load=lambda *a: started.append(a))
+    win = stand_in(session=session, sections={"music": section},
+                   _load=lambda *a: started.append(a))
     MainWindow.load_music(win)
     assert started == []  # nothing is read from the device
     assert shown == ["clear", ("title", "Music"), ("text", NO_MEDIA), "error"]
@@ -226,9 +227,9 @@ def test_music_page_reads_the_device_when_it_has_media(iq_device):
 
     st, dev = iq_device
     started = []
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
-                                sections={}, _load=lambda *a: started.append(a[0]),
-                                show_music=None)
+    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+                   sections={}, _load=lambda *a: started.append(a[0]),
+                   show_music=None)
     MainWindow.load_music(win)
     assert started == ["music"]
 
@@ -340,9 +341,9 @@ def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, libra
 
     run_task = RunNow(on_call=lambda call: events.append(call.title))
 
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
-                                run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
-                                error=lambda title, text: events.append((title, text)))
+    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+                   run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
+                   error=lambda title, text: events.append((title, text)))
     MainWindow.add_playlist(win, library)
     assert events[0] == "Reading the playlist…" and len(events) == 2
     title, text = events[1]
@@ -783,8 +784,8 @@ def test_window_offers_only_forget_for_apps_without_files(iq_device):
     st, dev = iq_device
     app = ciq.InstalledApp(FACE, 3, "FaceIt2", True, filename="GACF4619", has_files=False)
     asked = []
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st),
-                                confirm_forget_app=asked.append)
+    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+                   confirm_forget_app=asked.append)
     MainWindow.confirm_remove_app(win, app)
     assert asked == [app]  # the usual "delete from the device" dialog is not shown
     text = MainWindow._for_phone_text(["Face It"])
@@ -886,7 +887,7 @@ def test_window_toggle_passes_the_type(twin_device):
     st, dev = twin_device
     widget = ciq.read_installed(dev, st).find(WEATHER, 2)
     toasts = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), busy=False, toast=toasts.append,
         run_task=RunNow())
     row = types.SimpleNamespace(get_active=lambda: False)  # the switch was turned off
@@ -1228,7 +1229,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
     client = CountingClient()
     client.device_messages = lambda unit_id: [FACE_MESSAGE]
     errors = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),
@@ -1719,7 +1720,7 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
 
     run_task = RunNow(error=lambda title, text: errors.append((title, text)))
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), toast=lambda text: None,
         error=lambda title, text: errors.append((title, text)), run_task=run_task,
         load_section=lambda key, force=False: reads.append(key))
@@ -1885,7 +1886,7 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, i
 
     in_the_window("Adw", types.SimpleNamespace(
         AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=dev, storage=st))
+    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st))
     gui_app.MainWindow.confirm_remove_app(win, app)
     assert asked == [
         ("The app and its settings will be deleted from the device over a direct USB "
@@ -2606,7 +2607,7 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
     st, dev, backups = order_device
     copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
     toasts, loads, tasks = [], [], []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: loads.append((key, force)),
         run_task=RunNow(on_call=lambda call: tasks.append(call.title)))
@@ -2629,7 +2630,7 @@ def test_window_says_so_when_the_order_is_already_the_same(order_device):
     st, dev, backups = order_device
     same = ciq.AppListCopy(path=None, name="GARMIN-APPS x", state=ciq.read_installed(dev, st))
     toasts = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: None,
         run_task=RunNow())
@@ -2900,7 +2901,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
     client = CountingClient()
     client.device_messages = lambda unit_id: [FACE_MESSAGE]
     toasts, shown = [], []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=toasts.append, progress=lambda text: None,
         error=lambda title, text: pytest.fail(text),
@@ -3301,7 +3302,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
     client = CountingClient()
     client.device_messages = lambda unit_id: []
     errors = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),

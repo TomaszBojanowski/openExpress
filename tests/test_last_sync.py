@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from fakes import step_words
+from fakes import window as stand_in
 from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
 from openexpress import i18n, last_sync, service, sync
@@ -241,7 +242,7 @@ def test_the_window_marks_the_warnings(xdg):
         lines=[service.new_files_step([types.SimpleNamespace(datatype="FIT_TYPE_4")] * 3),
                service.uploads_step(_report(uploaded=1, checked=1, rejected=1))]))
     row = Adw.ExpanderRow(title="Last sync")
-    win = types.SimpleNamespace(
+    win = stand_in(
         last_sync_row=row, _last_sync_children=[],
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))
@@ -270,13 +271,12 @@ def test_the_device_page_switches_the_automatic_sync(enabled):
     """A switch, on or off as the background sync is; turning it asks for the change (a
     fake here: the background sync of this computer is never touched), and a change that
     fails puts it back."""
-    import types
 
     from openexpress.gui.app import MainWindow
 
     asked = []
-    win = types.SimpleNamespace(_background_enabled=lambda: enabled,
-                                set_background=lambda on, result: asked.append((on, result)))
+    win = stand_in(_background_enabled=lambda: enabled,
+                   set_background=lambda on, result: asked.append((on, result)))
     row = MainWindow._auto_sync_row(win)
     assert row.get_title() == "Sync automatically when connected"
     assert row.get_active() is enabled and asked == []
@@ -447,7 +447,7 @@ def test_the_window_shows_the_last_sync_of_its_device_after_another_one(xdg):
     row = types.SimpleNamespace(set_subtitle=said.append, set_enable_expansion=lambda on: None,
                                 remove=lambda child: None, add_row=lambda child: None,
                                 set_tooltip_text=lambda text: None)
-    win = types.SimpleNamespace(
+    win = stand_in(
         last_sync_row=row, _last_sync_children=[],
         session=types.SimpleNamespace(ownership_error=None,
                                       device=types.SimpleNamespace(unit_id=A)))

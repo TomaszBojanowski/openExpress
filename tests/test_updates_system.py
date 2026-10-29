@@ -10,7 +10,8 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, window_methods
+from fakes import window as stand_in
 
 from openexpress import download, updates
 from openexpress.cli import main
@@ -173,7 +174,7 @@ def _dialog(monkeypatch, part, answer=None):
     items = updates.parse_updates(lower_keys(answer or server_answer()))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39")),
         updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
@@ -299,7 +300,7 @@ def _updates_page(items, beta=False, drive=False):
     `drive`: the device is in mass storage mode."""
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39"), mass_storage=drive),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
@@ -535,7 +536,7 @@ def test_the_page_learns_from_the_answer_whether_beta_versions_are_offered(devic
     from openexpress.gui.app import MainWindow
 
     shown = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(
             storage=LocalStorage(device_root), device=types.SimpleNamespace(raw=b"<Device/>"),
             unit_info_answer={},  # asked when the device was opened
@@ -949,12 +950,12 @@ def _overview(items=None, drive=False):
 
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(software_version_str="23.39"),
                                       mass_storage=drive),
         update_row=Adw.ActionRow(), software_label=Gtk.Label(),
         _highlight_update=lambda on: None)  # the chip and the colour: test_update_highlight
-    win._render_update_state = types.MethodType(MainWindow._render_update_state, win)
+    window_methods(win, ["_render_update_state"])
     return win, MainWindow
 
 
@@ -994,7 +995,7 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
         client=types.SimpleNamespace(software_updates=lambda raw: lower_keys(server_answer())),
         storage=LocalStorage(offered), device=types.SimpleNamespace(raw=b""))
     states = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=s, _update_check_session=None, update_state=None,
         _set_update_state=lambda new, staged=(): states.append(
             ([u.part_number for u in new], [u.part_number for u in staged])),
@@ -1153,7 +1154,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     monkeypatch.setattr(updates, "install", install)
     monkeypatch.setattr(maps, "install", install)
     m = _map(10)
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(
             device=types.SimpleNamespace(software_version_str="23.39", raw=b""),
             storage=LocalStorage(device_root),
@@ -1167,7 +1168,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
             done(fn())
 
     win.run_task = run_task
-    win._ask_install_map = types.MethodType(MainWindow._ask_install_map, win)
+    window_methods(win, ["_ask_install_map"])
     MainWindow.confirm_update(win, win.updates_cache[0])
     MainWindow.confirm_map(win, m)
     for dialog in asked:

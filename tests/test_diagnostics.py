@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
+from fakes import window as stand_in
 
 from openexpress import diagnostics, forget, paths
 from openexpress.device import ptp
@@ -429,8 +430,8 @@ def _reading_window(session, in_the_window):
     background, drawn = [], []
     in_the_window("device_error_row",
                   lambda win, group=None: drawn.append(win.session.diagnostics))
-    win = types.SimpleNamespace(session=session, in_background=lambda fn, done, failed=None:
-                                background.append((fn, done)))
+    win = stand_in(session=session, in_background=lambda fn, done, failed=None:
+                   background.append((fn, done)))
     return win, background, drawn
 
 
@@ -498,9 +499,9 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
     reading = threading.Event()
     session = types.SimpleNamespace(diagnostics_reading=reading)
     order = []
-    win = types.SimpleNamespace(busy=False, session=session, _task_lets_close=False,
-                                set_busy=lambda busy, *a, **kw: None,
-                                _run_pending_refresh=lambda: None)
+    win = stand_in(busy=False, session=session, _task_lets_close=False,
+                   set_busy=lambda busy, *a, **kw: None,
+                   _run_pending_refresh=lambda: None)
 
     def work():
         order.append("work")
@@ -534,7 +535,7 @@ def _window(found):
     from fakes import RunNow
 
     toasts = []
-    return types.SimpleNamespace(
+    return stand_in(
         session=types.SimpleNamespace(device=None, storage=None, diagnostics=found),
         _button=lambda label, cb, style=None, with_button=False: _labelled(label),
         run_task=RunNow(), toast=toasts.append, toasts=toasts)
@@ -650,7 +651,7 @@ def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
 def test_the_preferences_switch_turns_the_copy_on_and_off():
     from openexpress.gui.app import Adw, diagnostics_group
 
-    win = types.SimpleNamespace(error=lambda title, text: pytest.fail(text))
+    win = stand_in(error=lambda title, text: pytest.fail(text))
     group = diagnostics_group(win)
     switch = next(w for w in _all(group) if isinstance(w, Adw.SwitchRow))
     assert switch.get_title() == "Keep a copy of the device's diagnostic files on this computer"

@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
+from fakes import window as stand_in
+from fakes import window_methods
 
 from openexpress import i18n, service, sync
 
@@ -252,15 +254,14 @@ def _window(unit_id):
 
     from gi.repository import Adw
 
-    from openexpress.gui.app import MainWindow
 
     # The device synced here (its state.json: the one source of "never synced").
     sync.SyncState(unit_id).save()
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id),
                                       ownership_error=None),
         last_sync_row=Adw.ExpanderRow(title="Last sync"), _last_sync_children=[])
-    win._show_last_sync = types.MethodType(MainWindow._show_last_sync, win)
+    window_methods(win, ["_show_last_sync"])
     return win
 
 

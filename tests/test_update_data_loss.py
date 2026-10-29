@@ -7,6 +7,7 @@ import logging
 import types
 
 import pytest
+from fakes import window as stand_in
 from test_updates_system import WARNING_EN, _below, server_answer
 
 from openexpress import updates
@@ -126,7 +127,7 @@ def _warnings(monkeypatch, part, **session):
     items = updates.parse_updates(lower_keys(server_answer()))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(
+    win = stand_in(session=types.SimpleNamespace(
         device=types.SimpleNamespace(software_version_str="23.39"), **session),
         updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
@@ -194,8 +195,8 @@ def _check_for_updates(session):
     from openexpress.gui.app import MainWindow
 
     works = []
-    win = types.SimpleNamespace(session=session, _load=lambda key, text, work, done,
-                                on_error=None: works.append(work))
+    win = stand_in(session=session, _load=lambda key, text, work, done,
+                   on_error=None: works.append(work))
     MainWindow.load_updates(win)
     (work,) = works
     return work()

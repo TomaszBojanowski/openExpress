@@ -8,6 +8,7 @@ import uuid
 
 import pytest
 from fakes import RunNow, SyncClient
+from fakes import window as stand_in
 from test_ciq_music import FACE, STORE_ID, iq_device, out_bin  # noqa: F401 - the fixtures
 from test_updates_system import disk_full_halfway
 
@@ -375,7 +376,7 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
     m = maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0, is_reinstall=False,
                           can_uninstall=True, version="2026.11", region="Test", identifier={},
                           files=[], files_to_remove=[], hosts=[])
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(storage=None, device=types.SimpleNamespace(raw=b""),
                                       client=types.SimpleNamespace(
                                           http=None,

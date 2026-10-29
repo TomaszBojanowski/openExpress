@@ -7,6 +7,7 @@ import types
 import uuid
 
 import pytest
+from fakes import window as stand_in
 from test_ciq_music import (  # noqa: F401 - fixtures
     STORE_ID,
     apps_cli,
@@ -146,7 +147,7 @@ def test_the_list_of_copies_opens_at_its_top_with_none_chosen(iq_device, device_
                         lambda self, parent: (shown.append(self), present(self, parent)))
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), run_task=RunNow(),
         error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,
         _order_rows=app.MainWindow._order_rows, confirm_order=lambda *a: None)

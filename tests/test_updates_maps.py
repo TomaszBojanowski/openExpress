@@ -6,7 +6,8 @@ import threading
 
 import pytest
 import requests
-from fakes import RunNow
+from fakes import RunNow, window_methods
+from fakes import window as stand_in
 
 from openexpress import applog, download, maps, updates
 from openexpress.connect import ApiError, lower_keys
@@ -566,14 +567,13 @@ def _maps_window(storage):
             return group
 
     reloads = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(storage=storage), sections={"maps": Section()},
         busy=False, _action_buttons=[], confirm_map=lambda m: None,
         confirm_remove=lambda m: None, _search_filter=lambda search, rows: None,
         load_section=lambda key, force=False: reloads.append((key, force)),
         _set_map_state=lambda result: None)
-    win._button = types.MethodType(MainWindow._button, win)
-    win._trash = types.MethodType(MainWindow._trash, win)
+    window_methods(win, ["_button", "_trash"])
     win._map_subtitle = MainWindow._map_subtitle
     return win, reloads
 
@@ -742,9 +742,9 @@ def _overview_window(answers, device_root=None, unit_info=UNIVERSAL):
                                      unit_info=lambda unit_id, part_number: unit_info),
         device=types.SimpleNamespace(raw=b"xml", unit_id=3000000002, part_number="006-B0000-00"),
         storage=LocalStorage(device_root) if device_root else None)
-    win = types.SimpleNamespace(session=session, map_state=None, map_update_count=0,
-                                _map_check_session=None, map_row=Row(), hold=False,
-                                in_background=in_background)
+    win = stand_in(session=session, map_state=None, map_update_count=0,
+                   _map_check_session=None, map_row=Row(), hold=False,
+                   in_background=in_background)
     for name in ("_render_map_state", "_set_map_state", "_check_maps_quietly"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     return win, asked, later
@@ -918,7 +918,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
                                      unit_id=3000000002, part_number="006-B0000-00",
                                      targets=lambda datatype: []),
         storage=LocalStorage(device_root), ownership_error=None)
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session, sections={k: Section() for k in ("watch", "updates", "maps", "apps",
                                                            "music")},
         pages=types.SimpleNamespace(get_visible_child_name=lambda: page),
@@ -1646,7 +1646,7 @@ def test_the_window_refuses_before_it_asks_to_install(server, device_root, monke
     monkeypatch.setattr(app.Adw, "AlertDialog", Question)
     japan = maps.parse_maps(_japan_answer(server, how))[2]
     storage = LocalStorage(device_root)
-    win = types.SimpleNamespace(
+    win = stand_in(
         maps_cache=[japan], error=lambda title, body: said.append((title, body)),
         session=types.SimpleNamespace(storage=storage, client=types.SimpleNamespace(
             consumer=types.SimpleNamespace(url_salt="salt"))))

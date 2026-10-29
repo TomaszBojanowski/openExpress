@@ -8,6 +8,7 @@ from datetime import datetime
 
 import pytest
 from fakes import record_sync
+from fakes import window as stand_in
 
 from openexpress import i18n, sync
 
@@ -183,7 +184,7 @@ def test_a_backup_made_says_so_at_once(backups):
     from openexpress.gui import app
 
     said = []
-    win = types.SimpleNamespace(backup_row=types.SimpleNamespace(
+    win = stand_in(backup_row=types.SimpleNamespace(
         set_subtitle=said.append, set_tooltip_text=lambda text: None),
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT)))
     _backup(backups, "2026-10-12 (17.37.37)")

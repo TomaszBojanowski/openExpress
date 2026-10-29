@@ -8,6 +8,7 @@ import types
 
 import pytest
 from fakes import RunNow
+from fakes import window as stand_in
 from test_ciq_music import (
     FACE,
     STORE_ID,
@@ -165,7 +166,7 @@ def test_window_asks_before_installing_an_app_with_new_permissions():
     from openexpress.gui.app import MainWindow
 
     asked, installed = [], []
-    win = types.SimpleNamespace(
+    win = stand_in(
         run_task=RunNow(), confirm_permissions=lambda apps, asking: asked.append(
             ([a.name for a in apps], [a.name for a in asking])),
         _install_apps=lambda apps, allowed=(): installed.append(([a.name for a in apps],
@@ -185,7 +186,7 @@ def _question(monkeypatch, apps, asking):
 
     shown, installed = [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: shown.append(self))
-    win = types.SimpleNamespace(_install_apps=lambda apps, allowed=(): installed.append(
+    win = stand_in(_install_apps=lambda apps, allowed=(): installed.append(
         ([a.name for a in apps], set(allowed))))
     MainWindow.confirm_permissions(win, apps, asking)
     (dialog,) = shown

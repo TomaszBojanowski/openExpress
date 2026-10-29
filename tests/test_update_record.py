@@ -7,6 +7,7 @@ import time
 import types
 
 import pytest
+from fakes import window as stand_in
 from test_fixes_ui import page_window
 from test_updates_system import _entry
 
@@ -285,7 +286,7 @@ def test_after_an_install_the_next_opening_shows_no_record_of_it(device_root):
     _record()
     items = updates.mark_present(LocalStorage(device_root),
                                  updates.parse_updates(lower_keys(_answer(_component()))))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="fēnix 8 - 47mm, Solar", software_version_str="23.39", unit_id=UNIT),
             mass_storage=False),

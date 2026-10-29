@@ -5,7 +5,7 @@ import types
 
 import pytest
 import requests
-from fakes import RunNow
+from fakes import RunNow, window_methods
 from gi.repository import GLib
 
 from openexpress import ownmaps
@@ -1223,7 +1223,6 @@ def test_window_takes_a_map_that_is_gone_off_the_list(window_device, my_map):
 
 @pytest.mark.needs_display
 def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
-    from openexpress.gui.app import MainWindow
 
     win, section = own_maps_window()
     asked, drawn = [], []
@@ -1241,7 +1240,7 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
         real(own)
 
     win.show_maps = show_maps
-    win.load_maps = types.MethodType(MainWindow.load_maps, win)
+    window_methods(win, ["load_maps"])
     win.load_maps()
     assert asked == [b"xml"]  # one request to Garmin's server
     # The server lists no map here, so every file not named like Garmin's counts as own.
@@ -1259,7 +1258,6 @@ def test_maps_page_shows_own_maps_whatever_service_serves_garmins_maps(map_folde
     """Maps of your own do not depend on the service Garmin serves its maps through
     (mapUpdateType): a device whose map updates are not supported still has the group of own
     maps, and Garmin's map server is not asked."""
-    from openexpress.gui.app import MainWindow
 
     win, section = own_maps_window()
     asked, drawn = [], []
@@ -1276,7 +1274,7 @@ def test_maps_page_shows_own_maps_whatever_service_serves_garmins_maps(map_folde
         real(own)
 
     win.show_maps = show_maps
-    win.load_maps = types.MethodType(MainWindow.load_maps, win)
+    window_methods(win, ["load_maps"])
     win.load_maps()
     assert asked == []  # no map check: Garmin's maps are not supported for this device
     # Without Garmin's list, a file counts as own unless it is named like Garmin's files.
