@@ -155,8 +155,9 @@ def in_a_worker(fn, name="worker"):
 
 
 def settle(*threads, limit_s=10.0):
-    """The main thread turns the global default context until the threads have ended (on the
-    old code a worker waited there for an answer only this thread could give it)."""
+    """The main thread turns the global default context until the threads have ended, so that
+    a worker that wrongly waits on that context, for an answer only this thread can give it,
+    still ends: the test then fails on what it checks instead of hanging."""
     context = GLib.MainContext.default()
     deadline = time.monotonic() + limit_s
     while any(t.is_alive() for t in threads) and time.monotonic() < deadline:

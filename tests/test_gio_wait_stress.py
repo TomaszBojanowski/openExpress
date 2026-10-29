@@ -153,7 +153,9 @@ def run_load(seed: int, per_worker: int, in_main: int, monkeypatch) -> dict:
         finally:
             if held:
                 context.release()
-            turn_default_until(workers, time.monotonic() + 10)  # the old code waits here
+            # A worker that wrongly waits on the global default context, for an answer only
+            # this thread can give it, ends here: the run reports it instead of hanging.
+            turn_default_until(workers, time.monotonic() + 10)
             in_workers = sorted({name for name in window.ran
                                  if name.startswith("stress-worker")})
             window.remove_left()
