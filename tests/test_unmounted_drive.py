@@ -818,6 +818,30 @@ def test_the_command_line_keeps_them_too(drives, monkeypatch, capsys):
         "20ee", DRIVE_ID_SERIAL, DRIVE_ID_UUID)
 
 
+@pytest.mark.xfail(strict=True, reason="the command line writes no line of drive keys")
+@pytest.mark.parametrize(("serial", "uuid", "line"), [
+    (DRIVE_ID_SERIAL, DRIVE_ID_UUID,
+     "device: this drive's USB serial is not its unit ID; its volume has a UUID"),
+    (f"{VARIA_UNIT:012x}", None,
+     "device: this drive's USB serial is its unit ID in hexadecimal; its volume has no UUID"),
+    (None, DRIVE_ID_UUID, "device: this drive has no USB serial; its volume has a UUID"),
+])
+def test_the_command_line_says_which_keys_a_drive_gives_and_none_of_them(
+        drives, monkeypatch, log_file, serial, uuid, line):
+    """The line of the window, once, in a log that never has the keys nor the unit ID."""
+    from openexpress import cli, service
+
+    _mounted(drives, monkeypatch, serial=serial, uuid=uuid)
+    (found,) = gio_storage.find_ums_devices()
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda **kw: gio_storage.open_ums_storage(found))
+    assert cli.main(["info"]) == 0
+    text = log_file.read_text()
+    assert text.count(line) == 1
+    for value in (serial, uuid, str(VARIA_UNIT), f"{VARIA_UNIT:x}"):
+        assert value is None or value.casefold() not in text.casefold()
+
+
 def test_they_never_reach_the_log_nor_the_report(drives, monkeypatch, log_file):
     from openexpress import applog, report, service
 
