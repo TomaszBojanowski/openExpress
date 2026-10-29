@@ -145,12 +145,11 @@ class UpdatesPage:
 
     def _updates_status(self, sec, system, count: int, beta: bool = False, ready=None,
                         only=None) -> None:
-        """The top of the Updates page: the state of the updates in the words of the row
-        "Device software" (update_state_text: `count` updates to install, `only` the one of
-        them; one copied already, `ready`, that waits for the device to be disconnected, with
-        the `count` still to install; or up to date); under it the system update when there is
-        one, or the version of the device; and whether Garmin offers beta versions to the
-        device."""
+        """Builds the top of the Updates page in `sec`: the state of the updates as "Device
+        software" says it (update_state_text): `count` to install (`only`: the one of them),
+        one copied (`ready`) with `count` still to install, or up to date; under it the
+        `system` update or the device's version; whether Garmin offers it beta versions
+        (`beta`)."""
         from openexpress import updates as upd
 
         d = self.session.device

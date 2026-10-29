@@ -101,11 +101,10 @@ def last_sync_words(data: dict, now: datetime | None = None) -> str:
 
 def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
                        now: datetime | None = None) -> str:
-    """The subtitle of "Last sync": "Never synced" for a device this installation never
-    synced (no state.json, the one source of it, as on its tile); else its last sync (`data`,
-    last_sync.json) or that none is recorded; then how many new activities there are to upload
-    (`to_sync`, the count of the chip "To sync"), unless its last sync could not upload (as the
-    tile, which shows no chip then)."""
+    """The subtitle of "Last sync": "Never synced" when this installation has no state.json
+    for the device (the one source of it, as on the tile); else the last sync (`data`,
+    last_sync.json) or that none is recorded, then the new activities to upload (`to_sync`,
+    the count of the chip "To sync"), unless that sync could not upload (no chip then)."""
     if not unit_id or not sync.synced_here(unit_id):
         return never_synced()
     text = last_sync_words(data, now) if data else no_sync_record()
@@ -441,11 +440,11 @@ def account_picture_refused_text(status: int | None) -> str:
 
 
 def read_diagnostics(win) -> None:
-    """What the open device logged as errors, and its diagnostic files copied when the copy
-    is on (diagnostics.at_open: once per connection, never a session of our own), read in
-    the background once its page is shown, not in the opening (3.7-4.4 s of 4.5-5 s on a
-    watch). A task that writes to the device waits for it
-    (window_tasks.wait_for_the_diagnostics); the row "Device error log" is drawn with it."""
+    """Reads in the background what the open device logged as errors, and copies its
+    diagnostic files when the copy is on (diagnostics.at_open: once per connection, never a
+    session of our own); leaves them in `session.diagnostics` and draws "Device error log".
+    `session.diagnostics_reading` is set once done: tasks that write to the device wait for
+    it (window_tasks.wait_for_the_diagnostics)."""
     s = win.session
     if (s is None or getattr(s, "diagnostics", None) is not None
             or getattr(s, "diagnostics_reading", None) is not None):
@@ -463,6 +462,8 @@ def read_diagnostics(win) -> None:
         if win.session is s:
             device_error_row(win)
 
+    # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
+    # 4.5-5 s of an opening.
     win.in_background(work, done)
 
 
@@ -577,13 +578,11 @@ remember_update_found = tile_facts.note_update_check
 
 
 def show_update_record(win) -> bool:
-    """The device page opened: what the last check of updates found for this device
-    (devices.json), when it is recent and for the software the device has now, as the state
-    of "Device software" and its chip until the check now running ends (which confirms or
-    changes it; a failed check leaves it, and says when it was: win.update_checked_at): an
-    update copied already ("ready", with the updates still to install), else updates to
-    install. Only shown: the Updates page, its buttons and the installs only ever use the
-    server's answer (updates_cache). Whether there was one."""
+    """Sets the state of "Device software" and its chip from the last check of updates
+    recorded for the open device (devices.json), if recent and for its software now: "ready"
+    (an update copied; `update_count` still to install) or "available"; returns whether there
+    was one. Only shown: the Updates page, its buttons and the installs use only the server's
+    answer (updates_cache)."""
     device = getattr(getattr(win, "session", None), "device", None)
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
@@ -592,6 +591,8 @@ def show_update_record(win) -> bool:
     software = getattr(device, "software_version_str", None)
     found = known_devices.recorded_updates(entry, software)
     check = known_devices.recorded_check(entry, software)
+    # Until the check now running ends: it confirms or changes this; a failed one leaves it
+    # and says when it was (update_checked_at).
     if check is not None and check.ready:
         win.update_state, win.update_count, win.update_only = "ready", 0, None
         win._update_record_at = check.at

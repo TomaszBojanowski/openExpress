@@ -24,11 +24,10 @@ class WindowClosed(Exception):
 
 
 def lets_the_window_close(fn):
-    """The work of a task that writes nothing to the device (a backup: it reads the device
-    and writes on this computer only): the window may close during it, as nothing on the
-    device can be left half-written. Its progress goes through stop_when_closed, so that the
-    work stops once the window is closed (the thread of a task keeps the process until it
-    ends)."""
+    """Marks the work of a task that writes nothing to the device (a backup reads the device
+    and writes on this computer only): the window may close during it, nothing on the device
+    can be left half-written. Its progress goes through stop_when_closed, so that it
+    stops once the window is closed (a task's thread keeps the process until it ends)."""
     @functools.wraps(fn)
     def work(*args, **kwargs):
         return fn(*args, **kwargs)
@@ -50,18 +49,18 @@ def stop_when_closed(win, progress):
 
 
 def read_again_after_failure(win, key: str, failed=None):
-    """The failure handler of a task that changes what page `key` (maps, apps, music) shows:
-    the page is read again, as when the task went well, since a part of it may be done (the
-    files of a map without its unlock file, half an own map that could not be deleted, songs
-    copied in part, an app list that waited and is gone). `failed` says the error as before
-    (else run_task does); its words stay over the page as it is read. Not when the device
-    was unplugged, or another one opened, meanwhile: the window reads what is open on its
-    own."""
+    """Returns the failure handler of a task that changes page `key` (maps, apps, music): it
+    reads the page again, since a part may be done. `failed(e)`: the caller's handler, run
+    first; its answer is returned (false: run_task shows the error) and its words stay over
+    the page. Not when the session changed meanwhile (unplugged, another device opened)."""
     started = win.session
 
     def handler(e) -> bool:
         said = bool(failed is not None and failed(e))
         if started is not None and win.session is started:
+            # As when the task went well: the files of a map without its unlock file, half an
+            # own map that could not be deleted, songs copied in part, an app list that waited
+            # and is gone.
             win.load_section(key, force=True)
         return said
 

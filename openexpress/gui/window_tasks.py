@@ -278,13 +278,11 @@ def _keep(parent, attribute: str, dialog) -> None:
 def confirm(parent, name: str, heading: str, body: str, *answers: Answer,
             cancel: str | None = None, default: str | None = None, extra=None,
             wide: bool = False, keep_as: str | None = None) -> Adw.AlertDialog:
-    """A question shown over `parent`: Cancel (`cancel`: its label) and `answers`, in this
-    order. Closed in any way (Escape, the system) it is cancelled: nothing runs. A chosen
-    answer runs its own `run`, and only while it is enabled. `default`: the answer of Enter.
-    `extra`: a widget below the text. `wide`: the wide layout. `keep_as`: see _keep;
-    libadwaita says "closed" before the answer (1.9), so an answer takes its data from its
-    own closure, never from that attribute. One line in the log: the dialog's `name` and
-    the answer's id, or "cancelled"."""
+    """Shows a question over `parent` and returns it: Cancel (labelled `cancel`), then
+    `answers`. Closed in any way (Escape) it is cancelled; a chosen answer runs its `run`
+    only while enabled. `default`: the answer of Enter; `extra`: a widget below the text;
+    `keep_as`: see _keep. ValueError for a missing, repeated or "cancel" answer. Logs `name`
+    and the answer's id, or "cancelled"."""
     ids = [a.id for a in answers]
     if not answers or "cancel" in ids or len(set(ids)) != len(ids):
         raise ValueError(f"dialog {name}: answers {ids}")
@@ -315,6 +313,8 @@ def confirm(parent, name: str, heading: str, body: str, *answers: Answer,
 
     d.connect("response", response)
     if keep_as is not None:
+        # libadwaita says "closed" before the answer (1.9), so an answer takes its data from
+        # its own closure, never from this attribute.
         _keep(parent, keep_as, d)
     d.present(parent)
     return d
@@ -418,15 +418,11 @@ class TaskRunner:
 
     def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True,
                  in_page: bool = False, button: Gtk.Button | None = None) -> None:
-        """Run `fn()` in a thread; the result is passed back to the GUI thread.
-
-        `device` is False for a task that does not touch the connected device: the user is
-        then not told to keep it plugged in. `in_page`: the page shows that it loads, so the
-        bottom bar has no indicator of its own. `button`: the task was started from it; it
-        spins at once, the rest of the page stays as it is, and the bar with `title` comes
-        only after TEXT_AFTER_MS. It is as it was before on_done or on_error runs. A task
-        whose work writes to the device (writes_to_device): once it ends (also when it failed:
-        a part may be written), its free space is read again in the background."""
+        """Run `fn()` in a thread, then `on_done(result)` or `on_error(e)` on the GUI thread
+        after the bar and `button` are restored; the error is shown unless `on_error`
+        returns true. While busy: a toast only. `device`: False when the device is not touched
+        (no "keep it plugged in"). `in_page`: as set_busy. `button`: spins at once, the bar
+        with `title` after TEXT_AFTER_MS."""
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
@@ -468,6 +464,8 @@ class TaskRunner:
             else:
                 GLib.idle_add(finish_ok, result)
 
+        # A work that writes to the device (writes_to_device): once it ends, also when it
+        # failed (a part may be written), the free space is read again in the background.
         def written() -> None:
             if getattr(fn, "writes_to_device", False) and started is not None \
                     and self.session is started:

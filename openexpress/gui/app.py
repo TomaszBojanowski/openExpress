@@ -570,8 +570,8 @@ class App(Adw.Application):
 
 def install_excepthook() -> None:
     """The window's exceptions nobody caught (in a handler of a signal, a callback of GLib:
-    PyGObject hands those to sys.excepthook too) go to the log; to stderr as before. Ctrl+C
-    is not an error."""
+    PyGObject hands those to sys.excepthook too) go to the log, then on to the hook that was
+    there (stderr). Ctrl+C is not an error."""
     previous = sys.excepthook
 
     def hook(exc_type, exc, tb):

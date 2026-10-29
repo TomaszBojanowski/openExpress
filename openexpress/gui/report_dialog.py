@@ -55,11 +55,7 @@ class ReportDialog:
     @staticmethod
     def _report_view(report_text: str, kept: dict | None = None):
         """The preview of the report with the "attach the log" switch: (widget, text buffer).
-        `kept["log"]`: the log shown, as the form's "Log" field takes it (None: not attached).
-
-        No handler here may refer to a widget of the preview: a widget that keeps itself
-        alive through its own handler outlives the dialog, and Python frees it whenever it
-        next collects reference cycles. The switch therefore only knows the text buffer."""
+        `kept["log"]`: the log shown, as the form's "Log" field takes it (None: not attached)."""
         view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
                             top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
         buffer = view.get_buffer()
@@ -69,6 +65,9 @@ class ReportDialog:
         attach = Gtk.CheckButton(label=_("Attach the last log"))
         attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
 
+        # No handler here may refer to a widget of the preview: a widget that keeps itself
+        # alive through its own handler outlives the dialog, and Python frees it whenever it
+        # next collects reference cycles. So the switch knows only the text buffer.
         def toggled(button):
             text, log_for_form = ReportDialog._report_and_log(report_text, button.get_active())
             buffer.set_text(text)
@@ -146,12 +145,10 @@ class ReportDialog:
 
     def _open_report_form(self, report_text: str, shown: str, log_for_form: str | None,
                           model: str | None) -> bool:
-        """Open a new device report on GitHub with the report filled in. The log never goes
-        into the address (too long, and the address is sent to GitHub when the page opens),
-        nor into the report field (what is pasted into a field filled in from the address is
-        lost): when it is attached (`log_for_form`), it goes to the clipboard, for the
-        form's "Log" field; whether it did. A report too long for an address goes to the
-        clipboard whole, with the empty form."""
+        """Open a new device report on GitHub with the report filled in; returns whether the
+        log went to the clipboard. The attached log (`log_for_form`) goes there, for the
+        form's "Log" field, never into the address or the report field. A report too long for
+        an address goes to the clipboard whole (`shown`), with the empty form."""
         from openexpress import report
 
         attached = bool(report_text) and log_for_form is not None
@@ -161,6 +158,9 @@ class ReportDialog:
             self.toast(_("Report copied: paste it into the form"))
             attached = False
         elif attached:
+            # Not into the address (too long, and the address is sent to GitHub when the page
+            # opens), nor into the report field (what is pasted into a field filled in from
+            # the address is lost).
             self.get_clipboard().set(log_for_form)
         Gtk.UriLauncher.new(url or report.ISSUE_URL).launch(self, None, None, None)
         return attached
