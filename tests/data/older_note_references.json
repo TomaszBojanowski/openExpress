@@ -16,7 +16,6 @@
  "tests/test_connected.py": 1,
  "tests/test_country_names.py": 2,
  "tests/test_dead_patches.py": 2,
- "tests/test_detection.py": 230,
  "tests/test_device_page_complete.py": 3,
  "tests/test_devicelist.py": 15,
  "tests/test_diagnostics.py": 7,

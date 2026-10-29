@@ -565,7 +565,7 @@ def test_a_mount_event_during_the_first_detection_does_not_load_the_pages_again(
 
 
 def test_a_mount_with_another_address_reads_the_list_again(detecting):
-    """Q1: another device mounted while one is open: the open one stays open, only the list
+    """Another device mounted while one is open: the open one stays open, only the list
     of devices connected is read again (no detection)."""
     from openexpress.gui.app import MainWindow
 
@@ -621,7 +621,7 @@ def test_the_same_address_at_a_new_place_on_usb_is_detected_again(detecting, tmp
 
 def test_its_own_mount_at_a_new_place_and_another_device_read_the_list_after(detecting,
                                                                            tmp_path):
-    """Q1, two mounts at once: the open device's own, at a new place on USB, and another
+    """Two mounts at once: the open device's own, at a new place on USB, and another
     device's. The open one is detected again first, then the list of devices connected is
     read, so that the other one gets its tile."""
     import shutil
@@ -668,7 +668,7 @@ def test_several_triggers_lead_to_one_detection(detecting):
     assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []
     # A mount of the open device and a device seen on USB: one decision covers both. The
     # open one is at its place on USB, so it stays open; the trigger without an address
-    # only has the list read again (Q1).
+    # only has the list read again.
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     schedule_detection(win, 2500)
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
@@ -703,7 +703,7 @@ FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive, but this v
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
                      "openExpress shows its information and software updates; sync, apps, "
                      "maps and music are not supported in this mode.")
-# Made by hand after the Varia RTL515 (17.10.2026); the unit ID is made up.
+# Made by hand after the Varia RTL515; the unit ID is made up.
 RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
  <Model><PartNumber>006-B3592-03</PartNumber><SoftwareVersion>336</SoftwareVersion>
@@ -826,7 +826,7 @@ def usb_drive(drives, vendor="091e", product="20ee", port="1-4", devnum=12, disk
               partition="sdb1", serial=DRIVE_SERIAL):
     """A USB drive as the kernel shows it: the USB device, its mass storage interface and the
     SCSI disk below it. Its USB serial (None: it has none, as a Varia Rearview Radar) tells one
-    drive from another, and is never shown (analysis 18)."""
+    drive from another, and is never shown."""
     extra = {"serial": serial} if serial is not None else {}
     usb = usb_device(drives.hub, port, 1, devnum, vendor, product, **extra)
     interface = usb / f"{port}:1.0"
@@ -851,7 +851,7 @@ def monitor_with(monkeypatch, *mounts):
 
 
 def test_the_drive_text_says_what_is_not_supported_not_that_it_does_not_apply():
-    """A navigator with lifetime maps connects as a USB drive (a nüvi 52LMT, 25.10.2026): its
+    """A navigator with lifetime maps connects as a USB drive (a nüvi 52LMT): its
     maps exist, openExpress does not handle them in this mode. The text says so, in English
     and in Polish (no "nie dotyczą")."""
     from openexpress import i18n
@@ -890,8 +890,8 @@ def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
 
 
 def test_a_device_read_for_the_list_is_hidden_in_the_log_also_in_hexadecimal(drives, monkeypatch):
-    """Its USB serial and its MTP address may carry its unit ID in hexadecimal (a fēnix 8,
-    26.10.2026): probe hides that too, as a session does (applog.hide_device)."""
+    """Its USB serial and its MTP address may carry its unit ID in hexadecimal (a fēnix 8):
+    probe hides that too, as a session does (applog.hide_device)."""
     from openexpress import applog
 
     monitor_with(monkeypatch, FakeDriveMount(drive_folder(drives), usb_drive(drives)))
@@ -1014,7 +1014,7 @@ def test_a_garmin_drive_opens_as_mass_storage(drives, monkeypatch, label):
 
 
 def test_only_a_garmin_drive_is_mass_storage(tmp_path):
-    """MTP storages and the folder given with --path are not: --path stays as it was."""
+    """MTP storages and the folder given with --path are not: --path stays a local folder."""
     from openexpress import cli
     from openexpress.device import storage
 
@@ -1138,7 +1138,7 @@ def watch_and_drives(plugged, drives, device_root, monkeypatch):
 
 
 def test_a_garmin_drive_opens_only_when_asked_for(watch_and_drives, monkeypatch):
-    """Without allow_ums, as before: MTP alone (the command line, the background service)."""
+    """Without allow_ums: MTP alone (the command line, the background service)."""
     from openexpress import service
 
     monitor_with(monkeypatch, watch_and_drives.drive())
@@ -1151,7 +1151,7 @@ def test_a_garmin_drive_opens_only_when_asked_for(watch_and_drives, monkeypatch)
 
 
 def test_mtp_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
-    """D1: the MTP device opens as it does today; the drive is skipped, and the log says so."""
+    """The MTP device opens; the drive is skipped, and the log says so."""
     from openexpress import service
 
     monitor_with(monkeypatch, watch_and_drives.drive())
@@ -1164,7 +1164,7 @@ def test_mtp_comes_before_a_garmin_drive(watch_and_drives, monkeypatch, caplog):
     assert "opened in mass storage mode" not in caplog.text
 
 
-# --- the command line opens a Garmin drive as the window does (Varia, step 3) ---------------------
+# --- the command line opens a Garmin drive as the window does -------------------------------------
 
 
 def test_the_command_line_opens_a_garmin_drive_without_path(watch_and_drives, monkeypatch,
@@ -1227,7 +1227,7 @@ def test_the_info_of_a_drive_without_a_volume_label(watch_and_drives, monkeypatc
 
 def test_the_info_of_an_mtp_device_still_gives_its_storage(watch_and_drives, monkeypatch,
                                                            capsys):
-    """Guards: over MTP the line is as before (the address of its storage)."""
+    """Guards: over MTP the line gives the address of its storage."""
     import json
 
     from openexpress.cli import main
@@ -1243,7 +1243,7 @@ def test_the_info_of_an_mtp_device_still_gives_its_storage(watch_and_drives, mon
 
 def test_the_command_line_opens_mtp_before_a_garmin_drive(watch_and_drives, monkeypatch,
                                                           capsys, caplog):
-    """D1, as in the window: the MTP device opens, the drive is skipped and the log says so."""
+    """As in the window: the MTP device opens, the drive is skipped and the log says so."""
     from openexpress.cli import main
 
     monitor_with(monkeypatch, watch_and_drives.drive())
@@ -1317,7 +1317,7 @@ def test_a_watch_on_its_way_comes_before_a_garmin_drive(watch_and_drives, monkey
 
 
 def test_several_mtp_devices_next_to_a_garmin_drive(watch_and_drives, monkeypatch):
-    """Two MTP devices: "Several devices" as before, with their addresses."""
+    """Two MTP devices: "Several devices", with their addresses."""
     from openexpress import service
 
     monitor_with(monkeypatch, watch_and_drives.drive())
@@ -1345,8 +1345,8 @@ def test_several_garmin_drives(watch_and_drives, monkeypatch):
 
 
 def test_several_mtp_devices_come_with_the_devices_found(watch_and_drives, monkeypatch):
-    """K1: the error carries what was found (kind, address, USB id), for the window to offer
-    a choice; its text is the same as before."""
+    """The error carries what was found (kind, address, USB id), for the window to offer
+    a choice; its text says to choose one with --device-uri."""
     from openexpress import service
 
     monitor_with(monkeypatch)  # no drive
@@ -1363,7 +1363,7 @@ def test_several_mtp_devices_come_with_the_devices_found(watch_and_drives, monke
 
 
 def test_several_garmin_drives_come_with_the_drives_found(watch_and_drives, monkeypatch):
-    """K1: two drives, the same: kind, address and USB id of each; the text as before."""
+    """Two drives, the same: kind, address and USB id of each; the text asks for only one."""
     from openexpress import service
 
     first = watch_and_drives.drive()
@@ -1384,7 +1384,7 @@ def found_list():
 
 
 def test_all_devices_with_an_mtp_device_alone(watch_and_drives, monkeypatch):
-    """K2: one MTP device, no drive: one entry of kind mtp."""
+    """One MTP device, no drive: one entry of kind mtp."""
     monitor_with(monkeypatch)
     watch_and_drives.plug("51b4")
     watch_and_drives.offer()
@@ -1392,14 +1392,14 @@ def test_all_devices_with_an_mtp_device_alone(watch_and_drives, monkeypatch):
 
 
 def test_all_devices_with_a_garmin_drive_alone(watch_and_drives, monkeypatch):
-    """K2: one Garmin drive, no MTP device: one entry of kind ums."""
+    """One Garmin drive, no MTP device: one entry of kind ums."""
     drive = watch_and_drives.drive()
     monitor_with(monkeypatch, drive)
     assert found_list() == [("ums", drive.root.get_uri(), "091e:20ee")]
 
 
 def test_all_devices_lists_an_mtp_device_and_a_garmin_drive(watch_and_drives, monkeypatch):
-    """K2: both at once are both listed (opening one still puts MTP first, D1); nothing is
+    """Both at once are both listed (opening one still puts MTP first); nothing is
     opened and no GarminDevice.xml is read for the list."""
     drive = watch_and_drives.drive()
     monitor_with(monkeypatch, drive)
@@ -1419,7 +1419,7 @@ def summary_of(summary):
 
 
 def test_probe_reads_a_garmin_drive(watch_and_drives, monkeypatch):
-    """K3: model, part number and version from the drive's GarminDevice.xml; the unit ID
+    """Model, part number and version from the drive's GarminDevice.xml; the unit ID
     is kept in memory only."""
     drive = watch_and_drives.drive()
     monitor_with(monkeypatch, drive)
@@ -1434,7 +1434,7 @@ def test_probe_reads_a_garmin_drive(watch_and_drives, monkeypatch):
     (b"<Device><Model>", "unreadable"),  # cut short
 ])
 def test_probe_of_a_drive_without_a_readable_device_file(drives, content, reason):
-    """K3: no exception; the summary says why it has no details."""
+    """No exception; the summary says why it has no details."""
     folder = drive_folder(drives, xml_path=None)
     if content is not None:
         (folder / "GARMIN" / "GarminDevice.xml").write_bytes(content)
@@ -1465,7 +1465,7 @@ def test_probe_of_an_mtp_device_that_cannot_be_opened_logs_why(monkeypatch, capl
 
 
 def test_probe_does_not_mount_an_mtp_device(watch_and_drives, monkeypatch):
-    """K3 (P3): an MTP device whose volume is not mounted gets an entry without details;
+    """An MTP device whose volume is not mounted gets an entry without details;
     nothing is mounted or read."""
     mounted = []
     monkeypatch.setattr(gio_storage, "mount", lambda dev, *a, **kw: mounted.append(dev))
@@ -1479,7 +1479,7 @@ def test_probe_does_not_mount_an_mtp_device(watch_and_drives, monkeypatch):
 
 
 def test_probe_never_writes_the_unit_id(watch_and_drives, monkeypatch, caplog):
-    """K3: neither the log (the raw records, before the log filter) nor the summary's text
+    """Neither the log (the raw records, before the log filter) nor the summary's text
     shows the unit ID; the MTP device and the drive each get one line."""
     drive = watch_and_drives.drive()
     monitor_with(monkeypatch, drive)
@@ -1499,8 +1499,8 @@ def test_probe_never_writes_the_unit_id(watch_and_drives, monkeypatch, caplog):
 
 
 def test_open_session_opens_the_mtp_device_chosen(watch_and_drives, monkeypatch):
-    """K4: of two MTP devices, the one chosen from the list is opened, not the other; without
-    a choice it is "Several devices" as before."""
+    """Of two MTP devices, the one chosen from the list is opened, not the other; without
+    a choice it is "Several devices"."""
     from openexpress import service
 
     monitor_with(monkeypatch)
@@ -1518,7 +1518,7 @@ def test_open_session_opens_the_mtp_device_chosen(watch_and_drives, monkeypatch)
 
 
 def test_open_session_opens_the_garmin_drive_chosen(watch_and_drives, monkeypatch):
-    """K4: of two Garmin drives, the one chosen is opened."""
+    """Of two Garmin drives, the one chosen is opened."""
     from openexpress import service
 
     first = watch_and_drives.drive()
@@ -1567,7 +1567,7 @@ def _watcher_syncs(monkeypatch):
 
 
 def test_the_watcher_syncs_the_watch_next_to_a_garmin_drive(watch_and_drives, monkeypatch):
-    """P4: a device in mass storage mode is left out; one device left (the watch): synced."""
+    """A device in mass storage mode is left out; one device left (the watch): synced."""
     from openexpress import watch
 
     synced, _shown = _watcher_syncs(monkeypatch)
@@ -1580,7 +1580,7 @@ def test_the_watcher_syncs_the_watch_next_to_a_garmin_drive(watch_and_drives, mo
 
 def test_the_watcher_syncs_nothing_with_two_watches(watch_and_drives, monkeypatch, tmp_path,
                                                     device_root):
-    """P4: two devices left (two MTP devices): nothing synced, nothing shown."""
+    """Two devices left (two MTP devices): nothing synced, nothing shown."""
     from openexpress import watch
 
     synced, shown = _watcher_syncs(monkeypatch)
@@ -1591,7 +1591,7 @@ def test_the_watcher_syncs_nothing_with_two_watches(watch_and_drives, monkeypatc
 
 
 def test_the_watcher_syncs_nothing_with_a_garmin_drive_alone(watch_and_drives, monkeypatch):
-    """P4: a drive alone starts no sync (its mount is not a device's), and a sync asked for
+    """A drive alone starts no sync (its mount is not a device's), and a sync asked for
     while only a drive is there syncs nothing."""
     from openexpress import watch
 
@@ -1609,10 +1609,10 @@ def test_the_watcher_syncs_nothing_with_a_garmin_drive_alone(watch_and_drives, m
 
 def test_a_sync_that_finds_only_a_garmin_drive_says_nothing(watch_and_drives, monkeypatch,
                                                              caplog):
-    """P4 and D4: the watch was plugged in and out again before its sync started, a Garmin
+    """The watch was plugged in and out again before its sync started, a Garmin
     drive is left. As with several devices: asked once (nothing to wait for), one INFO line
-    in the log, no notification and no ERROR (there was "Sync failed: ... its drive is not
-    mounted", while it was)."""
+    in the log, no notification and no ERROR (not "Sync failed: ... its drive is not
+    mounted", while it is)."""
     from openexpress import watch
 
     synced, shown = _watcher_syncs(monkeypatch)
@@ -1657,7 +1657,7 @@ def drive_window(watch_and_drives, monkeypatch):
 
 
 def test_window_detects_a_garmin_drive_when_it_is_mounted(drive_window, caplog):
-    """Test 1: the mount of a Garmin drive leads to a detection; a pendrive does not."""
+    """The mount of a Garmin drive leads to a detection; a pendrive does not."""
     from openexpress.gui.app import MainWindow
 
     win, world = drive_window, drive_window.world
@@ -1699,8 +1699,8 @@ def test_a_detection_after_the_task_leaves_no_timer_behind(drive_window, monkeyp
 
 
 def test_window_opens_a_garmin_drive(drive_window, monkeypatch):
-    """Test 2: the window's detection opens the RTL515 as a Garmin drive; nothing is asked of
-    the account. An MTP device next to it would come first (step 4)."""
+    """The window's detection opens the RTL515 as a Garmin drive; nothing is asked of
+    the account. An MTP device next to it would come first."""
     monitor_with(monkeypatch, drive_window.world.drive())
     drive_window.refresh_device()
     (s,) = drive_window.built
@@ -1710,7 +1710,7 @@ def test_window_opens_a_garmin_drive(drive_window, monkeypatch):
 
 
 def drive_session(drive_window, monkeypatch):
-    """A session on the RTL515 drive as the window gets it (step 4), without the window."""
+    """A session on the RTL515 drive as the window gets it, without the window."""
     from openexpress import service
 
     monitor_with(monkeypatch, drive_window.world.drive())
@@ -1787,8 +1787,8 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
 
 @pytest.mark.needs_display
 def test_device_page_of_a_garmin_drive_says_what_applies(drive_window, monkeypatch):
-    """D6: no backup. A short description in place of the sync; not the words for a drive the
-    window cannot open (step 1)."""
+    """No backup. A short description in place of the sync; not the words for a drive the
+    window cannot open."""
     texts, _calls = _drive_device_page(drive_window, monkeypatch)
     assert "Backup" not in texts
     assert "USB drive" in texts and MASS_STORAGE_TEXT in texts
@@ -1893,7 +1893,7 @@ def test_reading_a_garmin_drive_keeps_nothing_open_on_it(drive_window, monkeypat
 
 def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monkeypatch,
                                                               caplog):
-    """Test 12 (F1): in the Flatpak the drive of a Garmin device is known from /sys (vendor
+    """In the Flatpak the drive of a Garmin device is known from /sys (vendor
     091e) and from gvfs, but its folder under /run/media is not in the sandbox. No session;
     the page says that this version has no access to the drive's folder, and the log says why
     it was skipped."""
@@ -1948,7 +1948,7 @@ def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidde
     assert "--path" not in FLATPAK_DRIVE_TEXT
 
 
-# --- several devices: a list to choose from (start page, K5) ---------------------------------
+# --- several devices: a list to choose from (start page) -------------------------------------
 
 EDGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
@@ -1978,7 +1978,7 @@ def choosing_window(drive_window):
     if hasattr(MainWindow, "open_choice"):
         win.open_choice = types.MethodType(MainWindow.open_choice, win)
     win.error = lambda title, text: win.errors.append(text)
-    # The start page reads the list again when another device goes away (D5): recorded here.
+    # The start page reads the list again when another device goes away: recorded here.
     win.rereads = []
     win._reread_connected = lambda: win.rereads.append(win.session)
     return win
@@ -2009,7 +2009,7 @@ def two_watches(world, monkeypatch, tmp_path, device_root):
 
 def test_window_offers_a_choice_of_two_mtp_devices(choosing_window, monkeypatch, tmp_path,
                                                    device_root):
-    """K5: two MTP devices: a list of both by name, no session, no "starting" or "PIN",
+    """Two MTP devices: a list of both by name, no session, no "starting" or "PIN",
     and no detection planned again."""
     win = choosing_window
     monitor_with(monkeypatch)
@@ -2021,8 +2021,8 @@ def test_window_offers_a_choice_of_two_mtp_devices(choosing_window, monkeypatch,
 
 
 def test_window_offers_an_mtp_device_and_a_garmin_drive(choosing_window, monkeypatch):
-    """K5 (P2): an MTP device and a Garmin drive, two different devices: both on the list
-    (opening without a choice would take the MTP device, D1)."""
+    """An MTP device and a Garmin drive, two different devices: both on the list
+    (opening without a choice would take the MTP device)."""
     win = choosing_window
     monitor_with(monkeypatch, win.world.drive())
     win.world.plug("51b4")
@@ -2033,8 +2033,8 @@ def test_window_offers_an_mtp_device_and_a_garmin_drive(choosing_window, monkeyp
 
 
 def test_one_device_in_both_modes_is_no_choice(choosing_window, monkeypatch, device_root):
-    """K5 (P2, D1): the same device seen over MTP and as a drive (the same unit ID) is one
-    device: no list; it opens over MTP, as before."""
+    """The same device seen over MTP and as a drive (the same unit ID) is one
+    device: no list; it opens over MTP."""
     win = choosing_window
     (device_root / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)
     monitor_with(monkeypatch, win.world.drive())
@@ -2047,8 +2047,8 @@ def test_one_device_in_both_modes_is_no_choice(choosing_window, monkeypatch, dev
 
 
 def test_the_devices_to_choose_from_are_merged_by_unit_id():
-    """K5: one entry per device: an MTP entry and a drive with the same unit ID are one
-    (the MTP entry stays, D1); entries without details are kept apart."""
+    """One entry per device: an MTP entry and a drive with the same unit ID are one
+    (the MTP entry stays); entries without details are kept apart."""
     usb = gio_storage.GarminUsb("20ee", 1, 12)
 
     def summary(kind, uri, unit_id, reason=None):
@@ -2065,7 +2065,7 @@ def test_the_devices_to_choose_from_are_merged_by_unit_id():
 
 
 def test_choosing_a_device_opens_it(choosing_window, monkeypatch, tmp_path, device_root):
-    """K5: a click on an entry opens that device, as if it were the only one."""
+    """A click on an entry opens that device, as if it were the only one."""
     win = choosing_window
     monitor_with(monkeypatch)
     edge = two_watches(win.world, monkeypatch, tmp_path, device_root)
@@ -2078,7 +2078,7 @@ def test_choosing_a_device_opens_it(choosing_window, monkeypatch, tmp_path, devi
 
 
 def test_unplugging_down_to_one_device_opens_it(choosing_window, monkeypatch):
-    """K5 (D7): two drives on the list; one is unplugged: the list is detected again and the
+    """Two drives on the list; one is unplugged: the list is detected again and the
     one left is opened."""
     from openexpress.gui.app import MainWindow
 
@@ -2103,7 +2103,7 @@ def test_unplugging_down_to_one_device_opens_it(choosing_window, monkeypatch):
 
 
 def test_refresh_keeps_the_device_chosen(choosing_window, monkeypatch, tmp_path, device_root):
-    """K5: with two devices connected and one chosen, Refresh opens the chosen one again
+    """With two devices connected and one chosen, Refresh opens the chosen one again
     instead of going back to the list."""
     win = choosing_window
     monitor_with(monkeypatch)
@@ -2118,7 +2118,7 @@ def test_refresh_keeps_the_device_chosen(choosing_window, monkeypatch, tmp_path,
 
 
 def test_one_device_found_twice_opens_without_a_list(choosing_window, monkeypatch):
-    """K5: two entries of one device (the same unit ID) where opening says "Several devices":
+    """Two entries of one device (the same unit ID) where opening says "Several devices":
     it is opened at once, not offered as a list of one."""
     win = choosing_window
     first = win.world.drive()
@@ -2133,9 +2133,8 @@ def test_one_device_found_twice_opens_without_a_list(choosing_window, monkeypatc
 def test_a_second_device_plugged_in_while_one_is_open_keeps_it_open(choosing_window,
                                                                    monkeypatch, tmp_path,
                                                                    device_root):
-    """K5, found on the devices: the Edge is open alone, then the fēnix is mounted. Q1: the
-    Edge stays open (not opened again), no list to choose from; only the list of devices
-    connected is read again."""
+    """The Edge is open alone, then the fēnix is mounted. The Edge stays open (not opened
+    again), no list to choose from; only the list of devices connected is read again."""
     from openexpress.gui.app import MainWindow
 
     win, world = choosing_window, choosing_window.world
@@ -2155,7 +2154,7 @@ def test_a_second_device_plugged_in_while_one_is_open_keeps_it_open(choosing_win
 
 def test_two_devices_without_an_id_are_not_merged(choosing_window, monkeypatch, tmp_path,
                                                   device_root):
-    """K5: GarminDevice.xml without <Id> gives no unit ID (None, not 0): two such devices
+    """GarminDevice.xml without <Id> gives no unit ID (None, not 0): two such devices
     are two entries, never merged."""
     import re
 
@@ -2173,7 +2172,7 @@ def test_two_devices_without_an_id_are_not_merged(choosing_window, monkeypatch, 
 
 def test_two_mtp_devices_known_by_their_usb_device_are_both_listed(choosing_window, monkeypatch,
                                                                   tmp_path, device_root):
-    """K5, as on the devices: the Edge's address has its name ("Garmin_…"), the fēnix's only
+    """As on the devices: the Edge's address has its name ("Garmin_…"), the fēnix's only
     the IDs ("091e_51b4_…", libmtp does not know it); both are Garmin devices by vendor
     091e in /sys (the real find_devices), so both are on the list."""
     win, world = choosing_window, choosing_window.world
@@ -2206,7 +2205,7 @@ def three_devices(win, monkeypatch, tmp_path, device_root):
 
 def test_unplugging_another_device_keeps_the_open_one(choosing_window, monkeypatch, tmp_path,
                                                       device_root):
-    """K6: the test watch was chosen from the list and is open; the Edge, which is not the
+    """The test watch was chosen from the list and is open; the Edge, which is not the
     one shown, is unplugged. The open device stays as it is: not closed, no list."""
     from openexpress.gui.app import MainWindow
 
@@ -2230,8 +2229,7 @@ def test_unplugging_another_device_keeps_the_open_one(choosing_window, monkeypat
 
 def test_a_device_gone_from_the_list_of_three_leaves_two(choosing_window, monkeypatch,
                                                          tmp_path, device_root):
-    """K6 (guards K5): the list of three; the drive is unplugged: the list of the two
-    others."""
+    """The list of three; the drive is unplugged: the list of the two others."""
     from openexpress.gui.app import MainWindow
 
     win = choosing_window
@@ -2247,7 +2245,7 @@ def test_a_device_gone_from_the_list_of_three_leaves_two(choosing_window, monkey
 
 def test_a_third_device_makes_the_list_grow(choosing_window, monkeypatch, tmp_path,
                                             device_root):
-    """K6 (guards K5): the list of two; a drive is mounted: the list of three."""
+    """The list of two; a drive is mounted: the list of three."""
     from openexpress.gui.app import MainWindow
 
     win = choosing_window
@@ -2265,9 +2263,9 @@ def test_a_third_device_makes_the_list_grow(choosing_window, monkeypatch, tmp_pa
 
 def test_a_device_never_mounted_that_leaves_is_noticed(choosing_window, monkeypatch, tmp_path,
                                                        device_root):
-    """K6 (guards K5): an Edge whose volume was never mounted (an entry without details)
+    """An Edge whose volume was never mounted (an entry without details)
     leaves USB without any mount event; the poll of USB notices it, and the one device
-    left opens (D7)."""
+    left opens."""
     from openexpress.gui.app import MainWindow
 
     win, world = choosing_window, choosing_window.world
@@ -2288,7 +2286,7 @@ def test_a_device_never_mounted_that_leaves_is_noticed(choosing_window, monkeypa
 
 
 def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch):
-    """K5: the list comes from what is plugged in, not from the account: a drive and an MTP
+    """The list comes from what is plugged in, not from the account: a drive and an MTP
     device that the account does not list are both there, and the account is not asked."""
     from openexpress import service
 
@@ -2308,9 +2306,9 @@ def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch
 
 @pytest.mark.needs_display
 def test_list_shows_names_and_never_addresses(monkeypatch):
-    """K5, on the start page since D5 (T2): one tile per device: its name (or "Garmin
-    device" without details), how it is connected, its version or why it has no details;
-    never an MTP address; the other pages say to choose a device."""
+    """On the start page, one tile per device: its name (or "Garmin device" without
+    details), how it is connected, its version or why it has no details; never an MTP
+    address; the other pages say to choose a device."""
     from openexpress.gui.app import MainWindow, Section
     from openexpress.gui.start import StartPage
 
@@ -2340,7 +2338,7 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
     assert win.navigation.stack == [win.start.page]
 
 
-# --- several devices: edge cases (after K1–K7) -----------------------------------------------
+# --- several devices: edge cases -------------------------------------------------------------
 
 
 def another_drive(world, unit_id, label="GARMIN 2", port="1-5", devnum=13, disk="sdc"):
@@ -2383,7 +2381,7 @@ def rows_of(win):
 
 
 def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, device_root):
-    """A1: three devices at once: three rows, each with its name and how it is connected."""
+    """Three devices at once: three rows, each with its name and how it is connected."""
     win = choosing_window
     three_devices(win, monkeypatch, tmp_path, device_root)
     assert rows_of(win) == [("Test watch", "Software 23.39"),
@@ -2392,7 +2390,7 @@ def test_three_devices_give_three_rows(choosing_window, monkeypatch, tmp_path, d
 
 
 def test_four_devices_give_four_rows(choosing_window, monkeypatch, tmp_path, device_root):
-    """A2: two MTP devices and two drives: four rows."""
+    """Two MTP devices and two drives: four rows."""
     win = choosing_window
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     monitor_with(monkeypatch, win.world.drive(), another_drive(win.world, 3000000004))
@@ -2402,8 +2400,8 @@ def test_four_devices_give_four_rows(choosing_window, monkeypatch, tmp_path, dev
 
 
 def test_unplugging_one_by_one_down_to_none(choosing_window, monkeypatch):
-    """A3: three drives on the list, unplugged one after another: two on the list, then the
-    last one open (D7), then no device at all; never a list of one or of none."""
+    """Three drives on the list, unplugged one after another: two on the list, then the
+    last one open, then no device at all; never a list of one or of none."""
     win = choosing_window
     first = win.world.drive()
     second = another_drive(win.world, 3000000004)
@@ -2423,7 +2421,7 @@ def test_unplugging_one_by_one_down_to_none(choosing_window, monkeypatch):
 
 @pytest.mark.parametrize("left", ["mtp", "ums"])
 def test_the_one_device_left_opens_whatever_its_kind(choosing_window, monkeypatch, left):
-    """A4 (D7): an MTP device and a drive on the list; one goes: the other one opens, an MTP
+    """An MTP device and a drive on the list; one goes: the other one opens, an MTP
     device as well as a drive."""
     win, world = choosing_window, choosing_window.world
     drive = world.drive()
@@ -2457,8 +2455,8 @@ def vanishing(monkeypatch, *uris):
 
 def test_a_device_gone_before_it_is_read_is_not_listed(choosing_window, monkeypatch, tmp_path,
                                                        device_root):
-    """B5: found, then gone from USB before its GarminDevice.xml was read: no row for it;
-    the one device left opens (D7)."""
+    """Found, then gone from USB before its GarminDevice.xml was read: no row for it;
+    the one device left opens."""
     win = choosing_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)  # the Edge was never in /sys
@@ -2471,7 +2469,7 @@ def test_a_device_gone_before_it_is_read_is_not_listed(choosing_window, monkeypa
 
 def test_all_devices_gone_before_they_are_read(choosing_window, monkeypatch, tmp_path,
                                               device_root):
-    """B5: both gone before they were read: no list (not even an empty one), no device."""
+    """Both gone before they were read: no list (not even an empty one), no device."""
     win = choosing_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
@@ -2483,7 +2481,7 @@ def test_all_devices_gone_before_they_are_read(choosing_window, monkeypatch, tmp
 
 
 def test_choosing_a_device_that_is_gone(choosing_window, monkeypatch, tmp_path, device_root):
-    """B6: the Edge is chosen just after it was unplugged: a message says that it could not
+    """The Edge is chosen just after it was unplugged: a message says that it could not
     be opened, and the detection runs again (the test watch alone: it opens)."""
     win, world = choosing_window, choosing_window.world
     monitor_with(monkeypatch)
@@ -2503,7 +2501,7 @@ def test_choosing_a_device_that_is_gone(choosing_window, monkeypatch, tmp_path, 
 
 
 def test_a_quick_unplug_and_plug_in_makes_one_detection(choosing_window, monkeypatch):
-    """B7: a drive on the list is unplugged and plugged in again at once: one detection, the
+    """A drive on the list is unplugged and plugged in again at once: one detection, the
     same two rows, nothing opened."""
     from openexpress.gui.app import MainWindow
 
@@ -2521,7 +2519,7 @@ def test_a_quick_unplug_and_plug_in_makes_one_detection(choosing_window, monkeyp
 
 def test_two_devices_not_mounted_are_two_rows(choosing_window, monkeypatch, tmp_path,
                                              device_root):
-    """C8 (P3): two MTP devices whose volumes are not mounted, both on USB: two rows to
+    """Two MTP devices whose volumes are not mounted, both on USB: two rows to
     click, "not mounted", without details; never merged (no unit ID is no match)."""
     win, world = choosing_window, choosing_window.world
     monitor_with(monkeypatch)
@@ -2537,7 +2535,7 @@ def test_two_devices_not_mounted_are_two_rows(choosing_window, monkeypatch, tmp_
 
 def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatch, tmp_path,
                                                      device_root):
-    """C9: the Edge's GarminDevice.xml is cut short; the test watch is fine: a row "could
+    """The Edge's GarminDevice.xml is cut short; the test watch is fine: a row "could
     not be read" next to the normal one; nothing stops the list."""
     win, world = choosing_window, choosing_window.world
     monitor_with(monkeypatch)
@@ -2550,7 +2548,7 @@ def test_a_damaged_device_file_next_to_a_good_device(choosing_window, monkeypatc
 
 
 def test_an_mtp_device_and_two_drives_give_three_rows(choosing_window, monkeypatch):
-    """D11: an MTP device and two Garmin drives: three rows."""
+    """An MTP device and two Garmin drives: three rows."""
     win = choosing_window
     monitor_with(monkeypatch, win.world.drive(), another_drive(win.world, 3000000004))
     win.world.plug("51b4")
@@ -2562,7 +2560,7 @@ def test_an_mtp_device_and_two_drives_give_three_rows(choosing_window, monkeypat
 
 def test_one_device_seen_both_ways_next_to_another(choosing_window, monkeypatch, tmp_path,
                                                    device_root):
-    """D12 (P2, D1): the radar is seen over MTP and as a drive at once (the same unit ID),
+    """The radar is seen over MTP and as a drive at once (the same unit ID),
     an Edge is connected too: the radar is one row (its MTP entry), the Edge another; two
     rows, not three."""
     win = choosing_window
@@ -2575,8 +2573,8 @@ def test_one_device_seen_both_ways_next_to_another(choosing_window, monkeypatch,
 
 def test_devices_on_and_off_the_account_are_both_listed(choosing_window, monkeypatch, tmp_path,
                                                         device_root):
-    """D13: the account lists the Edge but not the test watch: both are on the list, and
-    the list does not ask the account (K5)."""
+    """The account lists the Edge but not the test watch: both are on the list, and
+    the list does not ask the account."""
     from openexpress import service
 
     asked = []
@@ -2591,7 +2589,7 @@ def test_devices_on_and_off_the_account_are_both_listed(choosing_window, monkeyp
     assert asked == []
 
 
-# --- the devices seen go to devices.json (start page, D3) -------------------------------------
+# --- the devices seen go to devices.json (start page) -----------------------------------------
 
 
 def remembered():
@@ -2603,7 +2601,7 @@ def remembered():
 
 
 def test_opening_an_mtp_device_remembers_it(watch_and_drives, monkeypatch):
-    """D3: a session on an MTP device (window, background service): its entry is written."""
+    """A session on an MTP device (window, background service): its entry is written."""
     from openexpress import service
 
     monitor_with(monkeypatch)
@@ -2614,7 +2612,7 @@ def test_opening_an_mtp_device_remembers_it(watch_and_drives, monkeypatch):
 
 
 def test_opening_a_garmin_drive_remembers_it(watch_and_drives, monkeypatch):
-    """D3: the same for a Garmin drive, of kind ums."""
+    """The same for a Garmin drive, of kind ums."""
     from openexpress import service
 
     monitor_with(monkeypatch, watch_and_drives.drive())
@@ -2624,7 +2622,7 @@ def test_opening_a_garmin_drive_remembers_it(watch_and_drives, monkeypatch):
 
 def test_the_command_line_remembers_a_device_but_not_a_folder(watch_and_drives, monkeypatch,
                                                               device_root):
-    """D3: the command line opens devices without open_session; a device found is
+    """The command line opens devices without open_session; a device found is
     remembered, a folder given with --path (e.g. a copy) is not."""
     import types
 
@@ -2643,7 +2641,7 @@ def test_the_command_line_remembers_a_device_but_not_a_folder(watch_and_drives, 
 
 def test_the_list_remembers_each_device_with_details(choosing_window, monkeypatch, tmp_path,
                                                      device_root):
-    """D3: the list to choose from remembers every entry whose GarminDevice.xml was read,
+    """The list to choose from remembers every entry whose GarminDevice.xml was read,
     before anything is chosen."""
     win = choosing_window
     monitor_with(monkeypatch)
@@ -2656,7 +2654,7 @@ def test_the_list_remembers_each_device_with_details(choosing_window, monkeypatc
 
 def test_an_entry_without_details_is_not_remembered(choosing_window, monkeypatch, tmp_path,
                                                     device_root):
-    """D3: an Edge whose volume is not mounted has no unit ID read: only the test watch is
+    """An Edge whose volume is not mounted has no unit ID read: only the test watch is
     remembered."""
     win = choosing_window
     monitor_with(monkeypatch)
@@ -2670,7 +2668,7 @@ def test_an_entry_without_details_is_not_remembered(choosing_window, monkeypatch
 
 def test_a_failed_remembering_does_not_stop_the_detection(choosing_window, monkeypatch,
                                                           tmp_path, device_root, caplog):
-    """D3: devices.json cannot be written (e.g. the disk is full): said in the log; the device
+    """devices.json cannot be written (e.g. the disk is full): said in the log; the device
     opens all the same, and the list is shown all the same."""
     import errno
 
@@ -2696,7 +2694,7 @@ def test_a_failed_remembering_does_not_stop_the_detection(choosing_window, monke
     assert remembered() == {}
 
 
-# --- installing an update on a Garmin drive (step 7) ----------------------------------------
+# --- installing an update on a Garmin drive -------------------------------------------------
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
 BIKE_ACCESSORY_TEXT = (
@@ -2750,7 +2748,7 @@ def record_fsyncs(monkeypatch) -> list[str]:
 @pytest.mark.skipif(not Path("/proc/self/fd").is_dir(), reason="needs /proc")
 def test_an_update_written_to_a_drive_is_on_the_disk_before_it_counts(drive_window, monkeypatch,
                                                                       tmp_path):
-    """Test 1: the file goes where GarminDevice.xml says, with its content, under a temporary
+    """The file goes where GarminDevice.xml says, with its content, under a temporary
     name until it is complete; the file and then its folder are synced (a Varia resets its
     USB when the cable goes out, so only what is on the disk counts). Progress as it goes."""
     from openexpress.device import storage
@@ -2772,7 +2770,7 @@ def test_an_update_written_to_a_drive_is_on_the_disk_before_it_counts(drive_wind
     assert len(steps) == 3 and steps[-1] == (size, size)  # 10 kB in 4 kB steps
 
 
-# After an update was saved on a Garmin drive (#11): the drive is ejected before the cable may
+# After an update was saved on a Garmin drive: the drive is ejected before the cable may
 # go out; only then is that said.
 EJECT_FIRST_TEXT = ("Eject the device before you unplug the cable: until then it may not see "
                     "the update.")
@@ -2828,7 +2826,7 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
 ])
 def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
     """The window asks, then copies; exactly one file comes to the drive. Then it asks to eject
-    the drive and does not say that the cable can go out (#11: a device in mass storage mode
+    the drive and does not say that the cable can go out (a device in mass storage mode
     may take the file only once ejected). Once ejected it says so, and for a bike accessory, as
     Garmin Express does, how the device finishes the update."""
     s, mount, dialogs, asked = installed_on_a_drive(drive_window, monkeypatch, segment)
@@ -2935,9 +2933,9 @@ def test_eject_asks_the_system_and_waits_for_its_answer(watch_and_drives, monkey
 
 def test_a_drive_ejected_by_openexpress_is_not_opened_again_until_unplugged(drive_window,
                                                                             monkeypatch, caplog):
-    """Ejected, the drive stays on USB (the Varia, 21.10.2026). Mounted again meanwhile (here:
+    """Ejected, the drive stays on USB (the Varia). Mounted again meanwhile (here:
     still in the monitor), it is neither opened nor listed, and the pages say that the cable
-    can go out. Unplugged and plugged in again, it opens as before."""
+    can go out. Unplugged and plugged in again, it opens again."""
     from openexpress.gui.app import MainWindow
 
     world = drive_window.world
@@ -3033,7 +3031,7 @@ def test_cli_says_a_copied_update_on_a_drive_waits_to_be_ejected(watch_and_drive
 
 def test_the_log_says_where_an_update_goes_and_whether_it_is_on_a_drive(drive_window,
                                                                          monkeypatch, caplog):
-    """#11: the log names the file of each offered update on the device, from the device's
+    """The log names the file of each offered update on the device, from the device's
     folder (never the mount path, which has the user name), and whether it is there: not yet;
     copied, it matches; another file at its place has another MD5 or size."""
     from openexpress import applog, updates
@@ -3075,7 +3073,7 @@ def test_the_log_says_where_an_update_goes_and_whether_it_is_on_a_drive(drive_wi
 
 def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(drive_window,
                                                                             monkeypatch):
-    """Test 2: the drive runs out of space in the middle of the copy. The error names the file
+    """The drive runs out of space in the middle of the copy. The error names the file
     and the reason; neither half a GUPDATE.GCD nor a temporary file stays on the drive."""
     import errno
 
@@ -3115,7 +3113,7 @@ def _recording_page(key):
 
 @pytest.mark.parametrize("force", [False, True])  # True: "Try Again"
 def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force):
-    """Test 11 (D5): Maps, Apps and Music load nothing for a drive (no request, no "Internal
+    """Maps, Apps and Music load nothing for a drive (no request, no "Internal
     error") and say in one sentence why; the Updates page loads as for any device."""
     from openexpress.gui.app import MainWindow
 
@@ -3134,7 +3132,7 @@ def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force
         assert seen == {"cleared": True, "title": key.title(), "description": MASS_STORAGE_TEXT,
                         "shown": "error"}
         assert seen["description"] != gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
-    # Another device: the pages load as before.
+    # Another device: every page loads.
     win.session.storage.mass_storage = False
     loaded.clear()
     for key in keys:
@@ -3144,7 +3142,7 @@ def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force
 
 @pytest.mark.parametrize("logged_in", [False, True])
 def test_sync_is_grey_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
-    """With its reason in the tooltip, the words of step 1; and no sync starts anyway."""
+    """With its reason in the tooltip ("USB drive"); and no sync starts anyway."""
     from openexpress.gui.app import MainWindow
 
     s = drive_session(drive_window, monkeypatch)
@@ -3603,7 +3601,7 @@ def mass_storage_device(root, name="1-4", product="20ee", classes=("08",)):
 
 def test_usb_state_ignores_a_garmin_in_mass_storage_mode(plugged):
     """A Garmin device whose interfaces are all mass storage (class 08) is no MTP device on
-    its way: there is nothing to wait for. A watch next to it is waited for as before."""
+    its way: there is nothing to wait for. A watch next to it is waited for all the same."""
     mass_storage_device(plugged.root)
     assert gio_storage.usb_state() != gio_storage.PRESENT
     assert gio_storage.usb_state() == gio_storage.MASS_STORAGE
@@ -3616,7 +3614,8 @@ def test_usb_state_ignores_a_garmin_in_mass_storage_mode(plugged):
 
 @pytest.mark.parametrize("classes", [("08", "ff"), ("06",), ("ff",), (None,), ()])
 def test_a_garmin_with_other_interfaces_is_waited_for_as_before(plugged, classes):
-    """Not only mass storage, or interfaces whose class cannot be read: as before."""
+    """Not only mass storage, or interfaces whose class cannot be read: waited for as a
+    device in its normal mode."""
     mass_storage_device(plugged.root, product="51b4", classes=classes)
     assert gio_storage.usb_state() == gio_storage.PRESENT
 
@@ -3875,11 +3874,10 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     for now in (10, 10 + gio_storage.WAIT_FOR_DEVICE_S + 1):
         plugged.clock.now = now
         MainWindow._poll_usb(win, clock=plugged.clock)
-        # Nothing over MTP; one detection, for a drive the system has not mounted (its tile,
-        # analysis 15, stage 0).
+        # Nothing over MTP; one detection, for a drive the system has not mounted (its tile).
         assert refreshed == [app.Cause.PLUGGED]
         assert shown[-1][2] is False and "PIN" not in shown[-1][1]
-        # The window opens such a drive once it is mounted (step 5c): no advice about --path.
+        # The window opens such a drive once it is mounted: no advice about --path.
         assert shown[-1] == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
         assert "--path" not in shown[-1][1]
     assert updates == ["USB drive"]  # the Sync button says why, told once
@@ -3888,7 +3886,7 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
 REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
 # After the sentence about a PIN, which names the device already.
 REPLUG_HINT_AFTER_PIN = "If it isn't locked and isn't asking for anything, unplug the cable and plug it back in."
-# Added once the wait ran out (#13: KDE's kmtpd, in kiod6, held the device).
+# Added once the wait ran out (KDE's kmtpd, in kiod6, may hold the device).
 HELD_HINT = ("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
              "and takes it back when the cable is plugged in again. Close Dolphin and run "
              "kquitapp6 kiod6, then unplug the cable and plug it back in.")
@@ -3919,8 +3917,8 @@ def _replug_lines(caplog):
 
 def test_a_device_in_its_normal_mode_without_mtp_for_15_s_is_to_be_plugged_in_again(
         plugged, monkeypatch, caplog):
-    """Edge 1050, 21.10.2026: restarted with its cable in, on USB in its normal mode, but gvfs
-    mounted nothing, and only plugging it in again helped. After 15 s in its normal mode
+    """An Edge 1050 restarted with its cable in: on USB in its normal mode, but gvfs
+    mounts nothing, and only plugging it in again helps. After 15 s in its normal mode
     without MTP the page adds what to do (one line in the log); before, it says what it said."""
     from openexpress.gui.app import MainWindow
 
@@ -4150,7 +4148,7 @@ def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
     assert _looks(win)[2] == "Not logged in to Garmin Connect"
 
 
-# --- the start page and D7 (D5, T2) ------------------------------------------------------------
+# --- the start page and the navigation after a detection ---------------------------------------
 
 
 class FakeStartPage:
@@ -4261,8 +4259,8 @@ START_METHODS = ("show_device", "show_no_device", "_clear_device_pages", "show_c
 
 
 def start_stand_in(start, sections, win=None):
-    """A stand-in of the window with the real code of the start page and of D7 on a fake
-    navigation; the device view's pages are recorded, not built."""
+    """A stand-in of the window with the real code of the start page and of its navigation, on
+    a fake navigation; the device view's pages are recorded, not built."""
     from openexpress.gui.app import MainWindow
 
     win = win or types.SimpleNamespace(session=None, busy=False, errors=[])
@@ -4282,7 +4280,7 @@ def start_stand_in(start, sections, win=None):
     win.connected, win._reread_pending = Connected(), False
     win._account, win._account_wanted = None, False
     for name in START_METHODS:
-        if hasattr(MainWindow, name):  # so that on old code the tests fail on what they check
+        if hasattr(MainWindow, name):  # so that without it the tests fail on what they check
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     win.navigation.connect("popped", lambda nav, page: win._on_popped(nav, page))
     return win
@@ -4290,7 +4288,7 @@ def start_stand_in(start, sections, win=None):
 
 @pytest.fixture
 def start_window(choosing_window):
-    """The window's detection (choosing_window) with the start page and D7."""
+    """The window's detection (choosing_window) with the start page and its navigation."""
     return start_stand_in(FakeStartPage(), {"watch": FakeSection(), "maps": FakeSection()},
                           choosing_window)
 
@@ -4307,7 +4305,7 @@ def back(win):
 
 
 def test_one_device_connected_opens_its_view(start_window, monkeypatch):
-    """D7: exactly one device connected: its view at once, as before."""
+    """Exactly one device connected: its view at once."""
     win = start_window
     one_watch(win, monkeypatch)
     win.refresh_device()
@@ -4317,7 +4315,7 @@ def test_one_device_connected_opens_its_view(start_window, monkeypatch):
 
 def test_several_devices_connected_show_the_start_page(start_window, monkeypatch, tmp_path,
                                                        device_root):
-    """D7: several devices: the start page with a tile each (connected, how, never the
+    """Several devices: the start page with a tile each (connected, how, never the
     address), no device open; the other pages say to choose one."""
     win = start_window
     monitor_with(monkeypatch)
@@ -4365,7 +4363,7 @@ def test_a_tile_opens_its_device_and_back_keeps_it_open(start_window, monkeypatc
 
 def test_unplugging_the_open_device_shows_the_start_page(start_window, monkeypatch):
     """The open device unplugged: the start page, with the notice of the USB state on top
-    and no device connected; the one unplugged is remembered (T3)."""
+    and no device connected; the one unplugged is remembered."""
     win = start_window
     one_watch(win, monkeypatch)
     win.refresh_device()
@@ -4378,7 +4376,7 @@ def test_unplugging_the_open_device_shows_the_start_page(start_window, monkeypat
 
 
 def test_refresh_on_the_start_page_stays_there(start_window, monkeypatch):
-    """Decision 7: Refresh on the start page, one device connected: the start page stays,
+    """Refresh on the start page, one device connected: the start page stays,
     with its tile; Refresh in the device view stays in the device view."""
     win = start_window
     one_watch(win, monkeypatch)
@@ -4454,7 +4452,7 @@ def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
         win.destroy()
 
 
-# --- the start page with a device open: no flicker, no reopening (live test of T2) -----------
+# --- the start page with a device open: no flicker, no reopening -----------------------------
 
 
 def defer_background(win):
@@ -4501,9 +4499,8 @@ def count_opening(monkeypatch):
 
 def test_back_draws_the_list_at_once_never_one_tile_of_two(start_window, monkeypatch,
                                                            tmp_path, device_root):
-    """Live test of T2 (17.10.2026): two devices, back from the view of one: the start page
-    is drawn once, at once, with both tiles; never only the open one first, and nothing is
-    read again."""
+    """Two devices, back from the view of one: the start page is drawn once, at once, with
+    both tiles; never only the open one first, and nothing is read again."""
     win = start_window
     later = defer_background(win)
     two_and_one_open(win, monkeypatch, tmp_path, device_root, "Edge 1050")
@@ -4516,7 +4513,7 @@ def test_back_draws_the_list_at_once_never_one_tile_of_two(start_window, monkeyp
 
 def test_refresh_on_the_start_page_reads_the_list_only(start_window, monkeypatch, tmp_path,
                                                        device_root):
-    """Decision A: Refresh on the start page with a device open reads the list again, once,
+    """Refresh on the start page with a device open reads the list again, once,
     in whole: the open device is not opened again, the account not asked, its view not
     rebuilt; the start page stays and shows both tiles all the time."""
     win = start_window
@@ -4534,7 +4531,7 @@ def test_refresh_on_the_start_page_reads_the_list_only(start_window, monkeypatch
 
 def test_reading_the_list_again_never_opens_a_device_view(start_window, monkeypatch, tmp_path,
                                                           device_root):
-    """Guards D7: the list read again with one device left (the Edge unplugged) shows its
+    """Guards: the list read again with one device left (the Edge unplugged) shows its
     tile; the start page stays, no device view comes up."""
     win = start_window
     later = defer_background(win)
@@ -4545,16 +4542,15 @@ def test_reading_the_list_again_never_opens_a_device_view(start_window, monkeypa
     win._on_refresh()
     run_later(later)
     assert win.navigation.stack == ["start page"]
-    # The Edge is no longer connected; it is remembered (T3).
+    # The Edge is no longer connected; it is remembered.
     assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
         ("Test watch", True), ("Edge 1050", False)]
 
 
 def test_another_device_unplugged_while_one_is_open_updates_the_list(start_window, monkeypatch,
                                                                      tmp_path, device_root):
-    """K6 with the start page: the test watch open, the start page shown, the Edge unplugged:
-    the list is read again 1.5 s later and drawn once, with the test watch only; it stays
-    open."""
+    """The test watch open, the start page shown, the Edge unplugged: the list is read again
+    1.5 s later and drawn once, with the test watch only; it stays open."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -4572,7 +4568,7 @@ def test_another_device_unplugged_while_one_is_open_updates_the_list(start_windo
     win.timers.fire()
     run_later(later)
     assert win.session is opened and win.navigation.stack == ["start page"]
-    # Drawn once: the Edge is no longer connected, it is remembered (T3).
+    # Drawn once: the Edge is no longer connected, it is remembered.
     assert len(win.start.shown) == drawn + 1
     assert [(name, on) for name, on, _how in drawn_tiles(win)] == [
         ("Test watch", True), ("Edge 1050", False)]
@@ -4606,7 +4602,7 @@ def test_two_mounts_removed_for_one_device_read_the_list_once(start_window, monk
     """gvfs reports two mounts of one MTP device: the test watch open, the Edge unplugged,
     both its mounts removed one after the other. The list of devices connected is read once,
     1.5 s later, by the timer of every other trigger (the second one moves it); never twice
-    at the same time, where the one that ends last would win (log 18.10.2026, 23:05:30)."""
+    at the same time, where the one that ends last would win."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -4653,7 +4649,7 @@ def test_a_pending_refresh_stays_on_the_start_page(start_window, monkeypatch, tm
     assert drawn_names(win)[-1] == ["Test watch", "Edge 1050"]
 
 
-# --- opening a device from the start page: nothing undoes the choice (live test of T2) -------
+# --- opening a device from the start page: nothing undoes the choice -------------------------
 
 
 def mounts_reported_at_start(win):
@@ -4668,11 +4664,11 @@ def mounts_reported_at_start(win):
 @pytest.mark.parametrize("when", ["after the choice", "during the opening"])
 def test_a_detection_planned_before_the_choice_leaves_the_device_open(
         start_window, monkeypatch, tmp_path, device_root, when):
-    """Live test of T2 (17.10.2026): two devices on the start page, the mounts of both
-    reported at the start; the Edge is clicked. The detection planned before the click finds
-    only devices already on the list: the Edge stays open, its view stays up, and the start
-    page below is not drawn again (the window used to close the Edge, go back and draw the
-    tiles anew, whose first frames showed empty under the animation)."""
+    """Two devices on the start page, the mounts of both reported at the start; the Edge is
+    clicked. The detection planned before the click finds only devices already on the list:
+    the Edge stays open, its view stays up, and the start page below is not drawn again
+    (closing the Edge, going back and drawing the tiles anew would show their first frames
+    empty under the animation)."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -4707,7 +4703,7 @@ def test_a_detection_planned_before_the_choice_leaves_the_device_open(
 
 def test_a_device_mounted_while_one_is_open_keeps_its_view(start_window, monkeypatch,
                                                            tmp_path, device_root):
-    """Q1: a device that was not on the list is mounted while one is open: the open one
+    """A device that was not on the list is mounted while one is open: the open one
     stays open and its view stays; back on the start page, the tiles of both."""
     win = start_window
     one_watch(win, monkeypatch)
@@ -4727,7 +4723,7 @@ def test_a_device_mounted_while_one_is_open_keeps_its_view(start_window, monkeyp
 @pytest.mark.needs_display
 def test_the_same_list_keeps_its_tiles():
     """The start page given the same tiles again keeps the widgets it has (nothing removed
-    and added), and so does the one left when the other goes (PLAN T7); other tiles are
+    and added), and so does the one left when the other goes; other tiles are
     built anew."""
     from openexpress.devicelist import Tile
     from openexpress.gui.start import StartPage
@@ -4749,7 +4745,7 @@ def test_the_same_list_keeps_its_tiles():
     assert len(start.tiles()) == 1 and start.tiles()[0] is not before[0]
 
 
-# --- remembered devices on the start page (D5, T3) ---------------------------------------------
+# --- remembered devices on the start page ------------------------------------------------------
 
 TEST_WATCH = 1234567890  # the <Id> of conftest's test watch (made up)
 VARIA, VENU = 3000000003, 3000000004
@@ -4781,7 +4777,7 @@ def nothing_connected(win, monkeypatch):
 
 def test_the_start_page_lists_remembered_devices_after_the_connected(start_window, monkeypatch,
                                                                      tmp_path, device_root):
-    """T3: the devices remembered and not connected come after the connected ones, by name;
+    """The devices remembered and not connected come after the connected ones, by name;
     one both connected and remembered is listed once, as connected. A
     remembered tile says its version and when it was seen; never a unit ID."""
     import time
@@ -4801,7 +4797,7 @@ def test_the_start_page_lists_remembered_devices_after_the_connected(start_windo
 
 
 def test_a_remembered_tile_says_when_it_was_seen_in_relative_words():
-    """T9 step 1: a remembered device seen two hours ago: "Last seen 2 h ago" under its name,
+    """A remembered device seen two hours ago: "Last seen 2 h ago" under its name,
     as the last sync says when it was (i18n.relative_time), not the full date."""
     from datetime import datetime
 
@@ -4816,7 +4812,7 @@ def test_a_remembered_tile_says_when_it_was_seen_in_relative_words():
 
 @pytest.mark.needs_display
 def test_a_remembered_tile_tells_the_full_date_in_its_tooltip():
-    """T9 step 1: the tooltip of a remembered device's tile tells when it was last seen, in
+    """The tooltip of a remembered device's tile tells when it was last seen, in
     full; a connected one has none."""
     from datetime import datetime
 
@@ -4836,7 +4832,7 @@ def test_a_remembered_tile_tells_the_full_date_in_its_tooltip():
 
 
 def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_the_window):
-    """T3: a remembered device that is not connected opens its read-only view: its name,
+    """A remembered device that is not connected opens its read-only view: its name,
     version, when it was seen and its last sync, as remembered. Nothing is opened, nothing
     is read from USB, nothing is asked of a server; back is the start page."""
     import time
@@ -4846,7 +4842,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_
 
     win = start_window
     remember_others(time.time())
-    sync.SyncState(VENU).save()  # synced here before (analysis 14, a3)
+    sync.SyncState(VENU).save()  # synced here before
     record_sync(VENU, uploaded=2, downloaded=1, skipped_known=0, errors=[], lines=[])
     nothing_connected(win, monkeypatch)
     names = [name for name, _on, _how in drawn_tiles(win)]
@@ -4876,7 +4872,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_
 
 def test_a_connected_tile_still_opens_its_device(start_window, monkeypatch, tmp_path,
                                                  device_root):
-    """Guards T2: with remembered devices on the list, a connected tile opens that device,
+    """Guards: with remembered devices on the list, a connected tile opens that device,
     a remembered one opens nothing."""
     import time
 
@@ -4893,7 +4889,7 @@ def test_a_connected_tile_still_opens_its_device(start_window, monkeypatch, tmp_
 
 def test_a_device_plugged_in_while_a_remembered_one_is_shown_opens_its_view(start_window,
                                                                             monkeypatch):
-    """D7 also from the read-only view: one device plugged in and detected: its view."""
+    """From the read-only view too: one device plugged in and detected: its view."""
     import time
 
     win = start_window
@@ -4972,8 +4968,8 @@ def test_the_account_list_arriving_keeps_the_remembered_view(start_window, monke
 
 def test_devices_plugged_in_while_a_remembered_one_is_shown_give_the_start_page(
         start_window, monkeypatch, tmp_path, device_root):
-    """Decision 3 (Q1): the test watch's read-only view shown, the test watch comes with
-    another device: the start page with the tiles of both, nothing opened (the list)."""
+    """The test watch's read-only view shown, the test watch comes with another device: the
+    start page with the tiles of both, nothing opened (the list)."""
     import time
 
     win = start_window
@@ -4990,7 +4986,7 @@ def test_devices_plugged_in_while_a_remembered_one_is_shown_give_the_start_page(
 
 def test_the_open_device_unplugged_while_a_remembered_one_is_shown_keeps_its_view(
         start_window, monkeypatch):
-    """Q1: the open device unplugged while another one's read-only view is shown: the view
+    """The open device unplugged while another one's read-only view is shown: the view
     stays, the start page is drawn under it without the device gone."""
     import time
 
@@ -5022,12 +5018,11 @@ def real_usb_poll(win):
                                      "a drive open, an mtp left"])
 def test_the_open_device_unplugged_with_another_connected_opens_the_other(
         start_window, monkeypatch, tmp_path, device_root, variant, caplog):
-    """Audit 22.10.2026, point 1, seen live with 0.6.11 (an Edge open, a Varia connected, the
-    Edge's cable out): the device left was not looked for when it is a drive (the USB poll
-    looked only for one in its normal mode, and a mounted drive sends no event), so the
-    start page showed it as remembered, under "Mass storage mode - not mounted". Now the
-    one left is opened in each case, as one in its normal mode always was (D7): its view
-    shows, and back on the start page it is connected, with no notice of the USB state.
+    """An Edge open, a Varia connected, the Edge's cable out: a mounted drive left sends no
+    event, so the USB poll looks for it as for one in its normal mode; it is not shown as
+    remembered, under "Mass storage mode - not mounted". The one left is opened in each
+    case, as one in its normal mode is: its view shows, and back on the start page it is
+    connected, with no notice of the USB state.
     The USB poll is the window's own; only /sys and gvfs are made up."""
     win, world = start_window, start_window.world
     real_usb_poll(win)
@@ -5083,8 +5078,7 @@ def test_a_drive_left_that_is_not_mounted_is_looked_for_once(start_window, monke
     assert win.start.notices[-1][0] == "USB drive"
 
 
-# --- the navigation matrix of the start page (audit, part 3) --------------------------------
-# The window as the decisions Q1, Q2 and Q3 (AGENTS.md) have it.
+# --- the navigation matrix of the start page ------------------------------------------------
 
 
 def detections(win):
@@ -5133,7 +5127,7 @@ def second_device_mounted(win, monkeypatch, tmp_path, device_root):
 
 def test_a_second_device_plugged_in_while_one_is_open_on_the_start_page(
         start_window, monkeypatch, tmp_path, device_root):
-    """N1, the start page shown, a second device mounted (Q1): the open one stays open, the
+    """The start page shown, a second device mounted: the open one stays open, the
     start page shows the tiles of both."""
     win = start_window
     one_watch(win, monkeypatch)
@@ -5147,7 +5141,7 @@ def test_a_second_device_plugged_in_while_one_is_open_on_the_start_page(
 
 def test_a_second_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
                                                                     tmp_path, device_root):
-    """N1, a remembered device's view shown, a second device mounted (Q1): the view stays,
+    """A remembered device's view shown, a second device mounted: the view stays,
     the open one stays open; back on the start page, the tiles of both."""
     import time
 
@@ -5167,7 +5161,7 @@ def test_a_second_device_plugged_in_while_a_remembered_one_is_shown(start_window
 
 def test_a_third_device_plugged_in_while_a_remembered_one_is_shown(start_window, monkeypatch,
                                                                    tmp_path, device_root):
-    """N2 on the list, a remembered device's view shown, a Garmin drive mounted (Q1): the
+    """Two devices on the list, a remembered device's view shown, a Garmin drive mounted: the
     view stays, the start page under it lists the three devices connected."""
     import time
 
@@ -5191,7 +5185,7 @@ def test_a_third_device_plugged_in_while_a_remembered_one_is_shown(start_window,
 
 def test_another_device_unplugged_while_a_remembered_one_is_shown(start_window, monkeypatch,
                                                                   tmp_path, device_root):
-    """N2 with the test watch open, a remembered device's view shown, the Edge unplugged:
+    """Two devices, the test watch open, a remembered device's view shown, the Edge unplugged:
     the view stays, the test watch stays open."""
     import time
 
@@ -5208,8 +5202,8 @@ def test_another_device_unplugged_while_a_remembered_one_is_shown(start_window, 
 
 def test_one_of_two_on_the_list_unplugged_on_the_start_page(start_window, monkeypatch,
                                                            tmp_path, device_root):
-    """U2-S: two devices on the list, the start page shown, one unplugged: the one left is
-    opened and its view comes up (K5, D7)."""
+    """Two devices on the list, the start page shown, one unplugged: the one left is
+    opened and its view comes up."""
     win = start_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
@@ -5222,7 +5216,7 @@ def test_one_of_two_on_the_list_unplugged_on_the_start_page(start_window, monkey
 
 def test_one_of_two_on_the_list_unplugged_while_a_remembered_one_is_shown(
         start_window, monkeypatch, tmp_path, device_root):
-    """U2-R: two devices on the list, a remembered device's view shown, one unplugged (Q1):
+    """Two devices on the list, a remembered device's view shown, one unplugged:
     the one left is opened in the background, the remembered view stays."""
     import time
 
@@ -5241,7 +5235,7 @@ def test_one_of_two_on_the_list_unplugged_while_a_remembered_one_is_shown(
 @pytest.mark.parametrize("shown", ["start page", "remembered view"])
 def test_the_device_unplugged_from_the_list_leaves_no_tile(start_window, monkeypatch, tmp_path,
                                                           device_root, shown):
-    """U2: two devices on the list, the Edge unplugged; the test watch, found alone, is
+    """Two devices on the list, the Edge unplugged; the test watch, found alone, is
     opened. Back on the start page the Edge has no tile of a device connected: it is gone
     (such a tile would try to open it, and fail)."""
     import time
@@ -5262,9 +5256,8 @@ def test_the_device_unplugged_from_the_list_leaves_no_tile(start_window, monkeyp
 
 def test_a_device_plugged_in_while_another_remembered_one_is_shown_opens_behind_it(
         start_window, monkeypatch):
-    """N0-plug-other-on-R (Q1): the Venu 2's read-only view shown, the test watch plugged
-    in: it is opened in the background, the view stays; the start page under it has the
-    test watch's tile, open."""
+    """The Venu 2's read-only view shown, the test watch plugged in: it is opened in the
+    background, the view stays; the start page under it has the test watch's tile, open."""
     import time
 
     from openexpress.gui.navigation import Cause
@@ -5282,7 +5275,7 @@ def test_a_device_plugged_in_while_another_remembered_one_is_shown_opens_behind_
 
 def test_two_devices_plugged_in_while_another_remembered_one_is_shown_list_behind_it(
         start_window, monkeypatch, tmp_path, device_root):
-    """N0-plug-two-on-R (Q1): the Venu 2's read-only view shown, two devices plugged in:
+    """The Venu 2's read-only view shown, two devices plugged in:
     the view stays, nothing is opened, the list is drawn under it."""
     import time
 
@@ -5301,9 +5294,9 @@ def test_two_devices_plugged_in_while_another_remembered_one_is_shown_list_behin
 
 def test_the_device_shown_plugged_in_while_another_one_is_open_gives_the_start_page(
         start_window, monkeypatch, tmp_path, device_root, caplog):
-    """Decision 3 (Q1), with a device open: the Edge open alone, the test watch's read-only
-    view shown, the test watch plugged in. Only the list is read again; the user goes to
-    the start page, where the test watch's tile is, and the Edge stays open."""
+    """With a device open: the Edge open alone, the test watch's read-only view shown, the
+    test watch plugged in. Only the list is read again; the user goes to the start page,
+    where the test watch's tile is, and the Edge stays open."""
     import time
 
     from openexpress.gui.app import MainWindow
@@ -5409,7 +5402,7 @@ def test_the_mount_of_a_device_listed_without_details_is_detected(start_window, 
 def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
         start_window, monkeypatch, tmp_path, device_root, caplog):
     """The test watch chosen from the list and open, the Edge on the list not mounted yet
-    ("Not mounted"); gvfs then mounts it (Q1): no detection, the test watch stays open,
+    ("Not mounted"); gvfs then mounts it: no detection, the test watch stays open,
     the list is read again and the Edge's tile gets its details."""
     from openexpress.gui.app import MainWindow
 
@@ -5443,8 +5436,8 @@ def test_the_mount_of_a_device_listed_without_details_while_one_is_open(
 def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, monkeypatch,
                                                                 tmp_path, device_root):
     """Two devices listed at the start; gvfs reports their mounts, which bring no second
-    detection (Q2): a tile clicked then opens its device at once, with no "Another operation
-    is in progress" (the detection that used to run then kept the window busy)."""
+    detection: a tile clicked then opens its device at once, with no "Another operation
+    is in progress" (a detection running then would keep the window busy)."""
     win = start_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
@@ -5497,7 +5490,7 @@ def login_finished(win, monkeypatch):
 
 
 def test_the_login_finished_in_the_device_view(start_window, monkeypatch):
-    """N1, the device view shown: after the login the same device, its view stays."""
+    """One device, its view shown: after the login the same device, its view stays."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient(logged_in=False))
     one_watch(win, monkeypatch)
@@ -5509,8 +5502,8 @@ def test_the_login_finished_in_the_device_view(start_window, monkeypatch):
 
 
 def test_the_login_finished_after_going_back_to_the_start_page(start_window, monkeypatch):
-    """N1, the login started in the device view, the start page shown when it finishes
-    (Q3): the device is open again, the start page stays, as after Refresh there."""
+    """One device, the login started in the device view, the start page shown when it
+    finishes: the device is open again, the start page stays, as after Refresh there."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient(logged_in=False))
     one_watch(win, monkeypatch)
@@ -5522,7 +5515,7 @@ def test_the_login_finished_after_going_back_to_the_start_page(start_window, mon
 
 
 def test_logging_out_in_the_device_view(start_window, monkeypatch):
-    """N1, the device view shown, logged out: the view stays; back on the start page there
+    """One device, its view shown, logged out: the view stays; back on the start page there
     is no section of the account any more."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient())
@@ -5543,9 +5536,9 @@ def test_logging_out_in_the_device_view(start_window, monkeypatch):
 
 def test_logging_out_in_the_device_view_with_two_devices_plugged_in(start_window, monkeypatch,
                                                                    tmp_path, device_root):
-    """The test watch open in its view, the Edge plugged in too; logged out (Q3, live test
-    18.10.2026, 23:52:35, with a Varia): the session is dropped, the detection opens the
-    same device again although two are connected; its view stays."""
+    """The test watch open in its view, the Edge plugged in too; logged out: the session is
+    dropped, the detection opens the same device again although two are connected; its view
+    stays."""
     win = start_window
     with_account(monkeypatch, FakeAccountClient())
     two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
@@ -5561,7 +5554,7 @@ def test_logging_out_in_the_device_view_with_two_devices_plugged_in(start_window
 
 
 def test_try_again_on_the_banner_in_the_device_view(start_window, monkeypatch):
-    """N1, the device view shown, "Try Again" on the banner: a detection, the view stays."""
+    """One device, its view shown, "Try Again" on the banner: a detection, the view stays."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -5578,8 +5571,8 @@ def test_try_again_on_the_banner_in_the_device_view(start_window, monkeypatch):
 
 def test_the_mounts_reported_at_the_start_bring_no_detection_on_the_start_page(
         start_window, monkeypatch, tmp_path, device_root, caplog):
-    """N2 at the start, the start page shown: gvfs reports the mounts of both devices
-    listed; they bring no more detection (Q2), the start page stays with the same tiles."""
+    """Two devices at the start, the start page shown: gvfs reports the mounts of both devices
+    listed; they bring no more detection, the start page stays with the same tiles."""
     win = start_window
     monitor_with(monkeypatch)
     two_watches(win.world, monkeypatch, tmp_path, device_root)
@@ -5596,8 +5589,8 @@ def test_the_mounts_reported_at_the_start_bring_no_detection_on_the_start_page(
 
 
 def test_a_device_mounted_on_an_empty_start_page_opens_its_view(start_window, monkeypatch):
-    """N0, nothing remembered, the start page shown: gvfs reports the mount of a Garmin
-    device; a detection runs and finds it: its view comes up (D7)."""
+    """No device, nothing remembered, the start page shown: gvfs reports the mount of a Garmin
+    device; a detection runs and finds it: its view comes up."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -5688,7 +5681,7 @@ def test_the_remembered_section_only_with_remembered_devices():
 
 @pytest.mark.needs_display
 def test_the_tile_grids_start_where_the_headings_do():
-    """T9 step 0: every section's grid fills the line from the left, where its heading
+    """Every section's grid fills the line from the left, where its heading
     starts: it shares the line out among its tiles; a section of fewer tiles keeps them as
     wide, from the left (where they stand is checked laid out, in the tests below)."""
     from gi.repository import Gtk
@@ -5708,7 +5701,7 @@ def test_the_tile_grids_start_where_the_headings_do():
 def test_tiles_have_one_width_in_every_section():
     """Tiles in different sections, with texts of different lengths, have the same width
     once the window is laid out (no grid fits its tiles to its longest text): the width the
-    page gives them (T9 step 0); three share a line in a window 1100 px wide."""
+    page gives them; three share a line in a window 1100 px wide."""
     import time
 
     import gi
@@ -5760,7 +5753,7 @@ def test_tiles_have_one_width_in_every_section():
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 @pytest.mark.parametrize("window, per_line", [(1000, 3), (400, 1)])
 def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
-    """T9 step 0: how many tiles share a line follows the width of the page (a tile at least
+    """How many tiles share a line follows the width of the page (a tile at least
     220 px wide, 12 px between them), and they share the line out: three in a window 1000 px
     wide, one filling it in a window 400 px wide. The same width in every section, each grid
     where its heading starts, and laid out once for as long as the window keeps its size."""
@@ -5828,10 +5821,10 @@ def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
 @pytest.mark.parametrize("sizes, per_line", [((1000, 700, 520, 450, 420, 400), 1),
                                               ((400, 450, 520, 700, 1000), 3)])
 def test_the_tiles_follow_the_window_narrowed_or_widened(sizes, per_line, capfd):
-    """T9 step 0, after 6f750d4: the same window narrowed step by step from 1000 px to
-    400 px, as when it is dragged (or widened back): the tiles follow, one column at the end
-    (or three), and they always fit in the window. The width they were given never becomes
-    their minimum, which kept the window from getting narrower ("... exceeds ... width")."""
+    """The same window narrowed step by step from 1000 px to 400 px, as when it is dragged
+    (or widened back): the tiles follow, one column at the end (or three), and they always
+    fit in the window. The width they were given never becomes their minimum, which would
+    keep the window from getting narrower ("... exceeds ... width")."""
     import time
 
     import gi
@@ -5918,7 +5911,7 @@ def _left_right(widget, nav):
 # PyGObject's own (gi/events.py) while the test turns the GLib main loop; not our code.
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 def test_a_wide_window_with_two_tiles_a_section_has_two_columns_in_the_middle():
-    """T9 step 0: a window 1500 px wide, two sections of two tiles each: two columns (no
+    """A window 1500 px wide, two sections of two tiles each: two columns (no
     third, empty one), each tile at most 300 px wide; the block of headings and tiles in the
     middle of the window, the headings at the left edge of the tiles."""
     start, nav, win = _laid_out_start_page(1500, [
@@ -5942,7 +5935,7 @@ def test_a_wide_window_with_two_tiles_a_section_has_two_columns_in_the_middle():
 @pytest.mark.needs_display
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 def test_one_tile_stands_in_the_middle():
-    """T9 step 0: one tile only, in a wide window: one column, at most 300 px wide, in the
+    """One tile only, in a wide window: one column, at most 300 px wide, in the
     middle of the window, its heading at its left edge."""
     start, nav, win = _laid_out_start_page(1500, [(_start_tile("fēnix 8", True), "x")])
     try:
@@ -5959,8 +5952,8 @@ def test_one_tile_stands_in_the_middle():
 @pytest.mark.needs_display
 def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeypatch,
                                                                          in_the_window):
-    """T9 step 1: once a minute while the start page, the device view or the read-only view
-    of a remembered device is shown (its texts too since 25.10.2026, test_update_states), the
+    """Once a minute while the start page, the device view or the read-only view
+    of a remembered device is shown (its texts too: test_update_states), the
     texts told against now are drawn again: the tiles only when one of their texts changed,
     the row of the last sync only when its words changed. No timer once the window is
     closed."""
@@ -6026,7 +6019,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         assert len(minute_timers()) == 1
         row, changes = Adw.ExpanderRow(), []
         row.connect("notify::subtitle", lambda *_a: changes.append(1))
-        # The device open, synced here before (its state.json: analysis 14, a3).
+        # The device open, synced here before (its state.json).
         sync.SyncState(3000000004).save()
         win.session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=3000000004),
                                             ownership_error=None, to_sync=None)
@@ -6060,7 +6053,7 @@ def test_the_read_only_view_offers_no_action():
     assert view.page.get_title() == "Venu 2"
 
 
-# --- devices of the Garmin account on the start page (D5, T4) ---------------------------------
+# --- devices of the Garmin account on the start page ------------------------------------------
 
 FORERUNNER = 3000000005
 ACCOUNT_LIST = [  # as GET device-service/deviceregistration/devices gives it (made up)
@@ -6107,7 +6100,7 @@ def sections(win, since=-1):
 def test_the_account_list_comes_after_the_first_drawing_with_one_more(start_window,
                                                                       monkeypatch, tmp_path,
                                                                       device_root):
-    """T4: the start page is drawn at once with the connected and remembered devices; the
+    """The start page is drawn at once with the connected and remembered devices; the
     account's list, read in the background, adds its devices that are neither (the
     Forerunner) with exactly one more drawing: the tiles before are the same, no device
     view comes up. A device of the account that is connected or remembered is not
@@ -6138,7 +6131,7 @@ def test_the_account_list_comes_after_the_first_drawing_with_one_more(start_wind
 
 
 def test_the_account_list_while_a_device_view_is_shown(start_window, monkeypatch):
-    """D7 stays: one device open in its view; the account's list arrives: nothing is drawn
+    """One device open in its view; the account's list arrives: nothing is drawn
     and the view stays up; back on the start page, its devices are there."""
     win = start_window
     later = defer_background(win)
@@ -6215,7 +6208,7 @@ def test_the_account_list_failing_leaves_no_section(start_window, monkeypatch, c
 
 
 def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch, in_the_window):
-    """T4: a tile only on the account opens the read-only view with what the account says:
+    """A tile only on the account opens the read-only view with what the account says:
     its name and version; it was never seen here and never synced from here. Nothing is
     opened or read from USB."""
 
@@ -6245,9 +6238,9 @@ def test_an_account_tile_opens_a_read_only_view(start_window, monkeypatch, in_th
 
 def test_logging_out_on_the_view_of_a_device_of_the_account_gives_the_start_page(
         start_window, monkeypatch):
-    """The exception to Q3: logged out on the read-only view of a device only on the
-    account, which has nothing to show without it: back on the start page, where its tile
-    is gone."""
+    """The exception to the view staying: logged out on the read-only view of a device only
+    on the account, which has nothing to show without it: back on the start page, where its
+    tile is gone."""
     win = start_window
     later = defer_background(win)
     with_account(monkeypatch, FakeAccountClient())
@@ -6264,7 +6257,7 @@ def test_logging_out_on_the_view_of_a_device_of_the_account_gives_the_start_page
 
 
 def test_logging_out_on_the_view_of_a_remembered_device_keeps_it(start_window, monkeypatch):
-    """Q3: logged out on the read-only view of a device remembered by this computer (not
+    """Logged out on the read-only view of a device remembered by this computer (not
     from the account): the view stays."""
     import time
 
@@ -6311,7 +6304,7 @@ def test_the_account_section_adds_tiles_without_touching_the_others():
     assert after[2].get_parent() is start.account_grid
 
 
-# --- the account's list asked once (after T4) ---------------------------------------------------
+# --- the account's list asked once --------------------------------------------------------------
 
 
 def logged_in_everywhere(monkeypatch, more=()):
@@ -6347,8 +6340,9 @@ def names_on_the_start_page(win):
 
 def test_one_device_at_the_start_asks_the_account_once(start_window, monkeypatch):
     """The window opens with one device connected and an account logged in: the device is
-    opened (D7), whose ownership check reads the account's list; the start page uses that
-    list instead of asking again. One request, and the section "On the account" as before."""
+    opened, whose ownership check reads the account's list; the start page uses that
+    list instead of asking again. One request, and the section "On the account" all the
+    same."""
     win = start_window
     later = defer_background(win)
     asked = logged_in_everywhere(monkeypatch)
@@ -6366,7 +6360,7 @@ def test_one_device_at_the_start_asks_the_account_once(start_window, monkeypatch
 
 def test_refresh_on_the_start_page_opening_a_device_asks_once(start_window, monkeypatch):
     """Refresh on the start page with no device open, one plugged in meanwhile: the
-    detection opens it (the start page stays, decision 7) and its check reads the account's
+    detection opens it (the start page stays) and its check reads the account's
     list: one request, not two."""
     win = start_window
     later = defer_background(win)
@@ -6386,7 +6380,7 @@ def test_refresh_on_the_start_page_opening_a_device_asks_once(start_window, monk
 
 
 def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeypatch):
-    """Guards T4: with a device open, Refresh on the start page asks the account once more
+    """Guards: with a device open, Refresh on the start page asks the account once more
     and shows what it says now; logging out removes its devices."""
     win = start_window
     later = defer_background(win)
@@ -6401,7 +6395,7 @@ def test_refresh_on_the_start_page_reads_the_account_again(start_window, monkeyp
     assert asked == [1, 1]
     assert names_on_the_start_page(win) == ["Test watch", "Edge 1050", "Forerunner 965",
                                             "Instinct 3", "Venu 2"]
-    win.logout()  # on the start page; the one device is opened again, the page stays (Q3)
+    win.logout()  # on the start page; the one device is opened again, the page stays
     run_later(later)
     assert win.navigation.stack == ["start page"]
     back(win)
@@ -6413,8 +6407,7 @@ def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(st
                                                                               monkeypatch):
     """F5/Ctrl+R on the read-only view of a device (here one only on the account) while
     another is open: the account's list is read again and the view shows what it says now;
-    the device open is not opened again, nothing is detected, the view stays (decision of
-    23.10.2026; before, the open device was opened from scratch)."""
+    the device open is not opened again, nothing is detected, the view stays."""
     from openexpress.connect import GarminClient, lower_keys
 
     win = start_window
@@ -6447,7 +6440,7 @@ def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(st
     assert win.remembered.shown[-1]["version"] == "Software 22.30 (Garmin Connect)"
 
 
-# --- pictures on the tiles (D5, T5) -------------------------------------------------------------
+# --- pictures on the tiles ----------------------------------------------------------------------
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"made up"
 
@@ -6483,7 +6476,7 @@ def in_the_cache(part_number):
 
 def test_a_connected_tile_shows_the_picture_of_the_device_view(start_window, monkeypatch,
                                                                tmp_path, device_root):
-    """T5: a connected tile shows what the device view shows: its picture in memory at
+    """A connected tile shows what the device view shows: its picture in memory at
     once (the same texture), else its file in the cache by part number, read in the
     background; nothing downloaded for a connected device the account does not list."""
     win = start_window
@@ -6501,7 +6494,7 @@ def test_a_connected_tile_shows_the_picture_of_the_device_view(start_window, mon
 
 
 def test_a_remembered_tile_shows_its_picture_from_the_cache_only(start_window, monkeypatch):
-    """T5: a remembered device: its picture from the cache by part number (the Venu 2);
+    """A remembered device: its picture from the cache by part number (the Venu 2);
     none in the cache (the Varia): the icon stays, nothing is downloaded."""
     import time
 
@@ -6518,9 +6511,8 @@ def test_a_remembered_tile_shows_its_picture_from_the_cache_only(start_window, m
 
 def test_a_picture_comes_into_the_tile_there_and_nothing_else_moves(start_window, monkeypatch,
                                                                     tmp_path, device_root):
-    """T5 with d348bcf and f2f2615: the picture read in the background is put into the tile
-    that is there: the start page is not drawn again, no view comes up or goes; read once,
-    not at each drawing."""
+    """The picture read in the background is put into the tile that is there: the start page
+    is not drawn again, no view comes up or goes; read once, not at each drawing."""
     win = start_window
     later = defer_background(win)
     fake_pictures(monkeypatch)
@@ -6539,7 +6531,7 @@ def test_a_picture_comes_into_the_tile_there_and_nothing_else_moves(start_window
 
 def test_an_account_tile_downloads_its_picture_and_a_failure_leaves_the_icon(start_window,
                                                                              monkeypatch):
-    """T5: a device only on the account: its picture from the account's address, into the
+    """A device only on the account: its picture from the account's address, into the
     cache by part number; a download that fails leaves the icon, raises nothing, and is not
     tried again at each drawing."""
     from openexpress.connect import lower_keys
@@ -6601,13 +6593,13 @@ def test_the_picture_goes_into_the_tile_that_is_there():
     assert tile_image(start.tiles()[2]).get_paintable() is texture
 
 
-# --- the kind of a device on its tile (D5, T5.1) -----------------------------------------------
+# --- the kind of a device on its tile ----------------------------------------------------------
 
 
 def test_unit_info_read_for_the_picture_tells_a_bike_accessory(monkeypatch):
-    """The device view asks unit-info for the picture of a device not on the account (as
-    before); its segmenttype bikeaccessory is kept as the device's kind. One request, the
-    same as before; another segment teaches nothing."""
+    """The device view asks unit-info for the picture of a device not on the account; its
+    segmenttype bikeaccessory is kept as the device's kind. One request, the one for the
+    picture; another segment teaches nothing."""
     from openexpress import known_devices
     from openexpress.gui.app import picture_from_unit_info
 
@@ -6657,7 +6649,7 @@ def test_the_account_list_keeps_the_kind_of_a_remembered_device(start_window, mo
 
 
 def test_the_ownership_check_keeps_the_kind_of_a_remembered_device(start_window, monkeypatch):
-    """Q4: the account's list read by the ownership check of the device opened (and not
+    """The account's list read by the ownership check of the device opened (and not
     asked again for the start page) keeps the kinds it tells of remembered devices, as the
     list read for the start page does (the Edge is a cycling computer)."""
     from openexpress import known_devices
@@ -6811,7 +6803,7 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
         renderer.unrealize()
 
 
-# --- the device view's icon before its picture (T5.2) -------------------------------------------
+# --- the device view's icon before its picture --------------------------------------------------
 
 
 def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
@@ -6839,7 +6831,7 @@ def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
 
 @pytest.mark.needs_display
 def test_the_device_view_waits_with_the_neutral_icon_like_the_tile(drive_window, monkeypatch):
-    """T5.2: a device of an unknown kind, no picture in the cache: the device view shows the
+    """A device of an unknown kind, no picture in the cache: the device view shows the
     icon its tile shows (the neutral one), not the icon of the program."""
     from openexpress.gui.app import APP_ID
     from openexpress.gui.start import kind_icon
@@ -6850,8 +6842,8 @@ def test_the_device_view_waits_with_the_neutral_icon_like_the_tile(drive_window,
 
 @pytest.mark.needs_display
 def test_the_device_view_waits_with_the_icon_of_its_kind(drive_window, monkeypatch):
-    """T5.2: the kind as the tiles know it (devices.json, or the account: also for D7, with
-    no tile before): the same icon in the device view."""
+    """The kind as the tiles know it (devices.json, or the account: also for a device opened
+    at once, with no tile before): the same icon in the device view."""
     from openexpress import known_devices
     from openexpress.connect import lower_keys
     from openexpress.gui.app import MainWindow
@@ -6862,7 +6854,7 @@ def test_the_device_view_waits_with_the_icon_of_its_kind(drive_window, monkeypat
     icon, win = _device_view_icon(drive_window, monkeypatch)
     assert icon == kind_icon("bike-accessory")
     known_devices.forget(3000000003)
-    # Opened at once (D7, no tile before): the kind from the account's list all the same.
+    # Opened at once (no tile before): the kind from the account's list all the same.
     win._account = lower_keys([{"unitId": 3000000003, "productDisplayName": "Varia RTL515",
                                 "deviceCategories": ["DEDICATED_BIKE_COMPUTER"]}])
     MainWindow.show_overview(win)
@@ -6872,9 +6864,9 @@ def test_the_device_view_waits_with_the_icon_of_its_kind(drive_window, monkeypat
 @pytest.mark.needs_display
 def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
         drive_window, monkeypatch):
-    """T5.2: the unit-info the device view asks for the picture (as before, one request)
-    tells a bike accessory and gives no picture: the icon becomes the radar; nothing more
-    is asked for the icon."""
+    """The unit-info the device view asks for the picture (one request) tells a bike
+    accessory and gives no picture: the icon becomes the radar; nothing more is asked for
+    the icon."""
     from openexpress.gui.app import MainWindow
     from openexpress.gui.start import kind_icon
 
@@ -6913,7 +6905,7 @@ def test_a_tile_without_a_word_from_garmin_shows_the_icon_its_name_tells():
         DEVICE_ICON, KIND_ICONS["bike-accessory"], KIND_ICONS["watch"]]
 
 
-# --- a list instead of tiles for many devices (T6a) --------------------------------------------
+# --- a list instead of tiles for many devices --------------------------------------------------
 
 
 def seven_watches():
@@ -6926,7 +6918,7 @@ def seven_watches():
 
 @pytest.mark.needs_display
 def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_window):
-    """T6a: seven devices connected: their section is a list, not tiles; each row has the
+    """Seven devices connected: their section is a list, not tiles; each row has the
     name, the words and the icon its tile would have (the kind, else the neutral one), and
     nothing is asked for the pictures (no unit-info, no download). A click on a row opens
     that device, as a click on its tile. Two remembered devices stay tiles."""
@@ -7045,7 +7037,7 @@ def test_a_click_in_each_section_of_the_real_page_opens_its_device(choosing_wind
 
 @pytest.mark.needs_display
 def test_a_row_gets_its_picture_like_a_tile():
-    """T6a: the picture of a part number goes into the row that is there (the same widget)
+    """The picture of a part number goes into the row that is there (the same widget)
     and into rows built later, as into tiles."""
     from openexpress.devicelist import Tile
     from openexpress.gui.app import Gdk, GLib
