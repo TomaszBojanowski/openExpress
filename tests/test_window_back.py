@@ -141,3 +141,47 @@ def test_a_page_chosen_stays_in_front_when_the_window_folds(device_window):
     win.split.set_collapsed(True)  # as the window's breakpoint folds it
     _turn()
     assert win.split.get_show_content() and win.pages.get_visible_child_name() == "maps"
+
+
+# --- the device opened again: always on its device page -----------------------------------
+
+TILE_REASON = "the device view keeps the page of the side panel seen last"
+
+
+def _on_device_page(win):
+    return (_stack(win) == ["start", "device"] and win.pages.get_visible_child_name() == "watch"
+            and win.content_page.get_title() == win.sections["watch"].title)
+
+
+@pytest.mark.xfail(strict=True, reason=TILE_REASON)
+@pytest.mark.parametrize("key", PAGES)
+def test_the_tile_of_the_open_device_opens_its_device_page(device_window, key):
+    from openexpress.gui.start_window import OPEN
+
+    win = device_window()
+    _row_of(win, key).emit("activated")
+    _turn()
+    _back(win)
+    assert _stack(win) == ["start"]
+    index = next(i for i, (_tile, target) in enumerate(win._start_entries) if target is OPEN)
+    win._open_tile(index)
+    _turn()
+    assert _on_device_page(win)
+
+
+@pytest.mark.xfail(strict=True, reason=TILE_REASON)
+@pytest.mark.parametrize("key", PAGES)
+def test_the_device_plugged_in_again_opens_on_its_device_page(device_window, device_root, key):
+    from openexpress import service
+    from openexpress.device.storage import LocalStorage
+
+    win = device_window()
+    _row_of(win, key).emit("activated")
+    _turn()
+    win.session = None  # unplugged: the window goes back to the start page
+    win.navigation.pop_to_page(win.start.page)
+    _turn()
+    win.session = service.open_session(storage=LocalStorage(device_root))  # plugged in again
+    win.show_device()
+    _turn()
+    assert _on_device_page(win)
