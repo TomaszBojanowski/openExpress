@@ -88,7 +88,7 @@ class ForgetDevice:
     def _forget_ticked(self, choice: dict, which: str, button) -> None:
         """A tick of the question changed (read from the signal's button)."""
         choice[which] = button.get_active()
-        dialog = getattr(self, "_forget_dialog", None)
+        dialog = self._forget_dialog
         if which == "pending" and dialog is not None:
             dialog.set_response_enabled("forget", choice["pending"])
 

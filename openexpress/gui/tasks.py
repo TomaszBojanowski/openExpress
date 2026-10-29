@@ -40,7 +40,7 @@ def stop_when_closed(win, progress):
     """`progress` of a work that lets the window close: once the window is closed, its next
     step raises WindowClosed instead, with one line in the log."""
     def told(*args):
-        if getattr(win, "_closed", False):
+        if win._closed:
             log.info("task: stopped, the window was closed")
             raise WindowClosed
         progress(*args)

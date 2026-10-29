@@ -54,7 +54,7 @@ def note_apps_count(win, count: int | None) -> None:
     """How many apps the Apps page found on the open device (None: not read yet), kept for
     the session and said by the row "Apps" of the device page."""
     win.apps_count = count
-    row = getattr(win, "apps_row", None)
+    row = win.apps_row
     if row is not None:
         row.set_subtitle(apps_count_text(count) if count is not None else "")
 
@@ -369,7 +369,7 @@ class AppsPage:
 
             def selected(_box, row):
                 picked["choice"] = row.choice if row is not None else None
-                dialog = getattr(self, "_order_dialog", None)
+                dialog = self._order_dialog
                 if dialog is not None:
                     dialog.set_response_enabled("next", row is not None)
 
@@ -459,7 +459,7 @@ class AppsPage:
             if rep.needs_consent:  # only by a mistake of the program: it asked first
                 log.warning("apps: %d not installed, their new permissions not allowed",
                             len(rep.needs_consent))
-            self._updated_apps = set(getattr(self, "_updated_apps", ())) | set(rep.updated_ids)
+            self._updated_apps = set(self._updated_apps) | set(rep.updated_ids)
             if rep.failed:
                 # What was written first, then each app that was not (the USB connection
                 # to renew, if any, comes last).

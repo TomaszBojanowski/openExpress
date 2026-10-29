@@ -147,7 +147,7 @@ def account_note(why: str | None) -> str | None:
 
 def show_account_note(win, entries) -> None:
     """The sentence of account_note under the tiles drawn; none without tiles."""
-    win.start.set_account_note(account_note(getattr(win, "_account_why", None))
+    win.start.set_account_note(account_note(win._account_why)
                                if entries else None)
 
 
@@ -209,7 +209,7 @@ def last_sync_more(unit_id) -> tuple[str | None, list]:
 def account_rows(win, unit_id) -> list[tuple[str, str]]:
     """What the account's list in memory says of a device not connected, read only: its
     primary wearable, for a device that can be one. Nothing is asked."""
-    wearable = devicelist.primary_wearable(getattr(win, "_account", None), unit_id)
+    wearable = devicelist.primary_wearable(win._account, unit_id)
     if wearable is None:
         return []
     return [(_("Primary wearable"), primary_wearable_text(wearable))]
@@ -324,10 +324,10 @@ class StartWindow:
             # What it says of the devices remembered, for their tiles (before they are drawn).
             tile_facts.note_account(devices)
         if devices == self._account:
-            if why != getattr(self, "_account_why", None):
+            if why != self._account_why:
                 # The same tiles: only the sentence under them changes.
                 self._account_why = why
-                show_account_note(self, getattr(self, "_start_entries", []))
+                show_account_note(self, self._start_entries)
             return
         self._account, self._account_why = devices, why
         if devices:
@@ -505,9 +505,9 @@ class StartWindow:
         not connected is shown (their texts are told against now); none on another page, nor
         while the window is not on the screen or once it is closed."""
         visible = self.navigation.get_visible_page()
-        wanted = (self.get_mapped() and not getattr(self, "_closed", False)
+        wanted = (self.get_mapped() and not self._closed
                   and visible in (self.start.page, self.device_view, self.remembered.page))
-        timer = getattr(self, "_relative_timer", None)
+        timer = self._relative_timer
         if wanted and timer is None:
             self._relative_timer = GLib.timeout_add_seconds(RELATIVE_REFRESH_S,
                                                             self._refresh_relative_texts)
@@ -523,11 +523,11 @@ class StartWindow:
         visible = self.navigation.get_visible_page()
         if visible is self.start.page:
             if any(tile_subtitle(source) != text
-                   for source, text in getattr(self, "_start_texts", [])):
+                   for source, text in self._start_texts):
                 self._render_start()
         elif visible is self.device_view:
             refresh_last_sync_subtitle(self)
-            if getattr(self, "update_checked_at", None) is not None:
+            if self.update_checked_at is not None:
                 self._render_update_state()
         elif visible is self.remembered.page:
             self._refresh_remembered_texts()
@@ -577,7 +577,7 @@ class StartWindow:
             self._show_remembered(target, tile)
         elif isinstance(target, dict):
             self._show_account(target)
-        elif getattr(self, "_opening_tile", None) != index:
+        elif self._opening_tile != index:
             self.open_choice(target, tile=index)
         # else its device is being opened: a second click says nothing
 
@@ -647,7 +647,7 @@ class StartWindow:
     def _refresh_remembered_texts(self) -> None:
         """Once a minute on the view of a device not connected: its texts told against now,
         only where their words changed (of a device only on the account: its last sync)."""
-        known = getattr(self, "_remembered_entry", None)
+        known = self._remembered_entry
         if known is not None:
             self.remembered.show_texts(**remembered_texts(self, known))
         else:

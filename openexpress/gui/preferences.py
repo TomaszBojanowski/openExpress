@@ -90,7 +90,7 @@ def logged_in_auth():
 def render_account_row(win) -> None:
     """The account's row of the preferences, while they are open: who is logged in, with
     Log out, or nobody, with Log In."""
-    shown = getattr(win, "_account_row", None)
+    shown = win._account_row
     if shown is None:
         return
     row, button = shown
@@ -124,7 +124,7 @@ def show_cache_usage(win, use) -> None:
     """The sizes counted (cache.usage) in the storage group of the preferences, if they are
     still open: for each part and for all of it, its size and files, and its button clickable
     when there is something to clear."""
-    shown = getattr(win, "_storage", None)
+    shown = win._storage
     if shown is None:
         return  # the preferences closed meanwhile
     shown.usage = use
@@ -139,7 +139,7 @@ def show_cache_usage(win, use) -> None:
 def ask_clear_cache_part(win, name: str, button) -> None:
     """The trash of a part of the cache: maps and updates ask first, with their size; the
     others are cleared at once."""
-    shown = getattr(win, "_storage", None)
+    shown = win._storage
     if shown is None or shown.usage is None:
         return
     if name not in CACHE_QUESTIONS:
@@ -153,7 +153,7 @@ def ask_to_clear(win, heading: str, body: str, names: list[str] | None) -> None:
     """Clear (destructive) or Cancel (the default); Clear clears those parts (None: all) from
     their button, found when the answer comes: the handler holds no widget."""
     def clear():
-        shown = getattr(win, "_storage", None)
+        shown = win._storage
         if shown is None:
             return
         button = shown.everything[1] if names is None else shown.parts[names[0]][1]
@@ -187,7 +187,7 @@ def clear_cache(win, names: list[str] | None, button) -> None:
 
 def cache_toast(win, text: str) -> None:
     """A toast on the preferences while they are open (the window's own is under them)."""
-    shown = getattr(win, "_preferences", None)
+    shown = win._preferences
     if shown is not None:
         shown.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
     else:
@@ -218,7 +218,7 @@ def resolve_account(win) -> None:
         # Not asked again; kept as any list of the account is, with the kinds it tells.
         # The caller draws the page shown, after deciding where the user goes.
         win._set_account(listed, draw=False)
-    elif getattr(win, "_account_wanted", False):
+    elif win._account_wanted:
         win._account_wanted = False
         win._fetch_account()
 
@@ -343,7 +343,7 @@ class Preferences:
             except (OSError, ValueError) as e:
                 self.error(_("Language"), str(e))
                 return
-            shown = getattr(self, "_preferences", None)
+            shown = self._preferences
             if shown is not None:
                 shown.add_toast(Adw.Toast(
                     title=_("Restart the application to change the language")))
@@ -425,7 +425,7 @@ class Preferences:
     def _ask_clear_cache(self, button) -> None:
         """"Clear All…": asks first, naming the maps and their size; then clears as
         `cache --clear --apply` does, from the button."""
-        shown = getattr(self, "_storage", None)
+        shown = self._storage
         use = shown.usage if shown is not None else None
         if use is None:
             return

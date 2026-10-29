@@ -23,7 +23,7 @@ def note_music_count(win, count: int | None, size: int | None) -> None:
     """How many media files the Music page found on the open device, and their size (None:
     not read yet), kept for the session and said by the row "Music" of the device page."""
     win.music_count = (count, size) if count is not None else None
-    row = getattr(win, "music_row", None)
+    row = win.music_row
     if row is not None:
         row.set_subtitle(GLib.markup_escape_text(caption(ngettext(
             "{count} file · {size}", "{count} files · {size}", count).format(

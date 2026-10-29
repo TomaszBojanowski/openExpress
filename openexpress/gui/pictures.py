@@ -37,7 +37,7 @@ def device_picture_path(part_number: str) -> Path:
 
 def store(win) -> dict:
     """The window's pictures, by part number."""
-    textures = getattr(win, "_device_textures", None)
+    textures = win._device_textures
     if textures is None:
         textures = win._device_textures = {}
     return textures
@@ -60,10 +60,10 @@ def with_device_picture(win, part: str, url: str | None, use: Use, read) -> None
     account's `url`, kept and given to all who asked meanwhile. Each part is read once;
     without a picture `use` is never called (the icon stays). No unit-info is asked."""
     textures = store(win)
-    asked = getattr(win, "_pictures_asked", None)
+    asked = win._pictures_asked
     if asked is None:
         asked = win._pictures_asked = set()
-    waiting = getattr(win, "_pictures_waiting", None)
+    waiting = win._pictures_waiting
     if waiting is None:
         waiting = win._pictures_waiting = {}
     if textures.get(part) is not None:

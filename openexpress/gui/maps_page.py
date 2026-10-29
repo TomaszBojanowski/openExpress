@@ -468,5 +468,5 @@ def _cleanup_paragraph(win) -> str:
     is installed, updated or removed (shown, never removed); "" without."""
     from openexpress import maps as mp
 
-    lines = mp.cleanup_lines(getattr(win, "map_cleanup", None) or [])
+    lines = mp.cleanup_lines(win.map_cleanup or [])
     return "\n\n" + "\n".join(lines) if lines else ""

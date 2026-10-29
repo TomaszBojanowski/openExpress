@@ -234,11 +234,11 @@ def schedule_detection(win, delay_ms: int, mount_uri: str | None = None,
     after it showed up on USB (None), or only read the list of devices connected again
     (READ_THE_LIST); `cause`: why (navigation.Cause). One timer for all of them: another
     trigger moves it, and what is decided when it fires covers every trigger so far."""
-    if getattr(win, "_detect_timer", None) is not None:
+    if win._detect_timer is not None:
         GLib.source_remove(win._detect_timer)
         log.info("device detection: moved by another trigger")
-    win._detect_reasons = [*getattr(win, "_detect_reasons", []), mount_uri]
-    win._detect_causes = [*getattr(win, "_detect_causes", []), cause or _cause_of(mount_uri)]
+    win._detect_reasons = [*win._detect_reasons, mount_uri]
+    win._detect_causes = [*win._detect_causes, cause or _cause_of(mount_uri)]
 
     def due():
         win._detect_timer = None
@@ -254,7 +254,7 @@ def watch_drives_while_open(win) -> None:
     has the list read again (the open device stays open), and so has one not mounted that
     goes. Only /sys is read."""
     places = drives_on_usb()
-    before = getattr(win, "_drives_while_open", None)
+    before = win._drives_while_open
     win._drives_while_open = places
     if before is None or places == before:
         return  # the first look: what is there is the open device's company
@@ -263,7 +263,7 @@ def watch_drives_while_open(win) -> None:
                  "list of devices is read again in 2.5 s")
         schedule_detection(win, 2500, cause=Cause.PLUGGED)
         return
-    connected = getattr(win, "connected", None)
+    connected = win.connected
     if connected is not None and any(u.startswith(UNMOUNTED_DRIVE) for u in connected.unread()):
         log.info("USB: a Garmin device in mass storage mode went while a device is open, the "
                  "list of devices is read again in 1.5 s")
@@ -280,7 +280,7 @@ def look_again_for_drives(win, clock=time.monotonic) -> None:
         win._drive_look = None
         return
     now = clock()
-    look = getattr(win, "_drive_look", None)
+    look = win._drive_look
     if look is None or look[0] != waiting:
         win._drive_look = (waiting, 0, now)  # counted from now
         return
@@ -301,16 +301,16 @@ def detection_due(win) -> None:
         win._detect_after_task = True
         return
     win._detect_after_task = False
-    reasons, win._detect_reasons = getattr(win, "_detect_reasons", []), []
-    causes, win._detect_causes = getattr(win, "_detect_causes", []), []
-    if getattr(win, "_detect_timer", None) is not None:
+    reasons, win._detect_reasons = win._detect_reasons, []
+    causes, win._detect_causes = win._detect_causes, []
+    if win._detect_timer is not None:
         # Decided after a task: this covers the triggers that came meanwhile, so the timer
         # armed for them would only fire again with none left.
         GLib.source_remove(win._detect_timer)
         win._detect_timer = None
     cause = _timed_cause(causes)
     s = win.session
-    connected = getattr(win, "connected", None)
+    connected = win.connected
     usb = getattr(s.storage, "usb", None) if s is not None else None
     what = detection_plan(cause, reasons,
                           open_label=str(getattr(s.storage, "label", "")) if s is not None
@@ -369,10 +369,10 @@ def _take_asked(win, own: Cause) -> tuple[Cause, str | None]:
     """Why the decision made now is made and the device open when it was asked: those of
     the detection that ends here (if one), else `own`. A Refresh on the start page asked
     while a task ran keeps the start page for what that task brings as well, once."""
-    asked = getattr(win, "_asked", None)
+    asked = win._asked
     win._asked = None
     cause, open_before = asked if asked is not None else (own, None)
-    if getattr(win, "_pending_cause", None) is Cause.REFRESH_ON_START:
+    if win._pending_cause is Cause.REFRESH_ON_START:
         cause, win._pending_cause = Cause.REFRESH_ON_START, Cause.REFRESH_IN_VIEW
     return cause, open_before
 
@@ -391,8 +391,8 @@ def visible_view(win) -> View:
     if page is win.start.page:
         return View(Page.START)
     if page is win.remembered.page:
-        return View(Page.REMEMBERED, getattr(win, "_remembered_unit", None),
-                    getattr(win, "_remembered_from_account", False))
+        return View(Page.REMEMBERED, win._remembered_unit,
+                    win._remembered_from_account)
     return View(Page.DEVICE)
 
 
@@ -403,9 +403,9 @@ class DeviceDetection:
         if self._refresh_pending and not self.busy:
             self._refresh_pending = False
             self.refresh_device()
-        elif getattr(self, "_detect_after_task", False) and not self.busy:
+        elif self._detect_after_task and not self.busy:
             detection_due(self)
-        elif getattr(self, "_reread_pending", False) and not self.busy:
+        elif self._reread_pending and not self.busy:
             self._reread_pending = False
             self._reread_connected()
 
@@ -487,7 +487,7 @@ class DeviceDetection:
         s = self.session
         # A Garmin drive is known by its label as well: an unplugged one is gone from /sys.
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
-        connected = getattr(self, "connected", None)
+        connected = self.connected
         if s is None and connected is not None and connected.is_choice(uri):
             log.info("mount removed (%s): one of the devices to choose from, detecting in "
                      "1.5 s", where)
@@ -516,7 +516,7 @@ class DeviceDetection:
         if ours or garmin_usb(mount):
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
-                     bool(getattr(self, "busy", False)))
+                     bool(self.busy))
             if ours and getattr(s, "mass_storage", False):
                 # Its place on USB, kept: a watch goes into its Garmin USB mode once it is
                 # ejected and comes back as 091e:0003.
@@ -589,8 +589,8 @@ class DeviceDetection:
             return True
         self._drives_while_open = None  # looked at anew once a device is open
         # The open device was just unplugged: a device left on USB is looked for (below).
-        unplugged, self._open_unplugged = getattr(self, "_open_unplugged", False), False
-        connected = getattr(self, "connected", None)
+        unplugged, self._open_unplugged = self._open_unplugged, False
+        connected = self.connected
         if connected is not None and connected.choosing and connected.devices:
             # The list stays as it is; a Garmin device plugged in or out (also one that was
             # never mounted, which sends no mount event) brings one new detection.
@@ -603,7 +603,7 @@ class DeviceDetection:
         state = usb_state()
         if state == ABSENT and self._usb_state != ABSENT:
             # Off the bus for a moment between its two modes, or unplugged? Wait and see.
-            gone = getattr(self, "_usb_gone", None)
+            gone = self._usb_gone
             if gone is None:
                 self._usb_gone = clock()
                 return True
@@ -632,8 +632,8 @@ class DeviceDetection:
                      "detecting in 2.5 s")
             schedule_detection(self, 2500, cause=Cause.PLUGGED)
         self._usb_state = state
-        normal_s = clock() - getattr(self, "_normal_since", 0.0) if state == PRESENT else 0.0
-        if normal_s >= REPLUG_HINT_S and not getattr(self, "_replug_told", False):
+        normal_s = clock() - self._normal_since if state == PRESENT else 0.0
+        if normal_s >= REPLUG_HINT_S and not self._replug_told:
             self._replug_told = True
             log.info("USB: present for %d s without MTP, suggesting to replug", REPLUG_HINT_S)
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0,
@@ -664,9 +664,9 @@ class DeviceDetection:
                 self._pending_reopen = reopen
             return
         self._refresh_pending = False
-        reopen = reopen or getattr(self, "_pending_reopen", None)
+        reopen = reopen or self._pending_reopen
         self._pending_reopen = None
-        pending, self._pending_cause = getattr(self, "_pending_cause", None), None
+        pending, self._pending_cause = self._pending_cause, None
         if pending is Cause.REFRESH_ON_START:
             cause = pending  # Refresh on the start page waited for the task: it stays there
         elif cause is None:
@@ -800,7 +800,7 @@ class DeviceDetection:
             if self.session is not s:
                 return  # closed or replaced meanwhile: drawn by what did that
             log.info("start page: %d devices connected", len(found))
-            cause, self._reread_cause = (getattr(self, "_reread_cause", None)
+            cause, self._reread_cause = (self._reread_cause
                                          or Cause.UNPLUGGED_OTHER), None
             address = open_address(s)
             before = Seen(self.connected.drawn, address)

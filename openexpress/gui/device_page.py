@@ -137,11 +137,11 @@ def refresh_last_sync_subtitle(win) -> None:
     """The subtitle of "Last sync" of the device page drawn again where its words changed:
     once a minute (its time told against now), and when the count of activities to upload
     comes or changes."""
-    row, s = getattr(win, "last_sync_row", None), getattr(win, "session", None)
+    row, s = win.last_sync_row, win.session
     if row is None or s is None or getattr(s, "ownership_error", None) is not None:
         return
     text = GLib.markup_escape_text(last_sync_subtitle(
-        s.device.unit_id, getattr(win, "_last_sync_data", None), open_to_sync(s),
+        s.device.unit_id, win._last_sync_data, open_to_sync(s),
         datetime.now()))
     if row.get_subtitle() != text:
         row.set_subtitle(text)
@@ -197,7 +197,7 @@ def backups_text(unit_id) -> str:
 def show_backups(win) -> None:
     """The row "Backup" as the folder of the backups is now; the folder in its tooltip
     (that of all devices: the device's own is named after its unit ID)."""
-    row, s = getattr(win, "backup_row", None), getattr(win, "session", None)
+    row, s = win.backup_row, win.session
     if row is None or s is None:
         return
     row.set_subtitle(GLib.markup_escape_text(backups_text(getattr(s.device, "unit_id", None))))
@@ -230,8 +230,8 @@ def device_error_row(win, group=None) -> None:
     in the last 30 days (read when it was opened, the copy on or off).
     Inside, where they apply: Copy Crash Logs (a device that hides its event logs) and Copy
     Memory Dumps. Drawn again in its place when that changes."""
-    old = getattr(win, "device_error_row", None)
-    group = group or getattr(win, "device_error_group", None)
+    old = win.device_error_row
+    group = group or win.device_error_group
     win.device_error_row, win.device_error_group = None, group
     if old is not None and group is not None:
         group.remove(old)
@@ -289,7 +289,7 @@ def device_name(s) -> str:
 
 def show_device_name(win, s) -> None:
     """The name on the page of `s` as it is known now, while it is still the open one."""
-    title = getattr(win, "device_title", None)
+    title = win.device_title
     if win.session is s and title is not None:
         title.set_label(device_name(s))
 
@@ -361,7 +361,7 @@ def account_picture_row(win, s):
         title=_("Device picture"),
         subtitle=_("Garmin's update server has none. Getting it sends the Unit ID of this "
                    "device to your Garmin Connect account."),
-        visible=getattr(win, "account_picture_offer", None) is s)
+        visible=win.account_picture_offer is s)
     row.add_suffix(win._button(_("Get Picture From Account"),
                                lambda button: get_picture_from_account(win, button),
                                with_button=True))
@@ -372,14 +372,14 @@ def account_picture_row(win, s):
 def show_account_picture_offer(win, s) -> None:
     """Offer Get Picture From Account for `s`, the open device (its row, when it is built)."""
     win.account_picture_offer = s
-    row = getattr(win, "account_picture_row", None)
+    row = win.account_picture_row
     if row is not None:
         row.set_visible(True)
 
 
 def _no_account_picture_offer(win) -> None:
     win.account_picture_offer = None
-    row = getattr(win, "account_picture_row", None)
+    row = win.account_picture_row
     if row is not None:
         row.set_visible(False)
 
@@ -413,7 +413,7 @@ def get_picture_from_account(win, button=None) -> None:
             return
         log.info("device picture: from the account, asked on request")
         pictures.keep(win, part, texture)
-        start_page = getattr(win, "start", None)
+        start_page = win.start
         if start_page is not None:
             start_page.set_picture(part, texture)  # its tile on the start page as well
         if win.session is s:
@@ -583,7 +583,7 @@ def show_update_record(win) -> bool:
     (an update copied; `update_count` still to install) or "available"; returns whether there
     was one. Only shown: the Updates page, its buttons and the installs use only the server's
     answer (updates_cache)."""
-    device = getattr(getattr(win, "session", None), "device", None)
+    device = getattr(win.session, "device", None)
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return False
@@ -626,7 +626,7 @@ def open_device_kind(s, account) -> str | None:
 def device_view_icon(win, s) -> str:
     """The icon of the device view before the picture: that of the device's kind, from the
     window's account list (or the one its ownership check read) and devices.json."""
-    account = getattr(win, "_account", None)
+    account = win._account
     if account is None:
         account = getattr(s, "account_devices", None)
     return kind_icon(open_device_kind(s, account))
@@ -791,7 +791,7 @@ class DevicePage:
         if self.busy:
             self.toast(_("Another operation is in progress"))
             return
-        kind = getattr(self, "_banner_kind", "")
+        kind = self._banner_kind
         if kind == "setup":
             self.choose_dll()
         elif kind == "recheck":
@@ -975,7 +975,7 @@ class DevicePage:
             self.apps_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
             self.apps_row.connect("activated", lambda *_a: self.select_section("apps"))
             g.add(self.apps_row)
-            note_apps_count(self, getattr(self, "apps_count", None))
+            note_apps_count(self, self.apps_count)
             self.music_row = None
             if music_kinds(d):
                 self.music_row = Adw.ActionRow(title=pgettext("tab", "Music"),
@@ -983,7 +983,7 @@ class DevicePage:
                 self.music_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
                 self.music_row.connect("activated", lambda *_a: self.select_section("music"))
                 g.add(self.music_row)
-                count = getattr(self, "music_count", None)
+                count = self.music_count
                 note_music_count(self, *(count or (None, None)))
 
         if s.logged_in or not mass_storage:
@@ -1157,7 +1157,7 @@ class DevicePage:
                 return
             log.info("device picture: from %s", source)
             pictures.keep(self, part, texture)
-            start = getattr(self, "start", None)
+            start = self.start
             if start is not None:
                 start.set_picture(part, texture)  # its tile on the start page as well
             if self.session is s:
@@ -1168,7 +1168,7 @@ class DevicePage:
     def _render_update_state(self) -> None:
         """Shows self.update_state in the overview: the "Device software" row, the chip under
         the version (_highlight_update) and the software label."""
-        if self.session is None or getattr(self, "update_row", None) is None:
+        if self.session is None or self.update_row is None:
             return
         state = self.update_state
         self._highlight_update(start.update_available() if state == "available"
@@ -1179,7 +1179,7 @@ class DevicePage:
             state, self.update_count if state in ("available", "ready") else 0,
             self.update_only if state == "available" else None,
             mass_storage=getattr(self.session, "mass_storage", False))
-        checked_at = getattr(self, "update_checked_at", None)
+        checked_at = self.update_checked_at
         if checked_at is not None:
             text = checked_text(text, checked_at, datetime.now())  # not a check of now
         self.update_row.set_subtitle(GLib.markup_escape_text(text))
@@ -1214,7 +1214,7 @@ class DevicePage:
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now), and whether one
         # waits for the device to install it.
-        remember_update_found(getattr(getattr(self, "session", None), "device", None),
+        remember_update_found(getattr(self.session, "device", None),
                               new_updates, staged)
         self._render_update_state()
 
@@ -1249,7 +1249,7 @@ class DevicePage:
 
     def _render_map_state(self) -> None:
         """Shows self.map_state in the overview (the "Maps" row)."""
-        if self.session is None or getattr(self, "map_row", None) is None:
+        if self.session is None or self.map_row is None:
             return
         from openexpress import maps as mp
 
@@ -1330,7 +1330,7 @@ class DevicePage:
         self.in_background(work, done, failed)
 
     def _show_last_sync(self) -> None:
-        if (getattr(self, "last_sync_row", None) is None or self.session is None
+        if (self.last_sync_row is None or self.session is None
                 or self.session.ownership_error is not None):
             return
         row = self.last_sync_row

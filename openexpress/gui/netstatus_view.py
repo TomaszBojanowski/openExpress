@@ -156,7 +156,7 @@ class NetStatusPanel:
         not: the same widgets get the new texts, so an open window follows at once)."""
         last, answered = netstatus.STATUS.snapshot()
         state = netstatus.state_of(last, answered)
-        session = getattr(self, "session", None)
+        session = self.session
         try:
             hosts = (session.client.settings if session is not None else Settings.load()).hosts
         except Exception:  # noqa: BLE001 - only for the names of the servers

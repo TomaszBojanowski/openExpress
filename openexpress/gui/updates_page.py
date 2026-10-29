@@ -70,7 +70,7 @@ def update_check_failed(win) -> None:
     when it was."""
     if win.update_state is None:
         win.update_state = "failed"
-    elif getattr(win, "_update_record_at", None) is not None:
+    elif win._update_record_at is not None:
         win.update_checked_at = win._update_record_at
     else:
         return

@@ -80,7 +80,7 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
 
 def show_stop_waiting(win, visible: bool) -> None:
     """Stop Waiting on the bar at the bottom, shown only while TrueUp waits."""
-    button = getattr(win, "stop_wait_button", None)
+    button = win.stop_wait_button
     if button is not None:
         button.set_visible(visible)
 
@@ -88,7 +88,7 @@ def show_stop_waiting(win, visible: bool) -> None:
 def stop_waiting(win) -> None:
     """Stop Waiting: the wait for TrueUp ends at its next step; the sync then ends as usual
     and writes nothing of TrueUp."""
-    stop = getattr(getattr(win, "session", None), "stop_waiting", None)
+    stop = getattr(win.session, "stop_waiting", None)
     if stop is not None:
         stop.set()
         log.info("TrueUp: the wait stopped by the user")
@@ -174,7 +174,7 @@ def render_space(win) -> None:
     """The subtitle (and the bar) of "Device storage" from the space the session holds, in
     the words of every page (space_text): "Reading…" until it is read, "Unknown" when the
     device does not say. Nothing is asked of the device."""
-    row, bar = getattr(win, "storage_row", None), getattr(win, "storage_bar", None)
+    row, bar = win.storage_row, win.storage_bar
     s = win.session
     if row is None or s is None:
         return
