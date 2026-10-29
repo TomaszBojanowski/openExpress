@@ -24,7 +24,7 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 
 <p align="center">
   <img src="screenshots/updates.png" width="800"
-       alt="The Updates page: a component update offered for a fēnix 8">
+       alt="The Updates page: two component updates offered for a fēnix 8">
 </p>
 
 ## Not yet available
