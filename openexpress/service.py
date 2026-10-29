@@ -150,17 +150,34 @@ def account_country(s) -> str | None:
     return s.account_country_code
 
 
-def make_client(settings: Settings) -> GarminClient:
+def make_client(settings: Settings, need_auth: bool | None = None) -> GarminClient:
+    """The client of Garmin Connect, with the application key and the saved login.
+
+    `need_auth` None (the window, the watcher): what is missing is left out, without an
+    error: no key, no login, a login of another environment taken for none. True or False
+    (a command): the key is needed (SetupError without it, or damaged), asked for before
+    the login; True: the login too (NotLoggedIn without it, or damaged; SetupError for a
+    login of another environment); False: no login, none read."""
     try:
         consumer = load_consumer()
     except SetupError:
+        if need_auth is not None:
+            raise
         consumer = None
-    try:
-        auth = store.load()
-        if auth.environment != settings.environment:
+    auth = None
+    if need_auth is not False:
+        try:
+            auth = store.load()
+        except store.NotLoggedIn:
+            if need_auth:
+                raise
+        if auth is not None and auth.environment != settings.environment:
+            if need_auth:
+                raise SetupError(
+                    _("The token is for environment {token_environment}, but the configured "
+                      "one is {environment}. Please log in again.").format(
+                        token_environment=auth.environment, environment=settings.environment))
             auth = None
-    except store.NotLoggedIn:
-        auth = None
     return GarminClient(settings, consumer, auth)
 
 

@@ -102,15 +102,11 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
 
 
 def make_client(settings: Settings, need_auth: bool) -> GarminClient:
-    consumer = load_consumer()
-    auth = store.load() if need_auth else None
-    if auth and auth.environment != settings.environment:
-        raise SetupError(
-            _("The token is for environment {token_environment}, but the configured one is "
-              "{environment}. Please log in again.").format(
-                token_environment=auth.environment, environment=settings.environment)
-        )
-    return GarminClient(settings, consumer, auth)
+    """The client of a command (service.make_client): the key is needed; with `need_auth`
+    the login too, without it none is read."""
+    from openexpress import service
+
+    return service.make_client(settings, need_auth=need_auth)
 
 
 # --- commands --------------------------------------------------------------------------
