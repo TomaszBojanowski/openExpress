@@ -110,7 +110,7 @@ def hide(value, label: str) -> None:
 
 def hide_unit_id(unit_id) -> None:
     """Never write this unit ID: in decimal, nor in hexadecimal, as a USB serial and an MTP
-    address carry it (a fēnix 8: 12 digits with leading zeros, 26.10.2026), in either case."""
+    address carry it (a fēnix 8: 12 digits with leading zeros), in either case."""
     hide(unit_id, "unit")
     if isinstance(unit_id, int) and not isinstance(unit_id, bool) and unit_id > 0:
         for form in (f"{unit_id:x}", f"{unit_id:012x}"):
@@ -265,7 +265,7 @@ def _packaging() -> str:
 def environment() -> str:
     """What the start line says about the program: its version, how it is packaged, the
     Python version, the language it runs in, the locale of the C library with its character
-    set (#10: a Flatpak runtime without the system's) and the PID. Nothing about the user or
+    set (a Flatpak runtime may lack the system's) and the PID. Nothing about the user or
     the computer, nor a variable of the environment."""
     return (f"openExpress {__version__}, {_packaging()}, "
             f"Python {platform.python_version()}, language {i18n.current_language()}, "
@@ -284,8 +284,8 @@ def shown_path() -> str:
 
 def tail(count: int = 200) -> list[str]:
     """The last `count` lines of the log, redacted once more (the rules may have become
-    stricter since a line was written) and with plain spaces (a line written before
-    22.10.2026 may have hard ones). Empty when there is no log."""
+    stricter since a line was written) and with plain spaces (a line written by an older
+    version may have hard ones). Empty when there is no log."""
     lines: list[str] = []
     path = log_path()
     for file in (path, path.with_name(path.name + ".1")):  # the current file, then the one before

@@ -108,7 +108,7 @@ class InstalledState:
     # name are missing, so no list may be built from it (require_readable_waiting_list).
     in_bin_damaged: bool = False
     # The device declares Connect IQ but has no app list (OUT.BIN) yet: no app was ever
-    # installed on it (#14). No apps; nothing may be written, as a list built now would name
+    # installed on it. No apps; nothing may be written, as a list built now would name
     # none of the device's own: new apps are only queued in Garmin Connect.
     no_app_list: bool = False
 
@@ -344,7 +344,7 @@ def no_apps_text() -> str:
 
 def no_app_list_text(names: list[str]) -> str:
     """Why apps were only queued for a device without an app list (OUT.BIN): the device
-    makes it later (#14: on the second day; when exactly is not known yet)."""
+    makes it later (one did on the second day; when exactly is not known)."""
     # TRANSLATORS: "Install" is the button of the Apps page
     return _("{app}: the device has not provided its Connect IQ app list yet. The app waits in "
              "the queue in Garmin Connect. Once the device shows its app list, open the Apps "
@@ -622,7 +622,7 @@ class IqInstallReport:
     # of them that are new versions of apps already on the device.
     sandboxed: list[str] = field(default_factory=list)
     sandboxed_updates: list[str] = field(default_factory=list)
-    # The device has no app list yet: all of `for_phone` stay queued for that (#14).
+    # The device has no app list yet: all of `for_phone` stay queued for that.
     no_app_list: bool = False
     # Apps with new permissions that were not allowed: nothing was done for them.
     needs_consent: list[str] = field(default_factory=list)
@@ -1024,7 +1024,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     report = IqInstallReport()
     state = read_installed(device, storage)
     if state.no_app_list:
-        # Nothing is written: the queued apps stay for the phone (#14). Garmin Express does
+        # Nothing is written: the queued apps stay for the phone. Garmin Express does
         # not install them either, as it cannot read the apps of a device without a list.
         report.no_app_list = True
         for m in messages:
@@ -1401,8 +1401,8 @@ def removal_way(device: GarminDevice, storage: Storage, app: InstalledApp) -> st
     listing shows it, DIRECT when the device hides it and a PTP session reaches it,
     SANDBOXED when only the sandbox keeps it out of reach, UNREACHABLE otherwise. The
     settings file decides nothing: a settings file the listing shows next to an app file it
-    does not show used to send the removal through the mounted storage, which deleted the
-    settings alone and left the app on the device."""
+    does not show would send the removal through the mounted storage, which would delete the
+    settings alone and leave the app on the device."""
     path = app_file_path(device, app)
     if path and storage.exists(path):
         return MOUNTED
@@ -1842,7 +1842,7 @@ def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
 
 def apps_moved(plan: OrderPlan) -> int:
     """How many apps have to be moved to get from the order on the device to the order of
-    the copy (25.10.2026): the fewest moves, so the apps in both lists outside their longest
+    the copy: the fewest moves, so the apps in both lists outside their longest
     common subsequence. One app taken from the top to the bottom changes every position, but
     is one app moved. Apps only on the device keep their place and are not counted."""
     def key(a):

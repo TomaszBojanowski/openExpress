@@ -237,7 +237,7 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
         found.append(presence(storage, u))
         u.on_device = found[-1].why == MATCHES
     # For each: where its file goes on the device, from the device's folder, and whether it
-    # is there (#11); never an address (a download address carries a token).
+    # is there; never an address (a download address carries a token).
     named = ", ".join(f"{u.part_number} {u.version} at {_where(u, p)}: {p.why}"
                       for u, p in zip(offered[:LOG_ITEMS], found, strict=False))
     if len(offered) > LOG_ITEMS:
@@ -433,7 +433,7 @@ def _install(
                                           error=UpdateError)
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
-        # The whole path from the device's folder, as mark_present names it (#11).
+        # The whole path from the device's folder, as mark_present names it.
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(size), real)
     return report
@@ -449,7 +449,7 @@ def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
     in letter case is deleted, so that the new file has exactly the name the server gives;
     for a system update also a leftover GUPDATE.TMP in the same folder. openExpress does both
     on every device, over MTP and on a drive. (An Edge 1050 did not install GUPDATE.GSP
-    written over its own GUPDATE.gsp at once, 21.10.2026, but later installed that file by
+    written over its own GUPDATE.gsp at once, but later installed that file by
     itself: the letter case is not known to matter, the exact name is the safer choice.) A
     file of exactly that name is replaced by the copy itself (on a drive only once the new
     one is whole). Names compared in any letter case; the log names what is deleted."""

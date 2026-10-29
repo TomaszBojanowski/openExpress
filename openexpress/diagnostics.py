@@ -1,4 +1,4 @@
-"""The device's own diagnostic files (analysis 20, §3.1–3.2).
+"""The device's own diagnostic files.
 
 What the device last logged as an error (its `err_log` files, read through the ordinary
 connection at each opening, whatever the settings), and a copy of its diagnostic files kept
@@ -51,9 +51,8 @@ COPIES_KEPT = 30
 LIMIT = 50 * 1000 * 1000
 STAMP = "%Y-%m-%d %H.%M.%S"
 RECENT = timedelta(days=30)
-# The only kind shown as "the device reported an error" (analysis 20, §3.2): an Edge 1050
-# logs "Assert" at every ordinary restart, "Abnormal Powerdown" is a power loss or a
-# restart forced with the button.
+# The only kind shown as "the device reported an error": an Edge 1050 logs "Assert" at every
+# ordinary restart, "Abnormal Powerdown" is a power loss or a restart forced with the button.
 CRASH = "RTL Trap"
 
 
@@ -99,8 +98,8 @@ def _field(item: dict, key: str, limit: int = 40) -> str | None:
 
 def _moment(item: dict, extra: dict) -> datetime | None:
     """The time of an entry: "Time" of its details ("2026-10-26 22:24:06"), else
-    "ms_since_epoch"; both are the device's local time (analysis 20: they agree, and they
-    agree with the time of the file)."""
+    "ms_since_epoch"; both are the device's local time (they agree, and they agree with the
+    time of the file)."""
     text = _field(extra, "Time")
     if text:
         try:
@@ -442,7 +441,7 @@ def hidden_logs_known_absent(unit_id: int) -> bool:
 
 
 def may_have_hidden_logs(storage: Storage, shown: bool | None = None) -> bool:
-    """The rule of "Copy Crash Logs" (analysis 20, §3.2): a device over MTP whose event logs
+    """The rule of "Copy Crash Logs": a device over MTP whose event logs
     the ordinary connection does not show (a fēnix 8 hides them, a Venu 2 and an Edge 1050
     show them, and the copy takes them as they are). `shown`: whether it shows them, when
     that is known already (Seen.event_logs)."""
@@ -557,7 +556,7 @@ class Seen:
 # Where a device keeps its diagnostic files, as an opening found them by looking through its
 # folders: in the device's folder (not with the copies, made only when the copy is on), so
 # that the next openings read those paths only. Over MTP each listing of a folder is a round
-# trip: looking through them took 4-5 s on a Venu 2, even with no file to read (27.10.2026).
+# trip: looking through them took 4-5 s on a Venu 2, even with no file to read.
 PLACES = "diagnostic-places.json"
 
 
@@ -607,7 +606,7 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
     """What is at the places kept now, each read alone, nothing listed; None when the note
     no longer holds: a path gone, other software on the device, the files a copy takes not
     looked for yet, or a damaged note. The paths looked for in vain are not asked about (on
-    a Venu 2, 4 of 9 questions, 27.10.2026): one there now is seen with other software."""
+    a Venu 2, 4 of 9 questions): one there now is seen with other software."""
     try:
         if note.get("software_version") != device.software_version_str:
             return None

@@ -274,8 +274,8 @@ def ensure_utf8_locale() -> str | None:
     the program starts any process: whether the C library can have that locale, in UTF-8.
     If not (a Flatpak whose runtime has no data for the language of the system), LC_ALL is
     set to C.UTF-8 for the program and the processes it starts: in the "C" locale GLib
-    converts no name with a character outside ASCII, so flatpak-spawn failed and the
-    sign-in window took the program down (#10). LANGUAGE is left as it is (the translations
+    converts no name with a character outside ASCII, so flatpak-spawn fails and the
+    sign-in window takes the program down. LANGUAGE is left as it is (the translations
     follow it); the languages of the system for Garmin stay as they were (read now, before
     the change); Python's own locale is set back as it was. What to log, or None when
     nothing is changed."""

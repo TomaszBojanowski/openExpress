@@ -435,7 +435,7 @@ def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[Cle
 
 def cleanup_lines(files: list[CleanupFile]) -> list[str]:
     """What the questions and the command line say of `files`: a heading, the files and that
-    openExpress leaves them (stage 1); nothing without files."""
+    openExpress leaves them; nothing without files."""
     if not files:
         return []
     return [_("Old files Garmin asks to remove:"), *(f.path for f in files),

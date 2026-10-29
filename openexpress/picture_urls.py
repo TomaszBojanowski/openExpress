@@ -1,6 +1,6 @@
-"""Which addresses of device pictures openExpress downloads: Garmin's own hosts, over HTTPS
-(#8). The one rule for every picture of a device model, wherever its address comes from (the
-account, Garmin's update server): the window downloads only what passes it.
+"""Which addresses of device pictures openExpress downloads: Garmin's own hosts, over HTTPS.
+The one rule for every picture of a device model, wherever its address comes from (the account,
+Garmin's update server): the window downloads only what passes it.
 
 Amazon S3 is allowed only for a bucket named in S3_BUCKETS, by the first segment of the path
 (s3.amazonaws.com/<bucket>/...) or by the host (<bucket>.s3[.<region>].amazonaws.com). A
@@ -15,8 +15,8 @@ from urllib.parse import urlsplit
 
 HOSTS = frozenset({"res.garmin.com", "static.garmincdn.com"})
 # Garmin's buckets of device pictures on S3, by name (S3 names a bucket in lower case only).
-# garmin-connect-prod: the account's pictures of some models (#8, the log of 0.6.10). Any
-# other bucket is refused, and the log names it, so that a real one can be added here.
+# garmin-connect-prod: the account's pictures of some models. Any other bucket is refused,
+# and the log names it, so that a real one can be added here.
 S3_BUCKETS: frozenset[str] = frozenset({"garmin-connect-prod"})
 
 _S3_PATH_HOST = re.compile(r"s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com")

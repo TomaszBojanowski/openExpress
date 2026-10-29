@@ -1,13 +1,4 @@
 {
- "openexpress/applog.py": 3,
- "openexpress/ciq.py": 5,
- "openexpress/cli.py": 9,
- "openexpress/diagnostics.py": 9,
- "openexpress/i18n.py": 1,
- "openexpress/maps.py": 1,
- "openexpress/picture_urls.py": 3,
- "openexpress/report.py": 2,
- "openexpress/updates.py": 3,
  "tests/conftest.py": 2,
  "tests/data/last_sync/README.txt": 4,
  "tests/data/last_sync/format-0.7.5-ecg-not-uploaded.json": 2,

@@ -645,7 +645,7 @@ def _connected_unit_ids() -> set[int]:
 
 
 def _seen_at(ts: float) -> str:
-    """A moment as the program writes dates, in local time: "17.10.2026 13:20" in Polish."""
+    """A moment as the program writes dates, in local time: "DD.MM.YYYY HH:MM" in Polish."""
     t = time.localtime(ts)
     return pgettext("date and hour", "{date} {time}").format(
         date=time.strftime(_("%Y-%m-%d"), t), time=time.strftime("%H:%M", t))
@@ -892,7 +892,7 @@ def _flags(u) -> str:
 
 def _to_install_staged(st) -> str:
     """What makes the device install an update copied already: a device in mass storage
-    mode takes it once its drive is ejected (#11)."""
+    mode takes it once its drive is ejected."""
     if getattr(st, "mass_storage", False):
         return _("To install it, eject the drive in the file manager, then unplug the device.")
     return _("Disconnect the device to install it.")
@@ -909,7 +909,7 @@ def _print_staged(staged, st) -> None:
 
 
 def _eject_drive(st) -> bool:
-    """After a write to a Garmin drive: eject it, so that the device takes the update (#11);
+    """After a write to a Garmin drive: eject it, so that the device takes the update;
     only then may the cable go out. False, with what to do, when it is not ejected."""
     from openexpress.device import gio_storage
 
@@ -1036,8 +1036,7 @@ def cmd_updates(args) -> int:
 
 def _loses_data_on_update(client, dev) -> bool:
     """Whether Garmin files the device (unit-info, asked here once) as a kind that loses the
-    data it holds when its software is updated (point 6 of package 3). A failed request only
-    means no warning."""
+    data it holds when its software is updated. A failed request only means no warning."""
     from openexpress import updates as upd
 
     if not dev.unit_id:
@@ -1229,8 +1228,8 @@ def cmd_maps(args) -> int:
     else:
         targets = [mp.find(all_maps, args.name)]
 
-    # The old files Garmin's cleanup rules would take (point 8, stage 1): listed with the
-    # plan, in a dry run and with --apply, and never removed.
+    # The old files Garmin's cleanup rules would take: listed with the plan, in a dry run and
+    # with --apply, and never removed.
     cleanup = mp.cleanup_lines(mp.cleanup_plan(st, dev, all_maps))
     if cleanup:
         print(cleanup[0])
@@ -1339,7 +1338,7 @@ def _app_status(disabled: bool) -> str:
 
 
 def _apps_queue_only(args, dev, st, client, api, account) -> int:
-    """`apps install` on a device without an app list (OUT.BIN, #14): the app is queued in
+    """`apps install` on a device without an app list (OUT.BIN): the app is queued in
     Garmin Connect for the phone or Garmin Express; nothing is written to the device."""
     from openexpress import ciq
 
@@ -1516,7 +1515,7 @@ def cmd_apps(args) -> int:
 
     if cmd == "list":
         updates = {u.app_id: u for u in api.updates(dev, state.store_apps, locale)}
-        if state.no_app_list:  # no app was ever installed (#14): none, not an error
+        if state.no_app_list:  # no app was ever installed: none, not an error
             print(ciq.no_apps_text())
         else:
             print(ngettext("Connect IQ on {device}: {count} store app, {slots} free slots, "
@@ -2387,8 +2386,8 @@ def _run(args, service, requests) -> int:
         _error(_("Error: {error}").format(error=e))
         return 1
     except OrdinaryStop as e:
-        # Not an error (another sync running, a choice to make…): the user is told as
-        # before, the log says what it waits for.
+        # Not an error (another sync running, a choice to make…): the user sees the same
+        # line as for an error; the log says what it waits for.
         log.info("stopped: %s", e.log_reason)
         _error(_("Error: {error}").format(error=e))
         return 1

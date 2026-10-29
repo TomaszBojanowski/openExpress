@@ -61,8 +61,7 @@ def form_log(lines: list[str], crash: list[str] | None = None) -> str:
     "Log" field, which GitHub shows as code between backticks itself, the tildes do not
     close that block and are only two lines more. The fence is longer than any run of
     tildes a line begins with, so that no line of the log closes it. An issue opened from
-    the window never has the log in its address; the window puts this in the clipboard
-    (#18, #19)."""
+    the window never has the log in its address; the window puts this in the clipboard."""
     out = "\n".join(lines) + "\n" if lines else "(no log file)\n"
     if crash:
         out += (f"\n# Crash log (last {len(crash)} lines of crash.log)\n"
