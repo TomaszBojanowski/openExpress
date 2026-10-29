@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """Fill translations in a .po file from a JSON dictionary {key: msgstr | [plural forms]}.
 
+Usage: tools/po-fill.py po/pl.po translations.json
+
 The key is the msgid; for an entry with a context (msgctxt) "context|msgid", and "|msgid"
 for the entry without one. A bare msgid that also has entries with a context is ambiguous:
 nothing is filled for it and it is reported (exit code 1), so that one key never overwrites
-two translations (e.g. "Storage": "Pamięć" and, in "preferences", "Miejsce na dysku").
-
-Used by maintainers to apply batches of translations; clears the fuzzy flag of filled
-entries and keeps their other flags (python-brace-format…).
-Usage: tools/po-fill.py po/pl.po translations.json
+two translations. Filled entries lose the fuzzy flag and keep their other flags.
 """
 import json
 import re

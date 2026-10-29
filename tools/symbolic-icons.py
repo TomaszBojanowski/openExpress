@@ -1,14 +1,13 @@
 """Make the symbolic icons of the device kinds from their drawings (packaging/icons/*.svg).
 
-The drawings are lines (stroke="currentColor"). GTK draws a symbolic icon as a mask in the
-colour of the theme and fills every shape of it, so a line drawing would come out as solid
-shapes; GNOME's rule for symbolic icons is the same: shapes, no strokes. This turns each
-stroke into the filled outline of the same line (its width, round caps and joins), the
-drawing unchanged, and writes openexpress/data/<app ID>-<kind>-symbolic.svg.
+Each stroke of a drawing (stroke="currentColor") becomes the filled outline of the same line
+(its width, round caps and joins), the drawing unchanged, written to
+openexpress/data/<app ID>-<kind>-symbolic.svg: GTK draws a symbolic icon as a mask and fills
+every shape of it, so a line drawing would come out as solid shapes.
 
-For the maintainers only, run again after a drawing changes; it needs shapely, best in a
-throwaway venv:  python3 -m venv /tmp/oe-icons && /tmp/oe-icons/bin/pip install shapely
-                 /tmp/oe-icons/bin/python tools/symbolic-icons.py
+Run again after a drawing changes; it needs shapely, best in a throwaway venv:
+    python3 -m venv /tmp/oe-icons && /tmp/oe-icons/bin/pip install shapely
+    /tmp/oe-icons/bin/python tools/symbolic-icons.py
 """
 
 import math

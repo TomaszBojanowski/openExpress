@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """Polish typography in a .po file: a hard space (U+00A0) instead of a plain one after a
-one-letter word (w, z, i, o, u, a; also W, Z, I, O, U, A), so that the word never stays at
-the end of a line when a text of the window wraps ("…oprogramowanie w / wersji beta").
-tests/test_i18n.py checks po/pl.po for it.
+one-letter word (w, z, i, o, u, a and their capitals), so that the word never stays at the
+end of a line when a text of the window wraps. tests/test_i18n.py checks po/pl.po for it.
 
 Usage, after new translations (e.g. tools/po-fill.py):
     tools/po-hard-spaces.py po/pl.po            preview: what would change, nothing written
     tools/po-hard-spaces.py po/pl.po --apply    write it
     msgfmt --check -o openexpress/locale/pl/LC_MESSAGES/openexpress.mo po/pl.po
 
-Only msgstr (also msgstr[N]) is changed; msgid, msgctxt, comments, the header and obsolete
-entries (#~) stay as they are, and so does the layout of the lines. A letter that is not a
-word is left alone: one after a letter or a digit, a format code (%i), a tag (<a href…>), an
-option (-a), a placeholder ({a}), a path (/a) or an escape (\\a).
+Only msgstr (also msgstr[N]) is changed, not in the header nor in obsolete entries (#~), and
+the layout of the lines stays.
 """
 import re
 import sys
@@ -21,6 +18,8 @@ from pathlib import Path
 NBSP = "\u00a0"
 KEY = re.compile(r'^(msgctxt|msgid|msgid_plural|msgstr(?:\[\d+\])?) "(.*)"$')
 CONTINUED = re.compile(r'^"(.*)"$')
+# A letter that is not a word is left alone: one after a letter or a digit, a format code
+# (%i), a tag (<a href…>), an option (-a), a placeholder ({a}), a path (/a) or an escape (\a).
 ONE_LETTER = re.compile(r"(?<![\w%<\-/{\\])[wziouaWZIOUA] ")
 ESCAPES = {"n": "\n", "t": "\t", '"': '"', "\\": "\\"}
 

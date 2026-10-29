@@ -6,22 +6,20 @@ run by hand from the folder of the project:
                                    [--device-uri URI] [--settle S]
 
 Each cycle:
-  1. the device to ourselves for PTP, as for an app install, without its writes: unmounted
-     from gvfs, a session that only reads, mounted again;
-  2. unmounted and mounted again as when it is opened from its tile, then its
-     GarminDevice.xml looked at;
+  1. unmounted from gvfs, a PTP session that only reads, mounted again (as for an app
+     install, without its writes);
+  2. unmounted and mounted again as when it is opened from its tile, its GarminDevice.xml read;
   3. after --settle seconds: mounted, no thread left, no context left pushed, the answers
      of Gio taken by the thread that waited.
---path cli runs the cycles in the main thread (the command line), window in a worker thread
+--path: cli runs the cycles in the main thread (the command line), window in a worker thread
 while the main thread runs a main loop (the window), both one and the other in turn.
 --short-timeout gives the unmounts that time limit, to see what gvfs does with an unmount
-cancelled at its time limit.
+cancelled at it.
 
-It never writes to the device or to the account: its PTP session allows only reading calls,
-its storage refuses every write, and the network is closed to it. It refuses to start while a
-window or the background service of openExpress runs, or any other openexpress process, and
-gives a device other than the Edge 1050 at most 5 cycles (the fēnix 8 has crashed after long
-work), the Edge 1050 at most 200. Exit code: 0 no errors, 1 errors in the cycles, 2 refused."""
+Its PTP session allows only reading calls, its storage refuses every write and the network is
+closed to it. It refuses to start while any openexpress process runs (the window, the
+background service or another). At most 200 cycles on the Edge 1050, 5 on any other device.
+Exit code: 0 no errors, 1 errors in the cycles, 2 refused."""
 
 from __future__ import annotations
 
@@ -54,7 +52,7 @@ Gio, GLib = gio_storage.Gio, gio_storage.GLib
 EDGE_1050 = "006-B4440-00"
 FENIX_8 = "006-B4532-00"
 MOST_ON_THE_EDGE = 200
-MOST_ELSEWHERE = 5
+MOST_ELSEWHERE = 5  # the fēnix 8 has crashed after long work
 WARNING_PAUSE_S = 5
 SHOWN_S = 5.0  # how long the volume monitor may take to show a mount or an unmount
 XML = "GARMIN/GarminDevice.xml"
