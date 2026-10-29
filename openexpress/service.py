@@ -142,12 +142,20 @@ def account_country(s) -> str | None:
         return None
     if not s.account_country_asked:
         s.account_country_asked = True
-        try:
-            s.account_country_code = s.client.profile_country()
-        except (UserFacingError, requests.RequestException, ValueError) as e:
-            log.info("maps: the account's country not read (%s)", type(e).__name__)
-            s.account_country_code = None
+        s.account_country_code = read_account_country(s.client.profile_country)
     return s.account_country_code
+
+
+def read_account_country(ask: Callable[[], str | None]) -> str | None:
+    """What `ask()` gives: the country code of the account's profile, for a map Garmin does
+    not offer in a country. None when it cannot be read, and why said in the log (without
+    the country), so that the map is only marked. The command line and the window check the
+    device's owner first, each its own way."""
+    try:
+        return ask()
+    except (UserFacingError, requests.RequestException, ValueError) as e:
+        log.info("maps: the account's country not read (%s)", type(e).__name__)
+        return None
 
 
 def make_client(settings: Settings, need_auth: bool | None = None) -> GarminClient:

@@ -1069,21 +1069,17 @@ def _account_country(dev) -> str | None:
     """The country of the Garmin account, for a map Garmin does not offer in a country: only
     with a saved login and for a device of the account (its ownership checked first);
     otherwise, or when it cannot be read, None and the map is only marked."""
-    import requests
-
     from openexpress import service
-    from openexpress.errors import UserFacingError
 
-    try:
+    def ask():
         try:
             client = make_client(Settings.load(), need_auth=True)
         except store.NotLoggedIn:
             return None  # no login saved: the account is not asked
-        service.require_account_device(client, dev.unit_id)
+        service.require_account_device(client, dev.unit_id)  # on each run
         return client.profile_country()
-    except (UserFacingError, requests.RequestException, ValueError) as e:
-        log.info("maps: the account's country not read (%s)", type(e).__name__)
-        return None
+
+    return service.read_account_country(ask)
 
 
 def _url_salt() -> str | None:
