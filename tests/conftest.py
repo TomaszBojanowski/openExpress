@@ -18,9 +18,9 @@ import pytest
 # Tests that make GTK widgets need a display, and one of them shows a window. By default they
 # get an X server of their own, hidden (Xvfb), so that nothing shows on the desktop. Set
 # before anything opens a display (importing Gtk does):
-#   OPENEXPRESS_TESTS_ON_SCREEN=1   the display of the session, as before;
+#   OPENEXPRESS_TESTS_ON_SCREEN=1   the display of the session;
 #   OPENEXPRESS_TESTS_NO_DISPLAY=1  no display at all: the tests that need one are skipped.
-# Without Xvfb (or if it does not start), the display of the session, as before.
+# Without Xvfb (or if it does not start), the display of the session.
 
 ON_SCREEN, NO_DISPLAY = "OPENEXPRESS_TESTS_ON_SCREEN", "OPENEXPRESS_TESTS_NO_DISPLAY"
 XVFB_SCREEN = "1280x1024x24"
@@ -37,7 +37,7 @@ def _ends_with(parent: int):
         try:
             ctypes.CDLL(None, use_errno=True).prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
         except (OSError, AttributeError):
-            return  # no prctl: atexit and pytest_unconfigure as before
+            return  # no prctl: only atexit and pytest_unconfigure end it
         if os.getppid() != parent:
             os._exit(1)
 
@@ -329,8 +329,8 @@ def no_network(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def gvfs_has_mtp(monkeypatch):
-    """No test asks the real gvfs which backends it has (#13): it has MTP, unless a test
-    says otherwise, and nothing of it has been logged yet."""
+    """No test asks the real gvfs which backends it has: it has MTP, unless a test says
+    otherwise, and nothing of it has been logged yet."""
     try:
         from openexpress.device import gio_storage
     except (ImportError, ValueError):  # no PyGObject: nothing asks gvfs
@@ -482,7 +482,7 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     except ImportError:  # without GObject nothing opens a USB device anyway
         return folder
     monkeypatch.setattr(gio_storage, "USB_NODES", folder)
-    # Nor what an earlier test saw on USB (the places of Garmin drives, #19).
+    # Nor what an earlier test saw on USB (the places of Garmin drives).
     monkeypatch.setattr(gio_storage, "_drive_places", {})
     monkeypatch.setattr(gio_storage, "_said_0003", {})
     monkeypatch.setattr(gio_storage, "_without_drive", frozenset())
@@ -539,7 +539,7 @@ def clock(monkeypatch):
 def in_the_window(monkeypatch):
     """in_the_window(name, value): the name replaced in every module of the window that holds
     it (fakes.replace_in_window), not in gui.app alone; no test replaces a name in gui.app
-    itself (guard 3, test_dead_patches)."""
+    itself (test_dead_patches)."""
     from fakes import replace_in_window
 
     return functools.partial(replace_in_window, monkeypatch)

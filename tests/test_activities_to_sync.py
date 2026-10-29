@@ -1,7 +1,7 @@
-"""The activities on a connected device that this installation has not uploaded yet (PLAN T9,
-the chip "To sync", 24.10.2026): its activity folder (GarminDevice.xml) listed, the names held
-against sync/state.json and the copies kept after a failed upload; no file is read. All
-devices and files are made up."""
+"""The activities on a connected device that this installation has not uploaded yet (the chip
+"To sync"): its activity folder (GarminDevice.xml) listed, the names held against
+sync/state.json and the copies kept after a failed upload; no file is read. All devices and
+files are made up."""
 
 import logging
 import re

@@ -117,7 +117,7 @@ def test_first_sync_guard_without_candidates(device_root, xdg, fake_client, caps
 def test_the_first_sync_choice_has_an_exit_code_of_its_own(device_root, xdg, fake_client,
                                                            capsys):
     """3, not 2: 2 is a wrong command line (argparse), which a script must tell apart from
-    "choose baseline or sync --all first" (decision of 23.10.2026)."""
+    "choose baseline or sync --all first"."""
     assert main(["--path", str(device_root), "sync", "--apply"]) == 3
     assert "baseline --apply" in capsys.readouterr().err
     with pytest.raises(SystemExit) as wrong:
@@ -141,7 +141,7 @@ COURSES = [{"messageid": n, "messagetype": "file", "devicexmldatatype": "FIT_TYP
 def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fake_client,
                                                            capsys):
     """sync --apply --download-only does not look at the uploads: its record says so
-    ("upload skipped · 2 received"), not "nothing to upload" (decision of 23.10.2026). It is
+    ("upload skipped · 2 received"), not "nothing to upload". It is
     the shape of its pattern in tests/data/last_sync, which no real sync has made yet."""
     import json
 
@@ -153,8 +153,8 @@ def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fak
     record = service.load_last_sync(1234567890)
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.16-upload-skipped.json").read_text(encoding="utf-8"))
-    # Since 25.10.2026 the two courses also get a line of their own, after the step of the
-    # pattern (format-0.6.21-received-files.json).
+    # The two courses also get a line of their own, after the step of the pattern, as in
+    # format-0.6.21-received-files.json.
     assert sorted(record) == sorted(pattern) and record["lines"] == [
         *pattern["lines"], service.received_files_step(["FIT_TYPE_6"] * 2)]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 2, [])
@@ -163,7 +163,7 @@ def test_download_only_records_that_the_upload_was_skipped(device_root, xdg, fak
 def test_a_sync_of_some_types_says_its_numbers_are_of_them_only(device_root, xdg, fake_client,
                                                                 capsys):
     """sync --apply --type FIT_TYPE_4 counts only the activities: the row says "activities
-    only: …" (23.10.2026). The record has the shape of its pattern in tests/data/last_sync."""
+    only: …". The record has the shape of its pattern in tests/data/last_sync."""
     import json
 
     assert main(["--path", str(device_root), "sync", "--apply", "--all",
@@ -184,7 +184,7 @@ TRUEUP = {"messageid": 9, "messagetype": "true_up", "devicexmldatatype": "FIT_TY
 
 def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake_client,
                                                           capsys):
-    """Nothing new on the device, TrueUp from the queue written to it (PLAN (9), 24.10.2026):
+    """Nothing new on the device, TrueUp from the queue written to it:
     "nothing to upload · 1 received", not "nothing to upload" alone. The record has the
     shape of its pattern in tests/data/last_sync."""
     import json
@@ -206,8 +206,8 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
     pattern = json.loads((Path(__file__).parent / "data/last_sync"
                           / "format-0.6.19-trueup-received.json").read_text(encoding="utf-8"))
     assert sorted(record) == sorted(pattern)
-    # Since 0.6.20 the line is kept as data (format-0.6.20-details-as-data.json), in the words
-    # of the pattern of 0.6.19 when shown.
+    # The line is kept as data (as in format-0.6.20-details-as-data.json), in the words of
+    # the pattern (format-0.6.19-trueup-received.json) when shown.
     assert record["lines"] == [service.trueup_step()]
     assert step_words(record["lines"]) == pattern["lines"]
     assert (record["uploaded"], record["downloaded"], record["errors"]) == (0, 1, [])
@@ -216,7 +216,7 @@ def test_a_sync_that_only_wrote_trueup_counts_it_received(device_root, xdg, fake
 def test_the_command_line_names_the_files_from_garmin_connect(device_root, xdg, fake_client,
                                                               capsys):
     """sync --apply: a course from the queue written to the device gets the same line as in
-    the window, printed and kept as data in the record (25.10.2026)."""
+    the window, printed and kept as data in the record."""
     assert main(["--path", str(device_root), "baseline", "--apply"]) == 0
     client = fake_client["client"]
     client.messages = [{"messageid": 5, "devicexmldatatype": "FIT_TYPE_6",
@@ -500,7 +500,7 @@ def test_window_geometry(xdg):
 @pytest.mark.parametrize("maximized", [False, True])
 def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
     """Ctrl+Q (app.quit) ends the program without the window's close-request: the size is
-    saved there too, as when the window is closed (decision of 23.10.2026)."""
+    saved there too, as when the window is closed."""
     from openexpress.gui.app import App, MainWindow, load_gui_settings, window_geometry
 
     win = types.SimpleNamespace(busy=False, get_default_size=lambda: (1100, 700),
@@ -677,8 +677,8 @@ def _text(buffer) -> str:
 
 @pytest.mark.needs_display
 def test_report_preview_does_not_keep_itself_alive(log_file):
-    """In 0.4.1 the "attach the log" switch referred to itself through its own handler, so
-    the preview outlived the dialog until Python next collected reference cycles."""
+    """The "attach the log" switch does not refer to itself through its own handler, or
+    the preview would outlive the dialog until Python next collected reference cycles."""
     import gc
     import weakref
 
@@ -1210,8 +1210,8 @@ JPEG = b"\xff\xd8\xff\xe0" + b"jpeg bytes"
     (PICTURE_URL, PictureResponse(kind="image/jpeg", body=JPEG), JPEG),
 ])
 def test_a_png_or_jpeg_from_an_allowed_host_is_saved(pictures, url, response, saved):
-    """#8: static.garmincdn.com serves device pictures too, and a JPEG is taken as a PNG is.
-    The file keeps its name in the cache: GTK reads a picture by its content."""
+    """The host static.garmincdn.com serves device pictures too, and a JPEG is taken as a
+    PNG is. The file keeps its name in the cache: GTK reads a picture by its content."""
     xdg, _log, _monkeypatch = pictures
     from openexpress.gui import app
 
@@ -1239,7 +1239,7 @@ def test_a_picture_on_s3_is_refused_and_the_log_names_its_bucket_only(pictures):
 
 
 def test_a_picture_from_the_bucket_of_garmin_connect_is_saved_and_its_address_kept(pictures):
-    """#8 (0.6.10): the account gives the pictures of some models on S3, in the bucket
+    """The account gives the pictures of some models on S3, in the bucket
     garmin-connect-prod. They are downloaded as from Garmin's own hosts and their address is
     kept with the device; the log names the host, never the rest of the address."""
     from openexpress import known_devices
@@ -1298,9 +1298,9 @@ def test_the_address_of_a_picture_is_kept_with_the_device(pictures, logged_in, a
 
 
 def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(pictures):
-    """Venu 2, 21.10.2026 (from source): its picture was in the cache, so unit-info was not
-    asked and the address of the picture was not kept; once the cache is cleared it would be
-    gone again. Now unit-info is asked for the address alone (the file in the cache stays as it
+    """A Venu 2 off the account with its picture in the cache: without unit-info asked, the
+    address of the picture would not be kept, and once the cache is cleared it would be
+    gone. So unit-info is asked for the address alone (the file in the cache stays as it
     is), once: with the address kept, nothing is asked. A device on the account gets its
     address from the account's list, not here."""
     from openexpress import known_devices
@@ -1328,11 +1328,11 @@ def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(
 
 
 def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(pictures):
-    """#11, an inReach Mini 2 in mass storage mode: the account is never asked about it, and
-    with its picture in the cache and its address kept, unit-info was not asked either, so
-    the log never said what Garmin tells of it. Now unit-info is asked once in each run while
-    Garmin has told no kind of it, and only its segment and connect support are noted; the
-    file in the cache stays. A drive whose kind is kept (a Varia) is not asked."""
+    """An inReach Mini 2 in mass storage mode: the account is never asked about it, and
+    with its picture in the cache and its address kept, unit-info would not be asked either,
+    so the log would never say what Garmin tells of it. So unit-info is asked once in each
+    run while Garmin has told no kind of it, and only its segment and connect support are
+    noted; the file in the cache stays. A drive whose kind is kept (a Varia) is not asked."""
     from openexpress import devicelist, known_devices
 
     xdg, log_file, monkeypatch = pictures
@@ -1745,7 +1745,7 @@ def test_about_links_to_the_support_page(monkeypatch):
     assert about.links == [("Support the project", "https://buymeacoffee.com/sojer2005")]
 
 
-# --- names from the server never lead out of the picture cache (review of 106cd25) ------------
+# --- names from the server never lead out of the picture cache --------------------------------
 
 
 @pytest.mark.parametrize("name", ["app-a/b.png", "app-../../x.png", "..", "", "/tmp/x.png"])
@@ -1770,7 +1770,7 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
     assert {p for p in Path(xdg).rglob("*") if p.is_file()} == before
 
 
-# --- pictures over HTTPS only (after 4f3ac65) ---------------------------------------------------
+# --- pictures over HTTPS only -------------------------------------------------------------------
 
 
 def test_a_picture_over_http_is_asked_over_https(xdg):

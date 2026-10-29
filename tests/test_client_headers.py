@@ -1,4 +1,4 @@
-"""Point 12 of package 3: the headers of each Garmin service as Garmin Express sends them.
+"""The headers of each Garmin service as Garmin Express sends them.
 Garmin's update, map and upload configuration service (OMT) gets the Garmin-Client-* headers
 and the language as a tag with a hyphen ("de-DE") in Garmin-Client-LocaleCode and
 Accept-Language, without X-garmin-client-id; the Garmin Connect API gets the Garmin-Client-*

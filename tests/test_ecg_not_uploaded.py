@@ -1,8 +1,8 @@
-"""ECG recordings (FIT_TYPE_61) are never uploaded (decision of 26.10.2026). Garmin's upload
+"""ECG recordings (FIT_TYPE_61) are never uploaded. Garmin's upload
 settings send them to Garmin Health, which takes them only with a sign-in of its own that
 openExpress does not have. Signed with the Garmin Connect login, an answer 401 or 403 from
-there stopped the whole sync, every time while a recording was on the device: no
-monitoring or sleep uploaded, no queue read, no record of the sync. Now the type is left
+there would stop the whole sync, every time while a recording is on the device: no
+monitoring or sleep uploaded, no queue read, no record of the sync. So the type is left
 out of the plan, its files stay on the device, and the summary of the sync (the window's
 "Last sync" and `openexpress sync --apply`) has one line about them. All devices, files
 and answers are made up."""
@@ -26,8 +26,8 @@ ECG_TYPE = """  <DataType><Name>FIT_TYPE_61</Name>
     <TransferDirection>OutputFromUnit</TransferDirection></File>
   </DataType>
 """
-# As Garmin's upload settings name the type (analysis 06): one location, signed, that needs
-# the user's consent and the sign-in of Garmin Health.
+# As Garmin's upload settings name the type: one location, signed, that needs consent and
+# the sign-in of Garmin Health.
 SETTINGS = {"unittypename": "test", "datatypes": [
     *UPLOAD_SETTINGS["datatypes"],
     {"datatypename": "FIT_TYPE_61",

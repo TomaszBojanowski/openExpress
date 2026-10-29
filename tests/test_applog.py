@@ -68,7 +68,7 @@ def lines(path):
 
 def test_a_line_of_the_log_has_plain_spaces(log_file, capsys):
     """The window's hard spaces (a size, a Polish one-letter word) are plain spaces in every
-    line of the log, in the file and on the terminal (22.10.2026)."""
+    line of the log, in the file and on the terminal."""
     from openexpress import i18n, updates
     from openexpress.i18n import human_size
 
@@ -436,7 +436,7 @@ def test_cli_logs_start_and_end_without_arguments(log_file, device_root):
 
 def test_subcommand_is_logged(log_file, device_root, monkeypatch):
     """The command and its subcommand, never the name given. Garmin's map server is not asked
-    (it was, 24.10.2026: conftest's no_network): its answer is made up, with no maps."""
+    (conftest's no_network would stop it): its answer is made up, with no maps."""
     from openexpress.cli import main
     from openexpress.connect import GarminClient, lower_keys
 
@@ -650,7 +650,7 @@ def test_media_folders_come_from_the_device(log_file):
 
 
 # The USB serial of a Garmin device and its MTP address carry its unit ID in hexadecimal, 12
-# digits with leading zeros (a fēnix 8, 26.10.2026: serial == format(unit_id, "012x")). A unit
+# digits with leading zeros (a fēnix 8: serial == format(unit_id, "012x")). A unit
 # ID made up so that its hexadecimal form has letters between the digits, as a real one has.
 HEX_UNIT = "e5a1c3b7"
 HEX_UNIT_ID = int(HEX_UNIT, 16)  # 3852583863
@@ -750,7 +750,7 @@ def test_start_line_says_what_runs_and_nothing_about_the_user(flatpak, packaging
     said = start.split(" start: ", 1)[1]
     import locale
 
-    # The C library's locale and its character set (#10), as set: no variable of the
+    # The C library's locale and its character set, as set: no variable of the
     # environment.
     told = f"{locale.setlocale(locale.LC_CTYPE)} ({locale.nl_langinfo(locale.CODESET)})"
     assert said == (f"files --path (openExpress {__version__}, {packaging}, "

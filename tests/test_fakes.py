@@ -1,6 +1,5 @@
 """The shared fakes of the tests (tests/fakes.py) do what the program does where it matters:
-RunNow runs a task as the window's run_task does, at once (review of 24.10.2026, "Co
-ujednolicić" 7: 36 fakes of run_task in 14 files, with 5 ways of handling an error)."""
+RunNow runs a task as the window's run_task does, at once."""
 
 import threading
 
@@ -118,8 +117,8 @@ def test_the_button_spins_during_the_work_and_is_back_before_done(fails):
 # --- window_methods: the window's methods on a stand-in, wherever the window has them -----------
 
 def test_a_stand_in_gets_the_methods_of_the_mixins_too():
-    """A stand-in gets a method from the mixin that has it (moved out of app.py in the
-    split) as well as one MainWindow defines itself."""
+    """A stand-in gets a method from the mixin that has it (in a module of gui/ other than
+    app.py) as well as one MainWindow defines itself."""
     import types
 
     from fakes import window_methods
@@ -176,8 +175,8 @@ PLACES = {"Adw": ("report_dialog", "apps_page"),  # gui.app holds it
 def test_a_name_held_as_another_object_somewhere_fails():
     """A module of the window that holds the name as another object would keep it, and the
     code there would never see the replacement: replace_in_window says which, and replaces
-    nothing (it used to skip such a module without a word). The names are written out, so
-    that guard 3 (test_dead_patches) sees them."""
+    nothing (it never skips such a module without a word). The names are written out, so
+    that test_dead_patches sees them."""
     import importlib
 
     from fakes import replace_in_window

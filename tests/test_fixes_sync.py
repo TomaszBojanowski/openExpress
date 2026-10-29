@@ -95,8 +95,8 @@ def _consent_cfg():
                                             (503, False), (429, False), (408, False)])
 def test_consent_location_status_handling(device_root, tmp_path, status, refused):
     """A location that needs a consent refusing the file (403, 404) is no error, and the
-    file is not marked either (analysis 19, point 13): the next sync tries again from the
-    device, as Garmin Express does; no copy is kept. Other answers fail as before."""
+    file is not marked either: the next sync tries again from the device, as Garmin Express
+    does; no copy is kept. Other answers are failures."""
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, _consent_cfg(), state)
     rep = sync.run_uploads(plan, dev, st, SyncClient(statuses={MON: status}), state)
@@ -332,7 +332,7 @@ def test_watcher_retries_open_session(monkeypatch):
 
 
 def test_watcher_does_nothing_with_several_devices(monkeypatch, caplog):
-    """K7 (P4): with several devices connected the background service asks once, does not
+    """With several devices connected the background service asks once, does not
     try again, syncs nothing and shows no notification; one line in the log says why. Only
     a device chosen in the window is synced."""
     from openexpress import watch
@@ -357,7 +357,7 @@ def test_watcher_does_nothing_with_several_devices(monkeypatch, caplog):
 
 
 def test_watcher_stops_when_a_second_device_comes_while_it_waits(monkeypatch, caplog):
-    """E14 (P4): the first try finds one device that is not ready; by the next one a second
+    """The first try finds one device that is not ready; by the next one a second
     device is connected (SeveralDevices): no more tries, nothing synced, no notification,
     one line in the log."""
     from openexpress import watch

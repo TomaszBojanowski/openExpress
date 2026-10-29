@@ -1,4 +1,4 @@
-"""The name of a country for a map Garmin does not offer in it (point 9 of package 3): from
+"""The name of a country for a map Garmin does not offer in it: from
 the ISO 3166 list of the system's iso-codes (also in the Flatpak's runtime), in the program's
 language; the code itself when the list or the name is not there. The list here is made up."""
 

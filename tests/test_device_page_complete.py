@@ -1,4 +1,4 @@
-"""The device page says what the device has (analysis 14, stage 5, 25.10.2026): rows "Apps" and
+"""The device page says what the device has: rows "Apps" and
 "Music" as "Maps" (to their pages; how many only once their page has read them, never a read
 of its own); "Backup" says when the last one was made and how many there are, its folder in
 the tooltip; the Maps page names the map update type Garmin gives a device whose maps are not

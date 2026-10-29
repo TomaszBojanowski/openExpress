@@ -1,6 +1,6 @@
-"""Guard 4 of splitting gui/app.py (analysis 17): the questions of the window answered as a
+"""The questions of the window answered as a
 user answers them. Each dialog is shown in a real window and its button, found by its words,
-is clicked: libadwaita then says "closed" before "response" (1.9, 25.10.2026), so an answer
+is clicked: libadwaita then says "closed" before "response" (1.9), so an answer
 that reads what "closed" lets go of fails here, where a test that only emits "response" would
 pass. Every device, app and update here is made up."""
 
@@ -164,7 +164,7 @@ def test_installing_an_update_of_a_device_that_loses_its_data(click, words, task
 
     u = _update()
     win = _window(updates_cache=[u])
-    win.session.unit_info_answer = {"segmenttype": "Wellness"}  # the warning of point 6 too
+    win.session.unit_info_answer = {"segmenttype": "Wellness"}  # the data-loss warning too
     MainWindow.confirm_update(win, u)
     click(words, until=lambda: win.run_task.titles == tasks
           and not click.shown[-1].get_mapped())

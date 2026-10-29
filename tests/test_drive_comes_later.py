@@ -1,6 +1,6 @@
 """A Garmin drive that the system does not mount (KDE) sends no mount event, and gvfs may offer
-its volume, or a medium in it, a moment after the device is on USB (#19, 0.7.3: the tile of a
-Forerunner 55 came only after Refresh; analysis 18). The window hears gvfs's volumes (added,
+its volume, or a medium in it, a moment after the device is on USB (the tile of a
+Forerunner 55 would then come only after Refresh). The window hears gvfs's volumes (added,
 changed, removed); it looks at USB also while a device is open; and it looks again, a few
 times, for a device in mass storage mode that the last list found without a drive. All
 devices here are made up."""
@@ -118,8 +118,8 @@ def _open_session():
 
 @pytest.mark.parametrize("open_device", [False, True])
 def test_a_drive_volume_added_brings_its_tile(drives, monkeypatch, open_device):
-    """#19: with no device open, a detection; with one open (an Edge 540 that D7 opened),
-    the list read again and the open one stays (Q1)."""
+    """With no device open, a detection; with one open (an Edge 540, opened as the one
+    device), the list read again and the open one stays."""
     volume, key = _drive(drives, monkeypatch)
     win, asked = _window(monkeypatch, session=_open_session() if open_device else None)
     win._on_volume_added(None, volume)
@@ -150,7 +150,7 @@ def test_a_drive_already_on_the_list_brings_nothing(drives, monkeypatch):
 @pytest.mark.parametrize("what", ["mounted", "another vendor", "ejected by openExpress"])
 def test_these_volumes_bring_nothing(drives, monkeypatch, what):
     """A mounted one comes with its mount (mount-added); a drive ejected by openExpress stays
-    closed until it is unplugged (D3)."""
+    closed until it is unplugged."""
     volume, _key = _drive(drives, monkeypatch, vendor="0781" if what == "another vendor"
                           else "091e")
     if what == "mounted":
@@ -245,8 +245,8 @@ def _polled(monkeypatch, session=None, listed=()):
 
 
 def test_a_drive_that_comes_while_a_device_is_open_has_the_list_read_again(drives, monkeypatch):
-    """#19: with an Edge 540 open, the Forerunner 55 plugged in next to it had no tile until
-    Refresh: the window did not look at USB while a device was open."""
+    """With an Edge 540 open, a Forerunner 55 plugged in next to it gets its tile without
+    Refresh: the window looks at USB also while a device is open."""
     from openexpress.gui.app import MainWindow
 
     page, asked = _polled(monkeypatch, session=_open_session())
@@ -280,8 +280,8 @@ def test_a_drive_not_mounted_that_goes_while_a_device_is_open_leaves_the_list(dr
 @pytest.mark.parametrize("sectors", [None, 0])  # no volume yet; a volume without a medium yet
 def test_a_device_found_without_a_drive_is_looked_for_again_a_few_times(drives, monkeypatch,
                                                                         open_device, sectors):
-    """#19: the one detection 2.5 s after the device came may find no drive yet; nothing
-    looked again. Now every DRIVE_RETRY_S, at most DRIVE_RETRIES times."""
+    """The one detection 2.5 s after the device came may find no drive yet: it is looked
+    for again every DRIVE_RETRY_S, at most DRIVE_RETRIES times."""
     from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 

@@ -1,4 +1,4 @@
-"""A of 0.7.6 (analysis 20, §3.1–3.2): the device's error logs and a copy of its diagnostic
+"""The device's error logs and a copy of its diagnostic
 files on this computer. The logs are read at each opening (the copy on or off) and an "RTL
 Trap" of the last 30 days gets a row on the device page; the copy is off by default, made
 once per connection through the ordinary connection only, and never sent. The hidden crash
@@ -409,10 +409,10 @@ def test_without_access_to_usb_it_says_why(device):
 # --- the window -----------------------------------------------------------------------------
 
 
-# Point 10 (27.10.2026): the first opening of a watch took 4.5-5 s, 3.7-4.4 s of it reading
-# its diagnostics, and its tile said nothing meanwhile. The device page now comes first, the
-# diagnostics are read in the background after it, and a task that writes to the device waits
-# for them, so that the copy is still of the device before any change.
+# The first opening of a watch can take 4.5-5 s, 3.7-4.4 s of it reading its diagnostics, and
+# its tile would say nothing meanwhile. So the device page comes first, the diagnostics are
+# read in the background after it, and a task that writes to the device waits for them, so
+# that the copy is still of the device before any change.
 
 
 def test_the_opening_does_not_wait_for_them(device, monkeypatch):
@@ -519,8 +519,8 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
 
 
 def test_files_unchanged_in_size_and_time_are_not_read_again(device, clock):
-    """Before, only files over 64 kB were taken from the copy before: every small one was
-    read again at each opening."""
+    """A file unchanged in size and time is taken from the copy before, also a small one: it
+    is not read again at each opening."""
     st, dev = device
     first = diagnostics.copy_files(dev, st)
     st.reads.clear()
@@ -742,9 +742,9 @@ def test_the_row_in_polish():
          ["Skopiuj zrzuty pamięci"])]
 
 
-# --- the places of the diagnostic files, kept for the next openings (27.10.2026) --------------
-# Over MTP each listing of a folder is a round trip: looking through the diagnostic folders took
-# 4-5 s on a Venu 2, even with no file to read. The first opening looks as before and keeps
+# --- the places of the diagnostic files, kept for the next openings ---------------------------
+# Over MTP each listing of a folder is a round trip: looking through the diagnostic folders takes
+# 4-5 s on a Venu 2, even with no file to read. The first opening looks through them and keeps
 # where it found the files and folders (in the device's folder); the next ones
 # read those paths only, without listing; a path gone, one not there before that is there now,
 # or other software on the device: looked through again, and the note made anew.
@@ -797,7 +797,7 @@ def test_a_place_gone_is_looked_for_again(device, clock):
 def test_the_places_not_there_are_not_asked_about_again(device, clock):
     """A path looked for in vain (the event logs, err_log.txt…) is kept as not there: the next
     openings ask the device about the places found only (on a Venu 2, 4 of its 9 questions
-    were about paths it does not have, 27.10.2026)."""
+    are about paths it does not have)."""
     st, dev = device
     diagnostics.at_open(dev, st)
     absent = json.loads(diagnostics.places_path(UNIT).read_text())["absent"]

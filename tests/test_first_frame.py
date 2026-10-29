@@ -1,4 +1,4 @@
-"""Guard 5 of splitting gui/app.py (analysis 17): the first frame of the start page in the real
+"""The first frame of the start page in the real
 window. The tests of the first frame (test_tile_facts, test_sync_count_record,
 test_sync_chips) use a window made of chosen methods and the real StartPage; here the window
 is MainWindow itself, from its own start (__init__ → _start → the detection → _show_tiles).

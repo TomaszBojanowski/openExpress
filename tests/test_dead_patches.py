@@ -1,4 +1,4 @@
-"""Guard 3 of splitting gui/app.py (analysis 17): a test that replaces a name in gui.app alone
+"""A test that replaces a name in gui.app alone
 (monkeypatch.setattr(app, "name", …)) changes only what gui/app.py itself looks up. Once the
 code that uses the name moves to another module of the window, the replacement does nothing
 and the test checks something else, without failing; and a name the window's modules share
@@ -226,7 +226,7 @@ def called_through_a_mixin() -> set[str]:
 def test_the_guard_sees_every_way_of_replacing_a_name():
     """The guard itself: every form of a direct replacement is seen (a name written out or
     in the variable of a loop, setattr and delattr), and the tests' replacements through the
-    fixture are found, also in a loop (24 names on 27.10.2026, 26 with the loops)."""
+    fixture are found, also in a loop (at least 20 names)."""
     planted = ast.parse(
         "from openexpress.gui import app as gui_app\n"
         "import openexpress.gui.app\n"

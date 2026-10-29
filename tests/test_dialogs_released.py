@@ -1,7 +1,6 @@
 """The dialogs of the window are released once closed: no handler of a signal holds its own
-widget, the dialog or a sibling (the rule since 0.4.2; a cycle through GObject is one
-Python's collector cannot see). Seen with weak references in the review of 22.10.2026. All
-data is made up."""
+widget, the dialog or a sibling (a cycle through GObject is one Python's collector cannot
+see). Checked with weak references. All data is made up."""
 
 import gc
 import types
@@ -216,7 +215,7 @@ def _turn_until(done, seconds=5.0) -> bool:
 @pytest.mark.needs_display
 def test_next_clicked_goes_on_with_the_copy_chosen(monkeypatch):
     """The question shown in a window, a copy chosen and its button Next clicked as a user
-    does it: libadwaita says "closed" before "response" (1.9, 25.10.2026), so the copy must not
+    does it: libadwaita says "closed" before "response" (1.9), so the copy must not
     be taken from what "closed" lets go of. Next goes on with the copy chosen."""
     from gi.repository import Adw, Gtk
 

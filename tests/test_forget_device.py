@@ -1,4 +1,4 @@
-"""Forgetting a device (PLAN T7): everything this installation keeps of it goes, its entry in
+"""Forgetting a device: everything this installation keeps of it goes, its entry in
 devices.json last; files not uploaded yet only with consent; its backups only when asked.
 All unit IDs here are made up."""
 

@@ -1,5 +1,5 @@
-"""The cache of openExpress: how big it is, part by part (C1), and clearing it, all of it or
-some parts (maps, updates, pictures, temp)."""
+"""The cache of openExpress: how big it is, part by part, and clearing it, all of it or some
+parts (maps, updates, pictures, temp)."""
 
 import os
 from pathlib import Path
@@ -103,7 +103,7 @@ def test_cache_command_with_no_cache(cache, capsys):
     assert capsys.readouterr().out.splitlines()[-1] == "  Total: 0 B"
 
 
-# --- the lock of the cache (C2, part 1): shared while it is used, exclusive to clear it -------
+# --- the lock of the cache: shared while it is used, exclusive to clear it --------------------
 
 
 def in_use() -> bool:
@@ -247,7 +247,7 @@ def test_staging_a_file_for_the_device_holds_the_cache(cache, monkeypatch):
     assert list((cache / "transfer").iterdir()) == []
 
 
-# --- clearing the cache (C2, part 2): `openexpress cache --clear [--apply]` --------------------
+# --- clearing the cache: `openexpress cache --clear [--apply]` ---------------------------------
 
 
 def filled(cache, tmp_path) -> dict:
@@ -817,7 +817,7 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
                                 error=lambda title, text: None, run_task=None, toast=None)
     for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
-        if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
+        if hasattr(MainWindow, name):  # one missing: the test fails on what it checks
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     titles, add = [], Adw.PreferencesPage.add
     monkeypatch.setattr(Adw.PreferencesPage, "add",
@@ -841,7 +841,7 @@ def _descendants(widget):
 def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_window):
     """The group "Garmin Connect account", first in the preferences: who is logged in with
     Log out, or "Not logged in" with Log In. The button goes the way of the device view
-    (MainWindow.logout / login, so Q3 decides where the user goes), and the row follows a
+    (MainWindow.logout / login, which decide where the user goes), and the row follows a
     change of account while the preferences are open."""
     import types
 
@@ -862,7 +862,7 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
                                 login=lambda: calls.append("login"))
     for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
-        if hasattr(MainWindow, name):  # so that on old code the test fails on what it checks
+        if hasattr(MainWindow, name):  # one missing: the test fails on what it checks
             setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     groups, add = [], Adw.PreferencesPage.add
     monkeypatch.setattr(Adw.PreferencesPage, "add",
@@ -883,7 +883,7 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
     assert getattr(win, "_account_row", None) is None
 
 
-# --- clearing all of it keeps the pictures of the devices remembered (27.10.2026) --------------
+# --- clearing all of it keeps the pictures of the devices remembered ---------------------------
 # A device not on the account may have its picture from nowhere else any more (unit-info gives
 # none for some, the epix): clearing all of the cache keeps the pictures of the devices this
 # installation remembers; the trash of the pictures (--only pictures) still deletes them.

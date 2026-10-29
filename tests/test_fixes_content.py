@@ -65,7 +65,7 @@ def test_backup_failure_removes_partial(device_root, tmp_path):
     assert list((tmp_path / "bk" / str(dev.unit_id)).iterdir()) == []
 
 
-# --- names from GarminDevice.xml never lead out of the backup (review of 106cd25) ------------
+# --- names from GarminDevice.xml never lead out of the backup --------------------------------
 
 
 def _files_under(root: Path) -> set[Path]:

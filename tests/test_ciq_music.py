@@ -558,7 +558,7 @@ def test_cli_install_dry_run_shows_the_app_list(iq_device, device_root, apps_cli
 
 def test_the_store_is_asked_in_the_language_of_the_system(iq_device, device_root, apps_cli,
                                                           monkeypatch):
-    """App names and descriptions come in the language of the user (issue #5)."""
+    """App names and descriptions come in the language of the user."""
     from openexpress import i18n
     from openexpress.cli import main
 
@@ -1174,8 +1174,8 @@ def break_at_app_folder(monkeypatch, fake, n):
 def test_a_broken_session_then_a_failed_mount_still_tells_each_app(hidden_apps, monkeypatch):
     """The session breaks after the first app was sent, then the device is not mounted
     again: the report says what became of each app (sent and not registered, with the file
-    left; not sent), and only then that the USB connection is to be renewed (decision of
-    23.10.2026; before, the failed mount hid the rest)."""
+    left; not sent), and only then that the USB connection is to be renewed (the failed
+    mount does not hide the rest)."""
     from openexpress.device.storage import RemountFailed
 
     st, dev, fake = hidden_apps
@@ -1211,8 +1211,7 @@ def test_cli_tells_each_app_before_the_usb_connection(hidden_apps, apps_cli, mon
 @pytest.mark.parametrize("broken", [True, False])
 def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatch, broken):
     """The window's error says what was written, then each app that was not, then the USB
-    connection; with the session whole and only the mount failed, that the app was written
-    (before, only the USB connection was said)."""
+    connection; with the session whole and only the mount failed, that the app was written."""
     import types
 
     from openexpress import service
@@ -1473,7 +1472,7 @@ def test_a_hidden_app_is_removed_with_its_settings_file(hidden_spot):
 
 def test_a_visible_settings_file_does_not_send_the_removal_through_the_mounted_storage(
         hidden_spot):
-    """The app file decides the way: a settings file the ordinary listing shows used to make
+    """The app file decides the way: a settings file the ordinary listing shows must not make
     the removal delete that file alone, leave the app on the device and say it was removed."""
     st, dev, fake, app = hidden_spot
     (st.root / "GARMIN/APPS/SETTINGS").mkdir(parents=True, exist_ok=True)
@@ -1651,8 +1650,7 @@ def test_a_broken_removal_then_a_failed_mount_tells_what_became_of_the_app(
         hidden_spot, monkeypatch, where, said, file_left):
     """The session breaks, then the device is not mounted again: what became of the app
     first (not removed; not known whether its file was deleted; its file deleted and its
-    entry left), then the USB connection to renew (decision of 23.10.2026; before, the
-    failed mount hid the rest, or the rest hid the failed mount)."""
+    entry left), then the USB connection to renew (neither hides the other)."""
     from openexpress.device.storage import RemountFailed
 
     st, dev, fake, app = hidden_spot
@@ -1733,7 +1731,7 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
     assert reads == ["apps"]  # the page is read again (read_again_after_failure)
 
 
-# --- an error without a full stop before the next sentence (review of 24.10.2026) ----------------
+# --- an error without a full stop before the next sentence ---------------------------------------
 
 TIMED_OUT = "Cannot mount the device: the device did not answer in time"  # as _wait says it
 
@@ -2160,12 +2158,12 @@ def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
     root = str(st.root)
     assert main(["--path", root, "apps", "order"]) == 0
     out = capsys.readouterr().out
-    # The apps to move (25.10.2026): five positions change, two apps move.
+    # The apps to move: five positions change, two apps move.
     assert "GARMIN-APPS 2026-01-02 (03.04.05): 7 entries, 2 apps moved" in out
 
     assert main(["--path", root, "apps", "order", "--from", "03.04.05"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[1] == "2 apps moved"  # the measure of the list first (25.10.2026)
+    assert out[1] == "2 apps moved"  # the measure of the list first
     assert out[2] == "5 positions would change (widget: 5):"
     assert out[3] == "  3: Calendar (now: Music)"
     assert out[0] == "Order of the apps from the copy GARMIN-APPS 2026-01-02 (03.04.05)"
@@ -2365,7 +2363,7 @@ def test_no_second_copy_while_the_app_list_is_unchanged(iq_device, device_root, 
     second = ciq.save_app_list_copy(dev, st, now=next(stamps))
     assert copy_names(dev, backups) == [first, second]
     # Only the newest counts: the first state coming back is copied again, and the first
-    # copy, of the same list, goes (25.10.2026: a series keeps its newest).
+    # copy, of the same list, goes (a series keeps its newest).
     (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(
         (backups / str(dev.unit_id) / first / "OUT.BIN").read_bytes())
     third = ciq.save_app_list_copy(dev, st, now=next(stamps))
@@ -2470,7 +2468,7 @@ def test_dry_runs_save_no_copy(hidden_spot, apps_cli, monkeypatch, backups, caps
 
 def test_a_refused_folder_is_remembered_in_a_private_file(iq_device):
     """devices/<unit ID>/ciq.json is written as the other state files are (paths.write_private:
-    at once, readable by its owner only; review of 24.10.2026), and read back."""
+    at once, readable by its owner only), and read back."""
     import stat
 
     _st, dev = iq_device
@@ -2548,7 +2546,7 @@ def test_order_choices_are_newest_first_with_their_differences(old_copies):
     assert [c.name for c, _plan in choices] == [
         f"GARMIN-APPS 2026-10-12 ({s})" for s in reversed(stamps)]
     rows = MainWindow._order_rows(choices)
-    # The apps to move, not the positions that change (25.10.2026; 2 and 5 positions).
+    # The apps to move, not the positions that change (2 and 5 positions).
     assert rows[0] == ("2026-10-12 (21.19.41)", "1 app moved", True)
     assert rows[-1] == ("2026-10-12 (17.37.37)", "2 apps moved", True)
     assert not any(str(dev.unit_id) in text for row in rows for text in row[:2])
@@ -2557,7 +2555,7 @@ def test_order_choices_are_newest_first_with_their_differences(old_copies):
     ciq.save_app_list_copy(dev, st, backups, now=datetime.datetime(2026, 10, 12, 22, 0, 0))
     rows = MainWindow._order_rows(ciq.order_choices(dev, state, backups))
     assert rows[0] == ("2026-10-12 (22.00.00) Test watch", "The same order as now", False)
-    # Copies 2–8 had one list: its newest (21.19.41) stays (25.10.2026), with the first.
+    # Copies 2–8 had one list: its newest (21.19.41) stays, with the first.
     assert [title for title, _sub, _usable in rows] == [
         "2026-10-12 (22.00.00) Test watch", "2026-10-12 (21.19.41)", "2026-10-12 (17.37.37)"]
 
@@ -2570,7 +2568,7 @@ def test_order_summary_shows_the_first_ten_changes(order_device):
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     text = MainWindow._order_summary(plan, ciq.app_list_copy_note(dev, st))
     assert text.splitlines() == [
-        "2 apps moved",  # the measure of the list first (25.10.2026)
+        "2 apps moved",  # the measure of the list first
         "5 positions would change (widget: 5):",
         "  3: Calendar (now: Music)", "  4: Maps (now: Calendar)", "  5: Music (now: Maps)",
         "  6: Tides (now: Moon)", "  7: Moon (now: Tides)",

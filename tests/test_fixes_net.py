@@ -453,7 +453,7 @@ def test_activity_matches_body_not_signed():
     assert dict(parse_qsl(query))  # sanity
 
 
-# --- an MD5 is required, HTTPS only (review of 106cd25) ----------------------------------------
+# --- an MD5 is required, HTTPS only ------------------------------------------------------------
 
 
 class RecordingSession:

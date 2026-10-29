@@ -151,7 +151,7 @@ def test_for_start_with_a_device_open():
     shown, notice = c.for_start(varia, opens(VARIA))
     assert shown[0] is varia and len(shown) == 3 and notice is False
     c.clear()
-    assert c.for_start(varia, opens(VARIA)) == ([varia], False)  # the one device (D7)
+    assert c.for_start(varia, opens(VARIA)) == ([varia], False)  # the one device
 
 
 def test_drew_and_changed_since_drawn():
@@ -190,7 +190,7 @@ def test_the_moment_after_a_failed_choice():
     """Two devices listed, the Edge chosen, its opening failed; the detection after it is
     running. No list to choose from: a mount of the other one removed is not one of the
     choices; the devices are still known; with none open the start page has only the
-    notice, as the window gives it today."""
+    notice, as the window gives it."""
     c = Connected()
     c.listing(two(), ["51b4", "5158"])
     c.stop_choosing()  # open_choice failed

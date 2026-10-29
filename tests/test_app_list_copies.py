@@ -1,4 +1,4 @@
-"""The copies of the app list (GARMIN-APPS …, 25.10.2026): before a change no new copy is made
+"""The copies of the app list (GARMIN-APPS …): before a change no new copy is made
 while the apps and their order are those of the newest copy (whatever else OUT.BIN says, such
 as the free space); at most APP_LIST_COPIES_KEPT copies are kept for a device, the oldest go
 when a new one is made, as the full backups keep their newest three. The full backups and
@@ -106,7 +106,7 @@ def _full_backups(backups, dev):
 
 def _distinct(n):
     """The n-th of lists that all differ (one widget more of its own); a list seen before
-    keeps only its newest copy (25.10.2026), so the limit is seen with these."""
+    keeps only its newest copy, so the limit is seen with these."""
     return out_bin(APPS + [(uuid.UUID(int=n + 1), 2, f"W{n}", False, "")])
 
 

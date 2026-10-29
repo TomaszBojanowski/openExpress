@@ -1,4 +1,4 @@
-"""The tiles of the start page (D5, T1): one list made of the devices connected now, the
+"""The tiles of the start page: one list made of the devices connected now, the
 devices this installation remembers and the devices of the Garmin account. Data in, data out:
 no GTK, no network. All unit IDs here are made up."""
 
@@ -17,7 +17,7 @@ DAY = 86400.0
 NOW = 1_800_000_000.0
 
 # The fields the start page reads from GET device-service/deviceregistration/devices, as in the
-# masked answer of 17.10.2026 (testdata/konto-urzadzenia/), with made-up unit IDs and names.
+# masked answer (testdata/konto-urzadzenia/), with made-up unit IDs and names.
 ACCOUNT_ANSWER = [
     {"unitId": EDGE, "deviceId": EDGE, "displayName": "DEVICE 1",
      "productDisplayName": "Edge 1050", "partNumber": "006-B4440-00",
@@ -170,7 +170,7 @@ def test_fields_come_from_the_connected_device_first():
         "last_seen": NOW - 2 * DAY, "image_part_number": "006-B4532-00",
         "image_url": "https://res.garmin.com/en/products/010-02906-11/v/c1_01_md.png",
         "category": None, "image_source": "the account", "update_found": None,
-        # Never synced here (no state.json): said from the first frame (25.10.2026).
+        # Never synced here (no state.json): said from the first frame.
         "update_ready": None, "account_known": True, "to_sync": None, "never_synced": True,
         "synced_at": None}
 
@@ -340,7 +340,7 @@ def test_the_masked_account_answer():
 def test_each_tile_comes_with_what_it_was_made_of():
     """entries(): each tile with its source, kept outside the tile: the connected device's
     summary (to open it), else what is remembered of it, else its entry of the account's
-    list (only on the account; None before T4)."""
+    list (only on the account)."""
     from openexpress import devicelist
 
     drive = connected("file:///run/media/u/GARMIN/", "Varia RTL515", "006-B3592-03", "3.36",
@@ -355,7 +355,7 @@ def test_each_tile_comes_with_what_it_was_made_of():
     assert fenix.found.uri == "mtp://fenix/" and varia is mtp and edge is known[EDGE]
     answer = account()
     only_on_account = devicelist.entries([], {}, answer, logged_in=True)
-    assert [source for _, source in only_on_account] == answer  # T4: the account's entries
+    assert [source for _, source in only_on_account] == answer  # the account's entries
     assert [t for t, _ in entries] == devicelist.tiles(
         [drive, mtp, fenix_connected()], known, account(), logged_in=True)
 
@@ -370,7 +370,7 @@ ACCOUNT_WITH_A_THIRD = [*ACCOUNT_ANSWER, {
 
 
 def test_each_tile_has_its_section():
-    """T4: connected, remembered (not connected), only on the account; a device in two
+    """Connected, remembered (not connected), only on the account; a device in two
     sources is in the more present one: connected before remembered before the account."""
     from openexpress import devicelist
 
@@ -390,7 +390,7 @@ def test_each_tile_has_its_section():
 
 
 def test_a_tile_only_on_the_account_comes_with_its_entry():
-    """T4: the source of a tile only on the account is its entry of the account's list (for
+    """The source of a tile only on the account is its entry of the account's list (for
     the window to show it); the tile itself still holds no unit ID."""
     from openexpress import devicelist
 
@@ -472,7 +472,7 @@ def test_a_handheld_is_told_by_its_model_name(name):
 
 
 def test_an_inreach_without_a_picture_gets_the_icon_of_a_handheld_and_nothing_else():
-    """inReach Mini 2 (#11): Garmin tells no kind of it, its name does, for the icon only: the
+    """inReach Mini 2: Garmin tells no kind of it, its name does, for the icon only: the
     tile's kind stays what Garmin says (none), nothing is kept in devices.json. A name that
     tells nothing keeps the neutral icon."""
     from openexpress import devicelist, known_devices
@@ -557,8 +557,8 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
 
 
 def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(kinds_told, caplog):
-    """Which map service Garmin files a model under (a nüvi 52LMT got its software update but
-    no map, 25.10.2026): the log says it, so that a report tells whether the model is one the
+    """Which map service Garmin files a model under (a nüvi 52LMT gets its software update but
+    no map): the log says it, so that a report tells whether the model is one the
     universal map service serves. The part number only, no unit ID; once for each model and
     value; a value given as a number, or none given, is said as well."""
     import types
@@ -613,7 +613,7 @@ def test_a_tile_takes_the_remembered_address_when_the_account_gives_none():
 
 
 def test_an_account_address_that_is_not_allowed_gives_way_to_the_remembered_one():
-    """The account gives an address on S3 (#8), which is not downloaded: the remembered one
+    """The account gives an address on S3, which is not downloaded: the remembered one
     is taken instead; with none remembered, the account's stays, so that the log says why
     there is no picture."""
     from openexpress import devicelist, known_devices
@@ -709,11 +709,11 @@ def test_a_kind_from_the_name_is_never_kept_in_devices_json():
     assert known_devices.load()[VENU].category is None
 
 
-# --- grid or list, by the number in a section (T6a) ---------------------------------------------
+# --- grid or list, by the number in a section ---------------------------------------------------
 
 
 def test_a_section_is_a_grid_up_to_six_then_a_list():
-    """T6a: up to six devices in a section, tiles in a grid; seven or more, a list; none,
+    """Up to six devices in a section, tiles in a grid; seven or more, a list; none,
     no section. Counted for each section on its own."""
     from openexpress import devicelist
 
@@ -723,8 +723,8 @@ def test_a_section_is_a_grid_up_to_six_then_a_list():
 
 
 def test_the_view_chosen_lays_out_every_section_alike():
-    """T6b: "grid" and "list" whatever the number; "auto" (and a view not known) as T6a;
-    no device, no section, in every view."""
+    """The views "grid" and "list" whatever the number; "auto" (and a view not known) by the
+    number, as without a view; no device, no section, in every view."""
     from openexpress import devicelist
 
     grid, listed, auto = devicelist.GRID, devicelist.LIST, devicelist.AUTO

@@ -48,7 +48,7 @@ def test_the_repr_of_a_login_and_a_ticket_shows_no_secret():
         assert "tok-made-up-1" not in text and "sec-made-up-2" not in text
         assert "ST-0123" not in text and "AbCdEf" not in text
     assert "production" in repr(auth) and "sso.example" in repr(st)  # the rest stays readable
-    # Only the text changes: the fields are still compared and saved as before.
+    # Only the text hides them: the fields are compared and saved in full.
     assert auth == ConnectAuth("tok-made-up-1", "sec-made-up-2", "production", {"username": "someone"})
     assert asdict(auth)["token"] == "tok-made-up-1" and asdict(auth)["token_secret"] == "sec-made-up-2"
     assert st == ServiceTicket("ST-0123-AbCdEf-cas", "https://sso.example/embed")
@@ -308,16 +308,16 @@ def test_the_repr_of_the_installer_key_shows_no_secret():
     for text in (repr(c), str(c)):
         for secret in ("key-made-up-1", "sec-made-up-2", "salt-made-up-3"):
             assert secret not in text
-    # Only the text changes: compared and saved as before.
+    # Only the text hides them: compared and saved in full.
     assert c == Consumer("key-made-up-1", "sec-made-up-2", "salt-made-up-3")
     assert asdict(c) == {"key": "key-made-up-1", "secret": "sec-made-up-2",
                          "url_salt": "salt-made-up-3"}
 
 
 def test_the_sign_in_page_is_the_one_for_signing_in_without_a_new_account():
-    """Point 10 of package 3: Garmin Express signs in to Garmin Connect with the client that
-    shows the terms and no way to create an account (GarminExpress_WIN_Default it gives only to
-    sign-ins that may create one); the address has no other parameter."""
+    """Garmin Express signs in to Garmin Connect with the client that shows the terms and no
+    way to create an account (GarminExpress_WIN_Default it gives only to sign-ins that may
+    create one); the address has no other parameter."""
     from urllib.parse import parse_qs, urlsplit
 
     parts = urlsplit(sso.sign_in_url(Settings()))

@@ -1,7 +1,7 @@
 """The grey chips of a tile ("Primary", "USB drive", "Not on your account", "Never synced",
 "Synced") stand out from the grey line under them, in the dark and the light theme. Their
 style class is "dimmed", which libadwaita 1.7 dims as well (opacity 0.55, its own class of
-that name): they looked fainter than the line under the name (26.10.2026). Made-up words."""
+that name), so they could look fainter than the line under the name. Made-up words."""
 
 import pytest
 
@@ -113,7 +113,7 @@ def test_every_chip_has_one_shape():
 @pytest.mark.needs_display
 def test_chips_of_every_style_have_one_size():
     """The same words make a chip of the same width and height, whatever its colours: a row
-    of chips keeps one height (26.10.2026)."""
+    of chips keeps one height."""
     from gi.repository import Gdk, Gtk
 
     from openexpress.gui import start

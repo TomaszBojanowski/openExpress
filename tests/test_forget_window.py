@@ -1,4 +1,4 @@
-"""Forgetting a device in the window (PLAN T7): a button at the bottom of the read-only view of
+"""Forgetting a device in the window: a button at the bottom of the read-only view of
 a remembered device, a question that says what goes, files not uploaded yet given up only
 when ticked, backups deleted only when ticked; then back to the start page, where only its
 tile goes. All unit IDs here are made up."""
@@ -396,7 +396,7 @@ def _turn_until(done, seconds=5.0):
 @pytest.mark.needs_display
 def test_clicking_forget_in_the_window_forgets(monkeypatch):
     """The question shown in the window and its button Forget clicked, as libadwaita does it:
-    "closed" comes before "response" (libadwaita 1.9, 25.10.2026), so the choice must not be
+    "closed" comes before "response" (libadwaita 1.9), so the choice must not be
     taken from what "closed" lets go of. The device is forgotten and the window goes back to
     the start page."""
     from openexpress import known_devices, netstatus, paths

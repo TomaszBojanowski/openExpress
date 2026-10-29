@@ -1,4 +1,4 @@
-"""Point 5 of package 3: a Connect IQ app whose version in the store asks for other
+"""A Connect IQ app whose version in the store asks for other
 permissions than before ("permissionsChanged" of the store, with the list "permissions") is
 installed or updated only after the user allows them. Garmin Express asks in a window of its
 own before each such install and update; openExpress asks once for all of them in the window,

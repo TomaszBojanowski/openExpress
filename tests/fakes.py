@@ -87,7 +87,7 @@ class RunNow:
 
 
 class SyncClient:
-    """The Garmin Connect account as sync uses it (it was FakeClient of test_sync): the
+    """The Garmin Connect account as sync uses it: the
     uploads are noted and answered with `statuses` by address (201 otherwise), Connect
     already has the activities in `matches`, the queue gives a course for an address with
     "course" in it, the acknowledgements are noted. `require_verified` refuses as the real
@@ -296,9 +296,9 @@ def window_methods(win, names):
 def replace_in_window(monkeypatch, name, value):
     """Replace `name` (a function, a class, a module or a constant the window's code reads,
     e.g. "eject" or "Adw") in every module of the window (openexpress.gui.*) that holds the
-    same object under it, never in gui.app alone: code moved out of gui/app.py (analysis 17)
-    looks the name up in its new module, and a replacement in gui.app alone would do nothing
-    there, without failing (guard 3, test_dead_patches). Every module that holds the name
+    same object under it, never in gui.app alone: code in another module of the window
+    looks the name up in its own module, and a replacement in gui.app alone would do nothing
+    there, without failing (test_dead_patches). Every module that holds the name
     must hold the same object (that of gui.app, when gui.app holds it): one that holds
     another would keep it and its code would never see the replacement, so that fails,
     naming it, before anything is replaced. A name no module of the window holds fails at
