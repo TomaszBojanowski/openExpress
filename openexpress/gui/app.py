@@ -198,6 +198,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._relative_timer = None
         # The window is closing (_on_close_request).
         self._closed = False
+        # A page of the side panel was chosen: in front of the side panel while the window
+        # is folded (_show_content); unfolded, show-content stays False.
+        self._content_chosen = False
 
         # Made by __init__ and the layout.
         self.sections: dict = {}
@@ -274,7 +277,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             row.key = sec.key
             self.nav.append(row)
         self.nav.connect("row-selected", self._on_nav_selected)
-        self.nav.connect("row-activated", lambda *_a: self.split.set_show_content(True))
+        self.nav.connect("row-activated", lambda *_a: self._show_content())
+        self.split.connect("notify::collapsed", self._on_folded)
+        self.split.connect("notify::show-content", self._on_show_content)
         sidebar_view.set_content(Gtk.ScrolledWindow(child=self.nav,
                                                     hscrollbar_policy=Gtk.PolicyType.NEVER))
         sidebar_view.add_bottom_bar(self._build_net_status())
@@ -429,7 +434,30 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         for i, sec in enumerate(self.sections.values()):
             if sec.key == key:
                 self.nav.select_row(self.nav.get_row_at_index(i))
-        self.split.set_show_content(True)
+        self._show_content()
+
+    def _show_content(self) -> None:
+        """The page chosen in the side panel, in front of the panel while the window is
+        folded. Unfolded, both are in view and show-content stays False: set, the
+        NavigationSplitView takes the back arrow (navigation.pop) for itself, and the first
+        click only clears it, with nothing to see."""
+        self._content_chosen = True
+        if self.split.get_collapsed():
+            self.split.set_show_content(True)
+
+    def _on_folded(self, split, _pspec) -> None:
+        """Folded, the page chosen comes in front of the side panel again; unfolded,
+        show-content is cleared (_show_content)."""
+        if split.get_collapsed():
+            split.set_show_content(self._content_chosen)
+        else:
+            split.set_show_content(False)
+
+    def _on_show_content(self, split, _pspec) -> None:
+        """Folded, back from the page to the side panel (or a page chosen) is kept for the
+        next fold."""
+        if split.get_collapsed():
+            self._content_chosen = split.get_show_content()
 
     def _on_close_request(self, _win) -> bool:
         if not self.busy or self._task_lets_close:

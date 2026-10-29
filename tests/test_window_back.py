@@ -90,7 +90,6 @@ def _row_of(win, key):
             "music": win.music_row}[key]
 
 
-@pytest.mark.xfail(strict=True, reason="the first click only clears what the side panel shows")
 @pytest.mark.parametrize("key", PAGES)
 def test_one_click_back_from_a_page_chosen_on_the_device_page(device_window, key):
     win = device_window()
@@ -103,7 +102,6 @@ def test_one_click_back_from_a_page_chosen_on_the_device_page(device_window, key
     assert win.navigation.get_visible_page() is win.start.page
 
 
-@pytest.mark.xfail(strict=True, reason="the first click only clears what the side panel shows")
 @pytest.mark.parametrize("key", PAGES)
 def test_one_click_back_from_a_page_chosen_in_the_side_panel(device_window, key):
     win = device_window()
