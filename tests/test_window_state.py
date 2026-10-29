@@ -74,7 +74,6 @@ def test_every_attribute_the_window_names_is_there_once_it_is_built(window):
     assert missing == []
 
 
-@pytest.mark.xfail(strict=True, reason="a question kept by name is made where it is asked")
 def test_every_attribute_named_in_a_string_is_there_once_it_is_built(window):
     assert {"_order_dialog", "_close_dialog"} <= named_in_strings()
     assert sorted(name for name in named_in_strings() if name not in vars(window)) == []

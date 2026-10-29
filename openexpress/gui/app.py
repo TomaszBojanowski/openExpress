@@ -227,9 +227,10 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.device_error_group = self.device_error_row = None
         # The pictures of devices drawn and asked for (pictures.py).
         self._device_textures = self._pictures_asked = self._pictures_waiting = None
-        # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device.
+        # The dialogs open: Preferences (with its rows), the order of the apps, the new
+        # permissions of an app, Forget Device (kept by confirm(..., keep_as=)).
         self._preferences = self._account_row = self._storage = None
-        self._order_dialog = self._forget_dialog = None
+        self._order_dialog = self._permissions_dialog = self._forget_dialog = None
 
     def _start(self) -> None:
         """What the window does as it opens: the detection, and the account's devices for
