@@ -1082,9 +1082,10 @@ def _account_country(dev) -> str | None:
     from openexpress.errors import UserFacingError
 
     try:
-        client = make_client(Settings.load(), need_auth=False)
-        if client.auth is None:
-            return None
+        try:
+            client = make_client(Settings.load(), need_auth=True)
+        except store.NotLoggedIn:
+            return None  # no login saved: the account is not asked
         service.require_account_device(client, dev.unit_id)
         return client.profile_country()
     except (UserFacingError, requests.RequestException, ValueError) as e:

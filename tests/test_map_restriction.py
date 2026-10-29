@@ -283,8 +283,6 @@ def test_cli_update_says_what_it_does_not_update(cli_maps, capsys):
     assert "All installed maps are up to date." in out
 
 
-@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
-                   "without the saved login")
 def test_cli_asks_the_account_only_with_a_login_and_for_a_device_of_it(monkeypatch):
     from openexpress import cli
     from openexpress.auth import store
@@ -360,8 +358,6 @@ def japan_lines(out):
     return lines[at], lines[at + 1]
 
 
-@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
-                   "without the saved login")
 def test_cli_with_a_login_saved_checks_the_device_and_reads_the_account_country(
         saved_login, capsys):
     from test_ownership import DEVICES_PATH
@@ -374,8 +370,6 @@ def test_cli_with_a_login_saved_checks_the_device_and_reads_the_account_country(
     assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]  # its owner first
 
 
-@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
-                   "without the saved login")
 def test_cli_with_a_login_saved_asks_only_the_owner_of_a_device_of_another_account(
         saved_login, capsys):
     from test_ownership import DEVICES_PATH, OTHER, response
