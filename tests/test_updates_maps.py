@@ -587,7 +587,9 @@ def _children(widget):
 
 @pytest.mark.needs_display
 def test_maps_page_without_maps(device_root):
-    from openexpress.gui.app import Gtk, MainWindow
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
 
     win, reloads = _maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(lower_keys(NO_MAPS)))
@@ -1313,7 +1315,9 @@ def test_a_waiting_map_is_not_installed_again(server, device_root, xdg):
 
 @pytest.mark.needs_display
 def test_the_maps_page_shows_waiting_maps_on_the_device(server, device_root):
-    from openexpress.gui.app import Gtk, MainWindow
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
 
     put(device_root, **{"DEM.img": DEM, "E.img": b"old", "E.gma": b"u", "J.img": TOPO})
     all_maps = maps.parse_maps(maps_response(server))
@@ -1567,7 +1571,7 @@ SHORT_REASONS = {
 
 def _buttons(widget):
     """The buttons in a widget and below it, by label."""
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     found, child = [], widget.get_first_child()
     if isinstance(widget, Gtk.Button) and widget.get_label():
@@ -1632,6 +1636,8 @@ def test_the_window_refuses_before_it_asks_to_install(server, device_root, monke
     """Reached some other way: the window says why, and asks nothing."""
     import types
 
+    from gi.repository import Adw
+
     from openexpress.gui import app
 
     asked, said = [], []
@@ -1643,7 +1649,7 @@ def test_the_window_refuses_before_it_asks_to_install(server, device_root, monke
         def __getattr__(self, name):
             return lambda *a, **kw: None
 
-    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    monkeypatch.setattr(Adw, "AlertDialog", Question)
     japan = maps.parse_maps(_japan_answer(server, how))[2]
     storage = LocalStorage(device_root)
     win = stand_in(

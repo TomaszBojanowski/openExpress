@@ -82,7 +82,7 @@ def test_the_hooks_come_before_the_work_and_between_it_and_done():
 
 @pytest.mark.parametrize("fails", [False, True])
 def test_a_work_that_writes_to_the_device_is_noted_also_when_it_failed(fails):
-    from openexpress.gui.app import writes_to_device
+    from openexpress.gui.tasks import writes_to_device
 
     def work():
         if fails:
@@ -97,7 +97,7 @@ def test_a_work_that_writes_to_the_device_is_noted_also_when_it_failed(fails):
 @pytest.mark.needs_display
 @pytest.mark.parametrize("fails", [False, True])
 def test_the_button_spins_during_the_work_and_is_back_before_done(fails):
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     button, seen = Gtk.Button(label="Install"), []
 

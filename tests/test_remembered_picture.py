@@ -97,7 +97,7 @@ def test_the_view_shows_the_picture_the_start_page_already_has(caplog):
 
 @pytest.mark.needs_display
 def test_the_view_shows_the_picture_from_the_cache():
-    from openexpress.gui.app import device_picture_path
+    from openexpress.gui.pictures import device_picture_path
 
     path = device_picture_path(PART)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,13 +143,13 @@ def _account_entry():
 
 def _fake_download(monkeypatch):
     """The account's picture "downloaded" here: written to the cache, no request leaves."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import picture_target
 
     downloads = []
 
     def download(http, url, name):
         downloads.append(url)
-        target = app.picture_target(name)
+        target = picture_target(name)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(_texture().save_to_png_bytes().get_data())
         return target, ""
@@ -193,9 +193,9 @@ def test_a_tile_whose_address_is_not_allowed_takes_the_picture_in_the_cache(monk
     """The rule of the addresses is asked only when the picture is not in the cache: a tile of
     the account with an address that is not allowed (a bucket on S3 that is not Garmin
     Connect's) shows the file kept, asks nothing and logs no refusal."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import device_picture_path
 
-    path = app.device_picture_path(ACCOUNT_PART)
+    path = device_picture_path(ACCOUNT_PART)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_texture().save_to_png_bytes().get_data())
     win, tile, http, shown = _tile_with_an_address_not_allowed(monkeypatch)
@@ -212,13 +212,13 @@ def test_without_the_file_the_address_of_the_tile_is_refused(monkeypatch, caplog
     """No file in the cache: the address is refused, nothing is asked, the icon
     stays; the log names the host, the bucket and whether the address has a query, never
     the rest of it."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import device_picture_path
 
     win, tile, http, shown = _tile_with_an_address_not_allowed(monkeypatch)
     with caplog.at_level(logging.INFO, logger="openexpress"):
         win._load_tile_pictures([tile])
     assert shown == [] and http.calls == []
-    assert not app.device_picture_path(ACCOUNT_PART).exists()
+    assert not device_picture_path(ACCOUNT_PART).exists()
     logged = [r.getMessage() for r in caplog.records]
     assert [m for m in logged if m.startswith(f"pictures: no picture of {ACCOUNT_PART} ")] == [
         (f"pictures: no picture of {ACCOUNT_PART} (download refused: host s3.amazonaws.com, "
@@ -285,7 +285,7 @@ def test_a_picture_is_loaded_without_a_deprecated_call(tmp_path):
 
     from gi.repository import Gdk
 
-    from openexpress.gui import app
+    from openexpress.gui.pictures import load_texture
 
     path = tmp_path / "device-006-B0000-00.png"
     path.write_bytes(_texture().save_to_png_bytes().get_data())
@@ -293,10 +293,10 @@ def test_a_picture_is_loaded_without_a_deprecated_call(tmp_path):
     bad.write_bytes(b"not a picture")
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        texture = app.load_texture(path)
+        texture = load_texture(path)
         assert isinstance(texture, Gdk.Texture)
         assert (texture.get_width(), texture.get_height()) == (2, 2)
-        assert app.load_texture(bad) is None
+        assert load_texture(bad) is None
 
 
 # --- the picture of a device off the account, from the address remembered with it ------------

@@ -70,8 +70,9 @@ def test_the_real_window_from_its_own_start_stays_on_the_start_page(four, monkey
                                                                     in_the_window, units):
     from openexpress import netstatus
     from openexpress.gui import app
+    from openexpress.gui.detection import DeviceChoices
 
-    in_the_window("detect_devices", lambda current_uri=None: app.DeviceChoices(
+    in_the_window("detect_devices", lambda current_uri=None: DeviceChoices(
         [s for s in four() if s.unit_id in units]))
     monkeypatch.setattr(app.MainWindow, "_fetch_account", lambda self: None)
     monkeypatch.setattr(app.MainWindow, "_count_activities", lambda self, entries: None)

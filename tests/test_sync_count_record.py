@@ -246,13 +246,13 @@ def test_after_a_sync_the_record_is_what_is_counted_again(listed):
 
 def test_a_count_not_known_keeps_the_record():
     """The count failed (None): what was kept stays, the tile keeps showing it."""
-    from openexpress.gui import app
+    from openexpress.gui.device_page import remember_sync_count
 
     _remember()
     _state()
     _keep(3)
-    app.remember_sync_count(None)
-    app.remember_sync_count(sync.ActivitiesToSync(UNIT))  # never synced: nothing to keep
+    remember_sync_count(None)
+    remember_sync_count(sync.ActivitiesToSync(UNIT))  # never synced: nothing to keep
     assert known_devices.load()[UNIT].sync_count.count == 3
 
 

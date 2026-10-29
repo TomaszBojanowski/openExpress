@@ -127,7 +127,7 @@ def test_the_words_under_a_connected_device_are_its_version_only():
     never how it is connected: a drive says it in its chip, an MTP device is the usual
     way."""
     from openexpress.device.gio_storage import NOT_MOUNTED
-    from openexpress.gui.app import choice_subtitle
+    from openexpress.gui.start_window import choice_subtitle
 
     def summary(kind, ok=True):
         return types.SimpleNamespace(found=types.SimpleNamespace(kind=kind), ok=ok,

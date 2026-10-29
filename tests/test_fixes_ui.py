@@ -473,7 +473,7 @@ def test_pending_refresh_runs_when_idle():
 
 
 def test_window_geometry(xdg):
-    from openexpress.gui.app import (
+    from openexpress.gui.gui_settings import (
         DEFAULT_WINDOW,
         load_gui_settings,
         save_gui_settings,
@@ -501,7 +501,8 @@ def test_window_geometry(xdg):
 def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
     """Ctrl+Q (app.quit) ends the program without the window's close-request: the size is
     saved there too, as when the window is closed."""
-    from openexpress.gui.app import App, load_gui_settings, window_geometry
+    from openexpress.gui.app import App
+    from openexpress.gui.gui_settings import load_gui_settings, window_geometry
 
     win = stand_in(busy=False, get_default_size=lambda: (1100, 700),
                    is_maximized=lambda: maximized)
@@ -517,7 +518,8 @@ def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
 def test_ctrl_q_during_a_task_still_asks_the_window(xdg):
     """While a task runs, Ctrl+Q closes the window, which refuses and explains, as a close
     does then; nothing quits and nothing is saved here."""
-    from openexpress.gui.app import App, load_gui_settings
+    from openexpress.gui.app import App
+    from openexpress.gui.gui_settings import load_gui_settings
 
     closed, quits = [], []
     win = stand_in(busy=True, close=lambda: closed.append(1))
@@ -711,13 +713,14 @@ def test_window_collects_cycles_itself_on_the_gtk_thread(monkeypatch):
     from gi.repository import GLib
 
     from openexpress.gui import app
+    from openexpress.gui.window_tasks import collect_garbage
 
     calls = []
     monkeypatch.setattr(gc, "disable", lambda: calls.append("automatic collection off"))
     monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: calls.append((s, fn)))
     app.collect_garbage_on_the_gtk_thread()
-    assert calls == ["automatic collection off", (app.GC_INTERVAL_S, app.collect_garbage)]
-    assert app.collect_garbage() is True  # the timer keeps running
+    assert calls == ["automatic collection off", (app.GC_INTERVAL_S, collect_garbage)]
+    assert collect_garbage() is True  # the timer keeps running
 
     # After every task, successful or not, in the thread that ends it (the GTK thread).
     _run_now(monkeypatch)
@@ -1107,9 +1110,10 @@ def test_a_cache_file_that_is_no_picture_is_not_kept(pictures):
 def test_the_device_views_picture_from_the_cache_is_in_a_tile_built_later(pictures, in_the_window):
     """One store: the picture the device view read from the cache is there at once for a
     tile of that part number built later, with nothing read again in the background."""
+    from gi.repository import Gdk, GLib
+
     from openexpress.devicelist import Tile
     from openexpress.gui import pictures as store
-    from openexpress.gui.app import Gdk, GLib
     from openexpress.gui.start import StartPage, tile_image
 
     xdg, _log_file, monkeypatch = pictures
@@ -1208,10 +1212,10 @@ def test_a_png_or_jpeg_from_an_allowed_host_is_saved(pictures, url, response, sa
     """The host static.garmincdn.com serves device pictures too, and a JPEG is taken as a
     PNG is. The file keeps its name in the cache: GTK reads a picture by its content."""
     xdg, _log, _monkeypatch = pictures
-    from openexpress.gui import app
+    from openexpress.gui.pictures import download_picture
 
     http = PictureHttp(response)
-    path, why = app.download_picture(http, url, "device-x.png")
+    path, why = download_picture(http, url, "device-x.png")
     assert (why, path.name, path.read_bytes()) == ("", "device-x.png", saved)
     assert [asked for asked, _kw in http.calls] == [url]
     assert _cache(xdg) == ["device-x.png"]
@@ -1238,13 +1242,13 @@ def test_a_picture_from_the_bucket_of_garmin_connect_is_saved_and_its_address_ke
     garmin-connect-prod. They are downloaded as from Garmin's own hosts and their address is
     kept with the device; the log names the host, never the rest of the address."""
     from openexpress import known_devices
-    from openexpress.gui import app
+    from openexpress.gui.pictures import download_picture
 
     xdg, log_file, _monkeypatch = pictures
     url = ("https://s3.amazonaws.com/garmin-connect-prod/device_images/x.png"
            "?X-Amz-Signature=secret")
     http = PictureHttp()
-    path, why = app.download_picture(http, url, "device-006-B0000-00.png")
+    path, why = download_picture(http, url, "device-006-B0000-00.png")
     assert (why, path.read_bytes()) == ("", PNG)
     assert [asked for asked, _kw in http.calls] == [url]
     assert _cache(xdg) == ["device-006-B0000-00.png"]
@@ -1359,11 +1363,11 @@ def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(p
 
 def test_a_download_that_takes_too_long_is_given_up(pictures):
     xdg, _log, _monkeypatch = pictures
-    from openexpress.gui import app
+    from openexpress.gui.pictures import download_picture
 
     ticks = iter([0.0, 5.0, 20.0, 40.0])
     http = PictureHttp(PictureResponse(body=PNG + b"x" * 200_000))
-    assert app.download_picture(http, PICTURE_URL, "device-x.png",
+    assert download_picture(http, PICTURE_URL, "device-x.png",
                                 clock=lambda: next(ticks)) == (None, "timeout")
     assert _cache(xdg) == []
 
@@ -1641,7 +1645,11 @@ def page_window(key):
     """A page of the real kind in a window that is never shown, and a stand-in for the main
     window that loads it the way MainWindow does. A task runs at once, in the order run_task
     keeps: busy on, the work, busy off, then the page is rebuilt."""
-    from openexpress.gui.app import Gtk, MainWindow, Section, still_in_window
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
+    from openexpress.gui.window_tasks import still_in_window
 
     section = Section(key, key.title(), "x-symbolic", "Loading…")
     toplevel = Gtk.Window()
@@ -1711,7 +1719,8 @@ def test_cli_update_install_shows_a_bar_while_copying(offered, monkeypatch, caps
 def test_about_links_to_the_support_page(monkeypatch):
     """"About openExpress" links to the support page, beside the website and the issue
     tracker."""
-    from openexpress.gui import app
+    from gi.repository import Adw
+
     from openexpress.gui.app import MainWindow
 
     dialogs = []
@@ -1730,7 +1739,7 @@ def test_about_links_to_the_support_page(monkeypatch):
         def present(self, parent):
             pass
 
-    monkeypatch.setattr(app.Adw, "AboutDialog", About)
+    monkeypatch.setattr(Adw, "AboutDialog", About)
     MainWindow.show_about(stand_in())
     (about,) = dialogs
     assert about.props["website"] == "https://github.com/TomaszBojanowski/openExpress"
@@ -1746,7 +1755,7 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
     """An icon is cached as app-<app ID>.png, the app ID as the Connect IQ server gives it:
     a name that is no plain file name is not saved (and not even asked for), the icon stays
     as it is; nothing is written outside the cache. The same for device pictures."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import cached_download, download_picture
 
     asked = []
 
@@ -1756,8 +1765,8 @@ def test_a_picture_name_that_is_no_file_name_is_not_saved(xdg, name):
             raise AssertionError("asked for a picture with a bad name")
 
     before = {p for p in Path(xdg).rglob("*") if p.is_file()}
-    assert app.cached_download(Http(), "https://res.garmin.com/x.png", name) is None
-    assert app.download_picture(Http(), "https://res.garmin.com/x.png", name) == (
+    assert cached_download(Http(), "https://res.garmin.com/x.png", name) is None
+    assert download_picture(Http(), "https://res.garmin.com/x.png", name) == (
         None, "not a file name")
     assert asked == []
     assert {p for p in Path(xdg).rglob("*") if p.is_file()} == before
@@ -1770,7 +1779,7 @@ def test_a_picture_over_http_is_asked_over_https(xdg):
     """A picture or an icon whose address is plain HTTP is asked over HTTPS, as every
     download; for a device picture the rule (picture_urls) then still asks for one of
     Garmin's hosts, so plain HTTP from another host is not asked at all."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import cached_download, download_picture
 
     icon = types.SimpleNamespace(ok=True, content=b"icon")
 
@@ -1783,14 +1792,14 @@ def test_a_picture_over_http_is_asked_over_https(xdg):
             return icon
 
     http = IconHttp()
-    assert app.cached_download(http, "http://services.garmin.com/icon/1", "app-1.png")
+    assert cached_download(http, "http://services.garmin.com/icon/1", "app-1.png")
     assert http.calls == ["https://services.garmin.com/icon/1"]
     pictures = PictureHttp()
-    path, why = app.download_picture(pictures, "http://res.garmin.com/en/a.png", "device-a.png")
+    path, why = download_picture(pictures, "http://res.garmin.com/en/a.png", "device-a.png")
     assert (path is not None, why) == (True, "")
     assert [url for url, _kw in pictures.calls] == ["https://res.garmin.com/en/a.png"]
     other = PictureHttp()
-    assert app.download_picture(other, "http://example.org/a.png", "device-b.png") == (
+    assert download_picture(other, "http://example.org/a.png", "device-b.png") == (
         None, "host example.org is not allowed; no query")
     assert other.calls == []
 
@@ -1804,10 +1813,10 @@ def test_a_picture_over_http_is_asked_over_https(xdg):
     ("", "no address"),  # nothing to say of a query
 ])
 def test_a_refusal_says_whether_the_address_has_a_query_never_what(xdg, url, why):
-    from openexpress.gui import app
+    from openexpress.gui.pictures import download_picture
 
     http = PictureHttp()
-    assert app.download_picture(http, url, "device-a.png") == (None, why)
+    assert download_picture(http, url, "device-a.png") == (None, why)
     assert http.calls == [] and "secret" not in why and "token" not in why
 
 
@@ -1815,10 +1824,10 @@ def test_a_refusal_says_whether_the_address_has_a_query_never_what(xdg, url, why
 def test_a_picture_over_another_scheme_is_not_asked(xdg, url, log_file):
     """Any other address: nothing is asked or saved, the icon stays; one line in the log, no
     message (pictures are optional)."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import cached_download, download_picture
 
     http = PictureHttp()
-    assert app.cached_download(http, url, "app-1.png") is None
-    assert app.download_picture(http, url, "device-a.png") == (None, "not HTTPS; no query")
+    assert cached_download(http, url, "app-1.png") is None
+    assert download_picture(http, url, "device-a.png") == (None, "not HTTPS; no query")
     assert http.calls == []
     assert not any(p.is_file() for p in (Path(xdg) / "cache").rglob("*.png"))

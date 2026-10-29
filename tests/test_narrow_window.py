@@ -161,7 +161,7 @@ def _tiles():
     """Tiles of devices connected, remembered and only on the account, with the words under
     their names as the window makes them."""
     from openexpress.devicelist import Tile
-    from openexpress.gui import app
+    from openexpress.gui.start_window import account_subtitle, choice_subtitle, remembered_subtitle
     from openexpress.known_devices import KnownDevice
 
     def tile(name, part, connected, last_seen=None, on_account=False):
@@ -169,7 +169,7 @@ def _tiles():
                     False, last_seen, part, None, None)
 
     def connected(kind):
-        return app.choice_subtitle(types.SimpleNamespace(
+        return choice_subtitle(types.SimpleNamespace(
             found=types.SimpleNamespace(kind=kind), ok=True, software_version="23.39"))
 
     seen = time.time() - 86400
@@ -177,9 +177,9 @@ def _tiles():
     return [(tile("fēnix 8 - 47mm, Solar", "006-B4532-00", True), connected("mtp")),
             (tile("Edge 1050", "006-B4440-00", True), connected("mtp")),
             (tile("Varia RTL515", "006-B3592-03", True), connected("ums")),
-            (tile("Venu 2", "006-B3703-00", False, seen), app.remembered_subtitle(venu)),
+            (tile("Venu 2", "006-B3703-00", False, seen), remembered_subtitle(venu)),
             (tile("epix (Gen 2)", "006-B3943-00", False, on_account=True),
-             app.account_subtitle({"software_version": "27.18"}))]
+             account_subtitle({"software_version": "27.18"}))]
 
 
 EDGE = ("Edge 1050", "33.11", "006-B4440-00")
@@ -232,7 +232,7 @@ def _fill(win, page: str) -> str:
 
 
 def _iterate(seconds):
-    from openexpress.gui.app import GLib
+    from gi.repository import GLib
 
     end = time.monotonic() + seconds
     while time.monotonic() < end:
@@ -244,8 +244,10 @@ def narrow_window(monkeypatch):
     """A function that gives the real window, folded (narrower than its breakpoint), in the
     language asked for; nothing is detected, loaded or asked. GTK's settings and the language
     are put back afterwards."""
+    from gi.repository import Gtk
+
     from openexpress import i18n
-    from openexpress.gui.app import Gtk, MainWindow
+    from openexpress.gui.app import MainWindow
 
     families = {f.get_name() for f in Gtk.Label().get_pango_context().get_font_map()
                 .list_families()}
@@ -308,7 +310,7 @@ def _program_style() -> None:
 
 
 def _min_width(widget) -> int:
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     return widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
 
@@ -342,7 +344,7 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
                                                                           language):
     """The chip under the version and the name of the one update in the row "Device
     software": the page fits the narrowest window, the chip whole."""
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
@@ -365,7 +367,7 @@ def test_an_update_to_install_on_the_device_page_fits_the_narrowest_window(narro
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_row_of_the_primary_wearable_fits_the_narrowest_window(narrow_window, language):
     """Its title is long in Polish ("Podstawowe urządzenie typu wearable"); it wraps."""
-    from openexpress.gui.app import Adw
+    from gi.repository import Adw
 
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
@@ -385,7 +387,8 @@ def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, lang
     """The bar at the bottom while TrueUp waits, with Stop Waiting."""
     import threading
 
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
+
     from openexpress.progress import TimedWait
 
     win = narrow_window(language)
@@ -421,12 +424,12 @@ def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language)
 def test_the_sentence_about_the_account_fits_the_narrowest_window(narrow_window, language,
                                                                   why):
     """The sentence under the tiles wraps."""
-    from openexpress.gui import app
+    from openexpress.gui.start_window import show_account_note
 
     win = narrow_window(language)
     win.start.show(_tiles(), False)
     win._account_why = why
-    app.show_account_note(win, _tiles())
+    show_account_note(win, _tiles())
     _iterate(0.05)
     assert win.start.account_note.get_visible()
     assert _min_width(win.start.page) <= NARROWEST
@@ -457,7 +460,7 @@ def test_the_start_page_fits_the_narrowest_window(narrow_window, language):
 
 def _texts(widget):
     """The texts of all labels under `widget` (the rows of an expander too, folded or not)."""
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     if isinstance(widget, Gtk.Label) and widget.get_text():
         yield widget.get_text()
@@ -518,11 +521,11 @@ def test_the_line_of_the_last_sync_keeps_its_separators_too(language):
     """When the last sync was and its numbers, joined in the command line's words (service):
     in the window "·" stays with the part before it."""
     from openexpress import i18n
-    from openexpress.gui import app
+    from openexpress.gui.device_page import last_sync_words
 
     i18n.setup(language)
     try:
-        line = app.last_sync_words({"time": time.time() - 3 * 86400, "uploaded": 6,
+        line = last_sync_words({"time": time.time() - 3 * 86400, "uploaded": 6,
                                     "downloaded": 7, "new_files": {"FIT_TYPE_4": 8}})
     finally:
         i18n.setup("en")
@@ -551,8 +554,9 @@ def test_the_preferences_with_the_storage_group_fit_the_narrowest_window(narrow_
                                                                          monkeypatch, language):
     """The preferences of the real window, the parts of the cache counted with sizes of all
     kinds (gigabytes of maps, an empty part): no wider than the narrowest window."""
+    from gi.repository import Adw
+
     from openexpress import cache
-    from openexpress.gui.app import Adw
 
     sizes = {"maps": 6_657_384_448, "updates": 98_298_723, "pictures": 306_702, "temp": 0}
     files = {"maps": 128, "updates": 2, "pictures": 7, "temp": 0}
@@ -615,7 +619,7 @@ def _tiles_with_chips():
 def test_the_longest_chips_fit_the_narrowest_window_whole(narrow_window, language):
     """Two chips on a tile, the longest pairs in either language: the page fits the
     narrowest window, and in it no chip is cut short (they may go on two lines)."""
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
@@ -682,7 +686,7 @@ def _tiles_per_line(page) -> int:
 
 
 def _chip_labels(widget) -> list:
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     found = []
     for child in _descendants(widget):
@@ -695,7 +699,7 @@ class _WithoutWrapBox:
     """libadwaita before 1.7, for the start page: everything but Adw.WrapBox."""
 
     def __getattr__(self, name):
-        from openexpress.gui.app import Adw
+        from gi.repository import Adw
 
         if name == "WrapBox":
             raise AttributeError(name)

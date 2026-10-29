@@ -316,13 +316,14 @@ class Page:
 def unplug_window(monkeypatch, usb):
     """A window with the real code for an unplug, the pages and the notice from USB.
     `usb` is what /sys says when it is asked; nothing else of the window is real."""
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
 
     replace_in_window(monkeypatch, "usb_state", lambda: usb[0])
     replace_in_window(monkeypatch, "own_remount", lambda mount: False)
     replace_in_window(monkeypatch, "garmin_usb", lambda mount: True)
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
     pages = {"watch": Page(), "apps": Page()}
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(
@@ -381,8 +382,9 @@ def test_the_second_mount_of_an_unplugged_device_changes_nothing(monkeypatch, ca
 
 
 def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog, in_the_window):
+    from gi.repository import GLib
+
     from openexpress import applog
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     garmin = {NUMERIC}
@@ -390,7 +392,7 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog,
     timers = []
     in_the_window("garmin_usb", lambda m: m.uri in garmin)
     in_the_window("own_remount", lambda m: m.uri in remounted)
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(session=session, busy=False, show_device=lambda: None,
                    show_no_device=lambda: None)
@@ -492,14 +494,15 @@ def detecting(tmp_path, monkeypatch, in_the_window):
     """A window with the real detection code. Its tasks wait until the test finishes them;
     each started task is one `open_session`, and each `show_device` builds every page anew.
     The open device is on USB at bus 1, device 40 (a made-up /sys)."""
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
 
     usb_device(tmp_path / "sys", "1-4", 1, 40, "091e", "51b4")
     monkeypatch.setattr(gio_storage, "SYSFS_USB", tmp_path / "sys")
     timers = Timers()
-    monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
-    monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
+    monkeypatch.setattr(GLib, "timeout_add", timers.add)
+    monkeypatch.setattr(GLib, "source_remove", timers.remove)
     in_the_window("garmin_usb", lambda m: True)
     in_the_window("own_remount", lambda m: False)
     win = stand_in(busy=False, session=None, _refresh_pending=False, tasks=[],
@@ -656,7 +659,8 @@ def test_an_open_device_whose_place_on_usb_is_not_known_is_kept_by_its_address(d
 
 
 def test_several_triggers_lead_to_one_detection(detecting):
-    from openexpress.gui.app import MainWindow, schedule_detection
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.detection import schedule_detection
 
     win = detecting
     win.rereads = []
@@ -1655,11 +1659,11 @@ def test_a_sync_that_finds_only_a_garmin_drive_says_nothing(watch_and_drives, mo
 def drive_window(watch_and_drives, monkeypatch):
     """The window's own code for mount events and detection; a task runs at once and each
     `show_device` is recorded with the session it shows."""
-    from openexpress.gui import app
+    from gi.repository import GLib
 
     timers = Timers()
-    monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
-    monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
+    monkeypatch.setattr(GLib, "timeout_add", timers.add)
+    monkeypatch.setattr(GLib, "source_remove", timers.remove)
     win = stand_in(busy=False, session=None, _refresh_pending=False, built=[],
                    _updated_apps={"an app waiting for the unplug"}, timers=timers,
                    world=watch_and_drives, connected=Connected(),
@@ -1693,7 +1697,7 @@ def test_a_detection_after_the_task_leaves_no_timer_behind(drive_window, monkeyp
     """A mount reported during a task waits for it; one more reported meanwhile arms the timer
     again. Once the task ends, one detection covers both, and the timer armed for the second
     is gone: it does not fire a detection of its own later, with no trigger left."""
-    from openexpress.gui.app import detection_due, schedule_detection
+    from openexpress.gui.detection import detection_due, schedule_detection
 
     win = drive_window
     asked = []
@@ -1756,7 +1760,7 @@ def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatc
 
 def _texts(widget):
     """The texts of all labels below a widget."""
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     found = [widget.get_label()] if isinstance(widget, Gtk.Label) else []
     child = widget.get_first_child()
@@ -1912,11 +1916,11 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
     091e) and from gvfs, but its folder under /run/media is not in the sandbox. No session;
     the page says that this version has no access to the drive's folder, and the log says why
     it was skipped."""
-    from openexpress.gui import app
+    from openexpress import paths
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
-    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    monkeypatch.setattr(paths, "in_flatpak", lambda: True)
     win, drive = drive_window, drive_window.world.drive()
     shutil.rmtree(drive.root.path)  # /run/media/<user>/GARMIN does not exist in the sandbox
     monitor_with(monkeypatch, drive)
@@ -1944,11 +1948,11 @@ def test_the_flatpak_says_what_the_source_version_says_unless_the_drive_is_hidde
     drive is not mounted gets the words of the version from source; only a drive mounted
     where the sandbox cannot see gets the Flatpak's sentence (the condition that skips it in
     the detection)."""
-    from openexpress.gui import app
+    from openexpress import paths
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
-    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    monkeypatch.setattr(paths, "in_flatpak", lambda: True)
     monitor_with(monkeypatch)  # on USB, not mounted
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
         "USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
@@ -2324,7 +2328,8 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
     """On the start page, one tile per device: its name (or "Garmin device" without
     details), how it is connected, its version or why it has no details; never an MTP
     address; the other pages say to choose a device."""
-    from openexpress.gui.app import MainWindow, Section
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
     from openexpress.gui.start import StartPage
 
     maps = Section("maps", "Maps", "x-symbolic", "Loading…")
@@ -2390,7 +2395,7 @@ def unplug_mtp(win, found, usb_folder=None):
 
 def rows_of(win):
     """The rows of the list now shown: name and subtitle, as the window writes them."""
-    from openexpress.gui.app import choice_subtitle
+    from openexpress.gui.start_window import choice_subtitle
 
     return [(s.description, choice_subtitle(s)) for s in choices(win)]
 
@@ -3487,8 +3492,9 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
                                                             in_the_window):
     import shutil
 
+    from gi.repository import GLib
+
     from openexpress import watch
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     st, _fake, _events = exclusive
@@ -3511,7 +3517,7 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
     # Plugged in again a moment later, at a new place: the window and the watcher see it.
     usb_device(sysfs, "3-1", 3, 15, "091e", "51b4")
     timers, started = [], []
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
     monkeypatch.setattr(watch, "garmin_usb", lambda mount: True)
     in_the_window("garmin_usb", lambda mount: True)
@@ -3807,7 +3813,8 @@ def test_cli_waits_by_default_and_has_no_wait(plugged, monkeypatch, capsys):
 
 
 def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkeypatch):
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
 
     shown, refreshed, updates = [], [], []
@@ -3818,7 +3825,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
                    refresh_device=lambda **_kw: refreshed.append(1))
     # The Sync button is told whenever the words on the pages change, and only then.
     win._update_actions = lambda: updates.append(win._usb_title)
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn())
     clock = plugged.clock
     poll = lambda: MainWindow._poll_usb(win, clock=clock)  # noqa: E731
 
@@ -3874,8 +3881,10 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
 def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     """No spinner, no search over MTP and, after the wait, no advice about a PIN: the page
     says at once what the device is."""
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.navigation import Cause
 
     shown, refreshed, updates = [], [], []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
@@ -3884,13 +3893,13 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
                    _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
                    refresh_device=lambda **kw: refreshed.append(kw.get("cause")))
     win._update_actions = lambda: updates.append(win._usb_title)
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn())
     mass_storage_device(plugged.root)
     for now in (10, 10 + gio_storage.WAIT_FOR_DEVICE_S + 1):
         plugged.clock.now = now
         MainWindow._poll_usb(win, clock=plugged.clock)
         # Nothing over MTP; one detection, for a drive the system has not mounted (its tile).
-        assert refreshed == [app.Cause.PLUGGED]
+        assert refreshed == [Cause.PLUGGED]
         assert shown[-1][2] is False and "PIN" not in shown[-1][1]
         # The window opens such a drive once it is mounted: no advice about --path.
         assert shown[-1] == ("USB drive", DRIVE_NOT_MOUNTED_TEXT, False)
@@ -3910,7 +3919,8 @@ STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 def _banner_window(monkeypatch):
     """The window's own code for the page shown while no device is open."""
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
 
     shown, refreshed = [], []
@@ -3921,8 +3931,8 @@ def _banner_window(monkeypatch):
                    refresh_device=lambda **_kw: refreshed.append(1),
                    _update_actions=lambda: None)
     # A detection runs at once; its timer is made up, and so is its removal.
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn() or 1)
-    monkeypatch.setattr(app.GLib, "source_remove", lambda sid: None)
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn() or 1)
+    monkeypatch.setattr(GLib, "source_remove", lambda sid: None)
     return win, shown, refreshed
 
 
@@ -4013,10 +4023,10 @@ def test_a_garmin_drive_gets_no_advice_to_plug_it_in_again(plugged, monkeypatch)
 def test_the_flatpak_window_without_a_hidden_drive_speaks_as_from_source(plugged, monkeypatch):
     """The Flatpak reaches /run/media: with no drive out of its sight, the words of the
     version from source, without advice about --path."""
-    from openexpress.gui import app
+    from openexpress import paths
     from openexpress.gui.app import MainWindow
 
-    monkeypatch.setattr(app.paths, "in_flatpak", lambda: True)
+    monkeypatch.setattr(paths, "in_flatpak", lambda: True)
     monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
     monitor_with(monkeypatch)  # nothing mounted
     mass_storage_device(plugged.root)
@@ -4409,7 +4419,8 @@ def test_refresh_on_the_start_page_stays_there(start_window, monkeypatch):
 def test_the_start_page_tells_the_usb_state(plugged, monkeypatch):
     """With no device open, the start page has the words of the pages on top: no device,
     a device that is starting, or one that is not ready."""
-    from openexpress.gui import app
+    from gi.repository import GLib
+
     from openexpress.gui.app import MainWindow
 
     shown = []
@@ -4419,7 +4430,7 @@ def test_the_start_page_tells_the_usb_state(plugged, monkeypatch):
                    start=start, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
                    _usb_title="", _usb_notice=MainWindow._usb_notice,
                    refresh_device=lambda: None, _update_actions=lambda: None)
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn())
     MainWindow._poll_usb(win, clock=plugged.clock)
     assert start.notices[-1] == shown[-1] and shown[-1][0] == "Connect your device"
     usb_device(plugged.root, "1-4", 1, 40, "091e", "0003")  # starting
@@ -4449,13 +4460,14 @@ def test_the_window_starts_on_the_start_page_with_one_back_arrow(monkeypatch):
     """The real window: the start page is the root of the navigation and the device view is
     a page above it, whose sidebar header shows the back arrow; the header of its content
     only when folded (there it goes back to the sidebar), so never two arrows."""
+    from gi.repository import GLib
+
     from openexpress import netstatus
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(MainWindow, "refresh_device",
                         lambda self, cause=None: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
         assert win.navigation.get_visible_page() is win.start.page
@@ -4670,7 +4682,7 @@ def test_a_pending_refresh_stays_on_the_start_page(start_window, monkeypatch, tm
 def mounts_reported_at_start(win):
     """gvfs reports the mounts of the devices already connected as the window starts: a
     detection planned for each, in 1.5 s."""
-    from openexpress.gui.app import schedule_detection
+    from openexpress.gui.detection import schedule_detection
 
     schedule_detection(win, 1500, NUMERIC)
     schedule_detection(win, 1500, NAMED)
@@ -4725,7 +4737,7 @@ def test_a_device_mounted_while_one_is_open_keeps_its_view(start_window, monkeyp
     opened = win.session
     assert win.navigation.stack == ["start page", "device view"]
     two_watches(win.world, monkeypatch, tmp_path, device_root)
-    from openexpress.gui.app import schedule_detection
+    from openexpress.gui.detection import schedule_detection
 
     schedule_detection(win, 1500, NAMED)
     win.timers.fire()
@@ -4815,7 +4827,7 @@ def test_a_remembered_tile_says_when_it_was_seen_in_relative_words():
     as the last sync says when it was (i18n.relative_time), not the full date."""
     from datetime import datetime
 
-    from openexpress.gui.app import remembered_subtitle
+    from openexpress.gui.start_window import remembered_subtitle
     from openexpress.known_devices import KnownDevice
 
     now = datetime(2026, 10, 20, 23, 22)
@@ -4851,8 +4863,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_
     is read from USB, nothing is asked of a server; back is the start page."""
     import time
 
-    from openexpress import sync
-    from openexpress.gui import app
+    from openexpress import service, sync
 
     win = start_window
     remember_others(time.time())
@@ -4868,7 +4879,7 @@ def test_a_remembered_tile_opens_a_read_only_view(start_window, monkeypatch, in_
 
     for name in ("find_all_devices", "probe", "usb_state", "usb_still_there"):
         in_the_window(name, no_device)
-    monkeypatch.setattr(app.service, "make_client", no_device)
+    monkeypatch.setattr(service, "make_client", no_device)
     win._open_tile(names.index("Venu 2"))
     assert win.navigation.stack == ["start page", "remembered view"]
     assert opening == [] and win.session is None
@@ -5130,7 +5141,7 @@ def edge_unplugged(win):
 
 def second_device_mounted(win, monkeypatch, tmp_path, device_root):
     """The Edge plugged in and mounted while the test watch is connected."""
-    from openexpress.gui.app import schedule_detection
+    from openexpress.gui.detection import schedule_detection
 
     two_watches(win.world, monkeypatch, tmp_path, device_root)
     schedule_detection(win, 1500, NAMED)
@@ -5478,8 +5489,9 @@ def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, mon
 def login_finished(win, monkeypatch):
     """The login window gives a ticket and the login task finishes (the exchange of the
     ticket stands in: nothing leaves the test)."""
+    from gi.repository import GLib
+
     from openexpress.auth import sso
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     tickets = []
@@ -5487,7 +5499,7 @@ def login_finished(win, monkeypatch):
                         lambda settings, on_ticket, **kw: (tickets.append(on_ticket),
                                                            types.SimpleNamespace(
                                                                present=lambda: None))[1])
-    monkeypatch.setattr(app.GLib, "idle_add", lambda fn: fn())
+    monkeypatch.setattr(GLib, "idle_add", lambda fn: fn())
     real = win.run_task
 
     def run_task(title, fn, done, failed=None, device=True, in_page=False):
@@ -5623,8 +5635,9 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch, in_the_window):
     """The real window, one device open in its view: the Refresh button in the header of
     the view finds the same device again (the one open is asked for again); the view stays,
     nothing goes back to the start page."""
+    from gi.repository import Adw, GLib
+
     from openexpress import netstatus
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     real_refresh = MainWindow.refresh_device
@@ -5632,7 +5645,7 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch, in_the_window):
     # Nothing is detected while the window opens; the real detection code once it is open.
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: (
         real_refresh(self, cause) if ready else None))
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
 
     def session(n):
         return types.SimpleNamespace(
@@ -5654,7 +5667,7 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch, in_the_window):
         assert win.navigation.get_visible_page() is win.device_view
         ready.append(True)
         button = win.refresh_button
-        assert button.get_ancestor(app.Adw.HeaderBar) is win.content_header
+        assert button.get_ancestor(Adw.HeaderBar) is win.content_header
         assert button.get_action_name() == "win.refresh"
         button.emit("clicked")
         assert asked == [NUMERIC]  # the device open now, opened again
@@ -5974,11 +5987,11 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
     import gi
 
     gi.require_version("Adw", "1")
-    from gi.repository import Adw
+    from gi.repository import Adw, GLib
 
     from openexpress import known_devices, netstatus, sync
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.start_window import RELATIVE_REFRESH_S
 
     class Clock(datetime):
         current = datetime(2026, 10, 21, 12, 0)
@@ -5987,7 +6000,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         def now(cls, tz=None):
             return cls.current
 
-    timers, real_remove = {}, app.GLib.source_remove
+    timers, real_remove = {}, GLib.source_remove
 
     def add_seconds(seconds, fn):
         timers[len(timers) + 1000] = (seconds, fn)
@@ -5998,12 +6011,12 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
             real_remove(source)
 
     def minute_timers():
-        return [fn for seconds, fn in timers.values() if seconds == app.RELATIVE_REFRESH_S]
+        return [fn for seconds, fn in timers.values() if seconds == RELATIVE_REFRESH_S]
 
     in_the_window("datetime", Clock)
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, **kw: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", add_seconds)
-    monkeypatch.setattr(app.GLib, "source_remove", remove)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", add_seconds)
+    monkeypatch.setattr(GLib, "source_remove", remove)
     seen = datetime(2026, 10, 21, 11, 58).timestamp()
     known_devices.remember(3000000004, "Venu 2", "006-B3703-00", "19.05", "mtp", now=seen)
     win = MainWindow(None)
@@ -6460,7 +6473,7 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"made up"
 def fake_pictures(monkeypatch):
     """Pictures as textures named after their file; downloads counted and answered here
     (`answers`: url -> True to save it, False to fail). No request leaves the test."""
-    from openexpress.gui import app
+    from openexpress.gui.pictures import device_picture_path
 
     fakes = types.SimpleNamespace(downloads=[], answers={})
     replace_in_window(monkeypatch, "load_texture", lambda path: f"texture of {path.name}")
@@ -6469,7 +6482,7 @@ def fake_pictures(monkeypatch):
         fakes.downloads.append(url)
         if not fakes.answers.get(url):
             return None, "network error"
-        target = app.device_picture_path(name[len("device-"):-len(".png")])
+        target = device_picture_path(name[len("device-"):-len(".png")])
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(PNG)
         return target, ""
@@ -6479,7 +6492,7 @@ def fake_pictures(monkeypatch):
 
 
 def in_the_cache(part_number):
-    from openexpress.gui.app import device_picture_path
+    from openexpress.gui.pictures import device_picture_path
 
     path = device_picture_path(part_number)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -6579,8 +6592,9 @@ def test_an_account_tile_downloads_its_picture_and_a_failure_leaves_the_icon(sta
 def test_the_picture_goes_into_the_tile_that_is_there():
     """StartPage.set_picture puts the picture into the tiles of that part number, the same
     widgets; a tile built later gets it at once."""
+    from gi.repository import Gdk, GLib
+
     from openexpress.devicelist import Tile
-    from openexpress.gui.app import Gdk, GLib
     from openexpress.gui.start import StartPage, tile_image
 
     def tile(name, part, connected=True):
@@ -6613,7 +6627,7 @@ def test_unit_info_read_for_the_picture_tells_a_bike_accessory(monkeypatch):
     segmenttype bikeaccessory is kept as the device's kind. One request, the one for the
     picture; another segment teaches nothing."""
     from openexpress import known_devices
-    from openexpress.gui.app import picture_from_unit_info
+    from openexpress.gui.pictures import picture_from_unit_info
 
     known_devices.remember(VARIA, "Varia RTL515", "006-B3592-03", "3.36", "ums", now=1.0)
     known_devices.remember(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", now=1.0)
@@ -6713,8 +6727,9 @@ def test_a_tile_without_a_picture_shows_the_icon_of_its_kind():
     """The icon of the kind of the device (a watch, a cycling computer, a bike accessory);
     without a kind a neutral one, never the watch; a picture before both. A kind learnt
     later changes the icon in the tile that is there."""
+    from gi.repository import Gdk, GLib
+
     from openexpress.devicelist import Tile
-    from openexpress.gui.app import Gdk, GLib
     from openexpress.gui.start import DEVICE_ICON, KIND_ICONS, StartPage, tile_image
 
     def tile(name, part, category, connected=True):
@@ -6766,9 +6781,8 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
     """With the folder of the program on the icon theme's search path (as App.do_startup
     adds it), each icon is found (no "missing image" in place of a kind) and is drawn in the
     colour of the theme: readable in the light and the dark one."""
-    from gi.repository import Graphene, Gsk
+    from gi.repository import Gdk, Graphene, Gsk, Gtk
 
-    from openexpress.gui.app import Gdk, Gtk
     from openexpress.gui.start import DEVICE_ICON, KIND_ICONS
 
     display = Gdk.Display.get_default()
@@ -6845,8 +6859,8 @@ def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
 def test_the_device_view_waits_with_the_neutral_icon_like_the_tile(drive_window, monkeypatch):
     """A device of an unknown kind, no picture in the cache: the device view shows the
     icon its tile shows (the neutral one), not the icon of the program."""
-    from openexpress.gui.app import APP_ID
     from openexpress.gui.start import kind_icon
+    from openexpress.paths import APP_ID
 
     icon, _win = _device_view_icon(drive_window, monkeypatch, name="Test drive")
     assert icon == kind_icon(None) and icon != APP_ID
@@ -6933,7 +6947,8 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_windo
     nothing is asked for the pictures (no unit-info, no download). A click on a row opens
     that device, as a click on its tile. Two remembered devices stay tiles."""
     from openexpress import known_devices
-    from openexpress.gui.app import MainWindow, Section
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
     from openexpress.gui.start import StartPage, kind_icon, tile_image
 
     def asked(*_a, **_k):
@@ -7049,8 +7064,9 @@ def test_a_click_in_each_section_of_the_real_page_opens_its_device(choosing_wind
 def test_a_row_gets_its_picture_like_a_tile():
     """The picture of a part number goes into the row that is there (the same widget)
     and into rows built later, as into tiles."""
+    from gi.repository import Gdk, GLib
+
     from openexpress.devicelist import Tile
-    from openexpress.gui.app import Gdk, GLib
     from openexpress.gui.start import StartPage, tile_image
 
     def tile(n):

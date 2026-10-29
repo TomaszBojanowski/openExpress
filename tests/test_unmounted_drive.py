@@ -87,7 +87,7 @@ def _unmounted(drives, monkeypatch, sectors=7_800_000, vendor="091e", serial=DRI
 
 
 def test_an_unmounted_garmin_drive_is_listed_to_be_mounted(drives, monkeypatch, caplog):
-    from openexpress.gui.app import choice_subtitle
+    from openexpress.gui.start_window import choice_subtitle
 
     volume, _folder = _unmounted(drives, monkeypatch)
     with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
@@ -196,12 +196,12 @@ def test_a_mount_refused_says_so(drives, monkeypatch):
 def test_one_unmounted_drive_alone_gives_its_tile_not_a_mount(drives, monkeypatch):
     """The window's detection: the drive is not mounted behind the user's back (the window
     opens by itself only the one device that is mounted); it is a tile to choose."""
-    from openexpress.gui import app
+    from openexpress.gui.detection import DeviceChoices, detect_devices
 
     volume, _folder = _unmounted(drives, monkeypatch)
     _on_usb(drives, monkeypatch)  # still on USB: its tile stays
-    result = app.detect_devices()
-    assert isinstance(result, app.DeviceChoices) and volume.asked == 0
+    result = detect_devices()
+    assert isinstance(result, DeviceChoices) and volume.asked == 0
     (summary,) = result.summaries
     assert summary.reason == gio_storage.NOT_MOUNTED and summary.found.kind == "ums"
 
@@ -284,10 +284,11 @@ def test_without_gvfs_nothing_changes(drives, monkeypatch):
 def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeypatch):
     """No mount event comes for a drive that the system does not mount: the window's look at
     USB finds it in mass storage mode and detects once."""
+    from gi.repository import GLib
     from test_detection import FakeStartPage
 
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.navigation import Cause
 
     usb_drive(drives, product=FR55)
     _on_usb(drives, monkeypatch)
@@ -298,10 +299,10 @@ def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeyp
         _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,
         refresh_device=lambda **kw: detected.append(kw.get("cause")), start=FakeStartPage(),
         sections={"watch": types.SimpleNamespace(set_empty=lambda *notice: None)})
-    monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
+    monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn())
     MainWindow._poll_usb(page)
     MainWindow._poll_usb(page)
-    assert detected == [app.Cause.PLUGGED]  # once
+    assert detected == [Cause.PLUGGED]  # once
 
 
 # --- two block devices of one device (a Forerunner 55 just plugged in) --------------------
@@ -359,11 +360,11 @@ def test_chosen_it_mounts_the_slot_with_the_drive(drives, monkeypatch):
 
 
 def test_the_window_lists_it_once(drives, monkeypatch):
-    from openexpress.gui import app
+    from openexpress.gui.detection import DeviceChoices, detect_devices
 
     _two_slots(drives, monkeypatch, ("sdc", "sdd"))
-    result = app.detect_devices()
-    assert isinstance(result, app.DeviceChoices)
+    result = detect_devices()
+    assert isinstance(result, DeviceChoices)
     (summary,) = result.summaries
     assert summary.found.uri == "ums-volume:/dev/sdd"
 
@@ -542,7 +543,8 @@ def test_0003_without_a_drive_before_is_a_device_starting(drives, monkeypatch, c
     """091e:0003 with no drive there before (an MTP watch before its normal mode): "The device is
     starting…"; after 25 s (past the about 19 s of a fēnix 8 starting) the page adds that it may
     be plugged in again, after the wait it is not ready."""
-    from openexpress.gui.app import REPLUG_HINT, MainWindow
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.detection import REPLUG_HINT
 
     _on_usb(drives, monkeypatch, port="1-8")
     _reenumerated(drives, port="1-8")
@@ -633,12 +635,13 @@ def _varia_session():
 def _start_window(monkeypatch, listed):
     from fakes import RunNow
 
+    from openexpress import service
     from openexpress.gui import app
     from openexpress.gui.connected import Connected
 
     session = _varia_session()
-    monkeypatch.setattr(app.service, "open_session", lambda found: session)
-    monkeypatch.setattr(app.service, "check_session", lambda s: s)
+    monkeypatch.setattr(service, "open_session", lambda found: session)
+    monkeypatch.setattr(service, "check_session", lambda s: s)
     replace_in_window(monkeypatch, "with_space", lambda s: s)
     replace_in_window(monkeypatch, "resolve_account", lambda win: None)
     reread = []
@@ -687,9 +690,9 @@ def test_an_mtp_device_chosen_from_the_list_is_opened_and_the_list_stays(monkeyp
     win, reread = _start_window(monkeypatch, listed)
     fenix = _varia_session()
     fenix.device.unit_id, fenix.mass_storage = FENIX, False
-    from openexpress.gui import app
+    from openexpress import service
 
-    monkeypatch.setattr(app.service, "open_session", lambda found: fenix)
+    monkeypatch.setattr(service, "open_session", lambda found: fenix)
     win.open_choice(listed[0].found)
     summaries, _notice = win._start_summaries()
     assert summaries == listed and reread == []
@@ -794,14 +797,14 @@ def test_the_line_of_the_log_says_which_keys_a_drive_gives(drives, monkeypatch, 
 
 def test_the_window_keeps_them_for_a_drive_it_lists(drives, monkeypatch):
     """The list (app._choose) remembers each device read before anything is chosen."""
-    from openexpress import known_devices
-    from openexpress.gui import app
+    from openexpress import known_devices, service
+    from openexpress.gui.detection import _choose
 
     _mounted(drives, monkeypatch)
     (found,) = gio_storage.find_ums_devices()
-    monkeypatch.setattr(app.service, "open_session", lambda found: "opened")
-    monkeypatch.setattr(app.service, "check_session", lambda session: session)
-    assert app._choose([found]) == "opened"
+    monkeypatch.setattr(service, "open_session", lambda found: "opened")
+    monkeypatch.setattr(service, "check_session", lambda session: session)
+    assert _choose([found]) == "opened"
     known = known_devices.load()[VARIA_UNIT]
     assert (known.usb_serial, known.volume_uuid) == (DRIVE_ID_SERIAL, DRIVE_ID_UUID)
 

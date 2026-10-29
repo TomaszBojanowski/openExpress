@@ -77,12 +77,12 @@ def _window(sections):
 
 @pytest.mark.needs_display
 def test_a_page_that_cannot_be_drawn_says_so_and_loads_anew(log_file, monkeypatch):
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
 
     monkeypatch.setattr(sys, "excepthook", lambda *exc: None)  # stderr stays quiet here
     _gui_log(log_file)
-    sec = app.Section("apps", "Apps", "application-x-addon-symbolic", "Reading the apps…")
+    sec = Section("apps", "Apps", "application-x-addon-symbolic", "Reading the apps…")
     win = _window({"apps": sec})
     shown = []
 

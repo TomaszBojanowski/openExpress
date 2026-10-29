@@ -105,10 +105,11 @@ def test_no_rows_for_a_drive_and_no_music_row_for_a_device_without_music():
 def test_once_their_pages_have_read_them_the_rows_say_how_many():
     """Never a read of the device of their own: the counts of the Apps and Music pages, as
     those pages found them; a page drawn again keeps them, another device has none."""
-    from openexpress.gui import app, music_page
+    from openexpress.gui import music_page
+    from openexpress.gui.apps_page import note_apps_count
 
     win, section = _page()
-    app.note_apps_count(win, 4)
+    note_apps_count(win, 4)
     music_page.note_music_count(win, 3, 12_000_000)
     rows = _rows(section)
     assert rows["Apps"].get_subtitle() == "4 Connect IQ apps"
@@ -130,17 +131,17 @@ def test_the_apps_and_music_pages_give_their_counts():
     music = Path("openexpress/gui/music_page.py").read_text()
     assert "note_apps_count(self, len(state.store_apps))" in apps
     assert "note_music_count(self, len(items), sum(i.size for i in items))" in music
-    from openexpress.gui import app
+    from openexpress.gui.music_page import note_music_count
 
-    assert app.note_music_count is not None  # the device page uses the page's own
+    assert note_music_count is not None  # the device page uses the page's own
 
 
 def test_the_counts_in_polish():
-    from openexpress.gui import app
+    from openexpress.gui.apps_page import apps_count_text
 
     i18n.setup("pl")
     try:
-        said = [app.apps_count_text(n) for n in (1, 2, 5)]
+        said = [apps_count_text(n) for n in (1, 2, 5)]
     finally:
         i18n.setup("en")
     assert said == ["1 aplikacja Connect IQ", "2 aplikacje Connect IQ", "5 aplikacji Connect IQ"]
@@ -181,26 +182,26 @@ def test_without_a_backup_the_row_says_so(backups):
 
 def test_a_backup_made_says_so_at_once(backups):
     """The task that made it: the row says the new one."""
-    from openexpress.gui import app
+    from openexpress.gui.device_page import show_backups
 
     said = []
     win = stand_in(backup_row=types.SimpleNamespace(
         set_subtitle=said.append, set_tooltip_text=lambda text: None),
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT)))
     _backup(backups, "2026-10-12 (17.37.37)")
-    app.show_backups(win)
+    show_backups(win)
     assert said[-1].endswith(f"{NB}· 1 backup")
 
 
 def test_the_backup_words_in_polish(backups):
-    from openexpress.gui import app
+    from openexpress.gui.device_page import backups_text
 
     for stamp in ("2026-10-12 (17.37.37)", "2026-10-13 (17.37.37)"):
         _backup(backups, stamp)
     i18n.setup("pl")
     try:
-        said = app.backups_text(UNIT)
-        none = app.backups_text(3000000099)
+        said = backups_text(UNIT)
+        none = backups_text(3000000099)
     finally:
         i18n.setup("en")
     assert said.startswith("Ostatnia: ") and said.endswith(f"{NB}· 2 kopie")
@@ -294,15 +295,15 @@ def test_the_folders_the_device_refused_with_its_software_now():
 
 
 def test_the_apps_page_says_it_in_one_line():
-    from openexpress.gui import app
+    from openexpress.gui.apps_page import refused_dirs_text
 
-    assert app.refused_dirs_text([]) is None
-    assert app.refused_dirs_text(["garmin/apps/media"]) == (
+    assert refused_dirs_text([]) is None
+    assert refused_dirs_text(["garmin/apps/media"]) == (
         "The device did not let openExpress create garmin/apps/media with this software "
         "version: apps that go there stay queued in Garmin Connect.")
     i18n.setup("pl")
     try:
-        said = app.refused_dirs_text(["garmin/apps/media", "garmin/apps/settings"])
+        said = refused_dirs_text(["garmin/apps/media", "garmin/apps/settings"])
     finally:
         i18n.setup("en")
     assert said == ("Urządzenie nie pozwoliło openExpress utworzyć garmin/apps/media, "

@@ -206,7 +206,7 @@ def test_a_wait_of_known_length_fills_the_bar_and_can_be_stopped(window):
     back and forth, no note after 20 s), and Stop Waiting is offered while it lasts."""
     import threading
 
-    from openexpress.gui.app import stop_waiting
+    from openexpress.gui.window_tasks import stop_waiting
     from openexpress.progress import TimedWait
 
     text = "Waiting 3 min 20 s for Garmin Connect to prepare TrueUp…"

@@ -166,10 +166,11 @@ def _window(monkeypatch, session=None):
     work, then done, or failed and the error when failed did not say it. Each reading of a
     page is noted in `reads`; `fails` is a work that fails, and unplugs the device first
     when `unplug` is set."""
-    from openexpress.gui import app
+    from gi.repository import Adw
+
     from openexpress.gui.app import MainWindow
 
-    monkeypatch.setattr(app.Adw, "AlertDialog", Answering)
+    monkeypatch.setattr(Adw, "AlertDialog", Answering)
     Answering.answer = "ok"
     win = stand_in(
         session=session or types.SimpleNamespace(**SESSION), busy=False, errors=[],

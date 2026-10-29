@@ -200,8 +200,9 @@ def test_two_versions_stay_on_one_line():
     import re
 
     from openexpress.gui import app
+    from openexpress.gui.updates_page import ARROW
 
-    assert VERSIONS == "23.39" + app.ARROW + "23.40"  # what the window builds
+    assert VERSIONS == "23.39" + ARROW + "23.40"  # what the window builds
     assert not re.search(r"[ \n]→|→[ \n]", VERSIONS)  # no place to break around the arrow
     # Every arrow between two values in the window goes through the constant, in each module
     # of the window (gui/*.py), not only in app.py; navigation.py has no text of the window,
@@ -620,13 +621,13 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
             assert (text, styles) == (f"{VERSIONS}\u00a0· 12\u00a0B", ["dim-label"])
     # The line of parts is centred like the labels around it, and its parts go on to the next
     # line in a narrow window: a separator ends a part, it never starts one.
-    from openexpress.gui import app
+    from openexpress.gui.window_tasks import WRAP_BOX
 
     win, _status, _groups, _buttons = _updates_page(
         updates.parse_updates(lower_keys(beta_answer())))
     (box,) = win.sections["updates"].groups[0].rows
     line = list(_children(box))[2]
-    assert isinstance(line, app.WRAP_BOX or Gtk.FlowBox)
+    assert isinstance(line, WRAP_BOX or Gtk.FlowBox)
     assert line.get_halign() == Gtk.Align.CENTER
     parts = [_text(part)[0] for part in _children(line)]
     assert parts == [f"{VERSIONS}\u00a0· ", "Beta\u00a0· ", "12\u00a0B"]

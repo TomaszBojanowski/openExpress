@@ -187,7 +187,7 @@ def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root
     drawn without waiting for a count; each MTP device keeps what probe opened (its
     GarminDevice.xml and storage), for the count in the background; a drive keeps none."""
     from openexpress.device import gio_storage
-    from openexpress.gui import app
+    from openexpress.gui.detection import DeviceChoices, _choose, connected_devices
 
     roots = {"mtp://one/": device_root, "mtp://two/": _second_device(device_root, tmp_path)}
     monkeypatch.setattr(gio_storage, "_mtp_storage",
@@ -197,10 +197,10 @@ def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root
     found = [gio_storage.FoundDevice(uri, "x", True,
                                      usb=gio_storage.GarminUsb(product, 1, number))
              for uri, product, number in (("mtp://one/", "51b4", 9), ("mtp://two/", "5158", 10))]
-    choices = app._choose(found)
-    assert isinstance(choices, app.DeviceChoices)
+    choices = _choose(found)
+    assert isinstance(choices, DeviceChoices)
     in_the_window("find_all_devices", lambda: found)
-    for summaries in (choices.summaries, app.connected_devices()):
+    for summaries in (choices.summaries, connected_devices()):
         assert [s.to_sync for s in summaries] == [None, None]
         assert sorted(s.device.unit_id for s in summaries) == [1234567890, 3000000002]
         assert all(isinstance(s.storage, LocalStorage) for s in summaries)

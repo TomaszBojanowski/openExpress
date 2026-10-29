@@ -224,7 +224,7 @@ def test_the_count_that_comes_later_is_said_on_the_page():
 
 def test_the_open_device_is_counted_once_without_the_start_page():
     """Opened at once (one device plugged in): its page asks for the count, once."""
-    from openexpress.gui import app
+    from openexpress.gui.device_page import count_open_activities
 
     asked = []
     s = types.SimpleNamespace(
@@ -232,8 +232,8 @@ def test_the_open_device_is_counted_once_without_the_start_page():
         mass_storage=False, ownership_error=None, logged_in=True, to_sync_asked=False)
     win = stand_in(session=s,
                    in_background=lambda work, done, failed=None: asked.append(work))
-    app.count_open_activities(win)
-    app.count_open_activities(win)
+    count_open_activities(win)
+    count_open_activities(win)
     assert len(asked) == 1 and s.to_sync_asked
 
 
@@ -241,7 +241,7 @@ def test_the_open_device_is_counted_once_without_the_start_page():
                                     {"ownership_error": RuntimeError("x")},
                                     {"to_sync_asked": True}])
 def test_a_drive_one_not_logged_in_or_off_the_account_is_not_counted(fields):
-    from openexpress.gui import app
+    from openexpress.gui.device_page import count_open_activities
 
     asked = []
     values = dict(device=types.SimpleNamespace(unit_id=UNIT), storage=types.SimpleNamespace(),
@@ -249,7 +249,7 @@ def test_a_drive_one_not_logged_in_or_off_the_account_is_not_counted(fields):
     values.update(fields)
     win = stand_in(session=types.SimpleNamespace(**values),
                    in_background=lambda work, done, failed=None: asked.append(work))
-    app.count_open_activities(win)
+    count_open_activities(win)
     assert asked == []
 
 
@@ -353,9 +353,9 @@ def test_what_the_window_knows_of_the_account(in_the_window):
 @pytest.mark.parametrize("why, note", [("logged-out", LOGGED_OUT), ("failed", FAILED),
                                        (None, None)])
 def test_the_start_page_says_once_why_it_says_nothing_of_the_account(why, note):
-    from openexpress.gui import app
+    from openexpress.gui.start_window import account_note
 
-    assert app.account_note(why) == note
+    assert account_note(why) == note
 
 
 @pytest.mark.needs_display
@@ -379,15 +379,15 @@ def test_the_note_is_under_the_tiles_and_only_with_tiles():
 
 def test_the_window_gives_the_note_with_the_tiles_drawn():
     """Drawn with the tiles: the note for the state of the account, none without tiles."""
-    from openexpress.gui import app
+    from openexpress.gui.start_window import show_account_note
 
     notes = []
     win = stand_in(_account_why="logged-out",
                    start=types.SimpleNamespace(set_account_note=notes.append))
-    app.show_account_note(win, [("a tile", "its source")])
-    app.show_account_note(win, [])
+    show_account_note(win, [("a tile", "its source")])
+    show_account_note(win, [])
     win._account_why = None
-    app.show_account_note(win, [("a tile", "its source")])
+    show_account_note(win, [("a tile", "its source")])
     assert notes == [LOGGED_OUT, None, None]
 
 
@@ -405,11 +405,11 @@ def test_logging_out_says_it_on_the_start_page(monkeypatch, in_the_window):
 
 
 def test_the_notes_in_polish():
-    from openexpress.gui import app
+    from openexpress.gui.start_window import account_note
 
     i18n.setup("pl")
     try:
-        said = [app.account_note("logged-out"), app.account_note("failed")]
+        said = [account_note("logged-out"), account_note("failed")]
     finally:
         i18n.setup("en")
     assert said == [

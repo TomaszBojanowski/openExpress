@@ -201,7 +201,7 @@ def test_saving_a_picture_holds_the_cache(cache, monkeypatch):
     """A picture or an icon is written to the cache while it is held (not the network part)."""
     import types
 
-    from openexpress.gui import app
+    from openexpress.gui.pictures import PNG_SIGNATURE, cached_download, download_picture
 
     seen, write = [], Path.write_bytes
 
@@ -210,10 +210,10 @@ def test_saving_a_picture_holds_the_cache(cache, monkeypatch):
         return write(self, data)
 
     monkeypatch.setattr(Path, "write_bytes", write_bytes)
-    png = app.PNG_SIGNATURE + b"picture"
+    png = PNG_SIGNATURE + b"picture"
     http = types.SimpleNamespace(get=lambda url, **kw: types.SimpleNamespace(
         ok=True, content=png))
-    assert app.cached_download(http, "https://example/icon.png", "app-x.png") is not None
+    assert cached_download(http, "https://example/icon.png", "app-x.png") is not None
 
     class Stream:
         status_code, headers = 200, {"Content-Type": "image/png"}
@@ -228,7 +228,7 @@ def test_saving_a_picture_holds_the_cache(cache, monkeypatch):
             return [png]
 
     http = types.SimpleNamespace(get=lambda url, **kw: Stream())
-    path, why = app.download_picture(http, "https://res.garmin.com/p.png", "device-x.png")
+    path, why = download_picture(http, "https://res.garmin.com/p.png", "device-x.png")
     assert path is not None and why == ""
     assert seen == [True, True] and not in_use()
 
@@ -620,9 +620,9 @@ def _button(group, title):
 def test_the_group_shows_each_part_and_all_of_it(prefs, cache, tmp_path, monkeypatch, flatpak):
     """A row for each part, with its size and its files, and one for all of it; a part with
     nothing in it has a grey trash. The group says which installation it is about."""
-    from openexpress.gui import app
+    from openexpress import paths
 
-    monkeypatch.setattr(app.paths, "in_flatpak", lambda: flatpak)
+    monkeypatch.setattr(paths, "in_flatpak", lambda: flatpak)
     fill(cache, {"maps/a": 1000, "maps/b": 750, "images/p.png": 30})
     group = prefs._cache_group()
     assert group.get_title() == "Storage"
@@ -846,10 +846,11 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
     change of account while the preferences are open."""
     import types
 
-    from gi.repository import Adw
+    from gi.repository import Adw, Gtk
 
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.navigation import Cause
+    from openexpress.gui.preferences import account_changed
 
     shown, calls = [], []
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
@@ -871,12 +872,12 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
     MainWindow.show_preferences(win)
     assert groups[0].get_title() == "Garmin Connect account"
     (row,) = [w for w in _descendants(groups[0]) if isinstance(w, Adw.ActionRow)]
-    (button,) = [w for w in _descendants(row) if isinstance(w, app.Gtk.Button)]
+    (button,) = [w for w in _descendants(row) if isinstance(w, Gtk.Button)]
     assert (row.get_title(), button.get_label()) == ("someone", "Log out")
     button.emit("clicked")
     assert calls == ["logout"]
     client.auth = None  # logged out: the window tells of the change of account
-    app.account_changed(win, app.Cause.LOGGED_OUT)
+    account_changed(win, Cause.LOGGED_OUT)
     assert (row.get_title(), button.get_label()) == ("Not logged in", "Log In")
     button.emit("clicked")
     assert calls == ["logout", "login"]

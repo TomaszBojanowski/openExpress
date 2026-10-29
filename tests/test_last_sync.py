@@ -64,7 +64,7 @@ def test_every_row_in_english_and_polish(data, english, polish):
     window (when, then the same words; a hard space before "·")."""
     from datetime import datetime
 
-    from openexpress.gui.app import last_sync_words
+    from openexpress.gui.device_page import last_sync_words
 
     data = {**data, "time": datetime(2026, 10, 19, 12, 0).timestamp()}
     now = datetime(2026, 10, 22, 12, 0)
@@ -157,7 +157,7 @@ def test_the_row_of_a_sync_in_polish():
     when, told against now, then the numbers; the details name the files and the 2."""
     from datetime import datetime
 
-    from openexpress.gui.app import last_sync_words
+    from openexpress.gui.device_page import last_sync_words
 
     data = {"time": datetime(2026, 10, 18, 21, 14).timestamp(), "uploaded": 6,
             "skipped_known": 2, "downloaded": 0, "rejected": 0, "errors": [], "lines": [
@@ -469,7 +469,7 @@ def test_a_record_of_the_last_sync_of_an_unexpected_shape_reads_as_none(xdg, fie
     import json
 
     from openexpress import paths
-    from openexpress.gui.app import last_sync_words
+    from openexpress.gui.device_page import last_sync_words
 
     good = {"time": 1761000000.0, "unit_id": UNIT, "uploaded": 1, "downloaded": 0,
             "skipped_known": 0, "rejected": 0, "errors": [], "lines": []}
@@ -486,12 +486,17 @@ def test_gui_settings_of_an_unexpected_shape_read_as_none(xdg, text):
     """gui.json that is not an object (edited by hand): the defaults, not a window that does
     not start."""
     from openexpress import paths
-    from openexpress.gui import app
+    from openexpress.gui.gui_settings import (
+        DEFAULT_WINDOW,
+        gui_settings_path,
+        load_gui_settings,
+        window_geometry,
+    )
 
-    paths.write_private(app.gui_settings_path(), text)
-    settings = app.load_gui_settings()
+    paths.write_private(gui_settings_path(), text)
+    settings = load_gui_settings()
     assert settings == {}
-    assert app.window_geometry(settings) == (*app.DEFAULT_WINDOW, False)
+    assert window_geometry(settings) == (*DEFAULT_WINDOW, False)
 
 
 def test_the_record_of_the_last_sync_is_read_as_utf_8_whatever_the_locale(xdg):

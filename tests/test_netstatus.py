@@ -373,7 +373,7 @@ def note(state, steps):
     (((netstatus.CONNECT, 401),), netstatus.SIGN_IN_EXPIRED),
 ])
 def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_state):
-    from openexpress.gui.app import DOT, NET_COLOUR, NET_COLOURS
+    from openexpress.gui.netstatus_view import DOT, NET_COLOUR, NET_COLOURS
 
     win, _bar, window = _status_window()
     note(network_state, steps)
@@ -388,7 +388,7 @@ def test_the_button_shows_the_state_in_words_and_colour(steps, state, network_st
 
 @pytest.mark.needs_display
 def test_the_popover_names_each_service_with_its_server_and_time(network_state):
-    from openexpress.gui.app import DOT
+    from openexpress.gui.netstatus_view import DOT
 
     win, _bar, window = _status_window()
     note(network_state, [(netstatus.CONNECT, 200), (netstatus.OMT, 200), (netstatus.OMT, 503)])
@@ -443,6 +443,7 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
     from gi.repository import GObject, Gtk
 
     from openexpress.gui import app
+    from openexpress.gui.netstatus_view import _render_net_status_on_show
 
     class Root(Gtk.Window):  # never shown: a stand-in for the main window
         session = None
@@ -465,7 +466,7 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
     popover = root.net_button.get_popover()
     show = GObject.signal_lookup("show", Gtk.Widget)
     assert GObject.signal_has_handler_pending(popover, show, 0, False)  # opening redraws
-    app._render_net_status_on_show(popover)  # what opening it does
+    _render_net_status_on_show(popover)  # what opening it does
     assert when.get_label() == "yesterday, 23:40"
     root.destroy()
 
@@ -474,7 +475,7 @@ def test_the_popover_tells_the_date_of_an_answer_from_yesterday_when_opened(monk
 def test_the_popover_opens_upwards_from_the_left_edge_of_the_button():
     from gi.repository import Gtk
 
-    from openexpress.gui.app import NET_POPOVER_WIDTH
+    from openexpress.gui.netstatus_view import NET_POPOVER_WIDTH
 
     win, _bar, _window = _status_window()
     popover = win.net_button.get_popover()
@@ -528,7 +529,7 @@ def test_the_window_draws_later_only_while_it_is_there():
     import gc
     import weakref
 
-    from openexpress.gui.app import _render_net_status_later
+    from openexpress.gui.netstatus_view import _render_net_status_later
 
     class Win:
         drawn = 0

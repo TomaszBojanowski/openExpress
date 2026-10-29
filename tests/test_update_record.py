@@ -116,7 +116,7 @@ def _children(widget):
 
 
 def _subtitle_classes(row):
-    from openexpress.gui.app import row_subtitle
+    from openexpress.gui.window_tasks import row_subtitle
 
     return set(row_subtitle(row).get_css_classes())
 

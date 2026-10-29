@@ -15,11 +15,11 @@ EMAIL = "name@example.com"
 
 def _at_once(monkeypatch):
     """The window's thread and main loop, run at once."""
-    from openexpress.gui import app
+    from gi.repository import GLib
 
     replace_in_window(monkeypatch, "threading", types.SimpleNamespace(
         Thread=lambda target, daemon: types.SimpleNamespace(start=target)))
-    monkeypatch.setattr(app.GLib, "idle_add", lambda fn, *args: fn(*args))
+    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
 
 
 def _failing_work():

@@ -18,6 +18,8 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
                                                                          in_the_window):
     from openexpress import netstatus
     from openexpress.gui import app
+    from openexpress.gui.detection import DeviceChoices
+    from openexpress.gui.device_page import remember_update_found
 
     # An opening before, on a window of chosen methods (as in test_tile_facts): the account
     # came, the devices were counted, the fēnix's page found an update. What the tiles said
@@ -27,7 +29,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     before._set_account(ACCOUNT)
     _run(before)
     fenix = next(s for s in before.connected.devices if s.unit_id == FENIX)
-    app.remember_update_found(fenix.device, [types.SimpleNamespace(
+    remember_update_found(fenix.device, [types.SimpleNamespace(
         title="Map Region Grouping file", version="2.31", is_system=False)])
     before._render_start()
     assert dict(_said(before)) == LAST
@@ -36,7 +38,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     # the counts are held back, so that the first frame has only what was kept.
     detected, asked, counted, frames = [], [], [], []
     in_the_window("detect_devices", lambda current_uri=None: (
-        detected.append(current_uri), app.DeviceChoices(four()))[1])
+        detected.append(current_uri), DeviceChoices(four()))[1])
     monkeypatch.setattr(app.MainWindow, "_fetch_account", lambda self: asked.append(1))
     monkeypatch.setattr(app.MainWindow, "_count_activities",
                         lambda self, entries: counted.append(len(entries)))

@@ -424,11 +424,13 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     """As on the start page and the device view: "Last seen", "Last sync" and the check of
     updates drawn again once a minute, only where the words changed; the timer runs while
     the page is shown."""
-    from openexpress import netstatus, service, sync
-    from openexpress.gui import app
-    from openexpress.gui.app import MainWindow
+    from gi.repository import GLib
 
-    timers, real_remove = {}, app.GLib.source_remove
+    from openexpress import netstatus, service, sync
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.start_window import RELATIVE_REFRESH_S
+
+    timers, real_remove = {}, GLib.source_remove
 
     def add_seconds(seconds, fn):
         timers[len(timers) + 1000] = (seconds, fn)
@@ -439,11 +441,11 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
             real_remove(source)
 
     def minute_timers():
-        return [fn for seconds, fn in timers.values() if seconds == app.RELATIVE_REFRESH_S]
+        return [fn for seconds, fn in timers.values() if seconds == RELATIVE_REFRESH_S]
 
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, **kw: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", add_seconds)
-    monkeypatch.setattr(app.GLib, "source_remove", remove)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", add_seconds)
+    monkeypatch.setattr(GLib, "source_remove", remove)
     seen = (NOON - timedelta(minutes=2)).timestamp()
     known_devices.remember(UNIT, "fēnix 8 - 47mm, Solar", "006-B4532-00", "23.39", "mtp",
                            now=seen)

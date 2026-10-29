@@ -232,13 +232,13 @@ def test_choosing_the_first_sync(click, words, started):
 
 @pytest.mark.parametrize(("words", "cleared"), [("Clear", [["maps"]]), ("Cancel", [])])
 def test_clearing_a_part_of_the_cache(click, words, cleared, in_the_window):
-    from openexpress.gui import app
+    from openexpress.gui.preferences import ask_to_clear
 
     got = []
     in_the_window("clear_cache", lambda win, names, button: got.append(names))
     win = _window(_storage=types.SimpleNamespace(parts={"maps": (None, object())},
                                                  everything=(None, object())))
-    app.ask_to_clear(win, "Clear the downloaded maps?", "They take 1 GB.", ["maps"])
+    ask_to_clear(win, "Clear the downloaded maps?", "They take 1 GB.", ["maps"])
     click(words, until=lambda: got == cleared and not click.shown[-1].get_mapped())
 
 
@@ -461,12 +461,12 @@ def _playlist_add(ctx):
 
 
 def _cache_clear(ctx):
-    from openexpress.gui import app
+    from openexpress.gui.preferences import ask_to_clear
 
     ctx.in_the_window("clear_cache", _note(ctx, "clear_cache"))
     win = _escape_window(ctx, _storage=types.SimpleNamespace(parts={"maps": (None, object())},
                                                              everything=(None, object())))
-    app.ask_to_clear(win, "Clear the downloaded maps?", "They take 1 GB.", ["maps"])
+    ask_to_clear(win, "Clear the downloaded maps?", "They take 1 GB.", ["maps"])
 
 
 def _update_install(ctx):

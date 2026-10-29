@@ -281,8 +281,8 @@ def test_a_device_found_without_a_drive_is_looked_for_again_a_few_times(drives, 
                                                                         open_device, sectors):
     """The one detection 2.5 s after the device came may find no drive yet: it is looked
     for again every DRIVE_RETRY_S, at most DRIVE_RETRIES times."""
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.detection import DRIVE_RETRIES
 
     volume, _key = _drive(drives, monkeypatch, sectors=sectors or 0)
     _monitor(monkeypatch, volumes=[] if sectors is None else [volume])
@@ -296,7 +296,7 @@ def test_a_device_found_without_a_drive_is_looked_for_again_a_few_times(drives, 
         clock.now += 2
         MainWindow._poll_usb(page, clock)
     again = asked[len(first):]
-    assert again == [(500, None, Cause.PLUGGED)] * app.DRIVE_RETRIES
+    assert again == [(500, None, Cause.PLUGGED)] * DRIVE_RETRIES
 
 
 def test_once_the_drive_is_found_it_is_not_looked_for_again(drives, monkeypatch):

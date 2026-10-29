@@ -17,29 +17,31 @@ from openexpress import sync
 def test_the_view_is_automatic_unless_one_was_chosen():
     """No gui.json, no key, a value of another type or not known: automatic, and the file is
     not written again."""
-    from openexpress.gui import app
+    from openexpress.gui.gui_settings import gui_settings_path, save_gui_settings
+    from openexpress.gui.start_window import StartView
 
-    assert app.StartView.saved() == "auto"
-    path = app.gui_settings_path()
+    assert StartView.saved() == "auto"
+    path = gui_settings_path()
     for bad in ("tiles", 3, None, ["list"], {"view": "list"}, True):
-        app.save_gui_settings({"start_view": bad, "window": {"width": 800}})
+        save_gui_settings({"start_view": bad, "window": {"width": 800}})
         before = path.read_bytes()
-        assert app.StartView.saved() == "auto"
+        assert StartView.saved() == "auto"
         assert path.read_bytes() == before
     path.write_text("[1, 2]")  # not an object (edited by hand)
-    assert app.StartView.saved() == "auto"
+    assert StartView.saved() == "auto"
 
 
 def test_the_view_and_the_window_size_keep_each_other():
-    from openexpress.gui import app
+    from openexpress.gui.gui_settings import load_gui_settings, save_window_geometry
+    from openexpress.gui.start_window import StartView
 
-    app.save_window_geometry(900, 700, False)
-    app.StartView.save("list")
-    assert app.load_gui_settings() == {
+    save_window_geometry(900, 700, False)
+    StartView.save("list")
+    assert load_gui_settings() == {
         "window": {"width": 900, "height": 700, "maximized": False}, "start_view": "list"}
-    app.save_window_geometry(1000, 740, True)
-    assert app.StartView.saved() == "list"
-    assert app.load_gui_settings()["window"] == {"width": 1000, "height": 740,
+    save_window_geometry(1000, 740, True)
+    assert StartView.saved() == "list"
+    assert load_gui_settings()["window"] == {"width": 1000, "height": 740,
                                                  "maximized": True}
 
 
@@ -148,12 +150,12 @@ def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypat
     from gi.repository import GLib
 
     from openexpress import netstatus
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.gui_settings import load_gui_settings, save_gui_settings
 
-    app.save_gui_settings({"window": {"width": 900, "height": 700}, "start_view": "list"})
+    save_gui_settings({"window": {"width": 900, "height": 700}, "start_view": "list"})
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
         action = win.lookup_action("start-view")
@@ -168,7 +170,7 @@ def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypat
         win._render_start = lambda: drawn.append(win.start.view)
         action.activate(GLib.Variant.new_string("grid"))
         assert drawn == ["grid"] and action.get_state().get_string() == "grid"
-        assert app.load_gui_settings() == {"window": {"width": 900, "height": 700},
+        assert load_gui_settings() == {"window": {"width": 900, "height": 700},
                                            "start_view": "grid"}
         action.activate(GLib.Variant.new_string("tiles"))
         assert drawn == ["grid"] and action.get_state().get_string() == "grid"
@@ -179,12 +181,14 @@ def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypat
 
 @pytest.mark.needs_display
 def test_in_polish():
+    from gi.repository import Gio
+
     from openexpress import i18n
-    from openexpress.gui import app
+    from openexpress.gui.start_window import StartView
 
     i18n.setup("pl")
     try:
-        (view,) = _menu_items(app.StartView.menu(app.Gio.Menu()))
+        (view,) = _menu_items(StartView.menu(Gio.Menu()))
     finally:
         i18n.setup("en")
     assert view == ("Widok", [("Automatycznie", "win.start-view", "auto"),
@@ -201,6 +205,7 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     same."""
     from openexpress.device import gio_storage
     from openexpress.gui import app, start
+    from openexpress.gui.start_window import StartView
 
     def asked(*_a, **_k):
         raise AssertionError("a device was asked")
@@ -215,7 +220,7 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     assert _chips_on(win.start.tiles()[0]) == ["To sync"]
     for name in ("find_all_devices", "probe"):
         monkeypatch.setattr(gio_storage, name, asked)
-    app.StartView.choose(win, "list")
+    StartView.choose(win, "list")
     (row,) = win.start.tiles()
     assert isinstance(row, start.DeviceRow) and _chips_on(row) == ["To sync"]
     assert win.later == []  # not counted again
@@ -225,6 +230,6 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     win._count_activities_again()
     assert win.start.tiles() == [row] and _chips_on(row) == ["Synced"]
-    app.StartView.choose(win, "grid")
+    StartView.choose(win, "grid")
     (tile,) = win.start.tiles()
     assert not isinstance(tile, start.DeviceRow) and _chips_on(tile) == ["Synced"]

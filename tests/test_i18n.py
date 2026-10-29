@@ -221,10 +221,9 @@ def test_cli_in_polish_shows_sizes_with_a_comma_and_versions_with_a_point(polish
 
 
 def test_window_row_in_polish_uses_the_same_sizes(polish):
-    from openexpress.gui import app
-    from openexpress.i18n import _
+    from openexpress.i18n import _, human_size
 
-    assert app.human_size is __import__("openexpress.cli", fromlist=["_human"])._human
-    text = _("{free} free of {total}").format(free=app.human_size(6657199308),
-                                              total=app.human_size(7623566950))
+    assert human_size is __import__("openexpress.cli", fromlist=["_human"])._human
+    text = _("{free} free of {total}").format(free=human_size(6657199308),
+                                              total=human_size(7623566950))
     assert text == "6,7\u00a0GB wolne z\u00a07,6\u00a0GB"

@@ -17,141 +17,39 @@ gi.require_version("Gio", "2.0")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import (  # noqa: E402, F401 - paths also gui.app.paths for the tests
-    devicelist,
-    diagnostics,
-    i18n,
-    known_devices,
-    last_sync,
-    netstatus,
-    paths,
-    service,
-    sync,
-    tile_facts,
-)
+from openexpress import netstatus, service  # noqa: E402
 from openexpress.connect import NotAccountDevice  # noqa: E402
 from openexpress.console import error as print_error  # noqa: E402
 from openexpress.device.gio_storage import ABSENT  # noqa: E402
 from openexpress.gui import pictures, start  # noqa: E402
-from openexpress.gui.apps_page import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    AppsPage,
-    apps_count_text,
-    note_apps_count,
-    refused_dirs_text,
-)
-from openexpress.gui.connected import Connected, session_summary  # noqa: E402, F401 - also gui.app.<name> for the tests
-from openexpress.gui.detection import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    DRIVE_RETRIES,
-    REPLUG_HINT,
-    DeviceChoices,
-    DeviceDetection,
-    _choose,
-    connected_devices,
-    detect_devices,
-    detection_due,
-    schedule_detection,
-    with_space,
-)
-from openexpress.gui.device_page import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    DevicePage,
-    Section,
-    backups_text,
-    copy_crash_logs,
-    copy_dumps,
-    count_open_activities,
-    device_error_row,
-    last_sync_subtitle,
-    last_sync_words,
-    open_device_kind,
-    refresh_last_sync_subtitle,
-    remember_sync_count,
-    remember_update_found,
-    show_backups,
-    show_not_for_mass_storage,
-)
+from openexpress.gui.apps_page import AppsPage  # noqa: E402
+from openexpress.gui.connected import Connected  # noqa: E402
+from openexpress.gui.detection import DeviceDetection  # noqa: E402
+from openexpress.gui.device_page import DevicePage, Section  # noqa: E402
 from openexpress.gui.forget_device import ForgetDevice  # noqa: E402
-from openexpress.gui.gui_settings import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    DEFAULT_WINDOW,
+from openexpress.gui.gui_settings import (  # noqa: E402
     MIN_WINDOW,
-    gui_settings_path,
     load_gui_settings,
-    save_gui_settings,
     save_window_geometry,
-    update_gui_settings,
     window_geometry,
 )
 from openexpress.gui.maps_page import MapsPage  # noqa: E402
-from openexpress.gui.music_page import MusicPage, note_music_count  # noqa: E402, F401 - also gui.app.<name> for the tests
+from openexpress.gui.music_page import MusicPage  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
-from openexpress.gui.netstatus_view import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    DOT,
-    NET_COLOUR,
-    NET_COLOURS,
-    NET_POPOVER_WIDTH,
-    NetStatusPanel,
-    _render_net_status_later,
-    _render_net_status_on_show,
-)
-from openexpress.gui.pictures import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    PNG_SIGNATURE,
-    cached_download,
-    cached_texture,
-    device_picture_path,
-    download_picture,
-    load_texture,
-    note_segment,
-    picture_from_unit_info,
-    picture_target,
-    with_device_picture,
-)
-from openexpress.gui.preferences import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    KEYS,
-    Preferences,
-    account_changed,
-    account_client,
-    ask_clear_cache_part,
-    ask_to_clear,
-    diagnostics_group,
-    load_ui_language,
-    resolve_account,
-    save_ui_language,
-    show_cache_usage,
-)
+from openexpress.gui.netstatus_view import NetStatusPanel, _render_net_status_later  # noqa: E402
+from openexpress.gui.preferences import KEYS, Preferences  # noqa: E402
 from openexpress.gui.report_dialog import ReportDialog  # noqa: E402
 from openexpress.gui.start import RememberedPage, StartPage  # noqa: E402
-from openexpress.gui.start_window import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    RELATIVE_REFRESH_S,
-    StartView,
-    StartWindow,
-    account_note,
-    account_subtitle,
-    choice_subtitle,
-    remembered_subtitle,
-    show_account_note,
-)
-from openexpress.gui.tasks import writes_to_device  # noqa: E402, F401 - also gui.app.<name> for the tests
-from openexpress.gui.updates_page import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    ARROW,
-    UpdatesPage,
-    update_check_failed,
-)
-from openexpress.gui.window_tasks import (  # noqa: E402, F401 - also gui.app.<name> for the tests
-    TEXT_AFTER_MS,
-    WRAP_BOX,
+from openexpress.gui.start_window import StartView, StartWindow  # noqa: E402
+from openexpress.gui.updates_page import UpdatesPage  # noqa: E402
+from openexpress.gui.window_tasks import (  # noqa: E402
     TaskRunner,
     collect_garbage,
     inform,
     log_unexpected,
-    read_space,
-    refresh_space,
-    render_space,
-    row_subtitle,
-    show_working,
-    still_in_window,
     stop_waiting,
-    wrapping_row,
 )
-from openexpress.i18n import N_, _, human_size, pgettext  # noqa: E402, F401 - human_size also gui.app.human_size for the tests
+from openexpress.i18n import _, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 

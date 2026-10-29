@@ -14,7 +14,7 @@ NETWORK = ("Cannot check the device on your account: network error (HTTPSConnect
 
 
 def _section(key):
-    from openexpress.gui.app import Section
+    from openexpress.gui.device_page import Section
 
     return Section(key, key.title(), "x-symbolic", "Loading…")
 
@@ -50,12 +50,12 @@ def test_the_apps_page_shows_an_ownership_error_with_brackets():
 
 @pytest.mark.needs_display
 def test_a_page_not_for_a_drive_shows_its_words_with_brackets(in_the_window):
-    from openexpress.gui import app
+    from openexpress.gui.device_page import show_not_for_mass_storage
 
     words = "A drive <made up> & its words"
     in_the_window("mass_storage_text", lambda: words)
     section = _section("maps")
-    app.show_not_for_mass_storage(section)
+    show_not_for_mass_storage(section)
     assert words in _shown(section)
 
 

@@ -350,13 +350,14 @@ def test_a_section_laid_out_anew_without_it_is_built_again():
 @pytest.mark.needs_display
 def test_the_button_of_the_window_asks(monkeypatch, asked):
     """In the window itself: the view of a remembered device shows the button, and it asks."""
+    from gi.repository import GLib
+
     from openexpress import netstatus
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     known = remembered()
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
         win._fill_remembered(known)
@@ -400,15 +401,16 @@ def test_clicking_forget_in_the_window_forgets(monkeypatch):
     "closed" comes before "response" (libadwaita 1.9), so the choice must not be
     taken from what "closed" lets go of. The device is forgotten and the window goes back to
     the start page."""
+    from gi.repository import GLib
+
     from openexpress import known_devices, netstatus, paths
-    from openexpress.gui import app
     from openexpress.gui.app import MainWindow
 
     known = remembered(EDGE, "Venu 2", "006-B3703-00")
     last_sync_of(EDGE)
     monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: None)
     monkeypatch.setattr(MainWindow, "_update_relative_timer", lambda self: None)
-    monkeypatch.setattr(app.GLib, "timeout_add_seconds", lambda s, fn: 0)
+    monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
         win.present()

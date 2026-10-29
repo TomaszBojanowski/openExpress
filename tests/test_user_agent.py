@@ -67,9 +67,9 @@ def _ask_everything(client: GarminClient, tmp_path: Path, fetch_session) -> None
                             b"made-up activity", is_zip=False, last_file=True,
                             authenticated=True)
     client.poll_location(up.location, delay_ms=1, timeout_s=5)
-    from openexpress.gui import app
+    from openexpress.gui.pictures import download_picture
 
-    app.download_picture(client.http, "https://res.garmin.com/p.png", "device-x.png")
+    download_picture(client.http, "https://res.garmin.com/p.png", "device-x.png")
     body = b"made-up update"
     download.fetch(["https://download.garmin.com/made-up/update.gcd"], tmp_path / "update.gcd",
                    len(body), hashlib.md5(body).hexdigest(), session=fetch_session)

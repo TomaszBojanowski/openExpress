@@ -495,11 +495,11 @@ def test_the_open_inreach_gets_the_icon_of_a_handheld_too():
     """The device view before its picture: the same kind as its tile."""
     import types
 
-    from openexpress.gui import app
+    from openexpress.gui.device_page import open_device_kind
 
     s = types.SimpleNamespace(mass_storage=True, device=types.SimpleNamespace(
         unit_id=3000000005, description="inReach Mini 2", part_number="006-B3968-00"))
-    assert app.open_device_kind(s, None) == "handheld"
+    assert open_device_kind(s, None) == "handheld"
 
 
 @pytest.fixture
@@ -540,14 +540,14 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
     an update or for a picture); a bike accessory is a kind Garmin tells."""
     import types
 
-    from openexpress.gui import app
+    from openexpress.gui.pictures import note_segment
 
     venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
     varia = types.SimpleNamespace(unit_id=VARIA, part_number="006-B3592-03")
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        app.note_segment(venu, {"segmenttype": "Fitness", "serialnumber": "SECRET123"})
-        app.note_segment(venu, {"segmenttype": "Fitness", "connectsupport": "Enabled"})
-        app.note_segment(varia, {"segmenttype": "BikeAccessory"})
+        note_segment(venu, {"segmenttype": "Fitness", "serialnumber": "SECRET123"})
+        note_segment(venu, {"segmenttype": "Fitness", "connectsupport": "Enabled"})
+        note_segment(varia, {"segmenttype": "BikeAccessory"})
     assert _no_kind_lines(caplog) == [
         ("devices: Garmin tells no kind of 006-B3703-00 (account categories: not known; "
          "unit-info segment: Fitness, connect support: none given)"),
@@ -563,17 +563,17 @@ def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(kinds_told
     said too."""
     import types
 
-    from openexpress.gui import app
+    from openexpress.gui.pictures import note_segment
 
     nuvi = types.SimpleNamespace(unit_id=3000000052, part_number="006-B1234-00")  # made up
     venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
     edge = types.SimpleNamespace(unit_id=EDGE, part_number="006-B4440-00")
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        app.note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu",
+        note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu",
                                 "serialnumber": "SECRET123"})
-        app.note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu"})
-        app.note_segment(venu, {"segmenttype": "Fitness"})
-        app.note_segment(edge, {"segmenttype": "Fitness", "mapupdatetype": 4})
+        note_segment(nuvi, {"segmenttype": "Automotive", "mapupdatetype": "LegacyRmu"})
+        note_segment(venu, {"segmenttype": "Fitness"})
+        note_segment(edge, {"segmenttype": "Fitness", "mapupdatetype": 4})
     tail = " (openExpress asks the universal map service only)"
     assert [r.getMessage() for r in caplog.records if "map update type" in r.getMessage()] == [
         "maps: unit-info gives the map update type LegacyRmu for 006-B1234-00" + tail,

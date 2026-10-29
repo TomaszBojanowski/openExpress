@@ -191,7 +191,7 @@ def _page_rows(device_root, country):
 
 
 def _rows(widget):
-    from openexpress.gui.app import Adw
+    from gi.repository import Adw
 
     if isinstance(widget, Adw.ActionRow):
         return [widget]

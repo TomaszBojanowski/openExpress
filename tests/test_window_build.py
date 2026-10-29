@@ -83,6 +83,7 @@ def test_the_side_panel_chooses_a_section(window):
 def test_closing_saves_the_size(monkeypatch):
     from openexpress import netstatus
     from openexpress.gui import app
+    from openexpress.gui.gui_settings import load_gui_settings
 
     monkeypatch.setattr(app.MainWindow, "refresh_device", lambda self, cause=None: None)
     win = app.MainWindow(None)
@@ -91,7 +92,7 @@ def test_closing_saves_the_size(monkeypatch):
     listener = win._net_listener
     win.close()
     netstatus.STATUS.remove_listener(listener)
-    assert app.load_gui_settings()["window"] == {"width": 900, "height": 700,
+    assert load_gui_settings()["window"] == {"width": 900, "height": 700,
                                                  "maximized": False}
 
 

@@ -186,7 +186,7 @@ def test_no_chip_while_the_account_does_not_let_a_sync_upload():
 
 
 def test_the_open_device_s_tile_has_what_its_session_counted():
-    from openexpress.gui import app
+    from openexpress.gui.connected import session_summary
 
     counted = sync.ActivitiesToSync(UNIT, frozenset({"a.fit"}), 1)
     session = types.SimpleNamespace(
@@ -194,7 +194,7 @@ def test_the_open_device_s_tile_has_what_its_session_counted():
                                      software_version_str="23.39", unit_id=UNIT),
         storage=types.SimpleNamespace(device_uri="mtp://made-up/"), mass_storage=False,
         to_sync=counted)
-    assert app.session_summary(session).to_sync is counted
+    assert session_summary(session).to_sync is counted
 
 
 # --- counted again after a sync, without the device -----------------------------------------

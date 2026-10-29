@@ -79,12 +79,14 @@ def _map(*sizes):
 
 @pytest.fixture
 def map_window(device_root, monkeypatch):
+    from gi.repository import Adw
+
     from openexpress.gui import app
 
     (device_root / "Garmin/Maps").mkdir(parents=True, exist_ok=True)
     (device_root / "Garmin/Maps/Map0.img").write_bytes(b"x" * 300)  # an older one, replaced
     Question.asked = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    monkeypatch.setattr(Adw, "AlertDialog", Question)
     storage = Counting(device_root)
     m = _map(1000, 2000)
     tasks = tasks_in_a_thread()
@@ -105,6 +107,7 @@ def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device
     """After a short "Checking the space…": the question with the download, space and files."""
     from openexpress import maps as mp
     from openexpress.gui import app
+    from openexpress.i18n import human_size
 
     win, m, storage = map_window
     plain = LocalStorage(device_root)
@@ -118,7 +121,7 @@ def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device
     assert asked["heading"] == "Install Test Map?"
     assert asked["body"].startswith(
         "Download: 3.0\u00a0kB\n"
-        f"Space on the device: {app.human_size(need)} ({app.human_size(free)} free)\nFiles: 2")
+        f"Space on the device: {human_size(need)} ({human_size(free)} free)\nFiles: 2")
 
 
 @pytest.mark.parametrize("meanwhile", ["unplugged", "list read again without it"])
@@ -273,7 +276,7 @@ def test_the_install_button_of_the_maps_page_starts_the_check_from_itself(server
     """Install and Update on the Maps page hand their own button to the check."""
     from gi.repository import Gtk
 
-    from openexpress.gui import app
+    from openexpress.gui.window_tasks import TEXT_AFTER_MS
 
     win, section, _asked = _real_maps_page([maps_response(server)], device_root)
     started = []
@@ -285,7 +288,7 @@ def test_the_install_button_of_the_maps_page_starts_the_check_from_itself(server
     for b in buttons:
         b.emit("clicked")
     assert started == buttons and all(isinstance(b, Gtk.Button) for b in started)
-    assert app.TEXT_AFTER_MS == 500
+    assert TEXT_AFTER_MS == 500
 
 
 def _suffix_buttons(row):
@@ -311,12 +314,14 @@ NOTE = "Before any change, a copy of the app list of the device is made."
 
 
 def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeypatch):
+    from gi.repository import Adw
+
     from openexpress import ciq
     from openexpress.gui import app
 
     st, dev, backups = order_device
     Question.asked = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    monkeypatch.setattr(Adw, "AlertDialog", Question)
     copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     storage = Counting(st.root)
@@ -357,14 +362,14 @@ class Dialog:
 def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     """The note comes with the list read in the background (read_installed read the app
     list, so it is there): Next hands it to the question, which asks the device nothing."""
-    from gi.repository import Gtk
+    from gi.repository import Adw, Gtk
 
     from openexpress import ciq
     from openexpress.gui import app
 
     st, dev, backups = order_device
     Dialog.made = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", Dialog)
+    monkeypatch.setattr(Adw, "AlertDialog", Dialog)
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     storage = Counting(st.root)
@@ -410,14 +415,14 @@ def _rows(group):
 def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     """The free space and the size of the device are read with the maps, in the task: the
     page shows them under "On the device" and asks the device nothing as it is drawn."""
-    from openexpress.gui import app
+    from openexpress.i18n import human_size
 
     win, section, _asked = _real_maps_page([maps_response(server)], device_root)
     storage = Counting(device_root)
     win.session.storage = storage
     win.run_task = tasks_in_a_thread()
     plain = LocalStorage(device_root)
-    title = f"{app.human_size(plain.free_space())} free of {app.human_size(plain.capacity())}"
+    title = f"{human_size(plain.free_space())} free of {human_size(plain.capacity())}"
     win.load_section("maps")
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (on_device,) = [g for g in section.groups if g.get_title() == "On the device"]
@@ -433,6 +438,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     from test_fixes_ui import page_window
 
     from openexpress.gui import app
+    from openexpress.i18n import human_size
 
     st, dev = iq_device
     win, section = page_window("music")
@@ -443,7 +449,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
     for name in ("load_music", "show_music"):
         setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))
-    free = app.human_size(LocalStorage(st.root).free_space())
+    free = human_size(LocalStorage(st.root).free_space())
     win.load_music()
     assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]
@@ -588,12 +594,12 @@ def test_after_a_task_that_writes_the_free_space_is_read_again(iq_device):
     _turn_until(lambda: False, 0.1)
     assert storage.elsewhere == []
 
-    from openexpress.gui import app
+    from openexpress.gui.tasks import writes_to_device
 
     def write():
         storage.free = 40_000_000_000
 
-    win.run_task("Copying…", app.writes_to_device(write), lambda result: None)
+    win.run_task("Copying…", writes_to_device(write), lambda result: None)
     _turn_until(lambda: _storage_subtitle(section) != READ)
     assert _storage_subtitle(section) == "40.0\u00a0GB free of 64.0\u00a0GB"
     assert storage.on_gtk == [] and storage.elsewhere == ["free_space"]
@@ -611,9 +617,9 @@ def test_a_space_read_after_the_device_was_unplugged_is_dropped(iq_device):
     storage = Space(st.root, free=1, wait=answer)
     win, section, s = _overview_window(storage, dev, space=(FREE, SIZE))
     win.show_overview()
-    from openexpress.gui import app
+    from openexpress.gui.tasks import writes_to_device
 
-    win.run_task("Copying…", app.writes_to_device(lambda: None), lambda result: None)
+    win.run_task("Copying…", writes_to_device(lambda: None), lambda result: None)
     _turn_until(lambda: "free_space" in storage.elsewhere)
     win.session = None  # unplugged
     answer.set()
@@ -639,6 +645,7 @@ def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, 
                                                                      in_the_window):
     """refresh_device and open_choice: the device found is opened with its free space and
     size read in the task's thread, never on the window's."""
+    from openexpress import service
     from openexpress.gui import app
 
     st, dev = iq_device
@@ -650,8 +657,8 @@ def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, 
             show=lambda key: None)},
         run_task=lambda title, fn, done=None, failed=None, **kw: works.append(fn))
     in_the_window("detect_devices", lambda current_uri=None: session)
-    monkeypatch.setattr(app.service, "open_session", lambda found=None: session)
-    monkeypatch.setattr(app.service, "check_session", lambda s: s)
+    monkeypatch.setattr(service, "open_session", lambda found=None: session)
+    monkeypatch.setattr(service, "check_session", lambda s: s)
     app.MainWindow.refresh_device(win)
     app.MainWindow.open_choice(win, object())
     assert len(works) == 2
@@ -714,10 +721,12 @@ def test_every_task_that_writes_to_the_device_says_so():
 
 def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
     """The report the window shows for the device (its preview), the dialog recorded."""
+    from gi.repository import Adw
+
     from openexpress.gui import app
 
     Question.asked = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", Question)
+    monkeypatch.setattr(Adw, "AlertDialog", Question)
     s = types.SimpleNamespace(device=dev, storage=storage, logged_in=False)
     if space is not NOT_READ:
         s.space = space
@@ -849,14 +858,14 @@ def test_restore_order_spins_its_button(order_device, monkeypatch, delay, text_s
     then one question with them."""
     import time
 
-    from gi.repository import Gtk
+    from gi.repository import Adw, Gtk
 
     from openexpress import ciq
     from openexpress.gui import app
 
     st, dev, backups = order_device
     Dialog.made = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", Dialog)
+    monkeypatch.setattr(Adw, "AlertDialog", Dialog)
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: (
         time.sleep(delay), real(device, state, backups))[1])
@@ -925,11 +934,12 @@ def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
 
     from gi.repository import Adw, Gtk
 
+    from openexpress import service
     from openexpress.gui import app
 
     questions = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
-    monkeypatch.setattr(app.service, "set_primary_training",
+    monkeypatch.setattr(service, "set_primary_training",
                         lambda client, device, apply: time.sleep(delay))
     s = types.SimpleNamespace(device=types.SimpleNamespace(description="Test watch"),
                               logged_in=True, ownership_error=None, client=None)
@@ -971,9 +981,10 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
     question with itself."""
     from gi.repository import Adw
 
+    from openexpress import service
     from openexpress.gui import app
 
-    monkeypatch.setattr(app.service, "primary_training_status",
+    monkeypatch.setattr(service, "primary_training_status",
                         lambda client, device, listed: PRIMARY)
     started = []
     win = stand_in(

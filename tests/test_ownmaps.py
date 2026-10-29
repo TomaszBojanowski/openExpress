@@ -916,7 +916,7 @@ def own_maps_window(key="maps"):
 
 def rows_of(group):
     """(title, subtitle, has a button) of the rows of a preferences group, as it was built."""
-    from openexpress.gui.app import Adw, Gtk
+    from gi.repository import Adw, Gtk
 
     found = []
 
@@ -1012,7 +1012,7 @@ def test_own_map_rows_do_not_keep_themselves_alive():
     import gc
     import weakref
 
-    from openexpress.gui.app import still_in_window
+    from openexpress.gui.window_tasks import still_in_window
 
     win, section = own_maps_window()
     win.session = types.SimpleNamespace()
@@ -1626,7 +1626,7 @@ def test_foreign_map_rows_do_not_keep_themselves_alive():
     import gc
     import weakref
 
-    from openexpress.gui.app import still_in_window
+    from openexpress.gui.window_tasks import still_in_window
 
     win, section = own_maps_window()
     win.session = types.SimpleNamespace()

@@ -106,11 +106,11 @@ def test_the_free_space_in_one_caption():
 def _storage_row(space):
     from gi.repository import Adw, Gtk
 
-    from openexpress.gui import app
+    from openexpress.gui.window_tasks import render_space
 
     win = stand_in(storage_row=Adw.ActionRow(), storage_bar=Gtk.LevelBar(),
                    session=types.SimpleNamespace(space=space))
-    app.render_space(win)
+    render_space(win)
     return win.storage_row.get_subtitle()
 
 
@@ -307,10 +307,10 @@ def test_the_page_of_a_remembered_device_tells_last_seen_against_now(clock):
 
 
 def test_a_version_known_only_from_the_account_says_so():
-    from openexpress.gui import app
+    from openexpress.gui.start_window import account_subtitle
 
     fields = {"software_version": "22.26"}
-    assert app.account_subtitle(fields) == (
+    assert account_subtitle(fields) == (
         f"Software 22.26 (Garmin Connect){NB}· Not seen on this computer")
 
 

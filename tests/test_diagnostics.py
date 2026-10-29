@@ -416,7 +416,7 @@ def test_without_access_to_usb_it_says_why(device):
 
 def test_the_opening_does_not_wait_for_them(device, monkeypatch):
     """with_space (the task that opens the device) reads its free space only."""
-    from openexpress.gui.app import with_space
+    from openexpress.gui.detection import with_space
 
     st, dev = device
     monkeypatch.setattr(diagnostics, "at_open", lambda *a: pytest.fail("read in the opening"))
@@ -491,10 +491,12 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
     import threading
     import time
 
+    from gi.repository import GLib
+
     from openexpress.gui import app
     from openexpress.gui.tasks import writes_to_device
 
-    monkeypatch.setattr(app.GLib, "idle_add", lambda fn, *args: fn(*args))
+    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
     in_the_window("refresh_space", lambda win, session: None)
     reading = threading.Event()
     session = types.SimpleNamespace(diagnostics_reading=reading)
@@ -542,13 +544,13 @@ def _window(found):
 
 
 def _labelled(label):
-    from openexpress.gui.app import Gtk
+    from gi.repository import Gtk
 
     return Gtk.Button(label=label)
 
 
 def _rows(win):
-    from openexpress.gui.app import Adw, Gtk
+    from gi.repository import Adw, Gtk
 
     row = win.device_error_row
     if row is None:
@@ -587,7 +589,9 @@ def _found(**kw):
 
 @pytest.mark.needs_display
 def test_the_row_says_the_crash_with_the_copy_off():
-    from openexpress.gui.app import Adw, device_error_row
+    from gi.repository import Adw
+
+    from openexpress.gui.device_page import device_error_row
 
     win = _window(_found())
     group = Adw.PreferencesGroup()
@@ -602,7 +606,9 @@ def test_the_row_says_the_crash_with_the_copy_off():
 
 @pytest.mark.needs_display
 def test_no_row_without_a_recent_crash_and_no_buttons_that_do_not_apply():
-    from openexpress.gui.app import Adw, device_error_row
+    from gi.repository import Adw
+
+    from openexpress.gui.device_page import device_error_row
 
     win = _window(_found(crash=None))
     device_error_row(win, Adw.PreferencesGroup())
@@ -617,7 +623,9 @@ def test_no_row_without_a_recent_crash_and_no_buttons_that_do_not_apply():
 
 @pytest.mark.needs_display
 def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
-    from openexpress.gui.app import Adw, copy_crash_logs, device_error_row
+    from gi.repository import Adw
+
+    from openexpress.gui.device_page import copy_crash_logs, device_error_row
 
     found = _found()
     win = _window(found)
@@ -637,7 +645,7 @@ def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
 
 @pytest.mark.needs_display
 def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
-    from openexpress.gui.app import copy_dumps
+    from openexpress.gui.device_page import copy_dumps
 
     win = _window(_found())
     monkeypatch.setattr(diagnostics, "copy_dumps", lambda device, storage: diagnostics.Copied(
@@ -649,7 +657,9 @@ def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
 
 @pytest.mark.needs_display
 def test_the_preferences_switch_turns_the_copy_on_and_off():
-    from openexpress.gui.app import Adw, diagnostics_group
+    from gi.repository import Adw
+
+    from openexpress.gui.preferences import diagnostics_group
 
     win = stand_in(error=lambda title, text: pytest.fail(text))
     group = diagnostics_group(win)
@@ -722,8 +732,10 @@ def test_nothing_is_sent(device, clock):
 
 @pytest.mark.needs_display
 def test_the_row_in_polish():
+    from gi.repository import Adw
+
     from openexpress import i18n
-    from openexpress.gui.app import Adw, device_error_row
+    from openexpress.gui.device_page import device_error_row
 
     i18n.setup("pl")
     try:

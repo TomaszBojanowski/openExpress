@@ -34,7 +34,7 @@ class RunNow:
             self.on_call(call)
         restore = None
         if button is not None:
-            from openexpress.gui.app import show_working
+            from openexpress.gui.window_tasks import show_working
 
             restore = show_working(button)
         result, raised = [], []

@@ -213,11 +213,12 @@ def _copy_folder(backups, dev, stamp, data, model=" Test watch"):
 def _dialog_of(monkeypatch, st, dev, backups):
     """choose_order of a window that is never shown: the dialog it made, and the errors."""
     from fakes import RunNow
+    from gi.repository import Adw
 
     from openexpress.gui import app
 
     _Dialog.made = []
-    monkeypatch.setattr(app.Adw, "AlertDialog", _Dialog)
+    monkeypatch.setattr(Adw, "AlertDialog", _Dialog)
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     errors = []
