@@ -868,12 +868,6 @@ class DeviceRow(Gtk.ListBoxRow):
         _mark(self, tile, image, picture)
         self.set_chips(chips(tile))
 
-    def get_title(self) -> str:
-        return self._title
-
-    def get_subtitle(self) -> str:
-        return self._subtitle
-
     def set_chips(self, said) -> None:
         """Its chips as `said` (start.chips) now; none: no line for them (no empty chip,
         which the tiles keep for their height)."""

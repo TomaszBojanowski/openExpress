@@ -261,6 +261,27 @@ def start_section(start, key):
     return start._sections[key]
 
 
+def row_words(row):
+    """The title and the words under it that a row of the start page's list (gui.start.
+    DeviceRow) shows: its labels "title" and "subtitle", "" for one it has not."""
+    from gi.repository import Gtk
+
+    def labels(widget):
+        child = widget.get_first_child()
+        while child is not None:
+            if isinstance(child, Gtk.Label):
+                yield child
+            yield from labels(child)
+            child = child.get_next_sibling()
+
+    words = {"title": "", "subtitle": ""}
+    for label in labels(row):
+        for kind in words:
+            if not words[kind] and label.has_css_class(kind):
+                words[kind] = label.get_label()
+    return words["title"], words["subtitle"]
+
+
 def window(**changes):
     """A stand-in for the window without GTK: every attribute the real window has, with the
     value it has before anything is shown (MainWindow._init_state), then `changes`. None of

@@ -12,7 +12,7 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, record_sync, replace_in_window, start_section, window_methods
+from fakes import RunNow, record_sync, replace_in_window, row_words, start_section, window_methods
 from fakes import window as stand_in
 from gio_fake import answer_as_gio
 
@@ -6980,8 +6980,8 @@ def test_seven_connected_devices_are_a_list_with_the_icons_of_tiles(in_the_windo
     assert start_section(start, "connected").list.get_visible()
     rows = start.tiles()[:7]
     assert all(row.get_parent() is start_section(start, "connected").list for row in rows)
-    assert [row.get_title() for row in rows] == [f"Watch {n}" for n in range(7)]
-    assert rows[0].get_subtitle() == "Software 1.00"
+    assert [row_words(row)[0] for row in rows] == [f"Watch {n}" for n in range(7)]
+    assert row_words(rows[0])[1] == "Software 1.00"
     assert tile_image(rows[1]).get_icon_name() == kind_icon("watch")
     assert tile_image(rows[0]).get_icon_name() == kind_icon(None)
     remembered = start.tiles()[7:]

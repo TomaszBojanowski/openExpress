@@ -7,7 +7,7 @@ import dataclasses
 import time
 
 import pytest
-from fakes import start_section
+from fakes import row_words, start_section
 
 NOW = time.time()
 
@@ -98,7 +98,7 @@ def test_a_row_keeps_its_title_and_subtitle_and_the_tooltip_of_a_device_not_conn
     start = StartPage()
     start.show(entries, False)
     row = start.tiles()[0]
-    assert (row.get_title(), row.get_subtitle()) == ("Watch 0", "Last seen 2 days ago")
+    assert row_words(row) == ("Watch 0", "Last seen 2 days ago")
     assert "activatable" in row.get_css_classes()  # lit under the pointer, as a row of Adw
     assert row.get_tooltip_text().startswith("Last seen ")
 
