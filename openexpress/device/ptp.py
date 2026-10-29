@@ -1,19 +1,12 @@
-"""A minimal PTP/MTP client for the files a Garmin device hides from ordinary MTP.
+"""A minimal PTP/MTP client over USB for the files a Garmin device hides from ordinary MTP;
+everything else stays with gvfs. gvfs (libmtp) shows only what the standard
+`GetObjectHandles` returns, and some devices return the Connect IQ app folder only through
+Garmin's operation 0x9002, so app files cannot be written there through gvfs.
 
-gvfs (libmtp) shows only what the standard `GetObjectHandles` returns. Some devices
-keep the Connect IQ app folder out of that list and return it only through Garmin's
-own operation 0x9002, so app files cannot be written there through gvfs. This module
-talks PTP over USB directly, for exactly that case; everything else stays with gvfs.
-
-Three layers:
-
-* a transport: bulk transfers to one USB device (`LibusbTransport`, libusb-1.0
-  through ctypes; tests use a fake device instead),
-* `Session`: PTP containers and transactions,
-* the file operations on top of it: list, look up, send, read, delete.
-
-The device must not be in use by another MTP client (unmount it from gvfs first).
-Nothing here creates folders.
+Layers: a transport of bulk transfers to one USB device (`LibusbTransport`, libusb-1.0
+through ctypes), `Session` (PTP containers and transactions), and the file operations on
+top: list, look up, send, read, delete. The device must not be in use by another MTP client
+(unmount it from gvfs first). Nothing here creates folders.
 """
 
 from __future__ import annotations

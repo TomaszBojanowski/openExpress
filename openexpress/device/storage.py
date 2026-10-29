@@ -361,12 +361,8 @@ def _sync_folder(folder: Path) -> None:
 
 
 class LocalStorage(Storage):
-    """Directory on disk: a device in mass storage mode, a copy, or tests.
-
-    A write counts only once it is on the disk (fsync of the file and of its folder): a
-    device in mass storage mode may lose what is still in the system's cache when its cable
-    goes out. Ejected, it stays on USB with its medium, not mounted (a Varia: no reset of its
-    USB), so an update written to it is followed by an eject."""
+    """Directory on disk: a device in mass storage mode, a copy, or tests. A write counts only
+    once it is on the disk (fsync of the file and of its folder)."""
 
     replaces_atomically = True  # a temporary copy, renamed when whole (_replace)
 
@@ -441,6 +437,8 @@ class LocalStorage(Storage):
                         done += len(chunk)
                         if progress:
                             progress(done, total)
+                    # A device in mass storage mode may lose what is still in the system's
+                    # cache when its cable goes out.
                     os.fsync(fd)
                 finally:
                     os.close(fd)
@@ -472,6 +470,8 @@ class UmsStorage(LocalStorage):
     """A Garmin device in mass storage mode: the folder where the system mounted the drive.
     Reads and writes like LocalStorage; it also knows where it is on USB and its address."""
 
+    # Ejected, it stays on USB with its medium, not mounted (a Varia: no reset of its USB), so
+    # an update written to it is followed by an eject.
     mass_storage = True
 
     def __init__(self, root: Path, device_uri: str, usb=None, volume_name: str | None = None):

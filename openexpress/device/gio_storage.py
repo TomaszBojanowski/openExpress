@@ -122,17 +122,11 @@ def _detail(stderr: str, stdout: str) -> str:
 
 
 def host_copy(local: Path, target_uri: str, what: str, progress=None, started=None) -> None:
-    """Copies a local file to the watch with the host's `gio copy`.
-
-    gvfs refuses to copy local files for sandboxed (Flatpak) apps, and gvfs-mtp supports no
-    other way of writing; so in the Flatpak the copy runs on the host (needs the
-    --talk-name=org.freedesktop.Flatpak permission).
-
-    With `progress(done, total)` the copy runs with `-p` and what it prints is read while it
-    runs. When that cannot be read, `progress` is simply not called: the result of the copy
-    depends on the exit code alone. `started()` is called for each line of progress read: the
-    evidence that the copy is under way (and that the device is being written).
-    """
+    """Copies a local file to the watch with the host's `gio copy`, as gvfs refuses local files
+    from sandboxed (Flatpak) apps and gvfs-mtp has no other way of writing (needs
+    --talk-name=org.freedesktop.Flatpak). `progress(done, total)` adds `-p`; `started()` is
+    called for each update of progress read. Raises CopyNotStarted when the command cannot
+    start, DeviceError when the copy fails or times out."""
     if not shutil.which("flatpak-spawn"):
         raise CopyNotStarted(f"{what}: " + _("flatpak-spawn is not available"))
     command = ["flatpak-spawn", "--host", "gio", "copy"]
@@ -176,10 +170,12 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
             # Updates begin with a carriage return and are cut anywhere by the pipe: the
             # newest one is read as far as it has come, and again when the rest arrives.
             *complete, pending = re.split(r"[\r\n]", pending + text)
+            # An update that cannot be read only goes without `progress`: the result of the
+            # copy depends on the exit code alone.
             for update in (*complete, pending):
                 fraction = copy_fraction(update)
                 if fraction is not None and started is not None:
-                    started()
+                    started()  # the evidence that the copy, so a write to the device, is under way
                 if fraction is not None and fraction > shown:
                     shown = fraction
                     progress(int(fraction * size), size)
@@ -373,15 +369,10 @@ class GioStorage(Storage):
         return info.get_size()
 
     def _discard_partial(self, real_path: str) -> None:
-        """After a copy that failed once it ran: the file under the name is deleted only on
-        evidence that the copy touched it - gio copy reported progress, or a file is there
-        now where there was none, or with another size than before. Otherwise it is the old
-        file, untouched (e.g. gio copy started and refused at once), and it stays.
-
-        Not told apart, and safe either way: the old and the new file of the same size, gio
-        copy reporting no progress and gvfs replacing the old one with the whole new one -
-        then the complete new file is kept. Half a new file of exactly the old size is all
-        but impossible, and would only be kept, never wrongly deleted."""
+        """After a copy that failed once it ran, deletes the file under the name only on
+        evidence that the copy touched it: gio copy reported progress, or a file is there now
+        where there was none or with another size. Otherwise it is the old file, untouched
+        (gio copy refused at once), and stays; a failed delete is only logged."""
         attempt = self._attempts.pop(real_path, None)
         now = self._size_now(real_path)
         if now is None or attempt is None:
@@ -391,6 +382,10 @@ class GioStorage(Storage):
         elif attempt.before is _UNKNOWN or now is _UNKNOWN:
             touched = False  # no evidence
         else:
+            # Not told apart, and safe either way: an old and a new file of the same size, no
+            # progress reported and gvfs replacing the old file with the whole new one - the
+            # complete new file is kept. Half a new file of exactly the old size is all but
+            # impossible, and would only be kept, never wrongly deleted.
             touched = attempt.before is None or now != attempt.before
         if not touched:
             log.info("device: a failed copy left the file under its name as it was; kept")
@@ -767,21 +762,15 @@ def find_ums_devices() -> list[FoundDevice]:
 
 
 def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
-    """The Garmin drives that the system has not mounted (KDE mounts a drive only once a file
-    manager opens it): a volume (gvfs) whose block device belongs to a USB device of
-    vendor 091e with a mass storage interface, and that has a medium – listed, to be mounted
-    when chosen. Without a medium (removed safely: the device turns its drive off), or with
-    no volume at all, only a replug helps: not listed, said in the log. `seen`: the USB
-    places of the drives already mounted (and found or skipped), not looked at again.
-
-    One entry for each USB device, judged by all of its volumes: a device may give more
-    than one block device, one of them an empty slot (a Forerunner 55: `sdc` of 0 B beside
-    `sdd`, its drive). Its drive is its first block device with a medium; an empty slot
-    beside it is no drive without a medium."""
+    """The Garmin drives the system has not mounted, to be mounted when chosen: one for each USB
+    device of vendor 091e with a mass storage interface, its drive the first of its block
+    devices (gvfs volumes) with a medium. Skips the USB places in `seen` and adds those looked
+    at; leaves the places of devices without a drive in `_without_drive`."""
     global _without_drive
     found = []
     waiting = set()  # the places of devices in mass storage mode without a drive to list
     places: dict[str, list] = {}  # the unmounted volumes of each Garmin drive, by USB place
+    # KDE mounts a drive only once a file manager opens it.
     for vol in Gio.VolumeMonitor.get().get_volumes():
         mounted = getattr(vol, "get_mount", lambda: None)()
         unix = vol.get_identifier("unix-device")
@@ -803,10 +792,15 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
             continue
+        # A device may give more than one block device, one of them an empty slot (a
+        # Forerunner 55: `sdc` of 0 B beside `sdd`, its drive): judged by all of its volumes,
+        # an empty slot beside its drive is no drive without a medium.
         with_medium = sorted(((vol, unix) for vol, unix, _ids, _f in volumes
                               if _block_size(unix)),
                              key=lambda v: (len(v[1]), v[1]))  # sdc before sdd, sdz before sdaa
         if not with_medium:
+            # Removed safely, the device turns its drive off: only a replug helps, so it is
+            # not listed, only said in the log.
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
             waiting.add(place)  # or not yet
@@ -818,7 +812,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         found.append(FoundDevice(UNMOUNTED_DRIVE + unix, vol.get_name(), False, vol, usb,
                                  kind="ums"))
     for base, product in _mass_storage_on_usb():
-        if base not in seen:
+        if base not in seen:  # no volume at all: only a replug helps
             log.info("device: a Garmin device in mass storage mode (USB %s:%s) without a "
                      "drive: unplug it and plug it in again", GARMIN_VID, product)
             waiting.add(base)  # or not yet
@@ -1263,12 +1257,10 @@ def mtp_missing() -> bool:
 
 
 def held_elsewhere_text() -> str:
-    """Said once the wait for a device in its normal mode ran out (the window and the command
-    line): another program may hold it over MTP, so that gvfs cannot offer it (KDE's
-    kmtpd, from kio-extras, in the kiod6 process). Once Dolphin has started it, kmtpd keeps
-    every MTP device until it is unplugged or kiod6 quits, and opens one plugged in again at
-    once: plugging the cable in again does not free it, quitting kiod6 does. Not Nautilus: it
-    reads the device through gvfs."""
+    """The sentence added when the wait for a device in its normal mode ran out: KDE's kmtpd
+    (kio-extras, in kiod6) may hold it over MTP, so gvfs cannot offer it. Once Dolphin started
+    it, kmtpd keeps every MTP device until unplugged or kiod6 quits, and takes one plugged in
+    again at once. Nautilus does not: it reads through gvfs."""
     # TRANSLATORS: added once the wait for a device on USB ran out: KDE's MTP service may hold
     # it; "kquitapp6 kiod6" is a command, not to be translated
     return _("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
@@ -1308,13 +1300,10 @@ def not_ready_text(state: str) -> str:
 
 def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                         sleep=time.sleep, clock=time.monotonic) -> GioStorage:
-    """Return the device storage that contains GARMIN/GarminDevice.xml.
-
-    With `wait`, a Garmin device that is on USB but not offered by gvfs yet is waited for,
-    up to WAIT_FOR_DEVICE_S; `notify` is called once with a line saying so. Without a
-    Garmin device on USB there is nothing to wait for. A device that was seen and then
-    leaves the bus is given USB_GAP_S to come back before it counts as unplugged.
-    """
+    """Return the device storage that contains GARMIN/GarminDevice.xml; raises DeviceError
+    (NotThereYet, SeveralDevices, MassStorageNotice) when there is none to open. With `wait`,
+    a Garmin device on USB but not offered by gvfs yet is waited for up to WAIT_FOR_DEVICE_S,
+    and `notify` is called once with a line saying so."""
     started = clock()
     deadline = started + WAIT_FOR_DEVICE_S
     told = False
@@ -1341,9 +1330,11 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
             if state == DRIVE_OFF and isinstance(e, NotThereYet):
                 # In Garmin USB mode after it was ejected: only plugging it in again helps.
                 raise MassStorageNotice(not_ready_text(state)) from e
+            # Without a Garmin device on USB (in its normal mode) there is nothing to wait for.
             if state in (ABSENT, MASS_STORAGE):
                 if wait and told:
                     # A device we were waiting for left the bus: unplugged, or between modes.
+                    # It has USB_GAP_S to come back before it counts as unplugged.
                     if gone_since is None:
                         gone_since = clock()
                     if clock() - gone_since < USB_GAP_S and clock() < deadline:
@@ -1587,20 +1578,17 @@ def _ms(seconds: float) -> int:
 
 
 def _wait(start, timeout_s: float, what: str, name: str = "operation") -> None:
-    """Run one asynchronous Gio operation to its end. `start(done, cancellable)` begins it and
-    `done(finish)` is called with a function that raises GLib.Error on failure. `name` says
-    the operation in the log.
-
-    Gio gives the answer in the main context that was the default of the thread when the
-    operation began. A worker thread waits on a context of its own, pushed for the wait: its
-    answer and its time limit need nothing of the main thread (the window holds the global
-    default context while it runs), and no callback of the main thread runs here. The main
-    thread (the command line) waits on the global default context, where PyGObject wakes it on
-    Ctrl+C.
-
-    At its time limit the operation is cancelled and its answer, which Gio always gives, is
-    waited for up to CANCEL_WAIT_S. Done all the same is a success: that is what happened. A
-    cancel, an error or no answer at all is GioTimedOut."""
+    """Run one asynchronous Gio operation to its end: in a worker thread on a main context of
+    its own, in the main thread on the global default one. `start(done, cancellable)` begins
+    it; `done(finish)` gets a function that raises GLib.Error on failure. Raises DeviceError
+    when it fails, GioTimedOut when cancelled at `timeout_s` and not done within
+    CANCEL_WAIT_S."""
+    # Gio gives the answer in the main context that was the default of the thread when the
+    # operation began. A worker thread's own context, pushed for the wait, needs nothing of
+    # the main thread for the answer and the time limit (the window holds the global default
+    # context while it runs), and no callback of the main thread runs here. The main thread
+    # (the command line) waits on the global default context, where PyGObject wakes it on
+    # Ctrl+C.
     own = threading.current_thread() is not threading.main_thread()
     context = GLib.MainContext.new() if own else GLib.MainContext.default()
     loop = GLib.MainLoop(context)
@@ -1658,7 +1646,7 @@ def _wait(start, timeout_s: float, what: str, name: str = "operation") -> None:
                     "either, given up", name, timeout_s, CANCEL_WAIT_S)
         raise GioTimedOut(_("{action}: the device did not answer in time").format(action=what))
     answer = answers[0]
-    if answer is None:
+    if answer is None:  # done all the same is a success: that is what happened
         log.warning("gio: %s: no answer in %g s, cancelled; it ended all the same after "
                     "%.1f s", name, timeout_s, took)
         return
