@@ -1,7 +1,7 @@
-"""A tile clicked shows that its device is being opened (a spinner over its picture; in a row
-of a list, in place of its arrow) for the 4.5-5 s the first opening of a watch can take, and
-a second click on the same tile meanwhile says nothing, not "Another operation is in
-progress". A click on another tile meanwhile still says so. Every device here is made up."""
+"""A tile clicked shows that its device is being opened (a spinner over its picture, or in place
+of the arrow of a row) for the 4.5-5 s the first opening of a watch can take; a second click on
+it meanwhile says nothing, a click on another tile "Another operation is in progress". Every
+device here is made up."""
 
 import types
 
@@ -50,7 +50,7 @@ def test_a_second_click_on_the_tile_being_opened_says_nothing():
     win._open_tile(0)
     assert len(win.tasks) == 1 and win.toasts == []
     assert win.start.opening == [0]
-    win._open_tile(1)  # another device: as before
+    win._open_tile(1)  # another device: "Another operation is in progress"
     assert len(win.tasks) == 1 and win.toasts == [ANOTHER]
 
 

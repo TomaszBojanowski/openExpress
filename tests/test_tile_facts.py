@@ -1,12 +1,7 @@
-"""The tiles once and for all: the facts a tile says in its chips are kept with
-the device, one object "tile_facts" of its entry in devices.json, written by one module after
-each source (the check of updates, the count in the background, the account's list, a sync, a
-detection) and read by one function (tile_facts.read). start.chips() gets only those facts and
-what the device itself shows; no session, no account's list, no count held in memory. Each fact
-holds for so long and while what it was told against stays the same (an update: 30 days and
-the software of the device; a count: 7 days and the sync state; the account: 7 days and the
-login saved); past that it is not known: no chip, never the contrary. All devices, unit IDs and
-files are made up."""
+"""The facts a tile says in its chips: "tile_facts" of the device's entry in devices.json, written
+after each source (updates, count, account's list, sync, detection) and read only by
+tile_facts.read for start.chips(); each holds for a time and while what it was told against
+stays the same, past that no chip. All devices, unit IDs and files are made up."""
 
 import json
 import sys

@@ -1,9 +1,7 @@
-"""Answers of the Connect IQ store and queue that are not what we expect: an item of the
-store's list without a proper app ID is left out with one line in
-the log, the others are shown (before, one such item failed the whole list, and the Apps
-page with it); an app of the queue whose package is empty (204/404) is taken off the queue
-and nothing is written, as Garmin Express does, now with a line in the log (before, without
-a word). All answers are made up."""
+"""Answers of the Connect IQ store and queue not as expected: an item of the store's list
+without a proper app ID is left out; an app of the queue with an empty package (204/404) is
+taken off it and nothing is written, as Garmin Express does; each with a line in the log. All
+answers are made up."""
 
 import logging
 import uuid

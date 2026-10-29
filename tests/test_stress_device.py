@@ -1,8 +1,7 @@
-"""tools/stress_device.py, the stress test of the waits for gvfs on a real device, without a
-device: it refuses to start while openExpress
-runs and before it touches a device, it lets only devices other than the Edge 1050 have at most
-5 cycles, it only reads (its PTP session, its storage, no network), its summary, and its short
-time limit is for its run only. The device, its folders and its answers are made up."""
+"""tools/stress_device.py, the stress test of gvfs waits on a real device, without a device: it
+refuses while openExpress runs, lets only an Edge 1050 run over 5 cycles, only reads (PTP
+session, storage; no network), keeps its short time limit to its run and sums up how the device
+settled. The device, its folders and answers are made up."""
 
 import contextlib
 import importlib.util

@@ -1,8 +1,7 @@
-"""A task that changes what the Maps, Apps or Music page shows reads its page again when it
-ends, also when it failed: a part of it may be done (the files of a map written but not its
-unlock file, one song of two copied, the app list that waited gone), and the page would
-otherwise go on showing the device as it was before the task. The error is said too, over
-the page as it is read. All data is made up."""
+"""A task that changes the Maps, Apps or Music page reads it again when it ends, also after a
+failure, since a part may be done (a map's files written but not its unlock file, one song of
+two copied, the waiting app list gone); the error is said over the page as read. All data is
+made up."""
 
 import types
 from pathlib import Path
@@ -105,7 +104,7 @@ def test_a_map_whose_unlock_file_failed_is_shown_waiting_to_be_loaded(maps_page,
 @pytest.mark.needs_display
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 def test_a_map_whose_download_failed_reads_the_page_again_too(maps_page, monkeypatch):
-    """Nothing was written: the page read again shows the map as before, not installed."""
+    """Nothing was written: the page read again shows the map not installed."""
     win, section, reads = maps_page
 
     def install(m, all_maps, storage, **kw):
@@ -249,7 +248,7 @@ def forget_app(win, monkeypatch):
 
 
 def switch_app(win, monkeypatch):
-    """The switch is set back, as before; and the page is read again."""
+    """The switch is set back to off, and the page is read again."""
     from openexpress.gui.app import MainWindow
 
     monkeypatch.setattr(ciq, "set_enabled", win.fails)
@@ -314,7 +313,7 @@ CASES = [restore_order, install_apps, remove_app, remove_and_forget, forget_app,
 
 @pytest.mark.parametrize("start", CASES, ids=[c.__name__ for c in CASES])
 def test_a_task_that_failed_reads_its_page_again(start, monkeypatch):
-    """Once, as after a task that went well; the error is said as before."""
+    """The page is read once, as after a task that went well, and the error is said."""
     win = _window(monkeypatch)
     key, title = start(win, monkeypatch)
     assert win.reads == [(key, True)]
@@ -324,7 +323,7 @@ def test_a_task_that_failed_reads_its_page_again(start, monkeypatch):
 @pytest.mark.parametrize("start", CASES, ids=[c.__name__ for c in CASES])
 def test_a_task_whose_device_is_gone_meanwhile_reads_no_page(start, monkeypatch):
     """Unplugged, or another device opened, during the task: the window reads the pages of
-    what is open on its own; the task reads none. The error is said as before."""
+    what is open on its own; the task reads none. The error is still said."""
     win = _window(monkeypatch)
     win.unplug = True
     key, title = start(win, monkeypatch)

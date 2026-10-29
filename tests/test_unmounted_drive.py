@@ -1,11 +1,7 @@
-"""A Garmin drive that the system has not mounted: on KDE a drive is mounted only once a file
-manager opens it. Seen through Gio.VolumeMonitor's volumes (gvfs, no new permission): its
-block device belongs to a USB device of vendor 091e with a mass storage interface and has a
-medium (a size): a tile "Not mounted; choose it to open it" with the chip "USB drive", as for
-MTP; chosen, it is mounted (Gio.Volume.mount) and opened as a drive. Without a medium
-(removed safely: the Garmin device turns its drive off) it is not listed and the notice stays
-as it was; a drive ejected by openExpress is not listed; without gvfs there are no volumes
-and nothing changes. All devices are made up."""
+"""A Garmin drive that the system has not mounted (on KDE only a file manager mounts it), seen
+through Gio.VolumeMonitor's volumes: its tile, mounted when chosen; what is not listed (no
+medium, ejected by openExpress, no gvfs); the USB states of a drive removed safely or ejected;
+what tells drives apart (USB serial, volume UUID). All devices are made up."""
 
 import logging
 import os
@@ -271,7 +267,7 @@ def test_the_volume_of_a_mounted_drive_is_listed_once(drives, monkeypatch):
 
 
 def test_without_gvfs_nothing_changes(drives, monkeypatch):
-    """No gvfs: Gio knows no volumes, only what is mounted; a mounted drive as before."""
+    """No gvfs: Gio knows no volumes, only what is mounted; a mounted drive is still found."""
     unix = usb_drive(drives, product=FR55)
     _sized(drives, unix, 7_800_000)
     _monitor(monkeypatch)
@@ -542,9 +538,9 @@ def test_the_window_notes_the_place_of_the_open_drive_it_sees_unmounted(drives, 
 
 
 def test_0003_without_a_drive_before_is_a_device_starting(drives, monkeypatch, caplog):
-    """An MTP watch starting (091e:0003 before its normal mode): as before; after 25 s (past
-    the about 19 s of a fēnix 8 starting) the page adds that it may be plugged in again,
-    after the wait it is not ready."""
+    """091e:0003 with no drive there before (an MTP watch before its normal mode): "The device is
+    starting…"; after 25 s (past the about 19 s of a fēnix 8 starting) the page adds that it may
+    be plugged in again, after the wait it is not ready."""
     from openexpress.gui.app import REPLUG_HINT, MainWindow
 
     _on_usb(drives, monkeypatch, port="1-8")

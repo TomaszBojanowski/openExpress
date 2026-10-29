@@ -1,8 +1,7 @@
-"""The window is one object made of MainWindow
-and mixins (MapsPage, MusicPage, …). Its methods are listed in tests/data/window_methods.txt:
-a method lost while moving code, or a name defined in two of the window's classes (one would
-hide the other, depending on their order), or a method of ours that hides one of GTK's, fails
-here. The list names methods, not classes: a method moved to another mixin keeps its line."""
+"""The window, MainWindow with its mixins (MapsPage, MusicPage, …), has the methods listed in
+tests/data/window_methods.txt: a method lost while moving code, a name defined in two of its
+classes (one would hide the other) or a method that hides one of GTK's fails here. The list
+names methods, not classes, so a method moved to another mixin keeps its line."""
 
 import inspect
 from pathlib import Path

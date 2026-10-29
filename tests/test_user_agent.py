@@ -1,9 +1,8 @@
 """openExpress names itself to every server it asks with one User-Agent header,
-"openexpress/<version> (Linux)": the Garmin Connect API, the upload of an activity and the
-check of its status, product pictures and the files of updates and maps. None goes with the
-default header of the HTTP library ("python-requests/…"). Only the sign-in window is a web
-browser with its own. The requests are caught before they leave (nothing goes to the
-network); the account, the addresses and the files are made up."""
+"openexpress/<version> (Linux)" (the Garmin Connect API, uploads and their status, product
+pictures, files of updates and maps), never with the HTTP library's ("python-requests/…"); only
+the sign-in window, a web browser, has its own. The requests are caught before they leave; the
+account, addresses and files are made up."""
 
 import ast
 import hashlib

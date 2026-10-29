@@ -1,11 +1,7 @@
-"""An update to install stands out on the device page: the chip of the device's tile
-("Update available", warning) under its software version, in the place of the grey
-"· update available" of that line; the row "Device software" says it in the colour of a
-warning: of one update, the version of a system update or the name and version of another, as
-the Updates page names it; of several, how many. No dot before its arrow. Copied already,
-waiting for the device: its own chip, "Update ready", and the warning colour too
-(test_update_states). With none to install, or a failed check: as the other rows. A beta
-counts as any update. All devices and updates are made up."""
+"""An update to install stands out on the device page: the tile's chip ("Update available",
+warning), and the row "Device software" in the warning colour, naming the update as the Updates
+page does, or how many; copied already, "Update ready" (test_update_states). With none, or a
+failed check: as the other rows. All devices and updates are made up."""
 
 import time
 import types
@@ -142,7 +138,7 @@ def test_an_update_to_install_gives_the_device_page_the_chip_of_its_tile():
 @pytest.mark.needs_display
 def test_the_row_device_software_says_which_update_in_the_warning_colour_without_a_dot():
     """One system update: its version; one other: its name and version as the Updates page
-    has them; two: how many, as before. Always the warning colour, only the arrow after the
+    has them; two: how many. Always the warning colour, only the arrow after the
     words."""
     win, _section = _device_page()
     font, bundle = updates.pending(_offered())

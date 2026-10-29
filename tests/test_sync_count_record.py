@@ -1,12 +1,7 @@
-"""The tiles from their first frame (the same rule as for the updates): what the count in
-the background last found for a connected device of the account is
-kept with it (devices.json: how many to upload, when, and the version of its sync state it was
-counted against), and its tile shows "To sync" / "Synced" from it at once while the record is
-of this installation, at most 7 days old, and the state of the sync has not changed since. The
-count runs as well: the same result changes nothing on the screen, another one changes the
-chip and the record. A device never synced here says so from the first frame (no state.json:
-nothing to count). No record for a drive or a device off the account; Forget removes it. All
-devices and files are made up."""
+"""The tiles from their first frame: the last count in the background for an account's device is
+kept with it (devices.json), and its tile shows "To sync" / "Synced" at once while that count is
+at most 7 days old and of the same sync state; the count confirms or changes it. All devices and
+files are made up."""
 
 import json
 import time

@@ -1,8 +1,7 @@
-"""openexpress status: in one look, the login, the Garmin devices connected (name, USB mode,
-whether they are on the account), the last sync of each and what the last check of its
-updates found. Without --online nothing is asked of a server: only the
-devices' GarminDevice.xml and what this installation keeps are read (the tests' guard against
-the network fails a test that tries). Every device and account here is made up."""
+"""openexpress status: the login, the Garmin devices connected (name, USB mode, on the account
+or not), the last sync of each and what its last check of updates found. Without --online no
+server is asked, only the devices' GarminDevice.xml and what this installation keeps (the tests'
+network guard fails a test that asks). Every device and account is made up."""
 
 import types
 

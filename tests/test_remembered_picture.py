@@ -208,7 +208,7 @@ def test_a_tile_whose_address_is_not_allowed_takes_the_picture_in_the_cache(monk
 
 @pytest.mark.needs_display
 def test_without_the_file_the_address_of_the_tile_is_refused(monkeypatch, caplog):
-    """No file in the cache: the address is refused as before, nothing is asked, the icon
+    """No file in the cache: the address is refused, nothing is asked, the icon
     stays; the log names the host, the bucket and whether the address has a query, never
     the rest of it."""
     from openexpress.gui import app
@@ -279,7 +279,7 @@ def test_the_view_guesses_the_icon_from_the_name_as_the_tile_does():
 
 def test_a_picture_is_loaded_without_a_deprecated_call(tmp_path):
     """A real small PNG becomes a texture with no DeprecationWarning (Gdk.Texture.new_for_pixbuf
-    is deprecated); a file that is no picture gives None, as before."""
+    is deprecated); a file that is no picture gives None."""
     import warnings
 
     from gi.repository import Gdk

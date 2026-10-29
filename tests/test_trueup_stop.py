@@ -1,9 +1,7 @@
-"""The stop of the wait for TrueUp: a stop asked during a
-sync reaches the wait for TrueUp. Before, the service cleared it just before the wait, so that
-the background service, asked to quit during the uploads, still waited for TrueUp to the end;
-and a quit asked before the background service kept its session was not passed on at all.
-Now the window clears a stop left from its previous sync when a sync starts, and the service
-passes the stop on as it is (test_trueup_wait.py). All data is made up."""
+"""The stop of the wait for TrueUp: a stop asked during a sync reaches the wait, also a quit
+asked before the background service kept its session, and the window clears a stop left from
+its previous sync when a sync starts (the service passes the stop on as it is:
+test_trueup_wait.py). All data is made up."""
 
 import threading
 import types
@@ -64,4 +62,4 @@ def test_a_quit_asked_before_the_background_service_kept_its_session(monkeypatch
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: None)
     w._sync()
     assert seen == [True]
-    assert released == []  # after the sync, as before (_worker)
+    assert released == []  # released after the sync, by _worker

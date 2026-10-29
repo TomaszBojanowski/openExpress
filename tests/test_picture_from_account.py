@@ -1,9 +1,7 @@
-"""Get Picture From Account: a device not on the account whose picture Garmin's update server
-does not give (unit-info without an address, as for an epix) can get it from the account, but
-only when the user clicks the button on its page: that request names the device's unit ID to
-the user's Garmin Connect account (device-info), which nothing does on its own. The picture
-goes into the cache as any other, and its address is kept with the device. Every device here
-is made up."""
+"""Get Picture From Account: a device off the account whose picture Garmin's update server does
+not give (unit-info without an address, as for an epix) gets it from the account only when the
+user clicks the button on its page, since that request names its unit ID to the account
+(device-info). Every device here is made up."""
 
 import types
 
@@ -55,7 +53,7 @@ def test_the_client_asks_the_account_about_a_device_off_it_only_by_its_own_metho
     client._connect = lambda method, path, what, **kw: sent.append((method, path)) or object()
     client._json = lambda r, what: {"imageUrl": PICTURE_URL}
     with pytest.raises(DeviceNotVerified):
-        client.device_image_url(SECRET_UNIT)  # as before: never about a device not checked
+        client.device_image_url(SECRET_UNIT)  # the usual method: never about a device not checked
     assert sent == []
     assert client.device_image_url_off_account(SECRET_UNIT) == PICTURE_URL
     assert sent == [("GET", f"device-service/deviceservice/device-info/{SECRET_UNIT}")]

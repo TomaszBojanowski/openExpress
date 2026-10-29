@@ -153,7 +153,7 @@ def test_not_enough_space_is_said_with_readable_sizes(server, device_root, xdg, 
     said = not_enough_space(server, device_root, tmp_path, monkeypatch)
     for text in said:
         assert text.startswith("Not enough space on the device: ") and "1200000" not in text
-    # An update says what it keeps free besides (maps and music do not, as before).
+    # An update says what it keeps free besides (maps and music do not).
     assert said[0].endswith(" needed and 2.1\u00a0MB kept free, but only 1.2\u00a0MB free")
     assert all(text.endswith(" needed, 1.2\u00a0MB free") for text in said[1:])
     assert said[2] == "Not enough space on the device: 2.5\u00a0MB needed, 1.2\u00a0MB free"
@@ -241,7 +241,7 @@ def test_ptp_debug_line_keeps_the_size_of_a_large_file(log_file, monkeypatch):
     logging.shutdown()
     text = log_file.read_text()
     assert "received 1_500_000 B)" in text and "<number>" not in text
-    assert "(sent 0 B, received 0 B)" in text  # small numbers look as before
+    assert "(sent 0 B, received 0 B)" in text  # small numbers stay plain
 
 
 def test_log_size_in_a_report_survives_the_second_filter(log_file):

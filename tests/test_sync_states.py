@@ -1,13 +1,7 @@
-"""The states of the sync said the same way everywhere.
-
-One source for "never synced": no state.json of the device in this installation; its tile and
-its page say it in the same words, with the tooltip "…by this installation of openExpress".
-"Synced" on a tile needs a sync recorded (last_sync.json): files marked as uploaded alone
-(baseline) give no chip. The row "Last sync" of a connected device ends with how many new
-activities there are to upload, the number of the chip "To sync". The row "Primary training
-device" stays when it cannot be read: "Log in to see", "Could not check". While the account's
-list is not known (not logged in, an error), the start page says so in one sentence. All
-devices and files are made up."""
+"""The states of the sync said the same way everywhere: "Never synced" (no state.json here) on
+tile and page, "Synced" only with a sync recorded, the count of "To sync" at the end of "Last
+sync", "Primary training device" when it cannot be read, and the start page without the
+account's list. All devices and files are made up."""
 
 import types
 
@@ -211,7 +205,7 @@ def test_the_count_in_polish():
 @pytest.mark.needs_display
 def test_the_count_that_comes_later_is_said_on_the_page():
     """The count runs in the background: once it comes for the open device, the row says
-    it, and the tiles get their chips as before."""
+    it, and the tiles get their chips too."""
     from openexpress.gui.app import MainWindow
 
     _state()

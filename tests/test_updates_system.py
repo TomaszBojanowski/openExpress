@@ -1,9 +1,8 @@
-"""System updates: recognised by their file as well as by the flags of the server.
+"""System updates: recognised by their file, not only by the server's flags.
 
-The answer below has the shape of a real one (an Edge 1050 offered a beta bundle):
-the bundle with the device software comes as GUPDATE.GSP without "isprimaryfirmware" and
-without "isrestartrequired", and its data type, "Firmware", is also that of plain files such
-as fonts. All values are made up."""
+The answer below has the shape of a real one (an Edge 1050 offered a beta bundle): the bundle of
+the device software is GUPDATE.GSP without "isprimaryfirmware" or "isrestartrequired", and its
+data type, "Firmware", is also that of plain files such as fonts. All values are made up."""
 
 import hashlib
 import logging
@@ -244,7 +243,7 @@ def test_the_question_names_both_versions_of_a_system_update(monkeypatch):
     body, _warning = _question(monkeypatch, "006-V0000-00")
     assert body.splitlines()[0] == f"Test Bundle {VERSIONS}"
     body, _warning = _question(monkeypatch, "006-D0000-00")
-    assert body.splitlines()[0] == "Test Font 23.40"  # not the device software: as before
+    assert body.splitlines()[0] == "Test Font 23.40"  # another update: its name and version
 
 
 # --- the status at the top of the Updates page ---------------------------------------------------
@@ -353,7 +352,7 @@ def test_status_when_the_software_is_up_to_date():
         "texts": [("Software is up to date", ["title-1"]),  # a title: no full stop
                   ("Software 23.39", ["dim-label"])],
         "buttons": [("Check Again", False)]}
-    assert [g.title for g in groups] == ["Advanced"]  # no list of updates; reinstalls as before
+    assert [g.title for g in groups] == ["Advanced"]  # no list of updates; reinstalls in Advanced
     check.emit("clicked")
     assert win.loads == [(("updates",), {"force": True})]
 
@@ -616,7 +615,7 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
         if beta:
             assert text == f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B"
             assert styles[1] == ["heading", "warning"] and "dim-label" not in styles[1]
-        else:  # one label, as before
+        else:  # one label
             assert (text, styles) == (f"{VERSIONS}\u00a0· 12\u00a0B", ["dim-label"])
     # The line of parts is centred like the labels around it, and its parts go on to the next
     # line in a narrow window: a separator ends a part, it never starts one.
@@ -1135,7 +1134,7 @@ def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypat
     m = _map(10)
     maps.install(m, [m], LocalStorage(device_root), lambda ident: {})
     updates.install(updates.parse_updates(lower_keys(server_answer())), LocalStorage(device_root))
-    assert given == [None, None, None]  # as before
+    assert given == [None, None, None]  # no progress function for any download
 
 
 @pytest.mark.needs_display

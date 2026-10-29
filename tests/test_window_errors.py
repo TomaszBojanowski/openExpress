@@ -24,7 +24,7 @@ def _lines(log_file):
 def test_an_exception_in_a_callback_of_the_window_is_logged_with_its_traceback(log_file,
                                                                               monkeypatch):
     """Raised in a callback of GLib (a handler, an idle): PyGObject hands it to
-    sys.excepthook, which the window sets; stderr gets it as before."""
+    sys.excepthook, which the window sets; stderr still gets it."""
     from gi.repository import GLib
 
     from openexpress.gui import app
@@ -46,7 +46,7 @@ def test_an_exception_in_a_callback_of_the_window_is_logged_with_its_traceback(l
     assert ("ERROR openexpress.gui.window_tasks: unexpected error in the window: "
             "RuntimeError") in text
     assert "Traceback" in text and "made-up failure" in text
-    assert told == [RuntimeError]  # and on to stderr, as before
+    assert told == [RuntimeError]  # and on to stderr too
 
 
 def test_ctrl_c_is_not_an_error_of_the_window(log_file, monkeypatch):

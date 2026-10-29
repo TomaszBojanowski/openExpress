@@ -144,7 +144,7 @@ def test_the_copy_goes_when_only_its_copy_is_left_and_connect_has_it(device_root
 def test_the_copy_goes_when_the_files_on_the_device_are_marked_as_uploaded(device_root,
                                                                            tmp_path):
     """baseline: the files on the device count as uploaded, so their copies are not kept; a
-    copy whose file is no longer on the device waits for its upload, as before."""
+    copy whose file is no longer on the device still waits for its upload."""
     st, dev, state = _failed_once(device_root, tmp_path)
     (device_root / "GARMIN/Activity/2026-10-02-10-00-00.fit").unlink()
     sync.mark_baseline(dev, st, UPLOAD_CONFIG, state, SyncClient(verified_unit_id=dev.unit_id))
@@ -235,7 +235,7 @@ def test_the_state_of_the_sync_is_readable_by_its_owner_only(tmp_path, xdg, monk
              service.last_sync_path()]
     for f in files:
         assert stat.S_IMODE(f.stat().st_mode) == 0o600, f.name
-    # Written as before: read back the same.
+    # Read back, they hold what was written.
     again = sync.SyncState(3000000001, base=tmp_path / "state")
     assert again.is_completed("FIT_TYPE_4", "a.fit") and again.unacked() == {"7"}
     assert service.load_last_sync(3000000001)["uploaded"] == 1

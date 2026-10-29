@@ -1,9 +1,7 @@
-"""A task of the window that fails: its traceback goes to the log file with the line that
-says so, through the filter of the log (addresses, e-mails…), so that a report from the
-window tells where it failed; work in the background that fails likewise, at INFO (DEBUG is
-below the level of the file). Only an error nobody expected has its traceback: one that is a
-message for the user (errors.UserFacingError) is one line at INFO. All addresses are made
-up."""
+"""A task of the window, or work in the background, that fails: its traceback goes to the log
+file, filtered, so that a report from the window tells where it failed (from the background at
+INFO: DEBUG is below the level of the file). A message for the user (errors.UserFacingError) is
+one line at INFO. All addresses are made up."""
 
 import types
 
@@ -60,7 +58,7 @@ def test_a_failed_task_writes_its_traceback_to_the_log_filtered(monkeypatch, log
     text = log_file.read_text()
     assert "Traceback (most recent call last)" in text and "in _failing_work" in text
     assert ADDRESS not in text and EMAIL not in text and "Garmin_Edge" not in text
-    assert told == [f"could not read {ADDRESS} for {EMAIL}"]  # the user is told as before
+    assert told == [f"could not read {ADDRESS} for {EMAIL}"]  # the user is told it in full
 
 
 def test_work_in_the_background_that_fails_writes_its_traceback_at_info(monkeypatch,

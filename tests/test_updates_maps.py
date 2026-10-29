@@ -1519,8 +1519,8 @@ def _japan_answer(server, how):
 @pytest.mark.parametrize("how, text", [("checksum", BAD_CHECKSUM_TEXT),
                                        ("file", MISSING_FILE_TEXT)])
 def test_a_map_says_why_it_cannot_be_installed(server, device_root, xdg, how, text):
-    """The window installs through maps.install: a bad checksum is said as such, a missing
-    file as before; nothing is written."""
+    """The window installs through maps.install: a bad checksum and a missing file are each
+    said as such; nothing is written."""
     response = _japan_answer(server, how)
     japan = maps.parse_maps(response)[2]
     with pytest.raises(maps.MapError) as refused:
@@ -1609,7 +1609,7 @@ def test_a_map_that_cannot_be_installed_has_no_install_button_and_says_why(serve
     for row in (japan, rows["TopoActive East"]):
         assert _buttons(row) == []  # neither Install nor Update
         assert row.get_subtitle().endswith("\n" + SHORT_REASONS[how])
-    assert "TopoActive West" in rows  # up to date, nothing to install: as before
+    assert "TopoActive West" in rows  # up to date, nothing to install: still listed
 
 
 @pytest.mark.needs_display

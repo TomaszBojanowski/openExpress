@@ -1,9 +1,7 @@
-"""One sync for the window, the background service and the command line: the
-same device and the same account give, whether the window or `openexpress sync --apply` ran
-it, the same record of the sync (last_sync.json), the same record of what was uploaded
-(state.json), the same files written to the device, the same requests to Garmin Connect,
-the same outcome (done, done with errors, or the first sync waiting for a choice) and the
-same lines in the log. All answers here are made up."""
+"""One sync for the window, the background service and the command line: with the same device
+and account, the window and `openexpress sync --apply` give the same last_sync.json and
+state.json, files written to the device, requests to Garmin Connect, outcome (done, done with
+errors, or a first sync waiting for a choice) and log lines. All answers are made up."""
 
 import json
 import re
@@ -146,8 +144,7 @@ def test_the_window_and_the_command_line_log_the_same_sync(name, device_root, tm
 
 
 def test_what_the_cases_tell_apart(device_root, tmp_path, monkeypatch):
-    """The cases are what their names say (the window's sync, as it was before the command
-    line went the same way)."""
+    """The cases, synced by the window, are what their names say."""
     seen = {name: run(name, case, by_the_window, device_root, tmp_path, monkeypatch)
             for name, case in CASES.items()}
     kinds = {name: [line["kind"] for line in kept["record"]["lines"]] if kept["record"]

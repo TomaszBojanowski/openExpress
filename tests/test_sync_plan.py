@@ -115,7 +115,7 @@ def test_some_types_only(device_root, xdg):
 
 
 def test_run_sync_plans_and_syncs_under_the_lock(device_root, xdg, monkeypatch):
-    """The window calls run_sync as before; it plans once, under the lock of the sync."""
+    """run_sync, which the window calls, plans once, under the lock of the sync, and syncs."""
     held = []
     lock = service.sync_lock
 

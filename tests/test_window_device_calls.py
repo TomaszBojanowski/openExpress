@@ -1,7 +1,7 @@
-"""The window asks the device nothing on its own thread (GTK's): over MTP each question is a
-round trip through gvfs, and a few dozen of them freeze the window for seconds. Here the
-thread of the test stands for GTK's: a task runs its work in a thread of its own and `done`
-back here, as run_task does. All data is made up."""
+"""The window asks the device nothing on GTK's thread: over MTP each question is a round trip
+through gvfs, and a few dozen freeze the window for seconds. The thread of the test stands for
+GTK's: a task runs its work in a thread of its own and `done` back here, as run_task does. All
+data is made up."""
 
 import threading
 import types
@@ -101,7 +101,7 @@ def map_window(device_root, monkeypatch):
 
 
 def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device_root):
-    """The same question as before, after a short "Checking the space…"."""
+    """After a short "Checking the space…": the question with the download, space and files."""
     from openexpress import maps as mp
     from openexpress.gui import app
 
@@ -408,7 +408,7 @@ def _rows(group):
 @pytest.mark.needs_display
 def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     """The free space and the size of the device are read with the maps, in the task: the
-    page shows them as before and asks the device nothing as it is drawn."""
+    page shows them under "On the device" and asks the device nothing as it is drawn."""
     from openexpress.gui import app
 
     win, section, _asked = _real_maps_page([maps_response(server)], device_root)
@@ -751,7 +751,7 @@ def test_a_space_not_known_is_unknown_in_the_report(iq_device, monkeypatch, spac
 
 
 def test_the_command_line_report_still_asks_the_device(iq_device):
-    """`openexpress report` has no window and no session: it asks the device, as before."""
+    """`openexpress report` has no window and no session: it asks the device for its space."""
     from openexpress import report
 
     st, dev = iq_device
@@ -846,7 +846,7 @@ DELAYS = [(0.1, False), (0.8, True)]
 @pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
 def test_restore_order_spins_its_button(order_device, monkeypatch, delay, text_shown):
     """Restore… reads the copies of the app list from the click with a spinning button;
-    then its question, as before."""
+    then one question with them."""
     import time
 
     from gi.repository import Gtk
@@ -995,7 +995,7 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
 @pytest.mark.parametrize(("delay", "text_shown"), DELAYS)
 def test_eject_spins_its_button(monkeypatch, delay, text_shown, in_the_window):
     """Eject on the Updates page of a drive: the button spins from the click while the
-    system ejects it, "Ejecting the device…" waits 500 ms; then "Done", as before."""
+    system ejects it, "Ejecting the device…" waits 500 ms; then the dialog "Done"."""
     import time
 
     from gi.repository import Adw, Gtk

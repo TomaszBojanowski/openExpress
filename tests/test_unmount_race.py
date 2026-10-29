@@ -1,14 +1,7 @@
-"""An unmount for a PTP session that goes on after its cancel (seen on an Edge 1050 whose
-unmounts had a time limit of 1 ms).
-
-The cancel at the time limit ends our wait at once ("cancelled"), while gvfs finishes the
-unmount a moment later. Before, the device was mounted again at once: gvfs said "mounted
-already" (the state before the unmount finished), that counted as done, and then the unmount
-took effect and left the device without a mount. Now the device is watched until it settles
-and mounted again only once it is seen unmounted; when it does not come back, the error says
-to unplug it and plug it in again. On the command line (the main thread) and in a worker
-thread while the main thread runs a main loop (the window). The device is made up
-(gio_fake.GvfsDevice)."""
+"""An unmount for a PTP session going on after its cancel (seen on an Edge 1050, time limit
+1 ms): gvfs ends it a moment later, saying "mounted already" until then. The device is mounted
+again once seen unmounted, else the error says to unplug it; on the command line and in the
+window. The device is made up (gio_fake.GvfsDevice)."""
 
 import os
 import random

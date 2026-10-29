@@ -69,7 +69,7 @@ def test_issue_address_fills_in_the_title_and_the_report():
     assert "\n" not in url and " " not in url and "#" not in url.split("?", 1)[1]
     assert report.issue_url("x", None).endswith("&report=x")
     assert _query(report.issue_url("x", None))["title"] == ["[Device] unknown"]
-    # The address of the empty form is the same as before.
+    # The address of the empty form: the issue form with its template alone.
     assert report.ISSUE_URL == ("https://github.com/TomaszBojanowski/openExpress/issues/new"
                                 "?template=device_report.yml")
 
@@ -328,11 +328,9 @@ def _note(dialog):
 
 @pytest.mark.needs_display
 def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
-    """The log never goes into the address. The form has a field of its own for it
-    ("Log": pasting into the field filled in from the address loses what is pasted), so the
-    report field gets the report alone; the log goes to the clipboard as that field shows
-    it (as code: its lines alone), and the dialog stays to say where to paste it (a toast on
-    the window is missed once the browser comes up)."""
+    """The log never goes into the address: the report field gets the report alone, the log goes
+    to the clipboard as the form's "Log" field shows it (its lines as code), and the dialog stays
+    open to say where to paste it."""
     from urllib.parse import parse_qs, urlsplit
 
     _write_log(log_file, ["one", "device 3987654321"])
@@ -342,10 +340,13 @@ def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, 
     _attach_log(dialog)
     dialog.emit("response", "open")
     (url,) = opened
+    # The form has a "Log" field of its own: pasting into a field filled in from the address
+    # loses what is pasted.
     assert parse_qs(urlsplit(url).query)["report"][0] == text
     assert "device <number>" not in url and "### Log" not in url
     assert copied == ["~~~\none\ndevice <number>\n~~~\n"]
     assert _note(dialog)[0] is True and said == []
+    # A toast on the window would be missed once the browser comes up.
     assert not dialog.get_can_close()  # it stays open with the sentence
 
 
@@ -401,7 +402,7 @@ def test_open_on_github_with_a_report_too_long_copies_it(monkeypatch, device_roo
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     _attach_log(dialog)
     dialog.emit("response", "open")
-    assert opened == [report.ISSUE_URL]  # the empty form, as before
+    assert opened == [report.ISSUE_URL]  # the empty form
     assert copied == [report.with_log(text, ["one"])]  # everything that is shown
     assert said == ["Report copied: paste it into the form"]
 

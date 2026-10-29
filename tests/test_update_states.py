@@ -1,15 +1,7 @@
-"""The states of the updates said the same way everywhere.
-
-An update copied already, waiting for the device to install it, is "ready": the chip under the
-version says "Update ready", the row "Device software" says what to do, the line of the version
-says nothing more; "ready" wins over updates still to install ("· N more available"), on the
-row and at the top of the Updates page; the tile of the connected device says "Unplug to
-install" ("Eject to install" for a drive). The last check that answered is kept with the
-device (when, its software then, whether one was copied): the page of a remembered device says
-what it found and when ("· checked {when}"), or "Not checked since {when}" for a check too old
-or of other software; a failed check on the device page says when what it shows was found.
-The page of a remembered device tells its texts against now once a minute, as the start page
-does. All devices and updates are made up."""
+"""The states of the updates said the same way everywhere: "ready" for an update copied, waiting
+for the device to install it (chip, row "Device software", Updates page, tile), and the last check
+that answered, kept with the device, for the page of a remembered device ("· checked {when}",
+"Not checked since {when}"). All devices and updates are made up."""
 
 import json
 import time
@@ -68,7 +60,7 @@ def test_the_last_check_is_kept_when_the_software_and_whether_one_was_copied():
 
 
 def test_a_check_without_the_software_keeps_no_record_of_it():
-    """As before (a caller that does not know the software): only what was found."""
+    """A caller that does not know the software: only what was found is kept."""
     _remembered()
     known_devices.set_update_found(UNIT, True, now=NOON.timestamp())
     entry = known_devices.load()[UNIT]

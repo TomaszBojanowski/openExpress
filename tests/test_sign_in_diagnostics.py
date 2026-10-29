@@ -1,8 +1,7 @@
-"""The sign-in window tells the log what it runs on and what happens in it, never
-the address the ticket is in; a page whose web process ended offers to try again and the
-sign-in without the window; a crash of the program leaves Python's trace in crash.log, which
-the report attaches filtered. No network: the WebView is a stand-in, its signals are emitted
-by the test."""
+"""The sign-in window logs what it runs on and what happens in it, never the address the ticket
+is in; a page whose web process ended offers to try again or to sign in without the window; a
+crash leaves Python's trace in crash.log, which the report attaches filtered. The WebView is a
+stand-in whose signals the test emits."""
 
 import functools
 import logging

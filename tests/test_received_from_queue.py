@@ -1,7 +1,7 @@
 """What a sync writes to the device from Garmin's queue counts as received: the files of the
-queue, and also TrueUp and the Connect IQ apps written, so that the row "Last sync" does
-not say "nothing to upload" alone when something came to the device;
-an app left in the queue (not written) is not received. All answers here are made up."""
+queue, TrueUp and the Connect IQ apps written, so that the row "Last sync" does not say "nothing
+to upload" alone when something came; an app left in the queue (not written) is not. All answers
+here are made up."""
 
 import pytest
 from fakes import step_words

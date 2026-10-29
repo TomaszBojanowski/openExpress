@@ -1,8 +1,7 @@
 """The real window, built as the program builds it (MainWindow(None), no detection), has what
-its parts wire together: its actions, the main menu and the start page's menu, the sections
-of its side panel, the size saved when it closes,
-and the bar at the bottom (the spinner, then the bar, a fraction, a wait of known length with
-Stop Waiting, and nothing left once the task ends)."""
+its parts wire together: its actions, the main menu and the start page's menu, the sections of
+its side panel, the size saved when it closes, and the bar at the bottom (spinner, bar, fraction,
+a wait of known length with Stop Waiting, then nothing)."""
 
 import threading
 import types

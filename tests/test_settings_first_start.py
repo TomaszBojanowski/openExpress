@@ -1,9 +1,7 @@
-"""The first start: settings.json does not exist yet, and the
-window, the background service and the command line (or two devices the window opens at
-once) load the settings at the same moment. Each made a client GUID of its own and wrote
-it, so that the program told Garmin two GUIDs; now the first one writes it under a lock and
-the others read it again under the lock. The language of the interface is written under
-the same lock, so that it cannot write over a GUID just written. All data is made up."""
+"""The first start: settings.json does not exist yet, and the window, the background service
+and the command line (or two devices opened at once) load the settings at the same moment: one
+client GUID is written under a lock and read again by the others, and the language is written
+under the same lock. All data is made up."""
 
 import json
 import threading

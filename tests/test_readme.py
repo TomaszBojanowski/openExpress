@@ -1,8 +1,7 @@
-"""README and the help of the command line say what the program has: the command table
-names every command and the options of sync, install-desktop, devices, report and cache,
-the help of `cache` names its parts and that of `--path` does not offer it for a device in
-mass storage mode (the program finds one by itself), the Development section names the
-variables of the tests, and the Flatpak permissions name every folder the manifest opens."""
+"""README and the help of the command line say what the program has: the command table names
+every command and the options of sync, install-desktop, devices, report and cache; the help of
+`cache` names its parts, that of `--path` is not for a drive; Development names the variables of
+the tests, and the Flatpak permissions every folder the manifest opens."""
 
 import re
 from pathlib import Path
@@ -72,6 +71,7 @@ def test_the_help_of_cache_names_every_part():
 def test_the_help_of_path_is_for_a_folder_not_for_a_drive():
     words = _help_of("--path")
     assert "copy" in words
+    # A device in mass storage mode is found by the program itself.
     assert "UMS" not in words and "mass storage" not in words
 
 

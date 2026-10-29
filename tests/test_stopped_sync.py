@@ -1,8 +1,7 @@
-"""A sync stopped after its uploads keeps its record:
-its files are in Garmin Connect and state.json is written, so last_sync.json says what it did
-and why it stopped, in a line of its errors; before, it kept the record of the sync before,
-and the row "Last sync" and the tiles told that one. Ctrl+C on the command line likewise. A
-sync stopped before its uploads did nothing and keeps no record. All answers are made up."""
+"""A sync stopped after its uploads, also by Ctrl+C on the command line, keeps its record: its
+files are in Garmin Connect and state.json is written, so last_sync.json says what it did and,
+in a line of its errors, why it stopped. A sync stopped before its uploads did nothing and keeps
+no record. All answers are made up."""
 
 import json
 import shutil

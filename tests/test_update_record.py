@@ -1,8 +1,7 @@
-"""What the last check of updates found, kept with the device (devices.json): the count, of
-one update its name, version and whether it is of the system, and the software the device
-had then. The device page shows it from its first frame (the chip under the version,
-the subtitle of "Device software"), while the check of the server runs, which confirms or
-changes it; only shown, never installed from. All devices and updates are made up."""
+"""What the last check of updates found, kept with the device (devices.json: the count, one
+update's name, version and whether it is of the system, the software then): the device page
+shows it from its first frame while the server's check runs and confirms or changes it; only
+shown, never installed from. All devices and updates are made up."""
 
 import time
 import types

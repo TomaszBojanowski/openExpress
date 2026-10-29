@@ -1,9 +1,7 @@
-"""TrueUp waits as Garmin Express does. Garmin Connect's `check_back`
-says when to ask again: under 300 s the whole time, from 300 s on 90 s, at most three rounds.
-The wait has a known length, so it is told with it (the window fills its bar, the command line
-one line), and it can be stopped (the window's Stop Waiting, Ctrl+C on the command line, the
-background service quitting): nothing more is asked or written, and the sync ends as usual.
-Every file and answer here is made up."""
+"""TrueUp waits as Garmin Express does: Garmin Connect's `check_back` says when to ask again
+(under 300 s the whole time, from 300 s on 90 s, at most three rounds). The wait is told with its
+length and can be stopped; then nothing more is asked or written and the sync ends. Every file
+and answer is made up."""
 
 import struct
 import threading
@@ -116,7 +114,7 @@ def test_ctrl_c_during_the_wait_stops_it_without_harm(watch):
 
 
 def test_ctrl_c_elsewhere_still_stops_the_program(watch):
-    """Only the wait is stopped by Ctrl+C: anywhere else it stops the program, as before."""
+    """Only the wait is stopped by Ctrl+C: anywhere else Ctrl+C stops the program."""
     dev, st = watch
     c = client(0)
 
