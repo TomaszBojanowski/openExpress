@@ -7,7 +7,8 @@ import sys
 import types
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, window_methods
+from fakes import window as stand_in
 
 
 def _gui_log(log_file):
@@ -63,15 +64,14 @@ def test_ctrl_c_is_not_an_error_of_the_window(log_file, monkeypatch):
 
 def _window(sections):
     """What _load and load_section need of the window; a task runs at once."""
-    from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         sections=sections, session=types.SimpleNamespace(mass_storage=False), busy=False,
         _retry_sources={}, _action_buttons=[],
         run_task=RunNow())
     for name in ("load_updates", "load_maps", "load_music"):
         setattr(win, name, lambda: pytest.fail("another page"))
-    win._load = types.MethodType(MainWindow._load, win)
+    window_methods(win, ["_load"])
     return win
 
 

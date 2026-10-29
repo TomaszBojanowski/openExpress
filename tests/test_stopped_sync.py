@@ -10,6 +10,7 @@ import types
 
 import pytest
 from fakes import RunNow, SyncAccount
+from fakes import window as stand_in
 
 from openexpress import applog, cli, service, sync
 from openexpress.connect import ApiError
@@ -146,7 +147,7 @@ def test_the_window_shows_the_record_of_a_stopped_sync(monkeypatch):
     monkeypatch.setattr(service, "run_sync", run_sync)
     s = types.SimpleNamespace(mass_storage=False, logged_in=True, ownership_error=None,
                               stop_waiting=threading.Event())
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=s, run_task=RunNow(error="record"), progress=lambda *a: None,
         toast=lambda text: None, _show_last_sync=lambda: shown.append("last sync"),
         _count_activities_again=lambda: None)

@@ -7,6 +7,7 @@ import threading
 import types
 
 from fakes import RunNow
+from fakes import window as stand_in
 
 from openexpress import service
 
@@ -31,7 +32,7 @@ def test_the_window_clears_a_stop_left_from_its_previous_sync(monkeypatch):
         return service.SyncSummary()
 
     monkeypatch.setattr(service, "run_sync", run_sync)
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=_session(stopped=True),  # Stop Waiting pressed in the sync before
         run_task=RunNow(), progress=lambda *a: None, toast=lambda text: None,
         _show_last_sync=lambda: None, _count_activities_again=lambda: None)

@@ -1,4 +1,6 @@
 import pytest
+from fakes import window as stand_in
+from fakes import window_methods
 
 from openexpress import report
 from openexpress.device.storage import LocalStorage
@@ -270,11 +272,11 @@ def _report_dialog(monkeypatch, device_root, connected=True):
 
     monkeypatch.setattr(Gtk, "UriLauncher", types.SimpleNamespace(new=Launcher))
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session if connected else None, toast=said.append,
         get_clipboard=lambda: types.SimpleNamespace(set=copied.append),
         _report_view=MainWindow._report_view)
-    win._open_report_form = types.MethodType(MainWindow._open_report_form, win)
+    window_methods(win, ["_open_report_form"])
     MainWindow.show_report(win)
     (dialog,) = asked
     text = report.build(session.device, st, True)

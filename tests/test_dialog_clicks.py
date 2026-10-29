@@ -8,6 +8,7 @@ import uuid
 
 import pytest
 from fakes import RunNow
+from fakes import window as stand_in
 from test_forget_window import _button_labelled, _turn_until
 
 from openexpress import ciq, service
@@ -66,7 +67,7 @@ def _window(**kw):
         storage=object(), client=object(), mass_storage=False, unit_info_answer=None),
         "run_task": Tasks(), "toasts": [], "load_section": lambda key, force=False: None}
     values.update(kw)
-    win = types.SimpleNamespace(**values)
+    win = stand_in(**values)
     win.toast = win.toasts.append
     return win
 

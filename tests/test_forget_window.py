@@ -7,6 +7,7 @@ import json
 import types
 
 import pytest
+from fakes import window as stand_in
 
 FENIX, EDGE = 3000000001, 3000000002
 BODY = ("openExpress forgets what it keeps of this device on this computer: what was "
@@ -67,7 +68,7 @@ def window(unit=FENIX, connected=(), session=None):
         on_done(result)
 
     errors, toasts = [], []
-    win = types.SimpleNamespace(
+    win = stand_in(
         _remembered_unit=unit, _remembered_from_account=False, session=session,
         connected=types.SimpleNamespace(devices=list(connected)),
         remembered=types.SimpleNamespace(page="remembered view"),
@@ -127,7 +128,7 @@ def test_the_view_of_a_remembered_device_offers_to_forget_it():
     from openexpress.gui.app import MainWindow
     from openexpress.gui.start import RememberedPage
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         remembered=RememberedPage(), navigation=types.SimpleNamespace(push=lambda page: None),
         _device_textures={}, _pictures_asked=set(), _account=None,
         _on_start_page=lambda: True,

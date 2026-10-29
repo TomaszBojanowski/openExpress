@@ -7,6 +7,7 @@ import time
 import types
 
 import pytest
+from fakes import window as stand_in
 from fakes import window_methods
 from test_upload_consent import QUEUED, Account
 
@@ -134,7 +135,7 @@ def window(monkeypatch):
     monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
     monkeypatch.setattr(GLib, "timeout_add", timeout_add)
     monkeypatch.setattr(GLib, "source_remove", lambda source: timers.pop(source) and True)
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=None, busy=True, action_bar=_Shown(), progress_label=_Label(),
         progress_bar=_Bar(), unplug_label=_Shown(), banner=_Shown(), _action_buttons=[],
         _update_actions=lambda: None, _waiting=0, timers=timers, busy_spinner=_Shown(),
@@ -274,7 +275,7 @@ def test_loading_a_page_runs_its_task_as_one_with_its_own_indicator():
 
     asked = []
     section = types.SimpleNamespace(show=lambda name: None)
-    win = types.SimpleNamespace(
+    win = stand_in(
         sections={"maps": section}, session="device", _retry_sources={}, busy=False,
         run_task=lambda *args, **kw: asked.append(kw))
     MainWindow._load(win, "maps", "Checking maps…", lambda: None, lambda result: None)

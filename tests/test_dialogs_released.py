@@ -6,7 +6,8 @@ import gc
 import types
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, window_methods
+from fakes import window as stand_in
 
 
 def _finalized(obj) -> list:
@@ -28,9 +29,9 @@ def _settle():
 def _preferences_window():
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
-                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
-                                error=lambda title, text: None, run_task=None, toast=None)
+    win = stand_in(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                   set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                   error=lambda title, text: None, run_task=None, toast=None)
     for name in ("_button", "_cache_group", "_ask_clear_cache", "_account_group",
                  "_account_action"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -150,19 +151,18 @@ def _order_window(monkeypatch, chosen):
     """The window of choose_order: the copies of the app list made up, the task run at
     once; what confirm_order gets is recorded in `chosen`."""
     from openexpress import ciq
-    from openexpress.gui.app import MainWindow
 
     choice = ("a made-up copy", "a made-up plan")
     monkeypatch.setattr(ciq, "read_installed", lambda device, storage: "state")
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: [choice])
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=None, storage=None),
         error=lambda title, text: pytest.fail(text),
         _order_blocked=lambda state: None,
         _order_rows=lambda choices: [("Copy of 12.10.2026", "213 apps", True)],
         confirm_order=lambda copy, plan, note: chosen.append((copy, plan)),
         run_task=RunNow())
-    win.choose_order = types.MethodType(MainWindow.choose_order, win)
+    window_methods(win, ["choose_order"])
     return win, choice
 
 

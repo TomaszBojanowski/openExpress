@@ -7,6 +7,7 @@ import types
 
 import pytest
 from fakes import replace_in_window
+from fakes import window as stand_in
 
 ADDRESS = "mtp://Garmin_Edge_1050_0a1b2c3d4e5f/"
 EMAIL = "name@example.com"
@@ -42,9 +43,9 @@ def _run(work):
 
     applog.setup("gui")
     told = []
-    win = types.SimpleNamespace(busy=False, session=None, set_busy=lambda *a, **kw: None,
-                                error=lambda title, text: told.append(text),
-                                _run_pending_refresh=lambda: None)
+    win = stand_in(busy=False, session=None, set_busy=lambda *a, **kw: None,
+                   error=lambda title, text: told.append(text),
+                   _run_pending_refresh=lambda: None)
     app.MainWindow.run_task(win, "Reading…", work)
     applog.close()
     return told

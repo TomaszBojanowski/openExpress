@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from fakes import window as stand_in
 
 pytestmark = pytest.mark.needs_display
 
@@ -45,7 +46,6 @@ def test_ctrl_slash_opens_the_keyboard_shortcuts_too(bound):
 
 
 def test_the_window_of_shortcuts_shows_each_as_it_is_bound(bound, monkeypatch):
-    import types
 
     from gi.repository import Adw
 
@@ -55,7 +55,7 @@ def test_the_window_of_shortcuts_shows_each_as_it_is_bound(bound, monkeypatch):
     monkeypatch.setattr(Adw.ShortcutsDialog, "add", lambda self, section: sections.append(
         section))
     monkeypatch.setattr(Adw.ShortcutsDialog, "present", lambda self, parent: None)
-    MainWindow.show_shortcuts(types.SimpleNamespace())
+    MainWindow.show_shortcuts(stand_in())
     shown = {item.get_title(): item.get_accelerator() for section in sections
              for item in (section.get_item(i) for i in range(section.get_n_items()))}
     assert shown == {"Sync": "<Control>s", "Refresh": "<Control>r",

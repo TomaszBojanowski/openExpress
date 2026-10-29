@@ -7,6 +7,7 @@ import types
 
 import pytest
 from fakes import RunNow, replace_in_window
+from fakes import window as stand_in
 
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -17,7 +18,7 @@ def _closing_window(**kw):
                   _net_listener=None, _remember_geometry=lambda: None,
                   _update_relative_timer=lambda: None)
     values.update(kw)
-    return types.SimpleNamespace(**values)
+    return stand_in(**values)
 
 
 def test_the_window_closes_during_a_task_that_lets_it():
@@ -44,9 +45,9 @@ def test_run_task_tells_whether_its_task_lets_the_window_close(monkeypatch, lets
 
     _at_once(monkeypatch)
     seen = []
-    win = types.SimpleNamespace(busy=False, session=None, _task_lets_close=False,
-                                set_busy=lambda busy, *a, **kw: setattr(win, "busy", busy),
-                                _run_pending_refresh=lambda: None)
+    win = stand_in(busy=False, session=None, _task_lets_close=False,
+                   set_busy=lambda busy, *a, **kw: setattr(win, "busy", busy),
+                   _run_pending_refresh=lambda: None)
 
     def work():
         seen.append(win._task_lets_close)
@@ -63,10 +64,10 @@ def test_a_window_closed_during_a_task_ends_it_without_a_word(monkeypatch):
 
     _at_once(monkeypatch)
     told = []
-    win = types.SimpleNamespace(busy=False, session=None, _task_lets_close=False,
-                                set_busy=lambda busy, *a, **kw: setattr(win, "busy", busy),
-                                error=lambda title, text: told.append(text),
-                                _run_pending_refresh=lambda: None)
+    win = stand_in(busy=False, session=None, _task_lets_close=False,
+                   set_busy=lambda busy, *a, **kw: setattr(win, "busy", busy),
+                   error=lambda title, text: told.append(text),
+                   _run_pending_refresh=lambda: None)
 
     def work():
         raise WindowClosed
@@ -82,8 +83,8 @@ def test_a_backup_stops_once_the_window_is_closed(device_root, backups, log_file
     storage = LocalStorage(device_root)
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     copied = []
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=device, storage=storage),
-                                run_task=RunNow(), toast=copied.append, _closed=False)
+    win = stand_in(session=types.SimpleNamespace(device=device, storage=storage),
+                   run_task=RunNow(), toast=copied.append, _closed=False)
 
     def progress(path):
         copied.append(path)
@@ -107,9 +108,9 @@ def test_a_backup_with_the_window_open_makes_its_copy_and_says_so(device_root, b
     storage = LocalStorage(device_root)
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     told = []
-    win = types.SimpleNamespace(session=types.SimpleNamespace(device=device, storage=storage),
-                                run_task=RunNow(), toast=told.append, _closed=False,
-                                progress=lambda path: None)
+    win = stand_in(session=types.SimpleNamespace(device=device, storage=storage),
+                   run_task=RunNow(), toast=told.append, _closed=False,
+                   progress=lambda path: None)
     win.backup_row = None
     MainWindow.backup(win)
     assert len(told) == 1 and told[0].startswith("Copied ")
