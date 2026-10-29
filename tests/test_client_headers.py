@@ -1,10 +1,9 @@
-"""The headers of each Garmin service as Garmin Express sends them.
-Garmin's update, map and upload configuration service (OMT) gets the Garmin-Client-* headers
-and the language as a tag with a hyphen ("de-DE") in Garmin-Client-LocaleCode and
-Accept-Language, without X-garmin-client-id; the Garmin Connect API gets the Garmin-Client-*
-headers with X-garmin-client-id and no language; the Connect IQ store only X-garmin-client-id.
-Every request also names openExpress (User-Agent). The requests are caught before they leave;
-the key, the token and the device are made up."""
+"""Each Garmin service gets the headers Garmin Express sends: OMT (updates, maps, upload
+configuration) the Garmin-Client-* headers and the language as "de-DE" in
+Garmin-Client-LocaleCode and Accept-Language, no X-garmin-client-id; the Connect API
+Garmin-Client-* with X-garmin-client-id, no language; the Connect IQ store X-garmin-client-id
+only; all a User-Agent naming openExpress. Requests are caught before they leave; key, token
+and device are made up."""
 
 import io
 

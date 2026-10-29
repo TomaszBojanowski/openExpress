@@ -1,8 +1,7 @@
-"""The questions of the window answered as a
-user answers them. Each dialog is shown in a real window and its button, found by its words,
-is clicked: libadwaita then says "closed" before "response" (1.9), so an answer
-that reads what "closed" lets go of fails here, where a test that only emits "response" would
-pass. Every device, app and update here is made up."""
+"""The window's questions answered as a user answers them: each dialog is shown in a real
+window and its button, found by its words, clicked. libadwaita 1.9 says "closed" before
+"response", so an answer that reads what "closed" lets go of fails here, where emitting only
+"response" would pass. Every device, app and update is made up."""
 
 import types
 import uuid
@@ -279,7 +278,7 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
     assert MainWindow._on_close_request(win, None) is True  # the window stays
     assert win._close_dialog is not None
     click("OK", until=lambda: win._close_dialog is None and not click.shown[-1].get_mapped())
-    assert MainWindow._on_close_request(win, None) is True  # asked again, as before
+    assert MainWindow._on_close_request(win, None) is True  # asked again, as the first time
 
 
 # --- Escape in every dialog of the window -------------------------------------------------------

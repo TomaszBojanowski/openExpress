@@ -1,15 +1,12 @@
-"""A fake Garmin device on the other end of a PTP transport, for tests.
+"""A fake Garmin device at the other end of a PTP transport, answering as the fēnix 8 does:
 
-It answers the way the fēnix 8 was seen to answer:
-
-* a folder taken over by the device is missing from the ordinary listing and comes
-  back only from Garmin's 0x9002, with protection 1; so do the app files inside it,
-* a freshly written file shows in the ordinary listing, with protection 0,
-* reading an app file (.PRG) returns other bytes than were written,
-* SendObjectInfo takes storage and parent as parameters and returns the new handle.
-
-* DeleteObject removes a protected app file too (seen when Garmin Express removed an
-  app); `delete_protected` can make the fake refuse instead.
+* a folder the device took over, and its app files, are missing from the ordinary listing;
+  only Garmin's 0x9002 lists them, with protection 1;
+* a file just written is listed as usual, with protection 0;
+* an app file (.PRG) reads back other bytes than were written;
+* SendObjectInfo takes storage and parent and returns the new handle;
+* DeleteObject removes a protected app file too, as seen when Garmin Express removes an app
+  (`delete_protected`: the fake refuses instead).
 
 Everything in the tree is made up.
 """

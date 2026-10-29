@@ -514,13 +514,11 @@ class _Clock(datetime):
 
 @pytest.fixture
 def clock(monkeypatch):
-    """One made-up clock for a test that tells a time against now: datetime.now() of the
-    window (gui.start_window, gui.device_page), of its words (gui.words), of i18n and of the
-    device's error logs (diagnostics), and time.time(), all at
-    `clock.current` (NOON; a test moves it: clock.current += timedelta(days=2)). The
-    computer's clock then never decides the words (a day of 25 hours when the clocks go
-    back, the first minute after midnight). A moment a day back is best told by the wall
-    clock: (clock.current - timedelta(days=1)).timestamp()."""
+    """The made-up clock, at `clock.current` (NOON; a test moves it: clock.current +=
+    timedelta(days=2)): datetime.now() of the window, its words, i18n and diagnostics, and
+    time.time(). The computer's clock never decides the words (a day of 25 hours when the
+    clocks go back, the first minute after midnight). A moment a day back, by the wall clock:
+    (clock.current - timedelta(days=1)).timestamp()."""
     import importlib
 
     _Clock.current = NOON

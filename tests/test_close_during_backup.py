@@ -1,8 +1,7 @@
-"""The window may be closed during a backup: a backup reads the device and writes on this
-computer only, so nothing on the device is left half-written (the reason the window asks to
-wait during other tasks). Once the window is closed, the backup stops at its next file and
-its unfinished copy is removed, so that the process ends soon instead of reading the device
-on its own, unseen. Every device here is made up."""
+"""The window may be closed during a backup, which only reads the device and writes on this
+computer, so nothing on the device is left half-written; once the window is closed, the backup
+stops at its next file and its unfinished copy is removed, so the process ends soon instead of
+reading the device unseen. Every device is made up."""
 
 import types
 

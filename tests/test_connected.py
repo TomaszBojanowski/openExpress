@@ -54,7 +54,7 @@ def test_clear_forgets_the_devices_but_not_the_usb_state_of_the_list():
     c.listing(two(), ["51b4", "5158"])
     c.clear()
     assert c.devices == [] and not c.choosing
-    assert c.usb_when_listed == ["51b4", "5158"]  # never cleared, as before
+    assert c.usb_when_listed == ["51b4", "5158"]  # clear() never forgets it
 
 
 def test_keep_if_open_keeps_the_devices_with_the_open_one_among_them():

@@ -1,10 +1,7 @@
-"""The device page says what the device has: rows "Apps" and
-"Music" as "Maps" (to their pages; how many only once their page has read them, never a read
-of its own); "Backup" says when the last one was made and how many there are, its folder in
-the tooltip; the Maps page names the map update type Garmin gives a device whose maps are not
-supported; the Apps page says when the device refused an app folder with its software now;
-the page of a remembered device has the details of its last sync and what the account's list
-says of it. All devices, backups and accounts are made up."""
+"""Tests what the device page says: rows Apps and Music like Maps (counts once their pages have
+read them), the Backup row, a remembered device's last sync and account details; on the Maps
+and Apps pages, the map update type Garmin gives unsupported maps and the app folders the
+device refused. All devices, backups and accounts are made up."""
 
 import types
 from datetime import datetime

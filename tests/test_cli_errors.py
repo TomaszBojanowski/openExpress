@@ -1,10 +1,7 @@
-"""The errors of the command line: every error that is a message for the user
-(errors.UserFacingError) is told as it is and logged in one line, without
-a traceback; only an error nobody expected has its traceback in the log. Before, the command
-line listed the expected errors by hand, and those it forgot (the primary wearable, the copy
-of the diagnostics) were logged as unexpected. A ProtoError (our reading of a server's answer
-failed) is unexpected, as in the window. The classes are found by reading the source (ast):
-only the modules that define them are imported. All texts are made up."""
+"""Tests how the command line reports errors: a message for the user (errors.UserFacingError) is
+told and logged in one line, without a traceback; only an unexpected error, a ProtoError among
+them (as in the window), has its traceback in the log. The classes are found with ast; only
+their modules are imported. All texts are made up."""
 
 import ast
 import importlib

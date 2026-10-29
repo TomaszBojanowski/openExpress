@@ -557,10 +557,10 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
 
 
 def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(kinds_told, caplog):
-    """Which map service Garmin files a model under (a nüvi 52LMT gets its software update but
-    no map): the log says it, so that a report tells whether the model is one the
-    universal map service serves. The part number only, no unit ID; once for each model and
-    value; a value given as a number, or none given, is said as well."""
+    """The log names the map update type unit-info gives a model (a nüvi 52LMT gets its software
+    update but no map), so a report tells whether the universal map service serves it: the part
+    number only, no unit ID; once per model and value; a value given as a number, or none, is
+    said too."""
     import types
 
     from openexpress.gui import app

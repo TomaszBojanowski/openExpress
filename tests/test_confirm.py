@@ -1,9 +1,7 @@
-"""The one question and the one message of the window (gui/window_tasks.py: confirm, inform).
-A question closed in any way is cancelled and runs nothing; an answer runs only its own
-work. The dialogs are shown in a real window, their buttons clicked and Escape is
-Adw.Dialog.close(): libadwaita then says "closed", and "response" after it, once (1.9, seen
-on Xvfb). A "closed" said by a test alone gives the close response as well, so
-the tests do not say it themselves."""
+"""Tests the window's one question and one message (gui/window_tasks.py: confirm, inform): a
+question closed in any way is cancelled and runs nothing; an answer runs only its own work. The
+dialogs are shown in a real window and clicked; Escape is Adw.Dialog.close(), after which
+libadwaita 1.9 says "closed", then "response" once, so the tests never say "closed" themselves."""
 
 import logging
 

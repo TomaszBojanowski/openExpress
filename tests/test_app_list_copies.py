@@ -1,8 +1,7 @@
-"""The copies of the app list (GARMIN-APPS …): before a change no new copy is made
-while the apps and their order are those of the newest copy (whatever else OUT.BIN says, such
-as the free space); at most APP_LIST_COPIES_KEPT copies are kept for a device, the oldest go
-when a new one is made, as the full backups keep their newest three. The full backups and
-anything else in the folder stay. All devices and apps are made up."""
+"""The copies of the app list (GARMIN-APPS …): before a change, no new copy while the apps and
+their order are those of the newest copy (whatever else OUT.BIN says); at most
+APP_LIST_COPIES_KEPT copies per device (the oldest go), full backups and other files left
+alone; and the dialog to restore an order. All devices and apps are made up."""
 
 import datetime
 import types

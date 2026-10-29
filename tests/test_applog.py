@@ -275,7 +275,7 @@ def test_terminal_lines_are_redacted_like_the_file(log_file, capsys):
 def test_the_journal_of_the_watcher_is_redacted(log_file, capsys):
     applog.setup("watch", stderr_level=logging.INFO, stderr_format="%(message)s")
     logging.getLogger("openexpress.watch").info("synced %s", "mtp://091e_51b4_0000abcdef12/")
-    assert capsys.readouterr().err == "synced mtp://<device>/\n"  # no prefix, as before
+    assert capsys.readouterr().err == "synced mtp://<device>/\n"  # no prefix: the watcher's format
 
 
 def test_a_traceback_on_the_terminal_is_redacted(log_file, capsys):
@@ -334,7 +334,7 @@ def test_a_sign_in_left_unfinished_is_one_line_of_the_log(log_file, monkeypatch,
                                                           manual):
     """The sign-in window closed by the user (or `login --manual` given an address without a
     ticket): one INFO line in the log, no traceback, not "unexpected error"; the command line
-    says so in one line, exit code 1, as before."""
+    says so in one line, exit code 1."""
     from openexpress import cli
     from openexpress.auth import sso
 

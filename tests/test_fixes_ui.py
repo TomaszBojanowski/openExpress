@@ -515,8 +515,8 @@ def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
 
 
 def test_ctrl_q_during_a_task_still_asks_the_window(xdg):
-    """While a task runs, Ctrl+Q closes the window, which refuses and explains (as before);
-    nothing quits and nothing is saved here."""
+    """While a task runs, Ctrl+Q closes the window, which refuses and explains, as a close
+    does then; nothing quits and nothing is saved here."""
     from openexpress.gui.app import App, load_gui_settings
 
     closed, quits = [], []
@@ -872,7 +872,7 @@ def test_nothing_can_be_said_without_a_size_or_an_md5(offered):
         raise DeviceError("the device went away")
 
     st.read = broken
-    assert not upd.mark_present(st, [u])[0].on_device  # not known to be there: offered as before
+    assert not upd.mark_present(st, [u])[0].on_device  # not known to be there: offered
 
 
 def test_readable_names_of_types_and_severities(offered):
@@ -1298,11 +1298,10 @@ def test_the_address_of_a_picture_is_kept_with_the_device(pictures, logged_in, a
 
 
 def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(pictures):
-    """A Venu 2 off the account with its picture in the cache: without unit-info asked, the
-    address of the picture would not be kept, and once the cache is cleared it would be
-    gone. So unit-info is asked for the address alone (the file in the cache stays as it
-    is), once: with the address kept, nothing is asked. A device on the account gets its
-    address from the account's list, not here."""
+    """A device off the account with its picture cached: unit-info is asked once for the address
+    alone, which is kept (without it, the picture would be gone once the cache is cleared); the
+    cached file stays. With the address kept, or for a device on the account (its address comes
+    from the account's list), nothing is asked."""
     from openexpress import known_devices
 
     xdg, _log, monkeypatch = pictures
@@ -1328,11 +1327,10 @@ def test_a_device_off_the_account_with_its_picture_cached_gets_its_address_kept(
 
 
 def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(pictures):
-    """An inReach Mini 2 in mass storage mode: the account is never asked about it, and
-    with its picture in the cache and its address kept, unit-info would not be asked either,
-    so the log would never say what Garmin tells of it. So unit-info is asked once in each
-    run while Garmin has told no kind of it, and only its segment and connect support are
-    noted; the file in the cache stays. A drive whose kind is kept (a Varia) is not asked."""
+    """An inReach Mini 2 in mass storage mode, its picture cached and its address kept: the
+    account is never asked, so unit-info is asked once a run while Garmin has told no kind of
+    it, for the log, noting only its segment and connect support; the cached file stays. A
+    drive whose kind is kept (a Varia) is not asked."""
     from openexpress import devicelist, known_devices
 
     xdg, log_file, monkeypatch = pictures
@@ -1417,7 +1415,7 @@ def test_unit_info_request_keeps_the_device_out_of_the_log(log_file):
     client = GarminClient(Settings(), None, None)
     client.http = Http()
     assert client.unit_info(SECRET_UNIT, "006-B0000-00") == {"graphicurl": PICTURE_URL}
-    assert sent[0].endswith(f"/unitids/{SECRET_UNIT}")  # the request itself is as before
+    assert sent[0].endswith(f"/unitids/{SECRET_UNIT}")  # the address itself names the unit
     line = log_file.read_text().splitlines()[-1]
     assert "HTTP GET omt.garmin.com -> 200 in " in line
     assert "unitids" not in line and str(SECRET_UNIT) not in line and "<unit>" not in line
@@ -1451,7 +1449,7 @@ def test_all_leaves_out_the_files_already_on_the_device(offered):
     # Neither the file nor the entry that only describes it.
     assert [u.part_number for u in upd.present_with_metadata(items)] == [
         "006-DA001-00", "006-DA001-00-META"]
-    # With the reinstalls nothing is left out, as before.
+    # With the reinstalls, nothing is left out.
     assert len(upd.select(items, ["all"], keep_present=True)) == len(items) == 6
 
 

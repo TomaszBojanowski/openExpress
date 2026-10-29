@@ -8,18 +8,11 @@ Call = namedtuple("Call", "title fn done failed device in_page button")
 
 
 class RunNow:
-    """run_task of the window (TaskRunner, gui/window_tasks.py), run at once: the work on
-    this thread (or, with `thread=True`, in another, waited for), then `done(result)`
-    outside any try, as the window calls it; an error of the work goes to `failed(error)`,
-    and one it does not take to `error`: "raise" (the default: an error nobody expected
-    fails the test), "record" (its words in `errors`) or a function (title, words), as the
-    window's `error`. WindowClosed (the work stopped as the window closed) ends the task
-    without done, failed or error, as in the window. A `button` spins during the work and
-    is back before done or failed, as in the window; a work marked writes_to_device is noted
-    in `written` (the window reads the free space again then). Every call is kept in
-    `calls` (`titles` for their titles); `on_call(call)` runs before the work and
-    `before_done()` between it and done or failed. Unlike the window: no check of `busy`,
-    no bar, no pending refresh afterwards."""
+    """The window's run_task (gui/window_tasks.py), run at once: the work (in a thread,
+    waited for, with `thread=True`), then done or failed; an error `failed` does not take goes
+    to `error`: "raise" (default), "record" (into `errors`) or a function (title, words).
+    WindowClosed ends the task quietly; `button` spins during the work. Leaves `calls`,
+    `titles` and `written` (writes_to_device works)."""
 
     def __init__(self, error="raise", thread=False, on_call=None, before_done=None):
         self.error, self.thread = error, thread
@@ -34,6 +27,7 @@ class RunNow:
 
     def __call__(self, title, fn, done=None, failed=None, device=True, in_page=False,
                  button=None):
+        # Unlike the window: no check of `busy`, no bar, no pending refresh afterwards.
         call = Call(title, fn, done, failed, device, in_page, button)
         self.calls.append(call)
         if self.on_call is not None:
@@ -69,7 +63,7 @@ class RunNow:
             elif raised:
                 self._failed(title, raised[0], failed)
             elif done is not None:
-                done(result[0])
+                done(result[0])  # an error of done is not caught, as in the window
         finally:
             if getattr(fn, "writes_to_device", False):
                 self.written.append(title)
@@ -87,12 +81,11 @@ class RunNow:
 
 
 class SyncClient:
-    """The Garmin Connect account as sync uses it: the
-    uploads are noted and answered with `statuses` by address (201 otherwise), Connect
-    already has the activities in `matches`, the queue gives a course for an address with
-    "course" in it, the acknowledgements are noted. `require_verified` refuses as the real
-    client does: without a device checked against the account (`verified_unit_id`), or for
-    another one."""
+    """The Garmin Connect account as sync uses it: uploads are noted and answered with
+    `statuses` by address (201 otherwise); Connect has the activities in `matches`; the queue
+    gives a course for an address with "course" in it; acknowledgements are noted.
+    `require_verified` refuses, as the real client does, without a device checked against the
+    account (`verified_unit_id`) or for another."""
 
     def __init__(self, statuses=None, matches=None, messages=None, verified_unit_id=None):
         self.statuses = statuses or {}
@@ -263,11 +256,10 @@ def step_words(lines):
 
 
 def window_methods(win, names):
-    """Binds these methods of MainWindow to the stand-in window `win` and returns it. Each is
-    looked up along MainWindow's whole MRO, as the window finds it: in app.py or in one of the
-    mixins (maps_page, music_page…), so a method moved to a mixin stays in the stand-in. A
-    name that no class of openExpress defines (renamed, removed, or only GTK's) fails at once
-    with that name, instead of a stand-in short of a method."""
+    """Returns the stand-in window `win` with these methods of MainWindow bound to it, each
+    looked up along MainWindow's MRO as the window finds it (in app.py or a mixin), so a method
+    moved to a mixin stays in the stand-in. A name no class of openExpress defines (renamed,
+    removed, or GTK's only) fails at once, naming it."""
     import types
 
     from openexpress.gui.app import MainWindow
@@ -294,17 +286,11 @@ def window_methods(win, names):
 
 
 def replace_in_window(monkeypatch, name, value):
-    """Replace `name` (a function, a class, a module or a constant the window's code reads,
-    e.g. "eject" or "Adw") in every module of the window (openexpress.gui.*) that holds the
-    same object under it, never in gui.app alone: code in another module of the window
-    looks the name up in its own module, and a replacement in gui.app alone would do nothing
-    there, without failing (test_dead_patches). Every module that holds the name
-    must hold the same object (that of gui.app, when gui.app holds it): one that holds
-    another would keep it and its code would never see the replacement, so that fails,
-    naming it, before anything is replaced. A name no module of the window holds fails at
-    once. The tests ask for it through the fixture in_the_window; a helper that gets
-    `monkeypatch` calls it itself. Returns the names of the modules it replaced the name
-    in."""
+    """Replaces `name` (e.g. "eject" or "Adw") in every module of openexpress.gui that holds
+    it, never in gui.app alone (test_dead_patches), and returns those modules' names. Fails,
+    replacing nothing, when no module holds the name or the modules hold different objects
+    under it (some code would not see the replacement). Tests use the fixture in_the_window;
+    a helper with `monkeypatch` calls this."""
     import importlib
     import pkgutil
 

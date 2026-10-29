@@ -1,11 +1,7 @@
-"""ECG recordings (FIT_TYPE_61) are never uploaded. Garmin's upload
-settings send them to Garmin Health, which takes them only with a sign-in of its own that
-openExpress does not have. Signed with the Garmin Connect login, an answer 401 or 403 from
-there would stop the whole sync, every time while a recording is on the device: no
-monitoring or sleep uploaded, no queue read, no record of the sync. So the type is left
-out of the plan, its files stay on the device, and the summary of the sync (the window's
-"Last sync" and `openexpress sync --apply`) has one line about them. All devices, files
-and answers are made up."""
+"""Tests that ECG recordings (FIT_TYPE_61) are never uploaded: Garmin's upload settings send
+them to Garmin Health, which needs a sign-in of its own, and its 401 or 403 to the Connect login
+would stop every sync. They stay on the device, with one line in the sync summary (window and
+CLI). All devices, files and answers are made up."""
 
 import json
 from pathlib import Path

@@ -638,7 +638,7 @@ def test_app_folder_states(iq_device, device_root, xdg):
     assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
     (device_root / "GARMIN/APPS/MEDIA").rmdir()
     assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
-    # A device that lets the folder be created is used as before.
+    # A device that lets the folder be created gets it, and the folder is used.
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is True
     assert (device_root / "GARMIN/APPS/MEDIA").is_dir()
     assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
@@ -2760,7 +2760,7 @@ def test_update_interrupted_while_the_app_file_is_sent(hidden_update):
     client = CountingClient()
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
     assert rep.installed == [] and "GeneralError" in rep.failed[0][1]
-    # The unfinished file we wrote is removed; the old version and its data are as before.
+    # The unfinished file we wrote is removed; the old version and its data stay unchanged.
     assert fake_tree(fake) == before and client.acks == []
     assert fake.sent(ptp.DELETE_OBJECT) == 1
 
@@ -2982,7 +2982,8 @@ def test_flatpak_never_tries_to_create_a_hidden_app_folder(flatpak_spot, backups
 
 
 def test_flatpak_still_creates_a_folder_that_is_really_missing(no_usb_apps, device_root):
-    """No app file is hidden on this device, so its folder is not there: tried as before."""
+    """In the Flatpak, a device with no hidden app file really lacks the folder: creating it is
+    still tried, once."""
     st, dev, attempts = no_usb_apps
     st.usb_blocked = lambda: True
     (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([(PRELOADED, 8, "Softball", True, "")]))
@@ -3274,7 +3275,7 @@ def test_install_with_no_free_slot_requests_nothing(iq_device, monkeypatch):
 
 
 def test_an_app_that_is_only_queued_is_not_refused_for_slots(flatpak_spot, monkeypatch):
-    # The Flatpak cannot write it anyway: it is requested for the phone, as before.
+    # The Flatpak cannot write it anyway: it is requested for the phone, slots or not.
     st, dev, _fake, _app, _attempts = flatpak_spot
     device_reports(monkeypatch, slots=0)
     new = uuid.UUID("11111111-2222-3333-4444-555555555555")
@@ -3346,7 +3347,7 @@ def test_copy_plan_tells_a_new_file_from_one_it_replaces(iq_device, songs):
     plan = music.plan_copy(tracks, dev, st)
     assert [d for _t, d in plan.already] == [ONE] and [d for _t, d in plan.to_copy] == [TWO]
     assert plan.replaced == {TWO: 150}
-    assert asked == [ONE, TWO]  # one question per file, as before
+    assert asked == [ONE, TWO]  # one question per file, no more
     track = plan.to_copy[0][0]
     assert music.replaced_note(plan, track, TWO) == (
         "(replaces the file on the device: 150\u00a0B → 203\u00a0B)")
@@ -3457,10 +3458,10 @@ def test_replaced_files_in_polish(iq_device, songs):
 def test_cli_update_through_the_mounted_storage_announces_no_app_list(iq_device, device_root,
                                                                      apps_cli, monkeypatch,
                                                                      capsys):
-    """An update of an app whose folder is in sight (an Edge 1050) goes next to the app's file
-    under a new name and leaves the app list as it is: the dry run says nothing of an IN.BIN
-    to be written, and --apply writes none (as an Edge 1050 does). Over PTP the list
-    is written again as it is: test_cli_update_of_a_hidden_app."""
+    """An update of an app whose folder is in sight goes next to the app's file under a new
+    name and leaves the app list as it is, as on an Edge 1050: the dry run says nothing of an
+    IN.BIN and --apply writes none. Over PTP the list is written again as it is
+    (test_cli_update_of_a_hidden_app)."""
     from openexpress.cli import main
 
     st, _dev = iq_device

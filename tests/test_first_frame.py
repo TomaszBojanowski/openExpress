@@ -1,9 +1,7 @@
-"""The first frame of the start page in the real
-window. The tests of the first frame (test_tile_facts, test_sync_count_record,
-test_sync_chips) use a window made of chosen methods and the real StartPage; here the window
-is MainWindow itself, from its own start (__init__ → _start → the detection → _show_tiles).
-Its first frame must say what tile_facts kept of the devices, before the account's list comes
-and before anything is counted. The devices are the four made-up ones of test_tile_facts."""
+"""Tests the first frame of the start page in MainWindow itself, not a window of chosen methods,
+from its own start (__init__ → _start → the detection → _show_tiles): it says what tile_facts
+kept of the devices, before the account's list comes and anything is counted. The devices are
+the four made-up ones of test_tile_facts."""
 
 import types
 

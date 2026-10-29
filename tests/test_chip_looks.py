@@ -1,7 +1,7 @@
-"""The grey chips of a tile ("Primary", "USB drive", "Not on your account", "Never synced",
-"Synced") stand out from the grey line under them, in the dark and the light theme. Their
-style class is "dimmed", which libadwaita 1.7 dims as well (opacity 0.55, its own class of
-that name), so they could look fainter than the line under the name. Made-up words."""
+"""Tests that the grey chips of a tile ("Primary", "USB drive", "Not on your account", "Never
+synced", "Synced") stand out from the grey line under them in the dark and the light theme,
+though libadwaita 1.7 dims their style class "dimmed" too (opacity 0.55); and that every chip
+has one shape and size. Made-up words."""
 
 import pytest
 

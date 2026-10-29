@@ -239,7 +239,7 @@ def test_progress_never_goes_back(host):
 ])
 def test_output_that_cannot_be_read_leaves_the_bar_alone(host, chunks):
     host.answer(chunks)
-    assert copy_with_progress(host) == []  # no error, no progress: as before the change
+    assert copy_with_progress(host) == []  # no error, no progress: the copy goes on, no bar
 
 
 def test_a_failed_copy_is_reported_with_what_gio_said(host):

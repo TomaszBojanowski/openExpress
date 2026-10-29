@@ -1,8 +1,7 @@
-"""The pages that say why they show nothing (a device in mass storage mode, the ownership of
-the device not known, a device without media): the description of an Adw.StatusPage is
-markup, and a text with "<" in it (a network error names "<path>", "<hex>" or
-"<urllib3… object at …>") would leave it empty. It is escaped, and shown as it is. All texts
-are made up."""
+"""Tests the pages that say why they show nothing (a device in mass storage mode, ownership not
+known, no media): an Adw.StatusPage description is markup, so a text with "<" (a network error
+names "<path>" or "<urllib3… object at …>") would leave it empty; it is escaped and shown as it
+is. All texts are made up."""
 
 import types
 

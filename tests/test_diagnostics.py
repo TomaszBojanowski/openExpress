@@ -1,9 +1,7 @@
-"""The device's error logs and a copy of its diagnostic
-files on this computer. The logs are read at each opening (the copy on or off) and an "RTL
-Trap" of the last 30 days gets a row on the device page; the copy is off by default, made
-once per connection through the ordinary connection only, and never sent. The hidden crash
-logs (a session of our own) and the memory dumps are copied only when asked for. Every entry,
-file and device here is made up."""
+"""Tests the device's error logs, read at each opening (an "RTL Trap" of the last 30 days gets a
+row on the device page), and the copy of its diagnostic files: off by default, made once per
+connection, never sent; the hidden crash logs and memory dumps only on request. All entries,
+files and devices are made up."""
 
 import json
 import os

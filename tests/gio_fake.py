@@ -38,15 +38,11 @@ def gio_error(word: str, message: str = "made-up refusal") -> GLib.Error:
 class GioOp:
     """One operation; `start` is what gio_storage._wait begins it with.
 
-    when: "at once" (within start: Gio never does that, but _wait copes), "next turn",
-    "before" (`delay_s` after it began), "on cancel" (only once cancelled, `delay_s` after the
-    cancel), "never" (the cancel ignored).
-    says: "done", "error" (`message`) or "already mounted"; `on_cancel`: "done" (too late to
-    cancel), "cancelled" or "error".
-    `strict`: an operation begun without a Gio.Cancellable fails at once.
-
-    `delivered` is what it really gave, once its answer ran: (word, name of the thread), or
-    None; `began_in` the thread that began it."""
+    when: "at once" (within start; Gio never does), "next turn", "before" (`delay_s` after
+    start), "on cancel" (`delay_s` after the cancel), "never" (the cancel ignored).
+    says: "done", "error" (`message`) or "already mounted"; `on_cancel`: "done" (too late),
+    "cancelled" or "error". `strict`: fails without a Gio.Cancellable.
+    Leaves `delivered` (word, thread name) and `began_in`."""
 
     def __init__(self, when="next turn", says="done", delay_s=0.0, on_cancel="cancelled",
                  message="made-up refusal", strict=False):
@@ -142,14 +138,11 @@ class WindowCallbacks:
 
 
 class GvfsDevice:
-    """An MTP device in gvfs as gio_storage sees it, for an unmount that goes on after its
-    cancel, as gvfs lets it. Its unmount and its mount answer through
-    D-Bus: a cancel ends the wait at once ("cancelled"), while gvfs goes on and the unmount
-    takes effect `unmount_takes_s` after it began, unless `cancel_stops` (gvfs honoured the
-    cancel). The volume monitor (`get_mounts`) shows a change once the main thread has had
-    its signal (an idle of the global default context, as in a program); the files (`exists`)
-    are as they are in gvfs. `comes_back=False`: mounted again, its files stay unseen.
-    `events`: "unmounted", "mounted", in order."""
+    """An MTP device in gvfs as gio_storage sees it. A cancel answers the unmount at once
+    ("cancelled"), but gvfs goes on: the unmount takes effect `unmount_takes_s` after it began,
+    unless `cancel_stops`. The volume monitor (`get_mounts`) shows a change once the main
+    thread has had its signal; `exists` follows gvfs at once. `comes_back=False`: mounted
+    again, its files stay unseen. Leaves `events`."""
 
     def __init__(self, uri, unmount_takes_s=0.2, cancel_stops=False, comes_back=True):
         self.uri, self.unmount_takes_s = uri, unmount_takes_s

@@ -1,10 +1,7 @@
-"""A Connect IQ app whose version in the store asks for other
-permissions than before ("permissionsChanged" of the store, with the list "permissions") is
-installed or updated only after the user allows them. Garmin Express asks in a window of its
-own before each such install and update; openExpress asks once for all of them in the window,
-and the command line needs --allow-permissions. A sync installs only what already waits in the
-queue (asked for by the phone, the store or openExpress) and never asks the store for updates,
-so it asks nothing. All apps, answers and devices are made up."""
+"""A Connect IQ app whose store version asks for new permissions ("permissionsChanged", with
+the list "permissions") is installed or updated only once the user allows them: the window asks
+once for all (Garmin Express asks before each), the command line needs --allow-permissions, and
+a sync, installing only the queue, asks nothing. All apps, answers and devices are made up."""
 
 import dataclasses
 import types
@@ -176,7 +173,7 @@ def test_window_asks_before_installing_an_app_with_new_permissions():
     plain = store_app(STORE_ID, "Connect IQ Store", "watch-app")
     MainWindow.install_apps(win, [plain, FACE_IT])
     assert asked == [(["Connect IQ Store", "Face It"], ["Face It"])] and installed == []
-    MainWindow.install_apps(win, [plain])  # nothing to allow: at once, as before
+    MainWindow.install_apps(win, [plain])  # nothing to allow: installed at once, unasked
     assert installed == [(["Connect IQ Store"], set())]
 
 

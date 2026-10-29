@@ -1,16 +1,8 @@
-"""A test that replaces a name in gui.app alone
-(monkeypatch.setattr(app, "name", …)) changes only what gui/app.py itself looks up. Once the
-code that uses the name moves to another module of the window, the replacement does nothing
-and the test checks something else, without failing; and a name the window's modules share
-(Adw, Gtk, eject, …) may be read in a module other than app.py already. So no test replaces a
-name in gui.app itself: it asks in_the_window (conftest, fakes.replace_in_window), which
-replaces the name in every module of the window that holds it. Each name replaced so must be
-read by a module of the window, and every module that reads it must hold it itself (an import
-inside a function is out of reach). A name imported by several modules of the window is not
-replaced in one of them alone either (the others would keep it), and no method a mixin calls
-through its own class (TaskRunner.in_background(…)) is replaced on MainWindow (those calls
-would not see it). In the same way, the made-up clock (conftest.clock) must stand in every
-module of gui/ that asks datetime.now(). Read from the sources only."""
+"""Checks, from the sources, that the tests' replacements of names reach the window's code. A
+name replaced in gui.app alone does nothing, without failing, once the code that reads it moves
+to another module; so tests use in_the_window (fakes.replace_in_window), which replaces it in
+every module of the window holding it. Also: conftest.clock stands in every gui/ module that
+asks datetime.now()."""
 
 import ast
 from pathlib import Path

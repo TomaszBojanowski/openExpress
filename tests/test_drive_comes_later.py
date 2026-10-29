@@ -1,9 +1,7 @@
-"""A Garmin drive that the system does not mount (KDE) sends no mount event, and gvfs may offer
-its volume, or a medium in it, a moment after the device is on USB (the tile of a
-Forerunner 55 would then come only after Refresh). The window hears gvfs's volumes (added,
-changed, removed); it looks at USB also while a device is open; and it looks again, a few
-times, for a device in mass storage mode that the last list found without a drive. All
-devices here are made up."""
+"""A Garmin drive the system does not mount (KDE) sends no mount event, and gvfs may offer its
+volume, or a medium in it, later. Tests that the window hears gvfs's volumes, watches USB with a
+device open, and looks again a few times for a device in mass storage mode listed without a
+drive. All devices are made up."""
 
 import types
 
