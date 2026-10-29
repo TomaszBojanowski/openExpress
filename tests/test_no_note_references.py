@@ -1,11 +1,12 @@
 """The repository says why, not when nor where in private notes. Comments, docstrings and the
 pattern files name no dates, no labels of a plan or of a decision (D7, Q1, T6b), no issues
 (#19), no commits, no steps of a plan or a review, no versions of openExpress (0.6.6) and no
-story of the work ("review of", "seen live"); no string names the analyses, audits, decisions
-or private notes, nor a "live test". A fact about a device, a server or another program stays,
-with that program's own version ("libadwaita 1.9", "firmware 23.39"). Dates and the like in
-other strings are data (the window shows dates as 21.10.2026), so only comments and
-docstrings are looked at for those. No file has an exception."""
+story of the work ("review of", "seen live", "as before"), and no function is named so; no
+string names the analyses, audits, decisions or private notes, nor a "live test". A fact about
+a device, a server or another program stays, with that program's own version ("libadwaita
+1.9", "firmware 23.39"). Dates and the like in other strings are data (the window shows
+dates as 21.10.2026), so only comments and docstrings are looked at for those. No file has an
+exception."""
 
 import ast
 import io
@@ -24,10 +25,10 @@ _MONTHS = ("January|February|March|April|May|June|July|August|September|October|
            "December")
 # Looked for in comments, docstrings and the lines of the pattern files only. A label is a
 # capital and a number, maybe with a part after a dot (T5.1); no S (Amazon S3, the Approach
-# S70) and no X (X11); not a file name (E2.img), not a code of ruff (E402), not the F5 key. A version of openExpress has three
-# parts, so "0.5 s" is none, nor is the version in the name of a pattern file
-# (format-0.6.20-…) or a part of 127.0.0.1. A commit is 7 hexadecimal digits, with a letter
-# and a digit among them.
+# S70) and no X (X11); not a file name (E2.img), not a code of ruff (E402), not the F5 key. A
+# version of openExpress has three parts, so "0.5 s" is none, nor is the version in the name
+# of a pattern file (format-0.6.20-…) or a part of 127.0.0.1. A commit is 7 hexadecimal
+# digits, with a letter and a digit among them.
 WHEN = (
     DATE,
     re.compile(rf"\b(?:\d{{1,2}} )?(?:{_MONTHS}) (?:\d{{1,2}}, )?20\d\d\b"),
@@ -37,7 +38,13 @@ WHEN = (
     re.compile(r"\b(?:[Ss]teps?|[Ss]tages?|[Pp]oints?|[Pp]ackages?|[Pp]arts?|[Aa]reas?) "
                r"\d+[a-z]?\b"),
     re.compile(r"\b(?:review of|seen live|reporter|moved out of|split out of|the split)\b"),
+    re.compile(r"\bas before\b(?!\s+(?:it|its|the|an?|this|that|these|those)\b"
+               r"(?!\s+(?:change|fix|split)\b))"),
 )
+# "As before" points at an earlier version, unless a moment of the events follows ("as before
+# the eject"; not "the change" or "the fix"). A function, and a test above all, is named after
+# what it does or checks, not after what an earlier version did.
+NAME = re.compile(r"(?:^|_)as_before(?:$|_(?!(?:it|its|the|an?|this|that)_))")
 VERSION = re.compile(r"(?<![\w.-])v?0\.\d{1,2}\.\d{1,2}(?![\w.])")
 
 
@@ -73,6 +80,8 @@ def references(path: Path) -> list[str]:
     tree = ast.parse(text)
     docs = _docstrings(tree)
     for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and NAME.search(node.name):
+            said.append(f"{node.lineno}: {node.name}")
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             patterns = (NOTES, *WHEN, VERSION) if id(node) in docs else (NOTES,)
             said += _said(node.lineno, node.value, patterns)
@@ -131,6 +140,22 @@ def test_what_tells_when_in_a_comment_or_a_docstring(tmp_path):
 def test_an_analysis_named_across_a_line_break(tmp_path):
     assert _words(tmp_path, '"""The rule of the analysis\n    14: one source."""\n') == [
         "analysis\n    14"]
+
+
+def test_as_before_without_a_moment_after_it(tmp_path):
+    """"As before" is history; before a moment it is the order of the events. A function
+    named with it is history too."""
+    assert _words(tmp_path, '# the tile keeps its chip, as before.\n'
+                            '# no error, no progress: as before the change\n'
+                            '# the list is read again, just as before the eject\n'
+                            '# a detection that ends with no device, as before it\n'
+                            '# written before the cable goes out\n'
+                            'def test_stderr_is_as_before(): pass\n'
+                            'def test_cli_installs_as_before_when_unit_info_fails(): pass\n'
+                            'def _space_as_before(): pass\n'
+                            'def test_the_page_is_read_as_before_the_reload(): pass\n') == [
+        "as before", "as before", "test_stderr_is_as_before",
+        "test_cli_installs_as_before_when_unit_info_fails", "_space_as_before"]
 
 
 def test_what_is_not_history(tmp_path):
