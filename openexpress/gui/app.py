@@ -436,6 +436,16 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
                 self.nav.select_row(self.nav.get_row_at_index(i))
         self._show_content()
 
+    def _front_device_page(self) -> None:
+        """The device page ("Device") in front of the device view, the page of the side panel
+        seen before forgotten: a device opened, opened again or chosen on the start page
+        always opens there (folded, on the side panel, as when it first opens)."""
+        self._content_chosen = False
+        self.split.set_show_content(False)
+        for i, sec in enumerate(self.sections.values()):
+            if sec.key == "watch":
+                self.nav.select_row(self.nav.get_row_at_index(i))
+
     def _show_content(self) -> None:
         """The page chosen in the side panel, in front of the panel while the window is
         folded. Unfolded, both are in view and show-content stays False: set, the

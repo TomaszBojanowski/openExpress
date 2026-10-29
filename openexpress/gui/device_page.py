@@ -733,6 +733,8 @@ class DevicePage:
             self.show_no_device()
             return
         self._clear_device_pages()
+        if self.navigation.get_visible_page() is not self.device_view:
+            self._front_device_page()  # opened, or opened again: on its device page
         page = self.pages.get_visible_child_name()
         # The Maps or Updates page asks right away, and its answer fills the row of the device
         # page as well (show_maps, show_updates): the row does not ask a second time.

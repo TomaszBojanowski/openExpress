@@ -369,6 +369,7 @@ class StartWindow:
         if visible is not self.start.page:
             # The read-only view of a remembered device: the device view takes its place.
             self.navigation.pop_to_page(self.start.page)
+        self._front_device_page()
         if not decision.animate:  # the window just opened: straight to the device
             self.navigation.set_animate_transitions(False)
             self.navigation.push(self.device_view)

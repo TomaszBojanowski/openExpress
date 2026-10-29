@@ -652,6 +652,8 @@ def _start_window(monkeypatch, listed):
         pages=types.SimpleNamespace(get_visible_child_name=lambda: "overview"),
         _clear_device_pages=lambda: None, show_overview=lambda: None,
         load_section=lambda page: None, _show_device_view=lambda: None,
+        navigation=types.SimpleNamespace(get_visible_page=lambda: "start page"),
+        _front_device_page=lambda: None,  # opened from the start page
         _reread_connected=lambda: reread.append(getattr(win, "_reread_cause", None)))
     for name in ("open_choice", "show_device", "_is_open", "_start_summaries"):
         setattr(win, name, types.MethodType(getattr(app.MainWindow, name), win))

@@ -4295,6 +4295,7 @@ def start_stand_in(start, sections, win=None):
     win.sections = sections
     win.pages = types.SimpleNamespace(get_visible_child_name=lambda: "watch")
     win._update_banner = win._update_actions = lambda: None
+    win._front_device_page = lambda: None  # the side panel is not built here
     win.overviews = []
     win.show_overview = lambda: win.overviews.append(win.session)
     win.load_section = lambda key: None

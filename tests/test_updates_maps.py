@@ -931,6 +931,8 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         _highlight_update=lambda on: None,
         _update_banner=lambda: None, _update_actions=lambda: None,
         _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation
+        navigation=types.SimpleNamespace(get_visible_page=lambda: "device view"),
+        device_view="device view",  # a refresh in the device view: it stays in view
         connected=Connected(),  # the devices connected, for the start page
         show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
         load_apps=None, load_music=None,  # other pages: not loaded here
