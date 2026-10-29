@@ -2825,10 +2825,10 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     ("fitness", [("Done", EJECTED_TEXT)]),
 ])
 def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
-    """The window asks, then copies; exactly one file comes to the drive. Then it asks to eject
-    the drive and does not say that the cable can go out (a device in mass storage mode
-    may take the file only once ejected). Once ejected it says so, and for a bike accessory, as
-    Garmin Express does, how the device finishes the update."""
+    """The window asks, then copies exactly one file to the drive; then it asks to eject the
+    drive, never saying the cable can go out (a device in mass storage mode may take the file
+    only once ejected). Once ejected it says so, and for a bike accessory, as Garmin Express
+    does, how the device finishes the update."""
     s, mount, dialogs, asked = installed_on_a_drive(drive_window, monkeypatch, segment)
     (question,) = dialogs[1:]
     assert (question.get_heading(), question.get_body()) == ("Update saved", EJECT_FIRST_TEXT)
@@ -4664,11 +4664,9 @@ def mounts_reported_at_start(win):
 @pytest.mark.parametrize("when", ["after the choice", "during the opening"])
 def test_a_detection_planned_before_the_choice_leaves_the_device_open(
         start_window, monkeypatch, tmp_path, device_root, when):
-    """Two devices on the start page, the mounts of both reported at the start; the Edge is
-    clicked. The detection planned before the click finds only devices already on the list:
-    the Edge stays open, its view stays up, and the start page below is not drawn again
-    (closing the Edge, going back and drawing the tiles anew would show their first frames
-    empty under the animation)."""
+    """Two devices on the start page, the mounts of both reported at the start, the Edge
+    clicked: the detection planned before the click finds only devices already listed, so the
+    Edge stays open, its view stays up and the start page below is not drawn again."""
     from openexpress.gui.app import MainWindow
 
     win = start_window
@@ -4697,6 +4695,7 @@ def test_a_detection_planned_before_the_choice_leaves_the_device_open(
     run_later(later)
     assert win.session is not None and win.session.device.description == "Edge 1050"
     assert win.navigation.stack == ["start page", "device view"]
+    # Drawn anew, the tiles would show their first frames empty under the animation.
     assert len(win.start.shown) == drawn  # not drawn again
     assert opening == ["open_session", "check_session"]  # the Edge, once
 
@@ -4905,7 +4904,7 @@ def test_a_device_plugged_in_while_a_remembered_one_is_shown_opens_its_view(star
 
 def test_a_detection_that_still_finds_nothing_keeps_the_remembered_view(start_window,
                                                                         monkeypatch):
-    """A detection that ends with no device, as before it: the read-only view of the
+    """No device connected before the detection nor after it: the read-only view of the
     remembered device stays; the start page under it is drawn anew."""
     import time
 
@@ -5018,14 +5017,12 @@ def real_usb_poll(win):
                                      "a drive open, an mtp left"])
 def test_the_open_device_unplugged_with_another_connected_opens_the_other(
         start_window, monkeypatch, tmp_path, device_root, variant, caplog):
-    """An Edge open, a Varia connected, the Edge's cable out: a mounted drive left sends no
-    event, so the USB poll looks for it as for one in its normal mode; it is not shown as
-    remembered, under "Mass storage mode - not mounted". The one left is opened in each
-    case, as one in its normal mode is: its view shows, and back on the start page it is
-    connected, with no notice of the USB state.
-    The USB poll is the window's own; only /sys and gvfs are made up."""
+    """The open device unplugged with another left connected: the one left is opened as one in
+    its normal mode, not shown as remembered under "Mass storage mode - not mounted"; back on
+    the start page it is connected, with no notice of the USB state. Only /sys and gvfs are
+    made up; the USB poll is the window's own."""
     win, world = start_window, start_window.world
-    real_usb_poll(win)
+    real_usb_poll(win)  # a mounted drive left sends no event: the poll looks for it
     if variant == "mtp open, another mtp left":
         two_and_one_open(win, monkeypatch, tmp_path, device_root, "Test watch")
         left = "Edge 1050"
@@ -5753,10 +5750,10 @@ def test_tiles_have_one_width_in_every_section():
 @pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")
 @pytest.mark.parametrize("window, per_line", [(1000, 3), (400, 1)])
 def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
-    """How many tiles share a line follows the width of the page (a tile at least
-    220 px wide, 12 px between them), and they share the line out: three in a window 1000 px
-    wide, one filling it in a window 400 px wide. The same width in every section, each grid
-    where its heading starts, and laid out once for as long as the window keeps its size."""
+    """How many tiles share a line follows the page width (each tile at least 220 px, 12 px
+    apart), and they fill the line: three in a window 1000 px wide, one in a window 400 px wide;
+    the same width in every section, each grid where its heading starts, laid out once while
+    the window keeps its size."""
     import time
 
     import gi
