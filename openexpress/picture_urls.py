@@ -1,12 +1,11 @@
 """Which addresses of device pictures openExpress downloads: Garmin's own hosts, over HTTPS.
 The one rule for every picture of a device model, wherever its address comes from (the account,
-Garmin's update server): the window downloads only what passes it.
+Garmin's update server).
 
 Amazon S3 is allowed only for a bucket named in S3_BUCKETS, by the first segment of the path
 (s3.amazonaws.com/<bucket>/...) or by the host (<bucket>.s3[.<region>].amazonaws.com). A
 refusal says why in words for the log, with the host and at most that first segment: never
-the rest of the address, nor its query (a signed address carries a token there); whether
-there is a query, query_said() tells."""
+the rest of the address, nor its query (a signed address carries a token there)."""
 
 from __future__ import annotations
 

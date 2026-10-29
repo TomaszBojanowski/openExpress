@@ -4,13 +4,12 @@ One file in the state directory (`~/.local/state/openexpress/openexpress.log`; i
 Flatpak under `~/.var/app/…/.local/state`), shared by the command-line tool, the window and
 the background watcher, kept to three files of about 1 MB each.
 
-Nothing personal may end up in it. Every line, including tracebacks and messages of other
-libraries, goes through `redact()` before it is written: values the program knows to be
-private (`hide()`) are replaced, and so is everything that looks like an identifier, an
-address of an MTP device, an e-mail address or a credential. Code that logs must still not
-pass file names, activity names, locations or file contents. What the log records print on
-the terminal (`-v`, the journal of the watcher) goes through the same filter; messages the
-program prints for the user (e.g. the addresses to choose from with `--device-uri`) do not.
+Nothing personal may end up in it. Every line, tracebacks and other libraries' messages
+included, goes through `redact()`: the values given to `hide()` and whatever looks like an
+identifier, an MTP address, an e-mail address or a credential are replaced. Code that logs
+must still not pass file names, activity names, locations or file contents. Log records shown
+on the terminal (`-v`, the watcher's journal) are filtered too; what the program prints for
+the user (e.g. the addresses for `--device-uri`) is not.
 
 `OPENEXPRESS_LOG=debug` writes more to the file, `OPENEXPRESS_LOG=off` writes no file.
 """
@@ -378,10 +377,10 @@ def close() -> None:
 def setup(role: str, verbose: bool = False, stderr_level: int | None = None,
           stderr_format: str = "%(levelname)s %(name)s: %(message)s",
           quiet_told: bool = False) -> Path | None:
-    """Send log records to stderr (as before) and to the log file. `role` names the part of
-    the program in every line: cli, gui or watch. `quiet_told`: the records marked TOLD go
-    to the log file only (the command line tells their news itself). Returns the log file,
-    if there is one."""
+    """Send log records to stderr (from WARNING, from DEBUG with `verbose`, or from
+    `stderr_level`) and to the log file; returns the log file, if there is one. `role` names
+    the part of the program in every line: cli, gui or watch. `quiet_told`: the records marked
+    TOLD go to the log file only (the command line tells their news itself)."""
     close()
     root = logging.getLogger()
     if stderr_level is None:

@@ -137,10 +137,9 @@ def current_language() -> str:
 
 
 def relative_time(moment: datetime, now: datetime) -> str:
-    """When something happened, told against `now` (both local): "just now" under a minute
-    (also a moment a little ahead), "5 min ago", "3 h ago" the same day, "yesterday, 23:41"
-    the day before and "3 days ago" two to six days back (by the date, however many hours
-    ago); else the date and the hour in the format of the language."""
+    """When `moment` happened, told against `now` (both local): "just now" under a minute
+    (also a moment a little ahead), "5 min ago", "3 h ago" the same day, "yesterday, 23:41",
+    "3 days ago" two to six days back by the date; else the date and the hour."""
     seconds = (now - moment).total_seconds()
     if seconds < 60:
         return _("just now")
@@ -270,15 +269,10 @@ def _not_available() -> str:
 
 
 def ensure_utf8_locale() -> str | None:
-    """Before GTK takes the locale from the environment (setlocale(LC_ALL, "")) and before
-    the program starts any process: whether the C library can have that locale, in UTF-8.
-    If not (a Flatpak whose runtime has no data for the language of the system), LC_ALL is
-    set to C.UTF-8 for the program and the processes it starts: in the "C" locale GLib
-    converts no name with a character outside ASCII, so flatpak-spawn fails and the
-    sign-in window takes the program down. LANGUAGE is left as it is (the translations
-    follow it); the languages of the system for Garmin stay as they were (read now, before
-    the change); Python's own locale is set back as it was. What to log, or None when
-    nothing is changed."""
+    """Whether the C library can have the locale of the environment in UTF-8; if not, LC_ALL
+    becomes C.UTF-8 for the program and the processes it starts. Returns what to log, or None
+    when nothing is changed. Call it before GTK takes the locale from the environment and
+    before any process is started; Python's own locale is set back."""
     global _names_before
     saved = locale.setlocale(locale.LC_ALL)
     try:
@@ -298,7 +292,10 @@ def ensure_utf8_locale() -> str | None:
             return f"{problem}, nor is {FALLBACK_LOCALE}: the locale is left as it is"
     finally:
         locale.setlocale(locale.LC_ALL, saved)
-    _names_before = system_language_names()
+    _names_before = system_language_names()  # read before the change: Garmin still gets them
+    # E.g. a Flatpak whose runtime has no data for the language of the system: in the "C"
+    # locale GLib converts no name with a character outside ASCII, so flatpak-spawn fails and
+    # the sign-in window takes the program down. LANGUAGE stays: the translations follow it.
     os.environ["LC_ALL"] = FALLBACK_LOCALE
     return f"{problem}, using {FALLBACK_LOCALE}"
 
@@ -330,13 +327,12 @@ def pgettext(context: str, message: str) -> str:
 
 def decimal(number: str) -> str:
     """A number written with a decimal point (e.g. "6.2 GB") as the language of the program
-    writes it ("6,2 GB" in Polish). The separator comes from the translation, not from the
-    system locale, so it always matches the language of the messages.
-
-    Only for what the user reads: the log, the device report, JSON output and anything a
-    program may read keep the point."""
+    writes it ("6,2 GB" in Polish). Only for what the user reads: the log, the device report,
+    JSON output and anything a program may read keep the point."""
     # TRANSLATORS: the decimal separator of your language, one character: "." or ","
     separator = pgettext("decimal separator", ".")
+    # From the translation, not from the system locale: it always matches the language of the
+    # messages.
     if len(separator) != 1 or separator == "." or separator.isalnum() or separator.isspace():
         return number
     return number.replace(".", separator)
@@ -396,14 +392,10 @@ def duration_text(seconds: float) -> str:
 
 
 def human_size(n: int | None, localize: bool = True) -> str:
-    """A size as the user reads it, like GNOME Files writes it: powers of 1000, the units
-    B, kB, MB and GB, one decimal ("699.4 kB"), with the decimal separator of the program's
-    language; "?" when the size is not known. A hard space between the number and the unit,
-    so that a text of the window that wraps never breaks a size ("4,7 / GB"); the command
-    line and the log write it as a plain one.
-
-    Without `localize` the decimal point and a plain space stay, for text that is always in
-    English (the device report)."""
+    """A size as the user reads it, like GNOME Files writes it: powers of 1000, B to GB, one
+    decimal ("699.4 kB") with the decimal separator of the program's language and a hard space
+    before the unit; "?" when not known. Without `localize`: the decimal point and a plain
+    space, for text always in English (the device report)."""
     if n is None:
         return "?"
     value = float(n)
@@ -411,6 +403,8 @@ def human_size(n: int | None, localize: bool = True) -> str:
         # Compare what would be printed: 999.96 kB is "1.0 MB", not "1000.0 kB".
         if unit == "GB" or round(value, 0 if unit == "B" else 1) < 1000:
             number = f"{value:.0f}" if unit == "B" else f"{value:.1f}"
+            # A hard space: a text of the window that wraps never breaks a size ("4,7 / GB");
+            # the command line and the log write it as a plain one.
             return f"{decimal(number)}\u00a0{unit}" if localize else f"{number} {unit}"
         value /= 1000
     return str(n)

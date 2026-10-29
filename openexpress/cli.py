@@ -394,11 +394,11 @@ def cmd_whoami(args) -> int:
 
 
 def cmd_status(args) -> int:
-    """What this installation knows now, in one look: the login, the Garmin devices connected
-    (name, USB mode, whether they are on the account), the last sync of each and what the
-    last check of its updates found. Only the devices' GarminDevice.xml and the files this
-    installation keeps are read; with --online the account's device list and Garmin's update
-    server are asked as well (as `openexpress updates` does), and nothing of them is kept."""
+    """Print what this installation knows now: the login, the Garmin devices connected (name,
+    USB mode, whether on the account), the last sync of each and what the last check of its
+    updates found. Reads only the devices' GarminDevice.xml and the files this installation
+    keeps; with --online it asks the account's device list and the update server too,
+    keeping nothing."""
     from datetime import datetime
 
     from openexpress.device import gio_storage
@@ -417,7 +417,7 @@ def cmd_status(args) -> int:
     print(ngettext("Connected: {count} device", "Connected: {count} devices",
                    len(summaries)).format(count=len(summaries)))
     client, listed = None, None
-    if args.online:
+    if args.online:  # asked as `openexpress updates` asks them
         settings = Settings.load()
         client = make_client(settings, need_auth=True) if auth is not None \
             else GarminClient(settings)

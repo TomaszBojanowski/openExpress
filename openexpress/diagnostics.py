@@ -2,12 +2,12 @@
 
 What the device last logged as an error (its `err_log` files, read through the ordinary
 connection at each opening, whatever the settings), and a copy of its diagnostic files kept
-on this computer: off by default, at most once per connection, and never sent anywhere.
+on this computer: off by default, at most once per connection, never sent anywhere.
 
-The files are read only. The copy never opens a session of its own with the device: the
-hidden crash logs (Garmin's listing only) and the memory dumps are copied only when asked
-for (`copy_crash_logs`, `copy_dumps`). Of an error entry only its kind, time, error number,
-program counter and screen are kept; never the unit ID or the backtrace in it.
+The files are only read, and the copy opens no session of its own with the device: the hidden
+crash logs (Garmin's listing only) and the memory dumps are copied only when asked for
+(`copy_crash_logs`, `copy_dumps`). Of an error entry only its kind, time, error number,
+program counter and screen are kept, never the unit ID or the backtrace in it.
 """
 
 from __future__ import annotations
@@ -605,8 +605,7 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
                    with_files: bool) -> Seen | None:
     """What is at the places kept now, each read alone, nothing listed; None when the note
     no longer holds: a path gone, other software on the device, the files a copy takes not
-    looked for yet, or a damaged note. The paths looked for in vain are not asked about (on
-    a Venu 2, 4 of 9 questions): one there now is seen with other software."""
+    looked for yet, or a damaged note."""
     try:
         if note.get("software_version") != device.software_version_str:
             return None
@@ -616,6 +615,8 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
         err_logs, dumps = _strings(note["err_logs"]), _strings(note["dumps"])
         files = _strings(kept_files) if with_files else []
         folders = _strings(note["folders"])
+        # The paths looked for in vain are not asked about (on a Venu 2, 4 of 9 questions):
+        # one there now is seen with other software.
         _strings(note["absent"])  # kept with the note, not asked about
         event_logs = note["event_logs"]
         if not isinstance(event_logs, bool):

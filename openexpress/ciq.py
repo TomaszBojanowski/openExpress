@@ -1,13 +1,10 @@
-"""Connect IQ apps: watch faces, data fields, widgets and apps.
-
-Mirrors Garmin Express:
-- the list of apps on the watch comes from GARMIN/APPS/OUT.BIN (protobuf
+"""Connect IQ apps (watch faces, data fields, widgets, apps), as in Garmin Express:
+- on the watch: GARMIN/APPS/OUT.BIN (protobuf
   `Smart.connect_iq_installed_apps_service.get_installed_apps_response`);
-- the apps assigned to the account come from services.garmin.com
-  (`express/appstore/rest/apps/*`, OAuth1-signed with the Connect token);
-- installing = asking the server to queue the app for the device, then
-  downloading the queued .PRG, writing it to the watch and writing
-  GARMIN/APPS/IN.BIN with the full, ordered app list (new apps appended).
+- of the account: services.garmin.com `express/appstore/rest/apps/*`, OAuth1-signed with
+  the Connect token;
+- installing: the server queues the app for the device; the queued .PRG is written to the
+  watch, then GARMIN/APPS/IN.BIN, the full, ordered app list (new apps last).
 """
 
 from __future__ import annotations
@@ -780,14 +777,9 @@ def _check_accepted(device: GarminDevice, datatype: str) -> list:
 
 def install_refusals(device: GarminDevice, storage: Storage, state: InstalledState,
                      targets: list[StoreApp]) -> dict[uuid.UUID, str]:
-    """Why some of these store apps cannot be installed over USB: app ID -> reason. Asked
-    before anything is requested in Garmin Connect, downloaded or written; it reads nothing
-    new. The apps are taken in order: one that fits uses up its slot and its space. An app
-    list that waits for the device refuses them as its writers would: a damaged one every
-    app, a readable one those written over a PTP session.
-
-    The size is the one the account lists; the file that is downloaded later can differ a
-    little, so the space is checked again when it is written."""
+    """Why some of these store apps cannot be installed over USB: app ID -> reason. It reads
+    nothing new, so it is asked before anything is requested in Garmin Connect, downloaded
+    or written. The apps are taken in order: one that fits uses up its slot and its space."""
     refused: dict[uuid.UUID, str] = {}
     free_slots = _free_slots(device, state)
     new = used = 0
@@ -799,14 +791,17 @@ def install_refusals(device: GarminDevice, storage: Storage, state: InstalledSta
         needs_room = existing is None or over_ptp
         try:
             if state.in_bin_damaged or (state.waiting and over_ptp):
-                # The app list would be refused: one that waits cannot be read whole (no
-                # list is built from it), or a PTP session writes nothing while one waits.
+                # Refused as the writers would: an app list that waits for the device refuses
+                # every app when it is damaged (no list is built from it), and those written
+                # over PTP when it is readable (a PTP session writes nothing while one waits).
                 raise CiqError(waiting_list_text())
             if existing is None:
                 _check_slot(free_slots, new)
             _check_not_leaving(existing)
             _check_accepted(device, datatype)
             if needs_room:
+                # The size the account lists: the file downloaded later can differ a little,
+                # so the space is checked again when it is written.
                 _check_space(state, used, t.size)
         except CiqError as e:
             refused[t.app_id] = str(e)
@@ -826,13 +821,10 @@ def install_apps(
     allowed: Collection[uuid.UUID] = (),
 ) -> IqInstallReport:
     """Queue the apps in Garmin Connect (unless they already wait there) and install over
-    USB those the device accepts.
-
-    Apps whose folder the device does not offer are only queued (`for_phone`): nothing is
-    downloaded or written for them, and they are not failures. Apps with new permissions
-    that are not in `allowed` are set aside before anything else (`needs_consent`): they
-    are not requested, downloaded or written.
-    """
+    USB those the device accepts; returns the report. Apps whose folder the device does not
+    offer are only queued (`for_phone`, not failures). Apps with new permissions not in
+    `allowed` are set aside first (`needs_consent`): nothing is requested, downloaded or
+    written for them."""
     asking = [t for t in needs_consent(targets) if t.app_id not in set(allowed)]
     targets = [t for t in targets if t not in asking]
     report = _install_apps(device, storage, client, api, targets, progress)
@@ -974,14 +966,10 @@ def install_queued(
     progress: Callable[[str], None] = lambda s: None,
     direct: bool = False,
 ) -> IqInstallReport:
-    """Writes queued Connect IQ apps to the watch and registers them in IN.BIN.
-
-    Messages are acknowledged only after the app is written and registered, so
-    an interrupted install is retried on the next sync.
-
-    `direct` allows a PTP session for a folder the device hides, which unmounts the
-    device for a moment: only for an install the user asked for, never for a sync.
-    """
+    """Write the queued apps to the watch, register them in IN.BIN and return the report. A
+    message is acknowledged only once its app is written and registered, so an interrupted
+    install is retried on the next sync. `direct` allows a PTP session (it unmounts the
+    device for a moment) for a folder the device hides: never during a sync."""
     report, leftover = _install_pass(device, storage, client, messages, known, only, progress,
                                      direct=direct)
     if leftover:
@@ -1001,20 +989,17 @@ def install_queued(
 
 
 def _free_slots(device: GarminDevice, state: InstalledState) -> int | None:
-    """How many more apps the device takes; None when nothing is known.
-
-    The device reports its free slots in its app list (OUT.BIN), and that number counts
-    what the list does not name (a Venu 2 reports 31 of 32 with no store app listed). It
-    does not count the apps that wait for the device: written earlier and registered in
-    the app list for the device (IN.BIN), but not yet in OUT.BIN. `read_installed` marks
-    those `pending`; an app that is in OUT.BIN is already counted by the device.
-
-    The declared limit less the store apps listed is the other bound; the smaller wins."""
+    """How many more apps the device takes, the smaller of two bounds; None when nothing is
+    known."""
     bounds = []
     if state.available_slots is not None:
+        # The free slots of OUT.BIN count what the list does not name (a Venu 2 reports 31 of
+        # 32 with no store app listed), but not the apps that wait for the device: registered
+        # in IN.BIN, not yet in OUT.BIN (`pending`). One in OUT.BIN the device counts already.
         waiting = sum(1 for a in state.store_apps if a.pending)
         bounds.append(state.available_slots - waiting)
     if device.iq_max_apps:
+        # The declared limit less the store apps listed.
         bounds.append(device.iq_max_apps - len(state.store_apps))
     return max(0, min(bounds)) if bounds else None
 
@@ -1335,14 +1320,14 @@ def _with_leftovers(error, paths: list[str]) -> str:
 
 
 def write_app_list(device: GarminDevice, storage: Storage, data: bytes) -> str:
-    """Write the app list for the device (IN.BIN) and read it back; returns its real path.
-    Never half a list, which the device could read as a shorter one and then drop the apps it
-    no longer names: when the write fails or reads back otherwise, what was there before is
-    written back (the list that waited, or none); when even that fails, what is there is
-    deleted and CiqError says that the changes that waited are lost; when it cannot be deleted
-    either, CiqError says to delete it before unplugging."""
+    """Write the app list (IN.BIN) and read it back; returns its real path. On a failure the
+    list that waited (or none) is put back and the error raised; when even that fails, the
+    file is deleted and CiqError says the changes that waited are lost (or, when it cannot be
+    deleted, to delete it before unplugging)."""
     path = _config_path(device, True)
     before = storage.read(path) if storage.exists(path) else None
+    # Never half a list: the device could read it as a shorter one and drop the apps it no
+    # longer names.
     try:
         return _write_list_checked(storage, path, data)
     except Exception as e:  # noqa: BLE001 - any failure: the list is put right, then raised
@@ -1399,10 +1384,9 @@ MOUNTED, UNREACHABLE = "mounted", "unreachable"
 def removal_way(device: GarminDevice, storage: Storage, app: InstalledApp) -> str:
     """How the app can be removed, told by its own file alone: MOUNTED when the ordinary
     listing shows it, DIRECT when the device hides it and a PTP session reaches it,
-    SANDBOXED when only the sandbox keeps it out of reach, UNREACHABLE otherwise. The
-    settings file decides nothing: a settings file the listing shows next to an app file it
-    does not show would send the removal through the mounted storage, which would delete the
-    settings alone and leave the app on the device."""
+    SANDBOXED when only the sandbox keeps it out of reach, UNREACHABLE otherwise."""
+    # Not the settings file: one the listing shows next to an app file it does not show would
+    # send the removal through the mounted storage, which would delete the settings alone.
     path = app_file_path(device, app)
     if path and storage.exists(path):
         return MOUNTED
@@ -1466,11 +1450,10 @@ def remove(device: GarminDevice, storage: Storage, app: InstalledApp) -> list[st
 
 
 def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) -> list[str]:
-    """Like Garmin Express: delete the app file the device hides, then write the app list
-    without the app; every other entry keeps its place and its flags. The app's settings
-    file goes too, as through the mounted storage, once the list is written: a session that
-    breaks at it leaves no app listed without its file, and a refusal only stays in the
-    log."""
+    """Like Garmin Express, over a PTP session: delete the app file the device hides, write
+    the app list without the app (every other entry keeps its place and its flags), then
+    delete the app's settings file; returns the deleted files. Raises CiqError that says what
+    became of the app."""
     in_path = _config_path(device, True)
     if storage.exists(in_path):
         raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
@@ -1555,6 +1538,9 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
                 left = (_ptp_delete(session, e.handle, in_path)
                         if isinstance(e, ptp.PtpWriteError) else [])
                 problem = _with_leftovers(e, left)
+            # The settings file goes too, as through the mounted storage, but only once the
+            # list is written: a session that breaks at it leaves no app listed without its
+            # file, and a refusal only stays in the log.
             if finished and settings is not None and not settings.is_dir:
                 try:
                     session.delete(settings.handle)
@@ -1751,17 +1737,10 @@ def _same_list(a: bytes, b: bytes) -> bool:
 
 def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path | None = None,
                        now: datetime | None = None) -> str | None:
-    """Keep the device's current app list (OUT.BIN) before it is changed, so that the apps
-    and their order can be looked up and put back. Returns the name of the copy; when the
-    newest copy of this device names the same apps in the same order (_same_list), that one
-    is named and no new copy is made. At most APP_LIST_COPIES_KEPT copies are kept: a new
-    one takes the place of the oldest (backup.keep_newest, as the full backups), once the
-    older copies of a list a newer copy has are gone (_older_same_lists). A device
-    without an app list has nothing to copy: None, and the change may go on. Raises
-    `AppListCopyError` when there is a list but the copy cannot be made.
-
-    The copies live next to the backups, in a folder named after the unit ID. Messages
-    and logs therefore name a copy by its own folder only, never by its path."""
+    """Copy the device's app list (OUT.BIN) next to its backups before it is changed; returns
+    the copy's folder name, or that of the newest copy when it names the same apps in the
+    same order. None when the device has no list (the change may go on); raises
+    `AppListCopyError` when the copy cannot be made. Keeps at most APP_LIST_COPIES_KEPT."""
     if not has_app_list(device, storage):
         log.info("The device has no app list: no copy made")
         return None
@@ -1770,6 +1749,8 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
     except DeviceError as e:
         raise AppListCopyError(_("Cannot read the app list of the device to make a copy of "
                                  "it: {error}. Nothing was changed.").format(error=e)) from e
+    # Named after the unit ID: messages and logs name a copy by its own folder only, never by
+    # its path.
     unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
     stamp = (now or datetime.now()).strftime(APP_LIST_COPY_STAMP)
     name = " ".join((APP_LIST_COPY_PREFIX + stamp, _model_for_name(device))).strip()
@@ -1796,6 +1777,8 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
     log.info("Saved a copy of the app list: %s", folder.name)
     try:
         copies = _copy_folders(unit_dir)
+        # The older copies of a list a newer copy has go first; then a new copy takes the
+        # place of the oldest, as for the full backups.
         removed = [p for p in _older_same_lists(copies) if p != folder]
         for p in removed:
             shutil.rmtree(p)
@@ -1841,10 +1824,9 @@ def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
 
 
 def apps_moved(plan: OrderPlan) -> int:
-    """How many apps have to be moved to get from the order on the device to the order of
-    the copy: the fewest moves, so the apps in both lists outside their longest
-    common subsequence. One app taken from the top to the bottom changes every position, but
-    is one app moved. Apps only on the device keep their place and are not counted."""
+    """The fewest apps to move to get from the order on the device to the order of the copy:
+    those in both lists outside their longest common subsequence. Apps only on the device
+    keep their place and are not counted."""
     def key(a):
         return a.app_id, a.app_type
 
@@ -1854,7 +1836,9 @@ def apps_moved(plan: OrderPlan) -> int:
     apart = {key(a) for a in plan.only_on_device}
     first = [key(a) for a in now if key(a) not in apart]
     second = [key(a) for a in plan.entries if key(a) not in apart]
-    # The longest common subsequence, a row of the table at a time.
+    # Not the positions that change: one app taken from the top to the bottom changes every
+    # position, but is one app moved. The longest common subsequence, a row of the table at a
+    # time.
     before_row = [0] * (len(second) + 1)
     for a in first:
         row = [0]

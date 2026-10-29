@@ -445,14 +445,10 @@ LEFTOVER_FILE = "GUPDATE.TMP"
 
 
 def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
-    """Before the file of an update is written: a file at its place whose name differs only
-    in letter case is deleted, so that the new file has exactly the name the server gives;
-    for a system update also a leftover GUPDATE.TMP in the same folder. openExpress does both
-    on every device, over MTP and on a drive. (An Edge 1050 did not install GUPDATE.GSP
-    written over its own GUPDATE.gsp at once, but later installed that file by
-    itself: the letter case is not known to matter, the exact name is the safer choice.) A
-    file of exactly that name is replaced by the copy itself (on a drive only once the new
-    one is whole). Names compared in any letter case; the log names what is deleted."""
+    """Before the file of an update is written, deletes a file at its place whose name differs
+    only in letter case, so that the new file has exactly the name the server gives, and for a
+    system update a leftover GUPDATE.TMP in its folder: on every device, over MTP and on a
+    drive."""
     parent, name = posixpath.split(u.device_path)
     real_parent = storage.resolve(parent) if parent else ""
     if real_parent is None:
@@ -460,8 +456,13 @@ def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
     for e in storage.listdir(real_parent):
         if e.is_dir:
             continue
+        # An Edge 1050 did not install GUPDATE.GSP written over its own GUPDATE.gsp at once,
+        # but later installed that file by itself: the letter case is not known to matter,
+        # the exact name is the safer choice.
         other_case = e.name != name and e.name.casefold() == name.casefold()
         leftover = u.is_system and e.name.casefold() == LEFTOVER_FILE.casefold()
+        # A file of exactly that name is replaced by the copy itself (on a drive only once
+        # the new one is whole).
         if not (other_case or leftover):
             continue
         real = posixpath.join(real_parent, e.name) if real_parent else e.name

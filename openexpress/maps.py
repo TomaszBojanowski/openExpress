@@ -1,19 +1,14 @@
 """"Universal" maps (TopoActive, base maps, CourseView, Ski) for watches.
 
-As in Garmin Express: the server returns
-the maps assigned to the device, the client downloads the files, activates the map
-on the server (the response contains .gma unlock files) and writes everything to the watch.
+As in Garmin Express: the server returns the maps assigned to the device, the client
+downloads the files, activates the map on the server (the response contains .gma unlock
+files) and writes everything to the watch (`write_order`). A file other maps use is never
+deleted. A map written or removed waits until the device is unplugged (`mark_waiting`): only
+then does the device take it in.
 
-openExpress writes the files smallest first. A file other maps share is tried once more
-after a failed write and is never deleted; every other file is written once. An unlock file
-is tried up to six times, with a pause between. A map written or removed waits until the
-device is unplugged (mark_waiting): only then does the device take it in.
-
-There is no license circumvention here: only what the server offers for this
-device is installed. A map Garmin does not offer in the country of the Garmin account (its
-"restriction") is not installed or updated; Garmin Express takes the country from the address
-of the computer, openExpress from the account's profile, and only marks such a map when that
-country is not known.
+There is no license circumvention here: only what the server offers for this device is
+installed. A map Garmin does not offer in the country of the Garmin account (its
+"restriction") is not installed or updated; when that country is not known, it is only marked.
 """
 
 from __future__ import annotations
@@ -242,13 +237,13 @@ def universal_serves(map_update_type, device) -> bool:
 
 
 def check(client, device, ask=None, country=None) -> tuple[list[UniversalMap], int]:
-    """The maps of the device as the universal map service lists them (read_maps), once
-    unit-info says that service serves it; MapsNotSupported when it does not. A failed
-    unit-info fails the check: without it, which service serves the device is not known.
-    `ask` gives unit-info's answer (the window: the one of the session, service.unit_info);
-    none: it is asked here. One line in the log says the way the check went (the part
-    number only). `country` gives the account's country, asked only when a map is
-    restricted to one (apply_restrictions); none: such a map is only marked."""
+    """The maps of the device and the count of listed maps (read_maps), restrictions applied;
+    MapsNotSupported when unit-info says the universal map service does not serve it. `ask`
+    gives unit-info's answer (the window: service.unit_info); none: it is asked here.
+    `country` gives the account's country, asked only when a map is restricted to one; none:
+    such a map is only marked."""
+    # A failed unit-info fails the check: without it, which service serves the device is not
+    # known.
     if ask is not None:
         info = ask()
     else:
@@ -284,6 +279,8 @@ def apply_restrictions(maps: list[UniversalMap], country=None) -> None:
     if not restricted:
         log.info("maps: 0 maps restricted by country")
         return
+    # Garmin Express takes the country from the address of the computer; here it is the
+    # account's profile.
     code = country() if country is not None else None
     apply_country(maps, code)
     log.info("maps: %d maps restricted by country; the account's country: %s; %d apply",
@@ -379,18 +376,16 @@ def _rule_folder(path: str | None) -> str | None:
 
 
 def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[CleanupFile]:
-    """The files the cleanup rules of the answer would take, read safely: whole names only,
-    only in a folder of the files of the maps of the answer (or the device's map folder),
-    only with the extension of such a file, and never a file the server names for a map,
-    a map of your own, a map file the server does not know (it has the header of one),
-    GarminDevice.xml or an update. Only shown: nothing is deleted. A folder that cannot be
-    read gives no plan."""
+    """The files the cleanup rules of the answer would take, read safely (the limits below).
+    Only shown: nothing is deleted. A folder that cannot be read gives no plan."""
     from openexpress import ownmaps
 
     rules = maps[0].cleanup_rules if maps else ()
     if not rules:
         return []
     named = {p.casefold() for m in maps for p in m.all_paths}
+    # Only in a folder of the files of the answer's maps (or the device's map folder), only
+    # with the extension of such a file.
     folders = {posixpath.dirname(p) for p in named}
     own_folder = ownmaps.map_dir(device)
     if own_folder:
@@ -416,6 +411,9 @@ def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[Cle
             for entry in storage.listdir(real):
                 path = f"{real}/{entry.name}"
                 low = entry.name.casefold()
+                # Whole names only, and never a file the server names for a map, a map of your
+                # own, a map file the server does not know (it has the header of one),
+                # GarminDevice.xml or an update.
                 if (entry.is_dir or not match.fullmatch(entry.name)
                         or posixpath.splitext(low)[1] not in extensions
                         or path.casefold() in named or path.casefold() in own
@@ -547,13 +545,10 @@ def find(maps: list[UniversalMap], name: str) -> UniversalMap:
 
 
 def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
-    """Marks the maps written to or removed from the device that the device has not taken in
-    yet: it does that when it is unplugged, and only then do GarminDevice.xml and so Garmin's
-    server know. Facts, no memory: the files on the device against the server's list.
-
-    Written: the server does not have the map (or has an older version), yet every file of
-    the map is on the device, at the size the server gives. Removed: the server has the map,
-    yet none of its own files (not used by other maps) is on the device."""
+    """Sets `waiting` on the maps written to or removed from the device that the device has
+    not taken in yet: it does that when it is unplugged, and only then do GarminDevice.xml and
+    so Garmin's server know. Read from the files on the device against the server's list,
+    nothing remembered; none is marked when the files cannot be listed."""
     for m in maps:
         m.waiting = None
     wanted = {p for m in maps for p in m.all_paths}
@@ -568,6 +563,8 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
                     "waiting for unplugging: %s", e)
         return
     for m in maps:
+        # Written: the server does not have the map (or has an older version), yet every file
+        # of the map is on the device, at the size the server gives.
         on_device = [present.get(f.device_path.casefold()) == f.size for f in m.files]
         # An update with the very names of the files installed now cannot be told apart.
         new_names = {f.device_path.casefold() for f in m.files} - {
@@ -579,6 +576,8 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
     for m in maps:
         if not m.listed or m.waiting:
             continue
+        # Removed: the server has the map, yet none of its own files (not used by other maps)
+        # is on the device.
         own = {p.casefold() for p in m.all_paths}
         own -= protected_files(maps, m)
         if own and not any(p in present for p in own):

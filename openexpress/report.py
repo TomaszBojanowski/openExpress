@@ -55,17 +55,17 @@ def with_log(text: str, lines: list[str], crash: list[str] | None = None) -> str
 
 
 def form_log(lines: list[str], crash: list[str] | None = None) -> str:
-    """The end of the log (and of crash.log, when there is one) to paste into the "Log"
-    field of the issue forms or into a comment: the lines without the headings of with_log,
-    between lines of tildes. Pasted into a comment, that is a block of code too; in the
-    "Log" field, which GitHub shows as code between backticks itself, the tildes do not
-    close that block and are only two lines more. The fence is longer than any run of
-    tildes a line begins with, so that no line of the log closes it. An issue opened from
-    the window never has the log in its address; the window puts this in the clipboard."""
+    """The end of the log (and of crash.log, when there is one) to paste into the "Log" field
+    of the issue forms or into a comment: the lines without the headings of with_log, between
+    lines of tildes. An issue opened from the window never has the log in its address; the
+    window puts this in the clipboard."""
     out = "\n".join(lines) + "\n" if lines else "(no log file)\n"
     if crash:
         out += (f"\n# Crash log (last {len(crash)} lines of crash.log)\n"
                 + "\n".join(crash) + "\n")
+    # Tildes make a block of code in a comment too; in the "Log" field, which GitHub shows as
+    # code between backticks itself, they close nothing and are only two lines more. No line
+    # of the log closes the fence: it is longer than any run of tildes a line begins with.
     longest = max((len(t) - len(t.lstrip("~")) for t in
                    (line.lstrip(" ") for line in out.splitlines())), default=0)
     fence = "~" * max(3, longest + 1)
@@ -74,11 +74,10 @@ def form_log(lines: list[str], crash: list[str] | None = None) -> str:
 
 def issue_url(text: str, model: str | None) -> str | None:
     """The address of a new device report on GitHub with the title and the "Device report"
-    field filled in (`report` is the id of that field in the issue form). None when the
-    address, encoded, would be longer than MAX_URL characters.
-
-    Opening it sends the text to GitHub with the request, so it gets only the report, never
-    the log; nothing is published until the issue is submitted."""
+    field filled in; None when, encoded, it would be longer than MAX_URL characters. It holds
+    only the report, never the log: opening it sends the text to GitHub, though nothing is
+    published until the issue is submitted."""
+    # "report" is the id of the "Device report" field in the issue form.
     query = urlencode({"template": ISSUE_TEMPLATE, "title": f"[Device] {model or 'unknown'}",
                        "report": text}, quote_via=quote)
     url = f"{ISSUE_FORM}?{query}"

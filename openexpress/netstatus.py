@@ -1,9 +1,9 @@
 """How Garmin's servers answered the requests the program really made.
 
-Nothing here asks a server: every request of the program reports how it ended, and the
-window shows the state that follows from the last answers (the button with a coloured dot at
-the bottom of the side panel, and its popover with each service). Kept in memory only, for
-this process; shown, never acted upon.
+Nothing here asks a server: every request reports how it ended, and the window shows the
+state that follows from the last answers (the button with a coloured dot at the bottom of the
+side panel, and its popover with each service). Kept in memory for this process only; shown,
+never acted upon.
 """
 
 from __future__ import annotations

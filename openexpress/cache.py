@@ -1,10 +1,9 @@
-"""The cache of openExpress: downloaded maps and software updates, pictures, and files staged
-for copying to the device. Everything in it can be downloaded again. It is counted and cleared
-in four parts (CATEGORIES), all of them or some.
+"""The cache of openExpress, paths.cache_dir(): downloaded maps and software updates,
+pictures, and files staged for copying to the device, all of which can be downloaded again.
+It is counted and cleared in four parts (CATEGORIES), all or some.
 
-It is paths.cache_dir(): ~/.cache/openexpress for the version from source; in the Flatpak,
-where XDG_CACHE_HOME is ~/.var/app/<app ID>/cache, its own folder below that. Each
-installation has its own cache."""
+Each installation has its own: ~/.cache/openexpress for the version from source, a folder
+below ~/.var/app/<app ID>/cache (its XDG_CACHE_HOME) in the Flatpak."""
 
 from __future__ import annotations
 
@@ -154,12 +153,10 @@ def usage(only: Iterable[str] | None = None) -> CacheUsage:
 
 
 def clear(only: Iterable[str] | None = None) -> CacheUsage:
-    """Delete what is in the folders of the parts named (all of them for None, but the
-    pictures of the devices remembered: kept_pictures), holding the whole cache alone:
-    CacheBusy while anything uses it, whichever part. The folders themselves stay, and so do
-    cache.lock and anything else in the cache folder; nothing is deleted through a symbolic
-    link, and a folder that is a link is left alone. Returns what was deleted in those parts:
-    its total is what was freed."""
+    """Delete what is in the folders of the parts named (all for None, but the pictures of the
+    devices remembered: kept_pictures); returns what was deleted, whose total is what was
+    freed. Raises CacheBusy while anything uses any part of the cache. The folders, cache.lock
+    and anything else in the cache folder stay; nothing is deleted through a symbolic link."""
     names = chosen(only)
     keep = kept_pictures() if only is None else set()
     with clearing():
