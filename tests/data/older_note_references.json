@@ -1,8 +1,5 @@
 {
  "tests/conftest.py": 2,
- "tests/data/last_sync/README.txt": 4,
- "tests/data/last_sync/format-0.7.5-ecg-not-uploaded.json": 2,
- "tests/data/last_sync/format-0.7.7-trueup-stopped.json": 2,
  "tests/fakes.py": 2,
  "tests/test_activities_to_sync.py": 2,
  "tests/test_app_list_copies.py": 2,
