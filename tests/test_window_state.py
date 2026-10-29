@@ -57,6 +57,14 @@ def test_every_attribute_the_window_names_is_there_once_it_is_built(window):
     assert missing == []
 
 
+def test_the_stand_in_has_every_attribute_of_the_real_window(window):
+    from fakes import window as stand_in
+
+    assert sorted(vars(stand_in())) == sorted(vars(window))
+    changed = stand_in(busy=True, session="a session")
+    assert (changed.busy, changed.session, changed.connected.devices) == (True, "a session", [])
+
+
 @pytest.mark.parametrize("units", [(), (FENIX, EDGE)], ids=["no-device", "two-devices"])
 def test_the_real_window_from_its_own_start_stays_on_the_start_page(four, monkeypatch,
                                                                     in_the_window, units):

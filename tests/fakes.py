@@ -255,6 +255,21 @@ def step_words(lines):
 # --- the window's own methods on a stand-in ------------------------------------------------
 
 
+def window(**changes):
+    """A stand-in for the window without GTK: every attribute the real window has, with the
+    value it has before anything is shown (MainWindow._init_state), then `changes`. None of
+    the window's methods: a test gives those it needs, or binds them with window_methods."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    win = types.SimpleNamespace()
+    MainWindow._init_state(win)
+    for name, value in changes.items():
+        setattr(win, name, value)
+    return win
+
+
 def window_methods(win, names):
     """Returns the stand-in window `win` with these methods of MainWindow bound to it, each
     looked up along MainWindow's MRO as the window finds it (in app.py or a mixin), so a method
