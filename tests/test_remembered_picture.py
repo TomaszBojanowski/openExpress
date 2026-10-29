@@ -8,6 +8,7 @@ import types
 
 import pytest
 from fakes import replace_in_window, window_methods
+from fakes import window as stand_in
 
 from openexpress.known_devices import KnownDevice
 
@@ -42,7 +43,7 @@ def _window(textures=None):
     from openexpress.gui.start import RememberedPage
 
     pushed = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         remembered=RememberedPage(), navigation=types.SimpleNamespace(push=pushed.append),
         pushed=pushed, _device_textures=dict(textures or {}), _pictures_asked=set(),
         _account=None, _on_start_page=lambda: True,
@@ -354,8 +355,8 @@ def test_the_account_list_read_by_the_window_keeps_the_picture_addresses():
     from openexpress.gui.app import MainWindow
 
     known_devices.remember(1234567891, "Test bike computer", ACCOUNT_PART, "2.00", "mtp")
-    win = types.SimpleNamespace(_account=None,
-                                in_background=lambda fn, on_done, on_error=None: on_done(fn()))
+    win = stand_in(_account=None,
+                   in_background=lambda fn, on_done, on_error=None: on_done(fn()))
     MainWindow._set_account(win, [_account_entry()], draw=False)
     known = known_devices.load()[1234567891]
     assert (known.image_url, known.category) == (ACCOUNT_URL, "cycling-computer")

@@ -6,6 +6,7 @@ device here is made up."""
 import types
 
 import pytest
+from fakes import window as stand_in
 
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice
 
@@ -30,7 +31,7 @@ def _window():
     from openexpress.gui.app import MainWindow
 
     tasks, toasts = [], []
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=False, toast=toasts.append, start=Start(), tasks=tasks, toasts=toasts,
         _start_entries=[(object(), _found("a")), (object(), _found("b"))])
 

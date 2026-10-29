@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from conftest import DEVICE_XML, make_fit
 from fakes import record_sync
+from fakes import window as stand_in
 
 from openexpress import known_devices, service, sync, tile_facts
 from openexpress.known_devices import AccountFact, SyncedFact
@@ -317,7 +318,7 @@ def test_the_window_keeps_the_account_s_list_before_it_draws_the_tiles():
     _login()
     _seen()
     drawn = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         _account=None, _account_why=None, _on_start_page=lambda: True,
         _on_remembered_page=lambda: False, in_background=lambda work, done, failed=None: None)
     win._render_start = lambda: drawn.append(known_devices.load()[FENIX].account)
@@ -409,7 +410,7 @@ def _window(summaries):
     from openexpress.gui.connected import Connected
 
     later = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=None, start=start.StartPage(None), _account=None, _account_why=None,
         connected=Connected(devices=list(summaries), choosing=True), _start_entries=[],
         _start_texts=[], later=later, _load_tile_pictures=lambda t: None,

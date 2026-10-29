@@ -9,6 +9,7 @@ import types
 
 import pytest
 from fakes import SyncClient
+from fakes import window as stand_in
 
 from openexpress import sync
 from openexpress.device.storage import DeviceError, LocalStorage
@@ -233,8 +234,8 @@ def test_opening_a_device_from_the_list_counts_nothing_in_its_thread(device_root
     in_the_window("read_space", lambda storage: (None, None))
     counted = Uncounted()
     monkeypatch.setattr(sync, "activities_to_sync", counted)
-    win = types.SimpleNamespace(busy=False, run_task=RunNow(), show_device=lambda: None,
-                                connected=types.SimpleNamespace(stop_choosing=lambda: None))
+    win = stand_in(busy=False, run_task=RunNow(), show_device=lambda: None,
+                   connected=types.SimpleNamespace(stop_choosing=lambda: None))
     app.MainWindow.open_choice(win, "the device chosen")
     assert win.session is session and session.to_sync is None and counted.calls == []
 
@@ -252,7 +253,7 @@ def test_detecting_the_device_counts_nothing_in_its_thread(device_root, monkeypa
     in_the_window("read_space", lambda storage: (None, None))
     counted = Uncounted()
     monkeypatch.setattr(sync, "activities_to_sync", counted)
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=False, session=None, run_task=RunNow(), show_device=lambda: None,
         connected=types.SimpleNamespace(found_alone=lambda: None, stop_choosing=lambda: None),
         sections={"watch": types.SimpleNamespace(show=lambda what: None)})

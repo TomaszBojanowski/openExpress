@@ -12,7 +12,8 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, record_sync, replace_in_window
+from fakes import RunNow, record_sync, replace_in_window, window_methods
+from fakes import window as stand_in
 from gio_fake import answer_as_gio
 
 from openexpress.gui.connected import Connected
@@ -281,8 +282,8 @@ def test_window_notices_the_removal_of_the_open_device(no_sysfs):
 
     def window(label):
         session = types.SimpleNamespace(storage=types.SimpleNamespace(label=label))
-        return types.SimpleNamespace(session=session, show_device=lambda: shown.append(1),
-                                     show_no_device=lambda: shown.append(1))
+        return stand_in(session=session, show_device=lambda: shown.append(1),
+                        show_no_device=lambda: shown.append(1))
 
     # A made-up address that neither sysfs (the device is gone) nor the fallback recognises.
     win = window("mtp://[usb:001,028]/Internal%20Storage")
@@ -324,15 +325,15 @@ def unplug_window(monkeypatch, usb):
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
     pages = {"watch": Page(), "apps": Page()}
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session, busy=False, sections=pages, built=[], _updated_apps=set(),
         connected=Connected(),
         _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="", _usb_gone=None,
         _usb_notice=MainWindow._usb_notice, _update_banner=lambda: None,
         _update_actions=lambda: None, start=FakeStartPage(), _show_start=lambda: None)
-    win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
+    window_methods(win, ["_poll_usb"])
     real_show = types.MethodType(MainWindow.show_no_device, win)
-    win._clear_device_pages = types.MethodType(MainWindow._clear_device_pages, win)
+    window_methods(win, ["_clear_device_pages"])
     win.show_no_device = lambda: (win.built.append(win.session), real_show())
     # Opened while the device was starting: the last words the pages were given.
     for page in pages.values():
@@ -391,8 +392,8 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog,
     in_the_window("own_remount", lambda m: m.uri in remounted)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: timers.append(ms))
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
-    win = types.SimpleNamespace(session=session, busy=False, show_device=lambda: None,
-                                show_no_device=lambda: None)
+    win = stand_in(session=session, busy=False, show_device=lambda: None,
+                   show_no_device=lambda: None)
     stick = "file:///run/media/someone/STICK/"
 
     with caplog.at_level(logging.INFO, logger="openexpress.gui"):
@@ -431,7 +432,7 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
 
     tasks, shown = [], []
     open_one = device(3000000001)
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=True, _refresh_pending=False, session=open_one, connected=Connected(),
         sections={"watch": types.SimpleNamespace(show=lambda state: None)},
         run_task=lambda title, fn, done, failed: tasks.append(done),
@@ -501,9 +502,9 @@ def detecting(tmp_path, monkeypatch, in_the_window):
     monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
     in_the_window("garmin_usb", lambda m: True)
     in_the_window("own_remount", lambda m: False)
-    win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, tasks=[],
-                                built=[], reads=[], connected=Connected(),
-                                sections={"watch": types.SimpleNamespace(show=lambda s: None)})
+    win = stand_in(busy=False, session=None, _refresh_pending=False, tasks=[],
+                   built=[], reads=[], connected=Connected(),
+                   sections={"watch": types.SimpleNamespace(show=lambda s: None)})
 
     def run_task(title, fn, done, failed):
         win.busy = True
@@ -524,7 +525,7 @@ def detecting(tmp_path, monkeypatch, in_the_window):
 
     win.run_task, win.in_background, win.finish = run_task, in_background, finish
     win.show_device = win.show_no_device = lambda: win.built.append(win.session)
-    win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
+    window_methods(win, ["refresh_device"])
     win.timers = timers
     return win
 
@@ -1655,19 +1656,18 @@ def drive_window(watch_and_drives, monkeypatch):
     """The window's own code for mount events and detection; a task runs at once and each
     `show_device` is recorded with the session it shows."""
     from openexpress.gui import app
-    from openexpress.gui.app import MainWindow
 
     timers = Timers()
     monkeypatch.setattr(app.GLib, "timeout_add", timers.add)
     monkeypatch.setattr(app.GLib, "source_remove", timers.remove)
-    win = types.SimpleNamespace(busy=False, session=None, _refresh_pending=False, built=[],
-                                _updated_apps={"an app waiting for the unplug"}, timers=timers,
-                                world=watch_and_drives, connected=Connected(),
-                                sections={"watch": types.SimpleNamespace(show=lambda s: None)})
+    win = stand_in(busy=False, session=None, _refresh_pending=False, built=[],
+                   _updated_apps={"an app waiting for the unplug"}, timers=timers,
+                   world=watch_and_drives, connected=Connected(),
+                   sections={"watch": types.SimpleNamespace(show=lambda s: None)})
 
     win.run_task = RunNow()
     win.show_device = win.show_no_device = lambda: win.built.append(win.session)
-    win.refresh_device = types.MethodType(MainWindow.refresh_device, win)
+    window_methods(win, ["refresh_device"])
     return win
 
 
@@ -1746,8 +1746,8 @@ def test_picture_of_a_garmin_drive_comes_from_unit_info(drive_window, monkeypatc
     in_the_window("download_picture",
                   lambda http, url, name: asked.append(("download", url)) or (None, "test"))
     works, hidden = [], types.SimpleNamespace(set_visible=lambda visible: None)
-    win = types.SimpleNamespace(session=s, device_image=hidden, device_picture=hidden,
-                                in_background=lambda work, done: works.append(work))
+    win = stand_in(session=s, device_image=hidden, device_picture=hidden,
+                   in_background=lambda work, done: works.append(work))
     MainWindow._show_device_picture(win)
     assert works[0]() == (None, "download refused: test")
     assert asked == [("unit-info", 3000000003, "006-B3592-03"),
@@ -1928,12 +1928,12 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
     assert "without GARMIN/GarminDevice.xml" not in caplog.text
 
     shown = []
-    page = types.SimpleNamespace(session=None, busy=False, _usb_state=gio_storage.ABSENT,
-                                 _usb_since=0.0, _usb_title="", _usb_notice=MainWindow._usb_notice,
-                                 _update_actions=lambda: None, refresh_device=lambda: None,
-                                 start=FakeStartPage(),
-                                 sections={"watch": types.SimpleNamespace(
-                                     set_empty=lambda *notice: shown.append(notice))})
+    page = stand_in(session=None, busy=False, _usb_state=gio_storage.ABSENT,
+                    _usb_since=0.0, _usb_title="", _usb_notice=MainWindow._usb_notice,
+                    _update_actions=lambda: None, refresh_device=lambda: None,
+                    start=FakeStartPage(),
+                    sections={"watch": types.SimpleNamespace(
+                        set_empty=lambda *notice: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
     assert shown == [("USB drive", FLATPAK_DRIVE_TEXT, False)]
 
@@ -1991,7 +1991,7 @@ def choosing_window(drive_window):
         [(s.found.kind, s.description) for s in choices(win)])
     # Bound only when it exists, so that on code without it the tests fail on what they check.
     if hasattr(MainWindow, "open_choice"):
-        win.open_choice = types.MethodType(MainWindow.open_choice, win)
+        window_methods(win, ["open_choice"])
     win.error = lambda title, text: win.errors.append(text)
     # The start page reads the list again when another device goes away: recorded here.
     win.rereads = []
@@ -2816,10 +2816,10 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness"):
     items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
     dialogs, toasts = [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
-    win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
-                                toast=toasts.append, progress=lambda text: None, fraction=None,
-                                _show_installed=lambda session, chosen: None,
-                                run_task=RunNow())
+    win = stand_in(session=s, updates_cache=items, updates_beta=False,
+                   toast=toasts.append, progress=lambda text: None, fraction=None,
+                   _show_installed=lambda session, chosen: None,
+                   run_task=RunNow())
     for name in ("error", "ask_to_eject", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)
@@ -2908,10 +2908,10 @@ def test_an_update_that_does_not_fit_says_so_under_its_own_heading(drive_window,
     items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
     dialogs = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
-    win = types.SimpleNamespace(session=s, updates_cache=items, updates_beta=False,
-                                toast=lambda text: None, progress=lambda text: None,
-                                fraction=None, _show_installed=lambda session, chosen: None,
-                                run_task=RunNow())
+    win = stand_in(session=s, updates_cache=items, updates_beta=False,
+                   toast=lambda text: None, progress=lambda text: None,
+                   fraction=None, _show_installed=lambda session, chosen: None,
+                   run_task=RunNow())
     for name in ("error", "ask_to_eject", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)
@@ -3134,9 +3134,9 @@ def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force
 
     loaded = []
     keys = ("updates", "maps", "apps", "music")
-    win = types.SimpleNamespace(session=drive_session(drive_window, monkeypatch),
-                                sections={key: _recording_page(key) for key in keys},
-                                refresh_device=lambda: loaded.append("refresh"))
+    win = stand_in(session=drive_session(drive_window, monkeypatch),
+                   sections={key: _recording_page(key) for key in keys},
+                   refresh_device=lambda: loaded.append("refresh"))
     for key in keys:
         setattr(win, f"load_{key}", lambda key=key: loaded.append(key))
     for key in keys:
@@ -3181,8 +3181,8 @@ def test_no_banner_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
     if logged_in:
         s.client.auth = object()
     seen = {}
-    win = types.SimpleNamespace(session=s, _ownership_title=MainWindow._ownership_title,
-                                banner=types.SimpleNamespace(
+    win = stand_in(session=s, _ownership_title=MainWindow._ownership_title,
+                   banner=types.SimpleNamespace(
         set_title=lambda t: seen.update(title=t),
         set_button_label=lambda b: seen.update(button=b),
         set_revealed=lambda r: seen.update(revealed=r)))
@@ -3471,9 +3471,9 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
     st, _fake, _events = exclusive
     shown, started = [], []
     session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
-    win = types.SimpleNamespace(session=session, show_device=lambda: shown.append(1),
-                                show_no_device=lambda: shown.append(1),
-                                refresh_device=lambda: shown.append(2))
+    win = stand_in(session=session, show_device=lambda: shown.append(1),
+                   show_no_device=lambda: shown.append(1),
+                   refresh_device=lambda: shown.append(2))
     monkeypatch.setattr(watch.GLib, "timeout_add_seconds", lambda delay, fn: started.append(fn))
     w = watch.Watcher()
     with st.exclusive_ptp():
@@ -3498,7 +3498,7 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
     sysfs = gio_storage.SYSFS_USB
     shutil.rmtree(sysfs / "3-1")  # unplugged, as the user is told to after an install
     shown = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal")),
         busy=False, show_device=lambda: shown.append(1), _updated_apps={"waiting"},
         show_no_device=lambda: shown.append(1))
@@ -3812,10 +3812,10 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
 
     shown, refreshed, updates = [], [], []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
-    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
-                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
-                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
-                                refresh_device=lambda **_kw: refreshed.append(1))
+    win = stand_in(session=None, busy=False, sections={"watch": section},
+                   _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
+                   _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
+                   refresh_device=lambda **_kw: refreshed.append(1))
     # The Sync button is told whenever the words on the pages change, and only then.
     win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
@@ -3879,10 +3879,10 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
 
     shown, refreshed, updates = [], [], []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
-    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
-                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
-                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
-                                refresh_device=lambda **kw: refreshed.append(kw.get("cause")))
+    win = stand_in(session=None, busy=False, sections={"watch": section},
+                   _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
+                   _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
+                   refresh_device=lambda **kw: refreshed.append(kw.get("cause")))
     win._update_actions = lambda: updates.append(win._usb_title)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
     mass_storage_device(plugged.root)
@@ -3915,11 +3915,11 @@ def _banner_window(monkeypatch):
 
     shown, refreshed = [], []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
-    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
-                                _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
-                                _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
-                                refresh_device=lambda **_kw: refreshed.append(1),
-                                _update_actions=lambda: None)
+    win = stand_in(session=None, busy=False, sections={"watch": section},
+                   _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
+                   _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
+                   refresh_device=lambda **_kw: refreshed.append(1),
+                   _update_actions=lambda: None)
     # A detection runs at once; its timer is made up, and so is its removal.
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn() or 1)
     monkeypatch.setattr(app.GLib, "source_remove", lambda sid: None)
@@ -4047,11 +4047,11 @@ def _sync_window(session=None, busy=False):
     enabled = {}
     action = lambda name: types.SimpleNamespace(  # noqa: E731
         set_enabled=lambda value: enabled.__setitem__(name, value))
-    win = types.SimpleNamespace(session=session, busy=busy, lookup_action=action,
-                                _usb_title="", enabled=enabled, sync_button=_SyncButton(),
-                                sync_icon_button=_SyncButton(),
-                                _ownership_title=MainWindow._ownership_title)
-    win._sync_blocked = types.MethodType(MainWindow._sync_blocked, win)
+    win = stand_in(session=session, busy=busy, lookup_action=action,
+                   _usb_title="", enabled=enabled, sync_button=_SyncButton(),
+                   sync_icon_button=_SyncButton(),
+                   _ownership_title=MainWindow._ownership_title)
+    window_methods(win, ["_sync_blocked"])
     win.update = types.MethodType(MainWindow._update_actions, win)
     return win
 
@@ -4120,7 +4120,7 @@ def test_sync_tooltip_uses_the_words_of_the_banner():
         titles = []
         banner = types.SimpleNamespace(set_title=titles.append, set_button_label=lambda b: None,
                                        set_revealed=lambda r: None)
-        MainWindow._update_banner(types.SimpleNamespace(
+        MainWindow._update_banner(stand_in(
             session=s, banner=banner, _ownership_title=MainWindow._ownership_title))
         return titles
 
@@ -4415,10 +4415,10 @@ def test_the_start_page_tells_the_usb_state(plugged, monkeypatch):
     shown = []
     section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
     start = FakeStartPage()
-    win = types.SimpleNamespace(session=None, busy=False, sections={"watch": section},
-                                start=start, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
-                                _usb_title="", _usb_notice=MainWindow._usb_notice,
-                                refresh_device=lambda: None, _update_actions=lambda: None)
+    win = stand_in(session=None, busy=False, sections={"watch": section},
+                   start=start, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
+                   _usb_title="", _usb_notice=MainWindow._usb_notice,
+                   refresh_device=lambda: None, _update_actions=lambda: None)
     monkeypatch.setattr(app.GLib, "timeout_add", lambda ms, fn: fn())
     MainWindow._poll_usb(win, clock=plugged.clock)
     assert start.notices[-1] == shown[-1] and shown[-1][0] == "Connect your device"
@@ -5025,7 +5025,7 @@ def real_usb_poll(win):
     win._usb_state, win._usb_since, win._usb_title, win._usb_gone = (
         gio_storage.ABSENT, 0.0, "", None)
     win._usb_notice = MainWindow._usb_notice
-    win._poll_usb = types.MethodType(MainWindow._poll_usb, win)
+    window_methods(win, ["_poll_usb"])
 
 
 @pytest.mark.parametrize("variant", ["mtp open, a drive left", "mtp open, another mtp left",
@@ -6879,7 +6879,6 @@ def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
     """The unit-info the device view asks for the picture (one request) tells a bike
     accessory and gives no picture: the icon becomes the radar; nothing more is asked for
     the icon."""
-    from openexpress.gui.app import MainWindow
     from openexpress.gui.start import kind_icon
 
     icon, win = _device_view_icon(drive_window, monkeypatch, name="Test drive")
@@ -6892,8 +6891,7 @@ def test_unit_info_read_for_the_picture_sets_the_icon_while_there_is_no_picture(
 
     monkeypatch.setattr(win.session.client, "unit_info", unit_info)
     win.in_background = lambda work, done, failed=None: done(work())
-    win._show_device_picture = types.MethodType(MainWindow._show_device_picture, win)
-    win._set_device_texture = types.MethodType(MainWindow._set_device_texture, win)
+    window_methods(win, ["_show_device_picture", "_set_device_texture"])
     win._show_device_picture()
     assert asked == ["006-B3592-03"]
     assert win.device_image.get_icon_name() == kind_icon("bike-accessory")

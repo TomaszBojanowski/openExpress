@@ -4,6 +4,8 @@ mixins of MainWindow, and the log names their tasks as MainWindow's."""
 import logging
 import types
 
+from fakes import window as stand_in
+
 
 def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(caplog, in_the_window):
     """The line "task: MainWindow.add_music" of the log names the method that made the work
@@ -15,7 +17,7 @@ def test_a_task_of_a_mixin_of_the_window_is_logged_as_the_windows(caplog, in_the
     started = []
     in_the_window("threading", types.SimpleNamespace(
         Thread=lambda target, daemon: types.SimpleNamespace(start=lambda: started.append(1))))
-    win = types.SimpleNamespace(busy=False, session=None, set_busy=lambda *a, **kw: None)
+    win = stand_in(busy=False, session=None, set_busy=lambda *a, **kw: None)
     for cls in [app.MainWindow, *mixins]:
         def work():
             pass

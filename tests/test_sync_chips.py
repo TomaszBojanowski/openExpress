@@ -9,6 +9,7 @@ from datetime import datetime
 
 import pytest
 from fakes import record_sync
+from fakes import window as stand_in
 
 from openexpress import service, sync
 from openexpress.device.storage import LocalStorage
@@ -223,7 +224,7 @@ def _window(device, to_sync, other):
                                     mass_storage=False, ownership_error=None, to_sync=to_sync,
                                     stop_waiting=threading.Event())
     drawn = []
-    return types.SimpleNamespace(
+    return stand_in(
         session=session, run_task=RunNow(), progress=lambda *a: None, toast=lambda text: None,
         _show_last_sync=lambda: None, connected=Connected(devices=[other]),
         _on_start_page=lambda: True, _start_summaries=lambda: ([], False),
@@ -341,7 +342,7 @@ def _start_window(summaries, session=None, account=({"unitid": UNIT},)):
     login()
     noted(summaries, list(account))
     later = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session, start=start.StartPage(None), _account=list(account),
         connected=Connected(devices=list(summaries), choosing=session is None),
         _start_entries=[], _start_texts=[], later=later, _load_tile_pictures=lambda t: None,

@@ -7,6 +7,7 @@ import time
 import types
 
 import pytest
+from fakes import window as stand_in
 
 from openexpress import known_devices
 
@@ -14,7 +15,7 @@ EDGE = 3000000002
 
 
 def _window(unit_id=EDGE):
-    return types.SimpleNamespace(
+    return stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id)),
         _render_update_state=lambda: None)
 

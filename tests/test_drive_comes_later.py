@@ -7,6 +7,7 @@ import types
 
 import pytest
 from fakes import replace_in_window, window_methods
+from fakes import window as stand_in
 from test_detection import drives, usb_drive  # noqa: F401 - the fixture
 from test_unmounted_drive import FR55, Clock, UnmountedVolume, _monitor, _on_usb, _sized
 
@@ -97,8 +98,8 @@ def _window(monkeypatch, session=None, listed=(), choosing=False):
     asked = []
     replace_in_window(monkeypatch, "schedule_detection",
                       lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
-    win = types.SimpleNamespace(session=session, busy=False,
-                                connected=Connected(devices=list(listed), choosing=choosing))
+    win = stand_in(session=session, busy=False,
+                   connected=Connected(devices=list(listed), choosing=choosing))
     return window_methods(win, VOLUME_METHODS), asked
 
 
@@ -234,7 +235,7 @@ def _polled(monkeypatch, session=None, listed=()):
     asked = []
     replace_in_window(monkeypatch, "schedule_detection",
                       lambda win, ms, reason=None, cause=None: asked.append((ms, reason, cause)))
-    page = types.SimpleNamespace(
+    page = stand_in(
         session=session, busy=False, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
         _usb_title="", _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,
         start=FakeStartPage(), connected=Connected(devices=list(listed)),

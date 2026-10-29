@@ -4,6 +4,8 @@ The name below is the one unit-info gave for an epix (Gen 2); every device here 
 
 import types
 
+from fakes import window as stand_in
+
 from openexpress import devicelist, known_devices, service
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice
 
@@ -77,7 +79,7 @@ def test_the_device_page_shows_it_once_unit_info_has_it():
     service.unit_info(session)
     assert device_name(session) == SHOWN
     labels = []
-    win = types.SimpleNamespace(session=session, device_title=types.SimpleNamespace(
+    win = stand_in(session=session, device_title=types.SimpleNamespace(
         set_label=labels.append))
     show_device_name(win, session)
     assert labels == [SHOWN]

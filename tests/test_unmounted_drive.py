@@ -10,6 +10,7 @@ import types
 
 import pytest
 from fakes import replace_in_window
+from fakes import window as stand_in
 from gio_fake import answer_as_gio
 from test_detection import (  # noqa: F401 - the fixture
     DRIVE_SERIAL,
@@ -292,7 +293,7 @@ def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeyp
     _on_usb(drives, monkeypatch)
     _monitor(monkeypatch)
     detected = []
-    page = types.SimpleNamespace(
+    page = stand_in(
         session=None, busy=False, _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
         _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,
         refresh_device=lambda **kw: detected.append(kw.get("cause")), start=FakeStartPage(),
@@ -527,7 +528,7 @@ def test_the_window_notes_the_place_of_the_open_drive_it_sees_unmounted(drives, 
     shown = []
     storage = types.SimpleNamespace(label=folder.as_uri() + "/", device_uri=folder.as_uri(),
                                     usb=gio_storage.GarminUsb(FR55, 1, 12))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(storage=storage, mass_storage=True,
                                       device=types.SimpleNamespace(unit_id=3000000055)),
         connected=None, show_no_device=lambda: shown.append(1))
@@ -641,7 +642,7 @@ def _start_window(monkeypatch, listed):
     replace_in_window(monkeypatch, "with_space", lambda s: s)
     replace_in_window(monkeypatch, "resolve_account", lambda win: None)
     reread = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         busy=False, session=None, run_task=RunNow(), toast=lambda text: None,
         in_background=lambda fn, done, failed=None: None,  # the diagnostics, not read here
         connected=Connected(devices=list(listed), choosing=True),

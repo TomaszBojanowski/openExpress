@@ -8,7 +8,8 @@ import time
 import types
 
 import pytest
-from fakes import record_sync
+from fakes import record_sync, window_methods
+from fakes import window as stand_in
 from test_sync_chips import UNIT, _chips_on, _start_window, listed  # noqa: F401 - the fixture
 
 from openexpress import known_devices, service, sync
@@ -226,13 +227,11 @@ def test_another_count_changes_the_chip_and_the_record(listed):
 
 @pytest.mark.needs_display
 def test_after_a_sync_the_record_is_what_is_counted_again(listed):
-    from openexpress.gui import app
 
     _remember()
     _synced()
     win = _start_window([listed])
-    win._count_activities_again = types.MethodType(app.MainWindow._count_activities_again,
-                                                   win)
+    window_methods(win, ["_count_activities_again"])
     win._on_start_page = lambda: True
     win._show_tiles(*win._start_summaries())
     work, done = win.later.pop()
@@ -270,7 +269,7 @@ def test_the_last_sync_of_the_device_page_says_the_count_from_the_record_too():
     _state()
     _synced()
     _keep(2)
-    win = types.SimpleNamespace(
+    win = stand_in(
         last_sync_row=Adw.ExpanderRow(title="Last sync"), _last_sync_children=[],
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT),
                                       ownership_error=None, to_sync=None))
