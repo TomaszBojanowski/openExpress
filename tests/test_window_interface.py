@@ -1,12 +1,8 @@
-"""The window, MainWindow with its mixins (MapsPage, MusicPage, …), has the methods listed in
-tests/data/window_methods.txt: a method lost while moving code, a name defined in two of its
-classes (one would hide the other) or a method that hides one of GTK's fails here. The list
-names methods, not classes, so a method moved to another mixin keeps its line."""
+"""The window, MainWindow with its mixins (MapsPage, MusicPage, …): a name defined in two of its
+classes (one would hide the other) or a method that hides one of GTK's fails here. What the
+window has besides its methods, its attributes, is in tests/test_window_state.py."""
 
 import inspect
-from pathlib import Path
-
-LIST = Path(__file__).parent / "data" / "window_methods.txt"
 
 
 def _classes():
@@ -20,25 +16,6 @@ def _methods(cls) -> set[str]:
     return {name for name, value in vars(cls).items()
             if inspect.isfunction(value) or isinstance(value, (staticmethod, classmethod,
                                                                 property))}
-
-
-def _listed() -> list[str]:
-    return [line.strip() for line in LIST.read_text(encoding="utf-8").splitlines()
-            if line.strip() and not line.startswith("#")]
-
-
-def test_the_list_is_sorted_and_names_each_method_once():
-    listed = _listed()
-    assert listed == sorted(set(listed))
-
-
-def test_the_window_has_the_methods_of_the_list():
-    found = set().union(*(_methods(c) for c in _classes()))
-    listed = set(_listed())
-    lost, new = sorted(listed - found), sorted(found - listed)
-    assert (lost, new) == ([], []), (
-        f"lost: {lost}; not in {LIST.name}: {new} (add or remove a name there only for a "
-        "method added, removed or renamed on purpose)")
 
 
 def test_no_method_is_defined_in_two_of_the_window_s_classes():
