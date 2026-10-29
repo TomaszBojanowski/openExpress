@@ -6,18 +6,11 @@ errors, or a first sync waiting for a choice) and log lines. All answers are mad
 import json
 import re
 import shutil
-import types
 from dataclasses import dataclass, field
 
 import pytest
-from fakes import (
-    ACTIVITY_URL,
-    COURSE,
-    MONITORING_URL,
-    NOT_TAKEN,
-    RunNow,
-    SyncAccount,
-)
+from fakes import ACTIVITY_URL, COURSE, MONITORING_URL, NOT_TAKEN, RunNow, SyncAccount
+from fakes import window as stand_in
 
 from openexpress import applog, cli, last_sync, service, sync
 from openexpress.device.storage import LocalStorage
@@ -53,7 +46,7 @@ def by_the_window(root, account, case):
     storage = LocalStorage(root)
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     said = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=service.DeviceSession(storage, device, Settings(), account),
         run_task=RunNow(error="record"), progress=lambda *a: None, toast=said.append,
         _show_last_sync=lambda: None, _count_activities_again=lambda: None,

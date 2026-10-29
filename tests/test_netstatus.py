@@ -5,6 +5,7 @@ import types
 
 import pytest
 import requests
+from fakes import window as stand_in
 
 from openexpress import download, netstatus
 from openexpress.connect import ApiError, GarminClient
@@ -349,7 +350,7 @@ def _status_window():
 
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(session=None)
+    win = stand_in(session=None)
     bar = MainWindow._build_net_status(win)
     return win, bar, MainWindow
 

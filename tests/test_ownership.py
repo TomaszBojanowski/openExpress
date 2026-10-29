@@ -10,6 +10,7 @@ import types
 import pytest
 import requests
 from fakes import RunNow
+from fakes import window as stand_in
 
 from openexpress import ciq, cli, service, sync
 from openexpress.auth import store
@@ -704,13 +705,13 @@ def banner_for(s):
     from openexpress.gui.app import MainWindow
 
     seen = {}
-    win = types.SimpleNamespace(session=s, _ownership_title=MainWindow._ownership_title,
-                                banner=types.SimpleNamespace(
+    win = stand_in(session=s, _ownership_title=MainWindow._ownership_title,
+                   banner=types.SimpleNamespace(
         set_title=lambda t: seen.update(title=t),
         set_button_label=lambda b: seen.update(button=b),
         set_revealed=lambda r: seen.update(revealed=r)))
     MainWindow._update_banner(win)
-    seen["kind"] = getattr(win, "_banner_kind", None)
+    seen["kind"] = win._banner_kind or None  # no banner: no kind
     return seen
 
 
@@ -754,7 +755,7 @@ def test_window_shows_the_refusal_instead_of_account_features(device_root, devic
         error=types.SimpleNamespace(set_title=lambda t: None,
                                     set_description=lambda d: shown.append(d)))
     started = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=s, busy=False, sections={"apps": section},
         _load=lambda *a: started.append("load"), run_task=lambda *a: started.append("task"),
         in_background=lambda *a: started.append("background"),
@@ -897,7 +898,7 @@ def test_window_primary_training_row(device_root, device):
     def window(client):
         s = service.check_session(session(device_root, device, client))
         assert s.account_devices is not None
-        win = types.SimpleNamespace(session=s, _primary_training_text=text)
+        win = stand_in(session=s, _primary_training_text=text)
 
         def run_now(fn, on_done, on_error=None):
             try:
@@ -1124,8 +1125,8 @@ def test_window_set_primary_training(device_root, device):
 
     run_task = RunNow(on_call=noted)
 
-    win = types.SimpleNamespace(session=s, run_task=run_task, toast=events.append,
-                                show_overview=lambda: events.append("overview"))
+    win = stand_in(session=s, run_task=run_task, toast=events.append,
+                   show_overview=lambda: events.append("overview"))
     MainWindow.set_primary_training(win)
     assert account.current == UNIT and len(account.puts) == 1
     assert events == ["Changing the primary training device…",
@@ -1313,7 +1314,7 @@ def _wearable_window(account, device):
     devices = service.require_account_device(account.client, UNIT)
     account.client.http.sent.clear()
     calls = {"toasts": [], "accounts": [], "overviews": 0}
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=device, client=account.client, logged_in=True,
                                       ownership_error=None, account_devices=devices,
                                       unit_info_answer=None),

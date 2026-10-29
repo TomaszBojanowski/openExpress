@@ -6,7 +6,8 @@ account's list. All devices and files are made up."""
 import types
 
 import pytest
-from fakes import record_sync
+from fakes import record_sync, window_methods
+from fakes import window as stand_in
 
 from openexpress import i18n, service, sync
 
@@ -61,7 +62,7 @@ def _last_sync_row(to_sync=None, ownership_error=None):
 
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         last_sync_row=Adw.ExpanderRow(title="Last sync"), _last_sync_children=[],
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT),
                                       ownership_error=ownership_error, to_sync=to_sync))
@@ -229,8 +230,8 @@ def test_the_open_device_is_counted_once_without_the_start_page():
     s = types.SimpleNamespace(
         device=types.SimpleNamespace(unit_id=UNIT), storage=types.SimpleNamespace(),
         mass_storage=False, ownership_error=None, logged_in=True, to_sync_asked=False)
-    win = types.SimpleNamespace(session=s,
-                                in_background=lambda work, done, failed=None: asked.append(work))
+    win = stand_in(session=s,
+                   in_background=lambda work, done, failed=None: asked.append(work))
     app.count_open_activities(win)
     app.count_open_activities(win)
     assert len(asked) == 1 and s.to_sync_asked
@@ -246,8 +247,8 @@ def test_a_drive_one_not_logged_in_or_off_the_account_is_not_counted(fields):
     values = dict(device=types.SimpleNamespace(unit_id=UNIT), storage=types.SimpleNamespace(),
                   mass_storage=False, ownership_error=None, logged_in=True, to_sync_asked=False)
     values.update(fields)
-    win = types.SimpleNamespace(session=types.SimpleNamespace(**values),
-                                in_background=lambda work, done, failed=None: asked.append(work))
+    win = stand_in(session=types.SimpleNamespace(**values),
+                   in_background=lambda work, done, failed=None: asked.append(work))
     app.count_open_activities(win)
     assert asked == []
 
@@ -320,16 +321,15 @@ FAILED = ("Your Garmin Connect account could not be read: the tiles show only wh
 
 
 def _account_window(why=None):
-    from openexpress.gui.app import MainWindow
 
     notes = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         _account=None, _account_why=why, drawn=[], _start_entries=[("a tile", "its source")],
         start=types.SimpleNamespace(set_account_note=notes.append),
         _on_start_page=lambda: True, _on_remembered_page=lambda: False,
         in_background=lambda work, done, failed=None: done(work()))
     win._render_start = lambda: win.drawn.append(1)
-    win._set_account = types.MethodType(MainWindow._set_account, win)
+    window_methods(win, ["_set_account"])
     return win, notes
 
 
@@ -382,8 +382,8 @@ def test_the_window_gives_the_note_with_the_tiles_drawn():
     from openexpress.gui import app
 
     notes = []
-    win = types.SimpleNamespace(_account_why="logged-out",
-                                start=types.SimpleNamespace(set_account_note=notes.append))
+    win = stand_in(_account_why="logged-out",
+                   start=types.SimpleNamespace(set_account_note=notes.append))
     app.show_account_note(win, [("a tile", "its source")])
     app.show_account_note(win, [])
     win._account_why = None
@@ -395,7 +395,7 @@ def test_logging_out_says_it_on_the_start_page(monkeypatch, in_the_window):
     from openexpress.auth import store
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(_account=[{"unitid": 1}], _account_why=None, toasts=[])
+    win = stand_in(_account=[{"unitid": 1}], _account_why=None, toasts=[])
     win.toast = win.toasts.append
     changed = []
     in_the_window("account_changed", lambda w, cause: changed.append(cause))

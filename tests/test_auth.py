@@ -7,6 +7,7 @@ import weakref
 from dataclasses import asdict
 
 import pytest
+from fakes import window as stand_in
 
 from openexpress import applog, paths, sync
 from openexpress.auth import sso, store
@@ -98,8 +99,8 @@ def test_logout_in_the_window_removes_the_saved_login():
 
     saved_login()
     said, refreshed = [], []
-    win = types.SimpleNamespace(session=object(), toast=said.append,
-                                refresh_device=lambda **_kw: refreshed.append(True))
+    win = stand_in(session=object(), toast=said.append,
+                   refresh_device=lambda **_kw: refreshed.append(True))
     MainWindow.logout(win)
     assert not login_file().exists()
     with pytest.raises(store.NotLoggedIn):

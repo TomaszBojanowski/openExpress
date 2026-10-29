@@ -6,15 +6,17 @@ the window, the command line and the start."""
 import json
 import types
 
+from fakes import window as stand_in
+
 
 def _window():
     from openexpress.gui import app
 
     shown = []
-    win = types.SimpleNamespace(gui_settings=app.load_gui_settings(), session=None,
-                                toast=shown.append, error=lambda *a: shown.append(a),
-                                start=types.SimpleNamespace(view=None),
-                                _render_start=lambda: None)
+    win = stand_in(gui_settings=app.load_gui_settings(), session=None,
+                   toast=shown.append, error=lambda *a: shown.append(a),
+                   start=types.SimpleNamespace(view=None),
+                   _render_start=lambda: None)
     return win, shown
 
 

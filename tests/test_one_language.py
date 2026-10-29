@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from fakes import window as stand_in
+from fakes import window_methods
 from test_updates_system import (
     BUNDLE_ENTRY,
     FONT_ENTRY,
@@ -106,8 +108,8 @@ def _storage_row(space):
 
     from openexpress.gui import app
 
-    win = types.SimpleNamespace(storage_row=Adw.ActionRow(), storage_bar=Gtk.LevelBar(),
-                                session=types.SimpleNamespace(space=space))
+    win = stand_in(storage_row=Adw.ActionRow(), storage_bar=Gtk.LevelBar(),
+                   session=types.SimpleNamespace(space=space))
     app.render_space(win)
     return win.storage_row.get_subtitle()
 
@@ -124,13 +126,12 @@ def test_the_device_page_says_reading_then_unknown():
 def test_the_music_page_says_the_space_in_the_same_words(free, said):
     from test_fixes_ui import page_window
 
-    from openexpress.gui import app
 
     win, section = page_window("music")
     dev = types.SimpleNamespace(targets=lambda datatype: [], unit_id=None)
     win.session = types.SimpleNamespace(device=dev, storage=None)
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
-    win.show_music = types.MethodType(app.MainWindow.show_music, win)
+    window_methods(win, ["show_music"])
     win.show_music(([], []), free=free)
     (add,) = [g for g in section.groups if g.get_title() == "Add to the device"]
     assert add.get_description() == said
@@ -156,7 +157,7 @@ def test_the_question_before_a_map_says_the_space_in_the_same_words(monkeypatch)
 
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = types.SimpleNamespace(session=types.SimpleNamespace(), run_task=None)
+    win = stand_in(session=types.SimpleNamespace(), run_task=None)
     m = types.SimpleNamespace(size=1_000_000, files=["a"], eula_urls=[], installed=False,
                               name="Test Map")
     app.MainWindow._ask_install_map(win, m, 1_500_000, None, [])
@@ -261,7 +262,7 @@ def test_the_device_page_of_a_drive_says_usb_drive():
 def test_the_sync_button_and_the_notice_of_a_drive_say_usb_drive():
     from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(session=types.SimpleNamespace(mass_storage=True))
+    win = stand_in(session=types.SimpleNamespace(mass_storage=True))
     assert MainWindow._sync_blocked(win) == "USB drive"
 
 

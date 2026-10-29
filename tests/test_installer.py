@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from fakes import window as stand_in
 
 from openexpress import installer
 from openexpress.settings import SetupError
@@ -223,7 +224,7 @@ def test_the_window_says_it_is_for_macos(tmp_path, in_the_window):
     in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
     in_the_window("save_consumer", lambda consumer: pytest.fail("saved"))
     run = RunNow(error="record")
-    win = types.SimpleNamespace(run_task=run, toast=lambda text: pytest.fail(text))
+    win = stand_in(run_task=run, toast=lambda text: pytest.fail(text))
     app.MainWindow.choose_dll(win)
     assert run.errors == [MACOS_TEXT.format(file="GarminExpress.dmg")]
 
@@ -283,7 +284,7 @@ def _banner_of_the_setup() -> dict:
     banner = types.SimpleNamespace(set_title=lambda text: said.update(title=text),
                                    set_button_label=lambda text: said.update(button=text),
                                    set_revealed=lambda on: said.update(revealed=on))
-    win = types.SimpleNamespace(banner=banner, session=types.SimpleNamespace(
+    win = stand_in(banner=banner, session=types.SimpleNamespace(
         mass_storage=False, client=types.SimpleNamespace(consumer=None)))
     MainWindow._update_banner(win)
     return said
@@ -322,7 +323,7 @@ def test_the_choice_of_the_file_says_which_installer(in_the_window):
             pass  # nothing chosen
 
     in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
-    app.MainWindow.choose_dll(types.SimpleNamespace())
+    app.MainWindow.choose_dll(stand_in())
     assert titles == ["Select the Garmin Express installer for Windows (GarminExpress.exe)"]
 
 
@@ -338,9 +339,9 @@ def test_the_preferences_say_which_installer(monkeypatch):
     groups, add = [], Adw.PreferencesPage.add
     monkeypatch.setattr(Adw.PreferencesPage, "add",
                         lambda page, group: groups.append(group) or add(page, group))
-    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
-                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
-                                error=lambda title, text: None, run_task=None, toast=None)
+    win = stand_in(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                   set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                   error=lambda title, text: None, run_task=None, toast=None)
     for name in ("_button", "_cache_group", "_ask_clear_cache", "_account_group",
                  "_account_action"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))

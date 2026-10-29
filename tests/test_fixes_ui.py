@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import RunNow, replace_in_window, step_words
+from fakes import RunNow, replace_in_window, step_words, window_methods
+from fakes import window as stand_in
 
 from openexpress import cli, desktop, service
 from openexpress.cli import main
@@ -420,13 +421,12 @@ class _Sec:
 
 
 def _fake_window(session):
-    from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(session=session, busy=False, sections={"maps": _Sec()},
-                                _retry_sources={}, tasks=[])
+    win = stand_in(session=session, busy=False, sections={"maps": _Sec()},
+                   _retry_sources={}, tasks=[])
     win.run_task = (lambda title, work, done, failed, device=True, in_page=False:
                     win.tasks.append((done, failed)))
-    win._load = types.MethodType(MainWindow._load, win)
+    window_methods(win, ["_load"])
     return win
 
 
@@ -463,8 +463,8 @@ def test_pending_refresh_runs_when_idle():
     from openexpress.gui.app import MainWindow
 
     calls = []
-    win = types.SimpleNamespace(_refresh_pending=True, busy=True,
-                                refresh_device=lambda: calls.append(1))
+    win = stand_in(_refresh_pending=True, busy=True,
+                   refresh_device=lambda: calls.append(1))
     MainWindow._run_pending_refresh(win)
     assert calls == [] and win._refresh_pending
     win.busy = False
@@ -501,11 +501,11 @@ def test_window_geometry(xdg):
 def test_ctrl_q_remembers_the_window_size_as_closing_does(xdg, maximized):
     """Ctrl+Q (app.quit) ends the program without the window's close-request: the size is
     saved there too, as when the window is closed."""
-    from openexpress.gui.app import App, MainWindow, load_gui_settings, window_geometry
+    from openexpress.gui.app import App, load_gui_settings, window_geometry
 
-    win = types.SimpleNamespace(busy=False, get_default_size=lambda: (1100, 700),
-                                is_maximized=lambda: maximized)
-    win._remember_geometry = types.MethodType(MainWindow._remember_geometry, win)
+    win = stand_in(busy=False, get_default_size=lambda: (1100, 700),
+                   is_maximized=lambda: maximized)
+    window_methods(win, ["_remember_geometry"])
     quits = []
     app = types.SimpleNamespace(main_window=lambda create=True: win,
                                 quit=lambda: quits.append(1))
@@ -520,7 +520,7 @@ def test_ctrl_q_during_a_task_still_asks_the_window(xdg):
     from openexpress.gui.app import App, load_gui_settings
 
     closed, quits = [], []
-    win = types.SimpleNamespace(busy=True, close=lambda: closed.append(1))
+    win = stand_in(busy=True, close=lambda: closed.append(1))
     app = types.SimpleNamespace(main_window=lambda create=True: win,
                                 quit=lambda: quits.append(1))
     App.request_quit(app)
@@ -554,17 +554,14 @@ class _Widget:
 
 
 def _busy_window(session):
-    from openexpress.gui.app import MainWindow
 
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=session, busy=False, action_bar=_Widget(), progress_label=_Widget(),
         progress_bar=_Widget(), unplug_label=_Widget(), banner=_Widget(), _action_buttons=[],
         _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[],
         _waiting=0, busy_spinner=_Widget())
     win.toast = win.toasts.append
-    win._stop_waiting = types.MethodType(MainWindow._stop_waiting, win)
-    win.set_busy = types.MethodType(MainWindow.set_busy, win)
-    win.run_task = types.MethodType(MainWindow.run_task, win)
+    window_methods(win, ["_stop_waiting", "set_busy", "run_task"])
     return win
 
 
@@ -773,15 +770,13 @@ def test_updates_page_with_several_updates(monkeypatch):
             return self.groups[-1]
 
     states = []
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39")),
         sections={"updates": Section()}, busy=False, _action_buttons=[],
         _set_update_state=lambda new, staged=(): states.append(len(new)), confirm_update=lambda u: None,
         load_section=lambda *a, **kw: None)
-    win._update_row = types.MethodType(MainWindow._update_row, win)
-    win._updates_status = types.MethodType(MainWindow._updates_status, win)
-    win._button = types.MethodType(MainWindow._button, win)
+    window_methods(win, ["_update_row", "_updates_status", "_button"])
     MainWindow.show_updates(win, items)
 
     status, available, advanced = win.sections["updates"].groups  # the status on top
@@ -943,10 +938,10 @@ def test_window_does_not_count_files_already_on_the_device(offered):
     s = types.SimpleNamespace(client=client, storage=LocalStorage(root),
                               device=types.SimpleNamespace(raw=b""))
     states = []
-    win = types.SimpleNamespace(session=s, _update_check_session=None, update_state=None,
-                                _set_update_state=lambda new, staged=(): states.append(new),
-                                _render_update_state=lambda: None,
-                                in_background=lambda work, done, failed: done(work()))
+    win = stand_in(session=s, _update_check_session=None, update_state=None,
+                   _set_update_state=lambda new, staged=(): states.append(new),
+                   _render_update_state=lambda: None,
+                   in_background=lambda work, done, failed: done(work()))
     MainWindow._check_updates_quietly(win)
     assert states == [[]]  # "Software is up to date", no "update available"
     assert upd.pending(upd.mark_present(s.storage, upd.parse_updates(answer))) == []
@@ -1024,7 +1019,7 @@ def _picture_window(client, logged_in=False, ownership_error=None, monkeypatch=N
                           lambda path: ("texture", path.read_bytes())
                           if path.read_bytes().startswith(PNG[:8]) else None)
     device = types.SimpleNamespace(unit_id=SECRET_UNIT, part_number="006-B0000-00")
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(device=device, client=client, logged_in=logged_in,
                                       ownership_error=ownership_error),
         device_image=_Widget(), device_picture=_Widget(), shown=[], jobs=[])
@@ -1659,9 +1654,9 @@ def page_window(key):
         win.busy = busy
         win._action_buttons = still_in_window(win._action_buttons)
 
-    win = types.SimpleNamespace(session=types.SimpleNamespace(), sections={key: section},
-                                busy=False, _action_buttons=[], _retry_sources={},
-                                run_task=run_task, set_busy=set_busy, toplevel=toplevel)
+    win = stand_in(session=types.SimpleNamespace(), sections={key: section},
+                   busy=False, _action_buttons=[], _retry_sources={},
+                   run_task=run_task, set_busy=set_busy, toplevel=toplevel)
     for name in ("_load", "_button", "_trash"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     return win, section
@@ -1736,7 +1731,7 @@ def test_about_links_to_the_support_page(monkeypatch):
             pass
 
     monkeypatch.setattr(app.Adw, "AboutDialog", About)
-    MainWindow.show_about(types.SimpleNamespace())
+    MainWindow.show_about(stand_in())
     (about,) = dialogs
     assert about.props["website"] == "https://github.com/TomaszBojanowski/openExpress"
     assert about.props["issue_url"] == "https://github.com/TomaszBojanowski/openExpress/issues"

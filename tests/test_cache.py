@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from fakes import RunNow
+from fakes import window as stand_in
 
 
 def fill(root: Path, files: dict[str, int]) -> None:
@@ -559,10 +560,10 @@ def prefs(cache, monkeypatch):
     run_task = RunNow(on_call=lambda call: tasks.append((call.title, call.device, call.button)),
                       error=lambda title, text: errors.append(text))
 
-    win = types.SimpleNamespace(busy=False, run_task=run_task, dialogs=dialogs, errors=errors,
-                                toast=toasts.append, toasts=toasts, tasks=tasks,
-                                _preferences=None,
-                                error=lambda title, text: errors.append(text))
+    win = stand_in(busy=False, run_task=run_task, dialogs=dialogs, errors=errors,
+                   toast=toasts.append, toasts=toasts, tasks=tasks,
+                   _preferences=None,
+                   error=lambda title, text: errors.append(text))
     for name in ("_cache_group", "_ask_clear_cache"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     return win
@@ -812,9 +813,9 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
 
     shown = []
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
-    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
-                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
-                                error=lambda title, text: None, run_task=None, toast=None)
+    win = stand_in(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                   set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                   error=lambda title, text: None, run_task=None, toast=None)
     for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
         if hasattr(MainWindow, name):  # one missing: the test fails on what it checks
@@ -854,12 +855,12 @@ def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
     client = types.SimpleNamespace(auth=types.SimpleNamespace(display="someone"))
     in_the_window("account_client", lambda: client)
-    win = types.SimpleNamespace(busy=False, _action_buttons=[], _background_enabled=lambda: False,
-                                set_background=lambda on, done=None: None, choose_dll=lambda: None,
-                                error=lambda title, text: None, run_task=None, toast=None,
-                                session=None, refresh_device=lambda **kw: None,
-                                logout=lambda: calls.append("logout"),
-                                login=lambda: calls.append("login"))
+    win = stand_in(busy=False, _action_buttons=[], _background_enabled=lambda: False,
+                   set_background=lambda on, done=None: None, choose_dll=lambda: None,
+                   error=lambda title, text: None, run_task=None, toast=None,
+                   session=None, refresh_device=lambda **kw: None,
+                   logout=lambda: calls.append("logout"),
+                   login=lambda: calls.append("login"))
     for name in ("_button", "_cache_group", "_ask_clear_cache",
                  "_account_group", "_account_action"):
         if hasattr(MainWindow, name):  # one missing: the test fails on what it checks
