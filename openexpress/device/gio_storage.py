@@ -470,7 +470,6 @@ class GarminUsb:
     """A Garmin device on USB. `product` is the USB product ID, when it is known."""
 
     product: str | None
-    source: str  # "usb": read from the USB device; "uri": taken from the MTP address
     # Where the device is on USB, when known; not part of what the device is.
     bus: int | None = field(default=None, compare=False)
     address: int | None = field(default=None, compare=False)
@@ -561,13 +560,13 @@ def _identify(uri: str | None, volume, monitor=None) -> GarminUsb | None:
     if ids is not None:
         if ids[0] != GARMIN_VID:
             return None
-        return GarminUsb(ids[1], "usb", int(address.group(1)), int(address.group(2)))
+        return GarminUsb(ids[1], int(address.group(1)), int(address.group(2)))
     # The USB properties are not available: fall back to the start of the host name.
     by_ids = _URI_GARMIN_IDS.match(uri)
     if by_ids:
-        return GarminUsb(by_ids.group(1).lower(), "uri")
+        return GarminUsb(by_ids.group(1).lower())
     if uri.lower().startswith(_URI_GARMIN_NAME):
-        return GarminUsb(None, "uri")
+        return GarminUsb(None)
     return None
 
 
@@ -646,7 +645,7 @@ def _drive_usb(ids: tuple[str, str, int, int], folder: Path, volume) -> GarminUs
     from openexpress import applog
 
     uuid = volume.get_identifier("uuid") if volume is not None else None
-    usb = GarminUsb(ids[1], "usb", ids[2], ids[3], serial=_usb_serial(folder),
+    usb = GarminUsb(ids[1], ids[2], ids[3], serial=_usb_serial(folder),
                     volume_uuid=uuid or None)
     applog.hide_usb(usb)
     return usb
@@ -678,7 +677,7 @@ def drive_volume(volume) -> tuple[str, GarminUsb, bool] | None:
     if block is None or block[0][0] != GARMIN_VID or not _mass_storage_only(block[1]):
         return None
     ids = block[0]
-    return (UNMOUNTED_DRIVE + unix, GarminUsb(ids[1], "usb", ids[2], ids[3]),
+    return (UNMOUNTED_DRIVE + unix, GarminUsb(ids[1], ids[2], ids[3]),
             bool(_block_size(unix)))
 
 
@@ -799,7 +798,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
     for place, volumes in places.items():
         seen.add(place)
         ids = volumes[0][2]
-        usb = GarminUsb(ids[1], "usb", ids[2], ids[3])
+        usb = GarminUsb(ids[1], ids[2], ids[3])
         if ejected_by_us(usb):
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
                      "is unplugged", usb.usb_id)
@@ -1793,7 +1792,7 @@ def _mount_back(uri: str, storage: Storage, sleep=time.sleep) -> None:
 def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | None = None):
     _quiet_until[_key(uri)] = float("inf")
     known = getattr(storage, "usb", None)
-    _quiet_usb[_key(uri)] = GarminUsb(known.product if known else None, "usb", bus, address)
+    _quiet_usb[_key(uri)] = GarminUsb(known.product if known else None, bus, address)
     started = time.monotonic()
     try:
         log.info("PTP: unmounting the device from gvfs")

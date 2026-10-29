@@ -251,7 +251,7 @@ def test_a_volume_of_another_vendor_is_not_listed(drives, monkeypatch):
 def test_a_drive_ejected_by_openexpress_is_not_listed(drives, monkeypatch):
     _volume, _folder = _unmounted(drives, monkeypatch)
     _on_usb(drives, monkeypatch)
-    usb = gio_storage.GarminUsb(FR55, "usb", 1, 12)
+    usb = gio_storage.GarminUsb(FR55, 1, 12)
     with gio_storage._ejected_lock:
         gio_storage._ejected.append(usb)
     try:
@@ -514,7 +514,7 @@ def test_a_drive_unmounted_while_open_is_known_by_its_place(drives, monkeypatch)
     _sized(drives, unix, FR55_SECTORS)
     _on_usb(drives, monkeypatch)
     _monitor(monkeypatch)
-    gio_storage.note_drive_place(gio_storage.GarminUsb(FR55, "usb", 1, 12))
+    gio_storage.note_drive_place(gio_storage.GarminUsb(FR55, 1, 12))
     _reenumerated(drives)
     assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
 
@@ -530,7 +530,7 @@ def test_the_window_notes_the_place_of_the_open_drive_it_sees_unmounted(drives, 
     mount = FakeDriveMount(folder, unix)
     shown = []
     storage = types.SimpleNamespace(label=folder.as_uri() + "/", device_uri=folder.as_uri(),
-                                    usb=gio_storage.GarminUsb(FR55, "usb", 1, 12))
+                                    usb=gio_storage.GarminUsb(FR55, 1, 12))
     win = types.SimpleNamespace(
         session=types.SimpleNamespace(storage=storage, mass_storage=True,
                                       device=types.SimpleNamespace(unit_id=3000000055)),
@@ -619,12 +619,12 @@ def _three_listed():
             DeviceSummary(FoundDevice("mtp://edge/", "x", True), "Edge 1050", "006-B4440-00",
                           "33.13", EDGE),
             DeviceSummary(FoundDevice(gio_storage.UNMOUNTED_DRIVE + "/dev/sdb", "GARMIN", False,
-                                      kind="ums", usb=GarminUsb("20ee", "usb", 1, 12)),
+                                      kind="ums", usb=GarminUsb("20ee", 1, 12)),
                           reason=gio_storage.NOT_MOUNTED)]
 
 
 def _varia_session():
-    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12)
+    usb = gio_storage.GarminUsb("20ee", 1, 12)
     storage = types.SimpleNamespace(device_uri="file:///run/media/u/GARMIN/",
                                     label="file:///run/media/u/GARMIN/", usb=usb)
     device = types.SimpleNamespace(unit_id=VARIA, description="Varia RTL515",
@@ -846,7 +846,7 @@ def test_a_session_hides_them_also_when_they_were_not_read_for_a_list():
     from openexpress import applog
     from openexpress.device.xmldevice import parse
 
-    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12, serial=DRIVE_ID_SERIAL,
+    usb = gio_storage.GarminUsb("20ee", 1, 12, serial=DRIVE_ID_SERIAL,
                                 volume_uuid=DRIVE_ID_UUID)
     applog.hide_device(parse(DEVICE_XML.encode()), usb)
     assert applog.redact(f"{DRIVE_ID_SERIAL} {DRIVE_ID_UUID.lower()}") == "<serial> <volume>"

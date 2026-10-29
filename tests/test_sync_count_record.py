@@ -321,7 +321,7 @@ def _probed(device_root):
     from openexpress.device import gio_storage
 
     found = gio_storage.FoundDevice("mtp://made-up/", "x", True,
-                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+                                    usb=gio_storage.GarminUsb("51b4", 1, 9))
     return gio_storage.probe(found)
 
 

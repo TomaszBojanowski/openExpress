@@ -169,20 +169,20 @@ def test_usb_address_form(sysfs):
 
 def test_a_device_still_at_its_place_on_usb(sysfs):
     still = gio_storage.usb_still_there
-    assert still(gio_storage.GarminUsb("51b4", "usb", 1, 31))
-    assert still(gio_storage.GarminUsb(None, "usb", 1, 31))  # product unknown: the place decides
-    assert not still(gio_storage.GarminUsb("51b4", "usb", 1, 32))  # plugged in again: new number
-    assert not still(gio_storage.GarminUsb("5158", "usb", 1, 31))  # another product there now
-    assert not still(gio_storage.GarminUsb("4ee1", "usb", 2, 7))  # not a Garmin device
-    assert not still(gio_storage.GarminUsb("51b4", "uri"))  # place not known
+    assert still(gio_storage.GarminUsb("51b4", 1, 31))
+    assert still(gio_storage.GarminUsb(None, 1, 31))  # product unknown: the place decides
+    assert not still(gio_storage.GarminUsb("51b4", 1, 32))  # plugged in again: new number
+    assert not still(gio_storage.GarminUsb("5158", 1, 31))  # another product there now
+    assert not still(gio_storage.GarminUsb("4ee1", 2, 7))  # not a Garmin device
+    assert not still(gio_storage.GarminUsb("51b4"))  # place not known
     assert not still(None)
     for name in ("busnum", "devnum", "idVendor", "idProduct"):  # unplugged: gone from /sys
         (sysfs / "1-8" / name).unlink()
-    assert not still(gio_storage.GarminUsb("51b4", "usb", 1, 31))
+    assert not still(gio_storage.GarminUsb("51b4", 1, 31))
 
 
 def test_no_device_is_still_there_without_sysfs(no_sysfs):
-    assert not gio_storage.usb_still_there(gio_storage.GarminUsb("51b4", "usb", 1, 31))
+    assert not gio_storage.usb_still_there(gio_storage.GarminUsb("51b4", 1, 31))
 
 
 def test_usb_address_form_without_sysfs(no_sysfs):
@@ -539,7 +539,7 @@ def opened(win, mount_uri, unit_id=3000000001, answers=True):
         return b"<Device/>"
 
     storage = types.SimpleNamespace(label=mount_uri + "Internal%20Storage", read=read,
-                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 40))
+                                    usb=gio_storage.GarminUsb("51b4", 1, 40))
     return types.SimpleNamespace(storage=storage,
                                  device=types.SimpleNamespace(unit_id=unit_id))
 
@@ -648,7 +648,7 @@ def test_an_open_device_whose_place_on_usb_is_not_known_is_kept_by_its_address(d
 
     win = detecting
     win.session = opened(win, NUMERIC)
-    win.session.storage.usb = gio_storage.GarminUsb("51b4", "uri")  # told by its address only
+    win.session.storage.usb = gio_storage.GarminUsb("51b4")  # told by its address only
     MainWindow._on_mount_added(win, None, FakeMount(NUMERIC))
     win.timers.fire()
     assert win.reads == ["GARMIN/GarminDevice.xml"] and win.tasks == []
@@ -1353,7 +1353,7 @@ def test_several_mtp_devices_come_with_the_devices_found(watch_and_drives, monke
     watch_and_drives.plug("51b4")
     watch_and_drives.offer()
     watch_and_drives.offered.append(gio_storage.FoundDevice(
-        NAMED, "Edge", True, usb=gio_storage.GarminUsb("5158", "usb", 1, 10)))
+        NAMED, "Edge", True, usb=gio_storage.GarminUsb("5158", 1, 10)))
     with pytest.raises(gio_storage.SeveralDevices) as error:
         service.open_session(allow_ums=True)
     assert str(error.value) == ("Several devices connected, choose one with --device-uri: "
@@ -1439,7 +1439,7 @@ def test_probe_of_a_drive_without_a_readable_device_file(drives, content, reason
     if content is not None:
         (folder / "GARMIN" / "GarminDevice.xml").write_bytes(content)
     found = gio_storage.FoundDevice(folder.as_uri(), "GARMIN", True,
-                                    usb=gio_storage.GarminUsb("20ee", "usb", 1, 12), kind="ums")
+                                    usb=gio_storage.GarminUsb("20ee", 1, 12), kind="ums")
     summary = gio_storage.probe(found)
     assert summary_of(summary) == ("ums", "", "", "", reason)
     assert not summary.ok and summary.unit_id is None
@@ -1453,7 +1453,7 @@ def test_probe_of_an_mtp_device_that_cannot_be_opened_logs_why(monkeypatch, capl
         raise RuntimeError(f"Could not open {NAMED}Internal: Not found")
 
     monkeypatch.setattr(gio_storage, "_mtp_storage", refuse)
-    found = gio_storage.FoundDevice(NAMED, "Edge", True, usb=gio_storage.GarminUsb(None, "uri"))
+    found = gio_storage.FoundDevice(NAMED, "Edge", True, usb=gio_storage.GarminUsb(None))
     with caplog.at_level(logging.INFO, logger="openexpress"):
         summary = gio_storage.probe(found)
     assert summary_of(summary) == ("mtp", "", "", "", "unreadable")
@@ -1472,7 +1472,7 @@ def test_probe_does_not_mount_an_mtp_device(watch_and_drives, monkeypatch):
     monkeypatch.setattr(gio_storage, "GioStorage",
                         lambda uri: pytest.fail("nothing is opened for an unmounted device"))
     found = gio_storage.FoundDevice(NUMERIC, "fenix", False,
-                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+                                    usb=gio_storage.GarminUsb("51b4", 1, 9))
     summary = gio_storage.probe(found)
     assert summary_of(summary) == ("mtp", "", "", "", "not-mounted")
     assert mounted == []
@@ -1507,7 +1507,7 @@ def test_open_session_opens_the_mtp_device_chosen(watch_and_drives, monkeypatch)
     watch_and_drives.plug("51b4")
     watch_and_drives.offer()
     edge = gio_storage.FoundDevice(NAMED, "Edge", True,
-                                   usb=gio_storage.GarminUsb("5158", "usb", 1, 10))
+                                   usb=gio_storage.GarminUsb("5158", 1, 10))
     watch_and_drives.offered.append(edge)
     with pytest.raises(gio_storage.SeveralDevices):
         service.open_session(allow_ums=True)
@@ -2002,7 +2002,7 @@ def two_watches(world, monkeypatch, tmp_path, device_root):
     world.plug("51b4")
     world.offer()
     edge = gio_storage.FoundDevice(NAMED, "Edge", True,
-                                   usb=gio_storage.GarminUsb("5158", "usb", 1, 10))
+                                   usb=gio_storage.GarminUsb("5158", 1, 10))
     world.offered.append(edge)
     return edge
 
@@ -2049,7 +2049,7 @@ def test_one_device_in_both_modes_is_no_choice(choosing_window, monkeypatch, dev
 def test_the_devices_to_choose_from_are_merged_by_unit_id():
     """K5: one entry per device: an MTP entry and a drive with the same unit ID are one
     (the MTP entry stays, D1); entries without details are kept apart."""
-    usb = gio_storage.GarminUsb("20ee", "usb", 1, 12)
+    usb = gio_storage.GarminUsb("20ee", 1, 12)
 
     def summary(kind, uri, unit_id, reason=None):
         return gio_storage.DeviceSummary(
@@ -2316,7 +2316,7 @@ def test_list_shows_names_and_never_addresses(monkeypatch):
 
     maps = Section("maps", "Maps", "x-symbolic", "Loading…")
     win = start_stand_in(StartPage(), {"maps": maps})
-    usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
+    usb = gio_storage.GarminUsb("51b4", 1, 9)
     win.connected.listing([
         gio_storage.DeviceSummary(gio_storage.FoundDevice(NUMERIC, "x", True, usb=usb),
                                   "fēnix 8", "006-B4532-00", "23.39", 1234567890),
@@ -3203,13 +3203,13 @@ def exclusive(tmp_path, monkeypatch):
                                     or fake))
     gio_storage._quiet_until.clear()
     st = gio_storage.GioStorage(NUMERIC + "Internal")
-    st.usb, st.device_uri = gio_storage.GarminUsb("51b4", "usb", 3, 14), NUMERIC
+    st.usb, st.device_uri = gio_storage.GarminUsb("51b4", 3, 14), NUMERIC
     yield st, fake, events
     gio_storage._quiet_until.clear()
 
 
 def test_usb_position_does_not_change_what_the_device_is():
-    assert gio_storage.GarminUsb("51b4", "usb", 3, 14) == gio_storage.GarminUsb("51b4", "usb")
+    assert gio_storage.GarminUsb("51b4", 3, 14) == gio_storage.GarminUsb("51b4")
 
 
 def test_ptp_session_unmounts_and_mounts_again(exclusive):
@@ -3380,7 +3380,7 @@ def test_no_ptp_session_where_it_cannot_work(exclusive, monkeypatch, change):
     if change == "flatpak":
         monkeypatch.setattr(gio_storage, "in_flatpak", lambda: True)
     elif change == "no-address":
-        st.usb = gio_storage.GarminUsb("51b4", "uri")
+        st.usb = gio_storage.GarminUsb("51b4")
 
     def missing():
         raise ptp.UsbUnavailable("no libusb")
@@ -3402,11 +3402,11 @@ def node(usb_nodes, bus=3, address=14, mode=0o600):
 
 
 def test_the_usb_node_of_a_device(usb_nodes):
-    usb = gio_storage.GarminUsb("51b4", "usb", 3, 14)
+    usb = gio_storage.GarminUsb("51b4", 3, 14)
     assert gio_storage.usb_node(usb) is None  # not there: no access
     path = node(usb_nodes)
     assert gio_storage.usb_node(usb) == path and path.name == "014" and path.parent.name == "003"
-    assert gio_storage.usb_node(gio_storage.GarminUsb("51b4", "uri")) is None
+    assert gio_storage.usb_node(gio_storage.GarminUsb("51b4")) is None
     assert gio_storage.usb_node(None) is None
 
 
@@ -3571,7 +3571,7 @@ def plugged(tmp_path, monkeypatch):
 
     def offer():
         world.offered[:] = [gio_storage.FoundDevice(NUMERIC, "mtp", True,
-                                                   usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+                                                   usb=gio_storage.GarminUsb("51b4", 1, 9))]
 
     world.plug, world.offer = plug, offer
     world.open = lambda wait=True: gio_storage.open_device_storage(
@@ -6918,7 +6918,7 @@ def test_a_tile_without_a_word_from_garmin_shows_the_icon_its_name_tells():
 
 def seven_watches():
     """Seven different watches connected (made up), as the detection lists them."""
-    usb = gio_storage.GarminUsb("51b4", "usb", 1, 9)
+    usb = gio_storage.GarminUsb("51b4", 1, 9)
     return [gio_storage.DeviceSummary(
         gio_storage.FoundDevice(f"mtp://watch-{n}/", "x", True, usb=usb),
         f"Watch {n}", f"006-B000{n}-00", "1.00", 3000000100 + n) for n in range(7)]

@@ -194,7 +194,7 @@ def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root
     counted = Uncounted()
     monkeypatch.setattr(sync, "activities_to_sync", counted)
     found = [gio_storage.FoundDevice(uri, "x", True,
-                                     usb=gio_storage.GarminUsb(product, "usb", 1, number))
+                                     usb=gio_storage.GarminUsb(product, 1, number))
              for uri, product, number in (("mtp://one/", "51b4", 9), ("mtp://two/", "5158", 10))]
     choices = app._choose(found)
     assert isinstance(choices, app.DeviceChoices)
@@ -205,7 +205,7 @@ def test_the_list_of_devices_counts_nothing_and_keeps_what_it_opened(device_root
         assert all(isinstance(s.storage, LocalStorage) for s in summaries)
     assert counted.calls == []
     drive = gio_storage.FoundDevice(device_root.as_uri(), "GARMIN", True,
-                                    usb=gio_storage.GarminUsb("20ee", "usb", 1, 12), kind="ums")
+                                    usb=gio_storage.GarminUsb("20ee", 1, 12), kind="ums")
     summary = gio_storage.probe(drive)
     assert summary.ok and summary.device is None and summary.storage is None
 

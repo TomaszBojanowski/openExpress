@@ -14,7 +14,7 @@ VARIA = 3000000005
 
 def _drive(in_the_window):
     found = gio_storage.FoundDevice("file:///run/media/user/GARMIN/", "GARMIN", True,
-                                    usb=gio_storage.GarminUsb("20ee", "usb", 1, 12),
+                                    usb=gio_storage.GarminUsb("20ee", 1, 12),
                                     kind="ums")
     summary = gio_storage.DeviceSummary(found, "Varia RTL515", "006-B3592-03", "3.36", VARIA)
     in_the_window("find_all_devices", lambda: [found])

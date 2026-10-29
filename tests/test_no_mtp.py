@@ -163,7 +163,7 @@ def test_the_command_line_names_other_programs_also_when_mounting_fails(plugged,
     monkeypatch.setattr(gio_storage, "mount", mount)
     plugged.plug("51b4")
     plugged.offered[:] = [gio_storage.FoundDevice(
-        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", 1, 9))]
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open()
     assert str(error.value) == f"{MOUNT_FAILED}. {HELD}"
@@ -177,7 +177,7 @@ def test_a_mount_error_before_the_wait_ran_out_is_said_as_it_is(plugged, monkeyp
         gio_storage.DeviceError(MOUNT_FAILED)))
     plugged.plug("51b4")
     plugged.offered[:] = [gio_storage.FoundDevice(
-        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", "usb", 1, 9))]
+        NUMERIC, "fēnix 8", False, object(), gio_storage.GarminUsb("51b4", 1, 9))]
     with pytest.raises(gio_storage.DeviceError) as error:
         plugged.open(wait=False)
     assert str(error.value) == MOUNT_FAILED

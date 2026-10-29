@@ -322,7 +322,7 @@ def listed(device_root, monkeypatch):
 
     monkeypatch.setattr(gio_storage, "_mtp_storage", lambda uri, usb: LocalStorage(device_root))
     found = gio_storage.FoundDevice("mtp://made-up/", "x", True,
-                                    usb=gio_storage.GarminUsb("51b4", "usb", 1, 9))
+                                    usb=gio_storage.GarminUsb("51b4", 1, 9))
     summary = gio_storage.probe(found)
     state = sync.SyncState(UNIT)
     state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")

@@ -394,7 +394,7 @@ def four(tmp_path, monkeypatch):
 
     def listed():
         found = [gio_storage.FoundDevice(f"mtp://{unit}/", "x", True,
-                                         usb=gio_storage.GarminUsb("51b4", "usb", 1, n))
+                                         usb=gio_storage.GarminUsb("51b4", 1, n))
                  for n, unit in enumerate((FENIX, EDGE, VENU))]
         found.append(gio_storage.FoundDevice(roots[VARIA].as_uri() + "/", "GARMIN", True,
                                              kind="ums"))
