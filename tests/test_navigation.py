@@ -1,10 +1,7 @@
 """Where the user goes after a detection (openexpress/gui/navigation.py): the start page's
-navigation matrix as the window behaves, one row per situation, with a short id. A row whose
-id ends in "-Q" and the number of a decision would be behaviour that this decision is to
-change, and the change would show in this table; there is none. No display, no GTK; the
-addresses and unit IDs are made up."""
-
-import re
+navigation matrix as the window behaves, one row per situation, with an id that names it: how
+many devices were seen, what happened, on which page (S start, D device, R remembered). No
+display, no GTK; the addresses and unit IDs are made up."""
 
 import pytest
 
@@ -52,96 +49,96 @@ NONE = seen()
 # (id, cause, page shown, what the user saw, what the detection found, where the user goes)
 NAVIGATION = [
     # --- the window opens ------------------------------------------------------------------
-    ("N0-start", Cause.START, S, NONE, NONE, Stay(redraw_start=True)),
-    ("N1-start", Cause.START, S, NONE, seen(W, open=W), ShowDevice(animate=False)),
-    ("N2-start", Cause.START, S, NONE, seen(W, E), Stay(redraw_start=True)),
+    ("no-device-start", Cause.START, S, NONE, NONE, Stay(redraw_start=True)),
+    ("one-device-start", Cause.START, S, NONE, seen(W, open=W), ShowDevice(animate=False)),
+    ("two-devices-start", Cause.START, S, NONE, seen(W, E), Stay(redraw_start=True)),
     # --- a device plugged in (mounted) -----------------------------------------------------
-    ("N0-plug-on-S", Cause.PLUGGED, S, NONE, seen(W, open=W), ShowDevice()),
-    ("N0-plug-same-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W), ShowDevice()),
+    ("no-device-plug-on-S", Cause.PLUGGED, S, NONE, seen(W, open=W), ShowDevice()),
+    ("no-device-plug-same-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W), ShowDevice()),
     # On a remembered device's view nothing moves but that very device plugged in: one
     # other device is opened in the background, two give the list, under the view.
-    ("N0-plug-other-on-R", Cause.PLUGGED, R, NONE, seen(W, open=W), Stay(redraw_start=True)),
-    ("N0-plug-two-on-R", Cause.PLUGGED, R, NONE, seen(W, E), Stay(redraw_start=True)),
+    ("no-device-plug-other-on-R", Cause.PLUGGED, R, NONE, seen(W, open=W), Stay(redraw_start=True)),
+    ("no-device-plug-two-on-R", Cause.PLUGGED, R, NONE, seen(W, E), Stay(redraw_start=True)),
     # A device without a unit ID is never the one shown.
-    ("N0-plug-same-without-id-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W, ids=False),
+    ("no-device-plug-same-without-id-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, open=W, ids=False),
      Stay(redraw_start=True)),
     # The very device shown comes with another one, or while another one is open: the
     # start page with its tile; the device open stays open.
-    ("N0-plug-same-and-other-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, E), ShowStart()),
-    ("N1-plug-same-on-R-while-open", Cause.PLUGGED, R_WATCH, seen(E, open=E),
+    ("no-device-plug-same-and-other-on-R", Cause.PLUGGED, R_WATCH, NONE, seen(W, E), ShowStart()),
+    ("one-device-plug-same-on-R-while-open", Cause.PLUGGED, R_WATCH, seen(E, open=E),
      seen(W, E, open=E), ShowStart()),
     # With a device open, plugging in another does not change the view: the open one
     # stays open, the list is read again (on the start page the tiles of both).
-    ("N1-plug-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, E, open=W),
+    ("one-device-plug-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, E, open=W),
      Stay(redraw_start=True)),
-    ("N1-plug-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, E, open=W), Stay()),
-    ("N1-plug-on-R", Cause.PLUGGED, R, seen(W, open=W), seen(W, E, open=W), Stay()),
-    ("N2-plug-third-on-R", Cause.PLUGGED, R, seen(W, E), seen(W, E, V),
+    ("one-device-plug-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, E, open=W), Stay()),
+    ("one-device-plug-on-R", Cause.PLUGGED, R, seen(W, open=W), seen(W, E, open=W), Stay()),
+    ("two-devices-plug-third-on-R", Cause.PLUGGED, R, seen(W, E), seen(W, E, V),
      Stay(redraw_start=True)),
-    ("N1-same-found-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, open=W),
+    ("one-device-same-found-on-S", Cause.PLUGGED, S, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
-    ("N1-same-found-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("one-device-same-found-on-D", Cause.PLUGGED, D, seen(W, open=W), seen(W, open=W), Stay()),
     # A detection that finds the devices listed (gvfs reporting their mounts at the start).
-    ("N2-listed-again-on-S", Cause.PLUGGED, S, seen(W, E), seen(W, E), Stay(redraw_start=True)),
-    ("N2-listed-again-on-R", Cause.PLUGGED, R, seen(W, E), seen(W, E), Stay(redraw_start=True)),
+    ("two-devices-listed-again-on-S", Cause.PLUGGED, S, seen(W, E), seen(W, E), Stay(redraw_start=True)),
+    ("two-devices-listed-again-on-R", Cause.PLUGGED, R, seen(W, E), seen(W, E), Stay(redraw_start=True)),
     # --- a device unplugged -----------------------------------------------------------------
-    ("N1-unplug-open-on-D", Cause.UNPLUGGED_OPEN, D, seen(W, open=W), NONE, ShowStart()),
-    ("N1-unplug-open-on-S", Cause.UNPLUGGED_OPEN, S, seen(W, open=W), NONE,
+    ("one-device-unplug-open-on-D", Cause.UNPLUGGED_OPEN, D, seen(W, open=W), NONE, ShowStart()),
+    ("one-device-unplug-open-on-S", Cause.UNPLUGGED_OPEN, S, seen(W, open=W), NONE,
      Stay(redraw_start=True)),
-    ("N1-unplug-open-on-R", Cause.UNPLUGGED_OPEN, R, seen(W, open=W), NONE,
+    ("one-device-unplug-open-on-R", Cause.UNPLUGGED_OPEN, R, seen(W, open=W), NONE,
      Stay(redraw_start=True)),
-    ("N2-unplug-other-on-D", Cause.UNPLUGGED_OTHER, D, seen(W, E, open=W), seen(W, open=W),
+    ("two-devices-unplug-other-on-D", Cause.UNPLUGGED_OTHER, D, seen(W, E, open=W), seen(W, open=W),
      Stay()),
-    ("N2-unplug-other-on-S", Cause.UNPLUGGED_OTHER, S, seen(W, E, open=W), seen(W, open=W),
+    ("two-devices-unplug-other-on-S", Cause.UNPLUGGED_OTHER, S, seen(W, E, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
-    ("N2-unplug-other-on-R", Cause.UNPLUGGED_OTHER, R, seen(W, E, open=W), seen(W, open=W),
+    ("two-devices-unplug-other-on-R", Cause.UNPLUGGED_OTHER, R, seen(W, E, open=W), seen(W, open=W),
      Stay()),
-    ("U2-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E), seen(W, open=W), ShowDevice()),
+    ("two-listed-unplug-one-on-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E), seen(W, open=W), ShowDevice()),
     # On a remembered device's view the one left opens, the view stays.
-    ("U2-R", Cause.UNPLUGGED_CHOICE, R, seen(W, E), seen(W, open=W), Stay(redraw_start=True)),
-    ("U3-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E, V), seen(W, E), Stay(redraw_start=True)),
-    ("N2-usb-changed-on-S", Cause.USB_CHANGED, S, seen(W, E), seen(W, E),
+    ("two-listed-unplug-one-on-R", Cause.UNPLUGGED_CHOICE, R, seen(W, E), seen(W, open=W), Stay(redraw_start=True)),
+    ("three-listed-unplug-one-on-S", Cause.UNPLUGGED_CHOICE, S, seen(W, E, V), seen(W, E), Stay(redraw_start=True)),
+    ("two-devices-usb-changed-on-S", Cause.USB_CHANGED, S, seen(W, E), seen(W, E),
      Stay(redraw_start=True)),
     # --- Refresh, Try Again ----------------------------------------------------------------
-    ("N0-refresh-on-S-finds-one", Cause.REFRESH_ON_START, S, NONE, seen(W, open=W),
+    ("no-device-refresh-on-S-finds-one", Cause.REFRESH_ON_START, S, NONE, seen(W, open=W),
      Stay(redraw_start=True)),
-    ("N0-refresh-on-S-finds-none", Cause.REFRESH_ON_START, S, NONE, NONE,
+    ("no-device-refresh-on-S-finds-none", Cause.REFRESH_ON_START, S, NONE, NONE,
      Stay(redraw_start=True)),
-    ("N1-refresh-in-D", Cause.REFRESH_IN_VIEW, D, seen(W, open=W), seen(W, open=W), Stay()),
-    ("N2-refresh-in-D-keeps-chosen", Cause.REFRESH_IN_VIEW, D, seen(W, E, open=E),
+    ("one-device-refresh-in-D", Cause.REFRESH_IN_VIEW, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("two-devices-refresh-in-D-keeps-chosen", Cause.REFRESH_IN_VIEW, D, seen(W, E, open=E),
      seen(W, E, open=E), Stay()),
-    ("N2-pending-refresh-on-S", Cause.REFRESH_IN_VIEW, S, seen(W, E, open=E),
+    ("two-devices-pending-refresh-on-S", Cause.REFRESH_IN_VIEW, S, seen(W, E, open=E),
      seen(W, E, open=E), Stay(redraw_start=True)),
     # --- a tile clicked ---------------------------------------------------------------------
-    ("N2-chosen", Cause.CHOSEN, S, seen(W, E), seen(W, E, open=E), ShowDevice()),
-    ("N2-open-tile", Cause.CHOSEN, S, seen(W, E, open=E), seen(W, E, open=E), ShowDevice()),
-    ("N2-chosen-another", Cause.CHOSEN, S, seen(W, E, open=W), seen(W, E, open=E),
+    ("two-devices-chosen", Cause.CHOSEN, S, seen(W, E), seen(W, E, open=E), ShowDevice()),
+    ("two-devices-open-tile", Cause.CHOSEN, S, seen(W, E, open=E), seen(W, E, open=E), ShowDevice()),
+    ("two-devices-chosen-another", Cause.CHOSEN, S, seen(W, E, open=W), seen(W, E, open=E),
      ShowDevice()),
-    ("N2-choice-failed", Cause.CHOICE_FAILED, S, seen(W, E), seen(W, E),
+    ("two-devices-choice-failed", Cause.CHOICE_FAILED, S, seen(W, E), seen(W, E),
      Stay(redraw_start=True)),
     # --- the account ------------------------------------------------------------------------
-    ("N1-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("one-device-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
     # A change of account never moves the user: the start page stays, as after Refresh
     # there.
-    ("N1-login-back-on-S", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
+    ("one-device-login-back-on-S", Cause.ACCOUNT_CHANGED, S, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
-    ("N1-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("one-device-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, open=W), seen(W, open=W), Stay()),
     # The device open before the change is opened again, also with two plugged in.
-    ("N2-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
+    ("two-devices-logout-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
      Stay()),
-    ("N2-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
+    ("two-devices-login-on-D", Cause.ACCOUNT_CHANGED, D, seen(W, V, open=W), seen(W, V, open=W),
      Stay()),
-    ("N1-logged-out-on-S", Cause.LOGGED_OUT, S, seen(W, open=W), seen(W, open=W),
+    ("one-device-logged-out-on-S", Cause.LOGGED_OUT, S, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
-    ("N1-logged-out-on-D", Cause.LOGGED_OUT, D, seen(W, open=W), seen(W, open=W), Stay()),
-    ("N1-logged-out-on-R", Cause.LOGGED_OUT, R, seen(W, open=W), seen(W, open=W),
+    ("one-device-logged-out-on-D", Cause.LOGGED_OUT, D, seen(W, open=W), seen(W, open=W), Stay()),
+    ("one-device-logged-out-on-R", Cause.LOGGED_OUT, R, seen(W, open=W), seen(W, open=W),
      Stay(redraw_start=True)),
     # The exception to "a change of account never moves the user": logged out on the view
     # of a device of the account, which has nothing to show without it: the start page.
-    ("N0-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, NONE, NONE, ShowStart()),
-    ("N1-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, seen(W, open=W),
+    ("no-device-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, NONE, NONE, ShowStart()),
+    ("one-device-logged-out-on-R-account", Cause.LOGGED_OUT, R_ACCOUNT, seen(W, open=W),
      seen(W, open=W), ShowStart()),
-    ("N0-login-on-R-account", Cause.ACCOUNT_CHANGED, R_ACCOUNT, NONE, NONE,
+    ("no-device-login-on-R-account", Cause.ACCOUNT_CHANGED, R_ACCOUNT, NONE, NONE,
      Stay(redraw_start=True)),
 ]
 
@@ -152,11 +149,9 @@ def test_where_the_user_goes(cause, visible, before, after, decision):
     assert navigate_after(cause, visible, before, after) == decision
 
 
-def test_the_ids_are_unique_and_the_marked_rows_are_known():
+def test_the_ids_are_unique():
     ids = [row[0] for row in NAVIGATION]
     assert len(ids) == len(set(ids))
-    marked = sorted(i for i in ids if re.search(r"-Q\d+$", i))
-    assert marked == []
 
 
 WATCH_LABEL = W + "/Internal Storage/"  # the open watch's storage, below its mount
