@@ -283,19 +283,30 @@ def test_cli_update_says_what_it_does_not_update(cli_maps, capsys):
     assert "All installed maps are up to date." in out
 
 
+@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
+                   "without the saved login")
 def test_cli_asks_the_account_only_with_a_login_and_for_a_device_of_it(monkeypatch):
     from openexpress import cli
+    from openexpress.auth import store
     from openexpress.connect import NotAccountDevice
 
     dev = types.SimpleNamespace(unit_id=3000000003)
     calls = []
-    client = types.SimpleNamespace(auth=None,
-                                   profile_country=lambda: calls.append("country") or "KR")
-    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: client)
+    saved = types.SimpleNamespace(login=False)
+
+    def make_client(settings, need_auth):
+        """As cli.make_client: the saved login only when it is asked for, and NotLoggedIn
+        then when none is saved."""
+        if need_auth and not saved.login:
+            raise store.NotLoggedIn("Not logged in. Run: openexpress login")
+        return types.SimpleNamespace(auth=object() if need_auth else None,
+                                     profile_country=lambda: calls.append("country") or "KR")
+
+    monkeypatch.setattr(cli, "make_client", make_client)
     monkeypatch.setattr(service, "require_account_device",
                         lambda c, unit_id: calls.append("owner") or [])
     assert cli._account_country(dev) is None and calls == []  # no login: nothing asked
-    client.auth = object()
+    saved.login = True
     assert cli._account_country(dev) == "KR" and calls == ["owner", "country"]
 
     def refuse(c, unit_id):
@@ -304,6 +315,95 @@ def test_cli_asks_the_account_only_with_a_login_and_for_a_device_of_it(monkeypat
     calls.clear()
     monkeypatch.setattr(service, "require_account_device", refuse)
     assert cli._account_country(dev) is None and calls == []  # another account's: not asked
+
+
+# --- the command line, with the program's own client and a login saved ---------------------
+
+LOCATION = "userprofile-service/userprofile/location"
+
+
+@pytest.fixture
+def saved_login(monkeypatch, device_root):
+    """`openexpress maps` as it runs on the made-up device: the application key and a login
+    saved as `openexpress setup` and `openexpress login` save them, and the made-up answers
+    of the map service (TopoActive Japan not offered in KR) and of the account (its device
+    list has the device, its profile says KR). Its `sent`: every request, in order."""
+    from test_ownership import UNIT, RecordingSession, response
+
+    from openexpress import connect
+    from openexpress.auth import store
+    from openexpress.settings import Consumer, save_consumer
+
+    save_consumer(Consumer("made-up-key", "made-up-secret"))
+    store.save(store.ConnectAuth("made-up-token", "made-up-token-secret"))
+    http = RecordingSession([{"unitid": UNIT}], **{
+        "api/unit-info/": response(body={"mapUpdateType": "Universal"}),
+        "api/maps/universal/update": response(body=answer()),
+        LOCATION: response(body={"countryCode": "kr"}),
+    })
+    monkeypatch.setattr(connect, "user_agent_session", lambda: http)
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda wait=True, notify=None: LocalStorage(device_root))
+    return http
+
+
+def account_asked(http):
+    """The paths asked of Garmin Connect (the account), in order."""
+    return [r["url"].split("garmin.com/")[-1].split("?")[0] for r in http.sent
+            if r["url"].startswith("https://connectapi.")]
+
+
+def japan_lines(out):
+    """The line of TopoActive Japan in `openexpress maps --all` and the one after it."""
+    lines = out.splitlines()
+    at = next(i for i, line in enumerate(lines) if "TopoActive Japan" in line)
+    return lines[at], lines[at + 1]
+
+
+@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
+                   "without the saved login")
+def test_cli_with_a_login_saved_checks_the_device_and_reads_the_account_country(
+        saved_login, capsys):
+    from test_ownership import DEVICES_PATH
+
+    from openexpress.cli import main
+
+    assert main(["maps", "--all"]) == 0
+    line, _after = japan_lines(capsys.readouterr().out)
+    assert line.endswith("not offered in your account's country")
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]  # its owner first
+
+
+@pytest.mark.xfail(strict=True, reason="the command line reads the account's country "
+                   "without the saved login")
+def test_cli_with_a_login_saved_asks_only_the_owner_of_a_device_of_another_account(
+        saved_login, capsys):
+    from test_ownership import DEVICES_PATH, OTHER, response
+
+    from openexpress.cli import main
+
+    saved_login.routes[DEVICES_PATH] = response(body=[{"unitid": OTHER}])
+    assert main(["maps", "--all"]) == 0
+    line, after = japan_lines(capsys.readouterr().out)
+    assert line.endswith("available")
+    assert after == "    Garmin does not offer this map in this country: South Korea"
+    assert account_asked(saved_login) == [DEVICES_PATH]
+
+
+def test_cli_without_a_login_asks_the_account_nothing_and_says_no_error(
+        saved_login, capsys, log_file):
+    from openexpress.auth import store
+    from openexpress.cli import main
+
+    store.delete()
+    assert main(["maps", "--all"]) == 0
+    out = capsys.readouterr()
+    line, after = japan_lines(out.out)
+    assert line.endswith("available")
+    assert after == "    Garmin does not offer this map in this country: South Korea"
+    assert out.err == ""
+    assert account_asked(saved_login) == []
+    assert "the account's country not read" not in log_file.read_text()
 
 
 def test_the_words_in_polish():
