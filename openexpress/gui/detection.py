@@ -443,16 +443,16 @@ class DeviceDetection:
             self._drive_gone(UNMOUNTED_DRIVE + unix, "removed")
 
     def _on_drive_volume(self, volume, what: str) -> None:
-        """A volume added or changed. A Garmin drive that the system does not mount (KDE)
-        sends no mount event, and gvfs may offer its volume, or a medium in it, a moment
-        after the device is on USB: one not mounted with a medium, not on the list yet,
-        brings a detection (with a device open: the list read again); one on the list without
-        a medium any more leaves it. A mounted one comes with its mount (_on_mount_added); a
-        drive ejected by openExpress stays closed."""
+        """A volume added or changed: a Garmin drive not mounted, with a medium and not
+        listed yet, brings a detection (a device open: the list read again); without a
+        medium it leaves the list. A drive the system does not mount (KDE) sends no mount
+        event; gvfs may offer its volume, or medium, a moment after it is on USB."""
         drive = drive_volume(volume)
         if drive is None:
             return
         key, usb, medium = drive
+        # A mounted one comes with its mount (_on_mount_added); a drive ejected by
+        # openExpress stays closed.
         if getattr(volume, "get_mount", lambda: None)() is not None or ejected_by_us(usb):
             return
         if not medium:
@@ -649,13 +649,11 @@ class DeviceDetection:
 
     def refresh_device(self, cause: Cause | None = None, read_list: bool = False,
                        reopen: str | None = None) -> None:
-        """Detect the device anew; with several devices connected, the one open now is
-        opened again when it is still there. `cause`: why (navigation.Cause); none said: a
-        detection asked again (Refresh and the like), or the one that waited for the
-        running task. `read_list`: once a device is open, the list of devices connected is
-        read again (another device came as well; asked by the timer, which itself waits for
-        a running task). `reopen`: the address of the device open before its session was
-        dropped (a change of account), opened again as the open one would be."""
+        """Detect the device anew, after the running task if any; the one open now is opened
+        again when it is still there. `cause`: why (navigation.Cause); none: the one that
+        waited, or Refresh. `read_list`: then the list of devices connected is read again
+        (another device came too). `reopen`: the address of a device whose session was
+        dropped (a change of account)."""
         if self.busy:
             # E.g. the watch was replugged during a task: detect it once the task ends.
             log.info("device detection: after the running task")
@@ -699,6 +697,7 @@ class DeviceDetection:
                 self.connected.stop_choosing()
             self.session = result
             self.show_device()
+            # `read_list` comes from the timer, which itself waits for a running task.
             if read_list and self.session is result:
                 self._reread_cause = cause
                 self._reread_connected()

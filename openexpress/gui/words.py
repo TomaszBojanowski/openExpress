@@ -28,11 +28,10 @@ def updates_available(count: int, only=None) -> str:
 
 def update_state_text(state: str | None, count: int = 0, only=None,
                       mass_storage: bool = False) -> str:
-    """The state of the updates of the device in one text, for the row "Device software" and
-    the top of the Updates page alike: "available" (updates_available), "ready" (copied, it
-    waits for the device to be disconnected, or ejected: `mass_storage`; it wins over the
-    `count` updates still to install, told after it), "current", "failed", or not known yet
-    (None). The chips say it short ("Update available", "Update ready")."""
+    """The state of the device's updates in one text, for the row "Device software" and the
+    top of the Updates page: "available" (updates_available), "ready" (copied, waiting for
+    the device to be disconnected, or ejected: `mass_storage`; it wins over the `count` still
+    to install, told after it), "current", "failed", or None (not known yet)."""
     if state == "available":
         return updates_available(count, only)
     if state == "ready":
@@ -68,12 +67,10 @@ def not_checked_since(at: float) -> str:
 
 
 def remembered_update_text(entry, now: datetime | None = None) -> str:
-    """The row "Device software" of a device not connected (its KnownDevice; None: not
-    remembered here), from the last check of updates kept with it: what it found and when,
-    while it is recent and of the software the device had when it was last seen
-    (known_devices.recorded_updates, recorded_check); "Not checked since …" for an older
-    check; "Connect the device to check" without one, or when the last check found an update
-    copied already (the device installs it once unplugged, which it has been since)."""
+    """The row "Device software" of a device not connected (`entry`, its KnownDevice; None:
+    not remembered here): what the last check kept with it found, and when, while it is
+    recent and of the software the device had when last seen; "Not checked since …" for an
+    older check; "Connect the device to check" without one, or after an update copied."""
     now = now or datetime.now()
     connect = _("Connect the device to check")
     if entry is None:
@@ -86,6 +83,7 @@ def remembered_update_text(entry, now: datetime | None = None) -> str:
     check = known_devices.recorded_check(entry, entry.software_version, at)
     if check is not None:
         if check.ready:
+            # The device installs it once unplugged, which it has been since.
             return connect
         if entry.update_found is None:
             return checked_text(_("Software is up to date"), check.at, now)

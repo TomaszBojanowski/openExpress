@@ -1,13 +1,12 @@
 """Pictures of device models, by part number (never by unit ID), for every view: the tiles of
 the start page, the pages of devices that are not connected and the device view. One store
-in the window (`win._device_textures`, never None in it); the tiles and those pages read the
-cache or the account's address of the picture in the background (with_device_picture), the
-device view reads the cache at once and asks its own sources (the account by unit ID,
-unit-info) itself - all of them keep what they found here. Below: a picture downloaded into
-the cache (download_picture, cached_download) and read (load_texture, cached_texture), the
-address of the picture and the kind of the device from Garmin's update server
-(picture_from_unit_info, note_segment, is_bike_accessory), moved here from gui/app.py; their
-lines of the log are the window's, as before.
+in the window, `win._device_textures` (part number -> texture, never None in it), which all
+of them fill with what they found: the tiles and those pages read the cache or the account's
+address of the picture in the background (with_device_picture), the device view reads the
+cache at once and asks its own sources (the account by unit ID, unit-info). Also: a picture
+downloaded into the cache (download_picture, cached_download) and read (load_texture,
+cached_texture), the address of the picture and the kind of the device from Garmin's update
+server (picture_from_unit_info, note_segment, is_bike_accessory).
 
 Has: win._device_textures, win._pictures_asked, win._pictures_waiting.
 Uses: win.in_background."""
@@ -56,12 +55,10 @@ def keep(win, part: str, texture) -> None:
 
 
 def with_device_picture(win, part: str, url: str | None, use: Use, read) -> None:
-    """The picture of a model for `use`: in memory (`win._device_textures`) at once; else the
-    file in the cache, or the account's address (a device on the account), read with
-    `read(part, url)` -> (texture, source) or (None, why) in `win.in_background`, kept in
-    memory and given to everyone who asked for it meanwhile. Nothing else is asked (no
-    unit-info for a device not open). Each part number is read once; none, or a failure:
-    `use` is not called and the icon stays."""
+    """Gives the picture of model `part` to `use`: from memory at once, else read in the
+    background by `read(part, url)` -> (texture, source) or (None, why) from the cache or the
+    account's `url`, kept and given to all who asked meanwhile. Each part is read once;
+    without a picture `use` is never called (the icon stays). No unit-info is asked."""
     textures = store(win)
     asked = getattr(win, "_pictures_asked", None)
     if asked is None:
@@ -150,12 +147,11 @@ def picture_from_unit_info(client, device, ask=None) -> str | None:
 
 
 def note_segment(device, info) -> None:
-    """Keep the kind Garmin's update server tells in an answer the window asked for (for a
-    picture, after an update, for a drive whose kind is not told): a bike accessory (e.g. a
-    Varia). Only this field, its connect support and the map update type are read. A segment
-    that tells no kind the program knows goes to the log with the part number and the connect
-    support (devicelist.note_kind_evidence); the map update type always, once a model
-    (devicelist.note_map_update_type)."""
+    """Keeps a bike accessory (e.g. a Varia), as Garmin's update server tells it in an answer
+    the window asked for, as the kind of the remembered device (known_devices.set_category).
+    Reads only the segment, the connect support and the map update type; the log gets the
+    first two while the kind is not known (devicelist.note_kind_evidence), the last once a
+    model (devicelist.note_map_update_type)."""
     segment = info.get("segmenttype") if isinstance(info, dict) else None
     bike_accessory = isinstance(segment, str) and segment.casefold() == "bikeaccessory"
     if bike_accessory:

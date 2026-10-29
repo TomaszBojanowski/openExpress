@@ -1,9 +1,9 @@
-"""The start page of the window: the Garmin devices as tiles. The root of the window's
-navigation; the view of one device comes above it, with the back arrow to this page.
+"""The start page of the window: the Garmin devices as tiles, the root of the window's
+navigation (the view of one device comes above it, with the back arrow to this page).
 
-The page only shows what it is given (devicelist.Tile and how the device is connected) and
-says which tile was clicked by the place it had in the list it was given (each tile keeps
-it): it never holds a device, an address or a unit ID."""
+It shows only what it is given (devicelist.Tile and how the device is connected) and tells
+which tile was clicked by its place in that list (each tile keeps it): it never holds a
+device, an address or a unit ID."""
 
 from __future__ import annotations
 
@@ -166,14 +166,10 @@ class _ColumnsLayout(Gtk.LayoutManager):
 
 
 class _TileColumns(Adw.Bin):
-    """The headings and the tiles of the start page: on a new width (or a new count of tiles),
-    how many tiles share a line and how wide they are (columns()), the same in every
-    section; the block of them as wide as that, in the middle of the page. Each grid gets how
-    many share a line and shares its line out itself; the tiles get no width (one that
-    became their minimum kept the window from getting narrower). Set when the window is
-    idle, never during its layout, and only when the columns or the width of a tile change.
-    (A scrollbar that comes with the new layout makes the page narrower, so that fewer tiles
-    share a line and the page gets longer: it stays, and nothing goes back.)"""
+    """The headings and tiles of the start page: on a new width or count of tiles, sets how
+    many tiles share a line and their width (columns(), in `layout`), the same in every
+    section, and keeps their block that wide, in the middle of the page. Set when the window
+    is idle, never during its layout, only on a change."""
 
     __gtype_name__ = "OpenExpressTileColumns"
 
@@ -197,6 +193,8 @@ class _TileColumns(Adw.Bin):
 
     def allocated(self, width: int) -> None:
         """The page got this width (from its layout): the tiles follow, once it is idle."""
+        # A scrollbar that comes with the new layout makes the page narrower, so that fewer
+        # tiles share a line and the page gets longer: that layout stays, nothing goes back.
         self._width = width
         wanted = columns(width - self._margins, self._most or None)
         if wanted != self.layout and wanted != self._wanted:
@@ -219,6 +217,9 @@ class _TileColumns(Adw.Bin):
         if wanted is not None and wanted != self.layout:
             self.layout = wanted
             self.updates += 1
+            # Each grid gets how many share a line and shares its line out itself; the tiles
+            # get no width (one that became their minimum kept the window from getting
+            # narrower).
             for grid in self._grids:
                 grid.set_max_children_per_line(wanted[0])
             self.queue_resize()  # the block's new width, in the middle
@@ -393,17 +394,17 @@ class _ChipsLayout(Gtk.LayoutManager):
 
 
 def chips_row(said, align: Gtk.Align = Gtk.Align.CENTER) -> Adw.Bin:
-    """The chips of a tile on a line in the middle (of a row of a list: from its start,
-    `align`), wrapped when the tile is too narrow (libadwaita 1.7: Adw.WrapBox; before it,
-    one line whose chips get shorter), never making the tile wider (_ChipsLayout). Without
-    chips the line keeps the height of one: every tile is as tall, the words under the names
-    on one line. Its chips can be changed alone (StartPage.set_chips: the row's child)."""
+    """The chips of a tile on a line in the middle (`align`: from its start in a list),
+    wrapped when the tile is too narrow, never making it wider (_ChipsLayout). Without chips
+    the line keeps the height of one, so every tile is as tall and the words under the names
+    line up. Its chips change alone (StartPage.set_chips: its child)."""
     holder = Adw.Bin(child=_chips_line(said, align))
     holder.set_layout_manager(_ChipsLayout())
     return holder
 
 
 def _chips_line(said, align: Gtk.Align = Gtk.Align.CENTER) -> Gtk.Widget:
+    # Adw.WrapBox is in libadwaita 1.7; before it, one line whose chips get shorter.
     if hasattr(Adw, "WrapBox"):
         row = Adw.WrapBox(child_spacing=6, line_spacing=4,
                           align=0.0 if align == Gtk.Align.START else 0.5, halign=align)
@@ -605,11 +606,10 @@ class StartPage:
 
 
 class RememberedPage:
-    """The read-only view of a device remembered and not connected: what was known of it
-    when it was last seen, and its last sync. It offers nothing to do: Sync and the rows of
-    updates and maps cannot be used, the banner says why. It is given words only (never a
-    device, an address or a unit ID), and the image of the model: the icon of its kind, then
-    its picture, as on its tile."""
+    """The read-only view of a device remembered, not connected: what was known when last
+    seen, and its last sync. Sync and the rows of updates and maps are disabled; the banner
+    says why. Given words only (never a device, an address or a unit ID) and the model's
+    image: its kind's icon, then its picture, as on its tile."""
 
     def __init__(self):
         header = Adw.HeaderBar()
@@ -838,15 +838,15 @@ def _mark(item, tile, image, picture) -> None:
 
 class DeviceRow(Gtk.ListBoxRow):
     """One row of a section of many devices, laid out as its tile, smaller: the picture or
-    the icon of the kind, then the name, its chips (start.chips, from the start of the line)
-    and the words under the name, then the arrow; spaced as an Adw.ActionRow of the same
-    list, which takes no widget between its title and its subtitle. Opened as a row of the
-    list (row-activated: a click, Enter or Space); a screen reader hears its name, chips and
-    words. Its chips change alone (set_chips, StartPage.set_chips)."""
+    the kind's icon, the name, its chips and the words under the name, then the arrow. Opened
+    as a row of the list (row-activated: a click, Enter or Space); a screen reader hears its
+    name, chips and words. Its chips change alone (set_chips)."""
 
     def __init__(self, tile, how: str, picture=None):
         super().__init__(activatable=True, focusable=True)
         self._title, self._subtitle = _name(tile), how
+        # Spaced as an Adw.ActionRow of the same list, which takes no widget between its title
+        # and its subtitle.
         line = Gtk.Box(margin_start=ROW_SIDE, margin_end=ROW_SIDE,
                        height_request=ROW_MIN_HEIGHT)
         image = _image(tile, picture, ROW_ICON_SIZE)

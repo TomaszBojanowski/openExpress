@@ -62,11 +62,10 @@ RELATIVE_REFRESH_S = 60
 
 
 class StartView:
-    """The section "View" of the menu of the start page: how its sections show their
-    devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1 devices in a section, each
-    section on its own), a grid or a list for all of them. Kept in gui.json (KEY); a change
-    draws the start page again from what is known (_render_start), the devices are not
-    asked. All of it in this class, next to the start page of the window."""
+    """The section "View" of the start page's menu: how its sections show their devices:
+    automatic (devicelist.AUTO: a list from GRID_MAX + 1 devices in a section, each section
+    on its own), a grid or a list for all of them. Kept in gui.json (KEY); a change draws the
+    start page again from what is known (_render_start), without asking the devices."""
 
     KEY = "start_view"
     ACTION = "start-view"  # win.start-view, whose state is the view
@@ -440,11 +439,11 @@ class StartWindow:
         self._count_activities(entries)
 
     def _count_activities(self, entries) -> None:
-        """The activities not uploaded yet of the connected devices of the account whose tiles
-        were just drawn, each counted in the background, once while it stays listed or open
-        (the one open: for its session); its tile shows no chip until the count comes
-        (_activities_counted). Never a drive, a device off the account or one whose
-        check against the account failed."""
+        """Counts in the background the activities not uploaded yet of each connected device
+        of the account whose tile was just drawn, once while it stays listed or open (the
+        open one for its session); its tile shows no chip until the count comes
+        (_activities_counted). Never a drive, a device off the account or one whose check
+        against the account failed."""
         s = self.session
         for tile, source in entries:
             if not (isinstance(source, DeviceSummary) and tile.connected and tile.on_account
@@ -615,11 +614,10 @@ class StartWindow:
         self.remembered.allow_forget(False)  # nothing of it is kept here
 
     def _show_remembered(self, known, tile=None) -> None:
-        """The read-only view of a device remembered and not connected: what was known when
-        it was last seen, and its last sync, from this computer only; its image as its
-        `tile` has it (the account's picture and kind, if it is on the account). Nothing is
-        opened or asked but that picture; the open device (if any) and the detection are not
-        touched."""
+        """Shows, from the start page only, the read-only view of a device remembered, not
+        connected: what this computer knew when it was last seen, and its last sync; its
+        image as its `tile` has it (the account's picture and kind, for one on it). Nothing
+        is asked but that picture; the open device and the detection are not touched."""
         if not self._on_start_page():
             return
         self._fill_remembered(known, tile)

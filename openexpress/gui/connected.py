@@ -1,16 +1,12 @@
-"""The Garmin devices known to be plugged in, for the window: one list (`devices`, the
-entries of the detection, each with its address in `found.uri`) instead of the window's list
-to choose from and its list of the devices connected while one is open. `choosing` is a flag
-of its own and not the length of that list: once a device is chosen, or its opening failed,
-there is no list to choose from any more, yet the devices connected are still known (the
-mounts of those already listed bring nothing new, the start page draws their tiles).
-`usb_when_listed` is what was on USB when the list was made, so that a device plugged in or
-out without a mount event is noticed. `drawn` is what the start page last showed, and may be
-older than `devices` (they are read again without drawing while another page is shown): it
-tells whether the user saw the devices connected now. Next to it: the addresses and unit
-IDs of entries (uris, unit_ids), those of the open device (open_address, open_unit) and the
-open device as an entry of the start page (session_summary). Nothing here opens, mounts or
-asks anything; addresses are compared in memory only."""
+"""The Garmin devices known to be plugged in, for the window (Connected); next to it the
+addresses and unit IDs of entries (uris, unit_ids) and of the open device (open_address,
+open_unit), compared in memory only, and the open device as an entry of the start page
+(session_summary). Nothing here opens, mounts or asks anything.
+
+`Connected` owns one list, `devices`: the entries of the detection (each with its address in
+`found.uri`), both the list to choose from and the devices connected while one is open.
+`choosing`: whether there is a list to choose from. `usb_when_listed`: the Garmin devices on
+USB when the list was made. `drawn`: the addresses the start page last showed."""
 
 from __future__ import annotations
 
@@ -57,8 +53,14 @@ def session_summary(s) -> DeviceSummary:
 @dataclass
 class Connected:
     devices: list = field(default_factory=list)
+    # Not the length of `devices`: once a device is chosen, or its opening failed, there is
+    # no list to choose from, yet the devices connected stay known (the mounts of those
+    # already listed bring nothing new, the start page draws their tiles).
     choosing: bool = False
+    # So that a device plugged in or out without a mount event is noticed.
     usb_when_listed: list[str] | None = None
+    # May be older than `devices` (read again without drawing while another page is shown):
+    # it tells whether the user saw the devices connected now.
     drawn: frozenset[str] = frozenset()
 
     def listing(self, summaries, usb: list[str] | None) -> None:

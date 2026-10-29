@@ -136,16 +136,12 @@ def plan(cause: Cause, reasons: Sequence[str | None] = (), *, open_label: str | 
          listed: frozenset[str] = frozenset(), unread: frozenset[str] = frozenset(),
          open_moved: Callable[[], bool] = lambda: False, left_on_usb: str | None = None,
          ejected_waits: bool = False) -> Plan:
-    """Whether to look for devices, and how. `reasons`: the triggers of the timer (the
-    address of a mount reported, None for a change on USB, READ_THE_LIST); `open_label`:
-    the address of the open device's storage (None: none open); `listed`: the addresses of
-    the devices connected, and `unread`: those of them listed without their details (e.g.
-    not mounted yet), all without the trailing slash; `open_moved`: whether the open device
-    is no longer at its place on USB (asked only when it matters). A device open stays open:
-    another device mounted or seen on USB only has the list read again.
-    `left_on_usb`, for the open device unplugged: what is on USB once it is gone (the state of
-    gio_storage.usb_state()), and `ejected_waits`: whether a drive ejected by openExpress is
-    still there."""
+    """Whether to look for devices, and how. `reasons`: the timer's triggers (a mount's
+    address; None: a change on USB; READ_THE_LIST). `open_label`: the open device's storage
+    address, or None. `listed`, `unread`: the devices connected, those without details (no
+    trailing slash). `open_moved()`: it left its place on USB. For UNPLUGGED_OPEN:
+    `left_on_usb`, gio_storage.usb_state() once gone; `ejected_waits`, a drive openExpress
+    ejected still there."""
     if cause not in _TIMED:
         if cause is Cause.UNPLUGGED_OPEN:
             # Another Garmin device left is looked for: one in its normal mode, and a drive,
