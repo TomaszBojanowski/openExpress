@@ -29,7 +29,7 @@ import logging
 import re
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -305,23 +305,14 @@ def remember(unit_id: int, description: str, part_number: str, software_version:
     with _locked():
         known, writable = _read()
         now = time.time() if now is None else now
-        old = known.get(unit_id)
-        entry = KnownDevice(unit_id, description, part_number, software_version, kind,
-                            old.first_seen if old is not None else now, now,
-                            old.category if old is not None else None,
-                            old.image_url if old is not None else None,
-                            old.update_found if old is not None else None,
-                            old.update_summary if old is not None else None,
-                            old.update_check if old is not None else None,
-                            old.sync_count if old is not None else None,
-                            usb_product or (old.usb_product if old is not None else None),
-                            old.account if old is not None else None,
-                            old.synced if old is not None else None,
-                            _identifier(usb_serial)
-                            or (old.usb_serial if old is not None else None),
-                            _identifier(volume_uuid)
-                            or (old.volume_uuid if old is not None else None),
-                            old.model_name if old is not None else None)
+        old = known.get(unit_id) or KnownDevice(
+            unit_id=unit_id, description=description, part_number=part_number,
+            software_version=software_version, kind=kind, first_seen=now, last_seen=now)
+        entry = replace(old, description=description, part_number=part_number,
+                        software_version=software_version, kind=kind, last_seen=now,
+                        usb_product=usb_product or old.usb_product,
+                        usb_serial=_identifier(usb_serial) or old.usb_serial,
+                        volume_uuid=_identifier(volume_uuid) or old.volume_uuid)
         known[unit_id] = entry
         if writable:
             _write(known)
@@ -353,16 +344,10 @@ def set_model_name(unit_id: int, name: str) -> bool:
     """Keep the name Garmin gives the model of a device remembered (garmin_name); whether it
     changed. A device that is not remembered gets no entry for it."""
     name = garmin_name(name)
-    if name is None:
+    changed = _update(unit_id, lambda entry: replace(entry, model_name=name)) if name else None
+    if changed is None:
         return False
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable or entry.model_name == name:
-            return False
-        entry.model_name = name
-        _write(known)
-    log.info("devices: the name of %s from unit-info kept", entry.part_number)
+    log.info("devices: the name of %s from unit-info kept", changed[1].part_number)
     return True
 
 
@@ -371,14 +356,10 @@ def set_category(unit_id: int, category: str) -> bool:
     device that is not remembered gets no entry for it."""
     if category not in CATEGORIES:
         return False
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable or entry.category == category:
-            return False
-        entry.category = category
-        _write(known)
-    log.info("devices: %s is a %s", entry.part_number, category)
+    changed = _update(unit_id, lambda entry: replace(entry, category=category))
+    if changed is None:
+        return False
+    log.info("devices: %s is a %s", changed[1].part_number, category)
     return True
 
 
@@ -390,14 +371,10 @@ def set_image_url(unit_id: int, url) -> bool:
     url = picture_urls.upgraded(url)
     if not picture_urls.allowed(url):
         return False
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable or entry.image_url == url:
-            return False
-        entry.image_url = url
-        _write(known)
-    log.info("devices: the picture of %s is at %s; %s", entry.part_number,
+    changed = _update(unit_id, lambda entry: replace(entry, image_url=url))
+    if changed is None:
+        return False
+    log.info("devices: the picture of %s is at %s; %s", changed[1].part_number,
              urlsplit(url).hostname, picture_urls.query_said(url))
     return True
 
@@ -410,23 +387,20 @@ def set_update_found(unit_id: int, found: bool, now: float | None = None,
     With `software_version` (the device's now), the check itself is kept too (UpdateCheck;
     `ready`: an update copied already waits for the device). A device not remembered gets no
     entry."""
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable:
-            return False
+    def change(entry: KnownDevice) -> KnownDevice:
         at = time.time() if now is None else now
-        value = at if found else None
-        summary = summary if found else None
         check = (UpdateCheck(at, software_version, ready) if software_version is not None
                  else entry.update_check)
-        if (entry.update_found, entry.update_summary, entry.update_check) == (value, summary,
-                                                                              check):
-            return False
-        said = (entry.update_found is not None,
-                entry.update_check is not None and entry.update_check.ready)
-        entry.update_found, entry.update_summary, entry.update_check = value, summary, check
-        _write(known)
+        return replace(entry, update_found=at if found else None,
+                       update_summary=summary if found else None, update_check=check)
+
+    changed = _update(unit_id, change)
+    if changed is None:
+        return False
+    before, entry = changed
+    said = (before.update_found is not None,
+            before.update_check is not None and before.update_check.ready)
+    check = entry.update_check
     if not found and said == (False, check is not None and check.ready):
         return True  # only the time of the check is new: nothing to say
     if found and ready:
@@ -458,14 +432,7 @@ def set_sync_count(unit_id: int, count: SyncCount) -> bool:
     """Keep what the window's count of the activities to upload found for a device
     remembered; whether the entry changed. A device that is not remembered gets no entry for
     it. Nothing goes to the log (the count has its own line)."""
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable or entry.sync_count == count:
-            return False
-        entry.sync_count = count
-        _write(known)
-    return True
+    return _update(unit_id, lambda entry: replace(entry, sync_count=count)) is not None
 
 
 def set_account_facts(facts: dict[int, AccountFact]) -> int:
@@ -488,14 +455,7 @@ def set_account_facts(facts: dict[int, AccountFact]) -> int:
 def set_synced(unit_id: int, fact: SyncedFact) -> bool:
     """Keep what is known of the sync of a device remembered (SyncedFact); whether the entry
     changed."""
-    with _locked():
-        known, writable = _read()
-        entry = known.get(unit_id)
-        if entry is None or not writable or entry.synced == fact:
-            return False
-        entry.synced = fact
-        _write(known)
-    return True
+    return _update(unit_id, lambda entry: replace(entry, synced=fact)) is not None
 
 
 def recorded_sync_count(entry: KnownDevice | None, state: str | None,
@@ -544,6 +504,24 @@ def forget(unit_id: int, before: Callable[[], str] | None = None) -> bool:
     return True
 
 
+def _update(unit_id: int, change: Callable[[KnownDevice], KnownDevice]
+            ) -> tuple[KnownDevice, KnownDevice] | None:
+    """Change the entry of a device remembered and write the file, under the lock: `change`
+    gets the entry and returns the new one. Returns (the entry before, after); None, writing
+    nothing, for a device not remembered, a file that may not be written over, or no change."""
+    with _locked():
+        known, writable = _read()
+        entry = known.get(unit_id)
+        if entry is None or not writable:
+            return None
+        new = change(entry)
+        if new == entry:
+            return None
+        known[unit_id] = new
+        _write(known)
+    return entry, new
+
+
 @contextlib.contextmanager
 def _locked():
     """One reader-changer-writer of devices.json at a time, in any process; the system lets go
@@ -578,22 +556,24 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
             facts = _tile_facts(value)
             update = facts.get("update") if isinstance(facts.get("update"), dict) else {}
             update_found = update.get("found")
-            entry = KnownDevice(int(key), str(value["description"]), str(value["part_number"]),
-                                str(value["software_version"]), str(value["kind"]),
-                                float(value["first_seen"]), float(value["last_seen"]),
-                                category if category in CATEGORIES else None,
-                                image_url if picture_urls.allowed(image_url) else None,
-                                float(update_found) if isinstance(update_found, int | float)
-                                and not isinstance(update_found, bool) else None,
-                                UpdateSummary.from_json(update.get("summary")),
-                                UpdateCheck.from_json(update.get("check")),
-                                SyncCount.from_json(facts.get("sync")),
-                                _product(value.get("usb_product")),
-                                AccountFact.from_json(facts.get("account")),
-                                SyncedFact.from_json(facts.get("synced")),
-                                _identifier(value.get("usb_serial")),
-                                _identifier(value.get("volume_uuid")),
-                                garmin_name(value.get("model_name")))
+            entry = KnownDevice(
+                unit_id=int(key), description=str(value["description"]),
+                part_number=str(value["part_number"]),
+                software_version=str(value["software_version"]), kind=str(value["kind"]),
+                first_seen=float(value["first_seen"]), last_seen=float(value["last_seen"]),
+                category=category if category in CATEGORIES else None,
+                image_url=image_url if picture_urls.allowed(image_url) else None,
+                update_found=float(update_found) if isinstance(update_found, int | float)
+                and not isinstance(update_found, bool) else None,
+                update_summary=UpdateSummary.from_json(update.get("summary")),
+                update_check=UpdateCheck.from_json(update.get("check")),
+                sync_count=SyncCount.from_json(facts.get("sync")),
+                usb_product=_product(value.get("usb_product")),
+                account=AccountFact.from_json(facts.get("account")),
+                synced=SyncedFact.from_json(facts.get("synced")),
+                usb_serial=_identifier(value.get("usb_serial")),
+                volume_uuid=_identifier(value.get("volume_uuid")),
+                model_name=garmin_name(value.get("model_name")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
