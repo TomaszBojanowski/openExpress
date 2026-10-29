@@ -4278,7 +4278,7 @@ def start_stand_in(start, sections, win=None):
     a fake navigation; the device view's pages are recorded, not built."""
     from openexpress.gui.app import MainWindow
 
-    win = win or types.SimpleNamespace(session=None, busy=False, errors=[])
+    win = win or stand_in(session=None, busy=False, errors=[])
     win.start, win.device_view = start, "device view"
     win.remembered = FakeRememberedPage()
     win.navigation = FakeNavigation(start.page)
