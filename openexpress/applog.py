@@ -19,6 +19,7 @@ from __future__ import annotations
 import faulthandler
 import fcntl
 import getpass
+import json
 import logging
 import logging.handlers
 import os
@@ -167,6 +168,21 @@ def redact(text: str) -> str:
     if _user is not None:
         text = _user.sub("<user>", text)
     return text
+
+
+ANSWER_CHARS = 500  # of a server's answer in a line of the log
+
+
+def answer_excerpt(body, limit: int = ANSWER_CHARS) -> str:
+    """A server's answer (parsed JSON or text) for one line of the log: on one line, filtered
+    as the log is, then cut to `limit` characters ("-" for none). Filtered whole, before the
+    cut, so that no part of a secret is left too short to be recognised."""
+    if body is None or body == "" or body == {} or body == []:
+        return "-"
+    text = body if isinstance(body, str) else json.dumps(
+        body, ensure_ascii=False, separators=(",", ":"), default=str)
+    text = redact(" ".join(text.split()))
+    return text if len(text) <= limit else text[:limit - 1] + "…"
 
 
 def _plain(text: str) -> str:

@@ -490,10 +490,16 @@ def _upload_one(c, data, label, last, client, state, report, progress,
             outcome = "tracker_conflict"
         elif res.status in REJECTED_HTTP:
             outcome = "rejected"
+            # Why, as far as the server says it: the type, never the name of the file.
+            log.warning("upload rejected: %s (%s), HTTP %d, answer: %s", c.datatype,
+                        applog.size(len(data)), res.status, applog.answer_excerpt(res.body))
         elif 200 <= res.status < 300:
             if codes and codes <= ALREADY_EXISTS_CODES:
                 outcome = "duplicate"
             elif codes - ALREADY_EXISTS_CODES:
+                log.warning("upload rejected: %s (%s), HTTP %d with codes %s, answer: %s",
+                            c.datatype, applog.size(len(data)), res.status, sorted(codes),
+                            applog.answer_excerpt(res.body))
                 ok, error = False, _("server rejected the file (codes {codes})").format(
                     codes=sorted(codes))
                 break

@@ -168,6 +168,43 @@ def test_tracker_conflict(device_root, tmp_path, body_code):
     assert state.is_completed("FIT_TYPE_32", "M2.FIT")
 
 
+class Rejecting(SyncClient):
+    def __init__(self, status, body):
+        super().__init__()
+        self.status, self.body = status, body
+
+    def upload_file(self, url, data, **kw):
+        super().upload_file(url, data, **kw)
+        return UploadResult(self.status, self.body, None, None)
+
+
+@pytest.mark.parametrize("status", [415, 200])
+def test_a_rejected_upload_is_logged_with_the_answer(device_root, tmp_path, caplog, status):
+    """A file the server rejects (an HTTP code, or failure codes in an answer that took it):
+    its type, the HTTP code and what the server said, in one short line without what
+    identifies the user, the account or a device, nor the file."""
+    st, dev, state = _setup(device_root, tmp_path)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_32"})
+    body = {"detailedimportresult": {"failures": [{"messages": [
+                {"code": 7, "content": "Unsupported file content"}]}]},
+            "owner": "jan.kowalski@example.org", "unitid": 3999888777,
+            "accesstoken": "abc123SECRETxyz", "notes": "x" * 2000}
+    with caplog.at_level(logging.INFO, logger="openexpress.sync"):
+        rep = sync.run_uploads(plan, dev, st, Rejecting(status, body), state)
+    if status == 415:
+        assert rep.rejected == ["FIT_TYPE_32/M1.FIT"]
+    else:
+        assert [label for label, _error in rep.failed] == ["FIT_TYPE_32/M1.FIT"]
+    lines = [r.getMessage() for r in caplog.records
+             if r.getMessage().startswith("upload rejected") and f"HTTP {status}" in r.getMessage()]
+    assert len(lines) == 1
+    line = lines[0]
+    assert "FIT_TYPE_32" in line and "Unsupported file content" in line
+    for private in ("jan.kowalski", "3999888777", "abc123SECRETxyz", "M1.FIT"):
+        assert private not in line
+    assert len(line) < 650  # the answer cut to 500 characters
+
+
 class AckFails(SyncClient):
     fail = True
 
