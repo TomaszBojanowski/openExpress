@@ -1,9 +1,9 @@
-"""Get Picture From Account (the user, 27.10.2026): a device not on the account whose picture
-Garmin's update server does not give (unit-info without an address, as for an epix) can get it
-from the account, but only when the user clicks the button on its page: that request names the
-device's unit ID to the user's Garmin Connect account (device-info), which nothing does on its
-own. The picture goes into the cache as any other, and its address is kept with the device.
-Every device here is made up."""
+"""Get Picture From Account: a device not on the account whose picture Garmin's update server
+does not give (unit-info without an address, as for an epix) can get it from the account, but
+only when the user clicks the button on its page: that request names the device's unit ID to
+the user's Garmin Connect account (device-info), which nothing does on its own. The picture
+goes into the cache as any other, and its address is kept with the device. Every device here
+is made up."""
 
 import types
 
@@ -138,9 +138,9 @@ def test_the_account_without_a_picture_says_so(pictures):
     assert _cache(xdg) == [] and win.shown == [] and shown_tiles == []
 
 
-# The account, asked about an epix not on it, answered HTTP 404 with a JSON {"error": …}
-# (27.10.2026): the window says so in a short sentence, never the server's words, and the
-# button stays (a try later may answer).
+# The account, asked about an epix not on it, answers HTTP 404 with a JSON {"error": …}:
+# the window says so in a short sentence, never the server's words, and the button stays
+# (a try later may answer).
 UNKNOWN_TEXT = "Garmin Connect does not know this device, so it has no picture of it."
 REFUSED_TEXT = "Garmin Connect could not be asked for the picture. Try again later."
 

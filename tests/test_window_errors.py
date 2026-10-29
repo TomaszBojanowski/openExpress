@@ -1,5 +1,5 @@
 """An exception the window does not expect goes to the log as ERROR with its traceback, as on
-the command line (review of 22.10.2026, area 7): a report with the log then tells where it
+the command line: a report with the log then tells where it
 was. A page whose drawing fails says so and loads anew when chosen again, instead of staying
 on "loading" for good. All data is made up."""
 

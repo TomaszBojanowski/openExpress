@@ -1,4 +1,4 @@
-"""The states of the sync said the same way everywhere (analysis 14, stage 3, 25.10.2026).
+"""The states of the sync said the same way everywhere.
 
 One source for "never synced": no state.json of the device in this installation; its tile and
 its page say it in the same words, with the tooltip "…by this installation of openExpress".

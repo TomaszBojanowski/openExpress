@@ -1,4 +1,4 @@
-"""The tiles once and for all (25.10.2026): the facts a tile says in its chips are kept with
+"""The tiles once and for all: the facts a tile says in its chips are kept with
 the device, one object "tile_facts" of its entry in devices.json, written by one module after
 each source (the check of updates, the count in the background, the account's list, a sync, a
 detection) and read by one function (tile_facts.read). start.chips() gets only those facts and

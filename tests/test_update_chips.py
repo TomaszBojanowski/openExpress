@@ -1,6 +1,6 @@
-"""Chips on the tiles of the start page (PLAN T9, variant D, 24.10.2026): what the window's
-check of updates found is kept with the device (devices.json) for its tile, and the tile
-shows a chip for an update, a USB drive, the primary device and a device off the account.
+"""Chips on the tiles of the start page: what the window's check of updates found is kept
+with the device (devices.json) for its tile, and the tile shows a chip for an update, a USB
+drive, the primary device and a device off the account.
 All devices are made up."""
 
 import time
@@ -124,7 +124,7 @@ def test_the_chips_in_polish():
 def test_the_words_under_a_connected_device_are_its_version_only():
     """The words under the name of a connected device: its version (or why it has none),
     never how it is connected: a drive says it in its chip, an MTP device is the usual
-    way (24.10.2026)."""
+    way."""
     from openexpress.device.gio_storage import NOT_MOUNTED
     from openexpress.gui.app import choice_subtitle
 
@@ -192,8 +192,8 @@ def test_a_tile_shows_its_chips_under_its_name_and_above_its_version():
 
 @pytest.mark.needs_display
 def test_a_tile_without_chips_is_as_tall_as_one_with_a_chip():
-    """An empty row of chips keeps the height of one chip (24.10.2026): tiles with a chip
-    and without are as tall, and the words under their names are on one line."""
+    """An empty row of chips keeps the height of one chip: tiles with a chip and without are
+    as tall, and the words under their names are on one line."""
     from gi.repository import Gdk, Gtk
 
     from openexpress.gui import start

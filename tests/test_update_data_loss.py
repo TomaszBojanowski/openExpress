@@ -1,7 +1,7 @@
-"""Point 6 of package 3: Garmin marks some kinds of device (the "segmenttype" of unit-info:
-Wellness, Vivomove) as losing the data they hold when their software is updated. openExpress
-then warns before every update of such a device, in the window and on the command line, and
-says to sync first; it does not hold the update back. All answers are made up."""
+"""Garmin marks some kinds of device (the "segmenttype" of unit-info: Wellness, Vivomove) as
+losing the data they hold when their software is updated. openExpress then warns before
+every update of such a device, in the window and on the command line, and says to sync
+first; it does not hold the update back. All answers are made up."""
 
 import logging
 import types

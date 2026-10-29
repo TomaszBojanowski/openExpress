@@ -1,11 +1,11 @@
-"""An update to install stands out on the device page (24.10.2026): the chip of the device's
-tile ("Update available", warning) under its software version, in the place of the grey
+"""An update to install stands out on the device page: the chip of the device's tile
+("Update available", warning) under its software version, in the place of the grey
 "· update available" of that line; the row "Device software" says it in the colour of a
 warning: of one update, the version of a system update or the name and version of another, as
-the Updates page names it; of several, how many. No dot before its arrow (removed the same
-day). Copied already, waiting for the device: its own chip, "Update ready", and the warning
-colour too (25.10.2026, test_update_states). With none to install, or a failed check: as the
-other rows. A beta counts as any update. All devices and updates are made up."""
+the Updates page names it; of several, how many. No dot before its arrow. Copied already,
+waiting for the device: its own chip, "Update ready", and the warning colour too
+(test_update_states). With none to install, or a failed check: as the other rows. A beta
+counts as any update. All devices and updates are made up."""
 
 import time
 import types
@@ -127,7 +127,7 @@ def _tile_chip():
 @pytest.mark.needs_display
 def test_an_update_to_install_gives_the_device_page_the_chip_of_its_tile():
     """Under "Software 23.39": the tile's chip, the same words and colour; the line of the
-    version no longer says it. Among the updates a beta, counted as any other."""
+    version does not say it. Among the updates a beta, counted as any other."""
     win, section = _device_page()
     assert _chips(section.page) == []  # still checking
     win._set_update_state(updates.pending(_offered()), [])
@@ -162,7 +162,7 @@ def test_the_row_device_software_says_which_update_in_the_warning_colour_without
 @pytest.mark.needs_display
 def test_once_installed_or_with_none_the_page_is_as_before():
     """The update copied (the device installs it once disconnected): the chip "Update
-    ready" and the warning colour (25.10.2026); a check that finds none, one that fails: no
+    ready" and the warning colour; a check that finds none, one that fails: no
     chip, the subtitle as the other rows'."""
     win, section = _device_page()
 

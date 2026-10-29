@@ -1,4 +1,4 @@
-"""The sign-in window tells the log what it runs on and what happens in it (issue #10), never
+"""The sign-in window tells the log what it runs on and what happens in it, never
 the address the ticket is in; a page whose web process ended offers to try again and the
 sign-in without the window; a crash of the program leaves Python's trace in crash.log, which
 the report attaches filtered. No network: the WebView is a stand-in, its signals are emitted

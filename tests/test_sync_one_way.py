@@ -1,4 +1,4 @@
-"""One sync for the window, the background service and the command line (26.10.2026): the
+"""One sync for the window, the background service and the command line: the
 same device and the same account give, whether the window or `openexpress sync --apply` ran
 it, the same record of the sync (last_sync.json), the same record of what was uploaded
 (state.json), the same files written to the device, the same requests to Garmin Connect,

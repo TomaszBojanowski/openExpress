@@ -1,7 +1,7 @@
-"""The package (code audit of 25.10.2026): the version is the same in its three places, the
-build needs a setuptools that knows the licence as it is written (an SPDX expression and
-license-files: setuptools 77 or newer), and PyGObject is what every command needs, so it is a
-dependency, and its absence is said in one line, not as a traceback."""
+"""The package: the version is the same in its three places, the build needs a setuptools
+that knows the licence as it is written (an SPDX expression and license-files: setuptools
+77 or newer), and PyGObject is what every command needs, so it is a dependency, and its
+absence is said in one line, not as a traceback."""
 
 import sys
 import tomllib
@@ -45,8 +45,7 @@ def test_the_command_line_without_pygobject_says_what_to_install(monkeypatch, ca
 
 def test_the_application_id_is_written_once():
     """The application ID (the window, the background watcher, the desktop file, the icons)
-    is written in paths.py alone; every other module takes it from there (27.10.2026: it
-    was in five places)."""
+    is written in paths.py alone; every other module takes it from there."""
     import ast
 
     written = []

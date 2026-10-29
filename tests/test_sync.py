@@ -288,10 +288,10 @@ def test_trueup_flow(device_root, tmp_path):
     assert (device_root / res.written).read_bytes() == b"TRUEUP"
 
 
-# --- a location that needs a consent refuses the file (analysis 19, point 13) ----------------
+# --- a location that needs a consent refuses the file ----------------------------------------
 # As Garmin Express: a file every location of which refused it, each one a location that
 # needs a consent, is neither counted as uploaded nor marked; the next sync tries again. A
-# file another location took is uploaded, as before.
+# file another location took is uploaded, as usual.
 
 OPTIONAL = {"unittypename": "test", "datatypes": [
     {"datatypename": "FIT_TYPE_2", "uploadlocations": [

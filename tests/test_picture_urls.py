@@ -1,4 +1,4 @@
-"""Which addresses of device pictures are downloaded (#8): Garmin's own hosts over HTTPS;
+"""Which addresses of device pictures are downloaded: Garmin's own hosts over HTTPS;
 Amazon S3 only from a bucket allowed by name (Garmin Connect's). A refusal names the host and
 the first segment of the path at most: never the rest of the address, nor its query."""
 
@@ -63,8 +63,8 @@ def test_a_bucket_of_garmin_on_s3_is_allowed_once_named(monkeypatch):
     "https://GARMIN-CONNECT-PROD.S3.AMAZONAWS.COM/a.png",  # a host in any letter case
 ])
 def test_the_bucket_of_garmin_connect_on_s3_is_allowed(url):
-    """#8, the log of 0.6.10 (22.10.2026): the account gives the pictures of three models in
-    the bucket garmin-connect-prod, by the path; by the host it is allowed as well."""
+    """The account gives the pictures of three models in the bucket garmin-connect-prod, by
+    the path; by the host it is allowed as well."""
     assert picture_urls.refusal(url) is None and picture_urls.allowed(url)
 
 

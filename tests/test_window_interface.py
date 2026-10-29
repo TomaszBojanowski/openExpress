@@ -1,4 +1,4 @@
-"""Guard 2 of splitting gui/app.py (analysis 17): the window is one object made of MainWindow
+"""The window is one object made of MainWindow
 and mixins (MapsPage, MusicPage, …). Its methods are listed in tests/data/window_methods.txt:
 a method lost while moving code, or a name defined in two of the window's classes (one would
 hide the other, depending on their order), or a method of ours that hides one of GTK's, fails

@@ -1,6 +1,6 @@
-"""openexpress status (the user, 27.10.2026): in one look, the login, the Garmin devices
-connected (name, USB mode, whether they are on the account), the last sync of each and what
-the last check of its updates found. Without --online nothing is asked of a server: only the
+"""openexpress status: in one look, the login, the Garmin devices connected (name, USB mode,
+whether they are on the account), the last sync of each and what the last check of its
+updates found. Without --online nothing is asked of a server: only the
 devices' GarminDevice.xml and what this installation keeps are read (the tests' guard against
 the network fails a test that tries). Every device and account here is made up."""
 

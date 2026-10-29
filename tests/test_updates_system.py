@@ -1,6 +1,6 @@
 """System updates: recognised by their file as well as by the flags of the server.
 
-The answer below has the shape of a real one (an Edge 1050 offered a beta bundle, 14.10.2026):
+The answer below has the shape of a real one (an Edge 1050 offered a beta bundle):
 the bundle with the device software comes as GUPDATE.GSP without "isprimaryfirmware" and
 without "isrestartrequired", and its data type, "Firmware", is also that of plain files such
 as fonts. All values are made up."""
@@ -924,8 +924,8 @@ def test_status_of_a_beta_that_waits_for_the_device():
 
 @pytest.mark.needs_display
 def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
-    """A device in mass storage mode takes the update once it is ejected (#11): Eject, which
-    does that; an MTP device is only to be disconnected, as above."""
+    """A device in mass storage mode takes the update once it is ejected: Eject, which does
+    that; an MTP device is only to be disconnected, as above."""
     win, status, _groups, buttons = _updates_page(_staged_items(), drive=True)
     assert status["texts"][:2] == [("Update ready: eject the device to install it", ["title-1"]),
                                    (VERSIONS, ["dim-label"])]
@@ -971,7 +971,7 @@ def test_device_page_says_the_update_waits_for_the_device():
     assert win.update_state == "ready"
     assert win.update_row.get_subtitle() == "Update ready: disconnect the device to install it"
     assert win.software_label.get_label() == "Software 23.39"  # its chip says it
-    # Something else to install too: ready wins, and says how many more (25.10.2026).
+    # Something else to install too: ready wins, and says how many more.
     items = _staged_items(font_on_device=False)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert (win.update_state, win.update_row.get_subtitle()) == (
@@ -1179,7 +1179,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     assert all(kw["download_progress"] is win.fraction for kw in calls["kw"])
 
 
-# --- a failed copy keeps the old file (review of 106cd25) ---------------------------------------
+# --- a failed copy keeps the old file -----------------------------------------------------------
 
 
 def disk_full_halfway(monkeypatch, name=""):
@@ -1256,8 +1256,8 @@ def test_a_drive_needs_room_for_the_new_file_beside_the_old(device_root, tmp_pat
 
 
 def _small_drive(device_root, tmp_path, monkeypatch, size):
-    """A drive of 1.3 MB with 929.8 kB free (as the Varia RTL515, 21.10.2026), and an update
-    of `size` bytes offered for it."""
+    """A drive of 1.3 MB with 929.8 kB free (as the Varia RTL515), and an update of `size`
+    bytes offered for it."""
     data = bytes(range(256)) * (size // 256) + bytes(size % 256)
     (update,) = _items(_entry("006-D2222-00", "Test Part", "Firmware", "GARMIN\\REMOTESW",
                               "D2222.GCD", data))
@@ -1353,10 +1353,10 @@ def _gupdate_files(folder):
 @pytest.mark.parametrize("storage_class", [LocalStorage, _OverMtp])
 def test_a_file_in_another_letter_case_gives_way_to_the_name_from_the_server(
         device_root, tmp_path, monkeypatch, caplog, storage_class):
-    """Edge 1050, 21.10.2026: GUPDATE.gsp of 2_442_874 B was on the device, the server gives
-    GUPDATE.GSP; written over it, the update kept the old name and was not installed. As Garmin
-    Express: the old file is deleted first, the new one has exactly the server's name, and the
-    log names the file on the device too."""
+    """An Edge 1050 with GUPDATE.gsp of 2_442_874 B on it, the server giving GUPDATE.GSP:
+    written over it, the update keeps the old name and is not installed. As Garmin Express:
+    the old file is deleted first, the new one has exactly the server's name, and the log
+    names the file on the device too."""
     bundle, _font = _offered_from_nowhere(tmp_path, monkeypatch)
     garmin = device_root / "GARMIN"
     (garmin / "GUPDATE.gsp").write_bytes(bytes(2_442_874))
@@ -1417,7 +1417,7 @@ def test_without_a_file_at_its_place_an_update_gets_the_name_from_the_server(
          "already on the device")]
 
 
-# --- names from the server never lead out of the cache (review of 106cd25) ---------------------
+# --- names from the server never lead out of the cache -----------------------------------------
 
 
 @pytest.mark.parametrize("field,value", [("part_number", "../x"), ("version", "1/2"),

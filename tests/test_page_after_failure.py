@@ -1,8 +1,8 @@
 """A task that changes what the Maps, Apps or Music page shows reads its page again when it
-ends, also when it failed (PLAN.md: a map without its unlock file): a part of it may be done
-(the files of a map written but not its unlock file, one song of two copied, the app list that
-waited gone), and the page went on showing the device as it was before. The error is said as
-before, over the page as it is read. All data is made up."""
+ends, also when it failed: a part of it may be done (the files of a map written but not its
+unlock file, one song of two copied, the app list that waited gone), and the page would
+otherwise go on showing the device as it was before the task. The error is said too, over
+the page as it is read. All data is made up."""
 
 import types
 from pathlib import Path
@@ -336,8 +336,8 @@ def test_a_task_whose_device_is_gone_meanwhile_reads_no_page(start, monkeypatch)
 
 def test_a_switch_whose_waiting_list_is_lost_reads_the_apps_page_again(iq_device, monkeypatch):
     """The list that waited (an earlier switch) cannot be written back either, so it is
-    deleted: the page read again finds that nothing waits any more (before, it went on
-    showing the earlier switch as waiting for the device)."""
+    deleted: the page read again finds that nothing waits any more (not the earlier switch
+    as waiting for the device)."""
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device
@@ -369,7 +369,7 @@ class SecondFails(LocalStorage):
 
 
 def test_music_copied_in_part_reads_the_music_page_again(iq_device, library, monkeypatch):
-    """One song of two is copied: the page read again lists it (before, it listed none)."""
+    """One song of two is copied: the page read again lists it."""
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device

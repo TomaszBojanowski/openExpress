@@ -201,7 +201,7 @@ MIXED = {"datatypes": [
 
 def test_a_type_is_not_uploaded_when_one_of_its_locations_lacks_its_consent(device_root, xdg):
     """As Garmin Express: a consent missing for any location of a data type keeps the whole
-    type back, also from the locations that need no consent (analysis 19, point 1)."""
+    type back, also from the locations that need no consent."""
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
 
@@ -332,7 +332,7 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
         {"kind": "new_files", "types": {"FIT_TYPE_4": 2}},
         {"kind": "uploads", "uploaded": 2, "known": 0, "known_checked": 0, "known_server": 0,
          "rejected": 0, "errors": 0},
-        {"kind": "received_files", "types": {"FIT_TYPE_6": 1}}]  # since 25.10.2026
+        {"kind": "received_files", "types": {"FIT_TYPE_6": 1}}]
     # The same words in the summary and from what is stored.
     text = last_sync.describe(summary.record()).text
     assert "Files from the device: activities ×2" in text.splitlines()
@@ -344,8 +344,7 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
 
 def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
     """A file from Garmin Connect written to the device: counted in the numbers
-    (" · 1 received"), and since 25.10.2026 a line of its own with its type (before, it had
-    none); no line ends with a full stop."""
+    (" · 1 received"), and a line of its own with its type; no line ends with a full stop."""
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
     from openexpress.settings import Settings

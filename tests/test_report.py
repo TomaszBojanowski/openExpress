@@ -160,7 +160,7 @@ def test_cli_report_with_log_prints_what_the_window_puts_in_the_clipboard(
 
 def test_the_log_to_paste_is_fenced_with_tildes():
     """Pasted into a comment on GitHub, the log is a block of code too, not one paragraph
-    with its <path> and <user> eaten as tags (#19). The fence is of tildes: in the form's
+    with its <path> and <user> eaten as tags. The fence is of tildes: in the form's
     "Log" field, which GitHub puts between backticks itself, it does not close that block
     and shows only as two lines more."""
     assert report.form_log(["one", "two"]) == "~~~\none\ntwo\n~~~\n"
@@ -195,7 +195,7 @@ def test_the_words_about_pasting_the_log_in_polish():
 
 def test_the_report_has_plain_spaces(device_root, log_file):
     """Text for GitHub: no hard space, also in a Polish session and in a line of the log
-    written with one (by a version from before 22.10.2026)."""
+    written with one."""
     from openexpress import applog, i18n
 
     i18n.setup("pl")
@@ -328,11 +328,11 @@ def _note(dialog):
 
 @pytest.mark.needs_display
 def test_open_on_github_puts_the_log_in_the_clipboard(monkeypatch, device_root, log_file):
-    """#18, #19: the log never goes into the address. The form has a field of its own for it
+    """The log never goes into the address. The form has a field of its own for it
     ("Log": pasting into the field filled in from the address loses what is pasted), so the
     report field gets the report alone; the log goes to the clipboard as that field shows
     it (as code: its lines alone), and the dialog stays to say where to paste it (a toast on
-    the window was missed once the browser came up)."""
+    the window is missed once the browser comes up)."""
     from urllib.parse import parse_qs, urlsplit
 
     _write_log(log_file, ["one", "device 3987654321"])
@@ -503,7 +503,7 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
 @pytest.mark.parametrize("name", ["device_report.yml", "bug_report.yml"])
 def test_the_forms_have_a_field_of_their_own_for_the_log(name):
     """Pasting into the "Device report" field filled in from the address loses what is
-    pasted (26.10.2026): the log goes into a field of its own, which shows it as code."""
+    pasted: the log goes into a field of its own, which shows it as code."""
     from pathlib import Path
 
     yaml = pytest.importorskip("yaml")

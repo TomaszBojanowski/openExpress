@@ -1,4 +1,4 @@
-"""Point 3 of package 3: TrueUp waits as Garmin Express does. Garmin Connect's `check_back`
+"""TrueUp waits as Garmin Express does. Garmin Connect's `check_back`
 says when to ask again: under 300 s the whole time, from 300 s on 90 s, at most three rounds.
 The wait has a known length, so it is told with it (the window fills its bar, the command line
 one line), and it can be stopped (the window's Stop Waiting, Ctrl+C on the command line, the
@@ -142,8 +142,8 @@ def test_the_duration_in_words():
 def test_the_sync_passes_the_stop_of_its_session_as_it_is(watch, monkeypatch):
     """A stop asked during this sync (the background service quitting during the uploads)
     ends the wait at once; one left from an earlier sync of the window is cleared when the
-    window starts a sync (test_trueup_stop.py). Before, the service cleared it here, and the
-    quit was lost."""
+    window starts a sync (test_trueup_stop.py). Cleared here by the service, the quit would
+    be lost."""
     from openexpress import service
 
     dev, st = watch

@@ -1,6 +1,5 @@
 """The hidden X server of the tests (conftest.py) ends with the tests, also when they do
-not end well: a segfault of pytest runs no atexit, and the server stayed (seen in the review
-of 22.10.2026)."""
+not end well: a segfault of pytest runs no atexit, and the server would stay."""
 
 import os
 import shutil

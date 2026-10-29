@@ -1,4 +1,4 @@
-"""The states of the updates said the same way everywhere (analysis 14, stage 2, 25.10.2026).
+"""The states of the updates said the same way everywhere.
 
 An update copied already, waiting for the device to install it, is "ready": the chip under the
 version says "Update ready", the row "Device software" says what to do, the line of the version
@@ -456,7 +456,7 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     known_devices.remember(UNIT, "fēnix 8 - 47mm, Solar", "006-B4532-00", "23.39", "mtp",
                            now=seen)
     known_devices.set_update_found(UNIT, False, now=seen, software_version="23.39")
-    sync.SyncState(UNIT).save()  # synced here before (stage 3: the one source)
+    sync.SyncState(UNIT).save()  # synced here before (the one source of "never synced")
     monkeypatch.setattr(service, "load_last_sync",
                         lambda unit_id=None: {"time": seen, "uploaded": 1})
     win = MainWindow(None)

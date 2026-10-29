@@ -1,8 +1,7 @@
-"""Point 10 (a) (27.10.2026): a tile clicked shows that its device is being opened (a spinner
-over its picture; in a row of a list, in place of its arrow), and a second click on the same
-tile meanwhile says nothing. Before, the tile showed nothing for the 4.5-5 s of the first
-opening of a watch, and the second click said "Another operation is in progress". A click on
-another tile meanwhile still says so. Every device here is made up."""
+"""A tile clicked shows that its device is being opened (a spinner over its picture; in a row
+of a list, in place of its arrow) for the 4.5-5 s the first opening of a watch can take, and
+a second click on the same tile meanwhile says nothing, not "Another operation is in
+progress". A click on another tile meanwhile still says so. Every device here is made up."""
 
 import types
 

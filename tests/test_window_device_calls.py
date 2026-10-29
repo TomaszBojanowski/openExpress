@@ -1,7 +1,7 @@
 """The window asks the device nothing on its own thread (GTK's): over MTP each question is a
-round trip through gvfs, and a few dozen of them froze the window for seconds (review of
-22.10.2026, area 7). Here the thread of the test stands for GTK's: a task runs its work in
-a thread of its own and `done` back here, as run_task does. All data is made up."""
+round trip through gvfs, and a few dozen of them freeze the window for seconds. Here the
+thread of the test stands for GTK's: a task runs its work in a thread of its own and `done`
+back here, as run_task does. All data is made up."""
 
 import threading
 import types
@@ -62,7 +62,7 @@ class Question:
         return lambda *a, **kw: None
 
 
-# --- step 1: the question before a map is installed --------------------------------------------
+# --- the question before a map is installed ----------------------------------------------------
 
 def _map(*sizes):
     from openexpress import maps
@@ -302,7 +302,7 @@ def _suffix_buttons(row):
     return out
 
 
-# --- step 3: the question before the order of the apps is restored ---------------------------
+# --- the question before the order of the apps is restored -----------------------------------
 
 from test_ciq_music import iq_device, order_device  # noqa: E402, F401 - the fixtures
 
@@ -384,7 +384,7 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     assert storage.on_gtk == [] and storage.elsewhere
 
 
-# --- step 4: the Maps page ----------------------------------------------------------------------
+# --- the Maps page ------------------------------------------------------------------------------
 
 from test_updates_maps import _real_maps_page, maps_response, server  # noqa: E402, F401
 
@@ -423,7 +423,7 @@ def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
     assert title in [r.get_title() for r in _rows(on_device)]
 
 
-# --- step 5: the Music page ---------------------------------------------------------------------
+# --- the Music page -----------------------------------------------------------------------------
 
 @pytest.mark.needs_display
 def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
@@ -449,7 +449,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     assert add.get_description() == f"{free} free"  # as on the device page
 
 
-# --- step 6: the device page (show_overview) -----------------------------------------------------
+# --- the device page (show_overview) -------------------------------------------------------------
 
 FREE, SIZE = 52_140_000_000, 64_000_000_000
 
@@ -674,8 +674,8 @@ WRITING = {"Syncing…", "Installing update…", "Copying the map…", "Installi
 def test_every_task_that_writes_to_the_device_says_so():
     """Each run_task of the window whose task writes to the device has its work wrapped in
     writes_to_device, and only those (read in the source: the title of the task, its work
-    and its keywords), in every module of the window (gui/*.py: the pages split out of
-    app.py too)."""
+    and its keywords), in every module of the window (gui/*.py: the pages in modules of
+    their own too)."""
     import ast
     from pathlib import Path
 
@@ -709,7 +709,7 @@ def test_every_task_that_writes_to_the_device_says_so():
             assert writes is (text in WRITING and device), text
 
 
-# --- step 7: the report (show_report) ------------------------------------------------------------
+# --- the report (show_report) --------------------------------------------------------------------
 
 def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
     """The report the window shows for the device (its preview), the dialog recorded."""

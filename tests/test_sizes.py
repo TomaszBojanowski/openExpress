@@ -41,9 +41,9 @@ def test_sizes_in_polish_only_differ_in_the_separator(polish):
 
 
 def test_a_size_never_breaks_between_its_number_and_its_unit():
-    """The window at 360 px (21.10.2026): "4,7 / GB". A hard space (U+00A0) joins the number
-    and the unit, in English and in Polish; the device report, text for GitHub, keeps a plain
-    one (and the command line and the log write plain spaces)."""
+    """The window at 360 px wraps a size as "4,7 / GB" without it: a hard space (U+00A0) joins
+    the number and the unit, in English and in Polish; the device report, text for GitHub,
+    keeps a plain one (and the command line and the log write plain spaces)."""
     for language in ("en", "pl"):
         i18n.setup(language)
         try:
@@ -58,7 +58,7 @@ def test_a_size_never_breaks_between_its_number_and_its_unit():
 def test_the_command_line_writes_plain_spaces(device_root, capsys):
     """The hard spaces are for the window, whose texts wrap (a size, a Polish one-letter
     word); what the command line writes is copied, searched and parsed, so every command
-    writes plain spaces (22.10.2026): here the sizes of `info` and the words of `--help`."""
+    writes plain spaces: here the sizes of `info` and the words of `--help`."""
     from openexpress.cli import main
 
     try:

@@ -1,5 +1,5 @@
-"""The chips "To sync" and "Never synced" on the tile of a connected device of the account
-(PLAN T9, 24.10.2026): its activities not uploaded yet, counted when it is listed or opened
+"""The chips "To sync" and "Never synced" on the tile of a connected device of the account:
+its activities not uploaded yet, counted when it is listed or opened
 (sync.activities_to_sync), counted again after a sync without asking the device. All devices
 and files are made up."""
 
@@ -62,7 +62,7 @@ def test_not_counted_gives_no_chip():
 def test_synced_before_with_nothing_to_upload_says_synced():
     """Counted, nothing to upload, and synced here before (its sync state is there: a device
     never synced has no count): dimmed, as the primary device is, without a tooltip. Only
-    with a sync recorded (25.10.2026): files marked as uploaded alone give none."""
+    with a sync recorded: files marked as uploaded alone give none."""
     assert _said(_tile(to_sync=0, synced_at=NOW)) == [("Synced", "dimmed", None)]
     assert _said(_tile(to_sync=0)) == []
 
@@ -94,9 +94,8 @@ def test_the_order_of_the_chips_at_most_two():
 
 
 def test_synced_comes_last_and_gives_way_to_every_other_chip():
-    """Last in the order, also after the primary device (decision of 25.10.2026): with the
-    primary device both are there; with an update and the primary device, Synced is the one
-    left out."""
+    """Last in the order, also after the primary device: with the primary device both are
+    there; with an update and the primary device, Synced is the one left out."""
     update = dict(update_found=NOW, synced_at=NOW)
     assert _words(_tile(to_sync=0, primary=True, synced_at=NOW)) == [("Primary", "dimmed"),
                                                                      ("Synced", "dimmed")]

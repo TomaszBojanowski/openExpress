@@ -1,9 +1,9 @@
-"""The tiles from their first frame (analysis 14, 25.10.2026; the rule of stage 2 for the
-updates): what the count in the background last found for a connected device of the account is
+"""The tiles from their first frame (the same rule as for the updates): what the count in
+the background last found for a connected device of the account is
 kept with it (devices.json: how many to upload, when, and the version of its sync state it was
 counted against), and its tile shows "To sync" / "Synced" from it at once while the record is
 of this installation, at most 7 days old, and the state of the sync has not changed since. The
-count runs as before: the same result changes nothing on the screen, another one changes the
+count runs as well: the same result changes nothing on the screen, another one changes the
 chip and the record. A device never synced here says so from the first frame (no state.json:
 nothing to count). No record for a drive or a device off the account; Forget removes it. All
 devices and files are made up."""
@@ -283,11 +283,11 @@ def test_the_last_sync_of_the_device_page_says_the_count_from_the_record_too():
     assert win.last_sync_row.get_subtitle().endswith("\u00a0· 2 new activities to upload")
 
 
-# --- the first frame comes before the account's list (25.10.2026, seen in the window) -----------
+# --- the first frame comes before the account's list --------------------------------------------
 #
-# Opened from source a second time, the tiles of the fēnix and the Edge got "To sync" and
-# "Synced" some 300 ms after the first frame: the record was valid, but the tiles were drawn
-# before the account's list came, and without it the sync of a tile was not said at all.
+# Opened a second time, the window draws the tiles before the account's list comes, some
+# 300 ms later: a valid record gives a tile its "To sync" or "Synced" in the first frame,
+# without waiting for that list.
 
 
 def _opened(win_of, monkeypatch, logged_in=True):

@@ -1,5 +1,5 @@
-"""The window in several modules (review of 24.10.2026, area 7): the pages split out of
-gui/app.py are mixins of MainWindow, and what the window says of itself stays as it was."""
+"""The window in several modules: the pages in modules of their own beside gui/app.py are
+mixins of MainWindow, and the log names their tasks as MainWindow's."""
 
 import logging
 import types

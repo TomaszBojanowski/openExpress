@@ -201,9 +201,8 @@ def test_after_20_s_of_waiting_the_label_says_it_can_take_a_while(window, monkey
 
 
 def test_a_wait_of_known_length_fills_the_bar_and_can_be_stopped(window):
-    """Point 3 of package 3: TrueUp's wait has a known length: the bar shows how much of it
-    has passed (no moving back and forth, no note after 20 s), and Stop Waiting is offered
-    while it lasts."""
+    """TrueUp's wait has a known length: the bar shows how much of it has passed (no moving
+    back and forth, no note after 20 s), and Stop Waiting is offered while it lasts."""
     import threading
 
     from openexpress.gui.app import stop_waiting

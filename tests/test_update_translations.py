@@ -1,7 +1,7 @@
 """tools/update-translations.sh drops the entries no code uses any more (msgattrib
---no-obsolete after msgmerge, which has no such option in gettext 0.26): before, they piled up
-as "#~" in po/pl.po (46 by 24.10.2026). Run on a copy of the package and the catalogue in a
-temporary folder; nothing in the repository changes."""
+--no-obsolete after msgmerge, which has no such option in gettext 0.26): otherwise they pile
+up as "#~" in po/pl.po. Run on a copy of the package and the catalogue in a temporary
+folder; nothing in the repository changes."""
 
 import shutil
 import subprocess

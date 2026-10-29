@@ -50,7 +50,7 @@ def _window(textures=None):
     return window_methods(win, REMEMBERED_METHODS)
 
 
-# The arrow of the row "Last sync" (an expander row since 25.10.2026): not the device's image.
+# The arrow of the row "Last sync" (an expander row): not the device's image.
 EXPANDER_ARROW = "adw-expander-arrow-symbolic"
 
 
@@ -81,7 +81,7 @@ def _shown(page):
 
 @pytest.mark.needs_display
 def test_the_view_shows_the_picture_the_start_page_already_has(caplog):
-    """As on 18 October 2026: the tile showed the picture (from the cache), the view did not."""
+    """The tile shows the picture from the cache: the view shows it too."""
     texture = _texture()
     win = _window({PART: texture})
     with caplog.at_level(logging.INFO, logger="openexpress"):
@@ -191,8 +191,7 @@ def test_a_tile_whose_address_is_not_allowed_takes_the_picture_in_the_cache(monk
                                                                             caplog):
     """The rule of the addresses is asked only when the picture is not in the cache: a tile of
     the account with an address that is not allowed (a bucket on S3 that is not Garmin
-    Connect's) shows the file kept, asks nothing and logs no refusal (006-B4536-00 in #8,
-    until the cache was cleared)."""
+    Connect's) shows the file kept, asks nothing and logs no refusal."""
     from openexpress.gui import app
 
     path = app.device_picture_path(ACCOUNT_PART)
@@ -316,7 +315,7 @@ def _remembered_with_address():
 @pytest.mark.needs_display
 def test_a_tile_off_the_account_gets_its_picture_from_the_remembered_address(monkeypatch,
                                                                               caplog):
-    """Venu 2, 21 October 2026: off the account, its picture gone with the cache
+    """A Venu 2: off the account, its picture gone with the cache
     (Preferences, Clear), and unit-info is not asked for a device that is not connected. Its
     address was remembered when it was last connected: the start page downloads it again."""
     from openexpress import devicelist, known_devices

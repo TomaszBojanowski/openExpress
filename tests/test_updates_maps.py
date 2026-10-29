@@ -770,8 +770,8 @@ def test_maps_row_says_what_the_check_found(counts, state, text, server):
 @pytest.mark.parametrize("info", [{"mapupdatetype": "Gemini"}, {"mapupdatetype": "LegacyRmu"},
                                   {"mapupdatetype": "Unknown"}, {}])
 def test_maps_row_says_map_updates_are_not_supported_for_a_device_served_another_way(info):
-    """Garmin serves the maps of the device another way than the universal service (a nüvi,
-    25.10.2026): no map check, and the row says so."""
+    """Garmin serves the maps of the device another way than the universal service (a nüvi):
+    no map check, and the row says so."""
     win, asked, _later = _overview_window([], unit_info=info)
     win._check_maps_quietly()
     assert (win.map_state, win.map_row.subtitle) == (
@@ -928,7 +928,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         software_label=types.SimpleNamespace(set_label=lambda text: None),
         _highlight_update=lambda on: None,
         _update_banner=lambda: None, _update_actions=lambda: None,
-        _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation (D5)
+        _show_device_view=lambda: None, _show_start=lambda: None,  # the navigation
         connected=Connected(),  # the devices connected, for the start page
         show_overview=show_overview, show_maps=show_maps, show_updates=show_updates,
         load_apps=None, load_music=None,  # other pages: not loaded here
@@ -954,8 +954,8 @@ def test_a_refresh_on_the_maps_page_asks_the_map_server_once(server, device_root
 
 
 def test_opening_a_device_and_its_maps_page_asks_unit_info_once(server, device_root):
-    """unit-info once for each opening of a device (25.10.2026): the "Maps" row of the device
-    page and then the Maps page use the one answer kept in the session."""
+    """unit-info once for each opening of a device: the "Maps" row of the device page and
+    then the Maps page use the one answer kept in the session."""
     win, asked = _refresh_window("watch", device_root, [map_answer(server, 1, 1)] * 2,
                                  [sw_response(server)])
     win.show_device()  # the device page: its "Maps" row checks quietly
@@ -1445,7 +1445,7 @@ def test_space_counts_a_file_once_whatever_its_spelling(device_root):
     assert maps.space_needed(LocalStorage(device_root), m, ["Garmin/D1.img"]) == 4000
 
 
-# --- a failed copy keeps the old map file (review of 106cd25) -----------------------------------
+# --- a failed copy keeps the old map file -------------------------------------------------------
 
 
 def test_a_failed_copy_keeps_the_old_map_file_on_a_drive(server, device_root, xdg, monkeypatch):
@@ -1480,7 +1480,7 @@ def test_a_drive_needs_room_for_the_new_map_beside_the_old(server, device_root, 
     assert maps.space_needed(OverMtp(device_root), east, []) == east.size - replaced
 
 
-# --- an invalid MD5 never turns off the check (review of 106cd25) -------------------------------
+# --- an invalid MD5 never turns off the check ---------------------------------------------------
 
 
 @pytest.mark.parametrize("md5", ["0" * 31, "z" * 32, "", None, "bm90IGFuIG1kNQ=="])
@@ -1698,7 +1698,8 @@ def _files_map(paths, size=10_000):
 
 
 def _space_as_before(storage, m, removing):
-    """space_needed as it was until 23.10.2026: one size() for each file."""
+    """The space a map needs, worked out with one size() for each file: what space_needed
+    gives, listing each folder once."""
     freed = sum(storage.size(p) or 0 for p in removing)
     gone = {p.casefold() for p in removing}
     replaced = sum(storage.size(f.device_path) or 0 for f in m.files
@@ -1728,7 +1729,7 @@ def test_the_space_a_map_needs_lists_each_folder_once(device_root):
     (["GARMIN/maps/map0.IMG", "Garmin/Maps/Map1.img"], []),
     # A file that is not there, and a folder where a file is expected.
     (["Garmin/Maps/Missing.img", "Garmin/Maps/Folder.img"], ["Garmin/Maps/Gone.img"]),
-    # Three folders, as on an Edge; a path removed twice counts twice, as before.
+    # Three folders, as on an Edge; a path removed twice counts twice.
     (["Garmin/Maps/Map0.img", "Garmin/SQL/Map1.db", "Map/Map2.img"],
      ["Garmin/Maps/Old0.img", "Garmin/Maps/Old0.img"]),
     # A folder that is not there at all, and the path of the root.
@@ -1748,7 +1749,7 @@ def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
         LocalStorage(device_root).size(p) or 0 for p in removing)
 
 
-# --- the states of a map the server gives (analysis 19, point 4; decision of 26.10.2026) ---
+# --- the states of a map the server gives --------------------------------------------------
 # 1 installed, 2 partly on the device, 3 a newer version on the device. A map partly there
 # is not installed: it shows on the device as incomplete, to be installed again, never as an
 # update. A newer one on the device is installed and never an update (that would write the

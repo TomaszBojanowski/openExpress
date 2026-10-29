@@ -1,5 +1,5 @@
 """The keyboard shortcuts of the window: the window of shortcuts opens with Ctrl+/ as well as
-with Ctrl+? (which needs Shift where "?" does, as on a Polish keyboard: the user, 27.10.2026),
+with Ctrl+? (which needs Shift where "?" does, as on a Polish keyboard),
 and that window shows each shortcut as it is bound, the first of its keys."""
 
 import json

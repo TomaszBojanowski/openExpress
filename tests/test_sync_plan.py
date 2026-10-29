@@ -1,6 +1,6 @@
-"""A sync in two steps (26.10.2026): service.plan_sync works out what a sync will do (the
-account, the upload settings, the first sync, the consents, what to upload) and writes
-nothing; service.apply_sync does it, reading Garmin Connect's queue after the uploads.
+"""A sync in two steps: service.plan_sync works out what a sync will do (the account, the
+upload settings, the first sync, the consents, what to upload) and writes nothing;
+service.apply_sync does it, reading Garmin Connect's queue after the uploads.
 service.run_sync runs both under the lock of the sync. All answers here are made up."""
 
 import pytest

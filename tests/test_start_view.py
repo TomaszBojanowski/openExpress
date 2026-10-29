@@ -1,6 +1,6 @@
-"""The view of the start page chosen in its menu (PLAN T6b, 24.10.2026): "View" with
-Automatic, Grid and List; automatic (a list from seven devices in a section, each section on
-its own) unless another is chosen; kept in gui.json ("start_view"). A change draws the page
+"""The view of the start page chosen in its menu: "View" with Automatic, Grid and List;
+automatic (a list from seven devices in a section, each section on its own) unless another
+is chosen; kept in gui.json ("start_view"). A change draws the page
 again from what is known, the devices are not asked. All devices are made up."""
 
 import types

@@ -1,10 +1,9 @@
-"""The primary wearable of the Garmin account, read only (analysis 14, stage 4, 25.10.2026): in
-Garmin Connect "Primary wearable" / "Podstawowe urządzenie typu wearable", the device that
-steps and sleep come from. The chip "Primary" of a tile says so in its tooltip; the device page
-has the row "Primary wearable" under "Primary training device", from the account's list it
-has already (no request of its own), and only for a device that can be one; its Set as Primary
-(27.10.2026) is tested with the account in test_ownership. All devices and accounts are made
-up."""
+"""The primary wearable of the Garmin account, read only: in Garmin Connect "Primary
+wearable" / "Podstawowe urządzenie typu wearable", the device that steps and sleep come
+from. The chip "Primary" of a tile says so in its tooltip; the device page has the row
+"Primary wearable" under "Primary training device", from the account's list it has already
+(no request of its own), and only for a device that can be one; its Set as Primary is tested
+with the account in test_ownership. All devices and accounts are made up."""
 
 import types
 

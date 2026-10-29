@@ -1,11 +1,11 @@
-"""A Garmin drive that the system has not mounted (analysis 15, stage 0; #19, 25.10.2026): on
-KDE a drive is mounted only once a file manager opens it. Seen through Gio.VolumeMonitor's
-volumes (gvfs, no new permission): its block device belongs to a USB device of vendor 091e
-with a mass storage interface and has a medium (a size): a tile "Not mounted; choose it to
-open it" with the chip "USB drive", as for MTP; chosen, it is mounted (Gio.Volume.mount) and
-opened as a drive. Without a medium (removed safely: the Garmin device turns its drive off)
-it is not listed and the notice stays as it was; a drive ejected by openExpress (D3) is not
-listed; without gvfs there are no volumes and nothing changes. All devices are made up."""
+"""A Garmin drive that the system has not mounted: on KDE a drive is mounted only once a file
+manager opens it. Seen through Gio.VolumeMonitor's volumes (gvfs, no new permission): its
+block device belongs to a USB device of vendor 091e with a mass storage interface and has a
+medium (a size): a tile "Not mounted; choose it to open it" with the chip "USB drive", as for
+MTP; chosen, it is mounted (Gio.Volume.mount) and opened as a drive. Without a medium
+(removed safely: the Garmin device turns its drive off) it is not listed and the notice stays
+as it was; a drive ejected by openExpress is not listed; without gvfs there are no volumes
+and nothing changes. All devices are made up."""
 
 import logging
 import os
@@ -197,8 +197,8 @@ def test_a_mount_refused_says_so(drives, monkeypatch):
 
 
 def test_one_unmounted_drive_alone_gives_its_tile_not_a_mount(drives, monkeypatch):
-    """The window's detection: the drive is not mounted behind the user's back (D7 opens the
-    one device that is mounted); it is a tile to choose."""
+    """The window's detection: the drive is not mounted behind the user's back (the window
+    opens by itself only the one device that is mounted); it is a tile to choose."""
     from openexpress.gui import app
 
     volume, _folder = _unmounted(drives, monkeypatch)
@@ -307,9 +307,9 @@ def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeyp
     assert detected == [app.Cause.PLUGGED]  # once
 
 
-# --- two block devices of one device (#19: a Forerunner 55 just plugged in) ---------------
+# --- two block devices of one device (a Forerunner 55 just plugged in) --------------------
 #
-# lsblk on the reporter's computer: `sdc 0B` (an empty slot) and `sdd GARMIN 25.3M`, both of
+# lsblk on a computer with such a drive: `sdc 0B` (an empty slot) and `sdd GARMIN 25.3M`, both of
 # the one USB device. Its drive is sdd: one tile, the empty slot gives neither a tile, nor a
 # line that its drive has no medium, nor that it has no drive.
 
@@ -383,7 +383,7 @@ def test_both_slots_without_a_medium_say_it_once(drives, monkeypatch, caplog):
          "unplug it and plug it in again")]
 
 
-# --- state (b): the drive removed safely (#19) -------------------------------------------
+# --- state (b): the drive removed safely -------------------------------------------------
 #
 # After "safely remove" the Forerunner 55 keeps its mass storage interface; its drive (sdd)
 # is gone and the empty slot (sdc, 0 B) stays. The window says it is a USB drive that is not
@@ -427,9 +427,9 @@ def test_removed_safely_the_command_line_says_the_same(drives, monkeypatch):
     assert str(refused.value) == gio_storage.drive_not_mounted_text()
 
 
-# --- state (b) as it is: after it was ejected, the watch is on USB as 091e:0003 (#19) ------
+# --- state (b) as it is: after it was ejected, the watch is on USB as 091e:0003 ------------
 #
-# lsusb on the reporter's computer: after "safely remove" the Forerunner 55 is 091e:0003, and
+# lsusb on a computer with this watch: after "safely remove" the Forerunner 55 is 091e:0003, and
 # 091e:0f1d once plugged in again. At the place on USB where a Garmin drive was in this run,
 # 091e:0003 is that watch in its Garmin USB mode (Garmin's own protocol, which openExpress does
 # not use), not a drive switched off: the window and the command line say so at once. A
@@ -601,12 +601,13 @@ def test_the_words_in_polish():
                     "openExpress nie korzysta. Odłącz kabel i\u00a0podłącz go ponownie.")
 
 
-# --- chosen from the start page: the others stay connected (0.7.1, GNOME) -------------------
+# --- chosen from the start page: the others stay connected (GNOME) --------------------------
 #
-# Seen on GNOME: a Varia ejected in Files, its tile "Not mounted; choose it to open it" chosen,
-# mounted and opened; back on the start page only the Varia was connected, the fēnix and the
-# Edge (still on USB) under "Remembered". Its entry had no details, nor the address it has once
-# mounted, so the open device was none of the entries and the list was dropped (keep_if_open).
+# On GNOME: a Varia ejected in Files, its tile "Not mounted; choose it to open it" chosen,
+# mounted and opened; back on the start page the fēnix and the Edge (still on USB) stay
+# connected, not under "Remembered". Its entry has no details, nor the address it has once
+# mounted, so the open device would be none of the entries and the list dropped
+# (keep_if_open): the open device takes the place of its entry instead.
 
 FENIX, EDGE, VARIA = 3000000201, 3000000202, 3000000203
 
@@ -697,10 +698,10 @@ def test_a_device_chosen_with_its_details_is_opened_as_before(monkeypatch):
     assert summaries == listed and reread == []
 
 
-# --- what tells one drive from another while nothing of it is read (analysis 18) ----------------
+# --- what tells one drive from another while nothing of it is read ------------------------------
 #
-# Its USB serial (a fēnix 8's is its unit ID in hexadecimal; a Varia Rearview Radar has none,
-# 26.10.2026) and the UUID of its volume (udisks reads it without mounting: a FAT volume ID).
+# Its USB serial (a fēnix 8's is its unit ID in hexadecimal; a Varia Rearview Radar has none)
+# and the UUID of its volume (udisks reads it without mounting: a FAT volume ID).
 # Both are as private as the unit ID: never in the log, nor in the report.
 
 DRIVE_ID_SERIAL = "7ZQ1W1FE0001"  # made up; not hexadecimal, so not a unit ID
@@ -731,7 +732,7 @@ def test_a_mounted_drive_has_them_too(drives, monkeypatch):
 
 @pytest.mark.parametrize("uuid", [DRIVE_ID_UUID, None])
 def test_a_drive_without_a_usb_serial_has_none(drives, monkeypatch, uuid):
-    """A Varia Rearview Radar (26.10.2026): no serial in /sys; its volume may have a UUID."""
+    """A Varia Rearview Radar: no serial in /sys; its volume may have a UUID."""
     _unmounted(drives, monkeypatch, serial=None, uuid=uuid)
     (found,) = gio_storage.find_ums_devices()
     assert (found.usb.serial, found.usb.volume_uuid) == (None, uuid)
@@ -852,13 +853,13 @@ def test_a_session_hides_them_also_when_they_were_not_read_for_a_list():
     assert applog.redact(f"{DRIVE_ID_SERIAL} {DRIVE_ID_UUID.lower()}") == "<serial> <volume>"
 
 
-# --- which remembered device a drive not mounted is (analysis 18) ------------------------------
+# --- which remembered device a drive not mounted is --------------------------------------------
 #
 # 1. its USB serial is the unit ID of a remembered device in hexadecimal; 2. the USB serial
 # kept with one; 2b. the UUID of its volume kept with one; 3. the one remembered drive with its
 # USB product, unless the serial or the UUID kept with it is another. No rule "the same model".
 
-WIFE = 3003377320   # a Forerunner 55 (#19: the reporter's wife's); b303e6a8 in hexadecimal
+WIFE = 3003377320   # a Forerunner 55; b303e6a8 in hexadecimal
 OTHER = 3003377337  # another Forerunner 55
 VARIA_A, VARIA_B = 3000000101, 3000000102  # two Varias of one USB product
 UUID_A, UUID_B, UUID_C = "1A2B-3C4D", "5E6F-7A8B", "9C0D-1E2F"
@@ -875,7 +876,7 @@ def _drive_tiles():
 
 
 def _entry_of_0_6_20(unit):
-    """devices.json as the window of 0.6.20 wrote it (#19): no USB product, no tile facts."""
+    """devices.json as an older window wrote it: no USB product, no tile facts."""
     import json
 
     from openexpress import known_devices
@@ -890,8 +891,8 @@ def _entry_of_0_6_20(unit):
 
 @pytest.mark.parametrize("serial", [f"{WIFE:012x}", f"{WIFE:012X}"])
 def test_an_entry_of_0_6_20_is_known_by_the_usb_serial(drives, monkeypatch, serial):
-    """#19, 0.7.3: the tile of the remembered Forerunner 55 and that of the drive not mounted
-    were two, until it was mounted. Its entry, of 0.6.20, has no USB product."""
+    """The remembered Forerunner 55 and its drive not mounted are one tile, known by the USB
+    serial, though its entry, written by an older window, has no USB product."""
     _entry_of_0_6_20(WIFE)
     _unmounted(drives, monkeypatch, serial=serial)
     assert _drive_tiles() == [("Forerunner 55", "11.03", True)]
@@ -920,7 +921,7 @@ def test_the_kept_serial_tells_which_of_two_remembered_drives_it_is(drives, monk
 
 
 def test_the_kept_uuid_tells_a_drive_without_a_usb_serial(drives, monkeypatch):
-    """A Varia Rearview Radar gives no USB serial (26.10.2026); its volume has a UUID."""
+    """A Varia Rearview Radar gives no USB serial; its volume has a UUID."""
     from openexpress import known_devices
 
     for unit, version, uuid in ((VARIA_A, "3.36", UUID_A), (VARIA_B, "3.37", UUID_B)):
@@ -959,7 +960,7 @@ def test_another_forerunner_55_is_not_taken_for_the_remembered_one(drives, monke
 def test_with_nothing_kept_to_say_otherwise_the_usb_product_tells_it(drives, monkeypatch,
                                                                      serial, uuid):
     """Rule 3: the one remembered drive with its USB product, which kept neither a serial nor
-    a UUID (opened by 0.7.1 to 0.7.3), whatever the drive gives."""
+    a UUID (an entry written by an older window), whatever the drive gives."""
     from openexpress import known_devices
 
     known_devices.remember(WIFE, "Forerunner 55", "006-B3869-00", "11.03", "ums",

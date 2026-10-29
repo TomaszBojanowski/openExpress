@@ -1,9 +1,9 @@
 """A whole file written to the device at once (Storage.write: files from Garmin Connect,
 TrueUp, the unlock file of a map, playlists, app files) never leaves half of it under its
-name, as write_file never does (review of 22.10.2026, risk A). Over MTP what a copy that
-touched the file left is deleted (_discard_partial); on a drive the file is written under a
-temporary name and renamed when whole; a copy that never touched the file leaves the old one
-as it was. The error is said by each caller as before. All data is made up."""
+name, as write_file never does. Over MTP what a copy that touched the file left is deleted
+(_discard_partial); on a drive the file is written under a temporary name and renamed when
+whole; a copy that never touched the file leaves the old one as it was. The error is said by
+each caller. All data is made up."""
 
 import posixpath
 import uuid

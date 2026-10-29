@@ -1,6 +1,6 @@
-"""The tests see no device of the computer running them (review of 24.10.2026, area 6): a
-watch plugged in while they run is not looked for on its USB bus, not listed by the session's
-volume monitor, and the windows the tests make stop listening when their test ends."""
+"""The tests see no device of the computer running them: a watch plugged in while they run
+is not looked for on its USB bus, not listed by the session's volume monitor, and the
+windows the tests make stop listening when their test ends."""
 
 from pathlib import Path
 

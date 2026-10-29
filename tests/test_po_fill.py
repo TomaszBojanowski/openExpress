@@ -1,7 +1,7 @@
 """tools/po-fill.py with contexts (msgctxt): "Storage" is both the device page's "Pamięć" and,
-with the context "preferences", "Miejsce na dysku" (9dae508). A key without a context must
-not overwrite either; "ctxt|msgid" fills the entry with that context, "|msgid" the one
-without (review of 24.10.2026). Run on a small made-up .po."""
+with the context "preferences", "Miejsce na dysku". A key without a context must not
+overwrite either; "ctxt|msgid" fills the entry with that context, "|msgid" the one
+without. Run on a small made-up .po."""
 
 import json
 import subprocess
@@ -88,9 +88,9 @@ msgstr ""
 
 
 def test_a_filled_entry_keeps_its_other_flags_and_loses_only_fuzzy(tmp_path):
-    """A filled entry kept no line of flags at all when it was fuzzy: "#, fuzzy,
-    python-brace-format" lost python-brace-format too, which msgfmt --check and the test of
-    the placeholders need (24.10.2026)."""
+    """A filled entry that was fuzzy keeps its line of flags without "fuzzy": "#, fuzzy,
+    python-brace-format" keeps python-brace-format, which msgfmt --check and the test of
+    the placeholders need."""
     (tmp_path / "pl.po").write_text(FUZZY, encoding="utf-8")
     run, text = fill(tmp_path, {"{n} maps": "{n} mapy", "New": "Nowy", "{n} files": "{n} plików"})
     assert run.returncode == 0

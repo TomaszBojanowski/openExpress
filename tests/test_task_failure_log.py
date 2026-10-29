@@ -1,9 +1,9 @@
-"""A task of the window that fails (code audit of 25.10.2026): its traceback goes to the log
-file with the line that says so, through the filter of the log (addresses, e-mails…), so that
-a report from the window tells where it failed; work in the background that fails likewise,
-at INFO. Before, both tracebacks were written at DEBUG only, below the level of the file.
-Since 26.10.2026 only an error nobody expected has its traceback: one that is a message for
-the user (errors.UserFacingError) is one line at INFO, as before. All addresses are made up."""
+"""A task of the window that fails: its traceback goes to the log file with the line that
+says so, through the filter of the log (addresses, e-mails…), so that a report from the
+window tells where it failed; work in the background that fails likewise, at INFO (DEBUG is
+below the level of the file). Only an error nobody expected has its traceback: one that is a
+message for the user (errors.UserFacingError) is one line at INFO. All addresses are made
+up."""
 
 import types
 

@@ -1,6 +1,6 @@
-"""What the last check of updates found, kept with the device (devices.json, 24.10.2026): the
-count, of one update its name, version and whether it is of the system, and the software the
-device had then. The device page shows it from its first frame (the chip under the version,
+"""What the last check of updates found, kept with the device (devices.json): the count, of
+one update its name, version and whether it is of the system, and the software the device
+had then. The device page shows it from its first frame (the chip under the version,
 the subtitle of "Device software"), while the check of the server runs, which confirms or
 changes it; only shown, never installed from. All devices and updates are made up."""
 
@@ -228,7 +228,7 @@ def test_a_record_for_other_software_or_too_old_is_not_shown(device_root, softwa
 
 @pytest.mark.needs_display
 def test_a_failed_check_keeps_what_the_record_says(device_root):
-    """And says when it was found (25.10.2026; its words: test_update_states)."""
+    """And says when it was found (its words: test_update_states)."""
     from openexpress.connect import ApiError
 
     _record()

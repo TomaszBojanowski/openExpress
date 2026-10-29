@@ -1,8 +1,8 @@
-"""README and the help of the command line say what the program has (review of 24.10.2026,
-area 8): the command table names every command and the options the review found missing,
-the help of `cache` names its parts and that of `--path` no longer offers it for a device in
-mass storage mode (found by itself since 0.6.4), the Development section names the variables
-of the tests, and the Flatpak permissions name every folder the manifest opens."""
+"""README and the help of the command line say what the program has: the command table
+names every command and the options of sync, install-desktop, devices, report and cache,
+the help of `cache` names its parts and that of `--path` does not offer it for a device in
+mass storage mode (the program finds one by itself), the Development section names the
+variables of the tests, and the Flatpak permissions name every folder the manifest opens."""
 
 import re
 from pathlib import Path

@@ -1,6 +1,6 @@
-"""What a sync writes to the device from Garmin's queue counts as received (PLAN (9),
-24.10.2026): the files of the queue, and also TrueUp and the Connect IQ apps written, so that
-the row "Last sync" does not say "nothing to upload" alone when something came to the device;
+"""What a sync writes to the device from Garmin's queue counts as received: the files of the
+queue, and also TrueUp and the Connect IQ apps written, so that the row "Last sync" does
+not say "nothing to upload" alone when something came to the device;
 an app left in the queue (not written) is not received. All answers here are made up."""
 
 import pytest
@@ -102,7 +102,7 @@ def test_files_trueup_and_apps_are_received_together(device_root, xdg, monkeypat
     assert _row(service.load_last_sync(UNIT)) == "nothing to upload · 3 received"
 
 
-# --- the line of the files of the queue (25.10.2026) ----------------------------------------
+# --- the line of the files of the queue -----------------------------------------------------
 
 METRICS = [{"messageid": 20 + n, "devicexmldatatype": "FIT_TYPE_44",
             "metadata": {"messageurl": f"metrics/{n}", "messagename": "Metrics"}}
@@ -120,9 +120,9 @@ def _details(record, language="en"):
 
 
 def test_the_files_of_the_queue_get_a_line_of_their_types(device_root, xdg, monkeypatch):
-    """As the sync of an Edge 1050 of 25.10.2026: three metrics files and TrueUp from the
-    queue (and here an app): one line for the three files, by their type, kept as data; TrueUp
-    and the app have their own lines and are not counted in it."""
+    """As in a sync of an Edge 1050: three metrics files and TrueUp from the queue (and here
+    an app): one line for the three files, by their type, kept as data; TrueUp and the app
+    have their own lines and are not counted in it."""
     session = _synced_once(device_root)
     session.client.messages = [*METRICS, TRUEUP, APP]
     monkeypatch.setattr(ciq, "install_queued", lambda *a, **kw: ciq.IqInstallReport(
@@ -186,7 +186,8 @@ def test_the_plural_forms_in_polish():
 
 
 def test_a_record_without_the_line_is_shown_as_before():
-    """A record of 0.6.20 or older (the files of the queue only counted): the same details."""
+    """A record written without that line (the files of the queue only counted): the same
+    details."""
     record = {"downloaded": 4, "lines": [service.trueup_step()]}
     assert _details(record) == ["TrueUp: daily totals aligned with your other Garmin devices"]
     assert _row(record) == "nothing to upload · 4 received"
@@ -194,7 +195,7 @@ def test_a_record_without_the_line_is_shown_as_before():
 
 def test_the_pattern_of_0_6_21_is_what_a_sync_writes():
     """tests/data/last_sync/format-0.6.21-received-files.json has the lines a sync writes for
-    the Edge's sync of 25.10.2026 (eight new files, three metrics files and TrueUp)."""
+    a sync of an Edge (eight new files, three metrics files and TrueUp)."""
     import json
     import types
     from pathlib import Path
@@ -212,7 +213,7 @@ def test_the_pattern_of_0_6_21_is_what_a_sync_writes():
                                 service.trueup_step()]
 
 
-# Types that come from Garmin Connect's queue to a device (25.10.2026): workouts, courses,
+# Types that come from Garmin Connect's queue to a device: workouts, courses,
 # schedules, goals and segments (FIT SDK), personal records and gear tracking (FIT profile;
 # both seen in the queue in the logs). Named as the other types are: what the data is, in the
 # plural for things counted.
