@@ -105,6 +105,52 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.10" date="2026-10-29">
+      <description>
+        <p>This release focuses on reliability: what openExpress writes to a device is checked,
+        a stop at the wrong moment leaves nothing half done, and a question in the window can
+        always be cancelled.</p>
+        <ul>
+          <li>Questions: Escape or closing a question always means Cancel. Before, Escape in
+          "Remove app" removed the app from the watch, and in "First sync" started the
+          sync.</li>
+          <li>Files written to the device: the size of every file written to the device is
+          checked (maps, software updates, apps, music, files from Garmin Connect, TrueUp); a
+          file of the wrong size is removed, and openExpress says so.</li>
+          <li>App updates: an interrupted app update no longer leaves a broken app; the old
+          version keeps working until the device takes in the new one.</li>
+          <li>Interrupted sync: when a sync stops after uploading files (an error or Ctrl+C),
+          "Last sync" shows what it did and why it stopped.</li>
+          <li>Background sync: stopping the background service during a sync no longer waits
+          for TrueUp to finish.</li>
+          <li>Connect IQ store: one bad entry in the store's answer no longer breaks the list of
+          apps.</li>
+          <li>Unmounting: when the system is slow to unmount, the device is no longer cut off
+          from the computer; if it still does not come back, openExpress says to unplug it and
+          plug it in again.</li>
+          <li>Maps on the command line: with a saved login, openexpress maps checks that the
+          device is on your account and reads your account's country, as the window does, so a
+          map Garmin does not offer in that country is held back instead of only marked.</li>
+          <li>Navigation: one click on Back leaves a device's view from any of its pages
+          (Updates, Maps, Apps, Music); with some versions of libadwaita it took two. A device's
+          tile, or the device plugged in again, opens its device page, not the page seen
+          last.</li>
+          <li>Smaller fixes: a drive chosen from its tile waits a moment for the system to show
+          it; the first start gives one client ID even when the window, the background service
+          and the command line start at once; on the command line, messages meant for you no
+          longer reach the log as an "unexpected error"; in the Flatpak no gio copy process is
+          left behind after an error; the command line's log says which identifiers a USB drive
+          gives, as the window's does, without the identifiers themselves.</li>
+          <li>Documentation: a short README, and the rest in docs/: supported devices, usage,
+          the command line, troubleshooting, privacy and security, other ways to install;
+          CONTRIBUTING.md for tests and translations.</li>
+          <li>Under the hood: the command line and the window make their Garmin Connect client,
+          open a device and read the account's country the same way; openexpress primary handles
+          the training device and the wearable with one code path and the same requests; the
+          window sets up its state in one place; some 4,000 tests.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.9" date="2026-10-28">
       <description>
         <ul>
