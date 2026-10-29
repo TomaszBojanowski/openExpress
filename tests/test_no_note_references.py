@@ -1,8 +1,11 @@
-"""The repository says why, not when nor where in private notes: no dates, no numbers of
-analyses, audits, steps or decisions, no "live test", no "§N" and no names of the private notes
-in the comments, docstrings and strings of the code, the tests and the tools, nor in the pattern
-files. Dates in other strings are data (the window shows dates as 21.10.2026), so only
-comments and docstrings are looked at for those.
+"""The repository says why, not when nor where in private notes. Comments, docstrings and the
+pattern files name no dates, no labels of a plan or of a decision (D7, Q1, T6b), no issues
+(#19), no commits, no steps of a plan or a review, no versions of openExpress (0.6.6) and no
+story of the work ("review of", "seen live"); no string names the analyses, audits, decisions
+or private notes, nor a "live test". A fact about a device, a server or another program stays,
+with that program's own version ("libadwaita 1.9", "firmware 23.39"). Dates and the like in
+other strings are data (the window shows dates as 21.10.2026), so only comments and
+docstrings are looked at for those.
 
 Older comments still have such words: their number per file is in
 tests/data/older_note_references.json, and it may only go down (when a file is cleaned, its
@@ -22,6 +25,25 @@ NOTES = re.compile("|".join((
     r"\b[Aa]nalys[ie]s \d+", r"\baudit\b", r"\bA[1-9]\b", r"\blive test", r"§\s?\d+",
     r"\b[Dd]ecision \d+", r"user's consent", r"\bPLAN(?:-archiwum)?\.md\b", r"\bAGENTS\.md\b",
     r"openexpress-private")))
+_MONTHS = ("January|February|March|April|May|June|July|August|September|October|November|"
+           "December")
+# Looked for in comments, docstrings and the lines of the pattern files only. A label is a
+# capital and a number (no S: Amazon S3, the Approach S70; no X: X11), not a file name
+# (E2.img), not a code of ruff (E402) and not the F5 key. A version of openExpress has three
+# parts, so "0.5 s" is none, nor is the version in the name of a pattern file
+# (format-0.6.20-…) or a part of 127.0.0.1. A commit is 7 hexadecimal digits, with a letter
+# and a digit among them.
+WHEN = (
+    DATE,
+    re.compile(rf"\b(?:\d{{1,2}} )?(?:{_MONTHS}) (?:\d{{1,2}}, )?20\d\d\b"),
+    re.compile(r"(?<![\w.-])(?!F5\b)[BCDEFKNPQTU][1-9]\d?[a-z]?(?!\w|\.\w)"),
+    re.compile(r"(?<![\w&/])#\d{1,3}\b"),
+    re.compile(r"(?<![\w.-])(?=[0-9a-f]{0,6}[a-f])(?=[0-9a-f]{0,6}\d)[0-9a-f]{7}(?![\w-])"),
+    re.compile(r"\b(?:[Ss]teps?|[Ss]tages?|[Pp]oints?|[Pp]ackages?|[Pp]arts?|[Aa]reas?) "
+               r"\d+[a-z]?\b"),
+    re.compile(r"\b(?:review of|seen live|reporter|moved out of|split out of|the split)\b"),
+)
+VERSION = re.compile(r"(?<![\w.-])v?0\.\d{1,2}\.\d{1,2}(?![\w.])")
 
 
 def _docstrings(tree) -> set[int]:
@@ -36,24 +58,29 @@ def _docstrings(tree) -> set[int]:
     return found
 
 
+def _said(line: int, text: str, patterns) -> list[str]:
+    """The words of `text` that `patterns` find, in their order in it: "line: words"."""
+    found = sorted((m.start(), m.group(0)) for pattern in patterns for m in pattern.finditer(text))
+    return [f"{line}: {words}" for _start, words in found]
+
+
 def references(path: Path) -> list[str]:
     """What `path` names that it should not: "line: words"."""
     text = path.read_text(encoding="utf-8")
     if path.suffix != ".py":
-        return [f"{n}: {m.group(0)}" for n, line in enumerate(text.splitlines(), 1)
-                for pattern in (DATE, NOTES) for m in pattern.finditer(line)]
+        # The names of the pattern files carry the version that wrote them: data.
+        return [ref for n, line in enumerate(text.splitlines(), 1)
+                for ref in _said(n, line, (NOTES, *WHEN))]
     said = []
     for tok in tokenize.generate_tokens(io.StringIO(text).readline):
         if tok.type == tokenize.COMMENT:
-            said += [f"{tok.start[0]}: {m.group(0)}" for pattern in (DATE, NOTES)
-                     for m in pattern.finditer(tok.string)]
+            said += _said(tok.start[0], tok.string, (NOTES, *WHEN, VERSION))
     tree = ast.parse(text)
     docs = _docstrings(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            patterns = (DATE, NOTES) if id(node) in docs else (NOTES,)
-            said += [f"{node.lineno}: {m.group(0)}" for pattern in patterns
-                     for m in pattern.finditer(node.value)]
+            patterns = (NOTES, *WHEN, VERSION) if id(node) in docs else (NOTES,)
+            said += _said(node.lineno, node.value, patterns)
     return said
 
 
@@ -90,11 +117,45 @@ def test_the_older_ones_only_go_down():
     assert lower == {}, f"lower these numbers in {OLDER.name} (listed, found): {lower}"
 
 
+def _words(tmp_path, text: str, name: str = "made_up.py") -> list[str]:
+    made_up = tmp_path / name
+    made_up.write_text(text, encoding="utf-8")
+    return [r.split(": ", 1)[1] for r in references(made_up)]
+
+
 def test_dates_are_looked_for_in_comments_and_docstrings_only(tmp_path):
-    made_up = tmp_path / "made_up.py"
-    made_up.write_text('"""Seen on 21.10.2026."""\n'
-                       '# analysis 20, step 4 after the audit (A8, §10)\n'
-                       'SHOWN = "Last on 21.10.2026"\n'
-                       'WORDS = "the live test"\n', encoding="utf-8")
-    assert [r.split(": ", 1)[1] for r in references(made_up)] == [
+    assert _words(tmp_path, '"""Seen on 21.10.2026."""\n'
+                            '# analysis 20 after the audit (A8, §10)\n'
+                            'SHOWN = "Last on 21.10.2026"\n'
+                            'WORDS = "the live test"\n') == [
         "analysis 20", "audit", "A8", "§10", "21.10.2026", "live test"]
+
+
+def test_what_tells_when_in_a_comment_or_a_docstring(tmp_path):
+    assert _words(tmp_path, '"""As on 18 October 2026 (#19, Q1): T6b of D7."""\n'
+                            '# since 0.6.6, after 1c55104 (step 0, point 8 of package 3)\n'
+                            '# the review of the window; seen live; the reporter\'s computer\n'
+                            '# code moved out of app.py in the split; v0.7.9\n'
+                            'SHOWN = "#19 Q1 0.6.6 1c55104 step 0"\n') == [
+        "0.6.6", "1c55104", "step 0", "point 8", "package 3",
+        "review of", "seen live", "reporter",
+        "moved out of", "the split", "v0.7.9",
+        "18 October 2026", "#19", "Q1", "T6b", "D7"]
+
+
+def test_what_is_not_history(tmp_path):
+    """Facts and data that look like such words: a bucket on S3, the Approach S70, the F5 key,
+    X11, a map file E2.img, a code of ruff, 127.0.0.1, a waiting time, a made-up serial in
+    hexadecimal, a format of a date, a colour, the versions of other programs, a pattern
+    file's name, steps in words."""
+    assert _words(tmp_path, '# pictures in a bucket on S3; the Approach S70; Refresh (F5)\n'
+                            '# without an X11 socket; its new file E2.img  # noqa: E402\n'
+                            '# the server at 127.0.0.1; 0.5 s; b303e6a8 in hexadecimal\n'
+                            '# e.g. 2026-10-14 23:41; the colour #1e1e1e\n'
+                            '# libadwaita 1.9, Flatpak 1.16, firmware 23.39, Python 3.14,\n'
+                            '# Garmin Express 7.29.1.0, gettext 0.26\n'
+                            '# format-0.6.20-details-as-data.json; step by step, the next '
+                            'step\n') == []
+    assert _words(tmp_path, '"synthetic": "made up: no real sync has made it yet",\n'
+                            '"file": "format-0.6.21-received-files.json"\n',
+                  name="format-0.7.5-made-up.json") == []
