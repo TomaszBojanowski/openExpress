@@ -1282,6 +1282,21 @@ def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypa
     assert MASS_STORAGE_TEXT in captured.err and captured.err.count("\n") == 1
 
 
+@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"],
+                                     ["backup"]])
+def test_a_command_refused_on_a_drive_remembers_nothing_of_it(watch_and_drives, monkeypatch,
+                                                              caplog, command):
+    """The refusal comes before the drive is remembered and before the line of its keys."""
+    from openexpress import known_devices
+    from openexpress.cli import main
+
+    monitor_with(monkeypatch, watch_and_drives.drive())
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert main(command) == 1
+    assert not known_devices.path().exists()
+    assert not any(m.startswith("device: this drive") for m in caplog.messages)
+
+
 def test_sync_refuses_a_folder_without_data_types(tmp_path, capsys):
     """A copy of a Varia with --path: nothing to sync, said so, instead of trying."""
     from openexpress.cli import main
