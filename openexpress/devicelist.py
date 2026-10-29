@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from openexpress import known_devices, picture_urls, tile_facts
 from openexpress.device.gio_storage import distinct_devices
 from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
-from openexpress.service import unit_id_of
+from openexpress.service import model_name, unit_id_of, wearable_entries
 
 log = logging.getLogger(__name__)
 
@@ -306,19 +306,16 @@ def primary_wearable(devices: list[dict] | None, unit_id: int | None) -> Primary
     device `unit_id`: None when the list is not known, the device is not on it, or it cannot
     be one (primaryActivityTrackerSettingCapable not true, unless it is the one). Read only:
     nothing is asked."""
-    entries = [e for e in devices or [] if isinstance(e, dict)]
-    this = next((e for e in entries if unit_id is not None
-                 and unit_id_of(e.get("unitid")) == unit_id), None)
+    if unit_id is None:
+        return None
+    this, primary = wearable_entries(devices, unit_id)
     if this is None:
         return None
-    primary = next((e for e in entries if e.get("primaryactivitytrackerindicator") is True),
-                   None)
     if this.get("primaryactivitytrackersettingcapable") is not True and primary is not this:
         return None
     if primary is None:
         return PrimaryWearable(False, "", False)
-    name = primary.get("productdisplayname") or primary.get("displayname") or ""
-    return PrimaryWearable(primary is this, name if isinstance(name, str) else "")
+    return PrimaryWearable(primary is this, model_name(primary))
 
 
 def account_fields(entry: dict) -> dict:
