@@ -8,8 +8,8 @@ downloaded into the cache (download_picture, cached_download) and read (load_tex
 cached_texture), the address of the picture and the kind of the device from Garmin's update
 server (picture_from_unit_info, note_segment, is_bike_accessory).
 
-Has: win._device_textures, win._pictures_asked, win._pictures_waiting.
-Uses: win.in_background."""
+Has: the pictures drawn and asked for: _device_textures, _pictures_asked, _pictures_waiting.
+"""
 
 from __future__ import annotations
 

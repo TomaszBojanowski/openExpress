@@ -2,11 +2,8 @@
 their install, update, removal, switch and order (ciq.py decides what is written where).
 AppsPage is a mixin of MainWindow (gui/app.py), without __init__ of its own.
 
-Has: _updated_apps (the apps whose update was written, cleared also by the USB code when the
-device goes), apps_count (said by the row "Apps" of the device page, cleared with the device's
-pages), _order_dialog and _permissions_dialog (a question open, cleared when it closes).
-Uses: session, sections, run_task, in_background, busy, progress, toast, error,
-load_section, _load, _button, _trash, _search_filter, _action_buttons, apps_row."""
+Has: what the Apps page keeps on the window: _updated_apps, apps_count, _order_dialog.
+"""
 from __future__ import annotations
 
 import logging

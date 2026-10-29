@@ -2,9 +2,8 @@
 view of the start page, the switch of the background sync) and the size of the window read
 from them, checked. No GTK here.
 
-Has: no attribute of the window; the window keeps what load_gui_settings and
-update_gui_settings give in its gui_settings.
-Uses: nothing of the window."""
+Has: no attribute of the window, which keeps what this module gives in gui_settings.
+"""
 from __future__ import annotations
 
 import json

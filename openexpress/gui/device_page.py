@@ -4,21 +4,8 @@ and the pages of its side panel as they are loaded (load_section, _load), and th
 Garmin Connect started from it. DevicePage is a mixin of MainWindow (gui/app.py), without
 __init__ of its own; Section is one page of the side panel.
 
-Has: the rows of the device page (software_label, update_row, update_chip, map_row, apps_row,
-music_row, storage_row, storage_bar, last_sync_row, primary_row, backup_row, device_error_row,
-device_error_group, device_image, device_picture, device_title), the state of its updates
-(update_state, update_count, update_only, update_checked_at, _update_record_at,
-_update_check_session, updates_cache) and of its maps (map_state, map_update_count, maps_cache,
-map_cleanup, _map_check_session), the counts of the Apps and Music pages (apps_count,
-music_count), "Last sync" (_last_sync_data, _last_sync_children, _last_sync_monitor),
-_banner_kind, _action_buttons, Get Picture From Account (account_picture_row,
-account_picture_offer).
-Uses: session, sections, pages, banner, start, connected, _account, busy, run_task,
-in_background, progress, toast, _button, the loading of the other pages (load_updates,
-load_maps, load_apps, load_music), select_section, refresh_device, _poll_usb, _retry_sources,
-_show_start, _show_device_view, _on_start_page, _is_open, _update_tile_chips,
-_activities_counted, _update_actions, _ownership_title, _auto_sync_row, login, logout,
-choose_dll, _closed (a backup stops once the window is closed)."""
+Has: the rows of the device page and the state of its updates, maps and last sync.
+"""
 from __future__ import annotations
 
 import logging

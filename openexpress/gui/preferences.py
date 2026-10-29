@@ -3,12 +3,8 @@ out, the key from Garmin Express's installer), the sync in the background, the l
 cache (its parts, counted and cleared), the copy of the diagnostic files; the shortcuts.
 Preferences is a mixin of MainWindow (gui/app.py), without __init__ of its own.
 
-Has: _preferences, _account_row and _storage (while the preferences are open; cleared when
-they close), gui_settings, _account and _account_why (after a logout), session (dropped when
-the account changes), _account_wanted (resolve_account, after a detection).
-Uses: busy, run_task, error, toast, _button, refresh_device, show_overview, _want_account,
-_set_account, _fetch_account, get_application; TaskRunner.in_background
-(gui/window_tasks.py)."""
+Has: the Preferences open and their rows: _preferences, _account_row, _storage.
+"""
 from __future__ import annotations
 
 import logging

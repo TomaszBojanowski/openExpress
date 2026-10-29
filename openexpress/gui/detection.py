@@ -6,17 +6,8 @@ helpers of navigation the start page shares (seen_open, _take_asked, visible_vie
 DeviceDetection is a mixin of MainWindow (gui/app.py), without __init__ of its own;
 DeviceChoices is a list of devices to choose from.
 
-Has: session (the device opened, or none), the state of USB (_usb_state, _usb_since,
-_usb_title, _usb_gone, _normal_since, _replug_told, _open_unplugged), the one timer of a
-detection and what it waits for (_detect_timer, _detect_causes, _detect_reasons,
-_detect_after_task, _asked, _pending_cause, _pending_reopen, _refresh_pending), the list read
-again (_reread_cause, _reread_pending), the drives looked for (_drive_look,
-_drives_while_open), _updated_apps (cleared when the device goes), _opening_tile (the tile
-whose device is being opened).
-Uses: busy, run_task, in_background, toast, error, connected, navigation, start, remembered,
-sections, _remembered_unit, _remembered_from_account, show_device, show_no_device,
-show_choices, _on_start_page, _on_remembered_page, _render_start, _refresh_remembered,
-_fetch_account, _want_account, _update_actions."""
+Has: the device opened (session), the state of USB and the one timer of a detection.
+"""
 from __future__ import annotations
 
 import logging

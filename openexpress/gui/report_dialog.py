@@ -2,9 +2,8 @@
 log", Copy, Open on GitHub) and "About openExpress". ReportDialog is a mixin of MainWindow
 (gui/app.py), without __init__ of its own.
 
-Has: no attribute of the window; what a dialog keeps is in its own closures.
-Uses: session (the device open, its storage and its space as the session holds them),
-toast, get_clipboard; the dialogs are shown over the window (present(self))."""
+Has: no attribute of the window; a dialog keeps what it needs in its closures.
+"""
 from __future__ import annotations
 
 import logging

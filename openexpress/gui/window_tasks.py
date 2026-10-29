@@ -9,13 +9,8 @@ collection of reference cycles after it (collect_garbage), an error nobody expec
 the log (log_unexpected), and the questions and messages of the window, which close as
 Cancel (confirm, Answer, inform).
 
-Has: busy and _waiting (a task runs; a wait moves the bar), _task_lets_close (the task under
-way lets the window close: lets_the_window_close, gui/tasks.py), _action_buttons (the
-buttons of the pages still in the window), the space of the session (session.space,
-refresh_space).
-Uses: session, toasts, banner, the bar as _build_layout made it (action_bar, busy_spinner,
-progress_bar, progress_label, unplug_label, stop_wait_button), storage_row and storage_bar
-(the device page), _update_actions, _run_pending_refresh."""
+Has: the task under way (busy, _waiting, _task_lets_close) and the action buttons.
+"""
 from __future__ import annotations
 
 import gc

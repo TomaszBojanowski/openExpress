@@ -5,15 +5,8 @@ of the start page, the page of a remembered device or one only on the account, a
 user goes after a detection. StartWindow is a mixin of MainWindow (gui/app.py), without
 __init__ of its own; StartView is the choice of grid or list of the start page.
 
-Has: _start_entries and _start_texts (the tiles drawn and their words), _relative_timer (the
-words told against now, every minute while shown), the account (_account, _account_why,
-_account_wanted), the remembered device shown (_remembered_unit, _remembered_entry,
-_remembered_from_account), _usb_title; show_choices clears the state of the device's pages
-as the device page does (update_state, update_checked_at, _update_record_at, updates_cache,
-map_state, maps_cache, map_cleanup, apps_count, music_count).
-Uses: session, connected, navigation, start, remembered, device_view, sections, _closed,
-in_background, open_choice, _opening_tile, add_action, get_mapped, _update_actions,
-_update_banner, _render_update_state."""
+Has: the tiles drawn and their words, the account's list, the remembered device shown.
+"""
 from __future__ import annotations
 
 import dataclasses

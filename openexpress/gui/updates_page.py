@@ -3,12 +3,8 @@ their install, the question before it and the eject of a drive after it (updates
 what is written where). UpdatesPage is a mixin of MainWindow (gui/app.py), without __init__ of
 its own.
 
-Has: updates_cache and updates_beta (the updates of the last check), _update_check_session
-(the session that check was for), _action_buttons (the buttons of the page); through
-update_check_failed, update_state and update_checked_at of the row "Device software" of the
-device page.
-Uses: session, sections, run_task, progress, fraction, error, load_section, _load, _button,
-_set_update_state and _render_update_state (the device page), _update_record_at."""
+Has: the updates of the last check: updates_cache, updates_beta, _update_check_session.
+"""
 from __future__ import annotations
 
 import logging
