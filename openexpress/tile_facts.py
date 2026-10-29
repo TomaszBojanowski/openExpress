@@ -1,6 +1,6 @@
-"""The facts the tile of a device says (its chips), kept with the device (25.10.2026): one
-object for each device in devices.json, "tile_facts" of its entry (known_devices), and the one
-way they are written and read.
+"""The facts the tile of a device says (its chips), kept with the device: one object for each
+device in devices.json, "tile_facts" of its entry (known_devices), and the one way they are
+written and read.
 
 The facts: what the last check of updates found (an update to install, one copied already,
 when it was checked, the software of the device then); the last count of its activities to
@@ -179,8 +179,8 @@ def note_update_check(device, new_updates: list, staged: list = ()) -> None:
 
 
 def update_summary(device, new_updates: list) -> known_devices.UpdateSummary | None:
-    """What is kept of the updates found (24.10.2026): how many; of one, its name, version
-    and whether it is of the system; and the device's software now. Nothing else (no path,
+    """What is kept of the updates found: how many; of one, its name, version and whether
+    it is of the system; and the device's software now. Nothing else (no path,
     no sum, no address). None without updates, or when the device's software is not known."""
     software = getattr(device, "software_version_str", None)
     if not new_updates or not isinstance(software, str):

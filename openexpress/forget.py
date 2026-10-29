@@ -1,5 +1,5 @@
-"""Forgetting a device (PLAN T7): what this installation keeps of it goes, so that the device,
-connected again, is a new one to it.
+"""Forgetting a device: what this installation keeps of it goes, so that the device, connected
+again, is a new one to it.
 
 Deleted: the entry in devices.json (last, so that a failure leaves the device listed, to be
 forgotten again), the device's own folder in the data folder (what was uploaded from it, the

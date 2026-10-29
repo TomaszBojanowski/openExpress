@@ -59,10 +59,10 @@ SYNC_COUNT_KEPT_S = 7 * 86400
 
 @dataclass(frozen=True)
 class UpdateSummary:
-    """What the window's check of updates found (24.10.2026), for the device page to show
-    until its own check ends: how many updates, of one its name (as the server gives it),
-    version and whether it is of the system, and the software the device had then. Only
-    shown: nothing is ever downloaded or installed from it."""
+    """What the window's check of updates found, for the device page to show until its own
+    check ends: how many updates, of one its name (as the server gives it), version and
+    whether it is of the system, and the software the device had then. Only shown: nothing is
+    ever downloaded or installed from it."""
 
     count: int
     software_version: str
@@ -98,10 +98,10 @@ class UpdateSummary:
 
 @dataclass(frozen=True)
 class UpdateCheck:
-    """The last check of updates of the window that answered (25.10.2026): when, the
-    software the device had then, and whether an update was copied to it already and waited
-    for the device to install it once disconnected. What it found to install is in
-    update_found and update_summary."""
+    """The last check of updates of the window that answered: when, the software the device
+    had then, and whether an update was copied to it already and waited for the device to
+    install it once disconnected. What it found to install is in update_found and
+    update_summary."""
 
     at: float
     software_version: str
@@ -125,9 +125,9 @@ class UpdateCheck:
 @dataclass(frozen=True)
 class SyncCount:
     """What the window's count in the background last found for a connected device of the
-    account (25.10.2026): how many activities it has to upload, when it was counted, and the
-    version of the sync state it was counted against (service.sync_stamp). For its tile from
-    the first frame; the count that runs then confirms or changes it."""
+    account: how many activities it has to upload, when it was counted, and the version of
+    the sync state it was counted against (service.sync_stamp). For its tile from the first
+    frame; the count that runs then confirms or changes it."""
 
     count: int
     at: float
@@ -151,9 +151,9 @@ class SyncCount:
 
 @dataclass(frozen=True)
 class AccountFact:
-    """What the account's list said of a remembered device when it was last read (25.10.2026):
-    whether the account lists it, and whether it is its primary wearable; when, and the
-    version of the login saved it was read with (store.stamp)."""
+    """What the account's list said of a remembered device when it was last read: whether
+    the account lists it, and whether it is its primary wearable; when, and the version of
+    the login saved it was read with (store.stamp)."""
 
     on_account: bool
     primary: bool
@@ -180,11 +180,10 @@ class AccountFact:
 
 @dataclass(frozen=True)
 class SyncedFact:
-    """What this installation knew of the sync of a device when it was last seen or synced
-    (25.10.2026): whether it synced it at all (its state.json is there), when its last sync
-    recorded was, and whether that one could not upload (no consent, device sync off in
-    Garmin Connect); when, and the version of its sync state then (service.sync_stamp;
-    None: never synced)."""
+    """What this installation knew of the sync of a device when it was last seen or synced:
+    whether it synced it at all (its state.json is there), when its last sync recorded was,
+    and whether that one could not upload (no consent, device sync off in Garmin Connect);
+    when, and the version of its sync state then (service.sync_stamp; None: never synced)."""
 
     once: bool
     last: float | None
@@ -235,7 +234,7 @@ class KnownDevice:
     # The last count of its activities to upload (SyncCount); None: not known.
     sync_count: SyncCount | None = None
     # The USB product ID of a drive ("0f1d"), kept when it was opened: the name of its tile
-    # while it is not mounted and nothing of it can be read (analysis 15); None: not known.
+    # while it is not mounted and nothing of it can be read; None: not known.
     usb_product: str | None = None
     # What the account's list said of it (AccountFact) and what is known of its sync
     # (SyncedFact); None: not known. With update_found, update_summary, update_check and
@@ -245,7 +244,7 @@ class KnownDevice:
     synced: SyncedFact | None = None
     # The USB serial of a drive and the UUID of its volume, kept when it was opened: they
     # tell which remembered drive a drive not mounted is, when its serial is not its unit ID
-    # in hexadecimal (analysis 18; a Varia Rearview Radar gives no serial). None: not known.
+    # in hexadecimal (a Varia Rearview Radar gives no serial). None: not known.
     # As private as the unit ID, as the file is.
     usb_serial: str | None = None
     volume_uuid: str | None = None
@@ -605,9 +604,9 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
 
 
 def _tile_facts(value: dict) -> dict:
-    """The object "tile_facts" of an entry; for an entry written before it (25.10.2026), the
-    same facts from where they were then (update_found, update_summary, update_check,
-    sync_count); an entry with neither has none (not known)."""
+    """The object "tile_facts" of an entry; for an entry an older version wrote, the same
+    facts from where they were then (update_found, update_summary, update_check, sync_count);
+    an entry with neither has none (not known)."""
     facts = value.get("tile_facts")
     if isinstance(facts, dict):
         return facts

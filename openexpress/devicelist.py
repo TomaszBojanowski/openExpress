@@ -9,7 +9,7 @@ never names it.
 
 What a tile says in its chips (an update, the sync, the account) comes only from the facts
 kept with the device (tile_facts.read) and from the device itself, never from the account's
-list or a count held in memory (25.10.2026)."""
+list or a count held in memory."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ SECTIONS = (CONNECTED, REMEMBERED, ON_ACCOUNT)  # in the order of the page
 
 # How a section of the start page shows its devices: tiles in a grid while they are few, a
 # list once they are many (counted for each section on its own), unless the view chosen in
-# the page's menu (T6b) is a grid or a list for all of them.
+# the page's menu is a grid or a list for all of them.
 GRID, LIST = "grid", "list"
 AUTO = "auto"
 VIEWS = (AUTO, GRID, LIST)
@@ -165,9 +165,9 @@ def entries(connected, remembered, account, logged_in: bool) -> list[tuple[Tile,
 
 def _remembered_drive(summary, remembered) -> int | None:
     """The unit ID of the remembered device that this connected drive is, when nothing of it
-    could be read (not mounted, analysis 18); None when that is not known. In this order:
-    1. its USB serial is the unit ID of a remembered device in hexadecimal (a fēnix 8's is,
-       26.10.2026), also one that an older version remembered without its USB product;
+    could be read (not mounted); None when that is not known. In this order:
+    1. its USB serial is the unit ID of a remembered device in hexadecimal (a fēnix 8's is),
+       also one that an older version remembered without its USB product;
     2. the USB serial kept with one remembered device; 2b. the UUID of its volume kept with
        one (a Varia Rearview Radar gives no USB serial);
     3. the one remembered drive with its USB product, unless the serial or the UUID kept
@@ -256,7 +256,7 @@ def picture_address(account_url: str | None, remembered_url: str | None):
     """(address, where it comes from) of a tile's picture: the account's, which is the newer
     word; the one remembered with the device when the account gives none it may download
     (none for a device off the account, or offline; one in a bucket on S3 that is not
-    allowed, #8). With neither allowed, the account's, so that the log says why there is no
+    allowed). With neither allowed, the account's, so that the log says why there is no
     picture."""
     if (remembered_url and not picture_urls.allowed(picture_urls.upgraded(account_url))
             and picture_urls.allowed(remembered_url)):
@@ -312,7 +312,7 @@ def primary_wearable(devices: list[dict] | None, unit_id: int | None) -> Primary
     """What the account's list (keys in lower case) says of its primary wearable, for the
     device `unit_id`: None when the list is not known, the device is not on it, or it cannot
     be one (primaryActivityTrackerSettingCapable not true, unless it is the one). Read only:
-    nothing is asked (analysis 14, stage 4)."""
+    nothing is asked."""
     entries = [e for e in devices or [] if isinstance(e, dict)]
     this = next((e for e in entries if unit_id is not None
                  and unit_id_of(e.get("unitid")) == unit_id), None)

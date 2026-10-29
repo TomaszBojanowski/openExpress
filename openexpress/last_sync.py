@@ -6,7 +6,7 @@ numbers at the end of `openexpress sync` and the notification of the background 
 caller puts a record into words itself.
 
 tests/test_last_sync_patterns.py checks it from the file to the screen on records of real
-syncs (tests/data/last_sync/): every change of the row comes with a new one (AGENTS.md)."""
+syncs (tests/data/last_sync/): every change of the row comes with a new one."""
 
 from __future__ import annotations
 

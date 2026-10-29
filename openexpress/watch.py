@@ -125,7 +125,7 @@ class Watcher(Gio.Application):
                 return service.open_session()
             except (SeveralDevices, MassStorageNotice):
                 # Nothing to wait for: syncing waits for a choice in the window, and a drive
-                # is never synced (P4).
+                # is never synced.
                 raise
             except DeviceError:
                 # Right after mounting, gvfs may not be ready yet.
@@ -172,11 +172,11 @@ class Watcher(Gio.Application):
         except service.SyncBusy:
             log.info("A sync is running in another process")
         except SeveralDevices:
-            # P4: nothing is synced and nothing shown; a device chosen in the window is.
+            # Nothing is synced and nothing shown; a device chosen in the window is.
             log.info("Not syncing: several devices are connected")
         except MassStorageNotice:
-            # P4 and D4: only a Garmin drive is there (the device plugged in went away before
-            # its sync started): nothing synced and nothing shown, as with several devices.
+            # Only a Garmin drive is there (the device plugged in went away before its sync
+            # started): nothing synced and nothing shown, as with several devices.
             log.info("Not syncing: only a device in mass storage mode is connected")
         except OwnershipError as e:
             log.info("Not syncing: %s", e)

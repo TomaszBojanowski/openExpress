@@ -564,7 +564,7 @@ def state_path(unit_id: int) -> Path:
 def synced_here(unit_id: int) -> bool:
     """Whether this installation has synced the device, or marked its files as uploaded
     (baseline): its state.json is there. Without it the device was never synced here, and
-    its first sync asks how to begin (analysis 14, a3: the one source of "never synced")."""
+    its first sync asks how to begin (the one source of "never synced")."""
     return state_path(unit_id).exists()
 
 
@@ -573,11 +573,11 @@ def synced_here(unit_id: int) -> bool:
 
 @dataclass(frozen=True)
 class ActivitiesToSync:
-    """The activities on a connected device that this installation has not uploaded yet
-    (PLAN T9, 24.10.2026): those its activity folder lists that state.json does not hold as
-    done, and the copies kept after a failed upload. Refused by Garmin and already in Connect
-    are done (as sync marks them), a failed upload is not. `count` None: the device was never
-    synced here (no state.json). The names listed stay in memory only, for again()."""
+    """The activities on a connected device that this installation has not uploaded yet:
+    those its activity folder lists that state.json does not hold as done, and the copies
+    kept after a failed upload. Refused by Garmin and already in Connect are done (as sync
+    marks them), a failed upload is not. `count` None: the device was never synced here (no
+    state.json). The names listed stay in memory only, for again()."""
 
     unit_id: int = field(repr=False)
     listed: frozenset[str] = field(default=frozenset(), repr=False)

@@ -193,7 +193,7 @@ def open_session(device_uri: str | None = None, storage: Storage | None = None,
 
 def drive_keys(usb) -> dict:
     """What a drive's entry keeps of its USB device (known_devices.seen): its USB product,
-    serial and the UUID of its volume, which tell it while it is not mounted (analysis 18);
+    serial and the UUID of its volume, which tell it while it is not mounted;
     nothing for a device that is not a drive (None)."""
     if usb is None:
         return {}
@@ -204,7 +204,7 @@ def drive_keys(usb) -> dict:
 
 def drive_keys_text(usb, unit_id) -> str:
     """For the log, without any of them: which of those keys a drive gives, and whether its
-    USB serial is its unit ID in hexadecimal (a fēnix 8's is, 26.10.2026)."""
+    USB serial is its unit ID in hexadecimal (a fēnix 8's is)."""
     serial = getattr(usb, "serial", None)
     try:
         is_unit = serial is not None and unit_id is not None and int(serial, 16) == unit_id
@@ -896,7 +896,8 @@ def describe_counts(data: dict) -> str:
     upload" when it had none; "nothing uploaded: <why>" when the upload did not take
     place; "upload skipped" when it was not looked at; "activities only: …" when only some
     data types were), and what came from Garmin Connect's queue to the device when there is
-    any: its files, and since 24.10.2026 TrueUp and the Connect IQ apps written too.
+    any: its files, TrueUp and the Connect IQ apps written (a record of an older version
+    counts only the files).
     The window shows it under "Last sync" after when it was; the command line and the
     notification put it before the details."""
     files, uploaded = _new_files(data), data.get("uploaded", 0)
@@ -1312,8 +1313,8 @@ def _install_queued_apps(s, messages, progress, errors,
 
     # A sync installs only what already waits in the queue (asked for by the phone, the store
     # or `apps install`, each with its own consent) and never asks the store for updates:
-    # nothing here needs the consent to new permissions (point 5). Should it ever update
-    # apps by itself, it must leave those with permissions_changed, as Garmin Express does.
+    # nothing here needs the consent to new permissions. Should it ever update apps by itself,
+    # it must leave those with permissions_changed, as Garmin Express does.
     try:
         known = {a.app_id: a for a in ciq.StoreApi(s.client).account_apps(
             s.device, language_tag(s.settings.locale))}
