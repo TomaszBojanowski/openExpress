@@ -1,0 +1,87 @@
+{
+ "version": 1,
+ "devices": {
+  "3000000001": {
+   "description": "fēnix 8",
+   "part_number": "006-B4532-00",
+   "software_version": "23.39",
+   "kind": "mtp",
+   "first_seen": 1000.0,
+   "last_seen": 2000.0,
+   "category": "watch",
+   "image_url": "https://res.garmin.com/en/products/010-02904-00/g/cf-lg.png",
+   "model_name": "fēnix 8, 47 mm, AMOLED",
+   "tile_facts": {
+    "update": {
+     "found": 1900.0,
+     "summary": {
+      "count": 1,
+      "title": "Map Region Grouping file",
+      "version": "2.31",
+      "is_system": false,
+      "software_version": "23.39"
+     },
+     "check": {
+      "at": 1900.0,
+      "software_version": "23.39",
+      "ready": false
+     }
+    },
+    "sync": {
+     "count": 3,
+     "at": 1950.0,
+     "state": "state-1"
+    },
+    "synced": {
+     "once": true,
+     "last": 1800.0,
+     "not_uploaded": false,
+     "at": 1970.0,
+     "state": "state-1"
+    },
+    "account": {
+     "on_account": true,
+     "primary": true,
+     "at": 1960.0,
+     "login": "login-1"
+    }
+   }
+  },
+  "3000000002": {
+   "description": "Varia RTL515",
+   "part_number": "006-B3596-00",
+   "software_version": "3.20",
+   "kind": "ums",
+   "first_seen": 1100.0,
+   "last_seen": 2100.0,
+   "category": "bike-accessory",
+   "usb_product": "0f1d",
+   "usb_serial": "MADE-UP-SERIAL-1",
+   "volume_uuid": "1234-ABCD",
+   "tile_facts": {
+    "update": {
+     "found": 2050.0,
+     "summary": {
+      "count": 2,
+      "software_version": "3.20"
+     },
+     "check": {
+      "at": 2050.0,
+      "software_version": "3.20",
+      "ready": true
+     }
+    }
+   }
+  },
+  "3000000003": {
+   "description": "EPIX",
+   "part_number": "006-B3943-00",
+   "software_version": "21.19",
+   "kind": "mtp",
+   "first_seen": 1200.0,
+   "last_seen": 1200.0,
+   "model_name": "epix (Gen 2)",
+   "tile_facts": {}
+  }
+ }
+}
