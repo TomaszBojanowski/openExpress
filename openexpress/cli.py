@@ -811,8 +811,8 @@ def cmd_backup(args) -> int:
                        "Dry run: about {count} files would be copied. Add --apply.",
                        n).format(count=n))
         return 0
-    res = run_backup(dev, st, dest, keep=args.keep,
-                     progress=(lambda p: print("  " + p)) if args.verbose else (lambda p: None))
+    with _progress() as progress:
+        res = run_backup(dev, st, dest, keep=args.keep, progress=progress)
     print(ngettext("Copied {count} file ({size}) to {path}",
                    "Copied {count} files ({size}) to {path}", res.files).format(
         count=res.files, size=_human(res.bytes), path=res.path))

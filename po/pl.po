@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 03:25+0100\n"
+"POT-Creation-Date: 2026-10-30 03:31+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -99,7 +99,7 @@ msgstr "Synchronizacja urządzenia z Garmin Connect po jego podłączeniu."
 msgid "systemctl was not found; background sync needs systemd."
 msgstr "Nie znaleziono systemctl; synchronizacja w tle wymaga systemd."
 
-#: openexpress/backup.py:74
+#: openexpress/backup.py:75
 #, python-brace-format
 msgid ""
 "Nothing was backed up: the device names a folder or file '{name}' that "
@@ -107,6 +107,11 @@ msgid ""
 msgstr ""
 "Nie zrobiono kopii zapasowej: urządzenie podaje folder lub plik '{name}', "
 "którego nie można użyć jako ścieżki na tym komputerze."
+
+#. TRANSLATORS: a step of a backup ("… · 120 of 1530")
+#: openexpress/backup.py:116
+msgid "Copying to the backup"
+msgstr "Kopiowanie do kopii zapasowej"
 
 #. TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
 #: openexpress/cache.py:32

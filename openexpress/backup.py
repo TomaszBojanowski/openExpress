@@ -19,6 +19,7 @@ from openexpress import applog, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import OUTPUT, GarminDevice
 from openexpress.i18n import _
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -93,12 +94,16 @@ def _out_path(target: Path, datatype: str, rel: str) -> Path:
 
 def _copy_files(device: GarminDevice, storage: Storage, target: Path,
                 progress: Callable[[str], None]) -> tuple[int, int]:
+    """`progress`: which file of how many ("Copying to the backup · 120 of 1530"), never its
+    name."""
     # Every data type checked before anything is written.
     for src in backup_files(device):
         if not paths.is_safe_component(src.datatype):
             raise _not_a_path(src.datatype)
     (target / "GarminDevice.xml").write_bytes(device.raw)
     count, total = 1, len(device.raw)
+    # All the files first, for how many there are; each path is checked before any is read.
+    files = []
     seen: set[str] = set()
     for src in backup_files(device):
         for path, entry in storage.walk_files(src.path):
@@ -106,12 +111,16 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
                 continue
             seen.add(path.casefold())
             rel = posixpath.relpath(path, storage.resolve(src.path) or src.path)
-            out = _out_path(target, src.datatype, rel)
-            out.parent.mkdir(parents=True, exist_ok=True)
-            progress(path)
-            out.write_bytes(storage.read(path))
-            count += 1
-            total += entry.size
+            files.append((path, entry, _out_path(target, src.datatype, rel)))
+    # TRANSLATORS: a step of a backup ("… · 120 of 1530")
+    head = _("Copying to the backup")
+    for n, (path, entry, out) in enumerate(files, 1):
+        progress(Step(head, n, len(files)))
+        log.debug("backup: copying %s", path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(storage.read(path))
+        count += 1
+        total += entry.size
     return count, total
 
 
