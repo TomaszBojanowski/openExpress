@@ -118,7 +118,7 @@ plug it back in ([more](docs/troubleshooting.md#kde-plasma-and-dolphin)).
    [garmin.com](https://www.garmin.com/en-US/software/express/windows/)) – also without
    Windows: openExpress only reads it. The installer for macOS does not work.
 3. Connect the watch. On its page, click **Choose Installer…** in the banner and select the
-   installer, then **Log In**.
+   installer, then **Log In**. No key needs to be created in Garmin Connect.
 4. Sync. The first sync asks whether to upload everything on the watch or new data only.
 5. To sync whenever the watch is connected, turn on **Sync automatically when connected** on
    its page.

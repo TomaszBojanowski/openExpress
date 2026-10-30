@@ -19,7 +19,7 @@ in the version from source it is `openexpress <command>`.
 | `openexpress upload-config [--json]` | what data is uploaded for this watch and where (Garmin server) |
 | `openexpress sync [--all] [--upload-only] [--download-only] [--type TYPE]… [--include-diagnostics] [--apply]` | uploads new FIT files to Connect, courses and workouts from Connect to the watch; `--all` uploads everything on the first sync, `--upload-only` and `--download-only` do one direction, `--type` (repeatable) uploads only the data types named (files from Garmin Connect are still written), `--include-diagnostics` also the device's diagnostics (see [Privacy and security](privacy.md#privacy-and-security)) |
 | `openexpress baseline [--apply]` | marks current files as already uploaded (first run) |
-| `openexpress backup [--dest DIR] [--keep N] [--apply]` | local backup of watch data (default `Garmin/Backups` in your Documents folder, or `--dest`; the newest 3 kept, or `--keep N`) |
+| `openexpress backup [--dest DIR] [--keep N] [--apply]` | local backup of watch data (default `Garmin/Backups` in your Documents folder, or `--dest`; the newest 3 kept, or `--keep N`); a FIT file the device was still writing when it was connected is left out, and the summary says so |
 | `openexpress cache [--clear] [--only maps,updates] [--apply]` | size of the cache by part (maps, updates, pictures, answers, temp) and clearing it (see [Cache](guide.md#cache)) |
 | `openexpress updates [--reinstalls]` | watch software updates (no login needed); `--reinstalls` also lists what can be installed again; a file the watch already has with the same size and MD5 is not counted as an update, only listed as "already on the device" |
 | `openexpress updates --install PART…\|all [--apply]` | download with MD5 check and copy to the watch; after it is unplugged the watch may ask whether to install the update now or later, then restart |
@@ -57,6 +57,11 @@ command fail at once instead.
 
 While a sync, a backup or a write is running, the window shows **Do not unplug the device**
 and the command-line tool prints the same warning when it starts such an operation.
+
+Long tasks (a sync, updates, maps, apps, music, a backup, diagnostic files) say how far they are
+in one line that updates in place, and the window in its bar at the bottom: what is done and to
+what (an update, a map, an app, a type of data), never a file name or a song, for example
+`Copying music · 3 of 25 · 120.0 MB of 1.2 GB`.
 
 ## Exit codes
 

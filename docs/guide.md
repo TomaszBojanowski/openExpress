@@ -63,7 +63,12 @@ Device page (or in Preferences) to sync whenever the watch is connected.
 With one Garmin device connected, the window opens on its page; otherwise on the start page
 (the picture at the top), which is also one step back from a device page: a tile for each
 Garmin device connected, for those seen before and, once you are logged in, for the other
-devices of your Garmin account; a tile opens its device. Up to two labels on a tile say
+devices of your Garmin account (by their product name, never one you gave them); a tile
+opens its device. A device with no picture yet shows the icon of its kind, smaller and dimmed
+(a watch, a cycling computer, a handheld, a bike light or radar, a heart rate strap, a scale, a
+blood pressure monitor, a speed or cadence sensor). The three buttons at the top of the main
+menu (☰) choose how the tiles are laid out: **Automatic** (tiles, or a list for a section of
+more than six devices), **Grid** or **List**. Up to two labels on a tile say
 what is waiting and what the device is: **Update available**, or **Unplug to install** (an
 update copied to the connected device, which installs it once unplugged; **Eject to install**
 for a USB drive), **To sync** (activities on the device not uploaded yet) or **Never synced**
@@ -82,7 +87,9 @@ device**, its **Primary wearable** (only for a device that can be one; **Set as 
 makes it this device, after a question). Its
 **Apps** and **Music** rows lead to their pages, as **Maps** does, and say how many there are
 once those pages have read them; **Backup** says when the last backup was made and how many
-there are (the folder in its tooltip).
+there are (the folder in its tooltip). A backup copies the device's files as they are; only a
+FIT file the device was still writing when it was connected (read cut short) is left out, and
+the backup then says to disconnect and reconnect the device and make it again.
 
 A device seen before and not connected opens read-only: what was known of it when it was
 last seen, its last sync with its details, what the last check of its updates found and
