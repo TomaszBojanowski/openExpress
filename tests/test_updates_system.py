@@ -1109,25 +1109,27 @@ def test_a_map_download_moves_one_bar_over_all_its_files(device_root, monkeypatc
     m = _map(400, 800)
     bar = []
     maps.install(m, [m], LocalStorage(device_root), lambda ident: {},
-                 download_progress=lambda done, total: bar.append((done, total)))
+                 progress=lambda step: bar.append((step.done, step.total))
+                 if getattr(step, "head", "").startswith("Downloading") else None)
     # The first file came from the cache: counted at once; the second in four steps.
     assert bar == [(400, 1200), (600, 1200), (800, 1200), (1000, 1200), (1200, 1200),
                    (1200, 1200)]
 
 
-def test_an_update_download_moves_one_bar_over_all_its_files(device_root, tmp_path,
-                                                             monkeypatch):
+def test_the_download_of_each_update_moves_forward_to_its_size(device_root, tmp_path,
+                                                                monkeypatch):
     fetch, _given = _fetch_in_steps()
     monkeypatch.setattr(download, "fetch", fetch)
     monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
     items = updates.parse_updates(lower_keys(server_answer()))
-    total = len(FONT) + len(BUNDLE)
-    bar = []
-    updates.install(items, LocalStorage(device_root),
-                    download_progress=lambda done, size: bar.append((done, size)))
-    assert all(size == total for _done, size in bar)
-    assert [done for done, _size in bar] == sorted(done for done, _size in bar)  # never back
-    assert bar[-1] == (total, total)
+    bars: dict[str, list] = {}
+    updates.install(items, LocalStorage(device_root), progress=lambda step: bars.setdefault(
+        step.head, []).append((step.done, step.total))
+        if getattr(step, "head", "").startswith("Downloading") else None)
+    assert sorted(bar[-1] for bar in bars.values()) == sorted(
+        [(len(FONT), len(FONT)), (len(BUNDLE), len(BUNDLE))])
+    for bar in bars.values():
+        assert [done for done, _size in bar] == sorted(done for done, _size in bar)  # never back
 
 
 def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypatch):
@@ -1182,7 +1184,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     assert len(calls["kw"]) == 2
     # Each tells its steps, the bar with them ("Downloading … · 1.2 MB of 3.4 MB").
     for kw in calls["kw"]:
-        assert kw["progress"] is win.progress and "download_progress" not in kw
+        assert kw["progress"] is win.progress
 
 
 # --- a failed copy keeps the old file -----------------------------------------------------------

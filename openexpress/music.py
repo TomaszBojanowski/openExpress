@@ -274,8 +274,8 @@ def copied_before_text(count: int) -> str:
                     count).format(count=count)
 
 
-def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] | None = None,
-         transfer_progress=None) -> list[str]:
+def copy(plan: CopyPlan, storage: Storage,
+         progress: Callable[[str], None] | None = None) -> list[str]:
     """`progress`: how many files and bytes, never a file nor a track - the names are the
     user's own ("Copying music · 3 of 25 · 120 MB of 1.2 GB")."""
     storage.require_space(plan.size, SPACE_MARGIN, error=MusicError)
@@ -288,12 +288,10 @@ def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] | Non
     for n, (t, dest) in enumerate(plan.to_copy, 1):
         def copied(done: int, total: int | None, _n=n, _before=before) -> None:
             say(Step(head, _n, count, bytes_done=_before + done, bytes_total=size))
-            if transfer_progress:
-                transfer_progress(done, total)
 
         # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
         # without -p in the Flatpak).
-        told = copied if progress is not None or transfer_progress is not None else None
+        told = copied if progress is not None else None
         say(Step(head, n, count, bytes_done=before, bytes_total=size))
         try:
             real = storage.write_file_checked(dest, t.local, told, error=MusicError)
@@ -380,11 +378,11 @@ def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
 
 
 def add_playlist(plan: PlaylistPlan, device: GarminDevice, storage: Storage,
-                 progress: Callable[[str], None] | None = None, transfer_progress=None) -> str:
+                 progress: Callable[[str], None] | None = None) -> str:
     """Copy the missing tracks, then write the playlist. Returns its device path."""
     if not plan.device_paths:
         raise MusicError(_("The playlist has no tracks that can be added."))
-    copy(plan.copy, storage, progress, transfer_progress)
+    copy(plan.copy, storage, progress)
     return write_playlist(device, storage, plan.name, plan.device_paths)
 
 

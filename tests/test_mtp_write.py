@@ -96,7 +96,7 @@ def test_a_copy_that_cannot_be_started_with_progress_keeps_the_old_file(device_r
     font = the_font(tmp_path, monkeypatch)
     old = old_font(device_root)
     with pytest.raises(DeviceError):
-        updates.install([font], gio(device_root), transfer_progress=lambda done, total: None)
+        updates.install([font], gio(device_root), progress=lambda message: None)
     assert old.read_bytes() == OLD
 
 
@@ -245,7 +245,7 @@ def test_with_the_progress_bar_no_progress_line_keeps_the_old_file(device_root, 
     font = the_font(tmp_path, monkeypatch)
     old = old_font(device_root)
     with pytest.raises(DeviceError):
-        updates.install([font], gio(device_root), transfer_progress=lambda done, total: None)
+        updates.install([font], gio(device_root), progress=lambda message: None)
     assert old.read_bytes() == OLD
 
 
@@ -259,7 +259,7 @@ def test_with_the_progress_bar_a_progress_line_is_evidence(device_root, tmp_path
     monkeypatch.setattr(gio_storage.subprocess, "Popen", popen_running(script))
     font = the_font(tmp_path, monkeypatch)
     with pytest.raises(DeviceError):
-        updates.install([font], gio(device_root), transfer_progress=lambda done, total: None)
+        updates.install([font], gio(device_root), progress=lambda message: None)
     assert not old.exists()
 
 

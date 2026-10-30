@@ -650,8 +650,6 @@ def _install(
     activate: Callable[[dict], dict],
     session=None,
     progress: Callable[[str], None] | None = None,
-    transfer_progress: Callable[[int, int], None] | None = None,
-    download_progress: Callable[[int, int | None], None] | None = None,
     url_salt: str | None = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> MapReport:
@@ -671,11 +669,9 @@ def _install(
 
     def downloaded(done: int, total: int | None) -> None:
         say(Step(downloading, done, total, in_bytes=True))
-        if download_progress:
-            download_progress(done, total)
 
-    listening = progress is not None or download_progress is not None
-    overall = download.Overall(m.size, downloaded) if listening else None
+    # One bar for all the files of the map.
+    overall = download.Overall(m.size, downloaded) if progress is not None else None
     for f in files:
         log.debug("map install: downloading %s (%s)", f.device_path, applog.size(f.size))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
@@ -719,12 +715,10 @@ def _install(
 
     def written(done: int, total: int | None) -> None:
         say(Step(copying, copied[0] + done, copy_total, in_bytes=True))
-        if transfer_progress:
-            transfer_progress(done, total)
 
     # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
     # without -p in the Flatpak).
-    told = written if progress is not None or transfer_progress is not None else None
+    told = written if progress is not None else None
     for f in files:
         log.debug("map install: copying %s", f.device_path)
         if f.device_path.casefold() not in shared:
@@ -753,27 +747,27 @@ def install(*args, **kwargs) -> MapReport:
         return _install(*args, **kwargs)
 
 
-def _write_checked(storage: Storage, f: MapFile, local: Path, transfer_progress,
+def _write_checked(storage: Storage, f: MapFile, local: Path, told,
                    keep: bool = False) -> str:
     """Writes one file and checks its size. What a failed write leaves is cleaned up by the
     storage itself, unless `keep` (a file other maps use: never deleted); a file of the
     wrong size is deleted here, unless `keep`."""
-    return storage.write_file_checked(f.device_path, local, transfer_progress,
+    return storage.write_file_checked(f.device_path, local, told,
                                       keep_partial=keep, error=MapError)
 
 
-def _write_shared(storage: Storage, f: MapFile, local: Path, transfer_progress,
+def _write_shared(storage: Storage, f: MapFile, local: Path, told,
                   users: list[str]) -> str:
     """A file other maps use too, installed or written and waiting to be taken in: deleting
     it after a failed write would break them, so the write is tried once more and the file
     is never deleted."""
     try:
-        return _write_checked(storage, f, local, transfer_progress, keep=True)
+        return _write_checked(storage, f, local, told, keep=True)
     except Exception as e:  # noqa: BLE001 - any failure gets the one retry
         log.warning("map install: writing a file other maps use failed, trying once more: %s",
                     e)
     try:
-        return _write_checked(storage, f, local, transfer_progress, keep=True)
+        return _write_checked(storage, f, local, told, keep=True)
     except Exception as e:
         raise MapError(_("Cannot write {path}, which other maps on the device also use "
                          "({maps}). Install the map again.")

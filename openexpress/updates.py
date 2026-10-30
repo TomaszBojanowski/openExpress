@@ -387,8 +387,6 @@ def _install(
     storage: Storage,
     session=None,
     progress: Callable[[str], None] | None = None,
-    transfer_progress: Callable[[int, int], None] | None = None,
-    download_progress: Callable[[int, int | None], None] | None = None,
 ) -> InstallReport:
     """`progress`: each update by its name, in bytes ("Downloading … · 1.2 MB of 3.4 MB",
     "Copying … to the device · …"); the files are the server's and the device's own."""
@@ -403,9 +401,6 @@ def _install(
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
     say = progress if progress is not None else (lambda _message: None)
-    # One bar for all the files.
-    overall = (download.Overall(sum(u.size or 0 for u in updates), download_progress)
-               if download_progress else None)
     for u in updates:
         if not u.url:
             raise UpdateError(_("{part}: the server did not provide a download URL")
@@ -414,18 +409,12 @@ def _install(
                   applog.size(u.size))
         # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
         downloading = _("Downloading {name}").format(name=u.title)
-        whole = overall.file() if overall else None
 
-        def downloaded(done: int, total: int | None, _head=downloading, _whole=whole) -> None:
+        def downloaded(done: int, total: int | None, _head=downloading) -> None:
             say(Step(_head, done, total, in_bytes=True))
-            if _whole:
-                _whole(done, total)
 
-        listening = progress is not None or overall is not None
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session,
-                               progress=downloaded if listening else None)
-        if overall:
-            overall.finished(u.size)
+                               progress=downloaded if progress is not None else None)
         got = local.stat().st_size
         say(Step(downloading, got, got, in_bytes=True))  # also when it came from the cache
         with open(local, "rb") as f:
@@ -444,12 +433,10 @@ def _install(
 
         def written(done: int, total: int | None, _head=copying) -> None:
             say(Step(_head, done, total, in_bytes=True))
-            if transfer_progress:
-                transfer_progress(done, total)
 
         # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
         # without -p in the Flatpak).
-        told = written if progress is not None or transfer_progress is not None else None
+        told = written if progress is not None else None
         _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,

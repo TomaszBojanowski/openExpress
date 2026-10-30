@@ -1201,7 +1201,8 @@ def test_update_files_report_their_progress(server, device_root, xdg):
     steps = []
     items = updates.select(updates.parse_updates(sw_response(server)), ["all"])
     rep = updates.install(items, ReportingStorage(device_root),
-                          transfer_progress=lambda done, total: steps.append((done, total)))
+                          progress=lambda step: steps.append((step.done, step.total))
+                          if getattr(step, "head", "").startswith("Copying") else None)
     assert len(rep.installed) == 2
     # Every file of the update gets the function, and the copy calls it.
     assert [name for name, _p in ReportingStorage.seen] == ["aux.gcd", "GUPDATE.GSP"]

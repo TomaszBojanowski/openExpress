@@ -237,7 +237,7 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
     return AddPlan(local, name, path, title, size, free)
 
 
-def add(plan: AddPlan, device: GarminDevice, storage: Storage, transfer_progress=None,
+def add(plan: AddPlan, device: GarminDevice, storage: Storage,
         progress: Callable[[str], None] | None = None) -> str:
     """Copy the map, check its size on the device and put it on the list of own maps.
     Returns the path written. When the copy fails, the incomplete file is removed: it can
@@ -245,14 +245,12 @@ def add(plan: AddPlan, device: GarminDevice, storage: Storage, transfer_progress
     the copy as steps, by the map's title ("Copying … to the device · 1.2 MB of 3.4 MB")."""
     if storage.resolve(plan.path) is not None:
         raise _taken(plan.name)  # it appeared since the plan was made
-    told = transfer_progress
+    told = None
     if progress is not None:
         head = _("Copying {name} to the device").format(name=plan.title or plan.name)
 
         def told(done: int, total: int | None) -> None:
             progress(Step(head, done, total, in_bytes=True))
-            if transfer_progress:
-                transfer_progress(done, total)
     try:
         real = storage.write_file(plan.path, plan.local, told)
         written = storage.size(plan.path)
