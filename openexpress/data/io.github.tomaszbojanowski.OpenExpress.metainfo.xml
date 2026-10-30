@@ -105,6 +105,43 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.12" date="2026-10-30">
+      <description>
+        <ul>
+          <li>Fewer requests to Garmin's servers: what the servers answer is kept for a while, as
+          Garmin Express does. Opening a device again, its pages, and a command run a moment
+          later no longer ask the same question again: the account's devices for 5 minutes,
+          software and map checks for an hour, a device's details for a week. Your account is
+          always asked anew before an upload or a change to it, and Refresh and Check Again
+          always ask. The answers kept on disk can be read only by you, signing out deletes those
+          of your account, and "openexpress cache --clear --only answers --apply" deletes them
+          all.</li>
+          <li>Calmer progress: software updates, Connect IQ apps, music, backups and diagnostic
+          files say what is done and how far, never a file name or a song: "Copying music · 3 of
+          25 · 120.0 MB of 1.2 GB". On the command line this is one line that updates in place,
+          and "openexpress backup" and "diagnostics --apply" show their progress too. During a
+          sync, TrueUp is shown like the other data, and its wait fits a narrow window ("TrueUp:
+          4 min 59 s…", the full sentence in the tooltip).</li>
+          <li>Backups: a FIT file the device was still writing when it was connected is left out
+          instead of being copied cut short, and the backup tells you to reconnect the device and
+          make it again. Every other file is copied as it is.</li>
+          <li>Start page menu: three buttons at the top of the main menu choose the view
+          (Automatic, Grid, List), with tooltips and names for screen readers. The other items
+          are grouped as in other GNOME apps.</li>
+          <li>Device icons: a device without a picture shows the icon of its kind, smaller and
+          dimmed. Heart rate straps, scales, blood pressure monitors and speed and cadence sensors
+          on your account have icons of their own.</li>
+          <li>Logging in before setup: until the Garmin Express installer is chosen, Preferences
+          offer Choose Installer… instead of Log In and explain why: openExpress signs in with the
+          application key of Garmin Express, read from its installer, so no key needs to be
+          created in Garmin Connect. Before, the sign-in opened and then failed with "OAuth1
+          consumer key is missing".</li>
+          <li>Smaller fixes: devices on your account are named by their product name, never by a
+          name you gave them; a window started without a device no longer logs a failed task; the
+          progress of a backup counts every file.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.11" date="2026-10-30">
       <description>
         <ul>
