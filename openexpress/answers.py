@@ -176,6 +176,9 @@ def _tell(source: str) -> None:
         listening.source = source
 
 
+_MISSING = object()  # nothing kept: an answer itself may be None (no country, an empty body)
+
+
 class _Flight:
     """A request under way: the others asking the same wait for its answer."""
 
@@ -208,7 +211,7 @@ class Answers:
             with self._lock:
                 if not fresh:
                     hit = self._fresh(kind, full)
-                    if hit is not None:
+                    if hit is not _MISSING:
                         return copy.deepcopy(hit)
                 flight = self._flying.get(full)
                 mine = flight is None
@@ -242,7 +245,7 @@ class Answers:
         return copy.deepcopy(value)
 
     def _fresh(self, kind: str, full: tuple):
-        """A kept answer still fresh (in memory, else on disk), or None. Under the lock."""
+        """A kept answer still fresh (in memory, else on disk), or _MISSING. Under the lock."""
         now = self.clock()
         kept = self._kept.get(full)
         if kept is not None and now - kept[0] < LIFETIMES[kind]:
@@ -257,7 +260,7 @@ class Answers:
                 log.debug("answers: %s from disk, %.0f s old", kind, now - at)
                 _tell(f"from disk, {now - at:.0f} s old")
                 return value
-        return None
+        return _MISSING
 
     def forget(self, kinds: Iterable[str] | str | None = None, about=None) -> None:
         """Forget the answers of these kinds (all: None), only those about `about` (a unit ID,
@@ -325,7 +328,9 @@ class Disk:
             data = json.loads(self._path(full).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
-        at = data.get("at") if isinstance(data, dict) else None
+        if not isinstance(data, dict):  # a file changed by hand: none
+            return None
+        at = data.get("at")
         if data.get("kind") != kind or not isinstance(at, (int, float)) \
                 or not 0 <= now - at < LIFETIMES[kind]:
             return None

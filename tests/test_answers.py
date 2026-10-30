@@ -196,3 +196,32 @@ def test_every_kind_has_a_lifetime():
 
 def test_the_tests_start_with_nothing_kept():
     assert answers.ANSWERS._kept == {} and answers.ANSWERS.disk is None
+
+
+def test_an_answer_of_none_is_kept_too(kept, caplog):
+    """No country on the account, an empty answer of the store: kept as any answer, and the
+    log says "from memory" only when the answer kept is taken."""
+    import logging
+
+    store, clock = kept
+    asked = []
+    with caplog.at_level(logging.DEBUG, logger="openexpress.answers"):
+        for _ in range(3):
+            assert store.ask(answers.ACCOUNT_COUNTRY, ("k",), lambda: asked.append(1)) is None
+        clock.now += answers.LIFETIMES[answers.ACCOUNT_COUNTRY] + 1
+        store.ask(answers.ACCOUNT_COUNTRY, ("k",), lambda: asked.append(1))
+    assert len(asked) == 2
+    assert sum("from memory" in m for m in caplog.messages) == 2
+
+
+@pytest.mark.parametrize("written", ["[]", "1", '"text"', "null"])
+def test_a_file_on_disk_that_is_no_object_is_no_answer(tmp_path, kept, written):
+    """A file of the cache changed by hand: taken for none, asked anew, written again."""
+    store, _clock = kept
+    store.disk = Disk(tmp_path)
+    full = (SOFTWARE_UPDATES, "k")
+    tmp_path.mkdir(exist_ok=True)
+    store.disk._path(full).write_text(written)
+    assert store.disk.get(SOFTWARE_UPDATES, full, 1_800_000_000.0) is None
+    assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"updates": []}) == {"updates": []}
+    assert json.loads(store.disk._path(full).read_text())["kind"] == SOFTWARE_UPDATES
