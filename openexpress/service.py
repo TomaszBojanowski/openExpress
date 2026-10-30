@@ -324,7 +324,7 @@ def require_account_device(client: GarminClient, unit_id: int,
     verified = None
     try:
         try:
-            devices = client.account_devices(fresh=True) if fresh else client.account_devices()
+            devices = client.account_devices(fresh=fresh)
         except (Unauthorized, ClockSkew):
             raise  # an expired login or a wrong clock as such: the user gets the usual advice
         except ApiError as e:
@@ -478,15 +478,16 @@ class PrimaryTrainingError(UserFacingError):
 
 
 def primary_training_status(client: GarminClient, device: GarminDevice,
-                            devices: list[dict] | None = None) -> PrimaryTraining:
+                            devices: list[dict] | None = None,
+                            fresh: bool = False) -> PrimaryTraining:
     """Read which device is the primary training device. Changes nothing on the account.
 
     Without `devices` (the account's device list from an ownership check that was just
-    made) the ownership check is run here.
+    made) the ownership check is run here. `fresh`: what the account says now, nothing kept.
     """
     if devices is None:
-        devices = require_account_device(client, device.unit_id)
-    raw = client.primary_training_device().get("deviceid")
+        devices = require_account_device(client, device.unit_id, fresh=fresh)
+    raw = client.primary_training_device(fresh=fresh).get("deviceid")
     unit_id = unit_id_of(raw)
     if unit_id is None and raw not in (None, 0, "0", ""):
         raise ApiError(_("{what}: unexpected response from the server").format(
@@ -511,7 +512,8 @@ def set_primary_training(client: GarminClient, device: GarminDevice,
         client, device, apply, status=primary_training_status,
         write=client.set_primary_training_device,
         # The setting has its own address: read back with the list of the check.
-        read_back=lambda devices: (primary_training_status(client, device, devices), devices),
+        read_back=lambda devices: (
+            primary_training_status(client, device, devices, fresh=True), devices),
         error=PrimaryTrainingError,
         cannot=_("{device} cannot be a primary training device."),
         not_known=_("Could not tell whether {device} can be a primary training device. "
@@ -542,11 +544,13 @@ class PrimaryWearableError(UserFacingError):
 
 
 def primary_wearable_status(client: GarminClient, device: GarminDevice,
-                            devices: list[dict] | None = None) -> WearableStatus:
+                            devices: list[dict] | None = None,
+                            fresh: bool = False) -> WearableStatus:
     """Which device is the primary wearable, from the account's device list (the ownership
-    check is run here without `devices`). Changes nothing on the account."""
+    check is run here without `devices`; `fresh`: the list asked anew). Changes nothing on
+    the account."""
     if devices is None:
-        devices = require_account_device(client, device.unit_id)
+        devices = require_account_device(client, device.unit_id, fresh=fresh)
     this, primary = wearable_entries(devices, device.unit_id)
     capable = this.get("primaryactivitytrackersettingcapable") if this is not None else None
     return WearableStatus(primary is not None, model_name(primary) if primary else "",
@@ -587,8 +591,7 @@ def _change_primary(client: GarminClient, device: GarminDevice, apply: bool, *, 
     the account's list as it is now."""
     # A change is decided on what the account says now: nothing kept is used (answers).
     devices = require_account_device(client, device.unit_id, fresh=True)
-    answers.ANSWERS.forget(answers.PRIMARY_TRAINING)
-    before = status(client, device, devices)
+    before = status(client, device, devices, fresh=True)
     if before.is_this_device:
         return before, devices
     if before.capable is False:

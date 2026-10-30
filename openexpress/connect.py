@@ -586,10 +586,11 @@ class GarminClient:
         return answers.ANSWERS.ask(answers.ACCOUNT_COUNTRY, self._account_scope(), ask,
                                    fresh=fresh)
 
-    def primary_training_device(self) -> dict:
+    def primary_training_device(self, fresh: bool = False) -> dict:
         """The account's primary training device setting: {"deviceid": unit ID}; {} if unset.
 
-        Read-only. The request names no device, so any verified device is enough.
+        Read-only. The request names no device, so any verified device is enough. Kept for a
+        while (answers.LIFETIMES); `fresh`: asked anew (before and after a change of it).
         """
         self.require_verified()
 
@@ -607,8 +608,8 @@ class GarminClient:
                                .format(what=what))
             return body
 
-        # Kept for a while (answers); a change of it forgets it (service._change_primary).
-        return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self._account_scope(), ask)
+        return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self._account_scope(), ask,
+                                   fresh=fresh)
 
     def set_primary_training_device(self, unit_id: int) -> None:
         """Make this device the account's primary training device. Changes the account.
