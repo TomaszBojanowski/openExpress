@@ -5492,12 +5492,15 @@ def test_a_tile_clicked_right_after_the_start_opens_its_device(start_window, mon
 
 def login_finished(win, monkeypatch):
     """The login window gives a ticket and the login task finishes (the exchange of the
-    ticket stands in: nothing leaves the test)."""
+    ticket stands in: nothing leaves the test). The application key is saved (a made-up one):
+    without it the window asks for the installer instead."""
     from gi.repository import GLib
 
+    from openexpress import settings
     from openexpress.auth import sso
     from openexpress.gui.app import MainWindow
 
+    settings.save_consumer(settings.Consumer("made-up-key", "made-up-secret"))
     tickets = []
     monkeypatch.setattr(sso, "create_login_window",
                         lambda settings, on_ticket, **kw: (tickets.append(on_ticket),

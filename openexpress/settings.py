@@ -166,8 +166,9 @@ def load_consumer() -> Consumer:
     if not path.exists():
         raise SetupError(_(
             "openExpress is not set up yet. It needs the Garmin Express installer for Windows "
-            "(GarminExpress.exe, a free download from garmin.com), and only reads it. First "
-            "run: openexpress setup --from-installer /path/to/GarminExpress.exe"
+            "(GarminExpress.exe, a free download from garmin.com), and only reads it: it takes "
+            "Garmin Express's application key from it, so no key needs to be created in Garmin "
+            "Connect. First run: openexpress setup --from-installer /path/to/GarminExpress.exe"
         ))
     try:
         data = json.loads(path.read_text())
@@ -177,6 +178,16 @@ def load_consumer() -> Consumer:
             "The saved client key in {path} is damaged. Run again: "
             "openexpress setup --from-installer /path/to/GarminExpress.exe"
         ).format(path=path)) from e
+
+
+def has_consumer() -> bool:
+    """Whether the application key is saved and readable (setup --from-installer, or the
+    installer chosen in the window): logging in needs it."""
+    try:
+        load_consumer()
+    except SetupError:
+        return False
+    return True
 
 
 def save_consumer(consumer: Consumer) -> None:

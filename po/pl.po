@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 19:48+0100\n"
+"POT-Creation-Date: 2026-10-30 19:59+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1011,7 +1011,7 @@ msgstr ""
 "Plik logu: {path} (dodaj --log, żeby wypisać jego ostatnie linie do pola "
 "„Log” formularza albo do komentarza)"
 
-#: openexpress/cli.py:341 openexpress/gui/preferences.py:115
+#: openexpress/cli.py:341 openexpress/gui/preferences.py:125
 #, python-brace-format
 msgid "{count} file"
 msgid_plural "{count} files"
@@ -1164,7 +1164,7 @@ msgstr "Pamięć podręczna: {path}"
 msgid "Total: {size}"
 msgstr "Razem: {size}"
 
-#: openexpress/cli.py:552 openexpress/gui/preferences.py:173
+#: openexpress/cli.py:552 openexpress/gui/preferences.py:183
 #, python-brace-format
 msgid "Freed {size}."
 msgstr "Zwolniono {size}."
@@ -2827,15 +2827,21 @@ msgstr "Błąd sieci: nie można połączyć się z serwerem Garmin ({error})"
 msgid "Interrupted."
 msgstr "Przerwano."
 
-#: openexpress/connect.py:142
-msgid "OAuth1 consumer key is missing (openexpress setup)."
-msgstr "Brak klucza konsumenta OAuth1 (openexpress setup)."
+#: openexpress/connect.py:150
+msgid ""
+"openExpress has no application key yet: first choose the Garmin Express "
+"installer for Windows (in the window: Preferences, Setup; on the command "
+"line: openexpress setup --from-installer GarminExpress.exe)."
+msgstr ""
+"openExpress nie ma jeszcze klucza aplikacji: najpierw wskaż instalator "
+"Garmin Express dla Windows (w oknie: Preferencje, Konfiguracja; w wierszu "
+"poleceń: openexpress setup --from-installer GarminExpress.exe)."
 
-#: openexpress/connect.py:146
+#: openexpress/connect.py:156
 msgid "Connect token is missing (openexpress login)."
 msgstr "Brak tokenu Connect (openexpress login)."
 
-#: openexpress/connect.py:159
+#: openexpress/connect.py:169
 msgid ""
 "Internal error: this device was not checked against your Garmin account. "
 "Nothing was transferred."
@@ -2843,109 +2849,109 @@ msgstr ""
 "Błąd wewnętrzny: nie sprawdzono, czy to urządzenie należy do tego konta "
 "Garmin. Niczego nie przesłano."
 
-#: openexpress/connect.py:190
+#: openexpress/connect.py:200
 #, python-brace-format
 msgid "{what}: network error ({error})"
 msgstr "{what}: błąd sieci ({error})"
 
-#: openexpress/connect.py:206 openexpress/connect.py:320
-#: openexpress/connect.py:527 openexpress/connect.py:546
-#: openexpress/connect.py:559 openexpress/connect.py:596
-#: openexpress/connect.py:633 openexpress/maps.py:324
+#: openexpress/connect.py:216 openexpress/connect.py:330
+#: openexpress/connect.py:537 openexpress/connect.py:556
+#: openexpress/connect.py:569 openexpress/connect.py:606
+#: openexpress/connect.py:643 openexpress/maps.py:324
 #: openexpress/service.py:507
 #, python-brace-format
 msgid "{what}: unexpected response from the server"
 msgstr "{what}: nieoczekiwana odpowiedź serwera"
 
-#: openexpress/connect.py:216
+#: openexpress/connect.py:226
 #, python-brace-format
 msgid "{action}: computer clock is off from the server by {minutes} min"
 msgstr "{action}: zegar komputera różni się od serwera o {minutes} min"
 
-#: openexpress/connect.py:221
+#: openexpress/connect.py:231
 #, python-brace-format
 msgid "{action}: unauthorized (HTTP {status}). Please log in again."
 msgstr "{action}: brak autoryzacji (HTTP {status}). Zaloguj się ponownie."
 
-#: openexpress/connect.py:264
+#: openexpress/connect.py:274
 msgid "Ticket exchange"
 msgstr "Wymiana biletu"
 
-#: openexpress/connect.py:270
+#: openexpress/connect.py:280
 msgid "Ticket exchange: no oauth_token in the response"
 msgstr "Wymiana biletu: brak oauth_token w odpowiedzi"
 
 #. TRANSLATORS: name of a server request, shown before an error
-#: openexpress/connect.py:275
+#: openexpress/connect.py:285
 msgid "Profile"
 msgstr "Profil"
 
-#: openexpress/connect.py:289
+#: openexpress/connect.py:299
 msgid "Upload configuration"
 msgstr "Konfiguracja wysyłania"
 
-#: openexpress/connect.py:306
+#: openexpress/connect.py:316
 msgid "Duplicate check"
 msgstr "Sprawdzanie duplikatów"
 
 #. TRANSLATORS: name of a server request (file upload), shown before an error
-#: openexpress/connect.py:348
+#: openexpress/connect.py:358
 msgid "Upload"
 msgstr "Wysyłanie"
 
-#: openexpress/connect.py:421 openexpress/connect.py:507
+#: openexpress/connect.py:431 openexpress/connect.py:517
 msgid "Device info"
 msgstr "Informacje o urządzeniu"
 
-#: openexpress/connect.py:443
+#: openexpress/connect.py:453
 msgid "Software update check"
 msgstr "Sprawdzanie aktualizacji oprogramowania"
 
-#: openexpress/connect.py:465 openexpress/maps.py:325
+#: openexpress/connect.py:475 openexpress/maps.py:325
 msgid "Map check"
 msgstr "Sprawdzanie map"
 
-#: openexpress/connect.py:484
+#: openexpress/connect.py:494
 msgid "Map activation"
 msgstr "Aktywacja mapy"
 
-#: openexpress/connect.py:523
+#: openexpress/connect.py:533
 msgid "Account device list"
 msgstr "Lista urządzeń konta"
 
-#: openexpress/connect.py:540
+#: openexpress/connect.py:550
 msgid "Upload consent"
 msgstr "Zgoda na przesyłanie danych"
 
-#: openexpress/connect.py:553
+#: openexpress/connect.py:563
 msgid "Device sync setting"
 msgstr "Ustawienie synchronizacji urządzeń"
 
-#: openexpress/connect.py:568
+#: openexpress/connect.py:578
 msgid "Account location"
 msgstr "Kraj konta"
 
-#: openexpress/connect.py:587 openexpress/connect.py:609
+#: openexpress/connect.py:597 openexpress/connect.py:619
 #: openexpress/gui/device_page.py:998 openexpress/service.py:508
 msgid "Primary training device"
 msgstr "Podstawowe urządzenie treningowe"
 
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
-#: openexpress/connect.py:619 openexpress/gui/device_page.py:301
+#: openexpress/connect.py:629 openexpress/gui/device_page.py:301
 #: openexpress/gui/start_window.py:274
 msgid "Primary wearable"
 msgstr "Podstawowe urządzenie typu wearable"
 
-#: openexpress/connect.py:624
+#: openexpress/connect.py:634
 msgid "Connect file queue"
 msgstr "Kolejka plików Connect"
 
-#: openexpress/connect.py:641
+#: openexpress/connect.py:651
 msgid "Downloading file from Connect"
 msgstr "Pobieranie pliku z Connect"
 
-#: openexpress/connect.py:656
+#: openexpress/connect.py:666
 msgid "Receipt acknowledgement"
 msgstr "Potwierdzenie odbioru"
 
@@ -3459,11 +3465,11 @@ msgstr "Muzyka"
 msgid "Reading music on the device…"
 msgstr "Odczytywanie muzyki na urządzeniu…"
 
-#: openexpress/gui/app.py:255 openexpress/gui/preferences.py:230
+#: openexpress/gui/app.py:255 openexpress/gui/preferences.py:240
 msgid "Preferences"
 msgstr "Preferencje"
 
-#: openexpress/gui/app.py:257 openexpress/gui/preferences.py:231
+#: openexpress/gui/app.py:257 openexpress/gui/preferences.py:241
 msgid "Keyboard Shortcuts"
 msgstr "Skróty klawiszowe"
 
@@ -3480,13 +3486,13 @@ msgid "Main Menu"
 msgstr "Menu główne"
 
 #: openexpress/gui/app.py:302 openexpress/gui/app.py:361
-#: openexpress/gui/preferences.py:229
+#: openexpress/gui/preferences.py:239
 msgid "Refresh"
 msgstr "Odśwież"
 
 #. TRANSLATORS: button that starts syncing
 #: openexpress/gui/app.py:305 openexpress/gui/app.py:309
-#: openexpress/gui/app.py:423 openexpress/gui/preferences.py:229
+#: openexpress/gui/app.py:423 openexpress/gui/preferences.py:239
 #: openexpress/gui/start.py:628
 msgid "Sync"
 msgstr "Synchronizuj"
@@ -4148,11 +4154,12 @@ msgstr ""
 "Jednorazowa konfiguracja: wybierz instalator Garmin Express dla Windows "
 "(GarminExpress.exe z garmin.com). openExpress tylko go odczytuje."
 
-#: openexpress/gui/device_page.py:773
+#: openexpress/gui/device_page.py:773 openexpress/gui/preferences.py:103
+#: openexpress/gui/preferences.py:512
 msgid "Choose Installer…"
 msgstr "Wybierz instalator…"
 
-#: openexpress/gui/device_page.py:778 openexpress/gui/preferences.py:96
+#: openexpress/gui/device_page.py:778 openexpress/gui/preferences.py:106
 msgid "Log In"
 msgstr "Zaloguj się"
 
@@ -4165,7 +4172,7 @@ msgstr "Pamięć"
 msgid "Device storage"
 msgstr "Pamięć urządzenia"
 
-#: openexpress/gui/device_page.py:935 openexpress/gui/preferences.py:302
+#: openexpress/gui/device_page.py:935 openexpress/gui/preferences.py:312
 #: openexpress/gui/start.py:653
 msgid "Sync with Garmin Connect"
 msgstr "Synchronizacja z Garmin Connect"
@@ -4190,12 +4197,12 @@ msgstr "Oprogramowanie urządzenia"
 msgid "Apps and music"
 msgstr "Aplikacje i muzyka"
 
-#: openexpress/gui/device_page.py:991 openexpress/gui/preferences.py:367
+#: openexpress/gui/device_page.py:991 openexpress/gui/preferences.py:377
 #: openexpress/gui/start.py:661
 msgid "Garmin Connect account"
 msgstr "Konto Garmin Connect"
 
-#: openexpress/gui/device_page.py:994 openexpress/gui/preferences.py:99
+#: openexpress/gui/device_page.py:994 openexpress/gui/preferences.py:109
 msgid "Log out"
 msgstr "Wyloguj"
 
@@ -4754,38 +4761,48 @@ msgstr ""
 "zgasnąć; gdy się skończy, dioda mignie na zielono i zaświeci się główne "
 "światło."
 
-#: openexpress/gui/preferences.py:49 openexpress/gui/preferences.py:64
+#: openexpress/gui/preferences.py:50 openexpress/gui/preferences.py:65
 msgid "Diagnostics"
 msgstr "Diagnostyka"
 
-#: openexpress/gui/preferences.py:50
+#: openexpress/gui/preferences.py:51
 msgid "Keep a copy of the device's diagnostic files on this computer"
 msgstr "Przechowuj kopię plików diagnostycznych urządzenia na tym komputerze"
 
-#: openexpress/gui/preferences.py:51
+#: openexpress/gui/preferences.py:52
 msgid "They stay on this computer; openExpress never sends them"
 msgstr "Zostają na tym komputerze; openExpress nigdy ich nie wysyła"
 
-#: openexpress/gui/preferences.py:95
+#: openexpress/gui/preferences.py:98 openexpress/gui/preferences.py:105
 msgid "Not logged in"
 msgstr "Nie zalogowano"
 
-#: openexpress/gui/preferences.py:105
+#. TRANSLATORS: under "Not logged in" in the preferences, before the installer is
+#. chosen (the button beside it: Choose Installer…)
+#: openexpress/gui/preferences.py:101
+msgid ""
+"First choose the Garmin Express installer for Windows: openExpress reads the "
+"application key from it"
+msgstr ""
+"Najpierw wskaż instalator Garmin Express dla Windows: openExpress odczyta "
+"z niego klucz aplikacji"
+
+#: openexpress/gui/preferences.py:115
 msgid "Clear the downloaded maps?"
 msgstr "Wyczyścić pobrane mapy?"
 
-#: openexpress/gui/preferences.py:106
+#: openexpress/gui/preferences.py:116
 #, python-brace-format
 msgid ""
 "This deletes the downloaded maps ({size}). They will have to be downloaded "
 "again."
 msgstr "Usunie to pobrane mapy ({size}). Trzeba je będzie pobrać od nowa."
 
-#: openexpress/gui/preferences.py:108
+#: openexpress/gui/preferences.py:118
 msgid "Clear the downloaded updates?"
 msgstr "Wyczyścić pobrane aktualizacje?"
 
-#: openexpress/gui/preferences.py:109
+#: openexpress/gui/preferences.py:119
 #, python-brace-format
 msgid ""
 "This deletes the downloaded software updates ({size}). They are downloaded "
@@ -4795,51 +4812,51 @@ msgstr ""
 "zostaną pobrane od nowa."
 
 #. TRANSLATORS: button that clears the cache
-#: openexpress/gui/preferences.py:160
+#: openexpress/gui/preferences.py:170
 msgid "Clear"
 msgstr "Wyczyść"
 
-#: openexpress/gui/preferences.py:177
+#: openexpress/gui/preferences.py:187
 msgid "The cache was not cleared"
 msgstr "Nie wyczyszczono pamięci podręcznej"
 
-#: openexpress/gui/preferences.py:181
+#: openexpress/gui/preferences.py:191
 msgid "Clearing the cache…"
 msgstr "Czyszczenie pamięci podręcznej…"
 
-#: openexpress/gui/preferences.py:231
+#: openexpress/gui/preferences.py:241
 msgid "Quit"
 msgstr "Zakończ"
 
-#: openexpress/gui/preferences.py:253
+#: openexpress/gui/preferences.py:263
 msgid "Background sync enabled"
 msgstr "Włączono synchronizację w tle"
 
-#: openexpress/gui/preferences.py:254
+#: openexpress/gui/preferences.py:264
 msgid "Background sync disabled"
 msgstr "Wyłączono synchronizację w tle"
 
-#: openexpress/gui/preferences.py:258
+#: openexpress/gui/preferences.py:268
 msgid "Background sync"
 msgstr "Synchronizacja w tle"
 
-#: openexpress/gui/preferences.py:258
+#: openexpress/gui/preferences.py:268
 msgid "The change failed."
 msgstr "Nie udało się wprowadzić zmiany."
 
-#: openexpress/gui/preferences.py:271
+#: openexpress/gui/preferences.py:281
 msgid "Sync automatically when connected"
 msgstr "Synchronizuj automatycznie po podłączeniu"
 
-#: openexpress/gui/preferences.py:293 openexpress/gui/preferences.py:445
+#: openexpress/gui/preferences.py:303 openexpress/gui/preferences.py:458
 msgid "General"
 msgstr "Ogólne"
 
-#: openexpress/gui/preferences.py:304
+#: openexpress/gui/preferences.py:314
 msgid "Sync in the background"
 msgstr "Synchronizacja w tle"
 
-#: openexpress/gui/preferences.py:305
+#: openexpress/gui/preferences.py:315
 msgid ""
 "Starts at login and syncs whenever the device is connected, also when this "
 "window is closed"
@@ -4847,31 +4864,31 @@ msgstr ""
 "Uruchamia się po zalogowaniu i synchronizuje po każdym podłączeniu "
 "urządzenia, także gdy to okno jest zamknięte"
 
-#: openexpress/gui/preferences.py:326 openexpress/gui/preferences.py:340
+#: openexpress/gui/preferences.py:336 openexpress/gui/preferences.py:350
 msgid "Language"
 msgstr "Język"
 
-#: openexpress/gui/preferences.py:328
+#: openexpress/gui/preferences.py:338
 msgid "System default"
 msgstr "Domyślny systemu"
 
-#: openexpress/gui/preferences.py:330
+#: openexpress/gui/preferences.py:340
 msgid "Interface language"
 msgstr "Język interfejsu"
 
-#: openexpress/gui/preferences.py:345
+#: openexpress/gui/preferences.py:355
 msgid "Restart the application to change the language"
 msgstr "Uruchom ponownie aplikację, aby zmienić język"
 
-#: openexpress/gui/preferences.py:351
+#: openexpress/gui/preferences.py:361
 msgid "Setup"
 msgstr "Konfiguracja"
 
-#: openexpress/gui/preferences.py:353
+#: openexpress/gui/preferences.py:363
 msgid "Garmin Express installer for Windows"
 msgstr "Instalator Garmin Express dla Windows"
 
-#: openexpress/gui/preferences.py:354
+#: openexpress/gui/preferences.py:364
 msgid ""
 "GarminExpress.exe from garmin.com: the application key is read from it "
 "again, nothing is installed"
@@ -4879,27 +4896,27 @@ msgstr ""
 "GarminExpress.exe z garmin.com: klucz aplikacji jest z niego odczytywany "
 "ponownie, nic nie jest instalowane"
 
-#: openexpress/gui/preferences.py:356
+#: openexpress/gui/preferences.py:366
 msgid "Choose File…"
 msgstr "Wybierz plik…"
 
-#: openexpress/gui/preferences.py:388
+#: openexpress/gui/preferences.py:401
 msgid "Flatpak"
 msgstr "Flatpak"
 
-#: openexpress/gui/preferences.py:388
+#: openexpress/gui/preferences.py:401
 msgid "version from source"
 msgstr "wersja ze źródeł"
 
 #. TRANSLATORS: group in the preferences: the cache (downloaded maps and updates,
 #. pictures, temporary files) on the disk of the computer (not the device's storage of
 #. the device page)
-#: openexpress/gui/preferences.py:392
+#: openexpress/gui/preferences.py:405
 msgctxt "preferences"
 msgid "Storage"
 msgstr "Miejsce na dysku"
 
-#: openexpress/gui/preferences.py:393
+#: openexpress/gui/preferences.py:406
 #, python-brace-format
 msgid ""
 "Only the files of this installation ({kind}); openExpress downloads them "
@@ -4908,25 +4925,25 @@ msgstr ""
 "Tylko pliki tej instalacji ({kind}); w razie potrzeby openExpress pobierze "
 "je od nowa"
 
-#: openexpress/gui/preferences.py:397 openexpress/gui/preferences.py:408
+#: openexpress/gui/preferences.py:410 openexpress/gui/preferences.py:421
 msgid "Counting…"
 msgstr "Liczenie…"
 
-#: openexpress/gui/preferences.py:399
+#: openexpress/gui/preferences.py:412
 msgid "Delete these files"
 msgstr "Usuń te pliki"
 
 #. TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
-#: openexpress/gui/preferences.py:408
+#: openexpress/gui/preferences.py:421
 msgid "All of the cache"
 msgstr "Cała pamięć podręczna"
 
 #. TRANSLATORS: button that clears every part of the cache
-#: openexpress/gui/preferences.py:410
+#: openexpress/gui/preferences.py:423
 msgid "Clear All…"
 msgstr "Wyczyść wszystko…"
 
-#: openexpress/gui/preferences.py:432
+#: openexpress/gui/preferences.py:445
 #, python-brace-format
 msgid ""
 "This deletes the downloaded maps ({maps}) and the other files of the cache "
@@ -4937,7 +4954,7 @@ msgstr ""
 "Mapy trzeba będzie pobrać od nowa. Zdjęcia urządzeń zapamiętanych przez "
 "openExpress zostają."
 
-#: openexpress/gui/preferences.py:437
+#: openexpress/gui/preferences.py:450
 #, python-brace-format
 msgid ""
 "This deletes the files of the cache ({size}). They are downloaded again when "
@@ -4946,40 +4963,56 @@ msgstr ""
 "Usunie to pliki pamięci podręcznej ({size}). W razie potrzeby zostaną "
 "pobrane od nowa. Zdjęcia urządzeń zapamiętanych przez openExpress zostają."
 
-#: openexpress/gui/preferences.py:440
+#: openexpress/gui/preferences.py:453
 msgid "Clear the cache?"
 msgstr "Wyczyścić pamięć podręczną?"
 
-#: openexpress/gui/preferences.py:453
+#: openexpress/gui/preferences.py:466
 msgid "Select the Garmin Express installer for Windows (GarminExpress.exe)"
 msgstr "Wybierz instalator Garmin Express dla Windows (GarminExpress.exe)"
 
-#: openexpress/gui/preferences.py:473
+#: openexpress/gui/preferences.py:486
 msgid "Choose a file stored on this computer"
 msgstr "Wybierz plik zapisany na tym komputerze"
 
-#: openexpress/gui/preferences.py:479
+#: openexpress/gui/preferences.py:492
 msgid "Application key saved"
 msgstr "Zapisano klucz aplikacji"
 
-#: openexpress/gui/preferences.py:482
+#: openexpress/gui/preferences.py:495
 msgid "Reading the installer…"
 msgstr "Odczytywanie instalatora…"
 
-#: openexpress/gui/preferences.py:511
+#: openexpress/gui/preferences.py:506
+msgid "Choose the Garmin Express installer first"
+msgstr "Najpierw wskaż instalator Garmin Express"
+
+#: openexpress/gui/preferences.py:507
+msgid ""
+"openExpress signs in to Garmin Connect with the application key of Garmin "
+"Express, which it reads from the Garmin Express installer for Windows "
+"(GarminExpress.exe, a free download from garmin.com); the installer is only "
+"read, nothing is installed. No key needs to be created in Garmin Connect."
+msgstr ""
+"openExpress loguje się do Garmin Connect kluczem aplikacji Garmin Express, "
+"który odczytuje z instalatora Garmin Express dla Windows (GarminExpress.exe, "
+"do pobrania za darmo z garmin.com); instalator jest tylko odczytywany, nic "
+"nie jest instalowane. W Garmin Connect nie trzeba tworzyć żadnego klucza."
+
+#: openexpress/gui/preferences.py:540
 #, python-brace-format
 msgid "Logged in as {account}"
 msgstr "Zalogowano jako {account}"
 
-#: openexpress/gui/preferences.py:512
+#: openexpress/gui/preferences.py:541
 msgid "Logged in, but the account details could not be loaded"
 msgstr "Zalogowano, ale nie udało się wczytać danych konta"
 
-#: openexpress/gui/preferences.py:519
+#: openexpress/gui/preferences.py:548
 msgid "Logging in…"
 msgstr "Logowanie…"
 
-#: openexpress/gui/preferences.py:534
+#: openexpress/gui/preferences.py:563
 msgid "Logged out"
 msgstr "Wylogowano"
 
@@ -6648,14 +6681,17 @@ msgstr "Nieznane środowisko: {name}"
 msgid ""
 "openExpress is not set up yet. It needs the Garmin Express installer for "
 "Windows (GarminExpress.exe, a free download from garmin.com), and only reads "
-"it. First run: openexpress setup --from-installer /path/to/GarminExpress.exe"
+"it: it takes Garmin Express's application key from it, so no key needs to be "
+"created in Garmin Connect. First run: openexpress setup --from-installer /"
+"path/to/GarminExpress.exe"
 msgstr ""
 "openExpress nie jest jeszcze skonfigurowany. Potrzebuje instalatora Garmin "
 "Express dla Windows (GarminExpress.exe, do pobrania za darmo z garmin.com) "
-"i tylko go odczytuje. Najpierw uruchom: openexpress setup --from-installer /"
-"ścieżka/do/GarminExpress.exe"
+"i tylko go odczytuje: bierze z niego klucz aplikacji Garmin Express, więc "
+"w Garmin Connect nie trzeba tworzyć żadnego klucza. Najpierw uruchom: "
+"openexpress setup --from-installer /ścieżka/do/GarminExpress.exe"
 
-#: openexpress/settings.py:177
+#: openexpress/settings.py:178
 #, python-brace-format
 msgid ""
 "The saved client key in {path} is damaged. Run again: openexpress setup --"
@@ -6664,12 +6700,12 @@ msgstr ""
 "Zapisany klucz aplikacji w {path} jest uszkodzony. Uruchom ponownie: "
 "openexpress setup --from-installer /ścieżka/do/GarminExpress.exe"
 
-#: openexpress/settings.py:212
+#: openexpress/settings.py:223
 #, python-brace-format
 msgid "Consumer key not found in {path}"
 msgstr "Nie znaleziono klucza konsumenta w {path}"
 
-#: openexpress/settings.py:224
+#: openexpress/settings.py:235
 #, python-brace-format
 msgid "URL signing data not found in {path}"
 msgstr "Nie znaleziono danych do podpisywania adresów URL w {path}"

@@ -47,6 +47,11 @@ class Unauthorized(ApiError):
     pass
 
 
+class NoApplicationKey(ApiError):
+    """A request to sign without Garmin Express's application key: the installer was not
+    chosen (or its key went away meanwhile)."""
+
+
 class ClockSkew(ApiError):
     pass
 
@@ -139,7 +144,12 @@ class GarminClient:
         with_token: bool = True,
     ) -> str:
         if self.consumer is None:
-            raise ApiError(_("OAuth1 consumer key is missing (openexpress setup)."))
+            log.warning("connect: no OAuth1 consumer key (consumer.json missing or damaged): "
+                        "the request is not signed")
+            raise NoApplicationKey(_(
+                "openExpress has no application key yet: first choose the Garmin Express "
+                "installer for Windows (in the window: Preferences, Setup; on the command "
+                "line: openexpress setup --from-installer GarminExpress.exe)."))
         token = secret = None
         if with_token:
             if self.auth is None:

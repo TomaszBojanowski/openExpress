@@ -535,8 +535,20 @@ def _backup_incomplete(ctx):
                                      backup_row=None))
 
 
+def _login_needs_installer(ctx):
+    """Log In without the application key: the question offers the installer; Garmin's sign-in
+    is never opened."""
+    from openexpress.auth import sso
+    from openexpress.gui.app import MainWindow
+
+    ctx.monkeypatch.setattr(sso, "create_login_window", lambda *a, **kw: ctx.effects.append(
+        ("sign-in",)) or types.SimpleNamespace(present=lambda: None))
+    MainWindow.login(_escape_window(ctx, choose_dll=_note(ctx, "choose_dll")))
+
+
 OPENERS = {
     "backup-incomplete": _backup_incomplete,
+    "login-needs-installer": _login_needs_installer,
     "close-busy": _close_busy, "order-none-differs": lambda ctx: _order(ctx, False),
     "order-choose": lambda ctx: _order(ctx, True), "order-restore": _order_restore,
     "app-permissions": _app_permissions, "app-forget": _app_forget, "app-remove": _app_remove,

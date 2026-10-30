@@ -30,6 +30,12 @@ if you open it in Dolphin again, repeat these steps.
 
 ## Signing in
 
+Logging in needs the Garmin Express installer for Windows first: openExpress signs in with
+the application key of Garmin Express, which it reads from the installer. No key or API
+access needs to be created in Garmin Connect. Until the installer is chosen, Preferences
+offers **Choose Installer…** instead of **Log In**, and `openexpress login` says to run
+`openexpress setup --from-installer /path/to/GarminExpress.exe`.
+
 If the login window does not capture the ticket, use `openexpress login --manual`: you
 sign in using a regular browser and paste the final URL containing `ticket=ST-…`.
 

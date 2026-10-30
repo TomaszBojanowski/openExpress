@@ -251,8 +251,9 @@ def test_the_words_in_polish(tmp_path):
 # from garmin.com, and that openExpress only reads it (no Windows needed).
 
 NOT_SET_UP = ("openExpress is not set up yet. It needs the Garmin Express installer for Windows "
-              "(GarminExpress.exe, a free download from garmin.com), and only reads it. First "
-              "run: openexpress setup --from-installer /path/to/GarminExpress.exe")
+              "(GarminExpress.exe, a free download from garmin.com), and only reads it: it takes "
+              "Garmin Express's application key from it, so no key needs to be created in Garmin "
+              "Connect. First run: openexpress setup --from-installer /path/to/GarminExpress.exe")
 BANNER = ("One-time setup: choose the Garmin Express installer for Windows (GarminExpress.exe "
           "from garmin.com). openExpress only reads it.")
 

@@ -31,6 +31,7 @@ from openexpress.settings import (  # noqa: E402
     SetupError,
     extract_consumer_from_dll,
     extract_url_salt_from_dll,
+    has_consumer,
     save_consumer,
 )
 
@@ -85,13 +86,22 @@ def logged_in_auth():
 
 def render_account_row(win) -> None:
     """The account's row of the preferences, while they are open: who is logged in, with
-    Log out, or nobody, with Log In."""
+    Log out, or nobody, with Log In; without the application key nobody can log in yet: the
+    row says why, with Choose Installer…."""
     shown = win._account_row
     if shown is None:
         return
     row, button = shown
     auth = logged_in_auth()
-    if auth is None:
+    row.set_subtitle("")
+    if auth is None and not has_consumer():
+        row.set_title(_("Not logged in"))
+        # TRANSLATORS: under "Not logged in" in the preferences, before the installer is
+        # chosen (the button beside it: Choose Installer…)
+        row.set_subtitle(_("First choose the Garmin Express installer for Windows: openExpress "
+                           "reads the application key from it"))
+        button.set_label(_("Choose Installer…"))
+    elif auth is None:
         row.set_title(_("Not logged in"))
         button.set_label(_("Log In"))
     else:
@@ -374,11 +384,14 @@ class Preferences:
         return g
 
     def _account_action(self) -> None:
-        """Log out or Log In in the preferences: the same as in the device view."""
-        if logged_in_auth() is None:
-            self.login()
-        else:
+        """Log out or Log In in the preferences: the same as in the device view; without the
+        application key, Choose Installer… first."""
+        if logged_in_auth() is not None:
             self.logout()
+        elif not has_consumer():
+            self.choose_dll()
+        else:
+            self.login()
 
     def _cache_group(self) -> Adw.PreferencesGroup:
         """The "Storage" group of the preferences: a row for each part of the cache, with its
@@ -484,6 +497,22 @@ class Preferences:
         dialog.open(self, None, chosen)
 
     def login(self) -> None:
+        if not has_consumer():
+            # Garmin's sign-in would be opened for nothing: the ticket cannot be exchanged
+            # without the key.
+            log.info("login: no OAuth1 consumer key (consumer.json missing or damaged): the "
+                     "installer asked for first")
+            confirm(self, "login-needs-installer",
+                    _("Choose the Garmin Express installer first"),
+                    _("openExpress signs in to Garmin Connect with the application key of "
+                      "Garmin Express, which it reads from the Garmin Express installer for "
+                      "Windows (GarminExpress.exe, a free download from garmin.com); the "
+                      "installer is only read, nothing is installed. No key needs to be "
+                      "created in Garmin Connect."),
+                    Answer("installer", _("Choose Installer…"), self.choose_dll,
+                           look="suggested"),
+                    default="installer")
+            return
         settings = Settings.load()
 
         def on_ticket(st):

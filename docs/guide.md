@@ -53,7 +53,9 @@ openExpress appears in your application menu. Setup needs the Garmin Express ins
 no Windows: openExpress only reads it and installs nothing. The installer for macOS does
 not work. Connect the watch and open it: its page has a banner at the top. Click **Choose
 Installer…** there and select the installer (at any time also in Preferences → Setup →
-**Choose File…**), then **Log In** in the same banner (or in Preferences). Turn on automatic sync on the
+**Choose File…**), then **Log In** in the same banner (or in Preferences; until the installer is
+chosen, Preferences offers **Choose Installer…** there instead). No key needs to be created in
+Garmin Connect. Turn on automatic sync on the
 Device page (or in Preferences) to sync whenever the watch is connected.
 
 ## The start page and the device page

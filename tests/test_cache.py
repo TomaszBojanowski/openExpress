@@ -844,17 +844,19 @@ def _descendants(widget):
 @pytest.mark.needs_display
 def test_the_preferences_show_the_account_and_log_in_or_out(monkeypatch, in_the_window):
     """The group "Garmin Connect account", first in the preferences: who is logged in with
-    Log out, or "Not logged in" with Log In. The button goes the way of the device view
-    (MainWindow.logout / login, which decide where the user goes), and the row follows a
-    change of account while the preferences are open."""
+    Log out, or "Not logged in" with Log In (the application key saved, a made-up one). The
+    button goes the way of the device view (MainWindow.logout / login, which decide where the
+    user goes), and the row follows a change of account while the preferences are open."""
     import types
 
     from gi.repository import Adw, Gtk
 
+    from openexpress import settings
     from openexpress.gui.app import MainWindow
     from openexpress.gui.navigation import Cause
     from openexpress.gui.preferences import account_changed
 
+    settings.save_consumer(settings.Consumer("made-up-key", "made-up-secret"))
     shown, calls = [], []
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
     client = types.SimpleNamespace(auth=types.SimpleNamespace(display="someone"))
