@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 21:46+0100\n"
+"POT-Creation-Date: 2026-10-30 21:48+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1178,7 +1178,7 @@ msgid "Devices this installation has seen:"
 msgstr "Urządzenia, które widziała ta instalacja:"
 
 #: openexpress/cli.py:575 openexpress/gui/device_page.py:901
-#: openexpress/gui/start_window.py:218 openexpress/gui/words.py:149
+#: openexpress/gui/start_window.py:222 openexpress/gui/words.py:149
 #, python-brace-format
 msgid "Software {version}"
 msgstr "Oprogramowanie {version}"
@@ -2927,7 +2927,7 @@ msgstr "Podstawowe urządzenie treningowe"
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/connect.py:630 openexpress/gui/device_page.py:301
-#: openexpress/gui/start_window.py:274
+#: openexpress/gui/start_window.py:278
 msgid "Primary wearable"
 msgstr "Podstawowe urządzenie typu wearable"
 
@@ -3469,7 +3469,7 @@ msgstr "Zgłoś urządzenie lub problem…"
 msgid "About openExpress"
 msgstr "O programie openExpress"
 
-#: openexpress/gui/app.py:271 openexpress/gui/start_window.py:143
+#: openexpress/gui/app.py:271 openexpress/gui/start_window.py:147
 msgid "Main Menu"
 msgstr "Menu główne"
 
@@ -5217,15 +5217,24 @@ msgid "List"
 msgstr "Lista"
 
 #. TRANSLATORS: the tooltip of the button Automatic on top of the start page's menu
-#. (its icon shows tiles above a list)
-#: openexpress/gui/start_window.py:122
-msgctxt "start view"
-msgid "Automatic: tiles, or a list when a section has more than six devices"
-msgstr ""
-"Automatycznie: kafle, a gdy w sekcji jest więcej niż sześć urządzeń, lista"
+#. (its icon shows tiles above a list); {count}: from how many devices on a section
+#. is a list
+#: openexpress/gui/start_window.py:123
+#, python-brace-format
+msgid "Automatic: tiles, or a list when a section has more than {count} device"
+msgid_plural ""
+"Automatic: tiles, or a list when a section has more than {count} devices"
+msgstr[0] ""
+"Automatycznie: kafle, a gdy w sekcji jest więcej niż {count} urządzenie, "
+"lista"
+msgstr[1] ""
+"Automatycznie: kafle, a gdy w sekcji jest więcej niż {count} urządzenia, "
+"lista"
+msgstr[2] ""
+"Automatycznie: kafle, a gdy w sekcji jest więcej niż {count} urządzeń, lista"
 
 #. TRANSLATORS: under the tiles of the start page
-#: openexpress/gui/start_window.py:198
+#: openexpress/gui/start_window.py:202
 msgid ""
 "Not logged in to Garmin Connect: the tiles do not show what is on your "
 "account or what there is to sync."
@@ -5234,7 +5243,7 @@ msgstr ""
 "co jest do synchronizacji."
 
 #. TRANSLATORS: under the tiles of the start page
-#: openexpress/gui/start_window.py:202
+#: openexpress/gui/start_window.py:206
 msgid ""
 "Your Garmin Connect account could not be read: the tiles show only what was "
 "known of it before."
@@ -5242,27 +5251,27 @@ msgstr ""
 "Nie udało się odczytać konta Garmin Connect: kafle pokazują tylko to, co "
 "było o nim wiadomo wcześniej."
 
-#: openexpress/gui/start_window.py:220
+#: openexpress/gui/start_window.py:224
 msgid "Not mounted; choose it to open it"
 msgstr "Niezamontowane; wybierz, aby otworzyć"
 
-#: openexpress/gui/start_window.py:222
+#: openexpress/gui/start_window.py:226
 msgid "No GarminDevice.xml found"
 msgstr "Nie znaleziono GarminDevice.xml"
 
-#: openexpress/gui/start_window.py:223
+#: openexpress/gui/start_window.py:227
 msgid "Could not be read"
 msgstr "Nie udało się odczytać"
 
-#: openexpress/gui/start_window.py:295 openexpress/gui/start_window.py:667
+#: openexpress/gui/start_window.py:299 openexpress/gui/start_window.py:671
 msgid "Not seen on this computer"
 msgstr "Niewidziane na tym komputerze"
 
-#: openexpress/gui/start_window.py:331 openexpress/gui/start_window.py:335
+#: openexpress/gui/start_window.py:335 openexpress/gui/start_window.py:339
 msgid "Choose a device"
 msgstr "Wybierz urządzenie"
 
-#: openexpress/gui/start_window.py:332
+#: openexpress/gui/start_window.py:336
 msgid "Several Garmin devices are connected. Choose one on the Device page."
 msgstr "Podłączono kilka urządzeń Garmin. Wybierz jedno na stronie Urządzenie."
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.11\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 21:46+0100\n"
+"POT-Creation-Date: 2026-10-30 21:48+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1044,7 +1044,7 @@ msgid "Devices this installation has seen:"
 msgstr ""
 
 #: openexpress/cli.py:575 openexpress/gui/device_page.py:901
-#: openexpress/gui/start_window.py:218 openexpress/gui/words.py:149
+#: openexpress/gui/start_window.py:222 openexpress/gui/words.py:149
 #, python-brace-format
 msgid "Software {version}"
 msgstr ""
@@ -2605,7 +2605,7 @@ msgstr ""
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/connect.py:630 openexpress/gui/device_page.py:301
-#: openexpress/gui/start_window.py:274
+#: openexpress/gui/start_window.py:278
 msgid "Primary wearable"
 msgstr ""
 
@@ -3102,7 +3102,7 @@ msgstr ""
 msgid "About openExpress"
 msgstr ""
 
-#: openexpress/gui/app.py:271 openexpress/gui/start_window.py:143
+#: openexpress/gui/app.py:271 openexpress/gui/start_window.py:147
 msgid "Main Menu"
 msgstr ""
 
@@ -4722,47 +4722,51 @@ msgid "List"
 msgstr ""
 
 #. TRANSLATORS: the tooltip of the button Automatic on top of the start page's menu
-#. (its icon shows tiles above a list)
-#: openexpress/gui/start_window.py:122
-msgctxt "start view"
-msgid "Automatic: tiles, or a list when a section has more than six devices"
-msgstr ""
+#. (its icon shows tiles above a list); {count}: from how many devices on a section
+#. is a list
+#: openexpress/gui/start_window.py:123
+#, python-brace-format
+msgid "Automatic: tiles, or a list when a section has more than {count} device"
+msgid_plural ""
+"Automatic: tiles, or a list when a section has more than {count} devices"
+msgstr[0] ""
+msgstr[1] ""
 
 #. TRANSLATORS: under the tiles of the start page
-#: openexpress/gui/start_window.py:198
+#: openexpress/gui/start_window.py:202
 msgid ""
 "Not logged in to Garmin Connect: the tiles do not show what is on your "
 "account or what there is to sync."
 msgstr ""
 
 #. TRANSLATORS: under the tiles of the start page
-#: openexpress/gui/start_window.py:202
+#: openexpress/gui/start_window.py:206
 msgid ""
 "Your Garmin Connect account could not be read: the tiles show only what was "
 "known of it before."
 msgstr ""
 
-#: openexpress/gui/start_window.py:220
+#: openexpress/gui/start_window.py:224
 msgid "Not mounted; choose it to open it"
 msgstr ""
 
-#: openexpress/gui/start_window.py:222
+#: openexpress/gui/start_window.py:226
 msgid "No GarminDevice.xml found"
 msgstr ""
 
-#: openexpress/gui/start_window.py:223
+#: openexpress/gui/start_window.py:227
 msgid "Could not be read"
 msgstr ""
 
-#: openexpress/gui/start_window.py:295 openexpress/gui/start_window.py:667
+#: openexpress/gui/start_window.py:299 openexpress/gui/start_window.py:671
 msgid "Not seen on this computer"
 msgstr ""
 
-#: openexpress/gui/start_window.py:331 openexpress/gui/start_window.py:335
+#: openexpress/gui/start_window.py:335 openexpress/gui/start_window.py:339
 msgid "Choose a device"
 msgstr ""
 
-#: openexpress/gui/start_window.py:332
+#: openexpress/gui/start_window.py:336
 msgid "Several Garmin devices are connected. Choose one on the Device page."
 msgstr ""
 

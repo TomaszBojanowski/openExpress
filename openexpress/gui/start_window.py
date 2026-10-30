@@ -48,7 +48,7 @@ from openexpress.gui.words import (  # noqa: E402
     remembered_update_text,
     software_text,
 )
-from openexpress.i18n import _, caption, pgettext  # noqa: E402
+from openexpress.i18n import _, caption, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import KnownDevice  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
@@ -118,9 +118,13 @@ class StartView:
                  devicelist.GRID: pgettext("start view", "Grid"),
                  devicelist.LIST: pgettext("start view", "List")}
         # TRANSLATORS: the tooltip of the button Automatic on top of the start page's menu
-        # (its icon shows tiles above a list)
-        automatic = pgettext("start view", "Automatic: tiles, or a list when a section has "
-                                           "more than six devices")
+        # (its icon shows tiles above a list); {count}: from how many devices on a section
+        # is a list
+        automatic = ngettext("Automatic: tiles, or a list when a section has more than "
+                             "{count} device",
+                             "Automatic: tiles, or a list when a section has more than "
+                             "{count} devices", devicelist.GRID_MAX).format(
+                                 count=devicelist.GRID_MAX)
         for view in devicelist.VIEWS:
             tooltip = automatic if view == devicelist.AUTO else names[view]
             button = Gtk.ToggleButton(icon_name=VIEW_ICONS[view], tooltip_text=tooltip,

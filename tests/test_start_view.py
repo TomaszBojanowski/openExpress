@@ -244,8 +244,8 @@ def test_the_buttons_tell_screen_readers_their_names(language, monkeypatch):
         i18n.setup("en")
     buttons = [w for w in _walk(row) if isinstance(w, Gtk.ToggleButton)]
     names = {"en": ["Automatic", "Grid", "List"], "pl": ["Automatycznie", "Siatka", "Lista"]}
-    auto = {"en": "Automatic: tiles, or a list when a section has more than six devices",
-            "pl": "Automatycznie: kafle, a\u00a0gdy w\u00a0sekcji jest więcej niż sześć "
+    auto = {"en": "Automatic: tiles, or a list when a section has more than 6 devices",
+            "pl": "Automatycznie: kafle, a\u00a0gdy w\u00a0sekcji jest więcej niż 6 "
                   "urządzeń, lista"}[language]
     group, *each = told
     assert [t[Gtk.AccessibleProperty.LABEL] for t in each] == names[language]
@@ -257,13 +257,6 @@ def test_the_buttons_tell_screen_readers_their_names(language, monkeypatch):
     assert {b.get_accessible_role() for b in buttons} == {Gtk.AccessibleRole.TOGGLE_BUTTON}
     assert row.get_accessible_role() == Gtk.AccessibleRole.GROUP
     assert group == {Gtk.AccessibleProperty.LABEL: {"en": "View", "pl": "Widok"}[language]}
-
-
-def test_automatic_says_six():
-    """The tooltip of Automatic names the count of devices from which a section is a list."""
-    from openexpress import devicelist
-
-    assert devicelist.GRID_MAX == 6
 
 
 @pytest.mark.needs_display
