@@ -255,24 +255,25 @@ def drive_keys_text(usb, unit_id) -> str:
 # Why a Garmin device connected as a USB drive is not synced (drive_sync_refusal).
 NO_UPLOAD_TYPES = "no-upload-types"  # no data type of it goes from the device
 CONNECT_DISABLED = "connect-disabled"  # Garmin Connect does not serve it
-CONNECT_NOT_KNOWN = "connect-not-known"  # no word from Garmin on whether Connect serves it
+NO_UNIT_INFO = "no-unit-info"  # no answer of unit-info: whether Connect serves it not known
 
 
 def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | None:
     """Why a Garmin device connected as a USB drive is not synced, None when it is (its files
     uploaded, nothing written to it): NO_UPLOAD_TYPES when its GarminDevice.xml declares no
-    data type whose files go from the device (a Varia); CONNECT_DISABLED when unit-info says
-    that Garmin Connect does not serve it ("connectSupport": "Disabled", an inReach Mini 2,
-    although it declares activities); CONNECT_NOT_KNOWN when there is no such word in
-    `unit_info`. Asks nothing: `unit_info` is the answer of unit-info as kept (unit_info(),
-    answers), None when there is none; whether the account has the device is asked apart,
-    before the uploads (plan_sync)."""
+    data type whose files go from the device (a Varia); NO_UNIT_INFO without an answer of
+    unit-info (`unit_info` None: not asked, or the server did not answer); CONNECT_DISABLED
+    when that answer says that Garmin Connect does not serve it ("connectSupport":
+    "Disabled", an inReach Mini 2, although it declares activities). An answer without that
+    field lets it sync: Garmin did not refuse it. Asks nothing: `unit_info` is the answer as
+    kept (unit_info(), answers); whether the account has the device is asked apart, before
+    the uploads (plan_sync)."""
     if not any(f.readable for f in device.files):
         return NO_UPLOAD_TYPES
-    support = unit_info.get("connectsupport") if isinstance(unit_info, dict) else None
-    if not isinstance(support, str) or not support.strip():
-        return CONNECT_NOT_KNOWN
-    if support.strip().casefold() == "disabled":
+    if not isinstance(unit_info, dict):
+        return NO_UNIT_INFO
+    support = unit_info.get("connectsupport")
+    if isinstance(support, str) and support.strip().casefold() == "disabled":
         return CONNECT_DISABLED
     return None
 

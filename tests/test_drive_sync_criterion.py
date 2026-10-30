@@ -1,7 +1,8 @@
 """Whether a watch connected as a USB drive is synced (only its files uploaded): its
-GarminDevice.xml has to declare a data type that goes from the device, and Garmin's server has
-to say that Garmin Connect serves it (unit-info "connectSupport" other than "Disabled", as the
-kept answers hold it). Nothing is asked of a server here. All devices are made up."""
+GarminDevice.xml has to declare a data type that goes from the device, and there has to be an
+answer of unit-info (as the kept answers hold it) that does not say "Disabled" of Garmin
+Connect; an answer without the field lets it sync. Nothing is asked of a server here. All
+devices are made up."""
 
 import pytest
 from fakes import RTL515_XML
@@ -58,14 +59,21 @@ def test_a_drive_that_garmin_connect_does_not_serve_is_not_synced(word):
     assert service.drive_sync_refusal(FORERUNNER_LIKE, info) == service.CONNECT_DISABLED
 
 
-@pytest.mark.parametrize("unit_info", [None, {}, {"devicemodel": "Forerunner 55"},
+@pytest.mark.parametrize("unit_info", [{}, {"devicemodel": "Forerunner 55"},
                                        {"connectsupport": ""}, {"connectsupport": None},
-                                       {"connectsupport": 1}, ["Required"]])
-def test_without_a_word_on_connect_support_it_is_not_synced(unit_info):
-    """No answer of unit-info, or one that says nothing usable of it: not synced."""
-    assert service.drive_sync_refusal(FORERUNNER_LIKE, unit_info) == service.CONNECT_NOT_KNOWN
+                                       {"connectsupport": 1}, {"connectsupport": "Optional"}])
+def test_an_answer_that_does_not_say_disabled_lets_it_sync(unit_info):
+    """Garmin's server answered, but said nothing of Garmin Connect, or something else than
+    "Disabled": it did not refuse the device."""
+    assert service.drive_sync_refusal(FORERUNNER_LIKE, unit_info) is None
+
+
+@pytest.mark.parametrize("unit_info", [None, ["Required"], "Required"])
+def test_without_an_answer_of_unit_info_it_is_not_synced(unit_info):
+    """Not asked, or the server did not answer (or not with an answer of unit-info)."""
+    assert service.drive_sync_refusal(FORERUNNER_LIKE, unit_info) == service.NO_UNIT_INFO
 
 
 def test_the_reasons_are_three_different_ones():
-    reasons = {service.NO_UPLOAD_TYPES, service.CONNECT_DISABLED, service.CONNECT_NOT_KNOWN}
+    reasons = {service.NO_UPLOAD_TYPES, service.CONNECT_DISABLED, service.NO_UNIT_INFO}
     assert len(reasons) == 3 and None not in reasons
