@@ -411,15 +411,21 @@ class GarminClient:
         return lower_keys(self._json(resp, what)) if resp.content else {}
 
     def unit_info(self, unit_id: int, part_number: str) -> dict:
-        """What Garmin's update server knows about the device; needs no login. The answer
-        carries the unit ID and the serial number: never log or store it."""
-        return self._omt(
-            "GET",
-            f"api/unit-info/manufacturers/Taiwan/unitids/{unit_id}",
-            _("Device info"),
-            quiet=True,  # the path names the device
-            params={"primaryFirmwarePartNumber": part_number},
-        )
+        """What Garmin's update server knows about the device; needs no login. Kept 7 days
+        (answers), only the fields the program reads: the answer carries the unit ID and the
+        serial number, never logged or kept."""
+        def ask():
+            return self._omt(
+                "GET",
+                f"api/unit-info/manufacturers/Taiwan/unitids/{unit_id}",
+                _("Device info"),
+                quiet=True,  # the path names the device
+                params={"primaryFirmwarePartNumber": part_number},
+            )
+
+        return answers.ANSWERS.ask(answers.UNIT_INFO,
+                                   (self.settings.environment, unit_id, part_number), ask,
+                                   about=[unit_id])
 
     def _omt_scope(self) -> tuple:
         """What an answer of the update server depends on besides the question: the
@@ -553,16 +559,22 @@ class GarminClient:
             raise ApiError(_("{what}: unexpected response from the server").format(what=what))
         return body
 
-    def profile_country(self) -> str | None:
-        """The country code of the account's location, when the profile has one. Read-only."""
+    def profile_country(self, fresh: bool = False) -> str | None:
+        """The country code of the account's location, when the profile has one. Read-only.
+        Kept an hour (answers); `fresh`: asked anew (whether data may be uploaded)."""
         self.require_verified()
-        what = _("Account location")
-        r = self._connect("GET", "userprofile-service/userprofile/location", what)
-        if r.status_code == 204 or not r.content.strip():
-            return None
-        body = lower_keys(self._json(r, what))
-        code = body.get("countrycode") if isinstance(body, dict) else None
-        return code.upper() if isinstance(code, str) and code.strip() else None
+
+        def ask():
+            what = _("Account location")
+            r = self._connect("GET", "userprofile-service/userprofile/location", what)
+            if r.status_code == 204 or not r.content.strip():
+                return None
+            body = lower_keys(self._json(r, what))
+            code = body.get("countrycode") if isinstance(body, dict) else None
+            return code.upper() if isinstance(code, str) and code.strip() else None
+
+        return answers.ANSWERS.ask(answers.ACCOUNT_COUNTRY, self._account_scope(), ask,
+                                   fresh=fresh)
 
     def primary_training_device(self) -> dict:
         """The account's primary training device setting: {"deviceid": unit ID}; {} if unset.

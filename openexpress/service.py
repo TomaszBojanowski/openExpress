@@ -60,6 +60,7 @@ class DeviceSession:
     # What Garmin's update server said of the device (unit-info), asked once for the
     # session (unit_info()); it carries the unit ID and the serial number: never shown.
     unit_info_answer: dict | None = field(default=None, repr=False)
+    unit_info_lock: threading.Lock | None = field(default=None, repr=False)  # unit_info
     # What the window learnt of the device's error logs when it opened it, and its copy
     # of the diagnostic files (diagnostics.at_open); None: not read. They are read in the
     # background once its page is shown: set when that is done (a task that writes to the
@@ -92,17 +93,25 @@ class DeviceSession:
         return self.storage.mass_storage
 
 
-# unit-info is asked by threads of the window at the same time (the "Maps" row, the picture):
-# one asks, the others wait for its answer.
-_unit_info_lock = threading.Lock()
+# The lock of each session's unit-info (unit_info): its threads wait for one answer, those
+# of another device do not.
+_session_locks = threading.Lock()
+
+
+def _unit_info_lock(session) -> threading.Lock:
+    with _session_locks:
+        lock = getattr(session, "unit_info_lock", None)
+        if lock is None:
+            lock = session.unit_info_lock = threading.Lock()
+        return lock
 
 
 def unit_info(session) -> dict:
-    """What Garmin's update server says of the open device (unit-info), asked once for the
-    session, that is for each opening of the device: the "Maps" row, the Maps page and the
-    picture use the one answer. A failed request is not kept, so the next one asks again.
-    The answer stays in memory with the session only."""
-    with _unit_info_lock:
+    """What Garmin's update server says of the open device (unit-info): the "Maps" row, the
+    Maps page and the picture use one answer, kept with the session and in the kept answers
+    (answers: 7 days, only the fields the program reads); threads of the session asking at
+    once wait for one request. A failed request is not kept, so the next one asks again."""
+    with _unit_info_lock(session):
         answer = getattr(session, "unit_info_answer", None)
         if answer is None:
             device = session.device
@@ -124,8 +133,9 @@ def note_model_name(device, answer) -> None:
 
 def forget_unit_info(session) -> None:
     """The maps checked again by hand: the next unit_info() asks the server anew."""
-    with _unit_info_lock:
-        session.unit_info_answer = None
+    session.unit_info_answer = None
+    device = getattr(session, "device", None)
+    answers.forget_device(answers.UNIT_INFO, getattr(device, "unit_id", None))
 
 
 class MassStorageMode(UserFacingError):
@@ -141,8 +151,10 @@ def account_country(s) -> str | None:
             or getattr(s.client, "verified_unit_id", None) is None):
         return None
     if not s.account_country_asked:
-        s.account_country_asked = True
+        # Kept an hour (answers); threads asking at once share one request, and each gets
+        # its answer (none is told "not known" while another asks).
         s.account_country_code = read_account_country(s.client.profile_country)
+        s.account_country_asked = True
     return s.account_country_code
 
 
@@ -425,7 +437,8 @@ class UploadGate:
         if consent_type not in self._consents:
             try:
                 self._consents[consent_type] = consent_granted(
-                    self.client.consent(consent_type), consent_type, self.client.profile_country)
+                    self.client.consent(consent_type), consent_type,
+                    lambda: self.client.profile_country(fresh=True))
             except (Unauthorized, ClockSkew):
                 raise
             except Exception as e:  # noqa: BLE001 - anything unclear means "no"
@@ -445,8 +458,10 @@ def _check_upload_allowed(client) -> UploadGate:
     empty or unreadable answer and a failed request all block uploads. An expired login
     or a wrong clock is raised as such."""
     try:
+        # Whether data may be uploaded is decided on what the account says now: the country
+        # asked anew, never as kept (answers).
         if not consent_granted(client.consent(UPLOAD_CONSENT), UPLOAD_CONSENT,
-                               client.profile_country):
+                               lambda: client.profile_country(fresh=True)):
             return UploadGate(NO_CONSENT)
         preference = client.device_sync_preference()
     except (Unauthorized, ClockSkew):

@@ -167,7 +167,7 @@ class SyncAccount(SyncClient):
         self.asked.append("device sync")
         return {"key": "account.deviceSync", "value": "true"}
 
-    def profile_country(self):
+    def profile_country(self, fresh=False):
         return "PL"
 
     def upload_settings(self, unit_id):

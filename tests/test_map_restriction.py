@@ -298,7 +298,7 @@ def test_cli_asks_the_account_only_with_a_login_and_for_a_device_of_it(monkeypat
         if need_auth and not saved.login:
             raise store.NotLoggedIn("Not logged in. Run: openexpress login")
         return types.SimpleNamespace(auth=object() if need_auth else None,
-                                     profile_country=lambda: calls.append("country") or "KR")
+                                     profile_country=lambda fresh=False: calls.append("country") or "KR")
 
     monkeypatch.setattr(cli, "make_client", make_client)
     monkeypatch.setattr(service, "require_account_device",
@@ -409,7 +409,8 @@ def test_cli_checks_the_owner_with_the_list_kept_a_few_minutes(saved_login, caps
 
     assert main(["maps", "--all"]) == 0
     assert main(["maps", "--all"]) == 0
-    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, LOCATION]
+    # The country too is kept (answers, an hour).
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
 
 
 def test_cli_asks_the_account_nothing_when_no_map_is_restricted(saved_login, capsys):
@@ -481,8 +482,8 @@ def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
     assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
     again = window_session(device_root)  # the device opened again: a new session
     assert service.account_country(again) == "KR"
-    # Its owner checked with the list kept (answers, 5 minutes); the country asked anew.
-    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, LOCATION]
+    # Its owner checked with the list kept (answers, 5 minutes), the country kept (an hour).
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
 
 
 def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_logged_out(

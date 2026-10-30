@@ -42,7 +42,7 @@ class Account(FakeClient):
         return value if value is None or isinstance(value, dict) else {
             "key": "account.deviceSync", "value": value}
 
-    def profile_country(self):
+    def profile_country(self, fresh=False):
         self.asked.append(("country", None))
         return self._answer(self.country)
 
