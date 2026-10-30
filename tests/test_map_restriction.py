@@ -326,7 +326,8 @@ def saved_login(monkeypatch, device_root):
     saved as `openexpress setup` and `openexpress login` save them, and the made-up answers
     of the map service (TopoActive Japan not offered in KR) and of the account (its device
     list has the device, its profile says KR). Its `sent`: every request, in order."""
-    from test_ownership import UNIT, RecordingSession, response
+    from fakes import DEVICE_UNIT as UNIT
+    from fakes import RecordingSession, response
 
     from openexpress import connect
     from openexpress.auth import store
@@ -360,7 +361,7 @@ def japan_lines(out):
 
 def test_cli_with_a_login_saved_checks_the_device_and_reads_the_account_country(
         saved_login, capsys):
-    from test_ownership import DEVICES_PATH
+    from fakes import DEVICES_PATH
 
     from openexpress.cli import main
 
@@ -372,7 +373,8 @@ def test_cli_with_a_login_saved_checks_the_device_and_reads_the_account_country(
 
 def test_cli_with_a_login_saved_asks_only_the_owner_of_a_device_of_another_account(
         saved_login, capsys):
-    from test_ownership import DEVICES_PATH, OTHER, response
+    from fakes import DEVICES_PATH, response
+    from fakes import OTHER_UNIT as OTHER
 
     from openexpress.cli import main
 
@@ -403,7 +405,7 @@ def test_cli_without_a_login_asks_the_account_nothing_and_says_no_error(
 def test_cli_checks_the_owner_with_the_list_kept_a_few_minutes(saved_login, capsys):
     """Reading only: the account's list may be the one kept (answers, 5 minutes); the check
     is made all the same."""
-    from test_ownership import DEVICES_PATH
+    from fakes import DEVICES_PATH
 
     from openexpress.cli import main
 
@@ -414,7 +416,7 @@ def test_cli_checks_the_owner_with_the_list_kept_a_few_minutes(saved_login, caps
 
 
 def test_cli_asks_the_account_nothing_when_no_map_is_restricted(saved_login, capsys):
-    from test_ownership import response
+    from fakes import response
 
     from openexpress.cli import main
 
@@ -447,7 +449,8 @@ def test_cli_without_the_key_nor_the_login_lists_the_maps_and_asks_the_account_n
 def test_cli_marks_the_map_when_the_country_cannot_be_read_and_says_why_in_the_log(
         saved_login, capsys, log_file, devices, location, asked, said):
     import requests
-    from test_ownership import DEVICES_PATH, OTHER, response
+    from fakes import DEVICES_PATH, response
+    from fakes import OTHER_UNIT as OTHER
 
     from openexpress.cli import main
 
@@ -475,7 +478,7 @@ def window_session(device_root):
 
 def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
         saved_login, device_root):
-    from test_ownership import DEVICES_PATH
+    from fakes import DEVICES_PATH
 
     s = window_session(device_root)
     assert service.account_country(s) == "KR" and service.account_country(s) == "KR"
@@ -488,7 +491,8 @@ def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
 
 def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_logged_out(
         saved_login, device_root):
-    from test_ownership import DEVICES_PATH, OTHER, response
+    from fakes import DEVICES_PATH, response
+    from fakes import OTHER_UNIT as OTHER
 
     from openexpress.auth import store
 

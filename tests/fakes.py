@@ -120,7 +120,6 @@ class SyncClient:
         self.acks.append(mid)
 
 
-
 # --- Garmin Connect as a whole sync asks it ------------------------------------------------
 
 ACTIVITY_URL = "https://up.example/activity"
@@ -351,3 +350,173 @@ def replace_in_window(monkeypatch, name, value):
     for module in holders:
         monkeypatch.setattr(module, name, value)
     return [module.__name__ for module in holders]
+
+
+# --- helpers several test modules use ---------------------------------------------------
+
+
+def page_window(key):
+    """A page of the real kind in a window that is never shown, and a stand-in for the main
+    window that loads it the way MainWindow does. A task runs at once, in the order run_task
+    keeps: busy on, the work, busy off, then the page is rebuilt."""
+    import types
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
+    from openexpress.gui.window_tasks import still_in_window
+
+    section = Section(key, key.title(), "x-symbolic", "Loading…")
+    toplevel = Gtk.Window()
+    toplevel.set_child(section.stack)
+
+    run_task = RunNow(on_call=lambda call: win.set_busy(True),
+                      before_done=lambda: win.set_busy(False))
+
+    def set_busy(busy):
+        win.busy = busy
+        win._action_buttons = still_in_window(win._action_buttons)
+
+    win = window(session=types.SimpleNamespace(), sections={key: section},
+                 busy=False, _action_buttons=[], _retry_sources={},
+                 run_task=run_task, set_busy=set_busy, toplevel=toplevel)
+    for name in ("_load", "_button", "_trash"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    return win, section
+
+
+# The view of a remembered device and its pictures (once picked by name: "picture",
+# "remembered"), found along the whole MRO (window_methods).
+REMEMBERED_METHODS = ("_show_remembered", "_show_account", "_fill_account", "_last_sync_text",
+                      "_fill_remembered", "_load_tile_pictures", "_on_remembered_page",
+                      "_redraw_remembered", "_refresh_remembered", "_refresh_remembered_texts",
+                      "_show_device_picture", "_show_page_picture", "_tile_picture_done")
+
+
+def remembered_device(category="watch", part="006-B0000-00"):
+    """A made-up device remembered an hour ago."""
+    import time
+
+    from openexpress.known_devices import KnownDevice
+
+    now = time.time()
+    return KnownDevice(unit_id=1234567890, description="Test watch", part_number=part,
+                       software_version="1.00", kind="mtp", first_seen=now - 86400,
+                       last_seen=now - 3600, category=category)
+
+
+def remembered_window(textures=None):
+    """The parts of the window that open the view, with the real view in it; background work
+    runs at once."""
+    import types
+
+    from openexpress.gui.start import RememberedPage
+
+    pushed = []
+    win = window(
+        remembered=RememberedPage(), navigation=types.SimpleNamespace(push=pushed.append),
+        pushed=pushed, _device_textures=dict(textures or {}), _pictures_asked=set(),
+        _account=None, _on_start_page=lambda: True,
+        in_background=lambda fn, on_done, on_error=None: on_done(fn()))
+    return window_methods(win, REMEMBERED_METHODS)
+
+
+RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
+ <Model><PartNumber>006-B3592-03</PartNumber><SoftwareVersion>336</SoftwareVersion>
+  <Description>Varia RTL515</Description></Model>
+ <Id>3000000003</Id>
+ <MassStorageMode>
+  <UpdateFile><PartNumber>006-B3592-03</PartNumber>
+   <Version><Major>3</Major><Minor>36</Minor></Version>
+   <Path>GARMIN/</Path><FileName>GUPDATE.GCD</FileName></UpdateFile>
+  <UpdateFile><PartNumber>006-B3593-06</PartNumber>
+   <Version><Major>3</Major><Minor>27</Minor></Version>
+   <Path>GARMIN/REMOTESW/</Path><FileName>6B359306.GCD</FileName></UpdateFile>
+ </MassStorageMode>
+</Device>
+"""
+
+
+class UpdateServer:
+    """Stands in for the HTTP session of GarminClient: records each request, answers with JSON."""
+
+    def __init__(self, answer):
+        self.answer, self.sent = answer, []
+
+    def request(self, method, url, **kw):
+        import json
+
+        import requests
+
+        self.sent.append((method, url, kw.get("params"), kw.get("json")))
+        resp = requests.Response()
+        resp.status_code, resp.url = 200, url
+        resp._content = json.dumps(self.answer).encode()
+        resp.headers["Content-Type"] = "application/json"
+        return resp
+
+
+DEVICES_PATH = "device-service/deviceregistration/devices"
+DEVICE_UNIT = 1234567890  # the test device (conftest.DEVICE_XML)
+OTHER_UNIT = 4222333444  # another device of the account
+
+
+def response(status=200, body=b"[]"):
+    import json
+
+    import requests
+
+    r = requests.Response()
+    r.status_code = status
+    r._content = body if isinstance(body, bytes) else json.dumps(body).encode()
+    return r
+
+
+class RecordingSession:
+    """Stands in for requests.Session: records every request, answers from `routes`."""
+
+    def __init__(self, devices=None, **routes):
+        self.routes = {DEVICES_PATH: response(body=devices if devices is not None else [])}
+        self.routes.update(routes)
+        self.handlers = {}  # url part -> function(method, request kwargs) -> response
+        self.sent = []
+
+    def request(self, method, url, **kw):
+        self.sent.append({"method": method, "url": url, "headers": kw.get("headers") or {},
+                          "body": repr((kw.get("data"), kw.get("json"), kw.get("files")))})
+        for part, handler in self.handlers.items():
+            if part in url:
+                return handler(method, kw)
+        for part, answer in self.routes.items():
+            if part in url:
+                if isinstance(answer, Exception):
+                    raise answer
+                return answer() if callable(answer) else answer
+        return response(404, b"")
+
+    def get(self, url, **kw):
+        return self.request("GET", url, **kw)
+
+    def signed_for(self, unit_id):
+        """Token-signed requests that name this watch."""
+        return [r for r in self.sent
+                if "Authorization" in r["headers"] and str(unit_id) in r["url"] + r["body"]]
+
+    def paths(self):
+        return [r["url"].split("garmin.com/")[-1].split("?")[0] for r in self.sent]
+
+
+def make_client(devices=None, auth=True, **routes):
+    """A client of a Garmin Connect of its own: what another one was told is not kept for it
+    (answers; in the program another account is another login, so another key)."""
+    from openexpress import answers
+    from openexpress.auth.store import ConnectAuth
+    from openexpress.connect import GarminClient
+    from openexpress.settings import Consumer, Settings
+
+    answers.ANSWERS.clear()
+    return GarminClient(Settings(), Consumer("ck", "cs"),
+                        ConnectAuth("t", "ts") if auth else None,
+                        RecordingSession(devices, **routes))

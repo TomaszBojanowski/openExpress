@@ -6,7 +6,7 @@ are made up."""
 import types
 
 import pytest
-from test_detection import RTL515_XML, _UpdateServer
+from fakes import RTL515_XML, UpdateServer
 from test_fixes_ui import offered  # noqa: F401 - the fixture
 
 from openexpress import answers
@@ -29,7 +29,7 @@ def _paths(server):
 
 @pytest.fixture
 def server():
-    return _UpdateServer({"updates": [], "maps": []})
+    return UpdateServer({"updates": [], "maps": []})
 
 
 def test_the_device_page_and_its_page_share_one_software_check(server):

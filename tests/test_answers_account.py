@@ -3,7 +3,8 @@ opening a device again does not ask again; a check before a write to the account
 upload asks anew; Refresh, a change of a primary device and another login (or none) forget
 them. Counted on a made-up Garmin Connect; all accounts and devices are made up."""
 import pytest
-from test_ownership import DEVICES_PATH, UNIT, make_client
+from fakes import DEVICE_UNIT as UNIT
+from fakes import DEVICES_PATH, make_client
 from test_primary_both_roles import LIST, READ_TRAINING, SET_TRAINING, Account
 from test_primary_both_roles import device as made_up_device  # noqa: F401 - the fixture
 

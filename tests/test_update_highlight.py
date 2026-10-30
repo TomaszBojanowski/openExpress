@@ -7,7 +7,7 @@ import time
 import types
 
 import pytest
-from test_fixes_ui import page_window
+from fakes import page_window
 from test_update_chips import _tile
 from test_updates_system import beta_answer
 

@@ -19,8 +19,8 @@ UNIT = 3000000001
 def _page(device=None, **session):
     """The device page as the window builds it, with the window's calls that leave it
     recorded in `win.went` (select_section)."""
+    from fakes import page_window
     from gi.repository import Adw
-    from test_fixes_ui import page_window
 
     from openexpress.gui.app import MainWindow
 
@@ -228,7 +228,7 @@ def test_maps_not_supported_carries_the_type_garmin_gives():
 
 
 def _maps_page(map_update_type):
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 
@@ -323,7 +323,8 @@ def test_show_apps_puts_the_line_into_the_group_on_the_device():
 
 @pytest.mark.needs_display
 def test_the_page_of_a_remembered_device_has_the_details_of_its_last_sync():
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     known = _remembered()
     sync.SyncState(known.unit_id).save()
@@ -339,7 +340,8 @@ def test_the_page_of_a_remembered_device_has_the_details_of_its_last_sync():
 
 @pytest.mark.needs_display
 def test_a_remembered_device_never_synced_has_no_details():
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     win = _window()
     win._show_remembered(_remembered())
@@ -352,7 +354,8 @@ def test_a_remembered_device_never_synced_has_no_details():
 
 @pytest.mark.needs_display
 def test_the_details_are_drawn_once_however_often_the_page_is():
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     known = _remembered()
     sync.SyncState(known.unit_id).save()
@@ -369,7 +372,8 @@ def test_the_details_are_drawn_once_however_often_the_page_is():
 def test_the_page_of_a_remembered_device_says_what_the_account_says():
     """The account's list in memory: the primary wearable, read only; without the list, or
     for a device that cannot be one, no group."""
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     known = _remembered()
     account = [{"unitid": known.unit_id, "primaryactivitytrackersettingcapable": True,
@@ -393,7 +397,7 @@ def test_the_page_of_a_remembered_device_says_what_the_account_says():
 
 @pytest.mark.needs_display
 def test_a_device_only_on_the_account_says_it_too():
-    from test_remembered_picture import _window
+    from fakes import remembered_window as _window
 
     entry = {"unitid": 3000000004, "productdisplayname": "Venu 2",
              "primaryactivitytrackersettingcapable": True,

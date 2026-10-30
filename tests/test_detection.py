@@ -12,7 +12,16 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, record_sync, replace_in_window, row_words, start_section, window_methods
+from fakes import (
+    RTL515_XML,
+    RunNow,
+    UpdateServer,
+    record_sync,
+    replace_in_window,
+    row_words,
+    start_section,
+    window_methods,
+)
 from fakes import window as stand_in
 from gio_fake import answer_as_gio
 
@@ -709,21 +718,6 @@ MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB dri
                      "openExpress shows its information and software updates; sync, apps, "
                      "maps and music are not supported in this mode.")
 # Made by hand after the Varia RTL515; the unit ID is made up.
-RTL515_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<Device xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2">
- <Model><PartNumber>006-B3592-03</PartNumber><SoftwareVersion>336</SoftwareVersion>
-  <Description>Varia RTL515</Description></Model>
- <Id>3000000003</Id>
- <MassStorageMode>
-  <UpdateFile><PartNumber>006-B3592-03</PartNumber>
-   <Version><Major>3</Major><Minor>36</Minor></Version>
-   <Path>GARMIN/</Path><FileName>GUPDATE.GCD</FileName></UpdateFile>
-  <UpdateFile><PartNumber>006-B3593-06</PartNumber>
-   <Version><Major>3</Major><Minor>27</Minor></Version>
-   <Path>GARMIN/REMOTESW/</Path><FileName>6B359306.GCD</FileName></UpdateFile>
- </MassStorageMode>
-</Device>
-"""
 DRIVE_SERIAL = "0000abcdef56"
 MEDIA_USER = "made-up-user"  # the user folder in /run/media/<user>
 TESTDATA_XML = (Path(__file__).resolve().parent.parent / "testdata" / "varia-rtl515"
@@ -1042,24 +1036,6 @@ def _offered(path, filename, data):
                              "isRestartRequired": False, "order": 0}}
 
 
-class _UpdateServer:
-    """Stands in for the HTTP session of GarminClient: records each request, answers with JSON."""
-
-    def __init__(self, answer):
-        self.answer, self.sent = answer, []
-
-    def request(self, method, url, **kw):
-        import json
-
-        import requests
-
-        self.sent.append((method, url, kw.get("params"), kw.get("json")))
-        resp = requests.Response()
-        resp.status_code, resp.url = 200, url
-        resp._content = json.dumps(self.answer).encode()
-        resp.headers["Content-Type"] = "application/json"
-        return resp
-
 
 def test_updates_of_a_garmin_drive_take_the_path_of_cli_path(drives, monkeypatch):
     """The same request and the same comparison with the files on the device, whether the
@@ -1080,7 +1056,7 @@ def test_updates_of_a_garmin_drive_take_the_path_of_cli_path(drives, monkeypatch
         from openexpress import answers
 
         answers.ANSWERS.clear()  # each way asks the server itself: the request is compared
-        server = _UpdateServer(answer)
+        server = UpdateServer(answer)
         client = GarminClient(Settings(), None, None, server)
         device = parse(storage.read("GARMIN/GarminDevice.xml"))
         items = updates.mark_present(
@@ -1775,7 +1751,7 @@ def _texts(widget):
 
 def _drive_device_page(drive_window, monkeypatch):
     """(the texts on the device page of the RTL515 drive, what it started)."""
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 
@@ -6852,7 +6828,7 @@ def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
     """The icon the device view of the RTL515 drive shows before its picture comes (the
     picture is not asked here), and the stand-in of the window; `name`: another model name
     (one that tells no kind)."""
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 

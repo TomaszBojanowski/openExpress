@@ -1084,7 +1084,7 @@ def _real_maps_page(answers, device_root, unit_info=UNIVERSAL):
     MainWindow loads it; Garmin's server gives `answers` in turn, unit-info `unit_info`."""
     import types
 
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 

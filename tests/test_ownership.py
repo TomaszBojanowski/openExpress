@@ -9,83 +9,36 @@ import types
 
 import pytest
 import requests
-from fakes import RunNow
+from fakes import (
+    DEVICE_UNIT,
+    DEVICES_PATH,
+    OTHER_UNIT,
+    RunNow,
+    make_client,
+    response,
+)
 from fakes import window as stand_in
 
 from openexpress import ciq, cli, service, sync
 from openexpress.auth import store
-from openexpress.auth.store import ConnectAuth
 from openexpress.cli import main
 from openexpress.connect import (
     ApiError,
     ClockSkew,
     DeviceNotVerified,
-    GarminClient,
     NotAccountDevice,
     OwnershipUnknown,
     Unauthorized,
 )
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
-from openexpress.settings import Consumer, Settings
+from openexpress.settings import Settings
 
-UNIT = 1234567890
-OTHER = 4222333444
-DEVICES_PATH = "device-service/deviceregistration/devices"
+UNIT = DEVICE_UNIT
+OTHER = OTHER_UNIT
 NOT_REGISTERED = "not registered to your Garmin account"
 COULD_NOT_CHECK = "Could not check whether this device belongs"
 
-
-def response(status=200, body=b"[]"):
-    r = requests.Response()
-    r.status_code = status
-    r._content = body if isinstance(body, bytes) else json.dumps(body).encode()
-    return r
-
-
-class RecordingSession:
-    """Stands in for requests.Session: records every request, answers from `routes`."""
-
-    def __init__(self, devices=None, **routes):
-        self.routes = {DEVICES_PATH: response(body=devices if devices is not None else [])}
-        self.routes.update(routes)
-        self.handlers = {}  # url part -> function(method, request kwargs) -> response
-        self.sent = []
-
-    def request(self, method, url, **kw):
-        self.sent.append({"method": method, "url": url, "headers": kw.get("headers") or {},
-                          "body": repr((kw.get("data"), kw.get("json"), kw.get("files")))})
-        for part, handler in self.handlers.items():
-            if part in url:
-                return handler(method, kw)
-        for part, answer in self.routes.items():
-            if part in url:
-                if isinstance(answer, Exception):
-                    raise answer
-                return answer() if callable(answer) else answer
-        return response(404, b"")
-
-    def get(self, url, **kw):
-        return self.request("GET", url, **kw)
-
-    def signed_for(self, unit_id):
-        """Token-signed requests that name this watch."""
-        return [r for r in self.sent
-                if "Authorization" in r["headers"] and str(unit_id) in r["url"] + r["body"]]
-
-    def paths(self):
-        return [r["url"].split("garmin.com/")[-1].split("?")[0] for r in self.sent]
-
-
-def make_client(devices=None, auth=True, **routes):
-    """A client of a Garmin Connect of its own: what another one was told is not kept for it
-    (answers; in the program another account is another login, so another key)."""
-    from openexpress import answers
-
-    answers.ANSWERS.clear()
-    return GarminClient(Settings(), Consumer("ck", "cs"),
-                        ConnectAuth("t", "ts") if auth else None,
-                        RecordingSession(devices, **routes))
 
 
 def tree(root):

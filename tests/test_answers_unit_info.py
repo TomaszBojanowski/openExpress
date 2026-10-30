@@ -4,7 +4,7 @@ Again of the maps asks anew; the country of the account is kept an hour for the 
 whether data may be uploaded asks it anew. All devices, answers and accounts are made up."""
 import types
 
-from test_detection import RTL515_XML, _UpdateServer
+from fakes import RTL515_XML, UpdateServer
 
 from openexpress import answers, service
 from openexpress.connect import GarminClient
@@ -22,7 +22,7 @@ def _session(server):
 
 
 def test_the_device_opened_again_does_not_ask_unit_info_again():
-    server = _UpdateServer(ANSWER)
+    server = UpdateServer(ANSWER)
     first = service.unit_info(_session(server))
     again = service.unit_info(_session(server))  # a new session: the device opened again
     assert len(server.sent) == 1 and first == again
@@ -30,7 +30,7 @@ def test_the_device_opened_again_does_not_ask_unit_info_again():
 
 
 def test_check_again_of_the_maps_asks_unit_info_anew():
-    server = _UpdateServer(ANSWER)
+    server = UpdateServer(ANSWER)
     s = _session(server)
     service.unit_info(s)
     service.forget_unit_info(s)
@@ -42,7 +42,7 @@ def test_check_again_of_the_maps_asks_unit_info_anew():
 def test_seven_days_later_unit_info_is_asked_anew(monkeypatch):
     clock = [1_800_000_000.0]
     monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
-    server = _UpdateServer(ANSWER)
+    server = UpdateServer(ANSWER)
     service.unit_info(_session(server))
     clock[0] += 7 * 86400 - 60
     service.unit_info(_session(server))
@@ -79,7 +79,7 @@ def test_whether_data_may_be_uploaded_asks_the_country_anew():
 def test_the_maps_take_the_country_kept_for_an_hour(monkeypatch):
     """Two openings of the device (two sessions): one request for the country."""
     import requests
-    from test_ownership import make_client
+    from fakes import make_client
 
     location = "userprofile-service/userprofile/location"
     resp = requests.Response()

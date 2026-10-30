@@ -435,7 +435,7 @@ def test_the_maps_page_reads_the_space_with_the_maps(server, device_root):
 def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     """The free space is read with the music on the device, in the task; the page shows it as
     before and asks the device nothing as it is drawn."""
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui import app
     from openexpress.i18n import human_size
@@ -496,8 +496,8 @@ def _overview_window(storage, dev, space=NOT_READ):
     """The device page of the real kind for a device in mass storage mode (no sync groups),
     the window around it with run_task and its bar as they are; `space`: what the session
     holds from its detection (NOT_READ: nothing)."""
+    from fakes import page_window
     from gi.repository import Adw, Gtk
-    from test_fixes_ui import page_window
 
     from openexpress.gui.app import MainWindow
 

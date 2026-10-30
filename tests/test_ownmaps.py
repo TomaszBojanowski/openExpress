@@ -893,7 +893,7 @@ def answered_at_once(in_the_window):
 def own_maps_window(key="maps"):
     """The Maps page of the real kind in a window that is never shown, with the window's own
     code for own maps; what it would show the user is recorded instead."""
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 

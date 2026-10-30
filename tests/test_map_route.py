@@ -181,13 +181,13 @@ def test_two_threads_of_the_window_ask_unit_info_once():
     import threading
     import time
 
-    from test_detection import _UpdateServer
+    from fakes import UpdateServer
 
     from openexpress import service
     from openexpress.connect import GarminClient
     from openexpress.settings import Settings
 
-    class Slow(_UpdateServer):
+    class Slow(UpdateServer):
         def request(self, method, url, **kw):
             time.sleep(0.2)
             return super().request(method, url, **kw)
@@ -217,7 +217,7 @@ def test_the_picture_and_the_map_check_share_the_answer_of_the_session():
 def test_the_line_tells_where_the_answer_came_from(caplog, monkeypatch):
     """The device page and its Maps page share one answer: the second line says it came from
     memory, not that the service was asked."""
-    from test_detection import _UpdateServer
+    from fakes import UpdateServer
 
     from openexpress import answers
     from openexpress.connect import GarminClient
@@ -225,7 +225,7 @@ def test_the_line_tells_where_the_answer_came_from(caplog, monkeypatch):
 
     clock = [1_800_000_000.0]
     monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
-    server = _UpdateServer({"maps": []})
+    server = UpdateServer({"maps": []})
     client = GarminClient(Settings(), None, None, server)
     with caplog.at_level(logging.INFO, logger="openexpress"):
         maps.check(client, device(PPNM), ask=lambda: {"mapupdatetype": "Universal"})

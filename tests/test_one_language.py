@@ -124,7 +124,7 @@ def test_the_device_page_says_reading_then_unknown():
 @pytest.mark.needs_display
 @pytest.mark.parametrize("free, said", [(None, "Unknown"), (5_000_000_000, f"5.0{NB}GB free")])
 def test_the_music_page_says_the_space_in_the_same_words(free, said):
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
 
     win, section = page_window("music")
@@ -202,8 +202,8 @@ def test_devices_names_the_usb_mode_with_the_same_pair(capsys, monkeypatch, tmp_
 def _device_page(**session):
     """The device page of a connected device as the window builds it, with what `session`
     says (a drive, the account); nothing is asked."""
+    from fakes import page_window
     from gi.repository import Adw
-    from test_fixes_ui import page_window
 
     from openexpress.gui.app import MainWindow
 
@@ -288,7 +288,8 @@ def test_the_reason_is_only_in_the_banner():
 def test_the_page_of_a_remembered_device_tells_last_seen_against_now(clock):
     from datetime import timedelta
 
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     from openexpress.i18n import full_time
 
@@ -316,7 +317,7 @@ def test_a_version_known_only_from_the_account_says_so():
 
 @pytest.mark.needs_display
 def test_the_page_of_a_device_only_on_the_account_says_where_its_version_comes_from():
-    from test_remembered_picture import _window
+    from fakes import remembered_window as _window
 
     win = _window()
     win._show_account({"unitid": 3000000002, "productdisplayname": "Edge 1050",

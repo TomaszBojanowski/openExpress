@@ -396,7 +396,7 @@ def test_the_chips_of_ready_in_polish():
 
 @pytest.mark.needs_display
 def test_the_page_of_a_remembered_device_shows_the_last_check(clock):
-    from test_remembered_picture import _window
+    from fakes import remembered_window as _window
 
     _remembered()
     found = (clock.current - timedelta(days=3)).timestamp()
@@ -411,7 +411,7 @@ def test_the_page_of_a_remembered_device_shows_the_last_check(clock):
 
 @pytest.mark.needs_display
 def test_the_page_of_a_device_only_on_the_account_asks_to_connect_it():
-    from test_remembered_picture import _window
+    from fakes import remembered_window as _window
 
     win = _window()
     win._show_account({"unitid": 3000000002, "productdisplayname": "Edge 1050"})

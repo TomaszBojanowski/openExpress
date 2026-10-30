@@ -3,24 +3,19 @@ model when it is known (in memory from the start page, or in the cache), else th
 its kind; never the icon of the program. All data here is made up."""
 
 import logging
-import time
 import types
 
 import pytest
-from fakes import replace_in_window, window_methods
+from fakes import (
+    remembered_device,
+    remembered_window,
+    replace_in_window,
+)
 from fakes import window as stand_in
-
-from openexpress.known_devices import KnownDevice
 
 PART = "006-B0000-00"
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 
-
-def _remembered(category="watch", part=PART):
-    now = time.time()
-    return KnownDevice(unit_id=1234567890, description="Test watch", part_number=part,
-                       software_version="1.00", kind="mtp", first_seen=now - 86400,
-                       last_seen=now - 3600, category=category)
 
 
 def _texture():
@@ -31,24 +26,7 @@ def _texture():
 
 # The view of a remembered device and its pictures (once picked by name: "picture",
 # "remembered"), found along the whole MRO (fakes.window_methods).
-REMEMBERED_METHODS = ("_show_remembered", "_show_account", "_fill_account", "_last_sync_text",
-                      "_fill_remembered", "_load_tile_pictures", "_on_remembered_page",
-                      "_redraw_remembered", "_refresh_remembered", "_refresh_remembered_texts",
-                      "_show_device_picture", "_show_page_picture", "_tile_picture_done")
 
-
-def _window(textures=None):
-    """The parts of the window that open the view, with the real view in it; background work
-    runs at once."""
-    from openexpress.gui.start import RememberedPage
-
-    pushed = []
-    win = stand_in(
-        remembered=RememberedPage(), navigation=types.SimpleNamespace(push=pushed.append),
-        pushed=pushed, _device_textures=dict(textures or {}), _pictures_asked=set(),
-        _account=None, _on_start_page=lambda: True,
-        in_background=lambda fn, on_done, on_error=None: on_done(fn()))
-    return window_methods(win, REMEMBERED_METHODS)
 
 
 # The arrow of the row "Last sync" (an expander row): not the device's image.
@@ -84,9 +62,9 @@ def _shown(page):
 def test_the_view_shows_the_picture_the_start_page_already_has(caplog):
     """The tile shows the picture from the cache: the view shows it too."""
     texture = _texture()
-    win = _window({PART: texture})
+    win = remembered_window({PART: texture})
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        win._show_remembered(_remembered())
+        win._show_remembered(remembered_device())
     assert win.pushed == [win.remembered.page]
     icons, paintables = _shown(win.remembered.page)
     assert texture in paintables
@@ -102,8 +80,8 @@ def test_the_view_shows_the_picture_from_the_cache():
     path = device_picture_path(PART)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_texture().save_to_png_bytes().get_data())
-    win = _window()
-    win._show_remembered(_remembered())
+    win = remembered_window()
+    win._show_remembered(remembered_device())
     icons, paintables = _shown(win.remembered.page)
     assert len(paintables) == 1 and APP_ID not in icons
 
@@ -115,8 +93,8 @@ def test_the_view_shows_the_picture_from_the_cache():
     (None, f"{APP_ID}-device-symbolic"),
 ])
 def test_without_a_picture_the_view_shows_the_icon_of_the_kind(category, icon):
-    win = _window()
-    win._show_remembered(_remembered(category))
+    win = remembered_window()
+    win._show_remembered(remembered_device(category))
     icons, paintables = _shown(win.remembered.page)
     assert icons == [icon] and paintables == []
 
@@ -124,9 +102,9 @@ def test_without_a_picture_the_view_shows_the_icon_of_the_kind(category, icon):
 @pytest.mark.needs_display
 def test_the_next_device_does_not_keep_the_picture_of_the_one_before():
     texture = _texture()
-    win = _window({PART: texture})
-    win._show_remembered(_remembered())
-    win._show_remembered(_remembered("cycling-computer", part="006-B0001-00"))
+    win = remembered_window({PART: texture})
+    win._show_remembered(remembered_device())
+    win._show_remembered(remembered_device("cycling-computer", part="006-B0001-00"))
     icons, paintables = _shown(win.remembered.page)
     assert icons == [f"{APP_ID}-cycling-computer-symbolic"] and paintables == []
 
@@ -181,7 +159,7 @@ def _tile_with_an_address_not_allowed(monkeypatch):
     (tile,) = devicelist.tiles([], {}, [dict(_account_entry(), imageurl=OTHER_BUCKET_URL)],
                                True)
     assert (tile.image_url, tile.image_source) == (OTHER_BUCKET_URL, "the account")
-    win = _window()
+    win = remembered_window()
     shown = []
     win.start = types.SimpleNamespace(set_picture=lambda part, texture: shown.append(part))
     return win, tile, http, shown
@@ -238,7 +216,7 @@ def _later(win):
 def test_the_account_view_shows_the_icon_then_the_picture_from_the_account(monkeypatch,
                                                                            caplog):
     downloads = _fake_download(monkeypatch)
-    win = _window()
+    win = remembered_window()
     later = _later(win)
     with caplog.at_level(logging.INFO, logger="openexpress"):
         win._show_account(_account_entry())
@@ -257,10 +235,10 @@ def test_the_account_view_shows_the_icon_then_the_picture_from_the_account(monke
 def test_a_late_picture_of_the_device_before_does_not_replace_the_image_of_the_next(
         monkeypatch):
     _fake_download(monkeypatch)
-    win = _window()
+    win = remembered_window()
     later = _later(win)
     win._show_account(_account_entry())  # its picture is still being read
-    win._show_remembered(_remembered())  # another device, with no picture
+    win._show_remembered(remembered_device())  # another device, with no picture
     for fn, on_done in later:
         on_done(fn())
     assert _shown(win.remembered.page) == ([f"{APP_ID}-watch-symbolic"], [])
@@ -271,8 +249,8 @@ def test_a_late_picture_of_the_device_before_does_not_replace_the_image_of_the_n
 def test_the_view_guesses_the_icon_from_the_name_as_the_tile_does():
     """Venu 2 remembered without a word from Garmin on its kind: a watch's icon, as on its
     tile (the name only for the icon, never stored)."""
-    win = _window()
-    known = _remembered(category=None)
+    win = remembered_window()
+    known = remembered_device(category=None)
     known.description = "Venu 2"
     win._show_remembered(known)
     assert _shown(win.remembered.page) == ([f"{APP_ID}-watch-symbolic"], [])
@@ -324,7 +302,7 @@ def test_a_tile_off_the_account_gets_its_picture_from_the_remembered_address(mon
     downloads = _fake_download(monkeypatch)
     _remembered_with_address()
     (tile,) = devicelist.tiles([], known_devices.load(), None, False)
-    win = _window()
+    win = remembered_window()
     shown = []
     win.start = types.SimpleNamespace(set_picture=lambda part, texture: shown.append(part))
     with caplog.at_level(logging.INFO, logger="openexpress"):
@@ -339,7 +317,7 @@ def test_the_page_of_a_device_off_the_account_gets_it_from_there_too(monkeypatch
     """Its page opened without a tile (as from the list of devices): the same address."""
     downloads = _fake_download(monkeypatch)
     known = _remembered_with_address()
-    win = _window()
+    win = remembered_window()
     with caplog.at_level(logging.INFO, logger="openexpress"):
         win._show_remembered(known)
     icons, paintables = _shown(win.remembered.page)

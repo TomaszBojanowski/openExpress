@@ -129,7 +129,8 @@ def test_the_tiles_after_baseline_alone_say_nothing_of_the_sync():
 
 @pytest.mark.needs_display
 def test_the_page_of_a_remembered_device_says_the_same():
-    from test_remembered_picture import _remembered, _window
+    from fakes import remembered_device as _remembered
+    from fakes import remembered_window as _window
 
     known = _remembered()  # the unit of conftest's device
     assert known.unit_id == UNIT

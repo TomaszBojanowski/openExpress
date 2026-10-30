@@ -7,8 +7,8 @@ import time
 import types
 
 import pytest
+from fakes import page_window
 from fakes import window as stand_in
-from test_fixes_ui import page_window
 from test_updates_system import _entry
 
 from openexpress import known_devices, updates

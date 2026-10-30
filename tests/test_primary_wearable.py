@@ -91,8 +91,8 @@ def _page(unit=FENIX, account=None, **session):
     """The device page as the window builds it (test_one_language._device_page), logged in
     with the account's list as the ownership check read it; the primary training device is
     not asked (its row says "Checking…")."""
+    from fakes import page_window
     from gi.repository import Adw
-    from test_fixes_ui import page_window
     from test_one_language import _texts
 
     from openexpress.gui.app import MainWindow

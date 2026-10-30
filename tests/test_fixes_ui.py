@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import RunNow, replace_in_window, step_words, window_methods
+from fakes import page_window, replace_in_window, step_words, window_methods
 from fakes import window as stand_in
 
 from openexpress import cli, desktop, service
@@ -1652,34 +1652,6 @@ def test_next_steps_in_polish():
 
 # --- the list of action buttons after a page is rebuilt -----------------------------------------
 
-
-def page_window(key):
-    """A page of the real kind in a window that is never shown, and a stand-in for the main
-    window that loads it the way MainWindow does. A task runs at once, in the order run_task
-    keeps: busy on, the work, busy off, then the page is rebuilt."""
-    from gi.repository import Gtk
-
-    from openexpress.gui.app import MainWindow
-    from openexpress.gui.device_page import Section
-    from openexpress.gui.window_tasks import still_in_window
-
-    section = Section(key, key.title(), "x-symbolic", "Loading…")
-    toplevel = Gtk.Window()
-    toplevel.set_child(section.stack)
-
-    run_task = RunNow(on_call=lambda call: win.set_busy(True),
-                      before_done=lambda: win.set_busy(False))
-
-    def set_busy(busy):
-        win.busy = busy
-        win._action_buttons = still_in_window(win._action_buttons)
-
-    win = stand_in(session=types.SimpleNamespace(), sections={key: section},
-                   busy=False, _action_buttons=[], _retry_sources={},
-                   run_task=run_task, set_busy=set_busy, toplevel=toplevel)
-    for name in ("_load", "_button", "_trash"):
-        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
-    return win, section
 
 
 @pytest.mark.needs_display

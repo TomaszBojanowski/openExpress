@@ -5,8 +5,8 @@ reads the queue once less. Counted on a made-up store; all apps and devices are 
 import types
 
 import pytest
+from fakes import UpdateServer
 from test_ciq_music import apps_cli, iq_device  # noqa: F401 - fixtures
-from test_detection import _UpdateServer
 
 from openexpress import answers, ciq, service
 from openexpress.auth.store import ConnectAuth
@@ -19,7 +19,7 @@ DEVICE = types.SimpleNamespace(unit_id=UNIT, part_number="006-B0000-00")
 
 @pytest.fixture
 def store():
-    server = _UpdateServer([])
+    server = UpdateServer([])
     client = GarminClient(Settings(), Consumer("k", "s"), ConnectAuth("t", "ts"), server)
     client.verified_unit_id = UNIT
     return ciq.StoreApi(client), server

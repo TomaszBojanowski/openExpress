@@ -162,7 +162,7 @@ def _apps_page(state, account):
     """The Apps page of a window that is never shown, filled from `state` and `account`."""
     import inspect
 
-    from test_fixes_ui import page_window
+    from fakes import page_window
 
     from openexpress.gui.app import MainWindow
 
