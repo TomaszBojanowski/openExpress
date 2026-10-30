@@ -453,7 +453,7 @@ class StoreApi:
     def _kept(self, kind: str, device: GarminDevice, key, ask):
         """An answer about the device's apps, kept a moment (answers)."""
         self.client.require_verified(device.unit_id)
-        return answers.ANSWERS.ask(kind, (*self.client._account_scope(), device.unit_id,
+        return answers.ANSWERS.ask(kind, (*self.client.account_scope(), device.unit_id,
                                           *key), ask, about=[device.unit_id])
 
     def _forget(self, device: GarminDevice) -> None:

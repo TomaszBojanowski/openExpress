@@ -23,7 +23,7 @@ class Store(ciq.StoreApi):
         # A client only for what the store's kept answers ask of it (answers): the device
         # checked, the account's key.
         super().__init__(types.SimpleNamespace(require_verified=lambda unit_id=None: None,
-                                               _account_scope=lambda: ("made-up", None)))
+                                               account_scope=lambda: ("made-up", None)))
         self.answer = answer
 
     def _request(self, *args, **kw):

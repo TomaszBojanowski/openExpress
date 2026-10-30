@@ -519,7 +519,7 @@ class GarminClient:
         body = lower_keys(self._json(r, what))
         return (body.get("imageurl") if isinstance(body, dict) else None) or None
 
-    def _account_scope(self) -> tuple:
+    def account_scope(self) -> tuple:
         """What an answer about the account depends on besides the question: the environment
         and the login saved (its version, nothing of what is in it)."""
         from openexpress.auth import store
@@ -538,7 +538,7 @@ class GarminClient:
                                .format(what=what))
             return body
 
-        return answers.ANSWERS.ask(answers.ACCOUNT_DEVICES, self._account_scope(), ask,
+        return answers.ANSWERS.ask(answers.ACCOUNT_DEVICES, self.account_scope(), ask,
                                    fresh=fresh)
 
     # --- consents and account settings that decide whether data may be uploaded ---------
@@ -583,7 +583,7 @@ class GarminClient:
             code = body.get("countrycode") if isinstance(body, dict) else None
             return code.upper() if isinstance(code, str) and code.strip() else None
 
-        return answers.ANSWERS.ask(answers.ACCOUNT_COUNTRY, self._account_scope(), ask,
+        return answers.ANSWERS.ask(answers.ACCOUNT_COUNTRY, self.account_scope(), ask,
                                    fresh=fresh)
 
     def primary_training_device(self, fresh: bool = False) -> dict:
@@ -608,7 +608,7 @@ class GarminClient:
                                .format(what=what))
             return body
 
-        return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self._account_scope(), ask,
+        return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self.account_scope(), ask,
                                    fresh=fresh)
 
     def set_primary_training_device(self, unit_id: int) -> None:
