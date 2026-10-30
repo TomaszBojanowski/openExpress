@@ -29,6 +29,8 @@ from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from openexpress.device.xmldevice import parse
+
 log = logging.getLogger(__name__)
 
 ACCOUNT_DEVICES = "account-devices"
@@ -128,12 +130,14 @@ def xml_key(device_xml: bytes) -> str:
 
 
 def device_tags(device_xml: bytes) -> list:
-    """What an answer about a device is about, for forget: its unit ID (the <Id> of its
-    GarminDevice.xml) and the XML itself (xml_key)."""
-    import re
-
-    found = re.search(rb"<Id>\s*(\d+)\s*</Id>", device_xml)
-    return ([int(found.group(1))] if found else []) + [xml_key(device_xml)]
+    """What an answer about a device is about, for forget: its unit ID, read as the program
+    reads it (xmldevice: whatever prefix or spaces the XML has), and the XML itself
+    (xml_key)."""
+    try:
+        unit_id = parse(device_xml).unit_id
+    except (SyntaxError, ValueError):  # not the XML of a device: only the XML itself
+        unit_id = 0
+    return ([unit_id] if unit_id else []) + [xml_key(device_xml)]
 
 
 def forget_device(kinds: Iterable[str] | str, unit_id) -> None:

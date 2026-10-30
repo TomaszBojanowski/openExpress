@@ -174,3 +174,39 @@ def test_the_command_line_install_forgets_it_too():
 
     source = inspect.getsource(cli.cmd_updates)
     assert "answers.forget_device(answers.SOFTWARE_UPDATES, dev.unit_id)" in source
+
+
+# A GarminDevice.xml written otherwise, as XML allows: the unit ID read as the program reads
+# it (xmldevice), whatever the prefix or the spaces in a tag.
+OTHERWISE = {
+    "a prefix": RTL515_XML.replace(
+        'xmlns="http://www.garmin.com/xmlschemas/GarminDevice/v2"',
+        'xmlns:g="http://www.garmin.com/xmlschemas/GarminDevice/v2"')
+    .replace("<", "<g:").replace("<g:/", "</g:").replace("<g:?", "<?"),
+    "a space in the tag": RTL515_XML.replace("<Id>", "<Id >"),
+}
+
+
+@pytest.mark.parametrize("written", sorted(OTHERWISE))
+def test_refresh_and_an_install_forget_also_an_xml_written_otherwise(server, monkeypatch,
+                                                                     written):
+    from openexpress import updates
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui.tasks import forget_on_refresh
+    from openexpress.gui.updates_page import install_updates
+
+    xml = OTHERWISE[written].encode()
+    device = parse(xml)
+    assert device.unit_id == UNIT  # the program reads it
+    client = _client(server)
+    client.software_updates(xml, include_reinstalls=True)
+    client.universal_maps(xml)
+    forget_on_refresh(types.SimpleNamespace(device=device))  # Refresh
+    client.software_updates(xml, include_reinstalls=True)
+    client.universal_maps(xml)
+    monkeypatch.setattr(updates, "install", lambda *a, **kw: [])
+    install_updates(types.SimpleNamespace(storage=None, client=client, device=device), [],
+                    None)  # an install
+    client.software_updates(xml, include_reinstalls=True)
+    assert _paths(server) == ["v1/updates", "universal/update", "v1/updates",
+                              "universal/update", "v1/updates"]
