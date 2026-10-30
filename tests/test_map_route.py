@@ -181,21 +181,25 @@ def test_two_threads_of_the_window_ask_unit_info_once():
     import threading
     import time
 
+    from test_detection import _UpdateServer
+
     from openexpress import service
+    from openexpress.connect import GarminClient
+    from openexpress.settings import Settings
 
-    class Slow(Client):
-        def unit_info(self, unit_id, part_number):
+    class Slow(_UpdateServer):
+        def request(self, method, url, **kw):
             time.sleep(0.2)
-            return super().unit_info(unit_id, part_number)
+            return super().request(method, url, **kw)
 
-    client = Slow({"mapupdatetype": "Universal"})
-    s = _session(client)
+    server = Slow({"mapUpdateType": "Universal"})
+    s = _session(GarminClient(Settings(), None, None, server))
     threads = [threading.Thread(target=service.unit_info, args=(s,)) for _ in range(2)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    assert len(client.asked) == 1
+    assert len(server.sent) == 1
 
 
 def test_the_picture_and_the_map_check_share_the_answer_of_the_session():

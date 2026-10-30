@@ -60,7 +60,6 @@ class DeviceSession:
     # What Garmin's update server said of the device (unit-info), asked once for the
     # session (unit_info()); it carries the unit ID and the serial number: never shown.
     unit_info_answer: dict | None = field(default=None, repr=False)
-    unit_info_lock: threading.Lock | None = field(default=None, repr=False)  # unit_info
     # What the window learnt of the device's error logs when it opened it, and its copy
     # of the diagnostic files (diagnostics.at_open); None: not read. They are read in the
     # background once its page is shown: set when that is done (a task that writes to the
@@ -93,33 +92,20 @@ class DeviceSession:
         return self.storage.mass_storage
 
 
-# The lock of each session's unit-info (unit_info): its threads wait for one answer, those
-# of another device do not.
-_session_locks = threading.Lock()
-
-
-def _unit_info_lock(session) -> threading.Lock:
-    with _session_locks:
-        lock = getattr(session, "unit_info_lock", None)
-        if lock is None:
-            lock = session.unit_info_lock = threading.Lock()
-        return lock
-
-
 def unit_info(session) -> dict:
     """What Garmin's update server says of the open device (unit-info): the "Maps" row, the
-    Maps page and the picture use one answer, kept with the session and in the kept answers
-    (answers: 7 days, only the fields the program reads); threads of the session asking at
-    once wait for one request. A failed request is not kept, so the next one asks again."""
-    with _unit_info_lock(session):
-        answer = getattr(session, "unit_info_answer", None)
-        if answer is None:
-            device = session.device
-            answer = (session.client.unit_info(device.unit_id, device.part_number)
-                      if device.unit_id else {})
-            session.unit_info_answer = answer
-            note_model_name(device, answer)
-        return answer
+    Maps page and the picture use one answer, kept with the session (the window reads it on
+    its own thread without asking) and in the kept answers (answers.LIFETIMES, only the
+    fields the program reads), which make threads asking at once share one request. A
+    failed request is not kept, so the next one asks again."""
+    answer = getattr(session, "unit_info_answer", None)
+    if answer is None:
+        device = session.device
+        answer = (session.client.unit_info(device.unit_id, device.part_number)
+                  if device.unit_id else {})
+        session.unit_info_answer = answer
+        note_model_name(device, answer)  # the same name, whichever thread notes it
+    return answer
 
 
 def note_model_name(device, answer) -> None:
