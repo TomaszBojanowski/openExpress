@@ -2,8 +2,6 @@
 opening a device again does not ask again; a check before a write to the account or an
 upload asks anew; Refresh, a change of a primary device and another login (or none) forget
 them. Counted on a made-up Garmin Connect; all accounts and devices are made up."""
-import inspect
-
 import pytest
 from test_ownership import DEVICES_PATH, UNIT, make_client
 from test_primary_both_roles import LIST, READ_TRAINING, SET_TRAINING, Account
@@ -24,27 +22,76 @@ def test_opening_a_device_again_uses_the_list_kept(monkeypatch):
     assert client.http.paths() == [DEVICES_PATH, DEVICES_PATH]
 
 
-def test_a_sync_checks_the_owner_anew_and_a_plan_shown_uses_the_list_kept(monkeypatch):
+class KeptList:
+    """The account of a sync whose list of devices is kept as Garmin Connect's client keeps it
+    (answers): `asked` says when it was asked of the server."""
+
+    def __init__(self):
+        from fakes import SyncAccount
+
+        self.account = SyncAccount(verified_unit_id=None)
+
+    def __getattr__(self, name):
+        return getattr(self.account, name)
+
+    def account_devices(self, fresh=False):
+        return answers.ANSWERS.ask(answers.ACCOUNT_DEVICES, ("made-up login",),
+                                   lambda: self.account.account_devices(), fresh=fresh)
+
+
+@pytest.mark.parametrize("preview", [False, True])
+def test_a_sync_checks_the_owner_anew_and_a_plan_shown_uses_the_list_kept(device_root, xdg,
+                                                                          preview):
     """Before uploads the account's list is asked anew; a sync only planned to be shown
-    (the command line's dry run) takes the one kept."""
-    from fakes import SyncAccount
+    (the command line's dry run) takes the one kept when the device was opened."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    client = KeptList()
+    st = LocalStorage(device_root)
+    s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(), client)
+    service.require_account_device(client, s.device.unit_id)  # the device opened
+    client.asked.clear()
+    service.plan_sync(s, service.SyncOptions(preview=preview, first_run="baseline"))
+    assert ("account" in client.asked) is not preview
+
+
+@pytest.mark.parametrize("task", ["install", "remove from the account", "remove and forget"])
+def test_a_change_of_the_apps_on_the_account_checks_the_owner_anew(task, monkeypatch,
+                                                                   in_the_window):
+    """Installing apps, removing one from the account list, removing one and forgetting it:
+    the ownership check asks the account's list anew before the change."""
+    import types
+    import uuid
+
+    from fakes import RunNow, window_methods
+    from fakes import window as stand_in
 
     asked = []
-    monkeypatch.setattr(service, "require_account_device",
-                        lambda client, unit, fresh=False: asked.append(fresh) or [])
-    source = inspect.getsource(service.plan_sync)
-    assert "require_account_device(s.client, s.device.unit_id, fresh=not options.preview)" \
-        in source
-    assert SyncAccount  # the shared stand-in of a sync's account takes `fresh` too
-    assert "fresh=False" in inspect.getsource(SyncAccount.account_devices)
 
+    class Checked(Exception):
+        pass
 
-def test_a_change_of_the_apps_on_the_account_checks_the_owner_anew():
-    from openexpress.gui import apps_page
+    def require(client, unit_id, fresh=False):
+        asked.append(fresh)
+        raise Checked  # nothing further: only the check is looked at
 
-    source = inspect.getsource(apps_page)
-    assert source.count("require_account_device(s.client, s.device.unit_id, fresh=True)") == 3
-    assert "require_account_device(s.client, s.device.unit_id)" not in source
+    monkeypatch.setattr(service, "require_account_device", require)
+    in_the_window("confirm", lambda win, name, heading, body, *answer, **kw: next(
+        a for a in answer if a.id == "forget").run())
+    app = types.SimpleNamespace(name="Face It", app_id=uuid.UUID(int=1), has_files=True,
+                                direct_removal=False)
+    runner = RunNow(error="record")
+    win = window_methods(stand_in(
+        session=types.SimpleNamespace(client=object(), storage=None,
+                                      device=types.SimpleNamespace(unit_id=UNIT)),
+        run_task=runner, progress=None, load_section=lambda key, force=False: None),
+        ["_install_apps", "confirm_forget_app", "confirm_remove_app", "_forget_text"])
+    {"install": lambda: win._install_apps([app]),
+     "remove from the account": lambda: win.confirm_forget_app(app),
+     "remove and forget": lambda: win.confirm_remove_app(app)}[task]()
+    assert asked == [True] and len(runner.calls) == 1
 
 
 # --- what forgets them ------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import types
 
 import pytest
 from test_detection import RTL515_XML, _UpdateServer
+from test_fixes_ui import offered  # noqa: F401 - the fixture
 
 from openexpress import answers
 from openexpress.connect import GarminClient
@@ -165,15 +166,35 @@ def test_an_update_installed_forgets_the_software_check(server, monkeypatch):
     assert len(server.sent) == 2
 
 
-def test_the_command_line_install_forgets_it_too():
-    """cmd_updates forgets the device's software check after the copy (source of the step:
-    the same call as the window's)."""
-    import inspect
+@pytest.mark.parametrize("copied", [True, False])
+def test_the_command_line_install_forgets_it_too(offered, monkeypatch, capsys, copied):
+    """`updates --install … --apply`: the next check of the device asks anew, also when the
+    copy failed (a part may be there)."""
+    from conftest import DEVICE_XML
 
-    from openexpress import cli
+    from openexpress import updates
+    from openexpress.cli import main
+    from openexpress.device.xmldevice import parse
 
-    source = inspect.getsource(cli.cmd_updates)
-    assert "answers.forget_device(answers.SOFTWARE_UPDATES, dev.unit_id)" in source
+    root, _answer = offered
+    unit = parse(DEVICE_XML.encode()).unit_id
+    asked = []
+
+    def check():
+        asked.append(1)
+        return {"updates": []}
+
+    answers.ANSWERS.ask(answers.SOFTWARE_UPDATES, ("made-up",), check, about=[unit])
+
+    def install(chosen, storage, session=None, progress=None):
+        if not copied:
+            raise OSError("the cable came out")
+        return types.SimpleNamespace(installed=[])
+
+    monkeypatch.setattr(updates, "install", install)
+    main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"])
+    answers.ANSWERS.ask(answers.SOFTWARE_UPDATES, ("made-up",), check, about=[unit])
+    assert asked == [1, 1]
 
 
 # A GarminDevice.xml written otherwise, as XML allows: the unit ID read as the program reads
