@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 23:06+0100\n"
+"POT-Creation-Date: 2026-10-30 01:13+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: openexpress/applog.py:406
+#: openexpress/applog.py:422
 #, python-brace-format
 msgid "No log file: {error}"
 msgstr "Brak pliku logu: {error}"
@@ -270,8 +270,8 @@ msgstr[2] ""
 "których nie można odczytać. Niczego nie zmieniono, aby żadna aplikacja nie "
 "wypadła z listy."
 
-#: openexpress/ciq.py:372 openexpress/ciq.py:761 openexpress/ciq.py:1169
-#: openexpress/ciq.py:1459 openexpress/ciq.py:1511 openexpress/ciq.py:1917
+#: openexpress/ciq.py:372 openexpress/ciq.py:761 openexpress/ciq.py:1177
+#: openexpress/ciq.py:1467 openexpress/ciq.py:1519 openexpress/ciq.py:1925
 #: openexpress/cli.py:1398
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
@@ -464,43 +464,43 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr "Usuń ją w telefonie, w aplikacji Connect IQ albo Garmin Connect."
 
-#: openexpress/ciq.py:1066 openexpress/sync.py:805
+#: openexpress/ciq.py:1074 openexpress/sync.py:842
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr "Pobieranie {name}"
 
-#: openexpress/ciq.py:1103 openexpress/ciq.py:1203
+#: openexpress/ciq.py:1111 openexpress/ciq.py:1211
 #, python-brace-format
 msgid "Writing {path}"
 msgstr "Zapisywanie {path}"
 
-#: openexpress/ciq.py:1134 openexpress/ciq.py:1254
+#: openexpress/ciq.py:1142 openexpress/ciq.py:1262
 #, python-brace-format
 msgid "Cannot register the apps on the device: {error}"
 msgstr "Nie można zarejestrować aplikacji na urządzeniu: {error}"
 
-#: openexpress/ciq.py:1207
+#: openexpress/ciq.py:1215
 msgid "not enough free space on the device"
 msgstr "za mało wolnego miejsca na urządzeniu"
 
-#: openexpress/ciq.py:1220
+#: openexpress/ciq.py:1228
 msgid "the app list folder was not found"
 msgstr "nie znaleziono katalogu z listą aplikacji"
 
-#: openexpress/ciq.py:1240
+#: openexpress/ciq.py:1248
 msgid "USB connection"
 msgstr "Połączenie USB"
 
-#: openexpress/ciq.py:1282
+#: openexpress/ciq.py:1290
 msgid "the GARMIN folder was not found on the device"
 msgstr "nie znaleziono katalogu GARMIN na urządzeniu"
 
-#: openexpress/ciq.py:1303
+#: openexpress/ciq.py:1311
 #, python-brace-format
 msgid "{error} Unplug the device and plug it in again."
 msgstr "{error} Odłącz urządzenie i podłącz je ponownie."
 
-#: openexpress/ciq.py:1317
+#: openexpress/ciq.py:1325
 #, python-brace-format
 msgid "An unfinished file may have been left on the device: {paths}."
 msgid_plural "Unfinished files may have been left on the device: {paths}."
@@ -508,7 +508,7 @@ msgstr[0] "Na urządzeniu mógł zostać niedokończony plik: {paths}."
 msgstr[1] "Na urządzeniu mogły zostać niedokończone pliki: {paths}."
 msgstr[2] "Na urządzeniu mogły zostać niedokończone pliki: {paths}."
 
-#: openexpress/ciq.py:1350
+#: openexpress/ciq.py:1358
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), and what was "
@@ -519,7 +519,7 @@ msgstr ""
 "tego, co z niej zapisano. Usuń {path} na urządzeniu, zanim je odłączysz (np. "
 "w Plikach): urządzenie mogłoby odczytać pół listy i usunąć aplikacje."
 
-#: openexpress/ciq.py:1357
+#: openexpress/ciq.py:1365
 #, python-brace-format
 msgid ""
 "The app list for the device could not be written ({error}), nor the one that "
@@ -530,12 +530,12 @@ msgstr ""
 "przywrócić listy, która czekała: została usunięta, więc zmiany aplikacji "
 "czekające na urządzenie przepadły. Wprowadź je ponownie."
 
-#: openexpress/ciq.py:1366 openexpress/device/storage.py:239
+#: openexpress/ciq.py:1374 openexpress/device/storage.py:239
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr "Weryfikacja zapisu {path} się nie powiodła"
 
-#: openexpress/ciq.py:1373
+#: openexpress/ciq.py:1381
 #, python-brace-format
 msgid ""
 "{name} is already being removed; the device finishes it after it is "
@@ -544,7 +544,7 @@ msgstr ""
 "Aplikacja {name} jest już usuwana; urządzenie dokończy usuwanie po "
 "odłączeniu."
 
-#: openexpress/ciq.py:1375
+#: openexpress/ciq.py:1383
 #, python-brace-format
 msgid ""
 "{name} is not installed yet; the device installs it after it is unplugged. "
@@ -553,16 +553,16 @@ msgstr ""
 "Aplikacja {name} nie jest jeszcze zainstalowana; urządzenie zainstaluje ją "
 "po odłączeniu. Najpierw odłącz urządzenie."
 
-#: openexpress/ciq.py:1426 openexpress/cli.py:1656
+#: openexpress/ciq.py:1434 openexpress/cli.py:1656
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
 msgstr "{name} jest częścią oprogramowania urządzenia i nie można go usunąć"
 
-#: openexpress/ciq.py:1463 openexpress/ciq.py:1946
+#: openexpress/ciq.py:1471 openexpress/ciq.py:1954
 msgid "App not found on the device"
 msgstr "Nie znaleziono aplikacji na urządzeniu"
 
-#: openexpress/ciq.py:1476
+#: openexpress/ciq.py:1484
 #, python-brace-format
 msgid ""
 "The file of {name} was deleted, but the app list on the device could not be "
@@ -575,12 +575,12 @@ msgstr ""
 "aplikację. Odłącz je i sprawdź; jeśli {name} nadal jest na liście, podłącz "
 "urządzenie i usuń aplikację jeszcze raz, żeby zaktualizować listę."
 
-#: openexpress/ciq.py:1485
+#: openexpress/ciq.py:1493
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
 msgstr "Nie udało się zaktualizować listy aplikacji na urządzeniu: {error}"
 
-#: openexpress/ciq.py:1495
+#: openexpress/ciq.py:1503
 #, python-brace-format
 msgid ""
 "It is not known whether the file of {name} was deleted: {error} The device "
@@ -591,16 +591,16 @@ msgstr ""
 "może nadal pokazywać tę aplikację. Odłącz je i sprawdź; jeśli {name} nadal "
 "jest na liście, podłącz urządzenie i usuń aplikację jeszcze raz."
 
-#: openexpress/ciq.py:1499
+#: openexpress/ciq.py:1507
 #, python-brace-format
 msgid "{name} was not removed: {error}"
 msgstr "Nie usunięto aplikacji {name}: {error}"
 
-#: openexpress/ciq.py:1509
+#: openexpress/ciq.py:1517
 msgid "the app folder was not found on the device"
 msgstr "nie znaleziono katalogu aplikacji na urządzeniu"
 
-#: openexpress/ciq.py:1518
+#: openexpress/ciq.py:1526
 #, python-brace-format
 msgid ""
 "{path} on the device is not the file the app list describes; nothing was "
@@ -609,18 +609,18 @@ msgstr ""
 "Plik {path} na urządzeniu nie zgadza się z listą aplikacji; niczego nie "
 "usunięto"
 
-#: openexpress/ciq.py:1524
+#: openexpress/ciq.py:1532
 #, python-brace-format
 msgid "The device refused to delete {path} ({reason}); nothing was changed."
 msgstr ""
 "Urządzenie odmówiło usunięcia pliku {path} ({reason}); niczego nie zmieniono."
 
-#: openexpress/ciq.py:1529
+#: openexpress/ciq.py:1537
 #, python-brace-format
 msgid "the device did not delete {path}"
 msgstr "urządzenie nie usunęło pliku {path}"
 
-#: openexpress/ciq.py:1553
+#: openexpress/ciq.py:1561
 #, python-brace-format
 msgid ""
 "{name} was removed, but the device could not be mounted again: {error} "
@@ -629,35 +629,35 @@ msgstr ""
 "Usunięto aplikację {name}, ale nie udało się ponownie zamontować urządzenia: "
 "{error} Odłącz urządzenie i podłącz je ponownie."
 
-#: openexpress/ciq.py:1631
+#: openexpress/ciq.py:1639
 #, python-brace-format
 msgid "No OUT.BIN in {name}"
 msgstr "Nie znaleziono pliku OUT.BIN w {name}"
 
-#: openexpress/ciq.py:1635
+#: openexpress/ciq.py:1643
 #, python-brace-format
 msgid "Cannot read the copy of the app list {name}: {error}"
 msgstr "Nie można odczytać kopii listy aplikacji {name}: {error}"
 
-#: openexpress/ciq.py:1640
+#: openexpress/ciq.py:1648
 #, python-brace-format
 msgid "No copy of the app list matches “{name}”."
 msgstr "Żadna kopia listy aplikacji nie pasuje do „{name}”."
 
-#: openexpress/ciq.py:1641
+#: openexpress/ciq.py:1649
 #, python-brace-format
 msgid "Several copies of the app list match “{name}”: {names}"
 msgstr "Do „{name}” pasuje kilka kopii listy aplikacji: {names}"
 
-#: openexpress/ciq.py:1670
+#: openexpress/ciq.py:1678
 msgid "Before any change, a copy of the app list of the device is made."
 msgstr "Przed zmianą zostanie utworzona kopia listy aplikacji z urządzenia."
 
-#: openexpress/ciq.py:1671
+#: openexpress/ciq.py:1679
 msgid "No copy will be made: the device has no app list."
 msgstr "Kopia nie powstanie, bo na urządzeniu nie ma listy aplikacji."
 
-#: openexpress/ciq.py:1750
+#: openexpress/ciq.py:1758
 #, python-brace-format
 msgid ""
 "Cannot read the app list of the device to make a copy of it: {error}. "
@@ -666,7 +666,7 @@ msgstr ""
 "Nie można odczytać listy aplikacji z urządzenia, żeby utworzyć jej kopię: "
 "{error}. Niczego nie zmieniono."
 
-#: openexpress/ciq.py:1774
+#: openexpress/ciq.py:1782
 #, python-brace-format
 msgid ""
 "Cannot make a copy of the app list ({name}): {error}. Nothing was changed."
@@ -675,7 +675,7 @@ msgstr ""
 "zmieniono."
 
 #. TRANSLATORS: how a copy of the app list differs from the order on the device
-#: openexpress/ciq.py:1857
+#: openexpress/ciq.py:1865
 #, python-brace-format
 msgid "{count} app moved"
 msgid_plural "{count} apps moved"
@@ -684,18 +684,18 @@ msgstr[1] "{count} aplikacje przesunięte"
 msgstr[2] "{count} aplikacji przesuniętych"
 
 #. TRANSLATORS: after "{count} apps moved": apps of the copy that the device has not
-#: openexpress/ciq.py:1860
+#: openexpress/ciq.py:1868
 #, python-brace-format
 msgid "{count} not on the device"
 msgstr "{count} nie ma na urządzeniu"
 
 #. TRANSLATORS: after "{count} apps moved": apps of the device that the copy has not
-#: openexpress/ciq.py:1863
+#: openexpress/ciq.py:1871
 #, python-brace-format
 msgid "{count} not in the copy"
 msgstr "{count} nie ma w kopii"
 
-#: openexpress/ciq.py:1890
+#: openexpress/ciq.py:1898
 #, python-brace-format
 msgid "{count} position would change ({kinds}):"
 msgid_plural "{count} positions would change ({kinds}):"
@@ -703,12 +703,12 @@ msgstr[0] "Zmieni się {count} pozycja ({kinds}):"
 msgstr[1] "Zmienią się {count} pozycje ({kinds}):"
 msgstr[2] "Zmieni się {count} pozycji ({kinds}):"
 
-#: openexpress/ciq.py:1895
+#: openexpress/ciq.py:1903
 #, python-brace-format
 msgid "{position}: {new} (now: {old})"
 msgstr "{position}: {new} (teraz: {old})"
 
-#: openexpress/ciq.py:1900 openexpress/cli.py:1896
+#: openexpress/ciq.py:1908 openexpress/cli.py:1896
 #: openexpress/gui/music_page.py:208
 #, python-brace-format
 msgid "… and {count} more"
@@ -717,17 +717,17 @@ msgstr[0] "… i {count} więcej"
 msgstr[1] "… i {count} więcej"
 msgstr[2] "… i {count} więcej"
 
-#: openexpress/ciq.py:1902
+#: openexpress/ciq.py:1910
 #, python-brace-format
 msgid "Not in the copy, left where they are: {names}"
 msgstr "Brak w kopii, pozostają na swoich miejscach: {names}"
 
-#: openexpress/ciq.py:1903
+#: openexpress/ciq.py:1911
 #, python-brace-format
 msgid "Only in the copy, ignored: {names}"
 msgstr "Tylko w kopii, pominięto: {names}"
 
-#: openexpress/ciq.py:1929 openexpress/cli.py:1441 openexpress/cli.py:1487
+#: openexpress/ciq.py:1937 openexpress/cli.py:1441 openexpress/cli.py:1487
 msgid ""
 "The app list that would be written does not match the device. Nothing was "
 "changed."
@@ -735,7 +735,7 @@ msgstr ""
 "Lista aplikacji, która zostałaby zapisana, nie zgadza się z urządzeniem. "
 "Niczego nie zmieniono."
 
-#: openexpress/ciq.py:1943
+#: openexpress/ciq.py:1951
 msgid "Several entries on the device share this ID; the type is needed"
 msgstr ""
 "Kilka wpisów na urządzeniu ma ten sam identyfikator; potrzebny jest typ"
@@ -2304,7 +2304,7 @@ msgstr ""
 "skrót o tej samej nazwie by go zasłonił. Użyj --force, aby mimo to "
 "zainstalować, albo włącz synchronizację w tle w oknie wersji Flatpak."
 
-#: openexpress/cli.py:1985 openexpress/sync.py:821
+#: openexpress/cli.py:1985 openexpress/sync.py:858
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr "Zapisano {path}"
@@ -3340,7 +3340,7 @@ msgstr "Ucięta definicja komunikatu FIT"
 msgid "Data message without a definition (local type {local})"
 msgstr "Komunikat danych bez definicji (typ lokalny {local})"
 
-#: openexpress/fit.py:124
+#: openexpress/fit.py:164
 msgid "No file_id message"
 msgstr "Brak komunikatu file_id"
 
@@ -6352,7 +6352,25 @@ msgstr[0] "Oznaczono {count} istniejący plik jako już wysłany"
 msgstr[1] "Oznaczono {count} istniejące pliki jako już wysłane"
 msgstr[2] "Oznaczono {count} istniejących plików jako już wysłane"
 
-#: openexpress/service.py:788
+#: openexpress/service.py:790
+#, python-brace-format
+msgid ""
+"{count} file was still being written by the device – disconnect and "
+"reconnect it, then sync again"
+msgid_plural ""
+"{count} files were still being written by the device – disconnect and "
+"reconnect it, then sync again"
+msgstr[0] ""
+"{count} plik był jeszcze zapisywany przez urządzenie – odłącz je i podłącz "
+"ponownie, potem zsynchronizuj jeszcze raz"
+msgstr[1] ""
+"{count} pliki były jeszcze zapisywane przez urządzenie – odłącz je i podłącz "
+"ponownie, potem zsynchronizuj jeszcze raz"
+msgstr[2] ""
+"{count} plików było jeszcze zapisywanych przez urządzenie – odłącz je "
+"i podłącz ponownie, potem zsynchronizuj jeszcze raz"
+
+#: openexpress/service.py:796
 #, python-brace-format
 msgid ""
 "Skipped {count} file: another device is your active tracker in Garmin Connect"
@@ -6369,12 +6387,12 @@ msgstr[2] ""
 "Pominięto {count} plików: aktywnym urządzeniem w Garmin Connect jest inne "
 "urządzenie"
 
-#: openexpress/service.py:795
+#: openexpress/service.py:803
 #, python-brace-format
 msgid "Installed Connect IQ apps: {names}"
 msgstr "Zainstalowane aplikacje Connect IQ: {names}"
 
-#: openexpress/service.py:799
+#: openexpress/service.py:807
 #, python-brace-format
 msgid ""
 "The Flatpak has no access to USB devices; {count} Connect IQ app waits in "
@@ -6392,7 +6410,7 @@ msgstr[2] ""
 "Wersja Flatpak nie ma dostępu do urządzeń USB; {count} aplikacji Connect IQ "
 "czeka w kolejce"
 
-#: openexpress/service.py:804
+#: openexpress/service.py:812
 #, python-brace-format
 msgid ""
 "{count} Connect IQ app waits in the queue: openExpress cannot install apps "
@@ -6410,17 +6428,17 @@ msgstr[2] ""
 "{count} aplikacji Connect IQ czeka w kolejce: nie można jeszcze instalować "
 "aplikacji na tym urządzeniu przez USB"
 
-#: openexpress/service.py:809
+#: openexpress/service.py:817
 msgid "TrueUp: daily totals aligned with your other Garmin devices"
 msgstr "TrueUp: dzienne podsumowania uzgodnione z innymi urządzeniami Garmin"
 
 #. TRANSLATORS: a line of the details of "Last sync" and of the end of
 #. `openexpress sync --apply`
-#: openexpress/service.py:813
+#: openexpress/service.py:821
 msgid "TrueUp: waiting stopped; it comes with the next sync"
 msgstr "TrueUp: czekanie przerwane; przyjdzie z następną synchronizacją"
 
-#: openexpress/service.py:818
+#: openexpress/service.py:826
 #, python-brace-format
 msgid ""
 "{count} ECG recording was not uploaded: ECG recordings need a Garmin Health "
@@ -6438,7 +6456,7 @@ msgstr[2] ""
 "{count} nagrań EKG nie zostało wysłanych: nagrania EKG wymagają konta Garmin "
 "Health"
 
-#: openexpress/service.py:824
+#: openexpress/service.py:832
 #, python-brace-format
 msgid "Skipped {count} item from Garmin Connect (not accepted by the device)"
 msgid_plural ""
@@ -6452,17 +6470,17 @@ msgstr[2] ""
 "urządzenie)"
 
 #. TRANSLATORS: under "Last sync": the uploads were not looked at (sync --download-only)
-#: openexpress/service.py:964
+#: openexpress/service.py:978
 msgid "upload skipped"
 msgstr "wysyłanie pominięte"
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded
-#: openexpress/service.py:969
+#: openexpress/service.py:983
 msgid "nothing uploaded"
 msgstr "nic nie wysłano"
 
 #. TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
-#: openexpress/service.py:972
+#: openexpress/service.py:986
 #, python-brace-format
 msgid "{count} new file"
 msgid_plural "{count} new files"
@@ -6470,7 +6488,7 @@ msgstr[0] "{count} nowy plik"
 msgstr[1] "{count} nowe pliki"
 msgstr[2] "{count} nowych plików"
 
-#: openexpress/service.py:973
+#: openexpress/service.py:987
 #, python-brace-format
 msgid "{count} uploaded"
 msgid_plural "{count} uploaded"
@@ -6479,23 +6497,23 @@ msgstr[1] "{count} wysłane"
 msgstr[2] "{count} wysłanych"
 
 #. TRANSLATORS: after "3 new files, ": not one of them was uploaded
-#: openexpress/service.py:976
+#: openexpress/service.py:990
 msgid "none uploaded"
 msgstr "nic nie wysłano"
 
 #. TRANSLATORS: the device had no new file to upload to Garmin Connect
-#: openexpress/service.py:980
+#: openexpress/service.py:994
 msgid "nothing to upload"
 msgstr "nic do wysłania"
 
 #. TRANSLATORS: under "Last sync": a sync of only these data types (sync --type), e.g.
 #. "activities only: 3 new files, 3 uploaded"
-#: openexpress/service.py:986
+#: openexpress/service.py:1000
 #, python-brace-format
 msgid "{types} only: {numbers}"
 msgstr "tylko {types}: {numbers}"
 
-#: openexpress/service.py:989
+#: openexpress/service.py:1003
 #, python-brace-format
 msgid "{count} received"
 msgid_plural "{count} received"
@@ -6503,42 +6521,42 @@ msgstr[0] "{count} odebrany"
 msgstr[1] "{count} odebrane"
 msgstr[2] "{count} odebranych"
 
-#: openexpress/service.py:1013
+#: openexpress/service.py:1027
 msgid "A sync is already running in another process."
 msgstr "Synchronizacja jest już uruchomiona w innym procesie."
 
-#: openexpress/service.py:1039
+#: openexpress/service.py:1053
 msgid "A device connected as a USB drive is not synced."
 msgstr "Urządzenie podłączone jako dysk USB nie jest synchronizowane."
 
 #. TRANSLATORS: under "Last sync", in its details: Ctrl+C on the command line
-#: openexpress/service.py:1052
+#: openexpress/service.py:1066
 msgid "The sync was interrupted before the end (Ctrl+C)"
 msgstr "Synchronizację przerwano przed końcem (Ctrl+C)"
 
 #. TRANSLATORS: under "Last sync", in its details: the error that stopped the sync
-#: openexpress/service.py:1058
+#: openexpress/service.py:1072
 #, python-brace-format
 msgid "The sync stopped before the end: {error}"
 msgstr "Synchronizację przerwano przed końcem: {error}"
 
-#: openexpress/service.py:1119
+#: openexpress/service.py:1133
 msgid "Not logged in to Garmin Connect."
 msgstr "Nie zalogowano do Garmin Connect."
 
-#: openexpress/service.py:1124
+#: openexpress/service.py:1138
 msgid "Fetching configuration from the Garmin server…"
 msgstr "Pobieranie konfiguracji z serwera Garmin…"
 
-#: openexpress/service.py:1133
+#: openexpress/service.py:1147
 msgid "Looking for new files on the device…"
 msgstr "Wyszukiwanie nowych plików na urządzeniu…"
 
-#: openexpress/service.py:1149
+#: openexpress/service.py:1163
 msgid "Checking for files from Garmin Connect…"
 msgstr "Sprawdzanie plików z Garmin Connect…"
 
-#: openexpress/service.py:1253
+#: openexpress/service.py:1269
 #, python-brace-format
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""
@@ -6602,21 +6620,21 @@ msgstr "diagnostyka/telemetria (--include-diagnostics)"
 msgid "consent not given ({consents})"
 msgstr "brak zgody ({consents})"
 
-#: openexpress/sync.py:465
+#: openexpress/sync.py:496
 #, python-brace-format
 msgid "Uploading {name} ({size})"
 msgstr "Wysyłanie {name} ({size})"
 
-#: openexpress/sync.py:488
+#: openexpress/sync.py:519
 msgid "Upload consent was revoked in Garmin Connect"
 msgstr "Zgoda na wysyłanie została wycofana w Garmin Connect"
 
-#: openexpress/sync.py:497
+#: openexpress/sync.py:534
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
 msgstr "serwer odrzucił plik (kody {codes})"
 
-#: openexpress/sync.py:733
+#: openexpress/sync.py:770
 msgid "device does not accept this type"
 msgstr "urządzenie nie obsługuje tego typu"
 

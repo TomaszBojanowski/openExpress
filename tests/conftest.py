@@ -400,13 +400,26 @@ DEVICE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+def fit_crc(data: bytes) -> int:
+    """CRC-16 of the FIT protocol, written here apart from the program's (fit.crc16)."""
+    crc = 0
+    for byte in data:
+        for _bit in range(8):
+            mix = (crc ^ byte) & 1
+            crc >>= 1
+            byte >>= 1
+            if mix:
+                crc ^= 0xA001
+    return crc
+
+
 def make_fit(time_created: int, file_type: int = 4) -> bytes:
-    """Simplest valid FIT file with a file_id message."""
+    """Simplest valid FIT file with a file_id message, its CRC right."""
     definition = bytes([0x40, 0, 0]) + struct.pack("<H", 0) + bytes([2, 0, 1, 0x00, 4, 4, 0x86])
     data = bytes([0x00, file_type]) + struct.pack("<I", time_created)
     body = definition + data
     header = struct.pack("<BBHI4sH", 14, 0x20, 2132, len(body), b".FIT", 0)
-    return header + body + b"\x00\x00"
+    return header + body + struct.pack("<H", fit_crc(header + body))
 
 
 @pytest.fixture(autouse=True)

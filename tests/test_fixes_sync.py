@@ -2,7 +2,7 @@ import logging
 import struct
 
 import pytest
-from conftest import make_fit
+from conftest import fit_crc, make_fit
 from fakes import SyncClient
 from test_sync import UPLOAD_CONFIG
 
@@ -61,12 +61,21 @@ def test_damaged_files_only_raise_fit_error():
     assert parse_file_id(good).time_created == 1100000000
 
 
-def test_damaged_activity_does_not_abort_sync(device_root, tmp_path):
-    (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(_truncated_definition())
+def _whole(data: bytes) -> bytes:
+    """`data` with the CRC a whole file ends with."""
+    return data + struct.pack("<H", fit_crc(data))
+
+
+@pytest.mark.parametrize(("data", "uploaded", "incomplete"), [
+    (_whole(_truncated_definition()), 3, 0),  # whole, its content unreadable: sent all the same
+    (_truncated_definition(), 2, 1),  # cut short (no CRC): it waits for the next sync
+])
+def test_damaged_activity_does_not_abort_sync(device_root, tmp_path, data, uploaded, incomplete):
+    (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(data)
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     rep = sync.run_uploads(plan, dev, st, SyncClient(), state)
-    assert len(rep.uploaded) == 3 and not rep.failed
+    assert len(rep.uploaded) == uploaded and len(rep.incomplete) == incomplete and not rep.failed
 
 
 class PollFails(SyncClient):
@@ -203,6 +212,69 @@ def test_a_rejected_upload_is_logged_with_the_answer(device_root, tmp_path, capl
     for private in ("jan.kowalski", "3999888777", "abc123SECRETxyz", "M1.FIT"):
         assert private not in line
     assert len(line) < 650  # the answer cut to 500 characters
+
+
+def _cut(path, count):
+    whole = path.read_bytes()
+    path.write_bytes(whole[:-count])
+    return whole
+
+
+def test_a_file_still_being_written_is_neither_uploaded_nor_marked(device_root, tmp_path,
+                                                                     caplog):
+    """A file the device was still writing when it was read (cut short at the size the
+    device gave when it was connected): not uploaded, not counted as done, and read again
+    by the next sync, which uploads it whole."""
+    st, dev, state = _setup(device_root, tmp_path)
+    settings = device_root / "GARMIN/Settings/Settings.fit"
+    whole = _cut(settings, 5)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_2"})
+    client = SyncClient()
+    with caplog.at_level(logging.INFO, logger="openexpress.sync"):
+        rep = sync.run_uploads(plan, dev, st, client, state)
+    assert client.uploads == [] and rep.incomplete == ["FIT_TYPE_2/Settings.fit"]
+    assert not rep.failed and not rep.rejected and not rep.uploaded
+    lines = [r.getMessage() for r in caplog.records if "still being written" in r.getMessage()]
+    assert len(lines) == 1 and "FIT_TYPE_2" in lines[0] and "Settings" not in lines[0]
+    assert f"{len(whole) - 5} B" in lines[0] and f"{len(whole)} B" in lines[0]
+    settings.write_bytes(whole)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_2"})
+    rep = sync.run_uploads(plan, dev, st, SyncClient(), state)
+    assert rep.uploaded == ["FIT_TYPE_2/Settings.fit"] and not rep.incomplete
+
+
+def test_monitoring_waits_behind_a_file_still_being_written(device_root, tmp_path):
+    st, dev, state = _setup(device_root, tmp_path)
+    _cut(device_root / "GARMIN/Monitor/M1.FIT", 3)
+    (device_root / "GARMIN/Monitor/M2.FIT").write_bytes(make_fit(1100000600, 32))
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_32"})
+    client = SyncClient()
+    rep = sync.run_uploads(plan, dev, st, client, state)
+    assert client.uploads == [] and rep.incomplete == ["FIT_TYPE_32/M1.FIT"]
+    assert not state.is_completed("FIT_TYPE_32", "M1.FIT")
+    assert not state.is_completed("FIT_TYPE_32", "M2.FIT")
+    assert not state.pending_files("FIT_TYPE_32")
+
+
+def test_an_activity_still_being_written_is_neither_matched_nor_uploaded(device_root, tmp_path):
+    st, dev, state = _setup(device_root, tmp_path)
+    _cut(device_root / "GARMIN/Activity/2026-10-02-10-00-00.fit", 4)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
+    client = SyncClient()
+    rep = sync.run_uploads(plan, dev, st, client, state)
+    assert rep.incomplete == ["FIT_TYPE_4/2026-10-02-10-00-00.fit"]
+    assert rep.uploaded == ["FIT_TYPE_4/2026-10-01-10-00-00.fit"] and len(client.uploads) == 1
+    assert not state.is_completed("FIT_TYPE_4", "2026-10-02-10-00-00.fit")
+
+
+def test_only_fit_files_are_checked():
+    from openexpress.sync import UploadCandidate, still_being_written
+
+    cut = make_fit(1100000000)[:-4]
+    assert still_being_written(UploadCandidate("FIT_TYPE_2", "a.fit", 1, "a", [], False), cut)
+    assert still_being_written(UploadCandidate("FIT_TYPE_2", "a.FIT", 1, "a", [], False), cut)
+    assert still_being_written(UploadCandidate("FIT_TYPE_2", "a.zip", 1, "a", [], True), cut) is None
+    assert still_being_written(UploadCandidate("X", "backup.db", 1, "a", [], False), cut) is None
 
 
 class AckFails(SyncClient):

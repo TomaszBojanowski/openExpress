@@ -783,6 +783,14 @@ def _describe_step(line) -> list[tuple[str, bool]]:
         return [(ngettext("Marked {count} existing file as already uploaded",
                           "Marked {count} existing files as already uploaded",
                           n).format(count=n), False)]
+    if kind == "still_written" and (n := _count(line)) is not None:
+        # TRANSLATORS: a line of the details of "Last sync" (and of the command line): FIT
+        # files the device was still writing when they were read, cut short; not uploaded
+        return [(ngettext(
+            "{count} file was still being written by the device – disconnect and reconnect "
+            "it, then sync again",
+            "{count} files were still being written by the device – disconnect and reconnect "
+            "it, then sync again", n).format(count=n), True)]
     if kind == "tracker_conflict" and (n := _count(line)) is not None:
         return [(ngettext(
             "Skipped {count} file: another device is your active tracker in Garmin Connect",
@@ -849,6 +857,12 @@ def marked_known_step(count: int) -> dict:
     """The first sync marked the files on the device as uploaded already (baseline): a step
     of the summary, put into words when it is shown, as all those below."""
     return {"kind": "marked_known", "count": count}
+
+
+def still_written_step(count: int) -> dict:
+    """FIT files the device was still writing when they were read (cut short): not uploaded,
+    read again by the next sync."""
+    return {"kind": "still_written", "count": count}
 
 
 def tracker_conflict_step(count: int) -> dict:
@@ -1188,6 +1202,8 @@ def apply_sync(s: DeviceSession, plan: SyncPlan,
                                for label, err in rep.failed]
             out.not_confirmed += rep.not_confirmed
             out.lines.append(uploads_step(rep))
+            if rep.incomplete:
+                out.lines.append(still_written_step(len(rep.incomplete)))
             if rep.tracker_conflict:
                 out.lines.append(tracker_conflict_step(len(rep.tracker_conflict)))
         if gate.allowed and plan.uploads.ecg_recordings:

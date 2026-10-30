@@ -31,7 +31,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
-from openexpress.fit import parse_file_id
+from openexpress.fit import incompleteness, parse_file_id
 from openexpress.i18n import _, human_size
 
 log = logging.getLogger(__name__)
@@ -339,6 +339,9 @@ class UploadReport:
     # Refused by every location, each of them one that needs a consent: neither counted nor
     # marked, tried again by the next sync (as Garmin Express does).
     not_taken: list[str] = field(default_factory=list)
+    # FIT files read cut short, as the device was still writing them: not sent, not marked,
+    # read again by the next sync.
+    incomplete: list[str] = field(default_factory=list)
 
 
 def _label(c: UploadCandidate) -> str:
@@ -355,6 +358,22 @@ def log_error(label: str, error: str) -> str:
     reading it may quote) as <file>."""
     name = label.split("/", 1)[1] if "/" in label else ""
     return error.replace(name, "<file>") if name else error
+
+
+def still_being_written(c: UploadCandidate, data: bytes) -> str | None:
+    """Why a FIT file is not whole as it was read (fit.incompleteness), or None. A device
+    that writes a file while it is connected over MTP is read at the size it had when it was
+    connected (gvfs keeps that size), so the file is cut short. Other files: None."""
+    if c.is_zip or not c.name.lower().endswith(".fit"):
+        return None
+    return incompleteness(data)
+
+
+def _skip_incomplete(c: UploadCandidate, why: str, report: UploadReport) -> None:
+    report.incomplete.append(_label(c))
+    # The type and the sizes: never the name of the file.
+    log.warning("upload skipped: %s still being written by the device (%s); "
+                "read again by the next sync", c.datatype, why)
 
 
 def _read_candidate(c: UploadCandidate, storage: Storage, state: SyncState) -> bytes:
@@ -400,6 +419,11 @@ def _run_uploads(plan, device, storage, client, state, progress,
             report.failed.append((_label(c), str(e)))
             unreadable.add(id(c))
             continue
+        why = still_being_written(c, data)
+        if why:
+            _skip_incomplete(c, why, report)
+            unreadable.add(id(c))
+            continue
         try:
             fid = parse_file_id(data)
             if fid.time_created is not None:
@@ -442,6 +466,13 @@ def _run_uploads(plan, device, storage, client, state, progress,
             report.failed.append((label, str(e)))
             if ordered:
                 stop_types.add(c.datatype)
+            continue
+        why = still_being_written(c, data)
+        if why:
+            _skip_incomplete(c, why, report)
+            c.data = None
+            if ordered:
+                stop_types.add(c.datatype)  # the later ones wait: they must arrive in order
             continue
         try:
             _upload_one(c, data, label, idx == len(remaining) - 1 and ordered, client, state,

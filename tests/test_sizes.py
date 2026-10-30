@@ -5,6 +5,7 @@ import base64
 import re
 
 import pytest
+from conftest import make_fit
 from fakes import SyncClient
 from test_sync import UPLOAD_CONFIG, _setup
 from test_updates_maps import maps_response, server, sw_response  # noqa: F401 - the fixture
@@ -83,7 +84,9 @@ def test_commands_and_window_use_the_same_function():
 
 
 def uploading(device_root, tmp_path):
-    (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(b"x" * 1500)
+    whole = make_fit(1100172800)  # a whole FIT file, padded with zeros to 1500 bytes
+    (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(
+        whole + bytes(1500 - len(whole)))
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
     lines = []

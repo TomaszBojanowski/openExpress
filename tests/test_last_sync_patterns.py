@@ -210,6 +210,18 @@ EXPECTED = {
             ("1 plik odrzucony przez Garmina", True),
             ("1 pliku nie udało się wysłać", True),
             ("FIT_TYPE_4/2026-10-01-10-00-00.fit: HTTP 500", True)])},
+    # A file the device was still writing when it was read, cut short: not uploaded, read again
+    # by the next sync (format-0.7.11-still-written.json; made up, as no real sync has kept
+    # one).
+    "format-0.7.11-still-written.json": {
+        "en": ("2 new files, 1 uploaded", [
+            ("Files from the device: monitoring, Garmin Coach plan", False),
+            (("1 file was still being written by the device – disconnect and reconnect it, "
+              "then sync again"), True)]),
+        "pl": ("2 nowe pliki, 1 wysłany", [
+            (f"Pliki z{NB}urządzenia: monitorowanie, plan Garmin Coach", False),
+            ((f"1 plik był jeszcze zapisywany przez urządzenie – odłącz je i{NB}podłącz "
+              "ponownie, potem zsynchronizuj jeszcze raz"), True)])},
 }
 CASES = [(name, language) for name in EXPECTED for language in ("en", "pl")]
 

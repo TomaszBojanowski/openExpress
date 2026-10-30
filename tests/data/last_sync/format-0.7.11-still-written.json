@@ -1,0 +1,32 @@
+{
+ "synthetic": "made up: no real sync has written a record with a file still being written yet",
+ "time": 1793270400.25,
+ "unit_id": 3000000107,
+ "uploaded": 1,
+ "downloaded": 0,
+ "skipped_known": 0,
+ "rejected": 0,
+ "errors": [],
+ "lines": [
+  {
+   "kind": "new_files",
+   "types": {
+    "FIT_TYPE_32": 1,
+    "FIT_TYPE_77": 1
+   }
+  },
+  {
+   "kind": "uploads",
+   "uploaded": 1,
+   "known": 0,
+   "known_checked": 0,
+   "known_server": 0,
+   "rejected": 0,
+   "errors": 0
+  },
+  {
+   "kind": "still_written",
+   "count": 1
+  }
+ ]
+}

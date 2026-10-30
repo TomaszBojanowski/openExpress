@@ -114,6 +114,46 @@ def _iter_messages(data: bytes):
         pos += sum(size for _, size in d.fields) + d.dev_size
 
 
+# CRC-16 of the FIT protocol, four bits at a time.
+_CRC_TABLE = (0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
+              0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400)
+
+
+def crc16(data: bytes, crc: int = 0) -> int:
+    for byte in data:
+        tmp = _CRC_TABLE[crc & 0xF]
+        crc = ((crc >> 4) & 0x0FFF) ^ tmp ^ _CRC_TABLE[byte & 0xF]
+        tmp = _CRC_TABLE[crc & 0xF]
+        crc = ((crc >> 4) & 0x0FFF) ^ tmp ^ _CRC_TABLE[(byte >> 4) & 0xF]
+    return crc
+
+
+def incompleteness(data: bytes) -> str | None:
+    """Why `data` is not a whole FIT file, or None when it is: every part (a file may chain
+    several) has a header of 12 or 14 bytes with ".FIT", the size its header declares (header,
+    data and the CRC of 2 bytes) and that CRC; zeros after the last part are padding. A file a
+    device was still writing when it was read is cut short or does not match its CRC. For the
+    log: sizes, never the content."""
+    pos = 0
+    while True:
+        if pos and not any(data[pos:]):
+            return None  # zeros after whole FIT data: padding, nothing cut short
+        if len(data) - pos < 12 or data[pos] not in (12, 14) or data[pos + 8:pos + 12] != b".FIT":
+            return (f"no FIT header ({len(data)} B read)" if pos == 0
+                    else f"{len(data) - pos} B after the whole FIT data are no FIT file")
+        header = data[pos]
+        (size,) = struct.unpack_from("<I", data, pos + 4)
+        end = pos + header + size + 2
+        if end > len(data):
+            return f"{len(data)} B read, {end} B declared"
+        (crc,) = struct.unpack_from("<H", data, end - 2)
+        if crc16(data[pos:end - 2]) != crc:
+            return f"the CRC does not match ({len(data)} B read)"
+        if end == len(data):
+            return None
+        pos = end
+
+
 def find_message(data: bytes, global_num: int) -> dict[int, int | None] | None:
     return next((v for g, v in iter_messages(data) if g == global_num), None)
 
