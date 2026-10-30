@@ -989,7 +989,8 @@ def test_hidden_folder_is_installed_over_ptp(hidden_apps):
     # Nothing was created or written through the mounted storage.
     assert not (st.root / "GARMIN/APPS/MEDIA").exists()
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
-    assert any(line.startswith("Writing GARMIN/APPS/MEDIA/") for line in lines)
+    # Told by the app's name, never its file (test_app_progress.py).
+    assert "Writing Face It to the device\u00a0· 1 of 1" in lines
 
 
 def test_install_apps_uses_ptp_without_trying_to_create_the_folder(hidden_apps, monkeypatch):

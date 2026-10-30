@@ -30,6 +30,7 @@ from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, caption, ngettext
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -954,6 +955,7 @@ class _Hidden:
     data: bytes
     entry: InstalledApp
     handle: int | None = None
+    step: tuple[int, int] = (0, 0)  # which app of how many, for the progress
 
 
 def install_queued(
@@ -1031,6 +1033,10 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     new_size = 0
     interrupted = False
     copied = False
+    # The apps of this pass, counted for the progress ("Downloading … · 1 of 2").
+    counted = [m for m in messages if is_iq_message(m) and message_app_id(m) is not None
+               and (only is None or message_app_id(m) in only)]
+    number = {id(m): n for n, m in enumerate(counted, 1)}
 
     def copy_first() -> None:
         """Before the first thing this pass writes to the device."""
@@ -1071,7 +1077,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                         report.sandboxed.append(name)
                     continue
                 copy_first()
-                progress(_("Downloading {name}").format(name=name))
+                step = (number[id(m)], len(counted))
+                # TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
+                progress(Step(_("Downloading {name}").format(name=name), *step))
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
                 if not data:
@@ -1106,9 +1114,10 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                     )
                 new_size += len(data)  # a new app, or an update's file next to the old one
                 if over_ptp:
-                    hidden.append(_Hidden(m, name, dt, path, data, entry))
+                    hidden.append(_Hidden(m, name, dt, path, data, entry, step=step))
                     continue
-                progress(_("Writing {path}").format(path=path))
+                progress(Step(writing_text(name), *step))
+                log.debug("apps: writing %s", path)
                 try:
                     # Of another size, the new file is deleted: it is ours, under a new name.
                     real = storage.write_checked(path, data, error=CiqError)
@@ -1167,6 +1176,11 @@ def _acknowledge(client: GarminClient, device: GarminDevice, message: dict) -> N
         log.info("Message %s was no longer in the queue", message.get("messageid"))
 
 
+def writing_text(name: str) -> str:
+    # TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
+    return _("Writing {name} to the device").format(name=name)
+
+
 def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, new_paths,
                     to_ack, leftover, report, progress) -> bool:
     """Write the apps of `hidden` and the app list through a PTP session. Returns whether
@@ -1208,7 +1222,8 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
                     settled.add(id(h))
                     leftover.append(h.message)
                     continue
-                progress(_("Writing {path}").format(path=h.path))
+                progress(Step(writing_text(h.name), *h.step))
+                log.debug("apps: writing %s over PTP", h.path)
                 try:
                     free = session.free_space(store)
                     if free is not None and free < len(h.data) + PTP_FREE_MARGIN:

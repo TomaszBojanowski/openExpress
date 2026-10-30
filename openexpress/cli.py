@@ -1664,8 +1664,9 @@ def cmd_apps(args) -> int:
                     print(ciq.app_list_copy_note(dev, st))
                 print(_("Dry run. Add --apply."))
             return 1 if refused or skipped else 0
-        rep = ciq.install_apps(dev, st, client, api, targets,
-                               progress=lambda s: print("  " + s), allowed=allowed)
+        with _progress() as progress:
+            rep = ciq.install_apps(dev, st, client, api, targets, progress=progress,
+                                   allowed=allowed)
         written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
         updated = [n for n in rep.installed if n in rep.updated]
         installed = [n for n in rep.installed if n not in rep.direct]
