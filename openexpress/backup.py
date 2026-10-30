@@ -138,7 +138,7 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
     left_out = 0
     for n, (path, entry, datatype, out) in enumerate(files, 2):
         progress(Step(head, n, count))
-        log.debug("backup: copying %s", path)
+        log.debug("backup: copying file %d of %d (%s)", n, count, datatype)
         data = storage.read(path)
         found = not_whole(data) if path.casefold().endswith(".fit") else None
         # The type and the sizes: never the name of the file.

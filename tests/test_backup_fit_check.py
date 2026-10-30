@@ -122,3 +122,15 @@ def test_the_window_says_it_in_a_message_after_its_toast(device_root, tmp_path, 
     MainWindow.backup(win)
     assert told[0].startswith("Copied 342 files to ")
     assert told[1] == ("backup-incomplete", "Not everything was backed up", TEXT)
+
+
+def test_the_log_of_a_backup_names_no_file(device_root, tmp_path, caplog):
+    """Also with -v: which file of how many and its data type, never its path or name."""
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    with caplog.at_level(logging.DEBUG, logger="openexpress"):
+        res = backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    copying = [m for m in caplog.messages if m.startswith("backup: copying")]
+    assert len(copying) == res.files - 1  # GarminDevice.xml, read already, is not copied so
+    assert copying[0].startswith(f"backup: copying file 2 of {res.files} (")
+    assert not any("/" in m or ".fit" in m.casefold() for m in copying)
