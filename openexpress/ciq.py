@@ -30,7 +30,7 @@ from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, caption, ngettext
-from openexpress.progress import Step
+from openexpress.progress import Step, say_to
 
 log = logging.getLogger(__name__)
 
@@ -836,7 +836,7 @@ def install_apps(
     client: GarminClient,
     api: StoreApi,
     targets: list[StoreApp],
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     allowed: Collection[uuid.UUID] = (),
     messages: list[dict] | None = None,
 ) -> IqInstallReport:
@@ -845,6 +845,7 @@ def install_apps(
     offer are only queued (`for_phone`, not failures). Apps with new permissions not in
     `allowed` are set aside first (`needs_consent`): nothing is requested, downloaded or
     written for them."""
+    progress = say_to(progress)
     asking = [t for t in needs_consent(targets) if t.app_id not in set(allowed)]
     targets = [t for t in targets if t not in asking]
     report = _install_apps(device, storage, client, api, targets, progress, messages)
@@ -987,13 +988,14 @@ def install_queued(
     messages: list[dict],
     known: dict[uuid.UUID, StoreApp],
     only: set[uuid.UUID] | None = None,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     direct: bool = False,
 ) -> IqInstallReport:
     """Write the queued apps to the watch, register them in IN.BIN and return the report. A
     message is acknowledged only once its app is written and registered, so an interrupted
     install is retried on the next sync. `direct` allows a PTP session (it unmounts the
     device for a moment) for a folder the device hides: never during a sync."""
+    progress = say_to(progress)
     report, leftover = _install_pass(device, storage, client, messages, known, only, progress,
                                      direct=direct)
     if leftover:

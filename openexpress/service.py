@@ -30,7 +30,7 @@ from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.errors import OrdinaryStop, UserFacingError
 from openexpress.i18n import N_, _, ngettext
-from openexpress.progress import Waiting
+from openexpress.progress import Waiting, say_to
 from openexpress.settings import Settings, SetupError, language_tag, load_consumer
 
 log = logging.getLogger(__name__)
@@ -1056,7 +1056,7 @@ def sync_lock():
 def run_sync(
     s: DeviceSession,
     first_run: str | None = None,
-    progress: Progress = lambda m: None,
+    progress: Progress | None = None,
     include_diagnostics: bool = False,
     options: SyncOptions | None = None,
 ) -> SyncSummary:
@@ -1065,6 +1065,7 @@ def run_sync(
     stopped after its uploads) and logs its start, end and errors. `first_run`: 'baseline' or
     'all' for the first sync; `options` (the command line's) hold it and the diagnostics
     instead (ValueError with both)."""
+    progress = say_to(progress)
     # The window and the background service ask for everything.
     if options is None:
         options = SyncOptions(first_run=first_run, include_diagnostics=include_diagnostics)
@@ -1145,11 +1146,12 @@ class SyncPlan:
 
 
 def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
-              progress: Progress = lambda m: None) -> SyncPlan:
+              progress: Progress | None = None) -> SyncPlan:
     """What a sync of the device will do (a SyncPlan), in the order it does it: the device
     checked against the account, its upload settings, the first sync (its baseline marked in
     memory, or the choice asked for: FirstSyncChoiceNeeded), whether the account lets data be
     uploaded, and the files to upload. Writes and uploads nothing."""
+    progress = say_to(progress)
     options = options or SyncOptions()
     if not s.logged_in and not options.preview:
         raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
@@ -1181,19 +1183,21 @@ def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
     return plan
 
 
-def plan_queue(s: DeviceSession, progress: Progress = lambda m: None) -> QueuePlan:
+def plan_queue(s: DeviceSession, progress: Progress | None = None) -> QueuePlan:
     """Garmin Connect's queue for the device, and what becomes of each item of it."""
+    progress = say_to(progress)
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     return QueuePlan(messages, sync.plan_downloads(s.device, messages))
 
 
 def apply_sync(s: DeviceSession, plan: SyncPlan,
-               progress: Progress = lambda m: None) -> SyncSummary:
+               progress: Progress | None = None) -> SyncSummary:
     """The sync of a plan (plan_sync): its baseline written, its files uploaded and
     state.json written, then Garmin Connect's queue read and its files written to the
     device, with its Connect IQ apps and TrueUp. What was done, in steps
     (SyncSummary.lines). The record is kept by run_sync."""
+    progress = say_to(progress)
     options = plan.options
     if options.preview:
         raise ValueError("a preview of a sync is only to be shown")

@@ -26,7 +26,7 @@ from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, ngettext
-from openexpress.progress import Step
+from openexpress.progress import Step, say_to
 
 log = logging.getLogger(__name__)
 
@@ -382,7 +382,7 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     # TRANSLATORS: a step of copying the diagnostic files the device shows ("… · 3 of 12")
     head = _("Copying diagnostic files")
     for n, (path, mtime, old) in enumerate(to_read, 1):
-        _say(progress, Step(head, n, len(to_read)))
+        say_to(progress)(Step(head, n, len(to_read)))
         data = storage.read_at(path)  # a real path, as listed
         sha, stored = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
@@ -401,11 +401,6 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
              applog.size(report.new_bytes), report.unchanged, report.listed, report.copies,
              applog.size(report.kept_bytes))
     return report
-
-
-def _say(progress: Callable[[str], None] | None, step: Step) -> None:
-    if progress is not None:
-        progress(step)
 
 
 def dumps_on_device(storage: Storage) -> list[tuple[str, int]]:
@@ -433,7 +428,7 @@ def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = No
     # TRANSLATORS: a step of copying the memory dumps ("… · 1 of 3")
     head = _("Copying memory dumps")
     for n, (path, entry) in enumerate(chosen, 1):
-        _say(progress, Step(head, n, len(chosen)))
+        say_to(progress)(Step(head, n, len(chosen)))
         data = storage.read(path)
         sha, new = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": entry.mtime}
@@ -515,7 +510,7 @@ def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None
         # TRANSLATORS: a step of copying the hidden crash logs ("… · 1 of 7")
         head = _("Copying crash logs")
         for n, (path, handle) in enumerate(found, 1):
-            _say(progress, Step(head, n, len(found)))
+            say_to(progress)(Step(head, n, len(found)))
             read[path] = session.read_file(handle)
     report = Copied()
     files = {}

@@ -22,7 +22,7 @@ from openexpress import applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
-from openexpress.progress import Step
+from openexpress.progress import Step, byte_steps, say_to
 
 log = logging.getLogger(__name__)
 
@@ -400,7 +400,7 @@ def _install(
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
-    say = progress if progress is not None else (lambda _message: None)
+    say = say_to(progress)
     for u in updates:
         if not u.url:
             raise UpdateError(_("{part}: the server did not provide a download URL")
@@ -409,12 +409,8 @@ def _install(
                   applog.size(u.size))
         # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
         downloading = _("Downloading {name}").format(name=u.title)
-
-        def downloaded(done: int, total: int | None, _head=downloading) -> None:
-            say(Step(_head, done, total, in_bytes=True))
-
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session,
-                               progress=downloaded if progress is not None else None)
+                               progress=byte_steps(progress, downloading))
         got = local.stat().st_size
         say(Step(downloading, got, got, in_bytes=True))  # also when it came from the cache
         with open(local, "rb") as f:
@@ -430,20 +426,14 @@ def _install(
         log.debug("software update: copying %s", u.device_path)
         # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
         copying = _("Copying {name} to the device").format(name=u.title)
-
-        def written(done: int, total: int | None, _head=copying) -> None:
-            say(Step(_head, done, total, in_bytes=True))
-
-        # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
-        # without -p in the Flatpak).
-        told = written if progress is not None else None
         _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,
         # and what _clear_the_place deleted does not come back.
         # A truncated firmware file must not stay where the watch would install it: one of
         # another size is deleted.
-        real = storage.write_file_checked(u.device_path, local, told, error=UpdateError)
+        real = storage.write_file_checked(u.device_path, local, byte_steps(progress, copying),
+                                          error=UpdateError)
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
         # The whole path from the device's folder, as mark_present names it.

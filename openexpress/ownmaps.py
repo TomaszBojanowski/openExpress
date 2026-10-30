@@ -22,7 +22,7 @@ from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import _
 from openexpress.maps import SPACE_MARGIN, MapError
-from openexpress.progress import Step
+from openexpress.progress import byte_steps
 
 log = logging.getLogger(__name__)
 
@@ -245,12 +245,8 @@ def add(plan: AddPlan, device: GarminDevice, storage: Storage,
     the copy as steps, by the map's title ("Copying … to the device · 1.2 MB of 3.4 MB")."""
     if storage.resolve(plan.path) is not None:
         raise _taken(plan.name)  # it appeared since the plan was made
-    told = None
-    if progress is not None:
-        head = _("Copying {name} to the device").format(name=plan.title or plan.name)
-
-        def told(done: int, total: int | None) -> None:
-            progress(Step(head, done, total, in_bytes=True))
+    told = byte_steps(progress, _("Copying {name} to the device").format(
+        name=plan.title or plan.name))
     try:
         real = storage.write_file(plan.path, plan.local, told)
         written = storage.size(plan.path)

@@ -20,7 +20,7 @@ from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import OUTPUT, GarminDevice
 from openexpress.fit import not_whole
 from openexpress.i18n import _, ngettext
-from openexpress.progress import Step
+from openexpress.progress import Step, say_to
 
 log = logging.getLogger(__name__)
 
@@ -161,8 +161,9 @@ def run_backup(
     storage: Storage,
     dest_root: Path,
     keep: int = 3,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
 ) -> BackupResult:
+    progress = say_to(progress)
     unit_dir = dest_root / str(device.unit_id)
     stamp = datetime.now().strftime(STAMP)
     target = unit_dir / stamp

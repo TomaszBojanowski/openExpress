@@ -27,6 +27,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
 from openexpress.device.storage import DeviceError  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
+from openexpress.progress import nothing  # noqa: E402
 
 log = logging.getLogger(__name__)
 OPEN_RETRIES = 3
@@ -163,7 +164,7 @@ class Watcher(Gio.Application):
                     # Asked while the session was being opened (request_quit had none).
                     s.stop_waiting.set()
             try:
-                summary = service.run_sync(s, progress=lambda _message: None)
+                summary = service.run_sync(s, progress=nothing)
             finally:
                 self._session = None
             # The words of the row under "Last sync", as last_sync.describe tells them.

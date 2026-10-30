@@ -90,6 +90,37 @@ class Step(str):
         return self.fraction == 1.0
 
 
+def nothing(_message: str) -> None:
+    """Progress nobody listens to."""
+
+
+def say_to(progress: Callable[[str], None] | None) -> Callable[[str], None]:
+    """What a task tells its steps to: `progress`, or nothing when nobody listens (None, the
+    default of every task)."""
+    return nothing if progress is None else progress
+
+
+def byte_steps(progress: Callable[[str], None] | None, head: str, *, before: int = 0,
+               total: int | None = None, n: int | None = None,
+               count: int | None = None) -> Callable[[int, int | None], None] | None:
+    """What a download or a write calls with its bytes (done, size): a Step of `head` told to
+    `progress`, in bytes ("… · 1.2 MB of 3.4 MB"; `before`: the bytes of the files done before
+    it, `total`: of all of them, else the file's own size), or with `n` of `count` besides
+    ("… · 3 of 25 · 120 MB of 1.2 GB"). None when nobody listens: a copy over MTP told
+    nothing goes another way (gio copy without -p in the Flatpak), a download says nothing."""
+    if progress is None or progress is nothing:
+        return None
+
+    def told(done: int, size: int | None) -> None:
+        whole = size if total is None else total
+        if count is None:
+            progress(Step(head, before + done, whole, in_bytes=True))
+        else:
+            progress(Step(head, n, count, bytes_done=before + done, bytes_total=whole))
+
+    return told
+
+
 class Reporter:
     """Tells the progress of a long task to `show` (the window's label, the command line's
     line): a `Step` at most once every `every` seconds - the first one, one of another head

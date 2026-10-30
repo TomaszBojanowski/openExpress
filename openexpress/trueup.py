@@ -21,7 +21,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.fit import FitError, true_up_time
 from openexpress.i18n import _, duration_text
-from openexpress.progress import Step, TimedWait, Waiting
+from openexpress.progress import Step, TimedWait, Waiting, say_to
 
 log = logging.getLogger(__name__)
 
@@ -111,13 +111,14 @@ def run(
     storage: Storage,
     client: GarminClient,
     messages: list[dict],
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], float] = time.time,
     stop=None,  # set by the window's Stop Waiting, or the background service quitting
 ) -> TrueUpResult:
     """`stop`: a threading.Event that stops the wait when it is set (its wait() is a step of
     the wait); without it the wait sleeps. Ctrl+C during the wait stops it the same way."""
+    progress = say_to(progress)
     result = TrueUpResult()
     targets = device.targets(DATATYPE)
     if not targets:

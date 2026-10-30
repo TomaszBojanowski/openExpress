@@ -22,7 +22,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size, ngettext
-from openexpress.progress import Step
+from openexpress.progress import Step, byte_steps, say_to
 
 log = logging.getLogger(__name__)
 
@@ -280,18 +280,13 @@ def copy(plan: CopyPlan, storage: Storage,
     user's own ("Copying music · 3 of 25 · 120 MB of 1.2 GB")."""
     storage.require_space(plan.size, SPACE_MARGIN, error=MusicError)
     written = []
-    say = progress if progress is not None else (lambda _message: None)
+    say = say_to(progress)
     # TRANSLATORS: a step of copying music ("… · 3 of 25 · 120 MB of 1.2 GB")
     head = _("Copying music")
     count, size = len(plan.to_copy), plan.size
     before = 0  # the bytes of the files copied before the current one
     for n, (t, dest) in enumerate(plan.to_copy, 1):
-        def copied(done: int, total: int | None, _n=n, _before=before) -> None:
-            say(Step(head, _n, count, bytes_done=_before + done, bytes_total=size))
-
-        # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
-        # without -p in the Flatpak).
-        told = copied if progress is not None else None
+        told = byte_steps(progress, head, before=before, total=size, n=n, count=count)
         say(Step(head, n, count, bytes_done=before, bytes_total=size))
         try:
             real = storage.write_file_checked(dest, t.local, told, error=MusicError)

@@ -33,7 +33,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
 from openexpress.fit import incompleteness, parse_file_id
 from openexpress.i18n import _
-from openexpress.progress import Step
+from openexpress.progress import Step, say_to
 
 log = logging.getLogger(__name__)
 
@@ -391,12 +391,13 @@ def run_uploads(
     storage: Storage,
     client: GarminClient,
     state: SyncState,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     wait_for_processing: bool = True,
 ) -> UploadReport:
     """Upload the files of the plan. A client never checked against the account (run_sync
     checks the owner first) stops it at its first refusal: nothing is sent, nothing is kept
     for a next sync, and the refusal is logged once and raised."""
+    progress = say_to(progress)
     try:
         return _run_uploads(plan, device, storage, client, state, progress, wait_for_processing)
     except DeviceNotVerified:
@@ -804,7 +805,7 @@ def run_downloads(
     items: list[DownloadItem],
     storage: Storage,
     client: GarminClient,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     state: SyncState | None = None,
 ) -> DownloadReport:
     """Download the queued files to the watch and return the report. With `state`, a message
@@ -812,6 +813,7 @@ def run_downloads(
     time (no duplicate file on the watch). Raises DeviceNotVerified at the first refusal of
     a client never checked against the account: nothing more is fetched, written or
     acknowledged."""
+    progress = say_to(progress)
     try:
         return _run_downloads(items, storage, client, progress, state)
     except DeviceNotVerified:

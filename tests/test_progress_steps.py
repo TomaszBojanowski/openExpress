@@ -158,3 +158,22 @@ def test_elsewhere_a_line_a_step():
     status.close()
     assert out.getvalue() == "  Uploading activities\n  Uploading monitoring\n"
     assert err.getvalue() == ""
+
+
+def test_the_steps_of_bytes_and_nobody_listening():
+    """byte_steps: a step in bytes of the file, of all the files (`before`, `total`), or with
+    the count besides; None when nobody listens (no progress, or nothing), so that a copy
+    over MTP goes its own way. say_to: what a task tells its steps to, always callable."""
+    from openexpress.progress import Step, byte_steps, nothing, say_to
+
+    seen = []
+    byte_steps(seen.append, "Copying Map")(1000, 4000)
+    byte_steps(seen.append, "Copying Map", before=4000, total=10000)(1000, 6000)
+    byte_steps(seen.append, "Copying music", before=10, total=100, n=2, count=5)(20, 40)
+    assert [(s.head, s.done, s.total, s.in_bytes, s.bytes_done, s.bytes_total) for s in seen] == [
+        ("Copying Map", 1000, 4000, True, None, None),
+        ("Copying Map", 5000, 10000, True, None, None),
+        ("Copying music", 2, 5, False, 30, 100)]
+    assert all(isinstance(s, Step) for s in seen)
+    assert byte_steps(None, "Copying Map") is None and byte_steps(nothing, "Copying Map") is None
+    assert say_to(None) is nothing and say_to(seen.append) == seen.append

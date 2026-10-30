@@ -28,7 +28,7 @@ from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, country_name
-from openexpress.progress import Step
+from openexpress.progress import Step, byte_steps, say_to
 
 log = logging.getLogger(__name__)
 
@@ -663,15 +663,11 @@ def _install(
 
     files = write_order(m)
     local: dict[str, Path] = {}
-    say = progress if progress is not None else (lambda _message: None)
+    say = say_to(progress)
     # The map as a whole, by its name: the files are the server's and the device's own.
-    downloading = _("Downloading {name}").format(name=m.name)
-
-    def downloaded(done: int, total: int | None) -> None:
-        say(Step(downloading, done, total, in_bytes=True))
-
+    downloaded = byte_steps(progress, _("Downloading {name}").format(name=m.name))
     # One bar for all the files of the map.
-    overall = download.Overall(m.size, downloaded) if progress is not None else None
+    overall = download.Overall(m.size, downloaded) if downloaded is not None else None
     for f in files:
         log.debug("map install: downloading %s (%s)", f.device_path, applog.size(f.size))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
@@ -711,22 +707,16 @@ def _install(
     # TRANSLATORS: a step of a map install; {name}: the map ("… · 1.2 GB of 6.3 GB")
     copying = _("Copying {name} to the device").format(name=m.name)
     copy_total = sum(f.size or 0 for f in files)
-    copied = [0]  # the bytes of the files written before the current one
-
-    def written(done: int, total: int | None) -> None:
-        say(Step(copying, copied[0] + done, copy_total, in_bytes=True))
-
-    # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
-    # without -p in the Flatpak).
-    told = written if progress is not None else None
+    copied = 0  # the bytes of the files written before the current one
     for f in files:
+        told = byte_steps(progress, copying, before=copied, total=copy_total)
         log.debug("map install: copying %s", f.device_path)
         if f.device_path.casefold() not in shared:
             real = _write_checked(storage, f, local[f.device_path], told)
         else:
             real = _write_shared(storage, f, local[f.device_path], told,
                                  _users(all_maps, m, f.device_path))
-        copied[0] += f.size or 0
+        copied += f.size or 0
         report.written.append(real)
     gmas = []
     for fname, gma in unlocks:
@@ -833,7 +823,8 @@ def cannot_remove_message(m: UniversalMap) -> str:
 
 
 def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
-              progress: Callable[[str], None] = lambda s: None) -> list[str]:
+              progress: Callable[[str], None] | None = None) -> list[str]:
+    progress = say_to(progress)
     if not m.can_uninstall:
         raise MapError(cannot_remove_message(m))
     removed = []
