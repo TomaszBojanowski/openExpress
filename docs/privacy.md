@@ -81,8 +81,10 @@ the application key, its secret and the value that signs download addresses are 
   told. The same request tells which map service serves the device: it is made once each
   time a device is opened, and again when its maps are checked again by hand, and its
   answer also serves the picture. Like the update check, that request names the device
-  (unit ID). The answer is kept in memory only while the device is open. Of it, only the
-  picture is cached, and three things are kept with the devices this installation
+  (unit ID). Of the answer only what the program reads is kept, for seven days, in memory
+  and in the cache (`answers`, below): the map service, the address of the model's picture,
+  the market segment, the model's name and the connect support – never the unit ID or the
+  serial number. The picture itself is cached, and three things are kept with the devices this installation
   remembers: the address of the model's picture (so that the picture can be downloaded
   again after the cache is cleared), Garmin's name of the model when the device gives it in
   capitals only, and whether the device is a bike accessory. Its market segment also tells
@@ -94,6 +96,17 @@ the application key, its secret and the value that signs download addresses are 
   Account**: only that click asks your Garmin Connect account for the picture, and that
   request sends the device's unit ID to your account. Nothing else asks the account about a
   device that is not on it.
+- **What Garmin's servers answered is kept for a while**, so that the program does not ask them
+  more often than Garmin Express does: in memory and in the cache (`answers`, files only you
+  can read), each for its own time – the account's device list and its primary training
+  device 5 minutes (of the list only the model, part number, software version, picture
+  address and what the device can be, never a name you gave a device), the software and map
+  offers for a device one hour (by its `GarminDevice.xml`, as Garmin Express keeps them), what
+  unit-info says seven days (above), the account's country one hour (in memory only). Refresh,
+  **Check Again**, an install, a change of a primary device and another login make the program
+  ask again; uploads, the consents, the queue of Garmin Connect and every change to the account
+  are always asked anew. `openexpress cache --clear --only answers --apply` (or the row in
+  Preferences → Storage) deletes what is kept; nothing of it is ever sent anywhere.
 - openExpress identifies itself to Garmin's servers: every request carries the header
   `User-Agent: openexpress/<version> (Linux)`; the sign-in window is a web browser with its
   own. It uses the Garmin Express client headers so that the servers answer, but it does not

@@ -58,10 +58,17 @@ UNIT_INFO_FIELDS = frozenset({"devicemodel", "graphicurl", "segmenttype", "conne
                               "mapupdatetype"})
 
 
+# Fields kept whole wherever they are: what the program sends back to the server as it came
+# (a map's identifier, in its activation).
+WHOLE = frozenset({"identifier"})
+
+
 def _fields(value: Any, keep: frozenset[str]) -> Any:
-    """`value` with only the keys of `keep` in its dicts, at any depth."""
+    """`value` with only the keys of `keep` in its dicts, at any depth (those of WHOLE with
+    all that is in them)."""
     if isinstance(value, dict):
-        return {k: _fields(v, keep) for k, v in value.items() if k in keep}
+        return {k: v if k in WHOLE else _fields(v, keep) for k, v in value.items()
+                if k in keep}
     if isinstance(value, list):
         return [_fields(v, keep) for v in value]
     return value
@@ -71,9 +78,41 @@ def _fields(value: Any, keep: frozenset[str]) -> Any:
 KEEP: dict[str, Callable[[Any], Any]] = {
     UNIT_INFO: lambda answer: _fields(answer, UNIT_INFO_FIELDS),
 }
+# What goes to disk of the account's list: what the start page, the ownership check and the
+# primary devices read; never a name the user gave a device ("displayname").
+ACCOUNT_FIELDS = frozenset({
+    "unitid", "deviceid", "productdisplayname", "partnumber", "currentfirmwareversion",
+    "primaryactivitytrackerindicator", "primaryactivitytrackersettingcapable",
+    "primarytrainingcapable", "imageurl", "devicecategories", "hasopticalheartrate"})
+PRIMARY_FIELDS = frozenset({"deviceid"})
+# What updates.parse_updates and beta_offered read of the software check.
+SOFTWARE_FIELDS = frozenset({
+    "updates", "accesslevel", "partnumber", "productname", "description", "displayversion",
+    "semanticversion", "version", "severity", "isprimaryfirmware", "installation",
+    "isreinstall", "isrestartrequired", "path", "filename", "order", "deliverable",
+    "securedownloadurl", "downloadurl", "md5", "sizeinbytes", "eulaurl", "releasenotes",
+    "changelog", "datatype", "releasestate"})
+# What maps.read_maps reads of the map check; never unlock data ("gma": that is the answer of
+# the activation, never kept).
+MAP_FIELDS = frozenset({
+    "maps", "directoriestoremove", "backgroundprimaryhost", "canuninstall", "country",
+    "deliverableoptions", "description", "displayname", "downloadhosts", "eulaurls",
+    "externalpath", "failoverhosts", "filematch", "filename", "files", "filestoremove",
+    "foregroundprimaryhost", "geographicregion", "identifier", "installationstate",
+    "installoptions", "ispreferred", "isreinstall", "majorversion", "maptype", "md5",
+    "minorversion", "path", "productgroupname", "release", "restriction", "restrictiontype",
+    "sizeinbytes", "title", "type", "url"})
 # The kinds kept on disk too, with the fields of each that go there (at any depth); a kind
-# not here stays in memory only.
-DISK_FIELDS: dict[str, frozenset[str]] = {}
+# not here stays in memory only (the account's country).
+DISK_FIELDS: dict[str, frozenset[str]] = {
+    ACCOUNT_DEVICES: ACCOUNT_FIELDS,
+    PRIMARY_TRAINING: PRIMARY_FIELDS,
+    SOFTWARE_UPDATES: SOFTWARE_FIELDS,
+    UNIVERSAL_MAPS: MAP_FIELDS,
+    UNIT_INFO: UNIT_INFO_FIELDS,
+}
+# The folder of the cache they are kept in (cache.CATEGORIES "answers").
+FOLDER = "answers"
 
 
 def xml_key(device_xml: bytes) -> str:
@@ -260,3 +299,11 @@ class Disk:
 
 
 ANSWERS = Answers()
+
+
+def use_disk() -> None:
+    """The kept answers on disk too, from now on (the command line, the window, the background
+    service), in the cache: for the next command and the next start of the window."""
+    from openexpress import paths
+
+    ANSWERS.disk = Disk(paths.cache_dir() / FOLDER)

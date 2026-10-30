@@ -2357,6 +2357,9 @@ def _main(argv: list[str] | None) -> int:
     role = args.cmd if args.cmd in ("gui", "watch") else "cli"
     # What a command tells the user itself is not printed again from the log (-v: all of it).
     applog.setup(role, args.verbose, quiet_told=role == "cli" and not args.verbose)
+    from openexpress import answers
+
+    answers.use_disk()  # what Garmin's servers said a moment ago, for this command too
     started = time.monotonic()
     log.info("start: %s (%s)", _command_line(args, argv), applog.environment())
     if fallback:

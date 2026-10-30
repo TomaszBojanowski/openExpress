@@ -26,11 +26,14 @@ log = logging.getLogger(__name__)
 # The parts of the cache, in the order they are shown, with the folders of each (the keys are
 # those of `cache --clear --only`); nothing else in the cache folder is counted or deleted.
 CATEGORIES = {"maps": ("maps",), "updates": ("software",), "pictures": ("images",),
+              # What Garmin's servers answered a moment ago (answers.FOLDER).
+              "answers": ("answers",),
               # Files on their way to the device (the Flatpak), and what older versions left.
               "temp": ("transfer", "tmp")}
 # TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
 CATEGORY_NAMES = {"maps": N_("Maps"), "updates": N_("Software updates"),
-                  "pictures": N_("Pictures and icons"), "temp": N_("Temporary files")}
+                  "pictures": N_("Pictures and icons"),
+                  "answers": N_("Answers of Garmin's servers"), "temp": N_("Temporary files")}
 
 
 # The lock of the cache, in its folder; a clearing never deletes it. Shared while files of the
@@ -164,6 +167,10 @@ def clear(only: Iterable[str] | None = None) -> CacheUsage:
         for name in names:
             for folder_name in CATEGORIES[name]:
                 _empty(before.root / folder_name, keep if name == "pictures" else set())
+        if "answers" in names:  # nor what this process keeps of them
+            from openexpress import answers
+
+            answers.ANSWERS.clear()
     kept_bytes, kept_number = before.kept
     if only is None:
         log.info("cache: pictures: %d of the devices remembered kept", kept_number)

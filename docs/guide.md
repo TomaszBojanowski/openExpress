@@ -299,7 +299,9 @@ setup --locale de_DE` sets another one for them.
 
 Downloaded maps and software updates, device pictures and app icons, and files on their way to
 the device are kept in `~/.cache/openexpress` (the Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/cache/openexpress`;
-each installation has its own), in four parts: `maps`, `updates`, `pictures` and `temp`.
+each installation has its own), in five parts: `maps`, `updates`, `pictures`, `answers` (what
+Garmin's servers answered a moment ago: see [Privacy and security](privacy.md#privacy-and-security))
+and `temp`.
 `openexpress cache` shows how big each part is, `openexpress cache --clear --apply` empties all of
 them except the pictures of the devices openExpress remembers (`--only pictures` deletes those
 too) and `openexpress cache --clear --only maps,updates --apply` only those named (without

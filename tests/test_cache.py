@@ -1,5 +1,5 @@
 """The cache of openExpress: how big it is, part by part, and clearing it, all of it or some
-parts (maps, updates, pictures, temp)."""
+parts (maps, updates, pictures, answers, temp)."""
 
 import os
 from pathlib import Path
@@ -42,8 +42,8 @@ def test_sizes_of_the_cache_folders(cache, tmp_path):
     os.symlink(tmp_path / "outside" / "big", cache / "maps" / "link")
     use = oe_cache.usage()
     assert use.root == cache
-    assert use.sizes == {"maps": 1750, "updates": 4000, "pictures": 30, "temp": 99}
-    assert use.files == {"maps": 3, "updates": 1, "pictures": 1, "temp": 1}
+    assert use.sizes == {"maps": 1750, "updates": 4000, "pictures": 30, "answers": 0, "temp": 99}
+    assert use.files == {"maps": 3, "updates": 1, "pictures": 1, "answers": 0, "temp": 1}
     assert use.total == 5879
 
 
@@ -52,7 +52,7 @@ def test_no_cache_yet_is_nothing(cache):
     from openexpress import cache as oe_cache
 
     use = oe_cache.usage()
-    assert use.sizes == {"maps": 0, "updates": 0, "pictures": 0, "temp": 0}
+    assert use.sizes == {"maps": 0, "updates": 0, "pictures": 0, "answers": 0, "temp": 0}
     assert use.total == 0 and not cache.exists()
 
 
@@ -79,8 +79,8 @@ def test_the_flatpak_cache_is_where_xdg_cache_home_says(tmp_path, monkeypatch):
     assert use.root == sandbox / "openexpress" and use.sizes["maps"] == 123
 
 
-def test_cache_command_lists_the_four_parts_and_the_total(cache, capsys):
-    """`openexpress cache`: the folder, each of the four parts with its size, the total; exit
+def test_cache_command_lists_the_parts_and_the_total(cache, capsys):
+    """`openexpress cache`: the folder, each of its parts with its size, the total; exit
     code 0; nothing deleted."""
     from openexpress.cli import main
 
@@ -91,6 +91,7 @@ def test_cache_command_lists_the_four_parts_and_the_total(cache, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
+        "  Answers of Garmin's servers: 0 B",
         "  Temporary files: 0 B",
         "  Total: 5.8 kB"]
     assert (cache / "maps" / "aaa").exists()
@@ -277,6 +278,7 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
+        "  Answers of Garmin's servers: 0 B",
         "  Temporary files: 119 B",
         "  Total: 5.9 kB",
         "Dry run: nothing was deleted. Add --apply to delete it.",
@@ -284,8 +286,8 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
     assert sorted(p for p in cache.rglob("*")) == before
 
 
-def test_clear_with_apply_empties_the_folders_of_the_four_parts(cache, tmp_path, capsys):
-    """--apply: what is in the folders of the four parts goes; the folders themselves,
+def test_clear_with_apply_empties_the_folders_of_the_parts(cache, tmp_path, capsys):
+    """--apply: what is in the folders of the parts goes; the folders themselves,
     cache.lock and all else stay (a link is removed as a link, the file it points to stays).
     It says how much was freed."""
     from openexpress.cli import main
@@ -404,7 +406,7 @@ def test_a_part_that_is_not_one_is_an_error_with_the_list(cache, tmp_path, capsy
     assert captured.err.strip() == (
         (f"Error: Not a part of the cache: {unknown}. " if unknown
          else "Error: No part of the cache named. ")
-        + "The parts are: maps, updates, pictures, temp.")
+        + "The parts are: maps, updates, pictures, answers, temp.")
     assert captured.out == ""
     assert sorted(p for p in cache.rglob("*")) == before
 
@@ -416,15 +418,15 @@ def test_the_help_names_the_parts(capsys):
         main(["cache", "--help"])
     help_text = " ".join(capsys.readouterr().out.split())
     assert "--only PARTS" in help_text
-    assert "maps, updates, pictures, temp" in help_text
+    assert "maps, updates, pictures, answers, temp" in help_text
 
 
 # --- clearing some parts of the cache: cache.clear(only=…) ---------------------------------------
 
 # The folders of each part, as the user knows them; and a file in each, of a known size.
 PARTS = {"maps": ["maps"], "updates": ["software"], "pictures": ["images"],
-         "temp": ["transfer", "tmp"]}
-SIZES = {"maps": 1750, "updates": 4000, "pictures": 30, "temp": 119}
+         "answers": ["answers"], "temp": ["transfer", "tmp"]}
+SIZES = {"maps": 1750, "updates": 4000, "pictures": 30, "answers": 0, "temp": 119}
 
 
 def _left(cache) -> dict[str, list[str]]:
@@ -455,15 +457,15 @@ def test_one_part_is_cleared_and_the_others_stay(cache, tmp_path, part):
 
 def test_some_parts_at_once_and_all_by_default(cache, tmp_path):
     """Two parts at once (in any order, named twice): both, in the order of the parts; no
-    parts named: all four."""
+    parts named: all of them."""
     from openexpress import cache as oe_cache
 
     filled(cache, tmp_path)
     freed = oe_cache.clear(only=["temp", "maps", "temp"])
     assert list(freed.sizes) == ["maps", "temp"] and freed.total == 1750 + 119
-    assert oe_cache.usage().sizes == {"maps": 0, "updates": 4000, "pictures": 30, "temp": 0}
+    assert oe_cache.usage().sizes == {"maps": 0, "updates": 4000, "pictures": 30, "answers": 0, "temp": 0}
     freed = oe_cache.clear()
-    assert list(freed.sizes) == ["maps", "updates", "pictures", "temp"]
+    assert list(freed.sizes) == ["maps", "updates", "pictures", "answers", "temp"]
     assert freed.total == 4030 and oe_cache.usage().total == 0
     assert (cache / "cache.lock").exists()
 
@@ -634,9 +636,10 @@ def test_the_group_shows_each_part_and_all_of_it(prefs, cache, tmp_path, monkeyp
         ("Maps", "1.8\u00a0kB\u00a0· 2 files"),
         ("Software updates", "0\u00a0B\u00a0· 0 files"),
         ("Pictures and icons", "30\u00a0B\u00a0· 1 file"),
+        ("Answers of Garmin's servers", "0\u00a0B\u00a0· 0 files"),
         ("Temporary files", "0\u00a0B\u00a0· 0 files"),
         ("All of the cache", "1.8\u00a0kB\u00a0· 3 files")]
-    assert [b.get_sensitive() for _t, _s, b in rows] == [True, False, True, False, True]
+    assert [b.get_sensitive() for _t, _s, b in rows] == [True, False, True, False, False, True]
     assert _button(group, "All of the cache").get_label() == "Clear All…"
 
 
@@ -644,7 +647,7 @@ def test_the_group_shows_each_part_and_all_of_it(prefs, cache, tmp_path, monkeyp
 def test_an_empty_cache_has_every_button_grey(prefs, cache):
     group = prefs._cache_group()
     rows = _counted(prefs, group)
-    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 5
+    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 6
     assert not any(b.get_sensitive() for _t, _s, b in rows)
 
 
@@ -662,7 +665,7 @@ def test_the_sizes_are_counted_off_the_window_thread(prefs, cache, monkeypatch):
                                            real(only))[1])
     fill(cache, {"maps/a": 1000})
     group = prefs._cache_group()
-    assert [s for _t, s, _b in storage_rows(group)] == ["Counting…"] * 5
+    assert [s for _t, s, _b in storage_rows(group)] == ["Counting…"] * 6
     assert not any(b.get_sensitive() for _t, _s, b in storage_rows(group))
     _counted(prefs, group)
     assert threads and threading.main_thread() not in threads
@@ -744,7 +747,7 @@ def test_clear_all_asks_with_the_total_and_clears_everything(prefs, cache, tmp_p
     assert all(files == [] for files in _left(cache).values())
     assert all(p.exists() for p in stay.values()) and (cache / "cache.lock").exists()
     rows = storage_rows(group)
-    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 5
+    assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 6
     assert not any(b.get_sensitive() for _t, _s, b in rows)
     assert prefs.toasts == ["Freed 5.9\u00a0kB."]
 
