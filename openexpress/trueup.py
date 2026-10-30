@@ -21,7 +21,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.fit import FitError, true_up_time
 from openexpress.i18n import _, duration_text
-from openexpress.progress import TimedWait, Waiting
+from openexpress.progress import Step, TimedWait, Waiting
 
 log = logging.getLogger(__name__)
 
@@ -142,7 +142,8 @@ def run(
         result.note = _("Connect has not prepared TrueUp data yet")
         log.info("TrueUp: nothing prepared yet (waited %.0f s)", result.waited_s)
         return result
-    progress(_("TrueUp: writing daily totals to the device"))
+    # TRANSLATORS: a step of a sync: the TrueUp file from Garmin Connect
+    progress(Step(_("Downloading {name}").format(name="TrueUp")))
     data = _fetch(client, m)
     if not data:
         result.note = _("empty TrueUp file")
@@ -150,6 +151,8 @@ def run(
         return result
     t = targets[0]
     name = f"{t.basename + '_' if t.basename else ''}{uuid.uuid4()}.{t.extension or 'FIT'}"
+    # TRANSLATORS: a step of a sync: the TrueUp file written to the device
+    progress(Step(_("Writing {name} to the device").format(name="TrueUp")))
     try:
         result.written = storage.write_checked(posixpath.join(t.path, name), data)
     except Exception as e:

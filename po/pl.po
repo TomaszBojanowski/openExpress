@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 03:34+0100\n"
+"POT-Creation-Date: 2026-10-30 03:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -470,8 +470,10 @@ msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr "Usuń ją w telefonie, w aplikacji Connect IQ albo Garmin Connect."
 
 #. TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
+#. TRANSLATORS: a step of a sync: the TrueUp file from Garmin Connect
 #. TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
-#: openexpress/ciq.py:1082 openexpress/maps.py:668 openexpress/updates.py:416
+#: openexpress/ciq.py:1082 openexpress/maps.py:668 openexpress/trueup.py:146
+#: openexpress/updates.py:416
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr "Pobieranie {name}"
@@ -482,7 +484,8 @@ msgid "Cannot register the apps on the device: {error}"
 msgstr "Nie można zarejestrować aplikacji na urządzeniu: {error}"
 
 #. TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
-#: openexpress/ciq.py:1181
+#. TRANSLATORS: a step of a sync: the TrueUp file written to the device
+#: openexpress/ciq.py:1181 openexpress/trueup.py:155
 #, python-brace-format
 msgid "Writing {name} to the device"
 msgstr "Zapisywanie {name} na urządzenie"
@@ -6701,11 +6704,7 @@ msgstr "TrueUp: oczekiwanie na Garmin Connect…"
 msgid "Connect has not prepared TrueUp data yet"
 msgstr "Connect nie przygotował jeszcze danych TrueUp"
 
-#: openexpress/trueup.py:145
-msgid "TrueUp: writing daily totals to the device"
-msgstr "TrueUp: zapisywanie dziennych podsumowań na urządzeniu"
-
-#: openexpress/trueup.py:148
+#: openexpress/trueup.py:149
 msgid "empty TrueUp file"
 msgstr "pusty plik TrueUp"
 

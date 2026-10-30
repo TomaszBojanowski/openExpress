@@ -51,8 +51,9 @@ def test_trueup_reports_its_wait_for_connect_as_a_wait(device_root):
     from openexpress.progress import TimedWait
 
     assert [m for m in seen if not isinstance(m, TimedWait)] == [
-        TRUEUP_WAIT, "TrueUp: writing daily totals to the device"]
-    assert [isinstance(m, Waiting) for m in seen if not isinstance(m, TimedWait)] == [True, False]
+        TRUEUP_WAIT, "Downloading TrueUp", "Writing TrueUp to the device"]
+    assert [isinstance(m, Waiting) for m in seen if not isinstance(m, TimedWait)] == [
+        True, False, False]
     assert len([m for m in seen if isinstance(m, TimedWait)]) == 11
 
 
