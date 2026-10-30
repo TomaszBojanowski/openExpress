@@ -19,10 +19,11 @@ def test_the_backup_counts_its_files(device_root, tmp_path):
     st, dev = _device(device_root)
     seen = []
     res = backup.run_backup(dev, st, tmp_path / "bk", keep=1, progress=seen.append)
-    files = res.files - 1  # GarminDevice.xml is written from what was read already
-    assert files >= 3 and all(isinstance(m, Step) for m in seen)
-    assert [str(m) for m in seen] == [f"Copying to the backup{NB}· {n} of {files}"
-                                      for n in range(1, files + 1)]
+    # Every file of the backup counted, GarminDevice.xml too: the last step says as many
+    # files as the sentence at the end ("Copied 343 files").
+    assert res.files >= 4 and all(isinstance(m, Step) for m in seen)
+    assert [str(m) for m in seen] == [f"Copying to the backup{NB}· {n} of {res.files}"
+                                      for n in range(1, res.files + 1)]
     assert not [m for m in seen if ".fit" in m.lower() or "GARMIN/" in m.upper()]
 
 

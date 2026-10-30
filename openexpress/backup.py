@@ -100,8 +100,6 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
     for src in backup_files(device):
         if not paths.is_safe_component(src.datatype):
             raise _not_a_path(src.datatype)
-    (target / "GarminDevice.xml").write_bytes(device.raw)
-    count, total = 1, len(device.raw)
     # All the files first, for how many there are; each path is checked before any is read.
     files = []
     seen: set[str] = set()
@@ -114,12 +112,16 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
             files.append((path, entry, _out_path(target, src.datatype, rel)))
     # TRANSLATORS: a step of a backup ("… · 120 of 1530")
     head = _("Copying to the backup")
-    for n, (path, entry, out) in enumerate(files, 1):
-        progress(Step(head, n, len(files)))
+    # Every file of the backup counted, GarminDevice.xml (read already) the first.
+    count = len(files) + 1
+    progress(Step(head, 1, count))
+    (target / "GarminDevice.xml").write_bytes(device.raw)
+    total = len(device.raw)
+    for n, (path, entry, out) in enumerate(files, 2):
+        progress(Step(head, n, count))
         log.debug("backup: copying %s", path)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(storage.read(path))
-        count += 1
         total += entry.size
     return count, total
 
