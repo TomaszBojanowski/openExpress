@@ -122,3 +122,56 @@ def test_the_login_is_part_of_the_key():
     store._path().write_text(store._path().read_text() + " ")  # written again elsewhere
     service.require_account_device(client, UNIT)
     assert client.http.paths() == [DEVICES_PATH, DEVICES_PATH]
+
+
+class SlowList(Account):
+    """The account's list asked first waits until let go, with what the account said then."""
+
+    def __init__(self):
+        import threading
+
+        super().__init__()
+        self.held, self.go, self.slow = threading.Event(), threading.Event(), True
+
+    def request(self, method, url, **kw):
+        answer = super().request(method, url, **kw)
+        if self.slow and method == "GET" and url.split("?")[0].endswith(DEVICES_PATH):
+            self.slow = False
+            self.held.set()
+            assert self.go.wait(5)
+        return answer
+
+
+def test_a_change_of_the_primary_wearable_takes_no_list_asked_before_it(made_up_device):
+    """Another task of the window reads the account's list just before the change: the
+    change does not wait for that request, its check and read-back ask anew, and the older
+    list, coming later, does not take the place of the one read back."""
+    import threading
+
+    account = SlowList()
+    client = account.client()
+    before = threading.Thread(target=lambda: service.require_account_device(client, UNIT))
+    before.start()
+    assert account.held.wait(5)
+    changed, done = [], threading.Event()
+
+    def change():
+        try:
+            changed.append(service.set_primary_wearable(client, made_up_device, apply=True))
+        except Exception as e:  # noqa: BLE001 - checked below
+            changed.append(e)
+        finally:
+            done.set()
+
+    worker = threading.Thread(target=change)
+    worker.start()
+    try:
+        assert done.wait(3), "the change waited for a list asked before it"
+    finally:
+        account.go.set()
+        before.join(5)
+        worker.join(5)
+    assert not isinstance(changed[0], Exception), changed[0]
+    account.sent.clear()
+    assert service.primary_wearable_status(client, made_up_device).is_this_device
+    assert account.sent == []  # the list read back, kept: not the older one

@@ -180,12 +180,15 @@ _MISSING = object()  # nothing kept: an answer itself may be None (no country, a
 
 
 class _Flight:
-    """A request under way: the others asking the same wait for its answer."""
+    """A request under way: the others asking the same wait for its answer. `generation`:
+    that of its key when it began; `tags`: what it is about, for forget."""
 
-    def __init__(self):
+    def __init__(self, generation: int, tags: frozenset[str]):
         self.done = threading.Event()
         self.value: Any = None
         self.error: BaseException | None = None
+        self.generation = generation
+        self.tags = tags
 
 
 class Answers:
@@ -197,28 +200,33 @@ class Answers:
         self._lock = threading.Lock()
         self._kept: dict[tuple, tuple[float, Any, frozenset[str]]] = {}
         self._flying: dict[tuple, _Flight] = {}
+        # A key's generation goes up when what its answer says may have changed (forget, a
+        # fresh question): a request begun in an older one is joined by nobody asking later,
+        # and its answer is not kept.
+        self._generations: dict[tuple, int] = {}
         self.disk = None  # a Disk, for the kinds in it (set up by the program, not by tests)
 
     def ask(self, kind: str, key: Iterable, fetch: Callable[[], Any], *,
             about: Iterable = (), fresh: bool = False) -> Any:
         """The answer of `kind` for `key`: a fresh one kept, else `fetch()` (once, also when
         several ask at once). `about`: what it is about (a unit ID, xml_key), for forget.
-        `fresh`: never from what is kept (still one request with those asking at once).
-        Each caller gets a copy of its own."""
+        `fresh`: what the server says now: never what is kept, nor a request begun before
+        (those asking after it share its request). Each caller gets a copy of its own."""
         full = (kind, *key)
         tags = frozenset(_tag(a) for a in about)
-        while True:
-            with self._lock:
-                if not fresh:
-                    hit = self._fresh(kind, full)
-                    if hit is not _MISSING:
-                        return copy.deepcopy(hit)
-                flight = self._flying.get(full)
-                mine = flight is None
-                if mine:
-                    flight = self._flying[full] = _Flight()
+        with self._lock:
+            if fresh:
+                self._generations[full] = self._generations.get(full, 0) + 1
+            else:
+                hit = self._fresh(kind, full)
+                if hit is not _MISSING:
+                    return copy.deepcopy(hit)
+            generation = self._generations.get(full, 0)
+            flight = self._flying.get(full)
+            mine = flight is None or flight.generation != generation
             if mine:
-                break
+                flight = self._flying[full] = _Flight(generation, tags)
+        if not mine:
             flight.done.wait()
             if flight.error is not None:
                 raise flight.error
@@ -235,12 +243,14 @@ class Answers:
         else:
             flight.value = value
             with self._lock:
-                self._kept[full] = (self.clock(), value, tags)
-            if self.disk is not None:
-                self.disk.put(kind, full, value, tags, self.clock())
+                if flight.generation == self._generations.get(full, 0):
+                    self._kept[full] = (self.clock(), value, tags)
+                    if self.disk is not None:
+                        self.disk.put(kind, full, value, tags, self.clock())
         finally:
             with self._lock:
-                self._flying.pop(full, None)
+                if self._flying.get(full) is flight:
+                    del self._flying[full]
             flight.done.set()
         return copy.deepcopy(value)
 
@@ -264,18 +274,26 @@ class Answers:
 
     def forget(self, kinds: Iterable[str] | str | None = None, about=None) -> None:
         """Forget the answers of these kinds (all: None), only those about `about` (a unit ID,
-        xml_key) when given; in memory and on disk."""
+        xml_key) when given; in memory and on disk. A request of theirs under way keeps its
+        answer to those who asked already, but it is not kept (generations)."""
         if isinstance(kinds, str):
             kinds = (kinds,)
         kinds = set(kinds) if kinds is not None else None
         tag = _tag(about) if about is not None else None
+
+        def matches(key: tuple, tags: frozenset[str]) -> bool:
+            return (kinds is None or key[0] in kinds) and (tag is None or tag in tags)
+
         with self._lock:
-            gone = [k for k, (_at, _v, tags) in self._kept.items()
-                    if (kinds is None or k[0] in kinds) and (tag is None or tag in tags)]
+            gone = [k for k, (_at, _v, tags) in self._kept.items() if matches(k, tags)]
             for k in gone:
                 del self._kept[k]
-        if self.disk is not None:
-            self.disk.forget(kinds, tag)
+            for k, flight in self._flying.items():
+                if matches(k, flight.tags):
+                    self._generations[k] = self._generations.get(k, 0) + 1
+            # Under the lock: nobody reads the disk back between memory and disk.
+            if self.disk is not None:
+                self.disk.forget(kinds, tag)
         if gone:
             log.debug("answers: %d forgotten (%s)", len(gone),
                       ", ".join(sorted({k[0] for k in gone})))

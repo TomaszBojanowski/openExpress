@@ -88,7 +88,7 @@ def test_two_asking_at_once_share_one_request(kept):
     first.start()
     started.wait(5)
     second = threading.Thread(target=lambda: got.append(
-        store.ask(SOFTWARE_UPDATES, ("x",), slow, fresh=True)))
+        store.ask(SOFTWARE_UPDATES, ("x",), slow)))
     second.start()
     release.set()
     first.join(5)
@@ -225,3 +225,84 @@ def test_a_file_on_disk_that_is_no_object_is_no_answer(tmp_path, kept, written):
     assert store.disk.get(SOFTWARE_UPDATES, full, 1_800_000_000.0) is None
     assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"updates": []}) == {"updates": []}
     assert json.loads(store.disk._path(full).read_text())["kind"] == SOFTWARE_UPDATES
+
+
+# --- a request under way and what changed meanwhile (generations) -----------------------------
+
+
+class Slow:
+    """A request that waits until let go; the answer is what was true when it was asked."""
+
+    def __init__(self, answer):
+        self.answer, self.started, self.go = answer, threading.Event(), threading.Event()
+
+    def __call__(self):
+        answer = self.answer
+        self.started.set()
+        assert self.go.wait(5)
+        return answer
+
+
+def _under_way(store, slow, **kw):
+    out = []
+    thread = threading.Thread(target=lambda: out.append(store.ask(SOFTWARE_UPDATES, ("k",),
+                                                                  slow, **kw)))
+    thread.start()
+    assert slow.started.wait(5)
+    return thread, out
+
+
+def test_an_answer_asked_before_forget_is_not_kept(kept):
+    store, _clock = kept
+    slow = Slow({"n": "before"})
+    thread, out = _under_way(store, slow)
+    store.forget(SOFTWARE_UPDATES)  # what it says may have changed meanwhile
+    slow.go.set()
+    thread.join(5)
+    assert out == [{"n": "before"}]  # the one who asked before gets it
+    assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"n": "after"}) == {"n": "after"}
+
+
+def test_after_forget_a_question_does_not_join_the_request_begun_before(kept):
+    store, _clock = kept
+    slow = Slow({"n": "before"})
+    thread, _out = _under_way(store, slow)
+    store.forget(SOFTWARE_UPDATES)
+    try:
+        assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"n": "after"}) == {"n": "after"}
+    finally:
+        slow.go.set()
+        thread.join(5)
+    assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"n": "third"}) == {"n": "after"}
+
+
+def test_fresh_does_not_join_a_request_begun_before(kept):
+    """fresh: what the server says now; the older answer, coming later, takes nothing over."""
+    store, _clock = kept
+    slow = Slow({"n": "before"})
+    thread, _out = _under_way(store, slow)
+    try:
+        assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"n": "now"},
+                         fresh=True) == {"n": "now"}
+    finally:
+        slow.go.set()
+        thread.join(5)
+    assert store.ask(SOFTWARE_UPDATES, ("k",), lambda: {"n": "third"}) == {"n": "now"}
+
+
+def test_those_asking_after_forget_share_one_new_request(kept):
+    store, _clock = kept
+    slow = Slow({"n": "before"})
+    thread, _out = _under_way(store, slow)
+    store.forget(SOFTWARE_UPDATES)
+    second = Slow({"n": "after"})
+    other, got = _under_way(store, second)  # its own request, not the one begun before
+    never, third = [], []
+    late = threading.Thread(target=lambda: third.append(store.ask(
+        SOFTWARE_UPDATES, ("k",), lambda: never.append(1) or {"n": "never"})))
+    late.start()
+    second.go.set()
+    slow.go.set()
+    for t in (thread, other, late):
+        t.join(5)
+    assert got == third == [{"n": "after"}] and never == []
