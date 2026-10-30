@@ -462,7 +462,7 @@ def copy_crash_logs(win, button=None) -> None:
         return
 
     def work():
-        return diagnostics.copy_crash_logs(s.device, s.storage)
+        return diagnostics.copy_crash_logs(s.device, s.storage, progress=win.progress)
 
     def done(copied):
         if win.session is not s:
@@ -486,7 +486,7 @@ def copy_dumps(win, button=None) -> None:
         return
 
     def work():
-        return diagnostics.copy_dumps(s.device, s.storage)
+        return diagnostics.copy_dumps(s.device, s.storage, progress=win.progress)
 
     def done(copied):
         if win.session is not s:

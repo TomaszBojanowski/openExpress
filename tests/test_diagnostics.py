@@ -540,7 +540,7 @@ def _window(found):
     return stand_in(
         session=types.SimpleNamespace(device=None, storage=None, diagnostics=found),
         _button=lambda label, cb, style=None, with_button=False: _labelled(label),
-        run_task=RunNow(), toast=toasts.append, toasts=toasts)
+        run_task=RunNow(), toast=toasts.append, toasts=toasts, progress=lambda message: None)
 
 
 def _labelled(label):
@@ -632,13 +632,14 @@ def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
     group = Adw.PreferencesGroup()
     device_error_row(win, group)
     monkeypatch.setattr(diagnostics, "copy_crash_logs",
-                        lambda device, storage: diagnostics.Copied())
+                        lambda device, storage, progress=None: diagnostics.Copied())
     copy_crash_logs(win)
     assert win.toasts == ["The device has no hidden crash logs"]
     assert not found.hidden_logs
     assert "Crash logs" not in [r[0] for r in _rows(win)]
     monkeypatch.setattr(diagnostics, "copy_crash_logs",
-                        lambda device, storage: diagnostics.Copied(new=2, saved=True))
+                        lambda device, storage, progress=None: diagnostics.Copied(
+                            new=2, saved=True))
     copy_crash_logs(win)
     assert win.toasts[-1] == "Crash logs copied to this computer"
 
@@ -648,8 +649,9 @@ def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
     from openexpress.gui.device_page import copy_dumps
 
     win = _window(_found())
-    monkeypatch.setattr(diagnostics, "copy_dumps", lambda device, storage: diagnostics.Copied(
-        new=1, unchanged=1, saved=True, not_copied=["RAM_bak2.zip"]))
+    monkeypatch.setattr(diagnostics, "copy_dumps",
+                        lambda device, storage, progress=None: diagnostics.Copied(
+                            new=1, unchanged=1, saved=True, not_copied=["RAM_bak2.zip"]))
     copy_dumps(win)
     assert win.toasts == [("2 memory dumps copied to this computer\u00a0· 1 not: over the "
                            "limit of 50.0\u00a0MB")]

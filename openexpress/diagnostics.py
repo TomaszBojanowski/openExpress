@@ -16,6 +16,7 @@ import hashlib
 import json
 import logging
 import posixpath
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -25,6 +26,7 @@ from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, ngettext
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -347,11 +349,13 @@ def rotate(where: Path, copies: int = COPIES_KEPT, limit: int = LIMIT) -> tuple[
 
 
 def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = None,
-               found: dict[str, tuple[int, float]] | None = None) -> Copied:
+               found: dict[str, tuple[int, float]] | None = None,
+               progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the diagnostic files the device shows (through the ordinary connection, never a
     session of its own): the content not kept yet, a new copy only when something changed.
     Memory dumps, health metrics, settings and big files are only listed. `found`: those
-    files already known (Seen.files), not looked for again."""
+    files already known (Seen.files), not looked for again. `progress`: which file read of
+    how many ("Copying diagnostic files · 3 of 12")."""
     now = now or datetime.now()
     where = folder(device.unit_id)
     found = _visible_files(device, storage) if found is None else found
@@ -359,6 +363,7 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     before = last.get("files", {})
     report = Copied()
     files, listed = {}, {}
+    to_read = []
     for path, (size, mtime) in found.items():
         if _listed_only(path, size):
             listed[path] = {"size": size, "mtime": mtime}
@@ -373,6 +378,11 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
             files[path] = old
             report.unchanged += 1
             continue
+        to_read.append((path, mtime, old))
+    # TRANSLATORS: a step of copying the diagnostic files the device shows ("… · 3 of 12")
+    head = _("Copying diagnostic files")
+    for n, (path, mtime, old) in enumerate(to_read, 1):
+        _say(progress, Step(head, n, len(to_read)))
         data = storage.read_at(path)  # a real path, as listed
         sha, stored = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
@@ -393,27 +403,40 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     return report
 
 
+def _say(progress: Callable[[str], None] | None, step: Step) -> None:
+    if progress is not None:
+        progress(step)
+
+
 def dumps_on_device(storage: Storage) -> list[tuple[str, int]]:
     """The memory dumps the device shows: (path, size)."""
     return [(path, e.size) for path, e in storage.walk_files(DUMPS)]
 
 
-def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = None) -> Copied:
+def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = None,
+               progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the memory dumps (on request only), the newest first while they fit within the
-    limit; those that do not fit even alone are not copied (`not_copied`)."""
+    limit; those that do not fit even alone are not copied (`not_copied`). `progress`: which
+    dump of how many ("Copying memory dumps · 1 of 3")."""
     now = now or datetime.now()
     where = folder(device.unit_id)
     found = sorted(storage.walk_files(DUMPS), key=lambda t: t[1].mtime, reverse=True)
     report = Copied()
     files, room = {}, LIMIT
+    chosen = []
     for path, entry in found:
         if entry.size > room:
             report.not_copied.append(posixpath.basename(path))
             continue
+        chosen.append((path, entry))
+        room -= entry.size
+    # TRANSLATORS: a step of copying the memory dumps ("… · 1 of 3")
+    head = _("Copying memory dumps")
+    for n, (path, entry) in enumerate(chosen, 1):
+        _say(progress, Step(head, n, len(chosen)))
         data = storage.read(path)
         sha, new = _keep(where, data)
         files[path] = {"sha256": sha, "size": len(data), "mtime": entry.mtime}
-        room -= len(data)
         report.new += new
         report.new_bytes += len(data) if new else 0
         report.unchanged += not new
@@ -461,11 +484,12 @@ def ptp_unavailable_text(storage: Storage) -> str:
              "read the hidden crash logs.")
 
 
-def copy_crash_logs(device: GarminDevice, storage: Storage,
-                    now: datetime | None = None) -> Copied:
+def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None = None,
+                    progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the hidden crash logs (the boot log and the event logs of a fēnix 8) in one
     read-only session of our own: the device leaves the file manager for a moment. Nothing
-    found: remembered, and not offered again."""
+    found: remembered, and not offered again. `progress`: which log of how many ("Copying
+    crash logs · 1 of 7")."""
     from openexpress import ciq
 
     now = now or datetime.now()
@@ -476,17 +500,23 @@ def copy_crash_logs(device: GarminDevice, storage: Storage,
     read: dict[str, bytes] = {}
     with opener as session:
         store = ciq._ptp_store(session)
+        found = []  # (path, handle): all first, for how many there are
         for path in CRASH_LOGS:
             item = session.lookup(store, path)
             if item is not None and not item.is_dir:
-                read[path] = session.read_file(item.handle)
+                found.append((path, item.handle))
         for path in CRASH_LOG_FOLDERS:
             item = session.lookup(store, path)
             if item is None or not item.is_dir:
                 continue
             for child in session.all_children(store, item.handle):
                 if not child.is_dir and child.size <= BIG:
-                    read[f"{path}/{child.name}"] = session.read_file(child.handle)
+                    found.append((f"{path}/{child.name}", child.handle))
+        # TRANSLATORS: a step of copying the hidden crash logs ("… · 1 of 7")
+        head = _("Copying crash logs")
+        for n, (path, handle) in enumerate(found, 1):
+            _say(progress, Step(head, n, len(found)))
+            read[path] = session.read_file(handle)
     report = Copied()
     files = {}
     for path, data in read.items():

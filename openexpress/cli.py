@@ -208,21 +208,24 @@ def cmd_diagnostics(args) -> int:
             print(_("With --apply, --crash-logs also reads its hidden crash logs in a session "
                     "of its own: the device leaves the file manager for a moment."))
         return 0
-    done = diagnostics.copy_files(dev, st)
+    with _progress() as progress:
+        done = diagnostics.copy_files(dev, st, progress=progress)
     print(ngettext("Copied: {count} new file ({size}), {unchanged} unchanged, {listed} only "
                    "listed.",
                    "Copied: {count} new files ({size}), {unchanged} unchanged, {listed} only "
                    "listed.", done.new).format(count=done.new, size=_human(done.new_bytes),
                                                unchanged=done.unchanged, listed=done.listed))
     if args.dumps:
-        dumped = diagnostics.copy_dumps(dev, st)
+        with _progress() as progress:
+            dumped = diagnostics.copy_dumps(dev, st, progress=progress)
         print(_("Memory dumps copied: {count} new ({size}).").format(
             count=dumped.new, size=_human(dumped.new_bytes)))
         if dumped.not_copied:
             print(_("Not copied, over the limit of {size}: {names}").format(
                 size=_human(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
     if args.crash_logs:
-        hidden = diagnostics.copy_crash_logs(dev, st)
+        with _progress() as progress:
+            hidden = diagnostics.copy_crash_logs(dev, st, progress=progress)
         print(ngettext("Crash logs: {count} file read ({new} new).",
                        "Crash logs: {count} files read ({new} new).",
                        hidden.new + hidden.unchanged).format(
