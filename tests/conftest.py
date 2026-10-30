@@ -431,6 +431,19 @@ def private_dirs(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
 
 
+@pytest.fixture(autouse=True)
+def nothing_answered_before():
+    """Every test starts with no answer of Garmin's servers kept (answers.ANSWERS lives as
+    long as the process) and with no disk for them: a test that wants one sets it up."""
+    from openexpress import answers
+
+    answers.ANSWERS.clear()
+    answers.ANSWERS.disk = None
+    yield
+    answers.ANSWERS.clear()
+    answers.ANSWERS.disk = None
+
+
 @pytest.fixture
 def xdg(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
