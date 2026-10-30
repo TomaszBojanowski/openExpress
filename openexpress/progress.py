@@ -32,33 +32,51 @@ class TimedWait(Waiting):
 class Step(str):
     """A step of a long task as a person reads it: what is done and to what (`head`: a name a
     person knows - a type of data, a map - never the name of a file), then how far: "<head> ·
-    3 of 8", or in bytes "<head> · 412 MB of 1.5 GB". `fraction`: for the bar (None: not
-    known). Steps of one head follow one another; `Reporter` shows a few of them."""
+    3 of 8", or in bytes "<head> · 412 MB of 1.5 GB", or both ("<head> · 3 of 25 · 120 MB of
+    1.2 GB": `bytes_done` of `bytes_total` besides the count). `fraction`: for the bar, by the
+    bytes when they are known (None: not known). Steps of one head follow one another;
+    `Reporter` shows a few of them."""
 
     head: str
     done: int | None
     total: int | None
     in_bytes: bool
+    bytes_done: int | None
+    bytes_total: int | None
 
     def __new__(cls, head: str, done: int | None = None, total: int | None = None,
-                in_bytes: bool = False) -> Step:
-        text = head
-        if done is not None and total:
-            from openexpress.i18n import _, human_size
+                in_bytes: bool = False, bytes_done: int | None = None,
+                bytes_total: int | None = None) -> Step:
+        from openexpress.i18n import _, human_size
 
-            shown = (human_size(done), human_size(total)) if in_bytes else (done, total)
+        def of(a, b) -> str:
             # TRANSLATORS: how far a step of a long task is: "3 of 8", "412.0 MB of 1.5 GB"
-            text = f"{head}\u00a0· " + _("{done} of {total}").format(done=shown[0],
-                                                                       total=shown[1])
-        step = super().__new__(cls, text)
+            return _("{done} of {total}").format(done=a, total=b)
+
+        parts = []
+        if done is not None and total:
+            parts.append(of(human_size(done), human_size(total)) if in_bytes
+                         else of(done, total))
+        if bytes_done is not None and bytes_total:
+            parts.append(of(human_size(bytes_done), human_size(bytes_total)))
+        step = super().__new__(cls, "".join([head, *(f"\u00a0· {p}" for p in parts)]))
         step.head, step.done, step.total, step.in_bytes = head, done, total, in_bytes
+        step.bytes_done, step.bytes_total = bytes_done, bytes_total
         return step
 
     @property
+    def measure(self) -> tuple[int | None, int | None]:
+        """How far, as the bar reads it: the bytes when they are known, else the count."""
+        if self.bytes_done is not None and self.bytes_total:
+            return self.bytes_done, self.bytes_total
+        return self.done, self.total
+
+    @property
     def fraction(self) -> float | None:
-        if self.done is None or not self.total:
+        done, total = self.measure
+        if done is None or not total:
             return None
-        return min(1.0, max(0.0, self.done / self.total))
+        return min(1.0, max(0.0, done / total))
 
     @property
     def last(self) -> bool:
@@ -110,7 +128,7 @@ class Reporter:
                     if (self.bar is not None and message.fraction is not None
                             and now - self._bar_at >= self.bar_every):
                         self._bar_at = now
-                        self.bar(message.done, message.total)
+                        self.bar(*message.measure)
         if send is not None:
             self.show(send)
 

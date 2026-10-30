@@ -126,8 +126,7 @@ class MusicPage:
         def copy(p):
             self.run_task(
                 _("Copying music…"),
-                writes_to_device(lambda: music.copy(p, s.storage, progress=self.progress,
-                                                    transfer_progress=self.fraction)),
+                writes_to_device(lambda: music.copy(p, s.storage, progress=self.progress)),
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
                                  self.load_section("music", force=True)),
@@ -222,8 +221,7 @@ class MusicPage:
             self.run_task(
                 _("Copying music…"),
                 writes_to_device(lambda: music.add_playlist(
-                    plan, s.device, s.storage, progress=self.progress,
-                    transfer_progress=self.fraction)),
+                    plan, s.device, s.storage, progress=self.progress)),
                 lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
                                self.load_section("music", force=True)),
                 read_again_after_failure(self, "music"))

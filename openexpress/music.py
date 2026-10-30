@@ -22,6 +22,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size, ngettext
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -273,20 +274,37 @@ def copied_before_text(count: int) -> str:
                     count).format(count=count)
 
 
-def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] = lambda s: None,
+def copy(plan: CopyPlan, storage: Storage, progress: Callable[[str], None] | None = None,
          transfer_progress=None) -> list[str]:
+    """`progress`: how many files and bytes, never a file nor a track - the names are the
+    user's own ("Copying music · 3 of 25 · 120 MB of 1.2 GB")."""
     storage.require_space(plan.size, SPACE_MARGIN, error=MusicError)
     written = []
-    for t, dest in plan.to_copy:
-        progress(_("Copying {path}").format(path=dest))
+    say = progress if progress is not None else (lambda _message: None)
+    # TRANSLATORS: a step of copying music ("… · 3 of 25 · 120 MB of 1.2 GB")
+    head = _("Copying music")
+    count, size = len(plan.to_copy), plan.size
+    before = 0  # the bytes of the files copied before the current one
+    for n, (t, dest) in enumerate(plan.to_copy, 1):
+        def copied(done: int, total: int | None, _n=n, _before=before) -> None:
+            say(Step(head, _n, count, bytes_done=_before + done, bytes_total=size))
+            if transfer_progress:
+                transfer_progress(done, total)
+
+        # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
+        # without -p in the Flatpak).
+        told = copied if progress is not None or transfer_progress is not None else None
+        say(Step(head, n, count, bytes_done=before, bytes_total=size))
         try:
-            real = storage.write_file_checked(dest, t.local, transfer_progress,
-                                              error=MusicError)
+            real = storage.write_file_checked(dest, t.local, told, error=MusicError)
         except MusicError as e:
             # Of the wrong size: deleted, and the rest is not copied, as with maps.
             log.info("music: stopped after %d files: one of the wrong size", len(written))
             raise MusicError(f"{e}. {copied_before_text(len(written))}") from e
         written.append(real)
+        before += t.size
+    if count:
+        say(Step(head, count, count, bytes_done=size, bytes_total=size))
     # Counts and sizes only: file names are the user's own.
     log.info("music: %d files copied (%s)", len(written), applog.size(plan.size))
     return written
@@ -362,7 +380,7 @@ def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
 
 
 def add_playlist(plan: PlaylistPlan, device: GarminDevice, storage: Storage,
-                 progress: Callable[[str], None] = lambda s: None, transfer_progress=None) -> str:
+                 progress: Callable[[str], None] | None = None, transfer_progress=None) -> str:
     """Copy the missing tracks, then write the playlist. Returns its device path."""
     if not plan.device_paths:
         raise MusicError(_("The playlist has no tracks that can be added."))

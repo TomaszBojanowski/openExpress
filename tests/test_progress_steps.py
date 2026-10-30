@@ -24,6 +24,22 @@ def test_a_step_in_bytes_says_both_sizes():
     assert step.fraction == pytest.approx(412 / 1500)
 
 
+def test_a_step_with_a_count_and_bytes_says_both_and_fills_by_the_bytes():
+    """Music: how many files and how many bytes ("3 of 25 · 120 MB of 1.2 GB")."""
+    step = Step("Copying music", 3, 25, bytes_done=120 * 10**6, bytes_total=12 * 10**8)
+    assert step == f"Copying music{NB}· 3 of 25{NB}· 120.0{NB}MB of 1.2{NB}GB"
+    assert step.fraction == pytest.approx(0.1) and not step.last
+    assert Step("Copying music", 25, 25, bytes_done=10, bytes_total=10).last
+
+
+def test_the_bar_of_a_step_with_bytes_follows_the_bytes(told):
+    reporter, clock, _shown, bar, _later = told
+    reporter(Step("Copying music", 1, 2, bytes_done=0, bytes_total=300))
+    clock.now += 0.2
+    reporter(Step("Copying music", 1, 2, bytes_done=100, bytes_total=300))
+    assert bar == [(100, 300)]
+
+
 def test_a_step_in_polish():
     i18n.setup("pl")
     try:

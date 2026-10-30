@@ -890,25 +890,6 @@ def _progress():
         status.close()
 
 
-class _Bar:
-    """Simple progress indicator for large transfers."""
-
-    def __init__(self, label: str = ""):
-        self.label = label
-        self.last = -1
-
-    def __call__(self, done: int, total: int | None) -> None:
-        if not total:
-            return
-        pct = int(done * 100 / total)
-        if pct != self.last:
-            self.last = pct
-            print(f"\r    {self.label}{pct:3d}%  {_human(done)} / {_human(total)}   ",
-                  end="", file=sys.stderr, flush=True)
-            if pct >= 100:
-                print(file=sys.stderr)
-
-
 def _beta_mark(u) -> str:
     """" [BETA]" after a beta version, in the list of updates and in what will be installed."""
     # TRANSLATORS: marks a beta version in the list of updates
@@ -1946,7 +1927,8 @@ def cmd_music(args) -> int:
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0
-        music.copy(plan, st, progress=lambda s: print("  " + s), transfer_progress=_Bar())
+        with _progress() as progress:
+            music.copy(plan, st, progress=progress)
         if args.playlist:
             dests = [d for _t, d in plan.to_copy + plan.already]
             print(_("Playlist: {path}").format(
@@ -1967,7 +1949,8 @@ def cmd_music(args) -> int:
         if not args.apply:
             print(_("Dry run. Add --apply."))
             return 0
-        music.copy(plan, st, progress=lambda s: print("  " + s), transfer_progress=_Bar())
+        with _progress() as progress:
+            music.copy(plan, st, progress=progress)
         dests = [d for _t, d in plan.to_copy + plan.already]
         print(_("Playlist: {path}").format(path=music.write_playlist(dev, st, name, dests)))
         return 0
