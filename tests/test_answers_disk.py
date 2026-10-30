@@ -5,8 +5,10 @@ unit-info's unit ID or unlock data; a command run again a moment later asks noth
 part "answers" counts and clears them. All answers and devices are made up."""
 import json
 import re
+import stat
 from pathlib import Path
 
+import pytest
 from test_updates_maps import maps_response, sw_response
 
 from openexpress import answers, maps, updates
@@ -102,3 +104,81 @@ def test_clearing_the_part_answers_forgets_them(xdg, capsys):
     assert "  Answers of Garmin's servers: " in capsys.readouterr().out
     assert main(["cache", "--clear", "--only", "answers", "--apply"]) == 0
     assert not list(ANSWERS.disk.folder.glob("*.json")) and ANSWERS._kept == {}
+
+
+# --- the account's answers: Garmin Connect sends them with "no-cache, no-store, private" -------
+
+
+def _on_disk(folder) -> dict:
+    found = {}
+    for p in folder.glob("*.json"):
+        data = json.loads(p.read_text())
+        found[data["kind"]] = data["value"]
+    return found
+
+
+def test_of_the_account_only_the_fields_read_go_to_disk(tmp_path):
+    """Of the account's list and its primary device only what the program reads: no name, no
+    serial number, no date, no profile of the user."""
+    ANSWERS.disk = Disk(tmp_path / "answers")
+    device = {"unitid": 3000000001, "deviceid": 4000000001, "partnumber": "006-X",
+              "productdisplayname": "Made-up 1", "displayname": "Jan Kowalski's watch",
+              "serialnumber": "SER00001", "registrationdate": "2025-01-01",
+              "userprofilepk": 5000000001, "devicestatus": "active",
+              "devicecategories": ["FITNESS"], "primaryactivitytrackerindicator": True}
+    ANSWERS.ask(answers.ACCOUNT_DEVICES, ("prod", "login"), lambda: [device])
+    ANSWERS.ask(answers.PRIMARY_TRAINING, ("prod", "login"), lambda: {
+        "deviceid": 4000000001, "userprofilepk": 5000000001, "displayname": "Jan Kowalski",
+        "devicename": "Jan's fenix"})
+    kept = _on_disk(tmp_path / "answers")
+    assert kept[answers.ACCOUNT_DEVICES] == [{
+        "unitid": 3000000001, "deviceid": 4000000001, "partnumber": "006-X",
+        "productdisplayname": "Made-up 1", "devicecategories": ["FITNESS"],
+        "primaryactivitytrackerindicator": True}]
+    assert kept[answers.PRIMARY_TRAINING] == {"deviceid": 4000000001}
+
+
+def test_each_field_of_the_account_on_disk_is_read_by_the_program():
+    """A field the program no longer reads leaves the list: nothing of the account is kept
+    on disk without a use."""
+    source = "\n".join(p.read_text() for p in (ROOT / "openexpress").rglob("*.py")
+                       if p.name != "answers.py")
+    for field in answers.ACCOUNT_FIELDS | answers.PRIMARY_FIELDS:
+        assert re.search(rf"""["']{field}["']""", source), field
+
+
+@pytest.mark.parametrize("made_before", [False, True])
+def test_the_folder_and_its_files_are_the_owners_only(xdg, made_before):
+    """The folder 0700 (also one made with the usual mode before), each file 0600."""
+    answers.use_disk()
+    folder = ANSWERS.disk.folder
+    if made_before:
+        folder.mkdir(parents=True)
+        folder.chmod(0o755)
+    ANSWERS.ask(answers.ACCOUNT_DEVICES, ("prod", "login"), lambda: [{"unitid": 3000000001}])
+    ANSWERS.ask(answers.PRIMARY_TRAINING, ("prod", "login"), lambda: {"deviceid": 4000000001})
+    assert stat.S_IMODE(folder.stat().st_mode) == 0o700
+    files = list(folder.iterdir())
+    assert len(files) == 2
+    assert all(stat.S_IMODE(p.stat().st_mode) == 0o600 for p in files)
+
+
+@pytest.mark.parametrize("how", ["logout", "login"])
+def test_a_logout_or_another_login_clears_the_account_on_disk(xdg, capsys, how):
+    """What another process kept on disk too; the device's answers stay."""
+    from openexpress.auth import store
+    from openexpress.cli import main
+
+    answers.use_disk()
+    store.save(store.ConnectAuth("made-up-token", "made-up-secret"))
+    ANSWERS.ask(answers.ACCOUNT_DEVICES, ("prod", store.stamp()),
+                lambda: [{"unitid": 3000000001}])
+    ANSWERS.ask(answers.PRIMARY_TRAINING, ("prod", store.stamp()),
+                lambda: {"deviceid": 4000000001})
+    ANSWERS.ask(answers.SOFTWARE_UPDATES, ("k",), lambda: {"updates": []})
+    ANSWERS.clear()  # the logout comes from another process
+    if how == "logout":
+        assert main(["logout"]) == 0
+    else:
+        store.save(store.ConnectAuth("another-token", "another-secret"))
+    assert set(_on_disk(ANSWERS.disk.folder)) == {answers.SOFTWARE_UPDATES}

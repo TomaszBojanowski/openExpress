@@ -25,7 +25,8 @@ import json
 import logging
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -146,6 +147,35 @@ def _tag(value) -> str:
     return hashlib.sha256(str(value).encode()).hexdigest()[:16]
 
 
+class Told:
+    """Where the answer asked inside told() came from, for the log."""
+
+    def __init__(self):
+        self.source = "asked now"
+
+
+_listening = threading.local()
+
+
+@contextmanager
+def told() -> Iterator[Told]:
+    """Where the answer asked inside comes from (this thread's last): "asked now", "from
+    memory, 85 s old", "from disk, …", "shared with a request under way"; for a line of the
+    log that would else say the server was asked."""
+    outer = getattr(_listening, "told", None)
+    _listening.told = mine = Told()
+    try:
+        yield mine
+    finally:
+        _listening.told = outer
+
+
+def _tell(source: str) -> None:
+    listening = getattr(_listening, "told", None)
+    if listening is not None:
+        listening.source = source
+
+
 class _Flight:
     """A request under way: the others asking the same wait for its answer."""
 
@@ -189,8 +219,10 @@ class Answers:
             flight.done.wait()
             if flight.error is not None:
                 raise flight.error
+            _tell("shared with a request under way")
             return copy.deepcopy(flight.value)
         try:
+            _tell("asked now")
             value = fetch()
             keep = KEEP.get(kind)
             value = keep(value) if keep is not None else value
@@ -215,6 +247,7 @@ class Answers:
         kept = self._kept.get(full)
         if kept is not None and now - kept[0] < LIFETIMES[kind]:
             log.debug("answers: %s from memory, %.0f s old", kind, now - kept[0])
+            _tell(f"from memory, {now - kept[0]:.0f} s old")
             return kept[1]
         if self.disk is not None:
             found = self.disk.get(kind, full, now)
@@ -222,6 +255,7 @@ class Answers:
                 at, value, tags = found
                 self._kept[full] = (at, value, tags)
                 log.debug("answers: %s from disk, %.0f s old", kind, now - at)
+                _tell(f"from disk, {now - at:.0f} s old")
                 return value
         return None
 
@@ -264,12 +298,20 @@ class Disk:
         name = hashlib.sha256(json.dumps(full, default=str).encode()).hexdigest()[:32]
         return self.folder / f"{name}.json"
 
+    def _own_folder(self) -> None:
+        """The folder its owner's alone (0700), also one made before with the usual mode: the
+        account's answers are among them."""
+        self.folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.folder.stat().st_mode & 0o777 != 0o700:
+            self.folder.chmod(0o700)
+
     def put(self, kind: str, full: tuple, value, tags: frozenset[str], at: float) -> None:
         if kind not in self.fields:
             return
         from openexpress import paths
 
         try:
+            self._own_folder()
             paths.write_private(self._path(full), json.dumps(
                 {"kind": kind, "at": at, "tags": sorted(tags),
                  "value": _fields(value, self.fields[kind])}))

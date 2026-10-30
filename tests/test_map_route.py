@@ -82,7 +82,7 @@ def test_only_a_device_the_universal_service_serves_is_asked_for_its_maps(
             assert str(refused.value) == REFUSAL
     assert client.asked == [("unit-info", UNIT, PART)] + ([("universal",)] if universal else [])
     (line,) = _route_lines(caplog)  # one line: the way the check went
-    assert ("asking the universal map service" in line) is universal
+    assert ("the universal map service's answer" in line) is universal
     assert PART in line and str(UNIT) not in caplog.text
 
 
@@ -208,3 +208,26 @@ def test_the_picture_and_the_map_check_share_the_answer_of_the_session():
         "https://example.com/d.png")
     assert maps.check(s.client, s.device, ask=lambda: service.unit_info(s)) == ([], 0)
     assert client.asked == [("unit-info", UNIT, PART), ("universal",)]
+
+
+def test_the_line_tells_where_the_answer_came_from(caplog, monkeypatch):
+    """The device page and its Maps page share one answer: the second line says it came from
+    memory, not that the service was asked."""
+    from test_detection import _UpdateServer
+
+    from openexpress import answers
+    from openexpress.connect import GarminClient
+    from openexpress.settings import Settings
+
+    clock = [1_800_000_000.0]
+    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
+    server = _UpdateServer({"maps": []})
+    client = GarminClient(Settings(), None, None, server)
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        maps.check(client, device(PPNM), ask=lambda: {"mapupdatetype": "Universal"})
+        clock[0] += 85
+        maps.check(client, device(PPNM), ask=lambda: {"mapupdatetype": "Universal"})
+    first, second = _route_lines(caplog)
+    assert first.endswith("the universal map service's answer, asked now")
+    assert second.endswith("the universal map service's answer, from memory, 85 s old")
+    assert len(server.sent) == 1 and "asking" not in caplog.text

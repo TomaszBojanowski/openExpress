@@ -23,7 +23,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from openexpress import applog, cache, download, paths
+from openexpress import answers, applog, cache, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
@@ -258,9 +258,11 @@ def check(client, device, ask=None, country=None) -> tuple[list[UniversalMap], i
         log.info("maps: map update type %s for %s: map updates not supported, no map check",
                  said, device.part_number)
         raise MapsNotSupported(value[:40] if isinstance(value, str) and value else None)
-    log.info("maps: map update type %s for %s: asking the universal map service", said,
-             device.part_number)
-    found = read_maps(client.universal_maps(device.raw))
+    with answers.told() as where:
+        answer = client.universal_maps(device.raw)
+    log.info("maps: map update type %s for %s: the universal map service's answer, %s", said,
+             device.part_number, where.source)
+    found = read_maps(answer)
     apply_restrictions(found[0], country)
     return found
 
