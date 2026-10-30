@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 01:37+0100\n"
+"POT-Creation-Date: 2026-10-30 01:46+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -464,7 +464,7 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr "Usuń ją w telefonie, w aplikacji Connect IQ albo Garmin Connect."
 
-#: openexpress/ciq.py:1074 openexpress/sync.py:842
+#: openexpress/ciq.py:1074
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr "Pobieranie {name}"
@@ -2304,7 +2304,7 @@ msgstr ""
 "skrót o tej samej nazwie by go zasłonił. Użyj --force, aby mimo to "
 "zainstalować, albo włącz synchronizację w tle w oknie wersji Flatpak."
 
-#: openexpress/cli.py:2020 openexpress/sync.py:858
+#: openexpress/cli.py:2020
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr "Zapisano {path}"
@@ -6613,36 +6613,43 @@ msgstr "Nie znaleziono klucza konsumenta w {path}"
 msgid "URL signing data not found in {path}"
 msgstr "Nie znaleziono danych do podpisywania adresów URL w {path}"
 
-#: openexpress/sync.py:266
+#: openexpress/sync.py:267
 msgid "ECG (needs a Garmin Health account)"
 msgstr "EKG (wymaga konta Garmin Health)"
 
-#: openexpress/sync.py:275
+#: openexpress/sync.py:276
 msgid "diagnostics/telemetry (--include-diagnostics)"
 msgstr "diagnostyka/telemetria (--include-diagnostics)"
 
-#: openexpress/sync.py:283
+#: openexpress/sync.py:284
 #, python-brace-format
 msgid "consent not given ({consents})"
 msgstr "brak zgody ({consents})"
 
-#: openexpress/sync.py:496
+#. TRANSLATORS: a step of the progress of a sync; {what}: a kind of data, e.g.
+#. "activities", "monitoring" ("Uploading activities · 3 of 8")
+#: openexpress/sync.py:467
 #, python-brace-format
-msgid "Uploading {name} ({size})"
-msgstr "Wysyłanie {name} ({size})"
+msgid "Uploading {what}"
+msgstr "Wysyłanie: {what}"
 
-#: openexpress/sync.py:519
+#: openexpress/sync.py:526
 msgid "Upload consent was revoked in Garmin Connect"
 msgstr "Zgoda na wysyłanie została wycofana w Garmin Connect"
 
-#: openexpress/sync.py:534
+#: openexpress/sync.py:541
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
 msgstr "serwer odrzucił plik (kody {codes})"
 
-#: openexpress/sync.py:770
+#: openexpress/sync.py:777
 msgid "device does not accept this type"
 msgstr "urządzenie nie obsługuje tego typu"
+
+#. TRANSLATORS: a step of the progress of a sync ("… · 5 of 21")
+#: openexpress/sync.py:855
+msgid "Downloading from Garmin Connect"
+msgstr "Pobieranie z Garmin Connect"
 
 #: openexpress/trueup.py:77
 msgid "Stopped waiting for TrueUp; Garmin Connect sends it with the next sync."

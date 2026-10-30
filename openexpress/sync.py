@@ -32,7 +32,8 @@ from openexpress.connect import (
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
 from openexpress.fit import incompleteness, parse_file_id
-from openexpress.i18n import _, human_size
+from openexpress.i18n import _
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -455,10 +456,16 @@ def _run_uploads(plan, device, storage, client, state, progress,
     state.save()
 
     stop_types: set[str] = set()
+    from openexpress.service import type_name  # here: service imports this module
+
     for idx, c in enumerate(remaining):
         label = _label(c)
         if c.datatype in stop_types:
             continue
+        # TRANSLATORS: a step of the progress of a sync; {what}: a kind of data, e.g.
+        # "activities", "monitoring" ("Uploading activities · 3 of 8")
+        progress(Step(_("Uploading {what}").format(what=type_name(c.datatype)), idx + 1,
+                      len(remaining)))
         ordered = c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES
         try:
             data = _read_candidate(c, storage, state)
@@ -493,7 +500,7 @@ def _run_uploads(plan, device, storage, client, state, progress,
 
 def _upload_one(c, data, label, last, client, state, report, progress,
                 wait_for_processing, stop_types) -> None:
-    progress(_("Uploading {name} ({size})").format(name=label, size=human_size(c.size)))
+    log.debug("upload: %s (%s)", label, applog.size(c.size))  # the device's own name
     ok = True
     error = ""
     outcome = "uploaded"
@@ -819,6 +826,9 @@ def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
     report = DownloadReport()
     unacked = state.unacked() if state is not None else set()
     initial = set(unacked)
+    fetched = [it for it in items if not (it.unsupported or it.handled_by)
+               and str(it.message_id) not in unacked]
+    count = 0
     try:
         for it in items:
             if it.unsupported or it.handled_by:
@@ -838,8 +848,11 @@ def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
                 else:
                     unacked.discard(mid)
                 continue
+            count += 1
             try:
-                progress(_("Downloading {name}").format(name=label))
+                # One step for each: fetched, then written to the device at once.
+                # TRANSLATORS: a step of the progress of a sync ("… · 5 of 21")
+                progress(Step(_("Downloading from Garmin Connect"), count, len(fetched)))
                 data = client.download_message(it.url, it.absolute)
                 if data is None:
                     client.ack_message(it.message_id)
@@ -855,7 +868,7 @@ def _run_downloads(items, storage, client, progress, state) -> DownloadReport:
                 report.failed.append((label, str(e)))
                 report.failed_in_log.append((quiet, str(e)))
                 continue
-            progress(_("Wrote {path}").format(path=real))
+            log.debug("download: %s written", it.datatype)
             report.written.append(f"{label} -> {real}")
             report.written_types.append(it.datatype)
             # Written: not acknowledged until Garmin Connect says so, whatever stops the sync

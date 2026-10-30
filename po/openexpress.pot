@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.10\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 01:37+0100\n"
+"POT-Creation-Date: 2026-10-30 01:46+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -404,7 +404,7 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:1074 openexpress/sync.py:842
+#: openexpress/ciq.py:1074
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
@@ -2019,7 +2019,7 @@ msgid ""
 "anyway, or turn on background sync in the Flatpak window."
 msgstr ""
 
-#: openexpress/cli.py:2020 openexpress/sync.py:858
+#: openexpress/cli.py:2020
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr ""
@@ -6006,35 +6006,42 @@ msgstr ""
 msgid "URL signing data not found in {path}"
 msgstr ""
 
-#: openexpress/sync.py:266
+#: openexpress/sync.py:267
 msgid "ECG (needs a Garmin Health account)"
 msgstr ""
 
-#: openexpress/sync.py:275
+#: openexpress/sync.py:276
 msgid "diagnostics/telemetry (--include-diagnostics)"
 msgstr ""
 
-#: openexpress/sync.py:283
+#: openexpress/sync.py:284
 #, python-brace-format
 msgid "consent not given ({consents})"
 msgstr ""
 
-#: openexpress/sync.py:496
+#. TRANSLATORS: a step of the progress of a sync; {what}: a kind of data, e.g.
+#. "activities", "monitoring" ("Uploading activities · 3 of 8")
+#: openexpress/sync.py:467
 #, python-brace-format
-msgid "Uploading {name} ({size})"
+msgid "Uploading {what}"
 msgstr ""
 
-#: openexpress/sync.py:519
+#: openexpress/sync.py:526
 msgid "Upload consent was revoked in Garmin Connect"
 msgstr ""
 
-#: openexpress/sync.py:534
+#: openexpress/sync.py:541
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
 msgstr ""
 
-#: openexpress/sync.py:770
+#: openexpress/sync.py:777
 msgid "device does not accept this type"
+msgstr ""
+
+#. TRANSLATORS: a step of the progress of a sync ("… · 5 of 21")
+#: openexpress/sync.py:855
+msgid "Downloading from Garmin Connect"
 msgstr ""
 
 #: openexpress/trueup.py:77

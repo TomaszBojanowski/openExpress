@@ -95,14 +95,21 @@ def uploading(device_root, tmp_path):
     return [line for line in lines if "2026-10-03" in line]
 
 
-def test_upload_progress_shows_a_readable_size(device_root, tmp_path):
-    assert uploading(device_root, tmp_path) == [
-        "Uploading FIT_TYPE_4/2026-10-03-10-00-00.fit (1.5\u00a0kB)"]
+def test_upload_progress_names_neither_the_file_nor_its_size(device_root, tmp_path):
+    """A step says the kind of data and how far (test_sync_progress.py), not the file."""
+    assert uploading(device_root, tmp_path) == []
 
 
 def test_upload_progress_in_polish(polish, device_root, tmp_path):
-    assert uploading(device_root, tmp_path) == [
-        "Wysyłanie FIT_TYPE_4/2026-10-03-10-00-00.fit (1,5\u00a0kB)"]
+    from openexpress.progress import Step
+
+    st, dev, state = _setup(device_root, tmp_path)
+    plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
+    lines = []
+    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append,
+                     wait_for_processing=False)
+    first = next(m for m in lines if isinstance(m, Step))
+    assert first == "Wysyłanie: aktywności\u00a0· 1 z\u00a04"
 
 
 def test_update_download_progress_shows_a_readable_size(server, device_root, xdg):
