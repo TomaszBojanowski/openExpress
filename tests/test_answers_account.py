@@ -2,6 +2,8 @@
 opening a device again does not ask again; a check before a write to the account or an
 upload asks anew; Refresh, a change of a primary device and another login (or none) forget
 them. Counted on a made-up Garmin Connect; all accounts and devices are made up."""
+from datetime import timedelta
+
 import pytest
 from fakes import DEVICE_UNIT as UNIT
 from fakes import DEVICES_PATH, make_client
@@ -11,14 +13,12 @@ from test_primary_both_roles import device as made_up_device  # noqa: F401 - the
 from openexpress import answers, service
 
 
-def test_opening_a_device_again_uses_the_list_kept(monkeypatch):
-    clock = [1_800_000_000.0]
-    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
+def test_opening_a_device_again_uses_the_list_kept(monkeypatch, clock):
     client = make_client([{"unitid": UNIT}])
     service.require_account_device(client, UNIT)  # the device opened
-    clock[0] += 4 * 60
+    clock.current += timedelta(seconds=4 * 60)
     service.require_account_device(client, UNIT)  # opened again, 4 minutes later
-    clock[0] += 2 * 60
+    clock.current += timedelta(seconds=2 * 60)
     service.require_account_device(client, UNIT)  # 6 minutes: asked anew
     assert client.http.paths() == [DEVICES_PATH, DEVICES_PATH]
 

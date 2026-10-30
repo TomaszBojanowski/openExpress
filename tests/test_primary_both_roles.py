@@ -10,6 +10,7 @@ import json
 import pytest
 import requests
 from conftest import DEVICE_XML
+from fakes import another_account
 
 from openexpress import connect, devicelist, service, tile_facts
 from openexpress.auth import store
@@ -100,11 +101,7 @@ class Account:
         return response(404)
 
     def client(self):
-        """A client of this account: what another account was told is not kept for it
-        (answers; in the program another account is another login, so another key)."""
-        from openexpress import answers
-
-        answers.ANSWERS.clear()
+        """A client of this account."""
         return GarminClient(Settings(), Consumer("made-up-key", "made-up-secret"),
                             ConnectAuth("made-up-token", "made-up-token-secret"), self)
 
@@ -163,6 +160,7 @@ def test_the_service_reads_it_with_the_list_of_a_check_just_made(device):
 def test_the_service_changes_the_primary_training_device(device, training, apply, sent, after):
     account = Account(training=training)
     before = service.set_primary_training(account.client(), device, apply=apply)
+    another_account()  # the account as it was before, to compare with
     assert before == service.primary_training_status(Account(training=training).client(),
                                                      device)
     assert account.sent == sent
@@ -221,6 +219,7 @@ def test_the_service_reads_the_primary_wearable(device, wearable, capable, expec
 def test_the_service_changes_the_primary_wearable(device, wearable, apply, sent, after):
     account = Account(wearable=wearable)
     change = service.set_primary_wearable(account.client(), device, apply=apply)
+    another_account()  # the account as it was before, to compare with
     assert change == service.WearableChange(
         service.primary_wearable_status(Account(wearable=wearable).client(), device),
         account.devices())  # the list as it is now: read back after a change

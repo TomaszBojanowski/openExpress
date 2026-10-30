@@ -3,9 +3,11 @@ later (Restore the order…) asks nothing; an install, a removal from the accoun
 forget what it said; the icons already on disk are not asked for; `apps install --apply`
 reads the queue once less. Counted on a made-up store; all apps and devices are made up."""
 import types
+from datetime import timedelta
 
 import pytest
 from fakes import UpdateServer
+from fakes import window as stand_in
 from test_ciq_music import apps_cli, iq_device  # noqa: F401 - fixtures
 
 from openexpress import answers, ciq, service
@@ -35,14 +37,12 @@ def _page(api):
     api.updates(DEVICE, [], "en-US")
 
 
-def test_the_apps_page_read_again_a_moment_later_asks_nothing(store, monkeypatch):
+def test_the_apps_page_read_again_a_moment_later_asks_nothing(store, monkeypatch, clock):
     api, server = store
-    clock = [1_800_000_000.0]
-    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
     _page(api)
-    clock[0] += 60
+    clock.current += timedelta(seconds=60)
     _page(api)  # Restore the order, a moment later
-    clock[0] += 61
+    clock.current += timedelta(seconds=61)
     _page(api)  # two minutes: asked anew
     assert _asked(server) == ["downloads", "updates", "downloads", "updates"]
 
@@ -93,7 +93,7 @@ def test_the_icons_on_disk_are_not_asked_for(monkeypatch, xdg):
     asked = []
     monkeypatch.setattr(ciq, "StoreApi", lambda client: types.SimpleNamespace(
         icon_urls=lambda ids: asked.append(list(ids)) or {}))
-    win = types.SimpleNamespace(
+    win = stand_in(
         session=types.SimpleNamespace(logged_in=True, ownership_error=None,
                                       client=types.SimpleNamespace(http=None)),
         in_background=lambda work, done: asked.append(sorted(str(k) for k in work())))

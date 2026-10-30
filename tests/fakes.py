@@ -508,15 +508,21 @@ class RecordingSession:
         return [r["url"].split("garmin.com/")[-1].split("?")[0] for r in self.sent]
 
 
-def make_client(devices=None, auth=True, **routes):
-    """A client of a Garmin Connect of its own: what another one was told is not kept for it
-    (answers; in the program another account is another login, so another key)."""
+def another_account() -> None:
+    """The next client is of another Garmin Connect account: what the one before was told of
+    its account does not hold for it (in the program another account is another login, so
+    another key of the kept answers; in a test the login stays the same)."""
     from openexpress import answers
+
+    answers.ANSWERS.forget(answers.ACCOUNT_KINDS)
+
+
+def make_client(devices=None, auth=True, **routes):
+    """A client of a Garmin Connect of its own (RecordingSession)."""
     from openexpress.auth.store import ConnectAuth
     from openexpress.connect import GarminClient
     from openexpress.settings import Consumer, Settings
 
-    answers.ANSWERS.clear()
     return GarminClient(Settings(), Consumer("ck", "cs"),
                         ConnectAuth("t", "ts") if auth else None,
                         RecordingSession(devices, **routes))

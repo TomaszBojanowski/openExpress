@@ -14,6 +14,7 @@ from fakes import (
     DEVICES_PATH,
     OTHER_UNIT,
     RunNow,
+    another_account,
     make_client,
     response,
 )
@@ -655,8 +656,10 @@ def test_a_garmin_drive_makes_no_account_request(device_root, device):
 def test_check_session_keeps_the_refusal(device_root, device):
     s = service.check_session(session(device_root, device, make_client([{"unitid": OTHER}])))
     assert isinstance(s.ownership_error, NotAccountDevice)
+    another_account()
     s = service.check_session(session(device_root, device, make_client([{"unitid": UNIT}])))
     assert s.ownership_error is None and s.client.verified_unit_id == UNIT
+    another_account()
     logged_out = make_client([{"unitid": UNIT}], auth=False)
     s = service.check_session(session(device_root, device, logged_out))
     assert s.ownership_error is None and logged_out.http.sent == []
@@ -678,6 +681,7 @@ def banner_for(s):
 
 def test_window_banner_for_each_outcome(device_root, device):
     def checked(**routes):
+        another_account()  # each outcome its own account
         client = make_client([{"unitid": UNIT}], **routes)
         return service.check_session(session(device_root, device, client))
 
@@ -857,6 +861,7 @@ def test_window_primary_training_row(device_root, device):
     assert text(service.PrimaryTraining(OTHER, "", False, True)) == "Another device"
 
     def window(client):
+        another_account()  # each client its own account
         s = service.check_session(session(device_root, device, client))
         assert s.account_devices is not None
         win = stand_in(session=s, _primary_training_text=text)
@@ -1314,6 +1319,7 @@ def test_the_row_offers_set_as_primary_only_when_it_can(device):
     row = primary_wearable_row(win, wearable)
     assert (row.get_title(), row.get_subtitle()) == ("Primary wearable", "Other watch")
     assert buttons(row) == ["Set as Primary"]
+    another_account()
     win, wearable, _calls = _wearable_window(FakeWearables(UNIT), device)
     assert buttons(primary_wearable_row(win, wearable)) == []  # it is the one already
 

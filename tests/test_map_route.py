@@ -3,8 +3,8 @@ universal one, which is the only one asked, serves a device filed as Universal, 
 UniversalDetect while it declares the data type PreProgrammedNamedMaps. A device served
 another way (Gemini, LegacyRmu, Unknown, none given) gets "not supported yet" and no map
 check. All data here is made up."""
-
 import logging
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -214,22 +214,19 @@ def test_the_picture_and_the_map_check_share_the_answer_of_the_session():
     assert client.asked == [("unit-info", UNIT, PART), ("universal",)]
 
 
-def test_the_line_tells_where_the_answer_came_from(caplog, monkeypatch):
+def test_the_line_tells_where_the_answer_came_from(caplog, monkeypatch, clock):
     """The device page and its Maps page share one answer: the second line says it came from
     memory, not that the service was asked."""
     from fakes import UpdateServer
 
-    from openexpress import answers
     from openexpress.connect import GarminClient
     from openexpress.settings import Settings
 
-    clock = [1_800_000_000.0]
-    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
     server = UpdateServer({"maps": []})
     client = GarminClient(Settings(), None, None, server)
     with caplog.at_level(logging.INFO, logger="openexpress"):
         maps.check(client, device(PPNM), ask=lambda: {"mapupdatetype": "Universal"})
-        clock[0] += 85
+        clock.current += timedelta(seconds=85)
         maps.check(client, device(PPNM), ask=lambda: {"mapupdatetype": "Universal"})
     first, second = _route_lines(caplog)
     assert first.endswith("the universal map service's answer, asked now")

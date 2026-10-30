@@ -543,7 +543,8 @@ def clock(monkeypatch):
     """The made-up clock, at `clock.current` (NOON; a test moves it: clock.current +=
     timedelta(days=2)): datetime.now() of the window, its words, i18n and diagnostics, and
     time.time(). The computer's clock never decides the words (a day of 25 hours when the
-    clocks go back, the first minute after midnight). A moment a day back, by the wall clock:
+    clocks go back, the first minute after midnight), nor how long the answers of Garmin's
+    servers are kept. A moment a day back, by the wall clock:
     (clock.current - timedelta(days=1)).timestamp()."""
     import importlib
 
@@ -556,6 +557,11 @@ def clock(monkeypatch):
             continue
         monkeypatch.setattr(module, "datetime", _Clock)
     monkeypatch.setattr(time, "time", lambda: _Clock.current.timestamp())
+    # The answers of Garmin's servers are kept by this clock too (answers.Answers took the
+    # computer's time.time when it was made).
+    from openexpress import answers
+
+    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: _Clock.current.timestamp())
     return _Clock
 
 

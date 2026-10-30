@@ -4,9 +4,11 @@ again after an update) is asked anew, and what may have changed is forgotten: Re
 Again, an update installed, a map activated. Counted on a made-up update server; all devices
 are made up."""
 import types
+from datetime import timedelta
 
 import pytest
 from fakes import RTL515_XML, UpdateServer
+from fakes import window as stand_in
 from test_fixes_ui import offered  # noqa: F401 - the fixture
 
 from openexpress import answers
@@ -74,14 +76,12 @@ def test_fresh_asks_anew(server):
     assert len(server.sent) == 2
 
 
-def test_an_hour_later_it_is_asked_anew(server, monkeypatch):
-    clock = [1_800_000_000.0]
-    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
+def test_an_hour_later_it_is_asked_anew(server, monkeypatch, clock):
     client = _client(server)
     client.software_updates(XML)
-    clock[0] += 59 * 60
+    clock.current += timedelta(seconds=59 * 60)
     client.software_updates(XML)
-    clock[0] += 2 * 60
+    clock.current += timedelta(seconds=2 * 60)
     client.software_updates(XML)
     assert len(server.sent) == 2
 
@@ -90,9 +90,8 @@ def test_an_hour_later_it_is_asked_anew(server, monkeypatch):
 
 
 def _window(unit=UNIT):
-    return types.SimpleNamespace(
-        session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit)),
-        loaded=[], load_section=None)
+    return stand_in(session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit)),
+                    loaded=[], load_section=None)
 
 
 def test_refresh_forgets_the_checks_of_the_device_open(server):

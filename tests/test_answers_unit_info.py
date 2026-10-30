@@ -3,6 +3,7 @@ opened again does not ask unit-info again (7 days, only the fields the program r
 Again of the maps asks anew; the country of the account is kept an hour for the maps, but
 whether data may be uploaded asks it anew. All devices, answers and accounts are made up."""
 import types
+from datetime import timedelta
 
 from fakes import RTL515_XML, UpdateServer
 
@@ -39,14 +40,12 @@ def test_check_again_of_the_maps_asks_unit_info_anew():
     assert len(server.sent) == 2
 
 
-def test_seven_days_later_unit_info_is_asked_anew(monkeypatch):
-    clock = [1_800_000_000.0]
-    monkeypatch.setattr(answers.ANSWERS, "clock", lambda: clock[0])
+def test_seven_days_later_unit_info_is_asked_anew(monkeypatch, clock):
     server = UpdateServer(ANSWER)
     service.unit_info(_session(server))
-    clock[0] += 7 * 86400 - 60
+    clock.current += timedelta(seconds=7 * 86400 - 60)
     service.unit_info(_session(server))
-    clock[0] += 120
+    clock.current += timedelta(seconds=120)
     service.unit_info(_session(server))
     assert len(server.sent) == 2
 
