@@ -542,6 +542,15 @@ class _Widget:
     def set_from_icon_name(self, name):  # the device view's icon of the kind
         self.icon = name
 
+    def set_pixel_size(self, size):
+        pass
+
+    def set_size_request(self, width, height):
+        pass
+
+    def add_css_class(self, name):
+        pass
+
     def set_text(self, text):
         self.text = text
 

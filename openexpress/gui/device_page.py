@@ -48,7 +48,7 @@ from openexpress.gui.pictures import (  # noqa: E402
     picture_from_unit_info,
 )
 from openexpress.gui.preferences import resolve_account  # noqa: E402
-from openexpress.gui.start import kind_icon  # noqa: E402
+from openexpress.gui.start import kind_icon, show_placeholder  # noqa: E402
 from openexpress.gui.tasks import (  # noqa: E402
     lets_the_window_close,
     stop_when_closed,
@@ -867,8 +867,8 @@ class DevicePage:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER,
                       margin_bottom=12)
         # Until its picture comes: the icon its tile shows, not the program's.
-        self.device_image = Gtk.Image(icon_name=device_view_icon(self, s), pixel_size=128,
-                                      height_request=DEVICE_PICTURE_SIZE)
+        self.device_image = Gtk.Image()
+        show_placeholder(self.device_image, device_view_icon(self, s), DEVICE_PICTURE_SIZE)
         self.device_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, can_shrink=True,
                                           visible=False)
         self.device_picture.set_size_request(DEVICE_PICTURE_SIZE, DEVICE_PICTURE_SIZE)
@@ -1140,7 +1140,8 @@ class DevicePage:
                 if self.session is s:
                     # Still the icon (a picture in the cache returns before this work);
                     # unit-info may have told the kind meanwhile (a bike accessory).
-                    self.device_image.set_from_icon_name(device_view_icon(self, s))
+                    show_placeholder(self.device_image, device_view_icon(self, s),
+                                     DEVICE_PICTURE_SIZE)
                     if path is None and source == NO_ADDRESS and offers_account_picture(s):
                         show_account_picture_offer(self, s)
                 return

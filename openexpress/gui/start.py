@@ -36,6 +36,11 @@ TILE_ICON_SIZE = 96
 # The spinner of a tile being opened, over its picture.
 TILE_SPINNER_SIZE = 32
 ROW_ICON_SIZE = 48  # in a row of a list (a section of many devices)
+REMEMBERED_PICTURE_SIZE = 128  # on the page of a remembered device
+# The icon of a device without a picture stands back from the pictures beside it: this much
+# of the place of a picture (a picture of a device leaves room around the device, as the
+# Venu 2's does), and dimmed (oe-placeholder); the place keeps the size of a picture.
+PLACEHOLDER_SCALE = 0.72
 # A row of a list as an Adw.ActionRow of the same list (measured with libadwaita 1.9): at
 # least 50 px tall, 12 px at its sides and after the picture, 6 px above and below its texts
 # and before its arrow, 3 px between the texts.
@@ -100,6 +105,9 @@ label.oe-chip.dimmed {
   opacity: 1;
   color: alpha(currentColor, 0.8);
   background-color: alpha(currentColor, 0.12);
+}
+image.oe-placeholder {
+  color: alpha(currentColor, 0.5);
 }
 """
 
@@ -548,7 +556,8 @@ class StartPage:
                 for item, (key, tile, _how) in zip(section.items(), part, strict=True):
                     item.key = key
                     if not item.has_picture:
-                        tile_image(item).set_from_icon_name(kind_icon(devicelist.icon_kind(tile)))
+                        show_placeholder(tile_image(item), kind_icon(devicelist.icon_kind(tile)),
+                                         item.place)
             section.title.set_visible(bool(part))
             section.grid.set_visible(mode is not None and mode != LIST)
             section.list.set_visible(mode == LIST)
@@ -590,7 +599,7 @@ class StartPage:
         for section in self._sections.values():
             for item in section.items():
                 if getattr(item, "part_number", None) == part_number:
-                    tile_image(item).set_from_paintable(texture)
+                    show_picture(tile_image(item), texture, item.place)
                     item.has_picture = True
 
     def tiles(self) -> list:
@@ -618,7 +627,8 @@ class RememberedPage:
         hero = Adw.PreferencesGroup()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6,
                       halign=Gtk.Align.CENTER, margin_bottom=12)
-        self.image = Gtk.Image(icon_name=DEVICE_ICON, pixel_size=128)
+        self.image = Gtk.Image()
+        show_placeholder(self.image, DEVICE_ICON, REMEMBERED_PICTURE_SIZE)
         self._part = ""  # the part number whose picture this view may show now
         box.append(self.image)
         self.name_label = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
@@ -735,14 +745,14 @@ class RememberedPage:
         """The icon of the device's kind until its picture comes; only a picture of this
         part number is taken after it (not a late one of the device shown before)."""
         self._part = part_number
-        self.image.set_from_icon_name(icon)
+        show_placeholder(self.image, icon, REMEMBERED_PICTURE_SIZE)
 
     def set_picture(self, part_number: str, texture) -> bool:
         """The picture of the model, if this view still shows a device of that part
         number. Whether it was taken."""
         if not part_number or part_number != self._part:
             return False
-        self.image.set_from_paintable(texture)
+        show_picture(self.image, texture, REMEMBERED_PICTURE_SIZE)
         return True
 
 
@@ -812,20 +822,40 @@ def seen_tooltip(tile) -> str | None:
     return last_seen_tooltip(tile.last_seen)
 
 
+def show_placeholder(image: Gtk.Image, icon: str, size: int) -> None:
+    """The icon of a device in an image that is the place of its picture (`size`): smaller
+    than the place and dimmed, the place as big as with the picture."""
+    image.set_from_icon_name(icon)
+    image.set_pixel_size(round(size * PLACEHOLDER_SCALE))
+    image.set_size_request(size, size)
+    image.add_css_class("oe-placeholder")
+
+
+def show_picture(image: Gtk.Image, picture, size: int) -> None:
+    """The picture of a device in the whole place (`size`), not dimmed."""
+    image.set_from_paintable(picture)
+    image.set_pixel_size(size)
+    image.set_size_request(size, size)
+    image.remove_css_class("oe-placeholder")
+
+
 def _image(tile, picture, size: int) -> Gtk.Image:
     """The image of an item, the same for a tile and a row: the picture of the device if it
     is known, else the icon of its kind (the picture is put in its place later, in the
     same size)."""
-    image = Gtk.Image(icon_name=kind_icon(devicelist.icon_kind(tile)), pixel_size=size)
+    image = Gtk.Image()
     if picture is not None:
-        image.set_from_paintable(picture)
+        show_picture(image, picture, size)
+    else:
+        show_placeholder(image, kind_icon(devicelist.icon_kind(tile)), size)
     return image
 
 
-def _mark(item, tile, image, picture) -> None:
-    """What set_picture and show need to find in an item: its image, which picture goes
-    into it and whether it is there."""
+def _mark(item, tile, image, picture, size: int) -> None:
+    """What set_picture and show need to find in an item: its image and the size of its
+    place, which picture goes into it and whether it is there."""
     item.image = image
+    item.place = size
     item.part_number = tile.image_part_number
     item.has_picture = picture is not None
 
@@ -865,7 +895,7 @@ class DeviceRow(Gtk.ListBoxRow):
         line.append(self.opening)
         self.set_child(line)
         self.set_tooltip_text(seen_tooltip(tile))
-        _mark(self, tile, image, picture)
+        _mark(self, tile, image, picture, ROW_ICON_SIZE)
         self.set_chips(chips(tile))
 
     def set_chips(self, said) -> None:
@@ -915,7 +945,7 @@ def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:
         box.append(label)
     child = Gtk.FlowBoxChild(child=box, tooltip_text=seen_tooltip(tile))
     child.opening = spinner
-    _mark(child, tile, image, picture)
+    _mark(child, tile, image, picture, TILE_ICON_SIZE)
     child.chips = row
     child.add_css_class("card")
     child.add_css_class("oe-tile")
