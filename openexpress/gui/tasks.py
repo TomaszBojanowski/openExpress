@@ -16,9 +16,7 @@ def forget_on_refresh(session) -> None:
     (answers)."""
     answers.ANSWERS.forget((answers.ACCOUNT_DEVICES, answers.PRIMARY_TRAINING,
                             answers.ACCOUNT_COUNTRY))
-    device = getattr(session, "device", None)
-    answers.forget_device((answers.SOFTWARE_UPDATES, answers.UNIVERSAL_MAPS),
-                          getattr(device, "unit_id", None))
+    answers.forget_session((answers.SOFTWARE_UPDATES, answers.UNIVERSAL_MAPS), session)
 
 
 def writes_to_device(fn):

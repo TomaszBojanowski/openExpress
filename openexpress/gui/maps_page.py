@@ -27,8 +27,7 @@ def _check_again(win) -> None:
     """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too."""
     if win.session is not None:
         service.forget_unit_info(win.session)
-        device = getattr(win.session, "device", None)
-        answers.forget_device(answers.UNIVERSAL_MAPS, getattr(device, "unit_id", None))
+        answers.forget_session(answers.UNIVERSAL_MAPS, win.session)
     win.load_section("maps", force=True)
 
 

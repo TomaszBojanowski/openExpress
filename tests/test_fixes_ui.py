@@ -1716,7 +1716,7 @@ def test_cli_update_install_tells_how_far_the_copy_is(offered, monkeypatch, caps
 
     root, _answer_ = offered
 
-    def install(chosen, storage, session=None, progress=None):
+    def install(chosen, storage, session=None, progress=None, unit_id=None):
         progress(Step("Copying Font to the device", 1000, 2000, in_bytes=True))  # half of it
         return upd.InstallReport(installed=["x"])
 

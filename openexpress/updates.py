@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
 
-from openexpress import applog, cache, download, paths
+from openexpress import answers, applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
@@ -475,10 +475,15 @@ def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
                  else "a leftover of an earlier update")
 
 
-def install(*args, **kwargs) -> InstallReport:
+def install(*args, unit_id: int | None = None, **kwargs) -> InstallReport:
     """Install software updates (see _install), holding the cache from the download to the
-    copy to the device: it is not cleared meanwhile."""
-    with cache.using():
-        return _install(*args, **kwargs)
+    copy to the device: it is not cleared meanwhile. What Garmin's server offers the device
+    `unit_id` is asked anew next time (answers), also after a copy that failed (a part may
+    be there)."""
+    try:
+        with cache.using():
+            return _install(*args, **kwargs)
+    finally:
+        answers.forget_device(answers.SOFTWARE_UPDATES, unit_id)
 
 

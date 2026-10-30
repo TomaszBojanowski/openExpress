@@ -303,7 +303,8 @@ def _updates_page(items, beta=False, drive=False):
 
     win = stand_in(
         session=types.SimpleNamespace(device=types.SimpleNamespace(
-            description="Test watch", software_version_str="23.39"), mass_storage=drive),
+            description="Test watch", software_version_str="23.39", unit_id=None),
+            mass_storage=drive),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
         ejected=[], _set_update_state=lambda new, staged=(): None)
     win.confirm_update = win.asked.append
@@ -995,7 +996,7 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
     s = types.SimpleNamespace(
         client=types.SimpleNamespace(software_updates=lambda raw, include_reinstalls=False: (
             asked.append(include_reinstalls), lower_keys(server_answer()))[1]),
-        storage=LocalStorage(offered), device=types.SimpleNamespace(raw=b""))
+        storage=LocalStorage(offered), device=types.SimpleNamespace(raw=b"", unit_id=None))
     states, asked = [], []
     win = stand_in(
         session=s, _update_check_session=None, update_state=None,
@@ -1162,7 +1163,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     m = _map(10)
     win = stand_in(
         session=types.SimpleNamespace(
-            device=types.SimpleNamespace(software_version_str="23.39", raw=b""),
+            device=types.SimpleNamespace(software_version_str="23.39", raw=b"", unit_id=None),
             storage=LocalStorage(device_root),
             client=types.SimpleNamespace(http=None, consumer=types.SimpleNamespace(url_salt="s"))),
         updates_cache=updates.parse_updates(lower_keys(server_answer())), maps_cache=[m],

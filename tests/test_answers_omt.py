@@ -157,7 +157,7 @@ def test_an_update_installed_forgets_the_software_check(server, monkeypatch):
     def cable_out(*a, **kw):
         raise OSError("the cable came out")
 
-    monkeypatch.setattr(updates, "install", cable_out)
+    monkeypatch.setattr(updates, "_install", cable_out)
     session = types.SimpleNamespace(storage=None, client=client,
                                     device=types.SimpleNamespace(unit_id=UNIT, raw=XML))
     with pytest.raises(OSError):
@@ -191,7 +191,7 @@ def test_the_command_line_install_forgets_it_too(offered, monkeypatch, capsys, c
             raise OSError("the cable came out")
         return types.SimpleNamespace(installed=[])
 
-    monkeypatch.setattr(updates, "install", install)
+    monkeypatch.setattr(updates, "_install", install)
     main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"])
     answers.ANSWERS.ask(answers.SOFTWARE_UPDATES, ("made-up",), check, about=[unit])
     assert asked == [1, 1]
@@ -225,7 +225,7 @@ def test_refresh_and_an_install_forget_also_an_xml_written_otherwise(server, mon
     forget_on_refresh(types.SimpleNamespace(device=device))  # Refresh
     client.software_updates(xml, include_reinstalls=True)
     client.universal_maps(xml)
-    monkeypatch.setattr(updates, "install", lambda *a, **kw: [])
+    monkeypatch.setattr(updates, "_install", lambda *a, **kw: [])
     install_updates(types.SimpleNamespace(storage=None, client=client, device=device), [],
                     None)  # an install
     client.software_updates(xml, include_reinstalls=True)

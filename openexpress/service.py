@@ -134,8 +134,7 @@ def note_model_name(device, answer) -> None:
 def forget_unit_info(session) -> None:
     """The maps checked again by hand: the next unit_info() asks the server anew."""
     session.unit_info_answer = None
-    device = getattr(session, "device", None)
-    answers.forget_device(answers.UNIT_INFO, getattr(device, "unit_id", None))
+    answers.forget_session(answers.UNIT_INFO, session)
 
 
 class MassStorageMode(UserFacingError):

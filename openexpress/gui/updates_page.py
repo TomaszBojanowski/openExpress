@@ -74,20 +74,17 @@ def update_check_failed(win) -> None:
 
 
 def install_updates(s, chosen, progress):
-    """Copy the updates chosen to the device of session `s`; what Garmin's server offers it
-    is asked anew next time (answers), also after a copy that failed (a part may be there)."""
+    """Copy the updates chosen to the device of session `s` (updates.install: what Garmin's
+    server offers it is asked anew next time)."""
     from openexpress import updates as upd
 
-    try:
-        return upd.install(chosen, s.storage, session=s.client.http, progress=progress)
-    finally:
-        answers.forget_device(answers.SOFTWARE_UPDATES, getattr(s.device, "unit_id", None))
+    return upd.install(chosen, s.storage, session=s.client.http, progress=progress,
+                       unit_id=s.device.unit_id)
 
 
 def check_updates_again(win) -> None:
     """"Check Again" on the Updates page: Garmin's server is asked anew."""
-    device = getattr(win.session, "device", None)
-    answers.forget_device(answers.SOFTWARE_UPDATES, getattr(device, "unit_id", None))
+    answers.forget_session(answers.SOFTWARE_UPDATES, win.session)
     win.load_section("updates", force=True)
 
 

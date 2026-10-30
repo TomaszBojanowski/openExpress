@@ -146,6 +146,13 @@ def forget_device(kinds: Iterable[str] | str, unit_id) -> None:
         ANSWERS.forget(kinds, about=int(unit_id))
 
 
+def forget_session(kinds: Iterable[str] | str, session) -> None:
+    """Forget what ANSWERS keeps of these kinds about the device of `session` (none open, or
+    a session of no device: nothing)."""
+    device = getattr(session, "device", None)
+    forget_device(kinds, getattr(device, "unit_id", None))
+
+
 def _tag(value) -> str:
     """A tag of an entry as it is kept (on disk too): hashed, so that no unit ID is in it."""
     return hashlib.sha256(str(value).encode()).hexdigest()[:16]
