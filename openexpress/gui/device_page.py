@@ -50,6 +50,7 @@ from openexpress.gui.pictures import (  # noqa: E402
 from openexpress.gui.preferences import resolve_account  # noqa: E402
 from openexpress.gui.start import kind_icon, show_placeholder  # noqa: E402
 from openexpress.gui.tasks import (  # noqa: E402
+    forget_on_refresh,
     lets_the_window_close,
     stop_when_closed,
     writes_to_device,
@@ -794,6 +795,7 @@ class DevicePage:
         if kind == "setup":
             self.choose_dll()
         elif kind == "recheck":
+            forget_on_refresh(self.session)
             self.refresh_device(cause=Cause.REFRESH_IN_VIEW)
         else:
             self.login()
@@ -1227,9 +1229,11 @@ class DevicePage:
         self._update_check_session = s
 
         def work():
-            items = upd.mark_present(
-                s.storage, upd.parse_updates(s.client.software_updates(s.device.raw)),
-                upd.component_count(s.device))
+            # Asked as the page Updates asks (reinstalls too): one answer for both (answers);
+            # the row counts only what pending and staged leave.
+            answer = s.client.software_updates(s.device.raw, include_reinstalls=True)
+            items = upd.mark_present(s.storage, upd.parse_updates(answer),
+                                     upd.component_count(s.device))
             return upd.pending(items), upd.staged(items)
 
         def done(result):

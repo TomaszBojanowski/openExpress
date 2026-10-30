@@ -79,6 +79,21 @@ def xml_key(device_xml: bytes) -> str:
     return hashlib.sha256(device_xml).hexdigest()
 
 
+def device_tags(device_xml: bytes) -> list:
+    """What an answer about a device is about, for forget: its unit ID (the <Id> of its
+    GarminDevice.xml) and the XML itself (xml_key)."""
+    import re
+
+    found = re.search(rb"<Id>\s*(\d+)\s*</Id>", device_xml)
+    return ([int(found.group(1))] if found else []) + [xml_key(device_xml)]
+
+
+def forget_device(kinds: Iterable[str] | str, unit_id) -> None:
+    """Forget what ANSWERS keeps of these kinds about the device `unit_id` (none: nothing)."""
+    if unit_id:
+        ANSWERS.forget(kinds, about=int(unit_id))
+
+
 def _tag(value) -> str:
     """A tag of an entry as it is kept (on disk too): hashed, so that no unit ID is in it."""
     return hashlib.sha256(str(value).encode()).hexdigest()[:16]

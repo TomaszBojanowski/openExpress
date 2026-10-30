@@ -492,8 +492,9 @@ def test_maps_command_on_a_device_without_maps(device_root, xdg, monkeypatch, ca
         assert main(["--path", str(device_root), "maps", *argv]) == 1, argv
         captured = capsys.readouterr()
         assert captured.err.strip() == "Error: " + NO_MAPS_TEXT and captured.out == ""
-    # Only the map check was asked for, and nothing was written to the device.
-    assert len(asked) == 8 and all(url.endswith("api/maps/universal/update")
+    # Only the map check was asked for, once (its answer is kept an hour: answers), and
+    # nothing was written to the device.
+    assert len(asked) == 1 and all(url.endswith("api/maps/universal/update")
                                    for _method, url in asked)
     assert device_files(device_root) == before
 

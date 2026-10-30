@@ -1077,6 +1077,9 @@ def test_updates_of_a_garmin_drive_take_the_path_of_cli_path(drives, monkeypatch
                           _offered("GARMIN\\REMOTESW", "6B359306.GCD", b"a newer light")]}
 
     def check(storage):
+        from openexpress import answers
+
+        answers.ANSWERS.clear()  # each way asks the server itself: the request is compared
         server = _UpdateServer(answer)
         client = GarminClient(Settings(), None, None, server)
         device = parse(storage.read("GARMIN/GarminDevice.xml"))

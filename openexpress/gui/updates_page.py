@@ -16,7 +16,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import service  # noqa: E402
+from openexpress import answers, service  # noqa: E402
 from openexpress.connect import ApiError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     DriveNotMounted,
@@ -71,6 +71,24 @@ def update_check_failed(win) -> None:
     else:
         return
     win._render_update_state()
+
+
+def install_updates(s, chosen, progress):
+    """Copy the updates chosen to the device of session `s`; what Garmin's server offers it
+    is asked anew next time (answers), also after a copy that failed (a part may be there)."""
+    from openexpress import updates as upd
+
+    try:
+        return upd.install(chosen, s.storage, session=s.client.http, progress=progress)
+    finally:
+        answers.forget_device(answers.SOFTWARE_UPDATES, getattr(s.device, "unit_id", None))
+
+
+def check_updates_again(win) -> None:
+    """"Check Again" on the Updates page: Garmin's server is asked anew."""
+    device = getattr(win.session, "device", None)
+    answers.forget_device(answers.SOFTWARE_UPDATES, getattr(device, "unit_id", None))
+    win.load_section("updates", force=True)
 
 
 class UpdatesPage:
@@ -188,8 +206,7 @@ class UpdatesPage:
         else:
             icon, subtitle = "object-select-symbolic", installed
             title = update_state_text("current")
-        buttons.append(self._button(_("Check Again"),
-                                    lambda: self.load_section("updates", force=True)))
+        buttons.append(self._button(_("Check Again"), lambda: check_updates_again(self)))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                       halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
         image = Gtk.Image(icon_name=icon, pixel_size=96)
@@ -294,7 +311,7 @@ class UpdatesPage:
             below.append(warning)
 
         def install():
-            rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress)
+            rep = install_updates(s, chosen, self.progress)
             return rep, mass_storage and is_bike_accessory(
                 s.client, s.device, ask=lambda: service.unit_info(s))
 

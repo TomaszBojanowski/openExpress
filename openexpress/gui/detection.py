@@ -69,6 +69,7 @@ from openexpress.gui.navigation import (
     navigate_after,
 )
 from openexpress.gui.navigation import plan as detection_plan
+from openexpress.gui.tasks import forget_on_refresh
 from openexpress.gui.window_tasks import read_space
 from openexpress.i18n import N_, _
 
@@ -760,6 +761,7 @@ class DeviceDetection:
         is found. On the view of a device not connected: only that view (_refresh_remembered).
         In the device view: the device detected anew, the open one opened again
         (refresh_device)."""
+        forget_on_refresh(self.session)
         if self._on_remembered_page():
             self._refresh_remembered()
             return

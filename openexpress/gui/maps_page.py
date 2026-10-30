@@ -14,7 +14,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import service  # noqa: E402
+from openexpress import answers, service  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
@@ -27,6 +27,8 @@ def _check_again(win) -> None:
     """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too."""
     if win.session is not None:
         service.forget_unit_info(win.session)
+        device = getattr(win.session, "device", None)
+        answers.forget_device(answers.UNIVERSAL_MAPS, getattr(device, "unit_id", None))
     win.load_section("maps", force=True)
 
 

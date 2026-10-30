@@ -993,9 +993,10 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
 
     _copied(offered, "006-V0000-00")
     s = types.SimpleNamespace(
-        client=types.SimpleNamespace(software_updates=lambda raw: lower_keys(server_answer())),
+        client=types.SimpleNamespace(software_updates=lambda raw, include_reinstalls=False: (
+            asked.append(include_reinstalls), lower_keys(server_answer()))[1]),
         storage=LocalStorage(offered), device=types.SimpleNamespace(raw=b""))
-    states = []
+    states, asked = [], []
     win = stand_in(
         session=s, _update_check_session=None, update_state=None,
         _set_update_state=lambda new, staged=(): states.append(
@@ -1003,6 +1004,8 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
         in_background=lambda work, done, failed: done(work()))
     MainWindow._check_updates_quietly(win)
     assert states == [(["006-D0000-00"], ["006-V0000-00"])]
+    # Asked as the page Updates asks, reinstalls too: one kept answer for both (answers).
+    assert asked == [True]
 
 
 @pytest.mark.needs_display

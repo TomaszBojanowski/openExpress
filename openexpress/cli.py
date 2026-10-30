@@ -1049,8 +1049,13 @@ def cmd_updates(args) -> int:
         print("\n" + _("Dry run: nothing was downloaded or written. Add --apply "
                        "(this means you accept the licenses above)."))
         return 0
-    with _progress() as progress:
-        rep = upd.install(chosen, st, session=client.http, progress=progress)
+    try:
+        with _progress() as progress:
+            rep = upd.install(chosen, st, session=client.http, progress=progress)
+    finally:  # what the server offers is asked anew next time
+        from openexpress import answers
+
+        answers.forget_device(answers.SOFTWARE_UPDATES, dev.unit_id)
     n = len(rep.installed)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
     if n and getattr(st, "mass_storage", False) and not _eject_drive(st):

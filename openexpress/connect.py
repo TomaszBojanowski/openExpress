@@ -15,7 +15,7 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 
 import requests
 
-from openexpress import applog, netstatus
+from openexpress import answers, applog, netstatus
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.errors import UserFacingError
@@ -421,37 +421,67 @@ class GarminClient:
             params={"primaryFirmwarePartNumber": part_number},
         )
 
-    def software_updates(self, device_xml: bytes, include_reinstalls: bool = False) -> dict:
-        return self._omt(
-            "POST",
-            "api/device-software/v1/updates",
-            _("Software update check"),
-            params={"filter": "all"} if include_reinstalls else None,
-            json={
-                "garminDeviceXml": device_xml.decode("utf-8"),
-                "isUserInteractive": True,
-                "clientInfo": {},
-            },
-        )
+    def _omt_scope(self) -> tuple:
+        """What an answer of the update server depends on besides the question: the
+        environment and the language it answers in."""
+        return self.settings.environment, language_tag(self.settings.locale)
 
-    def universal_maps(self, device_xml: bytes, reinstall: bool = False) -> dict:
-        return self._omt(
-            "POST",
-            f"api/maps/universal/{'reinstall' if reinstall else 'update'}",
-            _("Map check"),
-            json={
-                "garminDeviceXml": device_xml.decode("utf-8"),
-                "options": {"groupingMode": 2, "extractionMode": 2},
-            },
-        )
+    def software_updates(self, device_xml: bytes, include_reinstalls: bool = False,
+                         fresh: bool = False) -> dict:
+        """The updates offered to the device; kept by its GarminDevice.xml (answers), so that
+        the device page and its page Updates share one answer. `fresh`: asked anew."""
+        def ask():
+            return self._omt(
+                "POST",
+                "api/device-software/v1/updates",
+                _("Software update check"),
+                params={"filter": "all"} if include_reinstalls else None,
+                json={
+                    "garminDeviceXml": device_xml.decode("utf-8"),
+                    "isUserInteractive": True,
+                    "clientInfo": {},
+                },
+            )
+
+        return answers.ANSWERS.ask(
+            answers.SOFTWARE_UPDATES,
+            (*self._omt_scope(), answers.xml_key(device_xml), include_reinstalls), ask,
+            about=answers.device_tags(device_xml), fresh=fresh)
+
+    def universal_maps(self, device_xml: bytes, reinstall: bool = False,
+                       fresh: bool = False) -> dict:
+        """The maps of the device; kept by its GarminDevice.xml (answers), so that the device
+        page and its page Maps share one answer. `fresh`: asked anew."""
+        def ask():
+            return self._omt(
+                "POST",
+                f"api/maps/universal/{'reinstall' if reinstall else 'update'}",
+                _("Map check"),
+                json={
+                    "garminDeviceXml": device_xml.decode("utf-8"),
+                    "options": {"groupingMode": 2, "extractionMode": 2},
+                },
+            )
+
+        return answers.ANSWERS.ask(
+            answers.UNIVERSAL_MAPS,
+            (*self._omt_scope(), answers.xml_key(device_xml), reinstall), ask,
+            about=answers.device_tags(device_xml), fresh=fresh)
 
     def activate_maps(self, device_xml: bytes, identifiers: list[dict]) -> dict:
-        return self._omt(
-            "POST",
-            "api/maps/universal/activate",
-            _("Map activation"),
-            json={"garminDeviceXml": device_xml.decode("utf-8"), "installedMaps": identifiers},
-        )
+        """Never kept (the answer holds the unlock data); what was kept of the device's maps
+        is forgotten, as the activation may change it."""
+        try:
+            return self._omt(
+                "POST",
+                "api/maps/universal/activate",
+                _("Map activation"),
+                json={"garminDeviceXml": device_xml.decode("utf-8"),
+                      "installedMaps": identifiers},
+            )
+        finally:
+            answers.ANSWERS.forget(answers.UNIVERSAL_MAPS,
+                                   about=answers.xml_key(device_xml))
 
     # --- the account's devices --------------------------------------------------------
 
