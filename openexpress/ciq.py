@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
-from openexpress import applog, netstatus, paths, proto
+from openexpress import answers, applog, netstatus, paths, proto
 from openexpress.backup import keep_newest
 from openexpress.connect import ApiError, GarminClient, lower_keys
 from openexpress.device import ptp
@@ -450,11 +450,21 @@ class StoreApi:
         self.client._check(resp, what)
         return lower_keys(self.client._json(resp, what)) if resp.content else None
 
+    def _kept(self, kind: str, device: GarminDevice, key, ask):
+        """An answer about the device's apps, kept a moment (answers)."""
+        self.client.require_verified(device.unit_id)
+        return answers.ANSWERS.ask(kind, (*self.client._account_scope(), device.unit_id,
+                                          *key), ask, about=[device.unit_id])
+
+    def _forget(self, device: GarminDevice) -> None:
+        answers.forget_device((answers.STORE_APPS, answers.STORE_UPDATES), device.unit_id)
+
     def account_apps(self, device: GarminDevice, locale: str) -> list[StoreApp]:
-        data = self._request("GET", "express/appstore/rest/apps/downloads",
-                             _("Connect IQ apps"),
-                             params={"unitId": device.unit_id, "locale": locale,
-                                     "sku": device.part_number}, unit_id=device.unit_id)
+        data = self._kept(answers.STORE_APPS, device, (locale, device.part_number), lambda: (
+            self._request("GET", "express/appstore/rest/apps/downloads",
+                          _("Connect IQ apps"),
+                          params={"unitId": device.unit_id, "locale": locale,
+                                  "sku": device.part_number}, unit_id=device.unit_id)))
         return _store_apps(data)
 
     def updates(self, device: GarminDevice, installed: list[InstalledApp],
@@ -462,8 +472,10 @@ class StoreApi:
         body = {"apps": [{"appId": str(a.app_id), "internalVersionNumber": a.version or 0}
                          for a in installed],
                 "deviceSKU": device.part_number, "locale": locale}
-        data = self._request("POST", "express/appstore/rest/apps/updates",
-                             _("Connect IQ updates"), json_body=body, unit_id=device.unit_id)
+        data = self._kept(answers.STORE_UPDATES, device, (json.dumps(body, sort_keys=True),),
+                          lambda: self._request("POST", "express/appstore/rest/apps/updates",
+                                                _("Connect IQ updates"), json_body=body,
+                                                unit_id=device.unit_id))
         # The server also lists apps that are already current; keep only newer versions.
         current = {a.app_id: a.version or 0 for a in installed}
         return [u for u in _store_apps(data) if u.latest_version > current.get(u.app_id, -1)]
@@ -471,9 +483,12 @@ class StoreApi:
     def queue_install(self, device: GarminDevice, apps: list[StoreApp]) -> None:
         body = {"apps": [{"appId": str(a.app_id), "internalVersionNumber": a.latest_version}
                          for a in apps], "unitId": device.unit_id}
-        data = self._request("POST", "express/appstore/rest/apps/installApps",
-                             _("Connect IQ install"), json_body=body,
-                             unit_id=device.unit_id) or []
+        try:
+            data = self._request("POST", "express/appstore/rest/apps/installApps",
+                                 _("Connect IQ install"), json_body=body,
+                                 unit_id=device.unit_id) or []
+        finally:  # what the store said of the device's apps is asked anew
+            self._forget(device)
         bad = [r for r in data if int(r.get("status") or 0) != 200]
         if bad:
             apps = ", ".join(f"{r.get('appid')} ({r.get('status')})" for r in bad)
@@ -495,8 +510,11 @@ class StoreApi:
     def forget(self, device: GarminDevice, app_ids: list[uuid.UUID]) -> None:
         body = {"apps": [{"appId": str(i), "internalVersionNumber": 0} for i in app_ids],
                 "unitId": device.unit_id}
-        self._request("POST", "express/appstore/rest/apps/removeInstalledApps",
-                      _("Connect IQ remove"), json_body=body, unit_id=device.unit_id)
+        try:
+            self._request("POST", "express/appstore/rest/apps/removeInstalledApps",
+                          _("Connect IQ remove"), json_body=body, unit_id=device.unit_id)
+        finally:  # what the store said of the device's apps is asked anew
+            self._forget(device)
 
 
 def _has_app_id(item) -> bool:
@@ -820,6 +838,7 @@ def install_apps(
     targets: list[StoreApp],
     progress: Callable[[str], None] = lambda s: None,
     allowed: Collection[uuid.UUID] = (),
+    messages: list[dict] | None = None,
 ) -> IqInstallReport:
     """Queue the apps in Garmin Connect (unless they already wait there) and install over
     USB those the device accepts; returns the report. Apps whose folder the device does not
@@ -828,14 +847,15 @@ def install_apps(
     written for them."""
     asking = [t for t in needs_consent(targets) if t.app_id not in set(allowed)]
     targets = [t for t in targets if t not in asking]
-    report = _install_apps(device, storage, client, api, targets, progress)
+    report = _install_apps(device, storage, client, api, targets, progress, messages)
     report.needs_consent = [t.name for t in asking]
     if asking:
         log.info("apps install: %d set aside, their new permissions not allowed", len(asking))
     return report
 
 
-def _install_apps(device, storage, client, api, targets, progress) -> IqInstallReport:
+def _install_apps(device, storage, client, api, targets, progress,
+                  messages: list[dict] | None = None) -> IqInstallReport:
     if not targets:
         return IqInstallReport()
     state = read_installed(device, storage)
@@ -862,7 +882,9 @@ def _install_apps(device, storage, client, api, targets, progress) -> IqInstallR
            or prepare_app_dir(device, storage, store_datatype(t))]
     for_phone = [t.name for t in targets if t not in usb]
     # An app that already waits in Garmin's queue for this device is not requested again.
-    messages = client.device_messages(device.unit_id)
+    # The queue as the caller read it a moment ago (the command line), else read now.
+    if messages is None:
+        messages = client.device_messages(device.unit_id)
     waiting = queued_app_ids(messages)
     to_queue = [t for t in targets if t.app_id not in waiting]
     if to_queue:

@@ -4,6 +4,7 @@ taken off it and nothing is written, as Garmin Express does; each with a line in
 answers are made up."""
 
 import logging
+import types
 import uuid
 
 import pytest
@@ -19,6 +20,10 @@ class Store(ciq.StoreApi):
     """The store's answer as given, with no request made."""
 
     def __init__(self, answer):
+        # A client only for what the store's kept answers ask of it (answers): the device
+        # checked, the account's key.
+        super().__init__(types.SimpleNamespace(require_verified=lambda unit_id=None: None,
+                                               _account_scope=lambda: ("made-up", None)))
         self.answer = answer
 
     def _request(self, *args, **kw):

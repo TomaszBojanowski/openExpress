@@ -1612,7 +1612,8 @@ def cmd_apps(args) -> int:
             if not args.apply:
                 print(_("Dry run. Add --apply."))
             return 1
-        waiting = ciq.queued_app_ids(client.device_messages(dev.unit_id))
+        messages = client.device_messages(dev.unit_id)
+        waiting = ciq.queued_app_ids(messages)
         for a in targets:
             if a.app_id in waiting:
                 print("  " + _("{name}: already waits in the queue in Garmin Connect; no new "
@@ -1660,7 +1661,7 @@ def cmd_apps(args) -> int:
             return 1 if refused or skipped else 0
         with _progress() as progress:
             rep = ciq.install_apps(dev, st, client, api, targets, progress=progress,
-                                   allowed=allowed)
+                                   allowed=allowed, messages=messages)
         written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
         updated = [n for n in rep.installed if n in rep.updated]
         installed = [n for n in rep.installed if n not in rep.direct]

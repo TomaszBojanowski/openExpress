@@ -36,6 +36,8 @@ SOFTWARE_UPDATES = "software-updates"
 UNIVERSAL_MAPS = "universal-maps"
 UNIT_INFO = "unit-info"
 ACCOUNT_COUNTRY = "account-country"
+STORE_APPS = "store-apps"
+STORE_UPDATES = "store-updates"
 # The answers about the account: forgotten when the login changes (auth.store.save, delete).
 ACCOUNT_KINDS = (ACCOUNT_DEVICES, PRIMARY_TRAINING, ACCOUNT_COUNTRY)
 
@@ -49,6 +51,10 @@ LIFETIMES = {
     UNIVERSAL_MAPS: 60 * 60,
     UNIT_INFO: 7 * 86400,
     ACCOUNT_COUNTRY: 60 * 60,
+    # The Connect IQ store: the Apps page read again a moment later (Restore the order…);
+    # an install, a removal from the account and a sync forget it.
+    STORE_APPS: 2 * 60,
+    STORE_UPDATES: 2 * 60,
 }
 
 # What unit-info's answer keeps, in memory and on disk: the fields the program reads (the map

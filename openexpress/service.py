@@ -1298,6 +1298,8 @@ def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None
     received: list[str] = []  # what of them came to the device: received as the files
     if any(i.handled_by == "Connect IQ" for i in items):
         out.lines += _install_queued_apps(s, queue.messages, progress, out.errors, received)
+    # The queue may have brought apps: what the store said of the device's apps is asked anew.
+    answers.forget_device((answers.STORE_APPS, answers.STORE_UPDATES), s.device.unit_id)
     if any(i.handled_by == "TrueUp" for i in items):
         out.lines += _trueup(s, queue.messages, progress, out.errors, received)
     out.downloaded += len(received)
