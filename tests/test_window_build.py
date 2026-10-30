@@ -100,7 +100,7 @@ def test_the_bar_at_the_bottom(window):
     from openexpress.progress import TimedWait
 
     window.set_busy(True, "Syncing…", device=True)
-    assert window.action_bar.get_revealed() and window.busy
+    assert window.action_bar.get_reveal_child() and window.busy
     assert window.busy_spinner.get_visible() and not window.progress_bar.get_visible()
     assert window.unplug_label.get_visible() and not window.stop_wait_button.get_visible()
     window.progress("Uploading activity")
@@ -119,5 +119,5 @@ def test_the_bar_at_the_bottom(window):
     window.stop_wait_button.emit("clicked")
     assert window.session.stop_waiting.is_set() and not window.stop_wait_button.get_visible()
     window.set_busy(False)
-    assert not window.action_bar.get_revealed() and not window.busy
+    assert not window.action_bar.get_reveal_child() and not window.busy
     assert not window.stop_wait_button.get_visible() and window._waiting == 0

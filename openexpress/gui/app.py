@@ -44,6 +44,7 @@ from openexpress.gui.start_window import StartView, StartWindow  # noqa: E402
 from openexpress.gui.updates_page import UpdatesPage  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     TaskRunner,
+    bottom_bar,
     collect_garbage,
     inform,
     log_unexpected,
@@ -328,16 +329,14 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.unplug_label.add_css_class("caption-heading")
         self.unplug_label.add_css_class("warning")
         box.append(self.unplug_label)
-        self.action_bar = Gtk.ActionBar(revealed=False)
-        self.action_bar.pack_start(self.busy_spinner)
-        self.action_bar.set_center_widget(box)
         # Only while TrueUp waits for Garmin Connect (a wait of known length): nothing is
         # written to the device meanwhile.
         # TRANSLATORS: button on the bar at the bottom: stop waiting for TrueUp
         self.stop_wait_button = Gtk.Button(label=_("Stop Waiting"), valign=Gtk.Align.CENTER,
                                            visible=False)
         self.stop_wait_button.connect("clicked", lambda _b: stop_waiting(self))
-        self.action_bar.pack_end(self.stop_wait_button)
+        # In the column of the pages above it, at every width (window_tasks.bottom_bar).
+        self.action_bar = bottom_bar(self.busy_spinner, box, self.stop_wait_button)
         content_view.add_bottom_bar(self.action_bar)
 
         self.content_page = Adw.NavigationPage(title=self.sections["watch"].title,

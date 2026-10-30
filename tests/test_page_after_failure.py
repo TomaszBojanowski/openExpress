@@ -30,7 +30,7 @@ def _real_tasks(win) -> None:
     from openexpress.gui.app import MainWindow
 
     win.busy, win._waiting, win._refresh_pending = False, 0, False
-    win.action_bar, win.progress_label = Gtk.ActionBar(revealed=False), Gtk.Label()
+    win.action_bar, win.progress_label = Gtk.Revealer(reveal_child=False), Gtk.Label()
     win.progress_bar, win.busy_spinner = Gtk.ProgressBar(), Gtk.Spinner()
     win.unplug_label, win.banner = Gtk.Label(), Adw.Banner()
     win._update_actions = lambda *a: None

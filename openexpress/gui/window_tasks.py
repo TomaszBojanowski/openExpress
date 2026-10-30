@@ -4,7 +4,8 @@
 work in the background (in_background), toasts and error messages, the action buttons. The
 functions: the widgets of a page (still_in_window, wrapping_row, trash_button, show_working,
 row_subtitle), the free space of the device read again after a task that writes to it
-(read_space, render_space, refresh_space), the name of a task in the log (task_name), the
+(read_space, render_space, refresh_space), the bar at the bottom in the column of the pages
+(bottom_bar, page_column), the name of a task in the log (task_name), the
 collection of reference cycles after it (collect_garbage), an error nobody expected, in
 the log (log_unexpected), and the questions and messages of the window, which close as
 Cancel (confirm, Answer, inform).
@@ -71,6 +72,45 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
         place.set_focusable(False)  # the widget itself takes the focus, as in a box
         place.set_halign(Gtk.Align.CENTER)
     return row
+
+
+# The margin at the sides of the content of a page (Adw.PreferencesPage): libadwaita's CSS
+# gives its box 12 px; the bar at the bottom takes the same.
+PAGE_SIDE = 12
+
+
+def page_column(child) -> Adw.Clamp:
+    """`child` in the column of a page (Adw.PreferencesPage) at every width of the window:
+    the clamp of that page's own width (read from one, so that it follows libadwaita)."""
+    def widgets(widget):
+        yield widget
+        child_ = widget.get_first_child()
+        while child_ is not None:
+            yield from widgets(child_)
+            child_ = child_.get_next_sibling()
+
+    page_clamp = next((w for w in widgets(Adw.PreferencesPage()) if isinstance(w, Adw.Clamp)),
+                      None)
+    column = Adw.Clamp(child=child, maximum_size=600, tightening_threshold=400)
+    if page_clamp is not None:
+        column.set_maximum_size(page_clamp.get_maximum_size())
+        column.set_tightening_threshold(page_clamp.get_tightening_threshold())
+        if hasattr(page_clamp, "get_unit"):
+            column.set_unit(page_clamp.get_unit())
+    return column
+
+
+def bottom_bar(indicator, words, button) -> Gtk.Revealer:
+    """The bar at the bottom of a device's view, in the column of the pages above it: the
+    spinner (`indicator`), the words and the bar of the task (`words`) and Stop Waiting
+    (`button`), each where the groups of a page begin and end. Shown by set_reveal_child."""
+    row = Gtk.Box(spacing=6, margin_start=PAGE_SIDE, margin_end=PAGE_SIDE, margin_top=6,
+                  margin_bottom=6)
+    row.append(indicator)
+    row.append(words)
+    row.append(button)
+    return Gtk.Revealer(child=page_column(row), reveal_child=False,
+                        transition_type=Gtk.RevealerTransitionType.SLIDE_UP)
 
 
 def progress_reporter(win) -> Reporter:
@@ -363,7 +403,7 @@ class TaskRunner:
         self._stop_waiting()
         self._reporter.reset()  # nothing of a task before is shown later
         self.busy = busy
-        self.action_bar.set_revealed(busy)
+        self.action_bar.set_reveal_child(busy)
         self.progress_label.set_text(text)
         self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)

@@ -175,7 +175,7 @@ def _bar_window(map_window, monkeypatch, delay):
 
     monkeypatch.setattr(storage, "free_space", slow_free)
     win.busy, win._waiting, win._refresh_pending, win._action_buttons = False, 0, False, []
-    win.action_bar, win.progress_label = Gtk.ActionBar(revealed=False), Gtk.Label()
+    win.action_bar, win.progress_label = Gtk.Revealer(reveal_child=False), Gtk.Label()
     win.progress_bar, win.busy_spinner = Gtk.ProgressBar(), Gtk.Spinner()
     win.unplug_label, win.banner = Gtk.Label(), Adw.Banner()
     win._update_actions = win.toast = lambda *a: None
@@ -207,7 +207,7 @@ def _until_asked(win, button):
     seen = []
     deadline = time.monotonic() + 5
     while not Question.asked and time.monotonic() < deadline:
-        seen.append((win.action_bar.get_revealed(), win.progress_label.get_text(),
+        seen.append((win.action_bar.get_reveal_child(), win.progress_label.get_text(),
                      button.get_sensitive(), _spinning(button)))
         GLib.MainContext.default().iteration(False)
         time.sleep(0.005)
@@ -237,7 +237,7 @@ def test_the_button_spins_and_the_text_waits_half_a_second(map_window, monkeypat
     assert set(shown) <= {"Checking the space…"}
     assert button.get_label() == "Install" and button.get_sensitive()
     assert not _spinning(button)
-    assert not win.action_bar.get_revealed() and not win.busy
+    assert not win.action_bar.get_reveal_child() and not win.busy
 
 
 @pytest.mark.needs_display
@@ -514,7 +514,7 @@ def _overview_window(storage, dev, space=NOT_READ):
     win._background_enabled = lambda: False
     win.error = lambda title, text: win.errors.append(text)
     win._waiting, win._refresh_pending = 0, False
-    win.action_bar, win.progress_label = Gtk.ActionBar(revealed=False), Gtk.Label()
+    win.action_bar, win.progress_label = Gtk.Revealer(reveal_child=False), Gtk.Label()
     win.progress_bar, win.busy_spinner = Gtk.ProgressBar(), Gtk.Spinner()
     win.unplug_label, win.banner = Gtk.Label(), Adw.Banner()
     win._update_actions = win.toast = lambda *a: None
@@ -808,7 +808,7 @@ def _task_window(**attrs):
 
     win = stand_in(
         busy=False, _waiting=0, _refresh_pending=False, _action_buttons=[], session=None,
-        action_bar=Gtk.ActionBar(revealed=False), progress_label=Gtk.Label(),
+        action_bar=Gtk.Revealer(reveal_child=False), progress_label=Gtk.Label(),
         progress_bar=Gtk.ProgressBar(), busy_spinner=Gtk.Spinner(), unplug_label=Gtk.Label(),
         banner=Adw.Banner(), errors=[], toasts=[])
     win._update_actions = lambda *a: None
@@ -831,7 +831,7 @@ def _while_busy(win, button):
     seen = []
     deadline = time.monotonic() + 5
     while win.busy and time.monotonic() < deadline:
-        seen.append((win.action_bar.get_revealed(), win.progress_label.get_text(),
+        seen.append((win.action_bar.get_reveal_child(), win.progress_label.get_text(),
                      button.get_sensitive(), _spinning(button)))
         GLib.MainContext.default().iteration(False)
         time.sleep(0.005)

@@ -545,7 +545,7 @@ class _Widget:
     def set_text(self, text):
         self.text = text
 
-    def set_revealed(self, revealed):
+    def set_reveal_child(self, revealed):
         self.visible = revealed
 
     def set_fraction(self, fraction):

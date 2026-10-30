@@ -99,7 +99,7 @@ class _Shown:
     def __init__(self):
         self.visible = True  # as GTK makes a widget
 
-    def set_revealed(self, revealed):
+    def set_reveal_child(self, revealed):
         pass
 
     def set_visible(self, visible):
