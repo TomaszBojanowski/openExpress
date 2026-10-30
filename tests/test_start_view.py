@@ -1,7 +1,8 @@
-"""The view of the start page chosen in its menu: "View" with Automatic, Grid and List;
-automatic (a list from seven devices in a section, each section on its own) unless another
-is chosen; kept in gui.json ("start_view"). A change draws the page
-again from what is known, the devices are not asked. All devices are made up."""
+"""The view of the start page chosen in its menu: a row of three buttons on top of it,
+Automatic, Grid and List; automatic (a list from seven devices in a section, each section on
+its own) unless another is chosen; kept in gui.json ("start_view"). A change draws the page
+again from what is known, the devices are not asked. The buttons tell screen readers their
+names and which one is chosen, and the keyboard reaches them. All devices are made up."""
 
 import types
 
@@ -130,26 +131,55 @@ def _menu_items(model):
     return sections
 
 
-def _menu_of(header):
+def _walk(widget):
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        yield from _walk(child)
+        child = child.get_next_sibling()
+
+
+def _menu_button(header):
     from gi.repository import Gtk
 
-    stack = [header]
-    while stack:
-        widget = stack.pop()
+    for widget in _walk(header):
         if isinstance(widget, Gtk.MenuButton):
-            return widget.get_menu_model()
-        child = widget.get_first_child()
-        while child is not None:
-            stack.append(child)
-            child = child.get_next_sibling()
+            return widget
     raise AssertionError("no menu button")
+
+
+def _menu_of(header):
+    return _menu_button(header).get_menu_model()
+
+
+def _view_buttons(win):
+    from gi.repository import Gtk
+
+    popover = _menu_button(win.start.header).get_popover()
+    return [w for w in _walk(popover) if isinstance(w, Gtk.ToggleButton)]
+
+
+def _main_menu(language="en"):
+    from gi.repository import Adw
+
+    words = {"en": ("Preferences", "Keyboard Shortcuts", "Report a Device or Problem…",
+                    "About openExpress"),
+             "pl": ("Preferencje", "Skróty klawiszowe", "Zgłoś urządzenie lub problem…",
+                    "O programie openExpress")}[language]
+    first = [(words[0], "app.preferences", None)]
+    if hasattr(Adw, "ShortcutsDialog"):
+        first.append((words[1], "app.shortcuts", None))
+    return [(None, first), (None, [(words[2], "app.report", None)]),
+            (None, [(words[3], "app.about", None)])]
 
 
 @pytest.mark.needs_display
 def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypatch):
-    """The view chosen before is the action's state at start; choosing another keeps it in
-    gui.json (the window's size stays) and draws the start page again; a view not known is
-    not taken. The menu of the device view stays as it was."""
+    """The view chosen before is the action's state at start, its button pressed; another
+    button keeps the view chosen in gui.json (the window's size stays) and draws the start
+    page again; a view not known is not taken. The main menu: Preferences, Keyboard Shortcuts
+    | Report a Device or Problem… | About openExpress (GNOME's order), the start page's with
+    the row of buttons on top."""
     from gi.repository import GLib
 
     from openexpress import netstatus
@@ -164,15 +194,21 @@ def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypat
         action = win.lookup_action("start-view")
         assert action.get_state().get_string() == "list" and win.start.view == "list"
         main = _menu_items(_menu_of(win.sidebar_header))
-        (view, *rest) = _menu_items(_menu_of(win.start.header))
-        assert view == ("View", [("Automatic", "win.start-view", "auto"),
-                                 ("Grid", "win.start-view", "grid"),
-                                 ("List", "win.start-view", "list")])
-        assert rest == main and "View" not in [heading for heading, _items in main]
+        (row, *rest) = _menu_items(_menu_of(win.start.header))
+        assert main == _main_menu()
+        assert row == (None, [(None, None, None)]) and rest == main  # the row: a custom item
+        buttons = _view_buttons(win)
+        assert [b.get_action_target_value().get_string() for b in buttons] == [
+            "auto", "grid", "list"]
+        assert {b.get_action_name() for b in buttons} == {"win.start-view"}
+        assert [b.get_active() for b in buttons] == [False, False, True]
         drawn = []
         win._render_start = lambda: drawn.append(win.start.view)
-        action.activate(GLib.Variant.new_string("grid"))
+        buttons[1].emit("clicked")
         assert drawn == ["grid"] and action.get_state().get_string() == "grid"
+        assert [b.get_active() for b in buttons] == [False, True, False]
+        buttons[1].emit("clicked")  # the one chosen, clicked again: it stays chosen
+        assert drawn == ["grid"] and buttons[1].get_active()
         assert load_gui_settings() == {"window": {"width": 900, "height": 700},
                                            "start_view": "grid"}
         action.activate(GLib.Variant.new_string("tiles"))
@@ -183,20 +219,102 @@ def test_the_window_offers_the_view_in_the_menu_of_the_start_page_only(monkeypat
 
 
 @pytest.mark.needs_display
-def test_in_polish():
-    from gi.repository import Gio
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_buttons_tell_screen_readers_their_names(language, monkeypatch):
+    """Each button: its name and a tooltip (Automatic says what it does, also as the
+    description), a toggle button (pressed: the one chosen); the row: a group named View."""
+    from gi.repository import Gtk
 
     from openexpress import i18n
     from openexpress.gui.start_window import StartView
+    from openexpress.paths import APP_ID
 
-    i18n.setup("pl")
+    told = []  # what each widget told, in the order told: the row, then its buttons
+    original = Gtk.Accessible.update_property
+
+    def update_property(self, props, values):
+        told.append(dict(zip(props, values)))
+        return original(self, props, values)
+
+    monkeypatch.setattr(Gtk.Widget, "update_property", update_property, raising=False)
+    i18n.setup(language)
     try:
-        (view,) = _menu_items(StartView.menu(Gio.Menu()))
+        row = StartView.buttons()
     finally:
         i18n.setup("en")
-    assert view == ("Widok", [("Automatycznie", "win.start-view", "auto"),
-                              ("Siatka", "win.start-view", "grid"),
-                              ("Lista", "win.start-view", "list")])
+    buttons = [w for w in _walk(row) if isinstance(w, Gtk.ToggleButton)]
+    names = {"en": ["Automatic", "Grid", "List"], "pl": ["Automatycznie", "Siatka", "Lista"]}
+    auto = {"en": "Automatic: tiles, or a list when a section has more than six devices",
+            "pl": "Automatycznie: kafle, a\u00a0gdy w\u00a0sekcji jest więcej niż sześć "
+                  "urządzeń, lista"}[language]
+    group, *each = told
+    assert [t[Gtk.AccessibleProperty.LABEL] for t in each] == names[language]
+    assert each[0][Gtk.AccessibleProperty.DESCRIPTION] == auto
+    assert all(Gtk.AccessibleProperty.DESCRIPTION not in t for t in each[1:])
+    assert [b.get_tooltip_text() for b in buttons] == [auto, *names[language][1:]]
+    assert [b.get_icon_name() for b in buttons] == [
+        f"{APP_ID}-view-auto-symbolic", "view-grid-symbolic", "view-list-symbolic"]
+    assert {b.get_accessible_role() for b in buttons} == {Gtk.AccessibleRole.TOGGLE_BUTTON}
+    assert row.get_accessible_role() == Gtk.AccessibleRole.GROUP
+    assert group == {Gtk.AccessibleProperty.LABEL: {"en": "View", "pl": "Widok"}[language]}
+
+
+def test_automatic_says_six():
+    """The tooltip of Automatic names the count of devices from which a section is a list."""
+    from openexpress import devicelist
+
+    assert devicelist.GRID_MAX == 6
+
+
+@pytest.mark.needs_display
+def test_the_keyboard_reaches_the_buttons_and_the_chosen_one_has_the_focus(monkeypatch):
+    """The menu opened: the focus on the button of the view chosen; Left and Right go along
+    the row, Down leaves it for Preferences, Tab goes through all."""
+    from gi.repository import Gio, GLib, Gtk
+
+    from openexpress import netstatus
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(MainWindow, "refresh_device", lambda self, cause=None: None)
+    window = MainWindow(None)
+    # The application's actions, so that the menu's items can take the focus.
+    app_actions = Gio.SimpleActionGroup()
+    for name in ("preferences", "shortcuts", "report", "about"):
+        app_actions.add_action(Gio.SimpleAction.new(name, None))
+    window.insert_action_group("app", app_actions)
+    window.lookup_action("start-view").change_state(GLib.Variant.new_string("grid"))
+    button = _menu_button(window.start.header)
+    popover = button.get_popover()
+    buttons = _view_buttons(window)
+
+    def spin():
+        for _ in range(30):
+            GLib.MainContext.default().iteration(False)
+
+    def focus():
+        widget = window.get_focus()
+        if widget in buttons:
+            return ["auto", "grid", "list"][buttons.index(widget)]
+        return widget.get_property("text") if widget is not None else None
+
+    window.present()
+    button.popup()
+    spin()
+    try:
+        assert focus() == "grid"
+        moves = []
+        for direction in ("RIGHT", "LEFT", "LEFT", "DOWN", "UP", "TAB_FORWARD", "TAB_FORWARD"):
+            popover.child_focus(getattr(Gtk.DirectionType, direction))
+            spin()
+            moves.append(focus())
+        assert moves[:4] == ["list", "grid", "auto", "Preferences"]
+        assert moves[4] in ("auto", "grid", "list")  # back up into the row
+        assert set(moves[4:]) <= {"auto", "grid", "list", "Preferences"}
+    finally:
+        button.popdown()
+        spin()
+        netstatus.STATUS.remove_listener(window._net_listener)
+        window.destroy()
 
 
 @pytest.mark.needs_display

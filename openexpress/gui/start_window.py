@@ -13,30 +13,34 @@ import dataclasses
 import logging
 from datetime import datetime
 
-from gi.repository import Gio, GLib
+import gi
 
-from openexpress import devicelist, known_devices, last_sync, service, sync, tile_facts
-from openexpress.device.gio_storage import NO_DEVICE_FILE, NOT_MOUNTED, DeviceSummary
-from openexpress.gui import start
-from openexpress.gui.connected import session_summary, unit_ids, uris
-from openexpress.gui.detection import _take_asked, decided, seen_open
-from openexpress.gui.device_page import (
+gi.require_version("Gtk", "4.0")
+
+from gi.repository import Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
+
+from openexpress import devicelist, known_devices, last_sync, service, sync, tile_facts  # noqa: E402
+from openexpress.device.gio_storage import NO_DEVICE_FILE, NOT_MOUNTED, DeviceSummary  # noqa: E402
+from openexpress.gui import start  # noqa: E402
+from openexpress.gui.connected import session_summary, unit_ids, uris  # noqa: E402
+from openexpress.gui.detection import _take_asked, decided, seen_open  # noqa: E402
+from openexpress.gui.device_page import (  # noqa: E402
     last_sync_subtitle,
     refresh_last_sync_subtitle,
     remember_sync_count,
 )
-from openexpress.gui.gui_settings import load_gui_settings, update_gui_settings
-from openexpress.gui.navigation import Cause, Seen, ShowStart, Stay
-from openexpress.gui.pictures import (
+from openexpress.gui.gui_settings import load_gui_settings, update_gui_settings  # noqa: E402
+from openexpress.gui.navigation import Cause, Seen, ShowStart, Stay  # noqa: E402
+from openexpress.gui.pictures import (  # noqa: E402
     cached_texture,
     device_picture_path,
     download_picture,
     load_texture,
     with_device_picture,
 )
-from openexpress.gui.preferences import account_client, resolve_account
-from openexpress.gui.start import kind_icon
-from openexpress.gui.words import (
+from openexpress.gui.preferences import account_client, resolve_account  # noqa: E402
+from openexpress.gui.start import kind_icon  # noqa: E402
+from openexpress.gui.words import (  # noqa: E402
     last_seen_text,
     last_seen_tooltip,
     never_synced_tooltip,
@@ -44,8 +48,9 @@ from openexpress.gui.words import (
     remembered_update_text,
     software_text,
 )
-from openexpress.i18n import _, caption, pgettext
-from openexpress.known_devices import KnownDevice
+from openexpress.i18n import _, caption, pgettext  # noqa: E402
+from openexpress.known_devices import KnownDevice  # noqa: E402
+from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -54,14 +59,22 @@ log = logging.getLogger(__name__)
 RELATIVE_REFRESH_S = 60
 
 
+# The icons of the views of the start page: grid and list GNOME's, automatic the program's
+# own (tiles above a list).
+VIEW_ICONS = {devicelist.AUTO: f"{APP_ID}-view-auto-symbolic",
+              devicelist.GRID: "view-grid-symbolic", devicelist.LIST: "view-list-symbolic"}
+
+
 class StartView:
-    """The section "View" of the start page's menu: how its sections show their devices:
-    automatic (devicelist.AUTO: a list from GRID_MAX + 1 devices in a section, each section
-    on its own), a grid or a list for all of them. Kept in gui.json (KEY); a change draws the
-    start page again from what is known (_render_start), without asking the devices."""
+    """The row of buttons on top of the start page's menu: how its sections show their
+    devices: automatic (devicelist.AUTO: a list from GRID_MAX + 1 devices in a section, each
+    section on its own), a grid or a list for all of them. Kept in gui.json (KEY); a change
+    draws the start page again from what is known (_render_start), without asking the
+    devices."""
 
     KEY = "start_view"
     ACTION = "start-view"  # win.start-view, whose state is the view
+    CUSTOM = "start-view"  # the menu's custom item: the row of buttons
 
     @classmethod
     def saved(cls) -> str:
@@ -77,21 +90,74 @@ class StartView:
 
     @classmethod
     def menu(cls, main: Gio.Menu) -> Gio.Menu:
-        """The menu of the start page: "View" with its three items, one of them chosen (the
-        action's state), then the sections of the main menu."""
-        views = Gio.Menu()
-        # TRANSLATORS: items of the section "View" of the menu of the start page: how the
-        # devices are shown (automatic: tiles, a list for more than six in a section)
-        for view, words in ((devicelist.AUTO, pgettext("start view", "Automatic")),
-                            (devicelist.GRID, pgettext("start view", "Grid")),
-                            (devicelist.LIST, pgettext("start view", "List"))):
-            views.append(words, f"win.{cls.ACTION}::{view}")
+        """The menu of the start page: on top the row of buttons (the custom item CUSTOM,
+        put in by menu_button), then the sections of the main menu."""
+        item = Gio.MenuItem()
+        item.set_attribute_value("custom", GLib.Variant.new_string(cls.CUSTOM))
+        row = Gio.Menu()
+        row.append_item(item)
         menu = Gio.Menu()
-        # TRANSLATORS: heading of a section of the menu of the start page
-        menu.append_section(pgettext("start view", "View"), views)
+        menu.append_section(None, row)
         for i in range(main.get_n_items()):
             menu.append_item(Gio.MenuItem.new_from_model(main, i))
         return menu
+
+    @classmethod
+    def buttons(cls) -> Gtk.Box:
+        """The row: a round toggle button for each view, with the window's action and the view
+        as its target, so the one chosen is pressed (for screen readers too); each named, with
+        a tooltip; the row a group named "View"."""
+        row = Gtk.Box(spacing=18, halign=Gtk.Align.CENTER, margin_top=6, margin_bottom=6,
+                      accessible_role=Gtk.AccessibleRole.GROUP)
+        # TRANSLATORS: for screen readers: the row of buttons on top of the start page's
+        # menu, how the devices are shown
+        row.update_property([Gtk.AccessibleProperty.LABEL], [pgettext("start view", "View")])
+        # TRANSLATORS: buttons on top of the menu of the start page: how the devices are
+        # shown (automatic: tiles, a list for more than six in a section)
+        names = {devicelist.AUTO: pgettext("start view", "Automatic"),
+                 devicelist.GRID: pgettext("start view", "Grid"),
+                 devicelist.LIST: pgettext("start view", "List")}
+        # TRANSLATORS: the tooltip of the button Automatic on top of the start page's menu
+        # (its icon shows tiles above a list)
+        automatic = pgettext("start view", "Automatic: tiles, or a list when a section has "
+                                           "more than six devices")
+        for view in devicelist.VIEWS:
+            tooltip = automatic if view == devicelist.AUTO else names[view]
+            button = Gtk.ToggleButton(icon_name=VIEW_ICONS[view], tooltip_text=tooltip,
+                                      action_name=f"win.{cls.ACTION}",
+                                      action_target=GLib.Variant.new_string(view),
+                                      css_classes=["flat", "circular"], width_request=44,
+                                      height_request=44)
+            told = {Gtk.AccessibleProperty.LABEL: names[view]}
+            if view == devicelist.AUTO:
+                told[Gtk.AccessibleProperty.DESCRIPTION] = automatic
+            button.update_property(list(told), list(told.values()))
+            row.append(button)
+        return row
+
+    @classmethod
+    def menu_button(cls, main: Gio.Menu) -> Gtk.MenuButton:
+        """The start page's menu button: menu() with the row of buttons in it; opened, the
+        focus on the button of the view chosen (as in a group of radio buttons)."""
+        button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=cls.menu(main),
+                                tooltip_text=_("Main Menu"), primary=True)
+        popover = button.get_popover()
+        popover.add_child(cls.buttons(), cls.CUSTOM)
+        popover.connect("show", cls._focus_chosen)
+        return button
+
+    @staticmethod
+    def _focus_chosen(popover) -> None:
+        todo = [popover]
+        while todo:
+            widget = todo.pop()
+            if isinstance(widget, Gtk.ToggleButton) and widget.get_active():
+                widget.grab_focus()
+                return
+            child = widget.get_first_child()
+            while child is not None:
+                todo.append(child)
+                child = child.get_next_sibling()
 
     @classmethod
     def install(cls, win) -> None:

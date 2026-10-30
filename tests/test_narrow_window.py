@@ -315,6 +315,15 @@ def _min_width(widget) -> int:
     return widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
 
 
+def _all(widget):
+    """The widgets under `widget`, at any depth."""
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        yield from _all(child)
+        child = child.get_next_sibling()
+
+
 DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "updates-beta",
                 "updates-beta-drive",
                 "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
@@ -448,6 +457,28 @@ def test_the_start_page_in_the_view_chosen_fits_the_narrowest_window(narrow_wind
     kinds = {type(item).__name__ for item in win.start.tiles()}
     assert kinds == ({"DeviceRow"} if view == "list" else {"FlowBoxChild"})
     assert _min_width(win.start.page) <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_menu_of_the_start_page_fits_the_narrowest_window(narrow_window, language):
+    """Open, with the row of the view's buttons on top: no wider than the window, the three
+    buttons side by side."""
+    from gi.repository import Gtk
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    button = next(w for w in _all(win.start.header) if isinstance(w, Gtk.MenuButton))
+    popover = button.get_popover()
+    button.popup()
+    _iterate(0.1)
+    try:
+        assert popover.measure(Gtk.Orientation.HORIZONTAL, -1)[1] <= NARROWEST
+        buttons = [w for w in _all(popover) if isinstance(w, Gtk.ToggleButton)]
+        assert len(buttons) == 3
+        assert len({b.compute_bounds(popover)[1].get_y() for b in buttons}) == 1
+    finally:
+        button.popdown()
+        _iterate(0.05)
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

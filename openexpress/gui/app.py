@@ -248,14 +248,19 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
 
     @staticmethod
     def _main_menu() -> Gio.Menu:
+        """Preferences, Keyboard Shortcuts | Report a Device or Problem… | About openExpress:
+        GNOME's order, the report on its own."""
         menu = Gio.Menu()
         section = Gio.Menu()
         section.append(_("Preferences"), "app.preferences")
         if hasattr(Adw, "ShortcutsDialog"):
             section.append(_("Keyboard Shortcuts"), "app.shortcuts")
-        section.append(_("Report a Device or Problem…"), "app.report")
-        section.append(_("About openExpress"), "app.about")
         menu.append_section(None, section)
+        for words, action in ((_("Report a Device or Problem…"), "app.report"),
+                              (_("About openExpress"), "app.about")):
+            section = Gio.Menu()
+            section.append(words, action)
+            menu.append_section(None, section)
         return menu
 
     def _build_layout(self) -> None:
@@ -355,9 +360,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # The start page is the root; the device view comes above it.
         refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text=_("Refresh"),
                              action_name="win.refresh")
-        start_menu = Gtk.MenuButton(icon_name="open-menu-symbolic",
-                                    menu_model=StartView.menu(menu),
-                                    tooltip_text=_("Main Menu"), primary=True)
+        start_menu = StartView.menu_button(menu)
         self.start = StartPage(self._open_tile, header_start=[refresh], header_end=[start_menu],
                                picture_of=lambda part: pictures.known(self, part))
         StartView.install(self)

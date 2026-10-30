@@ -64,8 +64,20 @@ def test_the_main_menu_and_the_start_page_s_menu(window):
             ("app.report", None), ("app.about", None)]
     menus = [_items(b.get_menu_model()) for b in [*_all(window), *_all(window.start.page)]
              if isinstance(b, Gtk.MenuButton) and b.get_menu_model() is not None]
-    start = [("win.start-view", v) for v in ("auto", "grid", "list")] + main
+    start = [(None, None)] + main  # the row of the view's buttons: a custom item
     assert main in menus and start in menus
+
+
+def test_the_icon_of_automatic_is_in_the_program_and_in_the_flatpak():
+    from pathlib import Path
+
+    from openexpress.paths import APP_ID
+
+    root = Path(__file__).resolve().parent.parent
+    icon = f"{APP_ID}-view-auto-symbolic"
+    assert (root / "openexpress" / "data" / f"{icon}.svg").is_file()
+    manifest = (root / "packaging/flatpak/io.github.tomaszbojanowski.OpenExpress.yml").read_text()
+    assert "${FLATPAK_ID}-view-auto-symbolic.svg ${FLATPAK_DEST}" in manifest
 
 
 def test_the_side_panel_chooses_a_section(window):
