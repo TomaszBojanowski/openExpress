@@ -136,8 +136,8 @@ def account_country(s) -> str | None:
             or getattr(s.client, "verified_unit_id", None) is None):
         return None
     if not s.account_country_asked:
-        # Kept an hour (answers); threads asking at once share one request, and each gets
-        # its answer (none is told "not known" while another asks).
+        # Kept for a while (answers.LIFETIMES); threads asking at once share one request,
+        # and each gets its answer (none is told "not known" while another asks).
         s.account_country_code = read_account_country(s.client.profile_country)
         s.account_country_asked = True
     return s.account_country_code
@@ -312,8 +312,8 @@ def unit_id_of(value) -> int | None:
 def require_account_device(client: GarminClient, unit_id: int,
                            fresh: bool = False) -> list[dict]:
     """Allow account operations on this watch only if the account lists it: returns the
-    account's device list fetched for the check (kept a few minutes, answers; `fresh`: asked
-    anew, which every write to the account and every upload asks for; no override).
+    account's device list fetched for the check (kept for a while, answers.LIFETIMES; `fresh`:
+    asked anew, which every write to the account and every upload asks for; no override).
     Raises NotAccountDevice when the watch is not on it, OwnershipUnknown when it cannot be
     fetched, Unauthorized and ClockSkew as they are. Leaves `client.verified_unit_id` set on
     success, None otherwise."""

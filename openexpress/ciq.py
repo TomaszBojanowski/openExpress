@@ -451,7 +451,7 @@ class StoreApi:
         return lower_keys(self.client._json(resp, what)) if resp.content else None
 
     def _kept(self, kind: str, device: GarminDevice, key, ask):
-        """An answer about the device's apps, kept a moment (answers)."""
+        """An answer about the device's apps, kept for a while (answers.LIFETIMES)."""
         self.client.require_verified(device.unit_id)
         return answers.ANSWERS.ask(kind, (*self.client.account_scope(), device.unit_id,
                                           *key), ask, about=[device.unit_id])

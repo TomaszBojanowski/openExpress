@@ -421,9 +421,9 @@ class GarminClient:
         return lower_keys(self._json(resp, what)) if resp.content else {}
 
     def unit_info(self, unit_id: int, part_number: str) -> dict:
-        """What Garmin's update server knows about the device; needs no login. Kept 7 days
-        (answers), only the fields the program reads: the answer carries the unit ID and the
-        serial number, never logged or kept."""
+        """What Garmin's update server knows about the device; needs no login. Kept for a while
+        (answers.LIFETIMES), only the fields the program reads: the answer carries the unit ID
+        and the serial number, never logged or kept."""
         def ask():
             return self._omt(
                 "GET",
@@ -571,7 +571,8 @@ class GarminClient:
 
     def profile_country(self, fresh: bool = False) -> str | None:
         """The country code of the account's location, when the profile has one. Read-only.
-        Kept an hour (answers); `fresh`: asked anew (whether data may be uploaded)."""
+        Kept for a while (answers.LIFETIMES); `fresh`: asked anew (whether data may be
+        uploaded)."""
         self.require_verified()
 
         def ask():
