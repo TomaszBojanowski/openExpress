@@ -1046,6 +1046,14 @@ class MassStorageNotice(NotThereYet, OrdinaryStop):
     log_reason = "a notice about the USB mode of the device"
 
 
+class NoDevice(NotThereYet, OrdinaryStop):
+    """No Garmin device on USB at all: the state the program waits in (the window started
+    without one), not a failure. The user is told as for NotThereYet; the log says it in one
+    line of INFO."""
+
+    log_reason = "no Garmin device is connected"
+
+
 class SeveralDevices(DeviceError):
     """More than one device where one was to be opened. `devices`: what was found (kind,
     address, USB id), for a window that lets the user choose; the text is for the command
@@ -1343,6 +1351,9 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
                         continue
                 if state == MASS_STORAGE and isinstance(e, NotThereYet):
                     raise MassStorageNotice(not_ready_text(state)) from e
+                if state == ABSENT and isinstance(e, NotThereYet) \
+                        and not isinstance(e, OrdinaryStop):
+                    raise NoDevice(str(e)) from e
                 raise
             gone_since = None
             if state == PRESENT and mtp_missing():
