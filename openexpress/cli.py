@@ -695,11 +695,8 @@ def cmd_sync(args) -> int:
                        "Add --apply to run the sync."))
         return 0
     try:
-        status = _Status()
-        try:
-            summary = service.run_sync(session, progress=Reporter(status), options=options)
-        finally:
-            status.close()
+        with _progress() as progress:
+            summary = service.run_sync(session, progress=progress, options=options)
     except service.FirstSyncChoiceNeeded:
         print(
             "\n" + _("This is the first sync with this program. If the device also syncs "
@@ -880,6 +877,17 @@ class _Status:
 def _plain(text: str) -> str:
     """The hard spaces of the program's texts as plain ones, as the command line writes."""
     return text.replace("\u00a0", " ")
+
+
+@contextlib.contextmanager
+def _progress():
+    """The progress of a long command: progress.Reporter telling _Status, whose line is
+    ended when the command is."""
+    status = _Status()
+    try:
+        yield Reporter(status)
+    finally:
+        status.close()
 
 
 class _Bar:
@@ -1153,8 +1161,8 @@ def _maps_add(args, dev, st, all_maps) -> int:
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
-    with _own_map_hints():
-        path = ownmaps.add(plan, dev, st, transfer_progress=_Bar())
+    with _own_map_hints(), _progress() as progress:
+        path = ownmaps.add(plan, dev, st, progress=progress)
     print(_("Wrote {path} ({size}).").format(path=path, size=_human(plan.size)))
     return 0
 
@@ -1278,7 +1286,8 @@ def cmd_maps(args) -> int:
             if not args.apply:
                 print(_("Dry run. Add --apply."))
                 continue
-            removed = mp.uninstall(m, all_maps, st, progress=lambda s: print("  " + s))
+            with _progress() as progress:
+                removed = mp.uninstall(m, all_maps, st, progress=progress)
             print(ngettext("Removed {count} file.", "Removed {count} files.",
                            len(removed)).format(count=len(removed)))
             continue
@@ -1313,14 +1322,14 @@ def cmd_maps(args) -> int:
         if not args.apply:
             print(_("Dry run: nothing was downloaded or written. Add --apply."))
             continue
-        rep = mp.install(
-            m, all_maps, st,
-            activate=lambda ident: client.activate_maps(dev.raw, [ident]),
-            session=client.http,
-            url_salt=_url_salt(),
-            progress=lambda s: print("  " + s),
-            transfer_progress=_Bar(),
-        )
+        with _progress() as progress:
+            rep = mp.install(
+                m, all_maps, st,
+                activate=lambda ident: client.activate_maps(dev.raw, [ident]),
+                session=client.http,
+                url_salt=_url_salt(),
+                progress=progress,
+            )
         print(ngettext("Wrote {count} map file and {unlocks} unlock files.",
                        "Wrote {count} map files and {unlocks} unlock files.",
                        len(rep.written)).format(count=len(rep.written),

@@ -2,6 +2,7 @@ import base64
 import hashlib
 import http.server
 import json
+import logging
 import threading
 
 import pytest
@@ -240,15 +241,17 @@ def east_with_shared_dem(server, device_root):
     return all_maps, all_maps[1]
 
 
-def test_map_files_are_written_smallest_first_and_the_unlock_last(server, device_root, xdg):
+def test_map_files_are_written_smallest_first_and_the_unlock_last(server, device_root, xdg,
+                                                                  caplog):
     all_maps, east = east_with_shared_dem(server, device_root)
     assert [f.device_path for f in east.files] == ["Garmin/E2.img", "Garmin/DEM.img"]
     st = RecordingStorage(device_root)
-    lines = []
-    maps.install(east, all_maps, st, unlock_e2, progress=lines.append)
+    with caplog.at_level(logging.DEBUG, logger="openexpress.maps"):
+        maps.install(east, all_maps, st, unlock_e2, progress=lambda message: None)
     assert st.order == ["GARMIN/DEM.img", "GARMIN/E2.img", "GARMIN/E2.gma"]
-    downloads = [line for line in lines if line.startswith("Downloading ")]
-    assert [line.split()[1] for line in downloads] == ["Garmin/DEM.img", "Garmin/E2.img"]
+    downloads = [r.getMessage() for r in caplog.records
+                 if r.getMessage().startswith("map install: downloading ")]
+    assert [line.split()[3] for line in downloads] == ["Garmin/DEM.img", "Garmin/E2.img"]
 
 
 def test_files_of_the_same_size_keep_the_order_of_the_server():

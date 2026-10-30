@@ -27,7 +27,8 @@ from openexpress import applog, cache, download, paths
 from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
-from openexpress.i18n import _, country_name, human_size
+from openexpress.i18n import _, country_name
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -646,7 +647,7 @@ def _install(
     storage: Storage,
     activate: Callable[[dict], dict],
     session=None,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     transfer_progress: Callable[[int, int], None] | None = None,
     download_progress: Callable[[int, int | None], None] | None = None,
     url_salt: str | None = None,
@@ -662,11 +663,19 @@ def _install(
 
     files = write_order(m)
     local: dict[str, Path] = {}
-    # One bar for all the files of the map.
-    overall = download.Overall(m.size, download_progress) if download_progress else None
+    say = progress if progress is not None else (lambda _message: None)
+    # The map as a whole, by its name: the files are the server's and the device's own.
+    downloading = _("Downloading {name}").format(name=m.name)
+
+    def downloaded(done: int, total: int | None) -> None:
+        say(Step(downloading, done, total, in_bytes=True))
+        if download_progress:
+            download_progress(done, total)
+
+    listening = progress is not None or download_progress is not None
+    overall = download.Overall(m.size, downloaded) if listening else None
     for f in files:
-        progress(_("Downloading {path} ({size})")
-                 .format(path=f.device_path, size=human_size(f.size)))
+        log.debug("map install: downloading %s (%s)", f.device_path, applog.size(f.size))
         urls = [h + f.url.lstrip("/") for h in m.hosts] if not f.url.startswith("http") else [f.url]
         if url_salt:
             urls = [download.tokenize(u, url_salt) for u in urls]
@@ -675,7 +684,7 @@ def _install(
         if overall:
             overall.finished(f.size)
 
-    progress(_("Activating the map on the Garmin server"))
+    say(_("Activating the map on the Garmin server"))
     act = activate(m.identifier)
     entries = act.get("unlocks") or []
     unlocks = [(u.get("filename"), u.get("gma")) for u in entries
@@ -693,23 +702,40 @@ def _install(
                     m.version)
 
     report = MapReport()
-    for p in removing:
-        progress(_("Removing old file {path}").format(path=p))
+    for n, p in enumerate(removing, 1):
+        # TRANSLATORS: a step of a map install: files of an older version or of maps it
+        # replaces ("Removing old map files · 2 of 5")
+        say(Step(_("Removing old map files"), n, len(removing)))
+        log.debug("map install: removing %s", p)
         storage.delete(p)
         report.removed.append(p)
     shared = protected_files(all_maps, m)
+    # TRANSLATORS: a step of a map install; {name}: the map ("… · 1.2 GB of 6.3 GB")
+    copying = _("Copying {name} to the device").format(name=m.name)
+    copy_total = sum(f.size or 0 for f in files)
+    copied = [0]  # the bytes of the files written before the current one
+
+    def written(done: int, total: int | None) -> None:
+        say(Step(copying, copied[0] + done, copy_total, in_bytes=True))
+        if transfer_progress:
+            transfer_progress(done, total)
+
+    # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
+    # without -p in the Flatpak).
+    told = written if progress is not None or transfer_progress is not None else None
     for f in files:
-        progress(_("Copying to the device: {path}").format(path=f.device_path))
+        log.debug("map install: copying %s", f.device_path)
         if f.device_path.casefold() not in shared:
-            real = _write_checked(storage, f, local[f.device_path], transfer_progress)
+            real = _write_checked(storage, f, local[f.device_path], told)
         else:
-            real = _write_shared(storage, f, local[f.device_path], transfer_progress,
+            real = _write_shared(storage, f, local[f.device_path], told,
                                  _users(all_maps, m, f.device_path))
+        copied[0] += f.size or 0
         report.written.append(real)
     gmas = []
     for fname, gma in unlocks:
         data = base64.b64decode(gma)
-        real = _write_unlock(storage, _device_path(fname), data, progress, sleep)
+        real = _write_unlock(storage, _device_path(fname), data, say, sleep)
         report.unlocks.append(real)
         gmas.append(_short_md5(data))
     log.info("map install: %s %s, %d files written (%s), %d old files removed, %d unlock files"
@@ -815,11 +841,13 @@ def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
     if not m.can_uninstall:
         raise MapError(cannot_remove_message(m))
     removed = []
-    for p in removal_list(all_maps, m, rewriting=False):
-        if storage.exists(p):
-            progress(_("Removing {path}").format(path=p))
-            storage.delete(p)
-            removed.append(p)
+    there = [p for p in removal_list(all_maps, m, rewriting=False) if storage.exists(p)]
+    for n, p in enumerate(there, 1):
+        # TRANSLATORS: a step of a map removal; {name}: the map ("… · 2 of 5")
+        progress(Step(_("Removing {name}").format(name=m.name), n, len(there)))
+        log.debug("map removal: %s", p)
+        storage.delete(p)
+        removed.append(p)
     log.info("map removal: %s, %d files removed", m.name, len(removed))
     return removed
 

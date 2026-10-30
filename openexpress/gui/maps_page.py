@@ -296,7 +296,7 @@ class MapsPage:
             self.run_task(
                 _("Copying the map…"),
                 writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
-                                                     transfer_progress=self.fraction)),
+                                                     progress=self.progress)),
                 lambda real: written(real, plan), read_again_after_failure(self, "maps", refused))
 
         def ask_copy(plan):
@@ -432,7 +432,6 @@ class MapsPage:
                     m, self.maps_cache, s.storage,
                     activate=lambda ident: s.client.activate_maps(s.device.raw, [ident]),
                     session=s.client.http, progress=self.progress,
-                    transfer_progress=self.fraction, download_progress=self.fraction,
                     url_salt=s.client.consumer.url_salt)),
                 lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
                                         .format(name=m.name)),

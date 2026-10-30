@@ -902,6 +902,7 @@ def own_maps_window(key="maps"):
     win.error = lambda title, text: win.shown.append(("error", title, text))
     win.toast = lambda text: win.shown.append(("toast", text))
     win.fraction = lambda done, total: None
+    win.progress = lambda message: None
     win.maps_cache = []
     win.answer = "ok"  # what the user picks in a confirmation (answered_at_once)
     win.run_task = RunNow(on_call=lambda call: win.shown.append(("task", call.title)))

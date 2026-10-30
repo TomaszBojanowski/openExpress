@@ -132,9 +132,9 @@ def test_map_download_progress_shows_a_readable_size(server, device_root, xdg):
                                              "gma": base64.b64encode(b"UNLOCK").decode()}]},
                  progress=lines.append)
     downloads = [line for line in lines if line.startswith("Downloading ")]
-    assert downloads == [f"Downloading {f.device_path} ({human_size(f.size)})"
-                         for f in sorted(east.files, key=lambda f: f.size)]
-    assert downloads  # every file, each with its own size
+    # The map as a whole, by its name: "Downloading East · 1.2 MB of 3.4 MB".
+    assert downloads and downloads[-1] == (
+        f"Downloading {east.name}\u00a0· {human_size(east.size)} of {human_size(east.size)}")
 
 
 def not_enough_space(server, device_root, tmp_path, monkeypatch):
