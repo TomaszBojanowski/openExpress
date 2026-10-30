@@ -1,14 +1,15 @@
 """`openexpress sync` on a watch connected as a USB drive: its dry run shows the plan of its
 uploads when service.drive_sync_refusal lets it sync, and the refusal says which reason
-stopped it. Its unit-info is asked when it is not kept (read only), once. The other commands
-still refuse a drive. All devices, answers and errors are made up."""
+stopped it. Its unit-info is asked when it is not kept (read only), once. Its sync only
+uploads: Garmin Connect's queue is not asked, and --download-only is refused. The other
+commands still refuse a drive. All devices, answers and errors are made up."""
 
 import pytest
-from fakes import RTL515_XML, SyncAccount
+from fakes import COURSE, RTL515_XML, SyncAccount
 
 from openexpress import cli, i18n, service
 from openexpress.connect import ApiError, GarminClient
-from openexpress.device.storage import UmsStorage
+from openexpress.device.storage import LocalStorage, UmsStorage
 from openexpress.device.xmldevice import parse
 from openexpress.settings import Settings
 
@@ -22,6 +23,10 @@ NO_TYPES_TEXT = ("This device is connected as a USB drive and declares no data t
 NO_ANSWER_TEXT = ("This device is connected as a USB drive, and Garmin's server could not be "
                   "asked whether Garmin Connect takes its data, so it is not synced: ")
 NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused)")
+UPLOADS_ONLY_TEXT = ("On a USB drive the sync only uploads: nothing is downloaded from Garmin "
+                     "Connect to the device.")
+DOWNLOAD_ONLY_TEXT = ("This device is connected as a USB drive: its sync only uploads, so "
+                      "there is nothing to do with --download-only.")
 
 
 class DriveAccount(SyncAccount):
@@ -51,8 +56,8 @@ def drive_at(root, monkeypatch):
     return storage
 
 
-def account_for(monkeypatch, answer):
-    account = DriveAccount(answer)
+def account_for(monkeypatch, answer, **kw):
+    account = DriveAccount(answer, **kw)
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
     return account
 
@@ -134,12 +139,66 @@ def test_sync_apply_on_a_drive_that_may_sync_still_uploads_nothing(device_root, 
     before = sorted((p.relative_to(device_root), p.stat().st_size, p.stat().st_mtime_ns)
                     for p in device_root.rglob("*"))
     drive_at(device_root, monkeypatch)
-    account = account_for(monkeypatch, {"connectsupport": "Required"})
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
     assert cli.main(["sync", "--apply"]) == 1
     assert "A device connected as a USB drive is not synced." in capsys.readouterr().err
     assert account.uploads == [] and "upload" not in account.asked
+    assert "queue" not in account.asked
     assert sorted((p.relative_to(device_root), p.stat().st_size, p.stat().st_mtime_ns)
                   for p in device_root.rglob("*")) == before
+
+
+# --- only uploads ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("flags", [[], ["--upload-only"]])
+def test_the_dry_run_of_a_drive_only_uploads(device_root, monkeypatch, capsys, flags):
+    """Garmin Connect's queue is not asked, though it has a course for the device, and the
+    dry run says in one line that nothing is downloaded instead of planning the downloads."""
+    drive_at(device_root, monkeypatch)
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    assert cli.main(["sync", *flags]) == 0
+    out = capsys.readouterr().out
+    assert "queue" not in account.asked and "download" not in account.asked
+    assert "To download from Connect" not in out
+    assert out.count(UPLOADS_ONLY_TEXT) == 1 and "To upload: 3 files" in out
+
+
+def test_download_only_on_a_drive_is_refused_before_any_request(device_root, monkeypatch,
+                                                                capsys, log_file):
+    drive_at(device_root, monkeypatch)
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    assert cli.main(["sync", "--download-only"]) == 1
+    err = capsys.readouterr().err
+    assert DOWNLOAD_ONLY_TEXT in err and err.count("\n") == 1
+    assert account.asked == []
+    assert "sync: a USB drive not synced: download-only" in log_file.read_text()
+
+
+def test_a_device_not_a_drive_still_has_the_queue_in_its_dry_run(device_root, monkeypatch,
+                                                                  capsys):
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda **_kw: LocalStorage(device_root))
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    assert cli.main(["sync"]) == 0
+    out = capsys.readouterr().out
+    assert "queue" in account.asked and "unit-info" not in account.asked
+    assert "To download from Connect to the device: 1" in out and UPLOADS_ONLY_TEXT not in out
+
+
+def test_the_words_of_only_uploading_are_said_in_polish_too(device_root, monkeypatch, capsys):
+    drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"})
+    try:
+        assert cli.main(["--lang", "pl", "sync"]) == 0
+        assert cli.main(["--lang", "pl", "sync", "--download-only"]) == 1
+    finally:
+        i18n.setup("en")
+    said = capsys.readouterr()
+    assert ("Na dysku USB synchronizacja tylko wysyła: nic nie jest pobierane z Garmin Connect "
+            "na urządzenie.") in said.out
+    assert ("To urządzenie jest podłączone jako dysk USB: jego synchronizacja tylko wysyła, "
+            "więc z --download-only nie ma nic do zrobienia.") in said.err
 
 
 def test_the_refusals_are_said_in_polish_too():
