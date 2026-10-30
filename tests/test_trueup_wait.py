@@ -203,7 +203,7 @@ def test_the_command_line_shows_the_wait_on_one_line(monkeypatch, capsys):
 
     err = _Terminal(True)
     monkeypatch.setattr(cli.sys, "stderr", err)
-    show = cli._SyncProgress()
+    show = cli._Status()
     text = "Waiting 3 min 20 s for Garmin Connect to prepare TrueUp…"
     for done in (0, 0.5, 1):
         show(TimedWait(text, seconds=200, done=done))
@@ -217,7 +217,7 @@ def test_a_stopped_wait_ends_its_line_before_the_next(monkeypatch, capsys):
 
     err = _Terminal(True)
     monkeypatch.setattr(cli.sys, "stderr", err)
-    show = cli._SyncProgress()
+    show = cli._Status()
     show(TimedWait("Waiting", seconds=200, done=0.3))
     show("Stopped waiting for TrueUp; Garmin Connect sends it with the next sync.")
     assert err.text == "\r  Waiting  30%\n"
@@ -227,7 +227,7 @@ def test_not_on_a_terminal_the_wait_is_one_plain_line(monkeypatch, capsys):
     from openexpress import cli
 
     monkeypatch.setattr(cli.sys, "stderr", _Terminal(False))
-    show = cli._SyncProgress()
+    show = cli._Status()
     for done in (0, 0.5, 1):
         show(TimedWait("Waiting", seconds=200, done=done))
     assert capsys.readouterr().out == "  Waiting\n"

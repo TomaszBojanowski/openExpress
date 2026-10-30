@@ -26,6 +26,7 @@ from openexpress.console import error as _error
 from openexpress.device.storage import DeviceError, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.i18n import N_, _, human_size, ngettext, pgettext
+from openexpress.progress import Reporter
 from openexpress.settings import (
     ENVIRONMENTS,
     Consumer,
@@ -694,7 +695,11 @@ def cmd_sync(args) -> int:
                        "Add --apply to run the sync."))
         return 0
     try:
-        summary = service.run_sync(session, progress=_SyncProgress(), options=options)
+        status = _Status()
+        try:
+            summary = service.run_sync(session, progress=Reporter(status), options=options)
+        finally:
+            status.close()
     except service.FirstSyncChoiceNeeded:
         print(
             "\n" + _("This is the first sync with this program. If the device also syncs "
@@ -819,32 +824,62 @@ def cmd_backup(args) -> int:
     return 0
 
 
-class _SyncProgress:
-    """The progress of `sync --apply`: each step on a line of its own. A wait of known length
-    (TrueUp) is one line on stderr that fills in place on a terminal, and only its first line
-    elsewhere; a step after an unfinished one (a wait stopped) starts on a new line."""
+class _Status:
+    """Progress on the command line; progress.Reporter decides how often. A `Step`: on a
+    terminal one line on stderr, written over; elsewhere a line when a step of another kind
+    (head) begins, never a line a file. A wait of known length (TrueUp): one line on stderr
+    that fills in place on a terminal, only its first line elsewhere. Any other message: a
+    line of its own. `close` ends a line left open."""
 
-    def __init__(self):
+    def __init__(self, err=None, out=None):
+        self._err, self._out = err, out
         self.open = False
+        self.head = None
+
+    @property
+    def err(self):
+        return self._err or sys.stderr
+
+    @property
+    def out(self):
+        return self._out or sys.stdout
 
     def __call__(self, message: str) -> None:
-        from openexpress.progress import TimedWait
+        from openexpress.progress import Step, TimedWait
 
         if isinstance(message, TimedWait):
-            if not sys.stderr.isatty():
+            self.head = None
+            if not self.err.isatty():
                 if message.done == 0:
-                    print("  " + message)
+                    print("  " + _plain(message), file=self.out)
                 return
-            print(f"\r  {message} {int(message.done * 100):3d}%", end="", file=sys.stderr,
+            print(f"\r  {_plain(message)} {int(message.done * 100):3d}%", end="", file=self.err,
                   flush=True)
             self.open = message.done < 1
             if not self.open:
-                print(file=sys.stderr)
+                print(file=self.err)
             return
+        if isinstance(message, Step):
+            if self.err.isatty():
+                print(f"\r\x1b[K  {_plain(message)}", end="", file=self.err, flush=True)
+                self.open = True
+            elif message.head != self.head:
+                print("  " + _plain(message.head), file=self.out)
+            self.head = message.head
+            return
+        self.close()
+        self.head = None
+        print("  " + _plain(message), file=self.out)
+
+    def close(self) -> None:
         if self.open:
-            print(file=sys.stderr)
+            print(file=self.err)
             self.open = False
-        print("  " + message)
+
+
+def _plain(text: str) -> str:
+    """The hard spaces of the program's texts as plain ones, as the command line writes."""
+    return text.replace("\u00a0", " ")
 
 
 class _Bar:

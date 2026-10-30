@@ -47,6 +47,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     collect_garbage,
     inform,
     log_unexpected,
+    progress_reporter,
     stop_waiting,
 )
 from openexpress.i18n import _, pgettext  # noqa: E402
@@ -118,6 +119,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._usb_title = ""
         self.busy = False
         self._waiting = 0  # GLib timer that moves the bar during a wait for a server
+        self._reporter = progress_reporter(self)  # how often progress is shown
         self.gui_settings = load_gui_settings()
         self.maps_cache = None
         self.updates_cache = None

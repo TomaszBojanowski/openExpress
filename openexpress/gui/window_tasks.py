@@ -9,7 +9,7 @@ collection of reference cycles after it (collect_garbage), an error nobody expec
 the log (log_unexpected), and the questions and messages of the window, which close as
 Cancel (confirm, Answer, inform).
 
-Has: the task under way (busy, _waiting, _task_lets_close) and the action buttons.
+Has: the task under way (busy, _waiting, _task_lets_close, _reporter) and the action buttons.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from openexpress.errors import OrdinaryStop, UserFacingError  # noqa: E402
 from openexpress.gui.tasks import WindowClosed  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
-from openexpress.progress import TimedWait, Waiting  # noqa: E402
+from openexpress.progress import Reporter, Step, TimedWait, Waiting  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +71,21 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
         place.set_focusable(False)  # the widget itself takes the focus, as in a box
         place.set_halign(Gtk.Align.CENTER)
     return row
+
+
+def progress_reporter(win) -> Reporter:
+    """The window's one Reporter (progress.Reporter): the words of a step at most once a
+    second (a step held is shown by a timer of its own), the bar more often; on the GUI
+    thread, whichever thread tells it."""
+    def later(seconds, fn):
+        def once() -> bool:
+            fn()
+            return False
+
+        GLib.timeout_add(max(1, round(seconds * 1000)), once)
+
+    return Reporter(lambda message: GLib.idle_add(win._show_progress, message),
+                    bar=lambda done, total: win.fraction(done, total), later=later)
 
 
 def show_stop_waiting(win, visible: bool) -> None:
@@ -346,6 +361,7 @@ class TaskRunner:
         """A task starts or ends. Its indicator is the spinner until it tells its progress,
         then the bar (`_show_bar`, one way); none for a page that shows it loads (`in_page`)."""
         self._stop_waiting()
+        self._reporter.reset()  # nothing of a task before is shown later
         self.busy = busy
         self.action_bar.set_revealed(busy)
         self.progress_label.set_text(text)
@@ -361,7 +377,7 @@ class TaskRunner:
         self._update_actions()
 
     def progress(self, text: str) -> None:
-        GLib.idle_add(self._show_progress, text)
+        self._reporter(text)  # a step at most once a second (progress_reporter)
 
     def fraction(self, done: int, total: int | None) -> None:
         if total:
@@ -385,6 +401,9 @@ class TaskRunner:
             show_stop_waiting(self, text.done < 1 and stop is not None and not stop.is_set())
             return False
         show_stop_waiting(self, False)
+        if isinstance(text, Step) and text.fraction is not None:
+            self.progress_bar.set_fraction(text.fraction)  # how far: "3 of 8"
+            return False
         self.progress_bar.pulse()
         if isinstance(text, Waiting):
             until = time.monotonic() + LONG_WAIT_S

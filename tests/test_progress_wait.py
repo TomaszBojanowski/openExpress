@@ -280,3 +280,22 @@ def test_loading_a_page_runs_its_task_as_one_with_its_own_indicator():
         run_task=lambda *args, **kw: asked.append(kw))
     MainWindow._load(win, "maps", "Checking maps…", lambda: None, lambda result: None)
     assert asked == [{"device": True, "in_page": True}]
+
+
+def test_a_step_fills_the_bar_and_its_words_change_at_most_once_a_second(window):
+    from openexpress.progress import Step
+
+    window.set_busy(True)
+    window.progress(Step("Uploading activities", 1, 4))
+    assert window.progress_label.text == "Uploading activities · 1 of 4"
+    assert window.progress_bar.fraction == 0.25 and window.timers == {}
+    window.progress(Step("Uploading activities", 2, 4))  # within the second: held
+    assert window.progress_label.text.endswith("1 of 4")
+    ((interval, _fn),) = window.timers.values()
+    assert 0 < interval <= 1000
+    assert _tick(window) is False  # once
+    assert window.progress_label.text.endswith("2 of 4")
+    assert window.progress_bar.fraction == 0.5
+    window.set_busy(False)
+    window.progress(Step("Uploading activities", 3, 4))  # a task after: from the start
+    assert window.progress_label.text.endswith("3 of 4")
