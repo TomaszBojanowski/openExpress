@@ -910,6 +910,112 @@ def test_a_pendrive_with_a_garmin_folder_is_ignored(drives, monkeypatch):
     assert gio_storage.find_ums_devices() == []
 
 
+# --- a drive named for testing (OPENEXPRESS_TEST_DRIVE_USB) ------------------------------------
+#
+# For testing only, not for ordinary use: a pendrive with a copy of a watch's GARMIN folder
+# stands in for a watch connected as a USB drive. The IDs are made up.
+
+TEST_DRIVE_ENV = "OPENEXPRESS_TEST_DRIVE_USB"
+
+
+def _pendrive(drives, label="PENDRIVE", vendor="0781", product="5581", port="1-4", devnum=12,
+              disk="sdb", serial="0000abcdef71"):
+    return FakeDriveMount(drive_folder(drives, label=label),
+                          usb_drive(drives, vendor=vendor, product=product, port=port,
+                                    devnum=devnum, disk=disk, partition=f"{disk}1",
+                                    serial=serial))
+
+
+def _warnings(caplog):
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+
+
+def test_no_drive_is_named_for_testing_while_the_tests_run():
+    """conftest.py takes the variable out of the environment of every test."""
+    assert TEST_DRIVE_ENV not in os.environ
+    assert gio_storage.TEST_DRIVE_ENV == TEST_DRIVE_ENV
+
+
+def test_the_drive_named_for_testing_is_taken_for_a_garmin_drive(drives, monkeypatch, caplog):
+    """The mounted pendrive with these USB IDs is opened as a Garmin device in mass storage
+    mode, and the log says once, as a warning, that it is only for testing."""
+    monkeypatch.setenv(TEST_DRIVE_ENV, "0781:5581")
+    mount = _pendrive(drives)
+    monitor_with(monkeypatch, mount)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        (found,) = gio_storage.find_ums_devices()
+        assert len(gio_storage.find_ums_devices()) == 1
+    assert (found.uri, found.mounted, found.kind) == (mount.root.get_uri(), True, "ums")
+    assert (found.usb.product, found.usb.bus, found.usb.address) == ("5581", 1, 12)
+    storage = gio_storage.open_ums_storage(found)
+    assert storage.mass_storage
+    assert storage.exists("GARMIN/GarminDevice.xml")
+    (warning,) = _warnings(caplog)  # said once, not at every look
+    assert TEST_DRIVE_ENV in warning and "0781:5581" in warning and "testing" in warning
+    assert str(drives.media) not in caplog.text  # no local path (it has the user name)
+
+
+def test_the_variable_takes_only_the_mounted_drive_it_names(drives, monkeypatch):
+    """Another product of the same vendor, the same product of another vendor and the named
+    pendrive not mounted are not taken."""
+    monkeypatch.setenv(TEST_DRIVE_ENV, "0781:5581")
+    named = _pendrive(drives)
+    other_product = _pendrive(drives, label="OTHER", product="5583", port="1-5", devnum=13,
+                              disk="sdc", serial="0000abcdef72")
+    other_vendor = _pendrive(drives, label="KINGSTON", vendor="0951", port="1-6", devnum=14,
+                             disk="sdd", serial="0000abcdef73")
+    unmounted = usb_drive(drives, vendor="0781", product="5581", port="1-7", devnum=15,
+                          disk="sde", partition="sde1", serial="0000abcdef74")
+    (drives.block / "sde1" / "size").write_text("7800000\n")  # it has a medium
+    assert gio_storage.garmin_ums(other_product) is None
+    assert gio_storage.garmin_ums(other_vendor) is None
+    monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(
+        lambda: FakeMonitor(mounts=[named, other_product, other_vendor],
+                            volumes=[FakeVolume(None, unmounted, "PENDRIVE")])))
+    assert [d.uri for d in gio_storage.find_ums_devices()] == [named.root.get_uri()]
+
+
+@pytest.mark.parametrize("value", ["0781-5581", "781:5581", "0781:5581:0001", "0781:558g",
+                                   "pendrive"])
+def test_a_variable_in_another_form_is_ignored_with_a_warning(drives, monkeypatch, caplog,
+                                                              value):
+    """The pendrive is not taken, a Garmin drive still is, and the log says once why the
+    variable does nothing."""
+    monkeypatch.setenv(TEST_DRIVE_ENV, value)
+    pendrive = _pendrive(drives)
+    garmin = FakeDriveMount(drive_folder(drives),
+                            usb_drive(drives, port="1-5", devnum=13, disk="sdc", partition="sdc1"))
+    monitor_with(monkeypatch, pendrive, garmin)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert [d.uri for d in gio_storage.find_ums_devices()] == [garmin.root.get_uri()]
+        assert len(gio_storage.find_ums_devices()) == 1
+    (warning,) = _warnings(caplog)
+    assert TEST_DRIVE_ENV in warning and "VVVV:PPPP" in warning and "ignored" in warning
+
+
+def test_an_mtp_device_still_comes_before_the_drive_named_for_testing(drives, monkeypatch,
+                                                                      caplog):
+    """As with a Garmin drive: the command line opens the MTP device and says that it skipped
+    the drive; without an MTP device it opens the drive."""
+    from openexpress import service
+    from openexpress.device.storage import UmsStorage
+
+    monkeypatch.setenv(TEST_DRIVE_ENV, "0781:5581")
+    monitor_with(monkeypatch, _pendrive(drives))
+    mtp = object()
+    monkeypatch.setattr(gio_storage, "open_device_storage", lambda **_kw: mtp)
+    with caplog.at_level(logging.INFO, logger=service.log.name):
+        assert service.open_device_or_drive() is mtp
+    assert "an MTP device is open, 1 Garmin drive in mass storage mode skipped" in caplog.text
+
+    def no_mtp_device(**_kw):
+        raise gio_storage.NotThereYet("no MTP device")
+
+    monkeypatch.setattr(gio_storage, "open_device_storage", no_mtp_device)
+    storage = service.open_device_or_drive()
+    assert isinstance(storage, UmsStorage) and storage.mass_storage
+
+
 def test_a_garmin_drive_without_the_device_file_is_ignored(drives, monkeypatch, caplog):
     """E.g. the memory card of a Garmin device: vendor 091e, a GARMIN folder, no device file."""
     folder = drive_folder(drives, label="CARD", xml_path=None)

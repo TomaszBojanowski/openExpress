@@ -18,6 +18,20 @@ quietly when something is missing: the translation tests without gettext, the PT
 libusb-1.0 and the window-width tests without the Adwaita Sans font (the widths are measured in
 it). The tests never reach the network (one that tries fails) and need no device.
 
+## Trying a USB drive without such a watch
+
+For testing only, not for ordinary use. `OPENEXPRESS_TEST_DRIVE_USB=VVVV:PPPP` (the vendor
+and product ID that `lsusb` shows) makes openExpress take the mounted USB drive with these IDs
+for a Garmin device connected as a USB drive. A pendrive with a copy of a watch's
+`GARMIN/GarminDevice.xml` then stands in for that watch: the same unit ID, account and sync
+state, so `--apply` uploads to Garmin Connect as from that watch. The log says so in a warning
+(on the command line also in the terminal); a value in another form is ignored with a warning.
+A connected MTP device still comes first, and a drive that is not mounted is not taken.
+
+```bash
+OPENEXPRESS_TEST_DRIVE_USB=0781:5581 python3 -m openexpress sync    # dry run
+```
+
 
 ## Adding a translation
 

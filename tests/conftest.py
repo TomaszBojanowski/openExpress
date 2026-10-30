@@ -184,7 +184,9 @@ def _empty_sys_class_block(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def no_block_devices(_empty_sys_class_block, monkeypatch):
     """/sys/class/block is an empty folder, unless a test makes its own: a USB drive plugged
-    into this computer is never taken for a Garmin device in mass storage mode."""
+    into this computer is never taken for a Garmin device in mass storage mode, also when the
+    environment of the tests names one for testing (OPENEXPRESS_TEST_DRIVE_USB)."""
+    monkeypatch.delenv("OPENEXPRESS_TEST_DRIVE_USB", raising=False)
     try:
         from openexpress.device import gio_storage
     except (ImportError, ValueError):  # no PyGObject: nothing reads /sys/class/block
@@ -512,6 +514,7 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     monkeypatch.setattr(gio_storage, "_drive_places", {})
     monkeypatch.setattr(gio_storage, "_said_0003", {})
     monkeypatch.setattr(gio_storage, "_without_drive", frozenset())
+    monkeypatch.setattr(gio_storage, "_test_drive_said", set())
     # Nor the connections whose error logs an earlier test read (diagnostics.at_open).
     from openexpress import diagnostics
 

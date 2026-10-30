@@ -695,17 +695,48 @@ def drives_on_usb() -> frozenset[str]:
     return frozenset(place for place, _product in _mass_storage_on_usb())
 
 
+# For testing only, not for ordinary use: the mounted USB drive with the USB IDs in this
+# variable ("VVVV:PPPP", as lsusb shows them) is taken for a Garmin drive too, e.g. a pendrive
+# with a copy of a watch's GARMIN folder, so that the way of a watch connected as a USB drive
+# can be tried without one. The log says so once, as a warning.
+TEST_DRIVE_ENV = "OPENEXPRESS_TEST_DRIVE_USB"
+_TEST_DRIVE_IDS = re.compile(r"[0-9a-f]{4}:[0-9a-f]{4}")
+_test_drive_said: set[str] = set()  # the warnings about it already in the log
+
+
+def _warn_once(key: str, *message) -> None:
+    if key not in _test_drive_said:
+        _test_drive_said.add(key)
+        log.warning(*message)
+
+
+def _named_for_testing(vendor: str, product: str) -> bool:
+    """Whether the USB device vendor:product is the drive named in TEST_DRIVE_ENV."""
+    value = os.environ.get(TEST_DRIVE_ENV, "").strip().lower()
+    if not value:
+        return False
+    if not _TEST_DRIVE_IDS.fullmatch(value):
+        _warn_once("form", "device: %s is not in the form VVVV:PPPP (four hexadecimal digits "
+                   "each), ignored", TEST_DRIVE_ENV)
+        return False
+    if value != f"{vendor}:{product}":
+        return False
+    _warn_once(value, "device: %s: the USB drive %s is taken for a Garmin drive, for testing "
+               "only", TEST_DRIVE_ENV, value)
+    return True
+
+
 def garmin_ums(mount) -> GarminUsb | None:
     """Whether a Gio mount is a Garmin device in mass storage mode: a local folder on a block
-    device of a USB device of vendor 091e; None if not. Its files are not read here (that is
-    find_ums_devices), only /sys."""
+    device of a USB device of vendor 091e (or the drive named in TEST_DRIVE_ENV); None if not.
+    Its files are not read here (that is find_ums_devices), only /sys."""
     root = mount.get_root()
     uri = root.get_uri() if root is not None else None
     if not uri or not uri.lower().startswith("file://"):
         return None
     volume = mount.get_volume() if hasattr(mount, "get_volume") else None
     block = _block_usb(volume.get_identifier("unix-device") if volume is not None else None)
-    if block is None or block[0][0] != GARMIN_VID:
+    if block is None or (block[0][0] != GARMIN_VID and not _named_for_testing(*block[0][:2])):
         return None
     return _drive_usb(block[0], block[1], volume)
 
