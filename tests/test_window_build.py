@@ -121,3 +121,32 @@ def test_the_bar_at_the_bottom(window):
     window.set_busy(False)
     assert not window.action_bar.get_reveal_child() and not window.busy
     assert not window.stop_wait_button.get_visible() and window._waiting == 0
+
+
+def _toast_widgets(overlay):
+    return [w for w in _all(overlay) if "ToastWidget" in type(w).__name__ and w.get_mapped()]
+
+
+def test_a_toast_on_a_device_s_view_stays_above_the_bar(window):
+    """A task ends with a toast ("Removed 5 files") while the next one shows on the bar at the
+    bottom ("Checking …"): the toast is above the bar, never over its words. On the start page,
+    which has no such bar, a toast is the window's."""
+    window.present()
+    window.navigation.push(window.device_view)
+    assert _turn_until(lambda: window.navigation.get_visible_page() is window.device_view)
+    window.set_busy(True, "Checking for updates…")
+    window.toast("Removed 5 files")
+    assert _turn_until(lambda: _toast_widgets(window.page_toasts))
+    for _ in range(40):  # the toast slides in
+        _turn_until(lambda: False, seconds=0.01)
+    (toast,) = _toast_widgets(window.page_toasts)
+    ok_toast, toast_box = toast.compute_bounds(window)
+    ok_bar, bar_box = window.action_bar.compute_bounds(window)
+    assert ok_toast and ok_bar and window.action_bar.get_reveal_child()
+    assert toast_box.get_y() + toast_box.get_height() <= bar_box.get_y() + 1
+    window.set_busy(False)
+    window.navigation.pop_to_page(window.start.page)
+    assert _turn_until(lambda: window.navigation.get_visible_page() is window.start.page)
+    window.toast("Logged out")
+    assert _turn_until(lambda: len(_toast_widgets(window.toasts)) > len(
+        _toast_widgets(window.page_toasts)))

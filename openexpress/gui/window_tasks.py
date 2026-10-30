@@ -391,7 +391,12 @@ def inform(parent, name: str, heading: str, body: str, *, label: str | None = No
 
 class TaskRunner:
     def toast(self, text: str) -> None:
-        self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
+        """A short message: on a device's view above its bar at the bottom (where the next
+        task may show already), elsewhere on the window."""
+        on_device = (self.navigation is not None and self.page_toasts is not None
+                     and self.navigation.get_visible_page() is self.device_view)
+        shown = self.page_toasts if on_device else self.toasts
+        shown.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=5))
 
     def error(self, title: str, text: str) -> None:
         inform(self, "error", title, text)

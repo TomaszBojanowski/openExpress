@@ -216,7 +216,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.progress_bar = self.progress_label = self.busy_spinner = None
         self.unplug_label = self.action_bar = self.stop_wait_button = None
         self.content_page = self.start = self.device_view = None
-        self.navigation = self.remembered = self.toasts = None
+        self.navigation = self.remembered = self.toasts = self.page_toasts = None
         self._net_listener = self.monitor = self._usb_poll = None
         self._last_sync_monitor = None
 
@@ -313,7 +313,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.pages = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         for sec in self.sections.values():
             self.pages.add_named(sec.stack, sec.key)
-        content_view.set_content(self.pages)
+        # Toasts of a device's view: above its bar at the bottom, not over it (window_tasks.toast).
+        self.page_toasts = Adw.ToastOverlay(child=self.pages)
+        content_view.set_content(self.page_toasts)
 
         self.progress_bar = Gtk.ProgressBar(show_text=False, hexpand=True)
         self.progress_label = Gtk.Label(xalign=0, ellipsize=3, hexpand=True)
