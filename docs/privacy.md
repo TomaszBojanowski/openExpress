@@ -108,8 +108,11 @@ the application key, its secret and the value that signs download addresses are 
   list of the device's apps two minutes (these two in memory only). Refresh, **Check Again**,
   an install, a change of a primary device and another login make the program ask again;
   signing out deletes what is kept of the account, on disk too; uploads, the consents, the queue
-  of Garmin Connect and every change to the account are always asked anew. `openexpress cache --clear --only answers --apply` (or the row in
-  Preferences → Storage) deletes what is kept; nothing of it is ever sent anywhere.
+  of Garmin Connect and every change to the account are always asked anew. Answers out of date
+  leave the disk when the program starts. `openexpress cache --clear --only answers --apply` (or
+  the row in Preferences → Storage) deletes what is kept; nothing of it is ever sent anywhere.
+  The window and the command line name each device of the account by its product name, never
+  by a name you gave it in Garmin Connect.
 - openExpress identifies itself to Garmin's servers: every request carries the header
   `User-Agent: openexpress/<version> (Linux)`; the sign-in window is a web browser with its
   own. It uses the Garmin Express client headers so that the servers answer, but it does not

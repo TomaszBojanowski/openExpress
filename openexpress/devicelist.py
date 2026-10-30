@@ -364,7 +364,8 @@ def account_fields(entry: dict) -> dict:
     else:
         category = None
     return {
-        "description": text("productdisplayname") or text("displayname"),
+        # The product's name, never the one the user gave the device (displayname).
+        "description": text("productdisplayname"),
         "part_number": text("partnumber"),
         "software_version": text("currentfirmwareversion"),
         "primary": entry.get("primaryactivitytrackerindicator") is True,

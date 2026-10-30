@@ -612,8 +612,9 @@ def _change_primary(client: GarminClient, device: GarminDevice, apply: bool, *, 
 
 def model_name(entry: dict) -> str:
     """The model name of an entry of the account's list (keys in lower case): its product
-    display name, else its display name; "" when it gives neither as text."""
-    name = entry.get("productdisplayname") or entry.get("displayname") or ""
+    display name; "" when it gives none as text. Never the name the user gave the device
+    (displayname): it is neither shown nor kept."""
+    name = entry.get("productdisplayname") or ""
     return name if isinstance(name, str) else ""
 
 

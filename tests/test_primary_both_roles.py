@@ -385,14 +385,14 @@ W = devicelist.PrimaryWearable
     ([entry(UNIT, primary="true"), entry(OTHER, "Other watch", primary=True)],
      W(False, "Other watch")),
     ([{"unitid": str(UNIT), "primaryactivitytrackersettingcapable": True},
-      entry(OTHER, None, primary=True, displayname="Other")], W(False, "Other")),
+      entry(OTHER, None, primary=True, displayname="Other")], W(False, "")),
     ([entry(UNIT), entry(OTHER, 5, primary=True, displayname="Other")], W(False, "")),
     ([entry(UNIT), entry(OTHER, "", primary=True, displayname=7)], W(False, "")),
     ([entry(UNIT), entry(OTHER, "First", primary=True), entry(UNLISTED, "Second", primary=True)],
      W(False, "First")),
     (["not an entry", entry(UNIT, "Test watch", primary=True)], W(True, "Test watch")),
 ], ids=["no-list", "empty", "not-listed", "this", "other", "none-set", "this-not-capable",
-        "not-capable", "capable-null", "capable-text", "primary-text", "displayname",
+        "not-capable", "capable-null", "capable-text", "primary-text", "displayname-not-shown",
         "name-not-text", "displayname-not-text", "first-of-two", "not-a-dict"])
 def test_the_row_primary_wearable_of_the_device_page(devices, expected):
     assert devicelist.primary_wearable(devices, UNIT) == expected
@@ -407,7 +407,7 @@ def test_the_service_reads_the_same_fields_of_the_list(device):
         ([entry(UNIT), entry(OTHER, 5, primary=True, displayname="Other")],
          service.WearableStatus(True, "", False, True)),
         ([entry(UNIT, capable="yes"), entry(OTHER, None, primary=True, displayname="Other")],
-         service.WearableStatus(True, "Other", False, None)),
+         service.WearableStatus(True, "", False, None)),  # never the name the user gave
         ([entry(UNIT, "Test watch", capable=False, primary=True)],
          service.WearableStatus(True, "Test watch", True, False)),
         ([{"unitid": str(UNIT)}, entry(OTHER)], service.WearableStatus(False, "", False, None)),

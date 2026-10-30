@@ -222,3 +222,20 @@ def test_answers_out_of_date_leave_the_disk_when_a_process_starts(xdg, clock):
     assert len(names) == 2 and "note.txt" in names
     ANSWERS.clear()
     assert ANSWERS.ask(answers.SOFTWARE_UPDATES, ("new",), pytest.fail) == {"updates": []}
+
+
+def test_a_list_from_disk_names_the_devices_as_a_fresh_one():
+    """A name the user gave a device is never shown, nor kept: the account's list read from
+    disk (only ACCOUNT_FIELDS) names each device as the list just asked does."""
+    from openexpress import devicelist, service
+
+    named = {"unitid": 3000000001, "productdisplayname": "Made-up 1",
+             "displayname": "Jan Kowalski's watch", "partnumber": "006-X"}
+    only_given = {"unitid": 3000000002, "displayname": "Jan Kowalski's bike",
+                  "partnumber": "006-Y"}
+    for entry in (named, only_given):
+        cut = answers._fields(entry, answers.ACCOUNT_FIELDS)
+        assert devicelist.account_fields(cut) == devicelist.account_fields(entry)
+        assert service.model_name(cut) == service.model_name(entry)
+    assert devicelist.account_fields(only_given)["description"] == ""
+    assert service.model_name(only_given) == ""
