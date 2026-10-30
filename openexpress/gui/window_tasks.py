@@ -128,6 +128,12 @@ def progress_reporter(win) -> Reporter:
                     bar=lambda done, total: win.fraction(done, total), later=later)
 
 
+def show_label(win, text: str, about: str = "") -> None:
+    """The words of the bar at the bottom, and its tooltip (none without `about`)."""
+    win.progress_label.set_text(text)
+    win.progress_label.set_tooltip_text(about or None)
+
+
 def show_stop_waiting(win, visible: bool) -> None:
     """Stop Waiting on the bar at the bottom, shown only while TrueUp waits."""
     button = win.stop_wait_button
@@ -409,7 +415,7 @@ class TaskRunner:
         self._reporter.reset()  # nothing of a task before is shown later
         self.busy = busy
         self.action_bar.set_reveal_child(busy)
-        self.progress_label.set_text(text)
+        show_label(self, text)
         self.unplug_label.set_visible(busy and device)
         self.progress_bar.set_fraction(0)
         self.progress_bar.set_visible(False)
@@ -438,13 +444,15 @@ class TaskRunner:
         knows, keeps it moving until the next step, and after a while the label says so."""
         self._stop_waiting()
         self._show_bar()
-        self.progress_label.set_text(text)
         if isinstance(text, TimedWait):
+            # Its words short, for the narrowest window beside Stop Waiting; why in the tooltip.
+            show_label(self, text.short, text.about)
             # Its length is known: the bar shows how much has passed, and it can be stopped.
             self.progress_bar.set_fraction(text.done)
             stop = getattr(self.session, "stop_waiting", None)
             show_stop_waiting(self, text.done < 1 and stop is not None and not stop.is_set())
             return False
+        show_label(self, text)
         show_stop_waiting(self, False)
         if isinstance(text, Step) and text.fraction is not None:
             self.progress_bar.set_fraction(text.fraction)  # how far: "3 of 8"

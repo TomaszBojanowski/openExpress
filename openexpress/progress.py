@@ -18,14 +18,21 @@ class Waiting(str):
 
 class TimedWait(Waiting):
     """A wait of known length: `seconds` in all, `done` of it gone (0 to 1). It reads as the
-    message itself; the window fills its bar with `done`, the command line one line."""
+    message itself; the window fills its bar with `done`, the command line one line. `short`:
+    the same in as few words as can be, for the window's bar, which has to fit its narrowest
+    width (the message itself when not given); `about`: what it waits for, said apart (the
+    window's tooltip)."""
 
     seconds: float
     done: float
+    short: str
+    about: str
 
-    def __new__(cls, text: str, seconds: float, done: float = 0.0) -> TimedWait:
+    def __new__(cls, text: str, seconds: float, done: float = 0.0, short: str = "",
+                about: str = "") -> TimedWait:
         message = super().__new__(cls, text)
         message.seconds, message.done = float(seconds), min(1.0, max(0.0, float(done)))
+        message.short, message.about = short or text, about
         return message
 
 

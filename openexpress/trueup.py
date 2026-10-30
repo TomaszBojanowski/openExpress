@@ -80,10 +80,17 @@ def stopped_text() -> str:
 def _wait(seconds: float, progress, sleep, stop, result: TrueUpResult) -> bool:
     """Wait `seconds` in WAIT_STEPS steps, each told; False when it was stopped (`stop` set,
     or Ctrl+C: only here is it taken for "stop waiting", so that the sync ends as usual)."""
+    length = duration_text(seconds)
+    # The command line has room to say why; the window's bar says it short, the whole
+    # sentence in its tooltip.
     text = _("Waiting {time} for Garmin Connect to prepare TrueUp (the daily totals of all "
-             "your devices)…").format(time=duration_text(seconds))
+             "your devices)…").format(time=length)
+    # TRANSLATORS: the bar at the bottom of the window while TrueUp waits {time} for Garmin
+    # Connect, beside its filling bar and "Stop Waiting": as short as it can be, it has to fit
+    # the narrowest window whole ("TrueUp: 4 min 59 s…"; the whole sentence is its tooltip)
+    short = _("TrueUp: {time}…").format(time=length)
     step = seconds / WAIT_STEPS
-    progress(TimedWait(text, seconds, 0.0))
+    progress(TimedWait(text, seconds, 0.0, short=short, about=text))
     for i in range(1, WAIT_STEPS + 1):
         try:
             if stop is not None:
@@ -95,7 +102,7 @@ def _wait(seconds: float, progress, sleep, stop, result: TrueUpResult) -> bool:
             log.info("TrueUp: Ctrl+C during the wait")
             return False
         result.waited_s += step
-        progress(TimedWait(text, seconds, i / WAIT_STEPS))
+        progress(TimedWait(text, seconds, i / WAIT_STEPS, short=short, about=text))
     return True
 
 

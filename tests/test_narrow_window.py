@@ -741,3 +741,38 @@ def test_chips_never_change_how_many_tiles_share_a_line(narrow_window, monkeypat
     assert per_line[1] == per_line[0] and per_line[0] == (2 if width == 700 else 3)
     if wrap_box:
         assert [c.get_label() for c in chips if c.get_layout().is_ellipsized()] == []
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_wait_for_trueup_is_whole_in_the_narrowest_window(narrow_window, language):
+    """The words of TrueUp's wait on the bar at the bottom, beside Stop Waiting, at the
+    narrowest width: never cut short, also for the longest wait (4 min 59 s); why it waits
+    is in the tooltip."""
+    import threading
+
+    from openexpress import trueup
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "device")
+    # The device's view above the start page, folded: its page, not the side panel.
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.split.set_show_content(True)
+    win.session.stop_waiting = threading.Event()
+    win.set_busy(True, "Sync", device=True)
+    seen = []
+    trueup._wait(299, seen.append, lambda seconds: None, None, trueup.TrueUpResult())
+    wait = seen[0]
+    win._show_progress(wait)
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and (win.get_width() > NARROWEST
+                                           or not win.stop_wait_button.get_width()):
+        _iterate(0.01)
+    _iterate(0.1)
+    assert 0 < win.get_width() <= NARROWEST  # its frame aside, no wider than the narrowest
+    label = win.progress_label
+    assert win.stop_wait_button.get_visible() and label.get_text() == wait.short
+    assert "4 min 59 s" in label.get_text()
+    assert label.get_width() > 0 and not label.get_layout().is_ellipsized(), label.get_text()
+    assert label.get_tooltip_text() == wait.about

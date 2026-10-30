@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 03:38+0100\n"
+"POT-Creation-Date: 2026-10-30 03:44+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -472,7 +472,7 @@ msgstr "Usuń ją w telefonie, w aplikacji Connect IQ albo Garmin Connect."
 #. TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
 #. TRANSLATORS: a step of a sync: the TrueUp file from Garmin Connect
 #. TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
-#: openexpress/ciq.py:1082 openexpress/maps.py:668 openexpress/trueup.py:146
+#: openexpress/ciq.py:1082 openexpress/maps.py:668 openexpress/trueup.py:153
 #: openexpress/updates.py:416
 #, python-brace-format
 msgid "Downloading {name}"
@@ -485,7 +485,7 @@ msgstr "Nie można zarejestrować aplikacji na urządzeniu: {error}"
 
 #. TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
 #. TRANSLATORS: a step of a sync: the TrueUp file written to the device
-#: openexpress/ciq.py:1181 openexpress/trueup.py:155
+#: openexpress/ciq.py:1181 openexpress/trueup.py:162
 #, python-brace-format
 msgid "Writing {name} to the device"
 msgstr "Zapisywanie {name} na urządzenie"
@@ -3497,7 +3497,7 @@ msgstr "Nie zalogowano do Garmin Connect"
 
 #: openexpress/gui/app.py:412 openexpress/gui/apps_page.py:591
 #: openexpress/gui/detection.py:714 openexpress/gui/device_page.py:781
-#: openexpress/gui/window_tasks.py:486
+#: openexpress/gui/window_tasks.py:494
 msgid "Another operation is in progress"
 msgstr "Trwa inna operacja"
 
@@ -5335,19 +5335,19 @@ msgstr "Urządzenie nie jest zamontowane"
 msgid "The device was not ejected"
 msgstr "Nie wysunięto urządzenia"
 
-#: openexpress/gui/window_tasks.py:344
+#: openexpress/gui/window_tasks.py:350
 msgid "Cancel"
 msgstr "Anuluj"
 
-#: openexpress/gui/window_tasks.py:379
+#: openexpress/gui/window_tasks.py:385
 msgid "OK"
 msgstr "OK"
 
-#: openexpress/gui/window_tasks.py:461
+#: openexpress/gui/window_tasks.py:469
 msgid "This can take a few minutes."
 msgstr "To może potrwać kilka minut."
 
-#: openexpress/gui/window_tasks.py:617
+#: openexpress/gui/window_tasks.py:625
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"
@@ -6076,7 +6076,7 @@ msgid "{path} is still on the device; nothing was taken off the list."
 msgstr "Plik {path} nadal jest na urządzeniu; lista własnych map bez zmian."
 
 #. TRANSLATORS: how far a step of a long task is: "3 of 8", "412.0 MB of 1.5 GB"
-#: openexpress/progress.py:54
+#: openexpress/progress.py:61
 #, python-brace-format
 msgid "{done} of {total}"
 msgstr "{done} z {total}"
@@ -6683,7 +6683,7 @@ msgstr ""
 "Przerwano czekanie na TrueUp; Garmin Connect wyśle je przy następnej "
 "synchronizacji."
 
-#: openexpress/trueup.py:83
+#: openexpress/trueup.py:86
 #, python-brace-format
 msgid ""
 "Waiting {time} for Garmin Connect to prepare TrueUp (the daily totals of all "
@@ -6692,19 +6692,27 @@ msgstr ""
 "Czekanie {time}, aż Garmin Connect przygotuje TrueUp (dzienne sumy ze "
 "wszystkich urządzeń)…"
 
-#: openexpress/trueup.py:117
+#. TRANSLATORS: the bar at the bottom of the window while TrueUp waits {time} for Garmin
+#. Connect, beside its filling bar and "Stop Waiting": as short as it can be, it has to fit
+#. the narrowest window whole ("TrueUp: 4 min 59 s…"; the whole sentence is its tooltip)
+#: openexpress/trueup.py:91
+#, python-brace-format
+msgid "TrueUp: {time}…"
+msgstr "TrueUp: {time}…"
+
+#: openexpress/trueup.py:124
 msgid "the device does not support TrueUp"
 msgstr "urządzenie nie obsługuje TrueUp"
 
-#: openexpress/trueup.py:124
+#: openexpress/trueup.py:131
 msgid "TrueUp: waiting for Garmin Connect…"
 msgstr "TrueUp: oczekiwanie na Garmin Connect…"
 
-#: openexpress/trueup.py:142
+#: openexpress/trueup.py:149
 msgid "Connect has not prepared TrueUp data yet"
 msgstr "Connect nie przygotował jeszcze danych TrueUp"
 
-#: openexpress/trueup.py:149
+#: openexpress/trueup.py:156
 msgid "empty TrueUp file"
 msgstr "pusty plik TrueUp"
 

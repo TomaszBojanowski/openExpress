@@ -545,6 +545,9 @@ class _Widget:
     def set_text(self, text):
         self.text = text
 
+    def set_tooltip_text(self, text):
+        pass
+
     def set_reveal_child(self, revealed):
         self.visible = revealed
 

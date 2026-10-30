@@ -75,10 +75,13 @@ def test_a_sync_reports_its_waits_for_the_server_as_waits(device_root, xdg):
 # --- the window: a moving bar while waiting ------------------------------------------------------
 
 class _Label:
-    text = None
+    text = tooltip = None
 
     def set_text(self, text):
         self.text = text
+
+    def set_tooltip_text(self, text):
+        self.tooltip = text
 
 
 class _Bar:
@@ -228,6 +231,26 @@ def test_a_wait_of_known_length_fills_the_bar_and_can_be_stopped(window):
     window.progress(TimedWait(text, seconds=200, done=0.1))
     window.set_busy(False)
     assert not window.stop_wait_button.visible
+
+
+def test_the_wait_of_trueup_says_it_short_and_why_in_the_tooltip(window):
+    """The bar at the bottom has little room beside Stop Waiting: the short words of the wait,
+    why it waits in the tooltip, which the next step takes away."""
+    import threading
+
+    from openexpress.progress import TimedWait
+
+    window.session = types.SimpleNamespace(stop_waiting=threading.Event())
+    window.progress(TimedWait("Waiting 20 s for Garmin Connect to prepare TrueUp (the daily "
+                              "totals of all your devices)…", seconds=20, done=0.5,
+                              short="TrueUp: 20 s…", about="Why"))
+    assert window.progress_label.text == "TrueUp: 20 s…"
+    assert window.progress_label.tooltip == "Why" and window.stop_wait_button.visible
+    window.progress("Writing TrueUp to the device")
+    assert window.progress_label.tooltip is None
+    window.progress(TimedWait("Waiting", seconds=20, short="TrueUp: 20 s…", about="Why"))
+    window.set_busy(False)
+    assert window.progress_label.tooltip is None
 
 
 # --- one busy indicator: the spinner until the bar has something to show ------------------------
