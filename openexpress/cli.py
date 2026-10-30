@@ -821,6 +821,10 @@ def cmd_backup(args) -> int:
         count=res.files, size=_human(res.bytes), path=res.path))
     for p in res.removed:
         print(_("Removed old backup {path}").format(path=p))
+    if res.incomplete:
+        from openexpress.backup import incomplete_text
+
+        print(incomplete_text(res.incomplete))
     return 0
 
 

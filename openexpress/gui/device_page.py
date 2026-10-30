@@ -58,6 +58,7 @@ from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
     confirm,
+    inform,
     log_unexpected,
     refresh_space,
     render_space,
@@ -179,6 +180,15 @@ def backups_text(unit_id) -> str:
     return caption(_("Last on {when}").format(when=i18n.full_time(found[-1])),
                    ngettext("{count} backup", "{count} backups", len(found)).format(
                        count=len(found)))
+
+
+def tell_left_out(win, result) -> None:
+    """After a backup: the FIT files the device was still writing, left out of it."""
+    from openexpress.backup import incomplete_text
+
+    if result.incomplete:
+        inform(win, "backup-incomplete", _("Not everything was backed up"),
+               incomplete_text(result.incomplete))
 
 
 def show_backups(win) -> None:
@@ -1395,7 +1405,7 @@ class DevicePage:
             lambda r: (self.toast(ngettext("Copied {count} file to {path}",
                                            "Copied {count} files to {path}",
                                            r.files).format(count=r.files, path=r.path)),
-                       show_backups(self)),
+                       show_backups(self), tell_left_out(self, r)),
         )
 
     # --- sync -------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 """The progress of a backup: which file of how many ("Copying to the backup · 120 of 1530"),
 never the name of a file on the device. All devices and files are made up."""
+from conftest import make_fit
+
 from openexpress import backup, i18n
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -10,7 +12,8 @@ NB = " "
 
 def _device(device_root):
     for day in (1, 2, 3):
-        (device_root / f"GARMIN/Activity/2026-10-0{day}-10-00-00.fit").write_bytes(b"x" * 10)
+        (device_root / f"GARMIN/Activity/2026-10-0{day}-10-00-00.fit").write_bytes(
+            make_fit(1100000000 + day * 86400))
     st = LocalStorage(device_root)
     return st, parse(st.read("GARMIN/GarminDevice.xml"))
 

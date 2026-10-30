@@ -290,7 +290,7 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
 # noted in `effects`: tasks, syncs, removals, the next question. A new dialog without a case
 # here fails test_every_dialog_has_an_escape_case.
 
-INFORMS = {"close-busy", "order-none-differs", "ejected", "error"}
+INFORMS = {"close-busy", "order-none-differs", "ejected", "error", "backup-incomplete"}
 AFTER_ESCAPE = {"ejected": [("error", "Finish the update")]}  # a bike accessory's last step
 
 
@@ -522,7 +522,21 @@ def _report(ctx):
     MainWindow.show_report(win)
 
 
+def _backup_incomplete(ctx):
+    from pathlib import Path
+
+    from openexpress import backup
+    from openexpress.gui.app import MainWindow
+
+    ctx.monkeypatch.setattr(backup, "run_backup", lambda device, storage, dest, progress=None:
+                            backup.BackupResult(Path("/made/up/backups"), 3, 100, [],
+                                                incomplete=1))
+    MainWindow.backup(_escape_window(ctx, _closed=False, progress=lambda message: None,
+                                     backup_row=None))
+
+
 OPENERS = {
+    "backup-incomplete": _backup_incomplete,
     "close-busy": _close_busy, "order-none-differs": lambda ctx: _order(ctx, False),
     "order-choose": lambda ctx: _order(ctx, True), "order-restore": _order_restore,
     "app-permissions": _app_permissions, "app-forget": _app_forget, "app-remove": _app_remove,
