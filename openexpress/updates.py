@@ -22,6 +22,7 @@ from openexpress import applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
+from openexpress.progress import Step
 
 log = logging.getLogger(__name__)
 
@@ -385,10 +386,12 @@ def _install(
     updates: list[SoftwareUpdate],
     storage: Storage,
     session=None,
-    progress: Callable[[str], None] = lambda s: None,
+    progress: Callable[[str], None] | None = None,
     transfer_progress: Callable[[int, int], None] | None = None,
     download_progress: Callable[[int, int | None], None] | None = None,
 ) -> InstallReport:
+    """`progress`: each update by its name, in bytes ("Downloading … · 1.2 MB of 3.4 MB",
+    "Copying … to the device · …"); the files are the server's and the device's own."""
     need, free = check_space(storage, updates)
     margin = space_margin(storage)
     if free is not None and need + margin > free:
@@ -399,6 +402,7 @@ def _install(
     report = InstallReport()
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
+    say = progress if progress is not None else (lambda _message: None)
     # One bar for all the files.
     overall = (download.Overall(sum(u.size or 0 for u in updates), download_progress)
                if download_progress else None)
@@ -406,12 +410,24 @@ def _install(
         if not u.url:
             raise UpdateError(_("{part}: the server did not provide a download URL")
                               .format(part=u.part_number))
-        progress(_("Downloading {name} {version} ({size})")
-                 .format(name=u.title, version=u.version, size=human_size(u.size or None)))
+        log.debug("software update: downloading %s %s (%s)", u.part_number, u.device_path,
+                  applog.size(u.size))
+        # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
+        downloading = _("Downloading {name}").format(name=u.title)
+        whole = overall.file() if overall else None
+
+        def downloaded(done: int, total: int | None, _head=downloading, _whole=whole) -> None:
+            say(Step(_head, done, total, in_bytes=True))
+            if _whole:
+                _whole(done, total)
+
+        listening = progress is not None or overall is not None
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session,
-                               progress=overall.file() if overall else None)
+                               progress=downloaded if listening else None)
         if overall:
             overall.finished(u.size)
+        got = local.stat().st_size
+        say(Step(downloading, got, got, in_bytes=True))  # also when it came from the cache
         with open(local, "rb") as f:
             if f.read(4) == RGN_MAGIC:
                 raise UpdateError(
@@ -422,15 +438,25 @@ def _install(
     for u in sort_for_install(updates):
         local = local_files[u.key]
         size = local.stat().st_size
-        progress(_("Copying to the device: {path}").format(path=u.device_path))
+        log.debug("software update: copying %s", u.device_path)
+        # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
+        copying = _("Copying {name} to the device").format(name=u.title)
+
+        def written(done: int, total: int | None, _head=copying) -> None:
+            say(Step(_head, done, total, in_bytes=True))
+            if transfer_progress:
+                transfer_progress(done, total)
+
+        # Only when someone listens: a copy over MTP told nothing goes another way (gio copy
+        # without -p in the Flatpak).
+        told = written if progress is not None or transfer_progress is not None else None
         _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,
         # and what _clear_the_place deleted does not come back.
         # A truncated firmware file must not stay where the watch would install it: one of
         # another size is deleted.
-        real = storage.write_file_checked(u.device_path, local, transfer_progress,
-                                          error=UpdateError)
+        real = storage.write_file_checked(u.device_path, local, told, error=UpdateError)
         report.installed.append(f"{u.title} {u.version} -> {real}")
         report.restart_required |= u.is_system
         # The whole path from the device's folder, as mark_present names it.

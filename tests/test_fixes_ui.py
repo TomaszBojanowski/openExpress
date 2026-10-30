@@ -1698,22 +1698,21 @@ def test_buttons_of_other_pages_stay_in_the_list():
     assert elsewhere in win._action_buttons and len(win._action_buttons) == 2
 
 
-def test_cli_update_install_shows_a_bar_while_copying(offered, monkeypatch, capsys):
+def test_cli_update_install_tells_how_far_the_copy_is(offered, monkeypatch, capsys):
     from openexpress import updates as upd
+    from openexpress.progress import Step
 
     root, _answer_ = offered
-    asked = {}
 
-    def install(chosen, storage, session=None, progress=lambda s: None, transfer_progress=None):
-        asked["bar"] = transfer_progress
-        transfer_progress(1, 2)  # half of a file
+    def install(chosen, storage, session=None, progress=None):
+        progress(Step("Copying Font to the device", 1000, 2000, in_bytes=True))  # half of it
         return upd.InstallReport(installed=["x"])
 
     monkeypatch.setattr(upd, "install", install)
     assert main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"]) == 0
-    assert isinstance(asked["bar"], cli._Bar)
     captured = capsys.readouterr()
-    assert " 50%" in captured.out + captured.err  # the bar of the command line
+    # Not a terminal: a line when the step begins.
+    assert "  Copying Font to the device\n" in captured.out + captured.err
 
 
 def test_about_links_to_the_support_page(monkeypatch):

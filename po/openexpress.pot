@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.11\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 02:42+0100\n"
+"POT-Creation-Date: 2026-10-30 03:16+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,7 +34,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/auth/sso.py:251 openexpress/gui/device_page.py:773
-#: openexpress/gui/netstatus_view.py:139 openexpress/gui/updates_page.py:350
+#: openexpress/gui/netstatus_view.py:139 openexpress/gui/updates_page.py:349
 msgid "Try Again"
 msgstr ""
 
@@ -404,7 +404,8 @@ msgstr ""
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
 
-#: openexpress/ciq.py:1074 openexpress/maps.py:668
+#. TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
+#: openexpress/ciq.py:1074 openexpress/maps.py:668 openexpress/updates.py:416
 #, python-brace-format
 msgid "Downloading {name}"
 msgstr ""
@@ -1262,7 +1263,7 @@ msgstr ""
 msgid "Update copied, waiting for the device to install it:"
 msgstr ""
 
-#: openexpress/cli.py:954 openexpress/gui/updates_page.py:355
+#: openexpress/cli.py:954 openexpress/gui/updates_page.py:354
 msgid "Ejecting the device…"
 msgstr ""
 
@@ -3288,7 +3289,7 @@ msgid "No copy differs from the current order"
 msgstr ""
 
 #: openexpress/gui/apps_page.py:348 openexpress/gui/report_dialog.py:109
-#: openexpress/gui/updates_page.py:352
+#: openexpress/gui/updates_page.py:351
 msgid "Close"
 msgstr ""
 
@@ -4074,7 +4075,7 @@ msgstr ""
 msgid "{name} copied; unplug the device to load it"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:443 openexpress/gui/updates_page.py:316
+#: openexpress/gui/maps_page.py:443 openexpress/gui/updates_page.py:315
 msgid "Accept and install"
 msgstr ""
 
@@ -4734,7 +4735,7 @@ msgid "Beta"
 msgstr ""
 
 #. TRANSLATORS: button that ejects the device (its USB drive)
-#: openexpress/gui/updates_page.py:181 openexpress/gui/updates_page.py:328
+#: openexpress/gui/updates_page.py:181 openexpress/gui/updates_page.py:327
 msgid "Eject"
 msgstr ""
 
@@ -4773,46 +4774,46 @@ msgstr ""
 msgid "License agreement (EULA)"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:306 openexpress/gui/updates_page.py:340
+#: openexpress/gui/updates_page.py:305 openexpress/gui/updates_page.py:339
 msgid "Done"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:312
+#: openexpress/gui/updates_page.py:311
 msgid "Update not installed"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:315
+#: openexpress/gui/updates_page.py:314
 msgid "Install update?"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:317
+#: openexpress/gui/updates_page.py:316
 msgid "Installing update…"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:324
+#: openexpress/gui/updates_page.py:323
 msgid "Update saved"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:325
+#: openexpress/gui/updates_page.py:324
 msgid ""
 "Eject the device before you unplug the cable: until then it may not see the "
 "update."
 msgstr ""
 
 #. TRANSLATORS: button; the device is ejected later
-#: openexpress/gui/updates_page.py:331
+#: openexpress/gui/updates_page.py:330
 msgid "Later"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:341
+#: openexpress/gui/updates_page.py:340
 msgid "Finish the update"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:346
+#: openexpress/gui/updates_page.py:345
 msgid "The device is not mounted"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:348
+#: openexpress/gui/updates_page.py:347
 msgid "The device was not ejected"
 msgstr ""
 
@@ -5167,7 +5168,9 @@ msgid "Removing old map files"
 msgstr ""
 
 #. TRANSLATORS: a step of a map install; {name}: the map ("… · 1.2 GB of 6.3 GB")
+#. TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
 #: openexpress/maps.py:714 openexpress/ownmaps.py:250
+#: openexpress/updates.py:443
 #, python-brace-format
 msgid "Copying {name} to the device"
 msgstr ""
@@ -6073,7 +6076,7 @@ msgstr ""
 msgid "empty TrueUp file"
 msgstr ""
 
-#: openexpress/updates.py:43
+#: openexpress/updates.py:44
 msgid ""
 "\n"
 "To finish the installation:\n"
@@ -6087,7 +6090,7 @@ msgid ""
 "     should no longer be listed.\n"
 msgstr ""
 
-#: openexpress/updates.py:53
+#: openexpress/updates.py:54
 msgid ""
 "\n"
 "To finish the installation:\n"
@@ -6101,112 +6104,102 @@ msgid ""
 "     should no longer be listed.\n"
 msgstr ""
 
-#: openexpress/updates.py:63
+#: openexpress/updates.py:64
 msgid ""
 "Warning: this is a device system update. Charge the device and do not "
 "disconnect it while copying."
 msgstr ""
 
-#: openexpress/updates.py:71
+#: openexpress/updates.py:72
 msgid ""
 "Warning: installing an update erases the data stored on this device. Sync it "
 "with Garmin Connect first, or the data not uploaded yet is lost."
 msgstr ""
 
-#: openexpress/updates.py:73
+#: openexpress/updates.py:74
 msgid ""
 "Warning: installing an update erases the data stored on this device. Sync it "
 "first (openexpress sync --apply), or the data not uploaded yet is lost."
 msgstr ""
 
-#: openexpress/updates.py:76
+#: openexpress/updates.py:77
 msgid ""
 "Warning: installing an update erases the data stored on this device. "
 "openExpress does not sync a device connected as a USB drive: sync it with "
 "the Garmin Connect app first, or the data not uploaded yet is lost."
 msgstr ""
 
-#: openexpress/updates.py:84
+#: openexpress/updates.py:85
 msgid "Garmin offers beta software for this device."
 msgstr ""
 
 #. TRANSLATORS: kind of update: a file that belongs to a map (Garmin/SID/*.sid)
-#: openexpress/updates.py:155
+#: openexpress/updates.py:156
 msgid "Map support file"
 msgstr ""
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:157
+#: openexpress/updates.py:158
 msgid "Software"
 msgstr ""
 
 #. TRANSLATORS: kind of update
-#: openexpress/updates.py:159
+#: openexpress/updates.py:160
 msgid "Configuration"
 msgstr ""
 
 #. TRANSLATORS: kind of update: a file that describes other updates
-#: openexpress/updates.py:161
+#: openexpress/updates.py:162
 msgid "Update information"
 msgstr ""
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:165
+#: openexpress/updates.py:166
 msgid "Critical"
 msgstr ""
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:167
+#: openexpress/updates.py:168
 msgid "Recommended"
 msgstr ""
 
 #. TRANSLATORS: importance of an update
-#: openexpress/updates.py:169
+#: openexpress/updates.py:170
 msgid "Optional"
 msgstr ""
 
 #. TRANSLATORS: importance of an update, when the server does not say
-#: openexpress/updates.py:171
+#: openexpress/updates.py:172
 msgid "Unspecified"
 msgstr ""
 
-#: openexpress/updates.py:338
+#: openexpress/updates.py:339
 #, python-brace-format
 msgid "Not in the list: {items}"
 msgstr ""
 
-#: openexpress/updates.py:351
+#: openexpress/updates.py:352
 #, python-brace-format
 msgid ""
 "The server gave a name that cannot be used as a path on this computer: "
 "'{name}'"
 msgstr ""
 
-#: openexpress/updates.py:395
+#: openexpress/updates.py:398
 #, python-brace-format
 msgid ""
 "Not enough space on the device: {need} needed and {margin} kept free, but "
 "only {free} free"
 msgstr ""
 
-#: openexpress/updates.py:407
+#: openexpress/updates.py:411
 #, python-brace-format
 msgid "{part}: the server did not provide a download URL"
 msgstr ""
 
-#: openexpress/updates.py:409
-#, python-brace-format
-msgid "Downloading {name} {version} ({size})"
-msgstr ""
-
-#: openexpress/updates.py:418
+#: openexpress/updates.py:434
 #, python-brace-format
 msgid "{part}: the RGN format is not supported by openExpress"
-msgstr ""
-
-#: openexpress/updates.py:425
-#, python-brace-format
-msgid "Copying to the device: {path}"
 msgstr ""
 
 #: openexpress/watch.py:151

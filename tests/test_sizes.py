@@ -117,10 +117,13 @@ def test_update_download_progress_shows_a_readable_size(server, device_root, xdg
     items[1].size = None  # the server does not always say
     lines = []
     updates.install(items, LocalStorage(device_root), progress=lines.append)
-    downloads = [line for line in lines if line.startswith("Downloading ")]
-    assert downloads == [
-        f"Downloading System {items[0].version} ({human_size(items[0].size)})",
-        f"Downloading Aux {items[1].version} (?)"]
+    # Each update by its name and how far: "Downloading System · 1.2 MB of 3.4 MB"; one of
+    # unknown size says its size once it is there.
+    last = {line.head: line for line in lines if line.startswith("Downloading ")}
+    aux = (device_root / "GARMIN/RemoteSW/aux.gcd").stat().st_size
+    assert list(last.values()) == [
+        f"Downloading System · {human_size(items[0].size)} of {human_size(items[0].size)}",
+        f"Downloading Aux · {human_size(aux)} of {human_size(aux)}"]
 
 
 def test_map_download_progress_shows_a_readable_size(server, device_root, xdg):

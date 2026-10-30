@@ -1177,10 +1177,9 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
     for fn in tasks:
         fn()
     assert len(calls["kw"]) == 2
-    update, map_ = calls["kw"]
-    assert update["download_progress"] is win.fraction
-    # A map tells its steps, the bar with them ("Downloading … · 1.2 MB of 3.4 MB").
-    assert map_["progress"] is win.progress and "download_progress" not in map_
+    # Each tells its steps, the bar with them ("Downloading … · 1.2 MB of 3.4 MB").
+    for kw in calls["kw"]:
+        assert kw["progress"] is win.progress and "download_progress" not in kw
 
 
 # --- a failed copy keeps the old file -----------------------------------------------------------

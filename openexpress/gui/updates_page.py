@@ -294,8 +294,7 @@ class UpdatesPage:
             below.append(warning)
 
         def install():
-            rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress,
-                              transfer_progress=self.fraction, download_progress=self.fraction)
+            rep = upd.install(chosen, s.storage, session=s.client.http, progress=self.progress)
             return rep, mass_storage and is_bike_accessory(
                 s.client, s.device, ask=lambda: service.unit_info(s))
 
