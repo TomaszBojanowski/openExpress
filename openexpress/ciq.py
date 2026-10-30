@@ -30,7 +30,7 @@ from openexpress.device.storage import DeviceError, RemountFailed, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, caption, ngettext
-from openexpress.progress import Step, say_to
+from openexpress.progress import Step, downloading_text, say_to, writing_text
 
 log = logging.getLogger(__name__)
 
@@ -1030,6 +1030,23 @@ def _free_slots(device: GarminDevice, state: InstalledState) -> int | None:
     return max(0, min(bounds)) if bounds else None
 
 
+def _of_this_pass(messages: list[dict], only: set[uuid.UUID] | None) -> list[tuple]:
+    """The Connect IQ messages of the queue with an app, of the apps `only` names (None: all):
+    (message, app ID), in the queue's order."""
+    found = []
+    for m in messages:
+        app_id = message_app_id(m) if is_iq_message(m) else None
+        if app_id is not None and (only is None or app_id in only):
+            found.append((m, app_id))
+    return found
+
+
+def _app_name(message: dict, app_id: uuid.UUID, known: dict) -> str:
+    """The name of the app of a message: as the queue names it, else as the store does."""
+    meta = message.get("metadata") or {}
+    return meta.get("messagename") or (known[app_id].name if app_id in known else str(app_id))
+
+
 def _install_pass(device, storage, client, messages, known, only, progress,
                   direct: bool, ptp_tried: bool = False) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
@@ -1038,13 +1055,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
         # Nothing is written: the queued apps stay for the phone. Garmin Express does
         # not install them either, as it cannot read the apps of a device without a list.
         report.no_app_list = True
-        for m in messages:
-            app_id = message_app_id(m) if is_iq_message(m) else None
-            if app_id is None or (only is not None and app_id not in only):
-                continue
-            meta = m.get("metadata") or {}
-            report.for_phone.append(meta.get("messagename") or (
-                known[app_id].name if app_id in known else str(app_id)))
+        for m, app_id in _of_this_pass(messages, only):
+            report.for_phone.append(_app_name(m, app_id, known))
         return report, []
     require_complete(state)
     require_readable_waiting_list(state)  # the list written after the apps is built from it
@@ -1058,9 +1070,7 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     interrupted = False
     copied = False
     # The apps of this pass, counted for the progress ("Downloading … · 1 of 2").
-    counted = [m for m in messages if is_iq_message(m) and message_app_id(m) is not None
-               and (only is None or message_app_id(m) in only)]
-    number = {id(m): n for n, m in enumerate(counted, 1)}
+    counted = _of_this_pass(messages, only)
 
     def copy_first() -> None:
         """Before the first thing this pass writes to the device."""
@@ -1070,15 +1080,9 @@ def _install_pass(device, storage, client, messages, known, only, progress,
             copied = True
 
     try:
-        for m in messages:
-            if not is_iq_message(m):
-                continue
-            app_id = message_app_id(m)
-            if app_id is None or (only is not None and app_id not in only):
-                continue
+        for number, (m, app_id) in enumerate(counted, 1):
             meta = m.get("metadata") or {}
-            name = meta.get("messagename") or (
-                known[app_id].name if app_id in known else str(app_id))
+            name = _app_name(m, app_id, known)
             dt = m["devicexmldatatype"]
             existing = state.find(app_id)
             try:
@@ -1101,9 +1105,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                         report.sandboxed.append(name)
                     continue
                 copy_first()
-                step = (number[id(m)], len(counted))
-                # TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
-                progress(Step(_("Downloading {name}").format(name=name), *step))
+                step = (number, len(counted))
+                progress(Step(downloading_text(name), *step))
                 data = client.download_message(meta.get("messageurl") or "",
                                                bool(meta.get("absolute")))
                 if not data:
@@ -1198,11 +1201,6 @@ def _acknowledge(client: GarminClient, device: GarminDevice, message: dict) -> N
         if message.get("messageid") in queued:
             raise
         log.info("Message %s was no longer in the queue", message.get("messageid"))
-
-
-def writing_text(name: str) -> str:
-    # TRANSLATORS: a step of an app install; {name}: the app ("… · 1 of 2")
-    return _("Writing {name} to the device").format(name=name)
 
 
 def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, new_paths,

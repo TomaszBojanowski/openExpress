@@ -16,7 +16,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import service  # noqa: E402
-from openexpress.gui.pictures import cached_download, load_texture, picture_target  # noqa: E402
+from openexpress.gui.pictures import cached_download, cached_file, load_texture  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm, inform  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
@@ -234,11 +234,8 @@ class AppsPage:
 
         def work():
             # The icons on disk already: not asked for (their addresses never change).
-            files = {}
-            for app_id in images:
-                target = picture_target(f"app-{app_id}.png")
-                if target is not None and target.exists() and target.stat().st_size:
-                    files[app_id] = target
+            files = {app_id: cached_file(f"app-{app_id}.png") for app_id in images}
+            files = {app_id: path for app_id, path in files.items() if path is not None}
             missing = [app_id for app_id in images if app_id not in files]
             urls = ciq.StoreApi(s.client).icon_urls(missing) if missing else {}
             files.update({app_id: cached_download(s.client.http, url, f"app-{app_id}.png")

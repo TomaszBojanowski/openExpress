@@ -99,12 +99,20 @@ def picture_target(name: str) -> Path | None:
     return images / name
 
 
+def cached_file(name: str) -> Path | None:
+    """The file `name` (a picture, an icon) when it is in the cache already, not empty."""
+    target = picture_target(name)
+    if target is not None and target.exists() and target.stat().st_size:
+        return target
+    return None
+
+
 def cached_download(http, url: str, name: str) -> Path | None:
     """Downloads a small file (picture, icon) once into the cache."""
     target = picture_target(name)
     if target is None:
         return None
-    if target.exists() and target.stat().st_size:
+    if cached_file(name) is not None:
         return target
     try:
         url = download.secure_url(url)  # HTTPS only, as every download

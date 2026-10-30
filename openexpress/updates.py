@@ -22,7 +22,7 @@ from openexpress import answers, applog, cache, download, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
-from openexpress.progress import Step, byte_steps, say_to
+from openexpress.progress import Step, byte_steps, copying_text, downloading_text, say_to
 
 log = logging.getLogger(__name__)
 
@@ -407,8 +407,7 @@ def _install(
                               .format(part=u.part_number))
         log.debug("software update: downloading %s %s (%s)", u.part_number, u.device_path,
                   applog.size(u.size))
-        # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
-        downloading = _("Downloading {name}").format(name=u.title)
+        downloading = downloading_text(u.title)
         local = download.fetch([u.url], cache_path(u), u.size, u.md5, session=session,
                                progress=byte_steps(progress, downloading))
         got = local.stat().st_size
@@ -424,8 +423,7 @@ def _install(
         local = local_files[u.key]
         size = local.stat().st_size
         log.debug("software update: copying %s", u.device_path)
-        # TRANSLATORS: a step of an update install; {name}: the update ("… · 1.2 MB of 3.4 MB")
-        copying = _("Copying {name} to the device").format(name=u.title)
+        copying = copying_text(u.title)
         _clear_the_place(storage, u)  # deletes a file in another letter case, GUPDATE.TMP
         # A failed write is cleaned up by the storage itself (half a file over MTP; nothing
         # on a drive, nor when the copy never started): nothing more is deleted for it here,

@@ -28,7 +28,7 @@ from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, country_name
-from openexpress.progress import Step, byte_steps, say_to
+from openexpress.progress import Step, byte_steps, copying_text, downloading_text, say_to
 
 log = logging.getLogger(__name__)
 
@@ -665,7 +665,7 @@ def _install(
     local: dict[str, Path] = {}
     say = say_to(progress)
     # The map as a whole, by its name: the files are the server's and the device's own.
-    downloaded = byte_steps(progress, _("Downloading {name}").format(name=m.name))
+    downloaded = byte_steps(progress, downloading_text(m.name))
     # One bar for all the files of the map.
     overall = download.Overall(m.size, downloaded) if downloaded is not None else None
     for f in files:
@@ -704,8 +704,7 @@ def _install(
         storage.delete(p)
         report.removed.append(p)
     shared = protected_files(all_maps, m)
-    # TRANSLATORS: a step of a map install; {name}: the map ("… · 1.2 GB of 6.3 GB")
-    copying = _("Copying {name} to the device").format(name=m.name)
+    copying = copying_text(m.name)
     copy_total = sum(f.size or 0 for f in files)
     copied = 0  # the bytes of the files written before the current one
     for f in files:

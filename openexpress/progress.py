@@ -90,6 +90,31 @@ class Step(str):
         return self.fraction == 1.0
 
 
+# The words of a step of a long task, the same for every kind of data; {name} names what is
+# moved (an update, a map, an app, TrueUp: never a file).
+def downloading_text(name: str) -> str:
+    from openexpress.i18n import _
+
+    # TRANSLATORS: a step of a long task: an update, a map, an app or TrueUp downloaded
+    # ("… · 1.2 MB of 3.4 MB", "… · 1 of 2")
+    return _("Downloading {name}").format(name=name)
+
+
+def copying_text(name: str) -> str:
+    from openexpress.i18n import _
+
+    # TRANSLATORS: a step of a long task: an update or a map copied to the device
+    # ("… · 1.2 MB of 3.4 MB")
+    return _("Copying {name} to the device").format(name=name)
+
+
+def writing_text(name: str) -> str:
+    from openexpress.i18n import _
+
+    # TRANSLATORS: a step of a long task: an app or TrueUp written to the device ("… · 1 of 2")
+    return _("Writing {name} to the device").format(name=name)
+
+
 def nothing(_message: str) -> None:
     """Progress nobody listens to."""
 
