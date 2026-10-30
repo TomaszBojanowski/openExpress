@@ -191,7 +191,4 @@ def main() -> int:
     from openexpress import applog
 
     applog.setup("watch", stderr_level=logging.INFO, stderr_format="%(message)s")
-    from openexpress import answers
-
-    answers.use_disk()
     return Watcher().run([])

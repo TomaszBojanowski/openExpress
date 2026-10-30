@@ -258,10 +258,10 @@ def check(client, device, ask=None, country=None) -> tuple[list[UniversalMap], i
         log.info("maps: map update type %s for %s: map updates not supported, no map check",
                  said, device.part_number)
         raise MapsNotSupported(value[:40] if isinstance(value, str) and value else None)
-    with answers.told() as where:
+    with answers.told() as sources:
         answer = client.universal_maps(device.raw)
     log.info("maps: map update type %s for %s: the universal map service's answer, %s", said,
-             device.part_number, where.source)
+             device.part_number, sources[-1] if sources else "asked now")
     found = read_maps(answer)
     apply_restrictions(found[0], country)
     return found

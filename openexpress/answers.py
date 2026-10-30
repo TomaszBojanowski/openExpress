@@ -27,8 +27,10 @@ import threading
 import time
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
+from openexpress import cache, paths
 from openexpress.device.xmldevice import parse
 
 log = logging.getLogger(__name__)
@@ -83,10 +85,6 @@ def _fields(value: Any, keep: frozenset[str]) -> Any:
     return value
 
 
-# What a kind keeps of an answer, in memory and on disk.
-KEEP: dict[str, Callable[[Any], Any]] = {
-    UNIT_INFO: lambda answer: _fields(answer, UNIT_INFO_FIELDS),
-}
 # What goes to disk of the account's list: what the start page, the ownership check and the
 # primary devices read; never a name the user gave a device ("displayname").
 ACCOUNT_FIELDS = frozenset({
@@ -158,33 +156,26 @@ def _tag(value) -> str:
     return hashlib.sha256(str(value).encode()).hexdigest()[:16]
 
 
-class Told:
-    """Where the answer asked inside told() came from, for the log."""
-
-    def __init__(self):
-        self.source = "asked now"
-
-
 _listening = threading.local()
 
 
 @contextmanager
-def told() -> Iterator[Told]:
-    """Where the answer asked inside comes from (this thread's last): "asked now", "from
-    memory, 85 s old", "from disk, …", "shared with a request under way"; for a line of the
-    log that would else say the server was asked."""
-    outer = getattr(_listening, "told", None)
-    _listening.told = mine = Told()
+def told() -> Iterator[list[str]]:
+    """Where the answers asked inside, on this thread, come from, in order: "asked now",
+    "from memory, 85 s old", "from disk, …", "shared with a request under way"; for a line of
+    the log that would else say the server was asked."""
+    outer = getattr(_listening, "sources", None)
+    _listening.sources = sources = []
     try:
-        yield mine
+        yield sources
     finally:
-        _listening.told = outer
+        _listening.sources = outer
 
 
 def _tell(source: str) -> None:
-    listening = getattr(_listening, "told", None)
-    if listening is not None:
-        listening.source = source
+    sources = getattr(_listening, "sources", None)
+    if sources is not None:
+        sources.append(source)
 
 
 _MISSING = object()  # nothing kept: an answer itself may be None (no country, an empty body)
@@ -246,8 +237,8 @@ class Answers:
         try:
             _tell("asked now")
             value = fetch()
-            keep = KEEP.get(kind)
-            value = keep(value) if keep is not None else value
+            if kind == UNIT_INFO:  # only the fields the program reads, in memory too
+                value = _fields(value, UNIT_INFO_FIELDS)
         except BaseException as e:
             flight.error = e
             raise
@@ -320,11 +311,8 @@ class Disk:
     by its owner only, named by a hash of the key; in it the kind, when it was answered, the
     hashed tags and the fields of the answer DISK_FIELDS names."""
 
-    def __init__(self, folder, fields: dict[str, frozenset[str]] | None = None):
-        from pathlib import Path
-
+    def __init__(self, folder):
         self.folder = Path(folder)
-        self.fields = DISK_FIELDS if fields is None else fields
 
     def _path(self, full: tuple):
         name = hashlib.sha256(json.dumps(full, default=str).encode()).hexdigest()[:32]
@@ -338,20 +326,23 @@ class Disk:
             self.folder.chmod(0o700)
 
     def put(self, kind: str, full: tuple, value, tags: frozenset[str], at: float) -> None:
-        if kind not in self.fields:
+        """Kept on disk as the cache is used; never while it is being cleared (that does not
+        wait: the answer stays in memory only)."""
+        if kind not in DISK_FIELDS:
             return
-        from openexpress import paths
-
         try:
-            self._own_folder()
-            paths.write_private(self._path(full), json.dumps(
-                {"kind": kind, "at": at, "tags": sorted(tags),
-                 "value": _fields(value, self.fields[kind])}))
+            with cache.using(wait=False):
+                self._own_folder()
+                paths.write_private(self._path(full), json.dumps(
+                    {"kind": kind, "at": at, "tags": sorted(tags),
+                     "value": _fields(value, DISK_FIELDS[kind])}))
+        except cache.CacheBusy:
+            log.debug("answers: %s not kept on disk, the cache is being cleared", kind)
         except (OSError, TypeError, ValueError) as e:
             log.info("answers: %s not kept on disk (%s)", kind, type(e).__name__)
 
     def get(self, kind: str, full: tuple, now: float):
-        if kind not in self.fields:
+        if kind not in DISK_FIELDS:
             return None
         try:
             data = json.loads(self._path(full).read_text(encoding="utf-8"))
@@ -379,6 +370,26 @@ class Disk:
                     and (tag is None or tag in (data.get("tags") or ())):
                 p.unlink(missing_ok=True)
 
+    def tidy(self, now: float) -> None:
+        """Takes away the answers out of date and the files of answers that are none (changed
+        by hand): those of a key that no longer comes (another GarminDevice.xml, another
+        login) would else stay until the cache is cleared."""
+        gone = 0
+        for p in self.folder.glob("*.json"):
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = None
+            kind = data.get("kind") if isinstance(data, dict) else None
+            at = data.get("at") if isinstance(data, dict) else None
+            if kind in LIFETIMES and isinstance(at, (int, float)) \
+                    and 0 <= now - at < LIFETIMES[kind]:
+                continue
+            p.unlink(missing_ok=True)
+            gone += 1
+        if gone:
+            log.debug("answers: %d out of date taken off the disk", gone)
+
 
 ANSWERS = Answers()
 
@@ -386,6 +397,10 @@ ANSWERS = Answers()
 def use_disk() -> None:
     """The kept answers on disk too, from now on (the command line, the window, the background
     service), in the cache: for the next command and the next start of the window."""
-    from openexpress import paths
-
     ANSWERS.disk = Disk(paths.cache_dir() / FOLDER)
+    if ANSWERS.disk.folder.is_dir():
+        try:
+            with cache.using(wait=False):
+                ANSWERS.disk.tidy(ANSWERS.clock())
+        except cache.CacheBusy:
+            pass  # being cleared: nothing out of date is left either

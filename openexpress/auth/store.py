@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
-from openexpress import paths
+from openexpress import answers, paths
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 
@@ -74,6 +74,4 @@ def delete() -> bool:
 
 def _forget_the_account() -> None:
     """Another login (or none): nothing kept of the account's answers holds (answers)."""
-    from openexpress import answers
-
     answers.ANSWERS.forget(answers.ACCOUNT_KINDS)

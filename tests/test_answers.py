@@ -151,9 +151,11 @@ def test_unit_info_keeps_only_the_fields_the_program_reads(kept):
                    "connectsupport": "Required"}
 
 
-def test_on_disk_only_the_fields_named_in_a_file_its_owner_reads(tmp_path, kept):
+def test_on_disk_only_the_fields_named_in_a_file_its_owner_reads(tmp_path, kept, monkeypatch):
     store, clock = kept
-    store.disk = Disk(tmp_path / "answers", {ACCOUNT_DEVICES: frozenset({"unitid", "partnumber"})})
+    monkeypatch.setattr(answers, "DISK_FIELDS",
+                        {ACCOUNT_DEVICES: frozenset({"unitid", "partnumber"})})
+    store.disk = Disk(tmp_path / "answers")
     answer = [{"unitid": UNIT, "partnumber": "006-B0000-00", "displayname": "Jan's watch"}]
     store.ask(ACCOUNT_DEVICES, ("prod", "login"), lambda: answer, about=[UNIT])
     (file,) = (tmp_path / "answers").iterdir()
@@ -163,8 +165,7 @@ def test_on_disk_only_the_fields_named_in_a_file_its_owner_reads(tmp_path, kept)
     assert json.loads(text)["tags"] and str(UNIT) not in json.dumps(json.loads(text)["tags"])
     # Another process: nothing in memory, the answer from disk while it is fresh.
     other = Answers(clock)
-    other.disk = Disk(tmp_path / "answers",
-                      {ACCOUNT_DEVICES: frozenset({"unitid", "partnumber"})})
+    other.disk = Disk(tmp_path / "answers")
     assert other.ask(ACCOUNT_DEVICES, ("prod", "login"), pytest.fail) == [
         {"unitid": UNIT, "partnumber": "006-B0000-00"}]
     clock.now += answers.LIFETIMES[ACCOUNT_DEVICES]
@@ -172,18 +173,20 @@ def test_on_disk_only_the_fields_named_in_a_file_its_owner_reads(tmp_path, kept)
     assert other.ask(ACCOUNT_DEVICES, ("prod", "login"), list) == []
 
 
-def test_forget_takes_it_off_the_disk_too(tmp_path, kept):
+def test_forget_takes_it_off_the_disk_too(tmp_path, kept, monkeypatch):
     store, _clock = kept
-    store.disk = Disk(tmp_path / "answers", {SOFTWARE_UPDATES: frozenset({"updates"})})
+    monkeypatch.setattr(answers, "DISK_FIELDS", {SOFTWARE_UPDATES: frozenset({"updates"})})
+    store.disk = Disk(tmp_path / "answers")
     store.ask(SOFTWARE_UPDATES, ("one",), lambda: {"updates": []}, about=[UNIT])
     store.ask(SOFTWARE_UPDATES, ("two",), lambda: {"updates": []}, about=[3000000002])
     store.forget(SOFTWARE_UPDATES, about=UNIT)
     assert len(list((tmp_path / "answers").iterdir())) == 1
 
 
-def test_a_kind_not_named_for_the_disk_stays_in_memory(tmp_path, kept):
+def test_a_kind_not_named_for_the_disk_stays_in_memory(tmp_path, kept, monkeypatch):
     store, _clock = kept
-    store.disk = Disk(tmp_path / "answers", {})
+    monkeypatch.setattr(answers, "DISK_FIELDS", {})
+    store.disk = Disk(tmp_path / "answers")
     store.ask(ACCOUNT_DEVICES, ("k",), list)
     assert not (tmp_path / "answers").exists()
 

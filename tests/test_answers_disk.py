@@ -182,3 +182,43 @@ def test_a_logout_or_another_login_clears_the_account_on_disk(xdg, capsys, how):
     else:
         store.save(store.ConnectAuth("another-token", "another-secret"))
     assert set(_on_disk(ANSWERS.disk.folder)) == {answers.SOFTWARE_UPDATES}
+
+
+def test_an_answer_got_while_the_cache_is_cleared_stays_in_memory(xdg):
+    """Clearing the cache holds it alone (cache.clearing); an answer got meanwhile does not
+    wait for it, nor go to the folder being emptied: it is kept in memory only."""
+    import threading
+
+    from openexpress import cache
+
+    answers.use_disk()
+    got = []
+    with cache.clearing():
+        asking = threading.Thread(target=lambda: got.append(ANSWERS.ask(
+            answers.SOFTWARE_UPDATES, ("k",), lambda: {"updates": []})))
+        asking.start()
+        asking.join(5)
+        assert not asking.is_alive(), "the answer waited for the clearing"
+    assert got == [{"updates": []}]
+    assert not list(ANSWERS.disk.folder.glob("*.json"))
+    assert ANSWERS.ask(answers.SOFTWARE_UPDATES, ("k",), pytest.fail) == {"updates": []}
+
+
+def test_answers_out_of_date_leave_the_disk_when_a_process_starts(xdg, clock):
+    """An answer whose key no longer comes (another GarminDevice.xml, another login) would
+    stay until the cache is cleared: the next process takes away those out of date, and
+    files that are no answer."""
+    from datetime import timedelta
+
+    answers.use_disk()
+    ANSWERS.ask(answers.SOFTWARE_UPDATES, ("old",), lambda: {"updates": []})
+    clock.current += timedelta(seconds=answers.LIFETIMES[answers.SOFTWARE_UPDATES] + 1)
+    ANSWERS.ask(answers.SOFTWARE_UPDATES, ("new",), lambda: {"updates": []})
+    folder = ANSWERS.disk.folder
+    (folder / "0123.json").write_text("[]")  # changed by hand
+    (folder / "note.txt").write_text("not an answer")  # not ours: stays
+    answers.use_disk()  # the next process
+    names = sorted(p.name for p in folder.iterdir())
+    assert len(names) == 2 and "note.txt" in names
+    ANSWERS.clear()
+    assert ANSWERS.ask(answers.SOFTWARE_UPDATES, ("new",), pytest.fail) == {"updates": []}

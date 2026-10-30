@@ -53,11 +53,15 @@ class CacheBusy(CacheError, OrdinaryStop):
 
 
 @contextlib.contextmanager
-def using():
+def using(wait: bool = True):
     """Hold the cache while its files are downloaded, written or read for an install. Many
-    may hold it at once; while a clearing runs, this waits for it (a clearing is short)."""
+    may hold it at once; while a clearing runs, this waits for it (a clearing is short), or,
+    without `wait`, raises CacheBusy at once (what holds a lock the clearing may need)."""
     with _lock_file() as f:
-        fcntl.flock(f, fcntl.LOCK_SH)
+        try:
+            fcntl.flock(f, fcntl.LOCK_SH | (0 if wait else fcntl.LOCK_NB))
+        except BlockingIOError:
+            raise CacheBusy(_("The cache is being cleared.")) from None
         try:
             yield
         finally:

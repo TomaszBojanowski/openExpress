@@ -16,6 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit
 import requests
 
 from openexpress import answers, applog, netstatus
+from openexpress.auth import store
 from openexpress.auth.oauth1 import authorization_header
 from openexpress.auth.store import ConnectAuth
 from openexpress.errors import UserFacingError
@@ -522,8 +523,6 @@ class GarminClient:
     def account_scope(self) -> tuple:
         """What an answer about the account depends on besides the question: the environment
         and the login saved (its version, nothing of what is in it)."""
-        from openexpress.auth import store
-
         return self.settings.environment, store.stamp()
 
     def account_devices(self, fresh: bool = False) -> list[dict]:
