@@ -955,6 +955,26 @@ def test_the_drive_named_for_testing_is_taken_for_a_garmin_drive(drives, monkeyp
     assert str(drives.media) not in caplog.text  # no local path (it has the user name)
 
 
+def test_the_log_names_the_drive_named_for_testing_by_its_own_usb_ids(drives, monkeypatch,
+                                                                      caplog):
+    """Not by Garmin's vendor ID, which it has not: the lines about it give the vendor and the
+    product that /sys gives."""
+    monkeypatch.setenv(TEST_DRIVE_ENV, "0781:5581")
+    pendrive = _pendrive(drives)
+    without_xml = FakeDriveMount(drive_folder(drives, label="EMPTY", xml_path=None),
+                                 usb_drive(drives, vendor="0781", product="5581", port="1-5",
+                                           devnum=13, disk="sdc", partition="sdc1",
+                                           serial="0000abcdef75"))
+    monitor_with(monkeypatch, pendrive, without_xml)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        (found,) = gio_storage.find_ums_devices()
+        gio_storage.open_ums_storage(found)
+    assert found.usb.usb_id == "0781:5581"
+    assert "(USB 0781:5581) without GARMIN/GarminDevice.xml, skipped" in caplog.text
+    assert "opened in mass storage mode (file:, USB 0781:5581)" in caplog.text
+    assert "091e" not in caplog.text
+
+
 def test_the_variable_takes_only_the_mounted_drive_it_names(drives, monkeypatch):
     """Another product of the same vendor, the same product of another vendor and the named
     pendrive not mounted are not taken."""

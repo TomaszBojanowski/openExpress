@@ -474,10 +474,13 @@ class GarminUsb:
     # hidden in the log as soon as they are read (applog.hide_usb).
     serial: str | None = field(default=None, compare=False, repr=False)
     volume_uuid: str | None = field(default=None, compare=False, repr=False)
+    # Garmin's; another only for the drive named for testing (TEST_DRIVE_ENV), so that the log
+    # names it by the vendor it has.
+    vendor: str = field(default=GARMIN_VID, compare=False)
 
     @property
     def usb_id(self) -> str:
-        return f"{GARMIN_VID}:{self.product or 'unknown'}"
+        return f"{self.vendor}:{self.product or 'unknown'}"
 
 
 @dataclass
@@ -641,7 +644,7 @@ def _drive_usb(ids: tuple[str, str, int, int], folder: Path, volume) -> GarminUs
 
     uuid = volume.get_identifier("uuid") if volume is not None else None
     usb = GarminUsb(ids[1], ids[2], ids[3], serial=_usb_serial(folder),
-                    volume_uuid=uuid or None)
+                    volume_uuid=uuid or None, vendor=ids[0])
     applog.hide_usb(usb)
     return usb
 
