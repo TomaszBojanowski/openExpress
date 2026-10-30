@@ -252,6 +252,31 @@ def drive_keys_text(usb, unit_id) -> str:
     return f"{said}; its volume {has}"
 
 
+# Why a Garmin device connected as a USB drive is not synced (drive_sync_refusal).
+NO_UPLOAD_TYPES = "no-upload-types"  # no data type of it goes from the device
+CONNECT_DISABLED = "connect-disabled"  # Garmin Connect does not serve it
+CONNECT_NOT_KNOWN = "connect-not-known"  # no word from Garmin on whether Connect serves it
+
+
+def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | None:
+    """Why a Garmin device connected as a USB drive is not synced, None when it is (its files
+    uploaded, nothing written to it): NO_UPLOAD_TYPES when its GarminDevice.xml declares no
+    data type whose files go from the device (a Varia); CONNECT_DISABLED when unit-info says
+    that Garmin Connect does not serve it ("connectSupport": "Disabled", an inReach Mini 2,
+    although it declares activities); CONNECT_NOT_KNOWN when there is no such word in
+    `unit_info`. Asks nothing: `unit_info` is the answer of unit-info as kept (unit_info(),
+    answers), None when there is none; whether the account has the device is asked apart,
+    before the uploads (plan_sync)."""
+    if not any(f.readable for f in device.files):
+        return NO_UPLOAD_TYPES
+    support = unit_info.get("connectsupport") if isinstance(unit_info, dict) else None
+    if not isinstance(support, str) or not support.strip():
+        return CONNECT_NOT_KNOWN
+    if support.strip().casefold() == "disabled":
+        return CONNECT_DISABLED
+    return None
+
+
 def _open_found(found) -> Storage:
     """The storage of the device chosen from a list: a Garmin drive, mounted first when the
     system has not mounted it (KDE); an MTP device by its address, as with --device-uri,
