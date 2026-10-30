@@ -1383,13 +1383,17 @@ def test_a_garmin_drive_not_mounted_is_told_without_error_or_path(plugged, monke
                                      ["backup"]])
 def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypatch, capsys,
                                                       command):
-    """The refusal of the window, in one sentence, before any request or login."""
+    """The refusal of the window, in one sentence, before any request or login; `sync` says
+    its own reason (this Varia declares no data types: service.drive_sync_refusal)."""
+    from openexpress import service
     from openexpress.cli import main
 
     monitor_with(monkeypatch, watch_and_drives.drive())
     assert main(command) == 1
     captured = capsys.readouterr()
-    assert MASS_STORAGE_TEXT in captured.err and captured.err.count("\n") == 1
+    said = (service.drive_sync_refusal_text(service.NO_UPLOAD_TYPES) if command == ["sync"]
+            else MASS_STORAGE_TEXT)
+    assert said in captured.err and captured.err.count("\n") == 1
 
 
 @pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"],

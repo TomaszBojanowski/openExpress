@@ -13,6 +13,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import NoReturn
 
 from openexpress import __version__, applog, i18n, known_devices, paths
 from openexpress.auth import store
@@ -55,8 +56,9 @@ FIRST_SYNC_CHOICE = 3
 WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music"})
 
 
-# Commands that do not apply to a Garmin device in mass storage mode (as in the window).
-NOT_ON_A_DRIVE = ("sync", "baseline", "apps", "music", "maps", "backup")
+# Commands that do not apply to a Garmin device in mass storage mode (as in the window);
+# `sync` of one goes as service.drive_sync_refusal lets it (_refuse_drive_sync).
+NOT_ON_A_DRIVE = ("baseline", "apps", "music", "maps", "backup")
 
 
 def open_storage(args) -> Storage:
@@ -89,6 +91,12 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     command = getattr(args, "cmd", None)
 
     def refuse(st, dev):
+        if st.mass_storage and command == "sync":
+            # Its data types now, before it is remembered; Garmin's word on it once there is
+            # a session (_refuse_drive_sync).
+            if not service.declares_uploads(dev):
+                _drive_not_synced(service.NO_UPLOAD_TYPES)
+            return
         if st.mass_storage and command in NOT_ON_A_DRIVE:
             raise service.MassStorageMode(mass_storage_text())
         if command in ("sync", "baseline") and not dev.datatypes():
@@ -99,6 +107,31 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     st = open_storage(args)
     # A device found now is remembered; a folder given with --path may be a copy.
     return st, service.read_device(st, found_now=not args.path, refuse=refuse)
+
+
+def _drive_not_synced(reason: str, error: str = "") -> NoReturn:
+    from openexpress import service
+
+    log.info("sync: a USB drive not synced: %s%s", reason, f" ({error})" if error else "")
+    raise service.MassStorageMode(service.drive_sync_refusal_text(reason, error))
+
+
+def _refuse_drive_sync(session) -> None:
+    """A watch connected as a USB drive is synced only as service.drive_sync_refusal lets it.
+    Its unit-info comes from the kept answers, or is asked of Garmin's update server when
+    none is kept (read only, no login); without an answer it is refused. Each refusal says
+    its reason."""
+    from openexpress import service
+
+    try:
+        info, error = service.unit_info(session), ""
+    except ApiError as e:
+        info, error = None, applog.network_error_text(e)
+    reason = service.drive_sync_refusal(session.device, info)
+    if reason is not None:
+        _drive_not_synced(reason, error)
+    log.info("sync: a USB drive that may sync (connect support: %s)",
+             info.get("connectsupport") or "not given")
 
 
 def make_client(settings: Settings, need_auth: bool) -> GarminClient:
@@ -686,6 +719,8 @@ def cmd_sync(args) -> int:
         client = make_client(settings, need_auth=False)
         print(_("(not logged in: showing the upload plan only)"))
     session = service.DeviceSession(st, dev, settings, client)
+    if st.mass_storage:
+        _refuse_drive_sync(session)
     # The sync of the window and the background service (service.run_sync), with what was
     # asked here.
     options = service.SyncOptions(

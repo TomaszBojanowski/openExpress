@@ -268,7 +268,7 @@ def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | No
     field lets it sync: Garmin did not refuse it. Asks nothing: `unit_info` is the answer as
     kept (unit_info(), answers); whether the account has the device is asked apart, before
     the uploads (plan_sync)."""
-    if not any(f.readable for f in device.files):
+    if not declares_uploads(device):
         return NO_UPLOAD_TYPES
     if not isinstance(unit_info, dict):
         return NO_UNIT_INFO
@@ -276,6 +276,28 @@ def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | No
     if isinstance(support, str) and support.strip().casefold() == "disabled":
         return CONNECT_DISABLED
     return None
+
+
+def declares_uploads(device: GarminDevice) -> bool:
+    """Whether the GarminDevice.xml of a device declares a data type whose files go from it:
+    what drive_sync_refusal asks first, without any answer of a server."""
+    return any(f.readable for f in device.files)
+
+
+def drive_sync_refusal_text(reason: str, error: str = "") -> str:
+    """What the user is told of a refusal of drive_sync_refusal; `error`: why Garmin's server
+    gave no answer of unit-info (NO_UNIT_INFO)."""
+    if reason == NO_UPLOAD_TYPES:
+        return _("This device is connected as a USB drive and declares no data that goes from "
+                 "it to Garmin Connect, so there is nothing to sync.")
+    if reason == CONNECT_DISABLED:
+        # TRANSLATORS: "connect support: Disabled" is what Garmin's server says; keep it as it is
+        return _("This device is connected as a USB drive, and Garmin's server says that "
+                 "Garmin Connect does not take its data (connect support: Disabled), so it is "
+                 "not synced.")
+    return _("This device is connected as a USB drive, and Garmin's server could not be asked "
+             "whether Garmin Connect takes its data, so it is not synced: {error}").format(
+                 error=error)
 
 
 def _open_found(found) -> Storage:
