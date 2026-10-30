@@ -87,6 +87,10 @@ modules:
       - install -Dm644 openexpress/data/${FLATPAK_ID}-bike-accessory-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-bike-accessory-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-handheld-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-handheld-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-device-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-device-symbolic.svg
+      - install -Dm644 openexpress/data/${FLATPAK_ID}-heart-rate-monitor-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-heart-rate-monitor-symbolic.svg
+      - install -Dm644 openexpress/data/${FLATPAK_ID}-scale-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-scale-symbolic.svg
+      - install -Dm644 openexpress/data/${FLATPAK_ID}-blood-pressure-monitor-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-blood-pressure-monitor-symbolic.svg
+      - install -Dm644 openexpress/data/${FLATPAK_ID}-bike-sensor-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-bike-sensor-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
     sources:
       # Local builds use the working tree; release builds should pin a git tag instead.

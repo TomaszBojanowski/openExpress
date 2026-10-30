@@ -49,6 +49,13 @@ CATEGORIES = (WATCH, CYCLING_COMPUTER, BIKE_ACCESSORY)
 # A handheld (inReach, GPSMAP, Montana…): told by the model name only, for the icon; Garmin
 # tells no such kind that the program knows, so it is never kept here (not in CATEGORIES).
 HANDHELD = "handheld"
+# What the account tells of a device whose only categories are FITNESS and WELLNESS (a heart
+# rate strap, a scale…): never connected, so never kept here; with the product name it picks
+# the icon (devicelist.icon_kind_of). WELLNESS alone is a wellness device, else fitness.
+FITNESS, WELLNESS = "fitness", "wellness"
+# The icons of the accessories of the account, picked by those categories and the name.
+HEART_RATE_MONITOR, SCALE = "heart-rate-monitor", "scale"
+BLOOD_PRESSURE_MONITOR, BIKE_SENSOR = "blood-pressure-monitor", "bike-sensor"
 # An update the window's check found for a device (the time of that check) is shown on its
 # tile for so long; an older finding counts as none (the update may be installed since).
 UPDATE_FOUND_KEPT_S = 30 * 86400

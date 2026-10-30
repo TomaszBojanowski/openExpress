@@ -26,8 +26,12 @@ from openexpress.gui.words import (  # noqa: E402
 from openexpress.i18n import _, full_time, ngettext, pgettext  # noqa: E402
 from openexpress.known_devices import (  # noqa: E402
     BIKE_ACCESSORY,
+    BIKE_SENSOR,
+    BLOOD_PRESSURE_MONITOR,
     CYCLING_COMPUTER,
     HANDHELD,
+    HEART_RATE_MONITOR,
+    SCALE,
     WATCH,
 )
 from openexpress.paths import APP_ID  # noqa: E402
@@ -53,6 +57,10 @@ KIND_ICONS = {
     CYCLING_COMPUTER: f"{APP_ID}-cycling-computer-symbolic",
     BIKE_ACCESSORY: f"{APP_ID}-bike-accessory-symbolic",
     HANDHELD: f"{APP_ID}-handheld-symbolic",
+    HEART_RATE_MONITOR: f"{APP_ID}-heart-rate-monitor-symbolic",
+    SCALE: f"{APP_ID}-scale-symbolic",
+    BLOOD_PRESSURE_MONITOR: f"{APP_ID}-blood-pressure-monitor-symbolic",
+    BIKE_SENSOR: f"{APP_ID}-bike-sensor-symbolic",
 }
 DEVICE_ICON = f"{APP_ID}-device-symbolic"
 # One width for every tile, in every section (never fitted to the longest text of a

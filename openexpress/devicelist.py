@@ -16,7 +16,18 @@ from dataclasses import dataclass
 
 from openexpress import known_devices, picture_urls, tile_facts
 from openexpress.device.gio_storage import distinct_devices
-from openexpress.known_devices import BIKE_ACCESSORY, CYCLING_COMPUTER, HANDHELD, WATCH
+from openexpress.known_devices import (
+    BIKE_ACCESSORY,
+    BIKE_SENSOR,
+    BLOOD_PRESSURE_MONITOR,
+    CYCLING_COMPUTER,
+    FITNESS,
+    HANDHELD,
+    HEART_RATE_MONITOR,
+    SCALE,
+    WATCH,
+    WELLNESS,
+)
 from openexpress.service import model_name, unit_id_of, wearable_entries
 
 log = logging.getLogger(__name__)
@@ -46,6 +57,18 @@ NAME_KINDS = {
     # Handhelds, with inReach or not: for their icon only; Garmin tells no kind of them.
     HANDHELD: ("inreach", "gpsmap", "montana", "etrex", "oregon"),
 }
+# The accessories of the account (FITNESS or WELLNESS by its categories) by the start of their
+# product names, for the icon only and only with that category: heart rate straps, scales,
+# blood pressure monitors, speed and cadence sensors. Lower case, without diacritics.
+ACCESSORY_NAMES = {
+    HEART_RATE_MONITOR: ("hrm",),
+    SCALE: ("index s2", "index smart scale", "index scale"),
+    BLOOD_PRESSURE_MONITOR: ("index bpm",),
+    BIKE_SENSOR: ("speed sensor", "cadence sensor", "bike speed sensor", "bike cadence sensor",
+                  "speed/cadence"),
+}
+# The categories of the account that make a device one of these accessories.
+ACCESSORY_CATEGORIES = {"FITNESS", "WELLNESS"}
 
 
 def layout(count: int, view: str = AUTO) -> str | None:
@@ -259,13 +282,13 @@ def picture_address(account_url: str | None, remembered_url: str | None):
     return None, None
 
 
-def kind_from_name(name: str | None) -> str | None:
+def kind_from_name(name: str | None, kinds: dict = NAME_KINDS) -> str | None:
     """The kind a model name tells by its start ("fēnix 8 - 47mm, Solar": a watch), case and
     diacritics ignored; a known start must end there or before a character that is not a
     letter ("Approach S70", not "Venusaur"). None: not known (the neutral icon)."""
     text = "".join(c for c in unicodedata.normalize("NFKD", name or "")
                    if not unicodedata.combining(c)).casefold().strip()
-    for kind, starts in NAME_KINDS.items():
+    for kind, starts in kinds.items():
         for start in starts:
             if text.startswith(start) and not text[len(start):len(start) + 1].isalpha():
                 return kind
@@ -273,7 +296,11 @@ def kind_from_name(name: str | None) -> str | None:
 
 
 def icon_kind_of(category: str | None, name: str | None) -> str | None:
-    """The kind for the icon: what Garmin says, else what the model name tells."""
+    """The kind for the icon: what Garmin says, else what the model name tells. An accessory
+    of the account (FITNESS, WELLNESS) by its product name ("HRM-Pro Plus": a heart rate
+    strap), else as any other name; none of them: the neutral icon."""
+    if category in (FITNESS, WELLNESS):
+        return kind_from_name(name, ACCESSORY_NAMES) or kind_from_name(name)
     return category or kind_from_name(name)
 
 
@@ -331,6 +358,9 @@ def account_fields(entry: dict) -> dict:
         category = CYCLING_COMPUTER
     elif entry.get("hasopticalheartrate") is True:  # worn on the wrist
         category = WATCH
+    elif categories and set(categories) <= ACCESSORY_CATEGORIES:
+        # A heart rate strap, a scale, a sensor… (its name picks the icon: icon_kind_of)
+        category = WELLNESS if set(categories) == {"WELLNESS"} else FITNESS
     else:
         category = None
     return {

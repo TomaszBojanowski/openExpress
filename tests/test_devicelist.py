@@ -407,7 +407,8 @@ def test_a_tile_only_on_the_account_comes_with_its_entry():
 
 def test_the_kind_of_a_device_comes_from_garmin_only():
     """From what Garmin says only: a cycling computer by the account's category
-    DEDICATED_BIKE_COMPUTER, a watch by the account's hasOpticalHeartRate, a bike accessory as
+    DEDICATED_BIKE_COMPUTER, a watch by the account's hasOpticalHeartRate, a wellness device
+    by its only category WELLNESS (a scale: test_accessory_icons.py), a bike accessory as
     remembered (from unit-info's segmenttype); anything else none (the neutral icon). Never
     by the name: a remembered "Edge 1050" not on the account stays without a kind."""
     from openexpress import devicelist
@@ -423,7 +424,7 @@ def test_the_kind_of_a_device_comes_from_garmin_only():
     kinds = {t.description: t.category for t in devicelist.tiles(
         [], {VARIA: varia, VENU: venu}, answer, logged_in=True)}
     assert kinds == {"Edge 1050": "cycling-computer", "fenix 8 - 47mm, Solar": "watch",
-                     "Index S2": None, "Varia RTL515": "bike-accessory", "Venu 2": None}
+                     "Index S2": "wellness", "Varia RTL515": "bike-accessory", "Venu 2": None}
     edge_by_name = KnownDevice(EDGE, "Edge 1050", "006-B4440-00", "33.11", "mtp", 1.0, 4.0)
     (tile,) = devicelist.tiles([], {EDGE: edge_by_name}, None, logged_in=False)
     assert tile.category is None

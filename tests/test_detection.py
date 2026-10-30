@@ -6821,7 +6821,9 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
     # not a solid shape).
     points = {"watch": ((17, 0), (-8, 5)), "cycling-computer": ((15, 0), (0, -5)),
               "bike-accessory": ((8, 15), (0, 20)), "device": ((14, 0), (7, 7)),
-              "handheld": ((12, 0), (8, 22))}
+              "handheld": ((12, 0), (8, 22)), "heart-rate-monitor": ((12, 0), (8, 5)),
+              "scale": ((23, 0), (0, 3)), "blood-pressure-monitor": ((-27, 10), (-9, 20)),
+              "bike-sensor": ((11, 0), (6, 0))}
     try:
         for kind, name in (*KIND_ICONS.items(), ("device", DEVICE_ICON)):
             assert theme.has_icon(name), name
