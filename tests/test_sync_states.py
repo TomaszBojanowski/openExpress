@@ -339,7 +339,7 @@ def test_what_the_window_knows_of_the_account(in_the_window):
     win, notes = _account_window()
     for answer, why in ((None, "logged-out"), ([{"unitid": 1}], None)):
         in_the_window("account_client", lambda answer=answer: types.SimpleNamespace(
-            auth=None if answer is None else object(), account_devices=lambda: answer))
+            auth=None if answer is None else object(), account_devices=lambda fresh=False: answer))
         MainWindow._fetch_account(win)
         assert (win._account, win._account_why) == (answer, why)
     win.in_background = lambda work, done, failed=None: failed(OSError("no network"))

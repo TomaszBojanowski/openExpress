@@ -302,12 +302,12 @@ def test_cli_asks_the_account_only_with_a_login_and_for_a_device_of_it(monkeypat
 
     monkeypatch.setattr(cli, "make_client", make_client)
     monkeypatch.setattr(service, "require_account_device",
-                        lambda c, unit_id: calls.append("owner") or [])
+                        lambda c, unit_id, fresh=False: calls.append("owner") or [])
     assert cli._account_country(dev) is None and calls == []  # no login: nothing asked
     saved.login = True
     assert cli._account_country(dev) == "KR" and calls == ["owner", "country"]
 
-    def refuse(c, unit_id):
+    def refuse(c, unit_id, fresh=False):
         raise NotAccountDevice("This device is not registered to your Garmin account.")
 
     calls.clear()
@@ -400,14 +400,16 @@ def test_cli_without_a_login_asks_the_account_nothing_and_says_no_error(
     assert "the account's country not read" not in log_file.read_text()
 
 
-def test_cli_checks_the_owner_again_on_each_run(saved_login, capsys):
+def test_cli_checks_the_owner_with_the_list_kept_a_few_minutes(saved_login, capsys):
+    """Reading only: the account's list may be the one kept (answers, 5 minutes); the check
+    is made all the same."""
     from test_ownership import DEVICES_PATH
 
     from openexpress.cli import main
 
     assert main(["maps", "--all"]) == 0
     assert main(["maps", "--all"]) == 0
-    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, DEVICES_PATH, LOCATION]
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, LOCATION]
 
 
 def test_cli_asks_the_account_nothing_when_no_map_is_restricted(saved_login, capsys):
@@ -479,7 +481,8 @@ def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
     assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
     again = window_session(device_root)  # the device opened again: a new session
     assert service.account_country(again) == "KR"
-    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION] * 2
+    # Its owner checked with the list kept (answers, 5 minutes); the country asked anew.
+    assert account_asked(saved_login) == [DEVICES_PATH, LOCATION, LOCATION]
 
 
 def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_logged_out(

@@ -99,7 +99,7 @@ def test_status_online_asks_the_account_and_the_update_server(monkeypatch, capsy
     _connected(monkeypatch, [fenix])
     asked = []
     client = types.SimpleNamespace(
-        account_devices=lambda: asked.append("account") or [{"unitid": OTHER_UNIT}],
+        account_devices=lambda fresh=False: asked.append("account") or [{"unitid": OTHER_UNIT}],
         software_updates=lambda raw: asked.append("updates") or "answer")
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth=False: client)
     monkeypatch.setattr(cli, "GarminClient", lambda settings: client)

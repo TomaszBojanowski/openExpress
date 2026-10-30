@@ -36,6 +36,8 @@ SOFTWARE_UPDATES = "software-updates"
 UNIVERSAL_MAPS = "universal-maps"
 UNIT_INFO = "unit-info"
 ACCOUNT_COUNTRY = "account-country"
+# The answers about the account: forgotten when the login changes (auth.store.save, delete).
+ACCOUNT_KINDS = (ACCOUNT_DEVICES, PRIMARY_TRAINING, ACCOUNT_COUNTRY)
 
 # How long an answer is fresh, in seconds. Garmin Express: the account's devices and the
 # primary device only when signing in; software 1 day and maps 1 hour on disk, by the

@@ -31,7 +31,7 @@ class FakeClient:
         self.auth = object()
         self.verified_unit_id = None
 
-    def account_devices(self):
+    def account_devices(self, fresh=False):
         return [{"unitid": 1234567890}]
 
     def require_verified(self, unit_id=None):

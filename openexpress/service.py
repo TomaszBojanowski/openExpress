@@ -15,7 +15,7 @@ from datetime import datetime
 
 import requests
 
-from openexpress import applog, known_devices, paths, sync
+from openexpress import answers, applog, known_devices, paths, sync
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError,
@@ -312,9 +312,11 @@ def unit_id_of(value) -> int | None:
     return value if type(value) is int and value > 0 else None
 
 
-def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
+def require_account_device(client: GarminClient, unit_id: int,
+                           fresh: bool = False) -> list[dict]:
     """Allow account operations on this watch only if the account lists it: returns the
-    account's device list fetched for the check (asked every time, no cache, no override).
+    account's device list fetched for the check (kept a few minutes, answers; `fresh`: asked
+    anew, which every write to the account and every upload asks for; no override).
     Raises NotAccountDevice when the watch is not on it, OwnershipUnknown when it cannot be
     fetched, Unauthorized and ClockSkew as they are. Leaves `client.verified_unit_id` set on
     success, None otherwise."""
@@ -325,7 +327,7 @@ def require_account_device(client: GarminClient, unit_id: int) -> list[dict]:
     verified = None
     try:
         try:
-            devices = client.account_devices()
+            devices = client.account_devices(fresh=True) if fresh else client.account_devices()
         except (Unauthorized, ClockSkew):
             raise  # an expired login or a wrong clock as such: the user gets the usual advice
         except ApiError as e:
@@ -560,7 +562,7 @@ def set_primary_wearable(client: GarminClient, device: GarminDevice,
     nothing is reported as an error."""
     def read_back(_devices):
         # It is a field of the account's list: the list read anew, with its check.
-        devices = require_account_device(client, device.unit_id)
+        devices = require_account_device(client, device.unit_id, fresh=True)
         return primary_wearable_status(client, device, devices), devices
 
     return WearableChange(*_change_primary(
@@ -583,7 +585,9 @@ def _change_primary(client: GarminClient, device: GarminDevice, apply: bool, *, 
     (`read_back(devices)`: its status after and the account's list as it is now), and
     `not_changed` when an accepted request changed nothing. Gives the status before and
     the account's list as it is now."""
-    devices = require_account_device(client, device.unit_id)
+    # A change is decided on what the account says now: nothing kept is used (answers).
+    devices = require_account_device(client, device.unit_id, fresh=True)
+    answers.ANSWERS.forget(answers.PRIMARY_TRAINING)
     before = status(client, device, devices)
     if before.is_this_device:
         return before, devices
@@ -593,7 +597,10 @@ def _change_primary(client: GarminClient, device: GarminDevice, apply: bool, *, 
         # Like the ownership check: never assume in favour of a change.
         raise error(not_known.format(device=device.description))
     if apply:
-        write(device.unit_id)
+        try:
+            write(device.unit_id)
+        finally:  # what was kept of the account may be what it was before
+            answers.ANSWERS.forget((answers.PRIMARY_TRAINING, answers.ACCOUNT_DEVICES))
         after, devices = read_back(devices)
         if not after.is_this_device:
             raise error(not_changed)
@@ -1132,7 +1139,8 @@ def plan_sync(s: DeviceSession, options: SyncOptions | None = None,
     if not s.logged_in and not options.preview:
         raise store.NotLoggedIn(_("Not logged in to Garmin Connect."))
     if s.logged_in:
-        require_account_device(s.client, s.device.unit_id)
+        # Before uploads: the account's list asked anew (a plan only shown: as kept).
+        require_account_device(s.client, s.device.unit_id, fresh=not options.preview)
     plan = SyncPlan(options, s.state)
     if options.uploads:
         progress(Waiting(_("Fetching configuration from the Garmin server…")))

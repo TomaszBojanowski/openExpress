@@ -200,7 +200,7 @@ APP = types.SimpleNamespace(name="Face It", app_id=FACE, app_type=4, has_files=T
 
 
 def _account(monkeypatch, store=None):
-    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id, fresh=False: [])
     monkeypatch.setattr(ciq, "StoreApi", lambda client: store)
 
 

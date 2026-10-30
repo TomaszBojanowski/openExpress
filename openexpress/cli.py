@@ -1533,7 +1533,8 @@ def cmd_apps(args) -> int:
     client = make_client(settings, need_auth=True)
     from openexpress import service
 
-    service.require_account_device(client, dev.unit_id)
+    # Before a change (--apply), the account's list asked anew.
+    service.require_account_device(client, dev.unit_id, fresh=bool(getattr(args, "apply", False)))
     api = ciq.StoreApi(client)
     locale = language_tag(settings.locale)
     state = ciq.read_installed(dev, st)

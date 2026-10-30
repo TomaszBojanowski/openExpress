@@ -60,11 +60,20 @@ def load() -> ConnectAuth:
 
 def save(auth: ConnectAuth) -> None:
     paths.write_private(_path(), json.dumps(asdict(auth), indent=2))
+    _forget_the_account()
 
 
 def delete() -> bool:
     p = _path()
+    _forget_the_account()
     if p.exists():
         p.unlink()
         return True
     return False
+
+
+def _forget_the_account() -> None:
+    """Another login (or none): nothing kept of the account's answers holds (answers)."""
+    from openexpress import answers
+
+    answers.ANSWERS.forget(answers.ACCOUNT_KINDS)

@@ -58,7 +58,7 @@ def test_a_quit_asked_before_the_background_service_kept_its_session(monkeypatch
         return service.SyncSummary()
 
     monkeypatch.setattr(w, "_open_session", open_session)
-    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit_id, fresh=False: [])
     monkeypatch.setattr(watch.service, "run_sync", run_sync)
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: None)
     w._sync()

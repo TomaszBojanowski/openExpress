@@ -78,6 +78,11 @@ class RecordingSession:
 
 
 def make_client(devices=None, auth=True, **routes):
+    """A client of a Garmin Connect of its own: what another one was told is not kept for it
+    (answers; in the program another account is another login, so another key)."""
+    from openexpress import answers
+
+    answers.ANSWERS.clear()
     return GarminClient(Settings(), Consumer("ck", "cs"),
                         ConnectAuth("t", "ts") if auth else None,
                         RecordingSession(devices, **routes))
@@ -203,7 +208,7 @@ def test_recheck_keeps_the_verification_until_the_answer(failure, error):
 
     client.http.routes[DEVICES_PATH] = answer
     with pytest.raises(error):
-        service.require_account_device(client, UNIT)
+        service.require_account_device(client, UNIT, fresh=True)  # before a write
     assert during == [UNIT]  # background tasks sharing the client are not interrupted
     assert client.verified_unit_id is None  # but a failed check revokes the earlier one
 
@@ -214,7 +219,7 @@ def test_check_of_another_watch_revokes_at_once():
     during = []
     ok = client.http.routes[DEVICES_PATH]
     client.http.routes[DEVICES_PATH] = lambda: during.append(client.verified_unit_id) or ok
-    service.require_account_device(client, OTHER)
+    service.require_account_device(client, OTHER, fresh=True)
     assert during == [None]
     assert client.verified_unit_id == OTHER
 
@@ -222,16 +227,19 @@ def test_check_of_another_watch_revokes_at_once():
 def test_unexpected_error_revokes_too():
     client = make_client([{"unitid": UNIT}])
     service.require_account_device(client, UNIT)
-    client.account_devices = lambda: 1 / 0
+    client.account_devices = lambda fresh=False: 1 / 0
     with pytest.raises(ZeroDivisionError):
         service.require_account_device(client, UNIT)
     assert client.verified_unit_id is None
 
 
-def test_every_check_asks_the_server_again():
+def test_a_check_before_a_write_asks_the_server_again():
+    """On opening a device the account's list may be the one kept a few minutes (answers);
+    a check before a write to the account or an upload asks anew, never from it."""
     client = make_client([{"unitid": UNIT}])
     service.require_account_device(client, UNIT)
-    service.require_account_device(client, UNIT)
+    service.require_account_device(client, UNIT)  # kept
+    service.require_account_device(client, UNIT, fresh=True)  # before a write
     assert client.http.paths() == [DEVICES_PATH, DEVICES_PATH]
 
 

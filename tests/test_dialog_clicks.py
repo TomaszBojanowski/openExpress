@@ -80,7 +80,7 @@ def app_calls(monkeypatch):
     calls = []
     monkeypatch.setattr(ciq, "remove", lambda device, storage, app: calls.append("remove"))
     monkeypatch.setattr(service, "require_account_device",
-                        lambda client, unit_id: calls.append("owner") or [])
+                        lambda client, unit_id, fresh=False: calls.append("owner") or [])
     monkeypatch.setattr(ciq, "StoreApi", lambda client: types.SimpleNamespace(
         forget=lambda device, ids: calls.append("forget")))
     return calls

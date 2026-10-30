@@ -130,7 +130,7 @@ def test_the_background_sync_does_not_log_its_progress(monkeypatch, caplog):
         mass_storage=False, logged_in=True, first_sync=False, client=None,
         device=types.SimpleNamespace(unit_id=1, description="Test watch"))
     monkeypatch.setattr(watch.service, "open_session", lambda: session)
-    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit: None)
+    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit, fresh=False: None)
     monkeypatch.setattr(watch.service, "run_sync", run_sync)
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: None)
     with caplog.at_level(logging.DEBUG, logger="openexpress"):

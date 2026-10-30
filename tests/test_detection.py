@@ -1581,7 +1581,7 @@ def _watcher_syncs(monkeypatch):
                                      first_sync=False)
 
     monkeypatch.setattr(watch.service, "open_session", opened)
-    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit: None)
+    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit, fresh=False: None)
     monkeypatch.setattr(watch.service, "run_sync", lambda s, progress=None, **kw: (
         synced.append(s.device.description), service.SyncSummary())[1])
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
@@ -2314,7 +2314,7 @@ def test_devices_not_on_the_account_are_on_the_list(choosing_window, monkeypatch
 
     asked = []
     monkeypatch.setattr(service, "require_account_device",
-                        lambda client, unit_id: asked.append(unit_id) or [])
+                        lambda client, unit_id, fresh=False: asked.append(unit_id) or [])
     monkeypatch.setattr(service, "check_session",
                         lambda s: asked.append("check") or s)
     win = choosing_window
@@ -2602,7 +2602,7 @@ def test_devices_on_and_off_the_account_are_both_listed(choosing_window, monkeyp
 
     asked = []
     monkeypatch.setattr(service, "require_account_device",
-                        lambda client, unit_id: asked.append(unit_id) or [{"unitid": 3000000002}])
+                        lambda client, unit_id, fresh=False: asked.append(unit_id) or [{"unitid": 3000000002}])
     monkeypatch.setattr(service, "check_session", lambda s: asked.append("check") or s)
     win = choosing_window
     monitor_with(monkeypatch)
@@ -6110,7 +6110,7 @@ class FakeAccountClient:
         self.auth = object() if logged_in else None
         self.error, self.asked = error, 0
 
-    def account_devices(self):
+    def account_devices(self, fresh=False):
         from openexpress.connect import lower_keys
 
         self.asked += 1
@@ -6360,7 +6360,7 @@ def logged_in_everywhere(monkeypatch, more=()):
     monkeypatch.setattr(store, "load", load)
     monkeypatch.setattr(store, "delete", saved.clear)  # logging out
 
-    def account_devices(client):
+    def account_devices(client, fresh=False):
         asked.append(1)
         listed = [{"unitId": TEST_WATCH, "productDisplayName": "Test watch",
                    "partNumber": "006-B0000-00"}, *ACCOUNT_LIST]
@@ -6460,7 +6460,7 @@ def test_refresh_on_the_view_of_a_device_not_connected_redraws_only_that_view(st
     newer = [dict(d, currentFirmwareVersion="22.30") if d["unitId"] == FORERUNNER else d
              for d in ACCOUNT_LIST]
 
-    def account_devices(client):
+    def account_devices(client, fresh=False):
         asked.append(1)
         return lower_keys([{"unitId": TEST_WATCH, "productDisplayName": "Test watch",
                             "partNumber": "006-B0000-00"}, *newer])
@@ -6582,7 +6582,7 @@ def test_an_account_tile_downloads_its_picture_and_a_failure_leaves_the_icon(sta
     class WithPictures(FakeAccountClient):
         http = object()
 
-        def account_devices(self):
+        def account_devices(self, fresh=False):
             listed = lower_keys(ACCOUNT_LIST)
             listed[1]["imageurl"], listed[2]["imageurl"] = bad, good
             return listed
@@ -6669,7 +6669,7 @@ def test_the_account_list_keeps_the_kind_of_a_remembered_device(start_window, mo
     from openexpress.connect import lower_keys
 
     class WithKinds(FakeAccountClient):
-        def account_devices(self):
+        def account_devices(self, fresh=False):
             listed = lower_keys(ACCOUNT_LIST)
             listed[0]["devicecategories"] = ["FITNESS", "DEDICATED_BIKE_COMPUTER"]
             return listed

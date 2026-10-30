@@ -340,7 +340,7 @@ def test_the_notification_of_the_background_sync_says_what_the_row_says(monkeypa
         mass_storage=False, logged_in=True, first_sync=False, client=None,
         device=types.SimpleNamespace(unit_id=record["unit_id"], description="Test watch"))
     monkeypatch.setattr(watch.service, "open_session", lambda: session)
-    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit: None)
+    monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit, fresh=False: None)
     monkeypatch.setattr(watch.service, "run_sync", lambda s, progress=None, **kw: summary)
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
     watch.Watcher()._sync()

@@ -503,14 +503,27 @@ class GarminClient:
         body = lower_keys(self._json(r, what))
         return (body.get("imageurl") if isinstance(body, dict) else None) or None
 
-    def account_devices(self) -> list[dict]:
-        """Devices registered to the logged-in account; each entry carries `unitid`."""
-        what = _("Account device list")
-        r = self._connect("GET", "device-service/deviceregistration/devices", what)
-        body = lower_keys(self._json(r, what))
-        if not isinstance(body, list) or not all(isinstance(d, dict) for d in body):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
-        return body
+    def _account_scope(self) -> tuple:
+        """What an answer about the account depends on besides the question: the environment
+        and the login saved (its version, nothing of what is in it)."""
+        from openexpress.auth import store
+
+        return self.settings.environment, store.stamp()
+
+    def account_devices(self, fresh: bool = False) -> list[dict]:
+        """Devices registered to the logged-in account; each entry carries `unitid`. Kept for
+        a while (answers); `fresh`: asked anew (the ownership check before a write)."""
+        def ask():
+            what = _("Account device list")
+            r = self._connect("GET", "device-service/deviceregistration/devices", what)
+            body = lower_keys(self._json(r, what))
+            if not isinstance(body, list) or not all(isinstance(d, dict) for d in body):
+                raise ApiError(_("{what}: unexpected response from the server")
+                               .format(what=what))
+            return body
+
+        return answers.ANSWERS.ask(answers.ACCOUNT_DEVICES, self._account_scope(), ask,
+                                   fresh=fresh)
 
     # --- consents and account settings that decide whether data may be uploaded ---------
 
@@ -557,16 +570,23 @@ class GarminClient:
         Read-only. The request names no device, so any verified device is enough.
         """
         self.require_verified()
-        what = _("Primary training device")
-        r = self._connect("GET", PRIMARY_TRAINING_PATH, what, params={"ignoreCache": "false"})
-        if r.status_code == 204 or not r.content.strip():
-            return {}
-        body = lower_keys(self._json(r, what))
-        if body is None:
-            return {}
-        if not isinstance(body, dict):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
-        return body
+
+        def ask():
+            what = _("Primary training device")
+            r = self._connect("GET", PRIMARY_TRAINING_PATH, what,
+                              params={"ignoreCache": "false"})
+            if r.status_code == 204 or not r.content.strip():
+                return {}
+            body = lower_keys(self._json(r, what))
+            if body is None:
+                return {}
+            if not isinstance(body, dict):
+                raise ApiError(_("{what}: unexpected response from the server")
+                               .format(what=what))
+            return body
+
+        # Kept for a while (answers); a change of it forgets it (service._change_primary).
+        return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self._account_scope(), ask)
 
     def set_primary_training_device(self, unit_id: int) -> None:
         """Make this device the account's primary training device. Changes the account.

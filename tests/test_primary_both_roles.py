@@ -100,6 +100,11 @@ class Account:
         return response(404)
 
     def client(self):
+        """A client of this account: what another account was told is not kept for it
+        (answers; in the program another account is another login, so another key)."""
+        from openexpress import answers
+
+        answers.ANSWERS.clear()
         return GarminClient(Settings(), Consumer("made-up-key", "made-up-secret"),
                             ConnectAuth("made-up-token", "made-up-token-secret"), self)
 

@@ -535,7 +535,7 @@ def apps_cli(monkeypatch, xdg):
     FakeStore.queued = []
     FakeStore.forgotten = []
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: client)
-    monkeypatch.setattr(service, "require_account_device", lambda c, unit_id: [])
+    monkeypatch.setattr(service, "require_account_device", lambda c, unit_id, fresh=False: [])
     monkeypatch.setattr(ciq, "StoreApi", FakeStore)
     return client
 
@@ -1249,7 +1249,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
     st.remount_error = RemountFailed("Cannot mount the device.")
     if broken:
         break_at_app_folder(monkeypatch, fake, 1)
-    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id, fresh=False: [])
     monkeypatch.setattr(ciq, "StoreApi", FakeStore)
     FakeStore.queued = []
     client = CountingClient()
@@ -2921,7 +2921,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
     from openexpress.gui.app import MainWindow
 
     st, dev, _fake, _app = hidden_update
-    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id, fresh=False: [])
     monkeypatch.setattr(ciq, "StoreApi", FakeStore)
     FakeStore.queued = []
     client = CountingClient()
@@ -3322,7 +3322,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
 
     st, dev = iq_device
     device_reports(monkeypatch, slots=0)
-    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id: [])
+    monkeypatch.setattr(service, "require_account_device", lambda client, unit_id, fresh=False: [])
     store = RecordingStore()
     monkeypatch.setattr(ciq, "StoreApi", lambda client: store)
     client = CountingClient()

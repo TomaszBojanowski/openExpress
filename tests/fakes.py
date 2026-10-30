@@ -155,7 +155,7 @@ class SyncAccount(SyncClient):
         self.ack_fails = set(ack_fails)
         self.asked = []
 
-    def account_devices(self):
+    def account_devices(self, fresh=False):
         self.asked.append("account")
         return [{"unitid": self.UNIT}]
 
