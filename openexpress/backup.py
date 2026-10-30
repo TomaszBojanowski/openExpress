@@ -18,7 +18,7 @@ from pathlib import Path
 from openexpress import applog, paths
 from openexpress.device.storage import DeviceError, Storage
 from openexpress.device.xmldevice import OUTPUT, GarminDevice
-from openexpress.fit import incompleteness
+from openexpress.fit import not_whole
 from openexpress.i18n import _, ngettext
 from openexpress.progress import Step
 
@@ -110,9 +110,10 @@ def incomplete_text(count: int) -> str:
 def _copy_files(device: GarminDevice, storage: Storage, target: Path,
                 progress: Callable[[str], None]) -> tuple[int, int, int]:
     """`progress`: which file of how many ("Copying to the backup · 120 of 1530"), never its
-    name. A FIT file is checked as a sync checks it (fit.incompleteness): one the device was
-    still writing when it was connected is read cut short (gvfs keeps the size it had then)
-    and left out. Returns the files written, their bytes and those left out."""
+    name. A FIT file is checked as a sync checks it (fit.not_whole): one the device was still
+    writing when it was connected is read cut short (gvfs keeps the size it had then) and left
+    out; one not whole otherwise is copied as it is, the backup faithful. Returns the files
+    written, their bytes and those left out."""
     # Every data type checked before anything is written.
     for src in backup_files(device):
         if not paths.is_safe_component(src.datatype):
@@ -139,13 +140,16 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
         progress(Step(head, n, count))
         log.debug("backup: copying %s", path)
         data = storage.read(path)
-        why = incompleteness(data) if path.casefold().endswith(".fit") else None
-        if why:
-            # The type and the sizes: never the name of the file.
+        found = not_whole(data) if path.casefold().endswith(".fit") else None
+        # The type and the sizes: never the name of the file.
+        if found and found[0]:
             log.warning("backup: a %s file still being written by the device (%s); not in "
-                        "the backup", datatype, why)
+                        "the backup", datatype, found[1])
             left_out += 1
             continue
+        if found:
+            log.info("backup: a %s file is not a whole FIT file (%s); copied as it is",
+                     datatype, found[1])
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(data)
         total += entry.size

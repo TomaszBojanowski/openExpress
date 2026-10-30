@@ -128,30 +128,37 @@ def crc16(data: bytes, crc: int = 0) -> int:
     return crc
 
 
-def incompleteness(data: bytes) -> str | None:
-    """Why `data` is not a whole FIT file, or None when it is: every part (a file may chain
-    several) has a header of 12 or 14 bytes with ".FIT", the size its header declares (header,
-    data and the CRC of 2 bytes) and that CRC; zeros after the last part are padding. A file a
-    device was still writing when it was read is cut short or does not match its CRC. For the
-    log: sizes, never the content."""
+def not_whole(data: bytes) -> tuple[bool, str] | None:
+    """Why `data` is not a whole FIT file, as (cut short, the words for the log), or None when
+    it is: every part (a file may chain several) has a header of 12 or 14 bytes with ".FIT",
+    the size its header declares (header, data and the CRC of 2 bytes) and that CRC; zeros
+    after the last part are padding. Cut short: a header declares more bytes than were read,
+    as when the device was still writing the file; else no header, data after the end that
+    are no FIT file, or a CRC that does not match. For the log: sizes, never the content."""
     pos = 0
     while True:
         if pos and not any(data[pos:]):
             return None  # zeros after whole FIT data: padding, nothing cut short
         if len(data) - pos < 12 or data[pos] not in (12, 14) or data[pos + 8:pos + 12] != b".FIT":
-            return (f"no FIT header ({len(data)} B read)" if pos == 0
-                    else f"{len(data) - pos} B after the whole FIT data are no FIT file")
+            return False, (f"no FIT header ({len(data)} B read)" if pos == 0
+                           else f"{len(data) - pos} B after the whole FIT data are no FIT file")
         header = data[pos]
         (size,) = struct.unpack_from("<I", data, pos + 4)
         end = pos + header + size + 2
         if end > len(data):
-            return f"{len(data)} B read, {end} B declared"
+            return True, f"{len(data)} B read, {end} B declared"
         (crc,) = struct.unpack_from("<H", data, end - 2)
         if crc16(data[pos:end - 2]) != crc:
-            return f"the CRC does not match ({len(data)} B read)"
+            return False, f"the CRC does not match ({len(data)} B read)"
         if end == len(data):
             return None
         pos = end
+
+
+def incompleteness(data: bytes) -> str | None:
+    """Why `data` is not a whole FIT file (not_whole), for the log; None when it is."""
+    found = not_whole(data)
+    return found[1] if found else None
 
 
 def find_message(data: bytes, global_num: int) -> dict[int, int | None] | None:

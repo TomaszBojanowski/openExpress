@@ -48,3 +48,16 @@ def test_chained_files_are_whole_only_together():
 
 def test_zeros_after_the_data_are_padding():
     assert fit.incompleteness(make_fit(1100000000) + bytes(16)) is None
+
+
+def test_only_a_header_declaring_more_than_was_read_is_cut_short():
+    """not_whole tells a file read cut short (the device still writing it) from one not whole
+    otherwise: a backup leaves out only the first."""
+    data = make_fit(1100000000)
+    changed = bytearray(data)
+    changed[20] ^= 0xFF
+    assert fit.not_whole(data) is None
+    assert fit.not_whole(data[:-6])[0] is True
+    for other in (b"", b"no FIT here", data + b"\x01 more", bytes(changed)):
+        assert fit.not_whole(other)[0] is False
+        assert fit.not_whole(other)[1] == fit.incompleteness(other)

@@ -1,8 +1,11 @@
-"""A backup checks its FIT files as a sync does (fit.incompleteness: the header, the size it
-declares, the CRC): a file the device was still writing when it was connected is read cut
-short; it is left out of the backup, and the summary, in the window and on the command line,
-says to disconnect and reconnect the device, then to make the backup again. All devices and
-files are made up."""
+"""A backup checks its FIT files as a sync does (fit.not_whole: the header, the size it
+declares, the CRC), and stays faithful: only a file read cut short (its header declares more
+bytes than were read: the device was still writing it when it was connected) is left out, and
+the summary, in the window and on the command line, says to disconnect and reconnect the
+device, then to make the backup again. A file not whole for another reason (no header, data
+after its end, a CRC that does not match) is copied as it is, and only the log says so. All
+devices and files are made up."""
+import logging
 import types
 
 import pytest
@@ -37,6 +40,38 @@ def test_a_fit_file_cut_short_is_left_out_and_counted(device_root, tmp_path, cap
     said = [r for r in caplog.records if "still being written by the device" in r.getMessage()]
     assert len(said) == 1 and said[0].levelname == "WARNING"
     assert "2026-10-03" not in said[0].getMessage()  # the type and the sizes, never the name
+
+
+OTHER = "GARMIN/Activity/2026-10-04-10-00-00.fit"
+
+
+def _not_fit_whole_otherwise():
+    whole = make_fit(1100172900)
+    crc_off = bytearray(whole)
+    crc_off[20] ^= 0xFF  # a byte of the data changed: the CRC no longer matches
+    return {"no FIT header": b"not a FIT file at all",
+            "empty": b"",
+            "data after its end": whole + b"\x01 more",
+            "a CRC that does not match": bytes(crc_off)}
+
+
+@pytest.mark.parametrize("what", sorted(_not_fit_whole_otherwise()))
+def test_a_fit_file_not_whole_otherwise_is_copied_as_it_is(device_root, tmp_path, caplog,
+                                                            what):
+    data = _not_fit_whole_otherwise()[what]
+    (device_root / OTHER).write_bytes(data)
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        res = backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    assert res.incomplete == 0
+    (copied,) = [p for p in res.path.rglob("2026-10-04-10-00-00.fit")]
+    assert copied.read_bytes() == data  # faithful, byte for byte
+    said = [r.getMessage() for r in caplog.records if "not a whole FIT file" in r.getMessage()]
+    assert len(said) == 1 and "copied as it is" in said[0]
+    assert "2026-10-04" not in said[0] and "Activity" not in said[0]  # the type, no path
+    assert "still being written" not in caplog.text.replace(
+        "0 still being written left out", "")
 
 
 def test_whole_files_are_all_backed_up(device_root, tmp_path):
