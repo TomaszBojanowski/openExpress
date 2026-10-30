@@ -105,6 +105,25 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.11" date="2026-10-30">
+      <description>
+        <ul>
+          <li>Files still being written: a file the device was still writing while it was
+          connected (for example a Garmin Coach plan) is no longer uploaded cut short. It waits
+          for the next sync, and the sync says to disconnect and reconnect the device, then to
+          sync again. Before, Garmin refused such a file and it was not sent again.</li>
+          <li>Calmer progress: the sync and map installs no longer flash the name of every
+          file. The bar at the bottom says what is done and how far ("Uploading activities · 3
+          of 8", "Downloading TopoActive Japan · 412.0 MB of 1.5 GB") and changes at most once a
+          second; on the command line it is one line that updates in place.</li>
+          <li>Smaller fixes: a sync no longer asks a device to create an app folder it only hides
+          (fēnix 8), which made the Apps page say the folder was refused; when Garmin rejects an
+          uploaded file, the log says what Garmin answered; the progress bar at the bottom of a
+          device's view lines up with the page above it, and a message at the end of a task no
+          longer covers it.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.10" date="2026-10-29">
       <description>
         <p>This release focuses on reliability: what openExpress writes to a device is checked,

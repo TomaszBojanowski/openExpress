@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: openexpress 0.7.10\n"
+"Project-Id-Version: openexpress 0.7.11\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 01:53+0100\n"
+"POT-Creation-Date: 2026-10-30 02:42+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -778,7 +778,7 @@ msgstr ""
 
 #. TRANSLATORS: a device connected as a USB drive, not over MTP
 #: openexpress/cli.py:241 openexpress/cli.py:438 openexpress/cli.py:569
-#: openexpress/gui/app.py:405 openexpress/gui/detection.py:545
+#: openexpress/gui/app.py:406 openexpress/gui/detection.py:545
 #: openexpress/gui/detection.py:562 openexpress/gui/device_page.py:921
 msgid "USB drive"
 msgstr ""
@@ -3000,93 +3000,93 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/app.py:75
+#: openexpress/gui/app.py:76
 msgctxt "tab"
 msgid "Device"
 msgstr ""
 
-#: openexpress/gui/app.py:76 openexpress/gui/detection.py:706
+#: openexpress/gui/app.py:77 openexpress/gui/detection.py:706
 #: openexpress/gui/start.py:443
 msgid "Detecting the device…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:78 openexpress/gui/device_page.py:938
+#: openexpress/gui/app.py:79 openexpress/gui/device_page.py:938
 #: openexpress/gui/start.py:648
 msgctxt "tab"
 msgid "Updates"
 msgstr ""
 
-#: openexpress/gui/app.py:79 openexpress/gui/updates_page.py:102
+#: openexpress/gui/app.py:80 openexpress/gui/updates_page.py:102
 msgid "Checking for updates…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:81 openexpress/gui/device_page.py:950
+#: openexpress/gui/app.py:82 openexpress/gui/device_page.py:950
 #: openexpress/gui/start.py:652
 msgctxt "tab"
 msgid "Maps"
 msgstr ""
 
-#: openexpress/gui/app.py:82 openexpress/gui/maps_page.py:100
+#: openexpress/gui/app.py:83 openexpress/gui/maps_page.py:100
 #: openexpress/gui/maps_page.py:308
 msgid "Checking maps…"
 msgstr ""
 
 #. TRANSLATORS: tab title (Connect IQ apps)
-#: openexpress/gui/app.py:84 openexpress/gui/device_page.py:963
+#: openexpress/gui/app.py:85 openexpress/gui/device_page.py:963
 msgctxt "tab"
 msgid "Apps"
 msgstr ""
 
-#: openexpress/gui/app.py:85 openexpress/gui/apps_page.py:106
+#: openexpress/gui/app.py:86 openexpress/gui/apps_page.py:106
 msgid "Loading Connect IQ apps…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:87 openexpress/gui/device_page.py:970
+#: openexpress/gui/app.py:88 openexpress/gui/device_page.py:970
 #: openexpress/gui/music_page.py:43
 msgctxt "tab"
 msgid "Music"
 msgstr ""
 
-#: openexpress/gui/app.py:88 openexpress/gui/music_page.py:48
+#: openexpress/gui/app.py:89 openexpress/gui/music_page.py:48
 msgid "Reading music on the device…"
 msgstr ""
 
-#: openexpress/gui/app.py:252 openexpress/gui/preferences.py:230
+#: openexpress/gui/app.py:253 openexpress/gui/preferences.py:230
 msgid "Preferences"
 msgstr ""
 
-#: openexpress/gui/app.py:254 openexpress/gui/preferences.py:231
+#: openexpress/gui/app.py:255 openexpress/gui/preferences.py:231
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: openexpress/gui/app.py:255
+#: openexpress/gui/app.py:256
 msgid "Report a Device or Problem…"
 msgstr ""
 
-#: openexpress/gui/app.py:256
+#: openexpress/gui/app.py:257
 msgid "About openExpress"
 msgstr ""
 
-#: openexpress/gui/app.py:265 openexpress/gui/app.py:359
+#: openexpress/gui/app.py:266 openexpress/gui/app.py:360
 msgid "Main Menu"
 msgstr ""
 
-#: openexpress/gui/app.py:296 openexpress/gui/app.py:355
+#: openexpress/gui/app.py:297 openexpress/gui/app.py:356
 #: openexpress/gui/preferences.py:229
 msgid "Refresh"
 msgstr ""
 
 #. TRANSLATORS: button that starts syncing
-#: openexpress/gui/app.py:299 openexpress/gui/app.py:303
-#: openexpress/gui/app.py:419 openexpress/gui/preferences.py:229
+#: openexpress/gui/app.py:300 openexpress/gui/app.py:304
+#: openexpress/gui/app.py:420 openexpress/gui/preferences.py:229
 #: openexpress/gui/start.py:611
 msgid "Sync"
 msgstr ""
 
-#: openexpress/gui/app.py:326
+#: openexpress/gui/app.py:329
 msgid "Do not unplug the device"
 msgstr ""
 
@@ -3095,40 +3095,40 @@ msgstr ""
 msgid "Stop Waiting"
 msgstr ""
 
-#: openexpress/gui/app.py:394
+#: openexpress/gui/app.py:395
 msgid "This device is not registered to your Garmin account"
 msgstr ""
 
-#: openexpress/gui/app.py:395
+#: openexpress/gui/app.py:396
 msgid "Could not check whether this device belongs to your Garmin account"
 msgstr ""
 
-#: openexpress/gui/app.py:403 openexpress/gui/detection.py:551
+#: openexpress/gui/app.py:404 openexpress/gui/detection.py:551
 #: openexpress/gui/device_page.py:640
 msgid "Connect your device"
 msgstr ""
 
-#: openexpress/gui/app.py:407 openexpress/gui/device_page.py:766
+#: openexpress/gui/app.py:408 openexpress/gui/device_page.py:766
 msgid "Not logged in to Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/app.py:411 openexpress/gui/apps_page.py:591
+#: openexpress/gui/app.py:412 openexpress/gui/apps_page.py:591
 #: openexpress/gui/detection.py:714 openexpress/gui/device_page.py:781
-#: openexpress/gui/window_tasks.py:441
+#: openexpress/gui/window_tasks.py:486
 msgid "Another operation is in progress"
 msgstr ""
 
-#: openexpress/gui/app.py:483
+#: openexpress/gui/app.py:484
 msgid "An operation is in progress"
 msgstr ""
 
-#: openexpress/gui/app.py:484
+#: openexpress/gui/app.py:485
 msgid ""
 "Wait until it finishes before closing openExpress, so that no files on the "
 "device are left half-written."
 msgstr ""
 
-#: openexpress/gui/app.py:592
+#: openexpress/gui/app.py:593
 #, python-brace-format
 msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""
@@ -4816,19 +4816,19 @@ msgstr ""
 msgid "The device was not ejected"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:304
+#: openexpress/gui/window_tasks.py:344
 msgid "Cancel"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:339
+#: openexpress/gui/window_tasks.py:379
 msgid "OK"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:416
+#: openexpress/gui/window_tasks.py:461
 msgid "This can take a few minutes."
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:572
+#: openexpress/gui/window_tasks.py:617
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"
@@ -5156,30 +5156,30 @@ msgid ""
 "unplugged. Unplug the device first."
 msgstr ""
 
-#: openexpress/maps.py:685
+#: openexpress/maps.py:687
 msgid "Activating the map on the Garmin server"
 msgstr ""
 
 #. TRANSLATORS: a step of a map install: files of an older version or of maps it
 #. replaces ("Removing old map files · 2 of 5")
-#: openexpress/maps.py:706
+#: openexpress/maps.py:708
 msgid "Removing old map files"
 msgstr ""
 
 #. TRANSLATORS: a step of a map install; {name}: the map ("… · 1.2 GB of 6.3 GB")
-#: openexpress/maps.py:712 openexpress/ownmaps.py:250
+#: openexpress/maps.py:714 openexpress/ownmaps.py:250
 #, python-brace-format
 msgid "Copying {name} to the device"
 msgstr ""
 
-#: openexpress/maps.py:774
+#: openexpress/maps.py:776
 #, python-brace-format
 msgid ""
 "Cannot write {path}, which other maps on the device also use ({maps}). "
 "Install the map again."
 msgstr ""
 
-#: openexpress/maps.py:787
+#: openexpress/maps.py:789
 #, python-brace-format
 msgid ""
 "The map files are on the device, but its unlock file {path} could not be "
@@ -5187,7 +5187,7 @@ msgid ""
 "if it does not, run openexpress maps again."
 msgstr ""
 
-#: openexpress/maps.py:793
+#: openexpress/maps.py:795
 #, python-brace-format
 msgid ""
 "The map files are on the device, but its unlock file {path} could not be "
@@ -5195,18 +5195,18 @@ msgid ""
 "if it does not, come back to this page."
 msgstr ""
 
-#: openexpress/maps.py:813
+#: openexpress/maps.py:815
 #, python-brace-format
 msgid "Writing the unlock file again ({attempt} of {tries})"
 msgstr ""
 
-#: openexpress/maps.py:834
+#: openexpress/maps.py:836
 #, python-brace-format
 msgid "Map '{name}' cannot be removed"
 msgstr ""
 
 #. TRANSLATORS: a step of a map removal; {name}: the map ("… · 2 of 5")
-#: openexpress/maps.py:845
+#: openexpress/maps.py:847
 #, python-brace-format
 msgid "Removing {name}"
 msgstr ""
