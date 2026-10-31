@@ -29,15 +29,11 @@ NO_TYPES_TEXT = ("This device is connected as a USB drive and declares no data t
 NO_ANSWER_TEXT = ("This device is connected as a USB drive, and Garmin's server could not be "
                   "asked whether Garmin Connect takes its data, so it is not synced: ")
 NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused)")
-UPLOADS_ONLY_TEXT = ("On a USB drive the sync only uploads: nothing is downloaded from Garmin "
-                     "Connect to the device.")
 FIRST_SYNC_DRIVE_TEXT = (
     "This is the first sync with this program. On a USB drive the files on it cannot be marked "
     "as uploaded first, so the first sync uploads everything:\n"
     "  openexpress sync --apply --all   uploads all the activities and other data on the device "
     "(Connect rejects duplicates)")
-DOWNLOAD_ONLY_TEXT = ("This device is connected as a USB drive: its sync only uploads, so "
-                      "there is nothing to do with --download-only.")
 
 
 class DriveAccount(SyncAccount):
@@ -161,68 +157,75 @@ def session_of(root, account, storage_class=UmsStorage):
     return service.DeviceSession(storage, device, Settings(), account)
 
 
-# --- only uploads ---------------------------------------------------------------------------
+# --- the queue of Garmin Connect -----------------------------------------------------------
+
+QUEUE_NOTE = "[stays in Garmin Connect's queue]"
 
 
-@pytest.mark.parametrize("flags", [[], ["--upload-only"]])
-def test_the_dry_run_of_a_drive_only_uploads(device_root, monkeypatch, capsys, flags):
-    """Garmin Connect's queue is not asked, though it has a course for the device, and the
-    dry run says in one line that nothing is downloaded instead of planning the downloads."""
+def test_the_dry_run_of_a_drive_plans_the_queue_too(device_root, monkeypatch, capsys):
+    """As for a device over MTP; a Connect IQ app is told to stay in Garmin Connect's queue
+    and is not counted with what comes to the device."""
     drive_at(device_root, monkeypatch)
-    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
-    assert cli.main(["sync", *flags]) == 0
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE, APP])
+    assert cli.main(["sync"]) == 0
     out = capsys.readouterr().out
-    assert "queue" not in account.asked and "download" not in account.asked
-    assert "To download from Connect" not in out
-    assert out.count(UPLOADS_ONLY_TEXT) == 1 and "To upload: 3 files" in out
+    assert "queue" in account.asked and "download" not in account.asked
+    assert "To upload: 3 files" in out and "To download from Connect to the device: 1" in out
+    (app_line,) = [line for line in out.splitlines() if "IQWatchApps" in line]
+    assert app_line.endswith(QUEUE_NOTE)
+    assert "only uploads" not in out
 
 
-def test_download_only_on_a_drive_is_refused_before_any_request(device_root, monkeypatch,
-                                                                capsys, log_file):
+@pytest.mark.parametrize(("flag", "uploads", "queue"), [("--upload-only", True, False),
+                                                         ("--download-only", False, True)])
+def test_the_one_way_syncs_of_a_drive_go_as_over_mtp(device_root, monkeypatch, capsys, flag,
+                                                     uploads, queue):
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
-    assert cli.main(["sync", "--download-only"]) == 1
-    err = capsys.readouterr().err
-    assert DOWNLOAD_ONLY_TEXT in err and err.count("\n") == 1
-    assert account.asked == []
-    assert "sync: a USB drive not synced: download-only" in log_file.read_text()
+    assert cli.main(["sync", flag]) == 0
+    out = capsys.readouterr().out
+    assert ("To upload:" in out) is uploads and ("To download from Connect" in out) is queue
+    assert ("queue" in account.asked) is queue
 
 
 def test_a_device_not_a_drive_still_has_the_queue_in_its_dry_run(device_root, monkeypatch,
                                                                   capsys):
     monkeypatch.setattr(service, "open_device_or_drive",
                         lambda **_kw: LocalStorage(device_root))
-    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE, APP])
     assert cli.main(["sync"]) == 0
     out = capsys.readouterr().out
     assert "queue" in account.asked and "unit-info" not in account.asked
-    assert "To download from Connect to the device: 1" in out and UPLOADS_ONLY_TEXT not in out
+    assert "To download from Connect to the device: 2" in out and QUEUE_NOTE not in out
 
 
-def test_the_words_of_only_uploading_are_said_in_polish_too(device_root, monkeypatch, capsys):
+def test_the_note_of_an_app_left_in_the_queue_is_said_in_polish_too(device_root, monkeypatch,
+                                                                    capsys):
     drive_at(device_root, monkeypatch)
-    account_for(monkeypatch, {"connectsupport": "Required"})
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[APP])
     try:
         assert cli.main(["--lang", "pl", "sync"]) == 0
-        assert cli.main(["--lang", "pl", "sync", "--download-only"]) == 1
     finally:
         i18n.setup("en")
-    said = capsys.readouterr()
-    assert ("Na dysku USB synchronizacja tylko wysyła: nic nie jest pobierane z Garmin Connect "
-            "na urządzenie.") in said.out
-    assert ("To urządzenie jest podłączone jako dysk USB: jego synchronizacja tylko wysyła, "
-            "więc z --download-only nie ma nic do zrobienia.") in said.err
+    assert "[zostaje w kolejce Garmin Connect]" in capsys.readouterr().out
 
 
 # --- uploads (sync --apply) -----------------------------------------------------------------
 
 
-def test_sync_apply_on_a_drive_uploads_its_files_and_writes_nothing_to_it(
+def files(root):
+    """Every file under `root`: its path, size, time of change and bytes."""
+    return {(str(p.relative_to(root)), p.stat().st_size, p.stat().st_mtime_ns, p.read_bytes())
+            for p in root.rglob("*") if p.is_file()}
+
+
+def test_sync_apply_on_a_drive_uploads_its_files_and_writes_the_queue(
         device_root, monkeypatch, capsys, log_file):
     """Garmin's word on the device and the account asked anew come before the first upload;
-    Garmin Connect's queue is never asked; the drive is the same before and after."""
+    then the course of the queue comes to the folder GarminDevice.xml names and Garmin Connect
+    is told; no other file of the drive changes."""
     sync.SyncState(UNIT).save()  # synced here before: no first-sync choice
-    before = tree(device_root)
+    before = files(device_root)
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
     assert cli.main(["sync", "--apply"]) == 0
@@ -230,10 +233,16 @@ def test_sync_apply_on_a_drive_uploads_its_files_and_writes_nothing_to_it(
         ACTIVITY_URL, ACTIVITY_URL, MONITORING_URL]
     asked = account.asked
     assert asked.index("unit-info") < asked.index("account, fresh") < asked.index("upload")
-    assert not {"queue", "download", "acknowledge"} & set(asked)
-    assert tree(device_root) == before
-    assert "3 new files, 3 uploaded" in capsys.readouterr().out
-    assert "uploads: 3 uploaded, 0 duplicates, 0 already in Connect" in log_file.read_text()
+    assert asked.index("upload") < asked.index("queue") < asked.index("acknowledge")
+    after = files(device_root)
+    assert before <= after
+    (new,) = after - before
+    assert new[0].startswith("GARMIN/NewFiles/course_") and new[3] == b"COURSE"
+    assert account.acks == [COURSE["messageid"]]
+    assert "3 uploaded" in capsys.readouterr().out
+    log = log_file.read_text()
+    assert "uploads: 3 uploaded, 0 duplicates, 0 already in Connect" in log
+    assert "downloads: 1 written, 0 empty, 0 failed, 0 not acknowledged" in log
 
 
 def test_a_drive_not_on_the_account_uploads_nothing(device_root, monkeypatch, capsys):

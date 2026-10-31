@@ -91,11 +91,6 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
 
     def refuse(st, dev):
         if st.mass_storage and command == "sync":
-            if getattr(args, "download_only", False):
-                log.info("sync: a USB drive not synced: download-only")
-                raise service.MassStorageMode(_(
-                    "This device is connected as a USB drive: its sync only uploads, so there "
-                    "is nothing to do with --download-only."))
             # Its data types now, before it is remembered; Garmin's word on it once there is
             # a session (service.refuse_drive_sync).
             if not service.declares_uploads(dev):
@@ -701,18 +696,15 @@ def cmd_sync(args) -> int:
     if st.mass_storage and not args.apply:
         service.refuse_drive_sync(session)  # with --apply in run_sync, before its uploads
     # The sync of the window and the background service (service.run_sync), with what was
-    # asked here. A drive's only uploads: Garmin Connect's queue is not asked, and nothing is
-    # written to the drive.
+    # asked here.
     options = service.SyncOptions(
         first_run="all" if args.all else None, include_diagnostics=args.include_diagnostics,
         only_types=frozenset(args.type) if args.type else None,
-        uploads=not args.download_only, downloads=not (args.upload_only or st.mass_storage),
+        uploads=not args.download_only, downloads=not args.upload_only,
         drive=st.mass_storage)
     if not args.apply:
-        _print_sync_plan(service.plan_sync(session, dataclasses.replace(options, preview=True)))
-        if st.mass_storage:
-            print("\n" + _("On a USB drive the sync only uploads: nothing is downloaded from "
-                           "Garmin Connect to the device."))
+        _print_sync_plan(service.plan_sync(session, dataclasses.replace(options, preview=True)),
+                         drive=st.mass_storage)
         print("\n" + _("Dry run: nothing was uploaded or written to the device. "
                        "Add --apply to run the sync."))
         return 0
@@ -744,8 +736,9 @@ def cmd_sync(args) -> int:
     return _print_sync_result(summary, dev.unit_id)
 
 
-def _print_sync_plan(plan) -> None:
-    """What `sync` would do (its dry run), as service.plan_sync worked it out."""
+def _print_sync_plan(plan, drive: bool = False) -> None:
+    """What `sync` would do (its dry run), as service.plan_sync worked it out. On a `drive`
+    a Connect IQ app stays in Garmin Connect's queue (service._apply_queue)."""
     uploads = plan.uploads
     if uploads is not None:
         counts = collections.Counter(c.datatype for c in uploads.candidates)
@@ -764,11 +757,16 @@ def _print_sync_plan(plan) -> None:
                 "sync is on."))
     if plan.queue is not None:
         items = plan.queue.items
-        n_dl = sum(1 for i in items if not i.unsupported)
+
+        def left(it):
+            return drive and it.handled_by == "Connect IQ"
+
+        n_dl = sum(1 for i in items if not i.unsupported and not left(i))
         print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))
         for it in items:
             note = ("  [" + _("skipped: {reason}").format(reason=it.unsupported) + "]"
                     if it.unsupported
+                    else "  [" + _("stays in Garmin Connect's queue") + "]" if left(it)
                     else f"  [{it.handled_by}]" if it.handled_by else "")
             target = it.target.path if it.target else "-"
             print(f"  {it.datatype:22} {it.message_name or it.message_id} -> {target}{note}")
