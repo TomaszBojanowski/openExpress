@@ -75,8 +75,8 @@ def read(entry: KnownDevice | None, *, connected: bool, kind: str | None,
     """The facts of the device of `entry` that hold now, for its tile: `connected` (an
     update copied already and the sync are said of a connected device only), its USB `kind`
     ("ums": of the sync only its activities to upload, _drive_sync), and the software it has
-    now (`software_version`: the
-    device's own when connected, else as remembered). No entry: nothing known."""
+    now (`software_version`: the device's own when connected, else as remembered). No entry:
+    nothing known."""
     if entry is None:
         return TileFacts()
     now = time.time() if now is None else now

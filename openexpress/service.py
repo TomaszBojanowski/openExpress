@@ -92,7 +92,7 @@ class DeviceSession:
 
     @property
     def mass_storage(self) -> bool:
-        """A Garmin device in mass storage mode: never synced, nothing asked of the account."""
+        """A Garmin device in mass storage mode (a USB drive)."""
         return self.storage.mass_storage
 
 
@@ -263,8 +263,8 @@ NO_UNIT_INFO = "no-unit-info"  # no answer of unit-info: whether Connect serves 
 
 
 def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | None:
-    """Why a Garmin device connected as a USB drive is not synced, None when it is (its files
-    uploaded, nothing written to it): NO_UPLOAD_TYPES when its GarminDevice.xml declares no
+    """Why a Garmin device connected as a USB drive is not synced, None when it is (both ways,
+    as a device over MTP): NO_UPLOAD_TYPES when its GarminDevice.xml declares no
     data type whose files go from the device (a Varia); NO_UNIT_INFO without an answer of
     unit-info (`unit_info` None: not asked, or the server did not answer); CONNECT_DISABLED
     when that answer says that Garmin Connect does not serve it ("connectSupport":

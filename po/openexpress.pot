@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.12\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 03:23+0100\n"
+"POT-Creation-Date: 2026-10-31 10:42+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -478,7 +478,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/ciq.py:1411 openexpress/device/storage.py:239
-#: openexpress/device/storage.py:470
+#: openexpress/device/storage.py:471
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr ""
@@ -3641,24 +3641,24 @@ msgstr ""
 msgid "Changing the primary wearable…"
 msgstr ""
 
-#: openexpress/gui/device_page.py:350
+#: openexpress/gui/device_page.py:349
 msgid "Files saved on the device"
 msgstr ""
 
-#: openexpress/gui/device_page.py:351
+#: openexpress/gui/device_page.py:350
 msgid ""
 "Eject the device before you unplug the cable: until then it may not see the "
 "files from Garmin Connect."
 msgstr ""
 
 #. TRANSLATORS: button that ejects the device (its USB drive)
-#: openexpress/gui/device_page.py:354 openexpress/gui/updates_page.py:197
+#: openexpress/gui/device_page.py:353 openexpress/gui/updates_page.py:197
 #: openexpress/gui/updates_page.py:342
 msgid "Eject"
 msgstr ""
 
 #. TRANSLATORS: button; the device is ejected later
-#: openexpress/gui/device_page.py:357 openexpress/gui/updates_page.py:345
+#: openexpress/gui/device_page.py:356 openexpress/gui/updates_page.py:345
 msgid "Later"
 msgstr ""
 

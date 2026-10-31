@@ -460,10 +460,11 @@ class LocalStorage(Storage):
             self._p(real_path).mkdir()
 
     def write_checked(self, path: str, data: bytes, *, error: type[Exception] = DeviceError) -> str:
-        """As Storage.write_checked, and its bytes read back whole: a folder (a drive) is read
-        back cheaply, so other bytes of the same size are caught too, deleted, and `error`
-        raised, before anything is told of the file (a file of Garmin Connect's queue is
-        acknowledged only after this)."""
+        """As Storage.write_checked, and its bytes read back whole after the write (synced
+        already): what the system holds of the file is compared, not only its size, and
+        other bytes are deleted and raise `error` before anything is told of the file (a file
+        of Garmin Connect's queue is acknowledged only after this). The medium itself is
+        checked only by ejecting the drive."""
         real = super().write_checked(path, data, error=error)
         if self.read(real) != data:
             self.delete_quietly(real)

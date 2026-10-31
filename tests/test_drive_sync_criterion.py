@@ -1,4 +1,4 @@
-"""Whether a watch connected as a USB drive is synced (only its files uploaded): its
+"""Whether a watch connected as a USB drive is synced: its
 GarminDevice.xml has to declare a data type that goes from the device, and there has to be an
 answer of unit-info (as the kept answers hold it) that does not say "Disabled" of Garmin
 Connect; an answer without the field lets it sync. Nothing is asked of a server here. All

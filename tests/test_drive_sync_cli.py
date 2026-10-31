@@ -1,10 +1,11 @@
-"""`openexpress sync` on a watch connected as a USB drive: its dry run shows the plan of its
-uploads when service.drive_sync_refusal lets it sync, and the refusal says which reason
-stopped it. Its unit-info is asked when it is not kept (read only), once. Its sync only
-uploads: Garmin Connect's queue is not asked, --download-only is refused, and `sync --apply`
-uploads its files after the account was asked anew, checked as any device's, and writes
-nothing to the drive. The other commands still refuse a drive. All devices, answers and
-errors are made up."""
+"""`openexpress sync` on a watch connected as a USB drive, and the service under it: synced
+both ways as a device over MTP when service.drive_refusal lets it, with the reason when it
+does not (its unit-info asked when it is not kept, read only, once); the account asked anew
+before the uploads; its files checked as any device's; the files of Garmin Connect's queue
+written to the folders its GarminDevice.xml names and read back whole before Garmin Connect
+is told, its Connect IQ apps left in the queue; the drive ejected after a sync that wrote to
+it. baseline and backup work on a drive; apps, maps and music refuse one. All devices,
+answers and errors are made up."""
 
 import logging
 

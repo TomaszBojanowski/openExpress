@@ -342,7 +342,6 @@ def set_primary_wearable(win, button=None) -> None:
                  device=False, button=button)
 
 
-# Why the picture work found no picture: unit-info gave no address of one.
 def ask_to_eject_after_sync(win, s) -> None:
     """After a sync wrote files of Garmin Connect's queue to a drive: it is to be ejected
     first, so that the watch takes them; that the cable can go out is said only once it is
@@ -357,6 +356,7 @@ def ask_to_eject_after_sync(win, s) -> None:
             cancel=_("Later"), default="eject")
 
 
+# Why the picture work found no picture: unit-info gave no address of one.
 NO_ADDRESS = "unit-info gave no address"
 
 
@@ -1116,8 +1116,8 @@ class DevicePage:
         account first, then unit-info, and keeps it for every view."""
         s = self.session
         part = s.device.part_number
-        # The account is asked only about a device that is on it; never about a Garmin device
-        # in mass storage mode, which it was not checked for.
+        # The account is asked only about a device over MTP that is on it; the picture of a
+        # drive comes from unit-info, which also tells its kind.
         on_account = (s.logged_in and s.ownership_error is None
                       and not getattr(s, "mass_storage", False))
         texture = pictures.known(self, part)
