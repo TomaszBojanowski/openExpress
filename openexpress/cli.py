@@ -719,15 +719,21 @@ def cmd_sync(args) -> int:
         with _progress() as progress:
             summary = service.run_sync(session, progress=progress, options=options)
     except service.FirstSyncChoiceNeeded:
-        print(
-            "\n" + _("This is the first sync with this program. If the device also syncs "
-                     "via your phone, most files are already in Connect.\n"
-                     "  openexpress baseline --apply   marks current files as uploaded "
-                     "(recommended)\n"
-                     "  openexpress sync --apply --all uploads everything "
-                     "(Connect rejects duplicates)"),
-            file=sys.stderr,
-        )
+        if st.mass_storage:
+            # `baseline` refuses a drive (NOT_ON_A_DRIVE): only uploading everything is left.
+            choice = _("This is the first sync with this program. On a USB drive the files on "
+                       "it cannot be marked as uploaded first, so the first sync uploads "
+                       "everything:\n"
+                       "  openexpress sync --apply --all   uploads all the activities and "
+                       "other data on the device (Connect rejects duplicates)")
+        else:
+            choice = _("This is the first sync with this program. If the device also syncs "
+                       "via your phone, most files are already in Connect.\n"
+                       "  openexpress baseline --apply   marks current files as uploaded "
+                       "(recommended)\n"
+                       "  openexpress sync --apply --all uploads everything "
+                       "(Connect rejects duplicates)")
+        print("\n" + choice, file=sys.stderr)
         return FIRST_SYNC_CHOICE
     except (Exception, KeyboardInterrupt) as e:
         done = service.done_before(e)

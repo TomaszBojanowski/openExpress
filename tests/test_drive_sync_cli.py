@@ -29,6 +29,11 @@ NO_ANSWER_TEXT = ("This device is connected as a USB drive, and Garmin's server 
 NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused)")
 UPLOADS_ONLY_TEXT = ("On a USB drive the sync only uploads: nothing is downloaded from Garmin "
                      "Connect to the device.")
+FIRST_SYNC_DRIVE_TEXT = (
+    "This is the first sync with this program. On a USB drive the files on it cannot be marked "
+    "as uploaded first, so the first sync uploads everything:\n"
+    "  openexpress sync --apply --all   uploads all the activities and other data on the device "
+    "(Connect rejects duplicates)")
 DOWNLOAD_ONLY_TEXT = ("This device is connected as a USB drive: its sync only uploads, so "
                       "there is nothing to do with --download-only.")
 
@@ -276,6 +281,41 @@ def test_what_garmin_connect_has_already_is_a_success(device_root, monkeypatch, 
                                                                      MONITORING_URL]
     assert "uploads: 1 uploaded, 1 duplicates, 1 already in Connect" in log_file.read_text()
     assert tree(device_root) == before
+
+
+def test_the_first_sync_of_a_drive_offers_only_uploading_everything(device_root, monkeypatch,
+                                                                     capsys):
+    """`baseline --apply` is refused on a drive, so it is not offered; nothing is uploaded
+    before the choice."""
+    drive_at(device_root, monkeypatch)
+    account = account_for(monkeypatch, {"connectsupport": "Required"})
+    assert cli.main(["sync", "--apply"]) == 3
+    err = capsys.readouterr().err
+    assert FIRST_SYNC_DRIVE_TEXT in err and "baseline" not in err
+    assert account.uploads == [] and "upload" not in account.asked
+
+
+def test_the_first_sync_of_a_device_not_a_drive_still_offers_both(device_root, monkeypatch,
+                                                                   capsys):
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda **_kw: LocalStorage(device_root))
+    account_for(monkeypatch, {"connectsupport": "Required"})
+    assert cli.main(["sync", "--apply"]) == 3
+    err = capsys.readouterr().err
+    assert "openexpress baseline --apply" in err and "openexpress sync --apply --all" in err
+    assert "On a USB drive" not in err
+
+
+def test_the_first_sync_of_a_drive_is_offered_in_polish_too(device_root, monkeypatch, capsys):
+    drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"})
+    try:
+        assert cli.main(["--lang", "pl", "sync", "--apply"]) == 3
+    finally:
+        i18n.setup("en")
+    err = capsys.readouterr().err
+    assert "Na dysku USB nie da się najpierw oznaczyć plików jako wysłanych" in err
+    assert "wyśle wszystkie aktywności i inne dane z urządzenia" in err and "baseline" not in err
 
 
 @pytest.mark.parametrize(("answer", "said"), [({"connectsupport": "Disabled"}, DISABLED_TEXT),
