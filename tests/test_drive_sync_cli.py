@@ -358,6 +358,19 @@ def test_the_first_sync_offers_both_choices_on_a_drive_too(device_root, monkeypa
     assert account.uploads == [] and "upload" not in account.asked
 
 
+@pytest.mark.parametrize(("answer", "said"), [({"connectsupport": "Disabled"}, DISABLED_TEXT),
+                                              (NETWORK_ERROR, NO_ANSWER_TEXT)])
+def test_baseline_of_a_drive_that_is_not_synced_is_refused_so(device_root, monkeypatch, capsys,
+                                                             answer, said):
+    """As its sync: a drive Garmin's word does not let sync is not marked as synced either,
+    before the account is asked."""
+    drive_at(device_root, monkeypatch)
+    account = account_for(monkeypatch, answer)
+    assert cli.main(["baseline", "--apply"]) == 1
+    assert said in capsys.readouterr().err
+    assert not sync.synced_here(UNIT) and account.asked == ["unit-info"]
+
+
 def test_baseline_on_a_drive_marks_its_files_and_writes_nothing_to_it(device_root, monkeypatch,
                                                                       capsys):
     before = files(device_root)

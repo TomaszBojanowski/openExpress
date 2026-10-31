@@ -803,7 +803,11 @@ def cmd_baseline(args) -> int:
     from openexpress import service, sync, tile_facts
 
     st, dev = open_device(args)
-    client = make_client(Settings.load(), need_auth=True)
+    settings = Settings.load()
+    client = make_client(settings, need_auth=True)
+    if st.mass_storage:
+        # As its sync: a drive that Garmin's word does not let sync is not marked either.
+        service.refuse_drive_sync(service.DeviceSession(st, dev, settings, client))
     service.require_account_device(client, dev.unit_id)
     cfg = client.upload_settings(dev.unit_id)
     if not args.apply:
