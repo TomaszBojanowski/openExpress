@@ -1379,8 +1379,7 @@ def test_a_garmin_drive_not_mounted_is_told_without_error_or_path(plugged, monke
     assert "Error" not in captured.err and "--path" not in captured.err
 
 
-@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"],
-                                     ["backup"]])
+@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"]])
 def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypatch, capsys,
                                                       command):
     """The refusal of the window, in one sentence, before any request or login; `sync` and
@@ -1397,8 +1396,7 @@ def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypa
     assert said in captured.err and captured.err.count("\n") == 1
 
 
-@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"],
-                                     ["backup"]])
+@pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"]])
 def test_a_command_refused_on_a_drive_remembers_nothing_of_it(watch_and_drives, monkeypatch,
                                                               caplog, command):
     """The refusal comes before the drive is remembered and before the line of its keys."""
@@ -1916,10 +1914,10 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
 
 @pytest.mark.needs_display
 def test_device_page_of_a_garmin_drive_says_what_applies(drive_window, monkeypatch):
-    """No backup. A short description in place of the sync; not the words for a drive the
-    window cannot open."""
+    """A backup (it only reads the device). A short description in place of the sync; not
+    the words for a drive the window cannot open."""
     texts, _calls = _drive_device_page(drive_window, monkeypatch)
-    assert "Backup" not in texts
+    assert "Backup" in texts
     assert "USB drive" in texts and MASS_STORAGE_TEXT in texts
     assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) not in texts
 

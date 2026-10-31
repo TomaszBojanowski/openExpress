@@ -130,13 +130,29 @@ def test_a_drive_without_upload_types_is_refused_without_asking_anything(tmp_pat
     assert "sync: a USB drive not synced: no-upload-types" in log_file.read_text()
 
 
-@pytest.mark.parametrize("command", [["apps"], ["music"], ["maps"], ["backup"]])
+@pytest.mark.parametrize("command", [["apps"], ["music"], ["maps"]])
 def test_the_other_commands_still_refuse_a_drive(device_root, monkeypatch, capsys, command):
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"})
     assert cli.main(command) == 1
     assert gio_storage.mass_storage_text() in capsys.readouterr().err
     assert account.asked == []
+
+
+def test_a_backup_of_a_drive_copies_its_files_and_writes_nothing_to_it(device_root, tmp_path,
+                                                                        monkeypatch, capsys):
+    """As over MTP: the files of the device read, written to the computer."""
+    before = files(device_root)
+    drive_at(device_root, monkeypatch)
+    dest = tmp_path / "backups"
+    assert cli.main(["backup", "--dest", str(dest)]) == 0
+    assert "Dry run: about" in capsys.readouterr().out and not dest.exists()
+    assert cli.main(["backup", "--dest", str(dest), "--apply"]) == 0
+    (copy,) = (dest / str(UNIT)).iterdir()
+    assert (copy / "GarminDevice.xml").read_bytes() == (
+        device_root / "GARMIN" / "GarminDevice.xml").read_bytes()
+    assert any(p.suffix.lower() == ".fit" for p in copy.rglob("*"))
+    assert files(device_root) == before
 
 
 def tree(root):

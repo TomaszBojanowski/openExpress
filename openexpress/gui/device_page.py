@@ -1009,12 +1009,12 @@ class DevicePage:
             g.add(account_picture_row(self, s))
 
         g = sec.group(_("Tools"))
-        if not mass_storage:  # no backup of a device in mass storage mode
-            self.backup_row = Adw.ActionRow(title=_("Backup"))
-            show_backups(self)  # when the last one was made, how many; the folder in the tooltip
-            # TRANSLATORS: button that creates a backup
-            self.backup_row.add_suffix(self._button(_("Create"), self.backup))
-            g.add(self.backup_row)
+        # A backup only reads the files of the device: of a drive too.
+        self.backup_row = Adw.ActionRow(title=_("Backup"))
+        show_backups(self)  # when the last one was made, how many; the folder in the tooltip
+        # TRANSLATORS: button that creates a backup
+        self.backup_row.add_suffix(self._button(_("Create"), self.backup))
+        g.add(self.backup_row)
         device_error_row(self, g)  # only when the device logged an error lately
         row = Adw.ActionRow(title=_("Part number"), subtitle=d.part_number,
                             subtitle_selectable=True)

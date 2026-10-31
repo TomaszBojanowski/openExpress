@@ -57,7 +57,7 @@ WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music
 
 # Commands that do not apply to a Garmin device in mass storage mode (as in the window);
 # `sync` of one goes as service.drive_sync_refusal lets it (service.refuse_drive_sync).
-NOT_ON_A_DRIVE = ("apps", "music", "maps", "backup")
+NOT_ON_A_DRIVE = ("apps", "music", "maps")
 
 
 def open_storage(args) -> Storage:

@@ -102,6 +102,13 @@ def test_no_rows_for_a_drive_and_no_music_row_for_a_device_without_music():
 
 
 @pytest.mark.needs_display
+def test_a_drive_has_the_backup_row_too():
+    """A backup only reads the files of the device: a drive is backed up as over MTP."""
+    _win, section = _page(mass_storage=True)
+    assert "Backup" in _rows(section)
+
+
+@pytest.mark.needs_display
 def test_once_their_pages_have_read_them_the_rows_say_how_many():
     """Never a read of the device of their own: the counts of the Apps and Music pages, as
     those pages found them; a page drawn again keeps them, another device has none."""
