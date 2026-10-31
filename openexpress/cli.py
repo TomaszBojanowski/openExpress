@@ -733,7 +733,11 @@ def cmd_sync(args) -> int:
         if done is not None:  # stopped after its uploads: what they did, then the error
             _print_sync_steps(done, dev.unit_id)
         raise
-    return _print_sync_result(summary, dev.unit_id)
+    code = _print_sync_result(summary, dev.unit_id)
+    # A drive the sync wrote to is ejected, so that the watch takes the files.
+    if st.mass_storage and summary.downloaded and not _eject_drive(st, files=True):
+        return 1  # the cable must stay in
+    return code
 
 
 def _print_sync_plan(plan, drive: bool = False) -> None:
@@ -957,9 +961,10 @@ def _print_staged(staged, st) -> None:
     print(_to_install_staged(st))
 
 
-def _eject_drive(st) -> bool:
-    """After a write to a Garmin drive: eject it, so that the device takes the update;
-    only then may the cable go out. False, with what to do, when it is not ejected."""
+def _eject_drive(st, files: bool = False) -> bool:
+    """After a write to a Garmin drive: eject it, so that the device takes the update (or,
+    `files`, the files of Garmin Connect's queue); only then may the cable go out. False,
+    with what to do, when it is not ejected."""
     from openexpress.device import gio_storage
 
     print(_("Ejecting the device…"))
@@ -971,7 +976,7 @@ def _eject_drive(st) -> bool:
     except DeviceError as e:
         log.info("eject: %s", e)
         _error(_("The device was not ejected: {error}").format(error=e))
-        _error(gio_storage.not_ejected_text(window=False))
+        _error(gio_storage.not_ejected_text(window=False, files=files))
         return False
     print(gio_storage.ejected_text())
     return True

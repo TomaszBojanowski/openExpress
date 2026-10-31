@@ -228,6 +228,7 @@ def test_sync_apply_on_a_drive_uploads_its_files_and_writes_the_queue(
     before = files(device_root)
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    ejects(monkeypatch)
     assert cli.main(["sync", "--apply"]) == 0
     assert sorted(url for url, _size, _last in account.uploads) == [
         ACTIVITY_URL, ACTIVITY_URL, MONITORING_URL]
@@ -243,6 +244,72 @@ def test_sync_apply_on_a_drive_uploads_its_files_and_writes_the_queue(
     log = log_file.read_text()
     assert "uploads: 3 uploaded, 0 duplicates, 0 already in Connect" in log
     assert "downloads: 1 written, 0 empty, 0 failed, 0 not acknowledged" in log
+
+
+# --- ejected after a sync that wrote to it -------------------------------------------------
+
+NOT_EJECTED_FILES = ("Do not unplug the cable yet: the device may not see the files from Garmin "
+                     "Connect. Close any program that uses the drive and eject it in the file "
+                     "manager.")
+
+
+def ejects(monkeypatch, refusal=None):
+    """gio_storage.eject noting what it was given; with `refusal` the system refuses."""
+    asked = []
+
+    def eject(storage):
+        asked.append(storage)
+        if refusal is not None:
+            raise DeviceError(refusal)
+
+    monkeypatch.setattr(gio_storage, "eject", eject)
+    return asked
+
+
+def test_a_drive_is_ejected_after_a_sync_that_wrote_to_it(device_root, monkeypatch, capsys):
+    """So that the watch takes the files, as after an update; the cable may go out after."""
+    sync.SyncState(UNIT).save()
+    storage = drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    asked = ejects(monkeypatch)
+    assert cli.main(["sync", "--apply"]) == 0
+    assert asked == [storage]
+    out = capsys.readouterr().out
+    assert "Ejecting the device…" in out and gio_storage.ejected_text() in out
+
+
+@pytest.mark.parametrize("command", [["sync", "--apply"], ["sync"]])
+def test_a_drive_nothing_was_written_to_is_not_ejected(device_root, monkeypatch, command):
+    """Nothing in the queue (only uploads), or a dry run with a course in it."""
+    sync.SyncState(UNIT).save()
+    drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"},
+                messages=[COURSE] if command == ["sync"] else [])
+    asked = ejects(monkeypatch)
+    assert cli.main(command) == 0
+    assert asked == []
+
+
+def test_a_device_not_a_drive_is_not_ejected(device_root, monkeypatch):
+    sync.SyncState(UNIT).save()
+    monkeypatch.setattr(service, "open_device_or_drive",
+                        lambda **_kw: LocalStorage(device_root))
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    asked = ejects(monkeypatch)
+    assert cli.main(["sync", "--apply"]) == 0
+    assert asked == []
+
+
+def test_a_drive_the_system_does_not_eject_says_the_cable_must_stay_in(device_root,
+                                                                       monkeypatch, capsys):
+    sync.SyncState(UNIT).save()
+    drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
+    ejects(monkeypatch, refusal="made-up: the drive is busy")
+    assert cli.main(["sync", "--apply"]) == 1
+    err = capsys.readouterr().err
+    assert "The device was not ejected: made-up: the drive is busy" in err
+    assert NOT_EJECTED_FILES in err
 
 
 def test_a_drive_not_on_the_account_uploads_nothing(device_root, monkeypatch, capsys):

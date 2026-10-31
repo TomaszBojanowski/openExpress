@@ -1035,8 +1035,17 @@ def ejected_text() -> str:
     return _("The device is ejected. You can unplug the cable.")
 
 
-def not_ejected_text(window: bool = True) -> str:
-    """After a failed eject: the cable must stay in, and what to do."""
+def not_ejected_text(window: bool = True, files: bool = False) -> str:
+    """After a failed eject: the cable must stay in, and what to do; `files`: after a sync
+    wrote the files of Garmin Connect's queue, not an update."""
+    if files and window:
+        return _("Do not unplug the cable yet: the device may not see the files from Garmin "
+                 "Connect. Close any program that uses the drive and try again, or eject it in "
+                 "the file manager.")
+    if files:
+        return _("Do not unplug the cable yet: the device may not see the files from Garmin "
+                 "Connect. Close any program that uses the drive and eject it in the file "
+                 "manager.")
     if window:
         return _("Do not unplug the cable yet: the device may not see the update. Close any "
                  "program that uses the drive and try again, or eject it in the file manager.")
