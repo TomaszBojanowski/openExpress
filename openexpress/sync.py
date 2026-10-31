@@ -641,8 +641,8 @@ class ActivitiesToSync:
 
 def activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
     """The activities of `device` not uploaded yet, from its activity folder (GarminDevice.xml)
-    listed, no file read. None when not known: a drive, a device without a unit ID, or a
-    folder or state.json that could not be read. A device never synced here is not listed.
+    listed, no file read (also on a drive). None when not known: a device without a unit ID,
+    or a folder or state.json that could not be read. A device never synced here is not listed.
     Never raises: the device opens all the same."""
     try:
         return _activities_to_sync(device, storage)
@@ -652,7 +652,7 @@ def activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSy
 
 
 def _activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToSync | None:
-    if storage.mass_storage or not device.unit_id:  # a drive is never synced
+    if not device.unit_id:
         return None
     if not SyncState(device.unit_id).file.exists():
         log.info("activities: not counted, the device was never synced here")

@@ -49,6 +49,9 @@ class DeviceSession:
     ownership_error: Exception | None = None
     # The account's device list from that check (model names for the window).
     account_devices: list[dict] | None = None
+    # Set by check_session() for a watch connected as a USB drive: why it is not synced (a
+    # reason of drive_sync_refusal and the error of unit-info, drive_refusal()); None: it may be.
+    drive_refusal: tuple[str, str] | None = None
     # (free space, capacity) in bytes as the window read them, in the thread that opened the
     # device and again in the background after it wrote to it; None: not read yet, and
     # either one None: not known (it could not be asked).
@@ -307,20 +310,29 @@ def drive_not_synced(reason: str, error: str = "") -> NoReturn:
     raise MassStorageMode(drive_sync_refusal_text(reason, error))
 
 
-def refuse_drive_sync(s: DeviceSession) -> None:
-    """A watch connected as a USB drive is synced only as drive_sync_refusal lets it: raises
-    MassStorageMode with its reason otherwise. Its unit-info comes from the kept answers, or
-    is asked of Garmin's update server when none is kept (read only, no login); without an
-    answer it is refused."""
+def drive_refusal(s: DeviceSession) -> tuple[str, str] | None:
+    """Why the watch connected as a USB drive of `s` is not synced: the reason of
+    drive_sync_refusal and, without an answer of unit-info, its error; None when it may be.
+    Its data types first, without a request; then its unit-info from the kept answers, or
+    asked of Garmin's update server when none is kept (read only, no login)."""
+    if not declares_uploads(s.device):
+        return NO_UPLOAD_TYPES, ""
     try:
         info, error = unit_info(s), ""
     except ApiError as e:
         info, error = None, applog.network_error_text(e)
     reason = drive_sync_refusal(s.device, info)
-    if reason is not None:
-        drive_not_synced(reason, error)
+    return None if reason is None else (reason, error)
+
+
+def refuse_drive_sync(s: DeviceSession) -> None:
+    """A watch connected as a USB drive is synced only as drive_refusal lets it: raises
+    MassStorageMode with its reason otherwise."""
+    refused = drive_refusal(s)
+    if refused is not None:
+        drive_not_synced(*refused)
     log.info("sync: a USB drive that may sync (connect support: %s)",
-             info.get("connectsupport") or "not given")
+             (s.unit_info_answer or {}).get("connectsupport") or "not given")
 
 
 def _open_found(found) -> Storage:
@@ -706,14 +718,19 @@ def check_session(s: DeviceSession) -> DeviceSession:
     """For the window: run the ownership check and keep the refusal instead of raising.
 
     A rejected login makes the session logged out, so the window asks to log in again.
-    A Garmin device in mass storage mode is not checked: nothing is asked of the account
-    about it (`s.mass_storage` tells the window why there is no sync).
+    A watch connected as a USB drive is checked as a device over MTP when it may be synced
+    (drive_refusal); one that is not keeps why in `s.drive_refusal`, and nothing is asked of
+    the account about it.
     """
     s.ownership_error = None
     s.account_devices = None
+    s.drive_refusal = None
     if s.mass_storage:
-        log.info("device: in mass storage mode, the account is not asked about it")
-        return s
+        s.drive_refusal = drive_refusal(s)
+        if s.drive_refusal is not None:
+            log.info("device: a USB drive that is not synced (%s): the account is not asked "
+                     "about it", s.drive_refusal[0])
+            return s
     if s.logged_in:
         try:
             s.account_devices = require_account_device(s.client, s.device.unit_id)

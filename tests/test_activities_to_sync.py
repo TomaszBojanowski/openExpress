@@ -119,11 +119,9 @@ def test_a_state_json_that_cannot_be_read_leaves_it_unknown(device_root):
     assert sync.activities_to_sync(device, storage) is None
 
 
-def test_a_drive_or_a_device_without_a_unit_id_is_not_counted(device_root):
+def test_a_device_without_a_unit_id_is_not_counted(device_root):
     device, storage = _device(device_root)
     _synced(device)
-    drive = types.SimpleNamespace(mass_storage=True)
-    assert sync.activities_to_sync(device, drive) is None
     device.unit_id = 0  # GarminDevice.xml without <Id>
     assert sync.activities_to_sync(device, storage) is None
 

@@ -435,6 +435,54 @@ def test_a_drive_that_keeps_what_it_was_given_passes_the_check(tmp_path):
     assert not (tmp_path / "GARMIN" / "b.fit").exists()
 
 
+# --- opening a drive (the window's check_session) -------------------------------------------
+
+
+def test_opening_a_drive_that_may_sync_asks_the_account_as_over_mtp(device_root):
+    account = DriveAccount({"connectsupport": "Required"})
+    s = service.check_session(session_of(device_root, account))
+    assert s.drive_refusal is None and s.ownership_error is None
+    assert s.account_devices == [{"unitid": UNIT}]
+    assert account.asked == ["unit-info", "account"]
+
+
+def test_opening_a_drive_not_on_the_account_keeps_the_refusal(device_root):
+    from openexpress.connect import NotAccountDevice
+
+    account = DriveAccount({"connectsupport": "Required"}, devices=[{"unitid": 3000000099}])
+    s = service.check_session(session_of(device_root, account))
+    assert isinstance(s.ownership_error, NotAccountDevice) and s.drive_refusal is None
+
+
+@pytest.mark.parametrize(("answer", "reason", "error"), [
+    ({"connectsupport": "Disabled"}, service.CONNECT_DISABLED, ""),
+    (NETWORK_ERROR, service.NO_UNIT_INFO, "Device info: network error (made-up connection refused)"),
+])
+def test_opening_a_drive_that_is_not_synced_keeps_why_and_asks_no_account(device_root, answer,
+                                                                          reason, error):
+    account = DriveAccount(answer)
+    s = service.check_session(session_of(device_root, account))
+    assert s.drive_refusal == (reason, error) and account.asked == ["unit-info"]
+    assert s.account_devices is None and s.ownership_error is None
+
+
+def test_opening_a_drive_without_upload_types_asks_nothing(tmp_path):
+    root = tmp_path / "varia"
+    (root / "GARMIN").mkdir(parents=True)
+    (root / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)
+    account = DriveAccount({"connectsupport": "Required"})
+    s = service.check_session(session_of(root, account))
+    assert s.drive_refusal == (service.NO_UPLOAD_TYPES, "") and account.asked == []
+
+
+def test_the_activities_of_a_drive_are_counted(device_root):
+    """As those of a device over MTP: listed in its activity folder, none read."""
+    sync.SyncState(UNIT).save()
+    device = parse((device_root / "GARMIN" / "GarminDevice.xml").read_bytes())
+    counted = sync.activities_to_sync(device, UmsStorage(device_root, device_root.as_uri()))
+    assert counted is not None and counted.count == 2
+
+
 def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
     """The window and the background service ask for all of a sync: a drive is not synced."""
     account = DriveAccount({"connectsupport": "Required"})

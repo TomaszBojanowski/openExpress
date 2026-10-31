@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.12\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 02:21+0100\n"
+"POT-Creation-Date: 2026-10-31 02:27+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2545,7 +2545,7 @@ msgstr ""
 #: openexpress/connect.py:536 openexpress/connect.py:555
 #: openexpress/connect.py:568 openexpress/connect.py:607
 #: openexpress/connect.py:644 openexpress/maps.py:324
-#: openexpress/service.py:564
+#: openexpress/service.py:576
 #, python-brace-format
 msgid "{what}: unexpected response from the server"
 msgstr ""
@@ -2619,7 +2619,7 @@ msgid "Account location"
 msgstr ""
 
 #: openexpress/connect.py:598 openexpress/connect.py:620
-#: openexpress/gui/device_page.py:998 openexpress/service.py:565
+#: openexpress/gui/device_page.py:998 openexpress/service.py:577
 msgid "Primary training device"
 msgstr ""
 
@@ -5646,285 +5646,285 @@ msgstr ""
 msgid "Unsupported wire type {type}"
 msgstr ""
 
-#: openexpress/service.py:183
+#: openexpress/service.py:186
 #, python-brace-format
 msgid ""
 "The token is for environment {token_environment}, but the configured one is "
 "{environment}. Please log in again."
 msgstr ""
 
-#: openexpress/service.py:292
+#: openexpress/service.py:295
 msgid ""
 "This device is connected as a USB drive and declares no data that goes from "
 "it to Garmin Connect, so there is nothing to sync."
 msgstr ""
 
 #. TRANSLATORS: "connect support: Disabled" is what Garmin's server says; keep it as it is
-#: openexpress/service.py:296
+#: openexpress/service.py:299
 msgid ""
 "This device is connected as a USB drive, and Garmin's server says that "
 "Garmin Connect does not take its data (connect support: Disabled), so it is "
 "not synced."
 msgstr ""
 
-#: openexpress/service.py:299
+#: openexpress/service.py:302
 #, python-brace-format
 msgid ""
 "This device is connected as a USB drive, and Garmin's server could not be "
 "asked whether Garmin Connect takes its data, so it is not synced: {error}"
 msgstr ""
 
-#: openexpress/service.py:366
+#: openexpress/service.py:378
 msgid ""
 "Several Garmin devices are connected as USB drives. Connect only one of them."
 msgstr ""
 
-#: openexpress/service.py:404
+#: openexpress/service.py:416
 #, python-brace-format
 msgid ""
 "Could not check whether this device belongs to your Garmin account "
 "({error}). Nothing was synced."
 msgstr ""
 
-#: openexpress/service.py:408
+#: openexpress/service.py:420
 msgid ""
 "This device is not registered to your Garmin account. To use it with Garmin "
 "Connect here, sign in to the account it belongs to or add the device to your "
 "account in Garmin Connect."
 msgstr ""
 
-#: openexpress/service.py:430
+#: openexpress/service.py:442
 msgid "the Garmin account has no consent to upload data from devices"
 msgstr ""
 
-#: openexpress/service.py:431
+#: openexpress/service.py:443
 msgid "device sync is turned off in the Garmin account"
 msgstr ""
 
-#: openexpress/service.py:432
+#: openexpress/service.py:444
 msgid "the upload consent could not be checked. Try again later"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded, and why
-#: openexpress/service.py:437
+#: openexpress/service.py:449
 msgid "nothing uploaded: no consent in the account"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded, and why
-#: openexpress/service.py:439
+#: openexpress/service.py:451
 msgid "nothing uploaded: device sync is off in the account"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded, and why
-#: openexpress/service.py:441
+#: openexpress/service.py:453
 msgid "nothing uploaded: the consent could not be checked"
 msgstr ""
 
-#: openexpress/service.py:485
+#: openexpress/service.py:497
 #, python-brace-format
 msgid "Nothing was uploaded: {reason}"
 msgstr ""
 
-#: openexpress/service.py:486
+#: openexpress/service.py:498
 #, python-brace-format
 msgid "Nothing would be uploaded: {reason}"
 msgstr ""
 
-#: openexpress/service.py:589
+#: openexpress/service.py:601
 #, python-brace-format
 msgid "{device} cannot be a primary training device."
 msgstr ""
 
-#: openexpress/service.py:590
+#: openexpress/service.py:602
 #, python-brace-format
 msgid ""
 "Could not tell whether {device} can be a primary training device. Nothing "
 "was changed."
 msgstr ""
 
-#: openexpress/service.py:592
+#: openexpress/service.py:604
 msgid ""
 "Garmin Connect accepted the request, but the primary training device did not "
 "change."
 msgstr ""
 
-#: openexpress/service.py:646
+#: openexpress/service.py:658
 #, python-brace-format
 msgid "{device} cannot be a primary wearable."
 msgstr ""
 
-#: openexpress/service.py:647
+#: openexpress/service.py:659
 #, python-brace-format
 msgid ""
 "Could not tell whether {device} can be a primary wearable. Nothing was "
 "changed."
 msgstr ""
 
-#: openexpress/service.py:649
+#: openexpress/service.py:661
 msgid ""
 "Garmin Connect accepted the request, but the primary wearable did not change."
 msgstr ""
 
-#: openexpress/service.py:761
+#: openexpress/service.py:778
 msgid "activities"
 msgstr ""
 
-#: openexpress/service.py:762
+#: openexpress/service.py:779
 msgid "workouts"
 msgstr ""
 
-#: openexpress/service.py:763
+#: openexpress/service.py:780
 msgid "courses"
 msgstr ""
 
-#: openexpress/service.py:764
+#: openexpress/service.py:781
 msgid "schedules"
 msgstr ""
 
-#: openexpress/service.py:765
+#: openexpress/service.py:782
 msgid "weight"
 msgstr ""
 
-#: openexpress/service.py:766
+#: openexpress/service.py:783
 msgid "goals"
 msgstr ""
 
-#: openexpress/service.py:767
+#: openexpress/service.py:784
 msgid "activity summary"
 msgstr ""
 
-#: openexpress/service.py:768
+#: openexpress/service.py:785
 msgid "daily monitoring"
 msgstr ""
 
-#: openexpress/service.py:769
+#: openexpress/service.py:786
 msgid "personal records"
 msgstr ""
 
-#: openexpress/service.py:770
+#: openexpress/service.py:787
 msgid "monitoring"
 msgstr ""
 
-#: openexpress/service.py:771
+#: openexpress/service.py:788
 msgid "segments"
 msgstr ""
 
-#: openexpress/service.py:772
+#: openexpress/service.py:789
 msgid "segment list"
 msgstr ""
 
-#: openexpress/service.py:773
+#: openexpress/service.py:790
 msgid "golf scorecards"
 msgstr ""
 
-#: openexpress/service.py:774
+#: openexpress/service.py:791
 msgid "settings change log"
 msgstr ""
 
-#: openexpress/service.py:775
+#: openexpress/service.py:792
 msgid "metrics"
 msgstr ""
 
-#: openexpress/service.py:776
+#: openexpress/service.py:793
 msgid "sleep"
 msgstr ""
 
-#: openexpress/service.py:779
+#: openexpress/service.py:796
 msgid "device log"
 msgstr ""
 
-#: openexpress/service.py:780
+#: openexpress/service.py:797
 msgid "ECG"
 msgstr ""
 
-#: openexpress/service.py:781
+#: openexpress/service.py:798
 msgid "HRV status"
 msgstr ""
 
-#: openexpress/service.py:783
+#: openexpress/service.py:800
 msgid "training status data"
 msgstr ""
 
-#: openexpress/service.py:784
+#: openexpress/service.py:801
 msgid "skin temperature"
 msgstr ""
 
-#: openexpress/service.py:786
+#: openexpress/service.py:803
 msgid "primary training device data"
 msgstr ""
 
-#: openexpress/service.py:788
+#: openexpress/service.py:805
 msgid "Garmin Coach plan"
 msgstr ""
 
-#: openexpress/service.py:789
+#: openexpress/service.py:806
 msgid "sleep disruptions"
 msgstr ""
 
-#: openexpress/service.py:790
+#: openexpress/service.py:807
 msgid "gear tracking"
 msgstr ""
 
-#: openexpress/service.py:791
+#: openexpress/service.py:808
 msgid "multi-day activities"
 msgstr ""
 
-#: openexpress/service.py:792 openexpress/service.py:793
+#: openexpress/service.py:809 openexpress/service.py:810
 msgid "device backup"
 msgstr ""
 
-#: openexpress/service.py:794
+#: openexpress/service.py:811
 msgid "raw GPS data of activities"
 msgstr ""
 
-#: openexpress/service.py:802
+#: openexpress/service.py:819
 #, python-brace-format
 msgid "other data ({type})"
 msgstr ""
 
-#: openexpress/service.py:828
+#: openexpress/service.py:845
 #, python-brace-format
 msgid "Files from the device: {types}"
 msgstr ""
 
 #. TRANSLATORS: a line of the details of "Last sync": files of Garmin Connect's queue
 #. written to the device, and their types (as "Files from the device: …" names them)
-#: openexpress/service.py:837
+#: openexpress/service.py:854
 #, python-brace-format
 msgid "{count} file from Garmin Connect: {types}"
 msgid_plural "{count} files from Garmin Connect: {types}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:852
+#: openexpress/service.py:869
 #, python-brace-format
 msgid "{count} file was already in Garmin Connect"
 msgid_plural "{count} files were already in Garmin Connect"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:856
+#: openexpress/service.py:873
 #, python-brace-format
 msgid "{count} file was rejected by Garmin"
 msgid_plural "{count} files were rejected by Garmin"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:860
+#: openexpress/service.py:877
 #, python-brace-format
 msgid "{count} file could not be uploaded"
 msgid_plural "{count} files could not be uploaded"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:865
+#: openexpress/service.py:882
 #, python-brace-format
 msgid "Marked {count} existing file as already uploaded"
 msgid_plural "Marked {count} existing files as already uploaded"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:872
+#: openexpress/service.py:889
 #, python-brace-format
 msgid ""
 "{count} file was still being written by the device – disconnect and "
@@ -5935,7 +5935,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:878
+#: openexpress/service.py:895
 #, python-brace-format
 msgid ""
 "Skipped {count} file: another device is your active tracker in Garmin Connect"
@@ -5945,12 +5945,12 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:885
+#: openexpress/service.py:902
 #, python-brace-format
 msgid "Installed Connect IQ apps: {names}"
 msgstr ""
 
-#: openexpress/service.py:889
+#: openexpress/service.py:906
 #, python-brace-format
 msgid ""
 "The Flatpak has no access to USB devices; {count} Connect IQ app waits in "
@@ -5961,7 +5961,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:894
+#: openexpress/service.py:911
 #, python-brace-format
 msgid ""
 "{count} Connect IQ app waits in the queue: openExpress cannot install apps "
@@ -5972,17 +5972,17 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:899
+#: openexpress/service.py:916
 msgid "TrueUp: daily totals aligned with your other Garmin devices"
 msgstr ""
 
 #. TRANSLATORS: a line of the details of "Last sync" and of the end of
 #. `openexpress sync --apply`
-#: openexpress/service.py:903
+#: openexpress/service.py:920
 msgid "TrueUp: waiting stopped; it comes with the next sync"
 msgstr ""
 
-#: openexpress/service.py:908
+#: openexpress/service.py:925
 #, python-brace-format
 msgid ""
 "{count} ECG recording was not uploaded: ECG recordings need a Garmin Health "
@@ -5993,7 +5993,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:914
+#: openexpress/service.py:931
 #, python-brace-format
 msgid "Skipped {count} item from Garmin Connect (not accepted by the device)"
 msgid_plural ""
@@ -6002,24 +6002,24 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: under "Last sync": the uploads were not looked at (sync --download-only)
-#: openexpress/service.py:1060
+#: openexpress/service.py:1077
 msgid "upload skipped"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": nothing was uploaded
-#: openexpress/service.py:1065
+#: openexpress/service.py:1082
 msgid "nothing uploaded"
 msgstr ""
 
 #. TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
-#: openexpress/service.py:1068
+#: openexpress/service.py:1085
 #, python-brace-format
 msgid "{count} new file"
 msgid_plural "{count} new files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:1069
+#: openexpress/service.py:1086
 #, python-brace-format
 msgid "{count} uploaded"
 msgid_plural "{count} uploaded"
@@ -6027,65 +6027,65 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: after "3 new files, ": not one of them was uploaded
-#: openexpress/service.py:1072
+#: openexpress/service.py:1089
 msgid "none uploaded"
 msgstr ""
 
 #. TRANSLATORS: the device had no new file to upload to Garmin Connect
-#: openexpress/service.py:1076
+#: openexpress/service.py:1093
 msgid "nothing to upload"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync": a sync of only these data types (sync --type), e.g.
 #. "activities only: 3 new files, 3 uploaded"
-#: openexpress/service.py:1082
+#: openexpress/service.py:1099
 #, python-brace-format
 msgid "{types} only: {numbers}"
 msgstr ""
 
-#: openexpress/service.py:1085
+#: openexpress/service.py:1102
 #, python-brace-format
 msgid "{count} received"
 msgid_plural "{count} received"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/service.py:1109
+#: openexpress/service.py:1126
 msgid "A sync is already running in another process."
 msgstr ""
 
-#: openexpress/service.py:1137
+#: openexpress/service.py:1154
 msgid "A device connected as a USB drive is not synced."
 msgstr ""
 
 #. TRANSLATORS: under "Last sync", in its details: Ctrl+C on the command line
-#: openexpress/service.py:1152
+#: openexpress/service.py:1169
 msgid "The sync was interrupted before the end (Ctrl+C)"
 msgstr ""
 
 #. TRANSLATORS: under "Last sync", in its details: the error that stopped the sync
-#: openexpress/service.py:1158
+#: openexpress/service.py:1175
 #, python-brace-format
 msgid "The sync stopped before the end: {error}"
 msgstr ""
 
-#: openexpress/service.py:1223
+#: openexpress/service.py:1240
 msgid "Not logged in to Garmin Connect."
 msgstr ""
 
-#: openexpress/service.py:1229
+#: openexpress/service.py:1246
 msgid "Fetching configuration from the Garmin server…"
 msgstr ""
 
-#: openexpress/service.py:1238
+#: openexpress/service.py:1255
 msgid "Looking for new files on the device…"
 msgstr ""
 
-#: openexpress/service.py:1255
+#: openexpress/service.py:1272
 msgid "Checking for files from Garmin Connect…"
 msgstr ""
 
-#: openexpress/service.py:1362
+#: openexpress/service.py:1379
 #, python-brace-format
 msgid "{name}: written, but Garmin Connect was not notified (will retry)"
 msgstr ""

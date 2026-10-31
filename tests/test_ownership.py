@@ -639,14 +639,17 @@ def test_run_sync_refuses_a_garmin_drive(device_root, xdg, device):
     assert service.load_last_sync(UNIT) is None
 
 
-def test_a_garmin_drive_makes_no_account_request(device_root, device):
-    """check_session asks the account nothing about it and says it is a drive, so the window
-    can leave out the banner and say why there is no Sync."""
+def test_a_garmin_drive_garmin_says_nothing_of_makes_no_account_request(device_root, device):
+    """check_session asks the account nothing about a drive that is not synced (here unit-info
+    is not answered) and keeps why, so the window can leave out the banner and say why there
+    is no Sync."""
     client = make_client([{"unitid": UNIT}])
     s = service.check_session(ums_session(device_root, device, client))
     assert s.mass_storage is True and s.logged_in
     assert s.ownership_error is None and s.account_devices is None
-    assert client.http.sent == [] and client.verified_unit_id is None
+    assert s.drive_refusal is not None and s.drive_refusal[0] == service.NO_UNIT_INFO
+    assert [r["url"] for r in client.http.sent if "unit-info" not in r["url"]] == []
+    assert client.verified_unit_id is None
     assert service.check_session(session(device_root, device, client)).mass_storage is False
 
 
