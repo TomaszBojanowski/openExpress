@@ -706,7 +706,8 @@ def cmd_sync(args) -> int:
     options = service.SyncOptions(
         first_run="all" if args.all else None, include_diagnostics=args.include_diagnostics,
         only_types=frozenset(args.type) if args.type else None,
-        uploads=not args.download_only, downloads=not (args.upload_only or st.mass_storage))
+        uploads=not args.download_only, downloads=not (args.upload_only or st.mass_storage),
+        drive=st.mass_storage)
     if not args.apply:
         _print_sync_plan(service.plan_sync(session, dataclasses.replace(options, preview=True)))
         if st.mass_storage:

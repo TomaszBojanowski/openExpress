@@ -1132,12 +1132,10 @@ def run_sync(
     elif first_run is not None or include_diagnostics:
         raise ValueError("run_sync: first_run and include_diagnostics go in the options")
     if s.mass_storage:
-        if options.downloads:
-            # The window and the background service ask for all of a sync.
+        if not options.drive:
             log.info("sync: refused, the device is in mass storage mode")
             raise MassStorageMode(_("A device connected as a USB drive is not synced."))
-        # Only its uploads (the command line): as Garmin's word on it lets it, before the
-        # account is asked and anything uploaded. Nothing is written to the drive.
+        # As Garmin's word on it lets it, before the account is asked and anything uploaded.
         refuse_drive_sync(s)
     started = time.monotonic()
     log.info("sync: start (first run: %s, diagnostics: %s)", options.first_run or "-",
@@ -1179,6 +1177,9 @@ class SyncOptions:
     only_types: frozenset[str] | None = None  # only these data types (sync --type)
     uploads: bool = True  # False: the uploads are not looked at (sync --download-only)
     downloads: bool = True  # False: Garmin Connect's queue is not (sync --upload-only)
+    # A watch connected as a USB drive may be synced (refuse_drive_sync): the command line
+    # and the window ask for it, the background service never does.
+    drive: bool = False
     # Only to be shown (the dry run of the command line): no login needed (the uploads
     # alone then), the first sync planned without its choice, the queue read with the plan.
     preview: bool = False

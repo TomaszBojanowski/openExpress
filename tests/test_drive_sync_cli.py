@@ -325,9 +325,35 @@ def test_a_sync_of_a_drive_asks_garmin_before_anything_else(device_root, answer,
     account = DriveAccount(answer)
     with pytest.raises(service.MassStorageMode) as refused:
         service.run_sync(session_of(device_root, account),
-                         options=service.SyncOptions(downloads=False))
+                         options=service.SyncOptions(drive=True))
     assert str(refused.value).startswith(said)
     assert account.asked == ["unit-info"] and account.uploads == []
+
+
+@pytest.mark.parametrize("options", [None, "default", "uploads only"])
+def test_a_sync_of_a_drive_is_refused_unless_asked_for_a_drive(device_root, options):
+    """Only the command line and the window ask for a drive (SyncOptions.drive); the
+    background service never does: whatever else is asked, a drive is not synced then."""
+    options = {None: None, "default": service.SyncOptions(),
+               "uploads only": service.SyncOptions(downloads=False)}[options]
+    account = DriveAccount({"connectsupport": "Required"})
+    with pytest.raises(service.MassStorageMode,
+                       match="A device connected as a USB drive is not synced."):
+        service.run_sync(session_of(device_root, account), options=options)
+    assert account.asked == [] and account.uploads == []
+
+
+def test_a_sync_asked_for_a_drive_uploads_and_writes_the_queue(device_root):
+    """The files go to Garmin Connect, a course of the queue comes to the folder its
+    GarminDevice.xml names, and Garmin Connect is told it was received."""
+    sync.SyncState(UNIT).save()
+    account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE])
+    summary = service.run_sync(session_of(device_root, account),
+                               options=service.SyncOptions(drive=True))
+    assert (summary.uploaded, summary.downloaded, summary.errors) == (3, 1, [])
+    (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
+    assert written.name.startswith("course_") and written.read_bytes() == b"COURSE"
+    assert account.acks == [COURSE["messageid"]]
 
 
 def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
