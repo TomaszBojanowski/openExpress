@@ -44,12 +44,13 @@ ARROW = "\u00a0→\u00a0"
 
 
 def data_loss_text(session) -> str:
-    """The warning before an update of a device that loses its data on one: a drive is not
-    synced by openExpress; otherwise how many activities wait to be uploaded, when the window
-    has counted them."""
+    """The warning before an update of a device that loses its data on one: a drive that
+    openExpress cannot sync (its drive_refusal) is to be synced in the app; any other device
+    first here, with how many activities wait to be uploaded, when the window has counted
+    them."""
     from openexpress import updates as upd
 
-    if getattr(session, "mass_storage", False):
+    if getattr(session, "drive_refusal", None) is not None:
         return _(upd.DATA_LOSS_WARNING_DRIVE)
     text = _(upd.DATA_LOSS_WARNING)
     count = getattr(getattr(session, "to_sync", None), "count", None)

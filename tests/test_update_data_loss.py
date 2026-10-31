@@ -21,16 +21,15 @@ WINDOW_EN = ("Warning: installing an update erases the data stored on this devic
 CLI_EN = ("Warning: installing an update erases the data stored on this device. Sync it first "
           "(openexpress sync --apply), or the data not uploaded yet is lost.")
 DRIVE_EN = ("Warning: installing an update erases the data stored on this device. openExpress "
-            "does not sync a device connected as a USB drive: sync it with the Garmin Connect "
-            "app first, or the data not uploaded yet is lost.")
+            "cannot sync this device: sync it with the Garmin Connect app first, or the data not "
+            "uploaded yet is lost.")
 PLAIN_FILE, BUNDLE = "006-D0000-00", "006-V0000-00"
 WINDOW_PL = ("Ostrzeżenie: instalacja aktualizacji kasuje dane zapisane na tym urządzeniu. "
              "Najpierw zsynchronizuj je z\u00a0Garmin Connect, inaczej niewysłane jeszcze dane "
              "przepadną.")
 DRIVE_PL = ("Ostrzeżenie: instalacja aktualizacji kasuje dane zapisane na tym urządzeniu. "
-            "openExpress nie synchronizuje urządzenia podłączonego jako dysk USB: najpierw "
-            "zsynchronizuj je w\u00a0aplikacji Garmin Connect, inaczej niewysłane jeszcze dane "
-            "przepadną.")
+            "openExpress nie może synchronizować tego urządzenia: najpierw zsynchronizuj je "
+            "w\u00a0aplikacji Garmin Connect, inaczej niewysłane jeszcze dane przepadną.")
 
 
 @pytest.mark.parametrize(("info", "loses"), [
@@ -163,10 +162,35 @@ def test_the_window_before_a_system_update_has_both_warnings(monkeypatch):
 
 
 @pytest.mark.needs_display
-def test_the_window_has_other_words_for_a_drive(monkeypatch):
+def test_the_window_has_other_words_for_a_drive_that_is_not_synced(monkeypatch):
     assert _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
-                     mass_storage=True, to_sync=types.SimpleNamespace(count=3)) == [
+                     mass_storage=True, drive_refusal=("connect-disabled", ""),
+                     to_sync=types.SimpleNamespace(count=3)) == [
         (DRIVE_EN, ["heading", "warning"])]
+
+
+@pytest.mark.needs_display
+def test_the_window_warns_a_drive_that_is_synced_as_any_device(monkeypatch):
+    """Its sync is openExpress's too: sync first, with how many activities wait."""
+    assert _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
+                     mass_storage=True, drive_refusal=None,
+                     to_sync=types.SimpleNamespace(count=3)) == [
+        (f"{WINDOW_EN} 3 activities on the device have not been uploaded yet.",
+         ["heading", "warning"])]
+
+
+@pytest.mark.parametrize(("support", "said"), [("Required", CLI_EN), ("Disabled", DRIVE_EN)])
+def test_cli_warns_a_drive_as_its_sync_goes(offered, monkeypatch, capsys, support, said):
+    """A drive openExpress syncs: sync it first with openExpress; one it cannot: in the app."""
+    from openexpress import service
+    from openexpress.device.storage import UmsStorage
+
+    storage = UmsStorage(offered, offered.as_uri() + "/")
+    monkeypatch.setattr(service, "open_device_or_drive", lambda **_kw: storage)
+    monkeypatch.setattr(GarminClient, "unit_info", lambda self, unit_id, part_number: {
+        "segmenttype": "Wellness", "connectsupport": support})
+    assert main(["updates", "--install", PLAIN_FILE]) == 0
+    assert said in capsys.readouterr().out.splitlines()
 
 
 @pytest.mark.needs_display
@@ -228,7 +252,7 @@ def test_the_warning_in_polish(monkeypatch):
         found = _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
                           to_sync=types.SimpleNamespace(count=5))
         drive = _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
-                          mass_storage=True)
+                          mass_storage=True, drive_refusal=("connect-disabled", ""))
     finally:
         i18n.setup("en")
     assert found == [(WINDOW_PL + " 5 aktywności na urządzeniu nie zostało jeszcze wysłanych.",

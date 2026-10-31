@@ -781,8 +781,8 @@ class DevicePage:
 
     def _update_banner(self) -> None:
         s = self.session
-        if s is not None and getattr(s, "mass_storage", False):
-            # A Garmin device in mass storage mode needs neither the setup nor the account.
+        if s is not None and getattr(s, "drive_refusal", None) is not None:
+            # A drive openExpress does not sync needs neither the setup nor the account.
             self.banner.set_revealed(False)
         elif s is not None and s.client.consumer is None:
             self.banner.set_title(_("One-time setup: choose the Garmin Express installer for "

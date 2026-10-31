@@ -3290,8 +3290,9 @@ def test_sync_is_grey_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
 
 
 @pytest.mark.parametrize("logged_in", [False, True])
-def test_no_banner_for_a_garmin_drive(drive_window, monkeypatch, logged_in):
-    """Neither "Not logged in" nor the one-time setup: neither is needed for a drive."""
+def test_no_banner_for_a_garmin_drive_that_is_not_synced(drive_window, monkeypatch, logged_in):
+    """Neither "Not logged in" nor the one-time setup: neither is needed for a drive that is
+    not synced (this Varia declares no data types)."""
     from openexpress.gui.app import MainWindow
 
     s = drive_session(drive_window, monkeypatch)

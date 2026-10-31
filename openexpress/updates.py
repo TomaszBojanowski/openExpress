@@ -68,16 +68,15 @@ SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the 
 # sync of the device runs; openExpress says so before every update and suggests to sync first.
 DATA_LOST_SEGMENTS = frozenset({"wellness", "vivomove"})
 # Said before every update of such a device: in the window, on the command line, and for a
-# device connected as a USB drive, which openExpress does not sync.
+# device connected as a USB drive that openExpress cannot sync (service.drive_sync_refusal).
 DATA_LOSS_WARNING = N_("Warning: installing an update erases the data stored on this device. "
                        "Sync it with Garmin Connect first, or the data not uploaded yet is lost.")
 DATA_LOSS_WARNING_CLI = N_("Warning: installing an update erases the data stored on this "
                            "device. Sync it first (openexpress sync --apply), or the data not "
                            "uploaded yet is lost.")
 DATA_LOSS_WARNING_DRIVE = N_("Warning: installing an update erases the data stored on this "
-                             "device. openExpress does not sync a device connected as a USB "
-                             "drive: sync it with the Garmin Connect app first, or the data not "
-                             "uploaded yet is lost.")
+                             "device. openExpress cannot sync this device: sync it with the "
+                             "Garmin Connect app first, or the data not uploaded yet is lost.")
 # The offered updates named one by one in the log, at most.
 LOG_ITEMS = 20
 # Said when the server offers beta versions to the device ("accesslevel" of the answer, e.g.

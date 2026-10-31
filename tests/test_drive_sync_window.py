@@ -175,3 +175,43 @@ def test_a_page_a_drive_has_not_got_says_so_as_information_not_as_an_error():
     assert sec.info.get_icon_name() == "map-symbolic" and sec.info.get_child() is None
     assert (sec.info.get_title(), sec.info.get_description()) == ("Maps", mass_storage_text())
     assert "sync" not in mass_storage_text()  # a drive's sync is on its device page
+
+
+# --- the banner -------------------------------------------------------------------------------
+
+
+def _banner(s):
+    """What the window's banner shows for the session (as _update_banner sets it)."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    seen = {}
+    win = stand_in(session=s, _ownership_title=MainWindow._ownership_title,
+                   banner=types.SimpleNamespace(
+                       set_title=lambda t: seen.update(title=t),
+                       set_button_label=lambda b: seen.update(button=b),
+                       set_revealed=lambda r: seen.update(revealed=r)))
+    MainWindow._update_banner(win)
+    return seen
+
+
+def test_a_drive_that_may_sync_asks_to_log_in_as_over_mtp(device_root):
+    s, _account = checked(device_root)
+    s.client.consumer, s.client.auth = object(), None  # set up, not logged in
+    assert _banner(s) == {"title": "Not logged in to Garmin Connect", "button": "Log In",
+                          "revealed": True}
+
+
+def test_a_drive_off_the_account_says_so_in_the_banner(device_root):
+    s, _account = checked(device_root, devices=[{"unitid": 3000000099}])
+    s.client.consumer = object()
+    seen = _banner(s)
+    assert seen["revealed"] and seen["title"] == (
+        "This device is not registered to your Garmin account")
+
+
+def test_a_drive_that_is_not_synced_has_no_banner(device_root):
+    s, _account = checked(device_root, {"connectsupport": "Disabled"})
+    s.client.consumer, s.client.auth = object(), None
+    assert _banner(s) == {"revealed": False}
