@@ -20,12 +20,15 @@ def checked(device_root, answer=None, **kw):
     return service.check_session(drive_session(device_root, account)), account
 
 
-def window_for(s, said):
-    """A stand-in of the window around the session, its tasks run at once."""
+def window_for(s, said, ejects=None):
+    """A stand-in of the window around the session, its tasks run at once; the question to
+    eject the drive noted in `ejects` (whether it speaks of files)."""
+    ejects = [] if ejects is None else ejects
     return stand_in(
         session=s, busy=False, run_task=RunNow(error="record"), progress=lambda *a: None,
         toast=said.append, _show_last_sync=lambda: None, _count_activities_again=lambda: None,
-        ask_first_sync=lambda: said.append("first sync"), show_device=lambda: None)
+        ask_first_sync=lambda: said.append("first sync"), show_device=lambda: None,
+        ask_to_eject=lambda s, bike_accessory=False, files=False: ejects.append((s, files)))
 
 
 # --- the Sync button ----------------------------------------------------------------------
@@ -47,12 +50,11 @@ def test_the_sync_button_of_a_drive_that_is_not_synced_says_usb_drive(device_roo
     assert MainWindow._sync_blocked(stand_in(session=s, busy=False)) == "USB drive"
 
 
-def test_the_window_syncs_a_drive_both_ways(device_root, in_the_window):
+def test_the_window_syncs_a_drive_both_ways(device_root):
     """Its files uploaded, the course of the queue written to it and acknowledged, the toast
     of any sync."""
     from openexpress.gui.app import MainWindow
 
-    in_the_window("ask_to_eject_after_sync", lambda win, s: None)
     sync.SyncState(UNIT).save()
     s, account = checked(device_root, messages=[COURSE])
     said = []
@@ -88,8 +90,8 @@ def test_a_drive_that_is_not_synced_is_not_synced_by_the_window(device_root):
 
 
 def test_the_window_syncs_a_device_over_mtp_with_its_choice_alone(device_root, monkeypatch):
-    """The window's run_sync of a device over MTP gets the first-sync choice and nothing
-    of a drive."""
+    """The window's sync of a device over MTP asks for the first-sync choice and not for a
+    drive."""
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
     from openexpress.gui.app import MainWindow
@@ -104,7 +106,8 @@ def test_the_window_syncs_a_device_over_mtp_with_its_choice_alone(device_root, m
     win = window_for(s, [])
     MainWindow.start_sync(win)
     ((args, kwargs),) = calls
-    assert args[0] is s and args[1] is None and kwargs == {}
+    assert args == (s,)
+    assert (kwargs["options"].first_run, kwargs["options"].drive) == (None, False)
 
 
 # --- the device page --------------------------------------------------------------------------
@@ -130,33 +133,30 @@ def test_the_open_drive_is_counted_when_it_may_sync(refusal, counted):
 
 
 @pytest.mark.parametrize(("queue", "asked"), [([COURSE], 1), ([], 0)])
-def test_the_window_asks_to_eject_a_drive_a_sync_wrote_to(device_root, in_the_window, queue,
-                                                           asked):
+def test_the_window_asks_to_eject_a_drive_a_sync_wrote_to(device_root, queue, asked):
     """So that the watch takes the files, as after an update; nothing written, no question."""
     from openexpress.gui.app import MainWindow
 
     questions = []
-    in_the_window("ask_to_eject_after_sync", lambda win, s: questions.append(s))
     sync.SyncState(UNIT).save()
     s, _account = checked(device_root, messages=queue)
-    MainWindow.start_sync(window_for(s, []))
-    assert questions == [s] * asked
+    MainWindow.start_sync(window_for(s, [], questions))
+    assert questions == [(s, True)] * asked
 
 
-def test_no_question_to_eject_a_device_over_mtp(device_root, monkeypatch, in_the_window):
+def test_no_question_to_eject_a_device_over_mtp(device_root, monkeypatch):
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
     from openexpress.gui.app import MainWindow
     from openexpress.settings import Settings
 
     questions = []
-    in_the_window("ask_to_eject_after_sync", lambda win, s: questions.append(s))
     monkeypatch.setattr(service, "run_sync",
                         lambda *a, **kw: service.SyncSummary(downloaded=1))
     device = parse((device_root / "GARMIN" / "GarminDevice.xml").read_bytes())
     s = service.DeviceSession(LocalStorage(device_root), device, Settings(),
                               DriveAccount(SERVED))
-    MainWindow.start_sync(window_for(s, []))
+    MainWindow.start_sync(window_for(s, [], questions))
     assert questions == []
 
 

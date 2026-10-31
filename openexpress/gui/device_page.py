@@ -342,20 +342,6 @@ def set_primary_wearable(win, button=None) -> None:
                  device=False, button=button)
 
 
-def ask_to_eject_after_sync(win, s) -> None:
-    """After a sync wrote files of Garmin Connect's queue to a drive: it is to be ejected
-    first, so that the watch takes them; that the cable can go out is said only once it is
-    (eject_device)."""
-    confirm(win, "eject-after-sync", _("Files saved on the device"),
-            _("Eject the device before you unplug the cable: until then it may not see the "
-              "files from Garmin Connect."),
-            # TRANSLATORS: button that ejects the device (its USB drive)
-            Answer("eject", _("Eject"), lambda: win.eject_device(s, files=True),
-                   look="suggested"),
-            # TRANSLATORS: button; the device is ejected later
-            cancel=_("Later"), default="eject")
-
-
 # Why the picture work found no picture: unit-info gave no address of one.
 NO_ADDRESS = "unit-info gave no address"
 
@@ -947,7 +933,7 @@ class DevicePage:
         # A Garmin device in mass storage mode has no maps; one that is not synced says why
         # in place of the sync.
         mass_storage = getattr(s, "mass_storage", False)
-        refused = getattr(s, "drive_refusal", None) if mass_storage else None
+        refused = getattr(s, "drive_refusal", None)
         if refused is not None:
             sec.group(_("USB drive"), service.drive_sync_refusal_text(*refused))
         else:
@@ -1449,7 +1435,7 @@ class DevicePage:
             self._show_last_sync()
             self._count_activities_again()
             if getattr(s, "mass_storage", False) and summary.downloaded:
-                ask_to_eject_after_sync(self, s)
+                self.ask_to_eject(s, files=True)
 
         def failed(e):
             # What it uploaded before it stopped is done: kept in its record (run_sync).
@@ -1465,12 +1451,10 @@ class DevicePage:
             return False
 
         def work():
-            if getattr(s, "mass_storage", False):
-                # Asked for a drive (only here and on the command line, never in the
-                # background); run_sync judges it again before anything is uploaded.
-                return service.run_sync(s, progress=self.progress, options=service.SyncOptions(
-                    first_run=first_run, drive=True))
-            return service.run_sync(s, first_run, self.progress)
+            # A drive is asked for here and on the command line, never in the background;
+            # run_sync judges it again before anything is uploaded.
+            return service.run_sync(s, progress=self.progress, options=service.SyncOptions(
+                first_run=first_run, drive=getattr(s, "mass_storage", False)))
 
         # Stop Waiting pressed during the previous sync of this session: not for this one.
         s.stop_waiting.clear()

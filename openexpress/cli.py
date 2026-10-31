@@ -90,18 +90,16 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     command = getattr(args, "cmd", None)
 
     def refuse(st, dev):
-        if st.mass_storage and command == "sync":
-            # Its data types now, before it is remembered; Garmin's word on it once there is
-            # a session (service.refuse_drive_sync).
-            if not service.declares_uploads(dev):
-                service.drive_not_synced(service.NO_UPLOAD_TYPES)
-            return
+        # A drive's data types before it is remembered, without a request; Garmin's word on
+        # it once there is a session (service.refuse_drive_sync).
+        if (st.mass_storage and command in ("sync", "baseline")
+                and not service.declares_uploads(dev)):
+            service.drive_not_synced(service.NO_UPLOAD_TYPES)
         if st.mass_storage and command in NOT_ON_A_DRIVE:
             raise service.MassStorageMode(mass_storage_text())
         if command in ("sync", "baseline") and not dev.datatypes():
-            raise service.MassStorageMode(_(
-                "Nothing to sync: the device declares no data types (for example a device "
-                "connected as a USB drive, or a copy of one)."))
+            raise service.MassStorageMode(_("Nothing to sync: the device declares no data "
+                                            "types."))
 
     st = open_storage(args)
     # A device found now is remembered; a folder given with --path may be a copy.
@@ -736,7 +734,9 @@ def cmd_sync(args) -> int:
 
 def _print_sync_plan(plan, drive: bool = False) -> None:
     """What `sync` would do (its dry run), as service.plan_sync worked it out. On a `drive`
-    a Connect IQ app stays in Garmin Connect's queue (service._apply_queue)."""
+    a Connect IQ app stays in Garmin Connect's queue (service.stays_in_queue)."""
+    from openexpress import service
+
     uploads = plan.uploads
     if uploads is not None:
         counts = collections.Counter(c.datatype for c in uploads.candidates)
@@ -757,7 +757,7 @@ def _print_sync_plan(plan, drive: bool = False) -> None:
         items = plan.queue.items
 
         def left(it):
-            return drive and it.handled_by == "Connect IQ"
+            return service.stays_in_queue(it, drive)
 
         n_dl = sum(1 for i in items if not i.unsupported and not left(i))
         print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))

@@ -175,19 +175,20 @@ def test_ejecting_after_an_update_was_saved(click, words, ejected):
     from openexpress.gui.app import MainWindow
 
     asked = []
-    win = _window(eject_device=lambda s, bike_accessory=False: asked.append(s))
+    win = _window(eject_device=lambda s, bike_accessory=False, files=False: asked.append(s))
     MainWindow.ask_to_eject(win, win.session)
     click(words, until=lambda: len(asked) == ejected and not click.shown[-1].get_mapped())
 
 
 @pytest.mark.parametrize(("words", "ejected"), [("Eject", [True]), ("Later", [])])
 def test_ejecting_after_a_sync_wrote_to_the_drive(click, words, ejected):
-    from openexpress.gui.device_page import ask_to_eject_after_sync
+    from openexpress.gui.app import MainWindow
 
     asked = []
     win = _window(eject_device=lambda s, bike_accessory=False, button=None, files=False:
                   asked.append(files))
-    ask_to_eject_after_sync(win, win.session)
+    MainWindow.ask_to_eject(win, win.session, files=True)
+    assert click.shown[-1].get_heading() == "Files saved on the device"
     click(words, until=lambda: asked == ejected and not click.shown[-1].get_mapped())
 
 
@@ -515,13 +516,6 @@ def _eject_ask(ctx):
     MainWindow.ask_to_eject(win, win.session)
 
 
-def _eject_after_sync(ctx):
-    from openexpress.gui.device_page import ask_to_eject_after_sync
-
-    win = _escape_window(ctx, eject_device=_note(ctx, "eject_device"))
-    ask_to_eject_after_sync(win, win.session)
-
-
 def _eject_window(ctx, eject):
     from openexpress.gui.app import MainWindow
 
@@ -596,7 +590,6 @@ OPENERS = {
     "own-map-remove": _own_map_remove, "map-install": _map_install, "map-remove": _map_remove,
     "music-copy": _music_copy, "playlist-add": _playlist_add, "cache-clear": _cache_clear,
     "update-install": _update_install, "eject-ask": _eject_ask, "ejected": _ejected,
-    "eject-after-sync": _eject_after_sync,
     "eject-retry": _eject_retry, "error": _error, "report": _report,
 }
 

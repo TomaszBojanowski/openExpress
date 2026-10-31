@@ -261,7 +261,7 @@ def test_counted_again_after_the_window_s_sync(device_root, monkeypatch):
     win = _window(device, counted, other)
     win._count_activities_again = lambda: app.MainWindow._count_activities_again(win)
 
-    def run_sync(s, first_run, progress):
+    def run_sync(s, progress=None, options=None):
         _done_all(device)
         return service.SyncSummary()
 
@@ -280,7 +280,7 @@ def test_counted_again_after_a_failed_sync(device_root, monkeypatch):
     win._count_activities_again = lambda: app.MainWindow._count_activities_again(win)
     win.run_task.error = "record"
 
-    def run_sync(s, first_run, progress):
+    def run_sync(s, progress=None, options=None):
         state = sync.SyncState(device.unit_id)
         state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")
         state.save()

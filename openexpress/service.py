@@ -274,6 +274,12 @@ def drive_sync_refusal(device: GarminDevice, unit_info: dict | None) -> str | No
     the uploads (plan_sync)."""
     if not declares_uploads(device):
         return NO_UPLOAD_TYPES
+    return _connect_refusal(unit_info)
+
+
+def _connect_refusal(unit_info: dict | None) -> str | None:
+    """Garmin's word on a drive whose data types may sync (drive_sync_refusal): NO_UNIT_INFO
+    without an answer, CONNECT_DISABLED when it says "Disabled"; None otherwise."""
     if not isinstance(unit_info, dict):
         return NO_UNIT_INFO
     support = unit_info.get("connectsupport")
@@ -321,7 +327,7 @@ def drive_refusal(s: DeviceSession) -> tuple[str, str] | None:
         info, error = unit_info(s), ""
     except ApiError as e:
         info, error = None, applog.network_error_text(e)
-    reason = drive_sync_refusal(s.device, info)
+    reason = _connect_refusal(info)
     return None if reason is None else (reason, error)
 
 
@@ -1383,14 +1389,12 @@ def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None
                            for quiet in drep.ack_failed_in_log]
     told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
     received: list[str] = []  # what of them came to the device: received as the files
-    apps = sum(1 for i in items if i.handled_by == "Connect IQ")
-    if apps and s.mass_storage:
-        # Garmin Express refuses a protected app on a drive, and which apps are protected is
-        # not read here: they wait in the queue, for the device over MTP or the phone.
-        log.info("sync: %d Connect IQ app%s of the queue left in it (a USB drive)", apps,
-                 "" if apps == 1 else "s")
-        out.lines.append(apps_waiting_step(apps, flatpak=False))
-    elif apps:
+    left = sum(1 for i in items if stays_in_queue(i, s.mass_storage))
+    if left:
+        log.info("sync: %d Connect IQ app%s of the queue left in it (a USB drive)", left,
+                 "" if left == 1 else "s")
+        out.lines.append(apps_waiting_step(left, flatpak=False))
+    elif any(i.handled_by == "Connect IQ" for i in items):
         out.lines += _install_queued_apps(s, queue.messages, progress, out.errors, received)
     # The queue may have brought apps: what the store said of the device's apps is asked anew.
     answers.forget_device((answers.STORE_APPS, answers.STORE_UPDATES), s.device.unit_id)
@@ -1401,6 +1405,13 @@ def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None
     skipped = [i for i in items if i.unsupported]
     if skipped:
         out.lines.append(not_accepted_step(len(skipped)))
+
+
+def stays_in_queue(item: sync.DownloadItem, drive: bool) -> bool:
+    """Whether an item of Garmin Connect's queue stays in it, not acknowledged: a Connect IQ
+    app on a `drive` (Garmin Express refuses a protected app on a drive, and which apps are
+    protected is not read here; it waits for the device over MTP or the phone)."""
+    return drive and item.handled_by == "Connect IQ"
 
 
 def last_sync_path():

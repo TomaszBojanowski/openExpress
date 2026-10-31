@@ -141,7 +141,7 @@ def test_the_window_shows_the_record_of_a_stopped_sync(monkeypatch):
 
     shown = []
 
-    def run_sync(s, first_run, progress):
+    def run_sync(s, progress=None, options=None):
         raise ApiError("Connect file queue: HTTP 503", 503)
 
     monkeypatch.setattr(service, "run_sync", run_sync)

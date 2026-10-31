@@ -1379,19 +1379,18 @@ def test_a_garmin_drive_not_mounted_is_told_without_error_or_path(plugged, monke
 
 
 @pytest.mark.parametrize("command", [["sync"], ["baseline"], ["apps"], ["music"], ["maps"]])
-def test_commands_that_do_not_apply_to_a_drive_refuse(watch_and_drives, monkeypatch, capsys,
-                                                      command):
-    """The refusal of the window, in one sentence, before any request or login; `sync` and
-    `baseline` say their own reason (this Varia declares no data types)."""
+def test_commands_refused_on_this_drive_say_why(watch_and_drives, monkeypatch, capsys,
+                                                command):
+    """In one sentence, before any request or login: `sync` and `baseline` that this Varia
+    declares no data types, the others what a drive has not got (as the window says)."""
     from openexpress import service
     from openexpress.cli import main
 
     monitor_with(monkeypatch, watch_and_drives.drive())
     assert main(command) == 1
     captured = capsys.readouterr()
-    said = {"sync": service.drive_sync_refusal_text(service.NO_UPLOAD_TYPES),
-            "baseline": "Nothing to sync: the device declares no data types"}.get(
-                command[0], MASS_STORAGE_TEXT)
+    said = (service.drive_sync_refusal_text(service.NO_UPLOAD_TYPES)
+            if command[0] in ("sync", "baseline") else MASS_STORAGE_TEXT)
     assert said in captured.err and captured.err.count("\n") == 1
 
 

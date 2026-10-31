@@ -27,7 +27,7 @@ def test_the_window_clears_a_stop_left_from_its_previous_sync(monkeypatch):
 
     seen = []
 
-    def run_sync(s, first_run, progress):
+    def run_sync(s, progress=None, options=None):
         seen.append(s.stop_waiting.is_set())
         return service.SyncSummary()
 

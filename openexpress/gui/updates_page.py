@@ -332,14 +332,22 @@ class UpdatesPage:
                                              installed, failed), look="suggested"),
                 extra=below if below.get_first_child() is not None else None)
 
-    def ask_to_eject(self, s, bike_accessory: bool = False) -> None:
-        """After an update was saved on a Garmin drive: it is to be ejected first; that the
-        cable can go out is said only once it is (eject_device)."""
-        confirm(self, "eject-ask", _("Update saved"),
-                _("Eject the device before you unplug the cable: until then "
-                  "it may not see the update."),
+    def ask_to_eject(self, s, bike_accessory: bool = False, files: bool = False) -> None:
+        """After an update was saved on a Garmin drive, or (`files`) a sync wrote the files of
+        Garmin Connect's queue to it: it is to be ejected first, so that the device takes
+        them; that the cable can go out is said only once it is (eject_device)."""
+        if files:
+            title = _("Files saved on the device")
+            text = _("Eject the device before you unplug the cable: until then it may not see "
+                     "the files from Garmin Connect.")
+        else:
+            title = _("Update saved")
+            text = _("Eject the device before you unplug the cable: until then "
+                     "it may not see the update.")
+        confirm(self, "eject-ask", title, text,
                 # TRANSLATORS: button that ejects the device (its USB drive)
-                Answer("eject", _("Eject"), lambda: self.eject_device(s, bike_accessory),
+                Answer("eject", _("Eject"),
+                       lambda: self.eject_device(s, bike_accessory, files=files),
                        look="suggested"),
                 # TRANSLATORS: button; the device is ejected later
                 cancel=_("Later"), default="eject")
