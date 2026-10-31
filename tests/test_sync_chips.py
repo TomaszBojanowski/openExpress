@@ -165,13 +165,25 @@ def test_a_connected_device_of_the_account_gets_its_count_and_when_it_was_synced
     assert (never.to_sync, never.never_synced) == (None, True)
 
 
-def test_nothing_of_the_sync_for_a_device_off_the_account_not_logged_in_or_a_drive():
+def test_nothing_of_the_sync_for_a_device_off_the_account_or_not_logged_in():
     counted = sync.ActivitiesToSync(UNIT, frozenset({"a.fit"}), 1)
     for tile in (_tile_of(_summary(counted), account=()),
                  _tile_of(_summary(counted), logged_in=False),
-                 _tile_of(_summary(counted, kind="ums")),
                  _tile_of(_summary(sync.ActivitiesToSync(UNIT)), account=())):
         assert (tile.to_sync, tile.never_synced) == (None, False)
+
+
+def test_a_drive_counted_says_to_sync_and_never_never_synced():
+    """A drive is counted once it is open and may be synced: then "To sync" as over MTP.
+    "Never synced" it never says, as a drive that is not synced (a Varia) is never synced
+    either."""
+    sync.SyncState(UNIT).save()
+    _record()
+    tile = _tile_of(_summary(sync.ActivitiesToSync(UNIT, frozenset({"a.fit"}), 1), kind="ums"))
+    assert (tile.to_sync, tile.never_synced) == (1, False)
+    sync.state_path(UNIT).unlink()
+    never = _tile_of(_summary(sync.ActivitiesToSync(UNIT), kind="ums"))
+    assert (never.to_sync, never.never_synced) == (None, False)
 
 
 def test_no_chip_while_the_account_does_not_let_a_sync_upload():
@@ -445,6 +457,44 @@ def test_the_open_device_is_counted_for_its_session(listed):
     win.session = types.SimpleNamespace(**vars(session))  # another session meanwhile
     done(work())
     assert session.to_sync is None
+
+
+def _open_drive(device_root, refusal):
+    """The made-up device listed as a drive (probe keeps nothing of a drive) and open, as
+    check_session leaves it."""
+    from fakes import DriveAccount, drive_session
+
+    from openexpress.device import gio_storage
+
+    found = gio_storage.FoundDevice(device_root.as_uri() + "/", "GARMIN", True,
+                                    usb=gio_storage.GarminUsb("4f42", 1, 9), kind="ums")
+    summary = gio_storage.probe(found)
+    state = sync.SyncState(UNIT)
+    state.mark_completed(sync.ACTIVITY_TYPE, "2026-10-01-10-00-00.fit")
+    state.save()
+    s = drive_session(device_root, DriveAccount({"connectsupport": "Required"}))
+    s.drive_refusal = refusal
+    return summary, s
+
+
+@pytest.mark.needs_display
+def test_the_open_drive_that_may_sync_is_counted_and_its_tile_says_to_sync(device_root):
+    summary, s = _open_drive(device_root, None)
+    win = _start_window([summary], session=s)
+    win._show_tiles(*win._start_summaries())
+    work, done = win.later.pop()
+    done(work())
+    assert s.to_sync.count == 1
+    assert "To sync" in _chips_on(win.start.tiles()[0])
+
+
+@pytest.mark.needs_display
+def test_a_drive_that_is_not_synced_is_not_counted(device_root):
+    summary, s = _open_drive(device_root, ("connect-disabled", ""))
+    win = _start_window([summary], session=s)
+    win._show_tiles(*win._start_summaries())
+    assert win.later == []
+    assert "To sync" not in _chips_on(win.start.tiles()[0])
 
 
 @pytest.mark.needs_display

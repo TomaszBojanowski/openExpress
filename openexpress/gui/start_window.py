@@ -506,15 +506,16 @@ class StartWindow:
         """Counts in the background the activities not uploaded yet of each connected device
         of the account whose tile was just drawn, once while it stays listed or open (the
         open one for its session); its tile shows no chip until the count comes
-        (_activities_counted). Never a drive, a device off the account or one whose check
-        against the account failed."""
+        (_activities_counted). A drive only while it is open and may be synced (its list
+        keeps neither its GarminDevice.xml nor its storage); never a device off the account
+        or one whose check against the account failed."""
         s = self.session
         for tile, source in entries:
             if not (isinstance(source, DeviceSummary) and tile.connected and tile.on_account
-                    and tile.kind == "mtp"):
+                    and tile.kind in ("mtp", "ums")):
                 continue
             if s is not None and self._is_open(source):
-                if (getattr(s, "mass_storage", False)
+                if (getattr(s, "drive_refusal", None) is not None
                         or getattr(s, "ownership_error", None) is not None):
                     continue
                 holder, device, storage = s, s.device, s.storage

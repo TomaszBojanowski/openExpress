@@ -74,7 +74,8 @@ def read(entry: KnownDevice | None, *, connected: bool, kind: str | None,
          software_version: str, now: float | None = None) -> TileFacts:
     """The facts of the device of `entry` that hold now, for its tile: `connected` (an
     update copied already and the sync are said of a connected device only), its USB `kind`
-    ("ums": nothing of the sync), and the software it has now (`software_version`: the
+    ("ums": of the sync only its activities to upload, _drive_sync), and the software it has
+    now (`software_version`: the
     device's own when connected, else as remembered). No entry: nothing known."""
     if entry is None:
         return TileFacts()
@@ -86,7 +87,8 @@ def read(entry: KnownDevice | None, *, connected: bool, kind: str | None,
         update_ready=_update_ready(entry, software_version, now) if connected else None,
         primary=bool(account is not None and account.on_account and account.primary),
         on_account=account.on_account if account is not None else None,
-        **(_sync(entry, account, login, now) if connected and kind != "ums" else {}))
+        **(_drive_sync(entry, account, login, now) if connected and kind == "ums"
+           else _sync(entry, account, login, now) if connected else {}))
     if log.isEnabledFor(logging.DEBUG):
         log.debug("start page: facts of %s: %s", entry.part_number, ", ".join(
             f"{k} {v}" for k, v in vars(facts).items() if v not in (None, False)) or "none")
@@ -151,6 +153,16 @@ def _sync(entry: KnownDevice, account: AccountFact | None, login: str | None,
     if count is None:
         return {}
     return {"to_sync": count, "synced_at": synced.last}
+
+
+def _drive_sync(entry: KnownDevice, account: AccountFact | None, login: str | None,
+                now: float) -> dict:
+    """What a connected drive's tile says of its sync: its activities to upload, as of a
+    device over MTP (counted once it was open and could be synced); never "never synced", as a
+    drive that is not synced (a Varia) is never synced either."""
+    facts = _sync(entry, account, login, now)
+    facts.pop("never_synced", None)
+    return facts
 
 
 # --- writing ------------------------------------------------------------------------------

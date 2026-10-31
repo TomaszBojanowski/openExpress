@@ -160,14 +160,23 @@ def test_a_device_never_synced_here_says_so_from_the_first_frame():
     assert (tile.to_sync, tile.never_synced) == (None, True)
 
 
-def test_no_record_and_no_chip_for_a_drive_off_the_account_or_not_logged_in():
+def test_no_record_and_no_chip_off_the_account_or_not_logged_in():
     _remember()
     _state()
     _synced()
     _keep(3)
-    for tile in (_tile(_summary(kind="ums")), _tile(_summary(), account=()),
-                 _tile(_summary(), logged_in=False)):
+    for tile in (_tile(_summary(), account=()), _tile(_summary(), logged_in=False)):
         assert (tile.to_sync, tile.never_synced) == (None, False)
+
+
+def test_a_drive_with_a_count_recorded_gives_the_chip_too():
+    """Counted once it was open and could be synced: its tile says it as a device over MTP."""
+    _remember()
+    _state()
+    _synced()
+    _keep(3)
+    assert (_tile(_summary(kind="ums")).to_sync, _tile(_summary(kind="ums")).never_synced) == (
+        3, False)
 
 
 def test_after_forget_no_chip():
@@ -346,7 +355,8 @@ def test_without_a_login_the_record_gives_no_chip_in_the_first_frame(listed, dev
 
 def test_while_the_list_is_asked_only_a_record_says_the_sync():
     """No list yet: a recent record (made only for a device of the account) gives its chip; a
-    device never synced here (it may be off the account) and a drive say nothing yet."""
+    device never synced here (it may be off the account) says nothing yet; a drive counted
+    says its count."""
     from fakes import login
 
     from openexpress import devicelist
@@ -362,7 +372,7 @@ def test_while_the_list_is_asked_only_a_record_says_the_sync():
     _synced()
     _keep(3)
     assert tile(_summary()) == (3, False, False)
-    assert tile(_summary(kind="ums")) == (None, False, False)
+    assert tile(_summary(kind="ums")) == (3, False, False)  # a drive counted: as over MTP
     login(saved=False)
     (plain,) = devicelist.tiles([_summary()], known_devices.load(), None, False)
     assert (plain.to_sync, plain.never_synced) == (None, False)  # not asked: nothing

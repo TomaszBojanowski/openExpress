@@ -223,7 +223,8 @@ def test_a_count_holds_7_days_and_for_the_sync_state_it_was_counted_against():
     entry = known_devices.load()[FENIX]
     assert (_read(entry).to_sync, _read(entry).synced_at) == (1, entry.synced.last)
     assert _read(entry, now=time.time() + 8 * DAY).to_sync is None
-    assert _read(entry, kind="ums").to_sync is None  # a drive: nothing of the sync
+    drive = _read(entry, kind="ums")  # a drive counted: its count, never "never synced"
+    assert (drive.to_sync, drive.never_synced) == (1, False)
     assert _read(entry, connected=False).to_sync is None  # not connected: neither
 
 

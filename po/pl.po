@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 02:57+0100\n"
+"POT-Creation-Date: 2026-10-31 03:07+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -5298,7 +5298,7 @@ msgstr "Nie znaleziono GarminDevice.xml"
 msgid "Could not be read"
 msgstr "Nie udało się odczytać"
 
-#: openexpress/gui/start_window.py:299 openexpress/gui/start_window.py:671
+#: openexpress/gui/start_window.py:299 openexpress/gui/start_window.py:672
 msgid "Not seen on this computer"
 msgstr "Niewidziane na tym komputerze"
 
