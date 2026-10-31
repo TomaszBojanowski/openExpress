@@ -383,6 +383,30 @@ def test_connect_iq_apps_of_the_queue_stay_in_it_on_a_drive(device_root, caplog)
     assert "sync: 1 Connect IQ app of the queue left in it (a USB drive)" in caplog.messages
 
 
+TRUEUP = {"messageid": 9, "messagetype": "true_up", "devicexmldatatype": "FIT_TYPE_39",
+          "metadata": {"messageurl": "trueup/9"}}
+TAKES_TRUEUP = ("<DataType><Name>FIT_TYPE_39</Name><File><Location><Path>Garmin/NewFiles</Path>"
+                "<FileExtension>FIT</FileExtension></Location><TransferDirection>InputToUnit"
+                "</TransferDirection></File></DataType>")
+
+
+def test_trueup_of_the_queue_is_written_to_a_drive_as_over_mtp(device_root):
+    """The same steps as over MTP and in Garmin Express: fetched, acknowledged, written to
+    the folder its GarminDevice.xml names; told in the details."""
+    xml = device_root / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(xml.read_text().replace("</MassStorageMode>",
+                                           TAKES_TRUEUP + "</MassStorageMode>"))
+    sync.SyncState(UNIT).save()
+    account = DriveAccount({"connectsupport": "Required"}, messages=[TRUEUP])
+    account.download_message = lambda url, absolute: b"TRUEUP" if "trueup" in url else None
+    summary = service.run_sync(session_of(device_root, account),
+                               options=service.SyncOptions(drive=True))
+    assert summary.errors == [] and summary.downloaded == 1
+    (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
+    assert written.read_bytes() == b"TRUEUP" and account.acks == [TRUEUP["messageid"]]
+    assert service.trueup_step() in summary.lines
+
+
 def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
     """The window and the background service ask for all of a sync: a drive is not synced."""
     account = DriveAccount({"connectsupport": "Required"})
