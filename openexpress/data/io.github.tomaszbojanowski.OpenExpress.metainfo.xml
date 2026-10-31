@@ -105,6 +105,30 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.13" date="2026-10-31">
+      <description>
+        <ul>
+          <li>New and experimental: devices that connect as a USB drive (mass storage mode, such
+          as watches without music and older Edge bike computers) are synced too, in the window
+          and on the command line, both ways as over MTP. New activities and other data are
+          uploaded, and the courses, workouts, training plans and TrueUp that Garmin Connect
+          queues for the device are written to it. Use the Sync button or "openexpress sync";
+          such a device is never synced in the background. This was tested with a USB stick
+          standing in for a watch and is not yet confirmed on a real one: if you have such a
+          device, please report how it goes.</li>
+          <li>A device connected as a USB drive is synced only when it declares data for Garmin
+          Connect (a Varia, for example, declares none) and Garmin's server can be reached and
+          doesn't list the device as unsupported by Garmin Connect; otherwise its page and the
+          command say why. Connect IQ apps queued for it stay in Garmin Connect's queue. Each
+          file written to the drive is read back before Garmin Connect is told it was received.
+          After a sync that wrote files, the drive is ejected (the window asks first), so that
+          the device takes them.</li>
+          <li>Backups and "New data only" ("openexpress baseline") work for a device connected as
+          a USB drive too. Its Maps, Apps and Music pages say that these are not supported in this
+          mode, as information rather than as an error.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.12" date="2026-10-30">
       <description>
         <ul>
