@@ -15,7 +15,7 @@
 | Instinct 3 – 45mm Tactical (part 006-B4585-00) | MTP | [#21](https://github.com/TomaszBojanowski/openExpress/issues/21) | detected; sync works, also of an activity with GPS. With Stealth mode on, the watch keeps no GPS track of an activity, so only its totals reach Garmin Connect | Kubuntu 26.04, KDE on Wayland, Flatpak 0.7.0 |
 | Edge 1040 (part 006-B3843-00) | MTP | [#8](https://github.com/TomaszBojanowski/openExpress/issues/8), [#10](https://github.com/TomaszBojanowski/openExpress/issues/10) | detected; checking for software updates, installing a Garmin map (Trailforks) and installing and removing Connect IQ apps work; sync not tried. In #10 map updates worked too; the sign-in window works also when the system's language is missing in the Flatpak (see [The Flatpak and the language of your system](troubleshooting.md#the-flatpak-and-the-language-of-your-system)) | #8: Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1; #10: Ubuntu 26.04, KDE on X11, Flatpak 0.6.7 |
 | Edge 540 (part 006-B4061-00) | MTP | [#18](https://github.com/TomaszBojanowski/openExpress/issues/18) | detected; sync, software updates and maps work | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
-| inReach Mini 2 (part 006-B3968-00) | USB drive | [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) | connects as a USB drive: software updates work (the device installs one once its drive is ejected properly), sync not yet ([#12](https://github.com/TomaszBojanowski/openExpress/issues/12)) | Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4 |
+| inReach Mini 2 (part 006-B3968-00) | USB drive | [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) | connects as a USB drive: software updates work (the device installs one once its drive is ejected properly); not synced: Garmin's update server says that Garmin Connect does not take its data ([#12](https://github.com/TomaszBojanowski/openExpress/issues/12)) | Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4 |
 | Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: software updates work, sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | Forerunner 920XT (part 006-B1765-00) | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) | connects as a USB drive: software updates work (time-zone map updated), sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | zūmo 595LM | – | [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) | detected; software updates and map updates worked; the device itself has no Garmin Connect sync or Connect IQ apps | the command line only, in a container on a home server, also built for ARM on a Raspberry Pi; a version before 0.6.20 |
@@ -41,9 +41,10 @@ device is backed up as any other, and a watch is synced both ways, as over MTP: 
 are uploaded and the files Garmin Connect queues for it (courses, workouts, training plans,
 TrueUp) are written to it, with the **Sync** button or `openexpress sync`, never in the
 background. A drive is synced when its `GarminDevice.xml` declares data that goes to Garmin
-Connect and Garmin's update server does not say that Garmin Connect does not take its data
-(a Varia declares none; for an inReach Mini 2 the server says Garmin Connect does not take
-it); otherwise the device page and the command say why. Connect IQ apps queued for a drive
+Connect and Garmin's update server answers without saying that Garmin Connect does not take
+its data (a Varia declares none; for an inReach Mini 2 the server says Garmin Connect does not
+take it); without an answer of that server it is not synced either. Otherwise the device page
+and the command say why. Connect IQ apps queued for a drive
 stay in Garmin Connect's queue. After a sync that wrote files to it the drive is ejected (the
 window asks first), so that the watch takes them. Apps, maps and music are not supported for
 such a device; the window and the commands say so. The sync of a drive is new: it was tried
