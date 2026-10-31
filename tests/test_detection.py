@@ -714,8 +714,7 @@ DRIVE_NOT_MOUNTED_TEXT = ("The Garmin device is connected, but its drive is not 
                           "it in the file manager, or unplug the cable and plug it in again.")
 FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive, but this version "
                       "(Flatpak) has no access to /run/media, where the system mounted it.")
-MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): "
-                     "openExpress shows its information and software updates; sync, apps, "
+MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): apps, "
                      "maps and music are not supported in this mode.")
 # Made by hand after the Varia RTL515; the unit ID is made up.
 DRIVE_SERIAL = "0000abcdef56"
@@ -3235,9 +3234,11 @@ def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(driv
 def _recording_page(key):
     """Stands in for a Section: records what the page is made to show."""
     seen = {}
-    error = types.SimpleNamespace(set_title=lambda title: seen.update(title=title),
-                                  set_description=lambda text: seen.update(description=text))
-    return types.SimpleNamespace(key=key, title=key.title(), loaded=False, error=error, seen=seen,
+    status = types.SimpleNamespace(set_title=lambda title: seen.update(title=title),
+                                   set_description=lambda text: seen.update(description=text),
+                                   set_icon_name=lambda icon: seen.update(icon=icon))
+    return types.SimpleNamespace(key=key, title=key.title(), icon=f"{key}-symbolic",
+                                 loaded=False, error=status, info=status, seen=seen,
                                  clear=lambda: seen.update(cleared=True),
                                  show=lambda name: seen.update(shown=name))
 
@@ -3261,7 +3262,7 @@ def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force
     for key in ("maps", "apps", "music"):
         seen = win.sections[key].seen
         assert seen == {"cleared": True, "title": key.title(), "description": MASS_STORAGE_TEXT,
-                        "shown": "error"}
+                        "icon": f"{key}-symbolic", "shown": "info"}
         assert seen["description"] != gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
     # Another device: every page loads.
     win.session.storage.mass_storage = False

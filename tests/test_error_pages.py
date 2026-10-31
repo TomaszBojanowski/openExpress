@@ -19,11 +19,11 @@ def _section(key):
     return Section(key, key.title(), "x-symbolic", "Loading…")
 
 
-def _shown(section) -> list[str]:
-    """The texts of the labels of the page "error", as they are drawn."""
+def _shown(section, page="error") -> list[str]:
+    """The texts of the labels of the page "error" (or "info"), as they are drawn."""
     from gi.repository import Gtk
 
-    out, stack = [], [section.error]
+    out, stack = [], [getattr(section, page)]
     while stack:
         widget = stack.pop()
         if isinstance(widget, Gtk.Label):
@@ -56,7 +56,7 @@ def test_a_page_not_for_a_drive_shows_its_words_with_brackets(in_the_window):
     in_the_window("mass_storage_text", lambda: words)
     section = _section("maps")
     show_not_for_mass_storage(section)
-    assert words in _shown(section)
+    assert words in _shown(section, "info")
 
 
 @pytest.mark.needs_display

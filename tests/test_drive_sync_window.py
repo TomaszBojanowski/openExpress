@@ -158,3 +158,20 @@ def test_no_question_to_eject_a_device_over_mtp(device_root, monkeypatch, in_the
                               DriveAccount(SERVED))
     MainWindow.start_sync(window_for(s, []))
     assert questions == []
+
+
+# --- the pages a drive has not got ----------------------------------------------------------
+
+
+@pytest.mark.needs_display
+def test_a_page_a_drive_has_not_got_says_so_as_information_not_as_an_error():
+    """Maps, Apps, Music: the page's own icon, its title and the sentence, no "Try again"."""
+    from openexpress.device.gio_storage import mass_storage_text
+    from openexpress.gui.device_page import Section, show_not_for_mass_storage
+
+    sec = Section("maps", "Maps", "map-symbolic", "Loading…")
+    show_not_for_mass_storage(sec)
+    assert sec.stack.get_visible_child_name() == "info"
+    assert sec.info.get_icon_name() == "map-symbolic" and sec.info.get_child() is None
+    assert (sec.info.get_title(), sec.info.get_description()) == ("Maps", mass_storage_text())
+    assert "sync" not in mass_storage_text()  # a drive's sync is on its device page

@@ -647,16 +647,18 @@ def device_view_icon(win, s) -> str:
 
 def show_not_for_mass_storage(sec) -> None:
     """A page that does not apply to a Garmin device in mass storage mode: it loads nothing
-    and says why, as the Music page of a device without media does."""
+    and says why, as information (the page's icon, no Try Again), not as an error."""
     sec.clear()
-    sec.error.set_title(sec.title)
+    sec.info.set_icon_name(sec.icon)
+    sec.info.set_title(sec.title)
     # The description is markup: words with "<" or "&" would leave it empty.
-    sec.error.set_description(GLib.markup_escape_text(mass_storage_text()))
-    sec.show("error")
+    sec.info.set_description(GLib.markup_escape_text(mass_storage_text()))
+    sec.show("info")
 
 
 class Section:
-    """One page of the window: shows a placeholder, a spinner, an error or the content."""
+    """One page of the window: shows a placeholder, a spinner, an error, a piece of
+    information (what the device has not got) or the content."""
 
     def __init__(self, key: str, title: str, icon: str, loading_text: str):
         self.key, self.title, self.icon = key, title, icon
@@ -674,9 +676,10 @@ class Section:
         self.retry = Gtk.Button(label=_("Try again"), halign=Gtk.Align.CENTER)
         self.retry.add_css_class("pill")
         self.error.set_child(self.retry)
+        self.info = Adw.StatusPage()
         self.page = Adw.PreferencesPage()
         for name, widget in (("empty", self.empty), ("loading", self.loading),
-                             ("error", self.error), ("content", self.page)):
+                             ("error", self.error), ("info", self.info), ("content", self.page)):
             self.stack.add_named(widget, name)
         # Until the first detection finishes we don't know yet whether a watch is connected.
         self.stack.set_visible_child_name("loading")

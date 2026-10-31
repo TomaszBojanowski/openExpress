@@ -1241,11 +1241,11 @@ def usb_state(clock=time.monotonic) -> str:
 
 
 def mass_storage_text() -> str:
-    """What an open Garmin device in mass storage mode offers: for its pages in the window,
-    and the refusal of the commands that do not apply to it."""
-    return _("The device is connected in mass storage mode (as a USB drive): openExpress "
-             "shows its information and software updates; sync, apps, maps and music are "
-             "not supported in this mode.")
+    """What an open Garmin device in mass storage mode has not got: for its pages in the
+    window, and the refusal of the commands that do not apply to it. Its sync, backup and
+    updates are on its device page, which says too why a drive is not synced."""
+    return _("The device is connected in mass storage mode (as a USB drive): apps, maps and "
+             "music are not supported in this mode.")
 
 
 def drive_off_text() -> str:
