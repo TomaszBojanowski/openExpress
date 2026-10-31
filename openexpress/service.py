@@ -1366,7 +1366,14 @@ def _apply_queue(s, queue: QueuePlan, state, progress, out: SyncSummary) -> None
                            for quiet in drep.ack_failed_in_log]
     told = len(out.errors)  # the errors of the apps and TrueUp name nothing of the user's
     received: list[str] = []  # what of them came to the device: received as the files
-    if any(i.handled_by == "Connect IQ" for i in items):
+    apps = sum(1 for i in items if i.handled_by == "Connect IQ")
+    if apps and s.mass_storage:
+        # Garmin Express refuses a protected app on a drive, and which apps are protected is
+        # not read here: they wait in the queue, for the device over MTP or the phone.
+        log.info("sync: %d Connect IQ app%s of the queue left in it (a USB drive)", apps,
+                 "" if apps == 1 else "s")
+        out.lines.append(apps_waiting_step(apps, flatpak=False))
+    elif apps:
         out.lines += _install_queued_apps(s, queue.messages, progress, out.errors, received)
     # The queue may have brought apps: what the store said of the device's apps is asked anew.
     answers.forget_device((answers.STORE_APPS, answers.STORE_UPDATES), s.device.unit_id)

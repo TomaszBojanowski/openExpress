@@ -6,10 +6,12 @@ uploads its files after the account was asked anew, checked as any device's, and
 nothing to the drive. The other commands still refuse a drive. All devices, answers and
 errors are made up."""
 
+import logging
+
 import pytest
 from fakes import ACTIVITY_URL, COURSE, MONITORING_URL, RTL515_XML, SyncAccount
 
-from openexpress import cli, i18n, service, sync
+from openexpress import cli, i18n, last_sync, service, sync
 from openexpress.connect import ApiError, GarminClient
 from openexpress.device.storage import LocalStorage, UmsStorage
 from openexpress.device.xmldevice import parse
@@ -354,6 +356,31 @@ def test_a_sync_asked_for_a_drive_uploads_and_writes_the_queue(device_root):
     (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
     assert written.name.startswith("course_") and written.read_bytes() == b"COURSE"
     assert account.acks == [COURSE["messageid"]]
+
+
+APP = {"messageid": 7, "devicexmldatatype": "IQWatchApps",
+       "metadata": {"messageurl": "app/7", "messagename": "Made-up app",
+                    "appdetails": {"id": "2a6b4b8e-9a37-4a3e-8f0f-2e7d1f0b9c11"}}}
+
+
+def test_connect_iq_apps_of_the_queue_stay_in_it_on_a_drive(device_root, caplog):
+    """Garmin Express refuses a protected app on a drive, and which apps are protected is
+    not read here: an app waits in Garmin Connect's queue, one line says so, and the course of
+    the queue is written all the same."""
+    sync.SyncState(UNIT).save()
+    apps = device_root / "GARMIN" / "APPS"
+    before = sorted(str(p.relative_to(apps)) for p in apps.rglob("*"))
+    account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE, APP])
+    with caplog.at_level(logging.INFO, logger=service.log.name):
+        summary = service.run_sync(session_of(device_root, account),
+                                   options=service.SyncOptions(drive=True))
+    assert summary.errors == [] and summary.downloaded == 1
+    assert account.acks == [COURSE["messageid"]]  # the app's message stays in the queue
+    assert sorted(str(p.relative_to(apps)) for p in apps.rglob("*")) == before
+    said = [text for text, _warning in last_sync.describe(summary.record(UNIT)).steps]
+    assert ("1 Connect IQ app waits in the queue: openExpress cannot install apps on this "
+            "device over USB yet") in said
+    assert "sync: 1 Connect IQ app of the queue left in it (a USB drive)" in caplog.messages
 
 
 def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
