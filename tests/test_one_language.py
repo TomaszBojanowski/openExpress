@@ -262,7 +262,8 @@ def test_the_device_page_of_a_drive_says_usb_drive():
 def test_the_sync_button_and_the_notice_of_a_drive_say_usb_drive():
     from openexpress.gui.app import MainWindow
 
-    win = stand_in(session=types.SimpleNamespace(mass_storage=True))
+    win = stand_in(session=types.SimpleNamespace(mass_storage=True,
+                                                 drive_refusal=("no-upload-types", "")))
     assert MainWindow._sync_blocked(win) == "USB drive"
 
 

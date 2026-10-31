@@ -9,13 +9,20 @@ errors are made up."""
 import logging
 
 import pytest
-from fakes import ACTIVITY_URL, COURSE, MONITORING_URL, RTL515_XML, SyncAccount
+from fakes import (
+    ACTIVITY_URL,
+    COURSE,
+    MONITORING_URL,
+    RTL515_XML,
+    DriveAccount,
+    SyncAccount,
+    drive_session,
+)
 
 from openexpress import cli, i18n, last_sync, service, sync
-from openexpress.connect import ApiError, GarminClient
+from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, LocalStorage, UmsStorage
 from openexpress.device.xmldevice import parse
-from openexpress.settings import Settings
 
 gio_storage = pytest.importorskip("openexpress.device.gio_storage")
 
@@ -29,30 +36,6 @@ NO_TYPES_TEXT = ("This device is connected as a USB drive and declares no data t
 NO_ANSWER_TEXT = ("This device is connected as a USB drive, and Garmin's server could not be "
                   "asked whether Garmin Connect takes its data, so it is not synced: ")
 NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused)")
-
-
-class DriveAccount(SyncAccount):
-    """Garmin Connect as a sync asks it, and Garmin's update server answering unit-info with
-    `answer` (an exception: raised). unit-info goes through the kept answers as the real
-    client's does; `asked` notes each question that reached the server."""
-
-    unit_info = GarminClient.unit_info
-
-    def __init__(self, answer, devices=None, **kw):
-        super().__init__(verified_unit_id=None, **kw)
-        self.settings = Settings()
-        self.answer = answer
-        self.devices = [{"unitid": self.UNIT}] if devices is None else devices
-
-    def account_devices(self, fresh=False):
-        self.asked.append("account, fresh" if fresh else "account")
-        return self.devices
-
-    def _omt(self, method, path, what, quiet=False, **kw):
-        self.asked.append("unit-info")
-        if isinstance(self.answer, Exception):
-            raise self.answer
-        return self.answer
 
 
 def drive_at(root, monkeypatch):
@@ -159,13 +142,6 @@ def tree(root):
     """Every file and folder under `root`: its path, size, time of change and bytes."""
     return sorted((str(p.relative_to(root)), p.stat().st_size, p.stat().st_mtime_ns,
                    p.read_bytes() if p.is_file() else b"") for p in root.rglob("*"))
-
-
-def session_of(root, account, storage_class=UmsStorage):
-    storage = storage_class(root, root.as_uri() + "/",
-                            usb=gio_storage.GarminUsb("4f42", 1, 9, serial="MADE-UP-SERIAL-8"))
-    device = parse((root / "GARMIN" / "GarminDevice.xml").read_bytes())
-    return service.DeviceSession(storage, device, Settings(), account)
 
 
 # --- the queue of Garmin Connect -----------------------------------------------------------
@@ -409,7 +385,7 @@ def test_new_data_only_of_the_window_marks_the_files_of_a_drive(device_root):
     the files on the drive are marked as uploaded, none is sent, the drive is untouched."""
     before = files(device_root)
     account = DriveAccount({"connectsupport": "Required"})
-    summary = service.run_sync(session_of(device_root, account),
+    summary = service.run_sync(drive_session(device_root, account),
                                options=service.SyncOptions(first_run="baseline", drive=True,
                                                            downloads=False))
     assert summary.uploaded == 0 and account.uploads == []
@@ -422,7 +398,7 @@ def test_a_sync_of_a_drive_asks_garmin_before_anything_else(device_root, answer,
     """service.run_sync itself, whoever calls it: refused before the account or an upload."""
     account = DriveAccount(answer)
     with pytest.raises(service.MassStorageMode) as refused:
-        service.run_sync(session_of(device_root, account),
+        service.run_sync(drive_session(device_root, account),
                          options=service.SyncOptions(drive=True))
     assert str(refused.value).startswith(said)
     assert account.asked == ["unit-info"] and account.uploads == []
@@ -437,7 +413,7 @@ def test_a_sync_of_a_drive_is_refused_unless_asked_for_a_drive(device_root, opti
     account = DriveAccount({"connectsupport": "Required"})
     with pytest.raises(service.MassStorageMode,
                        match="A device connected as a USB drive is not synced."):
-        service.run_sync(session_of(device_root, account), options=options)
+        service.run_sync(drive_session(device_root, account), options=options)
     assert account.asked == [] and account.uploads == []
 
 
@@ -446,7 +422,7 @@ def test_a_sync_asked_for_a_drive_uploads_and_writes_the_queue(device_root):
     GarminDevice.xml names, and Garmin Connect is told it was received."""
     sync.SyncState(UNIT).save()
     account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE])
-    summary = service.run_sync(session_of(device_root, account),
+    summary = service.run_sync(drive_session(device_root, account),
                                options=service.SyncOptions(drive=True))
     assert (summary.uploaded, summary.downloaded, summary.errors) == (3, 1, [])
     (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
@@ -468,7 +444,7 @@ def test_connect_iq_apps_of_the_queue_stay_in_it_on_a_drive(device_root, caplog)
     before = sorted(str(p.relative_to(apps)) for p in apps.rglob("*"))
     account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE, APP])
     with caplog.at_level(logging.INFO, logger=service.log.name):
-        summary = service.run_sync(session_of(device_root, account),
+        summary = service.run_sync(drive_session(device_root, account),
                                    options=service.SyncOptions(drive=True))
     assert summary.errors == [] and summary.downloaded == 1
     assert account.acks == [COURSE["messageid"]]  # the app's message stays in the queue
@@ -495,7 +471,7 @@ def test_trueup_of_the_queue_is_written_to_a_drive_as_over_mtp(device_root):
     sync.SyncState(UNIT).save()
     account = DriveAccount({"connectsupport": "Required"}, messages=[TRUEUP])
     account.download_message = lambda url, absolute: b"TRUEUP" if "trueup" in url else None
-    summary = service.run_sync(session_of(device_root, account),
+    summary = service.run_sync(drive_session(device_root, account),
                                options=service.SyncOptions(drive=True))
     assert summary.errors == [] and summary.downloaded == 1
     (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
@@ -515,7 +491,7 @@ def test_a_file_of_the_queue_kept_otherwise_by_the_drive_is_not_acknowledged(dev
     deleted and not acknowledged, so the next sync brings it again."""
     sync.SyncState(UNIT).save()
     account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE])
-    summary = service.run_sync(session_of(device_root, account, GarblingDrive),
+    summary = service.run_sync(drive_session(device_root, account, GarblingDrive),
                                options=service.SyncOptions(drive=True))
     assert summary.downloaded == 0 and account.acks == []
     assert any("Write verification of" in error for error in summary.errors)
@@ -536,7 +512,7 @@ def test_a_drive_that_keeps_what_it_was_given_passes_the_check(tmp_path):
 
 def test_opening_a_drive_that_may_sync_asks_the_account_as_over_mtp(device_root):
     account = DriveAccount({"connectsupport": "Required"})
-    s = service.check_session(session_of(device_root, account))
+    s = service.check_session(drive_session(device_root, account))
     assert s.drive_refusal is None and s.ownership_error is None
     assert s.account_devices == [{"unitid": UNIT}]
     assert account.asked == ["unit-info", "account"]
@@ -546,7 +522,7 @@ def test_opening_a_drive_not_on_the_account_keeps_the_refusal(device_root):
     from openexpress.connect import NotAccountDevice
 
     account = DriveAccount({"connectsupport": "Required"}, devices=[{"unitid": 3000000099}])
-    s = service.check_session(session_of(device_root, account))
+    s = service.check_session(drive_session(device_root, account))
     assert isinstance(s.ownership_error, NotAccountDevice) and s.drive_refusal is None
 
 
@@ -557,7 +533,7 @@ def test_opening_a_drive_not_on_the_account_keeps_the_refusal(device_root):
 def test_opening_a_drive_that_is_not_synced_keeps_why_and_asks_no_account(device_root, answer,
                                                                           reason, error):
     account = DriveAccount(answer)
-    s = service.check_session(session_of(device_root, account))
+    s = service.check_session(drive_session(device_root, account))
     assert s.drive_refusal == (reason, error) and account.asked == ["unit-info"]
     assert s.account_devices is None and s.ownership_error is None
 
@@ -567,7 +543,7 @@ def test_opening_a_drive_without_upload_types_asks_nothing(tmp_path):
     (root / "GARMIN").mkdir(parents=True)
     (root / "GARMIN" / "GarminDevice.xml").write_text(RTL515_XML)
     account = DriveAccount({"connectsupport": "Required"})
-    s = service.check_session(session_of(root, account))
+    s = service.check_session(drive_session(root, account))
     assert s.drive_refusal == (service.NO_UPLOAD_TYPES, "") and account.asked == []
 
 
@@ -584,7 +560,7 @@ def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
     account = DriveAccount({"connectsupport": "Required"})
     with pytest.raises(service.MassStorageMode,
                        match="A device connected as a USB drive is not synced."):
-        service.run_sync(session_of(device_root, account))
+        service.run_sync(drive_session(device_root, account))
     assert account.asked == [] and account.uploads == []
 
 

@@ -1416,7 +1416,7 @@ class DevicePage:
 
     def start_sync(self, first_run: str | None = None) -> None:
         s = self.session
-        if (not s or getattr(s, "mass_storage", False) or not s.logged_in
+        if (not s or getattr(s, "drive_refusal", None) is not None or not s.logged_in
                 or s.ownership_error is not None):
             return
 
@@ -1439,11 +1439,17 @@ class DevicePage:
                 self.show_device()
             return False
 
+        def work():
+            if getattr(s, "mass_storage", False):
+                # Asked for a drive (only here and on the command line, never in the
+                # background); run_sync judges it again before anything is uploaded.
+                return service.run_sync(s, progress=self.progress, options=service.SyncOptions(
+                    first_run=first_run, drive=True))
+            return service.run_sync(s, first_run, self.progress)
+
         # Stop Waiting pressed during the previous sync of this session: not for this one.
         s.stop_waiting.clear()
-        self.run_task(_("Syncing…"),
-                      writes_to_device(lambda: service.run_sync(s, first_run, self.progress)),
-                      done, failed)
+        self.run_task(_("Syncing…"), writes_to_device(work), done, failed)
 
     def ask_first_sync(self) -> None:
         confirm(self, "first-sync", _("First sync"),

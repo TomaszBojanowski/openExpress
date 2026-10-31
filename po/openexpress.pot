@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.7.12\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 02:45+0100\n"
+"POT-Creation-Date: 2026-10-31 02:49+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3884,26 +3884,26 @@ msgstr ""
 msgid "Sync finished with errors"
 msgstr ""
 
-#: openexpress/gui/device_page.py:1444
+#: openexpress/gui/device_page.py:1452
 msgid "Syncing…"
 msgstr ""
 
-#: openexpress/gui/device_page.py:1449
+#: openexpress/gui/device_page.py:1455
 msgid "First sync"
 msgstr ""
 
-#: openexpress/gui/device_page.py:1450
+#: openexpress/gui/device_page.py:1456
 msgid ""
 "If the device also syncs via your phone, most data is already in Garmin "
 "Connect. You can mark the current files as uploaded and upload only new "
 "ones, or upload everything (Connect skips duplicates)."
 msgstr ""
 
-#: openexpress/gui/device_page.py:1453
+#: openexpress/gui/device_page.py:1459
 msgid "Upload everything"
 msgstr ""
 
-#: openexpress/gui/device_page.py:1454
+#: openexpress/gui/device_page.py:1460
 msgid "New data only"
 msgstr ""
 

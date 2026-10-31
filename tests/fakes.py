@@ -197,6 +197,51 @@ class SyncAccount(SyncClient):
             raise ApiError("the queue did not answer", 503)
         super().ack_message(mid)
 
+
+class DriveAccount(SyncAccount):
+    """Garmin Connect as a sync asks it (the account lists `devices`, by default the test
+    device), and Garmin's update server answering unit-info with `answer` (an exception:
+    raised). unit-info goes through the kept answers as the real client's does; `asked` notes
+    each question that reached a server."""
+
+    def __init__(self, answer, devices=None, **kw):
+        from openexpress.settings import Settings
+
+        super().__init__(verified_unit_id=None, **kw)
+        self.settings = Settings()
+        self.answer = answer
+        self.devices = [{"unitid": self.UNIT}] if devices is None else devices
+
+    def unit_info(self, unit_id, part_number):
+        from openexpress.connect import GarminClient
+
+        return GarminClient.unit_info(self, unit_id, part_number)
+
+    def account_devices(self, fresh=False):
+        self.asked.append("account, fresh" if fresh else "account")
+        return self.devices
+
+    def _omt(self, method, path, what, quiet=False, **kw):
+        self.asked.append("unit-info")
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        return self.answer
+
+
+def drive_session(root, account, storage_class=None):
+    """A session on the made-up device in `root` connected as a USB drive (UmsStorage, or
+    `storage_class`), as service.open_session makes it."""
+    from openexpress import service
+    from openexpress.device.gio_storage import GarminUsb
+    from openexpress.device.storage import UmsStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.settings import Settings
+
+    storage = (storage_class or UmsStorage)(
+        root, root.as_uri() + "/", usb=GarminUsb("4f42", 1, 9, serial="MADE-UP-SERIAL-8"))
+    device = parse((root / "GARMIN" / "GarminDevice.xml").read_bytes())
+    return service.DeviceSession(storage, device, Settings(), account)
+
 # --- what the window writes of the devices before it draws their tiles ------------------
 
 
