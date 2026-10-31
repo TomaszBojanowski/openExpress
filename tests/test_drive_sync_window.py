@@ -47,11 +47,12 @@ def test_the_sync_button_of_a_drive_that_is_not_synced_says_usb_drive(device_roo
     assert MainWindow._sync_blocked(stand_in(session=s, busy=False)) == "USB drive"
 
 
-def test_the_window_syncs_a_drive_both_ways(device_root):
+def test_the_window_syncs_a_drive_both_ways(device_root, in_the_window):
     """Its files uploaded, the course of the queue written to it and acknowledged, the toast
     of any sync."""
     from openexpress.gui.app import MainWindow
 
+    in_the_window("ask_to_eject_after_sync", lambda win, s: None)
     sync.SyncState(UNIT).save()
     s, account = checked(device_root, messages=[COURSE])
     said = []
@@ -123,3 +124,37 @@ def test_the_open_drive_is_counted_when_it_may_sync(refusal, counted):
     win = stand_in(session=s, in_background=lambda work, done: started.append(work))
     count_open_activities(win)
     assert bool(started) is counted
+
+
+# --- ejected after a sync that wrote to it ---------------------------------------------------
+
+
+@pytest.mark.parametrize(("queue", "asked"), [([COURSE], 1), ([], 0)])
+def test_the_window_asks_to_eject_a_drive_a_sync_wrote_to(device_root, in_the_window, queue,
+                                                           asked):
+    """So that the watch takes the files, as after an update; nothing written, no question."""
+    from openexpress.gui.app import MainWindow
+
+    questions = []
+    in_the_window("ask_to_eject_after_sync", lambda win, s: questions.append(s))
+    sync.SyncState(UNIT).save()
+    s, _account = checked(device_root, messages=queue)
+    MainWindow.start_sync(window_for(s, []))
+    assert questions == [s] * asked
+
+
+def test_no_question_to_eject_a_device_over_mtp(device_root, monkeypatch, in_the_window):
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    questions = []
+    in_the_window("ask_to_eject_after_sync", lambda win, s: questions.append(s))
+    monkeypatch.setattr(service, "run_sync",
+                        lambda *a, **kw: service.SyncSummary(downloaded=1))
+    device = parse((device_root / "GARMIN" / "GarminDevice.xml").read_bytes())
+    s = service.DeviceSession(LocalStorage(device_root), device, Settings(),
+                              DriveAccount(SERVED))
+    MainWindow.start_sync(window_for(s, []))
+    assert questions == []

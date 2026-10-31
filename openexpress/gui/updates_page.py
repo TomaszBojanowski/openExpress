@@ -344,10 +344,11 @@ class UpdatesPage:
                 cancel=_("Later"), default="eject")
 
     def eject_device(self, s, bike_accessory: bool = False,
-                     button: Gtk.Button | None = None) -> None:
+                     button: Gtk.Button | None = None, files: bool = False) -> None:
         """Eject the drive of a device in mass storage mode; then the cable can go out. When
         the system refuses, why, that the cable must stay in, and Try Again. `button`: the
-        Eject of the Updates page, which spins meanwhile."""
+        Eject of the Updates page, which spins meanwhile; `files`: after a sync wrote the
+        files of Garmin Connect's queue to it, not an update."""
         def ejected(_result):
             # For a bike accessory, as Garmin Express does: how it finishes the update.
             inform(self, "ejected", _("Done"), ejected_text(),
@@ -359,8 +360,9 @@ class UpdatesPage:
                 self.error(_("The device is not mounted"), str(e))
                 return True
             confirm(self, "eject-retry", _("The device was not ejected"),
-                    f"{e}\n\n{not_ejected_text()}",
-                    Answer("retry", _("Try Again"), lambda: self.eject_device(s, bike_accessory),
+                    f"{e}\n\n{not_ejected_text(files=files)}",
+                    Answer("retry", _("Try Again"),
+                           lambda: self.eject_device(s, bike_accessory, files=files),
                            look="suggested"),
                     cancel=_("Close"))
             return True

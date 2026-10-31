@@ -180,6 +180,38 @@ def test_ejecting_after_an_update_was_saved(click, words, ejected):
     click(words, until=lambda: len(asked) == ejected and not click.shown[-1].get_mapped())
 
 
+@pytest.mark.parametrize(("words", "ejected"), [("Eject", [True]), ("Later", [])])
+def test_ejecting_after_a_sync_wrote_to_the_drive(click, words, ejected):
+    from openexpress.gui.device_page import ask_to_eject_after_sync
+
+    asked = []
+    win = _window(eject_device=lambda s, bike_accessory=False, button=None, files=False:
+                  asked.append(files))
+    ask_to_eject_after_sync(win, win.session)
+    click(words, until=lambda: asked == ejected and not click.shown[-1].get_mapped())
+
+
+def test_trying_again_to_eject_after_a_sync_says_the_files(click, in_the_window):
+    from openexpress.device.storage import DeviceError
+    from openexpress.gui.app import MainWindow
+
+    tries = []
+
+    def refuse(storage):
+        tries.append(1)
+        raise DeviceError("The system refused to eject it.")
+
+    in_the_window("eject", refuse)
+    win = _window(run_task=RunNow())
+    win.eject_device = (lambda s, bike_accessory=False, button=None, files=False:
+                        MainWindow.eject_device(win, s, bike_accessory, button, files=files))
+    win.eject_device(win.session, files=True)
+    assert "may not see the files from Garmin Connect" in click.shown[-1].get_body()
+    click("Try Again", until=lambda: len(tries) == 2)
+    assert "may not see the files from Garmin Connect" in click.shown[-1].get_body()
+    click("Close")
+
+
 def test_trying_again_to_eject(click, in_the_window):
     from openexpress.device.storage import DeviceError
     from openexpress.gui.app import MainWindow
@@ -192,8 +224,8 @@ def test_trying_again_to_eject(click, in_the_window):
 
     in_the_window("eject", refuse)
     win = _window(run_task=RunNow())
-    win.eject_device = lambda s, bike_accessory=False, button=None: MainWindow.eject_device(
-        win, s, bike_accessory, button)
+    win.eject_device = (lambda s, bike_accessory=False, button=None, files=False:
+                        MainWindow.eject_device(win, s, bike_accessory, button, files=files))
     win.eject_device(win.session)
     assert tries == [1]
     click("Try Again", until=lambda: len(tries) == 2)
@@ -483,13 +515,20 @@ def _eject_ask(ctx):
     MainWindow.ask_to_eject(win, win.session)
 
 
+def _eject_after_sync(ctx):
+    from openexpress.gui.device_page import ask_to_eject_after_sync
+
+    win = _escape_window(ctx, eject_device=_note(ctx, "eject_device"))
+    ask_to_eject_after_sync(win, win.session)
+
+
 def _eject_window(ctx, eject):
     from openexpress.gui.app import MainWindow
 
     ctx.in_the_window("eject", eject)
     win = _escape_window(ctx, error=lambda title, text: ctx.effects.append(("error", title)))
-    win.eject_device = lambda s, bike_accessory=False, button=None: MainWindow.eject_device(
-        win, s, bike_accessory, button)
+    win.eject_device = (lambda s, bike_accessory=False, button=None, files=False:
+                        MainWindow.eject_device(win, s, bike_accessory, button, files=files))
     return win
 
 
@@ -557,6 +596,7 @@ OPENERS = {
     "own-map-remove": _own_map_remove, "map-install": _map_install, "map-remove": _map_remove,
     "music-copy": _music_copy, "playlist-add": _playlist_add, "cache-clear": _cache_clear,
     "update-install": _update_install, "eject-ask": _eject_ask, "ejected": _ejected,
+    "eject-after-sync": _eject_after_sync,
     "eject-retry": _eject_retry, "error": _error, "report": _report,
 }
 

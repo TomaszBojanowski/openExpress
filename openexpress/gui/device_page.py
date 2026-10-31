@@ -343,6 +343,20 @@ def set_primary_wearable(win, button=None) -> None:
 
 
 # Why the picture work found no picture: unit-info gave no address of one.
+def ask_to_eject_after_sync(win, s) -> None:
+    """After a sync wrote files of Garmin Connect's queue to a drive: it is to be ejected
+    first, so that the watch takes them; that the cable can go out is said only once it is
+    (eject_device)."""
+    confirm(win, "eject-after-sync", _("Files saved on the device"),
+            _("Eject the device before you unplug the cable: until then it may not see the "
+              "files from Garmin Connect."),
+            # TRANSLATORS: button that ejects the device (its USB drive)
+            Answer("eject", _("Eject"), lambda: win.eject_device(s, files=True),
+                   look="suggested"),
+            # TRANSLATORS: button; the device is ejected later
+            cancel=_("Later"), default="eject")
+
+
 NO_ADDRESS = "unit-info gave no address"
 
 
@@ -1431,6 +1445,8 @@ class DevicePage:
                        else _("Sync finished with errors"))
             self._show_last_sync()
             self._count_activities_again()
+            if getattr(s, "mass_storage", False) and summary.downloaded:
+                ask_to_eject_after_sync(self, s)
 
         def failed(e):
             # What it uploaded before it stopped is done: kept in its record (run_sync).
