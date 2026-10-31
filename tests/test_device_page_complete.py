@@ -101,6 +101,42 @@ def test_no_rows_for_a_drive_and_no_music_row_for_a_device_without_music():
     assert "Apps" in _rows(section) and "Music" not in _rows(section)
 
 
+DRIVE_SYNC_NOTE = ("A device connected as a USB drive is synced with the Sync button only, "
+                   "never in the background.")
+
+
+def _groups(section):
+    return {g.get_title(): g for g in section.groups}
+
+
+@pytest.mark.needs_display
+def test_a_drive_that_may_sync_has_the_sync_group_without_the_background_row():
+    """As over MTP, with a line on how it is synced in place of the row of the background
+    sync (the background service never syncs a drive)."""
+    _win, section = _page(mass_storage=True, drive_refusal=None)
+    groups = _groups(section)
+    assert "USB drive" not in groups
+    assert groups["Sync with Garmin Connect"].get_description() == DRIVE_SYNC_NOTE
+    assert "Sync automatically when connected" not in _rows(section)
+    _win, section = _page()  # a device over MTP: the row, no line
+    assert not _groups(section)["Sync with Garmin Connect"].get_description()
+    assert "Sync automatically when connected" in _rows(section)
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("reason", "error"), [("no-upload-types", ""),
+                                               ("connect-disabled", ""),
+                                               ("no-unit-info", "made-up: no network")])
+def test_a_drive_that_is_not_synced_says_why_in_place_of_the_sync(reason, error):
+    from openexpress import service
+
+    _win, section = _page(mass_storage=True, drive_refusal=(reason, error))
+    groups = _groups(section)
+    assert "Sync with Garmin Connect" not in groups
+    assert groups["USB drive"].get_description() == service.drive_sync_refusal_text(reason,
+                                                                                    error)
+
+
 @pytest.mark.needs_display
 def test_a_drive_has_the_backup_row_too():
     """A backup only reads the files of the device: a drive is backed up as over MTP."""

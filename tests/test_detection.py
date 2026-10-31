@@ -1914,11 +1914,14 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
 
 @pytest.mark.needs_display
 def test_device_page_of_a_garmin_drive_says_what_applies(drive_window, monkeypatch):
-    """A backup (it only reads the device). A short description in place of the sync; not
-    the words for a drive the window cannot open."""
+    """A backup (it only reads the device). Why it is not synced in place of the sync (this
+    Varia declares no data types); not the words for a drive the window cannot open."""
+    from openexpress import service
+
     texts, _calls = _drive_device_page(drive_window, monkeypatch)
     assert "Backup" in texts
-    assert "USB drive" in texts and MASS_STORAGE_TEXT in texts
+    assert "USB drive" in texts
+    assert service.drive_sync_refusal_text(service.NO_UPLOAD_TYPES) in texts
     assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) not in texts
 
 

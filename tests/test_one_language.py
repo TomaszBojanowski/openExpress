@@ -251,11 +251,13 @@ def _texts(section):
 
 @pytest.mark.needs_display
 def test_the_device_page_of_a_drive_says_usb_drive():
-    from openexpress.device.gio_storage import mass_storage_text
+    """Of a drive that is not synced (here: no data types), with the reason."""
+    from openexpress import service
 
-    _win, section = _device_page(mass_storage=True)
+    _win, section = _device_page(mass_storage=True,
+                                 drive_refusal=(service.NO_UPLOAD_TYPES, ""))
     texts = _texts(section)
-    assert ("USB drive", mass_storage_text()) in texts
+    assert ("USB drive", service.drive_sync_refusal_text(service.NO_UPLOAD_TYPES)) in texts
     assert not any(title == "Mass storage mode" for title, _sub in texts)
 
 

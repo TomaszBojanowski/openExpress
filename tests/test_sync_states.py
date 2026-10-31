@@ -238,10 +238,12 @@ def test_the_open_device_is_counted_once_without_the_start_page():
     assert len(asked) == 1 and s.to_sync_asked
 
 
-@pytest.mark.parametrize("fields", [{"mass_storage": True}, {"logged_in": False},
+@pytest.mark.parametrize("fields", [{"mass_storage": True,
+                                     "drive_refusal": ("connect-disabled", "")},
+                                    {"logged_in": False},
                                     {"ownership_error": RuntimeError("x")},
                                     {"to_sync_asked": True}])
-def test_a_drive_one_not_logged_in_or_off_the_account_is_not_counted(fields):
+def test_a_drive_not_synced_one_not_logged_in_or_off_the_account_is_not_counted(fields):
     from openexpress.gui.device_page import count_open_activities
 
     asked = []

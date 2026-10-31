@@ -195,6 +195,10 @@ def _fill(win, page: str) -> str:
     drive = page.endswith("-drive")
     model = INREACH if drive else EDGE if page.startswith(("device", "updates")) else FENIX
     win.session = _session(_device(*model), drive=drive)
+    if page == "device-refused-drive":
+        # Not synced, with the longest of the reasons in place of the sync.
+        win.session.drive_refusal = ("no-unit-info",
+                                     "Device info: network error (made-up connection refused)")
     if page == "device-off-account":
         # Not on the account, no picture from unit-info: Get Picture From Account offered.
         from openexpress.connect import NotAccountDevice
@@ -324,7 +328,8 @@ def _all(widget):
         child = child.get_next_sibling()
 
 
-DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "updates-beta",
+DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "device-drive",
+                "device-refused-drive", "updates-beta",
                 "updates-beta-drive",
                 "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
                 "music"]

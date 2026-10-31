@@ -104,3 +104,22 @@ def test_the_window_syncs_a_device_over_mtp_with_its_choice_alone(device_root, m
     MainWindow.start_sync(win)
     ((args, kwargs),) = calls
     assert args[0] is s and args[1] is None and kwargs == {}
+
+
+# --- the device page --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("refusal", "counted"), [(None, True),
+                                                  (("connect-disabled", ""), False)])
+def test_the_open_drive_is_counted_when_it_may_sync(refusal, counted):
+    """Its activities not uploaded yet, for "Last sync" and its tile, as over MTP."""
+    import types
+
+    from openexpress.gui.device_page import count_open_activities
+
+    started = []
+    s = types.SimpleNamespace(mass_storage=True, drive_refusal=refusal, to_sync_asked=False,
+                              logged_in=True, ownership_error=None, device=None, storage=None)
+    win = stand_in(session=s, in_background=lambda work, done: started.append(work))
+    count_open_activities(win)
+    assert bool(started) is counted

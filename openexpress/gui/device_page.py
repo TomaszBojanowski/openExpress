@@ -139,10 +139,11 @@ def refresh_last_sync_subtitle(win) -> None:
 def count_open_activities(win) -> None:
     """The device page of the open device: its activities not uploaded yet counted once, in
     the background, also when its tile was never drawn (opened at once); under the
-    conditions of its tile: logged in, on the account, not a drive. The count is the
-    window's (_activities_counted)."""
+    conditions of its tile: logged in, on the account, not a drive that is not synced. The
+    count is the window's (_activities_counted)."""
     s = win.session
-    if (s is None or getattr(s, "to_sync_asked", True) or s.mass_storage or not s.logged_in
+    if (s is None or getattr(s, "to_sync_asked", True)
+            or getattr(s, "drive_refusal", None) is not None or not s.logged_in
             or s.ownership_error is not None):
         return
     s.to_sync_asked = True
@@ -926,13 +927,18 @@ class DevicePage:
         if getattr(s, "space", None) is None:
             refresh_space(self, s)  # not read with the device: now, in the background
 
-        # A Garmin device in mass storage mode is never synced and has no maps.
+        # A Garmin device in mass storage mode has no maps; one that is not synced says why
+        # in place of the sync.
         mass_storage = getattr(s, "mass_storage", False)
-        if mass_storage:
-            # The mode is named in the explanation under the title only.
-            sec.group(_("USB drive"), mass_storage_text())
+        refused = getattr(s, "drive_refusal", None) if mass_storage else None
+        if refused is not None:
+            sec.group(_("USB drive"), service.drive_sync_refusal_text(*refused))
         else:
-            g = sec.group(_("Sync with Garmin Connect"))
+            # TRANSLATORS: under "Sync with Garmin Connect" on the page of a device connected
+            # as a USB drive, which has no row of the background sync
+            g = sec.group(_("Sync with Garmin Connect"), _(
+                "A device connected as a USB drive is synced with the Sync button only, never "
+                "in the background.") if mass_storage else "")
             if s.ownership_error is not None:
                 # Why, the banner says; not here again.
                 # TRANSLATORS: subtitle of "Last sync" of a device that cannot be synced
@@ -944,8 +950,8 @@ class DevicePage:
                 g.add(self.last_sync_row)
                 self._show_last_sync()
                 count_open_activities(self)  # how many to upload, also without the tiles
-            if s.ownership_error is None:
-                g.add(self._auto_sync_row())
+            if s.ownership_error is None and not mass_storage:
+                g.add(self._auto_sync_row())  # the background service never syncs a drive
 
         g = sec.group(pgettext("tab", "Updates"))
         self.update_row = Adw.ActionRow(title=_("Device software"), activatable=True)
