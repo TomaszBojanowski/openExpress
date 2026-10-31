@@ -1012,7 +1012,7 @@ def test_a_variable_in_another_form_is_ignored_with_a_warning(drives, monkeypatc
     assert TEST_DRIVE_ENV in warning and "VVVV:PPPP" in warning and "ignored" in warning
 
 
-def test_an_mtp_device_still_comes_before_the_drive_named_for_testing(drives, monkeypatch,
+def test_an_mtp_device_comes_before_the_drive_named_for_testing(drives, monkeypatch,
                                                                       caplog):
     """As with a Garmin drive: the command line opens the MTP device and says that it skipped
     the drive; without an MTP device it opens the drive."""

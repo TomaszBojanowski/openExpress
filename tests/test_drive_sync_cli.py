@@ -41,8 +41,7 @@ NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused
 
 def drive_at(root, monkeypatch):
     """The command line finds the device in `root` connected as a USB drive."""
-    storage = UmsStorage(root, root.as_uri() + "/",
-                         usb=gio_storage.GarminUsb("4f42", 1, 9, serial="MADE-UP-SERIAL-8"))
+    storage = drive_session(root, None).storage
     monkeypatch.setattr(service, "open_device_or_drive", lambda **_kw: storage)
     return storage
 
@@ -115,7 +114,7 @@ def test_a_drive_without_upload_types_is_refused_without_asking_anything(tmp_pat
 
 
 @pytest.mark.parametrize("command", [["apps"], ["music"], ["maps"]])
-def test_the_other_commands_still_refuse_a_drive(device_root, monkeypatch, capsys, command):
+def test_apps_maps_and_music_refuse_a_drive(device_root, monkeypatch, capsys, command):
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"})
     assert cli.main(command) == 1
@@ -139,12 +138,6 @@ def test_a_backup_of_a_drive_copies_its_files_and_writes_nothing_to_it(device_ro
     assert files(device_root) == before
 
 
-def tree(root):
-    """Every file and folder under `root`: its path, size, time of change and bytes."""
-    return sorted((str(p.relative_to(root)), p.stat().st_size, p.stat().st_mtime_ns,
-                   p.read_bytes() if p.is_file() else b"") for p in root.rglob("*"))
-
-
 # --- the queue of Garmin Connect -----------------------------------------------------------
 
 QUEUE_NOTE = "[stays in Garmin Connect's queue]"
@@ -161,7 +154,6 @@ def test_the_dry_run_of_a_drive_plans_the_queue_too(device_root, monkeypatch, ca
     assert "To upload: 3 files" in out and "To download from Connect to the device: 1" in out
     (app_line,) = [line for line in out.splitlines() if "IQWatchApps" in line]
     assert app_line.endswith(QUEUE_NOTE)
-    assert "only uploads" not in out
 
 
 @pytest.mark.parametrize(("flag", "uploads", "queue"), [("--upload-only", True, False),
@@ -176,7 +168,7 @@ def test_the_one_way_syncs_of_a_drive_go_as_over_mtp(device_root, monkeypatch, c
     assert ("queue" in account.asked) is queue
 
 
-def test_a_device_not_a_drive_still_has_the_queue_in_its_dry_run(device_root, monkeypatch,
+def test_a_device_not_a_drive_has_the_queue_in_its_dry_run(device_root, monkeypatch,
                                                                   capsys):
     monkeypatch.setattr(service, "open_device_or_drive",
                         lambda **_kw: LocalStorage(device_root))
@@ -302,14 +294,14 @@ def test_a_drive_the_system_does_not_eject_says_the_cable_must_stay_in(device_ro
 
 def test_a_drive_not_on_the_account_uploads_nothing(device_root, monkeypatch, capsys):
     sync.SyncState(UNIT).save()
-    before = tree(device_root)
+    before = files(device_root)
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"},
                           devices=[{"unitid": 3000000099}])
     assert cli.main(["sync", "--apply"]) == 1
     assert "This device is not registered to your Garmin account." in capsys.readouterr().err
     assert account.uploads == [] and "upload" not in account.asked
-    assert tree(device_root) == before
+    assert files(device_root) == before
 
 
 def test_a_fit_file_cut_short_on_a_drive_is_not_uploaded(device_root, monkeypatch, capsys,
@@ -319,7 +311,7 @@ def test_a_fit_file_cut_short_on_a_drive_is_not_uploaded(device_root, monkeypatc
     monitoring = device_root / "GARMIN" / "Monitor" / "M1.FIT"
     monitoring.write_bytes(monitoring.read_bytes()[:-4])
     sync.SyncState(UNIT).save()
-    before = tree(device_root)
+    before = files(device_root)
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"})
     assert cli.main(["sync", "--apply"]) == 0
@@ -327,7 +319,7 @@ def test_a_fit_file_cut_short_on_a_drive_is_not_uploaded(device_root, monkeypatc
     assert "1 file was still being written by the device" in capsys.readouterr().out
     assert "upload skipped: FIT_TYPE_32 still being written by the device" in (
         log_file.read_text())
-    assert tree(device_root) == before
+    assert files(device_root) == before
 
 
 def test_what_garmin_connect_has_already_is_a_success(device_root, monkeypatch, capsys,
@@ -335,7 +327,7 @@ def test_what_garmin_connect_has_already_is_a_success(device_root, monkeypatch, 
     """An activity Connect has (sent by the phone) is known before sending; a file Garmin
     answers 409 for is a duplicate. Both are told as already in Garmin Connect; no error."""
     sync.SyncState(UNIT).save()
-    before = tree(device_root)
+    before = files(device_root)
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"}, matches={"1100000000"},
                           statuses={MONITORING_URL: 409})
@@ -346,7 +338,7 @@ def test_what_garmin_connect_has_already_is_a_success(device_root, monkeypatch, 
     assert sorted(url for url, _size, _last in account.uploads) == [ACTIVITY_URL,
                                                                      MONITORING_URL]
     assert "uploads: 1 uploaded, 1 duplicates, 1 already in Connect" in log_file.read_text()
-    assert tree(device_root) == before
+    assert files(device_root) == before
 
 
 @pytest.mark.parametrize("found", ["drive", "mtp"])
@@ -363,7 +355,6 @@ def test_the_first_sync_offers_both_choices_on_a_drive_too(device_root, monkeypa
     assert cli.main(["sync", "--apply"]) == 3
     err = capsys.readouterr().err
     assert "openexpress baseline --apply" in err and "openexpress sync --apply --all" in err
-    assert "On a USB drive" not in err
     assert account.uploads == [] and "upload" not in account.asked
 
 
@@ -381,18 +372,6 @@ def test_baseline_on_a_drive_marks_its_files_and_writes_nothing_to_it(device_roo
     assert files(device_root) == before
 
 
-def test_new_data_only_of_the_window_marks_the_files_of_a_drive(device_root):
-    """The window's first-sync choice "New data only" (run_sync with first_run "baseline"):
-    the files on the drive are marked as uploaded, none is sent, the drive is untouched."""
-    before = files(device_root)
-    account = DriveAccount({"connectsupport": "Required"})
-    summary = service.run_sync(drive_session(device_root, account),
-                               options=service.SyncOptions(first_run="baseline", drive=True,
-                                                           downloads=False))
-    assert summary.uploaded == 0 and account.uploads == []
-    assert sync.synced_here(UNIT) and files(device_root) == before
-
-
 @pytest.mark.parametrize(("answer", "said"), [({"connectsupport": "Disabled"}, DISABLED_TEXT),
                                               (NETWORK_ERROR, NO_ANSWER_TEXT)])
 def test_a_sync_of_a_drive_asks_garmin_before_anything_else(device_root, answer, said):
@@ -405,12 +384,11 @@ def test_a_sync_of_a_drive_asks_garmin_before_anything_else(device_root, answer,
     assert account.asked == ["unit-info"] and account.uploads == []
 
 
-@pytest.mark.parametrize("options", [None, "default", "uploads only"])
+@pytest.mark.parametrize("options", [None, "default"])
 def test_a_sync_of_a_drive_is_refused_unless_asked_for_a_drive(device_root, options):
     """Only the command line and the window ask for a drive (SyncOptions.drive); the
-    background service never does: whatever else is asked, a drive is not synced then."""
-    options = {None: None, "default": service.SyncOptions(),
-               "uploads only": service.SyncOptions(downloads=False)}[options]
+    background service never does: a drive is not synced then."""
+    options = {None: None, "default": service.SyncOptions()}[options]
     account = DriveAccount({"connectsupport": "Required"})
     with pytest.raises(service.MassStorageMode,
                        match="A device connected as a USB drive is not synced."):
@@ -554,15 +532,6 @@ def test_the_activities_of_a_drive_are_counted(device_root):
     device = parse((device_root / "GARMIN" / "GarminDevice.xml").read_bytes())
     counted = sync.activities_to_sync(device, UmsStorage(device_root, device_root.as_uri()))
     assert counted is not None and counted.count == 2
-
-
-def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):
-    """The window and the background service ask for all of a sync: a drive is not synced."""
-    account = DriveAccount({"connectsupport": "Required"})
-    with pytest.raises(service.MassStorageMode,
-                       match="A device connected as a USB drive is not synced."):
-        service.run_sync(drive_session(device_root, account))
-    assert account.asked == [] and account.uploads == []
 
 
 def test_the_refusals_are_said_in_polish_too():

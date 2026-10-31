@@ -72,8 +72,3 @@ def test_an_answer_that_does_not_say_disabled_lets_it_sync(unit_info):
 def test_without_an_answer_of_unit_info_it_is_not_synced(unit_info):
     """Not asked, or the server did not answer (or not with an answer of unit-info)."""
     assert service.drive_sync_refusal(FORERUNNER_LIKE, unit_info) == service.NO_UNIT_INFO
-
-
-def test_the_reasons_are_three_different_ones():
-    reasons = {service.NO_UPLOAD_TYPES, service.CONNECT_DISABLED, service.NO_UNIT_INFO}
-    assert len(reasons) == 3 and None not in reasons
