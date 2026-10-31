@@ -29,11 +29,6 @@ NO_TYPES_TEXT = ("This device is connected as a USB drive and declares no data t
 NO_ANSWER_TEXT = ("This device is connected as a USB drive, and Garmin's server could not be "
                   "asked whether Garmin Connect takes its data, so it is not synced: ")
 NETWORK_ERROR = ApiError("Device info: network error (made-up connection refused)")
-FIRST_SYNC_DRIVE_TEXT = (
-    "This is the first sync with this program. On a USB drive the files on it cannot be marked "
-    "as uploaded first, so the first sync uploads everything:\n"
-    "  openexpress sync --apply --all   uploads all the activities and other data on the device "
-    "(Connect rejects duplicates)")
 
 
 class DriveAccount(SyncAccount):
@@ -135,7 +130,7 @@ def test_a_drive_without_upload_types_is_refused_without_asking_anything(tmp_pat
     assert "sync: a USB drive not synced: no-upload-types" in log_file.read_text()
 
 
-@pytest.mark.parametrize("command", [["baseline"], ["apps"], ["music"], ["maps"], ["backup"]])
+@pytest.mark.parametrize("command", [["apps"], ["music"], ["maps"], ["backup"]])
 def test_the_other_commands_still_refuse_a_drive(device_root, monkeypatch, capsys, command):
     drive_at(device_root, monkeypatch)
     account = account_for(monkeypatch, {"connectsupport": "Required"})
@@ -361,39 +356,48 @@ def test_what_garmin_connect_has_already_is_a_success(device_root, monkeypatch, 
     assert tree(device_root) == before
 
 
-def test_the_first_sync_of_a_drive_offers_only_uploading_everything(device_root, monkeypatch,
-                                                                     capsys):
-    """`baseline --apply` is refused on a drive, so it is not offered; nothing is uploaded
-    before the choice."""
-    drive_at(device_root, monkeypatch)
+@pytest.mark.parametrize("found", ["drive", "mtp"])
+def test_the_first_sync_offers_both_choices_on_a_drive_too(device_root, monkeypatch, capsys,
+                                                           found):
+    """`baseline` only reads the files and marks them on the computer: a drive is offered it
+    as a device over MTP is; nothing is uploaded before the choice."""
+    if found == "drive":
+        drive_at(device_root, monkeypatch)
+    else:
+        monkeypatch.setattr(service, "open_device_or_drive",
+                            lambda **_kw: LocalStorage(device_root))
     account = account_for(monkeypatch, {"connectsupport": "Required"})
-    assert cli.main(["sync", "--apply"]) == 3
-    err = capsys.readouterr().err
-    assert FIRST_SYNC_DRIVE_TEXT in err and "baseline" not in err
-    assert account.uploads == [] and "upload" not in account.asked
-
-
-def test_the_first_sync_of_a_device_not_a_drive_still_offers_both(device_root, monkeypatch,
-                                                                   capsys):
-    monkeypatch.setattr(service, "open_device_or_drive",
-                        lambda **_kw: LocalStorage(device_root))
-    account_for(monkeypatch, {"connectsupport": "Required"})
     assert cli.main(["sync", "--apply"]) == 3
     err = capsys.readouterr().err
     assert "openexpress baseline --apply" in err and "openexpress sync --apply --all" in err
     assert "On a USB drive" not in err
+    assert account.uploads == [] and "upload" not in account.asked
 
 
-def test_the_first_sync_of_a_drive_is_offered_in_polish_too(device_root, monkeypatch, capsys):
+def test_baseline_on_a_drive_marks_its_files_and_writes_nothing_to_it(device_root, monkeypatch,
+                                                                      capsys):
+    before = files(device_root)
     drive_at(device_root, monkeypatch)
-    account_for(monkeypatch, {"connectsupport": "Required"})
-    try:
-        assert cli.main(["--lang", "pl", "sync", "--apply"]) == 3
-    finally:
-        i18n.setup("en")
-    err = capsys.readouterr().err
-    assert "Na dysku USB nie da się najpierw oznaczyć plików jako wysłanych" in err
-    assert "wyśle wszystkie aktywności i inne dane z urządzenia" in err and "baseline" not in err
+    account = account_for(monkeypatch, {"connectsupport": "Required"})
+    assert cli.main(["baseline"]) == 0
+    assert "Dry run: 3 files would be marked as already uploaded." in capsys.readouterr().out
+    assert not sync.synced_here(UNIT)
+    assert cli.main(["baseline", "--apply"]) == 0
+    assert "Marked 3 files as already uploaded." in capsys.readouterr().out
+    assert sync.synced_here(UNIT) and account.uploads == []
+    assert files(device_root) == before
+
+
+def test_new_data_only_of_the_window_marks_the_files_of_a_drive(device_root):
+    """The window's first-sync choice "New data only" (run_sync with first_run "baseline"):
+    the files on the drive are marked as uploaded, none is sent, the drive is untouched."""
+    before = files(device_root)
+    account = DriveAccount({"connectsupport": "Required"})
+    summary = service.run_sync(session_of(device_root, account),
+                               options=service.SyncOptions(first_run="baseline", drive=True,
+                                                           downloads=False))
+    assert summary.uploaded == 0 and account.uploads == []
+    assert sync.synced_here(UNIT) and files(device_root) == before
 
 
 @pytest.mark.parametrize(("answer", "said"), [({"connectsupport": "Disabled"}, DISABLED_TEXT),

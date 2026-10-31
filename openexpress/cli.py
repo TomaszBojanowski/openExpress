@@ -57,7 +57,7 @@ WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music
 
 # Commands that do not apply to a Garmin device in mass storage mode (as in the window);
 # `sync` of one goes as service.drive_sync_refusal lets it (service.refuse_drive_sync).
-NOT_ON_A_DRIVE = ("baseline", "apps", "music", "maps", "backup")
+NOT_ON_A_DRIVE = ("apps", "music", "maps", "backup")
 
 
 def open_storage(args) -> Storage:
@@ -712,21 +712,15 @@ def cmd_sync(args) -> int:
         with _progress() as progress:
             summary = service.run_sync(session, progress=progress, options=options)
     except service.FirstSyncChoiceNeeded:
-        if st.mass_storage:
-            # `baseline` refuses a drive (NOT_ON_A_DRIVE): only uploading everything is left.
-            choice = _("This is the first sync with this program. On a USB drive the files on "
-                       "it cannot be marked as uploaded first, so the first sync uploads "
-                       "everything:\n"
-                       "  openexpress sync --apply --all   uploads all the activities and "
-                       "other data on the device (Connect rejects duplicates)")
-        else:
-            choice = _("This is the first sync with this program. If the device also syncs "
-                       "via your phone, most files are already in Connect.\n"
-                       "  openexpress baseline --apply   marks current files as uploaded "
-                       "(recommended)\n"
-                       "  openexpress sync --apply --all uploads everything "
-                       "(Connect rejects duplicates)")
-        print("\n" + choice, file=sys.stderr)
+        print(
+            "\n" + _("This is the first sync with this program. If the device also syncs "
+                     "via your phone, most files are already in Connect.\n"
+                     "  openexpress baseline --apply   marks current files as uploaded "
+                     "(recommended)\n"
+                     "  openexpress sync --apply --all uploads everything "
+                     "(Connect rejects duplicates)"),
+            file=sys.stderr,
+        )
         return FIRST_SYNC_CHOICE
     except (Exception, KeyboardInterrupt) as e:
         done = service.done_before(e)
