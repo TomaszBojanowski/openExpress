@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 01:45+0100\n"
+"POT-Creation-Date: 2026-10-31 02:21+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -552,6 +552,7 @@ msgstr ""
 "czekające na urządzenie przepadły. Wprowadź je ponownie."
 
 #: openexpress/ciq.py:1411 openexpress/device/storage.py:239
+#: openexpress/device/storage.py:470
 #, python-brace-format
 msgid "Write verification of {path} failed"
 msgstr "Weryfikacja zapisu {path} się nie powiodła"

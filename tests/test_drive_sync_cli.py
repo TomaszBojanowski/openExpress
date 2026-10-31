@@ -13,7 +13,7 @@ from fakes import ACTIVITY_URL, COURSE, MONITORING_URL, RTL515_XML, SyncAccount
 
 from openexpress import cli, i18n, last_sync, service, sync
 from openexpress.connect import ApiError, GarminClient
-from openexpress.device.storage import LocalStorage, UmsStorage
+from openexpress.device.storage import DeviceError, LocalStorage, UmsStorage
 from openexpress.device.xmldevice import parse
 from openexpress.settings import Settings
 
@@ -154,9 +154,9 @@ def tree(root):
                    p.read_bytes() if p.is_file() else b"") for p in root.rglob("*"))
 
 
-def session_of(root, account):
-    storage = UmsStorage(root, root.as_uri() + "/",
-                         usb=gio_storage.GarminUsb("4f42", 1, 9, serial="MADE-UP-SERIAL-8"))
+def session_of(root, account, storage_class=UmsStorage):
+    storage = storage_class(root, root.as_uri() + "/",
+                            usb=gio_storage.GarminUsb("4f42", 1, 9, serial="MADE-UP-SERIAL-8"))
     device = parse((root / "GARMIN" / "GarminDevice.xml").read_bytes())
     return service.DeviceSession(storage, device, Settings(), account)
 
@@ -405,6 +405,34 @@ def test_trueup_of_the_queue_is_written_to_a_drive_as_over_mtp(device_root):
     (written,) = (device_root / "GARMIN" / "NewFiles").iterdir()
     assert written.read_bytes() == b"TRUEUP" and account.acks == [TRUEUP["messageid"]]
     assert service.trueup_step() in summary.lines
+
+
+class GarblingDrive(UmsStorage):
+    """A drive that keeps other bytes than it was given, of the same size."""
+
+    def _write(self, real_path, data):
+        super()._write(real_path, bytes(b ^ 0xFF for b in data))
+
+
+def test_a_file_of_the_queue_kept_otherwise_by_the_drive_is_not_acknowledged(device_root):
+    """Read back whole before Garmin Connect is told: another content (of the same size) is
+    deleted and not acknowledged, so the next sync brings it again."""
+    sync.SyncState(UNIT).save()
+    account = DriveAccount({"connectsupport": "Required"}, messages=[COURSE])
+    summary = service.run_sync(session_of(device_root, account, GarblingDrive),
+                               options=service.SyncOptions(drive=True))
+    assert summary.downloaded == 0 and account.acks == []
+    assert any("Write verification of" in error for error in summary.errors)
+    assert list((device_root / "GARMIN" / "NewFiles").iterdir()) == []
+
+
+def test_a_drive_that_keeps_what_it_was_given_passes_the_check(tmp_path):
+    drive = UmsStorage(tmp_path, tmp_path.as_uri() + "/")
+    assert drive.write_checked("GARMIN/NewFiles/a.fit", b"WHOLE") == "GARMIN/NewFiles/a.fit"
+    assert (tmp_path / "GARMIN" / "NewFiles" / "a.fit").read_bytes() == b"WHOLE"
+    with pytest.raises(DeviceError, match="Write verification of"):
+        GarblingDrive(tmp_path, tmp_path.as_uri() + "/").write_checked("GARMIN/b.fit", b"WHOLE")
+    assert not (tmp_path / "GARMIN" / "b.fit").exists()
 
 
 def test_a_sync_of_a_drive_with_downloads_is_refused(device_root):

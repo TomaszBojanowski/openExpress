@@ -459,6 +459,17 @@ class LocalStorage(Storage):
         with _os_errors(_("Cannot create directory {path}").format(path=real_path)):
             self._p(real_path).mkdir()
 
+    def write_checked(self, path: str, data: bytes, *, error: type[Exception] = DeviceError) -> str:
+        """As Storage.write_checked, and its bytes read back whole: a folder (a drive) is read
+        back cheaply, so other bytes of the same size are caught too, deleted, and `error`
+        raised, before anything is told of the file (a file of Garmin Connect's queue is
+        acknowledged only after this)."""
+        real = super().write_checked(path, data, error=error)
+        if self.read(real) != data:
+            self.delete_quietly(real)
+            raise error(_("Write verification of {path} failed").format(path=real))
+        return real
+
     def free_space(self) -> int | None:
         return shutil.disk_usage(self.root).free
 
