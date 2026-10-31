@@ -12,6 +12,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from typing import NoReturn
 
 import requests
 
@@ -298,6 +299,28 @@ def drive_sync_refusal_text(reason: str, error: str = "") -> str:
     return _("This device is connected as a USB drive, and Garmin's server could not be asked "
              "whether Garmin Connect takes its data, so it is not synced: {error}").format(
                  error=error)
+
+
+def drive_not_synced(reason: str, error: str = "") -> NoReturn:
+    """The refusal of a reason of drive_sync_refusal: one line of the log, then raised."""
+    log.info("sync: a USB drive not synced: %s%s", reason, f" ({error})" if error else "")
+    raise MassStorageMode(drive_sync_refusal_text(reason, error))
+
+
+def refuse_drive_sync(s: DeviceSession) -> None:
+    """A watch connected as a USB drive is synced only as drive_sync_refusal lets it: raises
+    MassStorageMode with its reason otherwise. Its unit-info comes from the kept answers, or
+    is asked of Garmin's update server when none is kept (read only, no login); without an
+    answer it is refused."""
+    try:
+        info, error = unit_info(s), ""
+    except ApiError as e:
+        info, error = None, applog.network_error_text(e)
+    reason = drive_sync_refusal(s.device, info)
+    if reason is not None:
+        drive_not_synced(reason, error)
+    log.info("sync: a USB drive that may sync (connect support: %s)",
+             info.get("connectsupport") or "not given")
 
 
 def _open_found(found) -> Storage:
@@ -1109,8 +1132,13 @@ def run_sync(
     elif first_run is not None or include_diagnostics:
         raise ValueError("run_sync: first_run and include_diagnostics go in the options")
     if s.mass_storage:
-        log.info("sync: refused, the device is in mass storage mode")
-        raise MassStorageMode(_("A device connected as a USB drive is not synced."))
+        if options.downloads:
+            # The window and the background service ask for all of a sync.
+            log.info("sync: refused, the device is in mass storage mode")
+            raise MassStorageMode(_("A device connected as a USB drive is not synced."))
+        # Only its uploads (the command line): as Garmin's word on it lets it, before the
+        # account is asked and anything uploaded. Nothing is written to the drive.
+        refuse_drive_sync(s)
     started = time.monotonic()
     log.info("sync: start (first run: %s, diagnostics: %s)", options.first_run or "-",
              options.include_diagnostics)
