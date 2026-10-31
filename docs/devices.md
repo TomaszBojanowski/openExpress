@@ -16,8 +16,8 @@
 | Edge 1040 (part 006-B3843-00) | MTP | [#8](https://github.com/TomaszBojanowski/openExpress/issues/8), [#10](https://github.com/TomaszBojanowski/openExpress/issues/10) | detected; checking for software updates, installing a Garmin map (Trailforks) and installing and removing Connect IQ apps work; sync not tried. In #10 map updates worked too; the sign-in window works also when the system's language is missing in the Flatpak (see [The Flatpak and the language of your system](troubleshooting.md#the-flatpak-and-the-language-of-your-system)) | #8: Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1; #10: Ubuntu 26.04, KDE on X11, Flatpak 0.6.7 |
 | Edge 540 (part 006-B4061-00) | MTP | [#18](https://github.com/TomaszBojanowski/openExpress/issues/18) | detected; sync, software updates and maps work | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | inReach Mini 2 (part 006-B3968-00) | USB drive | [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) | connects as a USB drive: software updates work (the device installs one once its drive is ejected properly), sync not yet ([#12](https://github.com/TomaszBojanowski/openExpress/issues/12)) | Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4 |
-| Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: software updates work, sync not yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
-| Forerunner 920XT (part 006-B1765-00) | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) | connects as a USB drive: software updates work (time-zone map updated), sync not yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
+| Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: software updates work, sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
+| Forerunner 920XT (part 006-B1765-00) | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) | connects as a USB drive: software updates work (time-zone map updated), sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | zūmo 595LM | – | [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) | detected; software updates and map updates worked; the device itself has no Garmin Connect sync or Connect IQ apps | the command line only, in a container on a home server, also built for ARM on a Raspberry Pi; a version before 0.6.20 |
 | Other Garmin watches and bike computers connecting over USB (MTP) | MTP | – | expected to work, **untested** | – |
 
@@ -36,9 +36,18 @@ such a device by themselves. The window gives it a tile of its own, also when th
 not mounted it yet (as on KDE, until a file manager opens it), and mounts it when you choose
 it; when an MTP device is connected too, the command line opens the MTP device. `--path` is only for a folder without a device, such as a copy.
 Once its drive is ejected, a watch in this mode switches to its Garmin USB mode, which
-openExpress does not use: unplug the cable and plug it in again to use it again. Sync, apps, maps, music and backup are not
-supported for such a device; the window and the commands say so (the window just has no
-**Backup** row). A car or motorcycle
+openExpress does not use: unplug the cable and plug it in again to use it again. Such a
+device is backed up as any other, and a watch is synced both ways, as over MTP: its new files
+are uploaded and the files Garmin Connect queues for it (courses, workouts, training plans,
+TrueUp) are written to it, with the **Sync** button or `openexpress sync`, never in the
+background. A drive is synced when its `GarminDevice.xml` declares data that goes to Garmin
+Connect and Garmin's update server does not say that Garmin Connect does not take its data
+(a Varia declares none; for an inReach Mini 2 the server says Garmin Connect does not take
+it); otherwise the device page and the command say why. Connect IQ apps queued for a drive
+stay in Garmin Connect's queue. After a sync that wrote files to it the drive is ejected (the
+window asks first), so that the watch takes them. Apps, maps and music are not supported for
+such a device; the window and the commands say so. The sync of a drive is new: it was tried
+only with a pendrive standing in for a watch, and is not confirmed on a watch yet. A car or motorcycle
 navigator that connects as a USB drive (such as an older nüvi) should therefore get its
 software updates, but no map updates. Mass storage is tested by the developer on the Varia RTL515 (also
 copying a component update and ejecting the drive in the window), and users

@@ -77,8 +77,9 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 | Other Garmin watches and bike computers over USB (MTP) | MTP | expected to work, **untested** |
 
 What works on each, and the reports in full: [Supported devices](docs/devices.md). A device
-that connects as a USB drive gets its information and software updates; sync, apps, maps and
-music are for MTP devices only.
+that connects as a USB drive gets its information, software updates and backups; a watch in
+this mode is also synced, both ways, with the Sync button or `openexpress sync` (new, not yet
+confirmed on a watch: reports welcome). Apps, maps and music are for MTP devices only.
 
 ## Install
 
@@ -135,7 +136,8 @@ changes anything only shows its plan until you add `--apply`. Every command:
 ## Limitations
 
 - Connect IQ app settings (their form is rendered by apps.garmin.com).
-- Sync, apps, maps and music for devices that connect as a USB drive.
+- Apps, maps and music for devices that connect as a USB drive, and their sync in the
+  background (they are synced with the Sync button or the command line only).
 - Map updates for devices whose maps Garmin serves another way than its universal map
   service, and maps on a memory card.
 - GPS satellite data (ephemerides) and ECG recordings (they need Garmin Health's own

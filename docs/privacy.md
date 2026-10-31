@@ -78,7 +78,8 @@ the application key, its secret and the value that signs download addresses are 
 - The picture of a device that is not on the signed-in account (or when nobody is signed
   in) is looked up on Garmin's update server, and so, once each time openExpress runs, is
   what that server says of an open device in mass storage mode whose kind Garmin has not
-  told. The same request tells which map service serves the device: it is made once each
+  told, and of a watch connected as a USB drive whether Garmin Connect takes its data
+  (before it is synced). The same request tells which map service serves the device: it is made once each
   time a device is opened, and again when its maps are checked again by hand, and its
   answer also serves the picture. Like the update check, that request names the device
   (unit ID). Of the answer only what the program reads is kept, for seven days, in memory

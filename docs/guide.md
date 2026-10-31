@@ -121,6 +121,12 @@ notification asking for it. The window and the service
 never sync at the same time (shared lock). A watch that is not registered to the signed-in
 account only gets a notification.
 
+A watch that connects as a USB drive is synced with the **Sync** button only, as over MTP:
+its files uploaded and Garmin Connect's queue written to it (Connect IQ apps stay queued);
+after a sync that wrote files to it the window asks to eject it, so that the watch takes them.
+The device page says why a drive is not synced, when it is not
+([USB modes](devices.md#usb-modes-mtp-and-mass-storage)).
+
 The background service leaves devices in mass storage mode alone (such as the Varia RTL515):
 it neither opens nor syncs them, and shows no notification about them. It syncs only when,
 apart from those, exactly one Garmin device is connected; with two or more it writes a line
