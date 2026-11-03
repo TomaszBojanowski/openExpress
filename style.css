@@ -28,6 +28,10 @@
   --badge-bg: rgb(237 97 51 / 12%);
   --badge-fg: #6b2a10;
   --badge-border: rgb(237 97 51 / 25%);
+  --lightbox-bg: #fafafb;
+  --lightbox-fg: #2e2e33;
+  --lightbox-button: rgb(0 0 6 / 8%);
+  --lightbox-button-hover: rgb(0 0 6 / 15%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -56,6 +60,10 @@
     --badge-bg: rgb(255 150 91 / 12%);
     --badge-fg: #f6dccd;
     --badge-border: rgb(255 150 91 / 20%);
+    --lightbox-bg: #161619;
+    --lightbox-fg: #f5f5f7;
+    --lightbox-button: rgb(255 255 255 / 12%);
+    --lightbox-button-hover: rgb(255 255 255 / 22%);
   }
 }
 
@@ -446,3 +454,95 @@ footer p { margin: 0 0 12px; }
   .cards { grid-template-columns: 1fr; grid-auto-rows: auto; }
   .needs { grid-template-columns: 1fr; }
 }
+
+/* A screenshot opened large: its link opens the picture itself without a script; with one, a
+   dialog over the whole page, its picture as large as the screen lets it be. */
+a.zoom {
+  display: block;
+  cursor: zoom-in;
+  border-radius: 12px;
+}
+
+html.lightbox-open { overflow: hidden; }
+
+dialog.lightbox {
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--lightbox-bg);
+  color: var(--lightbox-fg);
+  overscroll-behavior: contain;
+}
+
+dialog.lightbox::backdrop { background: transparent; }
+
+.lightbox figure {
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  padding: 64px 72px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.lightbox img {
+  display: block;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 28%);
+}
+
+.lightbox figcaption {
+  margin: 0;
+  max-width: 60ch;
+  text-align: center;
+  color: var(--lightbox-fg);
+}
+
+.lightbox button {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lightbox-button);
+  color: var(--lightbox-fg);
+  font: inherit;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox button:hover { background: var(--lightbox-button-hover); }
+.lightbox button[hidden] { display: none; }
+.lightbox-close { top: 12px; right: 12px; }
+.lightbox-prev, .lightbox-next { top: 50%; transform: translateY(-50%); }
+.lightbox-prev { left: 12px; }
+.lightbox-next { right: 12px; }
+
+@media (max-width: 640px) {
+  .lightbox figure { padding: 64px 12px 72px; }
+  .lightbox-prev, .lightbox-next { top: auto; bottom: 12px; transform: none; }
+  .lightbox-prev { left: calc(50% - 56px); }
+  .lightbox-next { right: calc(50% - 56px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.lightbox[open] { animation: lightbox-in 160ms ease-out; }
+}
+
+@keyframes lightbox-in { from { opacity: 0; } }
