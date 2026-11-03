@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>openExpress – manage your Garmin watch on Linux</title>
+<meta name="description" content="openExpress is an unofficial Linux app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music over USB.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbeee6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1f24" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<link rel="canonical" href="https://openexpress.bojanowski.me/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="openExpress">
+<meta property="og:title" content="openExpress – manage your Garmin watch on Linux">
+<meta property="og:description" content="An unofficial Linux app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music over USB.">
+<meta property="og:url" content="https://openexpress.bojanowski.me/">
+<meta property="og:image" content="https://openexpress.bojanowski.me/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The openExpress icon and its page of devices, a fēnix 8 and an Edge 1050 connected">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="app-icon" src="icon.png" width="128" height="128" alt="">
+    <h1>openExpress</h1>
+    <p class="summary">Manage your Garmin watch on Linux</p>
+    <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
+    <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
+    <p class="actions">
+      <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
+      <a class="button source" href="https://github.com/TomaszBojanowski/openExpress">Source on GitHub</a>
+    </p>
+    <p class="hint">Install downloads a file that opens in GNOME Software. Or in a terminal:</p>
+    <pre class="command" tabindex="0"><code>flatpak install --user https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref</code></pre>
+    <details class="repository">
+      <summary>Or add the repository</summary>
+      <pre class="command" tabindex="0"><code>flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --user --if-not-exists bojanowski https://flatpak.bojanowski.me/bojanowski.flatpakrepo
+flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code></pre>
+    </details>
+  </div>
+</header>
+
+<main>
+  <section class="shots" aria-label="Screenshots">
+    <figure class="shot main-shot">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-device.webp">
+        <img src="screenshots/light-device.webp" width="1400" height="1036" alt="The page of a fēnix 8: its storage, its sync with Garmin Connect and its updates">
+      </picture>
+      <figcaption>A watch's page: storage, sync and updates</figcaption>
+    </figure>
+    <div class="shot-row">
+      <figure class="shot">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-start.webp">
+          <img src="screenshots/light-start.webp" width="1400" height="1036" loading="lazy" alt="The page of devices: a fēnix 8 and an Edge 1050 connected, three devices remembered">
+        </picture>
+        <figcaption>The devices connected, and those remembered</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-maps.webp">
+          <img src="screenshots/light-maps.webp" width="1400" height="1036" loading="lazy" alt="The Maps page: TopoActive and CourseView maps on the watch, a map of your own and free maps to install">
+        </picture>
+        <figcaption>Maps: Garmin's free maps and your own</figcaption>
+      </figure>
+      <figure class="shot narrow-shot">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-narrow-device.webp">
+          <img src="screenshots/light-narrow-device.webp" width="600" height="1233" loading="lazy" alt="The page of a watch in a narrow window">
+        </picture>
+        <figcaption>A narrow window</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="spotlight" aria-labelledby="apps-title">
+    <div class="spotlight-text">
+      <h2 id="apps-title">Connect IQ apps</h2>
+      <p>Install, update and remove apps, turn them on or off and put them back in order – also on watches that hide their app folder, such as the fēnix 8. Apps you added in the Connect IQ store wait on the same page.</p>
+    </div>
+    <picture class="spotlight-image">
+      <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-apps.webp">
+      <img src="screenshots/light-apps.webp" width="1400" height="1036" loading="lazy" alt="The Apps page: two apps with updates, Update all, the order restored from a copy and an app of the account ready to install">
+    </picture>
+  </section>
+
+  <section class="features" aria-labelledby="features-title">
+    <h2 id="features-title">What it does</h2>
+    <ul class="cards">
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 6.2A5.4 5.4 0 0 0 3.4 4.6"/><path d="M3 1.9v2.9h2.9"/><path d="M2.8 9.8a5.4 5.4 0 0 0 9.8 1.6"/><path d="M13 14.1v-2.9h-2.9"/></svg></span>
+        <div>
+          <h3>Sync with Garmin Connect</h3>
+          <p>New activities, sleep, HRV and other data go up; courses, workouts and apps queued in Garmin Connect come down to the watch. TrueUp too.</p>
+        </div>
+      </li>
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8v8.4"/><path d="M4.7 7 8 10.3 11.3 7"/><path d="M2.3 11v1.4a1.6 1.6 0 0 0 1.6 1.6h8.2a1.6 1.6 0 0 0 1.6-1.6V11"/></svg></span>
+        <div>
+          <h3>Software updates</h3>
+          <p>Updates for the device, downloaded from Garmin and checked before they are written to it.</p>
+        </div>
+      </li>
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 3.6 5.6 2l4.8 2 3.8-1.6v10L10.4 14l-4.8-2-3.8 1.6z"/><path d="M5.6 2v10M10.4 4v10"/></svg></span>
+        <div>
+          <h3>Maps</h3>
+          <p>Free maps such as TopoActive, CourseView and Ski, checked before they are written, and maps of your own.</p>
+        </div>
+      </li>
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.4V3.3l7-1.5v9.1"/><circle cx="4.2" cy="12.4" r="1.8"/><circle cx="11.2" cy="10.9" r="1.8"/></svg></span>
+        <div>
+          <h3>Music</h3>
+          <p>Music, podcasts and audiobooks, with playlists.</p>
+        </div>
+      </li>
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8.5h2.9l1.8-4.6 3 8.2 1.9-5.1 1 1.5h2.4"/></svg></span>
+        <div>
+          <h3>Activities</h3>
+          <p>The activities of the watch and of its backups – sport, time, distance and ascent – exported as GPX.</p>
+        </div>
+      </li>
+      <li class="card">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="3.5" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/><path d="M6.3 9h3.4"/></svg></span>
+        <div>
+          <h3>Backups and diagnostics</h3>
+          <p>Backups of the device and copies of its diagnostic files, kept on your computer; the primary training device and the primary wearable.</p>
+        </div>
+      </li>
+    </ul>
+    <ul class="badges" aria-label="Also">
+      <li>GTK 4 and libadwaita</li>
+      <li>Command line</li>
+      <li>Sync in the background</li>
+      <li>No telemetry</li>
+      <li>Light and dark style</li>
+      <li>English and Polish</li>
+    </ul>
+  </section>
+
+  <section class="devices" aria-labelledby="devices-title">
+    <h2 id="devices-title">Devices</h2>
+    <p>Tested by the developer on a fēnix 8, an Edge 1050 and a Varia RTL515, and reported working by users on more fēnix, Instinct, Edge, Forerunner and inReach models. Other Garmin watches and bike computers that connect over USB should work too – reports are welcome. What works on each: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md">Supported devices</a>.</p>
+  </section>
+
+  <section class="requirements" aria-labelledby="requirements-title">
+    <h2 id="requirements-title">Requirements</h2>
+    <ul class="needs">
+      <li>
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="9" rx="1.5"/><path d="M8 11v3M5.5 14h5"/></svg></span>
+        <div>
+          <h3>System</h3>
+          <p>Linux with Flatpak; the GNOME runtime comes from Flathub. Watches that connect over MTP need gvfs with its MTP backend (gvfs-mtp), which GNOME has.</p>
+        </div>
+      </li>
+      <li>
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.2" r="2.7"/><path d="M2.8 14a5.2 5.2 0 0 1 10.4 0"/></svg></span>
+        <div>
+          <h3>Garmin</h3>
+          <p>A Garmin Connect account, and the Garmin Express installer for Windows: openExpress reads two values from your own copy during setup, so it carries no Garmin code. No Windows needed.</p>
+        </div>
+      </li>
+    </ul>
+    <p class="note">Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+  </section>
+
+  <section class="privacy" aria-labelledby="privacy-title">
+    <h2 id="privacy-title">Privacy</h2>
+    <ul class="points">
+      <li>No telemetry.</li>
+      <li>Your password is typed only on Garmin's page.</li>
+      <li>Sync never deletes files from the watch, and every file written to it is checked.</li>
+    </ul>
+    <p class="note">More: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/privacy.md">Privacy and security</a>.</p>
+  </section>
+
+  <section class="press" aria-label="In the press">
+    <p>Featured in <a href="https://the5krunner.com/2026/10/17/openexpress-garmin-express-linux/">the5krunner's Indie Spotlight</a>.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>openExpress is free software, released under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License, version 3 or later</a>.</p>
+    <ul class="links">
+      <li><a href="https://github.com/TomaszBojanowski/openExpress">Source code</a></li>
+      <li><a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a></li>
+      <li><a href="https://github.com/TomaszBojanowski/openExpress/issues">Report an issue</a></li>
+      <li><a href="https://github.com/TomaszBojanowski/openExpress#documentation">Documentation</a></li>
+      <li><a href="https://flatpak.bojanowski.me/">Flatpak repository</a></li>
+      <li><a href="https://buymeacoffee.com/sojer2005">Buy me a coffee</a></li>
+    </ul>
+    <p class="disclaimer">openExpress is an independent project. It is not affiliated with, endorsed by or supported by Garmin Ltd. Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin Ltd. or its subsidiaries.</p>
+    <p>Made with substantial help from AI.</p>
+    <p class="copyright">© 2026 the openExpress authors</p>
+  </div>
+</footer>
+
+</body>
+</html>
