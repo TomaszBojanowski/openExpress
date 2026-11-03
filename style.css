@@ -288,7 +288,7 @@ figcaption {
   filter: drop-shadow(0 10px 24px var(--shot-shadow));
 }
 
-/* Six features, two by two, all of the same height. */
+/* Five features, two by two, all of the same height; the last one across the row. */
 .cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -298,6 +298,8 @@ figcaption {
   padding: 0;
   list-style: none;
 }
+
+.cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 .card {
   display: flex;
