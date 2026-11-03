@@ -127,6 +127,22 @@ code, pre {
   color: var(--hero-dim);
 }
 
+/* What is new: a label under what it does, to the section of it. */
+.new { margin: 16px 0 0; }
+
+.new a {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 16px;
+  border-radius: 9999px;
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.new a:hover { text-decoration: underline; }
+
 /* That openExpress is not Garmin's: said at once, under what it does. */
 .unofficial {
   display: inline-block;
@@ -255,7 +271,7 @@ figcaption {
   color: var(--dim);
 }
 
-/* The row: each picture as wide as its shape asks, so that all three are as high (the narrow
+/* The row: each picture as wide as its shape asks, so that all are as high (the narrow
    window smaller) and their captions on one line. */
 .shot-row {
   display: flex;
@@ -263,7 +279,7 @@ figcaption {
   margin-top: 26px;
 }
 
-.shot-row > .shot { flex: 1.351 1 0; min-width: 0; }   /* 1400 × 1036 */
+.shot-row > .shot { flex: var(--ratio, 1.351) 1 0; min-width: 0; }   /* 1400 × 1036 */
 .shot-row > .narrow-shot { flex: 0.4866 1 0; }          /* 600 × 1233 */
 
 /* Connect IQ apps: the picture and the text side by side. */
@@ -288,7 +304,7 @@ figcaption {
   filter: drop-shadow(0 10px 24px var(--shot-shadow));
 }
 
-/* Five features, two by two, all of the same height; the last one across the row. */
+/* The features, two by two, all of the same height; an odd last one across the row. */
 .cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

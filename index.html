@@ -31,6 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin watch on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
+    <p class="new"><a href="#activities">New in 0.8.2 — your activities on the map</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -51,12 +52,19 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
   <section class="shots" aria-label="Screenshots">
     <figure class="shot main-shot">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-device.webp">
-        <img src="screenshots/light-device.webp" width="1400" height="1036" alt="The page of a fēnix 8: its storage, its sync with Garmin Connect and its updates">
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-activity-elevation.webp">
+        <img src="screenshots/light-activity-elevation.webp" width="1400" height="840" alt="The page of a hike: its distance, time, pace, heart rate and ascent, its track on a map coloured by elevation with the legend of the colours, and its elevation profile">
       </picture>
-      <figcaption>A watch's page: storage, sync and updates</figcaption>
+      <figcaption>A hike: its track coloured by elevation, and its profile</figcaption>
     </figure>
     <div class="shot-row">
+      <figure class="shot">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-device.webp">
+          <img src="screenshots/light-device.webp" width="1400" height="1036" loading="lazy" alt="The page of a fēnix 8: its storage, its sync with Garmin Connect and its updates">
+        </picture>
+        <figcaption>A watch's page: storage, sync and updates</figcaption>
+      </figure>
       <figure class="shot">
         <picture>
           <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-start.webp">
@@ -77,6 +85,34 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
           <img src="screenshots/light-narrow-device.webp" width="600" height="1233" loading="lazy" alt="The page of a watch in a narrow window">
         </picture>
         <figcaption>A narrow window</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="activities" id="activities" aria-labelledby="activities-title">
+    <h2 id="activities-title">Activities</h2>
+    <p>Open an activity to see its track on a map, coloured by heart rate, pace or elevation, with a chart of each. Choose a lap to find it on the map and on the chart; below them are the heart-rate zones and the training effect as the watch worked them out. The map's tiles come from OpenStreetMap only after you agree; until then the track is drawn on a plain background. The activities of the watch and of its backups are listed together, and each can be saved as a GPX file.</p>
+    <div class="shot-row">
+      <figure class="shot" style="--ratio: 1.667">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-activity-hr.webp">
+          <img src="screenshots/light-activity-hr.webp" width="1400" height="840" loading="lazy" alt="The hike's track coloured by heart rate, from low in blue to high in red, and its chart of heart rate over the bands of the zones">
+        </picture>
+        <figcaption>The track coloured by heart rate, with its chart</figcaption>
+      </figure>
+      <figure class="shot" style="--ratio: 1.429">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-activity-laps.webp">
+          <img src="screenshots/light-activity-laps.webp" width="1400" height="980" loading="lazy" alt="The third lap of the hike chosen: thick on the map, the rest of the track faded, a band on the chart and its row ticked in the list of laps">
+        </picture>
+        <figcaption>A lap chosen: on the map and on the chart</figcaption>
+      </figure>
+      <figure class="shot" style="--ratio: 1.972">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-activity-zones.webp">
+          <img src="screenshots/light-activity-zones.webp" width="1400" height="710" loading="lazy" alt="The hike's heart-rate zones with the time in each, its aerobic and anaerobic training effect and its training load">
+        </picture>
+        <figcaption>Heart-rate zones and training effect</figcaption>
       </figure>
     </div>
   </section>
@@ -138,13 +174,6 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
       <li class="card">
-        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8.5h2.9l1.8-4.6 3 8.2 1.9-5.1 1 1.5h2.4"/></svg></span>
-        <div>
-          <h3>Activities</h3>
-          <p>The activities of the watch and of its backups – sport, time, distance and ascent – exported as GPX.</p>
-        </div>
-      </li>
-      <li class="card">
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="3.5" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/><path d="M6.3 9h3.4"/></svg></span>
         <div>
           <h3>Backups and diagnostics</h3>
@@ -181,7 +210,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.2" r="2.7"/><path d="M2.8 14a5.2 5.2 0 0 1 10.4 0"/></svg></span>
         <div>
           <h3>Garmin</h3>
-          <p>A Garmin Connect account, and the Garmin Express installer for Windows: openExpress reads two values from your own copy during setup, so it carries no Garmin code. No Windows needed.</p>
+          <p>A Garmin Connect account, and the Garmin Express installer for Windows: openExpress reads the application's key, its secret and the value that signs download addresses from your own copy during setup, and carries no Garmin code. No Windows needed.</p>
         </div>
       </li>
     </ul>
@@ -194,6 +223,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
       <li>No telemetry.</li>
       <li>Your password is typed only on Garmin's page.</li>
       <li>Sync never deletes files from the watch, and every file written to it is checked.</li>
+      <li>The map of an activity asks OpenStreetMap for its streets only after you turn them on.</li>
     </ul>
     <p class="note">More: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/privacy.md">Privacy and security</a>.</p>
   </section>
