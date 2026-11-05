@@ -330,6 +330,28 @@ figcaption {
 
 .cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
+/* A feature with its screenshot: a card across the row, the picture under the text. */
+.cards-wide { grid-template-columns: 1fr; margin-bottom: 16px; }
+
+.card.wide {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "chip text" "image image";
+  gap: 14px;
+}
+
+.card.wide .chip { grid-area: chip; align-self: start; }
+.wide-text { grid-area: text; align-self: start; }
+.wide-image { grid-area: image; }
+
+.wide-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  filter: drop-shadow(0 6px 16px var(--shot-shadow));
+}
+
 .card {
   display: flex;
   gap: 14px;

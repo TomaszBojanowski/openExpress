@@ -31,7 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin watch on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#activities">New: the page of an activity<span class="more"> — map, charts, zones</span> · 0.8.3</a></p>
+    <p class="new"><a href="#profiles">New: activity profiles<span class="more"> — data screens and their fields</span> · 0.8.4</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -174,6 +174,23 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="features" aria-labelledby="features-title">
     <h2 id="features-title">What it does</h2>
+    <ul class="cards cards-wide">
+      <li class="card wide" id="profiles">
+        <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="1.8" width="8" height="12.4" rx="1.6"/><path d="M5.8 5.6h4.4M5.8 8h4.4M5.8 10.4h4.4"/></svg></span>
+        <div class="wide-text">
+          <h3>Activity profiles</h3>
+          <p>The sport profiles of your device and their data screens, read only: each screen's fields in Garmin's words, and the built-in screens it always scrolls through, shows only when needed or keeps hidden.</p>
+        </div>
+        <a class="zoom wide-image" href="screenshots/full/light-profile.webp" data-dark="screenshots/full/dark-profile.webp" data-caption="A sport profile of an Edge 1050: its data screens with their fields, its built-in screens with an icon of each kind">
+          <picture>
+            <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="screenshots/dark-profile-narrow.webp" width="1504" height="940">
+            <source media="(max-width: 640px)" srcset="screenshots/light-profile-narrow.webp" width="1504" height="940">
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-profile.webp">
+            <img src="screenshots/light-profile.webp" width="1760" height="1100" loading="lazy" alt="The COMMUTE profile of an Edge 1050: two data screens drawn as the Edge shows them, beside their fields numbered (speed, heart rate, power and cadence with their averages and maximums, distance, elevation, total ascent, time of day, timer; elapsed time, performance condition, training effect), and the built-in screens Map, Elevation and Stamina, each with its icon">
+          </picture>
+        </a>
+      </li>
+    </ul>
     <ul class="cards">
       <li class="card">
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 6.2A5.4 5.4 0 0 0 3.4 4.6"/><path d="M3 1.9v2.9h2.9"/><path d="M2.8 9.8a5.4 5.4 0 0 0 9.8 1.6"/><path d="M13 14.1v-2.9h-2.9"/></svg></span>
