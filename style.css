@@ -453,6 +453,8 @@ footer {
 
 footer p { margin: 0 0 12px; }
 
+.translate img { display: block; }
+
 .links {
   display: flex;
   flex-wrap: wrap;
