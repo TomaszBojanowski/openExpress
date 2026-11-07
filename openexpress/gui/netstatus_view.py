@@ -5,6 +5,7 @@ a line for each service the program has asked so far, and Try Again when somethi
 (gui/app.py), without __init__ of its own."""
 from __future__ import annotations
 
+import logging
 import types
 
 import gi
@@ -12,11 +13,13 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 
-from gi.repository import Gdk, Gtk  # noqa: E402 - imports must follow gi.require_version
+from gi.repository import Gdk, Gio, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import netstatus  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 from openexpress.settings import Settings  # noqa: E402
+
+log = logging.getLogger(__name__)
 
 # The colour of the dot for each state of Garmin's servers (a word always goes with it).
 NET_COLOUR = {
@@ -27,7 +30,7 @@ NET_COLOUR = {
     netstatus.SIGN_IN_EXPIRED: "warning",
     netstatus.CLOCK_OFF: "warning",
 }
-# … and of each service in the popover (one not needed yet is not shown).
+# … and of each service in the popover (one not asked yet is not shown).
 NET_ROW_COLOUR = {
     netstatus.OK: "success",
     netstatus.NETWORK: "error",
@@ -74,6 +77,25 @@ def _retry_from_net_status(button) -> None:
         refresh()
 
 
+def network_monitor():
+    """The computer's network as GIO sees it (in the Flatpak through its portal)."""
+    return Gio.NetworkMonitor.get_default()
+
+
+def _network_changed(_monitor, available: bool) -> None:
+    """The network changed: what counts for the state of Garmin's servers (netstatus). The
+    handler holds no window."""
+    log.info("network: changed (available: %s)", "yes" if available else "no")
+    netstatus.STATUS.network_changed()
+
+
+def stop_watching_network(win) -> None:
+    """The window closes: the network monitor no longer calls it."""
+    if win._net_monitor is not None:
+        win._net_monitor.disconnect(win._net_monitor_handler)
+    win._net_monitor = win._net_monitor_handler = None
+
+
 def _render_net_status_on_show(popover) -> None:
     """When the popover opens, its times are told against now: an answer of another day gets
     its date. The window comes from the popover itself, so the handler holds no widget."""
@@ -85,6 +107,13 @@ def _render_net_status_on_show(popover) -> None:
 class NetStatusPanel:
     """The server state panel of the window: built once (_build_net_status), drawn again on
     each answer of Garmin's servers (_render_net_status)."""
+
+    def _watch_network(self) -> None:
+        """Changes of the computer's network go to netstatus: after one, a request that got no
+        answer before it no longer makes the state red."""
+        self._net_monitor = network_monitor()
+        self._net_monitor_handler = self._net_monitor.connect("network-changed",
+                                                              _network_changed)
 
     def _build_net_status(self):
         """The state of Garmin's servers at the bottom of the side panel: a button with a
@@ -118,8 +147,9 @@ class NetStatusPanel:
         box.append(Gtk.Separator(margin_start=6, margin_end=6))
         services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, margin_top=4, margin_bottom=4)
         # TRANSLATORS: in the popover of the server state button, in place of the parts of
-        # Garmin's servers, while the program has asked none of them
-        self.net_none = Gtk.Label(label=_("No server has been needed yet"), xalign=0, wrap=True,
+        # Garmin's servers, while this window has asked none of them (what its pages show may
+        # be kept from earlier)
+        self.net_none = Gtk.Label(label=_("Not checked yet in this window"), xalign=0, wrap=True,
                                   max_width_chars=24, margin_start=12, margin_end=12,
                                   margin_top=6, margin_bottom=6)
         self.net_none.add_css_class("dim-label")
@@ -178,7 +208,9 @@ class NetStatusPanel:
     def _render_net_status(self) -> None:
         """Shows the state of Garmin's servers on the button and in its window (open or
         not: the same widgets get the new texts, so an open window follows at once)."""
-        last, answered = netstatus.STATUS.snapshot()
+        # The dot, the heading and the rows from the same results: what counts since the
+        # network last changed (Status.counted).
+        last, answered = netstatus.STATUS.counted()
         state = netstatus.state_of(last, answered)
         session = self.session
         try:
@@ -198,7 +230,7 @@ class NetStatusPanel:
         shown = 0
         for r in netstatus.rows(last, answered, hosts):
             w = self.net_rows[r.service]
-            w.row.set_visible(r.kind is not None)  # a service not needed yet is not shown
+            w.row.set_visible(r.kind is not None)  # a service not asked yet is not shown
             if r.kind is None:
                 continue
             shown += 1

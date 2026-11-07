@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.8.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 19:06+0100\n"
+"POT-Creation-Date: 2026-11-07 19:22+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -160,7 +160,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/auth/sso.py:251 openexpress/gui/device_page.py:688
-#: openexpress/gui/device_page.py:889 openexpress/gui/netstatus_view.py:157
+#: openexpress/gui/device_page.py:889 openexpress/gui/netstatus_view.py:187
 #: openexpress/gui/updates_page.py:513
 msgid "Try Again"
 msgstr ""
@@ -1216,8 +1216,8 @@ msgstr ""
 #: openexpress/cli.py:545 openexpress/cli.py:1025 openexpress/cli.py:1186
 #: openexpress/cli.py:1199 openexpress/cli.py:2545
 #: openexpress/gui/courses_page.py:61 openexpress/gui/words.py:304
-#: openexpress/i18n.py:181 openexpress/netstatus.py:230
-#: openexpress/netstatus.py:261 openexpress/profiles.py:266
+#: openexpress/i18n.py:181 openexpress/netstatus.py:265
+#: openexpress/netstatus.py:296 openexpress/profiles.py:266
 #: openexpress/service.py:1308
 msgid "%Y-%m-%d"
 msgstr ""
@@ -1634,7 +1634,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
-#: openexpress/cli.py:1024 openexpress/i18n.py:183 openexpress/netstatus.py:239
+#: openexpress/cli.py:1024 openexpress/i18n.py:183 openexpress/netstatus.py:274
 #, ignore-reused, python-brace-format
 msgctxt "date and hour"
 msgid "{date} {time}"
@@ -4149,7 +4149,7 @@ msgid ""
 "To report it, choose “{item}” in the main menu."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1539 openexpress/gui/app.py:295
+#: openexpress/device/gio_storage.py:1539 openexpress/gui/app.py:302
 msgid "Report a Device or Problem…"
 msgstr ""
 
@@ -4516,7 +4516,7 @@ msgid "No GPS positions in this activity"
 msgstr ""
 
 #: openexpress/gui/activities_page.py:102 openexpress/gui/activity_page.py:138
-#: openexpress/gui/app.py:457 openexpress/gui/apps_page.py:632
+#: openexpress/gui/app.py:464 openexpress/gui/apps_page.py:632
 #: openexpress/gui/detection.py:755 openexpress/gui/device_page.py:897
 #: openexpress/gui/window_tasks.py:543
 msgid "Another operation is in progress"
@@ -4554,7 +4554,7 @@ msgid "This device does not keep activities."
 msgstr ""
 
 #: openexpress/gui/activities_page.py:188
-#: openexpress/gui/activities_page.py:245 openexpress/gui/app.py:106
+#: openexpress/gui/activities_page.py:245 openexpress/gui/app.py:110
 #, ignore-reused
 msgid "Reading Activities…"
 msgstr ""
@@ -4711,169 +4711,169 @@ msgstr ""
 msgid "Adding to the Account {account}…"
 msgstr ""
 
-#: openexpress/gui/app.py:84
+#: openexpress/gui/app.py:88
 msgctxt "tab"
 msgid "Device"
 msgstr ""
 
-#: openexpress/gui/app.py:85 openexpress/gui/detection.py:747
+#: openexpress/gui/app.py:89 openexpress/gui/detection.py:747
 #: openexpress/gui/start.py:507
 msgid "Detecting the Device…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:87 openexpress/gui/device_page.py:1061
+#: openexpress/gui/app.py:91 openexpress/gui/device_page.py:1061
 #: openexpress/gui/start.py:726
 msgctxt "tab"
 msgid "Updates"
 msgstr ""
 
-#: openexpress/gui/app.py:88 openexpress/gui/updates_page.py:259
+#: openexpress/gui/app.py:92 openexpress/gui/updates_page.py:259
 msgid "Checking for Updates…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:90 openexpress/gui/device_page.py:1074
+#: openexpress/gui/app.py:94 openexpress/gui/device_page.py:1074
 #: openexpress/gui/start.py:730
 msgctxt "tab"
 msgid "Maps"
 msgstr ""
 
-#: openexpress/gui/app.py:91 openexpress/gui/maps_page.py:104
+#: openexpress/gui/app.py:95 openexpress/gui/maps_page.py:104
 #: openexpress/gui/maps_page.py:323
 msgid "Checking Maps…"
 msgstr ""
 
 #. TRANSLATORS: tab title (courses on the device, made of GPX files)
-#: openexpress/gui/app.py:93
+#: openexpress/gui/app.py:97
 msgctxt "tab"
 msgid "Courses"
 msgstr ""
 
-#: openexpress/gui/app.py:94 openexpress/gui/courses_page.py:353
+#: openexpress/gui/app.py:98 openexpress/gui/courses_page.py:353
 msgid "Reading Courses…"
 msgstr ""
 
 #. TRANSLATORS: beside the title of the Courses page: not yet tried on
 #. every device
-#: openexpress/gui/app.py:97
+#: openexpress/gui/app.py:101
 msgctxt "chip"
 msgid "experimental"
 msgstr ""
 
 #. TRANSLATORS: tab title (Connect IQ apps)
-#: openexpress/gui/app.py:99 openexpress/gui/device_page.py:1087
+#: openexpress/gui/app.py:103 openexpress/gui/device_page.py:1087
 msgctxt "tab"
 msgid "Apps"
 msgstr ""
 
-#: openexpress/gui/app.py:100 openexpress/gui/apps_page.py:106
+#: openexpress/gui/app.py:104 openexpress/gui/apps_page.py:106
 msgid "Loading Connect IQ Apps…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:102 openexpress/gui/device_page.py:1094
+#: openexpress/gui/app.py:106 openexpress/gui/device_page.py:1094
 #: openexpress/gui/music_page.py:45
 msgctxt "tab"
 msgid "Music"
 msgstr ""
 
-#: openexpress/gui/app.py:103 openexpress/gui/music_page.py:50
+#: openexpress/gui/app.py:107 openexpress/gui/music_page.py:50
 msgid "Reading Music on the Device…"
 msgstr ""
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:105
+#: openexpress/gui/app.py:109
 msgctxt "tab"
 msgid "Activities"
 msgstr ""
 
 #. TRANSLATORS: tab title (the sport profiles of the device and their data screens)
-#: openexpress/gui/app.py:108
+#: openexpress/gui/app.py:112
 msgctxt "tab"
 msgid "Activity Profiles"
 msgstr ""
 
 #. TRANSLATORS: shown while the device's activity (sport) profiles are read, not
 #. user profiles
-#: openexpress/gui/app.py:111 openexpress/gui/profiles_page.py:572
+#: openexpress/gui/app.py:115 openexpress/gui/profiles_page.py:572
 msgid "Reading Profiles…"
 msgstr ""
 
-#: openexpress/gui/app.py:291 openexpress/gui/preferences.py:285
+#: openexpress/gui/app.py:298 openexpress/gui/preferences.py:285
 msgid "Preferences"
 msgstr ""
 
-#: openexpress/gui/app.py:293 openexpress/gui/preferences.py:286
+#: openexpress/gui/app.py:300 openexpress/gui/preferences.py:286
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: openexpress/gui/app.py:296
+#: openexpress/gui/app.py:303
 msgid "About openExpress"
 msgstr ""
 
-#: openexpress/gui/app.py:307 openexpress/gui/start_window.py:147
+#: openexpress/gui/app.py:314 openexpress/gui/start_window.py:147
 msgid "Main Menu"
 msgstr ""
 
-#: openexpress/gui/app.py:339 openexpress/gui/app.py:401
+#: openexpress/gui/app.py:346 openexpress/gui/app.py:408
 #: openexpress/gui/preferences.py:284
 msgid "Refresh"
 msgstr ""
 
 #. TRANSLATORS: button that starts syncing
-#: openexpress/gui/app.py:342 openexpress/gui/app.py:346
-#: openexpress/gui/app.py:465 openexpress/gui/preferences.py:284
+#: openexpress/gui/app.py:349 openexpress/gui/app.py:353
+#: openexpress/gui/app.py:472 openexpress/gui/preferences.py:284
 #: openexpress/gui/start.py:688
 msgid "Sync"
 msgstr ""
 
-#: openexpress/gui/app.py:371
+#: openexpress/gui/app.py:378
 msgid "Do not unplug the device"
 msgstr ""
 
 #. TRANSLATORS: button on the bar at the bottom: stop waiting for TrueUp
-#: openexpress/gui/app.py:379
+#: openexpress/gui/app.py:386
 msgid "Stop Waiting"
 msgstr ""
 
-#: openexpress/gui/app.py:440
+#: openexpress/gui/app.py:447
 msgid "This device is not registered to your Garmin account"
 msgstr ""
 
-#: openexpress/gui/app.py:441
+#: openexpress/gui/app.py:448
 msgid "Could not check whether this device belongs to your Garmin account"
 msgstr ""
 
 #. TRANSLATORS: title when no device is plugged in: plug it in with a USB cable
 #. ("connect", not Garmin Connect)
-#: openexpress/gui/app.py:449 openexpress/gui/detection.py:587
+#: openexpress/gui/app.py:456 openexpress/gui/detection.py:587
 #: openexpress/gui/device_page.py:680
 msgid "Connect Your Device"
 msgstr ""
 
 #. TRANSLATORS: a device connected as a USB drive, not over MTP
-#: openexpress/gui/app.py:451 openexpress/gui/detection.py:579
+#: openexpress/gui/app.py:458 openexpress/gui/detection.py:579
 #: openexpress/gui/detection.py:598 openexpress/gui/device_page.py:1040
 #, ignore-reused
 msgid "USB Drive"
 msgstr ""
 
-#: openexpress/gui/app.py:453 openexpress/gui/device_page.py:878
+#: openexpress/gui/app.py:460 openexpress/gui/device_page.py:878
 msgid "Not signed in to Garmin Connect"
 msgstr ""
 
-#: openexpress/gui/app.py:530
+#: openexpress/gui/app.py:538
 msgid "Operation in Progress"
 msgstr ""
 
-#: openexpress/gui/app.py:531
+#: openexpress/gui/app.py:539
 msgid ""
 "Wait until it finishes before closing openExpress, so that no files on the "
 "device are left half-written."
 msgstr ""
 
-#: openexpress/gui/app.py:639
+#: openexpress/gui/app.py:647
 #, python-brace-format
 msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""
@@ -6326,12 +6326,13 @@ msgid "Reading the Playlist…"
 msgstr ""
 
 #. TRANSLATORS: in the popover of the server state button, in place of the parts of
-#. Garmin's servers, while the program has asked none of them
-#: openexpress/gui/netstatus_view.py:122
-msgid "No server has been needed yet"
+#. Garmin's servers, while this window has asked none of them (what its pages show may
+#. be kept from earlier)
+#: openexpress/gui/netstatus_view.py:152 openexpress/netstatus.py:334
+msgid "Not checked yet in this window"
 msgstr ""
 
-#: openexpress/gui/netstatus_view.py:193
+#: openexpress/gui/netstatus_view.py:225
 msgid "Show the state of Garmin's servers"
 msgstr ""
 
@@ -8321,150 +8322,144 @@ msgid "format not supported by the device"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers, at the bottom of the side panel
-#: openexpress/netstatus.py:197
+#: openexpress/netstatus.py:232
 msgid "Status unknown"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: they answer
-#: openexpress/netstatus.py:199
+#: openexpress/netstatus.py:234
 msgid "Online"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: nothing answered,
 #. the computer has no connection
-#: openexpress/netstatus.py:202
+#: openexpress/netstatus.py:237
 msgid "No connection"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: a server error, or
 #. only some of the servers answer
-#: openexpress/netstatus.py:205
+#: openexpress/netstatus.py:240
 msgid "Garmin server problem"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: they refuse the
 #. sign-in, which must be renewed
-#: openexpress/netstatus.py:208
+#: openexpress/netstatus.py:243
 msgid "Sign-in expired"
 msgstr ""
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: they refuse the
 #. sign-in because the computer's clock differs too much from theirs
-#: openexpress/netstatus.py:211
+#: openexpress/netstatus.py:246
 msgid "Computer clock is off"
 msgstr ""
 
 #. TRANSLATORS: the parts of Garmin's servers, in the popover of the server state button
-#: openexpress/netstatus.py:215
+#: openexpress/netstatus.py:250
 #, ignore-same
 msgid "Garmin Connect"
 msgstr ""
 
 #. TRANSLATORS: a part of Garmin's servers, in the popover of the server state button: the
 #. one for software updates and maps
-#: openexpress/netstatus.py:218
+#: openexpress/netstatus.py:253
 msgid "Updates and maps"
 msgstr ""
 
 #. TRANSLATORS: a part of Garmin's servers, in the popover of the server state button: the
 #. sign-in server (a noun, not a button)
-#: openexpress/netstatus.py:221
+#: openexpress/netstatus.py:256
 msgid "Sign-in"
 msgstr ""
 
 #. TRANSLATORS: the time of an answer today, after a word: "answered at 23:41"
-#: openexpress/netstatus.py:247
+#: openexpress/netstatus.py:282
 #, python-brace-format
 msgid "at {time}"
 msgstr ""
 
 #. TRANSLATORS: the time of an answer on another day: "answered at 2026-10-14 23:41"
-#: openexpress/netstatus.py:249 openexpress/netstatus.py:261
+#: openexpress/netstatus.py:284 openexpress/netstatus.py:296
 #, ignore-reused, python-brace-format
 msgid "at {date} {time}"
 msgstr ""
 
 #. TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well
-#: openexpress/netstatus.py:266
+#: openexpress/netstatus.py:301
 msgid "Connected to Garmin's servers"
 msgstr ""
 
 #. TRANSLATORS: at the bottom of the window with the state of Garmin's servers
-#: openexpress/netstatus.py:268
+#: openexpress/netstatus.py:303
 msgid "The state comes from the program's last requests."
-msgstr ""
-
-#. TRANSLATORS: how a part of Garmin's servers answered when the program has not needed
-#. it yet; read by screen readers after its name
-#: openexpress/netstatus.py:299
-msgid "not needed yet"
 msgstr ""
 
 #. TRANSLATORS: a part of Garmin's servers answered well, read by screen readers; {at}:
 #. "at 23:41", on another day with the date
-#: openexpress/netstatus.py:303
+#: openexpress/netstatus.py:338
 #, python-brace-format
 msgid "answered {at}"
 msgstr ""
 
 #. TRANSLATORS: how a service of Garmin last answered, beside the time
-#: openexpress/netstatus.py:305
+#: openexpress/netstatus.py:340
 msgid "answered"
 msgstr ""
 
 #. TRANSLATORS: a part of Garmin's servers could not be reached, read by screen readers;
 #. {at}: "at 23:41", on another day with the date
-#: openexpress/netstatus.py:309
+#: openexpress/netstatus.py:344
 #, python-brace-format
 msgid "no connection {at}"
 msgstr ""
 
 #. TRANSLATORS: a part of Garmin's servers could not be reached: the word beside its time
 #. in the popover of the server state button
-#: openexpress/netstatus.py:312
+#: openexpress/netstatus.py:347
 msgid "no connection"
 msgstr ""
 
-#: openexpress/netstatus.py:314
+#: openexpress/netstatus.py:349
 #, python-brace-format
 msgid "server error (HTTP {status}) {at}"
 msgstr ""
 
-#: openexpress/netstatus.py:316
+#: openexpress/netstatus.py:351
 #, python-brace-format
 msgid "server error (HTTP {status})"
 msgstr ""
 
-#: openexpress/netstatus.py:318
+#: openexpress/netstatus.py:353
 #, python-brace-format
 msgid "sign-in refused (HTTP {status}) {at}"
 msgstr ""
 
-#: openexpress/netstatus.py:320
+#: openexpress/netstatus.py:355
 #, python-brace-format
 msgid "sign-in refused (HTTP {status})"
 msgstr ""
 
-#: openexpress/netstatus.py:322
+#: openexpress/netstatus.py:357
 #, python-brace-format
 msgid "computer clock off by {minutes} min at {time}"
 msgstr ""
 
-#: openexpress/netstatus.py:324
+#: openexpress/netstatus.py:359
 #, python-brace-format
 msgid "clock off by {minutes} min"
 msgstr ""
 
 #. TRANSLATORS: when a part of Garmin's servers last answered well (screen readers, tooltip
 #. of its row); {at}: "at 23:41" or with the date
-#: openexpress/netstatus.py:327 openexpress/netstatus.py:332
+#: openexpress/netstatus.py:362 openexpress/netstatus.py:367
 #, python-brace-format
 msgid "last answer {at}"
 msgstr ""
 
 #. TRANSLATORS: a line read by screen readers for each part of Garmin's servers; {host}: its
 #. address; {detail}: how it last answered
-#: openexpress/netstatus.py:346
+#: openexpress/netstatus.py:380
 #, python-brace-format
 msgid "{service} ({host}): {detail}"
 msgstr ""

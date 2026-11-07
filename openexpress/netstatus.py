@@ -97,12 +97,17 @@ class Status:
         self._last: dict[str, Result] = {}
         self._answered: dict[str, float] = {}
         self._listeners: list[Callable[[], None]] = []
+        # The last result of each service that was an answer (not a lost connection).
+        self._replied: dict[str, Result] = {}
+        self._changed: float | None = None  # when the computer's network last changed
 
     def note(self, service: str | None, result: Result) -> None:
         if service not in SERVICES:
             return
         with self._lock:
             self._last[service] = result
+            if result.kind != NETWORK:
+                self._replied[service] = result
             if result.kind == OK:
                 self._answered[service] = result.at
             listeners = list(self._listeners)
@@ -118,11 +123,39 @@ class Status:
         self.note(service, Result(NETWORK, time.time(), urlsplit(url).netloc))
 
     def snapshot(self) -> tuple[dict[str, Result], dict[str, float]]:
+        """Every service's last result and last good answer, as the rows show them."""
         with self._lock:
             return dict(self._last), dict(self._answered)
 
+    def network_changed(self, at: float | None = None) -> None:
+        """The computer's network changed (Gio.NetworkMonitor). Nothing is asked and the state
+        stays as it is until a request ends; from then on (counted) a request that got no
+        answer before the change no longer counts."""
+        with self._lock:
+            self._changed = time.time() if at is None else at
+
+    def counted(self) -> tuple[dict[str, Result], dict[str, float]]:
+        """What the state and the rows of the window come from: the last results, but once a
+        request ended after the network last changed, a service whose last request before it
+        got no answer (that tells of the network then, not now) counts with its last answer
+        before that, or not at all when it never answered. A refusal of the sign-in, a wrong
+        clock or a server error before it still count."""
+        with self._lock:
+            last, answered, changed = dict(self._last), dict(self._answered), self._changed
+            replied = dict(self._replied)
+        if changed is None or not any(r.at > changed for r in last.values()):
+            return last, answered
+        counted = {}
+        for s, r in last.items():
+            if r.kind == NETWORK and r.at <= changed:
+                if s in replied:
+                    counted[s] = replied[s]
+            else:
+                counted[s] = r
+        return counted, answered
+
     def state(self) -> str:
-        return state_of(*self.snapshot())
+        return state_of(*self.counted())
 
     def add_listener(self, fn: Callable[[], None]) -> None:
         with self._lock:
@@ -137,6 +170,8 @@ class Status:
         with self._lock:
             self._last.clear()
             self._answered.clear()
+            self._replied.clear()
+            self._changed = None
 
 
 def state_of(last: dict[str, Result], answered: dict[str, float]) -> str:
@@ -278,7 +313,7 @@ class Row:
     detail: str  # how it answered, with the time: "server error (HTTP 503) at 00:15"
     last_answer: str  # "last answer at …" after a failure; "" otherwise
     outcome: str = ""  # the same without the time, short: "server error (HTTP 503)"
-    time: str = ""  # "just now", "5 min ago", "yesterday, 23:41"; "" when not needed yet
+    time: str = ""  # "just now", "5 min ago", "yesterday, 23:41"; "" when not asked yet
     answered: str = ""  # "last answer at 2026-10-14 23:41", with the date; "" if none yet
 
 
@@ -294,9 +329,9 @@ def rows(last: dict[str, Result], answered: dict[str, float], hosts: dict[str, s
         r = last.get(s)
         host = r.host if r else urlsplit(hosts.get(_HOST_KEY[s], "")).netloc
         if r is None:
-            # TRANSLATORS: how a part of Garmin's servers answered when the program has not needed
-            # it yet; read by screen readers after its name
-            detail = outcome = _("not needed yet")
+            # The words of the popover with no service asked yet, for screen readers after the
+            # name of a service this window has not asked.
+            detail = outcome = _("Not checked yet in this window")
         elif r.kind == OK:
             # TRANSLATORS: a part of Garmin's servers answered well, read by screen readers; {at}:
             # "at 23:41", on another day with the date
@@ -337,8 +372,7 @@ def describe(last: dict[str, Result], answered: dict[str, float], hosts: dict[st
              now: float | None = None) -> tuple[str, str]:
     """(short text, whole text) of the state, the whole text naming each service, its host
     and when it last answered: for screen readers (the window shows the same in rows)."""
-    state = state_of(last, answered)
-    lines = [_(STATE_TEXT[state])]
+    lines = [_(STATE_TEXT[state_of(last, answered)])]
     for r in rows(last, answered, hosts, now):
         detail = r.detail + ("; " + r.last_answer if r.last_answer else "")
         # TRANSLATORS: a line read by screen readers for each part of Garmin's servers; {host}: its

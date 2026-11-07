@@ -1,5 +1,7 @@
 """The state of Garmin's servers, from the answers to the program's own requests."""
 
+import contextlib
+import logging
 import threading
 import types
 
@@ -322,7 +324,7 @@ def test_the_tooltip_names_each_service_its_host_and_time():
         "No connection",
         f"Garmin Connect (connectapi.garmin.com): answered at {hhmm}",
         f"Updates and maps (omt.garmin.com): no connection at {hhmm}",
-        "Sign-in (sso.garmin.com): not needed yet",
+        "Sign-in (sso.garmin.com): Not checked yet in this window",
     ]
 
 
@@ -518,7 +520,8 @@ def test_rows_for_every_kind_of_answer():
         (netstatus.SIGN_IN, None)]
     assert rows[0].detail.startswith("sign-in refused (HTTP 401) at ") and not rows[0].last_answer
     assert rows[1].last_answer.startswith("last answer at ")
-    assert rows[2].detail == "not needed yet" and rows[2].host == "sso.garmin.com"
+    assert rows[2].detail == "Not checked yet in this window"
+    assert rows[2].host == "sso.garmin.com"
 
 
 def test_the_window_draws_later_only_while_it_is_there():
@@ -581,7 +584,7 @@ def test_another_day_has_its_date_first_in_polish(polish):
     assert lines[1] == (f"Garmin Connect (connectapi.garmin.com): czas komputera różni się "
                         f"o\u00a0120 min ({day} o\u00a0{hour})")
     assert lines[2] == f"Aktualizacje i\u00a0mapy (omt.garmin.com): odpowiedź {day} o\u00a0{hour}"
-    assert lines[3] == "Logowanie (sso.garmin.com): nie było potrzeby"
+    assert lines[3] == "Logowanie (sso.garmin.com): W\u00a0tym oknie jeszcze nie sprawdzano"
 
 
 def test_today_has_only_the_hour_in_polish(polish):
@@ -650,7 +653,7 @@ def test_with_no_service_asked_the_popover_says_so_in_one_sentence(network_state
     window._render_net_status(win)
     assert win.net_heading.get_label() == "Status unknown"
     assert win.net_none.get_visible()
-    assert win.net_none.get_label() == "No server has been needed yet"
+    assert win.net_none.get_label() == "Not checked yet in this window"
     assert win.net_none.has_css_class("dim-label")
     assert not any(r.row.get_visible() for r in win.net_rows.values())
     assert not win.net_retry.get_visible() and not win.net_retry_line.get_visible()
@@ -768,3 +771,210 @@ def test_try_again_shows_only_when_something_is_wrong_and_refreshes_the_page(net
     root.net_retry.emit("clicked")
     assert refreshed == [True]  # Refresh of the page: no request of its own
     root.destroy()
+
+
+# --- a new window, and the computer's network changing ------------------------------------------
+
+class _Monitor:
+    """Gio.NetworkMonitor as the window sees it: "network-changed", with whether a network is
+    available."""
+
+    def __init__(self):
+        self.handlers = {}
+
+    def connect(self, signal, fn):
+        self.handlers[len(self.handlers) + 1] = (signal, fn)
+        return len(self.handlers)
+
+    def disconnect(self, handler):
+        del self.handlers[handler]
+
+    def change(self, available=True):
+        for signal, fn in list(self.handlers.values()):
+            if signal == "network-changed":
+                fn(self, available)
+
+
+@pytest.fixture
+def server(monkeypatch):
+    """Garmin's servers, made up: each request answers 200, or fails while the cable is out."""
+    world = {"online": True}
+
+    def request(self, method, url, **kw):
+        if not world["online"]:
+            raise requests.ConnectionError("cable out")
+        return answer(200)
+
+    monkeypatch.setattr(requests.Session, "request", request)
+    return world
+
+
+@pytest.fixture
+def watched(in_the_window):
+    """A window that watches the made-up network monitor; returns (window, monitor)."""
+    from openexpress.gui.app import MainWindow
+
+    monitor = _Monitor()
+    in_the_window("network_monitor", lambda: monitor)
+    win = stand_in()
+    MainWindow._watch_network(win)
+    return win, monitor
+
+
+def _ask(client, *urls):
+    for url in urls:
+        with contextlib.suppress(ApiError):
+            client._request("GET", url, "x")
+
+
+def test_after_the_network_changes_the_first_good_answer_is_green(server, network_state,
+                                                                  watched):
+    """All well; the cable out, nothing answers; the cable in: the state as it was until
+    something is asked; then the first good answer, of the update server alone, is green:
+    Garmin Connect's failure came before the network changed."""
+    _win, monitor = watched
+    c = GarminClient(Settings())
+    _ask(c, CONNECT_URL, OMT_URL)
+    assert network_state.state() == netstatus.ONLINE
+    server["online"] = False
+    _ask(c, CONNECT_URL, OMT_URL)
+    assert network_state.state() == netstatus.OFFLINE
+    server["online"] = True
+    monitor.change(True)
+    assert network_state.state() == netstatus.OFFLINE  # nothing asked since: as it was
+    _ask(c, OMT_URL)
+    assert network_state.state() == netstatus.ONLINE
+
+
+def test_a_failure_after_the_change_is_no_connection(server, network_state, watched):
+    _win, monitor = watched
+    c = GarminClient(Settings())
+    _ask(c, CONNECT_URL, OMT_URL)
+    monitor.change(True)
+    server["online"] = False
+    _ask(c, OMT_URL)
+    assert network_state.state() == netstatus.OFFLINE
+
+
+def test_a_refused_sign_in_still_counts_after_the_network_changed(network_state, watched):
+    """The network says nothing of the sign-in: a refusal before the change still counts once
+    the update server answers after it."""
+    _win, monitor = watched
+    note(network_state, [(netstatus.CONNECT, 401)])
+    monitor.change(True)
+    note(network_state, [(netstatus.OMT, 200)])
+    assert network_state.state() == netstatus.SIGN_IN_EXPIRED
+
+
+@pytest.mark.needs_display
+def test_a_service_that_never_answered_before_the_change_has_no_row_after_it(
+        server, network_state, watched):
+    """The cable out from the start, then in: the first good answer, of the update server,
+    is green, and Garmin Connect, which never answered, has no row: never "no connection"
+    beside "Connected"."""
+    _win, monitor = watched
+    win, _bar, window = _status_window()
+    c = GarminClient(Settings())
+    server["online"] = False
+    _ask(c, CONNECT_URL, OMT_URL)
+    server["online"] = True
+    monitor.change(True)
+    _ask(c, OMT_URL)
+    window._render_net_status(win)
+    assert win.net_label.get_label() == "Online"
+    assert win.net_heading.get_label() == "Connected to Garmin's servers"
+    assert not win.net_retry.get_visible()
+    assert not win.net_rows[netstatus.CONNECT].row.get_visible()
+    assert win.net_rows[netstatus.OMT].row.get_visible()
+
+
+@pytest.mark.needs_display
+def test_a_row_shows_what_its_service_answered_before_the_lost_connection(
+        server, network_state, watched):
+    """Garmin Connect answered, then the cable came out: after the change and a good answer
+    of the update server, its row tells that answer, with its time, not "no connection"."""
+    _win, monitor = watched
+    win, _bar, window = _status_window()
+    c = GarminClient(Settings())
+    _ask(c, CONNECT_URL)
+    answered_at = network_state.snapshot()[0][netstatus.CONNECT].at
+    server["online"] = False
+    _ask(c, CONNECT_URL, OMT_URL)
+    server["online"] = True
+    monitor.change(True)
+    _ask(c, OMT_URL)
+    window._render_net_status(win)
+    connect = win.net_rows[netstatus.CONNECT]
+    assert win.net_label.get_label() == "Online"
+    assert connect.row.get_visible() and not connect.state.get_visible()  # a good answer
+    assert connect.when.get_label() == netstatus.ago(answered_at)
+    last, _answered = network_state.counted()
+    assert last[netstatus.CONNECT].kind == netstatus.OK
+
+
+def test_a_server_error_before_the_lost_connection_still_shows(network_state, watched):
+    """What the server said before the cable came out still counts: its error, in the row and
+    in the state."""
+    _win, monitor = watched
+    note(network_state, [(netstatus.CONNECT, 503), (netstatus.CONNECT, None)])
+    monitor.change(True)
+    note(network_state, [(netstatus.OMT, 200)])
+    last, answered = network_state.counted()
+    rows = {r.service: r for r in netstatus.rows(last, answered, PROD)}
+    assert rows[netstatus.CONNECT].outcome == "server error (HTTP 503)"
+    assert network_state.state() == netstatus.SERVER_PROBLEM
+
+
+def test_before_any_answer_after_the_change_the_rows_stay_as_they_were(network_state, watched):
+    _win, monitor = watched
+    note(network_state, [(netstatus.CONNECT, 200), (netstatus.CONNECT, None)])
+    monitor.change(True)
+    assert network_state.counted() == network_state.snapshot()
+
+
+def test_screen_readers_hear_the_words_of_the_popover_for_a_service_not_asked(polish,
+                                                                               network_state):
+    note(network_state, [(netstatus.CONNECT, 200)])
+    _text, whole = netstatus.describe(*network_state.counted(), PROD)
+    assert whole.splitlines()[-1] == (
+        "Logowanie (sso.garmin.com): W\u00a0tym oknie jeszcze nie sprawdzano")
+
+
+def test_the_log_says_when_the_network_changed(network_state, watched, caplog):
+    _win, monitor = watched
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        monitor.change(False)
+        monitor.change(True)
+    said = [r.getMessage() for r in caplog.records if r.getMessage().startswith("network:")]
+    assert said == ["network: changed (available: no)", "network: changed (available: yes)"]
+
+
+def test_a_closed_window_stops_watching_the_network(watched):
+    from openexpress.gui.netstatus_view import stop_watching_network
+
+    win, monitor = watched
+    stop_watching_network(win)
+    assert monitor.handlers == {} and win._net_monitor is None
+    stop_watching_network(win)  # twice: nothing more
+
+
+@pytest.mark.needs_display
+def test_a_new_window_has_not_checked_yet_and_a_refresh_is_green(server, network_state):
+    """A new window takes the answers kept on disk and asks nothing: not checked yet in it.
+    Refresh asks anew: green."""
+    win, _bar, window = _status_window()
+    window._render_net_status(win)
+    assert (win.net_label.get_label(), win.net_none.get_label()) == (
+        "Status unknown", "Not checked yet in this window")
+    _ask(GarminClient(Settings()), CONNECT_URL, OMT_URL)
+    window._render_net_status(win)
+    assert win.net_label.get_label() == "Online" and not win.net_none.get_visible()
+
+
+@pytest.mark.needs_display
+def test_not_checked_yet_in_polish(polish, network_state):
+    win, _bar, window = _status_window()
+    window._render_net_status(win)
+    assert (win.net_label.get_label(), win.net_none.get_label()) == (
+        "Stan nieznany", "W\u00a0tym oknie jeszcze nie sprawdzano")
+

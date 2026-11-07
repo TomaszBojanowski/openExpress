@@ -41,7 +41,11 @@ from openexpress.gui.gui_settings import (  # noqa: E402
 from openexpress.gui.maps_page import MapsPage  # noqa: E402
 from openexpress.gui.music_page import MusicPage  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
-from openexpress.gui.netstatus_view import NetStatusPanel, _render_net_status_later  # noqa: E402
+from openexpress.gui.netstatus_view import (  # noqa: E402
+    NetStatusPanel,
+    _render_net_status_later,
+    stop_watching_network,
+)
 from openexpress.gui.preferences import KEYS, Preferences  # noqa: E402
 from openexpress.gui.profiles_page import PAGE_ICON as PROFILES_ICON  # noqa: E402
 from openexpress.gui.profiles_page import ProfilesPage  # noqa: E402
@@ -120,6 +124,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         ref = weakref.ref(self)
         self._net_listener = lambda: GLib.idle_add(_render_net_status_later, ref)
         netstatus.STATUS.add_listener(self._net_listener)
+        self._watch_network()
 
         self.connect("close-request", self._on_close_request)
         self.monitor = Gio.VolumeMonitor.get()
@@ -244,6 +249,8 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.content_page = self.start = self.device_view = None
         self.navigation = self.remembered = self.toasts = self.page_toasts = None
         self._net_listener = self.monitor = self._usb_poll = None
+        # The computer's network monitor and its handler (netstatus_view._watch_network).
+        self._net_monitor = self._net_monitor_handler = None
         self._last_sync_monitor = None
 
         # The device page, made as it is shown (show_overview): its rows and what they say.
@@ -522,6 +529,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         if not self.busy or self._task_lets_close:
             self._remember_geometry()
             netstatus.STATUS.remove_listener(self._net_listener)
+            stop_watching_network(self)
             self._closed = True
             self._update_relative_timer()  # no timer left once the window is closed
             return False
