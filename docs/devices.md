@@ -20,6 +20,7 @@
 | Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: software updates work, sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | Forerunner 920XT (part 006-B1765-00) | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) | connects as a USB drive: software updates work (time-zone map updated), sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | Instinct 2S Solar (part 006-B3889-00) | USB drive | [#24](https://github.com/TomaszBojanowski/openExpress/issues/24) | connects as a USB drive; sync works (new activities uploaded, those already in Garmin Connect recognised, no errors). The software of its GPS chip was shown as "17.22 → 6.70" against the watch's software, and after its copy the watch did not install it; both are fixed after 0.7.13 (the part's own name and version, the copy read back from the drive, the drive ejected at once), confirmation awaited in #24 | Arch Linux, GNOME on X11, Flatpak 0.7.13 |
+| inReach Mini (1st generation; USB 091e:0b89) | HID (a USB drive for its first minute) | [#31](https://github.com/TomaszBojanowski/openExpress/issues/31) | **not supported**: it connects with an HID interface and, for about a minute, a small USB drive, then with HID only; it offers neither MTP nor a drive that stays. 0.8.8 waited 45 s and then said *Device Not Ready*; 0.8.9 says at once that it is not supported (not tried on the device yet) | Arch Linux (Asahi, aarch64), Hyprland; 0.8.8 from source |
 | zūmo 595LM | – | [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) | detected; software updates and map updates worked; the device itself has no Garmin Connect sync or Connect IQ apps | the command line only, in a container on a home server, also built for ARM on a Raspberry Pi; a version before 0.6.20 |
 | Other Garmin watches and bike computers connecting over USB (MTP) | MTP | – | expected to work, **untested** | – |
 
@@ -59,3 +60,8 @@ report software updates working on an inReach Mini 2, a Forerunner 55 and a Fore
 and sync on an Instinct 2S (see the table); reports from other devices in mass storage mode are welcome. If you are not sure which mode your device
 uses, plug it in: if it appears as a USB drive in your file manager rather than through MTP,
 it is in mass storage mode.
+
+A Garmin device that connects with an HID interface and nothing else, or with HID beside a USB
+drive (such as the inReach Mini of the first generation, whose drive goes away after about a
+minute), offers neither MTP nor a drive that stays: openExpress cannot use it, and the window
+and the commands say so at once (*Device Not Supported*).

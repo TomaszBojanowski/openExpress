@@ -117,7 +117,9 @@ What works on each, and the reports in full: [Supported devices](docs/devices.md
 that connects as a USB drive gets its information, software updates and backups; a watch in
 this mode is also synced, both ways, with the Sync button or `openexpress sync` (confirmed on
 an Instinct 2S, [#24](https://github.com/TomaszBojanowski/openExpress/issues/24): more reports
-welcome). Apps, maps and music are for MTP devices only.
+welcome). Apps, maps and music are for MTP devices only. A device that connects only with HID,
+such as the inReach Mini of the first generation
+([#31](https://github.com/TomaszBojanowski/openExpress/issues/31)), is not supported.
 
 ## Install
 

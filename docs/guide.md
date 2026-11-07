@@ -89,7 +89,10 @@ and only while nothing was synced since); the count that runs then confirms or c
 Labels of the account come from the account's list as it was last read (at most 7 days ago,
 with the same sign-in). While you are not signed in the tiles show neither these labels nor
 **To sync**, **Never synced** or **Synced**, and a sentence under the tiles says so; it also
-says when the list could not be read (the tiles then keep what was known before). The device page shows **Update available** or
+says when the list could not be read (the tiles then keep what was known before). A Garmin
+device that openExpress cannot use (it connects neither over MTP nor as a USB drive that
+stays, such as the inReach Mini of the first generation) gets no tile: the notice on top of
+the start page says **Device Not Supported**, with its name. The device page shows **Update available** or
 **Update ready** under the software version too, and, under the account's **Primary training
 device**, its **Primary Wearable** (only for a device that can be one; **Set as Primary**
 makes it this device, after a question). Its

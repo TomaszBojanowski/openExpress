@@ -22,6 +22,11 @@
   2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
   again.
 - **An Edge 1050 restarts each time it is unplugged.** It always does.
+- **Device Not Supported.** The Garmin device connects neither over MTP nor as a USB drive
+  that stays (an inReach Mini of the first generation connects with HID, and for its first
+  minute with a small drive beside it): openExpress cannot use it. The window says so with
+  the device's name and USB ID, and commands end with the same words (exit code 1). A report
+  still works and says what is connected ([Reporting a problem](#reporting-a-problem)).
 - **Garmin Connect shows a heat or altitude acclimation you did not expect.** With two
   devices on the account (for example a watch and an Edge), each keeps its own acclimation, and
   the daily values in Garmin Connect come from the device that reported last: an Edge can keep
@@ -120,6 +125,10 @@ works. In the window: main menu (☰) → **Report a Device or Problem…**
 → **Open on GitHub** opens the form with the report and a title filled in; or run
 `openexpress report`, which prints the report and an address that does the same. The report
 contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
+When no device can be opened (one not ready or not supported, none connected), both still
+give a report: why no device is open, the Garmin devices on USB (their USB ID, the name each
+gives itself and the kinds of its interfaces) and whether gvfs has MTP, then the system;
+`openexpress report --log` gives the log as always.
 
 For a bug, send the device report with the command you ran and, if something failed, the
 output of `openexpress report --log` (see [Log file](#log-file)). Do not post the output of
