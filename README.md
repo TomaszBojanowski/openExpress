@@ -68,7 +68,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 - Backups, copies of the device's diagnostic files on this computer, the primary training
   device and the primary wearable.
 - A GTK 4 / libadwaita window, a command-line tool and sync in the background.
-- No telemetry. English and Polish.
+- No telemetry. English, Polish and German.
 
 <p align="center">
   <picture>
@@ -226,9 +226,9 @@ your `GarminDevice.xml` or the files in `~/.config/openexpress`. When something 
 
 <a href="https://hosted.weblate.org/projects/openexpress/"><img alt="Translation status on Hosted Weblate" src="https://hosted.weblate.org/widget/openexpress/openexpress/svg-badge.svg"></a>
 
-openExpress speaks English and Polish. To add your language or correct one, translate it in your
-browser on [Hosted Weblate](https://hosted.weblate.org/projects/openexpress/), or send a `.po`
-file in a pull request: [Translating openExpress](docs/translating.md).
+openExpress speaks English, Polish and German. To add your language or correct one, translate it
+in your browser on [Hosted Weblate](https://hosted.weblate.org/projects/openexpress/), or send a
+`.po` file in a pull request: [Translating openExpress](docs/translating.md).
 
 ## Documentation
 

@@ -26,7 +26,7 @@ should work, but are untested – reports are welcome. Developed on Fedora/GNOME
 - Backups; showing and setting the primary training device and the primary wearable;
   copies of the device's diagnostic files, kept on this computer.
 - GTK 4 / libadwaita window, command-line tool and background sync with notifications.
-- No telemetry. English and Polish; other languages are welcome
+- No telemetry. English, Polish and German; other languages are welcome
   ([Help translate](../README.md#help-translate)).
 
 <p align="center">
@@ -413,15 +413,15 @@ when needed, 1 hidden)"). A screen's page and `openexpress profiles show NAME` g
 and each field with its number. An Edge's own backups of its profiles (in `Sports/Backups`) are
 said in one line with their day.
 
-The fields are named with Garmin's words, in English or Polish. The numbers of the fields, the
-codes of the built-in screens and the letters of the layouts come from two open projects that
-learnt them on Edge bike computers (Activity Profile Editor and Sommet, see the README's
-thanks); a field, a built-in screen or a layout without a known name is shown by its number. On
-a watch (checked on a fēnix 8) the fields have the Edge's numbers, with a few of its own (pace,
-its charts and gauges), named as Garmin Connect names them for the watch; so are some of its
-built-in screens (Map, Compass, its clocks) and the families of some of its layouts (a stack of
-rows, a field without a label). The codes of its other built-in screens and layouts are not
-known yet and are shown as numbers.
+The fields are named with Garmin's words, in English, Polish or German. The numbers of the
+fields, the codes of the built-in screens and the letters of the layouts come from two open
+projects that learnt them on Edge bike computers (Activity Profile Editor and Sommet, see the
+README's thanks); a field, a built-in screen or a layout without a known name is shown by its
+number. On a watch (checked on a fēnix 8) the fields have the Edge's numbers, with a few of its
+own (pace, its charts and gauges), named as Garmin Connect names them for the watch; so are
+some of its built-in screens (Map, Compass, its clocks) and the families of some of its layouts
+(a stack of rows, a field without a label). The codes of its other built-in screens and layouts
+are not known yet and are shown as numbers.
 
 ## Sync details
 
@@ -514,7 +514,7 @@ name; an answer that took more than 5 s is noted too.
 
 ### Languages
 
-The interface is available in English and Polish. The language follows the system
+The interface is available in English, Polish and German. The language follows the system
 locale; you can override it:
 
 - in the window: main menu (☰) → Preferences → Language,
