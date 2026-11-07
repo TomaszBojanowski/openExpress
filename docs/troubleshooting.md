@@ -73,11 +73,13 @@ openExpress keeps a log of what it does, to make problems easier to find:
   repository it was installed from and its commit), the Python version, the language of the
   app, the locale of the C library and the process ID; nothing about you or your computer.
 - **What it contains:** which command or sync ran and how it ended, the steps of a sync
-  (numbers of files by type, not their contents), app installs and removals, how the device
-  was detected (including when it was mounted or unmounted), requests to Garmin's servers
-  as method, address without parameters, status and duration, and error messages. Of each
-  question or message of the window: its heading, its words in one line and the answer; of
-  those about your own files, maps, music or courses, only which one it was and the answer.
+  (numbers of files by type, not their contents), app installs and removals, which of the
+  software updates offered were chosen and which not, and why some were left out (by part
+  number and version), how the device was detected (including when it was mounted or
+  unmounted), requests to Garmin's servers as method, address without parameters, status and
+  duration, and error messages. Of each question or message of the window: its heading, its
+  words in one line and the answer; of those about your own files, maps, music or courses,
+  only which one it was and the answer.
 - **What it never contains:** serial numbers, unit IDs, MTP addresses, tokens, passwords,
   cookies, e-mail addresses, local paths, addresses of local files and network shares
   (`file://`, `smb://`, `sftp://`…), your user name, names of your music files, or file

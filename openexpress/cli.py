@@ -1536,7 +1536,7 @@ def cmd_updates(args) -> int:
         return 0
     with _progress() as progress:
         rep = upd.install(chosen, st, session=client.http, progress=progress,
-                          unit_id=dev.unit_id)
+                          unit_id=dev.unit_id, offered=items)
     n = len(rep.installed)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
     if n and getattr(st, "mass_storage", False) and not _eject_drive(st):

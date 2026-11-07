@@ -89,13 +89,13 @@ def update_check_failed(win) -> None:
     win._render_update_state()
 
 
-def install_updates(s, chosen, progress):
+def install_updates(s, chosen, progress, offered=None):
     """Copy the updates chosen to the device of session `s` (updates.install: what Garmin's
-    server offers it is asked anew next time)."""
+    server offers it is asked anew next time; `offered`: all it offered, for the log)."""
     from openexpress import updates as upd
 
     return upd.install(chosen, s.storage, session=s.client.http, progress=progress,
-                       unit_id=s.device.unit_id)
+                       unit_id=s.device.unit_id, offered=offered)
 
 
 def _below_the_question(s, chosen):
@@ -137,7 +137,7 @@ def _install_task(win, s, chosen):
     mass_storage = getattr(s, "mass_storage", False)
 
     def install():
-        rep = install_updates(s, chosen, win.progress)
+        rep = install_updates(s, chosen, win.progress, offered=win.updates_cache)
         return rep, mass_storage and is_bike_accessory(
             s.client, s.device, ask=lambda: service.unit_info(s))
 

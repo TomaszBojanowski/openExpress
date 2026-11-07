@@ -638,12 +638,53 @@ def _clear_the_place(storage: Storage, u: SoftwareUpdate) -> None:
                  else "a leftover of an earlier update")
 
 
-def install(*args, unit_id: int | None = None, **kwargs) -> InstallReport:
+def choice_text(offered: list[SoftwareUpdate], chosen: list[SoftwareUpdate]) -> str:
+    """For the log before updates are copied: how many of the `offered` were chosen and which,
+    the others offered, and those the program left out, with why: a reinstall, on the device
+    already, or put off because another one chosen (or one copied that waits) takes its file
+    (one_per_file). The -META entries go unsaid; at most LOG_ITEMS named in each list."""
+    real = [u for u in offered if not u.is_metadata]
+    picked = [u for u in real if any(u is c for c in chosen)]
+    takers = {u.device_path.casefold(): u for u in real
+              if any(u is p for p in picked) or (u.on_device and u.installs_when_disconnected
+                                                and not u.is_reinstall)}
+    others, left = [], []
+    for u in real:
+        if any(u is p for p in picked):
+            continue
+        taker = takers.get(u.device_path.casefold())
+        if u.is_reinstall:
+            left.append((u, "a reinstall"))
+        elif u.on_device:
+            left.append((u, "on the device already"))
+        elif taker is not None and taker is not u:
+            left.append((u, f"put off: the same file as {taker.part_number}"))
+        else:
+            others.append(u)
+
+    def named(items: list[str]) -> str:
+        more = [f"… and {len(items) - LOG_ITEMS} more"] if len(items) > LOG_ITEMS else []
+        return ", ".join(items[:LOG_ITEMS] + more)
+
+    text = f"{len(picked)} of {len(real)} offered chosen ("
+    text += named([f"{u.part_number} {u.version}" for u in picked]) + ")"
+    if others:
+        text += "; not chosen: " + named([f"{u.part_number} {u.version}" for u in others])
+    if left:
+        text += "; left out: " + named([f"{u.part_number} {u.version} ({why})" for u, why in left])
+    return text
+
+
+def install(*args, unit_id: int | None = None, offered: list[SoftwareUpdate] | None = None,
+            **kwargs) -> InstallReport:
     """Install software updates (see _install), holding the cache from the download to the
     copy to the device: it is not cleared meanwhile. What Garmin's server offers the device
     `unit_id` is asked anew next time (answers), also after a copy that failed (a part may
     be there); what was copied is kept with the device (known_devices), until the server
-    offers it no more (mark_copied)."""
+    offers it no more (mark_copied). `offered`: all the server offered, for the line of the
+    log that says what was chosen of it (choice_text)."""
+    if offered is not None and args:
+        log.info("software update: %s", choice_text(offered, args[0]))
     report = InstallReport()
     try:
         with cache.using():
