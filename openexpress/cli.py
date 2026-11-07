@@ -1390,7 +1390,7 @@ def _to_install_staged(st) -> str:
 
 
 def _print_staged(staged, st) -> None:
-    """System updates on the device already, waiting for it to install them."""
+    """Updates copied to the device already, waiting for it to install them (staged)."""
     if not staged:
         return
     print(_("Update copied, waiting for the device to install it:"))

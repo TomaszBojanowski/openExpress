@@ -151,6 +151,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.update_state: str | None = None
         self.update_count = 0
         self.update_only = None  # the update to install when it is the only one
+        self.update_waiting = 1  # of "ready": how many copied wait for the device
         # When the check whose answer "Device Software" shows was, when it is not a check of
         # now (a record, its check failed); None: an answer of now, or checking.
         self.update_checked_at: float | None = None

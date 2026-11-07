@@ -171,12 +171,13 @@ connected device; no login is needed.
   files as one of these kinds (Wellness and Vivomove), the window and `openexpress updates
   --install` warn that the update erases the data stored on it and say to sync it first. The
   update is not held back. No such device has been tried yet.
-- **After a system update is copied** the device installs it when it is disconnected. Until
-  then the page says *Update ready: disconnect the device to install it* (and how many more
+- **After an update is copied** the device installs it when it is disconnected. Until then
+  the page says *Update ready: disconnect the device to install it* (and how many more
   updates are available, if any), its tile *Unplug to install* (*Eject to install* for a USB
-  drive), and `openexpress updates` says that the update waits for the device. A copied
-  component is listed as already on the device; the device takes it in when it is
-  disconnected too.
+  drive), and `openexpress updates` says that the update waits for the device. The software
+  counts as up to date only once the server offers the update no more: the device has
+  reported the new version. A component counts as copied only when openExpress copied it;
+  its file there otherwise is no update.
 - **Two updates for one file of the device** are copied one at a time: the other one waits
   until the device has installed the first (the window shows when it can be installed, the
   command line says to disconnect the device and connect it again).

@@ -8,6 +8,7 @@ Has: the updates of the last check: updates_cache, updates_beta, _update_check_s
 from __future__ import annotations
 
 import logging
+import time
 
 import gi
 
@@ -274,8 +275,7 @@ class UpdatesPage:
         # A file holding an update copied already, which the device has not installed yet:
         # what else goes there would replace it.
         waiting = {w.device_path.casefold(): w for w in staged}
-        self._updates_status(sec, system, len(new), beta,
-                             ready=staged[0] if staged else None,
+        self._updates_status(sec, system, len(new), beta, ready=staged,
                              only=new[0] if len(new) == 1 else None,
                              installable=[u for u in new
                                           if u.device_path.casefold() not in waiting])
@@ -285,7 +285,7 @@ class UpdatesPage:
             for u in rest:
                 self._update_row(g, u, waits_for=waiting.get(u.device_path.casefold()))
         # A file the device already has is a reinstall, whatever the server calls it; but not
-        # a system update that is waiting for the device to install it.
+        # an update copied that is waiting for the device to install it.
         re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata
               and not any(u is w for w in staged)]
         if re:
@@ -305,11 +305,12 @@ class UpdatesPage:
                 self._update_row(exp, u, reinstall=True,
                                  waits_for=waiting.get(u.device_path.casefold()))
 
-    def _updates_status(self, sec, system, count: int, beta: bool = False, ready=None,
+    def _updates_status(self, sec, system, count: int, beta: bool = False, ready=(),
                         only=None, installable=()) -> None:
         """Builds the top of the Updates page in `sec`: the state of the updates as "Device
         software" says it (update_state_text): `count` to install (`only`: the one of them),
-        one copied (`ready`) with `count` still to install, or up to date; under it the
+        some copied that wait for the device (`ready`) with `count` still to install, or up
+        to date; under it the
         `system` update or the device's version; whether Garmin offers it beta versions
         (`beta`). More than one update `installable`: Install all, one question and one copy
         (a drive is ejected once after all of them; each Install ejects it after its own)."""
@@ -339,19 +340,26 @@ class UpdatesPage:
             buttons.append(self._button(_("Install") if note is None else _("Reinstall"),
                                         lambda u=system: self.confirm_update(u),
                                         "suggested-action" if note is None else None))
-        elif ready is not None:
+        elif ready:
             # What to do is in the title (as on the row "Device Software"), with how many are
-            # still to install (listed below); under it the versions.
+            # still to install (listed below); under it the versions of the one copied (of
+            # several, the device's software, if it is one of them, and the names of all).
             icon = "software-update-available-symbolic"
-            title = update_state_text("ready", count, mass_storage=mass_storage)
-            versions = versions_text(ready, d)
+            title = update_state_text("ready", count, mass_storage=mass_storage,
+                                      waiting=len(ready))
+            lead = next((u for u in ready if u.is_system), ready[0] if len(ready) == 1 else None)
             if mass_storage:
                 # A drive: the device takes the update once it is ejected.
                 buttons.append(self._button(
                     _("Eject"), lambda button, s=self.session: self.eject_device(s, button=button),
                     "suggested-action", with_button=True))
-            subtitle = (versions, _("Beta"), "") if ready.is_beta else versions
-            detail = caption(ready.title, ready.severity_text, ready.filename)
+            if lead is None:
+                subtitle = installed
+            else:
+                versions = versions_text(lead, d)
+                subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
+            detail = (caption(lead.title, lead.severity_text, lead.filename) if len(ready) == 1
+                      else caption(*(u.title for u in ready)))
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
             title = update_state_text("available", count, only)
@@ -368,7 +376,7 @@ class UpdatesPage:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                       halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
         image = Gtk.Image(icon_name=icon, pixel_size=96)
-        if system is None and ready is None and not count:
+        if system is None and not ready and not count:
             image.add_css_class("success")  # up to date only
         box.append(image)
 
@@ -512,15 +520,17 @@ class UpdatesPage:
                       button=button)
 
     def _show_installed(self, session, chosen) -> None:
-        """After an update was copied: the files are on the device now. The page shows that
-        without asking the server or reading the device again (a system update is then ready
-        to install, the others are no updates any more)."""
+        """After an update was copied: the files are on the device now, and wait for it to
+        take them in (updates.staged: ready to install). The page shows that without asking
+        the server or reading the device again."""
         cache = self.updates_cache
         if (self.session is not session or cache is None
                 or not all(any(c is u for u in cache) for c in chosen)):
             return  # another device, or the page was checked again meanwhile
+        now = time.time()
         for u in chosen:
             u.on_device = True
+            u.copied_at = now  # as the next check finds it (mark_copied)
         sec = self.sections["updates"]
         sec.clear()
         self._action_buttons = still_in_window(self._action_buttons)

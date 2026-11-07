@@ -38,6 +38,8 @@ built-in screen|GroupRide|ignore-same
 # ignore-same-plurals: Polish says two forms of these alike ("Kursy" for 2–4 and for 5 or more)
 |Course: {names}|ignore-same-plurals
 |Copy the Course to the Device?|ignore-same-plurals
+|Update ready: disconnect the device to install it|ignore-same-plurals
+|Update ready: eject the device to install it|ignore-same-plurals
 
 # ignore-reused
 sport|Paddling|ignore-reused

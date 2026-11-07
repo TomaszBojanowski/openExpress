@@ -55,16 +55,20 @@ def copied_update_text(u) -> str | None:
 
 
 def update_state_text(state: str | None, count: int = 0, only=None,
-                      mass_storage: bool = False) -> str:
+                      mass_storage: bool = False, waiting: int = 1) -> str:
     """The state of the device's updates in one text, for the row "Device Software" and the
-    top of the Updates page: "available" (updates_available), "ready" (copied, waiting for
-    the device to be disconnected, or ejected: `mass_storage`; it wins over the `count` still
-    to install, told after it), "current", "failed", or None (not known yet)."""
+    top of the Updates page: "available" (updates_available), "ready" (`waiting` copied,
+    waiting for the device to be disconnected, or ejected: `mass_storage`; it wins over the
+    `count` still to install, told after it), "current", "failed", or None (not known
+    yet)."""
     if state == "available":
         return updates_available(count, only)
     if state == "ready":
-        ready = (_("Update ready: eject the device to install it") if mass_storage
-                 else _("Update ready: disconnect the device to install it"))
+        ready = (ngettext("Update ready: eject the device to install it",
+                          "Updates ready: eject the device to install them", waiting)
+                 if mass_storage else
+                 ngettext("Update ready: disconnect the device to install it",
+                          "Updates ready: disconnect the device to install them", waiting))
         # TRANSLATORS: after "Update ready: disconnect the device to install it": updates
         # still to install besides the one copied already
         more = ngettext("{count} more available", "{count} more available", count).format(

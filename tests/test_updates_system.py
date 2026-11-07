@@ -537,6 +537,46 @@ def test_a_check_that_keeps_nothing_forgets_nothing(device_root):
     assert known_devices.path().read_bytes() == before
 
 
+
+def _font_on_the_device(root):
+    (root / "GARMIN" / "Font").mkdir(parents=True, exist_ok=True)
+    (root / "GARMIN" / "Font" / "006-D0000-00.fnt").write_bytes(FONT)
+
+
+@pytest.mark.parametrize(("copied", "waits"), [(True, True), (False, False)],
+                         ids=["copied-by-openexpress", "there-otherwise"])
+def test_a_component_copied_waits_for_the_device_until_it_is_offered_no_more(device_root,
+                                                                            copied, waits):
+    """A component openExpress copied that the server still offers, with the very same file
+    on the device: the device has not taken it in yet, and it waits as a copied update of the
+    device's software does (staged). Its file there without such a copy is no update (a map
+    support file the device briefly does not list). Offered no more: installed."""
+    from openexpress import known_devices
+
+    _remember_the_device()
+    if copied:
+        known_devices.note_copied(UNIT, ["006-D0000-00.23.40"], now=COPIED_AT)
+    _font_on_the_device(device_root)
+    items = _offered_now(device_root, FONT_ENTRY)
+    assert updates.pending(items) == []
+    assert [u.part_number for u in updates.staged(items)] == (["006-D0000-00"] if waits else [])
+    assert updates.staged(_offered_now(device_root)) == []  # installed: offered no more
+
+
+def test_cli_says_a_copied_component_waits_for_the_device(device_root, monkeypatch, capsys):
+    from openexpress import known_devices
+
+    _remember_the_device()
+    known_devices.note_copied(UNIT, ["006-D0000-00.23.40"], now=COPIED_AT)
+    _font_on_the_device(device_root)
+    answer = lower_keys({"updates": [FONT_ENTRY]})
+    monkeypatch.setattr(GarminClient, "software_updates",
+                        lambda self, raw, include_reinstalls=False: answer)
+    assert main(["--path", str(device_root), "updates"]) == 0
+    out = capsys.readouterr().out
+    assert "Update copied, waiting for the device to install it:" in out
+    assert "Test Font" in out.split("Update copied, waiting")[1]
+
 def test_what_was_copied_before_a_failure_is_kept(device_root, tmp_path, monkeypatch):
     """A copy that fails after some updates were written: those are kept as copied."""
     from openexpress import known_devices
@@ -1445,6 +1485,45 @@ def test_device_page_says_an_update_on_a_drive_waits_to_be_ejected():
     assert win.software_label.get_label() == "Software 23.39"
 
 
+
+def _two_waiting():
+    """Two components copied by openExpress that wait for the device."""
+    items = _items(FONT_ENTRY, MAP_DATA)
+    for u in items:
+        u.on_device, u.copied_at = True, COPIED_AT
+    return items
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("drive", "words"), [
+    (False, "Updates ready: disconnect the device to install them"),
+    (True, "Updates ready: eject the device to install them")], ids=["mtp", "drive"])
+def test_device_page_says_several_updates_wait_for_the_device(drive, words):
+    items = _two_waiting()
+    win, MainWindow = _overview(drive=drive)
+    MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
+    assert (win.update_state, win.update_row.get_subtitle()) == ("ready", words)
+
+
+@pytest.mark.parametrize(("waiting", "words"), [
+    (1, "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować"),
+    (2, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"),
+    (5, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"),
+    (12, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"),
+    (22, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować")])
+def test_updates_ready_in_polish(waiting, words):
+    from openexpress import i18n
+    from openexpress.gui.words import update_state_text
+
+    i18n.setup("pl")
+    try:
+        said = update_state_text("ready", waiting=waiting)
+        on_a_drive = update_state_text("ready", waiting=waiting, mass_storage=True)
+    finally:
+        i18n.setup("en")
+    assert said == words
+    assert on_a_drive == words.replace("odłącz", "wysuń")
+
 def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
     from openexpress.gui.app import MainWindow
 
@@ -1995,6 +2074,59 @@ def test_install_all_over_mtp_copies_every_update_in_one_go(monkeypatch, caplog)
     assert done.get_body().startswith("Files copied to the device.\nTo finish the installation:")
     assert done.get_body().endswith("\n\nStill available: 1 update")  # the font's patch
 
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("drive", [False, True], ids=["mtp", "drive"])
+@pytest.mark.parametrize("how", ["one", "all"])
+def test_after_copying_components_the_page_says_ready_not_up_to_date(monkeypatch, in_the_window,
+                                                                     drive, how):
+    """Copied components wait for the device as a copied system update does: the page, the
+    row "Device Software" and the tile say the update is ready (disconnect, or eject a
+    drive), not that the software is up to date; Install or Install All, over MTP or on a
+    drive."""
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.updates import InstallReport
+
+    items = _items(FONT_ENTRY, MAP_DATA)
+    win, _status, _groups, buttons = _updates_page(items, drive=drive)
+    states = []
+    win._set_update_state = lambda new, staged=(): states.append(
+        ([u.part_number for u in new], [u.part_number for u in staged]))
+    monkeypatch.setattr(updates, "install", lambda chosen, storage, **kw: InstallReport(
+        installed=[u.title for u in chosen], written=list(chosen)))
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    in_the_window("is_bike_accessory", lambda client, device, ask: False)
+    win.session.client = types.SimpleNamespace(http=None)
+    win.session.storage = None
+    win.updates_beta = False
+    win.run_task = RunNow()
+    win.error = lambda title, text: None
+    win.progress = win.fraction = None
+    win.eject_device = lambda *a, **kw: win.ejected.append(a)
+    for name in ("show_updates", "_show_installed", "confirm_update"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    if how == "all":
+        (install_all,) = [b for b in buttons if b.get_label() == "Install All"]
+        install_all.emit("clicked")
+    else:
+        win.confirm_update(items[0])
+    asked[0].emit("response", "ok")
+    status, _groups, _buttons = _read_page(win)
+    word = "eject" if drive else "disconnect"
+    if how == "all":
+        assert states[-1] == ([], ["006-D0000-00", "006-D0002-00"])
+        assert [text for text, _styles in status["texts"]] == [
+            f"Updates ready: {word} the device to install them", "Software 23.39",
+            "Test Font\u00a0· Test Map Data"]
+    else:
+        assert states[-1] == (["006-D0002-00"], ["006-D0000-00"])
+        assert [text for text, _styles in status["texts"]] == [
+            f"Update ready: {word} the device to install it\u00a0· 1 more available", "23.40",
+            "Test Font\u00a0· Recommended\u00a0· 006-D0000-00.fnt"]
 
 @pytest.mark.needs_display
 def test_install_all_copies_every_update_then_ejects_the_drive_once(monkeypatch, in_the_window):

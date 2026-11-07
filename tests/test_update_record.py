@@ -276,9 +276,11 @@ def test_the_record_is_never_installed_from(device_root, monkeypatch):
 
 
 @pytest.mark.needs_display
-def test_after_an_install_the_next_opening_shows_no_record_of_it(device_root):
-    """The component copied by openExpress (the page shown again without asking the server):
-    the record forgets it, and the device opened again starts from "Checking…"."""
+def test_after_an_install_the_next_opening_shows_the_copy_waiting_until_the_check(device_root):
+    """The component copied by openExpress (the page shown again without asking the server)
+    waits for the device, as a copied system update does: the record forgets the update found
+    and keeps that one waits; the device opened again says so from its first frame, and the
+    check, with the server offering it no more (installed), says up to date."""
     from test_updates_system import _Section
 
     from openexpress.gui.app import MainWindow
@@ -302,5 +304,8 @@ def test_after_an_install_the_next_opening_shows_no_record_of_it(device_root):
     win._show_installed(win.session, [items[0]])  # what the install's end does
     entry = known_devices.load()[UNIT]
     assert entry.update_found is None and entry.update_summary is None
+    assert entry.update_check.ready
     again, _section = _page(device_root, _answer())
-    assert _shown(again) == (False, "Checking…", False)
+    assert _shown(again) == (True, "Update ready: disconnect the device to install it", True)
+    _check(again)
+    assert _shown(again) == (False, "Software is up to date", False)

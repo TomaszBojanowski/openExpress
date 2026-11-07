@@ -604,7 +604,9 @@ def show_update_record(win) -> bool:
     # Until the check now running ends: it confirms or changes this; a failed one leaves it
     # and says when it was (update_checked_at).
     if check is not None and check.ready:
+        # How many wait the record does not say: one, until the check now running answers.
         win.update_state, win.update_count, win.update_only = "ready", 0, None
+        win.update_waiting = 1
         win._update_record_at = check.at
         if found is not None:
             win.update_count = found.count
@@ -1302,7 +1304,8 @@ class DevicePage:
         text = update_state_text(
             state, self.update_count if state in ("available", "ready") else 0,
             self.update_only if state == "available" else None,
-            mass_storage=getattr(self.session, "mass_storage", False))
+            mass_storage=getattr(self.session, "mass_storage", False),
+            waiting=self.update_waiting)
         checked_at = self.update_checked_at
         if checked_at is not None:
             text = checked_text(text, checked_at, datetime.now())  # not a check of now
@@ -1327,13 +1330,14 @@ class DevicePage:
             subtitle.remove_css_class("warning")
 
     def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
-        """`staged`: system updates copied already, waiting for the device to install them
+        """`staged`: updates copied already, waiting for the device to install them
         when it is disconnected: "ready", which wins over the updates still to install
         (those are told after it, with how many)."""
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_checked_at = self._update_record_at = None  # an answer of now
         self.update_count = len(new_updates)
         self.update_only = new_updates[0] if len(new_updates) == 1 else None
+        self.update_waiting = len(staged)
         self.update_state = ("ready" if staged else "available" if new_updates else "current")
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now), and whether one

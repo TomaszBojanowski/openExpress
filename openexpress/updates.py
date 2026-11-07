@@ -119,8 +119,9 @@ class SoftwareUpdate:
     # its model, and the version of this part number it lists; empty and None: not known.
     model_part_number: str = ""
     installed_version: str | None = None
-    # When openExpress copied this very update to this device before, while the server still
-    # offers it (mark_copied): the device has not installed it. None: not copied, or not known.
+    # When openExpress copied this very update to this device, while the server still offers
+    # it (mark_copied; and right after the copy): the device has not installed it. None: not
+    # copied, or not known.
     copied_at: float | None = None
     # The file at its place has the size offered but other bytes (mark_present): after a copy,
     # the device changed it, or refused it.
@@ -284,12 +285,14 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
 
 
 def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
-    """Updates the device installs once disconnected (installs_when_disconnected) that are
-    copied already and wait for it. Two facts, no guess: the server still offers the update
+    """Updates copied already that wait for the device to take them in once disconnected:
+    the device's own software or a part's (installs_when_disconnected), and a component that
+    openExpress copied (copied_at). Two facts, no guess: the server still offers the update
     (not as a reinstall), so the device has not installed it, and the very same file (size
-    and MD5) is on the device."""
-    return [u for u in updates if u.installs_when_disconnected and u.on_device
-            and not u.is_reinstall and not u.is_metadata]
+    and MD5) is on the device. The file of a component there without such a copy is no update
+    (mark_present)."""
+    return [u for u in updates if u.on_device and not u.is_reinstall and not u.is_metadata
+            and (u.installs_when_disconnected or u.copied_at is not None)]
 
 
 def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
