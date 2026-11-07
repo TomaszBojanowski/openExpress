@@ -4,6 +4,7 @@ openexpress/locale/
 openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml
 __pycache__/
 .ruff_cache/
+.pytest_cache/
 *.pyc
 .venv/
 *.egg-info/
@@ -16,7 +17,7 @@ flatpak-repo/
 
 # Local working files (not published)
 _extracted/
-testdata/
+/testdata
 docs/analiza/
 docs/ANALIZA.md
 *.docx
