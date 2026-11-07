@@ -472,7 +472,7 @@ class CoursesPage:
         def ask(plan):
             confirm(self, "course-remove", remove_heading(plan.title), courses.removal_note(plan),
                     Answer("remove", _("Remove"), lambda: remove(plan), look="destructive"),
-                    default="cancel")
+                    default="cancel", private=True)
 
         self.run_task(_("Checking the File…"),
                       lambda: courses.plan_remove(s.device, s.storage, shown), ask,
@@ -500,7 +500,7 @@ class CoursesPage:
             entered = {"name": None}
             confirm(self, "course-add", question_heading(plan), device_name(s),
                     Answer("copy", _("Copy"), lambda: copy(plan, entered), look="suggested"),
-                    default="copy", wide=True,
+                    default="copy", wide=True, private=True,
                     extra=question_body(plan, entered, question_width(self.get_width())))
 
         self.run_task(_("Checking the File…"),

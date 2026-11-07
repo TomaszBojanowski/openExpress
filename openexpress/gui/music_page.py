@@ -147,7 +147,7 @@ class MusicPage:
                     ngettext("Copy {count} File?", "Copy {count} Files?", n).format(count=n),
                     self._copy_summary(p),
                     # TRANSLATORS: button
-                    Answer("ok", _("Copy"), lambda: copy(p), look="suggested"))
+                    Answer("ok", _("Copy"), lambda: copy(p), look="suggested"), private=True)
 
         self.run_task(_("Scanning Files…"), plan, ask_copy)
 
@@ -239,12 +239,13 @@ class MusicPage:
             if not plan.device_paths:
                 # TRANSLATORS: heading of the message when no track of a playlist can be added
                 self.error(_("No Tracks to Add"),
-                           _("The playlist has no tracks that can be added.") + "\n\n" + summary)
+                           _("The playlist has no tracks that can be added.") + "\n\n" + summary,
+                           private=True)
                 return
             confirm(self, "playlist-add", _("Add the Playlist “{name}”?").format(name=plan.name),
                     summary,
                     # TRANSLATORS: button that adds the playlist to the device
-                    Answer("ok", _("Add"), lambda: add(plan), look="suggested"))
+                    Answer("ok", _("Add"), lambda: add(plan), look="suggested"), private=True)
 
         self.run_task(_("Reading the Playlist…"),
                       lambda: music.plan_playlist(path, s.device, s.storage), ask_add)

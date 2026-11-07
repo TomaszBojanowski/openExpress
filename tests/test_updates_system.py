@@ -1497,7 +1497,8 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     MainWindow.confirm_update(win, items[1])
     (dialog,) = asked
     dialog.emit("response", "ok")  # as if "Accept and Install" was pressed
-    assert [u.part_number for u in copied[0]] == ["006-V0000-00"] and win.shown == ["Done"]
+    assert [u.part_number for u in copied[0]] == ["006-V0000-00"]
+    assert win.shown == [] and asked[-1].get_heading() == "Done"  # a message, not an error
     status, groups, _buttons = _read_page(win)
     assert status["texts"][0][0] == (
         "Update ready: disconnect the device to install it\u00a0· 1 more available")

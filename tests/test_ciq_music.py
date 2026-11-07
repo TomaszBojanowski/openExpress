@@ -343,11 +343,11 @@ def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, libra
 
     win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
                    run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
-                   error=lambda title, text: events.append((title, text)))
+                   error=lambda title, text, private=False: events.append((title, text, private)))
     MainWindow.add_playlist(win, library)
     assert events[0] == "Reading the Playlist…" and len(events) == 2
-    title, text = events[1]
-    assert title == "No Tracks to Add"
+    title, text, private = events[1]
+    assert title == "No Tracks to Add" and private  # the playlist's names: not in the log
     assert text.startswith("The playlist has no tracks that can be added.\n\n")
     assert "• gone.mp3 (file not found)" in text
     assert music.list_playlists(dev, st) == [] and music.list_device(dev, st) == []

@@ -71,7 +71,8 @@ def test_a_question_escaped_or_cancelled_runs_nothing(host, caplog, closed_by):
         escape(d) if closed_by == "Escape" else click(d, "Cancel")
     assert ran == []
     assert d.get_close_response() == "cancel"
-    assert dialog_lines(caplog) == ["dialog test-question: cancelled"]
+    assert dialog_lines(caplog) == ["dialog test-question shown: Do it? — It does it.",
+                                    "dialog test-question: cancelled"]
 
 
 @pytest.mark.parametrize(("words", "chosen"), [("One", "one"), ("Two", "two")])
@@ -80,7 +81,8 @@ def test_an_answer_runs_only_its_own(host, caplog, words, chosen):
     with caplog.at_level(logging.INFO, logger=LOGGER):
         click(question(host.parent, ran), words)
     assert ran == [chosen]
-    assert dialog_lines(caplog) == [f"dialog test-question: {chosen}"]
+    assert dialog_lines(caplog) == ["dialog test-question shown: Do it? — It does it.",
+                                    f"dialog test-question: {chosen}"]
 
 
 @pytest.mark.parametrize("response", ["cancel", "close", "other"])
@@ -166,7 +168,8 @@ def test_a_message_runs_then_however_it_is_closed(host, caplog, closed_by):
         assert d.get_response_label("ok") == "OK"
         escape(d) if closed_by == "Escape" else click(d, "OK")
     assert after == ["then"]
-    assert dialog_lines(caplog) == ["dialog test-message: ok"]
+    assert dialog_lines(caplog) == ["dialog test-message shown: Done — It is done.",
+                                    "dialog test-message: ok"]
 
 
 def test_a_message_with_words_of_its_own(host):
@@ -175,3 +178,55 @@ def test_a_message_with_words_of_its_own(host):
     d = inform(host.parent, "test-message", "Done", "", label="Close")
     assert d.get_response_label("ok") == "Close"
     click(d, "Close")
+
+
+# --- what a dialog shows, in the log ------------------------------------------------------------
+
+
+def test_a_private_dialog_logs_only_its_name(host, caplog):
+    from openexpress.gui.window_tasks import inform
+
+    ran = []
+    with caplog.at_level(logging.INFO, logger=LOGGER):
+        click(question(host.parent, ran, private=True), "One")
+        click(inform(host.parent, "test-message", "Remove “Lake Loop”?", "Lake_Loop.fit",
+                     private=True), "OK")
+    assert dialog_lines(caplog) == ["dialog test-question shown", "dialog test-question: one",
+                                    "dialog test-message shown", "dialog test-message: ok"]
+
+
+def test_a_dialog_s_words_are_logged_in_one_line_without_paths(host, caplog, log_file):
+    from pathlib import Path
+
+    from openexpress.gui.window_tasks import inform
+
+    with caplog.at_level(logging.INFO, logger=LOGGER):
+        click(inform(host.parent, "test-message", "Not Copied",
+                     f"Cannot read {Path.home()}/maps/x.img.\n\nTry  again."), "OK")
+    assert dialog_lines(caplog)[0] == (
+        "dialog test-message shown: Not Copied — Cannot read <path> Try again.")
+
+
+def test_long_words_of_a_dialog_are_cut_in_the_log(host, caplog, log_file):
+    from openexpress.gui.window_tasks import SHOWN_CHARS, inform
+
+    with caplog.at_level(logging.INFO, logger=LOGGER):
+        click(inform(host.parent, "test-message", "Done", "word " * 200), "OK")
+    line = dialog_lines(caplog)[0]
+    words = line.split(" — ", 1)[1]
+    assert len(words) == SHOWN_CHARS and words.endswith("…")
+
+
+@pytest.mark.parametrize(("words", "logged"), [
+    ("USB serial 0000c0ffee42", "USB serial <hex>"),
+    ("Device C0FFEE42 is busy.", "Device <hex> is busy."),
+    ("serial_0000c0ffee42 and C0FFEE42,0000c0ffee42", "serial_<hex> and <hex>,<hex>"),
+    ("TopoActive Europe 2026.20 (3.2 GB) · 006-D1074-00", "TopoActive Europe 2026.20 (3.2 GB) · 006-D1074-00"),
+])
+def test_short_hex_strings_are_hidden_in_a_dialog_s_line(host, caplog, log_file, words, logged):
+    from openexpress.gui.window_tasks import inform
+
+    with caplog.at_level(logging.INFO, logger=LOGGER):
+        click(inform(host.parent, "test-message", "Done", words), "OK")
+    assert dialog_lines(caplog)[0] == f"dialog test-message shown: Done — {logged}"
+

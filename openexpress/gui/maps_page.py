@@ -317,7 +317,8 @@ class MapsPage:
             # Wide: room for the name of a map on one line.
             confirm(self, "own-map-add", _("Copy This Map to the Device?"),
                     self._add_map_text(plan),
-                    Answer("ok", _("Copy"), lambda: copy(plan), look="suggested"), wide=True)
+                    Answer("ok", _("Copy"), lambda: copy(plan), look="suggested"), wide=True,
+                    private=True)
 
         self.run_task(_("Checking Maps…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
@@ -366,7 +367,7 @@ class MapsPage:
         confirm(self, "own-map-remove", _("Remove {name}?").format(name=m.title or m.filename),
                 # TRANSLATORS: button that removes an own map openExpress did not copy to the device
                 body, Answer("ok", _("Remove Anyway") if foreign else _("Remove"), remove,
-                             look="destructive"), wide=True)
+                             look="destructive"), wide=True, private=True)
 
     @staticmethod
     def _map_subtitle(m) -> str:

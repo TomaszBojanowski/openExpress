@@ -190,7 +190,7 @@ def tell_left_out(win, result) -> None:
 
     if result.incomplete:
         inform(win, "backup-incomplete", _("Backup Incomplete"),
-               incomplete_text(result.incomplete))
+               incomplete_text(result.incomplete), private=True)
 
 
 def show_backups(win) -> None:

@@ -147,9 +147,7 @@ def _install_task(win, s, chosen):
         if not rep.written:
             return
         if not mass_storage:
-            # TRANSLATORS: heading of the message after an update was copied to the device or its
-            # drive was ejected (not a button)
-            win.error(_("Done"), win._update_done_text(rep))
+            tell_update_done(win, rep)
             return
         win.eject_device(s, bike_accessory)
 
@@ -160,6 +158,22 @@ def _install_task(win, s, chosen):
         return True
 
     return install, installed, failed
+
+
+def tell_update_done(win, rep) -> None:
+    """The message after updates were copied to a device over MTP: what to do next. A message,
+    not an error."""
+    # TRANSLATORS: heading of the message after an update was copied to the device or its
+    # drive was ejected (not a button)
+    inform(win, "update-done", _("Done"), UpdatesPage._update_done_text(rep))
+
+
+def tell_update_finish(win) -> None:
+    """After a bike accessory was ejected: the steps that finish its update, as Garmin
+    Express tells them."""
+    # TRANSLATORS: heading of the message after a bike accessory was ejected, with the steps that
+    # finish its update
+    inform(win, "update-finish", _("Finish the Update"), bike_accessory_text())
 
 
 def confirm_install_all(win, items) -> None:
@@ -459,10 +473,7 @@ class UpdatesPage:
         def ejected(_result):
             # For a bike accessory, as Garmin Express does: how it finishes the update.
             inform(self, "ejected", _("Done"), ejected_text(),
-                   # TRANSLATORS: heading of the message after a bike accessory was ejected, with
-                   # the steps that finish its update
-                   then=(lambda: self.error(_("Finish the Update"), bike_accessory_text()))
-                   if bike_accessory else None)
+                   then=(lambda: tell_update_finish(self)) if bike_accessory else None)
 
         def failed(e) -> bool:
             if isinstance(e, DriveNotMounted):

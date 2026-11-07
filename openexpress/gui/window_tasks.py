@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -28,6 +29,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress import applog  # noqa: E402
 from openexpress.errors import OrdinaryStop, UserFacingError  # noqa: E402
 from openexpress.gui import stalled  # noqa: E402
 from openexpress.gui.tasks import WindowClosed  # noqa: E402
@@ -38,6 +40,10 @@ from openexpress.progress import Reporter, Step, TimedWait, Waiting  # noqa: E40
 log = logging.getLogger(__name__)
 
 WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
+SHOWN_CHARS = 300  # of the words of a dialog in its line of the log
+# A short hex string standing alone (also after "_"): a serial number or an ID that
+# applog.redact leaves when nothing registered it (from 16 digits on, it is redact's).
+_SHORT_HEX = re.compile(r"(^|[^0-9A-Za-z])[0-9A-Fa-f]{8,15}([^0-9A-Za-z]|$)")
 LONG_WAIT_S = 20  # after this, the label says that the wait can take a while
 
 
@@ -332,14 +338,40 @@ def _keep(parent, attribute: str, dialog) -> None:
     dialog.connect("closed", closed)
 
 
+def _one_line(text: str) -> str:
+    """`text` for a line of the log: without what identifies the user (applog.redact, then
+    short hex strings, twice, as two may stand side by side), its whitespace one space."""
+    text = applog.redact(text)
+    for _pass in range(2):
+        text = _SHORT_HEX.sub(r"\1<hex>\2", text)
+    return " ".join(text.split())
+
+
+def _log_shown(name: str, heading: str, body: str, private: bool) -> None:
+    """One line in the log as a dialog is shown: its name, then its heading and words, without
+    what identifies the user (_one_line), the words cut at SHOWN_CHARS.
+    `private`: words that carry the user's own names (files, maps, music, courses): the name
+    alone."""
+    if private:
+        log.info("dialog %s shown", name)
+        return
+    title = _one_line(heading)
+    words = _one_line(body)
+    if len(words) > SHOWN_CHARS:
+        words = words[:SHOWN_CHARS - 1] + "…"
+    log.info("dialog %s shown: %s", name, f"{title} — {words}" if words else title)
+
+
 def confirm(parent, name: str, heading: str, body: str, *answers: Answer,
             cancel: str | None = None, default: str | None = None, extra=None,
-            wide: bool = False, keep_as: str | None = None) -> Adw.AlertDialog:
+            wide: bool = False, keep_as: str | None = None,
+            private: bool = False) -> Adw.AlertDialog:
     """Shows a question over `parent` and returns it: Cancel (labelled `cancel`), then
     `answers`. Closed in any way (Escape) it is cancelled; a chosen answer runs its `run`
     only while enabled. `default`: the answer of Enter; `extra`: a widget below the text;
-    `keep_as`: see _keep. ValueError for a missing, repeated or "cancel" answer. Logs `name`
-    and the answer's id, or "cancelled"."""
+    `keep_as`: see _keep. ValueError for a missing, repeated or "cancel" answer. Logs what it
+    shows (_log_shown; `private`: only its name), then `name` and the answer's id, or
+    "cancelled"."""
     ids = [a.id for a in answers]
     if not answers or "cancel" in ids or len(set(ids)) != len(ids):
         raise ValueError(f"dialog {name}: answers {ids}")
@@ -373,15 +405,17 @@ def confirm(parent, name: str, heading: str, body: str, *answers: Answer,
         # libadwaita says "closed" before the answer (1.9), so an answer takes its data from
         # its own closure, never from this attribute.
         _keep(parent, keep_as, d)
+    _log_shown(name, heading, body, private)
     d.present(parent)
     return d
 
 
 def inform(parent, name: str, heading: str, body: str, *, label: str | None = None,
-           then: Callable[[], object] | None = None) -> Adw.AlertDialog:
+           then: Callable[[], object] | None = None, private: bool = False) -> Adw.AlertDialog:
     """A message shown over `parent` with one button (`label`: its words, OK by default):
     nothing to cancel, so `then` runs once it is closed in any way, by the button or Escape.
-    One line in the log: the dialog's `name`."""
+    In the log: what it shows (_log_shown; `private`: only its name), then its `name` and
+    "ok"."""
     d = Adw.AlertDialog(heading=heading, body=body)
     d.add_response("ok", label if label is not None else _("OK"))
     d.set_close_response("ok")
@@ -392,6 +426,7 @@ def inform(parent, name: str, heading: str, body: str, *, label: str | None = No
             then()
 
     d.connect("response", response)
+    _log_shown(name, heading, body, private)
     d.present(parent)
     return d
 
@@ -409,11 +444,13 @@ class TaskRunner:
                           css_classes=["heading"])
         shown.add_toast(Adw.Toast(custom_title=words, timeout=5))
 
-    def error(self, title: str, text: str) -> None:
+    def error(self, title: str, text: str, private: bool = False) -> None:
+        """A message under `title`; `private`: its words carry the user's own names, so the
+        log has the dialog's name alone (_log_shown)."""
         if self._telling_stall:
             log.info("window: no error dialog: the banner says the device stopped responding")
             return
-        inform(self, "error", title, text)
+        inform(self, "error", title, text, private=private)
 
     def set_busy(self, busy: bool, text: str = "", device: bool = False,
                  in_page: bool = False) -> None:

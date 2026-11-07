@@ -315,8 +315,9 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
 # here fails test_every_dialog_has_an_escape_case.
 
 INFORMS = {"close-busy", "order-none-differs", "ejected", "error", "backup-incomplete",
-           "add-to-account-refused", "added-not-listed", "added-not-checked"}
-AFTER_ESCAPE = {"ejected": [("error", "Finish the Update")]}  # a bike accessory's last step
+           "add-to-account-refused", "added-not-listed", "added-not-checked", "update-done",
+           "update-finish"}
+AFTER_ESCAPE = {}
 
 
 def _escape_window(ctx, **kw):
@@ -593,7 +594,20 @@ def _eject_window(ctx, eject):
 
 def _ejected(ctx):
     win = _eject_window(ctx, lambda storage: None)
-    win.eject_device(win.session, True)  # a bike accessory: its last step follows
+    win.eject_device(win.session)  # a bike accessory's last step: test_a_bike_accessory_s_…
+
+
+def _update_done(ctx):
+    from openexpress.gui.updates_page import tell_update_done
+    from openexpress.updates import InstallReport
+
+    tell_update_done(_escape_window(ctx), InstallReport(installed=["Map 2.31"]))
+
+
+def _update_finish(ctx):
+    from openexpress.gui.updates_page import tell_update_finish
+
+    tell_update_finish(_escape_window(ctx))
 
 
 def _eject_retry(ctx):
@@ -662,6 +676,7 @@ OPENERS = {
     "update-install": _update_install, "update-install-all": _update_install_all,
     "eject-ask": _eject_ask, "ejected": _ejected,
     "eject-retry": _eject_retry, "error": _error, "report": _report,
+    "update-done": _update_done, "update-finish": _update_finish,
 }
 
 
@@ -683,6 +698,74 @@ def test_escape_in_every_dialog_does_nothing(click, monkeypatch, in_the_window, 
         assert said == []
     else:
         assert said == [f"dialog {name}: {'ok' if name in INFORMS else 'cancelled'}"]
+
+
+def test_a_bike_accessory_s_last_step_follows_the_done_message(click, monkeypatch, in_the_window,
+                                                             caplog):
+    import logging
+
+    ctx = types.SimpleNamespace(effects=[], monkeypatch=monkeypatch, in_the_window=in_the_window)
+    win = _eject_window(ctx, lambda storage: None)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
+        win.eject_device(win.session, True)
+        click("OK", until=lambda: len(click.shown) == 2)
+    assert click.shown[-1].get_heading() == "Finish the Update"
+    said = [m for m in caplog.messages if m.startswith("dialog ")]
+    assert said[-1].startswith("dialog update-finish shown: Finish the Update — ")
+
+
+@pytest.mark.parametrize("private", [False, True])
+def test_the_error_message_logs_its_words_unless_private(click, monkeypatch, in_the_window, caplog,
+                                                          log_file, private):
+    import logging
+    from pathlib import Path
+
+    from openexpress.gui.app import MainWindow
+
+    ctx = types.SimpleNamespace(effects=[], monkeypatch=monkeypatch, in_the_window=in_the_window)
+    with caplog.at_level(logging.INFO, logger="openexpress.gui"):
+        MainWindow.error(_escape_window(ctx), "Cannot Read",
+                         f"{Path.home()}/maps/x.img is unreadable.", private=private)
+    said = [m for m in caplog.messages if m.startswith("dialog ")]
+    assert said == (["dialog error shown"] if private
+                    else ["dialog error shown: Cannot Read — <path>"])
+
+
+# Their words carry names of the user's files, maps, music or courses: only the name of the
+# dialog goes to the log. An error() whose words do, too (the music page's).
+PRIVATE_DIALOGS = {"course-add", "course-remove", "own-map-add", "own-map-remove", "music-copy",
+                   "playlist-add", "backup-incomplete"}
+PRIVATE_ERRORS = {"music_page.py"}
+
+
+def test_dialogs_with_the_user_s_names_are_private_in_the_log():
+    import ast
+    from pathlib import Path
+
+    gui = Path(__file__).resolve().parent.parent / "openexpress" / "gui"
+    seen, wrong = set(), []
+    for path in sorted(gui.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            f = node.func
+            called = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else ""
+            private = any(k.arg == "private" and isinstance(k.value, ast.Constant)
+                          and k.value.value is True for k in node.keywords)
+            if called in ("confirm", "inform"):
+                if len(node.args) < 2 or not isinstance(node.args[1], ast.Constant):
+                    wrong.append(f"{path.name}:{node.lineno}: the name of the dialog is no literal")
+                    continue
+                name = node.args[1].value
+                seen.add(name)
+                if private != (name in PRIVATE_DIALOGS):
+                    wrong.append(f"{path.name}:{node.lineno}: {name} private={private}")
+            elif called == "error" and private and path.name not in PRIVATE_ERRORS:
+                wrong.append(f"{path.name}:{node.lineno}: error() private outside {PRIVATE_ERRORS}")
+            elif called == "error" and not private and path.name in PRIVATE_ERRORS:
+                wrong.append(f"{path.name}:{node.lineno}: error() not private")
+    assert wrong == []
+    assert seen >= PRIVATE_DIALOGS
 
 
 # --- the source of the window: every dialog through confirm() or inform() ----------------------

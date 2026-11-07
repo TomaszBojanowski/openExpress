@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.8.8\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 08:27+0100\n"
+"POT-Creation-Date: 2026-11-07 09:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -161,7 +161,7 @@ msgstr ""
 
 #: openexpress/auth/sso.py:251 openexpress/gui/device_page.py:686
 #: openexpress/gui/device_page.py:885 openexpress/gui/netstatus_view.py:157
-#: openexpress/gui/updates_page.py:473
+#: openexpress/gui/updates_page.py:484
 msgid "Try Again"
 msgstr ""
 
@@ -1987,7 +1987,7 @@ msgid ""
 "off the list of own maps."
 msgstr ""
 
-#: openexpress/cli.py:1668 openexpress/gui/maps_page.py:350
+#: openexpress/cli.py:1668 openexpress/gui/maps_page.py:351
 #, python-brace-format
 msgid "Took {name} off the list of own maps; the file was not on the device."
 msgstr ""
@@ -2003,7 +2003,7 @@ msgid "Free space on the device: {free} (removing it frees {size})"
 msgstr ""
 
 #: openexpress/cli.py:1680 openexpress/cli.py:2639
-#: openexpress/gui/maps_page.py:347
+#: openexpress/gui/maps_page.py:348
 #, python-brace-format
 msgid "Removed {path} ({size})."
 msgstr ""
@@ -4466,7 +4466,7 @@ msgstr ""
 #: openexpress/gui/activities_page.py:102 openexpress/gui/activity_page.py:138
 #: openexpress/gui/app.py:456 openexpress/gui/apps_page.py:632
 #: openexpress/gui/detection.py:726 openexpress/gui/device_page.py:893
-#: openexpress/gui/window_tasks.py:502
+#: openexpress/gui/window_tasks.py:526
 msgid "Another operation is in progress"
 msgstr ""
 
@@ -4676,7 +4676,7 @@ msgctxt "tab"
 msgid "Updates"
 msgstr ""
 
-#: openexpress/gui/app.py:88 openexpress/gui/updates_page.py:223
+#: openexpress/gui/app.py:88 openexpress/gui/updates_page.py:237
 msgid "Checking for Updates…"
 msgstr ""
 
@@ -4688,7 +4688,7 @@ msgid "Maps"
 msgstr ""
 
 #: openexpress/gui/app.py:91 openexpress/gui/maps_page.py:104
-#: openexpress/gui/maps_page.py:322
+#: openexpress/gui/maps_page.py:323
 msgid "Checking Maps…"
 msgstr ""
 
@@ -4922,8 +4922,8 @@ msgstr ""
 
 #. TRANSLATORS: button
 #: openexpress/gui/apps_page.py:200 openexpress/gui/maps_page.py:175
-#: openexpress/gui/maps_page.py:205 openexpress/gui/updates_page.py:304
-#: openexpress/gui/updates_page.py:408
+#: openexpress/gui/maps_page.py:205 openexpress/gui/updates_page.py:318
+#: openexpress/gui/updates_page.py:422
 msgid "Install"
 msgstr ""
 
@@ -4999,7 +4999,7 @@ msgid "No copy differs from the current order"
 msgstr ""
 
 #: openexpress/gui/apps_page.py:367 openexpress/gui/report_dialog.py:109
-#: openexpress/gui/updates_page.py:476
+#: openexpress/gui/updates_page.py:487
 msgid "Close"
 msgstr ""
 
@@ -5101,14 +5101,14 @@ msgstr ""
 
 #. TRANSLATORS: shown while an app or a map is removed ({name}: its name)
 #: openexpress/gui/apps_page.py:563 openexpress/gui/apps_page.py:605
-#: openexpress/gui/maps_page.py:361 openexpress/gui/maps_page.py:483
+#: openexpress/gui/maps_page.py:362 openexpress/gui/maps_page.py:484
 #, python-brace-format
 msgid "Removing {name}…"
 msgstr ""
 
 #. TRANSLATORS: heading of the question before an app or a map is removed ({name}: its name)
 #: openexpress/gui/apps_page.py:569 openexpress/gui/apps_page.py:608
-#: openexpress/gui/maps_page.py:366 openexpress/gui/maps_page.py:490
+#: openexpress/gui/maps_page.py:367 openexpress/gui/maps_page.py:491
 #, python-brace-format
 msgid "Remove {name}?"
 msgstr ""
@@ -5145,7 +5145,7 @@ msgstr ""
 #. TRANSLATORS: button that removes an app, map or music file from the device; also
 #. the tooltip of a trash button
 #: openexpress/gui/apps_page.py:614 openexpress/gui/courses_page.py:474
-#: openexpress/gui/maps_page.py:368 openexpress/gui/maps_page.py:493
+#: openexpress/gui/maps_page.py:369 openexpress/gui/maps_page.py:494
 #: openexpress/gui/music_page.py:93 openexpress/gui/music_page.py:100
 msgid "Remove"
 msgstr ""
@@ -5386,7 +5386,7 @@ msgstr ""
 msgid "Cannot Remove the Course"
 msgstr ""
 
-#: openexpress/gui/courses_page.py:467 openexpress/gui/music_page.py:256
+#: openexpress/gui/courses_page.py:467 openexpress/gui/music_page.py:257
 msgid "Removing…"
 msgstr ""
 
@@ -5928,7 +5928,7 @@ msgid "Garmin's map update type for this device: {type}"
 msgstr ""
 
 #: openexpress/gui/maps_page.py:57 openexpress/gui/maps_page.py:145
-#: openexpress/gui/updates_page.py:334
+#: openexpress/gui/updates_page.py:348
 msgid "Check Again"
 msgstr ""
 
@@ -6014,106 +6014,106 @@ msgstr ""
 msgid "Copy This Map to the Device?"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:343
+#: openexpress/gui/maps_page.py:344
 msgid "Cannot Remove the Map"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:354
+#: openexpress/gui/maps_page.py:355
 #, python-brace-format
 msgid "{path} ({size}) will be removed from the device."
 msgstr ""
 
-#: openexpress/gui/maps_page.py:358
+#: openexpress/gui/maps_page.py:359
 msgid "openExpress did not copy this map to the device."
 msgstr ""
 
 #. TRANSLATORS: button that removes an own map openExpress did not copy to the device
-#: openexpress/gui/maps_page.py:368
+#: openexpress/gui/maps_page.py:369
 msgid "Remove Anyway"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:391
+#: openexpress/gui/maps_page.py:392
 msgid "Cannot Install the Map"
 msgstr ""
 
 #. TRANSLATORS: heading of an error: the one-time setup (files read from Garmin Express)
 #. is not done
-#: openexpress/gui/maps_page.py:397
+#: openexpress/gui/maps_page.py:398
 msgid "Setup Missing"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:398
+#: openexpress/gui/maps_page.py:399
 msgid ""
 "Downloading maps requires the Utilities.dll file from Garmin Express.\n"
 "Run: openexpress setup --utilities-dll /path/to/Utilities.dll"
 msgstr ""
 
 #. TRANSLATORS: progress while the free space on the device is read before a map is installed
-#: openexpress/gui/maps_page.py:420
+#: openexpress/gui/maps_page.py:421
 msgid "Checking the Space…"
 msgstr ""
 
 #. TRANSLATORS: line of the question before a map is installed or updated: the size of
 #. its files on the device, which is also what is downloaded
-#: openexpress/gui/maps_page.py:432
+#: openexpress/gui/maps_page.py:433
 #, python-brace-format
 msgid "Map files on the device: {size}"
 msgstr ""
 
 #. TRANSLATORS: line of the question before a map is installed: how many files the
 #. map has
-#: openexpress/gui/maps_page.py:437
+#: openexpress/gui/maps_page.py:438
 #, python-brace-format
 msgid "Files: {count}"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:438
+#: openexpress/gui/maps_page.py:439
 #, python-brace-format
 msgid "Old files to remove: {count}"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:440 openexpress/gui/updates_page.py:114
+#: openexpress/gui/maps_page.py:441 openexpress/gui/updates_page.py:114
 #, python-brace-format
 msgid "License: {url}"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:441
+#: openexpress/gui/maps_page.py:442
 msgid "Copying large maps over USB can take tens of minutes."
 msgstr ""
 
 #. TRANSLATORS: heading of the question before an installed map is updated ({name}: the map)
-#: openexpress/gui/maps_page.py:444
+#: openexpress/gui/maps_page.py:445
 #, python-brace-format
 msgid "Update {name}?"
 msgstr ""
 
 #. TRANSLATORS: heading of the question before a map is installed ({name}: the
 #. map)
-#: openexpress/gui/maps_page.py:447
+#: openexpress/gui/maps_page.py:448
 #, python-brace-format
 msgid "Install {name}?"
 msgstr ""
 
 #. TRANSLATORS: progress of a map install, also the heading of its error ({name}: the
 #. map)
-#: openexpress/gui/maps_page.py:452 openexpress/gui/maps_page.py:459
+#: openexpress/gui/maps_page.py:453 openexpress/gui/maps_page.py:460
 #, python-brace-format
 msgid "Installing {name}…"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:465
+#: openexpress/gui/maps_page.py:466
 #, python-brace-format
 msgid "{name} copied; unplug the device to load it"
 msgstr ""
 
 #. TRANSLATORS: button that accepts the license agreement and installs the map or
 #. update
-#: openexpress/gui/maps_page.py:474 openexpress/gui/updates_page.py:188
-#: openexpress/gui/updates_page.py:437
+#: openexpress/gui/maps_page.py:475 openexpress/gui/updates_page.py:202
+#: openexpress/gui/updates_page.py:451
 msgid "Accept and Install"
 msgstr ""
 
-#: openexpress/gui/maps_page.py:491
+#: openexpress/gui/maps_page.py:492
 msgid "These files will be removed from the device:"
 msgstr ""
 
@@ -6263,17 +6263,17 @@ msgstr ""
 msgid "The playlist has no tracks that can be added."
 msgstr ""
 
-#: openexpress/gui/music_page.py:244
+#: openexpress/gui/music_page.py:245
 #, python-brace-format
 msgid "Add the Playlist “{name}”?"
 msgstr ""
 
 #. TRANSLATORS: button that adds the playlist to the device
-#: openexpress/gui/music_page.py:247
+#: openexpress/gui/music_page.py:248
 msgid "Add"
 msgstr ""
 
-#: openexpress/gui/music_page.py:249
+#: openexpress/gui/music_page.py:250
 msgid "Reading the Playlist…"
 msgstr ""
 
@@ -6998,56 +6998,62 @@ msgstr[1] ""
 msgid "License Agreement (EULA)"
 msgstr ""
 
+#. TRANSLATORS: heading of the error message when installing an update failed
+#: openexpress/gui/updates_page.py:157
+msgid "Update Not Installed"
+msgstr ""
+
 #. TRANSLATORS: heading of the message after an update was copied to the device or its
 #. drive was ejected (not a button)
-#: openexpress/gui/updates_page.py:152 openexpress/gui/updates_page.py:461
+#: openexpress/gui/updates_page.py:168 openexpress/gui/updates_page.py:475
 msgid "Done"
 msgstr ""
 
-#. TRANSLATORS: heading of the error message when installing an update failed
-#: openexpress/gui/updates_page.py:159
-msgid "Update Not Installed"
+#. TRANSLATORS: heading of the message after a bike accessory was ejected, with the steps that
+#. finish its update
+#: openexpress/gui/updates_page.py:176
+msgid "Finish the Update"
 msgstr ""
 
 #. TRANSLATORS: below an update whose file on the device holds another update,
 #. copied already and not installed yet by the device
-#: openexpress/gui/updates_page.py:177 openexpress/gui/updates_page.py:394
+#: openexpress/gui/updates_page.py:191 openexpress/gui/updates_page.py:408
 #, python-brace-format
 msgid "Can be installed once the device has installed {name}"
 msgstr ""
 
 #. TRANSLATORS: in the question before installing updates: their size; {size}: e.g. "25.4
 #. MB"
-#: openexpress/gui/updates_page.py:182 openexpress/gui/updates_page.py:425
+#: openexpress/gui/updates_page.py:196 openexpress/gui/updates_page.py:439
 #, python-brace-format
 msgid "Size: {size}"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:185
+#: openexpress/gui/updates_page.py:199
 msgid "Installing Updates…"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:187
+#: openexpress/gui/updates_page.py:201
 msgid "Install Updates?"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:249
+#: openexpress/gui/updates_page.py:263
 msgid "Available Updates"
 msgstr ""
 
 #. TRANSLATORS: heading of a group on the Updates page that holds the reinstall of
 #. components already on the device
-#: openexpress/gui/updates_page.py:259
+#: openexpress/gui/updates_page.py:273
 msgid "Advanced"
 msgstr ""
 
 #. TRANSLATORS: title of an expandable row on the Updates page that lists components
 #. already on the device, each with a Reinstall button
-#: openexpress/gui/updates_page.py:263
+#: openexpress/gui/updates_page.py:277
 msgid "Reinstall Components"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:264
+#: openexpress/gui/updates_page.py:278
 #, python-brace-format
 msgid "{count} component already on the device; useful for troubleshooting"
 msgid_plural ""
@@ -7056,107 +7062,101 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: marks a beta version of the device software
-#: openexpress/gui/updates_page.py:299 openexpress/gui/updates_page.py:318
+#: openexpress/gui/updates_page.py:313 openexpress/gui/updates_page.py:332
 msgid "Beta"
 msgstr ""
 
 #. TRANSLATORS: button
-#: openexpress/gui/updates_page.py:304 openexpress/gui/updates_page.py:408
+#: openexpress/gui/updates_page.py:318 openexpress/gui/updates_page.py:422
 msgid "Reinstall"
 msgstr ""
 
 #. TRANSLATORS: button that ejects the device (its USB drive)
-#: openexpress/gui/updates_page.py:316 openexpress/gui/updates_page.py:448
+#: openexpress/gui/updates_page.py:330 openexpress/gui/updates_page.py:462
 msgid "Eject"
 msgstr ""
 
 #. TRANSLATORS: button that installs every update offered to a device connected as a
 #. USB drive, then ejects it once
-#: openexpress/gui/updates_page.py:332
+#: openexpress/gui/updates_page.py:346
 msgid "Install All"
 msgstr ""
 
 #. TRANSLATORS: title of the row of an update of the device's own software (firmware), on
 #. the Updates page
-#: openexpress/gui/updates_page.py:403
+#: openexpress/gui/updates_page.py:417
 msgid "System Software"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:416
+#: openexpress/gui/updates_page.py:430
 msgid "Files copied to the device."
 msgstr ""
 
-#: openexpress/gui/updates_page.py:426
+#: openexpress/gui/updates_page.py:440
 #, python-brace-format
 msgid "On the device: {path}"
 msgstr ""
 
 #. TRANSLATORS: in the question before installing an update: above the list of what
 #. the update changes
-#: openexpress/gui/updates_page.py:429
+#: openexpress/gui/updates_page.py:443
 msgid "Changes:"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:431
+#: openexpress/gui/updates_page.py:445
 msgid "This is a beta version."
 msgstr ""
 
-#: openexpress/gui/updates_page.py:434
+#: openexpress/gui/updates_page.py:448
 msgid "Installing Update…"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:436
+#: openexpress/gui/updates_page.py:450
 msgid "Install Update?"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:444
+#: openexpress/gui/updates_page.py:458
 msgid "Files Saved on the Device"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:445
+#: openexpress/gui/updates_page.py:459
 msgid ""
 "Eject the device before you unplug the cable: until then it may not see the "
 "files from Garmin Connect."
 msgstr ""
 
 #. TRANSLATORS: button; the device is ejected later
-#: openexpress/gui/updates_page.py:451
+#: openexpress/gui/updates_page.py:465
 msgid "Later"
 msgstr ""
 
-#. TRANSLATORS: heading of the message after a bike accessory was ejected, with
-#. the steps that finish its update
-#: openexpress/gui/updates_page.py:464
-msgid "Finish the Update"
-msgstr ""
-
-#: openexpress/gui/updates_page.py:469
+#: openexpress/gui/updates_page.py:480
 msgid "Device Not Mounted"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:471
+#: openexpress/gui/updates_page.py:482
 msgid "Device Not Ejected"
 msgstr ""
 
-#: openexpress/gui/updates_page.py:479
+#: openexpress/gui/updates_page.py:490
 #, ignore-reused
 msgid "Ejecting the Device…"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:351
+#: openexpress/gui/window_tasks.py:370
 msgid "Cancel"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:386
+#: openexpress/gui/window_tasks.py:407
 msgid "OK"
 msgstr ""
 
-#: openexpress/gui/window_tasks.py:477
+#: openexpress/gui/window_tasks.py:501
 msgid "This can take a few minutes."
 msgstr ""
 
 #. TRANSLATORS: toast after music or map files were removed from the device
-#: openexpress/gui/window_tasks.py:635
+#: openexpress/gui/window_tasks.py:659
 #, python-brace-format
 msgid "Removed {count} file"
 msgid_plural "Removed {count} files"
