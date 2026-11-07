@@ -147,7 +147,7 @@ def _install_task(win, s, chosen):
         if not rep.written:
             return
         if not mass_storage:
-            tell_update_done(win, rep)
+            tell_update_done(win, s, rep)
             return
         win.eject_device(s, bike_accessory)
 
@@ -160,12 +160,32 @@ def _install_task(win, s, chosen):
     return install, installed, failed
 
 
-def tell_update_done(win, rep) -> None:
-    """The message after updates were copied to a device over MTP: what to do next. A message,
-    not an error."""
+def tell_update_done(win, s, rep) -> None:
+    """The message after updates were copied to the device of session `s` over MTP: what to
+    do next, and how many updates are still available. A message, not an error."""
+    text = UpdatesPage._update_done_text(rep)
+    still = still_available_text(win, s)
     # TRANSLATORS: heading of the message after an update was copied to the device or its
     # drive was ejected (not a button)
-    inform(win, "update-done", _("Done"), UpdatesPage._update_done_text(rep))
+    inform(win, "update-done", _("Done"), text + "\n\n" + still if still else text)
+
+
+def still_available_text(win, s) -> str:
+    """After updates were copied to the device of session `s`: how many the Updates page still
+    offers it (updates.pending), so that the next check finding one is no surprise; "" when
+    none, or when the window shows another device now."""
+    from openexpress import updates as upd
+
+    cache = win.updates_cache
+    if win.session is not s or cache is None:
+        return ""
+    count = len(upd.pending(cache))
+    if not count:
+        return ""
+    # TRANSLATORS: the last line of the message after updates were copied to the device or its
+    # drive was ejected: how many updates the Updates page still lists
+    return ngettext("Still available: {count} update", "Still available: {count} updates",
+                    count).format(count=count)
 
 
 def tell_update_finish(win) -> None:
@@ -427,8 +447,8 @@ class UpdatesPage:
     @staticmethod
     def _update_done_text(rep) -> str:
         """What the window says after an update was copied, with what to do next."""
-        return _("Files copied to the device.") + (_(FINISH_STEPS_WINDOW) if rep.installed
-                                                    else "")
+        return _("Files copied to the device.") + ("\n" + _(FINISH_STEPS_WINDOW)
+                                                    if rep.installed else "")
 
     def confirm_update(self, u) -> None:
         s = self.session
@@ -471,8 +491,10 @@ class UpdatesPage:
         Eject of the Updates page, which spins meanwhile; `files`: after a sync wrote the
         files of Garmin Connect's queue to it, not an update."""
         def ejected(_result):
+            # After an update (not the files of a sync): how many are still available.
+            still = "" if files else still_available_text(self, s)
             # For a bike accessory, as Garmin Express does: how it finishes the update.
-            inform(self, "ejected", _("Done"), ejected_text(),
+            inform(self, "ejected", _("Done"), ejected_text() + ("\n\n" + still if still else ""),
                    then=(lambda: tell_update_finish(self)) if bike_accessory else None)
 
         def failed(e) -> bool:

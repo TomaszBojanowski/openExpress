@@ -51,16 +51,17 @@ To finish the installation:
   4. Reconnect it and run `openexpress updates`: the installed update
      should no longer be listed.
 """)
-# The same for the window, which has no commands.
-FINISH_STEPS_WINDOW = N_("""
-To finish the installation:
-  1. Disconnect the device from the computer.
-  2. If the device does not turn on by itself, turn it on.
-  3. The device installs the update by itself. It may ask whether to install it:
-     choose to install now. It may also restart. Wait until it has finished.
-  4. Reconnect it and check for updates again: the installed update
-     should no longer be listed.
-""")
+# The same for the window, which has no commands and wraps the words itself.
+# TRANSLATORS: in the message after an update was copied to the device: one line for each step,
+# with no line break inside a sentence (the window wraps the words itself)
+FINISH_STEPS_WINDOW = N_("To finish the installation:\n"
+                         "1. Disconnect the device from the computer.\n"
+                         "2. If the device does not turn on by itself, turn it on.\n"
+                         "3. The device installs the update by itself. It may ask whether to "
+                         "install it: choose to install now. It may also restart. Wait until "
+                         "it has finished.\n"
+                         "4. Reconnect it and check for updates again: the installed update "
+                         "should no longer be listed.")
 # Said before an update the device installs once disconnected (installs_when_disconnected),
 # on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "

@@ -1499,6 +1499,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     dialog.emit("response", "ok")  # as if "Accept and Install" was pressed
     assert [u.part_number for u in copied[0]] == ["006-V0000-00"]
     assert win.shown == [] and asked[-1].get_heading() == "Done"  # a message, not an error
+    assert asked[-1].get_body().endswith("\n\nStill available: 1 update")  # the font
     status, groups, _buttons = _read_page(win)
     assert status["texts"][0][0] == (
         "Update ready: disconnect the device to install it\u00a0· 1 more available")

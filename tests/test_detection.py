@@ -2930,10 +2930,14 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness", refusal=N
     items = updates.mark_present(s.storage, updates.parse_updates(varia_answer()))
     dialogs, toasts = [], []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
+
+    def show_installed(session, chosen):
+        for u in chosen:  # as the page does: what was written is on the device now
+            u.on_device = True
+
     win = stand_in(session=s, updates_cache=items, updates_beta=False,
                    toast=toasts.append, progress=lambda text: None, fraction=None,
-                   _show_installed=lambda session, chosen: None,
-                   run_task=RunNow())
+                   _show_installed=show_installed, run_task=RunNow())
     for name in ("error", "eject_device"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     before = drive_tree(s.storage.root)

@@ -1634,12 +1634,32 @@ def test_window_says_what_to_do_next_without_naming_a_command():
     assert "openexpress updates" not in text
     # An accessory may stay off once unplugged (e.g. a Varia): then it is turned on, and
     # nothing promises a restart that may not come.
-    assert TURN_ON_STEP in text and "It may also restart. Wait until it has finished." in text
+    assert TURN_ON_STEP.strip() in text.split("\n")
+    assert "It may also restart. Wait until it has finished." in text
     # Whether the server says a restart is needed makes no difference.
     assert MainWindow._update_done_text(
         InstallReport(installed=["x"], restart_required=True)) == text
     assert MainWindow._update_done_text(InstallReport()) == "Files copied to the device."
 
+
+
+@pytest.mark.parametrize("lang", ["en", "pl"])
+def test_the_window_s_steps_wrap_by_themselves(lang):
+    """The window wraps its words itself: each step one line, no sentence broken in two, no
+    indent, and no empty line at the end of the message."""
+    from openexpress import i18n
+    from openexpress.gui.app import MainWindow
+    from openexpress.updates import InstallReport
+
+    i18n.setup(lang)
+    try:
+        text = MainWindow._update_done_text(InstallReport(installed=["x"]))
+    finally:
+        i18n.setup("en")
+    lines = text.split("\n")
+    assert len(lines) == 6  # copied, the heading of the steps, the four steps
+    assert all(line == line.strip() and line.endswith((".", ":")) for line in lines)
+    assert [line[:3] for line in lines[2:]] == ["1. ", "2. ", "3. ", "4. "]
 
 def test_next_steps_in_polish():
     from openexpress import i18n
@@ -1653,9 +1673,12 @@ def test_next_steps_in_polish():
         i18n.setup("en")
     for text in (cli_text, window_text):
         assert "wybierz instalację teraz" in text and "Może też uruchomić się ponownie" in text
-        assert text.startswith("\nAby dokończyć instalację:\n  1. ") and text.endswith(".\n")
-        assert "  2. Jeśli urządzenie nie włączy się samo, włącz je.\n" in text
-        assert "Może też uruchomić się ponownie.\n     Poczekaj, aż skończy.\n  4. " in text
+        assert "2. Jeśli urządzenie nie włączy się samo, włącz je.\n" in text
+    assert cli_text.startswith("\nAby dokończyć instalację:\n  1. ") and cli_text.endswith(".\n")
+    assert "Może też uruchomić się ponownie.\n     Poczekaj, aż skończy.\n  4. " in cli_text
+    # The window wraps the words itself: a step a line, nothing around them.
+    assert window_text.startswith("Aby dokończyć instalację:\n1. ") and window_text.endswith(".")
+    assert "Może też uruchomić się ponownie. Poczekaj, aż skończy.\n4. " in window_text
     assert "`openexpress updates`" in cli_text and "openexpress" not in window_text
     assert "sprawdź aktualizacje jeszcze raz" in window_text
 

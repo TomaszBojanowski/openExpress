@@ -601,7 +601,8 @@ def _update_done(ctx):
     from openexpress.gui.updates_page import tell_update_done
     from openexpress.updates import InstallReport
 
-    tell_update_done(_escape_window(ctx), InstallReport(installed=["Map 2.31"]))
+    win = _escape_window(ctx)
+    tell_update_done(win, win.session, InstallReport(installed=["Map 2.31"]))
 
 
 def _update_finish(ctx):
