@@ -38,7 +38,7 @@ from openexpress.device.storage import (  # noqa: E402
     UmsStorage,
 )
 from openexpress.errors import OrdinaryStop  # noqa: E402
-from openexpress.i18n import _  # noqa: E402
+from openexpress.i18n import _, caption, pgettext  # noqa: E402
 from openexpress.paths import host_command, in_flatpak  # noqa: E402
 from openexpress.progress import refreshing_text, say_to  # noqa: E402
 
@@ -987,6 +987,14 @@ def drive_hidden_in_sandbox() -> bool:
                for m in Gio.VolumeMonitor.get().get_mounts() if garmin_ums(m) is not None)
 
 
+def _drive_of_unsupported(mount) -> bool:
+    """Whether a mounted Garmin drive is that of a device openExpress cannot use (HID beside
+    the drive: _unsupported). Only /sys is read."""
+    volume = mount.get_volume() if hasattr(mount, "get_volume") else None
+    block = _block_usb(volume.get_identifier("unix-device") if volume is not None else None)
+    return block is not None and _unsupported(block[1])
+
+
 def find_ums_devices() -> list[FoundDevice]:
     """The mounted Garmin devices in mass storage mode that have GARMIN/GarminDevice.xml, in
     any letter case, then those that are not mounted (_unmounted_drives, `mounted` False).
@@ -998,6 +1006,11 @@ def find_ums_devices() -> list[FoundDevice]:
         if usb is None:
             continue
         usb_seen.add(f"{usb.bus}-{usb.address}")
+        if _drive_of_unsupported(mount):
+            # It goes away after a minute or so, and updates do not go through it.
+            log.info("device: a Garmin drive (USB %s) of a device that openExpress cannot use "
+                     "(HID beside it), skipped", usb.usb_id)
+            continue
         note_drive_place(usb)
         if ejected_by_us(usb):
             log.info("device: a Garmin drive (USB %s) ejected by openExpress, skipped until it "
@@ -1337,7 +1350,12 @@ MASS_STORAGE = "mass-storage"
 # openExpress does not use), not a drive switched off, whatever the name of this state says;
 # only plugging it in again helps, nothing to wait for (_drive_places).
 DRIVE_OFF = "drive-off"
+# A Garmin device whose interfaces are HID, or HID beside mass storage (an inReach Mini of the
+# first generation: a drive for its first minute, then HID only): it offers neither MTP nor a
+# drive that stays, so openExpress cannot use it, and nothing is waited for (_unsupported).
+UNSUPPORTED = "unsupported"
 MASS_STORAGE_CLASS = "08"  # the USB interface class
+HID_CLASS = "03"
 WAIT_FOR_DEVICE_S = 45
 # Between its transitional mode and MTP the device is off the bus for a moment (about
 # 0.3 s on the fēnix 8). Only a longer absence means that it was unplugged.
@@ -1354,6 +1372,14 @@ class MassStorageNotice(NotThereYet, OrdinaryStop):
     before it; the exit code stays 1)."""
 
     log_reason = "a notice about the USB mode of the device"
+
+
+class UnsupportedDevice(NotThereYet, OrdinaryStop):
+    """The only Garmin devices on USB are ones openExpress cannot use (UNSUPPORTED): told at
+    once, as a notice, not an error (the command line writes no "Error:" before it; the exit
+    code stays 1); nothing is waited for."""
+
+    log_reason = "a Garmin device that openExpress cannot use"
 
 
 class NoDevice(NotThereYet, OrdinaryStop):
@@ -1384,6 +1410,113 @@ def _mass_storage_only(base: Path) -> bool:
         except OSError:
             continue
     return bool(classes) and all(c == MASS_STORAGE_CLASS for c in classes)
+
+
+def _interface_classes(base: Path) -> list[str | None]:
+    """The class of each interface of this USB device, in their order; None for one whose
+    class cannot be read."""
+    classes: list[str | None] = []
+    for interface in sorted(base.glob(f"{base.name}:*")):
+        try:
+            classes.append((interface / "bInterfaceClass").read_text().strip().lower())
+        except OSError:
+            classes.append(None)
+    return classes
+
+
+def _unsupported(base: Path) -> bool:
+    """Whether this Garmin device on USB is one openExpress cannot use: the class of every
+    interface can be read, one of them is HID, and each is HID or mass storage. A device with
+    an MTP or a vendor-specific interface, or with a class that cannot be read, never is."""
+    classes = _interface_classes(base)
+    return (HID_CLASS in classes and None not in classes
+            and all(c in (HID_CLASS, MASS_STORAGE_CLASS) for c in classes))
+
+
+# What the log said of the devices openExpress cannot use, by their place on USB: their
+# product ID, once each while they stay.
+_said_unsupported: dict[str, str] = {}
+
+
+def _unsupported_places(devices: list[tuple[str, str, bool]]) -> set[str]:
+    """The places on USB of the `devices` (_garmin_at_places) that openExpress cannot use,
+    each said once in the log while it stays (its product ID and the classes of its
+    interfaces; not its name, nor its serial number)."""
+    found = {place: product for place, product, mass_storage in devices
+             if not mass_storage and _unsupported(SYSFS_USB / place)}
+    with _places_lock:
+        for place, product in found.items():
+            if _said_unsupported.get(place) != product:
+                _said_unsupported[place] = product
+                classes = _interface_classes(SYSFS_USB / place)
+                log.info("USB: a Garmin device %s:%s with interfaces %s: HID without MTP, not "
+                         "supported", GARMIN_VID, product, ", ".join(c or "?" for c in classes))
+        for place in [p for p in _said_unsupported if p not in found]:
+            del _said_unsupported[place]
+    return set(found)
+
+
+def unsupported_devices() -> list[tuple[str, str | None]]:
+    """(USB ID, the name it gives USB, if any) of each Garmin device on USB that openExpress
+    cannot use. Only its IDs and its product string are read, never its serial number."""
+    found = []
+    for place, product, mass_storage in _garmin_at_places():
+        base = SYSFS_USB / place
+        if mass_storage or not _unsupported(base):
+            continue
+        try:
+            name = (base / "product").read_text().strip() or None
+        except OSError:
+            name = None
+        found.append((f"{GARMIN_VID}:{product}", name))
+    return found
+
+
+def unsupported_title() -> str:
+    # TRANSLATORS: title while the only Garmin device on USB is one openExpress cannot use: it
+    # connects neither over MTP nor as a USB drive
+    return _("Device Not Supported")
+
+
+def _unsupported_name() -> tuple[str, str | None]:
+    """The USB ID and the name it gives USB, if any, of the first Garmin device on USB that
+    openExpress cannot use."""
+    found = unsupported_devices()
+    return found[0] if found else (f"{GARMIN_VID}:?", None)
+
+
+def unsupported_caption() -> str:
+    """The line under the title of the notice on the start page: the device and that its
+    connection is not supported (the whole text is on the pages of the device view)."""
+    _usb_id, name = _unsupported_name()
+    # TRANSLATORS: on the start page, after the name of a Garmin device openExpress cannot use
+    # (e.g. "Garmin USB inReach · Unsupported connection"); a line of a caption, so sentence
+    # case and no full stop
+    return caption(name or _("Garmin device"), _("Unsupported connection"))
+
+
+def unsupported_text(window: bool = True) -> str:
+    """Why the Garmin device on USB cannot be used, which one it is (the name it gives USB and
+    its USB ID) and how to report it: in the window, from its menu (the item named with the
+    menu's own words); on the command line (`window` False), with `openexpress report`."""
+    usb_id, name = _unsupported_name()
+    # TRANSLATORS: in the words about a Garmin device openExpress cannot use, after
+    # "Connected:", when the device gives USB no name
+    name = name or pgettext("in a sentence", "Garmin device")
+    if window:
+        # TRANSLATORS: the words of the window while the only Garmin device on USB is one
+        # openExpress cannot use; {name}: the name it gives USB (e.g. "Garmin USB inReach");
+        # {id}: its USB ID (e.g. "091e:0b89"); {item}: the item of the main menu, "Report a
+        # Device or Problem…" in your language (put your language's quotation marks around it)
+        return _("openExpress works with devices that connect as a media device (MTP) or a "
+                 "USB drive. This one uses a different connection. Connected: {name} (USB "
+                 "{id}). To report it, choose “{item}” in the main menu.").format(
+            name=name, id=usb_id, item=_("Report a Device or Problem…"))
+    # TRANSLATORS: the same on the command line; "openexpress report" is a command, not to be
+    # translated
+    return _("openExpress works with devices that connect as a media device (MTP) or a USB "
+             "drive. This one uses a different connection. Connected: {name} (USB {id}). To "
+             "report it, run openexpress report.").format(name=name, id=usb_id)
 
 
 def _garmin_on_usb() -> list[tuple[str, bool]]:
@@ -1493,16 +1626,20 @@ def garmin_products_on_usb() -> list[str]:
 def usb_state(clock=time.monotonic) -> str:
     """ABSENT: no Garmin device on USB; STARTING: one is there in its transitional mode;
     PRESENT: one is there in its normal mode (which says nothing about gvfs yet);
-    MASS_STORAGE: the only Garmin devices there are in mass storage mode; DRIVE_OFF: those
-    that are not are 091e:0003 where a Garmin drive was (_drive_places): in Garmin USB mode
-    after it was ejected."""
+    MASS_STORAGE: the only Garmin devices there are in mass storage mode, or those beside
+    ones openExpress cannot use; UNSUPPORTED: the only ones are those it cannot use
+    (_unsupported); DRIVE_OFF: those that are not are 091e:0003 where a Garmin drive was
+    (_drive_places): in Garmin USB mode after it was ejected."""
     devices = _garmin_at_places()
     _note_places(devices, clock())
     if not devices:
         return ABSENT
-    others = [(place, product) for place, product, mass_storage in devices if not mass_storage]
+    unsupported = _unsupported_places(devices)
+    others = [(place, product) for place, product, mass_storage in devices
+              if not mass_storage and place not in unsupported]
     if not others:
-        return MASS_STORAGE
+        drives = any(mass_storage for _place, _product, mass_storage in devices)
+        return MASS_STORAGE if drives else UNSUPPORTED
     if any(p != STARTING_PRODUCT for _place, p in others):
         return PRESENT
     with _places_lock:
@@ -1616,6 +1753,8 @@ def not_ready_text(state: str) -> str:
         return drive_notice_text()
     if state == DRIVE_OFF:
         return drive_off_text()
+    if state == UNSUPPORTED:
+        return unsupported_text(window=False)
     return _("No Garmin device (MTP) found. Connect the device with a USB cable "
              "and unlock it if it asks to allow the connection.")
 
@@ -1652,6 +1791,9 @@ def open_device_storage(uri: str | None = None, wait: bool = False, notify=None,
             if state == DRIVE_OFF and isinstance(e, NotThereYet):
                 # In Garmin USB mode after it was ejected: only plugging it in again helps.
                 raise MassStorageNotice(not_ready_text(state)) from e
+            if state == UNSUPPORTED and isinstance(e, NotThereYet):
+                # Neither MTP nor a drive that stays: nothing to wait for.
+                raise UnsupportedDevice(unsupported_text(window=False)) from e
             # Without a Garmin device on USB (in its normal mode) there is nothing to wait for.
             if state in (ABSENT, MASS_STORAGE):
                 if wait and told:

@@ -562,12 +562,15 @@ class StartPage:
         # TRANSLATORS: title of the start page, which lists the Garmin devices
         self.page = Adw.NavigationPage(title=_("Devices"), tag="start", child=view)
 
-    def set_empty(self, title: str, description: str, busy: bool) -> None:
+    def set_empty(self, title: str, description: str, busy: bool,
+                  icon: str | None = None) -> None:
         """The words of the notice on top (those of the device pages while no device is
-        open: no device, one that is starting, one that is not ready)."""
-        if self._notice == (title, description, busy):
+        open: no device, one that is starting, one that is not ready); `icon`: its icon when
+        not the program's."""
+        if self._notice == (title, description, busy, icon):
             return
-        self._notice = (title, description, busy)
+        self._notice = (title, description, busy, icon)
+        self.notice_icon.set_from_icon_name(icon or APP_ID)
         self.notice.set_title(title)
         self.notice.set_subtitle(description)
         self.notice_spinner.set_visible(busy)

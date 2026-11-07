@@ -502,7 +502,7 @@ def tells_stalls(win, monkeypatch, connected=()):
         told.banner += 1
 
     win.start = types.SimpleNamespace(set_stalled=told.start.append,
-                                      set_empty=lambda *notice: None)
+                                      set_empty=lambda *notice, icon=None: None)
     win._update_banner = banner
     win.connected = types.SimpleNamespace(devices=list(connected))
     win._run_pending_refresh = lambda: None
@@ -589,6 +589,26 @@ def usb_devices(monkeypatch, folder):
 
     put({})
     return put
+
+
+
+def garmin_on_usb(folder, place="1-4", product_id="0b89", classes=("03", "08"), devnum=9,
+                  **files):
+    """A Garmin device in a made-up /sys/bus/usb/devices (`folder`, read as SYSFS_USB): its
+    folder `place` with vendor 091e, `product_id`, bus 1 and `devnum`, any other file of
+    `files` (product="…", serial="…"), and an interface folder "<place>:1.<n>" for each of
+    `classes` with its class (None: a folder without it). Returns the device's folder."""
+    base = folder / place
+    base.mkdir(parents=True)
+    for name, value in {"idVendor": "091e", "idProduct": product_id, "busnum": 1,
+                        "devnum": devnum, **files}.items():
+        (base / name).write_text(f"{value}\n")
+    for number, cls in enumerate(classes):
+        interface = base / f"{place}:1.{number}"
+        interface.mkdir()
+        if cls is not None:
+            (interface / "bInterfaceClass").write_text(f"{cls}\n")
+    return base
 
 
 # --- a name of the window replaced where the window looks it up -----------------------------

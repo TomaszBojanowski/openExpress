@@ -318,7 +318,7 @@ class Page:
     def show(self, state):
         self.state = state
 
-    def set_empty(self, title, description, busy):
+    def set_empty(self, title, description, busy, icon=None):
         self.notices.append(title)
 
 
@@ -886,6 +886,21 @@ def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
     assert found[0].volume is mount.volume
     assert DRIVE_SERIAL not in repr(found)  # the serial number is never read
 
+
+
+def test_the_drive_of_a_device_openexpress_cannot_use_is_not_opened(drives, monkeypatch, caplog):
+    """An inReach Mini of the first generation offers a drive beside its HID interface for its
+    first minute: not opened, also with GARMIN/GarminDevice.xml on it (it goes away soon after,
+    and updates do not go through it); the log says why."""
+    unix = usb_drive(drives, product="0b89")
+    hid = drives.hub / "1-4" / "1-4:1.1"
+    hid.mkdir()
+    (hid / "bInterfaceClass").write_text("03\n")
+    monitor_with(monkeypatch, FakeDriveMount(drive_folder(drives), unix))
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        assert gio_storage.find_ums_devices() == []
+    assert ("device: a Garmin drive (USB 091e:0b89) of a device that openExpress cannot use "
+            "(HID beside it), skipped") in caplog.text
 
 def test_a_device_read_for_the_list_is_hidden_in_the_log_also_in_hexadecimal(drives, monkeypatch):
     """Its USB serial and its MTP address may carry its unit ID in hexadecimal (a fēnix 8):
@@ -2046,7 +2061,7 @@ def test_flatpak_window_tells_it_does_not_open_a_garmin_drive(drive_window, monk
                     _update_actions=lambda: None, refresh_device=lambda: None,
                     start=FakeStartPage(),
                     sections={"watch": types.SimpleNamespace(
-                        set_empty=lambda *notice: shown.append(notice))})
+                        set_empty=lambda *notice, icon=None: shown.append(notice))})
     MainWindow._poll_usb(page, clock=win.world.clock)
     assert shown == [("USB Drive", FLATPAK_DRIVE_TEXT, False)]
 
@@ -4020,7 +4035,7 @@ def test_window_shows_a_starting_device_instead_of_an_empty_page(plugged, monkey
     from openexpress.gui.app import MainWindow
 
     shown, refreshed, updates = [], [], []
-    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    section = types.SimpleNamespace(set_empty=lambda *notice, icon=None: shown.append(notice))
     win = stand_in(session=None, busy=False, sections={"watch": section},
                    _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                    _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
@@ -4089,7 +4104,7 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     from openexpress.gui.navigation import Cause
 
     shown, refreshed, updates = [], [], []
-    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    section = types.SimpleNamespace(set_empty=lambda *notice, icon=None: shown.append(notice))
     win = stand_in(session=None, busy=False, sections={"watch": section},
                    _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                    _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
@@ -4126,7 +4141,7 @@ def _banner_window(monkeypatch):
     from openexpress.gui.app import MainWindow
 
     shown, refreshed = [], []
-    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    section = types.SimpleNamespace(set_empty=lambda *notice, icon=None: shown.append(notice))
     win = stand_in(session=None, busy=False, sections={"watch": section},
                    _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
                    _usb_notice=MainWindow._usb_notice, start=FakeStartPage(),
@@ -4390,7 +4405,7 @@ class FakeStartPage:
     def show(self, entries, notice):
         self.shown.append(([(t.description, t.connected, how) for t, how in entries], notice))
 
-    def set_empty(self, title, description, busy):
+    def set_empty(self, title, description, busy, icon=None):
         self.notices.append((title, description, busy))
 
     def set_picture(self, part_number, texture):
@@ -4469,7 +4484,7 @@ class FakeSection:
     def show(self, name):
         self.state = name
 
-    def set_empty(self, *notice):
+    def set_empty(self, *notice, icon=None):
         self.empty = notice
 
 
@@ -4627,7 +4642,7 @@ def test_the_start_page_tells_the_usb_state(plugged, monkeypatch):
     from openexpress.gui.app import MainWindow
 
     shown = []
-    section = types.SimpleNamespace(set_empty=lambda *notice: shown.append(notice))
+    section = types.SimpleNamespace(set_empty=lambda *notice, icon=None: shown.append(notice))
     start = FakeStartPage()
     win = stand_in(session=None, busy=False, sections={"watch": section},
                    start=start, _usb_state=gio_storage.ABSENT, _usb_since=0.0,

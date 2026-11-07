@@ -3442,13 +3442,14 @@ def _command_line(args, argv) -> str:
 def _run(args, service, requests) -> int:
 
     from openexpress.auth.sso import LoginCancelled
-    from openexpress.device.gio_storage import MassStorageNotice
+    from openexpress.device.gio_storage import MassStorageNotice, UnsupportedDevice
     from openexpress.errors import OrdinaryStop, UserFacingError
 
     try:
         return args.func(args)
-    except MassStorageNotice as e:
-        # What the window says about the drive: a notice, not an error; exit code 1.
+    except (MassStorageNotice, UnsupportedDevice) as e:
+        # What the window says about the drive, or about a device openExpress cannot use: a
+        # notice, not an error; exit code 1.
         log.info("not opened: %s", type(e).__name__)
         _error(str(e))
         return 1

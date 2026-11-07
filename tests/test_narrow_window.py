@@ -1164,3 +1164,35 @@ def _all_labels(widget):
             stack.append(child)
             child = child.get_next_sibling()
     return found
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_notice_of_a_device_not_supported_fits_the_narrowest_window(narrow_window,
+                                                                       monkeypatch, tmp_path,
+                                                                       language):
+    """On top of the start page and on a page of the device view (no device open), folded."""
+    from fakes import garmin_on_usb
+
+    from openexpress.device import gio_storage
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", tmp_path / "usb")
+    garmin_on_usb(tmp_path / "usb", "1-4", "0b89", ("03",), product="Garmin USB inReach")
+    from openexpress.gui.detection import notice_icon, start_notice
+
+    win = narrow_window(language)
+    words = MainWindow._usb_notice(gio_storage.UNSUPPORTED, 0)
+    assert words[1].startswith("openExpress")
+    icon = notice_icon(gio_storage.UNSUPPORTED)
+    win.start.set_empty(*start_notice(gio_storage.UNSUPPORTED, words), icon=icon)
+    win.start.show(_tiles(), True)
+    for section in win.sections.values():
+        section.set_empty(*words, icon=icon)
+    _iterate(0.05)
+    assert _min_width(win.start.page) <= NARROWEST
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    _iterate(0.05)
+    assert _min_width(win.device_view) <= NARROWEST
+

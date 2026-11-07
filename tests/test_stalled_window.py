@@ -134,7 +134,7 @@ def test_no_detection_starts_while_the_stalled_device_stays(monkeypatch, tmp_pat
     monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: timers.append(ms) or len(timers))
     win, told = a_window(monkeypatch)
     win.connected = Connected()  # no device listed
-    win.sections = {"watch": types.SimpleNamespace(set_empty=lambda *notice: None)}
+    win.sections = {"watch": types.SimpleNamespace(set_empty=lambda *notice, icon=None: None)}
     win._usb_notice, win._update_actions = MainWindow._usb_notice, lambda: None
     window_methods(win, ["_poll_usb"])
     win._poll_usb()

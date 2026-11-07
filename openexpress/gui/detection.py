@@ -24,6 +24,7 @@ from openexpress.device.gio_storage import (
     PRESENT,
     STARTING,
     UNMOUNTED_DRIVE,
+    UNSUPPORTED,
     USB_GAP_S,
     WAIT_FOR_DEVICE_S,
     NotThereYet,
@@ -49,6 +50,9 @@ from openexpress.device.gio_storage import (
     note_drive_place,
     own_remount,
     probe,
+    unsupported_caption,
+    unsupported_text,
+    unsupported_title,
     usb_state,
     usb_still_there,
 )
@@ -103,6 +107,25 @@ REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unpl
 # TRANSLATORS: the same, after the sentence about a PIN, which names the device already
 REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, unplug the cable "
                            "and plug it back in.")
+
+
+# The icon of the notice for a Garmin device openExpress cannot use: not the program's, whose
+# arrows would say that something is on its way.
+UNSUPPORTED_ICON = "dialog-warning-symbolic"
+
+
+def notice_icon(state: str) -> str | None:
+    """The icon of the notice while no device is open, for the USB `state`; None: the
+    program's."""
+    return UNSUPPORTED_ICON if state == UNSUPPORTED else None
+
+
+def start_notice(state: str, notice: tuple[str, str, bool]) -> tuple[str, str, bool]:
+    """The notice on top of the start page: that of the pages (_usb_notice), but of a device
+    not supported only its title and one line (the pages of the device view say it all)."""
+    if state == UNSUPPORTED:
+        return notice[0], unsupported_caption(), notice[2]
+    return notice
 
 
 @dataclass
@@ -537,6 +560,10 @@ class DeviceDetection:
         if state == PRESENT and mtp_missing():
             # gvfs here has no MTP backend: said at once, nothing to wait for.
             return no_mtp_title(), no_mtp_text(), False
+        if state == UNSUPPORTED:
+            # Neither MTP nor a drive that stays: said at once, nothing to wait for, and no
+            # advice for a device that is not ready.
+            return unsupported_title(), unsupported_text(), False
         if state == PRESENT and waited_s >= WAIT_FOR_DEVICE_S:
             # The PIN (not_ready_text, which names the device), then plugging it in again
             # (after REPLUG_HINT_S in its normal mode), then other programs.
@@ -641,9 +668,11 @@ class DeviceDetection:
             log.info("USB: present for %d s without MTP, suggesting to replug", REPLUG_HINT_S)
         notice = self._usb_notice(state, clock() - self._usb_since if state != ABSENT else 0,
                                   normal_s)
+        icon = notice_icon(state)
         for sec in self.sections.values():
-            sec.set_empty(*notice)
-        self.start.set_empty(*notice)  # the start page says it on top
+            sec.set_empty(*notice, icon=icon)
+        # The start page says it on top (of a device not supported, in short).
+        self.start.set_empty(*start_notice(state, notice), icon=icon)
         if notice[0] != self._usb_title:
             self._usb_title = notice[0]
             self._update_actions()  # the Sync button says the same as the pages

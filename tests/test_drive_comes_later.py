@@ -239,7 +239,7 @@ def _polled(monkeypatch, session=None, listed=()):
         session=session, busy=False, _usb_state=gio_storage.ABSENT, _usb_since=0.0,
         _usb_title="", _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,
         start=FakeStartPage(), connected=Connected(devices=list(listed)),
-        sections={"watch": types.SimpleNamespace(set_empty=lambda *notice: None)})
+        sections={"watch": types.SimpleNamespace(set_empty=lambda *notice, icon=None: None)})
     return page, asked
 
 

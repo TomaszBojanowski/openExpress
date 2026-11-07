@@ -701,18 +701,20 @@ class Section:
         self.stack.set_visible_child_name("loading")
         self.groups: list[Adw.PreferencesGroup] = []
 
-    def set_empty(self, title: str, description: str, busy: bool) -> None:
-        """What the placeholder says while no device is open."""
-        if self._empty_notice == (title, description, busy):
+    def set_empty(self, title: str, description: str, busy: bool,
+                  icon: str | None = None) -> None:
+        """What the placeholder says while no device is open; `icon`: its icon when not the
+        program's."""
+        if self._empty_notice == (title, description, busy, icon):
             return
-        self._empty_notice = (title, description, busy)
+        self._empty_notice = (title, description, busy, icon)
         self.empty.set_title(title)
         self.empty.set_description(description)
         if busy and hasattr(Adw, "SpinnerPaintable"):
             self.empty.set_paintable(Adw.SpinnerPaintable.new(self.empty))
         else:
             self.empty.set_paintable(None)
-            self.empty.set_icon_name(APP_ID)
+            self.empty.set_icon_name(icon or APP_ID)
 
     def show(self, name: str) -> None:
         self.stack.set_visible_child_name(name)

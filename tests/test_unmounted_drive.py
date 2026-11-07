@@ -298,7 +298,7 @@ def test_a_device_in_mass_storage_mode_coming_brings_a_detection(drives, monkeyp
         session=None, busy=False, _usb_state=gio_storage.ABSENT, _usb_since=0.0, _usb_title="",
         _usb_notice=MainWindow._usb_notice, _update_actions=lambda: None,
         refresh_device=lambda **kw: detected.append(kw.get("cause")), start=FakeStartPage(),
-        sections={"watch": types.SimpleNamespace(set_empty=lambda *notice: None)})
+        sections={"watch": types.SimpleNamespace(set_empty=lambda *notice, icon=None: None)})
     monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: fn())
     MainWindow._poll_usb(page)
     MainWindow._poll_usb(page)

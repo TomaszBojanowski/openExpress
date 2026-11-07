@@ -535,6 +535,7 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     # Nor what an earlier test saw on USB (the places of Garmin drives).
     monkeypatch.setattr(gio_storage, "_drive_places", {})
     monkeypatch.setattr(gio_storage, "_said_0003", {})
+    monkeypatch.setattr(gio_storage, "_said_unsupported", {})
     monkeypatch.setattr(gio_storage, "_without_drive", frozenset())
     monkeypatch.setattr(gio_storage, "_test_drive_said", set())
     # Nor the devices that stopped responding (their places on USB).
