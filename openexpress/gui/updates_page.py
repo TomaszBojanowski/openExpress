@@ -197,9 +197,10 @@ def tell_update_finish(win) -> None:
 
 
 def confirm_install_all(win, items) -> None:
-    """Install all, for a drive: one question for the updates `items`, then one copy of them
-    with their -META entries and one eject (_install_task). Of two for one file one is copied
-    (one_per_file); the question says which waits."""
+    """Install all: one question for the updates `items`, then one copy of them with their
+    -META entries (_install_task): a drive is then ejected once, over MTP the window says what
+    to do next. Of two for one file one is copied (one_per_file); the question says which
+    waits."""
     from openexpress import updates as upd
 
     s = win.session
@@ -310,8 +311,8 @@ class UpdatesPage:
         software" says it (update_state_text): `count` to install (`only`: the one of them),
         one copied (`ready`) with `count` still to install, or up to date; under it the
         `system` update or the device's version; whether Garmin offers it beta versions
-        (`beta`). A drive with more than one update `installable`: Install all, which ejects
-        it once after all of them (each Install ejects it after its own)."""
+        (`beta`). More than one update `installable`: Install all, one question and one copy
+        (a drive is ejected once after all of them; each Install ejects it after its own)."""
         from openexpress import updates as upd
 
         d = self.session.device
@@ -357,12 +358,10 @@ class UpdatesPage:
         else:
             icon, subtitle = "object-select-symbolic", installed
             title = update_state_text("current")
-        if mass_storage and len(installable) > 1:
-            # TRANSLATORS: button that installs every update offered to a device connected as
-            # a USB drive, then ejects it once
+        if len(installable) > 1:
             buttons.append(self._button(
-                # TRANSLATORS: button that installs every update offered to a device connected as a
-                # USB drive, then ejects it once
+                # TRANSLATORS: button that installs every update offered to the device in one go
+                # (a device connected as a USB drive is then ejected once)
                 _("Install All"), lambda items=list(installable): confirm_install_all(self, items),
                 None if buttons else "suggested-action"))
         buttons.append(self._button(_("Check Again"), lambda: check_updates_again(self)))

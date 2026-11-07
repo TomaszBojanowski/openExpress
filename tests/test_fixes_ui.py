@@ -808,8 +808,8 @@ def test_updates_page_with_several_updates(monkeypatch):
     assert advanced.title == "Advanced" and isinstance(advanced.rows[0], Adw.ExpanderRow)
     # The file that is already on the device is listed with the reinstalls, not as an update.
     assert advanced.rows[0].get_subtitle().startswith("2 components already on the device")
-    # Three "Install", two "Reinstall" and "Check Again" in the status.
-    assert len(win._action_buttons) == 6
+    # Three "Install", two "Reinstall", "Install All" and "Check Again" in the status.
+    assert len(win._action_buttons) == 7
 
 
 # --- files the device already has are not updates ---------------------------------------------

@@ -180,6 +180,8 @@ connected device; no login is needed.
 - **Two updates for one file of the device** are copied one at a time: the other one waits
   until the device has installed the first (the window shows when it can be installed, the
   command line says to disconnect the device and connect it again).
+- **Install All**, shown when more than one update can be installed, asks once with the list
+  and their size and copies them all in one go, then says what to do next.
 - **An update copied before that the server offers again** was not installed by the device:
   the window says when it was copied and offers *Reinstall*, and says when the device changed
   or refused its file since (the same size, other bytes); `openexpress updates` says the same.
@@ -192,8 +194,7 @@ connected device; no login is needed.
   be unplugged only once that has worked; when the system refuses (a program still uses the
   drive), it says why and offers to try again. Some of these devices install an update only
   after a clean eject. Until it is unplugged, the window does not open a drive it ejected
-  again. With more than one update for such a device, **Install All** copies all of them (one
-  file of the device at a time) and ejects the drive once.
+  again. **Install All** ejects it once, after all of them.
 
 Installing a system update was tested on an Edge 1050 (beta 33.12) and
 reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2.

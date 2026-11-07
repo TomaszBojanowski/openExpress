@@ -817,13 +817,13 @@ def test_status_when_the_software_is_up_to_date():
 
 @pytest.mark.needs_display
 def test_status_with_a_system_update():
-    win, status, groups, (install, check) = _updates_page(_items(FONT_ENTRY, BUNDLE_ENTRY))
+    win, status, groups, (install, _all, _check) = _updates_page(_items(FONT_ENTRY, BUNDLE_ENTRY))
     assert status == {
         "icon": ("software-update-available-symbolic", 96, False),
         "texts": [("2 updates available", ["title-1"]),  # the words of the device's row
                   (f"{VERSIONS}\u00a0· 12\u00a0B", ["dim-label"]),
                   ("Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP", ["caption", "dim-label"])],
-        "buttons": [("Install", True), ("Check Again", False)]}
+        "buttons": [("Install", True), ("Install All", False), ("Check Again", False)]}
     # Below: only the other updates.
     (available,) = groups
     assert available.title == "Available Updates"
@@ -841,7 +841,7 @@ def test_status_with_plain_updates_only():
         "icon": ("software-update-available-symbolic", 96, False),
         "texts": [("2 updates available", ["title-1"]),
                   ("Software 23.39", ["dim-label"])],
-        "buttons": [("Check Again", False)]}
+        "buttons": [("Install All", True), ("Check Again", False)]}
     (available,) = groups
     assert [r.get_title() for r in available.rows] == ["Test Font", "Test Map Data"]
 
@@ -876,7 +876,8 @@ def test_the_status_in_polish():
     assert [t for t, _c in system["texts"]] == [
         "Dostępne są 2 aktualizacje", f"{VERSIONS}\u00a0· 12\u00a0B",
         "Test Bundle\u00a0· Zalecana\u00a0· GUPDATE.GSP"]
-    assert system["buttons"] == [("Zainstaluj", True), ("Sprawdź ponownie", False)]
+    assert system["buttons"] == [("Zainstaluj", True), ("Zainstaluj wszystkie", False),
+                                 ("Sprawdź ponownie", False)]
     assert groups[0].title == "Dostępne aktualizacje"
     assert plain["texts"][0][0] == "Dostępna aktualizacja: Test Font 23.40"  # as on the row
     assert listed.rows[0].get_title() == "Oprogramowanie systemowe"
@@ -1368,7 +1369,7 @@ def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(in_the_wi
     assert line.get_text() == f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B"
     assert "<b>Beta</b>" in line.get_label() and line.get_wrap()
     assert isinstance(row, Gtk.FlowBox)
-    assert [b.get_label() for b in _buttons(row)] == ["Install", "Check Again"]
+    assert [b.get_label() for b in _buttons(row)] == ["Install", "Install All", "Check Again"]
 
 
 @pytest.mark.needs_display
@@ -1920,20 +1921,79 @@ def test_a_name_from_the_server_that_is_no_path_is_refused(device_root, tmp_path
         (paths.cache_dir() / "software").resolve())
 
 
-# --- Install all, on a drive -------------------------------------------------------------------
+# --- Install all -------------------------------------------------------------------------------
 
 MAP_DATA = _entry("006-D0002-00", "Test Map Data", "Etyp", "Garmin\\SID", "DA00200.sid", b"sid")
+# A second update for the file of the font: copied only once the device has installed the font.
+FONT_PATCH = _entry("006-D0003-00", "Test Font Patch", "Firmware", "Garmin\\Font",
+                    "006-D0000-00.fnt", FONT)
 
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize(("drive", "entries", "offered"), [
     (True, (FONT_ENTRY, MAP_DATA), True),
     (True, (FONT_ENTRY,), False),           # one update: its own Install
-    (False, (FONT_ENTRY, MAP_DATA), False),  # over MTP each has its own Install
-], ids=["drive", "one-update", "mtp"])
-def test_install_all_is_offered_for_a_drive_with_more_than_one_update(drive, entries, offered):
+    (False, (FONT_ENTRY, MAP_DATA), True),
+    (False, (FONT_ENTRY,), False),
+], ids=["drive", "drive-one-update", "mtp", "mtp-one-update"])
+def test_install_all_is_offered_with_more_than_one_update(drive, entries, offered):
     _win, status, _groups, _buttons = _updates_page(_items(*entries), drive=drive)
     assert (("Install All", True) in status["buttons"]) is offered
+
+
+@pytest.mark.needs_display
+def test_install_all_over_mtp_copies_every_update_in_one_go(monkeypatch, caplog):
+    """Over MTP as on a drive: one question with the list and the size, one copy of them all
+    (of two for one file the first; the other waits for the device), every one chosen in the
+    line of the log, then Done with the steps and what is still available; nothing ejected."""
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    items = _items(BUNDLE_ENTRY, FONT_ENTRY, MAP_DATA, FONT_PATCH)
+    win, status, _groups, buttons = _updates_page(items)
+    assert status["buttons"] == [("Install", True), ("Install All", False),
+                                 ("Check Again", False)]
+    copies = []
+
+    def copy(chosen, storage, report, **kw):
+        copies.append([u.part_number for u in chosen])
+        report.written += chosen
+        report.installed += [u.title for u in chosen]
+        return report
+
+    monkeypatch.setattr(updates, "_install", copy)
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
+    win.session.client = types.SimpleNamespace(http=None)
+    win.session.storage = None
+    win.updates_beta = False
+    win.run_task = RunNow()
+    win.error = lambda title, text: None
+    win.progress = win.fraction = None
+    for name in ("show_updates", "_show_installed"):
+        setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
+    (install_all,) = [b for b in buttons if b.get_label() == "Install All"]
+    install_all.emit("clicked")
+    (question,) = asked
+    assert question.get_heading() == "Install Updates?"
+    body = question.get_body().splitlines()
+    assert body == [f"Test Bundle {VERSIONS}", "Test Font 23.40", "Test Map Data 23.40",
+                    "Test Font Patch: Can be installed once the device has installed Test Font",
+                    "", "Size: 19\u00a0B"]
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        question.emit("response", "ok")
+    assert copies == [["006-V0000-00", "006-D0000-00", "006-D0002-00"]]  # one copy
+    said = [r.getMessage() for r in caplog.records if r.getMessage().startswith("software update")]
+    line = ("software update: 3 of 4 offered chosen (006-V0000-00 23.40, 006-D0000-00 23.40, "
+            "006-D0002-00 23.40); left out: 006-D0003-00 23.40 (put off: the same file as "
+            "006-D0000-00)")
+    assert said == [line]
+    assert win.ejected == []
+    done = asked[-1]
+    assert done.get_heading() == "Done"
+    assert done.get_body().startswith("Files copied to the device.\nTo finish the installation:")
+    assert done.get_body().endswith("\n\nStill available: 1 update")  # the font's patch
 
 
 @pytest.mark.needs_display
