@@ -25,7 +25,7 @@ from openexpress.course_gpx import CourseFileError  # noqa: E402
 from openexpress.gui import course_map  # noqa: E402
 from openexpress.gui.device_page import device_name  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
-from openexpress.gui.window_tasks import WRAP_BOX, Answer, confirm  # noqa: E402
+from openexpress.gui.window_tasks import DIALOG_MARGINS, WRAP_BOX, Answer, confirm  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     row_ascent_text,
     row_distance_text,
@@ -40,10 +40,9 @@ log = logging.getLogger(__name__)
 # panel's and the page's without a course.
 PAGE_ICON = f"{APP_ID}-courses-symbolic"
 # The width of the question's content: a file's name on one line beside its title (libadwaita
-# gives a question 312 px at most); never more than the window leaves a dialog's content, 108 px
-# less than its own width (measured with libadwaita 1.9).
+# gives a question 312 px at most); never more than the window leaves a dialog's content
+# (DIALOG_MARGINS).
 QUESTION_WIDTH = 480
-DIALOG_MARGINS = 108
 
 
 # --- the words of the page -----------------------------------------------------------------------

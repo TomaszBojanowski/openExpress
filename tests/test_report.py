@@ -275,7 +275,7 @@ def _report_dialog(monkeypatch, device_root, connected=True):
     win = stand_in(
         session=session if connected else None, toast=said.append,
         get_clipboard=lambda: types.SimpleNamespace(set=copied.append),
-        _report_view=MainWindow._report_view)
+        _report_view=MainWindow._report_view, get_width=lambda: 1000)
     window_methods(win, ["_open_report_form"])
     MainWindow.show_report(win)
     (dialog,) = asked

@@ -41,6 +41,10 @@ log = logging.getLogger(__name__)
 
 WAIT_PULSE_MS = 150  # how often the bar moves while the program waits for a server
 SHOWN_CHARS = 300  # of the words of a dialog in its line of the log
+# What the window leaves a dialog's content: its own width less this, in px (measured with
+# libadwaita 1.9). The widest content (a question's extra widget, the report's preview)
+# never asks for more.
+DIALOG_MARGINS = 108
 # A short hex string standing alone (also after "_"): a serial number or an ID that
 # applog.redact leaves when nothing registered it (from 16 digits on, it is redact's).
 _SHORT_HEX = re.compile(r"(^|[^0-9A-Za-z])[0-9A-Fa-f]{8,15}([^0-9A-Za-z]|$)")

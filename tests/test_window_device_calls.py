@@ -733,9 +733,9 @@ def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
     if space is not NOT_READ:
         s.space = space
     shown = []
-    win = stand_in(session=s, toast=lambda text: None,
-                   _report_view=lambda text, kept=None: (shown.append(text),
-                                                         (None, None))[1])
+    win = stand_in(session=s, toast=lambda text: None, get_width=lambda: 1000,
+                   _report_view=lambda text, kept=None, width=None: (shown.append(text),
+                                                                     (None, None))[1])
     app.MainWindow.show_report(win)
     (text,) = shown
     return text

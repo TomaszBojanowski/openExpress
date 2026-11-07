@@ -15,6 +15,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress.gui.window_tasks import DIALOG_MARGINS  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
@@ -38,6 +39,14 @@ def report_log_note(dialog) -> None:
             child = child.get_next_sibling()
 
 
+# The width of the report's preview: never more than the window leaves a dialog's content.
+REPORT_WIDTH = 420
+
+
+def report_width(window_width: int) -> int:
+    return max(0, min(REPORT_WIDTH, window_width - DIALOG_MARGINS))
+
+
 class ReportDialog:
     @staticmethod
     def _report_and_log(report_text: str, attach_log: bool) -> tuple[str, str | None]:
@@ -52,14 +61,15 @@ class ReportDialog:
         return report.with_log(report_text, lines, crash), report.form_log(lines, crash)
 
     @staticmethod
-    def _report_view(report_text: str, kept: dict | None = None):
+    def _report_view(report_text: str, kept: dict | None = None, width: int = REPORT_WIDTH):
         """The preview of the report with the "attach the log" switch: (widget, text buffer).
-        `kept["log"]`: the log shown, as the form's "Log" field takes it (None: not attached)."""
+        `kept["log"]`: the log shown, as the form's "Log" field takes it (None: not attached);
+        `width`: of the preview (report_width)."""
         view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR,
                             top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
         buffer = view.get_buffer()
         buffer.set_text(report_text)
-        scroller = Gtk.ScrolledWindow(child=view, min_content_height=260, min_content_width=420)
+        scroller = Gtk.ScrolledWindow(child=view, min_content_height=260, min_content_width=width)
         scroller.add_css_class("card")
         attach = Gtk.CheckButton(label=_("Attach the last log"))
         attach.set_tooltip_text(_("The log is filtered, but read it before you send it."))
@@ -103,7 +113,7 @@ class ReportDialog:
         buffer = None
         kept = {"log": None}  # the log shown, for the form's "Log" field (_report_view)
         if body_text:
-            box, buffer = self._report_view(body_text, kept)
+            box, buffer = self._report_view(body_text, kept, report_width(self.get_width()))
             d.set_extra_child(box)
             d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))

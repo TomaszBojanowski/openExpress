@@ -1196,3 +1196,24 @@ def test_the_notice_of_a_device_not_supported_fits_the_narrowest_window(narrow_w
     _iterate(0.05)
     assert _min_width(win.device_view) <= NARROWEST
 
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_report_dialog_fits_the_narrowest_window(narrow_window, device_root, language):
+    """Its preview of the report as wide as the window leaves a dialog's content (at most
+    420 px): the dialog is no wider than the narrowest window."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui.window_tasks import DIALOG_MARGINS
+
+    storage = LocalStorage(device_root)
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    win.session = types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
+                                        storage=storage, logged_in=False, space=(None, None))
+    _iterate(0.3)
+    win.show_report()
+    _iterate(0.3)
+    dialog = win.get_visible_dialog()
+    assert _min_width(dialog.get_extra_child()) <= NARROWEST - DIALOG_MARGINS
+    dialog.force_close()
