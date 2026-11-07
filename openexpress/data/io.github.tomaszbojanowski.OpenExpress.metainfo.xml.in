@@ -92,6 +92,26 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.8.9" date="2026-11-07">
+      <description translate="no">
+        <ul>
+          <li>Software updates: the message after a copy says how many updates are still
+          available, and its steps wrap to the window. Install All now works for watches
+          connected over MTP too, not only for USB drives. A component copied to the device is
+          shown as waiting for it ("unplug to install"), as a system update is, until the device
+          has installed it, instead of "up to date".</li>
+          <li>A Garmin device that connects neither over MTP nor as a USB drive, such as the
+          first-generation inReach Mini, is now recognised as not supported right away, showing
+          its name and USB ID, instead of a 45-second wait and advice about KDE.</li>
+          <li>openexpress report and Report a Device or Problem… work without a ready device:
+          the report then says what is connected over USB.</li>
+          <li>The report dialog fits narrow windows.</li>
+          <li>The log now records which dialogs were shown and which of the offered updates were
+          chosen, which helps with bug reports.</li>
+          <li>German translation, by BeGiBue.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.8.8" date="2026-11-07">
       <description translate="no">
         <ul>
