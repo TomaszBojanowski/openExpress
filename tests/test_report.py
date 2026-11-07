@@ -410,11 +410,17 @@ def test_open_on_github_with_a_report_too_long_copies_it(monkeypatch, device_roo
 
 
 @pytest.mark.needs_display
-def test_open_on_github_without_a_device_opens_the_empty_form(monkeypatch, device_root):
+def test_open_on_github_without_a_device_fills_in_what_is_on_usb(monkeypatch, device_root):
+    """No device open: the form with the report of what is on USB (here nothing)."""
+    from urllib.parse import unquote
+
     dialog, _text, opened, copied, said = _report_dialog(monkeypatch, device_root,
                                                          connected=False)
     dialog.emit("response", "open")
-    assert opened == [report.ISSUE_URL] and copied == [] and said == []
+    (url,) = opened
+    assert url.startswith(report.ISSUE_FORM) and copied == [] and said == []
+    assert "- Not opened: no Garmin device on USB" in unquote(url)
+    assert "[Device] unknown" in unquote(url)
 
 
 @pytest.mark.needs_display

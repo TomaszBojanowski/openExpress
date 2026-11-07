@@ -1472,6 +1472,31 @@ def unsupported_devices() -> list[tuple[str, str | None]]:
     return found
 
 
+def garmin_usb_summary() -> list[tuple[str, str | None, list[str | None]]]:
+    """For a report without a device: (USB ID, the name it gives USB if any, the classes of
+    its interfaces) of each Garmin device on USB, those that stopped responding too. Only
+    idVendor, idProduct, product and the classes are read: never the serial number, nor the
+    place on USB."""
+    found = []
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return found
+    for base in entries:
+        try:
+            if (base / "idVendor").read_text().strip().lower() != GARMIN_VID:
+                continue
+            product = (base / "idProduct").read_text().strip().lower()
+        except OSError:
+            continue
+        try:
+            name = (base / "product").read_text().strip() or None
+        except OSError:
+            name = None
+        found.append((f"{GARMIN_VID}:{product}", name, _interface_classes(base)))
+    return found
+
+
 def unsupported_title() -> str:
     # TRANSLATORS: title while the only Garmin device on USB is one openExpress cannot use: it
     # connects neither over MTP nor as a USB drive

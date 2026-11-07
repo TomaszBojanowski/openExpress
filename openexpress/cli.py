@@ -315,15 +315,32 @@ def cmd_info(args) -> int:
 def cmd_report(args) -> int:
     from openexpress import report
 
-    st, dev = open_device(args)
+    try:
+        st, dev = open_device(args)
+    except DeviceNotResponding:
+        raise  # a stall stops what meets it
+    except DeviceError as e:
+        if args.path:
+            raise  # a folder named to report on that is no device
+        # Not ready, not supported, none…: a report of what is on USB, and the log.
+        log.info("report: no device opened (%s), a report of what is on USB", type(e).__name__)
+        st, dev, why = None, None, e
     try:
         store.load()  # it returns a login or raises
         logged_in = True
     except Exception:  # noqa: BLE001 - only yes/no: a broken login never stops the report
         logged_in = False
-    report_text = report.build(dev, st, logged_in)
+    if dev is None:
+        report_text = report.build_without_device(why, logged_in)
+        model = report.model_on_usb()
+        # TRANSLATORS: before the hints of `openexpress report` when no device could be opened
+        print(_("No device was opened: the report says what is connected over USB."),
+              file=sys.stderr)
+    else:
+        report_text = report.build(dev, st, logged_in)
+        model = dev.description
     # An address that opens the form with the report filled in; never with the log.
-    url = report.issue_url(report_text, dev.description)
+    url = report.issue_url(report_text, model)
     if not args.log or url is None:  # too long for an address: the report printed as well
         print(report_text, end="" if not args.log else "\n")
     if args.log:

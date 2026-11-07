@@ -98,16 +98,21 @@ class ReportDialog:
         from openexpress import report
 
         s = self.session
+        about = _("Open on GitHub starts a new issue with this report filled in; nothing is "
+                  "published until you submit it. The report contains no serial number, "
+                  "unit ID or e-mail.")
         if s is None:
-            text = _("Connect the device first, so that the report can describe it.")
-            body_text = ""
+            # What is on USB (a device not ready or not supported), read from /sys only; the
+            # login is not known here.
+            body_text = report.build_without_device()
+            # TRANSLATORS: in the problem report dialog when no device is open, before "Open on
+            # GitHub starts a new issue…"
+            text = f"{_('No device is open: the report says what is connected over USB.')} {about}"
         else:
             # The space as the session holds it: nothing is asked of the device here.
             body_text = report.build(s.device, s.storage, s.logged_in,
                                      space=getattr(s, "space", None) or (None, None))
-            text = _("Open on GitHub starts a new issue with this report filled in; nothing is "
-                     "published until you submit it. The report contains no serial number, "
-                     "unit ID or e-mail.")
+            text = about
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
         buffer = None
@@ -146,7 +151,7 @@ class ReportDialog:
             elif r == "open":
                 attached = self._open_report_form(
                     body_text, shown() if buffer is not None else "", kept["log"],
-                    s.device.description if s is not None else None)
+                    s.device.description if s is not None else report.model_on_usb())
                 if attached:
                     stay["open"] = True
                     report_log_note(dialog)

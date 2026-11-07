@@ -115,6 +115,22 @@ def _size(n: int | None) -> str:
     return "unknown" if not n else human_size(n, localize=False)
 
 
+def _system(logged_in: bool | None) -> list[str]:
+    """The section of the system, the same with a device or without."""
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP") or "unknown"
+    session = os.environ.get("XDG_SESSION_TYPE") or "unknown"
+    lines = [
+        "### System",
+        f"- openExpress: {__version__} ({_install_type()})",
+        f"- OS: {_os_name()}",
+        f"- Desktop: {desktop} ({session})",
+        f"- Python: {sys.version.split()[0]}",
+    ]
+    if logged_in is not None:
+        lines.append(f"- Logged in to Garmin Connect: {'yes' if logged_in else 'no'}")
+    return lines
+
+
 def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
           space: tuple[int | None, int | None] | None = None) -> str:
     """The report of the device. `space`: (free space, capacity) already read (the window
@@ -124,8 +140,6 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
     datatypes = set(device.datatypes())
     features = "\n".join(f"- [{'x' if test(datatypes) else ' '}] {label}"
                          for label, test in FEATURES)
-    desktop = os.environ.get("XDG_CURRENT_DESKTOP") or "unknown"
-    session = os.environ.get("XDG_SESSION_TYPE") or "unknown"
     lines = [
         "### Device",
         f"- Model: {device.description or 'unknown'}",
@@ -139,12 +153,62 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
         "### Features declared by the device",
         features,
         "",
-        "### System",
-        f"- openExpress: {__version__} ({_install_type()})",
-        f"- OS: {_os_name()}",
-        f"- Desktop: {desktop} ({session})",
-        f"- Python: {sys.version.split()[0]}",
+        *_system(logged_in),
     ]
-    if logged_in is not None:
-        lines.append(f"- Logged in to Garmin Connect: {'yes' if logged_in else 'no'}")
+    return "\n".join(lines) + "\n"
+
+
+# Why no device was opened, by the state of the Garmin devices on USB (gio_storage.usb_state).
+NOT_OPENED = {
+    "absent": "no Garmin device on USB",
+    "starting": "starting (in its transitional mode)",
+    "present": "not ready (on USB, not offered over MTP)",
+    "mass-storage": "a USB drive that is not mounted",
+    "drive-off": "in its Garmin USB mode after its drive was ejected",
+    "unsupported": "not supported (HID without MTP)",
+}
+# The classes of USB interfaces a Garmin device may have, by name.
+INTERFACES = {"03": "HID", "06": "PTP/MTP", "08": "mass storage", "ff": "vendor-specific"}
+
+
+def _interface(cls: str | None) -> str:
+    if cls is None:
+        return "unknown"
+    return f"{INTERFACES[cls]} ({cls})" if cls in INTERFACES else f"other ({cls})"
+
+
+def model_on_usb() -> str | None:
+    """The name the first Garmin device on USB gives itself, for the title of the form when
+    no device could be opened; None without one."""
+    from openexpress.device import gio_storage
+
+    return next((name for _usb_id, name, _classes in gio_storage.garmin_usb_summary() if name),
+                None)
+
+
+def build_without_device(error: BaseException | None = None,
+                         logged_in: bool | None = None) -> str:
+    """The report when no device could be opened (`error`: why, when one was tried): instead
+    of the device, why none is open, the Garmin devices on USB (their USB ID, the name each
+    gives itself and the classes of its interfaces; never a serial number) and whether gvfs
+    has MTP; then the system, as with a device. Only /sys is read."""
+    from openexpress.device import gio_storage
+
+    state = gio_storage.usb_state()
+    reason = ("several Garmin devices are connected"
+              if isinstance(error, gio_storage.SeveralDevices) else NOT_OPENED.get(state, state))
+    def described(usb_id: str, name: str | None, classes: list[str | None]) -> str:
+        named = f' "{name}"' if name else ""
+        interfaces = ", ".join(_interface(c) for c in classes) or "none"
+        return f"{usb_id}{named}, interfaces: {interfaces}"
+
+    devices = "; ".join(described(*d) for d in gio_storage.garmin_usb_summary()) or "none"
+    lines = [
+        "### Device",
+        f"- Not opened: {reason}",
+        f"- Garmin devices on USB: {devices}",
+        f"- MTP support in gvfs: {'no' if gio_storage.mtp_missing() else 'yes'}",
+        "",
+        *_system(logged_in),
+    ]
     return "\n".join(lines) + "\n"
