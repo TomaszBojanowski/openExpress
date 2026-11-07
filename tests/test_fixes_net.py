@@ -346,11 +346,11 @@ def sys_lang(tmp_path, monkeypatch):
 @pytest.mark.parametrize("env,expected", [
     ({"LANGUAGE": "en_US:pl"}, "en"),
     ({"LANGUAGE": "pl_PL:en"}, "pl"),
-    ({"LANGUAGE": "de:pl"}, "pl"),
+    ({"LANGUAGE": "sv:pl"}, "pl"),  # Swedish: a language openExpress is not translated into
     ({"LANG": "pl_PL.UTF-8"}, "pl"),
     ({"LC_ALL": "C", "LANG": "pl_PL.UTF-8"}, "en"),
     ({"LANG": "POSIX"}, "en"),
-    ({"LANG": "de_DE.UTF-8"}, "en"),
+    ({"LANG": "sv_SE.UTF-8"}, "en"),
     ({}, "en"),
 ])
 def test_system_language(sys_lang, env, expected):

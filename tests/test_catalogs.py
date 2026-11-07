@@ -249,22 +249,32 @@ def test_the_metainfo_template_has_no_translation_in_it():
 
 
 @needs_gettext
-def test_the_metainfo_is_translated_into_polish_at_the_build(tmp_path):
+def test_the_metainfo_is_translated_at_the_build_into_each_language(tmp_path):
     """Every text to translate of the template (the summary, the description and the
-    screenshots' captions) has its Polish from po/pl.po; the release notes stay in English."""
+    screenshots' captions) gets the words of each language of po/LINGUAS that translates it,
+    once; Polish translates all of them (its summary checked word for word). No language
+    beside those, and the release notes stay in English."""
     out = catalogs.compose_metainfo(tmp_path / "metainfo.xml")
     root = ET.parse(out).getroot()
-    polish = [e for e in root.iter() if e.get(XML_LANG) == "pl"]
     template = ET.parse(catalogs.METAINFO_TEMPLATE).getroot()
     notes = {id(e) for releases in template.iter("releases") for e in releases.iter()}
     to_translate = [e for e in template.iter()
                     if e.tag in ("summary", "p", "li", "caption") and id(e) not in notes]
-    assert to_translate and len(polish) == len(to_translate)
+    languages = catalogs.languages()
+    assert to_translate and "pl" in languages
+    translated: dict[str, list] = {}
+    for e in root.iter():
+        if e.get(XML_LANG):
+            translated.setdefault(e.get(XML_LANG), []).append(e)
+    assert set(translated) <= set(languages)
+    for language, elements in translated.items():
+        assert {e.tag for e in elements} <= {"summary", "p", "li", "caption"}, language
+        assert len(elements) <= len(to_translate), language
+    polish = translated["pl"]
+    assert len(polish) == len(to_translate)
+    assert {e.tag for e in polish} == {"summary", "p", "li", "caption"}
     assert root.find("summary[@{http://www.w3.org/XML/1998/namespace}lang='pl']").text == (
         "Zarządzaj zegarkiem Garmin na Linuksie")
-    assert {e.tag for e in polish} == {"summary", "p", "li", "caption"}
-    assert not [e for e in root.iter() if e.get(XML_LANG) and e.tag != "summary"
-                and e.get(XML_LANG) != "pl"]
     assert not root.findall(".//releases//*[@{http://www.w3.org/XML/1998/namespace}lang]")
 
 
