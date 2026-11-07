@@ -31,7 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin watch on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#profiles">New: activity profiles<span class="more"> — data screens and their fields</span> · 0.8.7</a></p>
+    <p class="new"><a href="#courses">New: courses from GPX files<span class="more"> — experimental</span> · 0.8.8</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -97,6 +97,32 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <figcaption>A narrow window</figcaption>
       </figure>
     </div>
+  </section>
+
+  <section class="activities" id="courses" aria-labelledby="courses-title">
+    <h2 id="courses-title">Courses</h2>
+    <p>Experimental. Copy a GPX file to the watch or bike computer, and the device turns it into a course when you unplug the cable – no Garmin Connect needed. Before the copy, the file is shown on a map with its name on the device and what the device will do with it; the points of a route are joined with straight lines, not roads, and the question says so. The Courses page lists the courses on the device and where each came from, the files waiting for it and its saved locations. Tried on an Edge 1050 and a fēnix 8.</p>
+    <div class="shot-row">
+      <figure class="shot" style="--ratio: 1.363">
+        <a class="zoom" href="screenshots/full/light-courses.webp" data-dark="screenshots/full/dark-courses.webp">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-courses.webp">
+            <img src="screenshots/light-courses.webp" width="1400" height="1027" loading="lazy" alt="The Courses page of a fēnix 8: four courses, two copied by openExpress and one from Garmin Connect, a GPX file waiting for the watch to be unplugged, and 14 saved locations">
+          </picture>
+        </a>
+        <figcaption>The courses on the watch, and a file waiting for it</figcaption>
+      </figure>
+      <figure class="shot" style="--ratio: 1.363">
+        <a class="zoom" href="screenshots/full/light-course-copy.webp" data-dark="screenshots/full/dark-course-copy.webp">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-course-copy.webp">
+            <img src="screenshots/light-course-copy.webp" width="1400" height="1027" loading="lazy" alt="The question before a GPX track is copied: the track on a map of OpenStreetMap, the course's name, the track's distance, ascent and points, and its file name on the watch">
+          </picture>
+        </a>
+        <figcaption>Before the copy: the track on a map</figcaption>
+      </figure>
+    </div>
+    <p class="note">The courses in the screenshots are made up, around Gdańsk, Sopot and Gdynia.</p>
   </section>
 
   <section class="activities" id="activities" aria-labelledby="activities-title">
