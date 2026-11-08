@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>openExpress – manage your Garmin watch on Linux</title>
+<title>openExpress – manage your Garmin device on Linux</title>
 <meta name="description" content="openExpress is an unofficial Linux app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music over USB.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#fbeee6" media="(prefers-color-scheme: light)">
@@ -14,7 +14,7 @@
 <link rel="canonical" href="https://openexpress.bojanowski.me/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="openExpress">
-<meta property="og:title" content="openExpress – manage your Garmin watch on Linux">
+<meta property="og:title" content="openExpress – manage your Garmin device on Linux">
 <meta property="og:description" content="An unofficial Linux app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music over USB.">
 <meta property="og:url" content="https://openexpress.bojanowski.me/">
 <meta property="og:image" content="https://openexpress.bojanowski.me/og.png">
@@ -29,9 +29,9 @@
   <div class="wrap">
     <img class="app-icon" src="icon.png" width="128" height="128" alt="">
     <h1>openExpress</h1>
-    <p class="summary">Manage your Garmin watch on Linux</p>
+    <p class="summary">Manage your Garmin device on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#courses">New: courses from GPX files<span class="more"> — experimental</span> · 0.8.9</a></p>
+    <p class="new"><a href="#courses">New in 0.8.8: courses from GPX files<span class="more"> (experimental)</span></a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -101,7 +101,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="activities" id="courses" aria-labelledby="courses-title">
     <h2 id="courses-title">Courses</h2>
-    <p>Experimental. Copy a GPX file to the watch or bike computer, and the device turns it into a course when you unplug the cable – no Garmin Connect needed. Before the copy, the file is shown on a map with its name on the device and what the device will do with it; the points of a route are joined with straight lines, not roads, and the question says so. The Courses page lists the courses on the device and where each came from, the files waiting for it and its saved locations. Tried on an Edge 1050 and a fēnix 8.</p>
+    <p>Experimental. Copy a GPX file to the watch or bike computer, and the device turns it into a course when you unplug the cable – no Garmin Connect needed. Before the copy, the file is shown on a map with its name on the device and what the device will do with it; the points of a route are joined with straight lines, not roads, and the confirmation dialog says so. The Courses page lists the courses on the device and where each came from, the files waiting for it and its saved locations. Tried on an Edge 1050 and a fēnix 8.</p>
     <div class="shot-row">
       <figure class="shot" style="--ratio: 1.363">
         <a class="zoom" href="screenshots/full/light-courses.webp" data-dark="screenshots/full/dark-courses.webp">
@@ -116,7 +116,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <a class="zoom" href="screenshots/full/light-course-copy.webp" data-dark="screenshots/full/dark-course-copy.webp">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-course-copy.webp">
-            <img src="screenshots/light-course-copy.webp" width="1400" height="1027" loading="lazy" alt="The question before a GPX track is copied: the track on a map of OpenStreetMap, the course's name, the track's distance, ascent and points, and its file name on the watch">
+            <img src="screenshots/light-course-copy.webp" width="1400" height="1027" loading="lazy" alt="The confirmation dialog before a GPX track is copied: the track on a map of OpenStreetMap, the course's name, the track's distance, ascent and points, and its file name on the watch">
           </picture>
         </a>
         <figcaption>Before the copy: the track on a map</figcaption>
@@ -127,7 +127,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="activities" id="activities" aria-labelledby="activities-title">
     <h2 id="activities-title">Activities</h2>
-    <p>Open an activity to see its track on a map, coloured by heart rate, pace or elevation, with a chart of each. Choose a lap to find it on the map and on the chart; below them are the heart rate zones and the training effect as the watch worked them out. The map's tiles come from OpenStreetMap only after you agree; until then the track is drawn on a plain background. The activities of the watch and of its backups are listed together, and each can be saved as a GPX file.</p>
+    <p>Open an activity to see its track on a map, coloured by heart rate, pace or elevation, with a chart of each. Choose a lap to find it on the map and on the chart; below them are the heart rate zones and the training effect as the device worked them out. The map's tiles come from OpenStreetMap only once you turn them on; until then the track is drawn on a plain background. The activities of the device and of its backups are listed together, and each can be saved as a GPX file.</p>
     <div class="shot-row">
       <figure class="shot" style="--ratio: 1.667">
         <a class="zoom" href="screenshots/full/light-activity-hr.webp" data-dark="screenshots/full/dark-activity-hr.webp">
@@ -163,7 +163,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
   <section class="spotlight" aria-labelledby="apps-title">
     <div class="spotlight-text">
       <h2 id="apps-title">Connect IQ apps</h2>
-      <p>Install, update and remove apps, turn them on or off and put them back in order – also on watches that hide their app folder, such as the fēnix 8. Apps you added in the Connect IQ store wait on the same page.</p>
+      <p>Install, update and remove apps, turn them on or off and put them back in order – also on watches that hide their app folder, such as the fēnix 8. Apps you added in the Connect IQ Store wait on the same page.</p>
     </div>
     <a class="zoom spotlight-image" href="screenshots/full/light-apps.webp" data-dark="screenshots/full/dark-apps.webp" data-caption="Connect IQ apps: install, update, remove and put back in order">
       <picture>
@@ -184,13 +184,13 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
             <img src="screenshots/light-updates.webp" width="1400" height="1036" loading="lazy" alt="The Updates page of an Edge 1050: version 33.20 available, a beta, with Install and Check Again, and Reinstall Components under Advanced">
           </picture>
         </a>
-        <figcaption>Updates for the device and its components, straight from Garmin</figcaption>
+        <figcaption>Updates for the device and its components, downloaded from Garmin</figcaption>
       </figure>
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-update-confirm.webp" data-dark="screenshots/full/dark-update-confirm.webp">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-update-confirm.webp">
-            <img src="screenshots/light-update-confirm.webp" width="1400" height="1036" loading="lazy" alt="The question before an update is installed: the versions, its size and where it goes on the device, what changes, that it is a beta, the license agreement and a warning about a system update">
+            <img src="screenshots/light-update-confirm.webp" width="1400" height="1036" loading="lazy" alt="The confirmation dialog before an update is installed: the versions, its size and where it goes on the device, what changes, that it is a beta, the license agreement and a warning about a system update">
           </picture>
         </a>
         <figcaption>Before anything is written, openExpress shows what changes and warns when Garmin offers a&nbsp;beta</figcaption>
@@ -205,14 +205,14 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 6.2A5.4 5.4 0 0 0 3.4 4.6"/><path d="M3 1.9v2.9h2.9"/><path d="M2.8 9.8a5.4 5.4 0 0 0 9.8 1.6"/><path d="M13 14.1v-2.9h-2.9"/></svg></span>
         <div>
           <h3>Sync with Garmin Connect</h3>
-          <p>New activities, sleep, HRV and other data go up; courses, workouts and apps queued in Garmin Connect come down to the watch. TrueUp too. A device not yet on your account can be added from openExpress (experimental).</p>
+          <p>New activities, sleep, HRV and other data go up; courses, workouts and Connect IQ apps queued in Garmin Connect come down to the device. TrueUp too. A device not yet on your account can be added from openExpress (experimental).</p>
         </div>
       </li>
       <li class="card">
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 3.6 5.6 2l4.8 2 3.8-1.6v10L10.4 14l-4.8-2-3.8 1.6z"/><path d="M5.6 2v10M10.4 4v10"/></svg></span>
         <div>
           <h3>Maps</h3>
-          <p>Free maps such as TopoActive, CourseView and Ski, checked before they are written, and maps of your own.</p>
+          <p>Free maps such as TopoActive, CourseView and Ski, checked by MD5 before they are written, and maps of your own.</p>
         </div>
       </li>
       <li class="card">
@@ -226,7 +226,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="3.5" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/><path d="M6.3 9h3.4"/></svg></span>
         <div>
           <h3>Backups and diagnostics</h3>
-          <p>Backups of the device and copies of its diagnostic files, kept on your computer; the primary training device and the primary wearable.</p>
+          <p>Backups of the device and copies of its diagnostic files, kept on your computer. Shows and sets the primary training device and the primary wearable.</p>
         </div>
       </li>
     </ul>
@@ -252,14 +252,14 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="9" rx="1.5"/><path d="M8 11v3M5.5 14h5"/></svg></span>
         <div>
           <h3>System</h3>
-          <p>Linux with Flatpak; the GNOME runtime comes from Flathub. Watches that connect over MTP need gvfs with its MTP backend (gvfs-mtp), which GNOME has.</p>
+          <p>Linux with Flatpak; the GNOME runtime comes from Flathub. Devices that connect over MTP need gvfs with its MTP backend (gvfs-mtp), which GNOME has.</p>
         </div>
       </li>
       <li>
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.2" r="2.7"/><path d="M2.8 14a5.2 5.2 0 0 1 10.4 0"/></svg></span>
         <div>
           <h3>Garmin</h3>
-          <p>A Garmin Connect account, and the Garmin Express installer for Windows: openExpress reads the application's key, its secret and the value that signs download addresses from your own copy during setup, and carries no Garmin code. No Windows needed.</p>
+          <p>A Garmin Connect account, and the Garmin Express installer for Windows. openExpress contains no Garmin code; the application key, its secret and the value that signs download addresses are read from your own copy of the installer during setup. No Windows needed.</p>
         </div>
       </li>
     </ul>
@@ -271,7 +271,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
     <ul class="points">
       <li>No telemetry.</li>
       <li>Your password is typed only on Garmin's page.</li>
-      <li>Sync never deletes files from the watch, and every file written to it is checked.</li>
+      <li>Sync never deletes files from the device, and every file written to it is checked.</li>
       <li>The map of an activity asks OpenStreetMap for its streets only after you turn them on.</li>
     </ul>
     <p class="note">More: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/privacy.md">Privacy and security</a>.</p>
