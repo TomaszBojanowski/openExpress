@@ -32,7 +32,7 @@ def iq_message(mid, app_id, name):
             "metadata": {"messageurl": "x", "messagename": name, "appdetails": {"id": str(app_id)}}}
 
 
-# --- 1. backup ------------------------------------------------------------------------
+# --- backup ---------------------------------------------------------------------------
 
 
 def test_backup_retention_ignores_foreign_dirs_and_cleans_partial(device_root, tmp_path):
@@ -137,7 +137,7 @@ def test_a_plain_backup_stays_inside_its_folder(device_root, tmp_path):
     _nothing_outside(tmp_path, before, res.path)
 
 
-# --- 2/3/9. Connect IQ ----------------------------------------------------------------
+# --- Connect IQ -----------------------------------------------------------------------
 
 
 def test_in_bin_only_apps_are_kept(iq_device):
@@ -321,7 +321,7 @@ def test_malformed_ciq_files():
     assert state.available_space is None and state.apps[0].name == ""
 
 
-# --- 10. proto ------------------------------------------------------------------------
+# --- protobuf: damaged messages -------------------------------------------------------
 
 
 def test_proto_rejects_truncated_fixed_and_field_zero():
@@ -335,7 +335,7 @@ def test_proto_rejects_truncated_fixed_and_field_zero():
     assert {f.number: f.value for f in fields}[1] == b"abcd"
 
 
-# --- 4. updates / maps write failures -------------------------------------------------
+# --- updates / maps write failures ----------------------------------------------------
 
 
 class TruncatingStorage(LocalStorage):
@@ -377,7 +377,7 @@ def test_map_write_failure_leaves_no_file(server, device_root, xdg, cls, exc):
     assert not (device_root / "GARMIN/J.img").exists()
 
 
-# --- 11. maps without deliverables -----------------------------------------------------
+# --- maps without deliverables ---------------------------------------------------------
 
 
 def test_map_with_missing_deliverable_not_installable(server, device_root, xdg):
@@ -395,7 +395,7 @@ def test_map_with_missing_deliverable_not_installable(server, device_root, xdg):
     assert (device_root / "GARMIN/E.img").exists() and called == []
 
 
-# --- 6/7/13. music --------------------------------------------------------------------
+# --- music ----------------------------------------------------------------------------
 
 
 def _track(local, album, disc=None, size=10):
@@ -431,7 +431,7 @@ def test_scan_direct_file_does_not_use_parent_folders(iq_device, tmp_path):
     assert (by_name["top.mp3"].artist, by_name["top.mp3"].album) == ("", "")
 
 
-# --- 12. storage ----------------------------------------------------------------------
+# --- errors of a local storage --------------------------------------------------------
 
 
 def test_local_storage_errors(device_root):

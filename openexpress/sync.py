@@ -6,7 +6,7 @@ Flow, as in Garmin Express:
   download: Connect message queue -> download -> write to device -> ack
 
 All `plan_*` functions are read-only; changes are made by `run_*`.
-The clone never deletes files from the watch.
+openExpress never deletes files from the watch.
 """
 
 from __future__ import annotations

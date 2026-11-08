@@ -83,7 +83,7 @@ def make_client(monkeypatch, base):
     return c
 
 
-# --- 1. network and JSON errors -> ApiError ---------------------------------------------
+# --- network and JSON errors -> ApiError ------------------------------------------------
 
 def test_connection_error_becomes_api_error(monkeypatch):
     c = make_client(monkeypatch, unused_url())
@@ -153,7 +153,7 @@ def test_a_network_error_in_the_ticket_exchange_does_not_show_the_ticket(monkeyp
     assert "connectapi.garmin.com" in text and "Connection refused" in text
 
 
-# --- 2. poll_location -------------------------------------------------------------------
+# --- polling where an upload is processed -----------------------------------------------
 
 def test_poll_location_network_error(monkeypatch):
     c = make_client(monkeypatch, unused_url())
@@ -176,7 +176,7 @@ def test_poll_location_relative_and_clamped(monkeypatch, server):
     assert time.monotonic() - t < 3
 
 
-# --- 8. signing covers the URL that is actually sent ----------------------------------
+# --- signing covers the URL that is actually sent -------------------------------------
 
 def test_signature_uses_sent_url(monkeypatch, server):
     server.routes["/a%20b/~user"] = (200, {}, b"{}")
@@ -192,7 +192,7 @@ def test_signature_uses_sent_url(monkeypatch, server):
     assert auth == expected
 
 
-# --- 3/4/5. downloads -------------------------------------------------------------------
+# --- downloads --------------------------------------------------------------------------
 
 DATA = bytes(range(256)) * 20
 
@@ -276,7 +276,7 @@ def test_416_with_complete_part(server, tmp_path):
     assert ranges(server)[1:] == [f"bytes={len(DATA) + 4}-", None]
 
 
-# --- 6/7. paths -------------------------------------------------------------------------
+# --- private files and the move of the program's folders --------------------------------
 
 def test_write_private(tmp_path, monkeypatch):
     target = tmp_path / "d" / "secret.json"
@@ -331,7 +331,7 @@ def test_app_dir_migration_race(tmp_path, monkeypatch):
     assert paths.config_dir() == old
 
 
-# --- 10. system language preference list ----------------------------------------------
+# --- system language preference list --------------------------------------------------
 
 @pytest.fixture
 def sys_lang(tmp_path, monkeypatch):
@@ -367,7 +367,7 @@ def test_explicit_language_wins(sys_lang):
     assert i18n.setup() == "pl"
 
 
-# --- 11. damaged config files ---------------------------------------------------------
+# --- damaged config files -------------------------------------------------------------
 
 def test_damaged_settings(xdg):
     path = paths.config_dir() / "settings.json"

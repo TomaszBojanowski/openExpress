@@ -5,8 +5,10 @@ story of the work ("review of", "seen live", "as before"), and no function is na
 string names the analyses, audits, decisions or private notes, nor a "live test". A fact about
 a device, a server or another program stays, with that program's own version ("libadwaita
 1.9", "firmware 23.39"). Dates and the like in other strings are data (the window shows
-dates as 21.10.2026), so only comments and docstrings are looked at for those. No file has an
-exception."""
+dates as 21.10.2026), so only comments and docstrings are looked at for those. A comment is
+read with the lines of comment that follow it, so that what a line break cuts in two is found;
+a comment inside a string (of CSS, of markup) is a comment too. A section of the tests is
+headed by its subject, not by the number of a point of a review. No file has an exception."""
 
 import ast
 import io
@@ -46,6 +48,10 @@ WHEN = (
 # what it does or checks, not after what an earlier version did.
 NAME = re.compile(r"(?:^|_)as_before(?:$|_(?!(?:it|its|the|an?|this|that)_))")
 VERSION = re.compile(r"(?<![\w.-])v?0\.\d{1,2}\.\d{1,2}(?![\w.])")
+# A comment inside a string: of CSS (or C) and of markup.
+COMMENT_IN_STRING = re.compile(r"/\*.*?\*/|<!--.*?-->", re.DOTALL)
+# A heading of a section numbered after the points of a review: "# --- 3/4/5. downloads".
+NUMBERED_HEADING = re.compile(r"^#\s*-+\s*\d+(?:/\d+)*[.:](?=\s)")
 
 
 # The design documents say what is decided and why, not the story of the work: no conversation
@@ -81,6 +87,29 @@ def _said(line: int, text: str, patterns) -> list[str]:
     return [f"{line}: {words}" for _start, words in found]
 
 
+def _said_by_line(line: int, text: str, patterns) -> list[str]:
+    """As _said, each find with the line it starts on, `text` starting on `line`."""
+    found = sorted((m.start(), m.group(0)) for pattern in patterns for m in pattern.finditer(text))
+    return [f"{line + text.count(chr(10), 0, start)}: {words}" for start, words in found]
+
+
+def _comment_blocks(text: str) -> list[tuple[int, str]]:
+    """The comments of a Python source, those on lines that follow each other as one: (the
+    line of the first, their texts without their first "#", a line break between them)."""
+    blocks: list[tuple[int, list[str]]] = []
+    last = None
+    for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+        if tok.type != tokenize.COMMENT:
+            continue
+        row = tok.start[0]
+        if last is not None and row == last + 1:
+            blocks[-1][1].append(tok.string[1:])
+        else:
+            blocks.append((row, [tok.string[1:]]))
+        last = row
+    return [(row, "\n".join(lines)) for row, lines in blocks]
+
+
 def references(path: Path) -> list[str]:
     """What `path` names that it should not: "line: words"."""
     text = path.read_text(encoding="utf-8")
@@ -89,17 +118,24 @@ def references(path: Path) -> list[str]:
         return [ref for n, line in enumerate(text.splitlines(), 1)
                 for ref in _said(n, line, (NOTES, *WHEN))]
     said = []
+    for row, comment in _comment_blocks(text):
+        said += _said_by_line(row, comment, (NOTES, *WHEN, VERSION))
     for tok in tokenize.generate_tokens(io.StringIO(text).readline):
         if tok.type == tokenize.COMMENT:
-            said += _said(tok.start[0], tok.string, (NOTES, *WHEN, VERSION))
+            said += _said(tok.start[0], tok.string, (NUMBERED_HEADING,))
     tree = ast.parse(text)
     docs = _docstrings(tree)
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and NAME.search(node.name):
             said.append(f"{node.lineno}: {node.name}")
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            patterns = (NOTES, *WHEN, VERSION) if id(node) in docs else (NOTES,)
-            said += _said(node.lineno, node.value, patterns)
+            if id(node) in docs:
+                said += _said(node.lineno, node.value, (NOTES, *WHEN, VERSION))
+                continue
+            said += _said(node.lineno, node.value, (NOTES,))
+            for m in COMMENT_IN_STRING.finditer(node.value):
+                said += _said_by_line(node.lineno + node.value.count("\n", 0, m.start()),
+                                      m.group(0), (*WHEN, VERSION))
     return said
 
 
@@ -167,6 +203,36 @@ def test_what_tells_when_in_a_comment_or_a_docstring(tmp_path):
 def test_an_analysis_named_across_a_line_break(tmp_path):
     assert _words(tmp_path, '"""The rule of the analysis\n    14: one source."""\n') == [
         "analysis\n    14"]
+
+
+def test_a_note_named_across_lines_of_comment(tmp_path):
+    """Comments that follow each other are read as one, the "#" of each line left out."""
+    assert _words(tmp_path, 'X = 1  # its serial (analysis\n'
+                            '# 18) and its volume\n'
+                            '# seen on 26.10.\n'
+                            '# 2026 at night\n') == ["analysis\n 18"]
+    assert _words(tmp_path, '# its serial (analysis\n'
+                            '    # 18): never shown\n') == ["analysis\n 18"]
+
+
+def test_a_date_in_a_comment_inside_a_string(tmp_path):
+    """A comment of CSS or of markup in a string says no date; the rest of the string is
+    data."""
+    assert _words(tmp_path, 'CSS = """\n.row { color: red; }\n'
+                            '/* fainter than the line under it (26.10.2026). */\n'
+                            '.tile { color: #1e1e1e; } /* shown 21.10.2026 */\n"""\n'
+                            'SVG = "<!-- made after D7, on 1 November 2026 -->"\n'
+                            'SHOWN = "Last on 21.10.2026"\n') == [
+        "26.10.2026", "21.10.2026", "D7", "1 November 2026"]
+
+
+def test_a_section_is_headed_by_its_subject_not_by_a_number(tmp_path):
+    assert _words(tmp_path, '# --- 1. network errors --------\n'
+                            '# --- 3/4/5. downloads ---\n'
+                            '# --- 10: inter-process lock ---\n'
+                            '# --- downloads over HTTPS only ---\n'
+                            '# 2 files at most; 3. the last\n') == [
+        "# --- 1.", "# --- 3/4/5.", "# --- 10:"]
 
 
 def test_as_before_without_a_moment_after_it(tmp_path):

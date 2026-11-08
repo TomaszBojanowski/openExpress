@@ -87,7 +87,7 @@ def _state_file(device_root):
     return SyncState(1234567890).file
 
 
-# --- 10: inter-process lock --------------------------------------------------------------
+# --- inter-process lock ------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("argv", [["sync", "--apply", "--all"], ["baseline", "--apply"]])
@@ -104,7 +104,7 @@ def test_apply_respects_sync_lock(device_root, xdg, fake_client, monkeypatch, ca
     assert not _state_file(device_root).exists()
 
 
-# --- 11: first-sync guard ----------------------------------------------------------------
+# --- first-sync guard --------------------------------------------------------------------
 
 
 def test_first_sync_guard_without_candidates(device_root, xdg, fake_client, capsys):
@@ -249,7 +249,7 @@ def test_sync_all_uploads_and_records_last_sync(device_root, xdg, fake_client, c
     assert step_words(data["lines"]) == ["Files from the device: activities ×2"]
 
 
-# --- 12: errors and exit codes -----------------------------------------------------------
+# --- errors and exit codes ---------------------------------------------------------------
 
 
 def test_sync_upload_errors_give_exit_code_1(device_root, xdg, fake_client, capsys):
@@ -269,7 +269,7 @@ def test_network_error_is_a_clean_user_error(device_root, xdg, fake_client, caps
     assert "Traceback" not in said.out + said.err
 
 
-# --- 14: setup --key/--secret ------------------------------------------------------------
+# --- setup --key/--secret ----------------------------------------------------------------
 
 
 @pytest.mark.parametrize("argv", [["setup", "--key", "abc"], ["setup", "--secret", "xyz"]])
@@ -288,7 +288,7 @@ def test_setup_does_not_show_any_of_the_key(xdg, capsys):
     assert "deadbeef" not in said.out + said.err and "secret" not in said.out + said.err
 
 
-# --- 15: music remove matching -----------------------------------------------------------
+# --- music remove matching ---------------------------------------------------------------
 
 PATHS = ["Music/Pink Floyd/The Wall/01 In the Flesh.mp3",
          "Music/Various Artists/Hits/02 Song.mp3",
@@ -316,7 +316,7 @@ def test_music_remove_rejects_short_patterns(device_root, xdg, capsys, pattern):
     assert "at least 3 characters" in capsys.readouterr().err
 
 
-# --- 16: desktop / systemd quoting -------------------------------------------------------
+# --- desktop / systemd quoting -----------------------------------------------------------
 
 
 def test_desktop_exec_quote():
@@ -348,7 +348,7 @@ def test_files_without_source_root(xdg, monkeypatch):
     assert "Environment=" not in unit
 
 
-# --- 17: uninstall -----------------------------------------------------------------------
+# --- uninstall ---------------------------------------------------------------------------
 
 
 def test_uninstall_disables_service_and_removes_wants_link(xdg, monkeypatch, tmp_path):

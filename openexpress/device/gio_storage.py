@@ -1,6 +1,6 @@
 """Access to the MTP device via GIO/gvfs (like the GNOME file manager).
 
-This way the clone does not take exclusive control of the device and does not
+This way openExpress does not take exclusive control of the device and does not
 conflict with gvfs-mtp, which mounts the watch automatically in GNOME.
 """
 
@@ -629,10 +629,10 @@ class GarminUsb:
     # Where the device is on USB, when known; not part of what the device is.
     bus: int | None = field(default=None, compare=False)
     address: int | None = field(default=None, compare=False)
-    # What tells a drive from another of its model while nothing of it is read (analysis
-    # 18): its USB serial (None: it gives none, as a Varia Rearview Radar) and the UUID of its
-    # volume. As private as its unit ID (a fēnix 8's serial is its unit ID): never shown, and
-    # hidden in the log as soon as they are read (applog.hide_usb).
+    # What tells a drive from another of its model while nothing of it is read, so that two of
+    # them are not taken for one: its USB serial (None: it gives none, as a Varia Rearview
+    # Radar) and the UUID of its volume. As private as its unit ID (a fēnix 8's serial is its
+    # unit ID): never shown, and hidden in the log as soon as they are read (applog.hide_usb).
     serial: str | None = field(default=None, compare=False, repr=False)
     volume_uuid: str | None = field(default=None, compare=False, repr=False)
     # Garmin's; another only for the drive named for testing (TEST_DRIVE_ENV), so that the log

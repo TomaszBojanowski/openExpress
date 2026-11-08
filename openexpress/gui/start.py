@@ -130,7 +130,7 @@ label.oe-chip.warning {
 }
 label.oe-chip.dimmed {
   /* libadwaita 1.7 dims every widget of the class "dimmed" (opacity 0.55): a grey chip has
-     its colours from here only, else it is fainter than the line under it (26.10.2026). */
+     its colours from here only, else it is fainter than the line under it. */
   opacity: 1;
   color: alpha(currentColor, 0.8);
   background-color: alpha(currentColor, 0.12);
