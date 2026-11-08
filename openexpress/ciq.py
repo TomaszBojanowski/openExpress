@@ -760,54 +760,152 @@ def _remember_refusal(device: GarminDevice, path: str) -> None:
         log.warning("Cannot remember that %s cannot be created: %s", path, e)
 
 
-def _hides_app_files(device: GarminDevice, storage: Storage) -> bool:
-    """Whether the device lists an app with a file of its own that the storage does not
-    show: its app folder exists and is only hidden."""
-    try:
-        apps = parse_out_bin(storage.read(_config_path(device, False))).apps
-    except DeviceNotResponding:
-        raise
-    except (DeviceError, CiqError):
-        return False
-    paths_ = [app_file_path(device, a) for a in apps]
-    return any(p and not storage.exists(p) for p in paths_)
+def _refused(device: GarminDevice, path: str) -> bool:
+    """Whether the device refused to create this app folder with the software it has now."""
+    return _refusals(device).get(path.casefold()) == device.software_version_str
 
 
-def usb_dir_state(device: GarminDevice, storage: Storage, datatype: str) -> str:
-    """READY (visible), DIRECT (not visible; will be looked for over PTP), SANDBOXED (hidden
-    by the device and out of reach in a sandbox; nothing is tried), MISSING (not on the
-    device; creating it was not tried) or REFUSED."""
-    path = app_dir(device, datatype)
-    if path is None or storage.resolve(path) is not None:
-        return READY
-    if storage.exclusive_ptp() is not None:
-        return DIRECT
-    if storage.usb_blocked() and _hides_app_files(device, storage):
-        return SANDBOXED
-    if _refusals(device).get(path.casefold()) == device.software_version_str:
-        return REFUSED
-    return MISSING
+class Operation:
+    """One install, removal or look at the apps of a device, and what it asks the device once
+    for its whole length (over MTP each question is a round trip): the state of each app
+    folder (`folder`, by a data type that keeps its apps there; several share one), the
+    files it shows (`files_in`), the apps on the device (`installed`: read again only after
+    the operation wrote their list) and the copy of the app list made before its first
+    change (`copy_first`)."""
+
+    def __init__(self, device: GarminDevice, storage: Storage,
+                 installed: InstalledState | None = None):
+        self.device, self.storage = device, storage
+        self._installed = installed  # as the caller read it a moment ago, or not yet read
+        # By the folder's path as GarminDevice.xml gives it, in lower case.
+        self._real: dict[str, str | None] = {}  # as the storage shows it; None: not shown
+        self._states: dict[str, str] = {}
+        self._files: dict[str, frozenset[str]] = {}
+        self._hides: bool | None = None
+        self._copied = False
+
+    def real_folder(self, datatype: str) -> str | None:
+        """The real path of the app folder of the data type, None when the storage does not
+        show it (or the device declares none)."""
+        path = app_dir(self.device, datatype)
+        if path is None:
+            return None
+        if path.casefold() not in self._real:
+            self._real[path.casefold()] = self.storage.resolve(path)
+        return self._real[path.casefold()]
+
+    def folder(self, datatype: str) -> str:
+        """READY (visible), DIRECT (not visible; will be looked for over PTP), SANDBOXED
+        (hidden by the device and out of reach in a sandbox; nothing is tried), MISSING (not
+        on the device; creating it was not tried) or REFUSED."""
+        path = app_dir(self.device, datatype)
+        if path is None:
+            return READY
+        if path.casefold() not in self._states:
+            if self.real_folder(datatype) is not None:
+                state = READY
+            elif self.storage.exclusive_ptp() is not None:
+                state = DIRECT
+            elif self.storage.usb_blocked() and self.hides_app_files():
+                state = SANDBOXED
+            elif _refused(self.device, path):
+                state = REFUSED
+            else:
+                state = MISSING
+            self._states[path.casefold()] = state
+        return self._states[path.casefold()]
+
+    def files_in(self, datatype: str) -> frozenset[str]:
+        """The names of the files the app folder of the data type shows, in lower case: one
+        listing for all its apps."""
+        path = app_dir(self.device, datatype)
+        if path is None:
+            return frozenset()
+        if path.casefold() not in self._files:
+            real = self.real_folder(datatype)
+            names: frozenset[str] = frozenset()
+            if real is not None:
+                try:
+                    names = frozenset(e.name.casefold() for e in self.storage.list_at(real)
+                                      if not e.is_dir)
+                except DeviceNotResponding:
+                    raise
+                except DeviceError:
+                    pass  # not shown, as a folder that cannot be listed
+            self._files[path.casefold()] = names
+        return self._files[path.casefold()]
+
+    def shows_file(self, app: InstalledApp) -> bool:
+        """Whether the ordinary listing shows the app's own file."""
+        path = app_file_path(self.device, app)
+        datatype = APPTYPE_TO_DATATYPE.get(app.app_type)
+        return bool(path and datatype) and (
+            posixpath.basename(path).casefold() in self.files_in(datatype))
+
+    def hides_app_files(self) -> bool:
+        """Whether the device lists an app with a file of its own that the storage does not
+        show: its app folder exists and is only hidden."""
+        if self._hides is None:
+            try:
+                apps = parse_out_bin(self.storage.read(_config_path(self.device, False))).apps
+            except DeviceNotResponding:
+                raise
+            except (DeviceError, CiqError):
+                apps = []
+            self._hides = any(app_file_path(self.device, a) and not self.shows_file(a)
+                              for a in apps)
+        return self._hides
+
+    def installed(self) -> InstalledState:
+        """The apps on the device (read_installed)."""
+        if self._installed is None:
+            self._installed = read_installed(self.device, self.storage)
+        return self._installed
+
+    def list_written(self) -> None:
+        """The operation wrote the app list: the apps on the device are read again."""
+        self._installed = None
+
+    def copy_first(self) -> None:
+        """The copy of the app list (save_app_list_copy), before the operation's first change."""
+        if not self._copied:
+            save_app_list_copy(self.device, self.storage)
+            self._copied = True
+
+    def folder_made(self, datatype: str, real: str) -> None:
+        key = app_dir(self.device, datatype).casefold()
+        self._real[key], self._states[key], self._files[key] = real, READY, frozenset()
+
+    def folder_refused(self, datatype: str) -> None:
+        key = app_dir(self.device, datatype).casefold()
+        # One a PTP session reaches stays DIRECT, as when it is looked at anew.
+        if self._states.get(key) == MISSING:
+            self._states[key] = REFUSED
 
 
-def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str) -> bool:
+def prepare_app_dir(device: GarminDevice, storage: Storage, datatype: str,
+                    op: Operation | None = None) -> bool:
     """Whether app files of this type can be written through the mounted storage; creates
-    a missing folder if the device allows it."""
-    path = app_dir(device, datatype)
-    if path is None or storage.resolve(path) is not None:
+    a missing folder if the device allows it. `op`: the operation it is part of."""
+    op = op or Operation(device, storage)
+    where = op.folder(datatype)
+    if where == READY:
         return True
-    if _refusals(device).get(path.casefold()) == device.software_version_str:
+    path = app_dir(device, datatype)
+    # SANDBOXED: the folder is there; asking the device to create it is pointless.
+    if where == SANDBOXED or _refused(device, path):
         return False
-    if usb_dir_state(device, storage, datatype) == SANDBOXED:
-        return False  # the folder is there; asking the device to create it is pointless
-    save_app_list_copy(device, storage)  # creating the folder is a change too
+    op.copy_first()  # creating the folder is a change too
     try:
-        storage.make_dir(path)
+        real = storage.make_dir(path)
     except DeviceNotResponding:
         raise  # not a refusal to remember
     except DeviceError as e:
         log.info("Cannot install apps on this device over USB (%s): %s", path, e)
         _remember_refusal(device, path)
+        op.folder_refused(datatype)
         return False
+    op.folder_made(datatype, real)
     return True
 
 
@@ -854,17 +952,20 @@ def _check_accepted(device: GarminDevice, datatype: str) -> list:
 
 
 def install_refusals(device: GarminDevice, storage: Storage, state: InstalledState,
-                     targets: list[StoreApp]) -> dict[uuid.UUID, str]:
-    """Why some of these store apps cannot be installed over USB: app ID -> reason. It reads
-    nothing new, so it is asked before anything is requested in Garmin Connect, downloaded
-    or written. The apps are taken in order: one that fits uses up its slot and its space."""
+                     targets: list[StoreApp],
+                     op: Operation | None = None) -> dict[uuid.UUID, str]:
+    """Why some of these store apps cannot be installed over USB: app ID -> reason. Besides
+    the state of the app folders (`op`: the operation it is part of) it asks the device
+    nothing, so it is asked before anything is requested in Garmin Connect, downloaded or
+    written. The apps are taken in order: one that fits uses up its slot and its space."""
+    op = op or Operation(device, storage, state)
     refused: dict[uuid.UUID, str] = {}
     free_slots = _free_slots(device, state)
     new = used = 0
     for t in targets:
         existing = state.find(t.app_id)
         datatype = store_datatype(t)
-        over_ptp = usb_dir_state(device, storage, datatype) == DIRECT
+        over_ptp = op.folder(datatype) == DIRECT
         # An update over PTP is written next to the old file: it needs room of its own.
         needs_room = existing is None or over_ptp
         try:
@@ -898,16 +999,18 @@ def install_apps(
     progress: Callable[[str], None] | None = None,
     allowed: Collection[uuid.UUID] = (),
     messages: list[dict] | None = None,
+    op: Operation | None = None,
 ) -> IqInstallReport:
     """Queue the apps in Garmin Connect (unless they already wait there) and install over
     USB those the device accepts; returns the report. Apps whose folder the device does not
     offer are only queued (`for_phone`, not failures). Apps with new permissions not in
     `allowed` are set aside first (`needs_consent`): nothing is requested, downloaded or
-    written for them."""
+    written for them. `op`: the operation the caller began (what it asked the device)."""
     progress = say_to(progress)
     asking = [t for t in needs_consent(targets) if t.app_id not in set(allowed)]
     targets = [t for t in targets if t not in asking]
-    report = _install_apps(device, storage, client, api, targets, progress, messages)
+    report = _install_apps(device, storage, client, api, targets, progress, messages,
+                           op or Operation(device, storage))
     report.needs_consent = [t.name for t in asking]
     if asking:
         log.info("apps install: %d set aside, their new permissions not allowed", len(asking))
@@ -915,18 +1018,18 @@ def install_apps(
 
 
 def _install_apps(device, storage, client, api, targets, progress,
-                  messages: list[dict] | None = None) -> IqInstallReport:
+                  messages: list[dict] | None, op: Operation) -> IqInstallReport:
     if not targets:
         return IqInstallReport()
-    state = read_installed(device, storage)
+    state = op.installed()
     if state.no_app_list:
         return _queue_only(device, client, api, targets)
     require_complete(state)
-    states = {t.app_id: usb_dir_state(device, storage, store_datatype(t)) for t in targets}
+    states = {t.app_id: op.folder(store_datatype(t)) for t in targets}
     # Before the copy and before Garmin is asked for anything: an app the device has no
     # room for is not requested, so that it does not stay in the account's queue.
     refused = install_refusals(device, storage, state, [
-        t for t in targets if states[t.app_id] not in (REFUSED, SANDBOXED)])
+        t for t in targets if states[t.app_id] not in (REFUSED, SANDBOXED)], op)
     failed = [(t.name, refused[t.app_id]) for t in targets if t.app_id in refused]
     targets = [t for t in targets if t.app_id not in refused]
     if not targets:
@@ -936,10 +1039,10 @@ def _install_apps(device, storage, client, api, targets, progress,
     states = {t.app_id: states[t.app_id] for t in targets}
     if any(s not in (REFUSED, SANDBOXED) for s in states.values()):
         # Something may be written: the copy comes first, before Garmin is asked for anything.
-        save_app_list_copy(device, storage)
+        op.copy_first()
     usb = [t for t in targets
-           if usb_dir_state(device, storage, store_datatype(t)) in (READY, DIRECT)
-           or prepare_app_dir(device, storage, store_datatype(t))]
+           if op.folder(store_datatype(t)) in (READY, DIRECT)
+           or prepare_app_dir(device, storage, store_datatype(t), op)]
     for_phone = [t.name for t in targets if t not in usb]
     # An app that already waits in Garmin's queue for this device is not requested again.
     # The queue as the caller read it a moment ago (the command line), else read now.
@@ -955,7 +1058,8 @@ def _install_apps(device, storage, client, api, targets, progress,
     if usb:
         report = install_queued(device, storage, client, messages,
                                 {t.app_id: t for t in targets},
-                                only={t.app_id for t in usb}, progress=progress, direct=True)
+                                only={t.app_id for t in usb}, progress=progress, direct=True,
+                                op=op)
     report.failed = failed + report.failed
     report.for_phone = for_phone + [n for n in report.for_phone if n not in for_phone]
     have = {a.app_id for a in state.store_apps}
@@ -1020,12 +1124,6 @@ def sandbox_removal_text() -> str:
         _("Remove it on the phone, in the Connect IQ or Garmin Connect app.")))
 
 
-def removal_sandboxed(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
-    """Whether only a Flatpak without access to USB keeps the app's file out of reach."""
-    dt = APPTYPE_TO_DATATYPE.get(app.app_type)
-    return bool(dt and app.filename and usb_dir_state(device, storage, dt) == SANDBOXED)
-
-
 @dataclass
 class _Hidden:
     """An app waiting to be written into a folder only PTP shows."""
@@ -1049,18 +1147,21 @@ def install_queued(
     only: set[uuid.UUID] | None = None,
     progress: Callable[[str], None] | None = None,
     direct: bool = False,
+    op: Operation | None = None,
 ) -> IqInstallReport:
     """Write the queued apps to the watch, register them in IN.BIN and return the report. A
     message is acknowledged only once its app is written and registered, so an interrupted
     install is retried on the next sync. `direct` allows a PTP session (it unmounts the
-    device for a moment) for a folder the device hides: never during a sync."""
+    device for a moment) for a folder the device hides: never during a sync. `op`: the
+    operation it is part of (install_apps)."""
     progress = say_to(progress)
+    op = op or Operation(device, storage)
     report, leftover = _install_pass(device, storage, client, messages, known, only, progress,
-                                     direct=direct)
+                                     op, direct=direct)
     if leftover:
         # The PTP session did not find their folder either: the old way, creating it.
         again, _none = _install_pass(device, storage, client, leftover, known, only, progress,
-                                     direct=False, ptp_tried=True)
+                                     op, direct=False, ptp_tried=True)
         report.installed += again.installed
         report.direct += again.direct
         report.updated += again.updated
@@ -1106,10 +1207,10 @@ def _app_name(message: dict, app_id: uuid.UUID, known: dict) -> str:
     return meta.get("messagename") or (known[app_id].name if app_id in known else str(app_id))
 
 
-def _install_pass(device, storage, client, messages, known, only, progress,
+def _install_pass(device, storage, client, messages, known, only, progress, op: Operation,
                   direct: bool, ptp_tried: bool = False) -> tuple[IqInstallReport, list[dict]]:
     report = IqInstallReport()
-    state = read_installed(device, storage)
+    state = op.installed()
     if state.no_app_list:
         # Nothing is written: the queued apps stay for the phone. Garmin Express does
         # not install them either, as it cannot read the apps of a device without a list.
@@ -1127,17 +1228,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
     to_ack: list[tuple[dict, str]] = []
     new_size = 0
     interrupted = False
-    copied = False
     # The apps of this pass, counted for the progress ("Downloading … · 1 of 2").
     counted = _of_this_pass(messages, only)
-
-    def copy_first() -> None:
-        """Before the first thing this pass writes to the device."""
-        nonlocal copied
-        if not copied:
-            save_app_list_copy(device, storage)
-            copied = True
-
     try:
         for number, (m, app_id) in enumerate(counted, 1):
             meta = m.get("metadata") or {}
@@ -1148,22 +1240,22 @@ def _install_pass(device, storage, client, messages, known, only, progress,
                 if existing is None:
                     _check_slot(free_slots, len(new_entries) + len(hidden))
                 _check_not_leaving(existing)
-                where = usb_dir_state(device, storage, dt)
+                where = op.folder(dt)
                 over_ptp = direct and where == DIRECT
                 # A folder the device only hides (an app of its own has a file there, out of
                 # sight) is not asked for without a PTP session: the request is pointless and
                 # its refusal would be kept as if the folder could not be had. Once a session
                 # did not find it, it is created the old way.
                 folder_hidden = (not over_ptp and not ptp_tried and where == DIRECT
-                                 and _hides_app_files(device, storage))
+                                 and op.hides_app_files())
                 if folder_hidden or (not over_ptp
-                                     and not prepare_app_dir(device, storage, dt)):
+                                     and not prepare_app_dir(device, storage, dt, op)):
                     # Not an error: the app stays queued and the phone installs it.
                     report.for_phone.append(name)
-                    if usb_dir_state(device, storage, dt) == SANDBOXED:
+                    if op.folder(dt) == SANDBOXED:
                         report.sandboxed.append(name)
                     continue
-                copy_first()
+                op.copy_first()  # before the first thing the operation writes
                 step = (number, len(counted))
                 progress(Step(downloading_text(name), *step))
                 data = client.download_message(meta.get("messageurl") or "",
@@ -1223,6 +1315,8 @@ def _install_pass(device, storage, client, messages, known, only, progress,
         interrupted = True
         raise
     finally:
+        if hidden or new_entries:
+            op.list_written()  # or tried to: asked anew by a pass after this one
         registered = False
         if hidden and not interrupted:
             registered = _install_hidden(device, storage, state, hidden, new_entries, new_paths,
@@ -1498,24 +1592,29 @@ MOUNTED, UNREACHABLE = "mounted", "unreachable"
 def removal_way(device: GarminDevice, storage: Storage, app: InstalledApp) -> str:
     """How the app can be removed, told by its own file alone: MOUNTED when the ordinary
     listing shows it, DIRECT when the device hides it and a PTP session reaches it,
-    SANDBOXED when only the sandbox keeps it out of reach, UNREACHABLE otherwise."""
+    SANDBOXED when only a Flatpak without access to USB keeps it out of reach, UNREACHABLE
+    otherwise."""
+    return _removal_way(Operation(device, storage), app)
+
+
+def removal_ways(device: GarminDevice, storage: Storage,
+                 apps: list[InstalledApp]) -> dict[tuple[uuid.UUID, int], str]:
+    """removal_way of each app, by (app ID, type): each app folder looked at once for all."""
+    op = Operation(device, storage)
+    return {(a.app_id, a.app_type): _removal_way(op, a) for a in apps}
+
+
+def _removal_way(op: Operation, app: InstalledApp) -> str:
     # Not the settings file: one the listing shows next to an app file it does not show would
     # send the removal through the mounted storage, which would delete the settings alone.
-    path = app_file_path(device, app)
-    if path and storage.exists(path):
+    if op.shows_file(app):
         return MOUNTED
-    if removable_directly(device, storage, app):
-        return DIRECT
-    if removal_sandboxed(device, storage, app):
-        return SANDBOXED
-    return UNREACHABLE
-
-
-def removable_directly(device: GarminDevice, storage: Storage, app: InstalledApp) -> bool:
-    """Whether the app's file is in a folder the device hides and a PTP session can reach."""
     dt = APPTYPE_TO_DATATYPE.get(app.app_type)
-    return bool(dt and app.filename and not app.pending and not app.pending_removal
-                and usb_dir_state(device, storage, dt) == DIRECT)
+    if not (dt and app.filename):
+        return UNREACHABLE
+    if not app.pending and not app.pending_removal and op.folder(dt) == DIRECT:
+        return DIRECT  # in a folder the device hides, which a PTP session reaches
+    return SANDBOXED if op.folder(dt) == SANDBOXED else UNREACHABLE
 
 
 def _without(apps: list[InstalledApp], app: InstalledApp) -> list[InstalledApp]:

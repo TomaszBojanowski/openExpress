@@ -166,3 +166,22 @@ def test_what_is_read_back_comes_from_the_medium_not_the_cache(tmp_path, monkeyp
     drive.write_file_checked("GARMIN/update.gcd", src)
     drive.write_checked("GARMIN/queue.fit", UPDATE)
     assert told == [(0, 0, os.POSIX_FADV_DONTNEED)] * 2  # the whole file, each time
+
+
+def test_a_long_check_of_a_drive_tells_its_bytes_as_the_copy_does(tmp_path, monkeypatch):
+    """What is read back from the drive goes to `checking` (done, size), from 0 to the whole
+    file: a check of its own, not a bar standing at its end. A check too short to be seen
+    says nothing."""
+    from openexpress.device import storage
+
+    src = tmp_path / "map.img"
+    src.write_bytes(bytes(2 * storage.COPY_CHUNK + 5))
+    size = src.stat().st_size
+    drive = LocalStorage(folder(tmp_path))
+    checked = []
+    drive.write_file_checked("GARMIN/a.img", src, checking=lambda *step: checked.append(step))
+    assert checked == []  # shorter than CHECK_TOLD_FROM
+    monkeypatch.setattr(storage, "CHECK_TOLD_FROM", size)
+    drive.write_file_checked("GARMIN/b.img", src, checking=lambda *step: checked.append(step))
+    assert checked == [(0, size), (storage.COPY_CHUNK, size), (2 * storage.COPY_CHUNK, size),
+                       (size, size)]

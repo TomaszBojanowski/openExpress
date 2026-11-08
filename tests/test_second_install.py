@@ -173,6 +173,24 @@ def test_an_acknowledgement_of_a_message_gone_already_counts_as_done(device_root
     assert state.unacked() == set()
 
 
+def test_an_empty_message_gone_already_counts_as_empty_not_failed(device_root):
+    """Its file gone (204/404) and the message too when it is acknowledged (404: the phone, or
+    the other install, took it meanwhile): an empty message, not a failure."""
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+
+    class Gone(SyncClient):
+        def download_message(self, url, absolute):
+            return None
+
+        def ack_message(self, mid):
+            raise ApiError("not found", 404)
+
+    report = sync.run_downloads(sync.plan_downloads(dev, [COURSE]), st, Gone(),
+                                state=sync.state_of(UNIT))
+    assert report.failed == [] and len(report.empty) == 1 and report.written == []
+
+
 def test_a_device_the_flatpak_synced_is_synced_and_its_records_change_the_stamp():
     """Its tile and page say no "Never synced", and a count of its activities kept against
     the sync state counts again once the Flatpak syncs it (its state.json changes)."""

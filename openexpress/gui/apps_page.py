@@ -93,8 +93,9 @@ class AppsPage:
             state = ciq.read_installed(s.device, s.storage)
             # How each app can be removed, told by its own file alone (as on the command
             # line): an app whose file is out of reach cannot be removed over USB.
+            ways = ciq.removal_ways(s.device, s.storage, state.store_apps)
             for app in state.store_apps:
-                way = ciq.removal_way(s.device, s.storage, app)
+                way = ways[(app.app_id, app.app_type)]
                 app.has_files = way == ciq.MOUNTED
                 app.direct_removal = way == ciq.DIRECT
                 app.sandboxed = way == ciq.SANDBOXED

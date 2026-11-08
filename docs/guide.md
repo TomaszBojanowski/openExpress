@@ -218,7 +218,8 @@ is stored in the file.
 - **Adding:** *Add Map…* on the Maps page, or `openexpress maps add FILE.img --apply`. The
   file keeps its name on the device; the name may have letters, digits, spaces and
   `. _ - ( )`, must start with a letter or digit and end in `.img`. `--name` gives it another
-  one; in the window, rename the file first.
+  one; in the window, rename the file first. After the copy its size on the device is
+  checked; a map of another size is removed and not listed.
 - **Nothing is overwritten:** a file that is already on the device is never replaced, and
   names that Garmin's own maps use are refused. Garmin's maps cannot be replaced or removed
   this way.
@@ -338,8 +339,9 @@ What courses from GPX files cannot do:
 The Music page (*Files…*, *Folders…*, *Add Playlist…*) and `openexpress music` copy music
 (as Artist/Album), podcasts and audiobooks (by album) to the folders the device declares,
 and write playlists as `.m3u8`. Files already on the device with the same size are skipped;
-before copying, openExpress says which files on the device will be replaced. Files and
-playlists can be removed (the trash button, `openexpress music remove`). In the Flatpak, the
+before copying, openExpress says which files on the device will be replaced. Each file and
+playlist written is checked by its size on the device; one of another size is removed. Files
+and playlists can be removed (the trash button, `openexpress music remove`). In the Flatpak, the
 tracks of a playlist can be read only from the Music and Downloads folders. Tested on a
 fēnix 8.
 

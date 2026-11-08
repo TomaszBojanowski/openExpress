@@ -78,6 +78,22 @@ def test_trueup_waits_in_ten_steps_and_tells_each(watch):
                              "TrueUp (the daily totals of all your devices)…")
 
 
+def test_a_message_gone_when_it_is_acknowledged_is_no_failure(watch):
+    """Garmin Connect answers 404 to the acknowledgement of a message it no longer has (another
+    sync took it): done, and TrueUp goes on."""
+    from openexpress.connect import ApiError
+
+    dev, st = watch
+    c = client(0)
+
+    def gone(mid):
+        raise ApiError("not found", 404)
+
+    c.ack_message = gone
+    res = trueup.run(dev, st, c, [CHECK], sleep=lambda s: None, now=lambda: NOW)
+    assert res.written is not None and len(written(st)) == 1
+
+
 def test_trueup_asks_again_at_most_three_times(watch):
     dev, st = watch
     c = client(20, later=[CHECK])

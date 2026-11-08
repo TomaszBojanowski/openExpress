@@ -195,6 +195,11 @@ class Storage(ABC):
             return []
         return self._list(real)
 
+    def list_at(self, real_path: str) -> list[Entry]:
+        """The entries of the folder at this real path (in its letter case, as listed before),
+        not looked for again."""
+        return self._list(real_path)
+
     def walk_files(self, path: str) -> list[tuple[str, Entry]]:
         """Recursive list of files under `path`: (real path, entry)."""
         real = self.resolve(path)
@@ -261,7 +266,8 @@ class Storage(ABC):
         storage itself cleans up what the copy left under the name (_discard_partial), unless
         the copy never started (CopyNotStarted: the old file is untouched; DeviceNotResponding:
         a copy has no time limit, so the device stopped responding before it, and a clean-up
-        would wait on it) or `keep_partial` (a file other maps use, never deleted)."""
+        would wait on it) or `keep_partial` (the caller's to keep or remove: a file other maps
+        use, never deleted, or an own map, removed and said by the caller)."""
         real = self._target(path)
         try:
             self._write_file(real, Path(local), progress)
@@ -283,18 +289,25 @@ class Storage(ABC):
 
     def write_file_checked(self, path: str, local: Path, progress=None, *,
                            keep_partial: bool = False,
-                           error: type[Exception] = DeviceError, md5: str | None = None) -> str:
+                           error: type[Exception] = DeviceError, md5: str | None = None,
+                           checking=None) -> str:
         """write_file, then its size on the device checked against the local file's: another
-        size (or one not known) deletes what was written, unless `keep_partial` (a file other
-        maps use, never deleted), and raises `error`. Returns the real path. `md5`: what the
-        bytes are to hash to (the server's), for a storage that reads them back (a drive)."""
+        size (or one not known) deletes what was written, unless `keep_partial` (as in
+        write_file), and raises `error`. Returns the real path. `md5`: what the
+        bytes are to hash to (the server's), for a storage that reads them back (a drive);
+        `checking` hears that reading as `progress` hears the copy (done, size)."""
         real = self.write_file(path, local, progress, keep_partial=keep_partial)
         self._check_written(real, Path(local).stat().st_size, error, keep=keep_partial)
         return real
 
     def _check_written(self, real: str, size: int, error: type[Exception], keep: bool) -> None:
-        if self.size(real) == size:
+        found = self.size(real)
+        if found == size:
             return
+        # Sizes only: the name may be the user's own (a track, a map).
+        log.warning("device: a file written has %s instead of %s%s",
+                    "no size" if found is None else applog.size(found), applog.size(size),
+                    "" if keep else "; deleted")
         if not keep:
             self.delete_quietly(real)
         raise error(_("Write verification of {path} failed").format(path=real))
@@ -409,8 +422,25 @@ def _os_errors(what: str):
 
 # Bytes written at a time when a large file is copied to a folder; one progress step each.
 COPY_CHUNK = 1 << 20
+# A file read back from a drive in less than about a second is not told as a step: below
+# this size its check would only flash by.
+CHECK_TOLD_FROM = 16 << 20
 # A file being copied is named ".<name><PART_SUFFIX>" until it is complete.
 PART_SUFFIX = ".openexpress-part"
+
+
+def _told(chunks, checking, size: int):
+    """The chunks of a file read back, each told to `checking` (done, size) after it, from
+    0; told nothing when nobody listens or the file is under CHECK_TOLD_FROM."""
+    if checking is None or size < CHECK_TOLD_FROM:
+        yield from chunks
+        return
+    done = 0
+    checking(done, size)
+    for chunk in chunks:
+        done += len(chunk)
+        checking(done, size)
+        yield chunk
 
 
 def _md5_of(chunks) -> str:
@@ -545,19 +575,21 @@ class LocalStorage(Storage):
 
     def write_file_checked(self, path: str, local: Path, progress=None, *,
                            keep_partial: bool = False,
-                           error: type[Exception] = DeviceError, md5: str | None = None) -> str:
+                           error: type[Exception] = DeviceError, md5: str | None = None,
+                           checking=None) -> str:
         """As Storage.write_file_checked, and the file read back from the drive after the write
-        (_from_the_medium) and its MD5 compared with `md5` (the server's, hex in any letter
-        case) or the local file's: other bytes are deleted, unless `keep_partial`, and raise
-        `error` before anything is told of the file."""
+        (_from_the_medium, its bytes told to `checking`) and its MD5 compared with `md5` (the
+        server's, hex in any letter case) or the local file's: other bytes are deleted, unless
+        `keep_partial`, and raise `error` before anything is told of the file."""
         real = super().write_file_checked(path, local, progress, keep_partial=keep_partial,
                                           error=error, md5=md5)
         if md5 is None:
             with _os_errors(_("Cannot read {path}").format(path=str(local))), \
                     open(local, "rb") as f:
                 md5 = _md5_of(iter(lambda: f.read(COPY_CHUNK), b""))
-        if _md5_of(self._from_the_medium(real)) != md5.strip().lower():
-            self._other_bytes(real, Path(local).stat().st_size, error, keep=keep_partial)
+        size = Path(local).stat().st_size
+        if _md5_of(_told(self._from_the_medium(real), checking, size)) != md5.strip().lower():
+            self._other_bytes(real, size, error, keep=keep_partial)
         return real
 
     def _from_the_medium(self, real_path: str):

@@ -21,25 +21,30 @@ class Mtp(LocalStorage):
     """A device as gvfs-mtp writes it: a file is replaced in place (the old one goes first) and a
     copy stopped half way leaves half of it; _discard_partial removes only a file the copy
     touched, as GioStorage does. Writes of names ending in `breaks` stop half way (the first
+    `times` of them), those in `short` leave half of the file and say nothing (the first
     `times` of them), those in `refused` never start."""
 
     replaces_atomically = False
 
-    def __init__(self, root, breaks=(), refused=(), times=None):
+    def __init__(self, root, breaks=(), refused=(), times=None, short=()):
         super().__init__(root)
-        self.breaks, self.refused, self.times = breaks, refused, times
+        self.breaks, self.refused, self.times, self.short = breaks, refused, times, short
         self.touched: set[str] = set()
+        self.writes: list[str] = []
 
     def _write(self, real_path, data):
         name = posixpath.basename(real_path)
+        self.writes.append(name)
         if name.endswith(self.refused):
             raise CopyNotStarted(f"Cannot write {real_path}: the copy could not start")
         target = self._p(real_path)
-        if name.endswith(self.breaks) and (self.times is None or self.times > 0):
+        if name.endswith(self.breaks + self.short) and (self.times is None or self.times > 0):
             if self.times is not None:
                 self.times -= 1
             self.touched.add(real_path)
             target.write_bytes(data[: len(data) // 2])
+            if name.endswith(self.short):
+                return
             raise DeviceError(f"Cannot write {real_path}: the device is gone")
         target.write_bytes(data)
 
@@ -196,6 +201,35 @@ def test_an_unlock_file_cut_short_once_is_whole_after_the_next_try(device_root):
     maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", lambda text: None,
                        lambda seconds: None)
     assert (device_root / "Garmin" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
+
+
+def test_an_unlock_file_written_short_without_a_word_is_written_again(device_root):
+    """The device took the unlock file but keeps half of it: its size says so, it is written
+    again after the pause, and whole then."""
+    st = Mtp(device_root, short=(".gma",), times=1)
+    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    said, slept = [], []
+    maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", said.append, slept.append)
+    assert (device_root / "Garmin" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
+    assert st.writes == ["abc.gma", "abc.gma"] and slept == [maps.UNLOCK_PAUSE_S]
+    assert said == [f"Writing the unlock file again (2 of {maps.UNLOCK_TRIES})"]
+
+
+def test_an_unlock_file_always_written_short_leaves_none(device_root):
+    st = Mtp(device_root, short=(".gma",))
+    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    with pytest.raises(maps.UnlockNotWritten, match="Write verification"):
+        maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", lambda text: None,
+                           lambda seconds: None)
+    assert len(st.writes) == maps.UNLOCK_TRIES
+    assert not (device_root / "Garmin" / "Maps" / "abc.gma").exists()
+
+
+def test_a_playlist_written_short_without_a_word_is_said_and_leaves_nothing(iq_device):
+    st, dev = iq_device
+    with pytest.raises(DeviceError, match="Write verification of Music/Mix.m3u8 failed"):
+        music.write_playlist(dev, Mtp(st.root, short=(".m3u8",)), "Mix", ["Music/a.mp3"])
+    assert not (st.root / "Music" / "Mix.m3u8").exists()
 
 
 def test_an_unlock_file_refused_leaves_the_old_one(device_root):

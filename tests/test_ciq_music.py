@@ -283,6 +283,18 @@ def test_add_playlist_copies_missing_tracks_and_writes_the_list(iq_device, libra
     assert music.add_playlist(again, dev, st) == path
 
 
+def test_a_playlist_the_drive_keeps_with_other_bytes_is_deleted(iq_device):
+    from fakes import other_bytes_drive
+
+    from openexpress.device.storage import DeviceError
+
+    st, dev = iq_device
+    drive = other_bytes_drive()(st.root)
+    with pytest.raises(DeviceError, match="Write verification of Music/Mix.m3u8 failed"):
+        music.write_playlist(dev, drive, "Mix", ["Music/a.mp3"])
+    assert not (st.root / "Music" / "Mix.m3u8").exists()
+
+
 def test_playlist_without_usable_tracks_is_not_written(iq_device, library):
     st, dev = iq_device
     library.write_text("gone.mp3\nlossless.flac\n", encoding="utf-8")
@@ -637,25 +649,25 @@ def no_usb_apps(iq_device, device_root, xdg, monkeypatch):
 
 def test_app_folder_states(iq_device, device_root, xdg):
     st, dev = iq_device
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.READY
     (device_root / "GARMIN/APPS/MEDIA").rmdir()
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.MISSING
     # A device that lets the folder be created gets it, and the folder is used.
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is True
     assert (device_root / "GARMIN/APPS/MEDIA").is_dir()
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.READY
 
 
 def test_refusal_is_remembered_per_software_version(no_usb_apps, device_root):
     st, dev, attempts = no_usb_apps
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.REFUSED
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.REFUSED
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
     assert len(attempts) == 1  # the device is not asked again on every sync
     dev.software_version = dev.software_version + 1  # after a firmware update: try again
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.MISSING
     (device_root / "GARMIN/APPS/MEDIA").mkdir()  # the folder exists: the old refusal is moot
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.READY
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.READY
 
 
 def test_queued_app_is_left_for_the_phone(no_usb_apps):
@@ -972,7 +984,7 @@ def fake_in_bin(fake):
 
 def test_hidden_folder_is_installed_over_ptp(hidden_apps):
     st, dev, fake = hidden_apps
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.DIRECT
     client = CountingClient()
     lines = []
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, progress=lines.append,
@@ -1005,6 +1017,128 @@ def test_install_apps_uses_ptp_without_trying_to_create_the_folder(hidden_apps, 
     assert FakeStore.queued == [["Face It"]]
 
 
+# --- each question to the device once: the app folder, the app list and its copy ------------
+
+APP_FOLDER, OUT_BIN = "garmin/apps/media", "garmin/apps/out.bin"
+FACES = [FACE, uuid.UUID(int=0xFACE2), uuid.UUID(int=0xFACE3)]
+
+
+def counted(st):
+    """`st`, noting the paths it is asked to look for and the files it reads."""
+    class Counted(type(st)):
+        def resolve(self, path):
+            self.looked_for.append(path.strip("/").casefold())
+            return super().resolve(path)
+
+        def _read(self, real_path):
+            self.read_paths.append(real_path.casefold())
+            return super()._read(real_path)
+
+    st.__class__ = Counted
+    st.looked_for, st.read_paths = [], []
+    return st
+
+
+def install_faces(st, dev, count):
+    """`count` made-up watch faces installed as the window and `apps install` do."""
+    FakeStore.queued = []
+    client = CountingClient()
+    messages = [{**FACE_MESSAGE, "messageid": 7 + n, "metadata": {
+        **FACE_MESSAGE["metadata"], "messagename": f"Face {n}", "appdetails": {"id": str(a)}}}
+        for n, a in enumerate(FACES[:count])]
+    client.device_messages = lambda unit_id: messages if FakeStore.queued else []
+    rep = ciq.install_apps(dev, st, client, FakeStore(client),
+                           [store_app(a, f"Face {n}") for n, a in enumerate(FACES[:count])])
+    assert len(rep.installed) == count and rep.failed == []
+
+
+@pytest.mark.parametrize("count", [1, 3])
+def test_an_install_looks_for_the_app_folder_once_and_reads_the_list_once(iq_device, count):
+    """The folder shown (as on an Edge): it is looked for once for the whole install, and the
+    app list is read once for the install and once for its copy, however many apps."""
+    st, dev = iq_device
+    st = counted(st)
+    install_faces(st, dev, count)
+    assert st.looked_for.count(APP_FOLDER) == 1
+    assert st.read_paths.count(OUT_BIN) == 2
+
+
+@pytest.mark.parametrize("count", [1, 3])
+def test_an_install_over_ptp_looks_for_the_app_folder_once(hidden_apps, count):
+    st, dev, _fake = hidden_apps
+    st = counted(st)
+    install_faces(st, dev, count)
+    assert st.looked_for.count(APP_FOLDER) == 1 and st.sessions == 1
+    assert st.read_paths.count(OUT_BIN) == 2
+
+
+def ten_faces(st, fake=None, files=True):
+    """Ten watch faces from the store on the device, their files in its app folder (and in
+    the PTP session's view of it, with `fake`)."""
+    apps = [(STORE_ID, 1, "Connect IQ Store", False, "DADE7E4")]
+    apps += [(uuid.UUID(int=0xB0 + n), 3, f"Face {n}", False, f"F{n:07X}") for n in range(10)]
+    (st.root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin(apps))
+    if files:
+        (st.root / "GARMIN/APPS/MEDIA").mkdir(exist_ok=True)
+    for _id, _type, _name, _off, filename in apps:
+        if files:
+            (st.root / f"GARMIN/APPS/MEDIA/{filename}.PRG").write_bytes(b"x")
+        if fake is not None:
+            fake.add(f"GARMIN/Apps/Media/{filename}.PRG", b"x", hidden=True)
+
+
+def apps_page_ways(st, dev, monkeypatch):
+    """How the Apps page offers to remove each app: (its file shown, over PTP, only the
+    sandbox in the way), by name."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    monkeypatch.setattr(ciq, "StoreApi", FakeStore)
+    loaded = []
+    session = types.SimpleNamespace(device=dev, storage=st, logged_in=True, ownership_error=None,
+                                    client=CountingClient(),
+                                    settings=types.SimpleNamespace(locale="en_US"))
+    win = stand_in(session=session, sections={"apps": None}, show_apps=None,
+                   _load=lambda key, title, work, show: loaded.append(work()))
+    MainWindow.load_apps(win)
+    state = loaded[0][0]
+    return {(a.has_files, a.direct_removal, a.sandboxed) for a in state.store_apps
+            if a.name.startswith("Face")}
+
+
+def test_the_apps_page_lists_the_app_folder_once(iq_device, monkeypatch):
+    """Files shown (an Edge): one listing of the folder for every app, none looked for alone."""
+    st, dev = iq_device
+    ten_faces(st)
+    st = counted(st)
+    assert apps_page_ways(st, dev, monkeypatch) == {(True, False, False)}
+    assert st.looked_for.count(APP_FOLDER) == 1
+    assert not [p for p in st.looked_for if p.endswith(".prg")]
+
+
+def test_the_apps_page_asks_about_a_hidden_app_folder_once(hidden_apps, monkeypatch):
+    """A folder only PTP shows (a fēnix 8): looked for once, not for each app."""
+    st, dev, fake = hidden_apps
+    ten_faces(st, fake, files=False)
+    st = counted(st)
+    assert apps_page_ways(st, dev, monkeypatch) == {(False, True, False)}
+    assert st.looked_for.count(APP_FOLDER) == 1
+
+
+def test_the_apps_page_in_a_sandbox_reads_the_app_list_once_more(hidden_apps, monkeypatch):
+    """A Flatpak without access to USB: whether the device hides its app files is asked once
+    (one more reading of the list), not twice for each app."""
+    st, dev, fake = hidden_apps
+    ten_faces(st, fake, files=False)
+    st.fake = None
+    st = counted(st)
+    monkeypatch.setattr(type(st), "usb_blocked", lambda self: True)
+    assert apps_page_ways(st, dev, monkeypatch) == {(False, False, True)}
+    assert st.looked_for.count(APP_FOLDER) == 1
+    assert st.read_paths.count(OUT_BIN) == 2
+
+
 def test_no_ptp_session_keeps_the_old_behaviour(hidden_apps, monkeypatch):
     """E.g. in a Flatpak sandbox: the folder is tried, refused, and the app only queued."""
     from openexpress.device.storage import DeviceError
@@ -1016,7 +1150,7 @@ def test_no_ptp_session_keeps_the_old_behaviour(hidden_apps, monkeypatch):
         raise DeviceError("refused")
 
     monkeypatch.setattr(LocalStorage, "_mkdir", refuse)
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.MISSING
     client = CountingClient()
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={}, direct=True)
     assert rep.for_phone == ["Face It"] and client.downloads == 0 and client.acks == []
@@ -1041,7 +1175,7 @@ def test_sync_creates_a_missing_folder_also_when_ptp_is_there(hidden_apps):
     the sync creates it as on any device."""
     st, dev, fake = hidden_apps
     (st.root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([(PRELOADED, 8, "Softball", True, "")]))
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.DIRECT
     client = CountingClient()
     rep = ciq.install_queued(dev, st, client, [FACE_MESSAGE], known={})
     assert (rep.installed, rep.failed, rep.for_phone) == (["Face It"], [], [])
@@ -1465,7 +1599,7 @@ def test_hidden_app_is_removed_like_express_does(hidden_spot):
     from openexpress.device import ptp
 
     st, dev, fake, app = hidden_spot
-    assert ciq.files_on_device(dev, st, app) == [] and ciq.removable_directly(dev, st, app)
+    assert ciq.files_on_device(dev, st, app) == [] and ciq.removal_way(dev, st, app) == ciq.DIRECT
     assert ciq.remove(dev, st, app) == ["GARMIN/APPS/MEDIA/0A1B2C3D.PRG"]
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
     # The app list: the same entries in the same order with the same flags, minus the app.
@@ -1844,7 +1978,7 @@ def test_the_full_stop_comes_in_polish_too(hidden_spot):
 def test_built_in_and_fileless_apps_are_not_removed_directly(hidden_spot):
     st, dev, fake, _app = hidden_spot
     state = ciq.read_installed(dev, st)
-    assert not ciq.removable_directly(dev, st, state.find(PRELOADED))  # no file of its own
+    assert ciq.removal_way(dev, st, state.find(PRELOADED)) != ciq.DIRECT  # no file of its own
     with pytest.raises(ciq.CiqError, match="part of the device software"):
         ciq.remove(dev, st, state.find(PRELOADED))
     assert fake.operations == []
@@ -2988,7 +3122,7 @@ def untouched(st, dev, fake, attempts, backups, before):
 def test_flatpak_never_tries_to_create_a_hidden_app_folder(flatpak_spot, backups):
     st, dev, fake, _app, attempts = flatpak_spot
     before = apps_files(st)
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.SANDBOXED
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.SANDBOXED
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False
 
     new = uuid.UUID("11111111-2222-3333-4444-555555555555")
@@ -3013,7 +3147,7 @@ def test_flatpak_still_creates_a_folder_that_is_really_missing(no_usb_apps, devi
     st, dev, attempts = no_usb_apps
     st.usb_blocked = lambda: True
     (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([(PRELOADED, 8, "Softball", True, "")]))
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.MISSING
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.MISSING
     assert ciq.prepare_app_dir(dev, st, "IQWatchFaces") is False and len(attempts) == 1
 
 
@@ -3120,7 +3254,7 @@ def test_flatpak_window_texts(flatpak_spot):
     from openexpress.gui.app import MainWindow
 
     st, dev, _fake, app, _attempts = flatpak_spot
-    assert ciq.removal_sandboxed(dev, st, app) and not ciq.removable_directly(dev, st, app)
+    assert ciq.removal_way(dev, st, app) == ciq.SANDBOXED
     app.sandboxed = True
     assert MainWindow._forget_text(app) == (
         "The Flatpak has no access to USB devices, so it cannot remove apps from this "

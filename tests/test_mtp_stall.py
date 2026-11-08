@@ -167,7 +167,7 @@ class Writes:
     def __init__(self):
         self.tries = 0
 
-    def write(self, path, data):
+    def write_checked(self, path, data, **_kw):
         self.tries += 1
         raise stall(f"Cannot read {path}")
 
@@ -193,11 +193,11 @@ def test_a_stall_is_not_remembered_as_a_refusal_to_make_the_app_folder(monkeypat
     """Remembered, the device would not be asked again for this software version."""
     monkeypatch.setattr(ciq, "app_dir", lambda device, datatype: "GARMIN/APPS/NEW")
     monkeypatch.setattr(ciq, "_refusals", lambda device: {})
-    monkeypatch.setattr(ciq, "usb_dir_state", lambda device, st, datatype: ciq.MISSING)
     monkeypatch.setattr(ciq, "save_app_list_copy", lambda device, st: None)
     remembered = []
     monkeypatch.setattr(ciq, "_remember_refusal", lambda device, path: remembered.append(path))
-    st = types.SimpleNamespace(resolve=lambda path: None,
+    st = types.SimpleNamespace(resolve=lambda path: None, exclusive_ptp=lambda: None,
+                               usb_blocked=lambda: False,
                                make_dir=lambda path: (_ for _ in ()).throw(stall()))
     with pytest.raises(DeviceNotResponding):
         ciq.prepare_app_dir(types.SimpleNamespace(software_version_str="1.00"), st,

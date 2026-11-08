@@ -357,7 +357,8 @@ lines), one commit.
 The 25 handlers of `DeviceError` in other modules, left as they were in step 1, let it through
 since step 3 (D8):
 
-- `ciq.py` (10): `_hides_app_files`, `prepare_app_dir`, `_install_hidden` (3), `_ptp_delete`,
+- `ciq.py` (10): `Operation.hides_app_files`, `prepare_app_dir`, `_install_hidden` (3),
+  `_ptp_delete`,
   `_remove_hidden` (3), `save_app_list_copy`;
 - `ownmaps.py` (4): `list_own`, `overview`, `add`, `_failed_text`;
 - `diagnostics.py` (4): `read_errors` (2), `at_open` (2);

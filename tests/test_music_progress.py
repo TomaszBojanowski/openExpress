@@ -39,6 +39,23 @@ def test_a_playlist_copies_its_tracks_the_same_way(iq_device, library):
     assert seen[-1] == f"Copying music{NB}· 2 of 2{NB}· 306{NB}B of 306{NB}B"
 
 
+def test_on_a_drive_each_file_is_checked_in_a_step_of_its_own(iq_device, songs, monkeypatch):
+    """A drive: each file read back after its copy is told as checking, counted as the copy
+    is, never by its name."""
+    from openexpress.device import storage
+
+    monkeypatch.setattr(storage, "CHECK_TOLD_FROM", 0)
+    st, _dev, plan = _plan(iq_device, songs)
+    seen = []
+    music.copy(plan, st, progress=seen.append)
+    heads = [m.head for m in seen]
+    assert [h for i, h in enumerate(heads) if i == 0 or h != heads[i - 1]] == [
+        "Copying music", "Checking music", "Copying music", "Checking music", "Copying music"]
+    checked = [m for m in seen if m.head == "Checking music"]
+    assert checked[-1] == f"Checking music{NB}· 2 of 2{NB}· 306{NB}B of 306{NB}B"
+    assert not [m for m in seen if ".mp3" in m or "one" in m or "two" in m]
+
+
 def test_music_progress_in_polish(iq_device, songs):
     st, _dev, plan = _plan(iq_device, songs)
     seen = []

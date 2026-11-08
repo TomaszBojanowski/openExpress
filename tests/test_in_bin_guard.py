@@ -143,7 +143,7 @@ def test_an_install_over_ptp_requests_nothing_while_any_list_waits(monkeypatch, 
     fake.add("GARMIN/Apps/OUT.BIN", (device_root / "GARMIN/APPS/OUT.BIN").read_bytes())
     fake.add("GARMIN/Apps/Media", hidden=True)
     st = HidingStorage(device_root, fake)
-    assert ciq.usb_dir_state(dev, st, "IQWatchFaces") == ciq.DIRECT
+    assert ciq.Operation(dev, st).folder("IQWatchFaces") == ciq.DIRECT
     ciq.set_enabled(dev, st, PRELOADED, True)  # a list that reads well waits for the device
     store = Requests()
     rep = ciq.install_apps(dev, st, _client(), store, [_store_app(FACE_IT, "Made-up Face")])

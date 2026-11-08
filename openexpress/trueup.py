@@ -16,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from openexpress import applog
-from openexpress.connect import GarminClient
+from openexpress.connect import GarminClient, acknowledge
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.fit import FitError, true_up_time
@@ -54,7 +54,7 @@ def _fetch(client: GarminClient, m: dict) -> bytes | None:
     so in the log)."""
     meta = m["metadata"]
     data = client.download_message(meta.get("messageurl") or "", bool(meta.get("absolute")))
-    client.ack_message(m.get("messageid"))
+    acknowledge(client, m.get("messageid"))
     return data
 
 

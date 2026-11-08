@@ -458,7 +458,7 @@ def failing(monkeypatch, short_only=False, keep_the_rest=False):
 
 @pytest.mark.parametrize("short_only, reason", [
     (False, "Cannot write: device gone"),
-    (True, "the file on the device has 1000 B instead of 2000 B"),  # written, but cut short
+    (True, "Write verification of GARMIN/osm-test.img failed"),  # written, but cut short
 ])
 def test_a_failed_copy_removes_its_own_incomplete_file(maps_cli, my_map, monkeypatch, capsys,
                                                        short_only, reason):
@@ -471,6 +471,43 @@ def test_a_failed_copy_removes_its_own_incomplete_file(maps_cli, my_map, monkeyp
         f"device. ({reason})")
     assert "Wrote" not in captured.out
     assert tree(maps_cli) == before and state_of(maps_cli) == []
+
+
+def test_a_map_the_drive_keeps_with_other_bytes_is_removed_and_not_listed(maps_cli, my_map,
+                                                                          monkeypatch, capsys):
+    """A drive that keeps the map at its size but with other bytes: read back, it is removed
+    and not put on the list of own maps."""
+    from fakes import other_bytes_drive
+
+    from openexpress import cli
+
+    monkeypatch.setattr(cli, "LocalStorage", other_bytes_drive())
+    before = tree(maps_cli)
+    assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 1
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        "Error: Writing GARMIN/osm-test.img failed; the incomplete file was removed from the "
+        "device. (Write verification of GARMIN/osm-test.img failed)")
+    assert tree(maps_cli) == before and state_of(maps_cli) == []
+
+
+def test_the_check_of_a_map_on_a_drive_is_a_step_of_its_own(map_folder, my_map, monkeypatch):
+    """On a drive the map is read back after the copy: its own step, by the map's name, its
+    bar from the start to the end."""
+    from openexpress.device import storage
+    from openexpress.progress import Step
+
+    monkeypatch.setattr(storage, "CHECK_TOLD_FROM", 0)
+    st = LocalStorage(map_folder)
+    dev = device()
+    dev.unit_id = 4000000001  # made up
+    seen = []
+    ownmaps.add(ownmaps.plan_add(dev, st, [], my_map, "new.img"), dev, st, progress=seen.append)
+    heads = [m.head for m in seen if isinstance(m, Step)]
+    title = "Sometown cyclemap/latin1 Example.org"
+    assert heads[0] == f"Copying {title} to the device"
+    assert heads[-1] == f"Checking {title} on the device" and seen[-1].last
+    checked = [m for m in seen if m.head.startswith("Checking")]
+    assert checked[0].fraction == 0 and heads.index(checked[0].head) > 0
 
 
 def test_a_failed_copy_that_cannot_be_cleaned_up_says_so(maps_cli, my_map, monkeypatch, capsys):

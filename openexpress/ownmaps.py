@@ -22,7 +22,7 @@ from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import _
 from openexpress.maps import SPACE_MARGIN, MapError
-from openexpress.progress import byte_steps, copying_text
+from openexpress.progress import byte_steps, checking_text, copying_text
 
 log = logging.getLogger(__name__)
 
@@ -243,28 +243,30 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
 
 def add(plan: AddPlan, device: GarminDevice, storage: Storage,
         progress: Callable[[str], None] | None = None) -> str:
-    """Copy the map, check its size on the device and put it on the list of own maps.
-    Returns the path written. When the copy fails, the incomplete file is removed: it can
-    only be this run's, because no file of that name was there a moment before. `progress`:
-    the copy as steps, by the map's title ("Copying … to the device · 1.2 MB of 3.4 MB")."""
+    """Copy the map, check it on the device (its size; its bytes too where the storage reads
+    them back) and put it on the list of own maps. Returns the path written. When the copy or
+    its check fails, what was written is removed: it can only be this run's, because no file
+    of that name was there a moment before. `progress`: the copy and the check as steps, by
+    the map's title ("Copying … to the device · 1.2 MB of 3.4 MB", "Checking … on the device
+    · …")."""
     if storage.resolve(plan.path) is not None:
         raise _taken(plan.name)  # it appeared since the plan was made
-    told = byte_steps(progress, copying_text(plan.title or plan.name))
+    name = plan.title or plan.name
     try:
-        real = storage.write_file(plan.path, plan.local, told)
-        written = storage.size(plan.path)
-        if written != plan.size:
-            raise DeviceError(_("the file on the device has {actual} instead of {expected}")
-                              .format(actual="?" if written is None else f"{written} B",
-                                      expected=f"{plan.size} B"))
+        # Kept by the storage when it fails: removed here, and said so (_failed_text).
+        real = storage.write_file_checked(plan.path, plan.local,
+                                          byte_steps(progress, copying_text(name)),
+                                          keep_partial=True,
+                                          checking=byte_steps(progress, checking_text(name)))
+        size = plan.local.stat().st_size  # what the check compared the device's file with
     except DeviceNotResponding:
         raise
     except (DeviceError, OSError) as e:
         log.warning("own map: the copy failed (%s)", type(e).__name__)
         raise MapError(f"{_failed_text(storage, plan.path)} ({e})") from e
-    _record(device, {"filename": plan.name, "size": plan.size, "title": plan.title,
+    _record(device, {"filename": plan.name, "size": size, "title": plan.title,
                      "added": datetime.now().isoformat(timespec="seconds")})
-    log.info("own map added: %s", applog.size(plan.size))  # no names: they are the user's
+    log.info("own map added: %s", applog.size(size))  # no names: they are the user's
     return real
 
 

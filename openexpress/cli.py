@@ -2134,8 +2134,10 @@ def cmd_apps(args) -> int:
             if a.app_id in waiting:
                 print("  " + _("{name}: already waits in the queue in Garmin Connect; no new "
                                "request will be sent.").format(name=a.name))
+        # What is asked of the device from here on is asked once, for the install too.
+        op = ciq.Operation(dev, st, state)
         # On some devices openExpress cannot install over USB yet: say so before queueing.
-        dirs = {a.app_id: ciq.usb_dir_state(dev, st, ciq.store_datatype(a)) for a in targets}
+        dirs = {a.app_id: op.folder(ciq.store_datatype(a)) for a in targets}
         for a in targets:
             folder = ciq.app_dir(dev, ciq.store_datatype(a))
             if dirs[a.app_id] == ciq.SANDBOXED:
@@ -2159,7 +2161,7 @@ def cmd_apps(args) -> int:
                  ", ".join(a.name for a in targets), applog.counts(dirs.values()),
                  sum(1 for a in targets if a.app_id in waiting), args.apply)
         # What --apply would refuse before it asks Garmin for anything, by app ID.
-        refused = ciq.install_refusals(dev, st, state, over_usb)
+        refused = ciq.install_refusals(dev, st, state, over_usb, op)
         over_usb = [a for a in over_usb if a.app_id not in refused]
         # The app list is written for a new app, and over PTP for an update too; an update
         # through the mounted storage leaves it as it is (it goes next to the app's file).
@@ -2179,7 +2181,7 @@ def cmd_apps(args) -> int:
             return 1 if refused or skipped else 0
         with _progress() as progress:
             rep = ciq.install_apps(dev, st, client, api, targets, progress=progress,
-                                   allowed=allowed, messages=messages)
+                                   allowed=allowed, messages=messages, op=op)
         written = [n for n in rep.installed if n in rep.direct and n not in rep.updated]
         updated = [n for n in rep.installed if n in rep.updated]
         installed = [n for n in rep.installed if n not in rep.direct]

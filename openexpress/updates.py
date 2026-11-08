@@ -23,7 +23,14 @@ from openexpress import answers, applog, cache, download, known_devices, paths
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, human_size
-from openexpress.progress import Step, byte_steps, copying_text, downloading_text, say_to
+from openexpress.progress import (
+    Step,
+    byte_steps,
+    checking_text,
+    copying_text,
+    downloading_text,
+    say_to,
+)
 
 log = logging.getLogger(__name__)
 
@@ -592,9 +599,12 @@ def _install(
         # and what _clear_the_place deleted does not come back.
         # A truncated firmware file must not stay where the watch would install it: one of
         # another size is deleted.
-        # On a drive, read back from it and compared with the server's MD5 before it counts.
-        real = storage.write_file_checked(u.device_path, local, byte_steps(progress, copying),
-                                          error=UpdateError, md5=download.normalize_md5(u.md5))
+        # On a drive, read back from it (a step of its own) and compared with the server's
+        # MD5 before it counts.
+        real = storage.write_file_checked(
+            u.device_path, local, byte_steps(progress, copying), error=UpdateError,
+            md5=download.normalize_md5(u.md5),
+            checking=byte_steps(progress, checking_text(u.title)))
         report.written.append(u)
         # The whole path from the device's folder, as mark_present names it.
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,

@@ -285,13 +285,19 @@ def copy(plan: CopyPlan, storage: Storage,
     say = say_to(progress)
     # TRANSLATORS: a step of copying music ("… · 3 of 25 · 120 MB of 1.2 GB")
     head = _("Copying music")
+    # TRANSLATORS: a step of copying music to a USB drive: each file read back after its copy
+    # and compared with what was written ("… · 3 of 25 · 120 MB of 1.2 GB")
+    checking = _("Checking music")
     count, size = len(plan.to_copy), plan.size
     before = 0  # the bytes of the files copied before the current one
     for n, (t, dest) in enumerate(plan.to_copy, 1):
         told = byte_steps(progress, head, before=before, total=size, n=n, count=count)
         say(Step(head, n, count, bytes_done=before, bytes_total=size))
         try:
-            real = storage.write_file_checked(dest, t.local, told, error=MusicError)
+            real = storage.write_file_checked(
+                dest, t.local, told, error=MusicError,
+                checking=byte_steps(progress, checking, before=before, total=size, n=n,
+                                    count=count))
         except MusicError as e:
             # Of the wrong size: deleted, and the rest is not copied, as with maps.
             log.info("music: stopped after %d files: one of the wrong size", len(written))
@@ -312,7 +318,7 @@ def write_playlist(device: GarminDevice, storage: Storage, name: str,
         raise MusicError(_("This device does not support playlists"))
     path = posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
     body = "".join(p + "\n" for p in device_paths).encode("utf-8")
-    return storage.write(path, body)
+    return storage.write_checked(path, body)
 
 
 def read_m3u(path: Path) -> list[Path]:

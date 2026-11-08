@@ -820,3 +820,14 @@ class GarminClient:
             params={"status": "received"},
             headers={"X-HTTP-Method-Override": "PUT"},
         )
+
+
+def acknowledge(client: GarminClient, message_id) -> None:
+    """Tell Garmin Connect a message of the queue is received. A message it no longer has (404:
+    the phone, Garmin Express or the other install of this computer took it) counts as done."""
+    try:
+        client.ack_message(message_id)
+    except ApiError as e:
+        if e.status != 404:
+            raise
+        log.info("queue: a message acknowledged already (HTTP 404), done")

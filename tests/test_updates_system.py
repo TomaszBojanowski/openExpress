@@ -1674,6 +1674,49 @@ def test_the_download_of_each_update_moves_forward_to_its_size(device_root, tmp_
         assert [done for done, _size in bar] == sorted(done for done, _size in bar)  # never back
 
 
+def heads_in_turn(seen) -> list[str]:
+    """The heads of the steps told, each once while it lasts."""
+    heads = [m.head for m in seen if hasattr(m, "head")]
+    return [h for n, h in enumerate(heads) if n == 0 or h != heads[n - 1]]
+
+
+def test_a_map_on_a_drive_is_checked_in_a_step_of_its_own(device_root, monkeypatch):
+    """A drive: each file of the map read back after its copy is told as checking, on the
+    same scale as the copy (the bytes of the whole map)."""
+    from openexpress import maps
+    from openexpress.device import storage
+
+    monkeypatch.setattr(storage, "CHECK_TOLD_FROM", 0)
+    fetch, _given = _fetch_in_steps()
+    monkeypatch.setattr(download, "fetch", fetch)
+    m = _map(400, 800)
+    seen = []
+    maps.install(m, [m], LocalStorage(device_root), lambda ident: {}, progress=seen.append)
+    assert [h for h in heads_in_turn(seen) if h.endswith("device")] == [
+        "Copying Test Map to the device", "Checking Test Map on the device",
+        "Copying Test Map to the device", "Checking Test Map on the device"]
+    checked = [m.measure for m in seen if getattr(m, "head", "").startswith("Checking")]
+    assert checked[0] == (0, 1200) and checked[-1] == (1200, 1200)
+
+
+def test_an_update_on_a_drive_is_checked_in_a_step_of_its_own(device_root, tmp_path,
+                                                                monkeypatch):
+    from openexpress.device import storage
+
+    monkeypatch.setattr(storage, "CHECK_TOLD_FROM", 0)
+    fetch, _given = _fetch_in_steps()
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    items = updates.parse_updates(lower_keys(server_answer()))
+    seen = []
+    updates.install(items, LocalStorage(device_root), progress=seen.append)
+    heads = [h for h in heads_in_turn(seen) if h.startswith(("Copying", "Checking"))]
+    titles = [h[len("Copying "):-len(" to the device")] for h in heads if h.startswith("Copying")]
+    assert len(titles) == 2  # the font and the bundle, each copied, then checked
+    assert heads == [head for t in titles for head in (f"Copying {t} to the device",
+                                                      f"Checking {t} on the device")]
+
+
 def test_without_a_bar_downloads_report_nothing(device_root, tmp_path, monkeypatch):
     from openexpress import maps
 

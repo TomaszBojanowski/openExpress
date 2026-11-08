@@ -29,6 +29,7 @@ from openexpress.connect import (
     DeviceNotVerified,
     GarminClient,
     Unauthorized,
+    acknowledge,
 )
 from openexpress.device.storage import (
     DeviceNotResponding,
@@ -1075,17 +1076,6 @@ def run_downloads(
         raise
 
 
-def _acknowledge(client: GarminClient, message_id) -> None:
-    """Tell Garmin Connect a message is received. A message it no longer has (404: the other
-    install of this computer, or another sync, acknowledged it) counts as done."""
-    try:
-        client.ack_message(message_id)
-    except ApiError as e:
-        if e.status != 404:
-            raise
-        log.info("download: a message acknowledged already (HTTP 404), done")
-
-
 def _run_downloads(items, storage, client, progress, state, makers: Makers) -> DownloadReport:
     report = DownloadReport()
     own = state.unacked()
@@ -1106,7 +1096,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
             mid = str(it.message_id)
             if mid in unacked:
                 try:
-                    _acknowledge(client, it.message_id)
+                    acknowledge(client, it.message_id)
                 except (Unauthorized, DeviceNotVerified):
                     raise
                 except Exception as e:  # noqa: BLE001
@@ -1123,7 +1113,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
                 progress(Step(_("Downloading from Garmin Connect"), count, len(fetched)))
                 data = client.download_message(it.url, it.absolute)
                 if data is None:
-                    client.ack_message(it.message_id)
+                    acknowledge(client, it.message_id)
                     report.empty.append(label)
                     continue
                 storage.require_space(len(data), DOWNLOAD_MARGIN, error=ApiError)
@@ -1149,7 +1139,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
             report.written.append(f"{label} -> {real}")
             report.written_types.append(it.datatype)
             try:
-                _acknowledge(client, it.message_id)
+                acknowledge(client, it.message_id)
             except (Unauthorized, DeviceNotVerified):
                 raise
             except Exception as e:  # noqa: BLE001

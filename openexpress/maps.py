@@ -28,7 +28,14 @@ from openexpress.connect import ApiError
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, country_name
-from openexpress.progress import Step, byte_steps, copying_text, downloading_text, say_to
+from openexpress.progress import (
+    Step,
+    byte_steps,
+    checking_text,
+    copying_text,
+    downloading_text,
+    say_to,
+)
 
 log = logging.getLogger(__name__)
 
@@ -784,17 +791,19 @@ def _install(
         storage.delete(p)
         report.removed.append(p)
     shared = protected_files(all_maps, m)
-    copying = copying_text(m.name)
+    copying, checking = copying_text(m.name), checking_text(m.name)
     copy_total = sum(f.size or 0 for f in files)
     copied = 0  # the bytes of the files written before the current one
     for f in files:
         told = byte_steps(progress, copying, before=copied, total=copy_total)
+        # Where the storage reads each file back after its copy: told on the same scale.
+        checked = byte_steps(progress, checking, before=copied, total=copy_total)
         log.debug("map install: copying %s", f.device_path)
         if f.device_path.casefold() not in shared:
-            real = _write_checked(storage, f, local[f.device_path], told)
+            real = _write_checked(storage, f, local[f.device_path], told, checked)
         else:
             real = _write_shared(storage, f, local[f.device_path], told,
-                                 _users(all_maps, m, f.device_path))
+                                 _users(all_maps, m, f.device_path), checked)
         copied += f.size or 0
         report.written.append(real)
     gmas = []
@@ -816,29 +825,30 @@ def install(*args, **kwargs) -> MapReport:
         return _install(*args, **kwargs)
 
 
-def _write_checked(storage: Storage, f: MapFile, local: Path, told,
+def _write_checked(storage: Storage, f: MapFile, local: Path, told, checked=None,
                    keep: bool = False) -> str:
-    """Writes one file and checks its size. What a failed write leaves is cleaned up by the
-    storage itself, unless `keep` (a file other maps use: never deleted); a file of the
-    wrong size is deleted here, unless `keep`."""
-    return storage.write_file_checked(f.device_path, local, told,
-                                      keep_partial=keep, error=MapError)
+    """Writes one file and checks its size (on a drive its bytes, read back and told to
+    `checked`). What a failed write leaves is cleaned up by the storage itself, unless `keep`
+    (a file other maps use: never deleted); a file of the wrong size is deleted here, unless
+    `keep`."""
+    return storage.write_file_checked(f.device_path, local, told, keep_partial=keep,
+                                      error=MapError, checking=checked)
 
 
 def _write_shared(storage: Storage, f: MapFile, local: Path, told,
-                  users: list[str]) -> str:
+                  users: list[str], checked=None) -> str:
     """A file other maps use too, installed or written and waiting to be taken in: deleting
     it after a failed write would break them, so the write is tried once more and the file
     is never deleted."""
     try:
-        return _write_checked(storage, f, local, told, keep=True)
+        return _write_checked(storage, f, local, told, checked, keep=True)
     except DeviceNotResponding:
         raise  # not tried again
     except Exception as e:  # noqa: BLE001 - any failure gets the one retry
         log.warning("map install: writing a file other maps use failed, trying once more: %s",
                     e)
     try:
-        return _write_checked(storage, f, local, told, keep=True)
+        return _write_checked(storage, f, local, told, checked, keep=True)
     except DeviceNotResponding:
         raise
     except Exception as e:
@@ -874,7 +884,8 @@ def _write_unlock(storage: Storage, path: str, data: bytes, progress, sleep) -> 
     attempt = 1
     while True:
         try:
-            return storage.write(path, data)
+            # Of another size (or other bytes on a drive) it is deleted: tried again.
+            return storage.write_checked(path, data)
         except DeviceNotResponding:
             raise  # not tried again
         except DeviceError as e:
