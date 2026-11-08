@@ -8,7 +8,7 @@ Fedora/GNOME; the devices it was tried on: [Supported devices](devices.md).
 
 <p align="center">
   <img src="screenshots/updates.png" width="800"
-       alt="The Updates page: a beta system update offered for an Edge 1050, with Install, Check Again and Reinstall Components">
+       alt="The Updates page: a beta system update offered for a fēnix 8, with Install, Install All, Check Again, a component update and Reinstall Components">
 </p>
 
 ## Setup

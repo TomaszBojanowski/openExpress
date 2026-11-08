@@ -61,7 +61,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/courses.png">
-    <img alt="The Courses page: courses on a fēnix 8, one copied by openExpress and one from Garmin Connect, a GPX file waiting for the watch to be unplugged and its saved locations" src="docs/screenshots/courses-light.png" width="700">
+    <img alt="The Courses page: four courses on a fēnix 8, two copied by openExpress and one from Garmin Connect, a GPX file waiting for the watch to be unplugged and its saved locations" src="docs/screenshots/courses-light.png" width="700">
   </picture>
 </p>
 
