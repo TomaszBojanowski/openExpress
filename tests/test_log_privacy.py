@@ -99,7 +99,7 @@ def test_the_errors_of_a_sync_are_logged_without_names(device_root, xdg, caplog)
                                  "metadata": {"messageurl": "course", "messagename": COURSE}}])
     s = service.DeviceSession(st, dev, Settings(), client)
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        summary = service.run_sync(s, first_run="all")
+        summary = service.run_sync(s, options=service.SyncOptions(first_run="all"))
     told = "\n".join(summary.errors)
     assert COURSE in told and ACTIVITY in told  # the window and the command line say which
     logged = _logged(caplog)

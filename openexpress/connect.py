@@ -420,17 +420,12 @@ class GarminClient:
             int(delay) if delay and delay.isdigit() else None,
         )
 
-    def poll_location(
-        self, url: str, delay_ms: int | None, timeout_s: float = 30, base: str | None = None
-    ) -> int:
-        """Wait for the activity to be processed (201 Created). Returns the last HTTP status.
-
-        0 means the status could not be checked (network error). A relative `url` is
-        resolved against `base` (the upload URL).
+    def poll_location(self, url: str, delay_ms: int | None, timeout_s: float = 30) -> int:
+        """Wait for the activity to be processed (201 Created) at `url`, the whole address
+        (upload_file resolves the one the server gives). Returns the last HTTP status; 0 means
+        the status could not be checked (network error).
         """
         self.require_verified()
-        if base:
-            url = urljoin(base, url)
         url = self._prepared_url("GET", url)
         deadline = time.monotonic() + timeout_s
         delay = (delay_ms or 1000) / 1000

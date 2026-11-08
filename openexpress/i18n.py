@@ -435,15 +435,17 @@ def human_size(n: int | None, localize: bool = True) -> str:
     if n is None:
         return "?"
     value = float(n)
-    for unit in ("B", "kB", "MB", "GB"):
+    for unit in ("B", "kB", "MB"):
         # Compare what would be printed: 999.96 kB is "1.0 MB", not "1000.0 kB".
-        if unit == "GB" or round(value, 0 if unit == "B" else 1) < 1000:
-            number = f"{value:.0f}" if unit == "B" else f"{value:.1f}"
-            # A hard space: a text of the window that wraps never breaks a size ("4,7 / GB");
-            # the command line and the log write it as a plain one.
-            return f"{decimal(number)}\u00a0{unit}" if localize else f"{number} {unit}"
+        if round(value, 0 if unit == "B" else 1) < 1000:
+            break
         value /= 1000
-    return str(n)
+    else:
+        unit = "GB"
+    number = f"{value:.0f}" if unit == "B" else f"{value:.1f}"
+    # A hard space: a text of the window that wraps never breaks a size ("4,7 / GB"); the
+    # command line and the log write it as a plain one.
+    return f"{decimal(number)}\u00a0{unit}" if localize else f"{number} {unit}"
 
 
 def N_(message: str) -> str:

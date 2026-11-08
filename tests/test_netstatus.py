@@ -50,6 +50,11 @@ def test_how_an_answer_ended(status, skew, kind):
     assert netstatus.kind_of(status, skew) == kind
 
 
+def state_now(s: netstatus.Status) -> str:
+    """The state the window shows for `s`."""
+    return netstatus.state_of(*s.counted())
+
+
 def noted(*steps):
     s = netstatus.Status()
     for service, status in steps:
@@ -59,7 +64,7 @@ def noted(*steps):
             s.note_failure(service, url)
         else:
             s.note_answer(service, url, status)
-    return s.state()
+    return state_now(s)
 
 
 @pytest.mark.parametrize("steps,state", [
@@ -113,11 +118,11 @@ CONN, OMT = netstatus.CONNECT, netstatus.OMT
                  id="h-one-service-lost"),
 ])
 def test_no_connection_is_what_came_after_the_last_good_answer(steps, state):
-    assert at_minutes(*steps).state() == state
+    assert state_now(at_minutes(*steps)) == state
 
 
 def test_nothing_answered_since_the_last_good_answer_reads_as_no_connection():
-    last, answered = at_minutes((CONN, 200, 0), (OMT, None, 5)).snapshot()
+    last, answered = at_minutes((CONN, 200, 0), (OMT, None, 5)).counted()
     assert netstatus.heading(netstatus.state_of(last, answered)) == "No connection"
     assert netstatus.describe(last, answered, PROD, TEN + 6 * 60)[0] == "No connection"
     rows = {r.service: r for r in netstatus.rows(last, answered, PROD, TEN + 6 * 60)}
@@ -127,8 +132,8 @@ def test_nothing_answered_since_the_last_good_answer_reads_as_no_connection():
 def test_a_wrong_clock_is_its_own_state():
     s = netstatus.Status()
     s.note_answer(netstatus.CONNECT, CONNECT_URL, 401, skew=3 * 3600)
-    assert s.state() == netstatus.CLOCK_OFF
-    last, _answered = s.snapshot()
+    assert state_now(s) == netstatus.CLOCK_OFF
+    last, _answered = s.counted()
     assert last[netstatus.CONNECT].minutes == 180
 
 
@@ -141,10 +146,10 @@ def test_a_refusal_of_the_update_server_is_no_sign_in_and_no_clock():
     s = netstatus.Status()
     s.note_answer(netstatus.CONNECT, CONNECT_URL, 200)
     s.note_answer(netstatus.OMT, OMT_URL, 403)
-    assert s.state() == netstatus.ONLINE  # not netstatus.SIGN_IN_EXPIRED
+    assert state_now(s) == netstatus.ONLINE  # not netstatus.SIGN_IN_EXPIRED
     s.note_answer(netstatus.OMT, OMT_URL, 401, skew=3 * 3600)
-    assert s.state() == netstatus.ONLINE  # not netstatus.CLOCK_OFF
-    omt = next(r for r in netstatus.rows(*s.snapshot(), PROD) if r.service == netstatus.OMT)
+    assert state_now(s) == netstatus.ONLINE  # not netstatus.CLOCK_OFF
+    omt = next(r for r in netstatus.rows(*s.counted(), PROD) if r.service == netstatus.OMT)
     assert (omt.kind, omt.outcome) == (netstatus.OK, "answered")
 
 
@@ -152,7 +157,7 @@ def test_the_client_notes_a_refusal_of_the_update_server_as_an_answer(monkeypatc
                                                                       network_state):
     monkeypatch.setattr(requests.Session, "request", lambda self, m, u, **kw: answer(403))
     GarminClient(Settings())._request("GET", OMT_URL, "x")
-    assert network_state.state() == netstatus.ONLINE
+    assert state_now(network_state) == netstatus.ONLINE
 
 
 @pytest.mark.parametrize("service,status,skew,state", [
@@ -165,7 +170,7 @@ def test_a_refusal_of_a_signed_request_still_tells_the_sign_in_or_the_clock(serv
                                                                            skew, state):
     s = netstatus.Status()
     s.note_answer(service, CONNECT_URL, status, skew=skew)
-    assert s.state() == state
+    assert state_now(s) == state
 
 
 def test_the_client_notes_every_answer_and_failure(monkeypatch, network_state):
@@ -183,18 +188,18 @@ def test_the_client_notes_every_answer_and_failure(monkeypatch, network_state):
     c._request("GET", OMT_URL, "x")
     with pytest.raises(ApiError):
         c._request("GET", OMT_URL, "x")
-    last, answered = network_state.snapshot()
+    last, answered = network_state.counted()
     assert last[netstatus.CONNECT].kind == netstatus.OK
     assert last[netstatus.OMT].kind == netstatus.NETWORK
     assert netstatus.OMT not in answered  # the 503 was no good answer
-    assert network_state.state() == netstatus.OFFLINE
+    assert state_now(network_state) == netstatus.OFFLINE
 
 
 def test_a_refused_signature_with_a_wrong_clock_is_noted_as_such(monkeypatch, network_state):
     monkeypatch.setattr(requests.Session, "request", lambda self, m, u, **kw: answer(
         401, "Mon, 01 Jan 2001 00:00:00 GMT"))
     GarminClient(Settings())._request("GET", CONNECT_URL, "x")
-    assert network_state.state() == netstatus.CLOCK_OFF
+    assert state_now(network_state) == netstatus.CLOCK_OFF
 
 
 def test_downloads_are_noted_and_a_refused_address_is_no_sign_in(tmp_path, network_state):
@@ -210,7 +215,7 @@ def test_downloads_are_noted_and_a_refused_address_is_no_sign_in(tmp_path, netwo
         with pytest.raises(download.DownloadError):
             download.fetch(["https://download.garmin.com/a.img"], tmp_path / "a", None, "0" * 32,
                            session=Http(status))
-        assert network_state.state() == state
+        assert state_now(network_state) == state
 
 
 def test_the_connect_iq_store_is_noted_under_garmin_connect(monkeypatch, network_state):
@@ -224,7 +229,7 @@ def test_the_connect_iq_store_is_noted_under_garmin_connect(monkeypatch, network
                             requests.ConnectionError("down")))
     with pytest.raises(ApiError):  # the client's way, without the address
         ciq.StoreApi(client)._request("GET", "express/x", "x")
-    assert network_state.snapshot()[0][netstatus.CONNECT].kind == netstatus.NETWORK
+    assert network_state.counted()[0][netstatus.CONNECT].kind == netstatus.NETWORK
 
 
 def test_a_store_refusal_with_a_wrong_clock_is_noted_as_such(monkeypatch, network_state):
@@ -242,8 +247,8 @@ def test_a_store_refusal_with_a_wrong_clock_is_noted_as_such(monkeypatch, networ
                         lambda self, m, u, **kw: answer(401, two_hours_ago))
     with pytest.raises(ClockSkew):
         ciq.StoreApi(client)._request("GET", "express/x", "x")
-    assert network_state.state() == netstatus.CLOCK_OFF  # not netstatus.SIGN_IN_EXPIRED
-    assert network_state.snapshot()[0][netstatus.CONNECT].minutes == 120
+    assert state_now(network_state) == netstatus.CLOCK_OFF  # not netstatus.SIGN_IN_EXPIRED
+    assert network_state.counted()[0][netstatus.CONNECT].minutes == 120
 
 
 STATUS_URL = "https://connectapi.garmin.com/activity-service/activity/status/1"
@@ -262,15 +267,15 @@ def test_a_lost_connection_while_checking_an_upload_is_noted(monkeypatch, networ
 
     monkeypatch.setattr(requests.Session, "get", get)
     assert _polling_client().poll_location(STATUS_URL, 1, timeout_s=5) == 0
-    last = network_state.snapshot()[0].get(netstatus.CONNECT)
+    last = network_state.counted()[0].get(netstatus.CONNECT)
     assert last is not None and last.kind == netstatus.NETWORK
-    assert network_state.state() == netstatus.OFFLINE
+    assert state_now(network_state) == netstatus.OFFLINE
 
 
 def test_the_answer_to_an_upload_check_is_noted(monkeypatch, network_state):
     monkeypatch.setattr(requests.Session, "get", lambda self, url, **kw: answer(201))
     assert _polling_client().poll_location(STATUS_URL, 1, timeout_s=5) == 201
-    last = network_state.snapshot()[0].get(netstatus.CONNECT)
+    last = network_state.counted()[0].get(netstatus.CONNECT)
     assert last is not None and (last.kind, last.status) == (netstatus.OK, 201)
 
 
@@ -307,7 +312,7 @@ def test_requests_from_many_threads(network_state):
         t.start()
     for t in threads:
         t.join()
-    assert network_state.snapshot()[0][netstatus.CONNECT].kind in (netstatus.OK,
+    assert network_state.counted()[0][netstatus.CONNECT].kind in (netstatus.OK,
                                                                    netstatus.SERVER)
 
 
@@ -315,7 +320,7 @@ def test_the_tooltip_names_each_service_its_host_and_time():
     s = netstatus.Status()
     s.note_answer(netstatus.CONNECT, CONNECT_URL, 200)
     s.note_failure(netstatus.OMT, OMT_URL)
-    last, answered = s.snapshot()
+    last, answered = s.counted()
     now = last[netstatus.CONNECT].at
     text, tooltip = netstatus.describe(last, answered, PROD, now)
     hhmm = netstatus.when(now, now)
@@ -332,7 +337,7 @@ def test_the_tooltip_tells_the_last_good_answer_after_a_failure():
     s = netstatus.Status()
     s.note_answer(netstatus.OMT, OMT_URL, 200)
     s.note_answer(netstatus.OMT, OMT_URL, 503)
-    last, answered = s.snapshot()
+    last, answered = s.counted()
     now = last[netstatus.OMT].at
     line = netstatus.describe(last, answered, PROD, now)[1].splitlines()[2]
     assert line.endswith(f"server error (HTTP 503) at {netstatus.when(now, now)}; "
@@ -514,7 +519,7 @@ def test_rows_for_every_kind_of_answer():
     s.note_answer(netstatus.CONNECT, CONNECT_URL, 401)
     s.note_answer(netstatus.OMT, OMT_URL, 200)
     s.note_failure(netstatus.OMT, OMT_URL)
-    rows = netstatus.rows(*s.snapshot(), PROD)
+    rows = netstatus.rows(*s.counted(), PROD)
     assert [(r.service, r.kind) for r in rows] == [
         (netstatus.CONNECT, netstatus.AUTH), (netstatus.OMT, netstatus.NETWORK),
         (netstatus.SIGN_IN, None)]
@@ -557,7 +562,7 @@ def another_day_tooltip():
     s = netstatus.Status()
     s.note_answer(netstatus.OMT, OMT_URL, 200)
     s.note_answer(netstatus.CONNECT, CONNECT_URL, 401, skew=2 * 3600)
-    last, answered = s.snapshot()
+    last, answered = s.counted()
     then = 1_800_000_000.0  # 15 Jan 2027, about noon UTC
     last = {k: netstatus.Result(r.kind, then, r.host, r.status, r.minutes)
             for k, r in last.items()}
@@ -591,7 +596,7 @@ def test_today_has_only_the_hour_in_polish(polish):
     s = netstatus.Status()
     s.note_answer(netstatus.OMT, OMT_URL, 200)
     s.note_answer(netstatus.OMT, OMT_URL, 503)
-    last, answered = s.snapshot()
+    last, answered = s.counted()
     now = last[netstatus.OMT].at
     hour = netstatus.when(now, now)
     line = netstatus.describe(last, answered, PROD, now)[1].splitlines()[2]
@@ -835,15 +840,15 @@ def test_after_the_network_changes_the_first_good_answer_is_green(server, networ
     _win, monitor = watched
     c = GarminClient(Settings())
     _ask(c, CONNECT_URL, OMT_URL)
-    assert network_state.state() == netstatus.ONLINE
+    assert state_now(network_state) == netstatus.ONLINE
     server["online"] = False
     _ask(c, CONNECT_URL, OMT_URL)
-    assert network_state.state() == netstatus.OFFLINE
+    assert state_now(network_state) == netstatus.OFFLINE
     server["online"] = True
     monitor.change(True)
-    assert network_state.state() == netstatus.OFFLINE  # nothing asked since: as it was
+    assert state_now(network_state) == netstatus.OFFLINE  # nothing asked since: as it was
     _ask(c, OMT_URL)
-    assert network_state.state() == netstatus.ONLINE
+    assert state_now(network_state) == netstatus.ONLINE
 
 
 def test_a_failure_after_the_change_is_no_connection(server, network_state, watched):
@@ -853,7 +858,7 @@ def test_a_failure_after_the_change_is_no_connection(server, network_state, watc
     monitor.change(True)
     server["online"] = False
     _ask(c, OMT_URL)
-    assert network_state.state() == netstatus.OFFLINE
+    assert state_now(network_state) == netstatus.OFFLINE
 
 
 def test_a_refused_sign_in_still_counts_after_the_network_changed(network_state, watched):
@@ -863,7 +868,7 @@ def test_a_refused_sign_in_still_counts_after_the_network_changed(network_state,
     note(network_state, [(netstatus.CONNECT, 401)])
     monitor.change(True)
     note(network_state, [(netstatus.OMT, 200)])
-    assert network_state.state() == netstatus.SIGN_IN_EXPIRED
+    assert state_now(network_state) == netstatus.SIGN_IN_EXPIRED
 
 
 @pytest.mark.needs_display
@@ -897,7 +902,7 @@ def test_a_row_shows_what_its_service_answered_before_the_lost_connection(
     win, _bar, window = _status_window()
     c = GarminClient(Settings())
     _ask(c, CONNECT_URL)
-    answered_at = network_state.snapshot()[0][netstatus.CONNECT].at
+    answered_at = network_state.counted()[0][netstatus.CONNECT].at
     server["online"] = False
     _ask(c, CONNECT_URL, OMT_URL)
     server["online"] = True
@@ -922,14 +927,15 @@ def test_a_server_error_before_the_lost_connection_still_shows(network_state, wa
     last, answered = network_state.counted()
     rows = {r.service: r for r in netstatus.rows(last, answered, PROD)}
     assert rows[netstatus.CONNECT].outcome == "server error (HTTP 503)"
-    assert network_state.state() == netstatus.SERVER_PROBLEM
+    assert state_now(network_state) == netstatus.SERVER_PROBLEM
 
 
 def test_before_any_answer_after_the_change_the_rows_stay_as_they_were(network_state, watched):
     _win, monitor = watched
     note(network_state, [(netstatus.CONNECT, 200), (netstatus.CONNECT, None)])
+    before = network_state.counted()
     monitor.change(True)
-    assert network_state.counted() == network_state.snapshot()
+    assert network_state.counted() == before
 
 
 def test_screen_readers_hear_the_words_of_the_popover_for_a_service_not_asked(polish,

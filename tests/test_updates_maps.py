@@ -161,7 +161,7 @@ def test_software_update_flow(server, device_root, xdg):
         updates.select(items, ["006-X"])
     st = LocalStorage(device_root)
     rep = updates.install(updates.select(items, ["all"]), st)
-    assert rep.restart_required
+    assert any(u.installs_when_disconnected for u in rep.written)
     assert (device_root / "GARMIN/GUPDATE.GSP").read_bytes() == FILES["/fw/GUPDATE.GSP"]
     assert (device_root / "GARMIN/RemoteSW/aux.gcd").exists()
 
@@ -1264,7 +1264,7 @@ def test_update_files_report_their_progress(server, device_root, xdg):
     rep = updates.install(items, ReportingStorage(device_root),
                           progress=lambda step: steps.append((step.done, step.total))
                           if getattr(step, "head", "").startswith("Copying") else None)
-    assert len(rep.installed) == 2
+    assert len(rep.written) == 2
     # Every file of the update gets the function, and the copy calls it.
     assert [name for name, _p in ReportingStorage.seen] == ["aux.gcd", "GUPDATE.GSP"]
     assert all(p is not None for _name, p in ReportingStorage.seen)

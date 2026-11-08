@@ -208,7 +208,7 @@ def test_an_ordinary_stop_on_the_command_line_is_no_error_in_the_log(log_file, c
         raise service.SyncBusy("A sync is already running in another process.")
 
     applog.setup("cli")
-    code = cli._run(types.SimpleNamespace(func=busy, verbose=False), service, object())
+    code = cli._run(types.SimpleNamespace(func=busy, verbose=False))
     applog.close()
     assert code == 1
     assert "A sync is already running in another process." in capsys.readouterr().err

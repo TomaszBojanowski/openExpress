@@ -64,7 +64,7 @@ def test_a_sync_reports_its_waits_for_the_server_as_waits(device_root, xdg):
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     seen = []
     service.run_sync(service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED)),
-                     first_run="all", progress=seen.append)
+                     progress=seen.append, options=service.SyncOptions(first_run="all"))
     assert [m for m in seen if isinstance(m, Waiting)] == [
         "Fetching configuration from the Garmin server…",
         "Checking for files from Garmin Connect…"]

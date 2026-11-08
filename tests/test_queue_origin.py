@@ -46,7 +46,8 @@ def test_each_file_written_is_said_with_its_maker_and_when_it_was_made(device_ro
     st = LocalStorage(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     with caplog.at_level(logging.INFO, logger="openexpress.sync"):
-        report = sync.run_downloads(items(dev), st, Queue(), makers=MAKERS)
+        report = sync.run_downloads(items(dev), st, Queue(), state=sync.SyncState(dev.unit_id),
+                                    makers=MAKERS)
     when = time.strftime("%Y-%m-%d %H:%M", time.localtime(MADE + FIT_EPOCH_OFFSET))
     said = [r.getMessage() for r in caplog.records if r.getMessage().startswith("download")]
     assert len(report.written) == 5
@@ -65,7 +66,7 @@ def test_without_the_names_a_product_is_said_by_its_number(device_root, caplog):
     st = LocalStorage(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     with caplog.at_level(logging.INFO, logger="openexpress.sync"):
-        sync.run_downloads(items(dev)[:1], st, Queue())
+        sync.run_downloads(items(dev)[:1], st, Queue(), state=sync.SyncState(dev.unit_id))
     assert "made by Garmin product 4532 on" in caplog.text
 
 

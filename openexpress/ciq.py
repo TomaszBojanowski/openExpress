@@ -461,15 +461,17 @@ def settings_file_path(device: GarminDevice, app: InstalledApp) -> str | None:
 # --- store API -----------------------------------------------------------------------
 
 
+STORE_URL = "https://services.garmin.com/"
+
+
 class StoreApi:
-    def __init__(self, client: GarminClient, base: str = "https://services.garmin.com/"):
+    def __init__(self, client: GarminClient):
         self.client = client
-        self.base = base
 
     def _request(self, method: str, path: str, what: str, json_body=None, params=None,
                  unit_id: int | None = None):
         self.client.require_verified(unit_id)
-        url = self.base + path
+        url = STORE_URL + path
         if params:
             url += "?" + urlencode(params)
         h = self.client._store_headers()
@@ -1720,10 +1722,10 @@ def _find_out_bin(folder: Path) -> Path | None:
                  if p.is_file() and p.name.upper() == "OUT.BIN"), None)
 
 
-def app_list_copies(device: GarminDevice, backup_dir: Path | None = None) -> list[AppListCopy]:
+def app_list_copies(device: GarminDevice) -> list[AppListCopy]:
     """The copies of the device's app list (OUT.BIN) in its backup folder, oldest first.
     Their folders are named after the time they were made, so the names sort by age."""
-    unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
+    unit_dir = paths.default_backup_dir() / str(device.unit_id)
     found = []
     if unit_dir.is_dir():
         for folder in sorted(unit_dir.iterdir()):
@@ -1732,14 +1734,14 @@ def app_list_copies(device: GarminDevice, backup_dir: Path | None = None) -> lis
                 continue
             try:
                 found.append(AppListCopy(path, folder.name, parse_out_bin(path.read_bytes())))
-            except (OSError, ValueError, CiqError) as e:
+            except (OSError, CiqError) as e:
                 # Never the path: the folder above is named after the unit ID.
                 log.warning("Cannot read the copy of the app list %s: %s", folder.name,
                             getattr(e, "strerror", None) or type(e).__name__)
     return found
 
 
-def load_app_list_copy(device: GarminDevice, backup_dir: Path | None, source: str) -> AppListCopy:
+def load_app_list_copy(device: GarminDevice, source: str) -> AppListCopy:
     """A copy named by a path (file or folder) or by part of its folder name."""
     given = Path(source).expanduser()
     if given.exists():
@@ -1749,10 +1751,10 @@ def load_app_list_copy(device: GarminDevice, backup_dir: Path | None, source: st
             raise CiqError(_("No OUT.BIN in {name}").format(name=name))
         try:
             return AppListCopy(path, name, parse_out_bin(path.read_bytes()))
-        except (OSError, ValueError) as e:
+        except OSError as e:
             raise CiqError(_("Cannot read the copy of the app list {name}: {error}").format(
                 name=name, error=getattr(e, "strerror", None) or type(e).__name__)) from e
-    matches = [c for c in app_list_copies(device, backup_dir) if source in c.name]
+    matches = [c for c in app_list_copies(device) if source in c.name]
     if len(matches) != 1:
         raise CiqError(
             _("No copy of the app list matches “{name}”.").format(name=source) if not matches
@@ -1853,7 +1855,7 @@ def _same_list(a: bytes, b: bytes) -> bool:
             == [(x.app_id, x.app_type) for x in second.apps])
 
 
-def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path | None = None,
+def save_app_list_copy(device: GarminDevice, storage: Storage,
                        now: datetime | None = None) -> str | None:
     """Copy the device's app list (OUT.BIN) next to its backups before it is changed; returns
     the copy's folder name, or that of the newest copy when it names the same apps in the
@@ -1871,7 +1873,7 @@ def save_app_list_copy(device: GarminDevice, storage: Storage, backup_dir: Path 
                                  "it: {error}. Nothing was changed.").format(error=e)) from e
     # Named after the unit ID: messages and logs name a copy by its own folder only, never by
     # its path.
-    unit_dir = Path(backup_dir or paths.default_backup_dir()) / str(device.unit_id)
+    unit_dir = paths.default_backup_dir() / str(device.unit_id)
     stamp = (now or datetime.now()).strftime(APP_LIST_COPY_STAMP)
     name = " ".join((APP_LIST_COPY_PREFIX + stamp, _model_for_name(device))).strip()
     try:
@@ -1984,12 +1986,12 @@ def order_difference(plan: OrderPlan) -> str:
     return caption(*parts)
 
 
-def order_choices(device: GarminDevice, state: InstalledState,
-                  backup_dir: Path | None = None) -> list[tuple[AppListCopy, OrderPlan]]:
+def order_choices(device: GarminDevice,
+                  state: InstalledState) -> list[tuple[AppListCopy, OrderPlan]]:
     """The copies of the device's app list, newest first, each with what its order would
     change."""
     return [(c, plan_order(state, c.state))
-            for c in reversed(app_list_copies(device, backup_dir))]
+            for c in reversed(app_list_copies(device))]
 
 
 def copy_title(copy: AppListCopy) -> str:
@@ -2026,8 +2028,8 @@ def describe_order(plan: OrderPlan, limit: int | None = 10) -> list[tuple[str, b
     return lines
 
 
-def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
-                  backup_dir: Path | None = None) -> tuple[OrderPlan, str | None]:
+def restore_order(device: GarminDevice, storage: Storage,
+                  copy: InstalledState) -> tuple[OrderPlan, str | None]:
     """Write the app list in the order of `copy`. A copy of the current OUT.BIN is made
     in the backup folder first. Returns the plan and the name of that copy (None when
     nothing had to change)."""
@@ -2048,7 +2050,7 @@ def restore_order(device: GarminDevice, storage: Storage, copy: InstalledState,
     if flags(plan.entries) != flags(state.listed) or sorted(written) != flags(state.listed):
         raise CiqError(_("The app list that would be written does not match the device. "
                          "Nothing was changed."))
-    saved = save_app_list_copy(device, storage, backup_dir)
+    saved = save_app_list_copy(device, storage)
     write_app_list(device, storage, data)
     log.info("apps order: wrote %d entries, %d moved", len(plan.entries), len(plan.moved))
     return plan, saved

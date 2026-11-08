@@ -90,22 +90,19 @@ class ZoneRow(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
                          margin_bottom=10, margin_start=12, margin_end=12)
         total = sum(zones.times)
-        self.name = zone_name(number)
-        self.span = zone_range(zones.bounds, number)
-        self.share_text = zone_share(zones.times[number], total)
+        bounds = zone_range(zones.bounds, number)
         line = Gtk.Box(spacing=10)
-        line.append(Gtk.Label(label=self.name, xalign=0))
-        span = Gtk.Label(label=self.span, xalign=0, hexpand=True, wrap=True,
-                         attributes=_whole_words(self.span))
+        line.append(Gtk.Label(label=zone_name(number), xalign=0))
+        span = Gtk.Label(label=bounds, xalign=0, hexpand=True, wrap=True,
+                         attributes=_whole_words(bounds))
         span.add_css_class("dim-label")
         span.add_css_class("caption")
         line.append(span)
-        share = Gtk.Label(label=self.share_text, xalign=1)
+        share = Gtk.Label(label=zone_share(zones.times[number], total), xalign=1)
         share.add_css_class("numeric")
         line.append(share)
         self.append(line)
-        self.bar = ZoneBar(zones.times[number] / total if total else 0, ZONE_COLOURS[number])
-        self.append(self.bar)
+        self.append(ZoneBar(zones.times[number] / total if total else 0, ZONE_COLOURS[number]))
 
 
 class ZoneList(Gtk.Box):

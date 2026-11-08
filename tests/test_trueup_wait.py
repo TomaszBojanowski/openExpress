@@ -156,7 +156,7 @@ def test_the_sync_passes_the_stop_of_its_session_as_it_is(watch, monkeypatch):
     monkeypatch.setattr(trueup, "run", run)
     s = types.SimpleNamespace(device=dev, storage=st, client=None, stop_waiting=stop)
     errors = []
-    assert service._trueup(s, [CHECK], lambda m: None, errors) == [{"kind": "trueup_stopped"}]
+    assert service._trueup(s, [CHECK], lambda m: None, errors, []) == [{"kind": "trueup_stopped"}]
     assert got == [True] and errors == []
 
 

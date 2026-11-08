@@ -247,7 +247,7 @@ def test_a_sync_never_asks_the_store_for_updates(iq_device, monkeypatch):
     s = types.SimpleNamespace(device=dev, storage=st, client=_client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
-    assert service._install_queued_apps(s, [], lambda m: None, errors) == []
+    assert service._install_queued_apps(s, [], lambda m: None, errors, []) == []
     assert errors == []
 
 

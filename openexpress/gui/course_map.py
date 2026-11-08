@@ -126,17 +126,14 @@ class CourseMap(MapView):
         self.map.add_layer(self.path)
         self.lowest = self.path
         marks = activity_map.Shumate.MarkerLayer.new(viewport)
-        self.starts, self.places = [], []
         for line in gpx.lines:
             marker = _marker(END_SIZE, _draw_end, "start")
             marker.set_location(*line.segments[0][0])
             marks.add_marker(marker)
-            self.starts.append(marker)
         for lat, lon in gpx.places:
             marker = _marker(PLACE_SIZE, _draw_place)
             marker.set_location(lat, lon)
             marks.add_marker(marker)
-            self.places.append(marker)
         self.map.add_layer(marks)
         self.box = bounds([point for line in gpx.lines for segment in line.segments
                            for point in segment] + list(gpx.places))

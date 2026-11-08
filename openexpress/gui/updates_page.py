@@ -455,7 +455,7 @@ class UpdatesPage:
     def _update_done_text(rep) -> str:
         """What the window says after an update was copied, with what to do next."""
         return _("Files copied to the device.") + ("\n" + _(FINISH_STEPS_WINDOW)
-                                                    if rep.installed else "")
+                                                    if rep.written else "")
 
     def confirm_update(self, u) -> None:
         s = self.session

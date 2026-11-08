@@ -86,12 +86,12 @@ def file_md5(path: Path) -> str:
     return h.hexdigest()
 
 
-def _valid(path: Path, size: int | None, md5: str | None) -> bool:
+def _valid(path: Path, size: int | None, md5: str) -> bool:
     if not path.exists():
         return False
     if size is not None and path.stat().st_size != size:
         return False
-    return md5 is None or file_md5(path) == md5
+    return file_md5(path) == md5
 
 
 class Overall:
@@ -173,7 +173,7 @@ def fetch(
                               .format(url=_short(url), got=got, size=size))
                 part.unlink(missing_ok=True)
                 continue
-            if md5 is not None and file_md5(part) != md5:
+            if file_md5(part) != md5:
                 log.warning("%s, MD5 mismatch; %s", said, then)
                 errors.append(_("{url}: MD5 checksum mismatch").format(url=_short(url)))
                 part.unlink(missing_ok=True)

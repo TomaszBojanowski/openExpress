@@ -9,7 +9,6 @@ import types
 from pathlib import Path
 
 import pytest
-import requests
 
 import openexpress
 
@@ -22,13 +21,13 @@ def _lines(log_file, words):
 
 def _run(error, log_file):
     """`error` raised by a command; its exit code and what the log says."""
-    from openexpress import applog, cli, service
+    from openexpress import applog, cli
 
     def command(_args):
         raise error
 
     applog.setup("cli")
-    code = cli._run(types.SimpleNamespace(func=command, verbose=False), service, requests)
+    code = cli._run(types.SimpleNamespace(func=command, verbose=False))
     applog.close()
     return code, log_file.read_text()
 

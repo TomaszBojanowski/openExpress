@@ -14,8 +14,7 @@ def test_the_uploads_say_the_kind_of_data_and_one_count(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
     seen = []
-    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=seen.append,
-                     wait_for_processing=False)
+    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=seen.append)
     assert [str(m) for m in seen if isinstance(m, Step)] == [
         f"Uploading activities{NB}· 1 of 4", f"Uploading activities{NB}· 2 of 4",
         f"Uploading other data (FIT_TYPE_2){NB}· 3 of 4", f"Uploading monitoring{NB}· 4 of 4"]

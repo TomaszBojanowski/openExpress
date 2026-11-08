@@ -239,7 +239,6 @@ class _TileColumns(Adw.Bin):
         self._grids = grids
         self._margins = child.get_margin_start() + child.get_margin_end()
         self.layout = (0, MIN_TILE_WIDTH)  # (tiles on a line, their width): none set yet
-        self.updates = 0  # how many times the tiles were laid out (for the tests)
         self._wanted = None
         self._most = 0  # the most tiles a section has (0: none)
         self._width = None  # the width the page was given last
@@ -276,7 +275,6 @@ class _TileColumns(Adw.Bin):
             return False
         if wanted is not None and wanted != self.layout:
             self.layout = wanted
-            self.updates += 1
             # Each grid gets how many share a line and shares its line out itself; the tiles
             # get no width (one that became their minimum kept the window from getting
             # narrower).
@@ -976,10 +974,9 @@ class DeviceRow(Gtk.ListBoxRow):
         which the tiles keep for their height)."""
         self.chips.set_child(_chips_line(said, Gtk.Align.START))
         self.chips.set_visible(bool(said))
-        self.accessible_label = ", ".join(
-            [self._title, *(words for words, _style, _tooltip in said)]
-            + ([self._subtitle] if self._subtitle else []))
-        self.update_property([Gtk.AccessibleProperty.LABEL], [self.accessible_label])
+        label = ", ".join([self._title, *(words for words, _style, _tooltip in said)]
+                          + ([self._subtitle] if self._subtitle else []))
+        self.update_property([Gtk.AccessibleProperty.LABEL], [label])
 
 
 def row_widget(tile, how: str, picture=None) -> DeviceRow:

@@ -75,7 +75,7 @@ def media_dir(device: GarminDevice, kind: str) -> str:
             "track": _("This device does not accept music"),
             "podcast": _("This device does not accept podcasts"),
             "audiobook": _("This device does not accept audiobooks"),
-        }.get(kind) or _("This device does not accept {kind}").format(kind=kind))
+        }[kind])
     return files[0].path.strip("/")
 
 

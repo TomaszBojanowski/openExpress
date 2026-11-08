@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import page_window, replace_in_window, step_words, window_methods
+from fakes import page_window, replace_in_window, software_update, step_words, window_methods
 from fakes import window as stand_in
 
 from openexpress import cli, desktop, service
@@ -1628,7 +1628,7 @@ def test_window_says_what_to_do_next_without_naming_a_command():
     from openexpress.gui.app import MainWindow
     from openexpress.updates import InstallReport
 
-    text = MainWindow._update_done_text(InstallReport(installed=["Etyp 2.70 -> x"]))
+    text = MainWindow._update_done_text(InstallReport(written=[software_update()]))
     assert text.startswith("Files copied to the device.\nTo finish the installation:")
     assert NEXT_STEP in text and "check for updates again" in text
     assert "openexpress updates" not in text
@@ -1638,7 +1638,7 @@ def test_window_says_what_to_do_next_without_naming_a_command():
     assert "It may also restart. Wait until it has finished." in text
     # Whether the server says a restart is needed makes no difference.
     assert MainWindow._update_done_text(
-        InstallReport(installed=["x"], restart_required=True)) == text
+        InstallReport(written=[software_update(restart_required=True)])) == text
     assert MainWindow._update_done_text(InstallReport()) == "Files copied to the device."
 
 
@@ -1653,7 +1653,7 @@ def test_the_window_s_steps_wrap_by_themselves(lang):
 
     i18n.setup(lang)
     try:
-        text = MainWindow._update_done_text(InstallReport(installed=["x"]))
+        text = MainWindow._update_done_text(InstallReport(written=[software_update()]))
     finally:
         i18n.setup("en")
     lines = text.split("\n")
@@ -1723,7 +1723,7 @@ def test_cli_update_install_tells_how_far_the_copy_is(offered, monkeypatch, caps
 
     def install(chosen, storage, session=None, progress=None, unit_id=None, offered=None):
         progress(Step("Copying Font to the device", 1000, 2000, in_bytes=True))  # half of it
-        return upd.InstallReport(installed=["x"])
+        return upd.InstallReport(written=[software_update()])
 
     monkeypatch.setattr(upd, "install", install)
     assert main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"]) == 0

@@ -1133,7 +1133,7 @@ def _turn_main_context() -> None:
                 break
 
 
-def _shown_mount(volume, sleep=time.sleep):
+def _shown_mount(volume):
     """The mount of a volume just mounted. The volume monitor shows it once it has its
     signal, which the main thread handles (the window's, or ours on the command line), while
     the answer to the mount comes to the thread that waited for it: so it may come a moment
@@ -1144,7 +1144,7 @@ def _shown_mount(volume, sleep=time.sleep):
         if mounted is not None or time.monotonic() - started >= MOUNT_SHOWN_S:
             break
         _turn_main_context()
-        sleep(0.1)
+        time.sleep(0.1)
     waited = time.monotonic() - started
     if mounted is not None and waited >= 0.1:
         log.debug("device: the mount of the drive was shown after %.1f s", waited)
@@ -1544,15 +1544,10 @@ def unsupported_text(window: bool = True) -> str:
              "report it, run openexpress report.").format(name=name, id=usb_id)
 
 
-def _garmin_on_usb() -> list[tuple[str, bool]]:
-    """(USB product ID, whether it is in mass storage mode) of each Garmin device plugged in."""
-    return [(product, mass_storage) for _place, product, mass_storage in _garmin_at_places()]
-
-
 def _garmin_at_places() -> list[tuple[str, str, bool]]:
-    """_garmin_on_usb, with the place of each device on USB: the name of its folder in
-    /sys/bus/usb/devices (e.g. "1-4"), which stays when it comes back under another product
-    ID at the same port."""
+    """(place, USB product ID, whether it is in mass storage mode) of each Garmin device
+    plugged in. The place: the name of its folder in /sys/bus/usb/devices (e.g. "1-4"), which
+    stays when it comes back under another product ID at the same port."""
     found = []
     try:
         entries = sorted(SYSFS_USB.iterdir())
@@ -1645,7 +1640,7 @@ def _note_places(devices: list[tuple[str, str, bool]], now: float) -> None:
 
 def garmin_products_on_usb() -> list[str]:
     """USB product IDs of the Garmin devices plugged in, whatever state they are in."""
-    return [product for product, _mass_storage in _garmin_on_usb()]
+    return [product for _place, product, _mass_storage in _garmin_at_places()]
 
 
 def usb_state(clock=time.monotonic) -> str:
@@ -2259,7 +2254,7 @@ def _device_state(uri: str, storage: Storage) -> str:
     return MOUNTED if seen else BETWEEN
 
 
-def _settled_state(uri: str, storage: Storage, sleep=time.sleep) -> tuple[str | None, float]:
+def _settled_state(uri: str, storage: Storage) -> tuple[str | None, float]:
     """The state of the device once it has stayed the same for SETTLED_S (looked at every
     SETTLE_POLL_S), and how long that took; None when it does not settle within
     SETTLE_LIMIT_S."""
@@ -2274,10 +2269,10 @@ def _settled_state(uri: str, storage: Storage, sleep=time.sleep) -> tuple[str | 
             return state, now - started
         if now - started >= SETTLE_LIMIT_S:
             return None, now - started
-        sleep(SETTLE_POLL_S)
+        time.sleep(SETTLE_POLL_S)
 
 
-def _mount_back(uri: str, storage: Storage, sleep=time.sleep) -> None:
+def _mount_back(uri: str, storage: Storage) -> None:
     """After an unmount that did not finish in time: the device is left as it settles when it
     is mounted; mounted again (at most MOUNT_BACK_TRIES times) only once it is seen
     unmounted: "mounted already" from gvfs may be the state before the unmount finishes.
@@ -2285,7 +2280,7 @@ def _mount_back(uri: str, storage: Storage, sleep=time.sleep) -> None:
     log.info("PTP: the unmount did not finish in time: seeing how the device settles")
     tries = 0
     while True:
-        state, took = _settled_state(uri, storage, sleep)
+        state, took = _settled_state(uri, storage)
         log.info("PTP: the device is %s (after %.1f s)", state or "not settled", took)
         if state == MOUNTED:
             return

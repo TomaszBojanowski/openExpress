@@ -7,7 +7,7 @@ import types
 import uuid
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, software_update
 from fakes import window as stand_in
 from test_forget_window import _button_labelled, _turn_until
 
@@ -344,7 +344,8 @@ def _order(ctx, differs):
     ctx.monkeypatch.setattr(ciq, "order_choices", lambda device, state: [("copy", "plan")])
     ctx.monkeypatch.setattr(ciq, "copy_note", lambda made: "")
     win = _escape_window(ctx, _order_blocked=lambda state: None,
-                         _order_rows=lambda choices: [("2026-10-26", "1 app moved", differs)],
+                         _order_rows=lambda choices: [
+                             ("2026-10-26", "1 app moved", choices[0])] if differs else [],
                          confirm_order=_note(ctx, "confirm_order"))
     MainWindow.choose_order(win)
 
@@ -603,7 +604,7 @@ def _update_done(ctx):
     from openexpress.updates import InstallReport
 
     win = _escape_window(ctx)
-    tell_update_done(win, win.session, InstallReport(installed=["Map 2.31"]))
+    tell_update_done(win, win.session, InstallReport(written=[software_update()]))
 
 
 def _update_finish(ctx):

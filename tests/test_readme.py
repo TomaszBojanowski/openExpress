@@ -8,7 +8,6 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-README = (ROOT / "README.md").read_text(encoding="utf-8")
 MANIFEST = (ROOT / "packaging" / "flatpak"
             / "io.github.tomaszbojanowski.OpenExpress.yml").read_text(encoding="utf-8")
 

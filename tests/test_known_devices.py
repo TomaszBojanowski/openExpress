@@ -414,6 +414,26 @@ def test_the_kind_is_kept_and_optional(store, caplog):
     assert known_devices.load()[EDGE].category is None
 
 
+def test_when_a_device_was_first_seen_is_written_and_optional(store):
+    """When a device was first seen is written for each device, but not needed to read the
+    file: an entry without it reads as not known and is written back without it, also when
+    the device is seen again."""
+    import json
+
+    from openexpress import known_devices
+
+    store.parent.mkdir(parents=True)
+    store.write_text(json.dumps({"version": 1, "devices": {str(EDGE): {
+        "description": "Edge 1050", "part_number": "006-B4440-00", "software_version": "33.11",
+        "kind": "mtp", "last_seen": 1.0}}}))
+    assert known_devices.load()[EDGE].first_seen is None
+    known_devices.remember(EDGE, "Edge 1050", "006-B4440-00", "33.12", "mtp", now=3.0)
+    known_devices.remember(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp", now=2.0)
+    devices = json.loads(store.read_text())["devices"]
+    assert "first_seen" not in devices[str(EDGE)] and devices[str(EDGE)]["last_seen"] == 3.0
+    assert devices[str(FENIX)]["first_seen"] == 2.0
+
+
 VENU = 3000000004
 PICTURE = "https://res.garmin.com/en/products/010-02430-11/g/cf-lg.png"
 NEWER_PICTURE = "https://static.garmincdn.com/pumac/venu2.jpg"

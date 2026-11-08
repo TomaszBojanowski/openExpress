@@ -46,7 +46,7 @@ def test_a_network_error_of_the_store_names_neither_the_unit_id_nor_the_address(
     assert text.startswith("Connect IQ apps: network error (")
     assert str(UNIT) not in text and "unitId" not in text and "sku" not in text
     assert "/express/" not in text and "?" not in text and "Connection refused" in text
-    assert network_state.snapshot()[0][netstatus.CONNECT].kind == netstatus.NETWORK
+    assert network_state.counted()[0][netstatus.CONNECT].kind == netstatus.NETWORK
 
 
 def test_a_failed_download_does_not_show_the_signed_address(tmp_path):

@@ -14,7 +14,7 @@ def test_the_usb_devices_of_this_computer_are_not_seen():
 
     assert gio_storage.SYSFS_USB != REAL_SYSFS_USB
     assert gio_storage.SYSFS_USB.is_dir() and list(gio_storage.SYSFS_USB.iterdir()) == []
-    assert gio_storage._garmin_on_usb() == []
+    assert gio_storage.garmin_products_on_usb() == []
     assert gio_storage.usb_state() == gio_storage.ABSENT
 
 

@@ -322,7 +322,7 @@ def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeyp
     st, dev, backups = order_device
     Question.asked = []
     monkeypatch.setattr(Adw, "AlertDialog", Question)
-    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    copy = ciq.load_app_list_copy(dev, "03.04.05")
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     storage = Counting(st.root)
     win = stand_in(session=types.SimpleNamespace(device=dev, storage=storage),
@@ -364,14 +364,11 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     list, so it is there): Next hands it to the question, which asks the device nothing."""
     from gi.repository import Adw, Gtk
 
-    from openexpress import ciq
     from openexpress.gui import app
 
     st, dev, backups = order_device
     Dialog.made = []
     monkeypatch.setattr(Adw, "AlertDialog", Dialog)
-    real = ciq.order_choices
-    monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     storage = Counting(st.root)
     asked = []
     win = stand_in(
@@ -870,7 +867,7 @@ def test_restore_order_spins_its_button(order_device, monkeypatch, delay, text_s
     monkeypatch.setattr(Adw, "AlertDialog", Dialog)
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: (
-        time.sleep(delay), real(device, state, backups))[1])
+        time.sleep(delay), real(device, state))[1])
     win = _task_window(session=types.SimpleNamespace(device=dev, storage=st),
                        _order_blocked=lambda state: None,
                        _order_rows=app.MainWindow._order_rows)

@@ -482,10 +482,6 @@ def space_margin(storage: Storage) -> int:
 
 @dataclass
 class InstallReport:
-    installed: list[str] = field(default_factory=list)
-    restart_required: bool = False
-    # Not copied: each with the update copied to its file instead (one_per_file).
-    put_off: list[tuple[SoftwareUpdate, SoftwareUpdate]] = field(default_factory=list)
     # The updates written to the device, their -META entries too.
     written: list[SoftwareUpdate] = field(default_factory=list)
 
@@ -549,12 +545,14 @@ def _install(
     storage: Storage,
     session=None,
     progress: Callable[[str], None] | None = None,
-    report: InstallReport | None = None,
+    *,
+    report: InstallReport,
 ) -> InstallReport:
     """`progress`: each update by its name, in bytes ("Downloading … · 1.2 MB of 3.4 MB",
     "Copying … to the device · …"); the files are the server's and the device's own. Two
-    updates for one file: one of them is copied (one_per_file)."""
-    updates, put_off = one_per_file(updates)
+    updates for one file: one of them is copied (one_per_file). `report` is filled as it goes:
+    what was written before a failure is in it."""
+    updates = one_per_file(updates)[0]  # the others are told in the log
     need, free = check_space(storage, updates)
     margin = space_margin(storage)
     if free is not None and need + margin > free:
@@ -562,8 +560,6 @@ def _install(
                             "free, but only {free} free")
                           .format(need=human_size(need), margin=human_size(margin),
                                   free=human_size(free)))
-    report = InstallReport() if report is None else report  # `report`: filled as it goes
-    report.put_off = put_off
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
     say = say_to(progress)
@@ -599,9 +595,7 @@ def _install(
         # On a drive, read back from it and compared with the server's MD5 before it counts.
         real = storage.write_file_checked(u.device_path, local, byte_steps(progress, copying),
                                           error=UpdateError, md5=download.normalize_md5(u.md5))
-        report.installed.append(f"{u.title} {u.version} -> {real}")
         report.written.append(u)
-        report.restart_required |= u.installs_when_disconnected
         # The whole path from the device's folder, as mark_present names it.
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(size), real)

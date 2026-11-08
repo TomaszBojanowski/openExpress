@@ -252,8 +252,6 @@ class QuietVolumeMonitor:
     def disconnect(self, handler_id):
         self.handlers.pop(handler_id, None)
 
-    handler_disconnect = disconnect
-
     def emit(self, signal, *values):
         for name, handler, args in list(self.handlers.values()):
             if name == signal:

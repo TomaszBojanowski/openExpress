@@ -111,8 +111,7 @@ def _uploads(root: Path, storage, config=UPLOAD_SETTINGS, said=None):
     state = sync.SyncState(UNIT)
     plan = sync.plan_uploads(device, storage, config, state)
     client = SyncClient(verified_unit_id=UNIT)
-    report = sync.run_uploads(plan, device, storage, client, state, said,
-                              wait_for_processing=False)
+    report = sync.run_uploads(plan, device, storage, client, state, said)
     return report, client, state
 
 

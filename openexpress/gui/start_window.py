@@ -310,11 +310,11 @@ def tile_subtitle(source) -> str:
     return choice_subtitle(source)
 
 
-def remembered_subtitle(known, now: datetime | None = None) -> str:
+def remembered_subtitle(known) -> str:
     """A remembered device that is not connected: its version and when it was last seen,
     told against now as the last sync is ("Last seen 2 h ago"; in full in its tooltip)."""
     return caption(software_text(known.software_version),
-                   last_seen_text(known.last_seen, now or datetime.now()))  # the window's clock
+                   last_seen_text(known.last_seen, datetime.now()))  # the window's clock
 
 
 class StartWindow:

@@ -228,16 +228,16 @@ SIZES = (None, 0, 512, 699392, 6657199308, 7623566950)
 
 
 def test_sizes_in_english_have_a_decimal_point():
-    from openexpress.cli import _human
+    from openexpress.i18n import human_size
 
-    assert [_human(n) for n in SIZES] == [
+    assert [human_size(n) for n in SIZES] == [
         "?", "0\u00a0B", "512\u00a0B", "699.4\u00a0kB", "6.7\u00a0GB", "7.6\u00a0GB"]
 
 
 def test_sizes_in_polish_have_a_decimal_comma(polish):
-    from openexpress.cli import _human
+    from openexpress.i18n import human_size
 
-    assert [_human(n) for n in SIZES] == [
+    assert [human_size(n) for n in SIZES] == [
         "?", "0\u00a0B", "512\u00a0B", "699,4\u00a0kB", "6,7\u00a0GB", "7,6\u00a0GB"]
 
 
@@ -296,7 +296,6 @@ def test_cli_in_polish_shows_sizes_with_a_comma_and_versions_with_a_point(polish
 def test_window_row_in_polish_uses_the_same_sizes(polish):
     from openexpress.i18n import _, human_size
 
-    assert human_size is __import__("openexpress.cli", fromlist=["_human"])._human
     text = _("{free} free of {total}").format(free=human_size(6657199308),
                                               total=human_size(7623566950))
     assert text == "6,7\u00a0GB wolne z\u00a07,6\u00a0GB"

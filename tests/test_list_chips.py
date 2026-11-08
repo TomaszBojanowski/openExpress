@@ -95,8 +95,28 @@ def test_a_row_keeps_its_title_and_subtitle_and_the_tooltip_of_a_device_not_conn
     assert row.get_tooltip_text().startswith("Last seen ")
 
 
+@pytest.fixture
+def told(monkeypatch):
+    """What each row last told a screen reader as its name: GTK gives no way to read an
+    accessible property back, so the call that sets it is watched."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import start
+
+    said = {}
+    real = start.DeviceRow.update_property
+
+    def update(row, properties, values):
+        for prop, value in zip(properties, values, strict=True):
+            if prop == Gtk.AccessibleProperty.LABEL:
+                said[row] = value
+        return real(row, properties, values)
+
+    monkeypatch.setattr(start.DeviceRow, "update_property", update)
+    return said
+
 @pytest.mark.needs_display
-def test_a_count_changes_the_chips_in_the_same_row():
+def test_a_count_changes_the_chips_in_the_same_row(told):
     """The count of activities came after the list was drawn: set_chips changes the chips of
     that row, the same object, and the list is not built again."""
     start, entries, rows = _page()
@@ -105,16 +125,16 @@ def test_a_count_changes_the_chips_in_the_same_row():
     assert start.set_chips(5, counted)
     assert start.tiles() == rows and start.tiles()[5] is rows[5]
     assert [words for words, _c, _t in _chips(rows[5])] == ["To sync"]
-    assert rows[5].accessible_label == "Watch 5, To sync, Software 1.05"
+    assert told[rows[5]] == "Watch 5, To sync, Software 1.05"
     entries[5] = (counted, how)
     start.show(entries, False)  # the same as shown now: nothing is built again
     assert start.tiles() == rows
     assert start.set_chips(5, tile)  # counted again: nothing to sync, no chip
-    assert _chips(rows[5]) == [] and rows[5].accessible_label == "Watch 5, Software 1.05"
+    assert _chips(rows[5]) == [] and told[rows[5]] == "Watch 5, Software 1.05"
 
 
 @pytest.mark.needs_display
-def test_a_row_is_opened_from_the_keyboard_and_tells_what_it_shows():
+def test_a_row_is_opened_from_the_keyboard_and_tells_what_it_shows(told):
     """Focusable and activatable: Enter or Space on it (the list's binding for both) opens
     its device, by its place in the whole list. A screen reader hears its name, its chips
     and its words."""
@@ -134,6 +154,6 @@ def test_a_row_is_opened_from_the_keyboard_and_tells_what_it_shows():
         assert row.grab_focus()
         start_section(start, "connected").list.emit("activate-cursor-row")
         assert opened == [3]
-        assert row.accessible_label == ("Watch 3, Never synced, Primary, Software 1.03")
+        assert told[row] == "Watch 3, Never synced, Primary, Software 1.03"
     finally:
         window.destroy()

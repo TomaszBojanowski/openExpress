@@ -173,3 +173,15 @@ def test_a_toast_on_a_device_s_view_stays_above_the_bar(window):
     window.toast("Signed out")
     assert _turn_until(lambda: len(_toast_widgets(window.toasts)) > len(
         _toast_widgets(window.page_toasts)))
+
+
+def test_a_closed_window_polls_usb_no_more(window):
+    """The window looks for devices on USB every few seconds; once it is closed, the timer is
+    gone, as that of its relative texts."""
+    from gi.repository import GLib
+
+    poll = window._usb_poll
+    assert poll and GLib.MainContext.default().find_source_by_id(poll) is not None
+    assert window._on_close_request(window) is False
+    assert window._usb_poll is None
+    assert GLib.MainContext.default().find_source_by_id(poll) is None

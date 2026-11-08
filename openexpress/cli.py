@@ -45,8 +45,6 @@ from openexpress.updates import FINISH_STEPS
 log = logging.getLogger(__name__)
 
 
-_human = human_size  # the name the commands use
-
 # The exit code of `sync --apply` when the first sync with this program waits for a choice
 # (baseline or --all): not 2, which argparse gives a wrong command line (docs/cli.md, "Exit
 # codes").
@@ -210,7 +208,7 @@ def cmd_diagnostics(args) -> int:
     if dumps:
         print(_("Memory dumps on the device: {count}, {size} (encrypted; copied only with "
                 "--dumps)").format(count=len(dumps),
-                                   size=_human(sum(size for _p, size in dumps))))
+                                   size=human_size(sum(size for _p, size in dumps))))
     crashes = diagnostics.boot_log_crashes(dev.unit_id)
     if crashes:
         print(_("Crashes in the copied boot log:"))
@@ -232,16 +230,16 @@ def cmd_diagnostics(args) -> int:
     print(ngettext("Copied: {count} new file ({size}), {unchanged} unchanged, {listed} only "
                    "listed.",
                    "Copied: {count} new files ({size}), {unchanged} unchanged, {listed} only "
-                   "listed.", done.new).format(count=done.new, size=_human(done.new_bytes),
+                   "listed.", done.new).format(count=done.new, size=human_size(done.new_bytes),
                                                unchanged=done.unchanged, listed=done.listed))
     if args.dumps:
         with _progress() as progress:
             dumped = diagnostics.copy_dumps(dev, st, progress=progress)
         print(_("Memory dumps copied: {count} new ({size}).").format(
-            count=dumped.new, size=_human(dumped.new_bytes)))
+            count=dumped.new, size=human_size(dumped.new_bytes)))
         if dumped.not_copied:
             print(_("Not copied, over the limit of {size}: {names}").format(
-                size=_human(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
+                size=human_size(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
     if args.crash_logs:
         with _progress() as progress:
             hidden = diagnostics.copy_crash_logs(dev, st, progress=progress)
@@ -294,7 +292,7 @@ def cmd_info(args) -> int:
         # TRANSLATORS: label in `openexpress info`, followed by where the files are: the MTP
         # storage's name or "USB drive (…)"
         (_("Storage:"), storage_text(st)),
-        (_("Free space:"), _human(st.free_space())),
+        (_("Free space:"), human_size(st.free_space())),
         # TRANSLATORS: label in `openexpress info`, followed by "{datatypes}, components:
         # {components}"
         (_("Data types:"),
@@ -306,7 +304,7 @@ def cmd_info(args) -> int:
     if dev.iq_max_apps:
         rows.append(("Connect IQ:", ngettext(
             "max. {count} app, {size}", "max. {count} apps, {size}", dev.iq_max_apps).format(
-                count=dev.iq_max_apps, size=_human(dev.iq_app_space))))
+                count=dev.iq_max_apps, size=human_size(dev.iq_app_space))))
     width = max(len(label) for label, _value in rows) + 1
     for label, value in rows:
         print(f"{label:{width}} {value}")
@@ -388,10 +386,10 @@ def cmd_files(args) -> int:
         paths_ = ", ".join(sorted({s.path for s in dev.sources(dt)}))
         count = ngettext("{count} file", "{count} files", len(files)).format(
             count=f"{len(files):5}")
-        print(f"{dt:22} {count:12} {_human(sum(files.values())):>9}  ({paths_})")
+        print(f"{dt:22} {count:12} {human_size(sum(files.values())):>9}  ({paths_})")
         if args.type or args.verbose:
             for p in sorted(files)[-args.limit:] if args.limit else sorted(files):
-                print(f"    {p}  {_human(files[p])}")
+                print(f"    {p}  {human_size(files[p])}")
     total = len(seen)
     print(ngettext("Total: {count} file", "Total: {count} files", total).format(count=total))
     return 0
@@ -651,7 +649,7 @@ def _inspection(name: str, found) -> list[str]:
     from openexpress import fit, service
 
     # TRANSLATORS: fit inspect: the file that was read, {name} its name, {size} its size
-    lines = [_("File: {name}, {size}").format(name=name, size=_human(found.size)),
+    lines = [_("File: {name}, {size}").format(name=name, size=human_size(found.size)),
              _fit_check(found)]
     if found.header_size is None:
         return lines
@@ -1046,8 +1044,6 @@ def cmd_upload_config(args) -> int:
 
 
 def cmd_sync(args) -> int:
-    import dataclasses
-
     from openexpress import service
 
     st, dev = open_device(args)
@@ -1125,7 +1121,7 @@ def _print_sync_plan(plan, client, drive: bool = False, makers=None) -> None:
                               n_up).format(count=n_up, done=uploads.already_done))
         for dt, n in sorted(counts.items()):
             size = sum(c.size for c in uploads.candidates if c.datatype == dt)
-            print(f"  {dt:22} {n:5}  {_human(size)}")
+            print(f"  {dt:22} {n:5}  {human_size(size)}")
         for dt, why in sorted(uploads.skipped_types.items()):
             # TRANSLATORS: dry run of sync: a data type or a file of the queue that is left out;
             # {reason} says why
@@ -1289,7 +1285,7 @@ def cmd_backup(args) -> int:
         res = run_backup(dev, st, dest, keep=args.keep, progress=progress)
     print(ngettext("Copied {count} file ({size}) to {path}",
                    "Copied {count} files ({size}) to {path}", res.files).format(
-        count=res.files, size=_human(res.bytes), path=res.path))
+        count=res.files, size=human_size(res.bytes), path=res.path))
     for p in res.removed:
         print(_("Removed old backup {path}").format(path=p))
     if res.incomplete:
@@ -1377,7 +1373,7 @@ def _beta_mark(u) -> str:
 def _update_line(u) -> str:
     """One update in a list. The file name is added when the server gives no real name."""
     name = u.title if u.title == u.name else f"{u.title} ({u.filename})"
-    return (f"{u.part_number:18} {u.version:>7}  {u.severity_text:<12} {_human(u.size):>9}  "
+    return (f"{u.part_number:18} {u.version:>7}  {u.severity_text:<12} {human_size(u.size):>9}  "
             f"{name}")
 
 
@@ -1536,9 +1532,10 @@ def cmd_updates(args) -> int:
     # TRANSLATORS: `openexpress updates --install`: heading above the updates about to be installed
     print(_("To install:"))
     for u in upd.sort_for_install(chosen):
-        print(f"  {u.part_number} {u.version}  {u.title}{_beta_mark(u)}  ({_human(u.size)}) "
+        print(f"  {u.part_number} {u.version}  {u.title}{_beta_mark(u)}  ({human_size(u.size)}) "
               f"-> {u.device_path}")
-    print(_("Space: {needed} needed, {free} free").format(needed=_human(need), free=_human(free)))
+    print(_("Space: {needed} needed, {free} free").format(needed=human_size(need),
+                                                         free=human_size(free)))
     eulas = sorted({u.eula_url for u in chosen if u.eula_url})
     for e in eulas:
         print(_("License (EULA): {url}").format(url=e))
@@ -1554,7 +1551,7 @@ def cmd_updates(args) -> int:
     with _progress() as progress:
         rep = upd.install(chosen, st, session=client.http, progress=progress,
                           unit_id=dev.unit_id, offered=items)
-    n = len(rep.installed)
+    n = len(rep.written)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
     if n and getattr(st, "mass_storage", False) and not _eject_drive(st):
         return 1  # the cable must stay in: no steps that begin with unplugging it
@@ -1658,16 +1655,16 @@ def _maps_add(args, dev, st, all_maps) -> int:
         plan = ownmaps.plan_add(dev, st, all_maps, Path(args.file), args.name)
     print(_("Map: {title}").format(title=plan.title or plan.name))
     print("  " + _("{file} ({size}) will be written to {path}").format(
-        file=plan.local.name, size=_human(plan.size), path=plan.path))
+        file=plan.local.name, size=human_size(plan.size), path=plan.path))
     if plan.free is not None:
         print(_("Free space on the device: {free} (the map takes {size})").format(
-            free=_human(plan.free), size=_human(plan.size)))
+            free=human_size(plan.free), size=human_size(plan.size)))
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
     with _own_map_hints(), _progress() as progress:
         path = ownmaps.add(plan, dev, st, progress=progress)
-    print(_("Wrote {path} ({size}).").format(path=path, size=_human(plan.size)))
+    print(_("Wrote {path} ({size}).").format(path=path, size=human_size(plan.size)))
     return 0
 
 
@@ -1686,15 +1683,15 @@ def _maps_remove_own(args, dev, st, all_maps) -> int:
             name=plan.name))
         return 0
     print(_("Removing own map: {title}").format(title=plan.title or plan.name))
-    print(f"  - {plan.path}  ({_human(plan.size)})")
+    print(f"  - {plan.path}  ({human_size(plan.size)})")
     if plan.free is not None:
         print(_("Free space on the device: {free} (removing it frees {size})").format(
-            free=_human(plan.free), size=_human(plan.size)))
+            free=human_size(plan.free), size=human_size(plan.size)))
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
     ownmaps.remove(plan, dev, st)
-    print(_("Removed {path} ({size}).").format(path=plan.path, size=_human(plan.size)))
+    print(_("Removed {path} ({size}).").format(path=plan.path, size=human_size(plan.size)))
     return 0
 
 
@@ -1733,7 +1730,7 @@ def cmd_maps(args) -> int:
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
-            print(f"  {m.name:48} {m.version:>9}  {_human(m.size):>9}  {m.status}")
+            print(f"  {m.name:48} {m.version:>9}  {human_size(m.size):>9}  {m.status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)
         if not args.all:
@@ -1741,7 +1738,7 @@ def cmd_maps(args) -> int:
             print("\n" + ngettext("{count} more map is available (openexpress maps --all).",
                                   "{count} more maps are available (openexpress maps --all).",
                                   n).format(count=n))
-        print(_("Free space on the device: {size}").format(size=_human(st.free_space())))
+        print(_("Free space on the device: {size}").format(size=human_size(st.free_space())))
         own = ownmaps.list_own(dev, st, all_maps)
         if own:
             print("\n" + _("Own maps (not from Garmin):"))
@@ -1749,7 +1746,7 @@ def cmd_maps(args) -> int:
                 # TRANSLATORS: in the list of own maps: shown in place of a map's name that could
                 # not be read from its file
                 title = o.title or _("(name not read)")
-                print(f"  {o.filename:48} {_human(o.size):>9}  {title}")
+                print(f"  {o.filename:48} {human_size(o.size):>9}  {title}")
         return 0
 
     if args.maps_cmd == "update":
@@ -1788,7 +1785,7 @@ def cmd_maps(args) -> int:
                            "Removing map {name}: {count} files", len(files)).format(
                 name=m.name, count=len(files)))
             for p in files:
-                print(f"  - {p}  ({_human(st.size(p))})")
+                print(f"  - {p}  ({human_size(st.size(p))})")
             if not args.apply:
                 print(_("Dry run. Add --apply."))
                 continue
@@ -1817,10 +1814,10 @@ def cmd_maps(args) -> int:
                            "Installing map {name} {version}: {count} files, download {size}, "
                            "space on the device {needed} ({free} free)", len(m.files))
         print(msg.format(name=m.name, version=m.version, count=len(m.files),
-                         size=_human(m.size), needed=_human(need),
-                         free=_human(st.free_space())))
+                         size=human_size(m.size), needed=human_size(need),
+                         free=human_size(st.free_space())))
         for f in mp.write_order(m):
-            print(f"  + {f.device_path}  {_human(f.size)}")
+            print(f"  + {f.device_path}  {human_size(f.size)}")
         for p in removing:
             print(f"  - {p}")
         for e in m.eula_urls:
@@ -1887,7 +1884,7 @@ def _apps_queue_only(args, dev, st, client, api, account) -> int:
 
     target = _find_app(account, args.name)
     print(_("Install {name} {version} ({size})").format(
-        name=target.name, version=target.version_name, size=_human(target.size)))
+        name=target.name, version=target.version_name, size=human_size(target.size)))
     targets, _skipped, allowed = _apps_consent(args, [target])
     if not args.apply:
         if targets:
@@ -1929,7 +1926,7 @@ def _apps_order(args, dev, st, state) -> int:
 
     backups = paths.default_backup_dir()
     if not args.source:
-        copies = ciq.app_list_copies(dev, backups)
+        copies = ciq.app_list_copies(dev)
         if not copies:
             # The folder of this device is named after its unit ID: only the one above it.
             print(_("No copies of the app list in {path}.").format(path=backups))
@@ -1944,7 +1941,7 @@ def _apps_order(args, dev, st, state) -> int:
         print(_("Show what a copy would change: openexpress apps order --from COPY"))
         return 0
 
-    copy = ciq.load_app_list_copy(dev, backups, args.source)
+    copy = ciq.load_app_list_copy(dev, args.source)
     if ciq.changes_waiting(dev, st):
         raise ciq.CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
                              "until it is ready and try again"))
@@ -1965,7 +1962,7 @@ def _apps_order(args, dev, st, state) -> int:
         print(ciq.app_list_copy_note(dev, st))
         print(_("Dry run. Add --apply."))
         return 0
-    _plan, saved = ciq.restore_order(dev, st, copy.state, backups)
+    _plan, saved = ciq.restore_order(dev, st, copy.state)
     print(_("Copy of the current app list: {name}").format(name=saved))
     print(_("Wrote the new order to the device; it takes effect after the device is "
             "unplugged."))
@@ -2068,7 +2065,7 @@ def cmd_apps(args) -> int:
                            "Connect IQ on {device}: {count} store apps, {slots} free slots, "
                            "{size} free", len(state.store_apps)).format(
                 device=dev.description, count=len(state.store_apps),
-                slots=state.available_slots, size=_human(state.available_space)))
+                slots=state.available_slots, size=human_size(state.available_space)))
         if state.unreadable:
             print(ngettext("WARNING: {count} entry of the app list on the device cannot be read; "
                            "apps cannot be installed, updated or removed.",
@@ -2094,7 +2091,7 @@ def cmd_apps(args) -> int:
         if missing:
             print("\n" + _("In your Garmin account but not on the device:"))
             for a in missing:
-                print(f"  {a.name:36} {a.store_type:11} {a.version_name:10} {_human(a.size)}")
+                print(f"  {a.name:36} {a.store_type:11} {a.version_name:10} {human_size(a.size)}")
         if args.builtin:
             print("\n" + _("Built-in activities and apps:"))
             for a in state.apps:
@@ -2125,7 +2122,7 @@ def cmd_apps(args) -> int:
             flag = "  " + _("(permissions changed)") if a.permissions_changed else ""
             msg = (_("Update {name} {version} ({size})") if a.app_id in installed_ids
                    else _("Install {name} {version} ({size})"))
-            print(msg.format(name=a.name, version=a.version_name, size=_human(a.size)) + flag)
+            print(msg.format(name=a.name, version=a.version_name, size=human_size(a.size)) + flag)
         targets, skipped, allowed = _apps_consent(args, targets)
         if not targets:
             if not args.apply:
@@ -2449,7 +2446,7 @@ def _waiting_line(waiting) -> str:
     if waiting.title != waiting.filename:
         parts.append(waiting.filename)
     if waiting.gpx is None:
-        parts.append(_human(waiting.size))
+        parts.append(human_size(waiting.size))
     return "  " + " · ".join(parts)
 
 
@@ -2492,7 +2489,7 @@ def _course_plan_lines(plan) -> list[str]:
         lines.append(ngettext("Course: {names}", "Courses: {names}", len(plan.courses)).format(
             names=", ".join(plan.courses)))
     lines.append("  " + _("{file} ({size}) will be written to {path}").format(
-        file=plan.gpx.path.name, size=_human(plan.size), path=plan.path))
+        file=plan.gpx.path.name, size=human_size(plan.size), path=plan.path))
     lines.append("  " + _("Contents: {contents}").format(contents=_gpx_contents(plan.gpx)))
     lines += ["  " + said for said, _warning in courses.what_the_device_does(plan.gpx)]
     if plan.same_waiting is not None:
@@ -2500,7 +2497,7 @@ def _course_plan_lines(plan) -> list[str]:
                      .format(name=plan.same_waiting))
     if plan.free is not None:
         lines.append(_("Free space on the device: {free} (the file takes {size})").format(
-            free=_human(plan.free), size=_human(plan.size)))
+            free=human_size(plan.free), size=human_size(plan.size)))
     return lines
 
 
@@ -2514,7 +2511,7 @@ def _courses_add(args, dev, st) -> int:
         return 0
     with _progress() as progress:
         path = courses.add(plan, dev, st, progress=progress)
-    print(_("Wrote {path} ({size}).").format(path=path, size=_human(plan.size)))
+    print(_("Wrote {path} ({size}).").format(path=path, size=human_size(plan.size)))
     print(_("Unplug the device so it can import the file."))
     return 0
 
@@ -2548,13 +2545,13 @@ def _courses_remove(args, dev, st, seen) -> int:
     plan = courses.plan_remove(dev, st, found[0])
     print((_("Removing a file waiting for the device: {name}") if plan.waiting
            else _("Removing course: {name}")).format(name=plan.title))
-    print(f"  - {plan.path}  ({_human(plan.size)})")
+    print(f"  - {plan.path}  ({human_size(plan.size)})")
     print("  " + courses.removal_note(plan))
     if not args.apply:
         print(_("Dry run. Add --apply."))
         return 0
     courses.remove(plan, dev, st)
-    print(_("Removed {path} ({size}).").format(path=plan.path, size=_human(plan.size)))
+    print(_("Removed {path} ({size}).").format(path=plan.path, size=human_size(plan.size)))
     return 0
 
 
@@ -2605,7 +2602,7 @@ def cmd_register(args) -> int:
         print(_("Would add it as an active device: POST {address}").format(
             address=address.netloc + address.path))
         print(_("with its GarminDevice.xml ({size}; it holds the device's unit ID).").format(
-            size=_human(len(dev.raw))))
+            size=human_size(len(dev.raw))))
         print(_("After that, a sync uploads its activities and health data to this account."))
         print(_("A device can be removed from an account only in Garmin Connect."))
         print(_("This is an experimental feature."))
@@ -2655,7 +2652,6 @@ def match_music_paths(device_paths: list[str], roots: list[str], patterns: list[
     for path in device_paths:
         norm = path.strip("/")
         low = norm.casefold()
-        rel = low
         for top in tops:
             if low.startswith(top + "/"):
                 rel = low[len(top) + 1:]
@@ -2696,7 +2692,7 @@ def cmd_music(args) -> int:
         for kind in kinds:
             files = by_kind.get(kind, [])
             print(_(MUSIC_KIND_LINES[kind]).format(
-                count=len(files), size=_human(sum(f.size for f in files))))
+                count=len(files), size=human_size(sum(f.size for f in files))))
             if args.verbose:
                 for f in files:
                     print(f"    {f.path}")
@@ -2707,7 +2703,7 @@ def cmd_music(args) -> int:
             print(_("Playlists: {count}: {names}").format(count=len(pls), names=", ".join(pls)))
         elif music.supports_playlists(dev):
             print(_("Playlists: {count}").format(count=len(pls)))
-        print(_("Free space: {size}").format(size=_human(st.free_space())))
+        print(_("Free space: {size}").format(size=human_size(st.free_space())))
         return 0
 
     if cmd == "add":
@@ -2717,7 +2713,7 @@ def cmd_music(args) -> int:
                        "{already} already on the device.",
                        "Found {count} playable files; {to_copy} to copy ({size}), "
                        "{already} already on the device.", len(tracks)).format(
-            count=len(tracks), to_copy=len(plan.to_copy), size=_human(plan.size),
+            count=len(tracks), to_copy=len(plan.to_copy), size=human_size(plan.size),
             already=len(plan.already)))
         for t, dest in plan.to_copy[: (None if args.verbose else 15)]:
             note = music.replaced_note(plan, t, dest)
@@ -2750,7 +2746,7 @@ def cmd_music(args) -> int:
         print(ngettext("Playlist '{name}': {count} track, {to_copy} to copy ({size})",
                        "Playlist '{name}': {count} tracks, {to_copy} to copy ({size})",
                        len(tracks)).format(name=name, count=len(tracks),
-                                           to_copy=len(plan.to_copy), size=_human(plan.size)))
+                                           to_copy=len(plan.to_copy), size=human_size(plan.size)))
         if plan.replaced:
             print(music.replaced_text(plan))
         if not args.apply:
@@ -3300,10 +3296,6 @@ def _main(argv: list[str] | None) -> int:
         # code 1, not the traceback of the first import of GLib (--help and --version above).
         _error(no_pygobject_text())
         return 1
-    import requests
-
-    from openexpress import applog, service
-
     # Before any process is started (the start line may ask flatpak-spawn) and before GTK:
     # a locale the C library cannot have (a Flatpak runtime without it) becomes C.UTF-8.
     fallback = i18n.ensure_utf8_locale()
@@ -3323,7 +3315,7 @@ def _main(argv: list[str] | None) -> int:
     sso.note_unfinished_sign_in()  # the last run ended with the sign-in window open
     code: int | str = "error"
     try:
-        code = _run(args, service, requests)
+        code = _run(args)
         return code
     finally:
         log.info("end: %s, exit code %s, %.1f s", args.cmd or "-", code,
@@ -3350,7 +3342,8 @@ def _command_line(args, argv) -> str:
     return " ".join(words)
 
 
-def _run(args, service, requests) -> int:
+def _run(args) -> int:
+    import requests
 
     from openexpress.auth.sso import LoginCancelled
     from openexpress.device.gio_storage import MassStorageNotice, UnsupportedDevice

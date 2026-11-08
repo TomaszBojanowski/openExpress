@@ -108,7 +108,7 @@ def point_colours(times, series) -> list[str] | None:
     out = []
     for at in times:
         i = max(0, bisect.bisect_right(series.times, at) - 1)
-        value = series.values[i] if i < len(series.values) else None
+        value = series.values[i]
         if value is None:
             out.append(NO_VALUE)
             continue

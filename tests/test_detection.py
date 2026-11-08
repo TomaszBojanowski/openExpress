@@ -4471,7 +4471,7 @@ class FakeRememberedPage:
         return False
 
     def allow_forget(self, on):
-        self.forgettable = on
+        pass
 
 
 class FakeSection:
@@ -5040,18 +5040,17 @@ def test_the_start_page_lists_remembered_devices_after_the_connected(start_windo
                    for u in (TEST_WATCH, VARIA, VENU, 3000000002))
 
 
-def test_a_remembered_tile_says_when_it_was_seen_in_relative_words():
+def test_a_remembered_tile_says_when_it_was_seen_in_relative_words(clock):
     """A remembered device seen two hours ago: "Last seen 2 h ago" under its name,
     as the last sync says when it was (i18n.relative_time), not the full date."""
-    from datetime import datetime
+    from datetime import timedelta
 
     from openexpress.gui.start_window import remembered_subtitle
     from openexpress.known_devices import KnownDevice
 
-    now = datetime(2026, 10, 20, 23, 22)
-    seen = datetime(2026, 10, 20, 21, 22).timestamp()
+    seen = (clock.current - timedelta(hours=2)).timestamp()
     venu = KnownDevice(VENU, "Venu 2", "006-B3703-00", "19.05", "mtp", seen, seen)
-    assert remembered_subtitle(venu, now) == "Software 19.05\u00a0· Last seen 2 h ago"
+    assert remembered_subtitle(venu) == "Software 19.05\u00a0· Last seen 2 h ago"
 
 
 @pytest.mark.needs_display
@@ -6061,9 +6060,9 @@ def test_the_tiles_share_out_the_width_of_the_page(window, per_line):
         assert right - 12 <= last[2] <= right  # the line filled, its CSS edge aside
         remembered = bounds(tiles[3], box)
         assert remembered[0] == left  # a section of one tile starts at the left too
-        laid_out = start.columns.updates
+        laid_out = start.columns.layout
         turn(0.5)  # the window keeps its size: nothing is laid out again
-        assert start.columns.updates == laid_out >= 1
+        assert start.columns.layout is laid_out
     finally:
         win.destroy()
 

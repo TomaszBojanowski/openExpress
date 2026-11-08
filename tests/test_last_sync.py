@@ -312,7 +312,7 @@ def test_trueup_says_only_what_it_wrote(monkeypatch, result, lines, errors):
     monkeypatch.setattr(trueup, "run", run)
     said_errors = []
     s = types.SimpleNamespace(device=None, storage=None, client=None)
-    assert step_words(service._trueup(s, [], lambda m: None, said_errors)) == lines
+    assert step_words(service._trueup(s, [], lambda m: None, said_errors, [])) == lines
     assert said_errors == errors
 
 

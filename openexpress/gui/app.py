@@ -266,10 +266,10 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.device_error_group = self.device_error_row = None
         # The pictures of devices drawn and asked for (pictures.py).
         self._device_textures = self._pictures_asked = self._pictures_waiting = None
-        # The dialogs open: Preferences (with its rows), the order of the apps, the new
-        # permissions of an app, Forget Device (kept by confirm(..., keep_as=)).
+        # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device
+        # (kept by confirm(..., keep_as=)).
         self._preferences = self._account_row = self._storage = None
-        self._order_dialog = self._permissions_dialog = self._forget_dialog = None
+        self._order_dialog = self._forget_dialog = None
 
     def _start(self) -> None:
         """What the window does as it opens: the detection, and the account's devices for
@@ -522,6 +522,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             stop_watching_network(self)
             self._closed = True
             self._update_relative_timer()  # no timer left once the window is closed
+            if self._usb_poll is not None:
+                GLib.source_remove(self._usb_poll)
+                self._usb_poll = None
             return False
         if self._close_dialog is None:
             self._close_dialog = inform(
@@ -562,8 +565,6 @@ class App(Adw.Application):
         Adw.Application.do_startup(self)
         collect_garbage_on_the_gtk_thread()
         # Lets the icon work also when running from the source tree (not installed).
-        from gi.repository import Gdk
-
         Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).add_search_path(
             str(Path(__file__).resolve().parent.parent / "data"))
         Gtk.Window.set_default_icon_name(APP_ID)
@@ -639,7 +640,3 @@ def main(argv=None) -> int:
         return 1
     install_excepthook()
     return App().run(argv or [])
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

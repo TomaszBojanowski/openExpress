@@ -10,7 +10,7 @@ import math
 import struct
 from collections.abc import Collection, Iterator
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, auto
 
 from openexpress.i18n import _
 
@@ -242,11 +242,11 @@ def crc16(data: bytes, crc: int = 0) -> int:
 
 
 class Problem(Enum):
-    """Why data are not a whole FIT file (check)."""
-    NO_HEADER = "no FIT header"
-    AFTER_THE_END = "data after the end that are no FIT file"
-    CUT_SHORT = "cut short"
-    CRC = "the CRC does not match"
+    """Why data are not a whole FIT file (check); its words: NotWhole.words()."""
+    NO_HEADER = auto()
+    AFTER_THE_END = auto()  # data after the end that are no FIT file
+    CUT_SHORT = auto()
+    CRC = auto()  # the CRC does not match
 
 
 @dataclass(frozen=True)

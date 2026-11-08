@@ -128,7 +128,8 @@ def test_run_sync_plans_and_syncs_under_the_lock(device_root, xdg, monkeypatch):
     monkeypatch.setattr(service, "plan_sync",
                         lambda *a, **kw: held.append("plan") or plan_sync(*a, **kw))
     account = SyncAccount(messages=[COURSE], verified_unit_id=None)
-    summary = service.run_sync(session(device_root, account), "all")
+    summary = service.run_sync(session(device_root, account),
+                               options=service.SyncOptions(first_run="all"))
     assert held == ["lock", "plan"] and summary.uploaded == 3 and summary.downloaded == 1
     assert service.load_last_sync(UNIT)["uploaded"] == 3
 
@@ -151,7 +152,8 @@ def test_a_first_sync_stopped_after_its_uploads_keeps_its_choice(by, device_root
     account.device_messages = offline
     if by == "window":
         with pytest.raises(requests.ConnectionError):
-            service.run_sync(session(device_root, account), "all")
+            service.run_sync(session(device_root, account),
+                             options=service.SyncOptions(first_run="all"))
     else:
         monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
         try:
@@ -161,11 +163,3 @@ def test_a_first_sync_stopped_after_its_uploads_keeps_its_choice(by, device_root
     assert sync.synced_here(UNIT)
 
 
-@pytest.mark.parametrize("old", [{"first_run": "baseline"}, {"include_diagnostics": True}])
-def test_run_sync_takes_options_or_its_old_arguments_never_both(old, device_root, xdg):
-    """With `options` the old arguments would be left out without a word: refused before
-    anything is asked."""
-    account = SyncAccount(verified_unit_id=None)
-    with pytest.raises(ValueError):
-        service.run_sync(session(device_root, account), options=service.SyncOptions(), **old)
-    assert account.asked == [] and service.load_last_sync(UNIT) is None

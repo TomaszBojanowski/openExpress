@@ -313,18 +313,17 @@ class AppsPage:
         return ""
 
     @staticmethod
-    def _order_rows(choices) -> list[tuple[str, str, bool]]:
-        """(title, subtitle, can be chosen) for each copy, newest first. Only the name of
-        a copy is shown, never its path."""
+    def _order_rows(choices) -> list[tuple[str, str, tuple]]:
+        """(title, what changes, the choice) for each copy that would change the order, newest
+        first. Only the name of a copy is shown, never its path."""
         from openexpress import ciq
 
         rows = []
-        for copy, plan in choices:
+        for choice in choices:
+            copy, plan = choice
             # The apps to move, not the positions that change.
-            moved = ciq.apps_moved(plan)
-            rows.append((ciq.copy_title(copy),
-                         ciq.order_difference(plan) if moved else _("The same order as now"),
-                         bool(moved)))
+            if ciq.apps_moved(plan):
+                rows.append((ciq.copy_title(copy), ciq.order_difference(plan), choice))
         return rows
 
     @staticmethod
@@ -359,20 +358,16 @@ class AppsPage:
                            _("There are no copies of the app list yet. A copy is made before "
                              "every change of the apps on the device."))
                 return
-            # Only the copies that would change something.
-            rows = [(row, choice) for row, choice in zip(self._order_rows(choices), choices)
-                    if row[2]]
+            rows = self._order_rows(choices)
             if not rows:
                 inform(self, "order-none-differs", _("Restore the Order From a Copy"),
                        _("No copy differs from the current order"), label=_("Close"))
                 return
             box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
             box.add_css_class("boxed-list")
-            for (title, subtitle, usable), choice in rows:
+            for title, subtitle, choice in rows:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(title),
                                     subtitle=GLib.markup_escape_text(subtitle))
-                row.set_sensitive(usable)
-                row.set_selectable(usable)
                 row.choice = choice
                 box.append(row)
             scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER,
@@ -467,7 +462,7 @@ class AppsPage:
             # TRANSLATORS: heading of the question before installing apps that ask for new
             # permissions ({count}: how many apps, more than one)
             "Allow New Permissions?", "Allow New Permissions for {count} Apps?",
-            count).format(count=count), body, *answers, keep_as="_permissions_dialog")
+            count).format(count=count), body, *answers)
 
     def _install_apps(self, apps, allowed=()) -> None:
         from openexpress import ciq

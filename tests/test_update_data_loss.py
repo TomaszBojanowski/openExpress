@@ -83,7 +83,7 @@ def test_the_warning_does_not_hold_the_update_back(offered, monkeypatch, capsys)
     _kind(monkeypatch, "Vivomove")
     installed = []
     monkeypatch.setattr(updates, "install", lambda chosen, storage, **_kw: (
-        installed.append(chosen), types.SimpleNamespace(installed=[]))[1])
+        installed.append(chosen), updates.InstallReport())[1])
     assert main(["--path", str(offered), "updates", "--install", PLAIN_FILE, "--apply"]) == 0
     assert CLI_EN in capsys.readouterr().out.splitlines()
     assert len(installed) == 1

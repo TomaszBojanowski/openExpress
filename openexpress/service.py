@@ -1368,22 +1368,15 @@ def _other_install_lock():
 
 def run_sync(
     s: DeviceSession,
-    first_run: str | None = None,
     progress: Progress | None = None,
-    include_diagnostics: bool = False,
     options: SyncOptions | None = None,
 ) -> SyncSummary:
     """A whole sync: planned (plan_sync) and done (apply_sync) under the sync lock, one process
     at a time; returns its summary. Leaves its record (last_sync.json, also of a sync
-    stopped after its uploads) and logs its start, end and errors. `first_run`: 'baseline' or
-    'all' for the first sync; `options` (the command line's) hold it and the diagnostics
-    instead (ValueError with both)."""
+    stopped after its uploads) and logs its start, end and errors. Without `options`: all of
+    it, as the background service asks."""
     progress = say_to(progress)
-    # The window and the background service ask for everything.
-    if options is None:
-        options = SyncOptions(first_run=first_run, include_diagnostics=include_diagnostics)
-    elif first_run is not None or include_diagnostics:
-        raise ValueError("run_sync: first_run and include_diagnostics go in the options")
+    options = options or SyncOptions()
     if s.mass_storage:
         if not options.drive:
             log.info("sync: refused, the device is in mass storage mode")
@@ -1850,8 +1843,7 @@ def load_last_sync(unit_id: int | None = None, test_drive: bool = False) -> dict
     return data
 
 
-def _install_queued_apps(s, messages, progress, errors,
-                         received: list | None = None) -> list[dict]:
+def _install_queued_apps(s, messages, progress, errors, received: list) -> list[dict]:
     """The Connect IQ apps of the queue written to the device: their lines for the details;
     their names go to `received` (counted as received, as the files of the queue). An app
     left in the queue is not received."""
@@ -1874,8 +1866,7 @@ def _install_queued_apps(s, messages, progress, errors,
         errors.append(f"Connect IQ: {e}")
         return []
     errors += [f"Connect IQ {name}: {err}" for name, err in rep.failed]
-    if received is not None:
-        received += rep.installed
+    received += rep.installed
     lines = []
     if rep.installed:
         lines.append(apps_installed_step(rep.installed))
@@ -1885,7 +1876,7 @@ def _install_queued_apps(s, messages, progress, errors,
     return lines
 
 
-def _trueup(s, messages, progress, errors, received: list | None = None) -> list[dict]:
+def _trueup(s, messages, progress, errors, received: list) -> list[dict]:
     """TrueUp of the queue written to the device: its line for the details; written, it goes
     to `received` (counted as received, as the files of the queue)."""
     from openexpress import trueup
@@ -1905,8 +1896,7 @@ def _trueup(s, messages, progress, errors, received: list | None = None) -> list
     if res.stopped:
         return [trueup_stopped_step()]
     if res.written:
-        if received is not None:
-            received.append("TrueUp")
+        received.append("TrueUp")
         return [trueup_step()]
     return []  # nothing to write, or not supported: in the log only (trueup.run)
 

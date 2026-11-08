@@ -132,7 +132,7 @@ def test_a_system_update_is_copied_last_and_asks_for_a_restart(device_root, tmp_
                             path, local, progress, **kw))
     report = updates.install(items, storage)
     assert copied == ["Garmin/Font/006-D0000-00.fnt", "Garmin/GUPDATE.GSP"]
-    assert report.restart_required
+    assert any(u.installs_when_disconnected for u in report.written)
     assert (device_root / "GARMIN/GUPDATE.GSP").read_bytes() == BUNDLE
 
 
@@ -146,7 +146,8 @@ def test_plain_files_alone_ask_for_no_restart(device_root, tmp_path, monkeypatch
 
     monkeypatch.setattr(download, "fetch", fetch)
     monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
-    assert not updates.install([font], LocalStorage(device_root)).restart_required
+    report = updates.install([font], LocalStorage(device_root))
+    assert report.written and not any(u.installs_when_disconnected for u in report.written)
 
 
 def test_an_update_the_drive_keeps_with_other_bytes_is_not_told_copied(device_root, tmp_path,
@@ -307,11 +308,11 @@ def test_two_updates_for_one_file_are_copied_one_at_a_time(device_root, tmp_path
     items = updates.parse_updates(lower_keys({"updates": SAME_FILE}))
     with caplog.at_level(logging.INFO, logger="openexpress.updates"):
         report = updates.install(items, LocalStorage(device_root))
+    assert [u.part_number for u in report.written if not u.is_metadata] == ["006-B0000-00"]
     # The name the server gives, in its letter case.
-    assert [Path(r.split(" -> ")[1]).name for r in report.installed] == ["gupdate.gcd"]
+    assert [p.name for p in (device_root / "GARMIN").iterdir()
+            if p.name.casefold() == "gupdate.gcd"] == ["gupdate.gcd"]
     assert (device_root / "GARMIN/gupdate.gcd").read_bytes() == BUNDLE
-    assert [(u.part_number, other.part_number) for u, other in report.put_off] == [
-        ("006-B0001-00", "006-B0000-00")]
     assert ("software update: 006-B0001-00 6.70 put off, it goes to the file of 006-B0000-00 "
             "23.40 (Garmin/GUPDATE.GCD): one at a time") in [r.getMessage() for r in caplog.records]
 
@@ -1561,7 +1562,6 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     copied = []
     monkeypatch.setattr(updates, "install",
                         lambda chosen, storage, **kw: copied.append(chosen) or InstallReport(
-                            installed=["Test Bundle 23.40 -> Garmin/GUPDATE.GSP"],
                             written=list(chosen)))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
@@ -1633,8 +1633,9 @@ def _fetch_in_steps(cached=()):
 def _map(*sizes):
     from openexpress import maps
 
+    # A made-up MD5 for each file: a map with a file without one is never installed.
     files = [maps.MapFile(device_path=f"Garmin/Map{n}.img",
-                          url=f"https://example.org/map{n}.img", md5=None, size=size)
+                          url=f"https://example.org/map{n}.img", md5=f"{n + 1:032x}", size=size)
              for n, size in enumerate(sizes)]
     return maps.UniversalMap(name="Test Map", map_type="TopoActive", state=0,
                              is_reinstall=False, can_uninstall=True, version="2026.11",
@@ -1645,9 +1646,9 @@ def _map(*sizes):
 def test_a_map_download_moves_one_bar_over_all_its_files(device_root, monkeypatch):
     from openexpress import maps
 
-    fetch, _given = _fetch_in_steps(cached={"Map0.img"})
-    monkeypatch.setattr(download, "fetch", fetch)
     m = _map(400, 800)
+    fetch, _given = _fetch_in_steps(cached={maps.cache_file(m.files[0]).name})
+    monkeypatch.setattr(download, "fetch", fetch)
     bar = []
     maps.install(m, [m], LocalStorage(device_root), lambda ident: {},
                  progress=lambda step: bar.append((step.done, step.total))
@@ -2038,7 +2039,6 @@ def test_install_all_over_mtp_copies_every_update_in_one_go(monkeypatch, caplog)
     def copy(chosen, storage, report, **kw):
         copies.append([u.part_number for u in chosen])
         report.written += chosen
-        report.installed += [u.title for u in chosen]
         return report
 
     monkeypatch.setattr(updates, "_install", copy)
@@ -2096,7 +2096,7 @@ def test_after_copying_components_the_page_says_ready_not_up_to_date(monkeypatch
     win._set_update_state = lambda new, staged=(): states.append(
         ([u.part_number for u in new], [u.part_number for u in staged]))
     monkeypatch.setattr(updates, "install", lambda chosen, storage, **kw: InstallReport(
-        installed=[u.title for u in chosen], written=list(chosen)))
+        written=list(chosen)))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
     in_the_window("is_bike_accessory", lambda client, device, ask: False)

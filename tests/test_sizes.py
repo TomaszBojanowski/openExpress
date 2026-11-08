@@ -76,13 +76,6 @@ def test_the_command_line_writes_plain_spaces(device_root, capsys):
     assert "\u00a0" not in text
 
 
-def test_commands_and_window_use_the_same_function():
-    from openexpress import cli
-    from openexpress.i18n import human_size
-
-    assert cli._human is human_size and human_size is human_size
-
-
 def uploading(device_root, tmp_path):
     whole = make_fit(1100172800)  # a whole FIT file, padded with zeros to 1500 bytes
     (device_root / "GARMIN/Activity/2026-10-03-10-00-00.fit").write_bytes(
@@ -90,8 +83,7 @@ def uploading(device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
     lines = []
-    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append,
-                     wait_for_processing=False)
+    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append)
     return [line for line in lines if "2026-10-03" in line]
 
 
@@ -106,8 +98,7 @@ def test_upload_progress_in_polish(polish, device_root, tmp_path):
     st, dev, state = _setup(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state)
     lines = []
-    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append,
-                     wait_for_processing=False)
+    sync.run_uploads(plan, dev, st, SyncClient(), state, progress=lines.append)
     first = next(m for m in lines if isinstance(m, Step))
     assert first == "Wysyłanie: aktywności\u00a0· 1 z\u00a04"
 

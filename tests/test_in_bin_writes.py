@@ -122,19 +122,19 @@ def test_a_switch_that_goes_well_is_read_back(iq_device):
 def test_an_order_cut_short_leaves_no_list(order_device):
     """Nothing waits when the order is restored (it is refused otherwise): the half list goes."""
     st, dev, backups = order_device
-    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    copy = ciq.load_app_list_copy(dev, "03.04.05")
     out_before = (st.root / "GARMIN/APPS/OUT.BIN").read_bytes()
     with pytest.raises(DeviceError, match="the device is gone"):
-        ciq.restore_order(dev, Breaking(st.root), copy.state, backups)
+        ciq.restore_order(dev, Breaking(st.root), copy.state)
     assert waiting(st) is None
     assert (st.root / "GARMIN/APPS/OUT.BIN").read_bytes() == out_before
 
 
 def test_an_order_half_written_that_cannot_be_deleted_is_said(order_device):
     st, dev, backups = order_device
-    copy = ciq.load_app_list_copy(dev, backups, "03.04.05")
+    copy = ciq.load_app_list_copy(dev, "03.04.05")
     with pytest.raises(ciq.CiqError, match="before you unplug it"):
-        ciq.restore_order(dev, Breaking(st.root, undeletable=True), copy.state, backups)
+        ciq.restore_order(dev, Breaking(st.root, undeletable=True), copy.state)
 
 
 # --- an install over the mounted storage (install_queued) -----------------------------------------

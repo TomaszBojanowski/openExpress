@@ -227,7 +227,7 @@ class KnownDevice:
     part_number: str
     software_version: str
     kind: str  # "mtp", or "ums" for a Garmin device in mass storage mode
-    first_seen: float
+    first_seen: float | None  # None: not in the entry read
     last_seen: float
     category: str | None = None  # one of CATEGORIES; None: not known
     image_url: str | None = None  # the address of its model's picture; None: not known
@@ -606,7 +606,8 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                 unit_id=int(key), description=str(value["description"]),
                 part_number=str(value["part_number"]),
                 software_version=str(value["software_version"]), kind=str(value["kind"]),
-                first_seen=float(value["first_seen"]), last_seen=float(value["last_seen"]),
+                first_seen=float(value["first_seen"]) if "first_seen" in value else None,
+                last_seen=float(value["last_seen"]),
                 category=category if category in CATEGORIES else None,
                 image_url=image_url if picture_urls.allowed(image_url) else None,
                 update_found=float(update_found) if isinstance(update_found, int | float)
@@ -679,8 +680,8 @@ def _write(known: dict[int, KnownDevice]) -> None:
         del fields["unit_id"]  # it is the key
         for name in _FACT_FIELDS:
             del fields[name]
-        for optional in ("category", "image_url", "usb_product", "usb_serial", "volume_uuid",
-                         "model_name"):
+        for optional in ("first_seen", "category", "image_url", "usb_product", "usb_serial",
+                         "volume_uuid", "model_name"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         del fields["copied_updates"]

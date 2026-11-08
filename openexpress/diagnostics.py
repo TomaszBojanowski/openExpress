@@ -595,19 +595,17 @@ def places_path(unit_id: int) -> Path:
 
 def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[Seen, dict]:
     """Through the folders, when the places kept do not hold (seen_now): what is there now,
-    and the note of where it is (the real paths of the files and folders found, and of the
-    paths looked for that are not there)."""
-    err, absent, folders = {}, [], []
+    and the note of where it is (the real paths of the files and folders found)."""
+    err, folders = {}, []
     for path in ERR_LOGS:
         real = storage.resolve(path)
         entry = storage.info(real) if real is not None else None
-        if entry is None or entry.is_dir:
-            absent.append(path)
-        else:
+        if entry is not None and not entry.is_dir:
             err[real] = entry.size
     for path in (DEBUG, DUMPS, *EVENT_LOGS):
         real = storage.resolve(path)
-        (folders.append(real) if real is not None else absent.append(path))
+        if real is not None:
+            folders.append(real)
     events = [real for path in EVENT_LOGS if (real := storage.resolve(path)) is not None]
     dumps = [(path, e.size) for path, e in storage.walk_files(DUMPS)]
     files = None
@@ -619,8 +617,7 @@ def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[See
     note = {"software_version": device.software_version_str, "err_logs": sorted(err),
             "dumps": [path for path, _size in dumps],
             "files": sorted(files) if files is not None else None,
-            "folders": sorted(set(folders)), "absent": sorted(set(absent)),
-            "event_logs": bool(events)}
+            "folders": sorted(set(folders)), "event_logs": bool(events)}
     return Seen(err, dumps, files, bool(events)), note
 
 
@@ -643,10 +640,9 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
             return None
         err_logs, dumps = _strings(note["err_logs"]), _strings(note["dumps"])
         files = _strings(kept_files) if with_files else []
+        # Only the places found are asked about, not the paths looked for in vain (on a
+        # Venu 2, 4 of 9 questions): one there now is seen with other software.
         folders = _strings(note["folders"])
-        # The paths looked for in vain are not asked about (on a Venu 2, 4 of 9 questions):
-        # one there now is seen with other software.
-        _strings(note["absent"])  # kept with the note, not asked about
         event_logs = note["event_logs"]
         if not isinstance(event_logs, bool):
             return None

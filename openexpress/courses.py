@@ -287,9 +287,6 @@ def overview(device: GarminDevice, storage: Storage) -> Overview:
         return Overview(None, [], [], None)
     copies = _copies(device.unit_id)
     unreadable: list[str] = []
-    courses: list[Course] = []
-    waiting: list[Waiting] = []
-    locations = None
     folder = _out_folder(device, COURSE_DATATYPE)
     parts = (
         ("courses", lambda: [_course(storage, p, s, copies)

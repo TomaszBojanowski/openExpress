@@ -122,11 +122,6 @@ class Status:
     def note_failure(self, service: str | None, url: str) -> None:
         self.note(service, Result(NETWORK, time.time(), urlsplit(url).netloc))
 
-    def snapshot(self) -> tuple[dict[str, Result], dict[str, float]]:
-        """Every service's last result and last good answer, as the rows show them."""
-        with self._lock:
-            return dict(self._last), dict(self._answered)
-
     def network_changed(self, at: float | None = None) -> None:
         """The computer's network changed (Gio.NetworkMonitor). Nothing is asked and the state
         stays as it is until a request ends; from then on (counted) a request that got no
@@ -153,9 +148,6 @@ class Status:
             else:
                 counted[s] = r
         return counted, answered
-
-    def state(self) -> str:
-        return state_of(*self.counted())
 
     def add_listener(self, fn: Callable[[], None]) -> None:
         with self._lock:

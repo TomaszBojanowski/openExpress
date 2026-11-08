@@ -13,7 +13,6 @@ from pathlib import Path
 APP_NAME = "openexpress"
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 FLATPAK_INFO = Path("/.flatpak-info")
-LEGACY_NAME = "garmin-linux"  # name used before the first public release
 
 
 def _xdg(var: str, default: str) -> Path:
@@ -22,18 +21,8 @@ def _xdg(var: str, default: str) -> Path:
 
 
 def _app_dir(var: str, default: str) -> Path:
-    """XDG directory for the app; moves data from the pre-release name if needed."""
-    base = _xdg(var, default)
-    new, old = base / APP_NAME, base / LEGACY_NAME
-    if not new.exists() and old.is_dir():
-        try:
-            old.rename(new)
-        except OSError:
-            # Another process may have migrated it in the meantime.
-            if new.is_dir():
-                return new
-            return old if old.is_dir() else new
-    return new
+    """XDG directory for the app."""
+    return _xdg(var, default) / APP_NAME
 
 
 def config_dir() -> Path:

@@ -49,7 +49,7 @@ def test_the_same_apps_in_the_same_order_make_no_new_copy(iq_device, device_root
     first = ciq.save_app_list_copy(dev, st, now=next(stamps))
     _list(device_root, _with_space(APPS, 65_000_000))
     assert ciq.save_app_list_copy(dev, st, now=next(stamps)) == first
-    assert copy_names(dev, backups) == [first]
+    assert copy_names(dev) == [first]
 
 
 def test_another_order_or_another_list_makes_a_new_copy(iq_device, device_root, backups):
@@ -61,7 +61,7 @@ def test_another_order_or_another_list_makes_a_new_copy(iq_device, device_root, 
     second = ciq.save_app_list_copy(dev, st, now=next(stamps))
     _list(device_root, out_bin(APPS[:2]))  # one app fewer
     third = ciq.save_app_list_copy(dev, st, now=next(stamps))
-    assert copy_names(dev, backups) == [first, second, third]
+    assert copy_names(dev) == [first, second, third]
 
 
 def test_only_the_copies_of_the_app_list_count_as_the_newest(iq_device, device_root, backups):
@@ -122,7 +122,7 @@ def test_the_eleventh_copy_takes_the_place_of_the_oldest(iq_device, device_root,
         _list(device_root, _distinct(n))
         made.append(ciq.save_app_list_copy(dev, st, now=next(stamps)))
     assert len(set(made)) == 11
-    assert copy_names(dev, backups) == made[1:]  # the oldest went
+    assert copy_names(dev) == made[1:]  # the oldest went
     unit = backups / str(dev.unit_id)
     assert sorted(p.name for p in unit.iterdir() if not p.name.startswith("GARMIN-APPS")) == (
         sorted([*full, "my notes"]))  # the full backups and the user's folder stay
@@ -134,10 +134,10 @@ def test_ten_copies_and_the_same_list_remove_nothing(iq_device, device_root, bac
     for n in range(10):
         _list(device_root, _distinct(n))
         ciq.save_app_list_copy(dev, st, now=next(stamps))
-    before = copy_names(dev, backups)
+    before = copy_names(dev)
     assert len(before) == 10
     assert ciq.save_app_list_copy(dev, st, now=next(stamps)) == before[-1]  # the same list
-    assert copy_names(dev, backups) == before
+    assert copy_names(dev) == before
 
 
 def test_the_full_backups_keep_their_own_three(iq_device, device_root, backups, monkeypatch):
@@ -160,7 +160,7 @@ def test_the_full_backups_keep_their_own_three(iq_device, device_root, backups, 
     made = [backup.run_backup(dev, st, backups, keep=3).path.name for _n in range(4)]
     unit = backups / str(dev.unit_id)
     assert sorted(p.name for p in unit.iterdir() if backup.is_backup_dir(p)) == made[1:]
-    assert copy_names(dev, backups) == [copy]
+    assert copy_names(dev) == [copy]
 
 
 def test_old_copies_are_removed_with_the_same_rule_as_the_backups():
@@ -210,7 +210,7 @@ def _copy_folder(backups, dev, stamp, data, model=" Test watch"):
     return folder.name
 
 
-def _dialog_of(monkeypatch, st, dev, backups):
+def _dialog_of(monkeypatch, st, dev):
     """choose_order of a window that is never shown: the dialog it made, and the errors."""
     from fakes import RunNow
     from gi.repository import Adw
@@ -219,8 +219,6 @@ def _dialog_of(monkeypatch, st, dev, backups):
 
     _Dialog.made = []
     monkeypatch.setattr(Adw, "AlertDialog", _Dialog)
-    real = ciq.order_choices
-    monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     errors = []
     win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), run_task=RunNow(),
@@ -250,7 +248,7 @@ def test_the_dialog_lists_only_the_copies_that_change_the_order(iq_device, devic
     _copy_folder(backups, dev, "10.00.00", out_bin([*APPS[:2], clock, APPS[2]]))
     _copy_folder(backups, dev, "11.00.00", _with_space(now, 12_345_678))  # the order of now
     _copy_folder(backups, dev, "12.00.00", out_bin([clock, *APPS]))
-    (dialog,), errors = _dialog_of(monkeypatch, st, dev, backups)
+    (dialog,), errors = _dialog_of(monkeypatch, st, dev)
     assert errors == []
     assert _titles(dialog) == ["2026-10-12 (12.00.00) Test watch",
                                "2026-10-12 (10.00.00) Test watch"]
@@ -263,7 +261,7 @@ def test_without_a_copy_that_differs_one_sentence_and_close(iq_device, device_ro
     st, dev = iq_device
     _list(device_root, out_bin(APPS))
     _copy_folder(backups, dev, "11.00.00", out_bin(APPS))
-    (dialog,), errors = _dialog_of(monkeypatch, st, dev, backups)
+    (dialog,), errors = _dialog_of(monkeypatch, st, dev)
     assert errors == [] and dialog.extra is None
     assert dialog.kw == {"heading": "Restore the Order From a Copy",
                          "body": "No copy differs from the current order"}
@@ -274,7 +272,7 @@ def test_without_a_copy_that_differs_one_sentence_and_close(iq_device, device_ro
 def test_without_any_copy_an_error_says_there_are_none_yet(iq_device, device_root, backups, monkeypatch):
     st, dev = iq_device
     _list(device_root, out_bin(APPS))
-    made, errors = _dialog_of(monkeypatch, st, dev, backups)
+    made, errors = _dialog_of(monkeypatch, st, dev)
     assert made == [] and errors == [
         ("There are no copies of the app list yet. A copy is made before every change of the "
          "apps on the device.")]
@@ -289,7 +287,7 @@ def test_the_sentence_in_polish(iq_device, device_root, backups, monkeypatch):
     _copy_folder(backups, dev, "11.00.00", out_bin(APPS))
     i18n.setup("pl")
     try:
-        (dialog,), _errors = _dialog_of(monkeypatch, st, dev, backups)
+        (dialog,), _errors = _dialog_of(monkeypatch, st, dev)
     finally:
         i18n.setup("en")
     assert dialog.kw["body"] == "Żadna kopia nie różni się od obecnej kolejności"
@@ -310,8 +308,8 @@ def test_older_copies_of_a_list_a_newer_copy_has_go(iq_device, device_root, back
                             _with_space(APPS, 12_345_678))  # the same list
     _list(device_root, out_bin(APPS[:2]))
     c = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 13, 0, 0))
-    assert copy_names(dev, backups) == [b_name, second_a, c]
-    assert first_a not in copy_names(dev, backups)
+    assert copy_names(dev) == [b_name, second_a, c]
+    assert first_a not in copy_names(dev)
 
 
 def test_different_lists_all_stay(iq_device, device_root, backups):
@@ -320,7 +318,7 @@ def test_different_lists_all_stay(iq_device, device_root, backups):
             for n, order in enumerate([APPS, [APPS[1], APPS[0], APPS[2]], APPS[:1]])]
     _list(device_root, out_bin(APPS[:2]))
     c = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 20, 0, 0))
-    assert copy_names(dev, backups) == [*made, c]
+    assert copy_names(dev) == [*made, c]
 
 
 def test_unreadable_copies_and_full_backups_are_left_alone(iq_device, device_root, backups):
@@ -347,4 +345,4 @@ def test_the_limit_counts_after_the_series(iq_device, device_root, backups):
             for n in range(10)]
     _list(device_root, out_bin(APPS[:1]))
     c = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 20, 0, 0))
-    assert copy_names(dev, backups) == [*made[:3], *made[4:], c]
+    assert copy_names(dev) == [*made[:3], *made[4:], c]

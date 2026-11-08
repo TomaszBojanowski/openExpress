@@ -568,13 +568,13 @@ def _zone_bounds_break_between_words(zones) -> None:
     from gi.repository import Gtk
 
     for row in zones.rows:
-        (span,) = [w for w in descendants(row)
-                   if isinstance(w, Gtk.Label) and w.get_label() == row.span]
-        spaces = {i + 1 for i, c in enumerate(row.span) if c == " "}
-        dashes = {i + 1 for i, c in enumerate(row.span) if c == "–"}
-        assert _starts(span) <= spaces, row.span  # a range on one line
+        _name, span, _share = [w for w in descendants(row) if isinstance(w, Gtk.Label)]
+        bounds = span.get_label()
+        spaces = {i + 1 for i, c in enumerate(bounds) if c == " "}
+        dashes = {i + 1 for i, c in enumerate(bounds) if c == "–"}
+        assert _starts(span) <= spaces, bounds  # a range on one line
         # Pango breaks after a dash whatever it is told; nowhere else in a word.
-        assert _starts(span, anywhere=True) <= spaces | dashes, row.span
+        assert _starts(span, anywhere=True) <= spaces | dashes, bounds
 
 
 @pytest.mark.parametrize("tiles", [False, True])  # the map before the yes, and after

@@ -304,7 +304,7 @@ def test_window_and_background_sync_use_the_same_gate(device_root, xdg):
         state = sync.SyncState(UNIT)
         if state.file.exists():
             state.file.unlink()
-        summary = service.run_sync(s, first_run="all")
+        summary = service.run_sync(s, options=service.SyncOptions(first_run="all"))
         assert len(client.uploads) == uploads and summary.uploaded == uploads
         assert summary.downloaded == 1
         blocked = [line for line in step_words(summary.lines)
@@ -326,7 +326,7 @@ def test_a_sync_keeps_the_numbers_of_its_uploads(device_root, xdg):
     st = LocalStorage(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
-    summary = service.run_sync(s, first_run="all")
+    summary = service.run_sync(s, options=service.SyncOptions(first_run="all"))
     steps = [line for line in summary.lines if isinstance(line, dict)]
     assert steps == [
         {"kind": "new_files", "types": {"FIT_TYPE_4": 2}},
@@ -352,7 +352,7 @@ def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
     st = LocalStorage(device_root)
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     s = service.DeviceSession(st, dev, Settings(), Account(messages=QUEUED))
-    summary = service.run_sync(s, first_run="all")
+    summary = service.run_sync(s, options=service.SyncOptions(first_run="all"))
     assert summary.downloaded == 1
     text = last_sync.describe(summary.record()).text
     assert text.splitlines() == ["2 new files, 2 uploaded · 1 received",

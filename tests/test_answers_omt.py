@@ -185,10 +185,10 @@ def test_the_command_line_install_forgets_it_too(offered, monkeypatch, capsys, c
 
     answers.ANSWERS.ask(answers.SOFTWARE_UPDATES, ("made-up",), check, about=[unit])
 
-    def install(chosen, storage, session=None, progress=None):
+    def install(chosen, storage, session=None, progress=None, *, report):
         if not copied:
             raise OSError("the cable came out")
-        return types.SimpleNamespace(installed=[])
+        return report
 
     monkeypatch.setattr(updates, "_install", install)
     main(["--path", str(root), "updates", "--install", "006-DA003-00", "--apply"])

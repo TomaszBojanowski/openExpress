@@ -432,9 +432,13 @@ def test_the_map_draws_each_track_and_route_their_starts_and_the_waypoints():
     shown = course_map.CourseMap(gpx)
     assert [dashed for dashed, _points in shown.path.lines] == [False, False, True]
     assert [len(points) for _dashed, points in shown.path.lines] == [3, 2, 3]
-    assert [m.get_latitude() for m in shown.starts] == [52.0, 52.1, 52.0]
-    assert [(m.get_latitude(), m.get_longitude()) for m in shown.places] == [(52.0, 13.0),
-                                                                           (52.3, 13.4)]
+    markers = [w for w in descendants(shown.map) if isinstance(w, activity_map.Shumate.Marker)]
+    starts = [m for m in markers if m.get_child().get_content_width() == course_map.END_SIZE]
+    places = [m for m in markers if m.get_child().get_content_width() == course_map.PLACE_SIZE]
+    assert len(starts) + len(places) == len(markers)
+    assert [m.get_latitude() for m in starts] == [52.0, 52.1, 52.0]
+    assert [(m.get_latitude(), m.get_longitude()) for m in places] == [(52.0, 13.0),
+                                                                     (52.3, 13.4)]
     assert shown.box == (52.0, 13.0, 52.3, 13.4)  # all of the file, its waypoints too
     assert not shown.map.get_can_target()  # a look at the file: not dragged, not zoomed
     assert shown.tiles is None and not shown.attribution.get_visible()  # no yes given

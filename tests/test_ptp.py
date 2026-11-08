@@ -430,7 +430,7 @@ def test_a_device_opened_through_its_node_closes_the_descriptor(tmp_path, monkey
     path.write_bytes(b"")
     given = []
 
-    def from_fd(cls, fd, timeout_ms=ptp.TIMEOUT_MS):
+    def from_fd(cls, fd):
         given.append(fd)
         return cls(FakeLibusb(), None, 1, 0, 1, 0x81, 512)
 
@@ -449,7 +449,7 @@ def test_a_node_that_cannot_be_used_leaves_no_descriptor_open(tmp_path, monkeypa
     path.write_bytes(b"")
     given = []
 
-    def refused(cls, fd, timeout_ms=ptp.TIMEOUT_MS):
+    def refused(cls, fd):
         given.append(fd)
         raise ptp.UsbUnavailable("busy")
 

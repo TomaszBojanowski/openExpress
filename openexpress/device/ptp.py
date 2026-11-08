@@ -292,14 +292,14 @@ class LibusbTransport:
     """One claimed PTP interface of a USB device, through libusb-1.0."""
 
     def __init__(self, lib, context, handle, interface: int, ep_out: int, ep_in: int,
-                 packet_size: int, timeout_ms: int = TIMEOUT_MS):
+                 packet_size: int):
         self._lib, self._context, self._handle = lib, context, handle
         self._interface, self._ep_out, self._ep_in = interface, ep_out, ep_in
-        self.packet_size, self.timeout_ms = packet_size, timeout_ms
+        self.packet_size = packet_size
         self._fd: int | None = None  # the device node opened by `open_node`, closed with us
 
     @classmethod
-    def open(cls, bus: int, address: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
+    def open(cls, bus: int, address: int) -> LibusbTransport:
         """Open the device at this bus and device number (as in /sys/bus/usb/devices)."""
         lib = load_libusb()
         context = ctypes.c_void_p()
@@ -320,7 +320,7 @@ class LibusbTransport:
                     raise UsbUnavailable(_("The USB device was not found."))
             finally:
                 lib.libusb_free_device_list(devices, 1)
-            return cls._claim(lib, context, handle, timeout_ms)
+            return cls._claim(lib, context, handle)
         except BaseException:
             if handle:
                 lib.libusb_close(handle)
@@ -328,7 +328,7 @@ class LibusbTransport:
             raise
 
     @classmethod
-    def from_fd(cls, fd: int, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
+    def from_fd(cls, fd: int) -> LibusbTransport:
         """Use a device file descriptor opened by someone else (open_node: the node in
         /dev/bus/usb that a Flatpak with --device=usb may open)."""
         lib = load_libusb()
@@ -341,7 +341,7 @@ class LibusbTransport:
         handle = ctypes.c_void_p()
         try:
             cls._check(lib, lib.libusb_wrap_sys_device(context, fd, ctypes.byref(handle)))
-            return cls._claim(lib, context, handle, timeout_ms)
+            return cls._claim(lib, context, handle)
         except BaseException:
             if handle:
                 lib.libusb_close(handle)
@@ -349,7 +349,7 @@ class LibusbTransport:
             raise
 
     @classmethod
-    def open_node(cls, path, timeout_ms: int = TIMEOUT_MS) -> LibusbTransport:
+    def open_node(cls, path) -> LibusbTransport:
         """Open the device through its node in /dev/bus/usb: in a Flatpak with the
         --device=usb permission the node is there, but no USB tree that libusb could scan."""
         try:
@@ -358,7 +358,7 @@ class LibusbTransport:
             raise UsbUnavailable(_("The USB device cannot be opened: {error}").format(
                 error=e.strerror or type(e).__name__)) from e
         try:
-            transport = cls.from_fd(fd, timeout_ms)
+            transport = cls.from_fd(fd)
         except BaseException:
             os.close(fd)
             raise
@@ -372,7 +372,7 @@ class LibusbTransport:
                 error=lib.libusb_error_name(result).decode()))
 
     @classmethod
-    def _claim(cls, lib, context, handle, timeout_ms: int) -> LibusbTransport:
+    def _claim(cls, lib, context, handle) -> LibusbTransport:
         config = ctypes.POINTER(_Config)()
         cls._check(lib, lib.libusb_get_active_config_descriptor(
             lib.libusb_get_device(handle), ctypes.byref(config)))
@@ -385,12 +385,12 @@ class LibusbTransport:
         interface, ep_out, ep_in, packet_size = found
         lib.libusb_set_auto_detach_kernel_driver(handle, 1)  # not supported everywhere; fine
         cls._check(lib, lib.libusb_claim_interface(handle, interface))
-        return cls(lib, context, handle, interface, ep_out, ep_in, packet_size, timeout_ms)
+        return cls(lib, context, handle, interface, ep_out, ep_in, packet_size)
 
     def write(self, data: bytes) -> None:
         done = ctypes.c_int()
         result = self._lib.libusb_bulk_transfer(self._handle, self._ep_out, bytes(data), len(data),
-                                                ctypes.byref(done), self.timeout_ms)
+                                                ctypes.byref(done), TIMEOUT_MS)
         if result < 0 or done.value != len(data):
             raise PtpError(_("Sending to the device failed: {error}").format(
                 error=(self._lib.libusb_error_name(result).decode() if result < 0
@@ -400,7 +400,7 @@ class LibusbTransport:
         buffer = ctypes.create_string_buffer(size)
         done = ctypes.c_int()
         result = self._lib.libusb_bulk_transfer(self._handle, self._ep_in, buffer, size,
-                                                ctypes.byref(done), self.timeout_ms)
+                                                ctypes.byref(done), TIMEOUT_MS)
         if result == _LIBUSB_ERROR_TIMEOUT and done.value == 0:
             raise PtpError(_("The device did not answer in time."))
         if result < 0 and result != _LIBUSB_ERROR_TIMEOUT:

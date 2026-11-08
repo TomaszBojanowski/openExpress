@@ -159,7 +159,7 @@ def test_baseline(device_root, tmp_path):
 
 
 def test_downloads(device_root, tmp_path):
-    st, dev, _ = _setup(device_root, tmp_path)
+    st, dev, state = _setup(device_root, tmp_path)
     messages = [
         {"messageid": 1, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",
          "metadata": {"messageurl": "course/1", "messagename": "Route"}},
@@ -177,7 +177,7 @@ def test_downloads(device_root, tmp_path):
     assert items[1].unsupported  # FIT_TYPE_5 has no target on this device
     assert items[2].handled_by == "Connect IQ" and not items[2].unsupported
     client = SyncClient()
-    rep = sync.run_downloads(items, st, client)
+    rep = sync.run_downloads(items, st, client, state=state)
     assert len(rep.written) == 1 and len(rep.empty) == 1
     assert client.acks == [1, 5]
     written = list((device_root / "GARMIN/NewFiles").iterdir())

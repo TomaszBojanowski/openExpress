@@ -597,21 +597,19 @@ def run_uploads(
     client: GarminClient,
     state: SyncState,
     progress: Callable[[str], None] | None = None,
-    wait_for_processing: bool = True,
 ) -> UploadReport:
     """Upload the files of the plan. A client never checked against the account (run_sync
     checks the owner first) stops it at its first refusal: nothing is sent, nothing is kept
     for a next sync, and the refusal is logged once and raised."""
     progress = say_to(progress)
     try:
-        return _run_uploads(plan, device, storage, client, state, progress, wait_for_processing)
+        return _run_uploads(plan, device, storage, client, state, progress)
     except DeviceNotVerified:
         log.warning("uploads: nothing uploaded, the device was not checked against the account")
         raise
 
 
-def _run_uploads(plan, device, storage, client, state, progress,
-                 wait_for_processing) -> UploadReport:
+def _run_uploads(plan, device, storage, client, state, progress) -> UploadReport:
     report = UploadReport()
     cands = plan.candidates
     unreadable: set[int] = set()
@@ -692,7 +690,7 @@ def _run_uploads(plan, device, storage, client, state, progress,
             continue
         try:
             _upload_one(c, data, label, idx == len(remaining) - 1 and ordered, client, state,
-                        report, progress, wait_for_processing, stop_types)
+                        report, stop_types)
         finally:
             c.data = None
         state.save()
@@ -707,8 +705,7 @@ def _run_uploads(plan, device, storage, client, state, progress,
     return report
 
 
-def _upload_one(c, data, label, last, client, state, report, progress,
-                wait_for_processing, stop_types) -> None:
+def _upload_one(c, data, label, last, client, state, report, stop_types) -> None:
     log.debug("upload: %s (%s)", label, applog.size(c.size))  # the device's own name
     ok = True
     error = ""
@@ -762,7 +759,7 @@ def _upload_one(c, data, label, last, client, state, report, progress,
                 ok, error = False, _("server rejected the file (codes {codes})").format(
                     codes=sorted(codes))
                 break
-            elif wait_for_processing and res.location and "activity-service" in res.location:
+            elif res.location and "activity-service" in res.location:
                 try:
                     st = client.poll_location(res.location, res.poll_delay_ms)
                 except Exception as e:  # noqa: BLE001 - the file itself was accepted
@@ -1057,12 +1054,13 @@ def run_downloads(
     storage: Storage,
     client: GarminClient,
     progress: Callable[[str], None] | None = None,
-    state: SyncState | None = None,
+    *,
+    state: SyncState,
     makers: Makers | None = None,
 ) -> DownloadReport:
-    """Download the queued files to the watch and return the report. With `state`, a message
-    whose file was written but not acknowledged is kept in it and only acknowledged next
-    time (no duplicate file on the watch). The log says who made each file written (`makers`:
+    """Download the queued files to the watch and return the report. A message whose file was
+    written but not acknowledged is kept in `state` and only acknowledged next time (no
+    duplicate file on the watch). The log says who made each file written (`makers`:
     the names of the devices; without them a product by its number). Raises DeviceNotVerified
     at the first refusal of a client never checked against the account: nothing more is
     fetched, written or acknowledged."""
@@ -1090,10 +1088,10 @@ def _acknowledge(client: GarminClient, message_id) -> None:
 
 def _run_downloads(items, storage, client, progress, state, makers: Makers) -> DownloadReport:
     report = DownloadReport()
-    own = state.unacked() if state is not None else set()
+    own = state.unacked()
     # A message the other install wrote but could not acknowledge is only acknowledged; its
     # number is never kept in this install's record.
-    elsewhere = state.written_elsewhere() - own if state is not None else set()
+    elsewhere = state.written_elsewhere() - own
     unacked = own | elsewhere
     initial = set(unacked)
     fetched = [it for it in items if not (it.unsupported or it.handled_by)
@@ -1161,7 +1159,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
             else:
                 unacked.discard(mid)
     finally:
-        if state is not None and unacked != initial:
+        if unacked != initial:
             state.save_unacked(unacked - elsewhere)
     log.info("downloads: %d written (%s), %d empty, %d failed, %d not acknowledged",
              len(report.written), applog.counts(report.makers), len(report.empty),

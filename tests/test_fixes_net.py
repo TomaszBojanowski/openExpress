@@ -7,7 +7,6 @@ import socket
 import stat
 import threading
 import time
-from pathlib import Path
 
 import pytest
 import requests
@@ -168,7 +167,6 @@ def test_poll_location_relative_and_clamped(monkeypatch, server):
                         authenticated=True)
     assert res.location == server.url + "/activity-service/st/1"
     assert c.poll_location(res.location, 1) == 201
-    assert c.poll_location("/activity-service/st/1", 1, base=server.url + "/up") == 201
 
     server.routes["/activity-service/st/2"] = (202, {"location-in-milliseconds": "60000"}, b"")
     t = time.monotonic()
@@ -276,7 +274,7 @@ def test_416_with_complete_part(server, tmp_path):
     assert ranges(server)[1:] == [f"bytes={len(DATA) + 4}-", None]
 
 
-# --- private files and the move of the program's folders --------------------------------
+# --- private files --------------------------------------------------------------------
 
 def test_write_private(tmp_path, monkeypatch):
     target = tmp_path / "d" / "secret.json"
@@ -304,31 +302,6 @@ def test_write_private_writes_bytes_as_they_are(tmp_path):
     paths.write_private(target, data)
     assert target.read_bytes() == data
     assert stat.S_IMODE(target.stat().st_mode) == 0o600
-
-
-def test_app_dir_migration_race(tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    old, new = tmp_path / paths.LEGACY_NAME, tmp_path / paths.APP_NAME
-
-    def raced(self, target):
-        Path(target).mkdir()  # another process won
-        raise OSError("exists")
-    old.mkdir()
-    monkeypatch.setattr(Path, "rename", raced)
-    assert paths.config_dir() == new
-
-    def gone(self, target):
-        self.rmdir()
-        raise OSError("gone")
-    new.rmdir()
-    monkeypatch.setattr(Path, "rename", gone)
-    assert paths.config_dir() == new
-
-    def denied(self, target):
-        raise OSError("denied")
-    old.mkdir()
-    monkeypatch.setattr(Path, "rename", denied)
-    assert paths.config_dir() == old
 
 
 # --- system language preference list --------------------------------------------------

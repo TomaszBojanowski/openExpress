@@ -22,7 +22,6 @@ class DetailRow(Adw.ActionRow):
 
     def __init__(self, name: str, value_text: str):
         super().__init__(title=name, use_markup=False, activatable=False)
-        self.name, self.value_text = name, value_text
         self.value = Gtk.Label(label=value_text, xalign=1)  # short: the name wraps instead
         self.value.add_css_class("numeric")
         self.add_suffix(self.value)

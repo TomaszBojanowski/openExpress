@@ -1062,3 +1062,14 @@ def git(cwd, *args: str) -> str:
            "GIT_COMMITTER_NAME": "A", "GIT_COMMITTER_EMAIL": "a@example.com"}
     return subprocess.run(["git", "-c", "commit.gpgsign=false", *args], cwd=cwd, env=env,
                           check=True, capture_output=True, text=True).stdout.strip()
+
+
+def software_update(**fields):
+    """A made-up software update (updates.SoftwareUpdate), its fields as given."""
+    from openexpress.updates import SoftwareUpdate
+
+    made_up = dict(part_number="006-D0000-00", name="Made-up file", version="1.00", severity="",
+                   is_primary=False, is_reinstall=False, restart_required=False,
+                   device_path="Garmin/006-D0000-00.bin", url="https://example.com/file.bin",
+                   md5="0" * 32, size=1, order=0)
+    return SoftwareUpdate(**{**made_up, **fields})

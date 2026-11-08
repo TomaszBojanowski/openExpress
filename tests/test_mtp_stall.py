@@ -84,7 +84,7 @@ def test_trueup_lets_a_stall_through(monkeypatch):
     session = types.SimpleNamespace(device=None, storage=None, client=None)
     errors = []
     with pytest.raises(DeviceNotResponding):
-        service._trueup(session, [], say_to(None), errors)
+        service._trueup(session, [], say_to(None), errors, [])
     assert errors == []
 
 

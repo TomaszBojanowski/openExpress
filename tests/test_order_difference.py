@@ -85,9 +85,10 @@ def test_the_rows_of_the_dialog_say_the_measure():
     copy = types.SimpleNamespace(name="GARMIN-APPS 2026-10-12 (17.37.37)")
     one = _plan([STORE, *WIDGETS], [STORE, *WIDGETS[1:], WIDGETS[0]])
     same = _plan([STORE, *WIDGETS], [STORE, *WIDGETS])
-    assert MainWindow._order_rows([(copy, one), (copy, same)]) == [
-        ("2026-10-12 (17.37.37)", "1 app moved", True),
-        ("2026-10-12 (17.37.37)", "The same order as now", False)]
+    rows = MainWindow._order_rows([(copy, one), (copy, same)])
+    assert [(title, moved) for title, moved, _choice in rows] == [
+        ("2026-10-12 (17.37.37)", "1 app moved")]  # the copy with the same order is left out
+    assert rows[0][2] == (copy, one)
 
 
 def test_the_command_line_says_the_same_measure(iq_device, device_root, backups, apps_cli,
@@ -146,8 +147,6 @@ def test_the_list_of_copies_opens_at_its_top_with_none_chosen(iq_device, device_
     present = Adw.AlertDialog.present
     monkeypatch.setattr(Adw.AlertDialog, "present",
                         lambda self, parent: (shown.append(self), present(self, parent)))
-    real = ciq.order_choices
-    monkeypatch.setattr(ciq, "order_choices", lambda device, state: real(device, state, backups))
     win = stand_in(
         session=types.SimpleNamespace(device=dev, storage=st), run_task=RunNow(),
         error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,

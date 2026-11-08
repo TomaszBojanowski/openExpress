@@ -45,7 +45,7 @@ class GioOp:
     start), "on cancel" (`delay_s` after the cancel), "never" (the cancel ignored).
     says: "done", "error" (`message`), "already mounted" or "not found"; `on_cancel`: "done"
     (too late), "cancelled" or "error". `strict`: fails without a Gio.Cancellable.
-    Leaves `delivered` (word, thread name) and `began_in`."""
+    Leaves `delivered` (word, thread name)."""
 
     def __init__(self, when="next turn", says="done", delay_s=0.0, on_cancel="cancelled",
                  message="made-up refusal", strict=False):
@@ -53,7 +53,6 @@ class GioOp:
         self.when, self.says, self.delay_s = when, says, delay_s
         self.on_cancel, self.message, self.strict = on_cancel, message, strict
         self.delivered = None
-        self.began_in = None
         self.cancellable = None
         self.was_cancelled = False
         self.sources = []
@@ -64,7 +63,6 @@ class GioOp:
         now when None."""
         if self.strict and cancellable is None:
             raise AssertionError("the operation was started without a way to cancel it")
-        self.began_in = threading.current_thread()
         self.cancellable = cancellable
         if self.when == "at once":
             self._give(done, self.says)

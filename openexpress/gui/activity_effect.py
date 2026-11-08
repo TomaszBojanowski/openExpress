@@ -46,7 +46,6 @@ class EffectRow(Gtk.Box):
     def __init__(self, name: str, value_text: str, bar: EffectBar | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=10,
                          margin_bottom=10, margin_start=12, margin_end=12)
-        self.name, self.value_text, self.bar = name, value_text, bar
         line = Gtk.Box(spacing=10)
         line.append(Gtk.Label(label=name, xalign=0, hexpand=True, wrap=True))
         value = Gtk.Label(label=value_text, xalign=1)

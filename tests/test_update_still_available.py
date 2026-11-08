@@ -3,7 +3,7 @@ offers the device, so that the next check finding one is no surprise (made-up up
 import types
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, software_update
 from fakes import window as stand_in
 
 from openexpress import i18n, updates
@@ -44,7 +44,7 @@ def polish():
     i18n.setup("en")
 
 
-COPIED = InstallReport(installed=["Made-up file 1.00 -> Garmin/006-D0000-00.bin"])
+COPIED = InstallReport(written=[software_update()])
 
 
 @pytest.mark.parametrize(("still", "words"), [

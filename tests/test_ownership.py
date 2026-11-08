@@ -495,7 +495,7 @@ def test_cli_errors_come_after_what_was_printed(error, line, code, monkeypatch):
 
     piped = PipedOutput(monkeypatch)
     args = types.SimpleNamespace(func=command, verbose=False)
-    assert cli._run(args, service, requests) == code
+    assert cli._run(args) == code
     piped.end()
     assert piped.lines == ["first line", line]
 
@@ -546,7 +546,7 @@ def test_run_sync_refuses_other_watch(device_root, xdg, device):
     before = tree(device_root)
     for first_run in (None, "baseline", "all"):
         with pytest.raises(NotAccountDevice):
-            service.run_sync(s, first_run)
+            service.run_sync(s, options=service.SyncOptions(first_run=first_run))
     assert set(client.http.paths()) == {DEVICES_PATH}
     assert tree(device_root) == before
     assert not s.state.dir.exists() and not service.last_sync_path().exists()

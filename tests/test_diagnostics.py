@@ -801,16 +801,32 @@ def test_a_place_gone_is_looked_for_again(device, clock):
 
 
 def test_the_places_not_there_are_not_asked_about_again(device, clock):
-    """A path looked for in vain (the event logs, err_log.txt…) is kept as not there: the next
-    openings ask the device about the places found only (on a Venu 2, 4 of its 9 questions
-    are about paths it does not have)."""
+    """A path looked for in vain (the event logs, err_log.txt…) is not asked about again: the
+    next openings ask the device about the places found only (on a Venu 2, 4 of its 9
+    questions are about paths it does not have)."""
     st, dev = device
+    looked_for = {*diagnostics.ERR_LOGS, diagnostics.DEBUG, diagnostics.DUMPS,
+                  *diagnostics.EVENT_LOGS}
+    not_there = {path for path in looked_for if st.resolve(path) is None}
+    assert "GARMIN/EVNTLOGS" in not_there
     diagnostics.at_open(dev, st)
-    absent = json.loads(diagnostics.places_path(UNIT).read_text())["absent"]
-    assert "GARMIN/EVNTLOGS" in absent
     _connected_again(st)
     diagnostics.at_open(dev, st)
-    assert st.infos and not set(st.infos) & set(absent) and st.lists == []
+    assert st.infos and not set(st.infos) & not_there and st.lists == []
+
+
+def test_a_note_that_lists_the_places_not_there_still_holds(device, clock):
+    """A note as older versions wrote it, with the paths looked for in vain ("absent"), holds:
+    the folders are not looked through again."""
+    st, dev = device
+    diagnostics.at_open(dev, st)
+    place = diagnostics.places_path(UNIT)
+    note = json.loads(place.read_text())
+    assert "absent" not in note
+    place.write_text(json.dumps({**note, "absent": ["GARMIN/EVNTLOGS"]}))
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert st.lists == []
 
 
 def test_a_place_not_there_before_is_looked_for_with_other_software(device, clock):

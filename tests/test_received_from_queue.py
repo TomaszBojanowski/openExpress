@@ -44,7 +44,7 @@ def _synced_once(device_root):
     state = sync.SyncState(UNIT)
     if state.file.exists():
         state.file.unlink()
-    service.run_sync(session, first_run="baseline")
+    service.run_sync(session, options=service.SyncOptions(first_run="baseline"))
     return session
 
 

@@ -495,7 +495,7 @@ def test_sync_is_logged_step_by_step_without_identifiers(log_file, device_root, 
     state = sync.SyncState(int(DEVICE_UNIT))
     if state.file.exists():
         state.file.unlink()
-    summary = service.run_sync(s, first_run="all")
+    summary = service.run_sync(s, options=service.SyncOptions(first_run="all"))
     assert summary.uploaded == 2 and summary.downloaded == 1
 
     text = log_file.read_text()
@@ -522,14 +522,14 @@ def test_blocked_uploads_and_sync_errors_are_logged(log_file, device_root, xdg):
     st = LocalStorage(device_root)
     s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(),
                               Account(messages=QUEUED, preference="false"))
-    service.run_sync(s, first_run="all")
+    service.run_sync(s, options=service.SyncOptions(first_run="all"))
     text = log_file.read_text()
     assert "uploads allowed: False (" in text and "upload plan: " in text
     assert "uploads: " not in text  # nothing was sent, so no upload result
 
     s.client.device_messages = lambda unit_id: (_ for _ in ()).throw(RuntimeError("no network"))
     with pytest.raises(RuntimeError):
-        service.run_sync(s, first_run="all")
+        service.run_sync(s, options=service.SyncOptions(first_run="all"))
     assert "WARNING openexpress.service: sync: stopped after " in log_file.read_text()
     assert "RuntimeError: no network" in log_file.read_text()
 

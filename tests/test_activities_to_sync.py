@@ -84,7 +84,7 @@ def test_what_garmin_refused_or_already_has_is_done_a_failed_upload_is_not(devic
     plan = sync.plan_uploads(device, storage, config, state)
     client = Answering([400, 500], matches={"1100086400": True},
                        verified_unit_id=device.unit_id)
-    report = sync.run_uploads(plan, device, storage, client, state, wait_for_processing=False)
+    report = sync.run_uploads(plan, device, storage, client, state)
     assert (len(report.rejected), len(report.already_in_connect), len(report.failed)) == (1, 1, 1)
     assert sync.activities_to_sync(device, storage).count == 1
 

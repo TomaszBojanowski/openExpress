@@ -683,14 +683,26 @@ def test_the_chart_s_cursor_is_marked_on_the_map():
     assert (shown.marker.get_latitude(), shown.marker.get_longitude()) == pytest.approx(point)
 
 
-def test_the_map_has_a_name_for_a_screen_reader_and_is_released_once_closed(no_tile_server):
+def test_the_map_has_a_name_for_a_screen_reader_and_is_released_once_closed(no_tile_server,
+                                                                           monkeypatch):
+    from gi.repository import Gtk
+
     from openexpress.gui import activity_map
 
+    # GTK gives no way to read an accessible property back: the call that sets it is watched.
+    told = []
+    real = activity_map.Shumate.Map.update_property
+
+    def update(widget, properties, values):
+        told.append(dict(zip(properties, values, strict=True)))
+        return real(widget, properties, values)
+
+    monkeypatch.setattr(activity_map.Shumate.Map, "update_property", update)
     activity_map.set_tiles(True)
     win, _the_list = a_window(walk())
     page = open_page(win, read_of(sport=WALKING))
     shown = map_of(page)
-    assert shown.accessible_name == "Map of the track"
+    assert {Gtk.AccessibleProperty.LABEL: "Map of the track"} in told
     gone = []
     shown.weak_ref(lambda: gone.append("map"))
     del shown, page
@@ -752,18 +764,47 @@ def order_of(widget) -> int:
     return i
 
 
+def ends_of(shown) -> list:
+    """The markers of the start and the finish of a map: all its markers but its cursor."""
+    from openexpress.gui.activity_map import Shumate
+
+    return [w for w in descendants(shown.map)
+            if isinstance(w, Shumate.Marker) and w is not shown.marker]
+
+
+def wheel_of(shown):
+    """The map's own controller of the mouse wheel, which goes before libshumate's."""
+    from gi.repository import Gtk
+
+    controllers = shown.map.observe_controllers()
+    return next(c for c in (controllers.get_item(i) for i in range(controllers.get_n_items()))
+                if isinstance(c, Gtk.EventControllerScroll)
+                and c.get_propagation_phase() == Gtk.PropagationPhase.CAPTURE)
+
+
+def row_texts(row) -> list[str]:
+    """The texts of a row of a section, in their order."""
+    from gi.repository import Gtk
+
+    return [w.get_label() for w in descendants(row) if isinstance(w, Gtk.Label)]
+
+
+def bar_of(row, kind):
+    return next((w for w in descendants(row) if isinstance(w, kind)), None)
+
+
 def test_the_start_and_the_finish_are_marked_and_the_cursor_above_them():
     shown, toplevel = a_map()
     try:
-        assert set(shown.ends) == {"start", "finish"}
-        start, finish = shown.ends["start"], shown.ends["finish"]
+        start, finish = sorted(ends_of(shown), key=lambda m: m.get_latitude())
         assert (start.get_latitude(), start.get_longitude()) == pytest.approx((51.5, -0.16))
         assert (finish.get_latitude(), finish.get_longitude()) == pytest.approx((51.51, -0.16))
         assert start.get_visible() and finish.get_visible()
-        from openexpress.gui.activity_map import CURSOR_SIZE
+        from openexpress.gui.activity_map import CURSOR_SIZE, END_SIZE
 
         assert shown.marker.get_child().get_content_width() == CURSOR_SIZE
-        assert start.get_child().get_content_width() < CURSOR_SIZE  # the cursor's is larger
+        assert [m.get_child().get_content_width() for m in (start, finish)] == [END_SIZE] * 2
+        assert END_SIZE < CURSOR_SIZE  # the cursor's is larger
         assert order_of(layer_of(shown.marker)) > order_of(layer_of(start)) > order_of(shown.path)
     finally:
         toplevel.destroy()
@@ -774,8 +815,10 @@ def test_a_loop_has_one_marker_for_its_start_and_finish():
     win, _the_list = a_window(walk())
     page = open_page(win, read_of(sport=WALKING))
     shown = map_of(page)
-    assert list(shown.ends) == ["start-and-finish"]
-    marker = shown.ends["start-and-finish"]
+    from openexpress.gui.activity_map import BOTH_SIZE
+
+    (marker,) = ends_of(shown)
+    assert marker.get_child().get_content_width() == BOTH_SIZE
     assert (marker.get_latitude(), marker.get_longitude()) == pytest.approx(shown.track.points[0])
 
 
@@ -1208,7 +1251,7 @@ def test_the_track_is_drawn_where_the_map_places_it_and_a_chosen_lap_stands_out(
     present(win)
     try:
         shown = map_of(page)
-        for marker in shown.ends.values():
+        for marker in ends_of(shown):
             marker.set_visible(False)
         viewport = shown.map.get_viewport()
 
@@ -1286,7 +1329,7 @@ def test_the_coloured_track_on_the_map_and_a_chosen_lap_over_its_colours(monkeyp
     present(win)
     try:
         shown = map_of(page)
-        for marker in shown.ends.values():
+        for marker in ends_of(shown):
             marker.set_visible(False)
         viewport = shown.map.get_viewport()
 
@@ -1329,7 +1372,7 @@ def test_the_mouse_wheel_over_the_map_scrolls_the_page_ctrl_with_it_zooms(monkey
         page_scroll = scrolled_of(shown).get_vadjustment()
         zoom = shown.map.get_viewport().get_zoom_level()
         assert page_scroll.get_upper() > page_scroll.get_page_size()  # the page scrolls
-        taken = shown.wheel.emit("scroll", 0.0, 1.0)
+        taken = wheel_of(shown).emit("scroll", 0.0, 1.0)
         assert taken is not ctrl
         assert (page_scroll.get_value() > 0) is not ctrl
         assert shown.map.get_viewport().get_zoom_level() == zoom
@@ -1349,7 +1392,7 @@ def test_the_hint_of_ctrl_goes_away(monkeypatch):
     present(win)
     try:
         shown = map_of(page)
-        shown.wheel.emit("scroll", 0.0, 1.0)
+        wheel_of(shown).emit("scroll", 0.0, 1.0)
         assert shown.hint.get_visible()
         until(lambda: not shown.hint.get_visible(), 2)
         assert not shown.hint.get_visible()
@@ -1486,14 +1529,18 @@ def test_the_heart_rate_zones_under_the_laps(monkeypatch):
     texts = labels(page)
     assert "Heart Rate Zones" in texts
     assert "Bounds from the device: % of lactate threshold (165 bpm)" in texts
-    rows = shown.rows
-    assert [r.name for r in rows] == ["Zone 5", "Zone 4", "Zone 3", "Zone 2", "Zone 1",
-                                      "Below zone 1"]
-    assert [r.span for r in rows] == ["above 177 bpm", "165–177 bpm", "155–164 bpm",
-                                      "140–154 bpm", "120–139 bpm", "below 120 bpm"]
-    assert rows[4].share_text == "5:00 · 12%" and rows[5].share_text == "36:30 · 88%"
-    assert [round(r.bar.share, 2) for r in rows] == [0, 0, 0, 0, 0.12, 0.88]
-    assert [r.bar.colour for r in rows] == list(reversed(ZONE_COLOURS))
+    from openexpress.gui.activity_zones import ZoneBar
+
+    texts = [row_texts(r) for r in shown.rows]
+    assert [name for name, _span, _share in texts] == [
+        "Zone 5", "Zone 4", "Zone 3", "Zone 2", "Zone 1", "Below zone 1"]
+    assert [span for _name, span, _share in texts] == [
+        "above 177 bpm", "165–177 bpm", "155–164 bpm", "140–154 bpm", "120–139 bpm",
+        "below 120 bpm"]
+    assert texts[4][2] == "5:00 · 12%" and texts[5][2] == "36:30 · 88%"
+    bars = [bar_of(r, ZoneBar) for r in shown.rows]
+    assert [round(b.share, 2) for b in bars] == [0, 0, 0, 0, 0.12, 0.88]
+    assert [b.colour for b in bars] == list(reversed(ZONE_COLOURS))
 
 
 def test_each_zone_s_colour_reads_on_the_cards_of_both_styles():
@@ -1536,17 +1583,19 @@ def test_the_training_effect_under_the_zones(monkeypatch):
     shown = effect_section(page)
     assert shown is not None and order_of(shown) > order_of(zone_section(page))
     assert "Training Effect" in labels(page)
-    rows = shown.rows
-    assert [r.name for r in rows] == ["Aerobic", "Anaerobic", "Training load"]
-    assert [r.value_text for r in rows] == ["2.4\u00a0· Maintaining", "1.2\u00a0· Minor benefit",
-                                            "28"]
-    assert [round(r.bar.share, 2) for r in rows[:2]] == [0.48, 0.24] and rows[2].bar is None
-    assert rows[0].bar.fill().to_string() == accent_colour().to_string()
+    from openexpress.gui.activity_effect import EffectBar
+
+    assert [row_texts(r) for r in shown.rows] == [
+        ["Aerobic", "2.4\u00a0· Maintaining"], ["Anaerobic", "1.2\u00a0· Minor benefit"],
+        ["Training load", "28"]]
+    bars = [bar_of(r, EffectBar) for r in shown.rows]
+    assert [round(b.share, 2) for b in bars[:2]] == [0.48, 0.24] and bars[2] is None
+    assert bars[0].fill().to_string() == accent_colour().to_string()
 
 
 def test_a_row_of_the_training_effect_not_in_the_file_is_left_out(monkeypatch):
     _win, page = page_of(monkeypatch, with_effect(lapped_walk(), aerobic=None, load=None))
-    assert [r.name for r in effect_section(page).rows] == ["Anaerobic"]
+    assert [row_texts(r)[0] for r in effect_section(page).rows] == ["Anaerobic"]
 
 
 def test_no_training_effect_without_it_in_the_file(monkeypatch):
@@ -1639,13 +1688,12 @@ def test_the_details_closed_at_the_end_of_the_page(monkeypatch):
     assert shown is not None and order_of(shown) > order_of(effect_section(page))
     assert shown.get_next_sibling() is None
     assert shown.expander.get_title() == "Details" and not shown.expander.get_expanded()
-    assert [(r.name, r.value_text) for r in shown.rows] == [
+    assert [(r.get_title(), r.value.get_label()) for r in shown.rows] == [
         ("Elapsed time", "48:20"), ("Moving time", "43:18"), ("Total descent", "12 m"),
         ("Average moving pace", "13:19 /km"), ("Steps", "2600"), ("Heart rate", "86–120 bpm")]
     assert not any(seen(r, page) for r in shown.rows)
     shown.expander.set_expanded(True)
     assert all(seen(r, page) for r in shown.rows)
-    assert [r.get_title() for r in shown.rows] == [r.name for r in shown.rows]
     assert [r.value.get_label() for r in shown.rows[:2]] == ["48:20", "43:18"]
 
 

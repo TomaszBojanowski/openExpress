@@ -151,7 +151,7 @@ def _order_window(monkeypatch, chosen):
         session=types.SimpleNamespace(device=None, storage=None),
         error=lambda title, text: pytest.fail(text),
         _order_blocked=lambda state: None,
-        _order_rows=lambda choices: [("Copy of 12.10.2026", "213 apps", True)],
+        _order_rows=lambda choices: [("Copy of 12.10.2026", "213 apps", choices[0])],
         confirm_order=lambda copy, plan, note: chosen.append((copy, plan)),
         run_task=RunNow())
     window_methods(win, ["choose_order"])

@@ -712,7 +712,8 @@ def write_order(m: UniversalMap) -> list[MapFile]:
 
 
 def cache_file(f: MapFile) -> Path:
-    return paths.cache_dir() / "maps" / (f.md5 or posixpath.basename(f.device_path))
+    """Named after its MD5: a map with a file without one is not installed (can_install)."""
+    return paths.cache_dir() / "maps" / f.md5
 
 
 @dataclass

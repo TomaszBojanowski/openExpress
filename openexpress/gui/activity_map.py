@@ -1043,20 +1043,17 @@ class ActivityMap(MapView):
     def __init__(self, track: Track):
         super().__init__(MAP_HEIGHT)
         self.track = track
-        self.accessible_name = _("Map of the track")
-        self.map.update_property([Gtk.AccessibleProperty.LABEL], [self.accessible_name])
+        self.map.update_property([Gtk.AccessibleProperty.LABEL], [_("Map of the track")])
         viewport = self.map.get_viewport()
         self.path = TrackLayer(viewport, track)
         self.map.add_layer(self.path)
         self.lowest = self.path
         ends = Shumate.MarkerLayer.new(viewport)
-        self.ends = {}  # "start", "finish" or "start-and-finish": its marker
         for kind, (lat, lon) in ends_of(track):
             marker = _marker(BOTH_SIZE if kind == "start-and-finish" else END_SIZE, _draw_end,
                              kind)
             marker.set_location(lat, lon)
             ends.add_marker(marker)
-            self.ends[kind] = marker
         self.map.add_layer(ends)
         cursor = Shumate.MarkerLayer.new(viewport)
         self.marker = _marker(CURSOR_SIZE, _draw_cursor)
@@ -1066,10 +1063,10 @@ class ActivityMap(MapView):
         self.box = bounds(track.points)
         self.fit(600, MAP_HEIGHT)  # near already; _fit sets it for the map's own size
         # Before libshumate's own handler, which would zoom at every turn of the wheel.
-        self.wheel = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
-        self.wheel.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        self.wheel.connect("scroll", _wheel)
-        self.map.add_controller(self.wheel)
+        wheel = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
+        wheel.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        wheel.connect("scroll", _wheel)
+        self.map.add_controller(wheel)
         self.hint_timer = None
 
         self.hint = Gtk.Label(label=_("Ctrl + scroll to zoom"), wrap=True,

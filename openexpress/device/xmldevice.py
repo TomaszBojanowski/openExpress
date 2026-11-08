@@ -22,7 +22,6 @@ class DeviceFile:
     path: str
     basename: str = ""
     extension: str = ""
-    identifier: str = ""
 
     @property
     def readable(self) -> bool:
@@ -121,7 +120,6 @@ def parse(data: bytes) -> GarminDevice:
             name = _text(dt, "Name")
             for f in dt.findall(NS + "File"):
                 loc = f.find(NS + "Location")
-                spec = f.find(NS + "Specification")
                 dev.files.append(
                     DeviceFile(
                         datatype=name,
@@ -129,7 +127,6 @@ def parse(data: bytes) -> GarminDevice:
                         path=_text(loc, "Path"),
                         basename=_text(loc, "BaseName"),
                         extension=_text(loc, "FileExtension"),
-                        identifier=_text(spec, "Identifier"),
                     )
                 )
         for uf in msm.findall(NS + "UpdateFile"):
