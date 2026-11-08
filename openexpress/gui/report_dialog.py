@@ -100,7 +100,7 @@ class ReportDialog:
         s = self.session
         about = _("Open on GitHub starts a new issue with this report filled in; nothing is "
                   "published until you submit it. The report contains no serial number, "
-                  "unit ID or e-mail.")
+                  "Unit ID or e-mail.")
         if s is None:
             # What is on USB (a device not ready or not supported), read from /sys only; the
             # login is not known here.

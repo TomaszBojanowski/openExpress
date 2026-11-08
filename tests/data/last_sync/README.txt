@@ -33,9 +33,11 @@ format-*: the shapes older versions wrote, with made-up numbers; and shapes of t
   format-nothing-new-one-course-received.json: a sync that found no new file on the device and
   wrote one course from Garmin Connect ("nothing to upload · 1 received"); with the activities
   the device has to upload now after it, the row and `openexpress status` say both apart
-  ("· now to upload: 2 activities"). Synthetic (marked "synthetic" in it).
+  ("· 2 activities to upload now"). Synthetic (marked "synthetic" in it).
 format-other-install.json: a sync of the version from source of a device the Flatpak synced
   after it: nothing new to send, and the step that says the Flatpak synced it (made up).
 format-test-drive.json: a sync of a test drive (a USB drive taken for a Garmin drive) that
   uploaded two activities, and the step that says the queue and TrueUp were left to the watch
   it stands in for (made up).
+format-activity-profile-backups.json: a sync of a bike computer that uploaded the backups of its
+  activity profiles (FIT file type 57), named by their type (made up).

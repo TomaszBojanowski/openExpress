@@ -193,9 +193,9 @@ def is_bike_accessory(client, device, ask=None) -> bool:
 
 def bike_accessory_text() -> str:
     """After an update was saved on a bike accessory: how the device finishes it."""
-    return _("Unplug the device and turn it on — it installs the update on its own and won't "
-             "work for a short while. The lights flash and may briefly go dark during the "
-             "install; when it's done, a light flashes green and the main light comes on.")
+    return _("Unplug the device and turn it on\u00a0– it installs the update on its own and will "
+             "not work for a short while. The lights flash and may briefly go dark during the "
+             "install; when it is done, a light flashes green and the main light comes on.")
 
 
 def download_picture(http, url: str, name: str,

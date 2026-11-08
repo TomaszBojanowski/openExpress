@@ -67,7 +67,7 @@ def test_the_window_syncs_a_drive_both_ways(device_root):
 
 
 def test_the_first_sync_of_a_drive_in_the_window_offers_new_data_only(device_root):
-    """As over MTP: the choice is asked; "New Data Only" marks the files, uploads none."""
+    """As over MTP: the choice is asked; "Upload New Data Only" marks the files, uploads none."""
     from openexpress.gui.app import MainWindow
 
     s, account = checked(device_root)
@@ -173,7 +173,9 @@ def test_a_page_a_drive_has_not_got_says_so_as_information_not_as_an_error():
     show_not_for_mass_storage(sec)
     assert sec.stack.get_visible_child_name() == "info"
     assert sec.info.get_icon_name() == "map-symbolic" and sec.info.get_child() is None
-    assert (sec.info.get_title(), sec.info.get_description()) == ("Maps", mass_storage_text())
+    # The window's words: the command line's sentence without its full stop.
+    assert (sec.info.get_title(), sec.info.get_description()) == (
+        "Maps", mass_storage_text().removesuffix("."))
     assert "sync" not in mass_storage_text()  # a drive's sync is on its device page
 
 

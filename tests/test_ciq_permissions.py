@@ -52,7 +52,7 @@ def test_the_words_of_the_permissions():
         "• GPS location\n"
         "• the internet, through the phone")
     assert ciq.permissions_text(flagged(store_app(FACE, "Face It"))) == (
-        "Face It 1.0 needs other permissions than before; the Connect IQ store does not say "
+        "Face It 1.0 needs other permissions than before; the Connect IQ Store does not say "
         "which.")
 
 

@@ -115,7 +115,7 @@ def test_bad_json_becomes_api_error(monkeypatch, server):
     c = make_client(monkeypatch, server.url)
     for call in (c.user_profile, lambda: c.device_messages(1),
                  lambda: c.unit_info(1, "006"), lambda: c.upload_settings(1)):
-        with pytest.raises(ApiError, match="unexpected response from the server"):
+        with pytest.raises(ApiError, match="Garmin's server gave an answer openExpress does not understand; try again later"):
             call()
 
 

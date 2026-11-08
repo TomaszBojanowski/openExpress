@@ -143,7 +143,7 @@ def test_a_page_whose_web_process_ended_offers_to_try_again(sign_in_window, monk
     stopped = win.get_child()
     assert stopped is not view
     labels = [w.get_label() for w in descendants(stopped) if isinstance(w, Gtk.Label)]
-    assert "The sign-in page stopped working" in labels and command in labels
+    assert "Sign-In Page Not Working" in labels and command in labels
     (again,) = [w for w in descendants(stopped) if isinstance(w, Gtk.Button)]
     assert again.get_label() == "Try Again"
     loaded = list(view.loaded)

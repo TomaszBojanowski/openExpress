@@ -41,7 +41,7 @@ CATEGORY_NAMES = {
     # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: downloaded
     # pictures of devices and icons of apps
     "pictures": N_("Pictures and icons"),
-    "answers": N_("Answers of Garmin's servers"),
+    "answers": N_("Garmin Server Responses"),
     # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences:
     # OpenStreetMap tiles under the maps of activities
     "tiles": N_("Activity map tiles"),

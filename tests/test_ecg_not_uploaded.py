@@ -61,7 +61,7 @@ class HealthAccount(SyncAccount):
     def upload_file(self, url, data, **kw):
         if url == ECG_URL:
             self.asked.append("health")
-            raise Unauthorized("Upload: unauthorized (HTTP 401). Please sign in again.", 401)
+            raise Unauthorized("Upload: the sign-in has expired (HTTP 401). Sign in again.", 401)
         return super().upload_file(url, data, **kw)
 
 

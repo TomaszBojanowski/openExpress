@@ -264,7 +264,7 @@ def test_without_a_copy_that_differs_one_sentence_and_close(iq_device, device_ro
     (dialog,), errors = _dialog_of(monkeypatch, st, dev)
     assert errors == [] and dialog.extra is None
     assert dialog.kw == {"heading": "Restore the Order From a Copy",
-                         "body": "No copy differs from the current order"}
+                         "body": "No copy differs from the current order."}
     assert dialog.responses == [("ok", "Close")]
 
 
@@ -290,7 +290,7 @@ def test_the_sentence_in_polish(iq_device, device_root, backups, monkeypatch):
         (dialog,), _errors = _dialog_of(monkeypatch, st, dev)
     finally:
         i18n.setup("en")
-    assert dialog.kw["body"] == "Żadna kopia nie różni się od obecnej kolejności"
+    assert dialog.kw["body"] == "Żadna kopia nie różni się od obecnej kolejności."
     assert dialog.responses == [("ok", "Zamknij")]
 
 

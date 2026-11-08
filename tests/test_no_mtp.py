@@ -26,7 +26,7 @@ NO_MTP_TEXT = ("openExpress reads the device over MTP through gvfs, and gvfs on 
                "out and back in, then plug the device in again.")
 HELD = ("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
         "and takes it back when the cable is plugged in again. Close Dolphin and run "
-        "kquitapp6 kiod6, then unplug the cable and plug it back in.")
+        "kquitapp6 kiod6, then unplug the cable and plug it in again.")
 
 
 def gvfs_offers(monkeypatch, *schemes):

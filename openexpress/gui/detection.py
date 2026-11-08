@@ -102,11 +102,11 @@ REPLUG_HINT_S = 15
 # about 19 s of a fēnix 8 starting, so that a device starting as usual gets no such advice.
 STARTING_REPLUG_HINT_S = 25
 # TRANSLATORS: added to the page while a device on USB is not offered over MTP
-REPLUG_HINT = N_("If the device isn't locked and isn't asking for anything, unplug the cable and "
-                 "plug it back in.")
+REPLUG_HINT = N_("If the device is not locked and is not asking for anything, unplug the cable "
+                 "and plug it in again.")
 # TRANSLATORS: the same, after the sentence about a PIN, which names the device already
-REPLUG_HINT_AFTER_PIN = N_("If it isn't locked and isn't asking for anything, unplug the cable "
-                           "and plug it back in.")
+REPLUG_HINT_AFTER_PIN = N_("If it is not locked and is not asking for anything, unplug the "
+                           "cable and plug it in again.")
 
 
 # The icon of the notice for a Garmin device openExpress cannot use: not the program's, whose
@@ -784,7 +784,7 @@ class DeviceDetection:
         def failed(e):
             opened()
             # Unplugged meanwhile, or not readable: said, and the devices detected again.
-            self.error(_("Could Not Open the Device"), str(e) or type(e).__name__)
+            self.error(_("Device Not Opened"), str(e) or type(e).__name__)
             self.connected.stop_choosing()
             self.refresh_device(cause=Cause.CHOICE_FAILED)
             return True

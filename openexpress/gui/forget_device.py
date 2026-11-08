@@ -1,5 +1,5 @@
 """Forgetting a device from the read-only view of a device remembered and not connected: its
-button "Forget Device…", the question and what follows. ForgetDevice is a mixin of
+button "Forget Device", the question and what follows. ForgetDevice is a mixin of
 MainWindow (gui/app.py), without __init__ of its own; what it uses of the window
 (_remembered_unit, connected, session, navigation, toast, error, in_background) is the
 window's. What goes is forget.forget_device's to decide."""
@@ -35,7 +35,7 @@ class ForgetDevice:
         return any(getattr(c, "unit_id", None) == unit_id for c in self.connected.devices)
 
     def ask_forget(self, _button=None) -> None:
-        """"Forget Device…" on the view of a remembered device: what goes, and a tick for what
+        """"Forget Device" on the view of a remembered device: what goes, and a tick for what
         is lost only when asked (files not uploaded yet: Forget waits for it) or kept unless
         asked (the backups). Nothing for a device not remembered here (any more)."""
         unit = self._remembered_unit
@@ -109,7 +109,8 @@ class ForgetDevice:
                 return
             if self._remembered_unit == unit:
                 self._remembered_unit = None
-            self.toast(_("Forgot {device}.").format(device=name))
+            # TRANSLATORS: toast after a remembered device was forgotten
+            self.toast(_("Forgot {device}").format(device=name))
             if self.navigation.get_visible_page() is self.remembered.page:
                 self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
 

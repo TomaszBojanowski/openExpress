@@ -1,4 +1,4 @@
-"""Add to Account… (experimental): a device the account's list does not hold added to the account
+"""Add to Account (experimental): a device the account's list does not hold added to the account
 the window is logged in to (service.add_device), after a question that names the device and the
 account; offered by the banner of the device view and by a row of the Device page. The account
 is named as the window names it elsewhere, its e-mail address whole.
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def offers_adding(s) -> bool:
-    """Whether the window offers Add to Account…: a device the account's list does not hold
+    """Whether the window offers Add to Account: a device the account's list does not hold
     (not a list that could not be read), while logged in, and not a USB drive openExpress
     does not sync."""
     return (s is not None and s.logged_in and isinstance(s.ownership_error, NotAccountDevice)
@@ -43,11 +43,11 @@ def _model(s) -> str:
 
 
 def add_to_account_row(win, s) -> Adw.ActionRow:
-    """The row "On the Account" of the group of the account on the Device page, with Add to
+    """The row "Garmin Account" of the group of the account on the Device page, with Add to
     Account…, for a device offers_adding allows."""
-    row = Adw.ActionRow(title=_("On the Account"), subtitle=GLib.markup_escape_text(
+    row = Adw.ActionRow(title=_("Garmin Account"), subtitle=GLib.markup_escape_text(
         _("Not on the account {account}").format(account=_account(s))))
-    row.add_suffix(win._button(_("Add to Account…"),
+    row.add_suffix(win._button(_("Add to Account"),
                                lambda button: confirm_add_to_account(win, button),
                                with_button=True))
     return row
@@ -62,7 +62,7 @@ def confirm_add_to_account(win, button=None) -> None:
     confirm(win, "add-to-account",
             _("Add {model} to Your Garmin Account?").format(model=_model(s)),
             _("openExpress sends Garmin the description of the device (its GarminDevice.xml, "
-              "with its unit ID) and adds it to the account {account} as an active device. "
+              "with its Unit ID) and adds it to the account {account} as an active device. "
               "Then a sync uploads its activities and health data to this account.\n\n"
               "If the device is paired with the Garmin Connect app on a phone, check first "
               "that the app uses the same account. A device can be removed from an account "
@@ -96,7 +96,7 @@ def add_to_account(win, button=None) -> None:
         elif result.listed is None:
             inform(win, "added-not-checked", _("Garmin Accepted the Device"),
                    _("The account's list could not be read to check it. Refresh in a few "
-                     "minutes; if the device is still refused, check the devices of your "
+                     "minutes; if the device is still missing, check the devices of your "
                      "account in Garmin Connect."))
         else:
             # One line, at 360 px too: the account is on the page.

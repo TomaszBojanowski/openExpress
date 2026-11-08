@@ -4,7 +4,7 @@ Flow as in Garmin Express:
   1. POST /api/device-software/v1/updates with GarminDevice.xml
   2. download `secureDownloadUrl`, check size and MD5
   3. copy to `installation.path/fileName` on the device
-  4. disconnect the device: it installs the file itself; the confirmation is that
+  4. unplug the device: it installs the file itself; the confirmation is that
      the update is no longer returned by the next server query.
 """
 
@@ -51,31 +51,31 @@ SYSTEM_FILES = frozenset({"GUPDATE.GCD", "GUPDATE.GSP"})
 # nothing promises one. Untranslated constants; show them with _(FINISH_STEPS).
 FINISH_STEPS = N_("""
 To finish the installation:
-  1. Disconnect the device from the computer.
+  1. Unplug the device from the computer.
   2. If the device does not turn on by itself, turn it on.
   3. The device installs the update by itself. It may ask whether to install it:
      choose to install now. It may also restart. Wait until it has finished.
-  4. Reconnect it and run `openexpress updates`: the installed update
+  4. Plug it in again and run `openexpress updates`: the installed update
      should no longer be listed.
 """)
 # The same for the window, which has no commands and wraps the words itself.
 # TRANSLATORS: in the message after an update was copied to the device: one line for each step,
 # with no line break inside a sentence (the window wraps the words itself)
 FINISH_STEPS_WINDOW = N_("To finish the installation:\n"
-                         "1. Disconnect the device from the computer.\n"
+                         "1. Unplug the device from the computer.\n"
                          "2. If the device does not turn on by itself, turn it on.\n"
                          "3. The device installs the update by itself. It may ask whether to "
                          "install it: choose to install now. It may also restart. Wait until "
                          "it has finished.\n"
-                         "4. Reconnect it and check for updates again: the installed update "
-                         "should no longer be listed.")
+                         "4. Plug it in again and check for updates again: the installed "
+                         "update should no longer be listed.")
 # Said before an update the device installs once disconnected (installs_when_disconnected),
 # on the command line and in the window.
 SYSTEM_UPDATE_WARNING = N_("Warning: this is a device system update. Charge the device and do "
-                           "not disconnect it while copying.")
+                           "not unplug it while copying.")
 # The same for the software of a part of the device (its GPS chip), copied with the same care.
 PART_UPDATE_WARNING = N_("Warning: this updates the software of a part of the device. Charge the "
-                         "device and do not disconnect it while copying.")
+                         "device and do not unplug it while copying.")
 # The kinds of device (the "segmenttype" of unit-info) that Garmin marks as losing the data
 # they hold when their software is updated. Garmin Express holds such an update back while a
 # sync of the device runs; openExpress says so before every update and suggests to sync first.
@@ -461,7 +461,7 @@ def cache_path(u: SoftwareUpdate) -> Path:
     path = root.joinpath(*parts) if bad is None else None
     if path is None or not paths.is_inside(path, root):
         raise UpdateError(_("The server gave a name that cannot be used as a path on this "
-                            "computer: '{name}'").format(name=bad if bad is not None else
+                            "computer: “{name}”").format(name=bad if bad is not None else
                                                          "/".join(parts)))
     return path
 

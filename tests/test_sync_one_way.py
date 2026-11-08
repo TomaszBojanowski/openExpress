@@ -182,7 +182,7 @@ def test_the_command_line_says_each_step_in_the_words_of_the_window(
     for text, _warning in told.steps:
         assert text in out
     for error in told.errors:
-        assert "  " + "ERROR " + error in out
+        assert "  " + "Error: " + error in out
     assert told.sentence in out
     assert out[-1] == ("Done." if kept["outcome"] == "done" else "Done with 1 error.")
 
@@ -194,7 +194,7 @@ def test_the_command_line_tells_a_file_not_confirmed_in_connect_as_an_error(
     kept = run("cli", CASES["a file written, not confirmed in Connect"], by_the_command_line,
                device_root, tmp_path, monkeypatch, monkeypatch)
     assert kept["outcome"] == "errors"
-    assert ("  ERROR FIT_TYPE_6: A course: written, but Garmin Connect was not notified "
+    assert ("  Error: FIT_TYPE_6: A course: written, but Garmin Connect was not notified "
             "(will retry)") in capsys.readouterr().out.splitlines()
 
 
@@ -226,7 +226,7 @@ def test_what_the_command_line_tells_is_not_repeated_on_its_terminal(
     sync.SyncState(UNIT).save()
     assert cli.main(["--path", str(device_root), "sync", "--apply"]) == 1
     said = capsys.readouterr()
-    assert "  ERROR FIT_TYPE_4/2026-10-02-10-00-00.fit: HTTP 500" in said.out.splitlines()
+    assert "  Error: FIT_TYPE_4/2026-10-02-10-00-00.fit: HTTP 500" in said.out.splitlines()
     assert "sync error" not in said.err
     assert "WARNING openexpress.service: sync error: FIT_TYPE_4: HTTP 500" in log_file.read_text()
 
@@ -242,7 +242,7 @@ def test_what_the_command_line_tells_is_not_repeated_on_its_terminal(
 
 @pytest.mark.parametrize("name, words", [
     ("a file for another tracker",
-     "Skipped 1 file: another device is your active tracker in Garmin Connect"),
+     "Skipped 1 file: another device is your primary wearable in Garmin Connect"),
     ("an item the device does not take",
      "Skipped 1 item from Garmin Connect (not accepted by the device)"),
 ])
@@ -323,6 +323,6 @@ def test_what_was_uploaded_is_told_when_the_sync_stops_after_it(device_root, xdg
         "",
         "Files from the device: activities, monitoring",
         "1 file could not be uploaded",
-        "  ERROR FIT_TYPE_32/M1.FIT: HTTP 500",
-        "  Warning: Connect did not confirm processing of FIT_TYPE_4/2026-10-02-10-00-00.fit"]
+        "  Error: FIT_TYPE_32/M1.FIT: HTTP 500",
+        "  Warning: Garmin Connect did not confirm processing of FIT_TYPE_4/2026-10-02-10-00-00.fit"]
     assert said.err.splitlines()[-1].startswith("Network error: ")

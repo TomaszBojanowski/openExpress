@@ -649,7 +649,7 @@ def permission_text(name: str) -> str:
 def permissions_text(app: StoreApp) -> str:
     """What an app with new permissions asks for: a sentence and a line for each."""
     if not app.permissions:
-        return _("{name} {version} needs other permissions than before; the Connect IQ store "
+        return _("{name} {version} needs other permissions than before; the Connect IQ Store "
                  "does not say which.").format(name=app.name, version=app.version_name)
     return "\n".join([_("{name} {version} needs these permissions:").format(
         name=app.name, version=app.version_name),

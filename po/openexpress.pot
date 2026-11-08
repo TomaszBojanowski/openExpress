@@ -150,13 +150,14 @@ msgid "No log file: {error}"
 msgstr ""
 
 #: openexpress/auth/sso.py
-msgid "The sign-in page stopped working"
+msgid "Sign-In Page Not Working"
 msgstr ""
 
 #: openexpress/auth/sso.py
 msgid ""
 "Try again, or sign in without this window: run this command in a terminal, "
-"sign in in your web browser and paste the address you end up on."
+"sign in in your web browser, then paste the address the browser shows at the "
+"end."
 msgstr ""
 
 #: openexpress/auth/sso.py openexpress/gui/device_page.py
@@ -179,8 +180,8 @@ msgstr ""
 #: openexpress/auth/sso.py
 msgid ""
 "2. Sign in. Afterwards, copy the full URL from the browser's address bar\n"
-"   (it contains 'ticket=ST-...'). If the browser shows an error, the URL "
-"still works."
+"   (it contains “ticket=ST-…”). If the browser shows an error, the URL still "
+"works."
 msgstr ""
 
 #: openexpress/auth/sso.py
@@ -198,12 +199,12 @@ msgstr ""
 msgid "(unknown account)"
 msgstr ""
 
-#: openexpress/auth/store.py
+#: openexpress/auth/store.py openexpress/connect.py
 msgid "Not signed in. Run: openexpress login"
 msgstr ""
 
 #: openexpress/auth/store.py
-msgid "The saved sign-in is damaged; please sign in again."
+msgid "The saved sign-in is damaged; sign in again."
 msgstr ""
 
 #: openexpress/background.py
@@ -225,7 +226,7 @@ msgstr ""
 #: openexpress/backup.py
 #, python-brace-format
 msgid ""
-"Nothing was backed up: the device names a folder or file '{name}' that "
+"Nothing was backed up: the device names a folder or file “{name}” that "
 "cannot be used as a path on this computer."
 msgstr ""
 
@@ -233,10 +234,10 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "{count} file was still being written by the device and is not in the backup. "
-"Disconnect and reconnect the device, then make the backup again."
+"Unplug the device and plug it in again, then make the backup again."
 msgid_plural ""
 "{count} files were still being written by the device and are not in the "
-"backup. Disconnect and reconnect the device, then make the backup again."
+"backup. Unplug the device and plug it in again, then make the backup again."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -265,9 +266,10 @@ msgstr ""
 msgid "Pictures and icons"
 msgstr ""
 
-#: openexpress/cache.py
-#, ignore-reused
-msgid "Answers of Garmin's servers"
+#. TRANSLATORS: row of the cache in the preferences: answers of Garmin's servers kept for a
+#. while
+#: openexpress/cache.py openexpress/gui/preferences.py
+msgid "Garmin Server Responses"
 msgstr ""
 
 #. TRANSLATORS: a part of the cache in `openexpress cache` and the preferences:
@@ -550,7 +552,7 @@ msgstr ""
 #: openexpress/ciq.py
 #, python-brace-format
 msgid ""
-"{name} {version} needs other permissions than before; the Connect IQ store "
+"{name} {version} needs other permissions than before; the Connect IQ Store "
 "does not say which."
 msgstr ""
 
@@ -872,7 +874,7 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "Saved OAuth1 consumer key in {path}"
+msgid "Saved the application key in {path}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -932,7 +934,9 @@ msgid "in the folder of the device under {folder}"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Dry run. Add --apply to copy the files the device shows now."
+msgid ""
+"Dry run: nothing was copied. Add --apply to copy the files the device shows "
+"now."
 msgstr ""
 
 #: openexpress/cli.py
@@ -1043,14 +1047,14 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid ""
-"This report contains no serial number, unit ID or e-mail. Open this address "
+"This report contains no serial number, Unit ID or e-mail. Open this address "
 "to start a device report with it filled in: {url}"
 msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid ""
-"This report contains no serial number, unit ID or e-mail. Paste it into a "
+"This report contains no serial number, Unit ID or e-mail. Paste it into a "
 "device report: {url}"
 msgstr ""
 
@@ -1094,9 +1098,11 @@ msgstr ""
 
 #. TRANSLATORS: first line of `openexpress activities` and `sync`: {device} the device's name,
 #. {version} its software version
+#. TRANSLATORS: first line of `openexpress updates`: {device} the device's name, {version} its
+#. software version
 #: openexpress/cli.py
 #, python-brace-format
-msgid "{device} (software {version})"
+msgid "{device}, software {version}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1139,8 +1145,8 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid ""
-"{name} was still being written by the device when it was read. Disconnect "
-"and reconnect the device, then export it again."
+"{name} was still being written by the device when it was read. Unplug the "
+"device and plug it in again, then export it again."
 msgstr ""
 
 #. TRANSLATORS: an activity not exported to GPX: {name} its file name, {error} why
@@ -1154,6 +1160,7 @@ msgstr ""
 msgid "{path} exists already; nothing is overwritten."
 msgstr ""
 
+#. TRANSLATORS: after a sync, under its steps: an error of the sync; {error} says what went wrong
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Error: {error}"
@@ -1215,7 +1222,7 @@ msgid "unreadable file"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "still being written: disconnect and reconnect the device"
+msgid "still being written: unplug the device and plug it in again"
 msgstr ""
 
 #. TRANSLATORS: a note under a row of `openexpress activities`: the activity's file is damaged
@@ -1229,6 +1236,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
+#. TRANSLATORS: column heading in `openexpress activities`: the activity's sport
 #: openexpress/cli.py
 msgid "Sport"
 msgstr ""
@@ -1238,6 +1246,7 @@ msgctxt "activity list column"
 msgid "Time"
 msgstr ""
 
+#. TRANSLATORS: column heading in `openexpress activities`: the distance covered
 #: openexpress/cli.py
 msgid "Distance"
 msgstr ""
@@ -1418,12 +1427,12 @@ msgid_plural "Connected: {count} devices"
 msgstr[0] ""
 msgstr[1] ""
 
-#. TRANSLATORS: on the start page, after the name of a Garmin device openExpress cannot use
-#. (e.g. "Garmin USB inReach · Unsupported connection"); a line of a caption, so sentence
-#. case and no full stop
+#. TRANSLATORS: the name of a Garmin device that gives USB no name of its own, in the same
+#. line ("Garmin device · Unsupported connection")
 #. TRANSLATORS: shown in place of a device's name when its name is not known
 #: openexpress/cli.py openexpress/device/gio_storage.py
 #: openexpress/gui/forget_device.py openexpress/gui/start.py
+#: openexpress/watch.py
 msgid "Garmin device"
 msgstr ""
 
@@ -1471,9 +1480,10 @@ msgstr ""
 msgid "an update is ready: unplug the device to install it"
 msgstr ""
 
-#. TRANSLATORS: the state of the updates, without a full stop
-#: openexpress/cli.py openexpress/gui/words.py
-msgid "Software is up to date"
+#. TRANSLATORS: after "Device software:" in openexpress status
+#. TRANSLATORS: map status
+#: openexpress/cli.py openexpress/maps.py
+msgid "up to date"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1506,7 +1516,7 @@ msgid "Total: {size}"
 msgstr ""
 
 #. TRANSLATORS: after clearing the cache: how much disk space was freed
-#: openexpress/cli.py openexpress/gui/preferences.py
+#: openexpress/cli.py
 #, python-brace-format
 msgid "Freed {size}."
 msgstr ""
@@ -1600,7 +1610,7 @@ msgstr ""
 
 #. TRANSLATORS: a device was forgotten, so this computer no longer remembers it; {device} is its
 #. name
-#: openexpress/cli.py openexpress/gui/forget_device.py
+#: openexpress/cli.py
 #, python-brace-format
 msgid "Forgot {device}."
 msgstr ""
@@ -1639,10 +1649,10 @@ msgstr ""
 #: openexpress/cli.py
 msgid ""
 "This is the first sync with this program. If the device also syncs via your "
-"phone, most files are already in Connect.\n"
+"phone, most files are already in Garmin Connect.\n"
 "  openexpress baseline --apply   marks current files as uploaded "
 "(recommended)\n"
-"  openexpress sync --apply --all uploads everything (Connect rejects "
+"  openexpress sync --apply --all uploads everything (Garmin Connect rejects "
 "duplicates)"
 msgstr ""
 
@@ -1668,7 +1678,7 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "To download from Connect to the device: {count}"
+msgid "To download from Garmin Connect to the device: {count}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1738,15 +1748,9 @@ msgstr ""
 msgid "damaged: {count} B after the end are no FIT file"
 msgstr ""
 
-#. TRANSLATORS: after a sync, under its steps: an error of the sync; {error} says what went wrong
 #: openexpress/cli.py
 #, python-brace-format
-msgid "ERROR {error}"
-msgstr ""
-
-#: openexpress/cli.py
-#, python-brace-format
-msgid "Warning: Connect did not confirm processing of {item}"
+msgid "Warning: Garmin Connect did not confirm processing of {item}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1829,7 +1833,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Disconnect the device to install it."
+msgid "Unplug the device to install it."
 msgstr ""
 
 #: openexpress/cli.py
@@ -1849,13 +1853,6 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Already on the device: {count}"
-msgstr ""
-
-#. TRANSLATORS: first line of `openexpress updates`: {device} the device's name, {version} its
-#. software version
-#: openexpress/cli.py
-#, python-brace-format
-msgid "{device}, software {version}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1900,8 +1897,8 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "Not now: {name} {version} goes to the same file on the device as {other} "
-"{other_version}. Install it once the device has installed {other}: "
-"disconnect the device, then connect it again."
+"{other_version}. Install it once the device has installed {other}: unplug "
+"the device, then plug it in again."
 msgstr ""
 
 #. TRANSLATORS: `openexpress updates --install`: heading above the updates about to be installed
@@ -1953,10 +1950,10 @@ msgid "Free space on the device: {free} (the map takes {size})"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Dry run. Add --apply."
+msgid "Dry run: nothing was changed. Add --apply."
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/maps_page.py
+#: openexpress/cli.py
 #, python-brace-format
 msgid "Wrote {path} ({size})."
 msgstr ""
@@ -1968,7 +1965,7 @@ msgid ""
 "off the list of own maps."
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/maps_page.py
+#: openexpress/cli.py
 #, python-brace-format
 msgid "Took {name} off the list of own maps; the file was not on the device."
 msgstr ""
@@ -1983,7 +1980,7 @@ msgstr ""
 msgid "Free space on the device: {free} (removing it frees {size})"
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/maps_page.py
+#: openexpress/cli.py
 #, python-brace-format
 msgid "Removed {path} ({size})."
 msgstr ""
@@ -2095,7 +2092,7 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "No app matches '{query}'"
+msgid "No app matches “{query}”"
 msgstr ""
 
 #: openexpress/cli.py
@@ -2160,7 +2157,7 @@ msgstr ""
 msgid "Order of the apps from the copy {name}"
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/apps_page.py
+#: openexpress/cli.py
 msgid "The apps on the device are already in this order."
 msgstr ""
 
@@ -2180,7 +2177,7 @@ msgstr ""
 msgid "Copy of the current app list: {name}"
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/apps_page.py
+#: openexpress/cli.py
 msgid ""
 "Wrote the new order to the device; it takes effect after the device is "
 "unplugged."
@@ -2220,8 +2217,10 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "Removed {count} file. Also removed from your account list."
-msgid_plural "Removed {count} files. Also removed from your account list."
+msgid ""
+"Removed {count} file. Also removed from the app list of your Garmin account."
+msgid_plural ""
+"Removed {count} files. Also removed from the app list of your Garmin account."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -2232,7 +2231,7 @@ msgstr[1] ""
 msgid "removed: {name} ({type})"
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/apps_page.py
+#: openexpress/cli.py
 msgid "The device finishes the removal after it is unplugged."
 msgstr ""
 
@@ -2249,7 +2248,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "WARNING: the new list does NOT match the apps on the device"
+msgid "Warning: the new list does not match the apps on the device"
 msgstr ""
 
 #: openexpress/cli.py
@@ -2274,10 +2273,10 @@ msgstr[1] ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid ""
-"WARNING: {count} entry of the app list on the device cannot be read; apps "
+"Warning: {count} entry of the app list on the device cannot be read; apps "
 "cannot be installed, updated or removed."
 msgid_plural ""
-"WARNING: {count} entries of the app list on the device cannot be read; apps "
+"Warning: {count} entries of the app list on the device cannot be read; apps "
 "cannot be installed, updated or removed."
 msgstr[0] ""
 msgstr[1] ""
@@ -2313,7 +2312,7 @@ msgstr ""
 
 #: openexpress/cli.py
 msgid ""
-"New apps are chosen in the Connect IQ store (website or phone); they then "
+"New apps are chosen in the Connect IQ Store (website or phone); they then "
 "appear in the list above."
 msgstr ""
 
@@ -2361,7 +2360,7 @@ msgstr ""
 #. {error} why
 #: openexpress/cli.py
 #, python-brace-format
-msgid "ERROR {item}: {error}"
+msgid "Error: {item}: {error}"
 msgstr ""
 
 #. TRANSLATORS: shown after "Installed:" when no app was installed
@@ -2389,7 +2388,8 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "To remove it only from your account list, use --forget."
+msgid ""
+"To remove it only from the app list of your Garmin account, use --forget."
 msgstr ""
 
 #: openexpress/cli.py
@@ -2400,12 +2400,14 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Would remove it from your account list. Add --apply."
+msgid ""
+"Dry run: nothing was removed. Add --apply to remove it from the app list of "
+"your Garmin account."
 msgstr ""
 
-#: openexpress/cli.py openexpress/gui/apps_page.py
+#: openexpress/cli.py
 #, python-brace-format
-msgid "Removed {name} from your account list."
+msgid "Removed {name} from the app list of your Garmin account."
 msgstr ""
 
 #. TRANSLATORS: CLI: the change "apps enable/disable" is about to make, before the dry-run note
@@ -2423,7 +2425,7 @@ msgid "Disable {name}"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Saved. The device applies the change after you disconnect it."
+msgid "Saved. The device applies the change after you unplug it."
 msgstr ""
 
 #: openexpress/cli.py
@@ -2685,7 +2687,7 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "with its GarminDevice.xml ({size}; it holds the device's unit ID)."
+msgid "with its GarminDevice.xml ({size}; it holds the device's Unit ID)."
 msgstr ""
 
 #: openexpress/cli.py
@@ -2786,8 +2788,8 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "Playlist '{name}': {count} track, {to_copy} to copy ({size})"
-msgid_plural "Playlist '{name}': {count} tracks, {to_copy} to copy ({size})"
+msgid "Playlist “{name}”: {count} track, {to_copy} to copy ({size})"
+msgid_plural "Playlist “{name}”: {count} tracks, {to_copy} to copy ({size})"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -2799,8 +2801,7 @@ msgstr ""
 #: openexpress/cli.py
 msgid ""
 "In the Flatpak version, the menu entry is installed by Flatpak. Turn on "
-"background sync in the window: main menu, Preferences, Sync in the "
-"background."
+"background sync in the window: main menu, Preferences, Background Sync."
 msgstr ""
 
 #. TRANSLATORS: CLI install-desktop --remove: a file of the launcher, icon or service
@@ -2944,7 +2945,9 @@ msgid "path to Utilities.dll (default: next to Networking.dll)"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "OAuth1 consumer key of Garmin Express; only together with --secret"
+msgid ""
+"the application key of Garmin Express (its OAuth1 consumer key); only "
+"together with --secret"
 msgstr ""
 
 #: openexpress/cli.py
@@ -3209,7 +3212,7 @@ msgid "also show items available for reinstall"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "part numbers to install, or 'all'"
+msgid "part numbers to install, or “all”"
 msgstr ""
 
 #: openexpress/cli.py
@@ -3258,7 +3261,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "remove a map of your own that was copied with 'maps add'"
+msgid "remove a map of your own that was copied with “maps add”"
 msgstr ""
 
 #: openexpress/cli.py
@@ -3339,7 +3342,7 @@ msgstr ""
 
 #: openexpress/cli.py
 msgid ""
-"add the connected device to your Garmin account (experimental; a trial run "
+"add the connected device to your Garmin account (experimental; a dry run "
 "without --apply)"
 msgstr ""
 
@@ -3364,7 +3367,9 @@ msgid "install the app, or queue it in Garmin Connect where USB cannot"
 msgstr ""
 
 #: openexpress/cli.py
-msgid "remove it from the device (with --forget: also from your account list)"
+msgid ""
+"remove it from the device (with --forget: also from the app list of your "
+"Garmin account)"
 msgstr ""
 
 #: openexpress/cli.py
@@ -3555,10 +3560,6 @@ msgid ""
 msgstr ""
 
 #: openexpress/connect.py
-msgid "Connect token is missing (openexpress login)."
-msgstr ""
-
-#: openexpress/connect.py
 msgid ""
 "Internal error: this device was not checked against your Garmin account. "
 "Nothing was transferred."
@@ -3569,19 +3570,16 @@ msgstr ""
 msgid "{what}: network error ({error})"
 msgstr ""
 
-#: openexpress/connect.py openexpress/maps.py openexpress/service.py
+#: openexpress/connect.py
 #, python-brace-format
-msgid "{what}: unexpected response from the server"
+msgid ""
+"{action}: this computer's clock is {minutes} min off; let the system set the "
+"time and try again"
 msgstr ""
 
 #: openexpress/connect.py
 #, python-brace-format
-msgid "{action}: computer clock is off from the server by {minutes} min"
-msgstr ""
-
-#: openexpress/connect.py
-#, python-brace-format
-msgid "{action}: unauthorized (HTTP {status}). Please sign in again."
+msgid "{action}: the sign-in has expired (HTTP {status}). Sign in again."
 msgstr ""
 
 #. TRANSLATORS: name of a server request (sign-in: a one-time ticket traded for a token),
@@ -3664,14 +3662,19 @@ msgstr ""
 msgid "Account location"
 msgstr ""
 
+#. TRANSLATORS: the name of a request to Garmin's server, shown before its error
+#. ("Primary training device: network error (…)")
 #: openexpress/connect.py openexpress/service.py
 #, ignore-reused
 msgctxt "server request"
 msgid "Primary training device"
 msgstr ""
 
+#. TRANSLATORS: the name of a request to Garmin's server, shown before its error
+#. ("Primary wearable: network error (…)")
 #: openexpress/connect.py
 #, ignore-reused
+msgctxt "server request"
 msgid "Primary wearable"
 msgstr ""
 
@@ -3720,13 +3723,22 @@ msgid "Connect file queue"
 msgstr ""
 
 #: openexpress/connect.py
-msgid "Downloading file from Connect"
+msgid "Downloading a file from Garmin Connect"
 msgstr ""
 
 #. TRANSLATORS: name of a server request (telling Garmin Connect that a queued file was
 #. received), shown before an error
 #: openexpress/connect.py
 msgid "Receipt acknowledgement"
+msgstr ""
+
+#. TRANSLATORS: an error: Garmin's server answered something openExpress cannot read; {what}:
+#. the name of the request
+#: openexpress/connect.py
+#, python-brace-format
+msgid ""
+"{what}: Garmin's server gave an answer openExpress does not understand; try "
+"again later"
 msgstr ""
 
 #: openexpress/course_gpx.py openexpress/music.py openexpress/ownmaps.py
@@ -3984,6 +3996,9 @@ msgstr ""
 msgid "Device Not Supported"
 msgstr ""
 
+#. TRANSLATORS: on the start page, after the name of a Garmin device openExpress cannot use
+#. (e.g. "Garmin USB inReach · Unsupported connection"); a line of a caption, so sentence
+#. case and no full stop
 #: openexpress/device/gio_storage.py
 msgid "Unsupported connection"
 msgstr ""
@@ -4051,7 +4066,7 @@ msgstr ""
 msgid ""
 "KDE's MTP service may be holding the device: it keeps it after Dolphin is "
 "closed and takes it back when the cable is plugged in again. Close Dolphin "
-"and run kquitapp6 kiod6, then unplug the cable and plug it back in."
+"and run kquitapp6 kiod6, then unplug the cable and plug it in again."
 msgstr ""
 
 #. TRANSLATORS: title while a Garmin device is on USB and gvfs has no MTP support
@@ -4245,7 +4260,7 @@ msgstr ""
 
 #: openexpress/device/storage.py
 #, python-brace-format
-msgid "Invalid file name: '{path}'"
+msgid "Invalid file name: “{path}”"
 msgstr ""
 
 #: openexpress/device/storage.py
@@ -4401,12 +4416,17 @@ msgstr ""
 msgid "Saved as {name}"
 msgstr ""
 
+#. TRANSLATORS: title of the Activities page when there are none
 #: openexpress/gui/activities_page.py
-msgid "There are no activities on the device or in its backups."
+msgid "No Activities"
 msgstr ""
 
 #: openexpress/gui/activities_page.py
-msgid "This device does not keep activities."
+msgid "There are none on the device or in its backups"
+msgstr ""
+
+#: openexpress/gui/activities_page.py
+msgid "This device does not keep activities"
 msgstr ""
 
 #: openexpress/gui/activities_page.py openexpress/gui/app.py
@@ -4470,10 +4490,8 @@ msgstr ""
 msgid "The map needs the libshumate library, which is not installed"
 msgstr ""
 
-#. TRANSLATORS: heading above the tiles of the devices of the Garmin account that
-#. were never connected to this computer
-#: openexpress/gui/add_to_account.py openexpress/gui/start.py
-msgid "On the Account"
+#: openexpress/gui/add_to_account.py
+msgid "Garmin Account"
 msgstr ""
 
 #: openexpress/gui/add_to_account.py
@@ -4482,7 +4500,7 @@ msgid "Not on the account {account}"
 msgstr ""
 
 #: openexpress/gui/add_to_account.py openexpress/gui/device_page.py
-msgid "Add to Account…"
+msgid "Add to Account"
 msgstr ""
 
 #: openexpress/gui/add_to_account.py
@@ -4494,7 +4512,7 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "openExpress sends Garmin the description of the device (its "
-"GarminDevice.xml, with its unit ID) and adds it to the account {account} as "
+"GarminDevice.xml, with its Unit ID) and adds it to the account {account} as "
 "an active device. Then a sync uploads its activities and health data to this "
 "account.\n"
 "\n"
@@ -4503,10 +4521,6 @@ msgid ""
 "only in Garmin Connect.\n"
 "\n"
 "This is an experimental feature."
-msgstr ""
-
-#: openexpress/gui/add_to_account.py
-msgid "Add to Account"
 msgstr ""
 
 #: openexpress/gui/add_to_account.py
@@ -4537,7 +4551,7 @@ msgstr ""
 #: openexpress/gui/add_to_account.py
 msgid ""
 "The account's list could not be read to check it. Refresh in a few minutes; "
-"if the device is still refused, check the devices of your account in Garmin "
+"if the device is still missing, check the devices of your account in Garmin "
 "Connect."
 msgstr ""
 
@@ -4611,7 +4625,7 @@ msgstr ""
 #. every device
 #: openexpress/gui/app.py
 msgctxt "chip"
-msgid "experimental"
+msgid "Experimental"
 msgstr ""
 
 #. TRANSLATORS: tab title (Connect IQ apps)
@@ -4621,7 +4635,7 @@ msgid "Apps"
 msgstr ""
 
 #: openexpress/gui/app.py openexpress/gui/apps_page.py
-msgid "Loading Connect IQ Apps…"
+msgid "Reading Connect IQ Apps…"
 msgstr ""
 
 #. TRANSLATORS: tab title
@@ -4734,7 +4748,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/gui/apps_page.py
-msgid "Sign in to manage apps."
+msgid "Sign in to manage apps"
 msgstr ""
 
 #. TRANSLATORS: heading above the apps, or the maps, installed on the device
@@ -4767,7 +4781,7 @@ msgstr ""
 
 #. TRANSLATORS: tooltip of the trash button of an app or map row ({name}: its name)
 #: openexpress/gui/apps_page.py openexpress/gui/courses_page.py
-#: openexpress/gui/maps_page.py
+#: openexpress/gui/maps_page.py openexpress/gui/music_page.py
 #, python-brace-format
 msgid "Remove {name}"
 msgstr ""
@@ -4797,12 +4811,12 @@ msgid "In Your Garmin Account"
 msgstr ""
 
 #: openexpress/gui/apps_page.py
-msgid "Apps you added in the Connect IQ store (website or phone)."
+msgid "Apps you added in the Connect IQ Store (website or phone)"
 msgstr ""
 
 #: openexpress/gui/apps_page.py
 msgid ""
-"Add apps in the Connect IQ store (website or phone); they will show up here."
+"Add apps in the Connect IQ Store (website or phone); they will show up here"
 msgstr ""
 
 #. TRANSLATORS: button
@@ -4816,7 +4830,7 @@ msgid "Built-In Activities and Apps"
 msgstr ""
 
 #: openexpress/gui/apps_page.py
-msgid "Changes take effect after you disconnect the device."
+msgid "Changes take effect after you unplug the device"
 msgstr ""
 
 #. TRANSLATORS: placeholder of the search field above the device's built-in activities
@@ -4875,7 +4889,7 @@ msgid ""
 msgstr ""
 
 #: openexpress/gui/apps_page.py
-msgid "No copy differs from the current order"
+msgid "No copy differs from the current order."
 msgstr ""
 
 #: openexpress/gui/apps_page.py openexpress/gui/report_dialog.py
@@ -4905,6 +4919,17 @@ msgstr ""
 #. TRANSLATORS: answer that restores the order of the apps from the chosen copy
 #: openexpress/gui/apps_page.py
 msgid "Restore the Order"
+msgstr ""
+
+#. TRANSLATORS: toasts after the order of the apps was restored from a copy
+#: openexpress/gui/apps_page.py
+msgid ""
+"Wrote the new order to the device; it takes effect after the device is "
+"unplugged"
+msgstr ""
+
+#: openexpress/gui/apps_page.py
+msgid "The apps on the device are already in this order"
 msgstr ""
 
 #. TRANSLATORS: shown while the order of the apps on the device is restored from a copy
@@ -4961,13 +4986,18 @@ msgstr ""
 #: openexpress/gui/apps_page.py
 #, python-brace-format
 msgid ""
-"{names}: openExpress cannot install apps on this device over USB yet. The "
-"app waits in the queue in Garmin Connect and will be installed by the phone "
+"{names}: openExpress cannot install this app on this device over USB yet. It "
+"waits in the queue in Garmin Connect and will be installed by the phone or "
+"Garmin Express."
+msgid_plural ""
+"{names}: openExpress cannot install these apps on this device over USB yet. "
+"They wait in the queue in Garmin Connect and will be installed by the phone "
 "or Garmin Express."
-msgstr ""
+msgstr[0] ""
+msgstr[1] ""
 
 #: openexpress/gui/apps_page.py
-msgid "Here you can only remove it from your account list."
+msgid "Here you can only remove it from the app list of your Garmin account."
 msgstr ""
 
 #: openexpress/gui/apps_page.py
@@ -4976,13 +5006,19 @@ msgid ""
 "{name} cannot be removed over USB: this device shows no app files. Remove it "
 "on the device itself or in Garmin Connect on the phone.\n"
 "\n"
-"Here you can only remove it from your account list."
+"Here you can only remove it from the app list of your Garmin account."
 msgstr ""
 
 #. TRANSLATORS: shown while an app or a map is removed ({name}: its name)
 #: openexpress/gui/apps_page.py openexpress/gui/maps_page.py
 #, python-brace-format
 msgid "Removing {name}…"
+msgstr ""
+
+#. TRANSLATORS: toast after an app was removed from the account's list of apps
+#: openexpress/gui/apps_page.py
+#, python-brace-format
+msgid "Removed {name} from the app list of your Garmin account"
 msgstr ""
 
 #. TRANSLATORS: heading of the question before an app or a map is removed ({name}: its name)
@@ -5008,7 +5044,13 @@ msgstr ""
 msgid "The app and its settings will be deleted from the device."
 msgstr ""
 
-#. TRANSLATORS: toast after an app was removed from the device ({name}: its name)
+#. TRANSLATORS: toasts after an app was removed from the device ({name}: its
+#. name); the second when a direct USB connection wrote the change
+#: openexpress/gui/apps_page.py
+#, python-brace-format
+msgid "Removed {name}; the device finishes the removal after it is unplugged"
+msgstr ""
+
 #: openexpress/gui/apps_page.py
 #, python-brace-format
 msgid "Removed {name}"
@@ -5017,13 +5059,13 @@ msgstr ""
 #. TRANSLATORS: answer: removes the app from the device and also from the account's
 #. list of apps
 #: openexpress/gui/apps_page.py
-msgid "Remove and Forget"
+msgid "Remove From Device and Account"
 msgstr ""
 
 #. TRANSLATORS: button that removes an app, map or music file from the device; also
 #. the tooltip of a trash button
 #: openexpress/gui/apps_page.py openexpress/gui/courses_page.py
-#: openexpress/gui/maps_page.py openexpress/gui/music_page.py
+#: openexpress/gui/maps_page.py
 msgid "Remove"
 msgstr ""
 
@@ -5120,7 +5162,7 @@ msgstr[1] ""
 #. is removed from it
 #: openexpress/gui/courses_page.py
 #, python-brace-format
-msgid "Remove “{name}” from the Device?"
+msgid "Remove “{name}” From the Device?"
 msgstr ""
 
 #. TRANSLATORS: toast after a course or a waiting GPX file was removed from the device
@@ -5192,14 +5234,24 @@ msgctxt "course"
 msgid "Free After Copying"
 msgstr ""
 
+#. TRANSLATORS: the Courses page of a device that does not take GPX files
+#: openexpress/gui/courses_page.py
+msgid "This device does not make courses of GPX files"
+msgstr ""
+
 #. TRANSLATORS: group of the Courses page: the courses the device keeps
 #: openexpress/gui/courses_page.py
 msgctxt "courses"
 msgid "On the Device"
 msgstr ""
 
+#. TRANSLATORS: a row of the Courses page when the courses could not be read
 #: openexpress/gui/courses_page.py
-msgid "The courses could not be read from the device"
+msgid "Courses"
+msgstr ""
+
+#: openexpress/gui/courses_page.py
+msgid "Could not be read from the device"
 msgstr ""
 
 #. TRANSLATORS: group of the Courses page: GPX files the device has not imported yet
@@ -5208,8 +5260,10 @@ msgctxt "courses"
 msgid "Waiting for the Device"
 msgstr ""
 
+#. TRANSLATORS: a row of the Courses page when the GPX files waiting for the
+#. device could not be read
 #: openexpress/gui/courses_page.py
-msgid "The files waiting could not be read"
+msgid "Files Waiting"
 msgstr ""
 
 #. TRANSLATORS: group of the Courses page: the device's saved locations
@@ -5250,17 +5304,12 @@ msgstr ""
 
 #. TRANSLATORS: title of the message why a GPX file was not copied
 #: openexpress/gui/courses_page.py
-msgid "Cannot Add the Course"
-msgstr ""
-
-#. TRANSLATORS: tooltip of the button that removes a course or a waiting GPX file
-#: openexpress/gui/courses_page.py
-msgid "Remove…"
+msgid "Course Not Added"
 msgstr ""
 
 #. TRANSLATORS: title of the message why a course or a waiting file was not removed
 #: openexpress/gui/courses_page.py
-msgid "Cannot Remove the Course"
+msgid "Course Not Removed"
 msgstr ""
 
 #: openexpress/gui/courses_page.py openexpress/gui/music_page.py
@@ -5284,15 +5333,15 @@ msgstr ""
 #. TRANSLATORS: added to the page while a device on USB is not offered over MTP
 #: openexpress/gui/detection.py
 msgid ""
-"If the device isn't locked and isn't asking for anything, unplug the cable "
-"and plug it back in."
+"If the device is not locked and is not asking for anything, unplug the cable "
+"and plug it in again."
 msgstr ""
 
 #. TRANSLATORS: the same, after the sentence about a PIN, which names the device already
 #: openexpress/gui/detection.py
 msgid ""
-"If it isn't locked and isn't asking for anything, unplug the cable and plug "
-"it back in."
+"If it is not locked and is not asking for anything, unplug the cable and "
+"plug it in again."
 msgstr ""
 
 #: openexpress/gui/detection.py
@@ -5324,7 +5373,7 @@ msgid "This takes a moment after the cable is plugged in"
 msgstr ""
 
 #: openexpress/gui/detection.py
-msgid "Could Not Open the Device"
+msgid "Device Not Opened"
 msgstr ""
 
 #: openexpress/gui/detection.py
@@ -5385,8 +5434,8 @@ msgstr ""
 
 #: openexpress/gui/device_page.py
 msgid ""
-"Hidden from the file manager. While they are copied, the device leaves it "
-"for a moment"
+"Hidden from the file manager: while they are copied, the device disappears "
+"from it for a moment"
 msgstr ""
 
 #: openexpress/gui/device_page.py
@@ -5446,7 +5495,7 @@ msgstr ""
 
 #. TRANSLATORS: button that makes this device the primary training device
 #: openexpress/gui/device_page.py
-msgid "Set"
+msgid "Change"
 msgstr ""
 
 #: openexpress/gui/device_page.py
@@ -5463,8 +5512,8 @@ msgstr ""
 
 #: openexpress/gui/device_page.py
 msgid ""
-"Garmin's update server has none. Getting it sends the Unit ID of this device "
-"to your Garmin Connect account."
+"Garmin's update server has no picture of this device. Getting one sends its "
+"Unit ID to your Garmin Connect account."
 msgstr ""
 
 #: openexpress/gui/device_page.py
@@ -5508,8 +5557,8 @@ msgstr[1] ""
 
 #: openexpress/gui/device_page.py
 #, python-brace-format
-msgid "{count} not: over the limit of {size}"
-msgid_plural "{count} not: over the limit of {size}"
+msgid "{count} file skipped: larger than {size}"
+msgid_plural "{count} files skipped: larger than {size}"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -5537,6 +5586,13 @@ msgstr ""
 #. server is asked
 #: openexpress/gui/device_page.py openexpress/gui/words.py
 msgid "Checking…"
+msgstr ""
+
+#. TRANSLATORS: the pages Maps, Apps and Music of a device connected as a USB drive
+#: openexpress/gui/device_page.py
+msgid ""
+"The device is connected in mass storage mode (as a USB drive): apps, maps "
+"and music are not supported in this mode"
 msgstr ""
 
 #: openexpress/gui/device_page.py
@@ -5572,31 +5628,34 @@ msgstr ""
 msgid "Device Storage"
 msgstr ""
 
-#. TRANSLATORS: under "Sync With Garmin Connect" on the page of a device connected
-#. as a USB drive, which has no row of the background sync
 #: openexpress/gui/device_page.py openexpress/gui/preferences.py
 #: openexpress/gui/start.py
 msgid "Sync With Garmin Connect"
 msgstr ""
 
+#. TRANSLATORS: under "Sync With Garmin Connect" on the page of a device
+#. connected as a USB drive, which has no row of the background sync
 #: openexpress/gui/device_page.py
 msgid ""
 "A device connected as a USB drive is synced with the Sync button only, never "
-"in the background."
+"in the background"
 msgstr ""
 
-#. TRANSLATORS: subtitle of "Last Sync" of a device that cannot be synced
 #: openexpress/gui/device_page.py openexpress/gui/start.py
 msgid "Last Sync"
 msgstr ""
 
+#. TRANSLATORS: subtitle of "Last Sync" of a device that cannot be synced
 #: openexpress/gui/device_page.py
 msgctxt "sync"
 msgid "Not available"
 msgstr ""
 
 #. TRANSLATORS: row of the device's own software (firmware) and its updates
+#. TRANSLATORS: title of the row of an update of the device's own software (firmware), on
+#. the Updates page
 #: openexpress/gui/device_page.py openexpress/gui/start.py
+#: openexpress/gui/updates_page.py
 msgid "Device Software"
 msgstr ""
 
@@ -5712,7 +5771,7 @@ msgid_plural "Copied {count} files to {path}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/gui/device_page.py openexpress/watch.py
+#: openexpress/gui/device_page.py
 msgid "Sync finished"
 msgstr ""
 
@@ -5733,7 +5792,7 @@ msgstr ""
 msgid ""
 "If the device also syncs via your phone, most data is already in Garmin "
 "Connect. You can mark the current files as uploaded and upload only new "
-"ones, or upload everything (Connect skips duplicates)."
+"ones, or upload everything (Garmin Connect skips duplicates)."
 msgstr ""
 
 #. TRANSLATORS: button of the question "First Sync": uploads every activity file on
@@ -5745,12 +5804,14 @@ msgstr ""
 #. TRANSLATORS: button of the question "First Sync": marks the files on the device as
 #. uploaded and uploads only new ones
 #: openexpress/gui/device_page.py
-msgid "New Data Only"
+msgid "Upload New Data Only"
 msgstr ""
 
 #. TRANSLATORS: title of a message about forgetting a device (the button "Forget
 #. Device…" on the page of a device not connected)
-#: openexpress/gui/forget_device.py
+#. TRANSLATORS: button at the bottom of the page of a device not connected: this
+#. computer forgets what it keeps of the device (it asks first)
+#: openexpress/gui/forget_device.py openexpress/gui/start.py
 msgid "Forget Device"
 msgstr ""
 
@@ -5790,6 +5851,12 @@ msgstr ""
 msgid "Forget"
 msgstr ""
 
+#. TRANSLATORS: toast after a remembered device was forgotten
+#: openexpress/gui/forget_device.py
+#, python-brace-format
+msgid "Forgot {device}"
+msgstr ""
+
 #: openexpress/gui/forget_device.py
 msgid "A sync is running. Forget the device once it has finished."
 msgstr ""
@@ -5802,6 +5869,11 @@ msgstr ""
 
 #: openexpress/gui/maps_page.py openexpress/gui/updates_page.py
 msgid "Check Again"
+msgstr ""
+
+#. TRANSLATORS: title of the Maps page of a device without maps
+#: openexpress/gui/maps_page.py
+msgid "No Maps on This Device"
 msgstr ""
 
 #. TRANSLATORS: subtitle under the free space of the device on the Maps page ({size}:
@@ -5875,7 +5947,13 @@ msgid "Map file on the device: {size}"
 msgstr ""
 
 #: openexpress/gui/maps_page.py
-msgid "Cannot Add the Map"
+msgid "Map Not Added"
+msgstr ""
+
+#. TRANSLATORS: toast after a map of the user's own was copied to the device
+#: openexpress/gui/maps_page.py
+#, python-brace-format
+msgid "Wrote {path} ({size})"
 msgstr ""
 
 #: openexpress/gui/maps_page.py
@@ -5887,7 +5965,18 @@ msgid "Copy This Map to the Device?"
 msgstr ""
 
 #: openexpress/gui/maps_page.py
-msgid "Cannot Remove the Map"
+msgid "Map Not Removed"
+msgstr ""
+
+#. TRANSLATORS: toast after a map of the user's own was removed
+#: openexpress/gui/maps_page.py
+#, python-brace-format
+msgid "Removed {path} ({size})"
+msgstr ""
+
+#: openexpress/gui/maps_page.py
+#, python-brace-format
+msgid "Took {name} off the list of own maps; the file was not on the device"
 msgstr ""
 
 #: openexpress/gui/maps_page.py
@@ -5905,7 +5994,7 @@ msgid "Remove Anyway"
 msgstr ""
 
 #: openexpress/gui/maps_page.py
-msgid "Cannot Install the Map"
+msgid "Map Not Installed"
 msgstr ""
 
 #. TRANSLATORS: heading of an error: the one-time setup (files read from Garmin Express)
@@ -5916,8 +6005,8 @@ msgstr ""
 
 #: openexpress/gui/maps_page.py
 msgid ""
-"Downloading maps requires the Utilities.dll file from Garmin Express.\n"
-"Run: openexpress setup --utilities-dll /path/to/Utilities.dll"
+"Downloading maps needs data from the Garmin Express installer for Windows: "
+"choose it in Preferences (Choose Installer…)."
 msgstr ""
 
 #. TRANSLATORS: progress while the free space on the device is read before a map is installed
@@ -5996,6 +6085,11 @@ msgid "{count} file · {size}"
 msgid_plural "{count} files · {size}"
 msgstr[0] ""
 msgstr[1] ""
+
+#. TRANSLATORS: the Music page of a device without music
+#: openexpress/gui/music_page.py
+msgid "This device does not play music, podcasts or audiobooks"
+msgstr ""
 
 #: openexpress/gui/music_page.py
 msgid "Add to the Device"
@@ -6161,10 +6255,10 @@ msgstr ""
 
 #: openexpress/gui/pictures.py
 msgid ""
-"Unplug the device and turn it on — it installs the update on its own and "
-"won't work for a short while. The lights flash and may briefly go dark "
-"during the install; when it's done, a light flashes green and the main light "
-"comes on."
+"Unplug the device and turn it on – it installs the update on its own and "
+"will not work for a short while. The lights flash and may briefly go dark "
+"during the install; when it is done, a light flashes green and the main "
+"light comes on."
 msgstr ""
 
 #: openexpress/gui/preferences.py
@@ -6222,13 +6316,6 @@ msgstr ""
 msgid "Pictures and Icons"
 msgstr ""
 
-#. TRANSLATORS: row of the cache in the preferences: answers of Garmin's servers kept for a
-#. while
-#: openexpress/gui/preferences.py
-#, ignore-reused
-msgid "Garmin Server Responses"
-msgstr ""
-
 #. TRANSLATORS: row of the cache in the preferences: OpenStreetMap tiles under the maps of
 #. activities
 #: openexpress/gui/preferences.py
@@ -6269,6 +6356,12 @@ msgstr ""
 msgid "Clear"
 msgstr ""
 
+#. TRANSLATORS: toast after the cache was cleared
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Freed {size}"
+msgstr ""
+
 #: openexpress/gui/preferences.py
 msgid "Cache Not Cleared"
 msgstr ""
@@ -6294,23 +6387,17 @@ msgid "Background Sync"
 msgstr ""
 
 #: openexpress/gui/preferences.py
-msgid "The change failed."
+msgid "Background sync could not be turned on or off."
 msgstr ""
 
 #: openexpress/gui/preferences.py
-msgid "Sync automatically when connected"
+msgid "Syncs each time a device is connected, even when the window is closed"
 msgstr ""
 
 #. TRANSLATORS: title of the main page of the preferences and of the section in the keyboard
 #. shortcuts window
 #: openexpress/gui/preferences.py
 msgid "General"
-msgstr ""
-
-#: openexpress/gui/preferences.py
-msgid ""
-"Starts at login and syncs whenever the device is connected, also when this "
-"window is closed"
 msgstr ""
 
 #: openexpress/gui/preferences.py
@@ -6384,14 +6471,14 @@ msgstr ""
 msgid "Delete These Files"
 msgstr ""
 
-#. TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
+#. TRANSLATORS: the last row of the cache in the preferences, with "Clear All"
 #: openexpress/gui/preferences.py
 msgid "Entire Cache"
 msgstr ""
 
 #. TRANSLATORS: button that clears every part of the cache
 #: openexpress/gui/preferences.py
-msgid "Clear All…"
+msgid "Clear All"
 msgstr ""
 
 #: openexpress/gui/preferences.py
@@ -6414,7 +6501,7 @@ msgid "Clear the Cache?"
 msgstr ""
 
 #: openexpress/gui/preferences.py
-msgid "Select the Garmin Express Installer for Windows (GarminExpress.exe)"
+msgid "Choose the Garmin Express Installer for Windows (GarminExpress.exe)"
 msgstr ""
 
 #: openexpress/gui/preferences.py
@@ -6475,7 +6562,7 @@ msgstr ""
 #: openexpress/gui/report_dialog.py
 msgid ""
 "Open on GitHub starts a new issue with this report filled in; nothing is "
-"published until you submit it. The report contains no serial number, unit ID "
+"published until you submit it. The report contains no serial number, Unit ID "
 "or e-mail."
 msgstr ""
 
@@ -6622,23 +6709,23 @@ msgstr ""
 msgid "Remembered"
 msgstr ""
 
+#. TRANSLATORS: heading above the tiles of the devices of the Garmin account that
+#. were never connected to this computer
+#: openexpress/gui/start.py
+msgid "On the Account"
+msgstr ""
+
 #. TRANSLATORS: title of the start page, which lists the Garmin devices
 #: openexpress/gui/start.py
 msgid "Devices"
 msgstr ""
 
 #: openexpress/gui/start.py
-msgid "Device not connected — connect it to sync or update"
+msgid "Device not connected – connect it to sync or update"
 msgstr ""
 
 #: openexpress/gui/start.py openexpress/gui/words.py
 msgid "Connect the device to check"
-msgstr ""
-
-#. TRANSLATORS: button at the bottom of the page of a device not connected: this
-#. computer forgets what it keeps of the device (it asks first)
-#: openexpress/gui/start.py
-msgid "Forget Device…"
 msgstr ""
 
 #. TRANSLATORS: for screen readers: the row of buttons on top of the start page's
@@ -6680,14 +6767,14 @@ msgstr[1] ""
 #: openexpress/gui/start_window.py
 msgid ""
 "Not signed in to Garmin Connect: the tiles do not show what is on your "
-"account or what there is to sync."
+"account or what there is to sync"
 msgstr ""
 
 #. TRANSLATORS: under the tiles of the start page
 #: openexpress/gui/start_window.py
 msgid ""
 "Your Garmin Connect account could not be read: the tiles show only what was "
-"known of it before."
+"known of it before"
 msgstr ""
 
 #: openexpress/gui/start_window.py
@@ -6820,12 +6907,6 @@ msgstr ""
 msgid "Install All"
 msgstr ""
 
-#. TRANSLATORS: title of the row of an update of the device's own software (firmware), on
-#. the Updates page
-#: openexpress/gui/updates_page.py
-msgid "System Software"
-msgstr ""
-
 #: openexpress/gui/updates_page.py
 msgid "Files copied to the device."
 msgstr ""
@@ -6938,12 +7019,12 @@ msgstr[1] ""
 
 #: openexpress/gui/words.py
 #, ignore-same-plurals
-msgid "Update ready: disconnect the device to install it"
-msgid_plural "Updates ready: disconnect the device to install them"
+msgid "Update ready: unplug the device to install it"
+msgid_plural "Updates ready: unplug the device to install them"
 msgstr[0] ""
 msgstr[1] ""
 
-#. TRANSLATORS: after "Update ready: disconnect the device to install it": updates
+#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
 #. still to install besides the one copied already
 #: openexpress/gui/words.py
 #, python-brace-format
@@ -6951,6 +7032,11 @@ msgid "{count} more available"
 msgid_plural "{count} more available"
 msgstr[0] ""
 msgstr[1] ""
+
+#. TRANSLATORS: the state of the updates, without a full stop
+#: openexpress/gui/words.py
+msgid "Software is up to date"
+msgstr ""
 
 #. TRANSLATORS: after the state of the updates of a device: when the check that said it
 #. was (e.g. "checked 3 days ago")
@@ -6980,8 +7066,8 @@ msgstr ""
 #. `openexpress status`), after what the last sync found ("nothing to upload")
 #: openexpress/gui/words.py
 #, python-brace-format
-msgid "now to upload: {count} activity"
-msgid_plural "now to upload: {count} activities"
+msgid "{count} activity to upload now"
+msgid_plural "{count} activities to upload now"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -7091,7 +7177,7 @@ msgid "Backup of {date}"
 msgstr ""
 
 #: openexpress/gui/words.py
-msgid "Still being written: disconnect and reconnect the device"
+msgid "Still being written: unplug the device and plug it in again"
 msgstr ""
 
 #. TRANSLATORS: title of the page of an activity whose file the device was still writing when
@@ -7101,7 +7187,7 @@ msgid "Still Being Written"
 msgstr ""
 
 #: openexpress/gui/words.py
-msgid "Disconnect and reconnect the device"
+msgid "Unplug the device and plug it in again"
 msgstr ""
 
 #: openexpress/gui/words.py
@@ -7221,22 +7307,22 @@ msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity tile"
-msgid "Average pace"
+msgid "Average Pace"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity tile"
-msgid "Average speed"
+msgid "Average Speed"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity tile"
-msgid "Average heart rate"
+msgid "Average Heart Rate"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity tile"
-msgid "Maximum heart rate"
+msgid "Maximum Heart Rate"
 msgstr ""
 
 #: openexpress/gui/words.py
@@ -7246,7 +7332,7 @@ msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity tile"
-msgid "Total ascent"
+msgid "Total Ascent"
 msgstr ""
 
 #. TRANSLATORS: the closed row of the details at the end of the page of an activity
@@ -7259,62 +7345,62 @@ msgstr ""
 #. your language: the time with the pauses
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Elapsed time"
+msgid "Elapsed Time"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Moving time"
+msgid "Moving Time"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Work time"
+msgid "Work Time"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Rest time"
+msgid "Rest Time"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Total descent"
+msgid "Total Descent"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Minimum elevation"
+msgid "Minimum Elevation"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Maximum elevation"
+msgid "Maximum Elevation"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Average moving pace"
+msgid "Average Moving Pace"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Average moving speed"
+msgid "Average Moving Speed"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Best pace"
+msgid "Best Pace"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Maximum speed"
+msgid "Maximum Speed"
 msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Average cadence"
+msgid "Average Cadence"
 msgstr ""
 
 #: openexpress/gui/words.py
@@ -7325,7 +7411,7 @@ msgstr ""
 #: openexpress/gui/words.py
 #, ignore-reused
 msgctxt "activity detail"
-msgid "Heart rate"
+msgid "Heart Rate"
 msgstr ""
 
 #: openexpress/gui/words.py
@@ -7340,7 +7426,7 @@ msgstr ""
 
 #: openexpress/gui/words.py
 msgctxt "activity detail"
-msgid "Respiration rate"
+msgid "Respiration Rate"
 msgstr ""
 
 #. TRANSLATORS: a cadence on foot, steps a minute ("104 spm")
@@ -7428,7 +7514,7 @@ msgstr ""
 
 #. TRANSLATORS: the row of the time below zone 1 of the heart rate
 #: openexpress/gui/words.py
-msgid "Below zone 1"
+msgid "Below Zone 1"
 msgstr ""
 
 #. TRANSLATORS: a heart rate zone ("Zone 3")
@@ -7772,11 +7858,6 @@ msgstr ""
 msgid "update not offered in your account's country"
 msgstr ""
 
-#. TRANSLATORS: map status
-#: openexpress/maps.py
-msgid "up to date"
-msgstr ""
-
 #. TRANSLATORS: map status (Garmin does not offer it in the account's country)
 #: openexpress/maps.py
 msgid "not offered in your account's country"
@@ -7792,7 +7873,7 @@ msgid "No maps are available for this device."
 msgstr ""
 
 #: openexpress/maps.py
-msgid "Map updates for this device aren't supported yet."
+msgid "Map updates for this device are not supported yet."
 msgstr ""
 
 #: openexpress/maps.py
@@ -7806,7 +7887,7 @@ msgstr ""
 
 #. TRANSLATORS: subtitle of the row "Maps" and title of the Maps page, without a full stop
 #: openexpress/maps.py
-msgid "Map updates for this device aren't supported yet"
+msgid "Map updates for this device are not supported yet"
 msgstr ""
 
 #. TRANSLATORS: {country} is the name of a country, e.g. South Korea
@@ -7840,37 +7921,38 @@ msgstr ""
 #: openexpress/maps.py
 #, python-brace-format
 msgid ""
-"Map '{name}' cannot be installed: Garmin does not offer it in your account's "
+"Map “{name}” cannot be installed: Garmin does not offer it in your account's "
 "country ({country})."
 msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
 msgid ""
-"Map '{name}' cannot be installed: the server gave an invalid checksum for "
+"Map “{name}” cannot be installed: the server gave an invalid checksum for "
 "one of its files."
 msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
 msgid ""
-"Map '{name}' cannot be installed: the server did not provide all of its files"
+"Map “{name}” cannot be installed: the server did not provide all of its "
+"files."
 msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
-msgid "No map named '{name}'"
+msgid "No map named “{name}”"
 msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
 msgid ""
-"Map '{name}' is on the device already and will be loaded after the device is "
+"Map “{name}” is on the device already and will be loaded after the device is "
 "unplugged. Unplug the device first."
 msgstr ""
 
 #: openexpress/maps.py
-msgid "Activating the map on the Garmin server"
+msgid "Activating the map on the Garmin server…"
 msgstr ""
 
 #. TRANSLATORS: a step of a map install: files of an older version or of maps it
@@ -7909,7 +7991,7 @@ msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
-msgid "Map '{name}' cannot be removed"
+msgid "Map “{name}” cannot be removed"
 msgstr ""
 
 #. TRANSLATORS: a step of a map removal; {name}: the map ("… · 2 of 5")
@@ -7918,16 +8000,18 @@ msgstr ""
 msgid "Removing {name}"
 msgstr ""
 
-#. TRANSLATORS: a kind of audio to add, beside Podcasts and Audiobooks: a row with Folders… and
-#. Files… on the Music page
+#. TRANSLATORS: a kind of audio to add, beside Podcasts and Audiobooks: a row with Folders…
+#. and Files… on the Music page
 #: openexpress/music.py
 msgid "Music"
 msgstr ""
 
+#. TRANSLATORS: a kind of audio to add, beside Music and Audiobooks (a row of the Music page)
 #: openexpress/music.py
 msgid "Podcasts"
 msgstr ""
 
+#. TRANSLATORS: a kind of audio to add, beside Music and Podcasts (a row of the Music page)
 #: openexpress/music.py
 msgid "Audiobooks"
 msgstr ""
@@ -8288,7 +8372,7 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "The token is for environment {token_environment}, but the configured one is "
-"{environment}. Please sign in again."
+"{environment}. Sign in again."
 msgstr ""
 
 #: openexpress/service.py
@@ -8328,7 +8412,7 @@ msgstr ""
 msgid ""
 "This device is not registered to your Garmin account. To use it with Garmin "
 "Connect here, sign in to the account it belongs to, or add the device to "
-"your account: here (Add to Account… in the window, openexpress register on "
+"your account: here (Add to Account in the window, openexpress register on "
 "the command line; experimental) or in Garmin Connect (the phone app, or "
 "connect.garmin.com); registering the product on garmin.com is not enough. If "
 "it is added already, check that the Garmin Connect app on your phone and "
@@ -8336,15 +8420,18 @@ msgid ""
 msgstr ""
 
 #: openexpress/service.py
-msgid "the Garmin account has no consent to upload data from devices"
+msgid ""
+"the Garmin account has no consent to upload data from devices; turn it on in "
+"Garmin Connect"
 msgstr ""
 
 #: openexpress/service.py
-msgid "device sync is turned off in the Garmin account"
+msgid ""
+"device sync is turned off in the Garmin account; turn it on in Garmin Connect"
 msgstr ""
 
 #: openexpress/service.py
-msgid "the upload consent could not be checked. Try again later"
+msgid "the upload consent could not be checked; try again later"
 msgstr ""
 
 #. TRANSLATORS: under "Last Sync": nothing was uploaded, and why
@@ -8497,6 +8584,12 @@ msgstr ""
 msgid "sleep"
 msgstr ""
 
+#. TRANSLATORS: a type of data: the device's backups of its activity profiles (lowercase, in
+#. lists of data types)
+#: openexpress/service.py
+msgid "activity profile backups"
+msgstr ""
+
 #. TRANSLATORS: a type of data: what the device logs about itself, not the wearer's tracking
 #. (lowercase, in lists of data types)
 #: openexpress/service.py
@@ -8614,20 +8707,21 @@ msgstr[1] ""
 #: openexpress/service.py
 #, python-brace-format
 msgid ""
-"{count} file was still being written by the device – disconnect and "
-"reconnect it, then sync again"
+"{count} file was still being written by the device – unplug it and plug it "
+"in again, then sync again"
 msgid_plural ""
-"{count} files were still being written by the device – disconnect and "
-"reconnect it, then sync again"
+"{count} files were still being written by the device – unplug it and plug it "
+"in again, then sync again"
 msgstr[0] ""
 msgstr[1] ""
 
 #: openexpress/service.py
 #, python-brace-format
 msgid ""
-"Skipped {count} file: another device is your active tracker in Garmin Connect"
+"Skipped {count} file: another device is your primary wearable in Garmin "
+"Connect"
 msgid_plural ""
-"Skipped {count} files: another device is your active tracker in Garmin "
+"Skipped {count} files: another device is your primary wearable in Garmin "
 "Connect"
 msgstr[0] ""
 msgstr[1] ""
@@ -8848,13 +8942,13 @@ msgstr ""
 #: openexpress/settings.py
 #, python-brace-format
 msgid ""
-"The saved client key in {path} is damaged. Run again: openexpress setup --"
-"from-installer /path/to/GarminExpress.exe"
+"The saved application key in {path} is damaged. Run again: openexpress setup "
+"--from-installer /path/to/GarminExpress.exe"
 msgstr ""
 
 #: openexpress/settings.py
 #, python-brace-format
-msgid "Consumer key not found in {path}"
+msgid "Application key not found in {path}"
 msgstr ""
 
 #: openexpress/settings.py
@@ -8941,13 +9035,13 @@ msgstr ""
 msgid ""
 "\n"
 "To finish the installation:\n"
-"  1. Disconnect the device from the computer.\n"
+"  1. Unplug the device from the computer.\n"
 "  2. If the device does not turn on by itself, turn it on.\n"
 "  3. The device installs the update by itself. It may ask whether to install "
 "it:\n"
 "     choose to install now. It may also restart. Wait until it has "
 "finished.\n"
-"  4. Reconnect it and run `openexpress updates`: the installed update\n"
+"  4. Plug it in again and run `openexpress updates`: the installed update\n"
 "     should no longer be listed.\n"
 msgstr ""
 
@@ -8956,24 +9050,24 @@ msgstr ""
 #: openexpress/updates.py
 msgid ""
 "To finish the installation:\n"
-"1. Disconnect the device from the computer.\n"
+"1. Unplug the device from the computer.\n"
 "2. If the device does not turn on by itself, turn it on.\n"
 "3. The device installs the update by itself. It may ask whether to install "
 "it: choose to install now. It may also restart. Wait until it has finished.\n"
-"4. Reconnect it and check for updates again: the installed update should no "
-"longer be listed."
+"4. Plug it in again and check for updates again: the installed update should "
+"no longer be listed."
 msgstr ""
 
 #: openexpress/updates.py
 msgid ""
-"Warning: this is a device system update. Charge the device and do not "
-"disconnect it while copying."
+"Warning: this is a device system update. Charge the device and do not unplug "
+"it while copying."
 msgstr ""
 
 #: openexpress/updates.py
 msgid ""
 "Warning: this updates the software of a part of the device. Charge the "
-"device and do not disconnect it while copying."
+"device and do not unplug it while copying."
 msgstr ""
 
 #: openexpress/updates.py
@@ -9049,7 +9143,7 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "The server gave a name that cannot be used as a path on this computer: "
-"'{name}'"
+"“{name}”"
 msgstr ""
 
 #: openexpress/updates.py
@@ -9069,8 +9163,11 @@ msgstr ""
 msgid "{part}: the RGN format is not supported by openExpress"
 msgstr ""
 
+#. TRANSLATORS: title of a notification of the background sync:
+#. the first sync of a device waits for the user's choice
 #: openexpress/watch.py
-msgid "Garmin: first sync required"
+#, python-brace-format
+msgid "{device}: choose how to sync it first"
 msgstr ""
 
 #: openexpress/watch.py
@@ -9089,12 +9186,16 @@ msgstr ""
 msgid "In progress…"
 msgstr ""
 
+#. TRANSLATORS: title of a notification of the background sync, over what it did
 #: openexpress/watch.py
-msgid "Garmin: this device was not synced"
+#, python-brace-format
+msgid "{device} synced"
 msgstr ""
 
+#. TRANSLATORS: title of a notification of the background sync, over why
 #: openexpress/watch.py
-msgid "Sync failed"
+#, python-brace-format
+msgid "{device} not synced"
 msgstr ""
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in

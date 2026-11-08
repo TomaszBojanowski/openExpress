@@ -92,7 +92,7 @@ APP = types.SimpleNamespace(name="Face It", app_id=uuid.UUID(int=7), has_files=T
 
 
 @pytest.mark.parametrize(("words", "done"), [
-    ("Remove", ["remove"]), ("Remove and Forget", ["owner", "remove", "forget"]),
+    ("Remove", ["remove"]), ("Remove From Device and Account", ["owner", "remove", "forget"]),
     ("Cancel", []), (ESCAPE, [])])
 def test_removing_an_app(click, app_calls, words, done):
     from openexpress.gui.app import MainWindow
@@ -228,7 +228,7 @@ def test_trying_again_to_eject(click, in_the_window):
 # --- the device page -----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("words", "changed"), [("Set", 1), ("Cancel", 0)])
+@pytest.mark.parametrize(("words", "changed"), [("Change", 1), ("Cancel", 0)])
 def test_making_the_device_the_primary_training_device(click, words, changed):
     from openexpress.gui.app import MainWindow
 
@@ -240,7 +240,7 @@ def test_making_the_device_the_primary_training_device(click, words, changed):
 
 
 @pytest.mark.parametrize(("words", "started"), [
-    ("New Data Only", ["baseline"]), ("Upload Everything", ["all"]), ("Cancel", []),
+    ("Upload New Data Only", ["baseline"]), ("Upload Everything", ["all"]), ("Cancel", []),
     (ESCAPE, [])])
 def test_choosing_the_first_sync(click, words, started):
     from openexpress.gui.app import MainWindow
@@ -410,7 +410,7 @@ def _primary_training(ctx):
 
 
 def _off_account_window(ctx):
-    """A device off the account, logged in: Add to Account… offered."""
+    """A device off the account, logged in: Add to Account offered."""
     from openexpress.connect import NotAccountDevice
 
     win = _escape_window(ctx, refresh_device=_note(ctx, "refresh_device"))

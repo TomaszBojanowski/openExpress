@@ -149,7 +149,7 @@ def _page(device_root, answer, software="23.39"):
     for name in ("_show_device_picture", "_check_maps_quietly", "_show_last_sync",
                  "_render_map_state", "select_section", "backup"):
         setattr(win, name, lambda *a, **kw: None)
-    win._auto_sync_row = lambda: Adw.ActionRow(title="Sync automatically when connected")
+    win._auto_sync_row = lambda: Adw.ActionRow(title="Syncs each time a device is connected, even when the window is closed")
     for name in ("show_overview", "_set_update_state", "_render_update_state",
                  "_highlight_update", "_check_updates_quietly"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -306,6 +306,6 @@ def test_after_an_install_the_next_opening_shows_the_copy_waiting_until_the_chec
     assert entry.update_found is None and entry.update_summary is None
     assert entry.update_check.ready
     again, _section = _page(device_root, _answer())
-    assert _shown(again) == (True, "Update ready: disconnect the device to install it", True)
+    assert _shown(again) == (True, "Update ready: unplug the device to install it", True)
     _check(again)
     assert _shown(again) == (False, "Software is up to date", False)

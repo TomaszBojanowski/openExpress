@@ -60,7 +60,7 @@ def test_status_says_what_is_known_without_asking_a_server(monkeypatch, capsys, 
         "  Last sync: just now · 2 new files, 2 uploaded · 1 received",
         "  Device software: Update available: Map Region Grouping file 2.31 · checked just now",
         "Varia RTL515 · USB drive",
-        "  Device software: Software is up to date · checked just now"]
+        "  Device software: up to date · checked just now"]
 
 
 def test_status_says_how_many_activities_there_are_to_upload_now(monkeypatch, capsys, clock,
@@ -80,8 +80,8 @@ def test_status_says_how_many_activities_there_are_to_upload_now(monkeypatch, ca
     sync.SyncState(device.unit_id).save()  # synced here, neither activity uploaded
     record_sync(device.unit_id, uploaded=0, downloaded=1, skipped_known=0, errors=[], lines=[])
     assert main(["status"]) == 0
-    assert ("  Last sync: just now · nothing to upload · 1 received · now to upload: 2 "
-            "activities") in capsys.readouterr().out.splitlines()
+    assert ("  Last sync: just now · nothing to upload · 1 received · 2 activities to upload "
+            "now") in capsys.readouterr().out.splitlines()
 
 
 def test_status_without_a_login_or_a_record(monkeypatch, capsys, clock):

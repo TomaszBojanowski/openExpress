@@ -1,4 +1,4 @@
-"""The command register: a trial run that says what would be sent and where, the account's
+"""The command register: a dry run that says what would be sent and where, the account's
 e-mail address masked; with --apply the device added, its outcomes; nothing written to the
 device. All IDs and names here are made up."""
 
@@ -70,11 +70,11 @@ def test_the_trial_run_says_what_would_be_sent(device_root, xdg, garmin, capsys)
         "Test watch (006-B0000-00, software 23.39) is not on the Garmin account t…b.",
         ("Would add it as an active device: POST "
          "connectapi.garmin.com/device-service/deviceregistration/device"),
-        f"with its GarminDevice.xml ({xml_size(device_root)}; it holds the device's unit ID).",
+        f"with its GarminDevice.xml ({xml_size(device_root)}; it holds the device's Unit ID).",
         "After that, a sync uploads its activities and health data to this account.",
         "A device can be removed from an account only in Garmin Connect.",
         "This is an experimental feature.",
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert g.requests() == [("GET", DEVICES_PATH)]
     assert tree(device_root) == before

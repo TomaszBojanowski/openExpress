@@ -155,7 +155,8 @@ def test_music_layout_and_playlist(iq_device, tmp_path):
 
 # --- only the kinds of media that the device declares -----------------------------------------
 
-NO_MEDIA = "This device does not play music, podcasts or audiobooks."
+NO_MEDIA = "This device does not play music, podcasts or audiobooks"  # the window's caption
+NO_MEDIA_CLI = NO_MEDIA + "."
 
 
 def test_supported_kinds(iq_device, device_root):
@@ -188,7 +189,7 @@ def test_music_command_on_a_device_without_media(device_root, tmp_path, capsys):
     before = sorted(p.name for p in device_root.rglob("*"))
     assert main(["--path", str(device_root), "music"]) == 0
     captured = capsys.readouterr()
-    assert captured.out.strip() == NO_MEDIA  # one message, no empty "Tracks: 0" lists
+    assert captured.out.strip() == NO_MEDIA_CLI  # one message, no empty "Tracks: 0" lists
     song = tmp_path / "song.mp3"
     song.write_bytes(b"ID3" + b"\x00" * 10)
     m3u = tmp_path / "list.m3u"
@@ -197,7 +198,7 @@ def test_music_command_on_a_device_without_media(device_root, tmp_path, capsys):
                  ["remove", "song", "--apply"]):
         assert main(["--path", str(device_root), "music", *argv]) == 1, argv
         captured = capsys.readouterr()
-        assert NO_MEDIA in captured.err and "Traceback" not in captured.err
+        assert NO_MEDIA_CLI in captured.err and "Traceback" not in captured.err
     assert sorted(p.name for p in device_root.rglob("*")) == before
 
 
@@ -565,7 +566,7 @@ def test_cli_install_dry_run_shows_the_app_list(iq_device, device_root, apps_cli
         "  every app on the device is kept, in the same order and with the same flags",
         "  new: Face It (watch face), added as inactive",
         "Before any change, a copy of the app list of the device is made.",
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_files(st) == before
 
@@ -623,7 +624,7 @@ def test_cli_list_warns_about_an_unreadable_app_list(iq_device, device_root, app
     damaged_out_bin(device_root, "no-id")
     assert main(["--path", str(device_root), "apps"]) == 0
     out = capsys.readouterr().out
-    assert "WARNING: 1 entry of the app list on the device cannot be read" in out
+    assert "Warning: 1 entry of the app list on the device cannot be read" in out
     assert "Connect IQ Store" in out  # the readable apps are still shown
 
 
@@ -726,7 +727,7 @@ def test_cli_install_on_a_device_without_usb_apps(no_usb_apps, device_root, apps
     out = capsys.readouterr().out
     assert "the app folder GARMIN/APPS/MEDIA does not exist on the device" in out
     assert "if the device refuses, the app is only queued in Garmin Connect" in out
-    assert "Dry run. Add --apply." in out and FakeStore.queued == [] and attempts == []
+    assert "Dry run: nothing was changed. Add --apply." in out and FakeStore.queued == [] and attempts == []
 
     assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
     out = capsys.readouterr().out
@@ -769,12 +770,12 @@ def test_cli_remove_without_visible_files(no_usb_apps, device_root, apps_cli, ca
     assert "Removed" not in out and FakeStore.forgotten == []
 
     assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--forget"]) == 0
-    assert "Would remove it from your account list." in capsys.readouterr().out
+    assert "Dry run: nothing was removed. Add --apply to remove it from the app list of your Garmin account." in capsys.readouterr().out
     assert FakeStore.forgotten == []
 
     assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--forget", "--apply"]) == 0
     out = capsys.readouterr().out
-    assert told in out and out.splitlines()[-1] == "Removed FaceIt2 from your account list."
+    assert told in out and out.splitlines()[-1] == "Removed FaceIt2 from the app list of your Garmin account."
     assert FakeStore.forgotten == [[FACE]] and apps_files(st) == before  # no file was touched
 
 
@@ -802,7 +803,7 @@ def test_window_offers_only_forget_for_apps_without_files(iq_device):
     MainWindow.confirm_remove_app(win, app)
     assert asked == [app]  # the usual "delete from the device" dialog is not shown
     text = MainWindow._for_phone_text(["Face It"])
-    assert text.startswith("Face It: openExpress cannot install apps on this device over USB yet.")
+    assert text.startswith("Face It: openExpress cannot install this app on this device over USB yet.")
     assert text.endswith("installed by the phone or Garmin Express.")
 
 
@@ -1365,9 +1366,9 @@ def test_cli_tells_each_app_before_the_usb_connection(hidden_apps, apps_cli, mon
     break_at_app_folder(monkeypatch, fake, 1)
     assert main(["--path", str(st.root), "apps", "install", "Face It", "--apply"]) == 1
     errors = [line.strip() for line in capsys.readouterr().out.splitlines()
-              if line.strip().startswith("ERROR")]
-    assert [line.split(":")[0] for line in errors] == ["ERROR Face It", "ERROR USB connection"]
-    assert errors[-1] == "ERROR USB connection: " + REMOUNT[1]
+              if line.strip().startswith("Error:")]
+    assert [line.split(":")[1].strip() for line in errors] == ["Face It", "USB connection"]
+    assert errors[-1] == "Error: USB connection: " + REMOUNT[1]
 
 
 @pytest.mark.parametrize("broken", [True, False])
@@ -2000,7 +2001,7 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
         "  every other app on the device is kept, in the same order and with the same flags",
         "  to be removed: Face It (watch face)",
         "Before any change, a copy of the app list of the device is made.",
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert fake.operations == [] and st.sessions == 0
 
@@ -2331,7 +2332,7 @@ def test_cli_apps_order(order_device, apps_cli, monkeypatch, capsys):
         "App list to be written (IN.BIN): 7 entries; the device lists 7 (OUT.BIN)",
         "  the same apps with the same flags; only the order changes",
         "Before any change, a copy of the app list of the device is made.",
-        "Dry run. Add --apply."]
+        "Dry run: nothing was changed. Add --apply."]
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
     assert len(ciq.app_list_copies(dev)) == 1  # a dry run saves nothing
 
@@ -2773,7 +2774,7 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
     MainWindow.restore_order(win, copy)
     assert tasks == ["Restoring the Order…"] and loads == [("apps", True)]
     assert toasts == [("Wrote the new order to the device; it takes effect after the device is "
-                       "unplugged.")]
+                       "unplugged")]
     written = ciq.parse_in_bin(st.read("GARMIN/APPS/IN.BIN"))
     assert [(e[0], e[1]) for e in written] == [(a.app_id, a.app_type) for a in copy.state.apps]
     assert len(ciq.app_list_copies(dev)) == 2  # the copy before the change
@@ -2794,7 +2795,7 @@ def test_window_says_so_when_the_order_is_already_the_same(order_device):
         load_section=lambda key, force=False: None,
         run_task=RunNow())
     MainWindow.restore_order(win, same)
-    assert toasts == ["The apps on the device are already in this order."]
+    assert toasts == ["The apps on the device are already in this order"]
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
 
 
@@ -3185,7 +3186,7 @@ def test_flatpak_cli_install_only_queues_and_says_why(flatpak_spot, apps_cli, mo
         ("  New Face: The Flatpak has no access to USB devices, so it cannot install apps on "
          "this device. The app will be queued in Garmin Connect and installed by the phone or "
          "Garmin Express."),
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert FakeStore.queued == []
 
@@ -3216,7 +3217,7 @@ def test_flatpak_cli_update_only_queues_and_says_why(flatpak_spot, apps_cli, mon
         ("  Face It: The Flatpak has no access to USB devices, so it cannot update apps on "
          "this device. The update will be queued in Garmin Connect and installed by the "
          "phone or Garmin Express."),
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert main(["--path", str(st.root), "apps", "update", "--apply"]) == 0
     assert capsys.readouterr().out.splitlines()[2:] == [
@@ -3242,10 +3243,11 @@ def test_flatpak_cli_remove_changes_nothing_and_says_why(flatpak_spot, apps_cli,
 
     assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 1
     assert capsys.readouterr().out.splitlines() == [
-        told, "To remove it only from your account list, use --forget."]
+        told, "To remove it only from the app list of your Garmin account, use --forget."]
     assert main(["--path", str(st.root), "apps", "remove", "Face It", "--forget"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        told, "Would remove it from your account list. Add --apply."]
+        told, ("Dry run: nothing was removed. Add --apply to remove it from the app list of your "
+               "Garmin account.")]
     assert FakeStore.forgotten == [] and fake_tree(fake) == tree
     assert untouched(st, dev, fake, attempts, backups, before)
 
@@ -3259,7 +3261,7 @@ def test_flatpak_window_texts(flatpak_spot):
     assert MainWindow._forget_text(app) == (
         "The Flatpak has no access to USB devices, so it cannot remove apps from this "
         "device. Remove it on the phone, in the Connect IQ or Garmin Connect app.\n\n"
-        "Here you can only remove it from your account list.")
+        "Here you can only remove it from the app list of your Garmin account.")
     app.sandboxed = False
     assert MainWindow._forget_text(app).startswith("Face It cannot be removed over USB: ")
     text = MainWindow._for_phone_text(["Face It"], ["Face It"], ["Face It"])
@@ -3360,7 +3362,7 @@ def test_cli_install_dry_run_says_what_apply_would_refuse(slots, space, reason, 
     assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 1
     out = capsys.readouterr().out.splitlines()
     # The refusal, and no promise: no app list to be written, no "Dry run".
-    assert out[1:] == [f"  ERROR Face It: {reason}"]
+    assert out[1:] == [f"  Error: Face It: {reason}"]
     assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_cli.acks == []
     assert apps_files(st) == before
 
@@ -3377,7 +3379,7 @@ def test_cli_install_apply_refuses_before_asking_garmin(slots, space, reason, iq
     before = apps_files(st)
     assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 1
     out = capsys.readouterr().out
-    assert f"  ERROR Face It: {reason}" in out and "App list to be written" not in out
+    assert f"  Error: Face It: {reason}" in out and "App list to be written" not in out
     # Not requested in Garmin Connect, so it does not stay in the account's queue.
     assert FakeStore.queued == [] and apps_cli.downloads == 0 and apps_cli.acks == []
     assert made == [] and apps_files(st) == before
@@ -3528,7 +3530,7 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
         f"  + {ONE}",
         f"  ~ {TWO}  (replaces the file on the device: 150 B → 203 B)",
         "1 file on the device will be replaced.",
-        "Dry run. Add --apply.",
+        "Dry run: nothing was changed. Add --apply.",
     ]
     assert (st.root / TWO).read_bytes() == before and not (st.root / ONE).exists()
 
@@ -3545,7 +3547,7 @@ def test_music_add_without_a_replaced_file_says_nothing_of_replacing(iq_device, 
     assert main(["--path", str(device_root), "music", "add", *map(str, songs)]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "Found 2 playable files; 2 to copy (306 B), 0 already on the device.",
-        f"  + {ONE}", f"  + {TWO}", "Dry run. Add --apply."]
+        f"  + {ONE}", f"  + {TWO}", "Dry run: nothing was changed. Add --apply."]
 
 
 def test_replaced_files_are_counted_also_when_the_list_is_cut(iq_device, device_root, tmp_path,
@@ -3561,7 +3563,7 @@ def test_replaced_files_are_counted_also_when_the_list_is_cut(iq_device, device_
     assert main(["--path", str(device_root), "music", "add", str(many)]) == 0
     out = capsys.readouterr().out.splitlines()
     assert "  … and 5 more" in out and not any(line.startswith("  ~ ") for line in out)
-    assert out[-2:] == ["1 file on the device will be replaced.", "Dry run. Add --apply."]
+    assert out[-2:] == ["1 file on the device will be replaced.", "Dry run: nothing was changed. Add --apply."]
 
 
 def test_music_playlist_dry_run_counts_the_replaced_files(iq_device, device_root, songs, capsys):
@@ -3574,7 +3576,7 @@ def test_music_playlist_dry_run_counts_the_replaced_files(iq_device, device_root
     m3u.write_text("one.mp3\nsub/two.mp3\n", encoding="utf-8")
     assert main(["--path", str(device_root), "music", "playlist", str(m3u)]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[-2:] == ["2 files on the device will be replaced.", "Dry run. Add --apply."]
+    assert out[-2:] == ["2 files on the device will be replaced.", "Dry run: nothing was changed. Add --apply."]
 
 
 def test_window_says_before_copying_that_files_are_replaced(iq_device, songs, library):

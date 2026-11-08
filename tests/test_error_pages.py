@@ -49,11 +49,13 @@ def test_the_apps_page_shows_an_ownership_error_with_brackets():
 
 
 @pytest.mark.needs_display
-def test_a_page_not_for_a_drive_shows_its_words_with_brackets(in_the_window):
+def test_a_page_not_for_a_drive_shows_its_words_with_brackets(monkeypatch):
+    """Its words as a translation gives them, "<" and "&" too."""
+    from openexpress.gui import device_page
     from openexpress.gui.device_page import show_not_for_mass_storage
 
     words = "A drive <made up> & its words"
-    in_the_window("mass_storage_text", lambda: words)
+    monkeypatch.setattr(device_page, "_", lambda text: words)
     section = _section("maps")
     show_not_for_mass_storage(section)
     assert words in _shown(section, "info")
@@ -61,12 +63,14 @@ def test_a_page_not_for_a_drive_shows_its_words_with_brackets(in_the_window):
 
 @pytest.mark.needs_display
 def test_the_music_page_without_media_shows_its_words_with_brackets(monkeypatch):
+    """Its words as a translation gives them, "<" and "&" too."""
     from openexpress import music
+    from openexpress.gui import music_page
     from openexpress.gui.app import MainWindow
 
     words = "No media <made up> & more"
     monkeypatch.setattr(music, "supported_kinds", lambda device: [])
-    monkeypatch.setattr(music, "no_media_message", lambda: words)
+    monkeypatch.setattr(music_page, "_", lambda text, *args: words)
     section = _section("music")
     win = stand_in(sections={"music": section},
                    session=types.SimpleNamespace(device=None))

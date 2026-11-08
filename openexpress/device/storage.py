@@ -408,7 +408,7 @@ class Storage(ABC):
 def _split_file_path(path: str) -> tuple[str, str]:
     parent, name = posixpath.split(path.strip("/"))
     if not name.strip():
-        raise DeviceError(_("Invalid file name: '{path}'").format(path=path))
+        raise DeviceError(_("Invalid file name: “{path}”").format(path=path))
     return parent, name
 
 

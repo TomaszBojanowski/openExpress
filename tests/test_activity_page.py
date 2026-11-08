@@ -132,8 +132,8 @@ def test_a_row_opens_the_page_of_its_activity_and_reads_it():
     assert title.get_title() == "Hiking" and title.get_subtitle()
     texts = labels(page)
     for value, name in [("12.40 km", "Distance"), ("3:50:00", "Time"),
-                        ("16:40 /km", "Average pace"), ("128 bpm", "Average heart rate"),
-                        ("740 m", "Total ascent")]:
+                        ("16:40 /km", "Average Pace"), ("128 bpm", "Average Heart Rate"),
+                        ("740 m", "Total Ascent")]:
         assert value in texts and name in texts
 
 
@@ -206,7 +206,7 @@ def test_what_a_file_still_being_written_a_damaged_one_and_one_without_a_summary
         assert "Damaged file" in labels(page) and "12.40 km" in labels(page)
     else:
         said = {"still being written": ["Still Being Written",
-                                        "Disconnect and reconnect the device"],
+                                        "Unplug the device and plug it in again"],
                 "no summary": ["No Summary", "This activity has no summary"]}[state]
         assert status_texts(page) == said
 
@@ -1533,7 +1533,7 @@ def test_the_heart_rate_zones_under_the_laps(monkeypatch):
 
     texts = [row_texts(r) for r in shown.rows]
     assert [name for name, _span, _share in texts] == [
-        "Zone 5", "Zone 4", "Zone 3", "Zone 2", "Zone 1", "Below zone 1"]
+        "Zone 5", "Zone 4", "Zone 3", "Zone 2", "Zone 1", "Below Zone 1"]
     assert [span for _name, span, _share in texts] == [
         "above 177 bpm", "165–177 bpm", "155–164 bpm", "140–154 bpm", "120–139 bpm",
         "below 120 bpm"]
@@ -1689,8 +1689,8 @@ def test_the_details_closed_at_the_end_of_the_page(monkeypatch):
     assert shown.get_next_sibling() is None
     assert shown.expander.get_title() == "Details" and not shown.expander.get_expanded()
     assert [(r.get_title(), r.value.get_label()) for r in shown.rows] == [
-        ("Elapsed time", "48:20"), ("Moving time", "43:18"), ("Total descent", "12 m"),
-        ("Average moving pace", "13:19 /km"), ("Steps", "2600"), ("Heart rate", "86–120 bpm")]
+        ("Elapsed Time", "48:20"), ("Moving Time", "43:18"), ("Total Descent", "12 m"),
+        ("Average Moving Pace", "13:19 /km"), ("Steps", "2600"), ("Heart Rate", "86–120 bpm")]
     assert not any(seen(r, page) for r in shown.rows)
     shown.expander.set_expanded(True)
     assert all(seen(r, page) for r in shown.rows)

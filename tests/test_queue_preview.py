@@ -117,7 +117,7 @@ def described(lines, name) -> str:
 def test_a_line_for_each_file_of_the_queue(device, monkeypatch, capsys):
     code, lines, _account = dry_run(monkeypatch, capsys, FILES)
     assert code == 0
-    assert "To download from Connect to the device: 3" in lines
+    assert "To download from Garmin Connect to the device: 3" in lines
     assert described(lines, "Tempo") == (
         "      workouts · Running · Tempo 5×1 km · 7 steps · created 2026-10-29 · whole")
     assert described(lines, "Morning loop") == (
@@ -147,10 +147,10 @@ def test_a_download_that_fails_is_one_line_and_the_dry_run_ends_well(device, mon
     from openexpress.connect import ApiError
 
     code, lines, _account = dry_run(monkeypatch, capsys, {
-        **FILES, "course/12": ApiError("Downloading file from Connect: made-up failure", 503)})
+        **FILES, "course/12": ApiError("Downloading a file from Garmin Connect: made-up failure", 503)})
     assert code == 0
     assert described(lines, "Morning loop") == (
-        "      could not be downloaded: Downloading file from Connect: made-up failure")
+        "      could not be downloaded: Downloading a file from Garmin Connect: made-up failure")
     assert described(lines, "Plan").startswith("      schedules · ")
 
 

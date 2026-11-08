@@ -34,7 +34,7 @@ from openexpress import (  # noqa: E402
     tile_facts,
 )
 from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # noqa: E402
-from openexpress.device.gio_storage import DeviceSummary, FoundDevice, mass_storage_text  # noqa: E402
+from openexpress.device.gio_storage import DeviceSummary, FoundDevice  # noqa: E402
 from openexpress.gui import activity_page, pictures, start  # noqa: E402
 from openexpress.gui.add_to_account import (  # noqa: E402
     add_to_account_row,
@@ -248,8 +248,8 @@ def device_error_row(win, group=None) -> None:
                                   subtitle=GLib.markup_escape_text(details)))
     if found.hidden_logs:
         r = Adw.ActionRow(title=_("Crash Logs"), subtitle=_(
-            "Hidden from the file manager. While they are copied, the device leaves it for a "
-            "moment"))
+            "Hidden from the file manager: while they are copied, the device disappears from it "
+            "for a moment"))
         r.add_suffix(win._button(_("Copy Crash Logs"),
                                  lambda button: copy_crash_logs(win, button), with_button=True))
         rows.append(r)
@@ -324,7 +324,8 @@ def confirm_primary_wearable(win, wearable, button=None) -> None:
               "Current: {old}\nNew: {new}").format(old=primary_wearable_text(wearable),
                                                   new=device_name(s)),
             # TRANSLATORS: button that makes this device the primary training device
-            Answer("set", _("Set"), lambda: set_primary_wearable(win, button), look="suggested"),
+            Answer("set", _("Change"), lambda: set_primary_wearable(win, button),
+                   look="suggested"),
             default="cancel")
 
 
@@ -363,8 +364,8 @@ def account_picture_row(win, s):
     shown once the picture work found none (show_account_picture_offer)."""
     row = Adw.ActionRow(
         title=_("Device Picture"),
-        subtitle=_("Garmin's update server has none. Getting it sends the Unit ID of this "
-                   "device to your Garmin Connect account."),
+        subtitle=_("Garmin's update server has no picture of this device. Getting one sends "
+                   "its Unit ID to your Garmin Connect account."),
         visible=win.account_picture_offer is s)
     row.add_suffix(win._button(_("Get Picture From Account"),
                                lambda button: get_picture_from_account(win, button),
@@ -513,8 +514,10 @@ def copy_dumps(win, button=None) -> None:
                         "{count} memory dumps copied to this computer",
                         copied_count).format(count=copied_count)
         if copied.not_copied:
+            # TRANSLATORS: after the files copied to this computer: those left out as too large
             text = caption(text, ngettext(
-                "{count} not: over the limit of {size}", "{count} not: over the limit of {size}",
+                "{count} file skipped: larger than {size}",
+                "{count} files skipped: larger than {size}",
                 len(copied.not_copied)).format(count=len(copied.not_copied),
                                                size=human_size(diagnostics.LIMIT)))
         win.toast(text)
@@ -661,7 +664,10 @@ def show_not_for_mass_storage(sec) -> None:
     sec.info.set_icon_name(sec.icon)
     sec.info.set_title(sec.title)
     # The description is markup: words with "<" or "&" would leave it empty.
-    sec.info.set_description(GLib.markup_escape_text(mass_storage_text()))
+    sec.info.set_description(GLib.markup_escape_text(
+        # TRANSLATORS: the pages Maps, Apps and Music of a device connected as a USB drive
+        _("The device is connected in mass storage mode (as a USB drive): apps, maps and "
+          "music are not supported in this mode")))
     sec.show("info")
 
 
@@ -669,7 +675,7 @@ class Section:
     """One page of the window: shows a placeholder, a spinner, an error, a piece of
     information (what the device has not got) or the content, under a banner of its own when
     the page has something to say over all of it. `chip`: words beside its title in the
-    header ("experimental")."""
+    header ("Experimental")."""
 
     def __init__(self, key: str, title: str, icon: str, loading_text: str,
                  chip: str | None = None):
@@ -880,7 +886,7 @@ class DevicePage:
         elif s is not None and s.ownership_error is not None:
             self.banner.set_title(self._ownership_title(s.ownership_error))
             if offers_adding(s):
-                self.banner.set_button_label(_("Add to Account…"))
+                self.banner.set_button_label(_("Add to Account"))
                 self._banner_kind = "add"
             else:
                 unknown = not isinstance(s.ownership_error, NotAccountDevice)
@@ -1037,16 +1043,18 @@ class DevicePage:
         if refused is not None:
             sec.group(_("USB Drive"), service.drive_sync_refusal_text(*refused))
         else:
-            # TRANSLATORS: under "Sync With Garmin Connect" on the page of a device connected
-            # as a USB drive, which has no row of the background sync
-            g = sec.group(_("Sync With Garmin Connect"), _(
-                "A device connected as a USB drive is synced with the Sync button only, never "
-                "in the background.") if mass_storage else "")
+            g = sec.group(
+                _("Sync With Garmin Connect"),
+                # TRANSLATORS: under "Sync With Garmin Connect" on the page of a device
+                # connected as a USB drive, which has no row of the background sync
+                _("A device connected as a USB drive is synced with the Sync button only, "
+                  "never in the background") if mass_storage else "")
             if s.ownership_error is not None:
                 # Why, the banner says; not here again.
-                # TRANSLATORS: subtitle of "Last Sync" of a device that cannot be synced
-                g.add(Adw.ActionRow(title=_("Last Sync"), subtitle=pgettext("sync",
-                                                                            "Not available")))
+                g.add(Adw.ActionRow(
+                    title=_("Last Sync"),
+                    # TRANSLATORS: subtitle of "Last Sync" of a device that cannot be synced
+                    subtitle=pgettext("sync", "Not available")))
             else:
                 self.last_sync_row = Adw.ExpanderRow(title=_("Last Sync"))
                 self._last_sync_children = []
@@ -1188,7 +1196,7 @@ class DevicePage:
                   "training data in Garmin Connect.\n\nCurrent: {old}\nNew: {new}").format(
                     old=current, new=s.device.description),
                 # TRANSLATORS: button that makes this device the primary training device
-                Answer("set", _("Set"), lambda: self.set_primary_training(button),
+                Answer("set", _("Change"), lambda: self.set_primary_training(button),
                        look="suggested"),
                 default="cancel")
 
@@ -1590,12 +1598,13 @@ class DevicePage:
         confirm(self, "first-sync", _("First Sync"),
                 _("If the device also syncs via your phone, most data is already "
                   "in Garmin Connect. You can mark the current files as uploaded "
-                  "and upload only new ones, or upload everything (Connect skips duplicates)."),
+                  "and upload only new ones, or upload everything (Garmin Connect skips "
+                  "duplicates)."),
                 # TRANSLATORS: button of the question "First Sync": uploads every activity file on
                 # the device
                 Answer("all", _("Upload Everything"), lambda: self.start_sync("all")),
                 # TRANSLATORS: button of the question "First Sync": marks the files on the device as
                 # uploaded and uploads only new ones
-                Answer("baseline", _("New Data Only"), lambda: self.start_sync("baseline"),
+                Answer("baseline", _("Upload New Data Only"), lambda: self.start_sync("baseline"),
                        look="suggested"),
                 default="baseline")

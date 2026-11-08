@@ -96,10 +96,10 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
                     _("Reading Courses…"),
                     # TRANSLATORS: beside the title of the Courses page: not yet tried on
                     # every device
-                    chip=pgettext("chip", "experimental")),
+                    chip=pgettext("chip", "Experimental")),
             # TRANSLATORS: tab title (Connect IQ apps)
             Section("apps", pgettext("tab", "Apps"), "view-app-grid-symbolic",
-                    _("Loading Connect IQ Apps…")),
+                    _("Reading Connect IQ Apps…")),
             # TRANSLATORS: tab title
             Section("music", pgettext("tab", "Music"), "audio-x-generic-symbolic",
                     _("Reading Music on the Device…")),

@@ -56,12 +56,12 @@ EXPECTED = {
     # shown once each, not under "No new data to upload" of the sync before.
     "real-flatpak-edge-1050-0.6.13.json": {
         "en": ("16 new files, 12 uploaded", [
-            (("Files from the device: monitoring ×2, segment list, Garmin Coach plan ×9, "
-             "other data (FIT_TYPE_57) ×4"), False),
+            (("Files from the device: monitoring ×2, segment list, activity profile backups "
+             "×4, Garmin Coach plan ×9"), False),
             ("4 files were already in Garmin Connect", False)]),
         "pl": ("16 nowych plików, 12 wysłanych", [
-            ((f"Pliki z{NB}urządzenia: monitorowanie ×2, lista segmentów, plan Garmin Coach ×9, "
-             "inne dane (FIT_TYPE_57) ×4"), False),
+            ((f"Pliki z{NB}urządzenia: monitorowanie ×2, lista segmentów, kopie profili "
+             "aktywności ×4, plan Garmin Coach ×9"), False),
             (f"4 pliki były już w{NB}Garmin Connect", False)])},
     "real-flatpak-fenix-8-0.6.3.json": {
         "en": ("8 new files, 6 uploaded", [
@@ -113,10 +113,10 @@ EXPECTED = {
     "format-0.6.11-not-uploaded.json": {
         "en": ("nothing uploaded: no consent in the account", [
             (("Nothing was uploaded: the Garmin account has no consent to upload data from "
-             "devices"), False)]),
+             "devices; turn it on in Garmin Connect"), False)]),
         "pl": ("nic nie wysłano: brak zgody na koncie", [
             (("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
-             f"z{NB}urządzeń"), False)])},
+             f"z{NB}urządzeń; włącz ją w{NB}Garmin Connect"), False)])},
     # `sync --download-only --apply` of the Edge 1050 by the version from source
     # (real-source-edge-1050-0.6.15-download-only.json): nothing received; TrueUp in the
     # words it was written in (with its hard space).
@@ -160,7 +160,7 @@ EXPECTED = {
         "en": ("2 new files, 1 uploaded · 2 received", [
             ("Marked 12 existing files as already uploaded", False),
             ("Files from the device: activities ×2", False),
-            ("Skipped 1 file: another device is your active tracker in Garmin Connect", False),
+            ("Skipped 1 file: another device is your primary wearable in Garmin Connect", False),
             ("Installed Connect IQ apps: Face It", False),
             (("1 Connect IQ app waits in the queue: openExpress cannot install apps on this "
               "device over USB yet"), False),
@@ -169,8 +169,8 @@ EXPECTED = {
         "pl": ("2 nowe pliki, 1 wysłany · 2 odebrane", [
             ("Oznaczono 12 istniejących plików jako już wysłane", False),
             (f"Pliki z{NB}urządzenia: aktywności ×2", False),
-            (f"Pominięto 1 plik: aktywnym urządzeniem w{NB}Garmin Connect jest inne urządzenie",
-             False),
+            (("Pominięto 1 plik: Twoim podstawowym urządzeniem typu wearable "
+              f"w{NB}Garmin Connect jest inne urządzenie"), False),
             ("Zainstalowane aplikacje Connect IQ: Face It", False),
             ((f"1 aplikacja Connect IQ czeka w{NB}kolejce: nie można jeszcze instalować "
               "aplikacji na tym urządzeniu przez USB"), False),
@@ -202,6 +202,16 @@ EXPECTED = {
             (f"3 pliki z{NB}Garmin Connect: zestawienia ×3", False),
             (f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin",
              False)])},
+    # A sync of a bike computer that uploaded the backups of its activity profiles (FIT file
+    # type 57): the type by its name, not its code (format-activity-profile-backups.json; made
+    # up).
+    "format-activity-profile-backups.json": {
+        "en": ("6 new files, 6 uploaded", [
+            (("Files from the device: monitoring, activity profile backups ×4, Garmin Coach "
+              "plan"), False)]),
+        "pl": ("6 nowych plików, 6 wysłanych", [
+            ((f"Pliki z{NB}urządzenia: monitorowanie, kopie profili aktywności ×4, plan "
+              "Garmin Coach"), False)])},
     "format-0.7.5-ecg-not-uploaded.json": {
         "en": ("1 new file, 1 uploaded", [
             ("Files from the device: monitoring", False),
@@ -247,7 +257,7 @@ EXPECTED = {
     "format-0.7.11-still-written.json": {
         "en": ("2 new files, 1 uploaded", [
             ("Files from the device: monitoring, Garmin Coach plan", False),
-            (("1 file was still being written by the device – disconnect and reconnect it, "
+            (("1 file was still being written by the device – unplug it and plug it in again, "
               "then sync again"), True)]),
         "pl": ("2 nowe pliki, 1 wysłany", [
             (f"Pliki z{NB}urządzenia: monitorowanie, plan Garmin Coach", False),
@@ -293,9 +303,9 @@ def test_every_record_in_words(name, language):
 
 
 NOW_TO_UPLOAD = {
-    "en": f"3 days ago{NB}· nothing to upload{NB}· 1 received{NB}· now to upload: 2 activities",
-    "pl": (f"3 dni temu{NB}· nic do wysłania{NB}· 1 odebrany{NB}· teraz do wysłania: "
-           "2 aktywności"),
+    "en": f"3 days ago{NB}· nothing to upload{NB}· 1 received{NB}· 2 activities to upload now",
+    "pl": (f"3 dni temu{NB}· nic do wysłania{NB}· 1 odebrany{NB}· 2 aktywności do wysłania "
+           "teraz"),
 }
 
 
@@ -388,7 +398,7 @@ def test_the_notification_of_the_background_sync_says_what_the_row_says(monkeypa
     monkeypatch.setattr(watch.GLib, "idle_add", lambda fn, *args: shown.append(args))
     watch.Watcher()._sync()
     told = last_sync.describe(summary.record(record["unit_id"]))
-    assert shown[-1] == ("Sync finished", told.notification)
+    assert shown[-1] == ("Test watch synced", told.notification)
     assert told.notification.splitlines() == [
         "3 new files, 1 uploaded", "Files from the device: activities ×3",
         "1 file was rejected by Garmin", "1 file could not be uploaded",

@@ -138,6 +138,12 @@ class Watcher(Gio.Application):
         return None
 
     def _sync(self):
+        s = None
+
+        def name() -> str:
+            """The device's name for a notification, until it is known a generic one."""
+            return s.device.description if s is not None else _("Garmin device")
+
         try:
             s = self._open_session()
             if s.mass_storage:
@@ -151,7 +157,10 @@ class Watcher(Gio.Application):
             service.require_account_device(s.client, s.device.unit_id,
                                            part_number=s.device.part_number)
             if s.first_sync:
-                GLib.idle_add(self.notify, _("Garmin: first sync required"),
+                GLib.idle_add(self.notify,
+                              # TRANSLATORS: title of a notification of the background sync:
+                              # the first sync of a device waits for the user's choice
+                              _("{device}: choose how to sync it first").format(device=name()),
                               _("Open openExpress and choose how to sync the device."))
                 return
             GLib.idle_add(self.notify,
@@ -173,7 +182,8 @@ class Watcher(Gio.Application):
                 self._session = None
             # The words of the row under "Last Sync", as last_sync.describe tells them.
             body = last_sync.describe(summary.record(s.device.unit_id)).notification
-            GLib.idle_add(self.notify, _("Sync finished"), body)
+            # TRANSLATORS: title of a notification of the background sync, over what it did
+            GLib.idle_add(self.notify, _("{device} synced").format(device=name()), body)
         except service.SyncBusy:
             log.info("A sync is running in another process")
         except SeveralDevices:
@@ -185,10 +195,11 @@ class Watcher(Gio.Application):
             log.info("Not syncing: only a device in mass storage mode is connected")
         except OwnershipError as e:
             log.info("Not syncing: %s", e)
-            GLib.idle_add(self.notify, _("Garmin: this device was not synced"), str(e))
+            # TRANSLATORS: title of a notification of the background sync, over why
+            GLib.idle_add(self.notify, _("{device} not synced").format(device=name()), str(e))
         except Exception as e:
             log.exception("Sync failed")
-            GLib.idle_add(self.notify, _("Sync failed"), str(e))
+            GLib.idle_add(self.notify, _("{device} not synced").format(device=name()), str(e))
 
 
 def main() -> int:

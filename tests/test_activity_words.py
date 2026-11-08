@@ -71,10 +71,10 @@ def test_heart_rate_calories_and_ascent(language):
 
 
 TILES = {
-    "en": {"distance": "Distance", "time": "Time", "pace": "Average pace",
-           "speed": "Average speed", "average heart rate": "Average heart rate",
-           "maximum heart rate": "Maximum heart rate", "calories": "Calories",
-           "ascent": "Total ascent"},
+    "en": {"distance": "Distance", "time": "Time", "pace": "Average Pace",
+           "speed": "Average Speed", "average heart rate": "Average Heart Rate",
+           "maximum heart rate": "Maximum Heart Rate", "calories": "Calories",
+           "ascent": "Total Ascent"},
     "pl": {"distance": "Dystans", "time": "Czas", "pace": "Średnie tempo",
            "speed": "Średnia prędkość", "average heart rate": "Średnie tętno",
            "maximum heart rate": "Maksymalne tętno", "calories": "Suma kalorii",
@@ -128,10 +128,10 @@ WORKOUT = activity(sport=TRAINING, timer_time=2700.0, distance=0.0, avg_heart_ra
                    max_heart_rate=151, calories=320)
 
 TILES_OF = {
-    "en": {"hike": [("12.40 km", "Distance"), ("3:50:00", "Time"), ("16:40 /km", "Average pace"),
-                    ("128 bpm", "Average heart rate"), ("740 m", "Total ascent")],
-           "workout": [("45:00", "Time"), ("112 bpm", "Average heart rate"),
-                       ("151 bpm", "Maximum heart rate"), ("320 kcal", "Calories")]},
+    "en": {"hike": [("12.40 km", "Distance"), ("3:50:00", "Time"), ("16:40 /km", "Average Pace"),
+                    ("128 bpm", "Average Heart Rate"), ("740 m", "Total Ascent")],
+           "workout": [("45:00", "Time"), ("112 bpm", "Average Heart Rate"),
+                       ("151 bpm", "Maximum Heart Rate"), ("320 kcal", "Calories")]},
     "pl": {"hike": [("12,40 km", "Dystans"), ("3:50:00", "Czas"), ("16:40 /km", "Średnie tempo"),
                     ("128 bpm", "Średnie tętno"), ("740 m", "Całkowity wznios")],
            "workout": [("45:00", "Czas"), ("112 bpm", "Średnie tętno"),
@@ -158,7 +158,7 @@ def test_the_tiles_by_their_kind_for_their_icons():
 
 
 ZONES = {
-    "en": {"title": "Heart Rate Zones", "below": "Below zone 1", "zone": "Zone 3",
+    "en": {"title": "Heart Rate Zones", "below": "Below Zone 1", "zone": "Zone 3",
            "share": "36:30 · 88%",
            "threshold": "Bounds from the device: % of lactate threshold (165 bpm)",
            "max": "Bounds from the device: % of maximum heart rate (190 bpm)",
@@ -284,7 +284,7 @@ def test_a_lap_whose_pace_is_its_time_leaves_it_out(sport, metres, pace):
 def test_a_ride_has_its_speed_worked_out_when_its_session_does_not_say_it():
     ride = activity(sport=CYCLING, timer_time=3600.0, distance=30_000.0)
     assert tiles(words(), ride) == [("30.00 km", "Distance"), ("1:00:00", "Time"),
-                                    ("30.0 km/h", "Average speed")]
+                                    ("30.0 km/h", "Average Speed")]
 
 
 def test_a_value_not_given_leaves_its_tile_out():
@@ -359,15 +359,15 @@ WORKOUT_DETAILS = activity(sport=TRAINING, timer_time=3130.0,
                            min_temperature=27.0, max_temperature=31.0, avg_respiration=24.4,
                            min_respiration=15.2, max_respiration=38.0)
 DETAILS_OF = {
-    "en": {"walk": [("Elapsed time", "1:05:00"), ("Moving time", "52:30"),
-                    ("Total descent", "12 m"), ("Minimum elevation", "19 m"),
-                    ("Maximum elevation", "31 m"), ("Average moving pace", "12:21 /km"),
-                    ("Best pace", "8:52 /km"), ("Average cadence", "104 spm (max 118)"),
-                    ("Steps", "4380"), ("Heart rate", "86–125 bpm"), ("Calories", "180 kcal"),
+    "en": {"walk": [("Elapsed Time", "1:05:00"), ("Moving Time", "52:30"),
+                    ("Total Descent", "12 m"), ("Minimum Elevation", "19 m"),
+                    ("Maximum Elevation", "31 m"), ("Average Moving Pace", "12:21 /km"),
+                    ("Best Pace", "8:52 /km"), ("Average Cadence", "104 spm (max 118)"),
+                    ("Steps", "4380"), ("Heart Rate", "86–125 bpm"), ("Calories", "180 kcal"),
                     ("Temperature", "27.4 °C (25.0–29.0 °C)")],
-           "workout": [("Work time", "24:30"), ("Rest time", "25:00"),
-                       ("Heart rate", "92–171 bpm"), ("Temperature", "29.0 °C (27.0–31.0 °C)"),
-                       ("Respiration rate", "24 brpm (15–38)")],
+           "workout": [("Work Time", "24:30"), ("Rest Time", "25:00"),
+                       ("Heart Rate", "92–171 bpm"), ("Temperature", "29.0 °C (27.0–31.0 °C)"),
+                       ("Respiration Rate", "24 brpm (15–38)")],
            "title": "Details"},
     "pl": {"walk": [("Upływ czasu", "1:05:00"), ("Czas ruchu", "52:30"),
                     ("Całkowity spadek", "12 m"), ("Minimalna wysokość", "19 m"),
@@ -454,5 +454,5 @@ def test_a_ride_s_details_by_its_speed():
     ride = activity(sport=CYCLING, timer_time=3600.0, distance=30_000.0, avg_speed=30_000 / 3600,
                     max_speed=15.0)
     assert w.activity_details(ride, 3000.0) == [
-        ("Moving time", "50:00"), ("Average moving speed", "36.0 km/h"),
-        ("Maximum speed", "54.0 km/h")]
+        ("Moving Time", "50:00"), ("Average Moving Speed", "36.0 km/h"),
+        ("Maximum Speed", "54.0 km/h")]

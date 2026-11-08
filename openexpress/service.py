@@ -29,6 +29,7 @@ from openexpress.connect import (
     OwnershipUnknown,
     Registration,
     Unauthorized,
+    unexpected_answer_text,
 )
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
@@ -193,7 +194,7 @@ def make_client(settings: Settings, need_auth: bool | None = None) -> GarminClie
             if need_auth:
                 raise SetupError(
                     _("The token is for environment {token_environment}, but the configured "
-                      "one is {environment}. Please sign in again.").format(
+                      "one is {environment}. Sign in again.").format(
                         token_environment=auth.environment, environment=settings.environment))
             auth = None
     return GarminClient(settings, consumer, auth)
@@ -482,7 +483,7 @@ def require_account_device(client: GarminClient, unit_id: int,
             refused = NotAccountDevice(
                 _("This device is not registered to your Garmin account. To use it with "
                   "Garmin Connect here, sign in to the account it belongs to, or add the "
-                  "device to your account: here (Add to Account… in the window, openexpress "
+                  "device to your account: here (Add to Account in the window, openexpress "
                   "register on the command line; experimental) or in Garmin Connect (the "
                   "phone app, or connect.garmin.com); registering the product on garmin.com "
                   "is not enough. If it is added already, check that the Garmin Connect app "
@@ -569,9 +570,11 @@ UPLOAD_CONSENT = "DI_CONNECT_UPLOAD"
 NO_CONSENT, SYNC_OFF, NOT_CHECKED = "no-consent", "sync-off", "not-checked"
 # Why nothing was uploaded: in the details of a sync, after "Nothing was uploaded: "…
 NOT_UPLOADED_WHY = {
-    NO_CONSENT: N_("the Garmin account has no consent to upload data from devices"),
-    SYNC_OFF: N_("device sync is turned off in the Garmin account"),
-    NOT_CHECKED: N_("the upload consent could not be checked. Try again later"),
+    NO_CONSENT: N_("the Garmin account has no consent to upload data from devices; turn it on "
+                   "in Garmin Connect"),
+    SYNC_OFF: N_("device sync is turned off in the Garmin account; turn it on in Garmin "
+                 "Connect"),
+    NOT_CHECKED: N_("the upload consent could not be checked; try again later"),
 }
 # … and in its row, short (under "Last Sync", first in the numbers of the command line).
 NOT_UPLOADED_ROW = {
@@ -704,8 +707,8 @@ def primary_training_status(client: GarminClient, device: GarminDevice,
     raw = client.primary_training_device(fresh=fresh).get("deviceid")
     unit_id = unit_id_of(raw)
     if unit_id is None and raw not in (None, 0, "0", ""):
-        raise ApiError(_("{what}: unexpected response from the server").format(
-            what=pgettext("server request", "Primary training device")))
+        raise ApiError(unexpected_answer_text(
+            pgettext("server request", "Primary training device")))
     by_id = {unit_id_of(d.get("unitid")): d for d in devices}
     entry = by_id.get(unit_id) if unit_id is not None else None
     capable = by_id.get(device.unit_id, {}).get("primarytrainingcapable")
@@ -952,6 +955,10 @@ TYPE_NAMES = {
     "FIT_TYPE_44": N_("metrics"),               # upload: metrics; queue
     # TRANSLATORS: a type of data: sleep records, a noun (lowercase, in lists of data types)
     "FIT_TYPE_49": N_("sleep"),                 # folder: Sleep
+    # FIT file type 57 in the files; folder: Garmin/Sports/Backups; upload: sport-backup
+    # TRANSLATORS: a type of data: the device's backups of its activity profiles (lowercase, in
+    # lists of data types)
+    "FIT_TYPE_57": N_("activity profile backups"),
     # FIT profile: device_monitoring ("data logged on a device level", not the wearer's
     # monitoring); upload: device-monitoring; folder: Garmin/Device
     # TRANSLATORS: a type of data: what the device logs about itself, not the wearer's tracking
@@ -1073,14 +1080,14 @@ def _describe_step(line) -> list[tuple[str, bool]]:
         # TRANSLATORS: a line of the details of "Last Sync" (and of the command line): FIT
         # files the device was still writing when they were read, cut short; not uploaded
         return [(ngettext(
-            "{count} file was still being written by the device – disconnect and reconnect "
-            "it, then sync again",
-            "{count} files were still being written by the device – disconnect and reconnect "
-            "it, then sync again", n).format(count=n), True)]
+            "{count} file was still being written by the device – unplug it and plug it in "
+            "again, then sync again",
+            "{count} files were still being written by the device – unplug it and plug it in "
+            "again, then sync again", n).format(count=n), True)]
     if kind == "tracker_conflict" and (n := _count(line)) is not None:
         return [(ngettext(
-            "Skipped {count} file: another device is your active tracker in Garmin Connect",
-            "Skipped {count} files: another device is your active tracker in Garmin Connect",
+            "Skipped {count} file: another device is your primary wearable in Garmin Connect",
+            "Skipped {count} files: another device is your primary wearable in Garmin Connect",
             n).format(count=n), False)]
     if kind == "apps_installed":
         names = line.get("names")

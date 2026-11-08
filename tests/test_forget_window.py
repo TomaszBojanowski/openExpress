@@ -132,7 +132,7 @@ def test_the_view_of_a_remembered_device_offers_to_forget_it():
     assert not win.remembered.forget_group.get_visible()
     win._show_remembered(remembered())
     assert win.remembered.forget_group.get_visible()
-    assert win.remembered.forget_button.get_label() == "Forget Device…"
+    assert win.remembered.forget_button.get_label() == "Forget Device"
     assert win.remembered.forget_button.has_css_class("destructive-action")
     win._show_account({"unitid": EDGE, "productdisplayname": "Edge 1050"})
     assert not win.remembered.forget_group.get_visible()
@@ -179,7 +179,7 @@ def test_forgetting_goes_back_to_the_start_page(asked):
     answer(asked[0], "forget")
     assert set(known_devices.load()) == {EDGE}
     assert not paths.device_dir(FENIX).exists()
-    assert win.toasts == ["Forgot fēnix 8."]
+    assert win.toasts == ["Forgot fēnix 8"]
     assert win.navigation.popped == ["start page"]
     assert win._remembered_unit is None and win.errors == []
 

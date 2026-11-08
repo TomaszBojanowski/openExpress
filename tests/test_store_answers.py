@@ -1,4 +1,4 @@
-"""Answers of the Connect IQ store and queue not as expected: an item of the store's list
+"""Answers of the Connect IQ Store and queue not as expected: an item of the store's list
 without a proper app ID is left out; an app of the queue with an empty package (204/404) is
 taken off it and nothing is written, as Garmin Express does; each with a line in the log. All
 answers are made up."""

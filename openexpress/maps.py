@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from openexpress import answers, applog, cache, download, paths
-from openexpress.connect import ApiError
+from openexpress.connect import ApiError, unexpected_answer_text
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, country_name
@@ -221,7 +221,7 @@ class MapsNotSupported(MapError):
     (e.g. "Gemini"), for the Maps page to name it; None when it gives none, or no word."""
 
     def __init__(self, map_update_type: str | None = None) -> None:
-        super().__init__(_("Map updates for this device aren't supported yet."))
+        super().__init__(_("Map updates for this device are not supported yet."))
         self.map_update_type = map_update_type
 
 
@@ -262,7 +262,7 @@ def no_maps_on_device_text() -> str:
 
 def not_supported_text() -> str:
     # TRANSLATORS: subtitle of the row "Maps" and title of the Maps page, without a full stop
-    return _("Map updates for this device aren't supported yet")
+    return _("Map updates for this device are not supported yet")
 
 
 def universal_serves(map_update_type, device) -> bool:
@@ -368,8 +368,7 @@ def _listed(response) -> list:
     another object) is an error, so that a failure is never taken for "no maps"."""
     listed = response.get("maps") if isinstance(response, dict) else None
     if not isinstance(listed, list):
-        raise ApiError(_("{what}: unexpected response from the server").format(
-            what=_("Map check")))
+        raise ApiError(unexpected_answer_text(_("Map check")))
     return listed
 
 
@@ -517,14 +516,14 @@ def cannot_install_reason(m: UniversalMap) -> str:
 def cannot_install_message(m: UniversalMap) -> str:
     """Why `m` cannot be installed, the same words in the command line and the window."""
     if m.restricted is True:
-        return _("Map '{name}' cannot be installed: Garmin does not offer it in your account's "
+        return _("Map “{name}” cannot be installed: Garmin does not offer it in your account's "
                  "country ({country}).").format(name=m.name,
                                                 country=country_name(m.restricted_in))
     if m.unavailable == BAD_CHECKSUM:
-        return _("Map '{name}' cannot be installed: the server gave an invalid checksum for "
+        return _("Map “{name}” cannot be installed: the server gave an invalid checksum for "
                  "one of its files.").format(name=m.name)
-    return _("Map '{name}' cannot be installed: the server did not provide "
-             "all of its files").format(name=m.name)
+    return _("Map “{name}” cannot be installed: the server did not provide "
+             "all of its files.").format(name=m.name)
 
 
 def parse_maps(response: dict) -> list[UniversalMap]:
@@ -591,7 +590,7 @@ def find(maps: list[UniversalMap], name: str) -> UniversalMap:
     if len(partial) == 1:
         return partial[0]
     if not partial:
-        raise MapError(_("No map named '{name}'").format(name=name))
+        raise MapError(_("No map named “{name}”").format(name=name))
     raise MapError(_("Ambiguous name, matches: {names}")
                    .format(names="; ".join(m.name for m in partial)))
 
@@ -668,7 +667,7 @@ def log_states(maps: list[UniversalMap]) -> None:
 
 
 def waiting_message(m: UniversalMap) -> str:
-    return _("Map '{name}' is on the device already and will be loaded after the device is "
+    return _("Map “{name}” is on the device already and will be loaded after the device is "
              "unplugged. Unplug the device first.").format(name=m.name)
 
 
@@ -765,7 +764,7 @@ def _install(
         if overall:
             overall.finished(f.size)
 
-    say(_("Activating the map on the Garmin server"))
+    say(_("Activating the map on the Garmin server…"))
     act = activate(m.identifier)
     entries = act.get("unlocks") or []
     unlocks = [(u.get("filename"), u.get("gma")) for u in entries
@@ -915,7 +914,7 @@ def _short_md5(data: bytes) -> str:
 
 
 def cannot_remove_message(m: UniversalMap) -> str:
-    return _("Map '{name}' cannot be removed").format(name=m.name)
+    return _("Map “{name}” cannot be removed").format(name=m.name)
 
 
 def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,

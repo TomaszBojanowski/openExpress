@@ -169,9 +169,9 @@ def test_the_last_sync_says_how_many_new_activities_there_are_to_upload():
     _state()
     _record()
     said = _last_sync_row(_counted(3)).last_sync_row.get_subtitle()
-    assert said.startswith("just now") and said.endswith(f"{NB}· now to upload: 3 activities")
+    assert said.startswith("just now") and said.endswith(f"{NB}· 3 activities to upload now")
     assert _last_sync_row(_counted(1)).last_sync_row.get_subtitle().endswith(
-        f"{NB}· now to upload: 1 activity")
+        f"{NB}· 1 activity to upload now")
     assert "to upload" not in _last_sync_row(_counted(0)).last_sync_row.get_subtitle()
     assert "to upload" not in _last_sync_row(None).last_sync_row.get_subtitle()
 
@@ -180,7 +180,7 @@ def test_the_last_sync_says_how_many_new_activities_there_are_to_upload():
 def test_after_baseline_alone_the_count_is_said_too():
     _state()
     assert _last_sync_row(_counted(2)).last_sync_row.get_subtitle() == (
-        f"{NO_RECORD}{NB}· now to upload: 2 activities")
+        f"{NO_RECORD}{NB}· 2 activities to upload now")
 
 
 @pytest.mark.needs_display
@@ -193,10 +193,10 @@ def test_no_count_when_the_last_sync_could_not_upload():
 
 
 COUNT_WORDS = {
-    "en": ["now to upload: 1 activity", "now to upload: 2 activities",
-           "now to upload: 5 activities"],
-    "pl": ["teraz do wysłania: 1 aktywność", "teraz do wysłania: 2 aktywności",
-           "teraz do wysłania: 5 aktywności"],
+    "en": ["1 activity to upload now", "2 activities to upload now",
+           "5 activities to upload now"],
+    "pl": ["1 aktywność do wysłania teraz", "2 aktywności do wysłania teraz",
+           "5 aktywności do wysłania teraz"],
 }
 
 
@@ -228,7 +228,7 @@ def test_the_count_that_comes_later_is_said_on_the_page():
     win._is_open = lambda summary: False
     win._update_tile_chips = lambda: chips.append(1)
     MainWindow._activities_counted(win, s, _counted(4))
-    assert win.last_sync_row.get_subtitle().endswith(f"{NB}· now to upload: 4 activities")
+    assert win.last_sync_row.get_subtitle().endswith(f"{NB}· 4 activities to upload now")
     assert chips == [1]
 
 
@@ -327,9 +327,9 @@ def test_the_row_in_polish():
 
 
 LOGGED_OUT = ("Not signed in to Garmin Connect: the tiles do not show what is on your "
-              "account or what there is to sync.")
+              "account or what there is to sync")
 FAILED = ("Your Garmin Connect account could not be read: the tiles show only what was known "
-          "of it before.")
+          "of it before")
 
 
 def _account_window(why=None):
@@ -426,6 +426,6 @@ def test_the_notes_in_polish():
         i18n.setup("en")
     assert said == [
         ("Nie zalogowano do Garmin Connect: kafle nie pokazują, co jest na koncie ani co jest "
-         "do synchronizacji."),
-        ("Nie udało się odczytać konta Garmin: kafle pokazują tylko to, co było "
-         "o\u00a0nim wiadomo wcześniej.")]
+         "do synchronizacji"),
+        ("Nie udało się odczytać konta Garmin Connect: kafle pokazują tylko to, co było "
+         "o\u00a0nim wiadomo wcześniej")]

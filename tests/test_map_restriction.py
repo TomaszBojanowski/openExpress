@@ -67,7 +67,7 @@ def test_a_map_restricted_in_the_account_country_cannot_be_installed(device_root
     assert japan.restricted is True and not mp.can_install(japan)
     assert mp.cannot_install_reason(japan) == REASON
     assert mp.cannot_install_message(japan) == (
-        "Map 'TopoActive Japan' cannot be installed: Garmin does not offer it in your "
+        "Map “TopoActive Japan” cannot be installed: Garmin does not offer it in your "
         "account's country (South Korea).")
     assert japan.status == "not offered in your account's country"
     assert mp.restriction_note(japan) is None  # said by the reason, not marked besides
@@ -261,7 +261,7 @@ def test_cli_refuses_to_install_a_map_not_offered_in_the_account_country(cli_map
 
     cli_maps.country = "KR"
     assert main(["maps", "install", "Japan"]) == 1
-    assert ("Map 'TopoActive Japan' cannot be installed: Garmin does not offer it in your "
+    assert ("Map “TopoActive Japan” cannot be installed: Garmin does not offer it in your "
             "account's country (South Korea).") in capsys.readouterr().err
 
 

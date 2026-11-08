@@ -76,7 +76,7 @@ class AppsPage:
         if not s.logged_in:
             sec.clear()
             sec.error.set_title("Connect IQ")
-            sec.error.set_description(GLib.markup_escape_text(_("Sign in to manage apps.")))
+            sec.error.set_description(GLib.markup_escape_text(_("Sign in to manage apps")))
             sec.show("error")
             return
         if s.ownership_error is not None:
@@ -104,7 +104,7 @@ class AppsPage:
             updates = api.updates(s.device, state.store_apps, locale)
             return state, account, updates
 
-        self._load("apps", _("Loading Connect IQ Apps…"), work, self.show_apps)
+        self._load("apps", _("Reading Connect IQ Apps…"), work, self.show_apps)
 
     def show_apps(self, result) -> None:
         if self.session is None:
@@ -187,9 +187,9 @@ class AppsPage:
         missing = [a for a in account if a.app_id not in installed]
         g = sec.group(
             _("In Your Garmin Account"),
-            _("Apps you added in the Connect IQ store (website or phone).") if missing
-            else _("Add apps in the Connect IQ store (website or phone); "
-                   "they will show up here."))
+            _("Apps you added in the Connect IQ Store (website or phone)") if missing
+            else _("Add apps in the Connect IQ Store (website or phone); "
+                   "they will show up here"))
         for a in missing:
             row = Adw.ActionRow(title=GLib.markup_escape_text(a.name),
                                 subtitle=GLib.markup_escape_text(
@@ -206,7 +206,7 @@ class AppsPage:
         if not builtin:
             return  # none known (no app list): no group of none
         g = sec.group(_("Built-In Activities and Apps"),
-                      _("Changes take effect after you disconnect the device."))
+                      _("Changes take effect after you unplug the device"))
         # TRANSLATORS: placeholder of the search field above the device's built-in activities
         # (sports) and apps
         search = Gtk.SearchEntry(placeholder_text=_("Search activities"), margin_bottom=12)
@@ -362,7 +362,7 @@ class AppsPage:
             rows = self._order_rows(choices)
             if not rows:
                 inform(self, "order-none-differs", _("Restore the Order From a Copy"),
-                       _("No copy differs from the current order"), label=_("Close"))
+                       _("No copy differs from the current order."), label=_("Close"))
                 return
             box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
             box.add_css_class("boxed-list")
@@ -419,9 +419,10 @@ class AppsPage:
 
         def done(result):
             plan, _saved = result
+            # TRANSLATORS: toasts after the order of the apps was restored from a copy
             self.toast(_("Wrote the new order to the device; it takes effect after the device "
-                         "is unplugged.") if plan.moved
-                       else _("The apps on the device are already in this order."))
+                         "is unplugged") if plan.moved
+                       else _("The apps on the device are already in this order"))
             self.load_section("apps", force=True)
 
         # TRANSLATORS: shown while the order of the apps on the device is restored from a copy
@@ -526,10 +527,13 @@ class AppsPage:
         if names and all(n in sandboxed for n in names):
             return ", ".join(names) + ": " + ciq.sandbox_text(
                 all(n in updates for n in names), queued=True)
-        return _("{names}: openExpress cannot install apps on this device over USB yet. The "
-                 "app waits in the queue in Garmin Connect and will be installed by the phone "
-                 "or Garmin Express.").format(
-            names=", ".join(names))
+        return ngettext(
+            "{names}: openExpress cannot install this app on this device over USB yet. It waits "
+            "in the queue in Garmin Connect and will be installed by the phone or Garmin "
+            "Express.",
+            "{names}: openExpress cannot install these apps on this device over USB yet. They "
+            "wait in the queue in Garmin Connect and will be installed by the phone or Garmin "
+            "Express.", len(names)).format(names=", ".join(names))
 
     @staticmethod
     def _forget_text(app) -> str:
@@ -537,10 +541,10 @@ class AppsPage:
 
         if getattr(app, "sandboxed", False):
             return (ciq.sandbox_removal_text() + "\n\n"
-                    + _("Here you can only remove it from your account list."))
+                    + _("Here you can only remove it from the app list of your Garmin account."))
         return _("{name} cannot be removed over USB: this device shows no app files. Remove "
                  "it on the device itself or in Garmin Connect on the phone.\n\nHere you can "
-                 "only remove it from your account list.").format(name=app.name)
+                 "only remove it from the app list of your Garmin account.").format(name=app.name)
 
     def confirm_forget_app(self, app) -> None:
         """For apps that cannot be removed over USB: only the account list can be changed."""
@@ -557,8 +561,10 @@ class AppsPage:
             self.run_task(
                 # TRANSLATORS: shown while an app or a map is removed ({name}: its name)
                 _("Removing {name}…").format(name=app.name), work,
-                lambda _r: (self.toast(_("Removed {name} from your account list.").format(
-                    name=app.name)), self.load_section("apps", force=True)),
+                # TRANSLATORS: toast after an app was removed from the account's list of apps
+                lambda _r: (self.toast(_("Removed {name} from the app list of your Garmin "
+                                         "account").format(name=app.name)),
+                            self.load_section("apps", force=True)),
                 read_again_after_failure(self, "apps"), device=False)
 
         # TRANSLATORS: heading of the question before an app or a map is removed ({name}: its name)
@@ -591,11 +597,11 @@ class AppsPage:
                 return removed
 
             def done(_removed):
-                # TRANSLATORS: toast after an app was removed from the device ({name}: its name)
-                text = _("Removed {name}").format(name=app.name)
-                if direct:
-                    text += ". " + _("The device finishes the removal after it is unplugged.")
-                self.toast(text)
+                # TRANSLATORS: toasts after an app was removed from the device ({name}: its
+                # name); the second when a direct USB connection wrote the change
+                self.toast(_("Removed {name}; the device finishes the removal after it is "
+                             "unplugged").format(name=app.name) if direct
+                           else _("Removed {name}").format(name=app.name))
                 self.load_section("apps", force=True)
 
             self.run_task(_("Removing {name}…").format(name=app.name),
@@ -604,7 +610,7 @@ class AppsPage:
         confirm(self, "app-remove", _("Remove {name}?").format(name=app.name), body,
                 # TRANSLATORS: answer: removes the app from the device and also from the account's
                 # list of apps
-                Answer("forget", _("Remove and Forget"), lambda: remove(True)),
+                Answer("forget", _("Remove From Device and Account"), lambda: remove(True)),
                 # TRANSLATORS: button that removes an app, map or music file from the device; also
                 # the tooltip of a trash button
                 Answer("ok", _("Remove"), lambda: remove(False), look="destructive"))

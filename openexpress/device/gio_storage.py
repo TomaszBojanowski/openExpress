@@ -1517,7 +1517,10 @@ def unsupported_caption() -> str:
     # TRANSLATORS: on the start page, after the name of a Garmin device openExpress cannot use
     # (e.g. "Garmin USB inReach · Unsupported connection"); a line of a caption, so sentence
     # case and no full stop
-    return caption(name or _("Garmin device"), _("Unsupported connection"))
+    unsupported = _("Unsupported connection")
+    # TRANSLATORS: the name of a Garmin device that gives USB no name of its own, in the same
+    # line ("Garmin device · Unsupported connection")
+    return caption(name or _("Garmin device"), unsupported)
 
 
 def unsupported_text(window: bool = True) -> str:
@@ -1668,9 +1671,9 @@ def usb_state(clock=time.monotonic) -> str:
 
 
 def mass_storage_text() -> str:
-    """What an open Garmin device in mass storage mode has not got: for its pages in the
-    window, and the refusal of the commands that do not apply to it. Its sync, backup and
-    updates are on its device page, which says too why a drive is not synced."""
+    """What an open Garmin device in mass storage mode has not got: the refusal of the
+    commands that do not apply to it (the window's pages say it in their own words). Its sync,
+    backup and updates work, and the device page says why a drive is not synced."""
     return _("The device is connected in mass storage mode (as a USB drive): apps, maps and "
              "music are not supported in this mode.")
 
@@ -1744,7 +1747,7 @@ def held_elsewhere_text() -> str:
     # it; "kquitapp6 kiod6" is a command, not to be translated
     return _("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
              "and takes it back when the cable is plugged in again. Close Dolphin and run "
-             "kquitapp6 kiod6, then unplug the cable and plug it back in.")
+             "kquitapp6 kiod6, then unplug the cable and plug it in again.")
 
 
 def no_mtp_title() -> str:

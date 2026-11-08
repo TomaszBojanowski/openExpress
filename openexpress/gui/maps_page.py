@@ -32,7 +32,7 @@ def _check_again(win) -> None:
 
 
 def map_update_type_text(word: str) -> str:
-    """Under "Map updates for this device aren't supported yet": the map update type Garmin
+    """Under "Map updates for this device are not supported yet": the map update type Garmin
     gives the device (unit-info), so that a report can name it."""
     # TRANSLATORS: {type} is a word of Garmin's server, e.g. "Gemini"
     return _("Garmin's map update type for this device: {type}").format(type=word)
@@ -118,7 +118,8 @@ class MapsPage:
             self.maps_cache = []
             self._set_map_state(None, no_maps=no_maps)  # the "Maps" row of the device page
             if no_maps:
-                _no_maps(self, sec, mp.no_maps_on_device_text(), check_again=False)
+                # TRANSLATORS: title of the Maps page of a device without maps
+                _no_maps(self, sec, _("No Maps on This Device"), check_again=False)
             else:
                 _no_maps(self, sec, mp.not_supported_text(),
                          map_update_type_text(map_update_type) if map_update_type else None)
@@ -300,10 +301,11 @@ class MapsPage:
         garmin_maps = self.maps_cache or []
 
         def refused(e):
-            return self._own_map_refused(e, _("Cannot Add the Map"))
+            return self._own_map_refused(e, _("Map Not Added"))
 
         def written(real, plan):
-            self.toast(_("Wrote {path} ({size}).").format(path=real, size=human_size(plan.size)))
+            # TRANSLATORS: toast after a map of the user's own was copied to the device
+            self.toast(_("Wrote {path} ({size})").format(path=real, size=human_size(plan.size)))
             self.load_section("maps", force=True)
 
         def copy(plan):
@@ -341,15 +343,16 @@ class MapsPage:
             return plan
 
         def refused(e):
-            return self._own_map_refused(e, _("Cannot Remove the Map"))
+            return self._own_map_refused(e, _("Map Not Removed"))
 
         def removed(plan):
             if plan.on_device:
-                self.toast(_("Removed {path} ({size}).").format(
+                # TRANSLATORS: toast after a map of the user's own was removed
+                self.toast(_("Removed {path} ({size})").format(
                     path=plan.path, size=human_size(plan.size)))
             else:
                 self.toast(_("Took {name} off the list of own maps; the file was not on the "
-                             "device.").format(name=plan.name))
+                             "device").format(name=plan.name))
             self.load_section("maps", force=True)
 
         body = _("{path} ({size}) will be removed from the device.").format(
@@ -389,15 +392,15 @@ class MapsPage:
 
         if not mp.can_install(m):
             # Refused before anything is asked or promised, as on the command line.
-            self.error(_("Cannot Install the Map"), mp.cannot_install_message(m))
+            self.error(_("Map Not Installed"), mp.cannot_install_message(m))
             return
         s = self.session
         if not (s.client.consumer and s.client.consumer.url_salt):
             # TRANSLATORS: heading of an error: the one-time setup (files read from Garmin Express)
             # is not done
             self.error(_("Setup Missing"),
-                       _("Downloading maps requires the Utilities.dll file from Garmin Express.\n"
-                         "Run: openexpress setup --utilities-dll /path/to/Utilities.dll"))
+                       _("Downloading maps needs data from the Garmin Express installer for "
+                         "Windows: choose it in Preferences (Choose Installer…)."))
             return
         removing = mp.removal_list(self.maps_cache, m, rewriting=True)
 

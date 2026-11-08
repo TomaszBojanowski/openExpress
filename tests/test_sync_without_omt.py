@@ -70,8 +70,8 @@ def test_the_command_line_writes_the_queue_and_says_why_nothing_was_uploaded(
     assert code == 1  # done, with an error
     assert written(device) == ["course"]
     assert account.acks == [5] and account.uploads == []
-    errors = [line.strip() for line in out.splitlines() if line.strip().startswith("ERROR ")]
-    assert len(errors) == 1 and errors[0].startswith("ERROR " + said)
+    errors = [line.strip() for line in out.splitlines() if line.strip().startswith("Error: ")]
+    assert len(errors) == 1 and errors[0].startswith("Error: " + said)
     assert str(UNIT) not in errors[0]  # the address of the request is left out
     record = service.load_last_sync(UNIT)
     assert record["downloaded"] == 1 and record["errors"][0].startswith(said)
@@ -108,7 +108,7 @@ def test_the_dry_run_plans_the_queue_and_says_why_nothing_would_be_uploaded(devi
     assert cli.main(["--path", str(device), "sync"]) == 0
     out = capsys.readouterr().out
     assert any(line.startswith(NOT_REACHED) for line in out.splitlines())
-    assert "To download from Connect to the device: 1" in out
+    assert "To download from Garmin Connect to the device: 1" in out
     assert written(device) == [] and account.acks == []
 
 

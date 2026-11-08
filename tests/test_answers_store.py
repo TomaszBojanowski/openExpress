@@ -1,4 +1,4 @@
-"""The Connect IQ store through the kept answers (answers): the Apps page read again a moment
+"""The Connect IQ Store through the kept answers (answers): the Apps page read again a moment
 later (Restore the order…) asks nothing; an install, a removal from the account and a sync
 forget what it said; the icons already on disk are not asked for; `apps install --apply`
 reads the queue once less. Counted on a made-up store; all apps and devices are made up."""

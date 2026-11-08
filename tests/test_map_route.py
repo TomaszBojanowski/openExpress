@@ -17,7 +17,7 @@ from openexpress.device.xmldevice import parse
 
 PPNM = "PreProgrammedNamedMaps"
 UNIT, PART = 3000000061, "006-B9999-00"
-REFUSAL = "Map updates for this device aren't supported yet."
+REFUSAL = "Map updates for this device are not supported yet."
 NO_MAPS = "This device has no maps."
 # Data types that are no maps, as a watch without maps (a Venu 2) declares them.
 NO_MAP_DATATYPES = (
@@ -125,7 +125,7 @@ def test_a_failed_unit_info_is_a_failed_map_check_not_a_guess():
 
 
 def test_the_window_says_it_without_a_full_stop():
-    assert maps.not_supported_text() == "Map updates for this device aren't supported yet"
+    assert maps.not_supported_text() == "Map updates for this device are not supported yet"
     assert maps.no_maps_on_device_text() == "This device has no maps"
 
 

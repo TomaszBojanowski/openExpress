@@ -133,11 +133,13 @@ def test_expired_login_and_wrong_clock_are_raised_as_such(error):
 
 def test_messages():
     assert gate(consent=None).message() == (
-        "Nothing was uploaded: the Garmin account has no consent to upload data from devices")
+        "Nothing was uploaded: the Garmin account has no consent to upload data from devices; "
+        "turn it on in Garmin Connect")
     assert gate(preference="false").message() == (
-        "Nothing was uploaded: device sync is turned off in the Garmin account")
+        "Nothing was uploaded: device sync is turned off in the Garmin account; turn it on in "
+        "Garmin Connect")
     assert gate(consent=ApiError("x")).message() == (
-        "Nothing was uploaded: the upload consent could not be checked. Try again later")
+        "Nothing was uploaded: the upload consent could not be checked; try again later")
     assert gate(preference="false").message(done=False).startswith("Nothing would be uploaded: ")
 
 

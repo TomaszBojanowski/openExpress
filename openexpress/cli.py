@@ -157,7 +157,7 @@ def cmd_setup(args) -> int:
     if consumer and (args.from_dll or args.key or args.utilities_dll):
         save_consumer(consumer)
         # No part of the key is printed: it comes from the user's own installer.
-        print(_("Saved OAuth1 consumer key in {path}").format(path=paths.config_dir()))
+        print(_("Saved the application key in {path}").format(path=paths.config_dir()))
     if args.environment:
         settings.environment = args.environment
     if args.locale:
@@ -220,7 +220,7 @@ def cmd_diagnostics(args) -> int:
     print("  " + _("in the folder of the device under {folder}").format(
         folder=paths.data_dir() / "devices"))
     if not args.apply:
-        print(_("Dry run. Add --apply to copy the files the device shows now."))
+        print(_("Dry run: nothing was copied. Add --apply to copy the files the device shows now."))
         if args.crash_logs:
             print(_("With --apply, --crash-logs also reads its hidden crash logs in a session "
                     "of its own: the device leaves the file manager for a moment."))
@@ -347,11 +347,11 @@ def cmd_report(args) -> int:
         # clipboard for it.
         print(report.form_log(applog.tail(report.LOG_LINES), applog.crash_tail()), end="")
     if url:
-        print("\n" + _("This report contains no serial number, unit ID or e-mail. Open this "
+        print("\n" + _("This report contains no serial number, Unit ID or e-mail. Open this "
                        "address to start a device report with it filled in: {url}").format(
             url=url), file=sys.stderr)
     else:  # too long for an address: the empty form
-        print("\n" + _("This report contains no serial number, unit ID or e-mail. "
+        print("\n" + _("This report contains no serial number, Unit ID or e-mail. "
                        "Paste it into a device report: {url}").format(url=report.ISSUE_URL),
               file=sys.stderr)
     if args.log:
@@ -416,7 +416,7 @@ def cmd_activities(args) -> int:
     st, dev = open_device(args)
     # TRANSLATORS: first line of `openexpress activities` and `sync`: {device} the device's name,
     # {version} its software version
-    print(_("{device} (software {version})").format(
+    print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
     exporting = args.activities_cmd == "export"
     if not activities.keeps_activities(dev):
@@ -478,8 +478,8 @@ def _export_activities(args, found) -> int:
             continue
         if summary.state is fit.FileState.STILL_BEING_WRITTEN:
             refused.append(("still being written", _(
-                "{name} was still being written by the device when it was read. Disconnect "
-                "and reconnect the device, then export it again.").format(name=a.name)))
+                "{name} was still being written by the device when it was read. Unplug the "
+                "device and plug it in again, then export it again.").format(name=a.name)))
             continue
         stem = activities.export_name(summary, a)
         try:
@@ -552,7 +552,7 @@ def _activity_row(read) -> tuple[list[str], str | None]:
              activities.sport_name(summary.sport) if summary.sport is not None else dash]
     if summary.state is fit.FileState.STILL_BEING_WRITTEN:
         return cells + [dash] * 3 + [source, a.name], _(
-            "still being written: disconnect and reconnect the device")
+            "still being written: unplug the device and plug it in again")
     seconds = None if summary.timer_time is None else round(summary.timer_time)
     cells += [
         dash if seconds is None else f"{seconds // 3600}:{seconds // 60 % 60:02}:{seconds % 60:02}",
@@ -570,8 +570,10 @@ def _activity_table(read) -> list[str]:
         # TRANSLATORS: column heading in `openexpress activities`: when the activity started
         # (date and hour)
         _("Date"),
+        # TRANSLATORS: column heading in `openexpress activities`: the activity's sport
         _("Sport"),
         pgettext("activity list column", "Time"),
+        # TRANSLATORS: column heading in `openexpress activities`: the distance covered
         _("Distance"),
         # TRANSLATORS: column heading in `openexpress activities`: the total ascent of the
         # activity, in metres
@@ -846,7 +848,8 @@ def _status_updates(entry, software: str, now) -> str:
             return words.checked_text(_("an update is ready: unplug the device to install it"),
                                       check.at, now)
         if check is not None and entry.update_found is None:
-            return words.checked_text(_("Software is up to date"), check.at, now)
+            # TRANSLATORS: after "Device software:" in openexpress status
+            return words.checked_text(_("up to date"), check.at, now)
         last = entry.update_check.at if entry.update_check is not None else entry.update_found
         if last is not None:
             return words.not_checked_since(last)
@@ -875,7 +878,8 @@ def _status_updates_online(client, s) -> str:
         return _("an update is ready: unplug the device to install it")
     if new:
         return words.updates_available(len(new), new[0] if len(new) == 1 else None)
-    return _("Software is up to date")
+    # TRANSLATORS: after "Device software:" in openexpress status
+    return _("up to date")
 
 
 def cmd_cache(args) -> int:
@@ -1048,7 +1052,7 @@ def cmd_sync(args) -> int:
 
     st, dev = open_device(args)
     settings = Settings.load()
-    print(_("{device} (software {version})").format(
+    print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
     try:
         client = make_client(settings, need_auth=True)
@@ -1080,11 +1084,11 @@ def cmd_sync(args) -> int:
     except service.FirstSyncChoiceNeeded:
         print(
             "\n" + _("This is the first sync with this program. If the device also syncs "
-                     "via your phone, most files are already in Connect.\n"
+                     "via your phone, most files are already in Garmin Connect.\n"
                      "  openexpress baseline --apply   marks current files as uploaded "
                      "(recommended)\n"
                      "  openexpress sync --apply --all uploads everything "
-                     "(Connect rejects duplicates)"),
+                     "(Garmin Connect rejects duplicates)"),
             file=sys.stderr,
         )
         return FIRST_SYNC_CHOICE
@@ -1139,7 +1143,7 @@ def _print_sync_plan(plan, client, drive: bool = False, makers=None) -> None:
             return service.stays_in_queue(it, drive)
 
         n_dl = sum(1 for i in items if not i.unsupported and not left(i))
-        print("\n" + _("To download from Connect to the device: {count}").format(count=n_dl))
+        print("\n" + _("To download from Garmin Connect to the device: {count}").format(count=n_dl))
         written = [it for it in items if not left(it)]
         described = {id(f.item): f for f in sync.describe_queue(written, client)}
         for it in items:
@@ -1216,8 +1220,8 @@ def _print_sync_steps(summary, unit_id: int):
     told = last_sync.describe(summary.record(unit_id))
     said = [text for text, _warning in told.steps]
     # TRANSLATORS: after a sync, under its steps: an error of the sync; {error} says what went wrong
-    said += ["  " + _("ERROR {error}").format(error=error) for error in summary.errors]
-    said += ["  " + _("Warning: Connect did not confirm processing of {item}").format(
+    said += ["  " + _("Error: {error}").format(error=error) for error in summary.errors]
+    said += ["  " + _("Warning: Garmin Connect did not confirm processing of {item}").format(
         item=label) for label in summary.not_confirmed]
     if said:
         print("\n" + "\n".join(said))
@@ -1399,7 +1403,7 @@ def _to_install_staged(st) -> str:
     mode takes it once its drive is ejected."""
     if getattr(st, "mass_storage", False):
         return _("To install it, eject the drive in the file manager, then unplug the device.")
-    return _("Disconnect the device to install it.")
+    return _("Unplug the device to install it.")
 
 
 def _print_staged(staged, st) -> None:
@@ -1524,7 +1528,7 @@ def cmd_updates(args) -> int:
     for u, other in put_off:
         print(_("Not now: {name} {version} goes to the same file on the device as {other} "
                 "{other_version}. Install it once the device has installed {other}: "
-                "disconnect the device, then connect it again.").format(
+                "unplug the device, then plug it in again.").format(
             name=u.title, version=u.version, other=other.title, other_version=other.version))
     if not chosen:
         return 0
@@ -1632,7 +1636,7 @@ def _url_salt() -> str | None:
     salt = load_consumer().url_salt
     if not salt:
         raise SetupError(_("Download URL signing data is missing. Run: {command}").format(
-            command="openexpress setup --utilities-dll /path/to/Utilities.dll"))
+            command="openexpress setup --from-installer GarminExpress.exe"))
     return salt
 
 
@@ -1660,7 +1664,7 @@ def _maps_add(args, dev, st, all_maps) -> int:
         print(_("Free space on the device: {free} (the map takes {size})").format(
             free=human_size(plan.free), size=human_size(plan.size)))
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     with _own_map_hints(), _progress() as progress:
         path = ownmaps.add(plan, dev, st, progress=progress)
@@ -1688,7 +1692,7 @@ def _maps_remove_own(args, dev, st, all_maps) -> int:
         print(_("Free space on the device: {free} (removing it frees {size})").format(
             free=human_size(plan.free), size=human_size(plan.size)))
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     ownmaps.remove(plan, dev, st)
     print(_("Removed {path} ({size}).").format(path=plan.path, size=human_size(plan.size)))
@@ -1787,7 +1791,7 @@ def cmd_maps(args) -> int:
             for p in files:
                 print(f"  - {p}  ({human_size(st.size(p))})")
             if not args.apply:
-                print(_("Dry run. Add --apply."))
+                print(_("Dry run: nothing was changed. Add --apply."))
                 continue
             with _progress() as progress:
                 removed = mp.uninstall(m, all_maps, st, progress=progress)
@@ -1858,7 +1862,7 @@ def _find_app(items, query: str, app_type: int | None = None):
     if len(partial) == 1:
         return partial[0]
     if not partial:
-        raise SetupError(_("No app matches '{query}'").format(query=query))
+        raise SetupError(_("No app matches “{query}”").format(query=query))
 
     def label(a):
         return f"{a.name} ({ciq.app_type_name(a.app_type) or a.app_type})"
@@ -1889,7 +1893,7 @@ def _apps_queue_only(args, dev, st, client, api, account) -> int:
     if not args.apply:
         if targets:
             print("  " + ciq.no_app_list_text([target.name]))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0 if targets else 1
     if not targets:
         return 1
@@ -1960,7 +1964,7 @@ def _apps_order(args, dev, st, state) -> int:
     print("  " + _("the same apps with the same flags; only the order changes"))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     _plan, saved = ciq.restore_order(dev, st, copy.state)
     print(_("Copy of the current app list: {name}").format(name=saved))
@@ -1994,15 +1998,17 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     print("  " + _("to be removed: {name} ({type})").format(name=app.name, type=kind))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     removed = ciq.remove(dev, st, app)
     if app_file not in removed:
         print(_("The app file was already gone; only the app list was updated."))
     if args.forget:
         api.forget(dev, [app.app_id])
-        msg = ngettext("Removed {count} file. Also removed from your account list.",
-                       "Removed {count} files. Also removed from your account list.",
+        msg = ngettext("Removed {count} file. Also removed from the app list of your Garmin "
+                       "account.",
+                       "Removed {count} files. Also removed from the app list of your Garmin "
+                       "account.",
                        len(removed))
     else:
         msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
@@ -2026,7 +2032,7 @@ def _print_in_bin_preview(preview) -> None:
                               preview.pending).format(count=preview.pending))
     print("  " + (_("every app on the device is kept, in the same order and with the same flags")
                   if preview.kept else
-                  _("WARNING: the new list does NOT match the apps on the device")))
+                  _("Warning: the new list does not match the apps on the device")))
     for name, app_type, disabled in preview.new:
         print("  " + (_("new: {name} ({type}), added as inactive") if disabled
                       else _("new: {name} ({type}), added as active")).format(
@@ -2067,9 +2073,9 @@ def cmd_apps(args) -> int:
                 device=dev.description, count=len(state.store_apps),
                 slots=state.available_slots, size=human_size(state.available_space)))
         if state.unreadable:
-            print(ngettext("WARNING: {count} entry of the app list on the device cannot be read; "
+            print(ngettext("Warning: {count} entry of the app list on the device cannot be read; "
                            "apps cannot be installed, updated or removed.",
-                           "WARNING: {count} entries of the app list on the device cannot be "
+                           "Warning: {count} entries of the app list on the device cannot be "
                            "read; apps cannot be installed, updated or removed.",
                            state.unreadable).format(count=state.unreadable))
         for a in state.store_apps:
@@ -2097,7 +2103,7 @@ def cmd_apps(args) -> int:
             for a in state.apps:
                 if a.preloaded:
                     print(f"  {a.name:36} {a.type_name:11} {_app_status(a.disabled)}")
-        print("\n" + _("New apps are chosen in the Connect IQ store (website or phone); "
+        print("\n" + _("New apps are chosen in the Connect IQ Store (website or phone); "
                        "they then appear in the list above."))
         return 0
 
@@ -2126,7 +2132,7 @@ def cmd_apps(args) -> int:
         targets, skipped, allowed = _apps_consent(args, targets)
         if not targets:
             if not args.apply:
-                print(_("Dry run. Add --apply."))
+                print(_("Dry run: nothing was changed. Add --apply."))
             return 1
         messages = client.device_messages(dev.unit_id)
         waiting = ciq.queued_app_ids(messages)
@@ -2172,12 +2178,12 @@ def cmd_apps(args) -> int:
                 if a.app_id in refused:
                     # TRANSLATORS: a Connect IQ app that could not be installed: {item} its name,
                     # {error} why
-                    print("  " + _("ERROR {item}: {error}").format(
+                    print("  " + _("Error: {item}: {error}").format(
                         item=a.name, error=refused[a.app_id]))
             if len(refused) < len(targets):
                 if over_usb:
                     print(ciq.app_list_copy_note(dev, st))
-                print(_("Dry run. Add --apply."))
+                print(_("Dry run: nothing was changed. Add --apply."))
             return 1 if refused or skipped else 0
         with _progress() as progress:
             rep = ciq.install_apps(dev, st, client, api, targets, progress=progress,
@@ -2197,7 +2203,7 @@ def cmd_apps(args) -> int:
             # separated by commas, or "none"
             print(_("Installed: {names}").format(names=", ".join(installed) or none))
         for name, err in rep.failed:
-            print("  " + _("ERROR {item}: {error}").format(item=name, error=err))
+            print("  " + _("Error: {item}: {error}").format(item=name, error=err))
         sandboxed = [n for n in rep.for_phone if n in rep.sandboxed]
         if sandboxed:
             print(", ".join(sandboxed) + ": " + ciq.sandbox_text(
@@ -2229,7 +2235,8 @@ def cmd_apps(args) -> int:
             if way == ciq.SANDBOXED:
                 print(f"{app.name}: " + ciq.sandbox_removal_text())
                 if not args.forget:
-                    print(_("To remove it only from your account list, use --forget."))
+                    print(_("To remove it only from the app list of your Garmin account, use "
+                            "--forget."))
             else:
                 print(_("{name} cannot be removed over USB: this device shows no app files. "
                         "Remove it on the device itself or in Garmin Connect on the "
@@ -2237,22 +2244,26 @@ def cmd_apps(args) -> int:
             if not args.forget:
                 return 1
             if not args.apply:
-                print(_("Would remove it from your account list. Add --apply."))
+                print(_("Dry run: nothing was removed. Add --apply to remove it from the app "
+                        "list of your Garmin account."))
                 return 0
             api.forget(dev, [app.app_id])
-            print(_("Removed {name} from your account list.").format(name=app.name))
+            print(_("Removed {name} from the app list of your Garmin account.").format(
+                name=app.name))
             return 0
         print(_("Remove {name} from the device: {files}").format(
             name=app.name, files=", ".join(paths_) or "-"))
         if not args.apply:
             print(ciq.app_list_copy_note(dev, st))
-            print(_("Dry run. Add --apply."))
+            print(_("Dry run: nothing was changed. Add --apply."))
             return 0
         removed = ciq.remove(dev, st, app)
         if args.forget:
             api.forget(dev, [app.app_id])
-            msg = ngettext("Removed {count} file. Also removed from your account list.",
-                           "Removed {count} files. Also removed from your account list.",
+            msg = ngettext("Removed {count} file. Also removed from the app list of your "
+                           "Garmin account.",
+                           "Removed {count} files. Also removed from the app list of your "
+                           "Garmin account.",
                            len(removed))
         else:
             msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
@@ -2270,10 +2281,10 @@ def cmd_apps(args) -> int:
            else _("Disable {name}")).format(name=app.name))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     ciq.set_enabled(dev, st, app.app_id, enable, app.app_type)
-    print(_("Saved. The device applies the change after you disconnect it."))
+    print(_("Saved. The device applies the change after you unplug it."))
     return 0
 
 
@@ -2368,7 +2379,7 @@ def _primary_set(client, dev, apply: bool, role: _PrimaryRole) -> int:
     if not apply:
         print(words["other"].format(name=old) if role.is_set(before) else words["none"])
         print(words["would"].format(device=dev.description))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     if not role.is_set(before):
         print(words["set"].format(device=dev.description))
@@ -2509,7 +2520,7 @@ def _courses_add(args, dev, st) -> int:
     plan = courses.plan_add(dev, st, Path(args.file), args.name)
     print("\n".join(_course_plan_lines(plan)))
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     with _progress() as progress:
         path = courses.add(plan, dev, st, progress=progress)
@@ -2550,7 +2561,7 @@ def _courses_remove(args, dev, st, seen) -> int:
     print(f"  - {plan.path}  ({human_size(plan.size)})")
     print("  " + courses.removal_note(plan))
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     courses.remove(plan, dev, st)
     print(_("Removed {path} ({size}).").format(path=plan.path, size=human_size(plan.size)))
@@ -2581,7 +2592,7 @@ def cmd_courses(args) -> int:
 
 def cmd_register(args) -> int:
     """Add the connected device to the Garmin account (service.add_device), experimental; a
-    trial run without --apply. The account is named by its user name, an e-mail address
+    dry run without --apply. The account is named by its user name, an e-mail address
     masked: the output is pasted into reports."""
     from urllib.parse import urlsplit
 
@@ -2603,12 +2614,12 @@ def cmd_register(args) -> int:
                                      version=dev.software_version_str, account=account))
         print(_("Would add it as an active device: POST {address}").format(
             address=address.netloc + address.path))
-        print(_("with its GarminDevice.xml ({size}; it holds the device's unit ID).").format(
+        print(_("with its GarminDevice.xml ({size}; it holds the device's Unit ID).").format(
             size=human_size(len(dev.raw))))
         print(_("After that, a sync uploads its activities and health data to this account."))
         print(_("A device can be removed from an account only in Garmin Connect."))
         print(_("This is an experimental feature."))
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     if result.listed is False:
         _error(_("Garmin accepted the device, but the account's list does not show it yet. "
@@ -2728,7 +2739,7 @@ def cmd_music(args) -> int:
             # Also when the list above is cut short.
             print(music.replaced_text(plan))
         if not args.apply:
-            print(_("Dry run. Add --apply."))
+            print(_("Dry run: nothing was changed. Add --apply."))
             return 0
         with _progress() as progress:
             music.copy(plan, st, progress=progress)
@@ -2745,14 +2756,14 @@ def cmd_music(args) -> int:
         tracks = music.scan(music.read_m3u(Path(args.m3u)), dev)
         plan = music.plan_copy(tracks, dev, st)
         name = args.name or Path(args.m3u).stem
-        print(ngettext("Playlist '{name}': {count} track, {to_copy} to copy ({size})",
-                       "Playlist '{name}': {count} tracks, {to_copy} to copy ({size})",
+        print(ngettext("Playlist “{name}”: {count} track, {to_copy} to copy ({size})",
+                       "Playlist “{name}”: {count} tracks, {to_copy} to copy ({size})",
                        len(tracks)).format(name=name, count=len(tracks),
                                            to_copy=len(plan.to_copy), size=human_size(plan.size)))
         if plan.replaced:
             print(music.replaced_text(plan))
         if not args.apply:
-            print(_("Dry run. Add --apply."))
+            print(_("Dry run: nothing was changed. Add --apply."))
             return 0
         with _progress() as progress:
             music.copy(plan, st, progress=progress)
@@ -2770,7 +2781,7 @@ def cmd_music(args) -> int:
     for m in matches:
         print(f"  - {m}")
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     n = len(music.remove(st, matches))
     print(ngettext("Removed {count} file.", "Removed {count} files.", n).format(count=n))
@@ -2794,7 +2805,7 @@ def cmd_install_desktop(args) -> int:
 
     if background.in_flatpak():
         print(_("In the Flatpak version, the menu entry is installed by Flatpak. Turn on "
-                "background sync in the window: main menu, Preferences, Sync in the background."))
+                "background sync in the window: main menu, Preferences, Background Sync."))
         return 0
 
     if args.remove:
@@ -2810,7 +2821,7 @@ def cmd_install_desktop(args) -> int:
             # TRANSLATORS: CLI install-desktop --remove: no launcher, icon or service file was found
             print(_("Nothing to remove."))
         elif not args.apply:
-            print(_("Dry run. Add --apply."))
+            print(_("Dry run: nothing was changed. Add --apply."))
         elif any(p.name == desktop.SERVICE for p in removed):
             print(_("The background sync service was stopped and disabled."))
         return 0
@@ -2833,7 +2844,7 @@ def cmd_install_desktop(args) -> int:
         print((_("Removed old file {path}") if args.apply
                else _("Would remove old file {path}")).format(path=p))
     if not args.apply:
-        print(_("Dry run. Add --apply."))
+        print(_("Dry run: nothing was changed. Add --apply."))
         return 0
     print("\n" + _("To enable background sync, run:"))
     print("  systemctl --user daemon-reload && systemctl --user enable --now " + desktop.SERVICE)
@@ -2909,7 +2920,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--utilities-dll", metavar="Utilities.dll",
                    help=_("path to Utilities.dll (default: next to Networking.dll)"))
     s.add_argument("--key",
-                   help=_("OAuth1 consumer key of Garmin Express; only together with --secret"))
+                   help=_("the application key of Garmin Express (its OAuth1 consumer key); "
+                          "only together with --secret"))
     s.add_argument("--secret",
                    help=_("OAuth1 consumer secret of Garmin Express; only together with --key"))
     s.add_argument("--environment", choices=sorted(ENVIRONMENTS),
@@ -3058,7 +3070,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--reinstalls", action="store_true",
                    help=_("also show items available for reinstall"))
     s.add_argument("--install", nargs="+", metavar="PART",
-                   help=_("part numbers to install, or 'all'"))
+                   help=_("part numbers to install, or “all”"))
     s.add_argument("--apply", action="store_true",
                    help=_("download the updates chosen with --install and copy them to the "
                           "device, accepting their licenses"))
@@ -3081,7 +3093,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("the map's name, or a part of it that only one map has; with --own the "
                           "exact file name of your own map"))
     m.add_argument("--own", action="store_true",
-                   help=_("remove a map of your own that was copied with 'maps add'"))
+                   help=_("remove a map of your own that was copied with “maps add”"))
     m.add_argument("--apply", action="store_true", help=_("remove the map from the device"))
     m = msub.add_parser("add", help=_("copy a map of your own (.img) to the device"))
     m.add_argument("file", metavar="FILE", help=_("a Garmin map file (.img) on this computer"))
@@ -3119,7 +3131,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_courses)
 
     register_help = _("add the connected device to your Garmin account (experimental; a "
-                      "trial run without --apply)")
+                      "dry run without --apply)")
     s = sub.add_parser("register", help=register_help, description=register_help)
     s.add_argument("--apply", action="store_true",
                    help=_("add it: changes your Garmin account"))
@@ -3131,7 +3143,8 @@ def build_parser() -> argparse.ArgumentParser:
     change_help = _("write the change to the device (it takes effect once unplugged)")
     apply_help = {
         "install": _("install the app, or queue it in Garmin Connect where USB cannot"),
-        "remove": _("remove it from the device (with --forget: also from your account list)"),
+        "remove": _("remove it from the device (with --forget: also from the app list of "
+                    "your Garmin account)"),
         "enable": change_help,
         "disable": change_help,
     }

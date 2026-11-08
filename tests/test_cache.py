@@ -94,7 +94,7 @@ def test_cache_command_lists_the_parts_and_the_total(cache, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
-        "  Answers of Garmin's servers: 0 B",
+        "  Garmin Server Responses: 0 B",
         "  Activity map tiles: 0 B",
         "  Temporary files: 0 B",
         "  Total: 5.8 kB"]
@@ -282,7 +282,7 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
-        "  Answers of Garmin's servers: 0 B",
+        "  Garmin Server Responses: 0 B",
         "  Activity map tiles: 100 B",
         "  Temporary files: 119 B",
         "  Total: 6.0 kB",
@@ -648,7 +648,7 @@ def test_the_group_shows_each_part_and_all_of_it(prefs, cache, tmp_path, monkeyp
         ("Entire Cache", "1.8\u00a0kB\u00a0· 3 files")]
     assert [b.get_sensitive() for _t, _s, b in rows] == [True, False, True, False, False, False,
                                                          True]
-    assert _button(group, "Entire Cache").get_label() == "Clear All…"
+    assert _button(group, "Entire Cache").get_label() == "Clear All"
 
 
 @pytest.mark.needs_display
@@ -694,7 +694,7 @@ def test_pictures_and_temporary_files_go_without_a_question(prefs, cache, tmp_pa
     trash.emit("clicked")
     assert prefs.dialogs == []
     assert prefs.tasks == [("Clearing the Cache…", False, trash)]
-    assert prefs.toasts == [f"Freed {freed}."] and prefs.errors == []
+    assert prefs.toasts == [f"Freed {freed}"] and prefs.errors == []
     left = _left(cache)
     for name in PARTS[part]:
         assert left[name] == []
@@ -739,7 +739,7 @@ def test_maps_and_updates_ask_first(prefs, cache, tmp_path, title, heading, body
 
 @pytest.mark.needs_display
 def test_clear_all_asks_with_the_total_and_clears_everything(prefs, cache, tmp_path):
-    """"Clear All…": the question names the maps and the rest; Clear empties every part, the
+    """"Clear All": the question names the maps and the rest; Clear empties every part, the
     rows then say so and every button is grey."""
     stay = filled(cache, tmp_path)
     group = prefs._cache_group()
@@ -757,7 +757,7 @@ def test_clear_all_asks_with_the_total_and_clears_everything(prefs, cache, tmp_p
     rows = storage_rows(group)
     assert [s for _t, s, _b in rows] == ["0\u00a0B\u00a0· 0 files"] * 7
     assert not any(b.get_sensitive() for _t, _s, b in rows)
-    assert prefs.toasts == ["Freed 6.0\u00a0kB."]
+    assert prefs.toasts == ["Freed 6.0\u00a0kB"]
 
 
 @pytest.mark.needs_display
@@ -803,7 +803,7 @@ def test_the_toast_goes_to_the_open_preferences(prefs, cache):
     group = prefs._cache_group()
     _counted(prefs, group)
     _button(group, "Pictures and Icons").emit("clicked")
-    assert shown == ["Freed 30\u00a0B."] and prefs.toasts == []
+    assert shown == ["Freed 30\u00a0B"] and prefs.toasts == []
     assert Adw.Toast  # (the real kind is built)
 
 
@@ -976,7 +976,7 @@ def test_clear_all_in_the_window_says_the_pictures_stay(prefs, cache):
         "(50\u00a0B). The maps will have to be downloaded again. The pictures of the devices "
         "openExpress remembers stay.")
     question.emit("response", "clear")
-    assert kept.exists() and prefs.toasts == ["Freed 150\u00a0B."]
+    assert kept.exists() and prefs.toasts == ["Freed 150\u00a0B"]
     rows = dict((t, (s, b.get_sensitive())) for t, s, b in storage_rows(group))
     assert rows["Pictures and Icons"] == ("10\u00a0B\u00a0· 1 file", True)  # its trash still
     assert rows["Entire Cache"] == ("10\u00a0B\u00a0· 1 file", False)  # nothing more to clear

@@ -20,9 +20,9 @@ from openexpress.settings import Consumer, Settings, SetupError, consumer_path, 
 
 NOT_SET_UP = "openExpress is not set up yet."
 NOT_LOGGED_IN = "Not signed in. Run: openexpress login"
-DAMAGED_LOGIN = "The saved sign-in is damaged; please sign in again."
+DAMAGED_LOGIN = "The saved sign-in is damaged; sign in again."
 OTHER_ENVIRONMENT = ("The token is for environment china, but the configured one is "
-                     "production. Please sign in again.")
+                     "production. Sign in again.")
 SERIAL = "MADE-UP-SERIAL-7"
 UUID = "ABCD-1234"
 
@@ -51,7 +51,7 @@ def damage_key():
 @pytest.mark.parametrize(("saved", "error", "text"), [
     ((), SetupError, NOT_SET_UP),
     ((login,), SetupError, NOT_SET_UP),  # the key is asked for before the login
-    ((damage_key,), SetupError, "The saved client key in "),
+    ((damage_key,), SetupError, "The saved application key in "),
     ((key,), store.NotLoggedIn, NOT_LOGGED_IN),
     ((key, damage_login), store.NotLoggedIn, DAMAGED_LOGIN),
     ((key, lambda: login("china")), SetupError, OTHER_ENVIRONMENT),

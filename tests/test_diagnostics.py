@@ -592,8 +592,8 @@ def test_the_row_says_the_crash_with_the_copy_off():
     assert _rows(win) == [
         ("Device Error Log", "RTL Trap\u00a0· 2026-10-20 22:24"),
         ("Error Details", "error 0x003\u00a0· at 0x10000abc\u00a0· screen 2301", []),
-        ("Crash Logs", ("Hidden from the file manager. While they are copied, the device "
-                        "leaves it for a moment"), ["Copy Crash Logs"]),
+        ("Crash Logs", ("Hidden from the file manager: while they are copied, the device "
+                        "disappears from it for a moment"), ["Copy Crash Logs"]),
         ("Memory Dumps", "1 dump\u00a0· 8.1\u00a0MB\u00a0· encrypted", ["Copy Memory Dumps"])]
 
 
@@ -646,8 +646,8 @@ def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
                         lambda device, storage, progress=None: diagnostics.Copied(
                             new=1, unchanged=1, saved=True, not_copied=["RAM_bak2.zip"]))
     copy_dumps(win)
-    assert win.toasts == [("2 memory dumps copied to this computer\u00a0· 1 not: over the "
-                           "limit of 50.0\u00a0MB")]
+    assert win.toasts == [("2 memory dumps copied to this computer\u00a0· 1 file skipped: "
+                           "larger than 50.0\u00a0MB")]
 
 
 @pytest.mark.needs_display
@@ -682,7 +682,7 @@ def test_cli_diagnostics_dry_run_copies_nothing(device, clock, monkeypatch, caps
             "(err_log.bak)") in out
     assert "Memory dumps on the device: 2, 500 B (encrypted; copied only with --dumps)" in out
     assert "Copies on this computer: No copy yet" in out
-    assert out[-1] == "Dry run. Add --apply to copy the files the device shows now."
+    assert out[-1] == "Dry run: nothing was copied. Add --apply to copy the files the device shows now."
     assert not diagnostics.folder(UNIT).exists() and st.sessions == 0
     assert not any(MADE_UP_UNIT in line or str(UNIT) in line or BACKTRACE[:16] in line
                    for line in out)
@@ -742,8 +742,8 @@ def test_the_row_in_polish():
     assert rows == [
         ("Dziennik błędów urządzenia", "RTL Trap\u00a0· 20.10.2026 o\u00a022:24"),
         ("Szczegóły błędu", "błąd 0x003\u00a0· adres 0x10000abc\u00a0· ekran 2301", []),
-        ("Dzienniki awarii", ("Ukryte przed menedżerem plików. Podczas kopiowania urządzenie "
-                              "na chwilę z\u00a0niego zniknie"), ["Skopiuj dzienniki awarii"]),
+        ("Dzienniki awarii", ("Ukryte przed menedżerem plików: podczas kopiowania urządzenie "
+                              "na chwilę z\u00a0niego znika"), ["Skopiuj dzienniki awarii"]),
         ("Zrzuty pamięci", "1 zrzut\u00a0· 8,1\u00a0MB\u00a0· zawartość zaszyfrowana",
          ["Skopiuj zrzuty pamięci"])]
 

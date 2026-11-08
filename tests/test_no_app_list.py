@@ -141,7 +141,7 @@ def test_cli_install_queues_it(no_list, device_root, apps_cli, capsys):
     st, _dev = no_list
     assert main(["--path", str(device_root), "apps", "install", "Face It"]) == 0
     out = capsys.readouterr().out
-    assert "Dry run. Add --apply." in out and "IN.BIN" not in out and FakeStore.queued == []
+    assert "Dry run: nothing was changed. Add --apply." in out and "IN.BIN" not in out and FakeStore.queued == []
     assert main(["--path", str(device_root), "apps", "install", "Face It", "--apply"]) == 0
     out = capsys.readouterr().out
     assert FakeStore.queued == [["Face It"]] and apps_files(st) == []

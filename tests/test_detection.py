@@ -716,6 +716,8 @@ FLATPAK_DRIVE_TEXT = ("The Garmin device is connected as a USB drive, but this v
                       "(Flatpak) has no access to /run/media, where the system mounted it.")
 MASS_STORAGE_TEXT = ("The device is connected in mass storage mode (as a USB drive): apps, "
                      "maps and music are not supported in this mode.")
+# The same on the pages of the window, without its full stop.
+MASS_STORAGE_PAGE = MASS_STORAGE_TEXT.removesuffix(".")
 # Made by hand after the Varia RTL515; the unit ID is made up.
 DRIVE_SERIAL = "0000abcdef56"
 MEDIA_USER = "made-up-user"  # the user folder in /run/media/<user>
@@ -1919,7 +1921,7 @@ def test_device_page_of_a_garmin_drive(drive_window, monkeypatch):
     for text in ("Varia RTL515", "Software 3.36", "Device Storage", "Device Software",
                  "Part Number", "006-B3592-03"):
         assert text in texts
-    for text in ("Sync With Garmin Connect", "Last Sync", "Sync automatically when connected",
+    for text in ("Sync With Garmin Connect", "Last Sync", "Syncs each time a device is connected, even when the window is closed",
                  "Maps"):
         assert text not in texts
     assert calls == ["_show_device_picture", "_check_updates_quietly"]
@@ -2842,9 +2844,9 @@ def test_a_failed_remembering_does_not_stop_the_detection(choosing_window, monke
 
 VARIA_UPDATE = b"GCD\x00" + bytes(range(256)) * 40  # made up; not an RGN file
 BIKE_ACCESSORY_TEXT = (
-    "Unplug the device and turn it on — it installs the update on its own and won't work for "
-    "a short while. The lights flash and may briefly go dark during the install; when it's "
-    "done, a light flashes green and the main light comes on.")
+    "Unplug the device and turn it on\u00a0– it installs the update on its own and will not "
+    "work for a short while. The lights flash and may briefly go dark during the install; when "
+    "it is done, a light flashes green and the main light comes on.")
 
 
 def varia_answer(data=VARIA_UPDATE):
@@ -3156,7 +3158,7 @@ def test_cli_says_a_copied_update_on_a_drive_waits_to_be_ejected(watch_and_drive
     assert cli.main(["updates"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert "Update copied, waiting for the device to install it:" in out
-    assert out[-1] == to_install and "Disconnect the device to install it." not in out
+    assert out[-1] == to_install and "Unplug the device to install it." not in out
     assert cli.main(["updates", "--install", "all"]) == 0
     assert capsys.readouterr().out.splitlines()[-1] == to_install
 
@@ -3264,7 +3266,7 @@ def test_pages_not_available_for_a_garmin_drive(drive_window, monkeypatch, force
     assert loaded == ["updates", "activities"]
     for key in ("maps", "apps", "music"):
         seen = win.sections[key].seen
-        assert seen == {"cleared": True, "title": key.title(), "description": MASS_STORAGE_TEXT,
+        assert seen == {"cleared": True, "title": key.title(), "description": MASS_STORAGE_PAGE,
                         "icon": f"{key}-symbolic", "shown": "info"}
         assert seen["description"] != gio_storage.not_ready_text(gio_storage.MASS_STORAGE)
     # Another device: every page loads.
@@ -4124,13 +4126,13 @@ def test_window_tells_a_garmin_in_mass_storage_mode(plugged, monkeypatch):
     assert updates == ["USB Drive"]  # the Sync button says why, told once
 
 
-REPLUG_HINT = "If the device isn't locked and isn't asking for anything, unplug the cable and plug it back in."
+REPLUG_HINT = "If the device is not locked and is not asking for anything, unplug the cable and plug it in again."
 # After the sentence about a PIN, which names the device already.
-REPLUG_HINT_AFTER_PIN = "If it isn't locked and isn't asking for anything, unplug the cable and plug it back in."
+REPLUG_HINT_AFTER_PIN = "If it is not locked and is not asking for anything, unplug the cable and plug it in again."
 # Added once the wait ran out (KDE's kmtpd, in kiod6, may hold the device).
 HELD_HINT = ("KDE's MTP service may be holding the device: it keeps it after Dolphin is closed "
              "and takes it back when the cable is plugged in again. Close Dolphin and run "
-             "kquitapp6 kiod6, then unplug the cable and plug it back in.")
+             "kquitapp6 kiod6, then unplug the cable and plug it in again.")
 STARTING_TEXT = "This takes a moment after the cable is plugged in"
 
 
@@ -6299,7 +6301,7 @@ def test_the_read_only_view_offers_no_action():
     view.show(name="Venu 2", version="Software 19.05", part_number="006-B3703-00",
               last_seen="Last seen 2026-10-17 14:27", last_sync="Not synced yet with openExpress")
     assert view.banner.get_revealed()
-    assert view.banner.get_title() == ("Device not connected — connect it to sync or update")
+    assert view.banner.get_title() == ("Device not connected\u00a0– connect it to sync or update")
     assert not view.sync_button.get_sensitive()
     assert not view.update_row.get_sensitive() and not view.map_row.get_sensitive()
     assert view.page.get_title() == "Venu 2"

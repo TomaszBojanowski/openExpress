@@ -67,9 +67,9 @@ def update_state_text(state: str | None, count: int = 0, only=None,
         ready = (ngettext("Update ready: eject the device to install it",
                           "Updates ready: eject the device to install them", waiting)
                  if mass_storage else
-                 ngettext("Update ready: disconnect the device to install it",
-                          "Updates ready: disconnect the device to install them", waiting))
-        # TRANSLATORS: after "Update ready: disconnect the device to install it": updates
+                 ngettext("Update ready: unplug the device to install it",
+                          "Updates ready: unplug the device to install them", waiting))
+        # TRANSLATORS: after "Update ready: unplug the device to install it": updates
         # still to install besides the one copied already
         more = ngettext("{count} more available", "{count} more available", count).format(
             count=count) if count else ""
@@ -152,7 +152,7 @@ def to_upload_text(count: int) -> str:
     from what that sync found."""
     # TRANSLATORS: at the end of the subtitle of "Last Sync" of a connected device (and of
     # `openexpress status`), after what the last sync found ("nothing to upload")
-    return ngettext("now to upload: {count} activity", "now to upload: {count} activities",
+    return ngettext("{count} activity to upload now", "{count} activities to upload now",
                     count).format(count=count)
 
 
@@ -333,7 +333,7 @@ def row_ascent_text(metres: float) -> str:
 
 def still_being_written_text() -> str:
     """An activity whose file its device was still writing when it was connected, in its row."""
-    return _("Still being written: disconnect and reconnect the device")
+    return _("Still being written: unplug the device and plug it in again")
 
 
 def still_being_written_title() -> tuple[str, str]:
@@ -341,7 +341,7 @@ def still_being_written_title() -> tuple[str, str]:
     still writing when it was connected."""
     # TRANSLATORS: title of the page of an activity whose file the device was still writing when
     # it was connected
-    return _("Still Being Written"), _("Disconnect and reconnect the device")
+    return _("Still Being Written"), _("Unplug the device and plug it in again")
 
 
 def damaged_file_text() -> str:
@@ -499,13 +499,13 @@ def tile_name(kind: str) -> str:
         # TRANSLATORS: the names of the tiles on top of the page of an activity
         "distance": pgettext("activity tile", "Distance"),
         "time": pgettext("activity tile", "Time"),
-        "pace": pgettext("activity tile", "Average pace"),
-        "swim pace": pgettext("activity tile", "Average pace"),
-        "speed": pgettext("activity tile", "Average speed"),
-        "average heart rate": pgettext("activity tile", "Average heart rate"),
-        "maximum heart rate": pgettext("activity tile", "Maximum heart rate"),
+        "pace": pgettext("activity tile", "Average Pace"),
+        "swim pace": pgettext("activity tile", "Average Pace"),
+        "speed": pgettext("activity tile", "Average Speed"),
+        "average heart rate": pgettext("activity tile", "Average Heart Rate"),
+        "maximum heart rate": pgettext("activity tile", "Maximum Heart Rate"),
         "calories": pgettext("activity tile", "Calories"),
-        "ascent": pgettext("activity tile", "Total ascent"),
+        "ascent": pgettext("activity tile", "Total Ascent"),
     }
     return names[kind]
 
@@ -553,23 +553,23 @@ def detail_name(kind: str) -> str:
     names = {
         # TRANSLATORS: the details of the page of an activity, as Garmin Connect names them in
         # your language: the time with the pauses
-        "elapsed time": pgettext("activity detail", "Elapsed time"),
-        "moving time": pgettext("activity detail", "Moving time"),
-        "work time": pgettext("activity detail", "Work time"),
-        "rest time": pgettext("activity detail", "Rest time"),
-        "descent": pgettext("activity detail", "Total descent"),
-        "minimum elevation": pgettext("activity detail", "Minimum elevation"),
-        "maximum elevation": pgettext("activity detail", "Maximum elevation"),
-        "moving pace": pgettext("activity detail", "Average moving pace"),
-        "moving speed": pgettext("activity detail", "Average moving speed"),
-        "best pace": pgettext("activity detail", "Best pace"),
-        "maximum speed": pgettext("activity detail", "Maximum speed"),
-        "cadence": pgettext("activity detail", "Average cadence"),
+        "elapsed time": pgettext("activity detail", "Elapsed Time"),
+        "moving time": pgettext("activity detail", "Moving Time"),
+        "work time": pgettext("activity detail", "Work Time"),
+        "rest time": pgettext("activity detail", "Rest Time"),
+        "descent": pgettext("activity detail", "Total Descent"),
+        "minimum elevation": pgettext("activity detail", "Minimum Elevation"),
+        "maximum elevation": pgettext("activity detail", "Maximum Elevation"),
+        "moving pace": pgettext("activity detail", "Average Moving Pace"),
+        "moving speed": pgettext("activity detail", "Average Moving Speed"),
+        "best pace": pgettext("activity detail", "Best Pace"),
+        "maximum speed": pgettext("activity detail", "Maximum Speed"),
+        "cadence": pgettext("activity detail", "Average Cadence"),
         "steps": pgettext("activity detail", "Steps"),
-        "heart rate": pgettext("activity detail", "Heart rate"),
+        "heart rate": pgettext("activity detail", "Heart Rate"),
         "calories": pgettext("activity detail", "Calories"),
         "temperature": pgettext("activity detail", "Temperature"),
-        "respiration": pgettext("activity detail", "Respiration rate"),
+        "respiration": pgettext("activity detail", "Respiration Rate"),
     }
     return names[kind]
 
@@ -736,7 +736,7 @@ def zone_name(number: int) -> str:
     """A zone by its number (1-5); 0: the time below zone 1."""
     if number == 0:
         # TRANSLATORS: the row of the time below zone 1 of the heart rate
-        return _("Below zone 1")
+        return _("Below Zone 1")
     # TRANSLATORS: a heart rate zone ("Zone 3")
     return _("Zone {number}").format(number=number)
 

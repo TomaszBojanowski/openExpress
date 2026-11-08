@@ -250,6 +250,10 @@ ALONE_ON_PURPOSE = {
         "the row of chips of start.py without Adw.WrapBox (libadwaita < 1.7), nothing else",
     ("test_activity_page.py", "activity_colours", "Adw"):
         "the accent colour without Adw.AccentColor (libadwaita < 1.6), nothing else",
+    ("test_error_pages.py", "device_page", "_"):
+        "a translation with brackets of the drive page's own words, nothing else",
+    ("test_error_pages.py", "music_page", "_"):
+        "a translation with brackets of the music page's own words, nothing else",
 }
 
 

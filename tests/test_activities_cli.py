@@ -80,7 +80,7 @@ def test_the_columns(device, backups, capsys, log_file):
     a_week(device, backups)
     code, lines = run(capsys, "--path", str(device), "activities")
     assert code == 0
-    assert lines[:2] == ["Test watch (software 23.39)", "  Reading activities"]
+    assert lines[:2] == ["Test watch, software 23.39", "  Reading activities"]
     assert columns(lines[2]) == ["Date", "Sport", "Time", "Distance", "Ascent", "Source", "File"]
     assert columns(lines[3]) == ["2026-10-30 07:00", "Running", "1:02:11", "12.40 km", "135 m",
                                  "device", "2026-10-30-07-00-00.fit"]
@@ -97,7 +97,7 @@ def test_the_sources_and_the_states(device, backups, capsys):
                                 "2026-10-29-18-00-00.fit"]
     assert columns(rows[2]) == ["2026-10-28 06:00", "–", "–", "–", "–", "device",
                                 "2026-10-28-06-00-00.fit"]
-    assert rows[3].strip() == "still being written: disconnect and reconnect the device"
+    assert rows[3].strip() == "still being written: unplug the device and plug it in again"
     # Under the sport, where the row's own words start.
     assert rows[3].index("still") == rows[2].index("–")
     assert columns(rows[4])[0] == "2026-10-27 07:00"

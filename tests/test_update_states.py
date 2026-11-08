@@ -27,7 +27,7 @@ from openexpress.device.storage import LocalStorage
 
 NB = "\u00a0"
 DAY = 86400.0
-READY = "Update ready: disconnect the device to install it"
+READY = "Update ready: unplug the device to install it"
 
 
 def _bundle():
@@ -331,7 +331,7 @@ def test_a_second_system_update_is_listed_while_one_is_ready():
     _win, status, groups, _buttons = _updates_page(items + other)
     assert status["texts"][0][0] == f"{READY}{NB}· 1 more available"
     (available, *_rest) = groups
-    assert [r.get_title() for r in available.rows] == ["System Software"]
+    assert [r.get_title() for r in available.rows] == ["Device Software"]
     assert "Install" not in [label for label, _s in status["buttons"]]
 
 

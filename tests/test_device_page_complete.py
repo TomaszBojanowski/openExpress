@@ -42,7 +42,7 @@ def _page(device=None, **session):
                  "_show_primary_training"):
         setattr(win, name, lambda *a, **kw: None)
     win.select_section = win.went.append
-    win._auto_sync_row = lambda: Adw.ActionRow(title="Sync automatically when connected")
+    win._auto_sync_row = lambda: Adw.ActionRow(title="Syncs each time a device is connected, even when the window is closed")
     for name in ("show_overview", "_set_update_state", "_render_update_state",
                  "_highlight_update"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
@@ -102,7 +102,7 @@ def test_no_rows_for_a_drive_and_no_music_row_for_a_device_without_music():
 
 
 DRIVE_SYNC_NOTE = ("A device connected as a USB drive is synced with the Sync button only, "
-                   "never in the background.")
+                   "never in the background")
 
 
 def _groups(section):
@@ -117,10 +117,10 @@ def test_a_drive_that_may_sync_has_the_sync_group_without_the_background_row():
     groups = _groups(section)
     assert "USB Drive" not in groups
     assert groups["Sync With Garmin Connect"].get_description() == DRIVE_SYNC_NOTE
-    assert "Sync automatically when connected" not in _rows(section)
+    assert "Syncs each time a device is connected, even when the window is closed" not in _rows(section)
     _win, section = _page()  # a device over MTP: the row, no line
     assert not _groups(section)["Sync With Garmin Connect"].get_description()
-    assert "Sync automatically when connected" in _rows(section)
+    assert "Syncs each time a device is connected, even when the window is closed" in _rows(section)
 
 
 @pytest.mark.needs_display
@@ -317,7 +317,7 @@ def _labels(widget):
 def test_the_maps_page_names_the_map_update_type():
     section = _maps_page("Gemini")
     labels = [t for g in section.groups for t in _labels(g)]
-    assert "Map updates for this device aren't supported yet" in labels
+    assert "Map updates for this device are not supported yet" in labels
     assert "Garmin's map update type for this device: Gemini" in labels
     section = _maps_page(None)
     assert not any("map update type" in t for g in section.groups for t in _labels(g))

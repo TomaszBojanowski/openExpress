@@ -686,7 +686,7 @@ class RememberedPage:
         self.sync_button = Gtk.Button(label=_("Sync"), sensitive=False)
         header.pack_end(self.sync_button)
         self.banner = Adw.Banner(
-            title=_("Device not connected — connect it to sync or update"), revealed=True)
+            title=_("Device not connected\u00a0– connect it to sync or update"), revealed=True)
         self.sync_button.set_tooltip_text(self.banner.get_title())
 
         content = Adw.PreferencesPage()
@@ -740,7 +740,7 @@ class RememberedPage:
         self.forget_group = Adw.PreferencesGroup(visible=False)
         # TRANSLATORS: button at the bottom of the page of a device not connected: this
         # computer forgets what it keeps of the device (it asks first)
-        self.forget_button = Gtk.Button(label=_("Forget Device…"), halign=Gtk.Align.CENTER,
+        self.forget_button = Gtk.Button(label=_("Forget Device"), halign=Gtk.Align.CENTER,
                                         css_classes=["destructive-action", "pill"])
         self.forget_group.add(self.forget_button)
         content.add(self.forget_group)
@@ -803,7 +803,7 @@ class RememberedPage:
         self.account_group.set_visible(bool(rows))
 
     def allow_forget(self, on: bool) -> None:
-        """Whether the button "Forget Device…" is there: for a device remembered here, not one
+        """Whether the button "Forget Device" is there: for a device remembered here, not one
         only on the account."""
         self.forget_group.set_visible(on)
 

@@ -1,5 +1,5 @@
 """Network errors say neither the address nor the device: a requests error names the whole
-address, and the Connect IQ store is asked with the unit ID and part number in the query, a
+address, and the Connect IQ Store is asked with the unit ID and part number in the query, a
 download with a signed address (garmindlm). Both go the way of the client: ApiError
 (DownloadError), the address left out, filtered as the log. All made up."""
 

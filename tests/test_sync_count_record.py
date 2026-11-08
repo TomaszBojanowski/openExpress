@@ -283,7 +283,7 @@ def test_the_last_sync_of_the_device_page_says_the_count_from_the_record_too():
         session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT),
                                       ownership_error=None, to_sync=None))
     MainWindow._show_last_sync(win)
-    assert win.last_sync_row.get_subtitle().endswith("\u00a0· now to upload: 2 activities")
+    assert win.last_sync_row.get_subtitle().endswith("\u00a0· 2 activities to upload now")
 
 
 # --- the first frame comes before the account's list --------------------------------------------

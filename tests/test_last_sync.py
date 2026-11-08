@@ -110,14 +110,18 @@ def test_every_row_of_a_sync_that_uploaded_nothing(data, english, polish):
 
 @pytest.mark.parametrize(("reason", "english", "polish"), [
     ("no-consent",
-     ("Nothing was uploaded: the Garmin account has no consent to upload data from devices"),
+     ("Nothing was uploaded: the Garmin account has no consent to upload data from devices; "
+      "turn it on in Garmin Connect"),
      ("Nie wysłano danych: na koncie Garmin nie ma zgody na przesyłanie danych "
-      "z\u00a0urządzeń")),
-    ("sync-off", "Nothing was uploaded: device sync is turned off in the Garmin account",
-     "Nie wysłano danych: synchronizacja urządzeń jest wyłączona na koncie Garmin"),
+      "z\u00a0urządzeń; włącz ją w\u00a0Garmin Connect")),
+    ("sync-off",
+     ("Nothing was uploaded: device sync is turned off in the Garmin account; turn it on in "
+      "Garmin Connect"),
+     ("Nie wysłano danych: synchronizacja urządzeń jest wyłączona na koncie Garmin; włącz ją "
+      "w\u00a0Garmin Connect")),
     ("not-checked",
-     "Nothing was uploaded: the upload consent could not be checked. Try again later",
-     ("Nie wysłano danych: nie udało się sprawdzić zgody na przesyłanie. Spróbuj ponownie "
+     "Nothing was uploaded: the upload consent could not be checked; try again later",
+     ("Nie wysłano danych: nie udało się sprawdzić zgody na przesyłanie; spróbuj ponownie "
       "później")),
 ])
 def test_the_details_say_in_full_why_nothing_was_uploaded(reason, english, polish):
@@ -279,7 +283,7 @@ def test_the_device_page_switches_the_automatic_sync(enabled):
                    set_background=lambda on, result: asked.append((on, result)))
     row = MainWindow._auto_sync_row(win)
     assert row.get_title() == "Background Sync"
-    assert row.get_subtitle() == "Sync automatically when connected"
+    assert row.get_subtitle() == "Syncs each time a device is connected, even when the window is closed"
     assert row.get_active() is enabled and asked == []
     row.set_active(not enabled)
     ((wanted, result),) = asked

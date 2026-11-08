@@ -125,7 +125,7 @@ def test_a_device_that_makes_no_courses_of_gpx_files(drive):
     win, section = courses_window(drive, offered=False)
     win.load_courses()
     assert section.stack.get_visible_child_name() == "info"
-    assert section.info.get_description() == "This device does not make courses of GPX files."
+    assert section.info.get_description() == "This device does not make courses of GPX files"
 
 
 def test_the_title_in_the_header_carries_the_chip():
@@ -235,7 +235,7 @@ def test_a_file_that_is_not_copied_is_said_and_nothing_is_asked(drive, tmp_path,
     bad = tmp_path / "bad.gpx"
     bad.write_text("<not a gpx file")
     win.add_course(bad)
-    assert asked == [] and win.errors == [("Cannot Add the Course", "bad.gpx is not a GPX file.")]
+    assert asked == [] and win.errors == [("Course Not Added", "bad.gpx is not a GPX file.")]
     assert list((drive / "Garmin/NewFiles").iterdir()) == []
 
 
@@ -306,7 +306,7 @@ def test_each_course_and_file_waiting_has_its_remove_button(drive, clock, told):
     win, section = courses_window(drive)
     win.load_courses()
     buttons = trash_buttons(section.page)
-    assert len(buttons) == 2 and {b.get_tooltip_text() for b in buttons} == {"Remove…"}
+    assert [b.get_tooltip_text() for b in buttons] == ["Remove By Hand", "Remove Morning Loop"]
     assert [p[Gtk.AccessibleProperty.LABEL] for w, p in told if w in buttons] == [
         "Remove By Hand", "Remove Morning Loop"]
 
@@ -335,7 +335,7 @@ def test_removing_a_course_asks_then_removes_it(drive, clock, asked, kind, body)
     _remove(section, "Along the River")
     (q,) = asked
     assert (q.name, q.heading, q.body) == ("course-remove",
-                                           "Remove “Along the River” from the Device?", body)
+                                           "Remove “Along the River” From the Device?", body)
     (remove,) = q.answers
     assert (remove.label, remove.look) == ("Remove", "destructive")
     remove.run()
@@ -367,7 +367,7 @@ def test_removing_a_file_waiting(drive, asked):
     win.load_courses()
     _remove(section, "Morning Loop")
     (q,) = asked
-    assert (q.heading, q.body) == ("Remove “Morning Loop” from the Device?",
+    assert (q.heading, q.body) == ("Remove “Morning Loop” From the Device?",
                                    "The device has not made a course of it yet.")
     q.answers[0].run()
     assert not waiting.exists() and win.toasts == ["Removed “Morning Loop” from the device."]
@@ -391,7 +391,7 @@ def test_a_file_gone_before_the_question_is_said_and_the_list_read_again(drive, 
     course.unlink()  # the device unplugged and the file removed elsewhere
     _remove(section, "By Hand")
     assert asked == []
-    assert win.errors == [("Cannot Remove the Course", "Hand.fit is no longer on the device.")]
+    assert win.errors == [("Course Not Removed", "Hand.fit is no longer on the device.")]
     assert win.loads == ["courses"]
     empty = "Copy a GPX file with a track or a route\u00a0– the device turns it into a course."
     assert labels(section.page)[:2] == ["No Courses on the Device", empty]
@@ -407,7 +407,7 @@ def test_a_file_changed_after_the_question_is_not_removed(drive, clock, asked):
     asked[0].answers[0].run()
     assert course.exists() and win.toasts == []
     said = "Hand.fit has changed since the list was shown, so it is not removed."
-    assert win.errors == [("Cannot Remove the Course", said)]
+    assert win.errors == [("Course Not Removed", said)]
     assert win.loads == ["courses"]
 
 

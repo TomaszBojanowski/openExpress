@@ -177,7 +177,7 @@ def load_consumer() -> Consumer:
         return Consumer(str(data["key"]), str(data["secret"]), data.get("url_salt"))
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise SetupError(_(
-            "The saved client key in {path} is damaged. Run again: "
+            "The saved application key in {path} is damaged. Run again: "
             "openexpress setup --from-installer /path/to/GarminExpress.exe"
         ).format(path=path)) from e
 
@@ -222,7 +222,7 @@ def extract_consumer_from_dll(dll: Path) -> Consumer:
         if (_UUID_RE.match(s) and _SECRET_RE.match(strings[i + 1])
                 and i > 0 and strings[i - 1].startswith("https://")):
             return Consumer(s, strings[i + 1])
-    raise SetupError(_("Consumer key not found in {path}").format(path=dll))
+    raise SetupError(_("Application key not found in {path}").format(path=dll))
 
 
 def extract_url_salt_from_dll(dll: Path) -> str:

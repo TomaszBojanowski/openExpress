@@ -235,12 +235,12 @@ def _stopped_page(url: str, view):
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, valign=Gtk.Align.CENTER,
                   margin_start=24, margin_end=24, margin_top=24, margin_bottom=24)
     box.append(Gtk.Image(icon_name="dialog-warning-symbolic", pixel_size=64))
-    title = Gtk.Label(label=_("The sign-in page stopped working"), wrap=True)
+    title = Gtk.Label(label=_("Sign-In Page Not Working"), wrap=True)
     title.add_css_class("title-2")
     box.append(title)
     text = Gtk.Label(label=_("Try again, or sign in without this window: run this command in "
-                             "a terminal, sign in in your web browser and paste the address "
-                             "you end up on."),
+                             "a terminal, sign in in your web browser, then paste the address "
+                             "the browser shows at the end."),
                      wrap=True, justify=Gtk.Justification.CENTER, max_width_chars=50)
     text.add_css_class("dim-label")
     box.append(text)
@@ -363,7 +363,7 @@ def login_manual(settings: Settings) -> ServiceTicket:
     print(_("1. Open this URL in your browser:"))
     print("   " + sign_in_url(settings))
     print(_("2. Sign in. Afterwards, copy the full URL from the browser's address bar\n"
-            "   (it contains 'ticket=ST-...'). If the browser shows an error, "
+            "   (it contains “ticket=ST-…”). If the browser shows an error, "
             "the URL still works."))
     url = input(_("3. Paste the URL: ")).strip()
     st = ticket_from_url(url)

@@ -118,7 +118,7 @@ def test_what_cannot_be_exported_says_why_and_nothing_is_written(device, gpx_fol
     no_positions = ("Error: 2026-10-29-18-00-00.fit: This activity has no GPS positions, so it "
                     "cannot be exported as GPX.")
     still_written = ("Error: 2026-10-28-06-00-00.fit was still being written by the device when "
-                     "it was read. Disconnect and reconnect the device, then export it again.")
+                     "it was read. Unplug the device and plug it in again, then export it again.")
     assert err.splitlines() == [
         no_positions, still_written,
         "Error: No activity named gone.fit is on the device or in its backups.",

@@ -184,7 +184,7 @@ class GarminClient:
         token = secret = None
         if with_token:
             if self.auth is None:
-                raise Unauthorized(_("Connect token is missing (openexpress login)."))
+                raise Unauthorized(_("Not signed in. Run: openexpress login"))
             token, secret = self.auth.token, self.auth.token_secret
         return authorization_header(
             method, url, self.consumer.key, self.consumer.secret, token, secret, form
@@ -244,7 +244,7 @@ class GarminClient:
             return resp.json()
         except ValueError as e:  # includes requests' JSONDecodeError
             raise ApiError(
-                _("{what}: unexpected response from the server").format(what=what),
+                unexpected_answer_text(what),
                 resp.status_code,
                 resp.text[:500],
             ) from e
@@ -256,7 +256,8 @@ class GarminClient:
         if netstatus.kind_of(resp.status_code, skew) != netstatus.CLOCK:
             return None
         return ClockSkew(
-            _("{action}: computer clock is off from the server by {minutes} min")
+            _("{action}: this computer's clock is {minutes} min off; let the system set the "
+              "time and try again")
             .format(action=what, minutes=int(skew // 60)),
             resp.status_code,
         )
@@ -267,7 +268,7 @@ class GarminClient:
             if skew is not None:
                 raise skew
             raise Unauthorized(
-                _("{action}: unauthorized (HTTP {status}). Please sign in again.")
+                _("{action}: the sign-in has expired (HTTP {status}). Sign in again.")
                 .format(action=what, status=resp.status_code),
                 resp.status_code,
                 resp.text[:500],
@@ -372,7 +373,7 @@ class GarminClient:
         body = lower_keys(self._json(r, what))
         matches = (body.get("matches") if isinstance(body, dict) else None) or {}
         if not isinstance(matches, dict):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+            raise ApiError(unexpected_answer_text(what))
         out = {}
         for i in ids:
             m = matches.get(i.lower()) or {}
@@ -582,8 +583,7 @@ class GarminClient:
             r = self._connect("GET", "device-service/deviceregistration/devices", what)
             body = lower_keys(self._json(r, what))
             if not isinstance(body, list) or not all(isinstance(d, dict) for d in body):
-                raise ApiError(_("{what}: unexpected response from the server")
-                               .format(what=what))
+                raise ApiError(unexpected_answer_text(what))
             return body
 
         return answers.ANSWERS.ask(answers.ACCOUNT_DEVICES, self.account_scope(), ask,
@@ -603,7 +603,7 @@ class GarminClient:
             return None
         body = lower_keys(self._json(r, what))
         if not isinstance(body, dict):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+            raise ApiError(unexpected_answer_text(what))
         return body
 
     def device_sync_preference(self) -> dict | None:
@@ -618,7 +618,7 @@ class GarminClient:
             return None
         body = lower_keys(self._json(r, what))
         if not isinstance(body, dict):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+            raise ApiError(unexpected_answer_text(what))
         return body
 
     def profile_country(self, fresh: bool = False) -> str | None:
@@ -650,6 +650,8 @@ class GarminClient:
         self.require_verified()
 
         def ask():
+            # TRANSLATORS: the name of a request to Garmin's server, shown before its error
+            # ("Primary training device: network error (…)")
             what = pgettext("server request", "Primary training device")
             r = self._connect("GET", PRIMARY_TRAINING_PATH, what,
                               params={"ignoreCache": "false"})
@@ -659,8 +661,7 @@ class GarminClient:
             if body is None:
                 return {}
             if not isinstance(body, dict):
-                raise ApiError(_("{what}: unexpected response from the server")
-                               .format(what=what))
+                raise ApiError(unexpected_answer_text(what))
             return body
 
         return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self.account_scope(), ask,
@@ -683,7 +684,10 @@ class GarminClient:
         accepted; callers read the account's device list back to confirm."""
         self.require_verified(unit_id)
         path = f"device-service/deviceservice/device-info/{unit_id}/primary-activity-tracker"
-        self._connect("PUT", path, _("Primary wearable"), data=json.dumps(True),
+        # TRANSLATORS: the name of a request to Garmin's server, shown before its error
+        # ("Primary wearable: network error (…)")
+        self._connect("PUT", path, pgettext("server request", "Primary wearable"),
+                      data=json.dumps(True),
                       headers={"Content-Type": "application/json"})
 
     # --- adding a device to the account (experimental) -----------------------------------
@@ -791,7 +795,7 @@ class GarminClient:
         )
         body = lower_keys(self._json(r, what))
         if not isinstance(body, dict):
-            raise ApiError(_("{what}: unexpected response from the server").format(what=what))
+            raise ApiError(unexpected_answer_text(what))
         return body.get("messages") or []
 
     def download_message(self, message_url: str, absolute: bool) -> bytes | None:
@@ -799,7 +803,7 @@ class GarminClient:
         self.require_verified()
         url = message_url if absolute else self.connect_url(message_url)
         url = self._prepared_url("GET", url)
-        what = _("Downloading file from Connect")
+        what = _("Downloading a file from Garmin Connect")
         h = self._client_headers()
         h["Accept"] = "application/octet-stream, application/json, */*"
         h["Authorization"] = self._sign("GET", url)
@@ -820,6 +824,14 @@ class GarminClient:
             params={"status": "received"},
             headers={"X-HTTP-Method-Override": "PUT"},
         )
+
+
+def unexpected_answer_text(what: str) -> str:
+    """An answer of Garmin's server the program cannot read; `what`: the request's name."""
+    # TRANSLATORS: an error: Garmin's server answered something openExpress cannot read; {what}:
+    # the name of the request
+    return _("{what}: Garmin's server gave an answer openExpress does not understand; try "
+             "again later").format(what=what)
 
 
 def acknowledge(client: GarminClient, message_id) -> None:

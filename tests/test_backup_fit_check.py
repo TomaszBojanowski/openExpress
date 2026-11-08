@@ -20,8 +20,8 @@ from openexpress.device.storage import LocalStorage, RemountFailed, UmsStorage
 from openexpress.device.xmldevice import parse
 
 CUT = "GARMIN/Activity/2026-10-03-10-00-00.fit"
-TEXT = ("1 file was still being written by the device and is not in the backup. Disconnect "
-        "and reconnect the device, then make the backup again.")
+TEXT = ("1 file was still being written by the device and is not in the backup. Unplug the "
+        "device and plug it in again, then make the backup again.")
 
 
 def _device(device_root):
@@ -90,8 +90,8 @@ def test_the_words_of_the_summary():
     i18n.setup("pl")
     try:
         assert backup.incomplete_text(1) == (
-            "1 plik był jeszcze zapisywany przez urządzenie i nie trafił do kopii. "
-            "Odłącz i podłącz urządzenie, a potem zrób kopię jeszcze raz.")
+            "1 plik był jeszcze zapisywany przez urządzenie i\u00a0nie trafił do kopii. "
+            "Odłącz urządzenie i\u00a0podłącz je ponownie, a\u00a0potem zrób kopię jeszcze raz.")
         assert backup.incomplete_text(5).startswith("5 plików było jeszcze zapisywanych")
     finally:
         i18n.setup("en")

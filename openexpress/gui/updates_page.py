@@ -441,7 +441,7 @@ class UpdatesPage:
         row = Adw.ActionRow(
             # TRANSLATORS: title of the row of an update of the device's own software (firmware), on
             # the Updates page
-            title=GLib.markup_escape_text(_("System Software") if u.is_system else u.title),
+            title=GLib.markup_escape_text(_("Device Software") if u.is_system else u.title),
             subtitle=GLib.markup_escape_text(subtitle),
         )
         if waits_for is None:

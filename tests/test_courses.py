@@ -497,7 +497,7 @@ def test_add_is_a_dry_run_without_apply(courses_cli, tmp_path, capsys):
         "  The device makes 2 courses when you unplug the cable.",
         ("  Garmin devices join the points of a route with straight lines, not roads. For a "
          "course along roads, export a track instead of a route.")]
-    assert out[5].startswith("Free space on the device: ") and out[-1] == "Dry run. Add --apply."
+    assert out[5].startswith("Free space on the device: ") and out[-1] == "Dry run: nothing was changed. Add --apply."
     assert sorted(p.name for p in (courses_cli / "GARMIN" / "NewFiles").iterdir()) == []
 
 
@@ -547,7 +547,7 @@ def test_remove_a_course_by_a_part_of_its_name(courses_cli, clock, capsys):
         "Removing course: Along the River",
         f"  - GARMIN/Courses/Along.fit  ({human(courses_cli / 'GARMIN/Courses/Along.fit')})",
         "  The device keeps no other copy of it; Garmin Connect can send it again.",
-        "Dry run. Add --apply."]
+        "Dry run: nothing was changed. Add --apply."]
     assert run(courses_cli, "remove", "RIVER", "--apply") == 0
     assert capsys.readouterr().out.splitlines()[-1].startswith("Removed GARMIN/Courses/Along.fit")
     assert not (courses_cli / "GARMIN" / "Courses" / "Along.fit").exists()

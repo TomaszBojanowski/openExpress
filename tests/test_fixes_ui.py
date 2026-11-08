@@ -284,7 +284,7 @@ def test_setup_does_not_show_any_of_the_key(xdg, capsys):
     """The consumer key comes from the user's own installer: not even its start is printed."""
     assert main(["setup", "--key", "deadbeef-made-up-key", "--secret", "made-up-secret"]) == 0
     said = capsys.readouterr()
-    assert "Saved OAuth1 consumer key in " in said.out
+    assert "Saved the application key in " in said.out
     assert "deadbeef" not in said.out + said.err and "secret" not in said.out + said.err
 
 
@@ -846,7 +846,7 @@ def offered(device_root, monkeypatch):
         ("006-DA001-00", "Etyp", "Etyp", "DA00100.sid", OFFERED_BYTES["DA00100.sid"], "Recommended"),
         ("006-DA002-00", "Etyp", "Etyp", "DA00200.sid", OFFERED_BYTES["DA00200.sid"], "Recommended"),
         ("006-DA003-00", "Etyp", "Etyp", "DA00300.sid", OFFERED_BYTES["DA00300.sid"], "Recommended"),
-        ("006-B0000-00", "Test watch System Software", "Firmware", "GUPDATE.GCD",
+        ("006-B0000-00", "Test watch Device Software", "Firmware", "GUPDATE.GCD",
          OFFERED_BYTES["GUPDATE.GCD"], "Critical"))
     monkeypatch.setattr(GarminClient, "software_updates",
                         lambda self, raw, include_reinstalls=False: answer)
@@ -901,7 +901,7 @@ def test_readable_names_of_types_and_severities(offered):
     etyp, _two, _three, firmware = upd.parse_updates(answer)
     assert (etyp.title, etyp.filename, etyp.severity_text) == (
         "Map support file", "DA00100.sid", "Recommended")
-    assert firmware.title == "Test watch System Software"  # a real name is kept
+    assert firmware.title == "Test watch Device Software"  # a real name is kept
     assert firmware.severity_text == "Critical"
     etyp.datatype = etyp.name = "SomethingNew"
     etyp.severity = "Urgent"  # made up
@@ -930,7 +930,7 @@ def test_cli_updates_counts_only_real_updates(offered, capsys):
     assert out[1] == "Available updates: 3"
     assert out[2:5] == [
         # GUPDATE.GCD: a system update, although the server sets neither flag.
-        "  006-B0000-00          2.70  Critical           2 B  Test watch System Software [PRIMARY]",
+        "  006-B0000-00          2.70  Critical           2 B  Test watch Device Software [PRIMARY]",
         "  006-DA002-00          2.70  Recommended        9 B  Map support file (DA00200.sid)",
         "  006-DA003-00          2.70  Recommended        7 B  Map support file (DA00300.sid)"]
     assert "Already on the device: 1" in out and not any("DA00100" in line for line in out)
@@ -1605,11 +1605,11 @@ def test_cli_says_what_to_do_after_every_install(offered, downloads, xdg, capsys
         "Copied 1 file.",
         "",
         "To finish the installation:",
-        "  1. Disconnect the device from the computer.",
+        "  1. Unplug the device from the computer.",
         "  2. If the device does not turn on by itself, turn it on.",
         "  3. The device installs the update by itself. It may ask whether to install it:",
         "     choose to install now. It may also restart. Wait until it has finished.",
-        "  4. Reconnect it and run `openexpress updates`: the installed update",
+        "  4. Plug it in again and run `openexpress updates`: the installed update",
         "     should no longer be listed.",
     ]
 

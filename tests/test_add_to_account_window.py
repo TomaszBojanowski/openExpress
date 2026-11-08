@@ -1,4 +1,4 @@
-"""Add to Account… in the window (experimental): offered for a device the account's list does not
+"""Add to Account in the window (experimental): offered for a device the account's list does not
 hold, by the banner and by a row of the Device page; a question naming the device and the
 account first; then service.add_device as an account task, and what came of it said. All IDs
 and names here are made up."""
@@ -117,7 +117,7 @@ def test_the_banner_offers_it_and_its_button_asks(device_root, asked):
                                     set_revealed=lambda r: seen.update(revealed=r)))
     MainWindow._update_banner(win)
     assert seen == {"title": "This device is not registered to your Garmin account",
-                    "button": "Add to Account…", "revealed": True}
+                    "button": "Add to Account", "revealed": True}
     assert win._banner_kind == "add"
     MainWindow._banner_action(win)
     assert [q.name for q in asked] == ["add-to-account"]
@@ -132,7 +132,7 @@ def test_the_question_names_the_device_and_the_account(device_root, asked):
     add_to_account.confirm_add_to_account(win)
     (q,) = asked
     assert q.heading == "Add Test watch to Your Garmin Account?"
-    assert ACCOUNT in q.body and "GarminDevice.xml" in q.body and "unit ID" in q.body
+    assert ACCOUNT in q.body and "GarminDevice.xml" in q.body and "Unit ID" in q.body
     assert "same account" in q.body and "only in Garmin Connect" in q.body
     assert q.body.endswith("This is an experimental feature.")
     (answer,) = q.answers
@@ -235,8 +235,8 @@ def test_the_row_of_the_page_offers_it(asked):
         device=types.SimpleNamespace(description="Test watch", unit_id=None))
     group = Adw.PreferencesGroup()
     group.add(add_to_account.add_to_account_row(win, win.session))
-    assert _row_texts(group) == [("On the Account", f"Not on the account {ACCOUNT}")]
+    assert _row_texts(group) == [("Garmin Account", f"Not on the account {ACCOUNT}")]
     (button,) = [w for w in descendants(group) if isinstance(w, Gtk.Button)
-                 and w.get_label() == "Add to Account…"]
+                 and w.get_label() == "Add to Account"]
     button.emit("clicked")
     assert [q.name for q in asked] == ["add-to-account"]

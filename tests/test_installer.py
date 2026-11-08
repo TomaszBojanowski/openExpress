@@ -131,7 +131,7 @@ def test_an_installer_that_is_not_there(tmp_path):
 # --- an installer for macOS -----------------------------------------------------------------
 # Only the installer for Windows has the two DLLs. For a macOS disk image the command line and
 # the window both say what the file is and which one is needed, not that it "does not look
-# like a Garmin Express installer" or "Consumer key not found". The file is told by its
+# like a Garmin Express installer" or "Application key not found". The file is told by its
 # bytes, not by its name.
 
 MACOS_TEXT = ("{file} is an installer for macOS. openExpress needs the Garmin Express installer "
@@ -326,7 +326,7 @@ def test_the_choice_of_the_file_says_which_installer(in_the_window):
 
     in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
     app.MainWindow.choose_dll(stand_in())
-    assert titles == ["Select the Garmin Express Installer for Windows (GarminExpress.exe)"]
+    assert titles == ["Choose the Garmin Express Installer for Windows (GarminExpress.exe)"]
 
 
 @pytest.mark.needs_display

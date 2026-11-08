@@ -304,7 +304,7 @@ def _attach_log(dialog):
 def test_open_on_github_fills_in_the_report(monkeypatch, device_root, log_file):
     dialog, text, opened, copied, said = _report_dialog(monkeypatch, device_root)
     assert "nothing is published until you submit it" in dialog.get_body()
-    assert "no serial number, unit ID or e-mail" in dialog.get_body()
+    assert "no serial number, Unit ID or e-mail" in dialog.get_body()
     assert dialog.get_response_label("open") == "Open on GitHub"
     assert dialog.get_response_label("copy") == "Copy"  # still there
     dialog.emit("response", "open")
@@ -442,7 +442,7 @@ def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
     assert dialog.get_body() == (
         "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z\u00a0wypełnionym raportem; nic nie zostanie "
         "opublikowane, dopóki go nie wyślesz. Raport nie zawiera numeru seryjnego, "
-        "identyfikatora urządzenia ani adresu e-mail.")  # the same words as on the command line
+        "numeru Unit ID ani adresu e-mail.")  # the same words as on the command line
     assert said == []  # the dialog says it (test_the_sentence_about_the_log_in_polish)
     assert said_too_long == ["Raport skopiowany: wklej go w\u00a0formularzu"]
 
@@ -457,7 +457,7 @@ def test_cli_report_prints_an_address_with_the_report(device_root, xdg, log_file
     out = capsys.readouterr()
     url = report.issue_url(out.out, "Test watch")
     assert url and url in out.err  # the report on stdout is the one in the address
-    assert ("This report contains no serial number, unit ID or e-mail. Open this address to "
+    assert ("This report contains no serial number, Unit ID or e-mail. Open this address to "
             f"start a device report with it filled in: {url}") in out.err
     assert "1234567890" not in out.err and "mtp" not in out.err
     assert "The log is not in the address" not in out.err
@@ -499,7 +499,7 @@ def test_cli_report_address_in_polish(device_root, xdg, log_file, capsys):
     finally:
         i18n.setup("en")
     err = capsys.readouterr().err
-    assert ("Ten raport nie zawiera numeru seryjnego, identyfikatora urządzenia ani adresu "
+    assert ("Ten raport nie zawiera numeru seryjnego, numeru Unit ID ani adresu "
             "e-mail. Otwórz ten adres, aby zacząć zgłoszenie z wypełnionym raportem: "
             "https://github.com/") in err
     assert ("Logu nie ma w adresie: wklej go w pole \u201eLog\u201d formularza albo "

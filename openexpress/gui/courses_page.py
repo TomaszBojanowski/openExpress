@@ -2,7 +2,7 @@
 it came from, the GPX files waiting for it under a banner of the page, how many saved locations it
 keeps, and Add Course…: a GPX file chosen (through the portal in the Flatpak, so from any
 folder), checked and planned, a question with the course's name to change, the copy; a row's
-Remove…: the course's file or the waiting file checked against the list, a question that says
+Remove: the course's file or the waiting file checked against the list, a question that says
 what is lost, the removal. courses.py decides all of it; this page shows it and asks.
 Has: nothing of its own in the window (the page reads the device each time it is shown).
 CoursesPage is a mixin of MainWindow (gui/app.py), without __init__ of its own; what it uses of
@@ -119,7 +119,7 @@ def waiting_banner(count: int) -> str:
 def remove_heading(name: str) -> str:
     # TRANSLATORS: heading of the question before a course or a GPX file waiting for the device
     # is removed from it
-    return _("Remove “{name}” from the Device?").format(name=name)
+    return _("Remove “{name}” From the Device?").format(name=name)
 
 
 def removed_toast(name: str) -> str:
@@ -347,7 +347,9 @@ class CoursesPage:
             sec.clear()
             sec.info.set_icon_name(PAGE_ICON)
             sec.info.set_title(sec.title)
-            sec.info.set_description(GLib.markup_escape_text(courses.not_offered_text()))
+            sec.info.set_description(GLib.markup_escape_text(
+                # TRANSLATORS: the Courses page of a device that does not take GPX files
+                _("This device does not make courses of GPX files")))
             sec.show("info")
             return
         self._load("courses", _("Reading Courses…"),
@@ -372,7 +374,9 @@ class CoursesPage:
         add.set_tooltip_text(add_tooltip())
         g.set_header_suffix(add)
         if "courses" in seen.unreadable:
-            g.add(Adw.ActionRow(title=_("The courses could not be read from the device")))
+            # TRANSLATORS: a row of the Courses page when the courses could not be read
+            g.add(Adw.ActionRow(title=_("Courses"),
+                                subtitle=_("Could not be read from the device")))
         elif not seen.courses:
             g.add(Adw.ActionRow(title=_("No Courses on the Device")))
         for course in seen.courses:
@@ -382,7 +386,10 @@ class CoursesPage:
             # TRANSLATORS: group of the Courses page: GPX files the device has not imported yet
             g = sec.group(pgettext("courses", "Waiting for the Device"))
             if "waiting" in seen.unreadable:
-                g.add(Adw.ActionRow(title=_("The files waiting could not be read")))
+                # TRANSLATORS: a row of the Courses page when the GPX files waiting for the
+                # device could not be read
+                g.add(Adw.ActionRow(title=_("Files Waiting"),
+                                    subtitle=_("Could not be read from the device")))
             for waiting in seen.waiting:
                 parts = [contents_text(waiting.gpx, short=True)] if waiting.gpx else []
                 if waiting.title != waiting.filename:
@@ -436,27 +443,25 @@ class CoursesPage:
         that a file was not copied); True when it was one."""
         if isinstance(e, CourseFileError | courses.CourseError):
             # TRANSLATORS: title of the message why a GPX file was not copied
-            self.error(title or _("Cannot Add the Course"), str(e))
+            self.error(title or _("Course Not Added"), str(e))
             return True
         return False
 
     def _remove_button(self, shown) -> Gtk.Button:
-        """Remove… of a row: its icon, its tooltip, and for a screen reader what it removes."""
-        # TRANSLATORS: tooltip of the button that removes a course or a waiting GPX file
-        button = self._trash(_("Remove…"), lambda: self.ask_remove_course(shown))
-        button.update_property([Gtk.AccessibleProperty.LABEL],
-                               [_("Remove {name}").format(name=shown.title)])
-        return button
+        """The trash button of a row: its tooltip names what it removes, for a screen reader
+        too."""
+        return self._trash(_("Remove {name}").format(name=shown.title),
+                           lambda: self.ask_remove_course(shown))
 
     def ask_remove_course(self, shown) -> None:
-        """Remove…: the file checked against what the list showed (courses.plan_remove), the
+        """Remove: the file checked against what the list showed (courses.plan_remove), the
         question with what is lost, then the removal through the core, as `courses remove`
         does. A refusal or a failure is said, and the page is read again."""
         s = self.session
 
         def refused(e):
             # TRANSLATORS: title of the message why a course or a waiting file was not removed
-            return self._course_refused(e, _("Cannot Remove the Course"))
+            return self._course_refused(e, _("Course Not Removed"))
 
         def removed(plan):
             self.toast(removed_toast(plan.title))

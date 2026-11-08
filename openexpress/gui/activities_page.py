@@ -156,10 +156,12 @@ def _no_activities(sec) -> None:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, halign=Gtk.Align.CENTER,
                   margin_top=24, margin_bottom=24)
     box.append(Gtk.Image(icon_name=PAGE_ICON, pixel_size=64))
-    words = Gtk.Label(label=_("There are no activities on the device or in its backups."),
-                      wrap=True, justify=Gtk.Justification.CENTER)
+    # TRANSLATORS: title of the Activities page when there are none
+    words = Gtk.Label(label=_("No Activities"), wrap=True, justify=Gtk.Justification.CENTER)
     words.add_css_class("title-2")
     box.append(words)
+    box.append(Gtk.Label(label=_("There are none on the device or in its backups"), wrap=True,
+                         justify=Gtk.Justification.CENTER, css_classes=["dim-label"]))
     sec.group().add(box)
 
 
@@ -177,7 +179,7 @@ class ActivitiesPage:
             sec.info.set_icon_name(PAGE_ICON)
             sec.info.set_title(sec.title)
             sec.info.set_description(GLib.markup_escape_text(
-                _("This device does not keep activities.")))
+                _("This device does not keep activities")))
             sec.show("info")
             return
         found = self.activities

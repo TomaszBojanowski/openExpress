@@ -57,7 +57,7 @@ def test_the_updates_page_says_the_state_in_the_words_of_the_device_row(entries,
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize("drive, words", [
-    (False, "Update ready: disconnect the device to install it"),
+    (False, "Update ready: unplug the device to install it"),
     (True, "Update ready: eject the device to install it"),
 ])
 def test_an_update_ready_is_said_alike_on_the_row_and_the_updates_page(drive, words):
@@ -181,13 +181,15 @@ def test_the_question_before_a_map_says_the_space_in_the_same_words(monkeypatch)
 
 def test_mass_storage_mode_is_named_only_in_the_sentence_that_explains_it():
     """Every text for the user that names the mode: "USB Drive" (and "MTP"); "mass storage
-    mode" only in the explanation under the title of the device page's group."""
+    mode" only in the explanation of what such a device has not got, the window's and the
+    command line's."""
     pot = (Path(__file__).resolve().parents[1] / "po" / "openexpress.pot").read_text(
         encoding="utf-8")
     msgids = ["".join(re.findall(r'"(.*)"', block)) for block in
               re.findall(r'^msgid ((?:".*"\n)+)', pot, re.MULTILINE)]
     named = [m for m in msgids if "mass storage" in m.casefold()]
-    assert len(named) == 1 and named[0].startswith("The device is connected in mass storage mode")
+    assert len(named) == 2
+    assert all(m.startswith("The device is connected in mass storage mode") for m in named)
 
 
 def test_devices_names_the_usb_mode_with_the_same_pair(capsys, monkeypatch, tmp_path):
@@ -230,7 +232,7 @@ def _device_page(**session):
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
                  "_show_last_sync", "_render_map_state", "select_section", "backup", "logout"):
         setattr(win, name, lambda *a, **kw: None)
-    win._auto_sync_row = lambda: Adw.ActionRow(title="Sync automatically when connected")
+    win._auto_sync_row = lambda: Adw.ActionRow(title="Syncs each time a device is connected, even when the window is closed")
     for name in ("show_overview", "_set_update_state", "_render_update_state",
                  "_highlight_update"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))

@@ -91,7 +91,7 @@ def keep_newest(folders: list[Path], keep: int, new: Path | None = None,
 
 
 def _not_a_path(name: str) -> DeviceError:
-    return DeviceError(_("Nothing was backed up: the device names a folder or file '{name}' "
+    return DeviceError(_("Nothing was backed up: the device names a folder or file “{name}” "
                          "that cannot be used as a path on this computer.").format(name=name))
 
 
@@ -117,9 +117,9 @@ def incomplete_text(count: int) -> str:
     # TRANSLATORS: after a backup (a message of the window and a line of the command line)
     return ngettext(
         "{count} file was still being written by the device and is not in the backup. "
-        "Disconnect and reconnect the device, then make the backup again.",
+        "Unplug the device and plug it in again, then make the backup again.",
         "{count} files were still being written by the device and are not in the backup. "
-        "Disconnect and reconnect the device, then make the backup again.",
+        "Unplug the device and plug it in again, then make the backup again.",
         count).format(count=count)
 
 

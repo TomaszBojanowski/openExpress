@@ -153,7 +153,7 @@ def test_the_dry_run_of_a_drive_plans_the_queue_too(device_root, monkeypatch, ca
     out = capsys.readouterr().out
     assert "queue" in account.asked and account.asked.count("download") == 1
     assert "acknowledge" not in account.asked
-    assert "To upload: 3 files" in out and "To download from Connect to the device: 1" in out
+    assert "To upload: 3 files" in out and "To download from Garmin Connect to the device: 1" in out
     (app_line,) = [line for line in out.splitlines() if "IQWatchApps" in line]
     assert app_line.endswith(QUEUE_NOTE)
 
@@ -166,7 +166,7 @@ def test_the_one_way_syncs_of_a_drive_go_as_over_mtp(device_root, monkeypatch, c
     account = account_for(monkeypatch, {"connectsupport": "Required"}, messages=[COURSE])
     assert cli.main(["sync", flag]) == 0
     out = capsys.readouterr().out
-    assert ("To upload:" in out) is uploads and ("To download from Connect" in out) is queue
+    assert ("To upload:" in out) is uploads and ("To download from Garmin Connect" in out) is queue
     assert ("queue" in account.asked) is queue
 
 
@@ -178,7 +178,7 @@ def test_a_device_not_a_drive_has_the_queue_in_its_dry_run(device_root, monkeypa
     assert cli.main(["sync"]) == 0
     out = capsys.readouterr().out
     assert "queue" in account.asked and "unit-info" not in account.asked
-    assert "To download from Connect to the device: 2" in out and QUEUE_NOTE not in out
+    assert "To download from Garmin Connect to the device: 2" in out and QUEUE_NOTE not in out
 
 
 def test_the_note_of_an_app_left_in_the_queue_is_said_in_polish_too(device_root, monkeypatch,

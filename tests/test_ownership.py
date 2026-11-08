@@ -142,7 +142,7 @@ def test_the_refusal_says_that_registering_the_product_is_not_enough():
     assert "in Garmin Connect (the phone app, or connect.garmin.com)" in said
     assert "registering the product on garmin.com is not enough" in said
     # and that openExpress can add it itself
-    assert "here (Add to Account… in the window, openexpress register on the command line" in said
+    assert "here (Add to Account in the window, openexpress register on the command line" in said
 
 
 def test_bool_never_matches_a_unit_id():
@@ -184,7 +184,7 @@ def test_not_logged_in_is_refused_without_a_request():
 def test_rejected_login_is_reported_as_such(status):
     client = make_client(**{DEVICES_PATH: response(status, b"")})
     client.verified_unit_id = UNIT
-    with pytest.raises(Unauthorized, match="Please sign in again"):
+    with pytest.raises(Unauthorized, match="Sign in again"):
         service.require_account_device(client, UNIT)
     assert client.verified_unit_id is None
 
@@ -194,7 +194,7 @@ def test_wrong_clock_is_reported_as_such():
     answer.headers["Date"] = "Mon, 01 Jan 2001 00:00:00 GMT"
     client = make_client(**{DEVICES_PATH: answer})
     client.verified_unit_id = UNIT
-    with pytest.raises(ClockSkew, match="computer clock is off"):
+    with pytest.raises(ClockSkew, match="clock is .* min off"):
         service.require_account_device(client, UNIT)
     assert client.verified_unit_id is None
 
@@ -477,7 +477,7 @@ def test_cli_refusal_comes_after_the_device_line_also_in_a_pipe(device_root, xdg
     assert main(["--path", str(device_root), "sync"]) == 1
     piped.end()
     assert len(piped.lines) == 2
-    assert piped.lines[0].startswith("Test watch (software ")
+    assert piped.lines[0].startswith("Test watch, software ")
     assert piped.lines[1].startswith("Error: ") and NOT_REGISTERED in piped.lines[1]
 
 
@@ -521,7 +521,7 @@ def test_cli_asks_to_log_in_again_when_the_login_is_rejected(device_root, xdg, c
     before = tree(device_root)
     assert main(["--path", str(device_root), *argv]) == 1
     err = capsys.readouterr().err
-    assert "Please sign in again" in err and COULD_NOT_CHECK not in err
+    assert "Sign in again" in err and COULD_NOT_CHECK not in err
     assert cli_client["client"].http.paths() == [DEVICES_PATH]
     assert tree(device_root) == before and not sync.SyncState(UNIT).dir.exists()
 
@@ -608,7 +608,7 @@ def test_watcher_other_watch_gets_one_notification(device_root, xdg, device, wat
     watcher._sync()
     assert len(watcher.notes) == 1
     title, body = watcher.notes[0]
-    assert title == "Garmin: this device was not synced" and NOT_REGISTERED in body
+    assert title == "Test watch not synced" and NOT_REGISTERED in body
     assert watcher.synced == [] and client.http.paths() == [DEVICES_PATH]
     assert tree(device_root) == before and not sync.SyncState(UNIT).dir.exists()
 
@@ -618,7 +618,7 @@ def test_watcher_unavailable_list_gets_one_notification(device_root, xdg, device
     client = make_client(**{DEVICES_PATH: requests.ConnectionError("offline")})
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     watcher._sync()
-    assert [t for t, _b in watcher.notes] == ["Garmin: this device was not synced"]
+    assert [t for t, _b in watcher.notes] == ["Test watch not synced"]
     assert COULD_NOT_CHECK in watcher.notes[0][1] and watcher.synced == []
 
 
@@ -627,7 +627,7 @@ def test_watcher_own_new_watch_still_asks_for_the_first_sync(device_root, xdg, d
     client = make_client([{"unitid": UNIT}])
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     watcher._sync()
-    assert [t for t, _b in watcher.notes] == ["Garmin: first sync required"]
+    assert [t for t, _b in watcher.notes] == ["Test watch: choose how to sync it first"]
     assert watcher.synced == []
 
 
@@ -639,7 +639,7 @@ def test_watcher_other_watch_with_old_state_is_not_synced(device_root, xdg, devi
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     before = tree(device_root)
     watcher._sync()
-    assert [t for t, _b in watcher.notes] == ["Garmin: this device was not synced"]
+    assert [t for t, _b in watcher.notes] == ["Test watch not synced"]
     assert watcher.synced == []
     assert client.http.paths() == [DEVICES_PATH] and tree(device_root) == before
 
@@ -650,7 +650,7 @@ def test_watcher_rejected_login_gets_one_notification(device_root, xdg, device, 
     monkeypatch.setattr(watcher, "_open_session", lambda: session(device_root, device, client))
     watcher._sync()
     assert len(watcher.notes) == 1 and watcher.synced == []
-    assert watcher.notes[0][0] == "Sync failed" and "Please sign in again" in watcher.notes[0][1]
+    assert watcher.notes[0][0] == "Test watch not synced" and "Sign in again" in watcher.notes[0][1]
 
 
 # --- a Garmin device in mass storage mode: no sync, nothing asked of the account -------------
@@ -748,7 +748,7 @@ def test_window_banner_for_each_outcome(device_root, device):
 
     s = checked(**{DEVICES_PATH: response(body=[{"unitid": OTHER}])})
     assert banner_for(s) == {"title": "This device is not registered to your Garmin account",
-                             "button": "Add to Account…", "revealed": True, "kind": "add"}
+                             "button": "Add to Account", "revealed": True, "kind": "add"}
 
     s = checked(**{DEVICES_PATH: requests.ConnectionError("offline")})
     seen = banner_for(s)
@@ -1097,10 +1097,10 @@ WHAT_IT_IS = ("The primary training device is the main source of performance and
 @pytest.mark.parametrize("argv, current, lines, puts", [
     (["primary", "set"], OTHER,
      ["Primary training device: Bike computer", "Would change it to: Test watch",
-      "Dry run. Add --apply."], 0),
+      "Dry run: nothing was changed. Add --apply."], 0),
     (["primary", "set"], None,
      ["No primary training device is set for this Garmin account.",
-      "Would change it to: Test watch", "Dry run. Add --apply."], 0),
+      "Would change it to: Test watch", "Dry run: nothing was changed. Add --apply."], 0),
     (["primary", "set", "--apply"], OTHER,
      ["Primary training device changed from Bike computer to Test watch.",
       ("To change it back, connect Bike computer and run `openexpress primary set --apply`, "
@@ -1311,10 +1311,10 @@ def test_cli_primary_wearable_says_when_the_device_cannot_be_one(device_root, xd
 @pytest.mark.parametrize("argv, primary, lines, puts", [
     (["primary", "set", "--wearable"], OTHER,
      ["Primary wearable: Other watch", "Would change it to: Test watch",
-      "Dry run. Add --apply."], 0),
+      "Dry run: nothing was changed. Add --apply."], 0),
     (["primary", "set", "--wearable"], None,
      ["No primary wearable is set for this Garmin account.",
-      "Would change it to: Test watch", "Dry run. Add --apply."], 0),
+      "Would change it to: Test watch", "Dry run: nothing was changed. Add --apply."], 0),
     (["primary", "set", "--wearable", "--apply"], OTHER,
      ["Primary wearable changed from Other watch to Test watch.",
       ("To change it back, connect Other watch and run "

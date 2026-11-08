@@ -747,7 +747,7 @@ def _breaks_badly(texts) -> list[str]:
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window, language):
-    """Its content, with the button "Forget Device…" at the bottom. Its title bar is not
+    """Its content, with the button "Forget Device" at the bottom. Its title bar is not
     measured: with the words of Sync it is 375 px wide in Polish (not fixed yet)."""
     from openexpress import known_devices
 
@@ -842,7 +842,7 @@ def test_the_preferences_with_the_storage_group_fit_the_narrowest_window(narrow_
                and everything.is_ancestor(w)]
     texts = list(_texts(page))
     assert any(t.startswith(("6.7\u00a0GB", "6,7\u00a0GB")) for t in texts)
-    assert ("Clear All…" if language == "en" else "Wyczyść wszystko…") in texts
+    assert ("Clear All" if language == "en" else "Wyczyść wszystko") in texts
     assert _min_width(page) <= NARROWEST
     dialog.close()
 

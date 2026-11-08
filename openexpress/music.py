@@ -27,9 +27,15 @@ from openexpress.progress import Step, byte_steps, say_to
 log = logging.getLogger(__name__)
 
 KINDS = {"track": "MEDIA_TRACK", "podcast": "MEDIA_PODCAST", "audiobook": "MEDIA_AUDIOBOOK"}
-# TRANSLATORS: a kind of audio to add, beside Podcasts and Audiobooks: a row with Folders… and
-# Files… on the Music page
-KIND_NAMES = {"track": N_("Music"), "podcast": N_("Podcasts"), "audiobook": N_("Audiobooks")}
+KIND_NAMES = {
+    # TRANSLATORS: a kind of audio to add, beside Podcasts and Audiobooks: a row with Folders…
+    # and Files… on the Music page
+    "track": N_("Music"),
+    # TRANSLATORS: a kind of audio to add, beside Music and Audiobooks (a row of the Music page)
+    "podcast": N_("Podcasts"),
+    # TRANSLATORS: a kind of audio to add, beside Music and Podcasts (a row of the Music page)
+    "audiobook": N_("Audiobooks"),
+}
 PLAYLIST = "MEDIA_PLAYLIST"
 PODCAST_WORDS = ("podcast", "подкаст")
 AUDIOBOOK_WORDS = ("audiobook", "audio book", "hörbuch", "hoerbuch", "spoken word", "speech",

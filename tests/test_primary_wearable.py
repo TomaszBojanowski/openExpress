@@ -114,7 +114,7 @@ def _page(unit=FENIX, account=None, **session):
                  "_show_last_sync", "_render_map_state", "select_section", "backup", "logout",
                  "_show_primary_training"):
         setattr(win, name, lambda *a, **kw: None)
-    win._auto_sync_row = lambda: Adw.ActionRow(title="Sync automatically when connected")
+    win._auto_sync_row = lambda: Adw.ActionRow(title="Syncs each time a device is connected, even when the window is closed")
     for name in ("show_overview", "_set_update_state", "_render_update_state",
                  "_highlight_update"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))

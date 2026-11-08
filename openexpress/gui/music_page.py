@@ -43,7 +43,9 @@ class MusicPage:
             sec = self.sections["music"]
             sec.clear()
             sec.error.set_title(pgettext("tab", "Music"))
-            sec.error.set_description(GLib.markup_escape_text(music.no_media_message()))
+            sec.error.set_description(GLib.markup_escape_text(
+                # TRANSLATORS: the Music page of a device without music
+                _("This device does not play music, podcasts or audiobooks")))
             sec.show("error")
             return
         # The free space too: asked of the device here, never as the page is drawn.
@@ -90,14 +92,16 @@ class MusicPage:
             for f in files:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(f.path.split("/")[-1]),
                                     subtitle=GLib.markup_escape_text(f.path))
-                row.add_suffix(self._trash(_("Remove"), lambda p=f.path: self.remove_music([p])))
+                row.add_suffix(self._trash(_("Remove {name}").format(name=f.path.split("/")[-1]),
+                                           lambda p=f.path: self.remove_music([p])))
                 exp.add_row(row)
         if music.supports_playlists(self.session.device):
             g = sec.group(_("Playlists"))
             g.set_header_suffix(self._button(_("Add Playlist…"), self.choose_playlist))
             for p in playlists:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(p.split("/")[-1]))
-                row.add_suffix(self._trash(_("Remove"), lambda p=p: self.remove_music([p])))
+                row.add_suffix(self._trash(_("Remove {name}").format(name=p.split("/")[-1]),
+                                           lambda p=p: self.remove_music([p])))
                 g.add(row)
 
     def choose_music(self, kind: str, folders: bool) -> None:

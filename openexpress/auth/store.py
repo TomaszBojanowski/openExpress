@@ -73,10 +73,10 @@ def load() -> ConnectAuth:
         data = json.loads(p.read_text())
         auth = ConnectAuth(**data)
     except (OSError, ValueError, TypeError) as e:
-        raise NotLoggedIn(_("The saved sign-in is damaged; please sign in again.")) from e
+        raise NotLoggedIn(_("The saved sign-in is damaged; sign in again.")) from e
     if not (isinstance(auth.token, str) and isinstance(auth.token_secret, str)
             and isinstance(auth.account, dict)):
-        raise NotLoggedIn(_("The saved sign-in is damaged; please sign in again."))
+        raise NotLoggedIn(_("The saved sign-in is damaged; sign in again."))
     return auth
 
 

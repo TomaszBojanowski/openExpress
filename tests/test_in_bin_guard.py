@@ -164,7 +164,7 @@ def test_the_dry_run_of_an_install_says_the_list_is_damaged(device, apps_cli, ca
                         lambda self, device, locale: [_store_app(FACE_IT, "Made-up Face")])
     assert main(["--path", str(device_root), "apps", "install", "Made-up Face"]) == 1
     out = capsys.readouterr().out
-    assert f"ERROR Made-up Face: {WAITING}" in out
+    assert f"Error: Made-up Face: {WAITING}" in out
     assert "every app on the device is kept" not in out
 
 

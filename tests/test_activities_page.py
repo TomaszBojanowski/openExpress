@@ -109,7 +109,7 @@ def test_what_a_file_still_being_written_a_damaged_and_an_unreadable_one_say():
     win.show_activities(made_up_list(*THE_WEEK))
     rows = rows_of(section)
     assert texts(rows[2]) == ("Activity", SEP.join([
-        "2026-10-28 06:00", "Still being written: disconnect and reconnect the device"]))
+        "2026-10-28 06:00", "Still being written: unplug the device and plug it in again"]))
     assert texts(rows[3])[1].endswith(f"{SEP}Device{SEP}Damaged file")
     assert texts(rows[4]) == ("Unreadable File", "Device")
 
@@ -184,7 +184,7 @@ def test_no_activity_yet(tmp_path):
     win.load_activities()
     assert rows_of(section) == []
     words = [w.get_label() for w in descendants(section.page) if hasattr(w, "get_label")]
-    assert "There are no activities on the device or in its backups." in words
+    assert "No Activities" in words and "There are none on the device or in its backups" in words
 
 
 def test_a_device_that_keeps_no_activities_reads_nothing(tmp_path):
@@ -194,7 +194,7 @@ def test_a_device_that_keeps_no_activities_reads_nothing(tmp_path):
     win.load_activities()
     assert win.run_task.calls == []
     assert section.stack.get_visible_child_name() == "info"
-    assert section.info.get_description() == "This device does not keep activities."
+    assert section.info.get_description() == "This device does not keep activities"
 
 
 def test_the_window_starts_with_no_activities_kept():

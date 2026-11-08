@@ -31,5 +31,5 @@ def test_the_window_imports_nothing_of_the_command_line():
 def test_the_texts_of_the_end_of_an_install_are_with_the_updates():
     from openexpress import updates
 
-    assert "Disconnect the device" in updates.FINISH_STEPS
+    assert "Unplug the device" in updates.FINISH_STEPS
     assert "check for updates again" in updates.FINISH_STEPS_WINDOW

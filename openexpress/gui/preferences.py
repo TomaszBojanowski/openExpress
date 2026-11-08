@@ -225,7 +225,8 @@ def clear_cache(win, names: list[str] | None, button) -> None:
     def done(result):
         freed, now = result
         show_cache_usage(win, now)
-        cache_toast(win, _("Freed {size}.").format(size=human_size(freed.total)))
+        # TRANSLATORS: toast after the cache was cleared
+        cache_toast(win, _("Freed {size}").format(size=human_size(freed.total)))
 
     def failed(e):
         if isinstance(e, cache.CacheError):
@@ -310,7 +311,8 @@ class Preferences:
                 if self.session is not None:
                     self.show_overview()
             else:
-                self.error(_("Background Sync"), error or _("The change failed."))
+                self.error(_("Background Sync"),
+                           error or _("Background sync could not be turned on or off."))
             if on_result:
                 on_result(ok)
 
@@ -324,7 +326,8 @@ class Preferences:
         """The background sync, on or off as it is, from the device page (the same as in
         Preferences): a change that fails puts the switch back."""
         row = Adw.SwitchRow(title=_("Background Sync"),
-                            subtitle=_("Sync automatically when connected"),
+                            subtitle=_("Syncs each time a device is connected, even when "
+                                       "the window is closed"),
                             active=self._background_enabled())
 
         def toggled(switch, _pspec):
@@ -360,8 +363,8 @@ class Preferences:
         g = Adw.PreferencesGroup(title=_("Sync With Garmin Connect"))
         sw = Adw.SwitchRow(
             title=_("Background Sync"),
-            subtitle=_("Starts at login and syncs whenever the device is connected, "
-                       "also when this window is closed"),
+            subtitle=_("Syncs each time a device is connected, even when the window is "
+                       "closed"),
             active=self._background_enabled())
 
         def toggled(row, _pspec):
@@ -448,7 +451,7 @@ class Preferences:
     def _cache_group(self) -> Adw.PreferencesGroup:
         """The "Storage" group of the preferences: a row for each part of the cache, with its
         size, its files and a trash (grey while the part is empty), and one for all of it
-        with "Clear All…". The sizes are counted in the background, never on the window's
+        with "Clear All". The sizes are counted in the background, never on the window's
         thread; the group is about the cache of this installation alone."""
         # TRANSLATORS: fills {kind} in "Only the files of this installation ({kind})…":
         # openExpress runs from its source code, not as the Flatpak
@@ -475,10 +478,10 @@ class Preferences:
             row.add_suffix(trash)
             g.add(row)
             parts[name] = (row, trash)
-        # TRANSLATORS: the last row of the cache in the preferences, with "Clear All…"
+        # TRANSLATORS: the last row of the cache in the preferences, with "Clear All"
         everything = Adw.ActionRow(title=_("Entire Cache"), subtitle=_("Counting…"))
         # TRANSLATORS: button that clears every part of the cache
-        button = Gtk.Button(label=_("Clear All…"), valign=Gtk.Align.CENTER, sensitive=False)
+        button = Gtk.Button(label=_("Clear All"), valign=Gtk.Align.CENTER, sensitive=False)
         button.connect("clicked", self._ask_clear_cache)
         everything.add_suffix(button)
         g.add(everything)
@@ -490,7 +493,7 @@ class Preferences:
         return g
 
     def _ask_clear_cache(self, button) -> None:
-        """"Clear All…": asks first, naming the maps and their size; then clears as
+        """"Clear All": asks first, naming the maps and their size; then clears as
         `cache --clear --apply` does, from the button."""
         shown = self._storage
         use = shown.usage if shown is not None else None
@@ -521,7 +524,7 @@ class Preferences:
 
     def choose_dll(self) -> None:
         dialog = Gtk.FileDialog(
-            title=_("Select the Garmin Express Installer for Windows (GarminExpress.exe)"))
+            title=_("Choose the Garmin Express Installer for Windows (GarminExpress.exe)"))
 
         def read(path: Path):
             from openexpress.installer import consumer_from_installer, refuse_macos_installer

@@ -163,7 +163,10 @@ def stop_waiting(win) -> None:
 
 
 def trash_button(tooltip: str, cb) -> Gtk.Button:
+    """An icon that removes: its tooltip says what ("Remove {name}"), for a screen reader
+    too."""
     b = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text=tooltip, valign=Gtk.Align.CENTER)
+    b.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
     b.add_css_class("flat")
     b.connect("clicked", lambda *_a: cb())
     return b

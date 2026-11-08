@@ -101,7 +101,7 @@ def test_clearing_the_part_answers_forgets_them(xdg, capsys):
     answers.use_disk()
     ANSWERS.ask(answers.SOFTWARE_UPDATES, ("k",), lambda: {"updates": []})
     assert main(["cache"]) == 0
-    assert "  Answers of Garmin's servers: " in capsys.readouterr().out
+    assert "  Garmin Server Responses: " in capsys.readouterr().out
     assert main(["cache", "--clear", "--only", "answers", "--apply"]) == 0
     assert not list(ANSWERS.disk.folder.glob("*.json")) and ANSWERS._kept == {}
 

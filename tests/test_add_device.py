@@ -1,5 +1,5 @@
 """Adding the connected device to the account (service.add_device): the account's list read
-first (on it already: nothing sent), a trial run that stops there, the request, a retired device
+first (on it already: nothing sent), a dry run that stops there, the request, a retired device
 made active, the list read again, which tells the result. All IDs here are made up."""
 
 import logging
@@ -72,7 +72,7 @@ def test_the_trial_run_reads_the_list_only():
 
 def test_the_list_is_read_anew_not_kept():
     client = garmin([[{"unitid": OTHER_UNIT}], [{"unitid": UNIT}]])
-    service.add_device(client, device())  # the trial run reads the list
+    service.add_device(client, device())  # the dry run reads the list
     assert service.add_device(client, device()).already is True  # read again: on it now
 
 

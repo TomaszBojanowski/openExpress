@@ -29,7 +29,7 @@ WITH_SETTINGS = {"unittypename": "test", "datatypes": [
     {"datatypename": "FIT_TYPE_2",
      "uploadlocations": [{"url": SETTINGS_URL, "requiresauthentication": True}]}]}
 NB = " "
-LINE = ("1 file was still being written by the device – disconnect and reconnect it, then "
+LINE = ("1 file was still being written by the device – unplug it and plug it in again, then "
         "sync again")
 
 
@@ -72,7 +72,7 @@ def test_the_command_line_says_so_once(device_root, monkeypatch, capsys):
 def test_the_words_of_the_line():
     assert service._describe_step({"kind": "still_written", "count": 1}) == [(LINE, True)]
     assert service._describe_step({"kind": "still_written", "count": 3}) == [(
-        ("3 files were still being written by the device – disconnect and reconnect it, then "
+        ("3 files were still being written by the device – unplug it and plug it in again, then "
          "sync again"), True)]
     i18n.setup("pl")
     try:

@@ -34,7 +34,7 @@ def test_a_map_is_downloaded_and_copied_by_its_name(server, device_root, xdg):
     assert all(m.in_bytes and m.total == east.size for m in down) and down[-1].last
     assert all(m.in_bytes and m.total == sum(f.size for f in east.files) for m in copy)
     assert copy[-1].last
-    assert "Activating the map on the Garmin server" in seen
+    assert "Activating the map on the Garmin server…" in seen
     assert _no_file_names(seen)
 
 

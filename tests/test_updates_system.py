@@ -181,7 +181,7 @@ def test_cli_lists_the_system_update_first_and_marks_it(offered, no_download, ca
 def test_cli_warns_before_a_system_update(offered, no_download, capsys):
     assert main(["--path", str(offered), "updates", "--install", "006-V0000-00"]) == 0
     out = capsys.readouterr().out
-    assert ("Warning: this is a device system update. Charge the device and do not disconnect "
+    assert ("Warning: this is a device system update. Charge the device and do not unplug "
             "it while copying.") in out
     assert "Dry run: nothing was downloaded or written." in out
     assert not (offered / "GARMIN/GUPDATE.GSP").exists()
@@ -330,8 +330,8 @@ def test_cli_says_which_update_waits_for_the_next_connection(device_root, tmp_pa
             "23.40 (Garmin/GUPDATE.GCD): one at a time") in [r.getMessage() for r in caplog.records]
     out = capsys.readouterr().out
     assert ("Not now: Test Part Software 6.70 goes to the same file on the device as Test "
-            "Software 23.40. Install it once the device has installed Test Software: disconnect "
-            "the device, then connect it again.") in out
+            "Software 23.40. Install it once the device has installed Test Software: unplug the "
+            "device, then plug it in again.") in out
     assert "Copied 1 file." in out
     assert (device_root / "GARMIN/gupdate.gcd").read_bytes() == BUNDLE
 
@@ -366,7 +366,7 @@ def test_cli_does_not_write_over_an_update_that_waits_for_the_device(device_root
     out = capsys.readouterr().out
     assert ("Not now: Test Sensor Software 1.20 goes to the same file on the device as Test GPS "
             "Software 6.70. Install it once the device has installed Test GPS Software: "
-            "disconnect the device, then connect it again.") in out
+            "unplug the device, then plug it in again.") in out
     assert (device_root / "GARMIN" / "REMOTESW" / "GUPDATE.GCD").read_bytes() == GPS
 
 
@@ -650,10 +650,10 @@ def test_the_device_software_copied_before_and_offered_again_is_told_at_the_top(
 
 # --- the window asks before it installs ---------------------------------------------------------
 
-WARNING_EN = ("Warning: this is a device system update. Charge the device and do not disconnect "
+WARNING_EN = ("Warning: this is a device system update. Charge the device and do not unplug "
               "it while copying.")
 PART_WARNING_EN = ("Warning: this updates the software of a part of the device. Charge the device "
-                   "and do not disconnect it while copying.")
+                   "and do not unplug it while copying.")
 WARNING_PL = ("Ostrzeżenie: to aktualizacja systemu urządzenia. Naładuj urządzenie i\u00a0nie odłączaj "
               "go podczas kopiowania.")
 
@@ -894,7 +894,7 @@ def test_a_second_system_update_is_listed_as_system_software():
     assert status["texts"][2][0] == "Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP"  # the first on top
     (available,) = groups
     assert [(r.get_title(), r.get_subtitle()) for r in available.rows] == [
-        ("System Software", "Test Software\u00a0· 23.40\u00a0· 2\u00a0B\u00a0· Recommended\u00a0· GUPDATE.GCD")]
+        ("Device Software", "Test Software\u00a0· 23.40\u00a0· 2\u00a0B\u00a0· Recommended\u00a0· GUPDATE.GCD")]
 
 
 @pytest.mark.needs_display
@@ -921,7 +921,7 @@ def test_the_status_in_polish():
                                  ("Sprawdź ponownie", False)]
     assert groups[0].title == "Dostępne aktualizacje"
     assert plain["texts"][0][0] == "Dostępna aktualizacja: Test Font 23.40"  # as on the row
-    assert listed.rows[0].get_title() == "Oprogramowanie systemowe"
+    assert listed.rows[0].get_title() == "Oprogramowanie urządzenia"
 
 
 # --- beta versions ---------------------------------------------------------------------------------
@@ -1316,7 +1316,7 @@ def test_cli_says_a_copied_update_waits_for_the_device(offered, no_download, cap
         "  006-D0000-00         23.40  Recommended        4 B  Test Font",
         "Update copied, waiting for the device to install it:",
         "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
-        "Disconnect the device to install it.",
+        "Unplug the device to install it.",
         "",
         "Install: openexpress updates --install PART_NUMBER [--reinstalls] --apply"]
 
@@ -1330,7 +1330,7 @@ def test_cli_is_not_up_to_date_while_a_copied_update_waits(offered, no_download,
         "Test watch, software 23.39",
         "Update copied, waiting for the device to install it:",
         "  006-V0000-00         23.40  Recommended       12 B  Test Bundle [PRIMARY]",
-        "Disconnect the device to install it.",
+        "Unplug the device to install it.",
         "Already on the device: 1"]  # the font: no update, and not waiting for anything
 
 
@@ -1340,14 +1340,14 @@ def test_cli_install_all_says_what_is_left_to_do(offered, no_download, capsys):
     assert capsys.readouterr().out.splitlines()[1:] == [
         "Skipped 2 files that are already on the device.",
         "Nothing to install: every offered file is already on the device.",
-        "Disconnect the device to install it."]
+        "Unplug the device to install it."]
 
 
 def test_cli_install_all_without_a_copied_system_update_says_nothing_more(offered, no_download,
                                                                          capsys):
     _copied(offered, "006-D0000-00")  # only the font is there
     assert main(["--path", str(offered), "updates", "--install", "all"]) == 0
-    assert "Disconnect the device" not in capsys.readouterr().out
+    assert "Unplug the device" not in capsys.readouterr().out
 
 
 def test_cli_copied_update_in_polish(offered, no_download, capsys):
@@ -1385,7 +1385,7 @@ def test_status_of_an_update_that_waits_for_the_device():
     _win, status, groups, _buttons = _updates_page(_staged_items())
     assert status == {
         "icon": ("software-update-available-symbolic", 96, False),
-        "texts": [("Update ready: disconnect the device to install it", ["title-1"]),
+        "texts": [("Update ready: unplug the device to install it", ["title-1"]),
                   (VERSIONS, ["dim-label"]),  # what to do is in the title
                   ("Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP", ["caption", "dim-label"])],
         "buttons": [("Check Again", False)]}  # nothing to install: no "Install"
@@ -1437,7 +1437,7 @@ def test_status_of_an_update_that_waits_on_a_drive_offers_to_eject_it():
 def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     _win, status, groups, _buttons = _updates_page(_staged_items(font_on_device=False))
     assert status["texts"][0][0] == (
-        "Update ready: disconnect the device to install it\u00a0· 1 more available")
+        "Update ready: unplug the device to install it\u00a0· 1 more available")
     (available,) = groups  # the font, to install before the device is disconnected
     assert [r.get_title() for r in available.rows] == ["Test Font"]
 
@@ -1468,13 +1468,13 @@ def test_device_page_says_the_update_waits_for_the_device():
     win, MainWindow = _overview()
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert win.update_state == "ready"
-    assert win.update_row.get_subtitle() == "Update ready: disconnect the device to install it"
+    assert win.update_row.get_subtitle() == "Update ready: unplug the device to install it"
     assert win.software_label.get_label() == "Software 23.39"  # its chip says it
     # Something else to install too: ready wins, and says how many more.
     items = _staged_items(font_on_device=False)
     MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
     assert (win.update_state, win.update_row.get_subtitle()) == (
-        "ready", "Update ready: disconnect the device to install it\u00a0· 1 more available")
+        "ready", "Update ready: unplug the device to install it\u00a0· 1 more available")
 
 
 @pytest.mark.needs_display
@@ -1497,7 +1497,7 @@ def _two_waiting():
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize(("drive", "words"), [
-    (False, "Updates ready: disconnect the device to install them"),
+    (False, "Updates ready: unplug the device to install them"),
     (True, "Updates ready: eject the device to install them")], ids=["mtp", "drive"])
 def test_device_page_says_several_updates_wait_for_the_device(drive, words):
     items = _two_waiting()
@@ -1582,7 +1582,7 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
     assert asked[-1].get_body().endswith("\n\nStill available: 1 update")  # the font
     status, groups, _buttons = _read_page(win)
     assert status["texts"][0][0] == (
-        "Update ready: disconnect the device to install it\u00a0· 1 more available")
+        "Update ready: unplug the device to install it\u00a0· 1 more available")
     assert status["buttons"] == [("Check Again", False)]
     assert [r.get_title() for r in groups[0].rows] == ["Test Font"]  # still to install
 
@@ -2159,7 +2159,7 @@ def test_after_copying_components_the_page_says_ready_not_up_to_date(monkeypatch
         win.confirm_update(items[0])
     asked[0].emit("response", "ok")
     status, _groups, _buttons = _read_page(win)
-    word = "eject" if drive else "disconnect"
+    word = "eject" if drive else "unplug"
     if how == "all":
         assert states[-1] == ([], ["006-D0000-00", "006-D0002-00"])
         assert [text for text, _styles in status["texts"]] == [

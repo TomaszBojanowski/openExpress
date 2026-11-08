@@ -483,7 +483,7 @@ def test_an_answer_without_a_list_of_maps_is_an_error(answer):
         maps.read_maps(answer)
     with pytest.raises(ApiError):
         maps.parse_maps(answer)
-    assert str(error.value) == "Map check: unexpected response from the server"
+    assert str(error.value) == "Map check: Garmin's server gave an answer openExpress does not understand; try again later"
 
 
 def test_maps_that_cannot_be_read_are_not_no_maps(device_root, xdg, monkeypatch, capsys):
@@ -696,7 +696,7 @@ def test_maps_remove_refuses_at_once_a_map_that_cannot_be_removed(
     captured = capsys.readouterr()
     # An error, and nothing before it: no "Removing map …", no list of files.
     assert captured.out == ""
-    assert captured.err.strip() == "Error: Map 'TopoActive West' cannot be removed"
+    assert captured.err.strip() == "Error: Map “TopoActive West” cannot be removed"
     assert device_files(device_root) == before
 
 
@@ -710,7 +710,7 @@ def test_maps_remove_still_lists_and_removes_a_map_that_can_be_removed(
     assert main(["--path", str(device_root), "maps", "remove", "West"]) == 0
     out = capsys.readouterr().out
     assert "Removing map TopoActive West: 2 files" in out and "  - Garmin/W.img" in out
-    assert "Dry run. Add --apply." in out and device_files(device_root) == before
+    assert "Dry run: nothing was changed. Add --apply." in out and device_files(device_root) == before
     assert main(["--path", str(device_root), "maps", "remove", "West", "--apply"]) == 0
     assert "Removed 2 files." in capsys.readouterr().out
     # The file shared with another map stays.
@@ -812,7 +812,7 @@ def test_maps_row_says_map_updates_are_not_supported_for_a_device_served_another
     win, asked, _later = _overview_window([], unit_info=info)
     win._check_maps_quietly()
     assert (win.map_state, win.map_row.subtitle) == (
-        "unsupported", "Map updates for this device aren't supported yet")
+        "unsupported", "Map updates for this device are not supported yet")
     assert asked == [] and win._map_check_session is None
 
 
@@ -1193,10 +1193,10 @@ def test_maps_page_says_map_updates_are_not_supported_for_a_device_served_anothe
                                           unit_info={"mapupdatetype": "LegacyRmu"})
     win.load_section("maps")
     texts = [t for g in section.groups for t in _texts(g)]
-    assert "Map updates for this device aren't supported yet" in texts
+    assert "Map updates for this device are not supported yet" in texts
     assert "Check Again" in texts and asked == []
     assert (win.map_state, win.map_row.subtitle) == (
-        "unsupported", "Map updates for this device aren't supported yet")
+        "unsupported", "Map updates for this device are not supported yet")
 
 
 @pytest.mark.needs_display
@@ -1209,7 +1209,7 @@ def test_maps_page_says_a_device_that_declares_no_maps_has_none(device_root):
                                           unit_info={"mapupdatetype": "UniversalDetect"})
     win.load_section("maps")
     texts = [t for g in section.groups for t in _texts(g)]
-    assert "This device has no maps" in texts
+    assert "No Maps on This Device" in texts
     assert "Check Again" not in texts and not check_again_buttons(win) and asked == []
     assert not any("map update type" in t for t in texts)
     assert (win.map_state, win.map_row.subtitle) == ("nomaps", "This device has no maps")
@@ -1611,9 +1611,9 @@ def test_a_map_file_with_an_invalid_md5_makes_the_map_not_installable(server, de
     assert not (device_root / "GARMIN" / "J.img").exists()
 
 
-MISSING_FILE_TEXT = ("Map 'TopoActive Japan' cannot be installed: the server did not provide "
-                     "all of its files")
-BAD_CHECKSUM_TEXT = ("Map 'TopoActive Japan' cannot be installed: the server gave an invalid "
+MISSING_FILE_TEXT = ("Map “TopoActive Japan” cannot be installed: the server did not provide "
+                     "all of its files.")
+BAD_CHECKSUM_TEXT = ("Map “TopoActive Japan” cannot be installed: the server gave an invalid "
                      "checksum for one of its files.")
 
 
@@ -1764,7 +1764,7 @@ def test_the_window_refuses_before_it_asks_to_install(server, device_root, monke
         session=types.SimpleNamespace(storage=storage, client=types.SimpleNamespace(
             consumer=types.SimpleNamespace(url_salt="salt"))))
     app.MainWindow.confirm_map(win, japan)
-    assert said == [("Cannot Install the Map", text)] and asked == []
+    assert said == [("Map Not Installed", text)] and asked == []
 
 
 def test_firmware_without_an_md5_is_not_downloaded(server, device_root, xdg):

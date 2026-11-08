@@ -93,7 +93,7 @@ def test_the_dry_run_of_a_test_drive_says_so_and_reads_no_queue(device_root, mon
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: account)
     assert cli.main(["sync"]) == 0
     out = capsys.readouterr().out
-    assert SAID in out.splitlines() and "To download from Connect" not in out
+    assert SAID in out.splitlines() and "To download from Garmin Connect" not in out
     assert "queue" not in account.asked
 
 
