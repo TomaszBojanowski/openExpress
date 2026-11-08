@@ -94,6 +94,35 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.9.0" date="2026-11-09">
+      <description translate="no">
+        <ul>
+          <li>The Activity Profiles page and the profiles command are removed. They only showed
+          the data screens of the sport profiles, and editing them is not planned; the device's
+          profiles are not touched. Thanks to skinnie (Sommet) and fullcarbonbike (Activity
+          Profile Editor), whose work the page was built on.</li>
+          <li>The window and the commands use the same words throughout: "unplug" for taking the
+          device off the cable, Device Software, Unit ID, Garmin account, and one pattern for the
+          headings of errors, such as "Map Not Added" and "Device Not Opened".</li>
+          <li>Notifications of the background sync name the device, such as "fēnix 8 synced".</li>
+          <li>In the details of Last Sync, the backups of an Edge's activity profiles are named as
+          such instead of FIT_TYPE_57.</li>
+          <li>The Apps page and app installs ask the device far fewer questions: the app folder,
+          the app list and its copy are read once, not again for each app.</li>
+          <li>Playlists and map unlock files are checked after they are written, as other files
+          already were; an unlock file of the wrong size is written again.</li>
+          <li>An update of 16 MB or more copied to a device connected as a USB drive shows a step
+          of its own while it is read back and checked ("Checking … on the device"), instead of a
+          progress bar standing still at the end of the copy.</li>
+          <li>After the computer's network changes, the state of Garmin's servers turns green with
+          the first good answer instead of staying red. Before any request, its panel says "Not
+          checked yet in this window".</li>
+          <li>A sync no longer reports an error when Garmin Connect had already taken an item of
+          its queue.</li>
+          <li>German: every text is translated.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.8.9" date="2026-11-07">
       <description translate="no">
         <ul>
