@@ -1,3 +1,3 @@
-"""Independent Garmin Express client for Linux."""
+"""Unofficial Linux app for Garmin watches and bike computers."""
 
 __version__ = "0.8.9"

@@ -281,7 +281,7 @@ def instrumented(summary: Summary, answers: list, short_timeout: float | None):
                 summary.time(step, time.monotonic() - started)
         return call
 
-    def noting_wait(start, timeout_s, what, name="operation"):
+    def noting_wait(start, timeout_s, what, name="operation", context=None, quiet=False):
         waiting = threading.current_thread().name
 
         def begin(done, cancellable):
@@ -289,7 +289,7 @@ def instrumented(summary: Summary, answers: list, short_timeout: float | None):
                 answers.append((name, waiting, threading.current_thread().name))
                 done(finish)
             start(noted, cancellable)
-        return saved["_wait"](begin, timeout_s, what, name)
+        return saved["_wait"](begin, timeout_s, what, name, context=context, quiet=quiet)
 
     gio_storage._unmount = timed("_unmount", "unmount")
     gio_storage._remount = timed("_remount", "mount again")
@@ -312,21 +312,11 @@ def _entry(uri: str):
     return next((d for d in gio_storage.find_devices() if gio_storage._key(d.uri) == key), None)
 
 
-def _pump() -> None:
-    """In the main thread outside a main loop (the command line): the volume monitor gets its
-    signals only while the global default context turns."""
-    if threading.current_thread() is threading.main_thread():
-        context = GLib.MainContext.default()
-        for _turn in range(100):
-            if not context.iteration(False):
-                break
-
-
 def wait_for(found, limit_s: float):
     """`found()`, once it gives something within `limit_s`; None otherwise."""
     deadline = time.monotonic() + limit_s
     while True:
-        _pump()
+        gio_storage._turn_main_context()
         value = found()
         if value or time.monotonic() >= deadline:
             return value
@@ -336,7 +326,7 @@ def wait_for(found, limit_s: float):
 def pause(seconds: float) -> None:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
-        _pump()
+        gio_storage._turn_main_context()
         time.sleep(0.05)
 
 

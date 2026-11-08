@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.8.9\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 20:40+0100\n"
+"POT-Creation-Date: 2026-11-08 19:39+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2940,7 +2940,7 @@ msgid "%(prog)s: error: %(message)s\n"
 msgstr ""
 
 #: openexpress/cli.py:2890
-msgid "Independent Garmin Express client for Linux."
+msgid "Unofficial Linux app for Garmin watches and bike computers."
 msgstr ""
 
 #. TRANSLATORS: CLI help of -v/--verbose: print more details

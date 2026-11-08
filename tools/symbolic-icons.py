@@ -104,29 +104,25 @@ def _path(d: str) -> list[tuple[list[tuple[float, float]], bool]]:
     return lines
 
 
-def _line(element):
-    """The centre line of a shape: a ring for circles and rectangles, else a line."""
+def _line(element) -> list:
+    """The centre lines of a shape: a ring for circles and rectangles, else those of its path."""
     tag = element.tag.removeprefix(NS)
     a = {k: float(v) for k, v in element.attrib.items() if k in SHAPE_KEYS}
     if tag == "circle":
-        return Point(a["cx"], a["cy"]).buffer(a["r"], quad_segs=64).exterior
+        return [Point(a["cx"], a["cy"]).buffer(a["r"], quad_segs=64).exterior]
     if tag == "rect":
         x, y, w, h, rx = a["x"], a["y"], a["width"], a["height"], a.get("rx", 0)
-        return LinearRing(box(x + rx, y + rx, x + w - rx, y + h - rx)
-                          .buffer(rx, quad_segs=32).exterior.coords)
+        return [LinearRing(box(x + rx, y + rx, x + w - rx, y + h - rx)
+                           .buffer(rx, quad_segs=32).exterior.coords)]
     if tag == "path":
-        lines = _path(element.attrib["d"])
-        if len(lines) == 1 and not lines[0][1]:
-            return LineString(lines[0][0])
-        return [LinearRing(p) if closed else LineString(p) for p, closed in lines]
+        return [LinearRing(p) if closed else LineString(p)
+                for p, closed in _path(element.attrib["d"])]
     raise ValueError(f"unsupported element: {tag}")
 
 
 def _area(element):
     """The inside of a shape, for a filled one."""
-    line = _line(element)
-    rings = line if isinstance(line, list) else [line]
-    return unary_union([Polygon(r.coords).buffer(0) for r in rings])
+    return unary_union([Polygon(r.coords).buffer(0) for r in _line(element)])
 
 
 def _shape(element, half):
@@ -135,8 +131,7 @@ def _shape(element, half):
     parts = []
     if element.get("stroke") != "none":
         width = element.get("stroke-width")
-        line = _line(element)
-        for each in line if isinstance(line, list) else [line]:
+        for each in _line(element):
             parts.append(each.buffer(float(width) / 2 if width else half, **ROUND))
     if element.get("fill") == "currentColor":
         parts.append(_area(element))
@@ -160,9 +155,7 @@ def outline(source: Path) -> str:
     elements = list(root)
     if not any(k in e.attrib for e in elements for k in EXTRAS):
         # Lines only, of the drawing's width.
-        lines = [_line(e) for e in elements]
-        shape = unary_union([each.buffer(half, **ROUND) for line in lines
-                             for each in (line if isinstance(line, list) else [line])])
+        shape = unary_union([each.buffer(half, **ROUND) for e in elements for each in _line(e)])
     else:
         shape = Polygon()
         holes = []

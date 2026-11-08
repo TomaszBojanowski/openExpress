@@ -5,6 +5,7 @@ settled. The device, its folders and answers are made up."""
 
 import contextlib
 import importlib.util
+import inspect
 import socket
 import sys
 import types
@@ -253,3 +254,33 @@ def test_the_summary_says_how_the_device_settled(stress):
         "PTP: the device settled mounted": 1,
         "PTP: the device did not settle": 1,
         "PTP: the device did not come back": 1}
+
+
+def _parameters(function) -> list:
+    return [(p.name, p.kind, p.default) for p in inspect.signature(function).parameters.values()]
+
+
+def test_the_wait_of_its_run_has_the_parameters_of_the_wait_of_gio_storage(stress):
+    """Its run puts a wait of its own in place of gio_storage._wait: with other parameters a read
+    through gvfs would fail at the first step."""
+    real = gio_storage._wait
+    with stress.instrumented(stress.Summary(), [], None):
+        noted = gio_storage._wait
+    assert noted is not real
+    assert _parameters(noted) == _parameters(real)
+
+
+def test_the_wait_of_its_run_passes_every_argument_on(stress, monkeypatch):
+    got = []
+
+    def recorded(start, timeout_s, what, name="operation", context=None, quiet=False):
+        got.append((timeout_s, what, name, context, quiet))
+        start(lambda finish: None, None)
+
+    monkeypatch.setattr(gio_storage, "_wait", recorded)
+    answers = []
+    with stress.instrumented(stress.Summary(), answers, None):
+        gio_storage._wait(lambda done, cancellable: done(None), 5.0, "Reading", "listing",
+                          context="its context", quiet=True)
+    assert got == [(5.0, "Reading", "listing", "its context", True)]
+    assert [name for name, _waiting, _answering in answers] == ["listing"]

@@ -2887,7 +2887,7 @@ def build_parser() -> argparse.ArgumentParser:
     argparse.ngettext = ngettext
     p = argparse.ArgumentParser(
         prog="openexpress",
-        description=_("Independent Garmin Express client for Linux."),
+        description=_("Unofficial Linux app for Garmin watches and bike computers."),
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     # TRANSLATORS: CLI help of -v/--verbose: print more details

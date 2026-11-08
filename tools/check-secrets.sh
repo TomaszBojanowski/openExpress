@@ -2,6 +2,9 @@
 # Stops a release if Garmin keys or personal identifiers would be published.
 # The patterns are kept in a local, untracked file (one regex per line), because
 # they are themselves secret: tools/secret-patterns.txt
+# Checks the commit given (the pre-push hook gives the one pushed; default HEAD): its files
+# and its history. A find is told by where it is only – file and line, or commit – never by
+# the line or the commit's message, which would print the secret.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 patterns=tools/secret-patterns.txt
@@ -10,10 +13,14 @@ if [[ ! -f $patterns ]]; then
     exit 2
 fi
 regex=$(grep -v '^\s*#' "$patterns" | grep -v '^\s*$' | paste -sd'|')
-found=0
-if git grep -n -I -i -E "$regex" -- . ; then found=1; fi
-if git log -p -i -E -G "$regex" --format="commit %h %s" "${1:-HEAD}" -- . ':!*.png' ':!*.mo' | grep -i -E "$regex"; then found=1; fi
-if [[ $found == 1 ]]; then
+commit=${1:-HEAD}
+in_files=$(git grep -z -n -I -i -E "$regex" "$commit" -- . \
+    | awk -F'\0' -v rev="$commit:" 'index($1, rev) == 1 { print substr($1, length(rev) + 1) ":" $2 }' \
+    || true)
+in_history=$(git log --format=%h -i -E -G "$regex" "$commit" -- . ':!*.png' ':!*.mo')
+if [[ -n $in_files || -n $in_history ]]; then
+    [[ -n $in_files ]] && printf '%s\n' "$in_files"
+    [[ -n $in_history ]] && printf 'commit %s\n' $in_history
     echo "STOP: secrets or personal identifiers found (see above). Nothing was published." >&2
     exit 1
 fi

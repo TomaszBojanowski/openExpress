@@ -3,26 +3,18 @@ secret check on what would be pushed, from the clone's main worktree and from an
 tree has no tools/ (a branch of its own history, such as the website's). In a made-up clone;
 the check is a stand-in that notes what it was asked to check."""
 
-import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+from fakes import git
 
 ROOT = Path(__file__).resolve().parent.parent
 ZERO = "0" * 40
 CHECK = """#!/bin/sh
 echo "$1" >> "$(dirname "$0")/checked.txt"
 """
-
-
-def git(cwd: Path, *args: str) -> str:
-    env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
-           "GIT_AUTHOR_NAME": "A", "GIT_AUTHOR_EMAIL": "a@example.com",
-           "GIT_COMMITTER_NAME": "A", "GIT_COMMITTER_EMAIL": "a@example.com"}
-    return subprocess.run(["git", "-c", "commit.gpgsign=false", *args], cwd=cwd, env=env,
-                          check=True, capture_output=True, text=True).stdout.strip()
 
 
 @pytest.fixture

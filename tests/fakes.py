@@ -1,7 +1,10 @@
 """Fakes shared by the tests (imported as `from fakes import …`, like ptp_fake). Only made-up
-data; nothing here reaches a device, the network or the disk of this computer."""
+data; nothing here reaches a device, the network or the disk of this computer outside the
+test's own folder."""
 
+import os
 import struct
+import subprocess
 import threading
 import types
 from collections import namedtuple
@@ -1049,3 +1052,13 @@ def program_style() -> None:
     if display not in _STYLED:
         _STYLED.add(display)
         start.load_css(display)
+
+
+def git(cwd, *args: str) -> str:
+    """git in a made-up repository: without the user's configuration, with a made-up author and
+    without signing; its output."""
+    env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_AUTHOR_NAME": "A", "GIT_AUTHOR_EMAIL": "a@example.com",
+           "GIT_COMMITTER_NAME": "A", "GIT_COMMITTER_EMAIL": "a@example.com"}
+    return subprocess.run(["git", "-c", "commit.gpgsign=false", *args], cwd=cwd, env=env,
+                          check=True, capture_output=True, text=True).stdout.strip()
