@@ -84,9 +84,11 @@ def write_template(out: Path = TEMPLATE) -> Path:
     files = potfiles()
     if out == TEMPLATE:
         (PO / "POTFILES").write_text("\n".join(files) + "\n", encoding="utf-8")
+    # The files without their lines: a change of code moves no reference of a text it leaves
+    # as it was, so the template and every .po change only where a text does.
     _run([_tool("xgettext"), "--from-code=UTF-8", *KEYWORDS, "--add-comments=TRANSLATORS",
-          f"--package-name={i18n.DOMAIN}", f"--package-version={__version__}",
-          f"--output={out}", *files])
+          "--add-location=file", f"--package-name={i18n.DOMAIN}",
+          f"--package-version={__version__}", f"--output={out}", *files])
     add_flags(out)
     return out
 

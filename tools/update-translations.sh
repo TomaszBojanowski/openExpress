@@ -22,7 +22,8 @@ for lang in $(sed 's/#.*//' po/LINGUAS); do
     # Written always, with the template's POT-Creation-Date in the header, as Weblate's msgmerge
     # add-on writes it: --update leaves a file whose only difference is that date, and Weblate
     # would open a pull request of that one line.
-    msgmerge --quiet --output-file="$po" "$po" "$POT"
+    # The references as the template has them: files without lines (update-template.sh).
+    msgmerge --quiet --add-location=file --output-file="$po" "$po" "$POT"
     # Texts no code uses any more are dropped, not kept as "#~" (msgmerge has no option for it)
     msgattrib --no-obsolete --output-file="$po" "$po"
     # The flags of Weblate (po/weblate-flags.txt), which msgmerge and msgattrib drop
