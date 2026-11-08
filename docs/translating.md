@@ -16,19 +16,17 @@ of this page.
 
 ## Garmin's words
 
-For Garmin's concepts, use the term Garmin Connect uses in your language. That covers data
-screens, activity profiles, workouts, courses, segments, training status, HRV status, the
+For Garmin's concepts, use the term Garmin Connect uses in your language. That covers
+workouts, courses, segments, training status, HRV status, the
 primary training device and the like. Garmin Connect on the web (connect.garmin.com, with your
 account's language set to your language) comes first. Use its phone app only for a term the web
-does not show. Names of sport profiles need no translation: they come from the device.
+does not show.
 
 The most frequent terms, with the Polish of openExpress (taken from Garmin Connect) as an
 example:
 
 | English | Where | Polish |
 |---|---|---|
-| Activity Profiles | a page of the device | Profile aktywności |
-| Data Screens | a profile's page | Ekrany danych |
 | workouts, courses, segments | data that goes to the device | treningi, kursy, segmenty |
 | training status data, HRV status | data that goes to Garmin Connect | dane stanu wytrenowania, status HRV |
 | Primary Training Device | the device page | Podstawowe urządzenie treningowe |
@@ -44,7 +42,7 @@ example:
   GNOME Translation Editor show them next to the text. They say where a text appears and what
   fills its placeholders.
 - **Contexts** (`msgctxt`): the same English text in two roles is two entries, each with its
-  context ("tab", "app type", "data field", "screen state"…). Translate each one for its own
+  context ("tab", "app type", "sport", "activity tile"…). Translate each one for its own
   role.
 - **Capitalization**: English labels use GNOME's header capitalization ("Install All", "Device
   Not Ready"). That rule is for English only: write by the conventions of your language. Polish,

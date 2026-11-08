@@ -63,8 +63,6 @@ devices that connect over USB (MTP) should work too – reports are welcome.
   (streets from OpenStreetMap after a yes) coloured by heart rate, pace or elevation, charts,
   laps, heart rate zones, training effect and details; exported as GPX, a look into any FIT
   file and a look into what a sync will write to the watch (checked on a fēnix 8 over MTP).
-- The data screens of the device's activity profiles, read only: their fields in Garmin's
-  words, their layouts and built-in screens.
 - Backups, copies of the device's diagnostic files on this computer, the primary training
   device and the primary wearable.
 - A GTK 4 / libadwaita window, a command-line tool and sync in the background.
@@ -74,13 +72,6 @@ devices that connect over USB (MTP) should work too – reports are welcome.
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/courses.png">
     <img alt="The Courses page: courses on a fēnix 8, one copied by openExpress and one from Garmin Connect, a GPX file waiting for the watch to be unplugged and its saved locations" src="docs/screenshots/courses-light.png" width="700">
-  </picture>
-</p>
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/profile.png">
-    <img alt="The COMMUTE profile of an Edge 1050: two data screens drawn as the Edge shows them, beside their numbered fields, and the built-in screens Map, Elevation and Stamina" src="docs/screenshots/profile-light.png" width="700">
   </picture>
 </p>
 
@@ -245,17 +236,10 @@ in your browser on [Hosted Weblate](https://hosted.weblate.org/projects/openexpr
 
 ## Thanks
 
-- [Sommet](https://github.com/skinnie/sommet) by skinnie and
-  [Activity Profile Editor](https://github.com/fullcarbonbike/Activity-Profile-Editor) by
-  fullcarbonbike described the files of sport profiles that the view of data screens
-  reads ([design](docs/design/ekrany-danych.md)); the names of the data fields follow the
-  numbers of Activity Profile Editor's table. openExpress copies no code of Sommet
-  (GPL-3.0-only); what it takes from Activity Profile Editor (MIT) keeps that project's notice
-  and its author's name.
 - GNOME's [icon-development-kit](https://gitlab.gnome.org/Teams/Design/icon-development-kit)
-  (CC0 1.0) gave the shapes of four icons: the heart and the stopwatch (built-in screens and
-  the tiles of an activity), the speedometer (pace and speed) and the sliders (Activity
-  profiles); the other icons are drawn in the style of GNOME's symbolic icons.
+  (CC0 1.0) gave the shapes of three icons of an activity's tiles: the heart, the stopwatch
+  and the speedometer (pace and speed); the other icons are drawn in the style of GNOME's
+  symbolic icons.
 - hutamaki found why every write to the device failed from the Flatpak on Ubuntu 22.04
   and sent the fix ([#28](https://github.com/TomaszBojanowski/openExpress/issues/28)).
 

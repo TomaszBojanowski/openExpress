@@ -47,8 +47,6 @@ from openexpress.gui.netstatus_view import (  # noqa: E402
     stop_watching_network,
 )
 from openexpress.gui.preferences import KEYS, Preferences  # noqa: E402
-from openexpress.gui.profiles_page import PAGE_ICON as PROFILES_ICON  # noqa: E402
-from openexpress.gui.profiles_page import ProfilesPage  # noqa: E402
 from openexpress.gui.report_dialog import ReportDialog  # noqa: E402
 from openexpress.gui.start import SMALL_DEVICE_ICON, RememberedPage, StartPage  # noqa: E402
 from openexpress.gui.start_window import StartView, StartWindow  # noqa: E402
@@ -71,7 +69,7 @@ log = logging.getLogger(__name__)
 
 
 class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage, CoursesPage,
-                 MusicPage, AppsPage, UpdatesPage, ActivitiesPage, ProfilesPage, Preferences,
+                 MusicPage, AppsPage, UpdatesPage, ActivitiesPage, Preferences,
                  NetStatusPanel, ForgetDevice, ReportDialog, Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
@@ -108,11 +106,6 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             # TRANSLATORS: tab title
             Section("activities", pgettext("tab", "Activities"), ACTIVITIES_ICON,
                     _("Reading Activities…")),
-            # TRANSLATORS: tab title (the sport profiles of the device and their data screens)
-            Section("profiles", pgettext("tab", "Activity Profiles"), PROFILES_ICON,
-                    # TRANSLATORS: shown while the device's activity (sport) profiles are read, not
-                    # user profiles
-                    _("Reading Profiles…")),
         )}
         for sec in self.sections.values():
             sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
@@ -269,9 +262,6 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # The activities of the open device as its page read them, and the groups of that page
         # that grow as more are read (gui/activities_page.py).
         self.activities = self.activities_list = self.activities_more = None
-        # The sport profiles of the open device as their page read them
-        # (gui/profiles_page.py).
-        self.profiles = None
         self.account_picture_offer = self.account_picture_row = None
         self.device_error_group = self.device_error_row = None
         # The pictures of devices drawn and asked for (pictures.py).

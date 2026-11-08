@@ -398,34 +398,6 @@ fēnix 8 over MTP.
   <img src="screenshots/activities.png" width="700" alt="Activities">
 </p>
 
-## Activity profiles
-
-The **Activity Profiles** page and `openexpress profiles` show the sport profiles of the
-connected device (its `Sports` folder) and their data screens, read only: nothing is written to
-the device. The profiles of its newest activities come first, then every profile by name, with
-a search; a profile whose file gives no name goes by the file's name. A profile's page shows its
-data screens, each drawn in the shape of the device's screen beside its fields, numbered in
-their order on the screen (where each field stands depends on
-the layout, which the drawing does not show), with its place in the order the device scrolls
-through its screens; then the built-in screens it always scrolls through (Map, Elevation,
-Stamina…), as rows with their place; then, folded, those an Edge shows only when they are needed
-(Workout during a workout, Segment on a segment, ClimbPro on a climb, GroupRide and GroupTrack
-during a group ride, Power Guide with an active power plan); then the screens turned off or
-hidden. The list of profiles counts the built-in screens the same way ("3 built-in screens (+6
-when needed, 1 hidden)"). A screen's page and `openexpress profiles show NAME` give its layout
-and each field with its number. An Edge's own backups of its profiles (in `Sports/Backups`) are
-said in one line with their day.
-
-The fields are named with Garmin's words, in English, Polish or German. The numbers of the
-fields, the codes of the built-in screens and the letters of the layouts come from two open
-projects that learnt them on Edge bike computers (Activity Profile Editor and Sommet, see the
-README's thanks); a field, a built-in screen or a layout without a known name is shown by its
-number. On a watch (checked on a fēnix 8) the fields have the Edge's numbers, with a few of its
-own (pace, its charts and gauges), named as Garmin Connect names them for the watch; so are
-some of its built-in screens (Map, Compass, its clocks) and the families of some of its layouts
-(a stack of rows, a field without a label). The codes of its other built-in screens and layouts
-are not known yet and are shown as numbers.
-
 ## Sync details
 
 - The watch must be registered to the Garmin account you are signed in to. Before every sync

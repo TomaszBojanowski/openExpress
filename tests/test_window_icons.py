@@ -1,6 +1,6 @@
 """The icons of the window: the side panel's Device takes the small icon of the open device's
-kind (the shape of its tile, drawn for 16 px), Activities a runner, Activity profiles sliders,
-Courses a trail of switchbacks from its start;
+kind (the shape of its tile, drawn for 16 px), Activities a runner, Courses a trail of
+switchbacks from its start;
 the tiles of an activity's page a distance between two points, a stopwatch, a speedometer, a
 heart, a flame and two peaks. Each icon of the program is drawn on the 16 px grid in
 packaging/icons and made into shapes by tools/symbolic-icons.py, and the Flatpak installs
@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 SMALL = ["watch-small", "cycling-computer-small", "handheld-small", "bike-accessory-small",
          "device-small"]
-OWN = [*SMALL, "activities", "profiles", "courses", "activity-distance", "activity-speed",
-       "activity-calories"]
+OWN = [*SMALL, "activities", "courses", "activity-distance", "activity-time", "activity-speed",
+       "activity-heart-rate", "activity-calories", "activity-elevation"]
 
 
 def own(name: str) -> str:
@@ -56,11 +56,11 @@ def test_the_small_icon_of_each_kind():
 def test_the_tiles_of_an_activity_have_their_icons():
     from openexpress.gui import activity_page
 
-    speed, heart = own("activity-speed"), own("screen-heart-rate-zone")
-    expected = {"distance": own("activity-distance"), "time": own("screen-lap-summary"),
+    speed, heart = own("activity-speed"), own("activity-heart-rate")
+    expected = {"distance": own("activity-distance"), "time": own("activity-time"),
                 "pace": speed, "swim pace": speed, "speed": speed,
                 "average heart rate": heart, "maximum heart rate": heart,
-                "calories": own("activity-calories"), "ascent": own("screen-elevation")}
+                "calories": own("activity-calories"), "ascent": own("activity-elevation")}
     shown = activity_page.TILE_ICONS
     assert shown == expected
     for icon in activity_page.TILE_ICONS.values():
@@ -68,9 +68,7 @@ def test_the_tiles_of_an_activity_have_their_icons():
 
 
 @pytest.mark.needs_display
-def test_the_pages_without_activities_or_profiles_take_their_side_panel_icons():
-    from openexpress.gui import activities_page, activity_page, profiles_page
+def test_the_pages_without_activities_take_their_side_panel_icon():
+    from openexpress.gui import activities_page, activity_page
 
     assert activities_page.PAGE_ICON == activity_page.PAGE_ICON == own("activities")
-    profiles_icon = profiles_page.PAGE_ICON
-    assert profiles_icon == own("profiles")

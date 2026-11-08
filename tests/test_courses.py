@@ -584,3 +584,10 @@ def test_remove_names_several_matches_and_none_and_removes_nothing(courses_cli, 
     assert run(courses_cli, "remove", "east", "--apply") == 1
     assert "No course or waiting file is named “east”." in capsys.readouterr().err
     assert sorted(p.name for p in c.iterdir()) == ["A.fit", "B.fit"]
+
+
+def test_courses_remove_matches_a_name_without_letter_case_or_diacritics():
+    from openexpress import cli
+
+    wanted = "cwiczenia lyzwy"
+    assert cli._name_key("Ćwiczenia ŁYŻWY") == cli._name_key(wanted) == wanted

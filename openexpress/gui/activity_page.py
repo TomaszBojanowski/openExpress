@@ -55,16 +55,16 @@ TAG = "activity"
 CONTENT_WIDTH = 1000  # its content in one column, at most this wide
 NARROW = "max-width: 450sp"  # a window too narrow for the dot of the sport beside the title
 NARROWEST = (360, 200)  # the page's own least size (its breakpoints need one)
-# The icons of the tiles, by their kind (the program's own, in data/): the stopwatch, the heart
-# and the peaks are those of the built-in screens of a profile.
+# The icons of the tiles, by their kind (the program's own, in data/): two points for the
+# distance, a stopwatch for the time, a speedometer, a heart, a flame and the peaks.
 _SPEED = f"{APP_ID}-activity-speed-symbolic"
-_HEART = f"{APP_ID}-screen-heart-rate-zone-symbolic"
+_HEART = f"{APP_ID}-activity-heart-rate-symbolic"
 TILE_ICONS = {"distance": f"{APP_ID}-activity-distance-symbolic",
-              "time": f"{APP_ID}-screen-lap-summary-symbolic",
+              "time": f"{APP_ID}-activity-time-symbolic",
               "pace": _SPEED, "swim pace": _SPEED, "speed": _SPEED,
               "average heart rate": _HEART, "maximum heart rate": _HEART,
               "calories": f"{APP_ID}-activity-calories-symbolic",
-              "ascent": f"{APP_ID}-screen-elevation-symbolic"}
+              "ascent": f"{APP_ID}-activity-elevation-symbolic"}
 
 
 class ReadFailed(UserFacingError):

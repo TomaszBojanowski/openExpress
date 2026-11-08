@@ -1,7 +1,7 @@
 # The window's icons
 
-What each place of the window shows as its icon, and why. The icons of the built-in screens of
-a profile are in [ekrany-danych.md](ekrany-danych.md); the icons of the device kinds on the
+What each place of the window shows as its icon, and why.
+The icons of the device kinds on the
 start page's tiles stay as they are.
 
 ## How an icon is chosen
@@ -22,15 +22,14 @@ start page's tiles stay as they are.
 
 | Place | Before | Now | Why |
 |---|---|---|---|
-| Side panel: Device | a clock | the small icon of the open device's kind (watch, cycling computer, handheld, bike accessory; any other: a neutral device), the neutral one until the kind is known | a clock suits a watch only and is the icon of the Clock screen; the tile's kind icons are drawn for a large size and come out too thin at 16 px, so the kinds are drawn again for 16 px |
+| Side panel: Device | a clock | the small icon of the open device's kind (watch, cycling computer, handheld, bike accessory; any other: a neutral device), the neutral one until the kind is known | a clock suits a watch only; the tile's kind icons are drawn for a large size and come out too thin at 16 px, so the kinds are drawn again for 16 px |
 | Side panel, empty list, page without a summary: Activities | a calendar | a running figure | a calendar says "dates"; the runner was the one idea read as "workouts" |
-| Side panel, no profiles: Activity profiles | the grid | sliders (the kit) | the grid is the start page's view button; no icon read as "sport profile" on its own, the sliders read as "settings" and are confused with nothing in the window; the label says the rest |
 | Tile: Distance | the pin | two points and the line between them | the pin is Maps, and a place, not a length |
-| Tile: Time | a clock | the stopwatch (the kit) | a duration; the same file as the Lap summary screen |
+| Tile: Time | a clock | the stopwatch (the kit) | a duration |
 | Tiles: Pace, Speed | the theme's filled gauge | a speedometer (the kit) | the same meaning, drawn as the other tiles |
-| Tiles: Heart rate | the theme's emoji heart | the heart (the kit) | the same file as the Heart rate zone screen |
+| Tiles: Heart rate | the theme's emoji heart | the heart (the kit) | the same meaning, drawn as the other tiles |
 | Tile: Calories | knife and fork | a flame | food is not calories burned |
-| Tile: Ascent | an arrow up | two peaks | the same file as the Elevation screen |
+| Tile: Ascent | an arrow up | two peaks | the same meaning as height, drawn as the other tiles |
 
 The cycling computer's small icon stands on a handlebar: drawn alone, it read as a phone.
 

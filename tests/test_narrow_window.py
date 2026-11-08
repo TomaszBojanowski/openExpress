@@ -11,7 +11,6 @@ import uuid
 
 import pytest
 from fakes import (
-    ScreenRecord,
     descendants,
     gpx_file,
     gpx_route,
@@ -19,7 +18,6 @@ from fakes import (
     gpx_waypoint,
     program_style,
     record_sync,
-    sport_file,
     start_section,
 )
 
@@ -276,10 +274,6 @@ def _fill(win, page: str) -> str:
         MainWindow.show_music(win, _music(), free=win.session.storage.free_space())
     elif key == "activities":
         MainWindow.show_activities(win, _activities())
-    elif key == "profiles":
-        # With the line of an Edge's own backups of its profiles.
-        backups = types.SimpleNamespace(backup_time=1_700_000_000.0)
-        MainWindow.show_profiles(win, backups, _profiles(), ["Narciarstwo skiturowe w terenie"])
     elif key == "courses":
         MainWindow.show_courses(win, _courses(empty=page == "courses-empty",
                                               uncounted=page == "courses-uncounted"))
@@ -287,43 +281,6 @@ def _fill(win, page: str) -> str:
     win._update_actions()
     win._update_banner()
     return key
-
-
-# Profiles with long names and long words, of a watch and of an Edge: every group of a
-# profile's page (data screens, built-in screens with the longest names and one not known,
-# those an Edge shows when needed, those off and hidden).
-LONG_SCREENS = (
-    ScreenRecord(place=0, code=0, order=0, fields=(7, 445, 269, 177), variant=2),
-    ScreenRecord(place=1, code=221, order=1, fields=(), variant=12),
-    ScreenRecord(place=2, code=1, state=0, order=None, fields=(579,), variant=3),
-    ScreenRecord(place=3, code=21, order=2), ScreenRecord(place=4, code=22, order=3),
-    ScreenRecord(place=5, code=127, order=4),  # not known on a watch
-    ScreenRecord(place=6, code=100, state=0, order=None),
-    ScreenRecord(place=7, code=198, state=0, order=None),  # off, not known
-)
-LONG_EDGE = (
-    ScreenRecord(place=0, code=0, order=0, fields=(445, 177, 269), variant=1),
-    ScreenRecord(place=1, code=63, order=1), ScreenRecord(place=2, code=128, order=2, hidden=1),
-    ScreenRecord(place=3, code=74, order=3), ScreenRecord(place=4, code=199, order=4),
-    ScreenRecord(place=5, code=125, order=5), ScreenRecord(place=6, code=162, order=6),
-    ScreenRecord(place=7, code=38, order=7, state=0),
-    ScreenRecord(place=8, code=1, state=0, order=None, fields=(579, 445), variant=2),
-)
-
-
-def _profiles():
-    from openexpress import profiles
-
-    files = []
-    for name, screens, shape in (("Narciarstwo skiturowe w terenie", LONG_SCREENS, "watch"),
-                                 ("Kolarstwo szosowe z czujnikami", LONG_EDGE, "edge")):
-        data = sport_file(name, screens=screens, shape=shape)
-        files.append(profiles.ProfileFile(f"GARMIN/Sports/{name}.fit", f"{name}.fit",
-                                          len(data), 0.0, profiles.read_profile(data)))
-    files.append(profiles.ProfileFile("GARMIN/Sports/Uszkodzony.fit", "Uszkodzony.fit", 3, 0.0,
-                                      None, "The file of this profile could not be read (it "
-                                      "ends too soon)"))
-    return files
 
 
 def _waiting_gpx():
@@ -437,7 +394,7 @@ DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "device-
                 "device-refused-drive", "updates-beta",
                 "updates-beta-drive",
                 "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
-                "music", "activities", "profiles", "courses", "courses-empty",
+                "music", "activities", "courses", "courses-empty",
                 "courses-uncounted"]
 
 
@@ -1100,70 +1057,6 @@ def test_the_banner_of_devices_that_stopped_responding_fits_the_narrowest_window
     _iterate(0.05)
     assert win.banner.get_revealed() and "Edge 1050" in win.banner.get_title()
     assert _min_width(win.device_view) <= NARROWEST
-
-
-@pytest.mark.parametrize("language", ["en", "pl"])
-@pytest.mark.parametrize("which", [0, 1])
-def test_a_profile_s_pages_fit_the_narrowest_window(narrow_window, language, which):
-    """A profile's page, the screens an Edge shows when needed unfolded, and the page of each
-    of its screens, of a watch and of an Edge, with long names."""
-    from gi.repository import Adw
-
-    from openexpress import profile_names
-    from openexpress.gui import profiles_page
-
-    win = narrow_window(language)
-    _fill(win, "profiles")
-    win.navigation.set_animate_transitions(False)
-    win.navigation.push(win.device_view)
-    found = _profiles()[which]
-    profiles_page.open_profile(win, found)
-    page = win.navigation.get_visible_page()
-    folded = []
-    stack = [page]
-    while stack:
-        widget = stack.pop()
-        if isinstance(widget, Adw.ExpanderRow):
-            folded.append(widget)
-        child = widget.get_first_child()
-        while child is not None:
-            stack.append(child)
-            child = child.get_next_sibling()
-    assert len(folded) == which  # the Edge's screens shown when needed
-    for row in folded:
-        row.set_expanded(True)
-    _iterate(0.05)
-    assert _min_width(page) <= NARROWEST
-    # The longest names are on the page: a built-in screen's, and when an Edge shows one.
-    by_code = {s.code: s for s in found.profile.screens}
-    edge = profile_names.edge_shaped(found.profile)
-    longest = profile_names.built_in_name(by_code[74 if edge else 221], edge)
-    labels = [w.get_label() for w in _all_labels(page)]
-    assert longest in labels
-    if edge:
-        when = profile_names.when_needed(by_code[125], edge)
-        assert any(label.casefold() == when.casefold() for label in labels)
-    for screen in found.profile.screens:
-        profiles_page.open_screen(win, found, screen)
-        _iterate(0.02)
-        assert _min_width(win.navigation.get_visible_page()) <= NARROWEST, screen.code
-        win.navigation.pop()
-
-
-def _all_labels(widget):
-    from gi.repository import Gtk
-
-    found = []
-    stack = [widget]
-    while stack:
-        w = stack.pop()
-        if isinstance(w, Gtk.Label):
-            found.append(w)
-        child = w.get_first_child()
-        while child is not None:
-            stack.append(child)
-            child = child.get_next_sibling()
-    return found
 
 
 @pytest.mark.needs_display

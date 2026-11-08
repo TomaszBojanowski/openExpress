@@ -125,9 +125,9 @@ software of their own projects; Crowdin and Transifex are proprietary services.
 
 Garmin Connect's words matter most on the activity page (summary tiles, details, charts and
 their axes, laps, heart rate zones, training effect, pace and speed, elevation, temperature,
-cadence, steps, strength sets), for sport names and for data fields. Garmin Connect on the web
-(connect.garmin.com) comes first; its app for phones only for a word the web does not show. The
-names of sport profiles stay those the device shows. A table of openExpress's
+cadence, steps, strength sets) and for sport names. Garmin Connect on the web
+(connect.garmin.com) comes first; its app for phones only for a word the web does not show.
+A table of openExpress's
 English and Polish against Garmin Connect's English and Polish, terms and short labels only,
 is kept outside the repository, with a proposal for each difference; its English column is the
 glossary of 6a.
@@ -139,8 +139,6 @@ term):
   page, the lists and the settings, read on the screen.
 - **The Garmin Connect app on a phone**, with the phone's language set to that language: a word
   the web does not show, read on the screen.
-- **Garmin's manuals**, published per language on Garmin's website: the names of data fields
-  and of the device's screens as the device shows them.
 - **Garmin Express** for Windows and macOS carries its own texts in its languages: few terms of
   activities.
 

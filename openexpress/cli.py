@@ -11,6 +11,7 @@ import json
 import logging
 import sys
 import time
+import unicodedata
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -60,7 +61,7 @@ WORKS_ON_DEVICE = frozenset({"sync", "backup", "updates", "maps", "apps", "music
 # (_device_options).
 DEVICE_COMMANDS = frozenset({
     "report", "info", "files", "activities", "diagnostics", "upload-config", "sync", "baseline",
-    "backup", "updates", "maps", "primary", "profiles", "register", "apps", "music", "courses"})
+    "backup", "updates", "maps", "primary", "register", "apps", "music", "courses"})
 
 
 # Commands that do not apply to a Garmin device in mass storage mode (as in the window);
@@ -580,8 +581,7 @@ def _activity_table(read) -> list[str]:
         # TRANSLATORS: column heading in `openexpress activities`: where the activity was
         # found, on the device or in a backup (not source code)
         _("Source"),
-        # TRANSLATORS: column heading in `openexpress activities` and a row in a profile's
-        # details: the name of the file
+        # TRANSLATORS: column heading in `openexpress activities`: the name of the file
         _("File"),
     ]
     rows = [_activity_row(r) for r in read]
@@ -2379,110 +2379,6 @@ def _primary_set(client, dev, apply: bool, role: _PrimaryRole) -> int:
     return 0
 
 
-def _profile_lines(f) -> list[str]:
-    """A profile's data screens as text: those the device scrolls through in their order, its
-    built-in screens with their state, those turned off; what is not known by its number."""
-    from openexpress import profile_names as names
-    from openexpress import profiles
-
-    p = f.profile
-    edge = names.edge_shaped(p)
-
-    def fields(screen) -> str:
-        return ", ".join(names.field_name(n, edge) for n in screen.fields)
-
-    def built_in(screen) -> str:
-        when = names.when_needed(screen, edge)
-        title = names.screen_title(p, screen)
-        return f"{title} ({when})" if when else title
-
-    def own(screen) -> str:
-        return " · ".join((names.screen_title(p, screen),
-                           ngettext("{count} field", "{count} fields", len(screen.fields))
-                           .format(count=len(screen.fields)),
-                           names.layout_name(screen.variant, edge)))
-
-    lines = [_("Data screens, in the order the device scrolls through them:")]
-    always = [s for s in p.carousel() if not names.when_needed(s, edge)]
-    for n, screen in enumerate(always, 1):
-        if screen.own:
-            lines.append(f"  {n}. {own(screen)}: {fields(screen) or '-'}")
-        else:
-            lines.append(f"  {n}. {built_in(screen)}")
-    if not always:
-        lines.append("  " + _("none"))
-    states = {True: pgettext("screen state", "on"), False: pgettext("screen state", "off")}
-    every = [s for s in p.built_in() if s.code != profiles.RESERVED_CODE]
-    needed = [s for s in every if names.when_needed(s, edge)]
-    # TRANSLATORS: CLI heading above the device's built-in screens of an activity profile, each with
-    # its state
-    for title, group in ((_("Built-in screens:"), [s for s in every if s not in needed]),
-                         (_("Built-in screens when needed:"), needed)):
-        if group:
-            lines.append(title)
-            for screen in group:
-                state = (pgettext("screen state", "hidden") if screen.hidden
-                         else states[screen.shown])
-                lines.append(f"  {built_in(screen)}: {state}")
-    off = [s for s in p.own_screens() if not s.shown]
-    if off:
-        lines.append(_("Screens off or hidden:"))
-        lines += [f"  {own(s)}: {fields(s) or '-'}" for s in off]
-    if not edge:
-        lines.append(_("The fields are named as Garmin's Edge devices number them; the codes "
-                       "of some of this device's layouts and built-in screens are not known to "
-                       "openExpress yet."))
-    return lines
-
-
-def cmd_profiles(args) -> int:
-    """The sport profiles of the connected device and, with show, the data screens of one;
-    read only."""
-    from openexpress import profile_names as names
-    from openexpress import profiles
-
-    st, dev = open_device(args)
-    if not profiles.keeps_profiles(dev):
-        _error(_("This device keeps no activity profiles."))
-        return 1
-    found_files = profiles.ProfileList(dev, st)
-    files = found_files.read_all()
-    readable = [f for f in files if f.profile is not None]
-    if args.profiles_cmd == "show":
-        wanted = profiles.sort_key(args.name)
-        found = ([f for f in readable if profiles.sort_key(f.title) == wanted]
-                 or [f for f in readable if wanted in profiles.sort_key(f.title)])
-        if len(found) != 1:
-            names_found = ", ".join(f.title for f in found)
-            _error(_("Profiles that match “{name}”: {names}").format(
-                name=args.name, names=names_found) if found
-                else _("No profile is named “{name}”.").format(name=args.name))
-            return 1
-        print(found[0].title)
-        print("\n".join(_profile_lines(found[0])))
-        return 0
-    # TRANSLATORS: CLI heading above the list of the device's activity profiles
-    print(ngettext("{count} profile:", "{count} profiles:", len(readable))
-          .format(count=len(readable)))
-    for f in readable:
-        shown = f.profile.carousel()
-        own = sum(1 for s in shown if s.own)
-        parts = [ngettext("{count} data screen", "{count} data screens", own).format(count=own)]
-        built_in = names.built_in_summary(f.profile)
-        if built_in:
-            parts.append(built_in)
-        print(f"  {f.title} · " + " · ".join(parts))
-    for f in files:
-        if f.profile is None:
-            # TRANSLATORS: CLI: an activity profile file that could not be read ({file}: its
-            # name, {error}: why); keep the two leading spaces
-            print(_("  {file}: {error}").format(file=f.name, error=f.error))
-    if found_files.backup_time is not None:
-        print(_("The device keeps backups of its profiles from {date}.").format(
-            date=profiles.backup_day(found_files.backup_time)))
-    return 0
-
-
 # --- courses -------------------------------------------------------------------------------
 
 
@@ -2623,17 +2519,22 @@ def _courses_add(args, dev, st) -> int:
     return 0
 
 
+def _name_key(name: str) -> str:
+    """A name as `courses remove` matches it: letter case and diacritics aside (ł as l too)."""
+    text = unicodedata.normalize("NFKD", name.casefold().replace("ł", "l"))
+    return "".join(c for c in text if not unicodedata.combining(c))
+
+
 def _courses_remove(args, dev, st, seen) -> int:
     """`courses remove NAME`: one course or waiting file, by its name or the file's (letter
     case and diacritics aside), else by a part of it that only one has."""
     from openexpress import courses
-    from openexpress.profiles import sort_key
 
     shown = [*seen.courses, *seen.waiting]
-    wanted = sort_key(args.name)
+    wanted = _name_key(args.name)
 
     def names(item) -> set[str]:
-        return {sort_key(item.title), sort_key(item.filename)}
+        return {_name_key(item.title), _name_key(item.filename)}
 
     found = ([item for item in shown if wanted in names(item)]
              or [item for item in shown if any(wanted in n for n in names(item))])
@@ -3200,13 +3101,6 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--wearable", dest="set_wearable", action="store_true", help=wearable_help)
     m.add_argument("--apply", action="store_true", help=_("change it in your Garmin account"))
     s.set_defaults(func=cmd_primary)
-
-    s = sub.add_parser("profiles", help=_("the sport profiles of the device and their data "
-                                          "screens (read only)"))
-    psub = s.add_subparsers(dest="profiles_cmd")
-    m = psub.add_parser("show", help=_("the data screens of one profile"))
-    m.add_argument("name", metavar="NAME", help=_("the name of the profile, or a part of it"))
-    s.set_defaults(func=cmd_profiles)
 
     s = sub.add_parser("courses", help=_("the courses on the device, the GPX files waiting for "
                                          "it and its saved locations (experimental)"))

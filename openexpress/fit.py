@@ -18,9 +18,6 @@ FIT_EPOCH_OFFSET = 631065600  # 1989-12-31T00:00:00Z as Unix time
 
 _MESG_FILE_ID = 0
 _FIELD_TIME_CREATED = 4
-# FIT profile: sport; in an activity file, the sport profile it was recorded with (its name)
-_MESG_SPORT_OF_ACTIVITY = 12
-_FIELD_SPORT_NAME = 3
 # FIT profile: session (one part of an activity; a multisport activity has one per sport)
 _MESG_SESSION = 18
 _SESSION_START_TIME = 2
@@ -360,7 +357,6 @@ class ActivitySummary:
     distance: float | None = None  # metres
     ascent: int | None = None  # metres
     has_positions: bool = False  # a GPX of it can be made
-    profile: str | None = None  # the name of the sport profile it was recorded with
 
 
 def _unix_time(value: Value) -> int | None:
@@ -409,22 +405,18 @@ def summary(data: bytes) -> ActivitySummary:
     if found is not None and found[0]:
         return ActivitySummary(FileState.STILL_BEING_WRITTEN, created=_created(data))
     state = FileState.WHOLE if found is None else FileState.DAMAGED
-    created = profile = None
+    created = None
     sessions: list[dict[int, Value]] = []
     try:
-        for num, values in iter_messages(data, wanted=(_MESG_FILE_ID, _MESG_SESSION,
-                                                       _MESG_SPORT_OF_ACTIVITY)):
+        for num, values in iter_messages(data, wanted=(_MESG_FILE_ID, _MESG_SESSION)):
             if num == _MESG_SESSION:
                 sessions.append(values)
-            elif num == _MESG_SPORT_OF_ACTIVITY:
-                name = values.get(_FIELD_SPORT_NAME)
-                profile = profile or (name if isinstance(name, str) else None)
             elif created is None:
                 created = _unix_time(values.get(_FIELD_TIME_CREATED))
     except FitError:
         state = FileState.DAMAGED
     if not sessions:
-        return ActivitySummary(state, created=created, profile=profile)
+        return ActivitySummary(state, created=created)
     sports = {_whole_number(s.get(_SESSION_SPORT)) for s in sessions} - {None}
     sport = None
     if len(sports) == 1:
@@ -438,8 +430,7 @@ def summary(data: bytes) -> ActivitySummary:
         state, created=created, start=_unix_time(sessions[0].get(_SESSION_START_TIME)),
         sport=sport, timer_time=_total(sessions, _SESSION_TIMER_TIME, 1000),
         distance=_total(sessions, _SESSION_DISTANCE, 100),
-        ascent=_total(sessions, _SESSION_ASCENT), has_positions=has_positions,
-        profile=profile)
+        ascent=_total(sessions, _SESSION_ASCENT), has_positions=has_positions)
 
 
 # FIT profile: the names of the messages `fit inspect` names (others: by number).

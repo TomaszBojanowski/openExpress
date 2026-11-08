@@ -1,5 +1,5 @@
 """Make the symbolic icons of the program from their drawings (packaging/icons/*.svg): the device
-kinds and the built-in screens of a profile.
+kinds, the pages of the side panel and the tiles of an activity.
 
 Each stroke of a drawing (stroke="currentColor") becomes the filled outline of the same line
 (its width, round caps and joins), the drawing unchanged, written to

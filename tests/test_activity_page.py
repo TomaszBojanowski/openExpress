@@ -1423,11 +1423,11 @@ def tile_icon(name: str) -> str:
 
 
 @pytest.mark.parametrize(("which", "group", "icons"), [
-    ("walk", "foot", [tile_icon(n) for n in ("activity-distance", "screen-lap-summary",
-                                             "activity-speed", "screen-heart-rate-zone",
-                                             "screen-elevation")]),
-    ("workout", "training", [tile_icon(n) for n in ("screen-lap-summary", "screen-heart-rate-zone",
-                                                    "screen-heart-rate-zone",
+    ("walk", "foot", [tile_icon(n) for n in ("activity-distance", "activity-time",
+                                             "activity-speed", "activity-heart-rate",
+                                             "activity-elevation")]),
+    ("workout", "training", [tile_icon(n) for n in ("activity-time", "activity-heart-rate",
+                                                    "activity-heart-rate",
                                                     "activity-calories")])])
 def test_the_tiles_have_the_icons_of_their_kind_in_the_sport_s_colour(monkeypatch, which, group,
                                                                       icons):

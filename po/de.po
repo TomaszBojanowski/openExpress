@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 19:22+0100\n"
+"POT-Creation-Date: 2026-11-07 20:40+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -161,7 +161,7 @@ msgstr ""
 "und fügen Sie die Adresse ein, auf der Sie landen."
 
 #: openexpress/auth/sso.py:251 openexpress/gui/device_page.py:688
-#: openexpress/gui/device_page.py:889 openexpress/gui/netstatus_view.py:187
+#: openexpress/gui/device_page.py:887 openexpress/gui/netstatus_view.py:187
 #: openexpress/gui/updates_page.py:513
 msgid "Try Again"
 msgstr "Erneut versuchen"
@@ -922,7 +922,7 @@ msgstr[1] "{count} Positionen würden sich ändern ({kinds}):"
 msgid "{position}: {new} (now: {old})"
 msgstr "{position}: {new} (jetzt: {old})"
 
-#: openexpress/ciq.py:2020 openexpress/cli.py:2826
+#: openexpress/ciq.py:2020 openexpress/cli.py:2727
 #: openexpress/gui/music_page.py:215
 #, ignore-same, ignore-same-plurals, python-brace-format
 msgid "… and {count} more"
@@ -952,71 +952,71 @@ msgstr ""
 msgid "Several entries on the device share this ID; the type is needed"
 msgstr "Mehrere Einträge auf dem Gerät haben diese ID; der Typ wird benötigt"
 
-#: openexpress/cli.py:89
+#: openexpress/cli.py:90
 msgid "Do not unplug the device until the operation is finished."
 msgstr "Trennen Sie das Gerät nicht, bevor der Vorgang abgeschlossen ist."
 
-#: openexpress/cli.py:109
+#: openexpress/cli.py:110
 msgid "Nothing to sync: the device declares no data types."
 msgstr "Nichts zu synchronisieren: Das Gerät gibt keine Datentypen an."
 
-#: openexpress/cli.py:135
+#: openexpress/cli.py:136
 #, python-brace-format
 msgid "Read the application key and download signing data from {file}"
 msgstr "Anwendungsschlüssel und Signaturdaten für Downloads aus {file} gelesen"
 
-#: openexpress/cli.py:154
+#: openexpress/cli.py:155
 #, python-brace-format
 msgid "Saved download URL signing data from {file}"
 msgstr "Signaturdaten für Download-URLs aus {file} gespeichert"
 
-#: openexpress/cli.py:156
+#: openexpress/cli.py:157
 #, python-brace-format
 msgid "Warning: {path} not found; map downloads will not work"
 msgstr ""
 "Warnung: {path} nicht gefunden; Karten-Downloads werden nicht funktionieren"
 
-#: openexpress/cli.py:161
+#: openexpress/cli.py:162
 #, python-brace-format
 msgid "Saved OAuth1 consumer key in {path}"
 msgstr "OAuth1-Consumer-Key in {path} gespeichert"
 
-#: openexpress/cli.py:172
+#: openexpress/cli.py:173
 #, python-brace-format
 msgid "Environment: {environment}, locale: {locale}"
 msgstr "Umgebung: {environment}, Locale: {locale}"
 
 #. TRANSLATORS: `openexpress setup --ui-language`: {language} is the language's own name, or
 #. "system language"
-#: openexpress/cli.py:177
+#: openexpress/cli.py:178
 #, python-brace-format
 msgid "Interface language: {language}"
 msgstr "Sprache der Oberfläche: {language}"
 
 #. TRANSLATORS: fills {language} in "Interface language: {language}": the program follows
 #. the system's language
-#: openexpress/cli.py:181
+#: openexpress/cli.py:182
 msgid "system language"
 msgstr "Systemsprache"
 
-#: openexpress/cli.py:188
+#: openexpress/cli.py:189
 msgid "Copy of the device's diagnostic files at each connection: on"
 msgstr "Kopie der Diagnosedateien des Geräts bei jeder Verbindung: ein"
 
-#: openexpress/cli.py:189
+#: openexpress/cli.py:190
 msgid "Copy of the device's diagnostic files at each connection: off"
 msgstr "Kopie der Diagnosedateien des Geräts bei jeder Verbindung: aus"
 
-#: openexpress/cli.py:202
+#: openexpress/cli.py:203
 msgid "Error logs on the device:"
 msgstr "Fehlerprotokolle auf dem Gerät:"
 
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
-#: openexpress/cli.py:207
+#: openexpress/cli.py:208
 msgid "no entries"
 msgstr "keine Einträge"
 
-#: openexpress/cli.py:210
+#: openexpress/cli.py:211
 #, python-brace-format
 msgid ""
 "Memory dumps on the device: {count}, {size} (encrypted; copied only with --"
@@ -1025,27 +1025,27 @@ msgstr ""
 "Speicherabbilder auf dem Gerät: {count}, {size} (verschlüsselt; werden nur "
 "mit --dumps kopiert)"
 
-#: openexpress/cli.py:215
+#: openexpress/cli.py:216
 msgid "Crashes in the copied boot log:"
 msgstr "Abstürze im kopierten Startprotokoll:"
 
-#: openexpress/cli.py:218
+#: openexpress/cli.py:219
 #, python-brace-format
 msgid "Copies on this computer: {copies}"
 msgstr "Kopien auf diesem Computer: {copies}"
 
-#: openexpress/cli.py:221
+#: openexpress/cli.py:222
 #, python-brace-format
 msgid "in the folder of the device under {folder}"
 msgstr "im Ordner des Geräts unter {folder}"
 
-#: openexpress/cli.py:224
+#: openexpress/cli.py:225
 msgid "Dry run. Add --apply to copy the files the device shows now."
 msgstr ""
 "Probelauf. Fügen Sie --apply hinzu, um die Dateien zu kopieren, die das "
 "Gerät jetzt anzeigt."
 
-#: openexpress/cli.py:226
+#: openexpress/cli.py:227
 msgid ""
 "With --apply, --crash-logs also reads its hidden crash logs in a session of "
 "its own: the device leaves the file manager for a moment."
@@ -1053,7 +1053,7 @@ msgstr ""
 "Mit --apply liest --crash-logs auch die verborgenen Absturzprotokolle in "
 "einer eigenen Sitzung: Das Gerät verlässt dafür kurz die Dateiverwaltung."
 
-#: openexpress/cli.py:231
+#: openexpress/cli.py:232
 #, python-brace-format
 msgid ""
 "Copied: {count} new file ({size}), {unchanged} unchanged, {listed} only "
@@ -1068,83 +1068,83 @@ msgstr[1] ""
 "Kopiert: {count} neue Dateien ({size}), {unchanged} unverändert, {listed} "
 "nur aufgelistet."
 
-#: openexpress/cli.py:239
+#: openexpress/cli.py:240
 #, python-brace-format
 msgid "Memory dumps copied: {count} new ({size})."
 msgstr "Speicherabbilder kopiert: {count} neu ({size})."
 
-#: openexpress/cli.py:242
+#: openexpress/cli.py:243
 #, python-brace-format
 msgid "Not copied, over the limit of {size}: {names}"
 msgstr "Nicht kopiert, über der Grenze von {size}: {names}"
 
-#: openexpress/cli.py:247
+#: openexpress/cli.py:248
 #, python-brace-format
 msgid "Crash logs: {count} file read ({new} new)."
 msgid_plural "Crash logs: {count} files read ({new} new)."
 msgstr[0] "Absturzprotokolle: {count} Datei gelesen ({new} neu)."
 msgstr[1] "Absturzprotokolle: {count} Dateien gelesen ({new} neu)."
 
-#: openexpress/cli.py:251
+#: openexpress/cli.py:252
 msgid "The device has no hidden crash logs."
 msgstr "Das Gerät hat keine verborgenen Absturzprotokolle."
 
 #. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
-#: openexpress/cli.py:262
+#: openexpress/cli.py:263
 #, python-brace-format
 msgid "USB drive ({name})"
 msgstr "USB-Laufwerk ({name})"
 
-#: openexpress/cli.py:262 openexpress/cli.py:797 openexpress/cli.py:945
+#: openexpress/cli.py:263 openexpress/cli.py:797 openexpress/cli.py:945
 #, ignore-reused
 msgid "USB drive"
 msgstr "USB-Laufwerk"
 
-#: openexpress/cli.py:284
+#: openexpress/cli.py:285
 msgid "Device:"
 msgstr "Gerät:"
 
 #. TRANSLATORS: label in `openexpress info`, followed by Garmin's part number of the model
 #. ("006-B1234-00")
-#: openexpress/cli.py:287
+#: openexpress/cli.py:288
 msgid "Part number:"
 msgstr "Teilenummer:"
 
 #. TRANSLATORS: label in `openexpress info`, followed by the version of the device's software
-#: openexpress/cli.py:289
+#: openexpress/cli.py:290
 msgid "Software:"
 msgstr "Software:"
 
 #. TRANSLATORS: label in `openexpress info`, followed by Garmin's number of this one device
 #. (its unit ID)
-#: openexpress/cli.py:292
+#: openexpress/cli.py:293
 msgid "Unit ID:"
 msgstr "Geräte-ID:"
 
 #. TRANSLATORS: label in `openexpress info`, followed by where the files are: the MTP
 #. storage's name or "USB drive (…)"
-#: openexpress/cli.py:295
+#: openexpress/cli.py:296
 msgid "Storage:"
 msgstr "Speicher:"
 
-#: openexpress/cli.py:296
+#: openexpress/cli.py:297
 msgid "Free space:"
 msgstr "Freier Speicher:"
 
 #. TRANSLATORS: label in `openexpress info`, followed by "{datatypes}, components:
 #. {components}"
-#: openexpress/cli.py:299
+#: openexpress/cli.py:300
 msgid "Data types:"
 msgstr "Datentypen:"
 
 #. TRANSLATORS: `openexpress info`, after "Data types:": {datatypes} how many data
 #. types, {components} how many software components
-#: openexpress/cli.py:302
+#: openexpress/cli.py:303
 #, python-brace-format
 msgid "{datatypes}, components: {components}"
 msgstr "{datatypes}, Komponenten: {components}"
 
-#: openexpress/cli.py:307
+#: openexpress/cli.py:308
 #, python-brace-format
 msgid "max. {count} app, {size}"
 msgid_plural "max. {count} apps, {size}"
@@ -1152,11 +1152,11 @@ msgstr[0] "max. {count} App, {size}"
 msgstr[1] "max. {count} Apps, {size}"
 
 #. TRANSLATORS: before the hints of `openexpress report` when no device could be opened
-#: openexpress/cli.py:337
+#: openexpress/cli.py:338
 msgid "No device was opened: the report says what is connected over USB."
 msgstr ""
 
-#: openexpress/cli.py:351
+#: openexpress/cli.py:352
 #, python-brace-format
 msgid ""
 "This report contains no serial number, unit ID or e-mail. Open this address "
@@ -1166,7 +1166,7 @@ msgstr ""
 "Adresse. Öffnen Sie diese Adresse, um einen Gerätebericht zu beginnen, in "
 "den er bereits eingetragen ist: {url}"
 
-#: openexpress/cli.py:355
+#: openexpress/cli.py:356
 #, python-brace-format
 msgid ""
 "This report contains no serial number, unit ID or e-mail. Paste it into a "
@@ -1175,7 +1175,7 @@ msgstr ""
 "Dieser Bericht enthält keine Seriennummer, keine Geräte-ID und keine E-Mail-"
 "Adresse. Fügen Sie ihn in einen Gerätebericht ein: {url}"
 
-#: openexpress/cli.py:359
+#: openexpress/cli.py:360
 msgid ""
 "The end of the log is printed above. It is filtered, but read it before you "
 "send it."
@@ -1183,7 +1183,7 @@ msgstr ""
 "Das Ende des Protokolls ist oben ausgegeben. Es ist gefiltert, aber lesen "
 "Sie es, bevor Sie es senden."
 
-#: openexpress/cli.py:362
+#: openexpress/cli.py:363
 msgid ""
 "The log is not in the address: paste it into the “Log” field of the form or "
 "into a comment."
@@ -1191,7 +1191,7 @@ msgstr ""
 "Das Protokoll ist nicht in der Adresse: Fügen Sie es in das Feld „Log“ des "
 "Formulars oder in einen Kommentar ein."
 
-#: openexpress/cli.py:365
+#: openexpress/cli.py:366
 #, python-brace-format
 msgid ""
 "Log file: {path} (add --log to print its last lines for the “Log” field of "
@@ -1200,71 +1200,71 @@ msgstr ""
 "Protokolldatei: {path} (fügen Sie --log hinzu, um ihre letzten Zeilen für "
 "das Feld „Log“ des Formulars oder einen Kommentar auszugeben)"
 
-#: openexpress/cli.py:388 openexpress/gui/preferences.py:170
+#: openexpress/cli.py:389 openexpress/gui/preferences.py:170
 #, python-brace-format
 msgid "{count} file"
 msgid_plural "{count} files"
 msgstr[0] "{count} Datei"
 msgstr[1] "{count} Dateien"
 
-#: openexpress/cli.py:395
+#: openexpress/cli.py:396
 #, python-brace-format
 msgid "Total: {count} file"
 msgid_plural "Total: {count} files"
 msgstr[0] "Insgesamt: {count} Datei"
 msgstr[1] "Insgesamt: {count} Dateien"
 
-#: openexpress/cli.py:408
+#: openexpress/cli.py:409
 #, python-brace-format
 msgid "a whole number from 1, not {value}"
 msgstr "eine ganze Zahl ab 1, nicht {value}"
 
 #. TRANSLATORS: first line of `openexpress activities` and `sync`: {device} the device's name,
 #. {version} its software version
-#: openexpress/cli.py:420 openexpress/cli.py:1055
+#: openexpress/cli.py:421 openexpress/cli.py:1055
 #, python-brace-format
 msgid "{device} (software {version})"
 msgstr "{device} (Software {version})"
 
-#: openexpress/cli.py:424
+#: openexpress/cli.py:425
 msgid "This device keeps no activities."
 msgstr "Dieses Gerät speichert keine Aktivitäten."
 
-#: openexpress/cli.py:433
+#: openexpress/cli.py:434
 msgid "No activities on the device or in its backups."
 msgstr "Keine Aktivitäten auf dem Gerät oder in seinen Sicherungen."
 
-#: openexpress/cli.py:440
+#: openexpress/cli.py:441
 #, python-brace-format
 msgid "The newest {shown} of {count}; --all shows every one."
 msgstr "Die neuesten {shown} von {count}; --all zeigt alle."
 
 #. TRANSLATORS: under the table of `openexpress activities`: how many recorded
 #. activities the device and its backups have
-#: openexpress/cli.py:444
+#: openexpress/cli.py:445
 #, python-brace-format
 msgid "{count} activity."
 msgid_plural "{count} activities."
 msgstr[0] "{count} Aktivität."
 msgstr[1] "{count} Aktivitäten."
 
-#: openexpress/cli.py:447
+#: openexpress/cli.py:448
 #, python-brace-format
 msgid "Only in backups: {count}."
 msgstr "Nur in Sicherungen: {count}."
 
-#: openexpress/cli.py:468
+#: openexpress/cli.py:469
 #, python-brace-format
 msgid "No activity named {name} is on the device or in its backups."
 msgstr ""
 "Keine Aktivität namens {name} ist auf dem Gerät oder in seinen Sicherungen."
 
-#: openexpress/cli.py:477
+#: openexpress/cli.py:478
 #, python-brace-format
 msgid "{name} cannot be read as a FIT file."
 msgstr "{name} kann nicht als FIT-Datei gelesen werden."
 
-#: openexpress/cli.py:482
+#: openexpress/cli.py:483
 #, python-brace-format
 msgid ""
 "{name} was still being written by the device when it was read. Disconnect "
@@ -1274,37 +1274,37 @@ msgstr ""
 "das Gerät, schließen Sie es wieder an und exportieren Sie es dann erneut."
 
 #. TRANSLATORS: an activity not exported to GPX: {name} its file name, {error} why
-#: openexpress/cli.py:492
+#: openexpress/cli.py:493
 #, python-brace-format
 msgid "{name}: {error}"
 msgstr "{name}: {error}"
 
-#: openexpress/cli.py:496 openexpress/cli.py:524
+#: openexpress/cli.py:497 openexpress/cli.py:525
 #, python-brace-format
 msgid "{path} exists already; nothing is overwritten."
 msgstr "{path} existiert bereits; nichts wird überschrieben."
 
-#: openexpress/cli.py:504 openexpress/cli.py:526 openexpress/cli.py:614
+#: openexpress/cli.py:505 openexpress/cli.py:527 openexpress/cli.py:614
 #: openexpress/cli.py:898 openexpress/cli.py:905 openexpress/cli.py:952
 #: openexpress/cli.py:961 openexpress/cli.py:991 openexpress/cli.py:996
-#: openexpress/cli.py:1000 openexpress/cli.py:3477 openexpress/cli.py:3483
-#: openexpress/cli.py:3489 openexpress/cli.py:3504 openexpress/cli.py:3521
+#: openexpress/cli.py:1000 openexpress/cli.py:3371 openexpress/cli.py:3377
+#: openexpress/cli.py:3383 openexpress/cli.py:3398 openexpress/cli.py:3415
 #, python-brace-format
 msgid "Error: {error}"
 msgstr "Fehler: {error}"
 
-#: openexpress/cli.py:505
+#: openexpress/cli.py:506
 msgid "Nothing was written."
 msgstr "Nichts wurde geschrieben."
 
-#: openexpress/cli.py:509
+#: openexpress/cli.py:510
 #, python-brace-format
 msgid "Would write {path} ({count} point)"
 msgid_plural "Would write {path} ({count} points)"
 msgstr[0] "{path} würde geschrieben ({count} Punkt)"
 msgstr[1] "{path} würde geschrieben ({count} Punkte)"
 
-#: openexpress/cli.py:512
+#: openexpress/cli.py:513
 #, ignore-same, ignore-same-plurals
 msgid "Dry run: nothing was written. Add --apply to write it."
 msgid_plural "Dry run: nothing was written. Add --apply to write them."
@@ -1315,14 +1315,14 @@ msgstr[1] ""
 "Probelauf: Nichts wurde geschrieben. Fügen Sie --apply hinzu, um sie zu "
 "schreiben."
 
-#: openexpress/cli.py:525 openexpress/device/gio_storage.py:429
+#: openexpress/cli.py:526 openexpress/device/gio_storage.py:429
 #: openexpress/device/gio_storage.py:451 openexpress/device/storage.py:490
 #: openexpress/device/storage.py:503
 #, python-brace-format
 msgid "Cannot write {path}"
 msgstr "{path} kann nicht geschrieben werden"
 
-#: openexpress/cli.py:528
+#: openexpress/cli.py:529
 #, python-brace-format
 msgid "Wrote {path} ({count} point)."
 msgid_plural "Wrote {path} ({count} points)."
@@ -1330,77 +1330,75 @@ msgstr[0] "{path} geschrieben ({count} Punkt)."
 msgstr[1] "{path} geschrieben ({count} Punkte)."
 
 #. TRANSLATORS: activities: where an activity was read
-#: openexpress/cli.py:542
+#: openexpress/cli.py:543
 msgctxt "activity source"
 msgid "device"
 msgstr "Gerät"
 
-#: openexpress/cli.py:544
+#: openexpress/cli.py:545
 #, python-brace-format
 msgctxt "activity source"
 msgid "backup {date}"
 msgstr "Sicherung {date}"
 
 #. TRANSLATORS: strftime format of a date in the popover of the server state button
-#: openexpress/cli.py:545 openexpress/cli.py:1025 openexpress/cli.py:1186
-#: openexpress/cli.py:1199 openexpress/cli.py:2545
+#: openexpress/cli.py:546 openexpress/cli.py:1025 openexpress/cli.py:1186
+#: openexpress/cli.py:1199 openexpress/cli.py:2441
 #: openexpress/gui/courses_page.py:61 openexpress/gui/words.py:304
 #: openexpress/i18n.py:181 openexpress/netstatus.py:265
-#: openexpress/netstatus.py:296 openexpress/profiles.py:266
-#: openexpress/service.py:1308
+#: openexpress/netstatus.py:296 openexpress/service.py:1308
 msgid "%Y-%m-%d"
 msgstr "%d.%m.%Y"
 
 #. TRANSLATORS: a note under a row of `openexpress activities`: the activity's file could not
 #. be read
-#: openexpress/cli.py:550
+#: openexpress/cli.py:551
 msgid "unreadable file"
 msgstr "unlesbare Datei"
 
-#: openexpress/cli.py:556
+#: openexpress/cli.py:557
 msgid "still being written: disconnect and reconnect the device"
 msgstr ""
 "wird noch geschrieben: Trennen Sie das Gerät und schließen Sie es wieder an"
 
 #. TRANSLATORS: a note under a row of `openexpress activities`: the activity's file is damaged
-#: openexpress/cli.py:564
+#: openexpress/cli.py:565
 msgid "damaged file"
 msgstr "beschädigte Datei"
 
 #. TRANSLATORS: column heading in `openexpress activities`: when the activity started
 #. (date and hour)
-#: openexpress/cli.py:573
+#: openexpress/cli.py:574
 msgid "Date"
 msgstr "Datum"
 
-#: openexpress/cli.py:574
+#: openexpress/cli.py:575
 msgid "Sport"
 msgstr "Sportart"
 
-#: openexpress/cli.py:575
+#: openexpress/cli.py:576
 msgctxt "activity list column"
 msgid "Time"
 msgstr "Zeit"
 
-#: openexpress/cli.py:576
+#: openexpress/cli.py:577
 msgid "Distance"
 msgstr "Distanz"
 
 #. TRANSLATORS: column heading in `openexpress activities`: the total ascent of the
 #. activity, in metres
-#: openexpress/cli.py:579
+#: openexpress/cli.py:580
 msgid "Ascent"
 msgstr "Anstieg"
 
 #. TRANSLATORS: column heading in `openexpress activities`: where the activity was
 #. found, on the device or in a backup (not source code)
-#: openexpress/cli.py:582
+#: openexpress/cli.py:583
 msgid "Source"
 msgstr "Quelle"
 
-#. TRANSLATORS: column heading in `openexpress activities` and a row in a profile's
-#. details: the name of the file
-#: openexpress/cli.py:585 openexpress/gui/profiles_page.py:435
+#. TRANSLATORS: column heading in `openexpress activities`: the name of the file
+#: openexpress/cli.py:585
 msgid "File"
 msgstr "Datei"
 
@@ -1688,7 +1686,7 @@ msgid "Devices this installation has seen:"
 msgstr "Geräte, die diese Installation gesehen hat:"
 
 #. TRANSLATORS: the version of a device's software, under its name ("Software 23.39")
-#: openexpress/cli.py:948 openexpress/gui/device_page.py:1007
+#: openexpress/cli.py:948 openexpress/gui/device_page.py:1005
 #: openexpress/gui/start_window.py:222 openexpress/gui/words.py:195
 #, python-brace-format
 msgid "Software {version}"
@@ -1936,7 +1934,7 @@ msgid_plural "Done with {count} errors."
 msgstr[0] "Fertig mit {count} Fehler."
 msgstr[1] "Fertig mit {count} Fehlern."
 
-#: openexpress/cli.py:1241 openexpress/cli.py:2842
+#: openexpress/cli.py:1241 openexpress/cli.py:2743
 msgid "Done."
 msgstr "Fertig."
 
@@ -2141,7 +2139,7 @@ msgstr "Die Signaturdaten für Download-URLs fehlen. Führen Sie aus: {command}"
 msgid "Map: {title}"
 msgstr "Karte: {title}"
 
-#: openexpress/cli.py:1660 openexpress/cli.py:2598
+#: openexpress/cli.py:1660 openexpress/cli.py:2494
 #, python-brace-format
 msgid "{file} ({size}) will be written to {path}"
 msgstr "{file} ({size}) wird nach {path} geschrieben"
@@ -2154,14 +2152,14 @@ msgstr "Freier Speicher auf dem Gerät: {free} (die Karte belegt {size})"
 #: openexpress/cli.py:1666 openexpress/cli.py:1694 openexpress/cli.py:1793
 #: openexpress/cli.py:1895 openexpress/cli.py:1966 openexpress/cli.py:2000
 #: openexpress/cli.py:2132 openexpress/cli.py:2181 openexpress/cli.py:2250
-#: openexpress/cli.py:2274 openexpress/cli.py:2372 openexpress/cli.py:2617
-#: openexpress/cli.py:2653 openexpress/cli.py:2711 openexpress/cli.py:2832
-#: openexpress/cli.py:2856 openexpress/cli.py:2874 openexpress/cli.py:2914
-#: openexpress/cli.py:2937
+#: openexpress/cli.py:2274 openexpress/cli.py:2372 openexpress/cli.py:2513
+#: openexpress/cli.py:2554 openexpress/cli.py:2612 openexpress/cli.py:2733
+#: openexpress/cli.py:2757 openexpress/cli.py:2775 openexpress/cli.py:2815
+#: openexpress/cli.py:2838
 msgid "Dry run. Add --apply."
 msgstr "Probelauf. Fügen Sie --apply hinzu."
 
-#: openexpress/cli.py:1670 openexpress/cli.py:2621
+#: openexpress/cli.py:1670 openexpress/cli.py:2517
 #: openexpress/gui/maps_page.py:306
 #, python-brace-format
 msgid "Wrote {path} ({size})."
@@ -2193,7 +2191,7 @@ msgstr "Eigene Karte wird entfernt: {title}"
 msgid "Free space on the device: {free} (removing it frees {size})"
 msgstr "Freier Speicher auf dem Gerät: {free} (das Entfernen gibt {size} frei)"
 
-#: openexpress/cli.py:1697 openexpress/cli.py:2656
+#: openexpress/cli.py:1697 openexpress/cli.py:2557
 #: openexpress/gui/maps_page.py:348
 #, python-brace-format
 msgid "Removed {path} ({size})."
@@ -2267,7 +2265,7 @@ msgstr[0] "Karte {name} wird entfernt: {count} Datei"
 msgstr[1] "Karte {name} wird entfernt: {count} Dateien"
 
 #: openexpress/cli.py:1797 openexpress/cli.py:2011 openexpress/cli.py:2259
-#: openexpress/cli.py:2877
+#: openexpress/cli.py:2778
 #, python-brace-format
 msgid "Removed {count} file."
 msgid_plural "Removed {count} files."
@@ -2627,7 +2625,7 @@ msgid "ERROR {item}: {error}"
 msgstr "FEHLER {item}: {error}"
 
 #. TRANSLATORS: shown after "Installed:" when no app was installed
-#: openexpress/cli.py:2196 openexpress/cli.py:2413
+#: openexpress/cli.py:2196
 msgid "none"
 msgstr "keine"
 
@@ -2813,103 +2811,9 @@ msgstr ""
 "Um es zurückzuändern, schließen Sie {old} an und führen Sie `openexpress "
 "primary set --wearable --apply` aus, oder ändern Sie es in Garmin Connect."
 
-#. TRANSLATORS: data fields on one data screen of an activity profile
-#: openexpress/cli.py:2401 openexpress/gui/profiles_page.py:43
-#, python-brace-format
-msgid "{count} field"
-msgid_plural "{count} fields"
-msgstr[0] "{count} Feld"
-msgstr[1] "{count} Felder"
-
-#: openexpress/cli.py:2405
-msgid "Data screens, in the order the device scrolls through them:"
-msgstr "Datenseiten in der Reihenfolge, in der das Gerät durch sie blättert:"
-
-#: openexpress/cli.py:2414
-msgctxt "screen state"
-msgid "on"
-msgstr "ein"
-
-#: openexpress/cli.py:2414
-msgctxt "screen state"
-msgid "off"
-msgstr "aus"
-
-#. TRANSLATORS: CLI heading above the device's built-in screens of an activity profile, each with
-#. its state
-#: openexpress/cli.py:2419
-msgid "Built-in screens:"
-msgstr "Integrierte Seiten:"
-
-#: openexpress/cli.py:2420
-msgid "Built-in screens when needed:"
-msgstr "Integrierte Seiten bei Bedarf:"
-
-#: openexpress/cli.py:2424
-msgctxt "screen state"
-msgid "hidden"
-msgstr "ausgeblendet"
-
-#: openexpress/cli.py:2429
-msgid "Screens off or hidden:"
-msgstr "Ausgeschaltete oder ausgeblendete Seiten:"
-
-#: openexpress/cli.py:2432 openexpress/gui/profiles_page.py:433
-msgid ""
-"The fields are named as Garmin's Edge devices number them; the codes of some "
-"of this device's layouts and built-in screens are not known to openExpress "
-"yet."
-msgstr ""
-"Die Felder sind so benannt, wie Garmins Edge-Geräte sie nummerieren; die "
-"Codes einiger Layouts und integrierter Seiten dieses Geräts kennt "
-"openExpress noch nicht."
-
-#: openexpress/cli.py:2446 openexpress/gui/profiles_page.py:563
-msgid "This device keeps no activity profiles."
-msgstr "Dieses Gerät speichert keine Aktivitätsprofile."
-
-#: openexpress/cli.py:2457
-#, python-brace-format
-msgid "Profiles that match “{name}”: {names}"
-msgstr "Profile, die zu „{name}“ passen: {names}"
-
-#: openexpress/cli.py:2459
-#, python-brace-format
-msgid "No profile is named “{name}”."
-msgstr "Kein Profil heißt „{name}“."
-
-#. TRANSLATORS: CLI heading above the list of the device's activity profiles
-#: openexpress/cli.py:2465
-#, python-brace-format
-msgid "{count} profile:"
-msgid_plural "{count} profiles:"
-msgstr[0] "{count} Profil:"
-msgstr[1] "{count} Profile:"
-
-#. TRANSLATORS: the user's own data screens in an activity profile, part of the line under its
-#. name
-#: openexpress/cli.py:2470 openexpress/gui/profiles_page.py:63
-#, python-brace-format
-msgid "{count} data screen"
-msgid_plural "{count} data screens"
-msgstr[0] "{count} Datenseite"
-msgstr[1] "{count} Datenseiten"
-
-#. TRANSLATORS: CLI: an activity profile file that could not be read ({file}: its
-#. name, {error}: why); keep the two leading spaces
-#: openexpress/cli.py:2479
-#, python-brace-format
-msgid "  {file}: {error}"
-msgstr "  {file}: {error}"
-
-#: openexpress/cli.py:2481
-#, python-brace-format
-msgid "The device keeps backups of its profiles from {date}."
-msgstr "Das Gerät hat Sicherungen seiner Profile vom {date}."
-
 #. TRANSLATORS: `openexpress courses`: the points of a track of a GPX file (not its
 #. waypoints)
-#: openexpress/cli.py:2499
+#: openexpress/cli.py:2395
 #, python-brace-format
 msgid "{count} track point"
 msgid_plural "{count} track points"
@@ -2918,67 +2822,67 @@ msgstr[1] "{count} Trackpunkte"
 
 #. TRANSLATORS: `openexpress courses`: the points of a route of a GPX file, which a device
 #. joins with straight lines (not its waypoints)
-#: openexpress/cli.py:2503
+#: openexpress/cli.py:2399
 #, python-brace-format
 msgid "{count} route point"
 msgid_plural "{count} route points"
 msgstr[0] "{count} Routenpunkt"
 msgstr[1] "{count} Routenpunkte"
 
-#: openexpress/cli.py:2514
+#: openexpress/cli.py:2410
 msgctxt "course contents"
 msgid "track"
 msgstr "Track"
 
-#: openexpress/cli.py:2519
+#: openexpress/cli.py:2415
 #, python-brace-format
 msgid "{count} track, {distance}"
 msgid_plural "{count} tracks, {distance}"
 msgstr[0] "{count} Track, {distance}"
 msgstr[1] "{count} Tracks, {distance}"
 
-#: openexpress/cli.py:2523
+#: openexpress/cli.py:2419
 msgctxt "course contents"
 msgid "route"
 msgstr "Route"
 
-#: openexpress/cli.py:2525
+#: openexpress/cli.py:2421
 #, python-brace-format
 msgid "{count} route"
 msgid_plural "{count} routes"
 msgstr[0] "{count} Route"
 msgstr[1] "{count} Routen"
 
-#: openexpress/cli.py:2528
+#: openexpress/cli.py:2424
 #, python-brace-format
 msgid "{count} waypoint"
 msgid_plural "{count} waypoints"
 msgstr[0] "{count} Wegpunkt"
 msgstr[1] "{count} Wegpunkte"
 
-#: openexpress/cli.py:2565
+#: openexpress/cli.py:2461
 msgid "The courses on the device could not be read."
 msgstr "Die Strecken auf dem Gerät konnten nicht gelesen werden."
 
 #. TRANSLATORS: CLI heading above the list of the device's courses
-#: openexpress/cli.py:2568
+#: openexpress/cli.py:2464
 #, python-brace-format
 msgid "{count} course on the device:"
 msgid_plural "{count} courses on the device:"
 msgstr[0] "{count} Strecke auf dem Gerät:"
 msgstr[1] "{count} Strecken auf dem Gerät:"
 
-#: openexpress/cli.py:2572
+#: openexpress/cli.py:2468
 msgid "No courses on the device."
 msgstr "Keine Strecken auf dem Gerät."
 
-#: openexpress/cli.py:2574
+#: openexpress/cli.py:2470
 msgid "The files waiting for the device could not be read."
 msgstr "Die Dateien, die auf das Gerät warten, konnten nicht gelesen werden."
 
 #. TRANSLATORS: CLI heading above the GPX files copied to the device that it has not
 #. made courses of yet (it does when it is unplugged)
-#: openexpress/cli.py:2578
+#: openexpress/cli.py:2474
 #, python-brace-format
 msgid "{count} GPX file waiting; unplug the device so it can import it:"
 msgid_plural ""
@@ -2990,99 +2894,99 @@ msgstr[1] ""
 "{count} GPX-Dateien warten; trennen Sie das Gerät, damit es sie importieren "
 "kann:"
 
-#: openexpress/cli.py:2583
+#: openexpress/cli.py:2479
 msgid "The saved locations could not be counted."
 msgstr "Die gespeicherten Positionen konnten nicht gezählt werden."
 
-#: openexpress/cli.py:2585
+#: openexpress/cli.py:2481
 #, python-brace-format
 msgid "Saved locations on the device: {count}"
 msgstr "Gespeicherte Positionen auf dem Gerät: {count}"
 
-#: openexpress/cli.py:2596
+#: openexpress/cli.py:2492
 #, ignore-same-plurals, python-brace-format
 msgid "Course: {names}"
 msgid_plural "Courses: {names}"
 msgstr[0] "Strecke: {names}"
 msgstr[1] "Strecken: {names}"
 
-#: openexpress/cli.py:2600
+#: openexpress/cli.py:2496
 #, python-brace-format
 msgid "Contents: {contents}"
 msgstr "Inhalt: {contents}"
 
-#: openexpress/cli.py:2603 openexpress/gui/courses_page.py:324
+#: openexpress/cli.py:2499 openexpress/gui/courses_page.py:324
 #, python-brace-format
 msgid "The same file is already waiting on the device as {name}."
 msgstr "Dieselbe Datei wartet bereits als {name} auf dem Gerät."
 
-#: openexpress/cli.py:2606
+#: openexpress/cli.py:2502
 #, python-brace-format
 msgid "Free space on the device: {free} (the file takes {size})"
 msgstr "Freier Speicher auf dem Gerät: {free} (die Datei belegt {size})"
 
-#: openexpress/cli.py:2622
+#: openexpress/cli.py:2518
 msgid "Unplug the device so it can import the file."
 msgstr "Trennen Sie das Gerät, damit es die Datei importieren kann."
 
-#: openexpress/cli.py:2643
+#: openexpress/cli.py:2544
 #, python-brace-format
 msgid "Courses and files that match “{name}”: {names}"
 msgstr "Strecken und Dateien, die zu „{name}“ passen: {names}"
 
-#: openexpress/cli.py:2645
+#: openexpress/cli.py:2546
 #, python-brace-format
 msgid "No course or waiting file is named “{name}”."
 msgstr "Keine Strecke und keine wartende Datei heißt „{name}“."
 
-#: openexpress/cli.py:2648
+#: openexpress/cli.py:2549
 #, python-brace-format
 msgid "Removing a file waiting for the device: {name}"
 msgstr "Eine auf das Gerät wartende Datei wird entfernt: {name}"
 
-#: openexpress/cli.py:2649
+#: openexpress/cli.py:2550
 #, python-brace-format
 msgid "Removing course: {name}"
 msgstr "Strecke wird entfernt: {name}"
 
-#: openexpress/cli.py:2696
+#: openexpress/cli.py:2597
 #, python-brace-format
 msgid "{model} is on the Garmin account {account} already."
 msgstr "{model} ist bereits im Garmin-Konto {account}."
 
-#: openexpress/cli.py:2701
+#: openexpress/cli.py:2602
 #, python-brace-format
 msgid ""
 "{model} ({part}, software {version}) is not on the Garmin account {account}."
 msgstr ""
 "{model} ({part}, Software {version}) ist nicht im Garmin-Konto {account}."
 
-#: openexpress/cli.py:2704
+#: openexpress/cli.py:2605
 #, python-brace-format
 msgid "Would add it as an active device: POST {address}"
 msgstr "Würde es als aktives Gerät hinzufügen: POST {address}"
 
-#: openexpress/cli.py:2706
+#: openexpress/cli.py:2607
 #, python-brace-format
 msgid "with its GarminDevice.xml ({size}; it holds the device's unit ID)."
 msgstr "mit seiner GarminDevice.xml ({size}; sie enthält die Geräte-ID)."
 
-#: openexpress/cli.py:2708
+#: openexpress/cli.py:2609
 msgid ""
 "After that, a sync uploads its activities and health data to this account."
 msgstr ""
 "Danach lädt eine Synchronisierung seine Aktivitäten und Gesundheitsdaten in "
 "dieses Konto hoch."
 
-#: openexpress/cli.py:2709
+#: openexpress/cli.py:2610
 msgid "A device can be removed from an account only in Garmin Connect."
 msgstr "Ein Gerät kann nur in Garmin Connect aus einem Konto entfernt werden."
 
-#: openexpress/cli.py:2710
+#: openexpress/cli.py:2611
 msgid "This is an experimental feature."
 msgstr "Dies ist eine experimentelle Funktion."
 
-#: openexpress/cli.py:2714
+#: openexpress/cli.py:2615
 msgid ""
 "Garmin accepted the device, but the account's list does not show it yet. Try "
 "again in a few minutes; if it is still missing, check the devices of your "
@@ -3092,7 +2996,7 @@ msgstr ""
 "nicht. Versuchen Sie es in ein paar Minuten erneut; fehlt es dann noch, "
 "prüfen Sie die Geräte Ihres Kontos in Garmin Connect."
 
-#: openexpress/cli.py:2719
+#: openexpress/cli.py:2620
 msgid ""
 "Could not read the account's device list to check it. Check the devices of "
 "your account in Garmin Connect."
@@ -3100,59 +3004,59 @@ msgstr ""
 "Die Geräteliste des Kontos konnte zur Prüfung nicht gelesen werden. Prüfen "
 "Sie die Geräte Ihres Kontos in Garmin Connect."
 
-#: openexpress/cli.py:2722
+#: openexpress/cli.py:2623
 #, python-brace-format
 msgid "Added {model} to the Garmin account {account}."
 msgstr "{model} zum Garmin-Konto {account} hinzugefügt."
 
-#: openexpress/cli.py:2725
+#: openexpress/cli.py:2626
 msgid "Garmin kept it as retired; it is active now."
 msgstr "Garmin hatte es als ausgemustert gespeichert; jetzt ist es aktiv."
 
 #. TRANSLATORS: CLI music list: music tracks on the device, not GPS tracks ({count}: how many,
 #. {size}: their total size)
-#: openexpress/cli.py:2732
+#: openexpress/cli.py:2633
 #, python-brace-format
 msgid "Tracks: {count} ({size})"
 msgstr "Titel: {count} ({size})"
 
 #. TRANSLATORS: CLI music list: podcast episodes on the device ({count}: how many, {size}: their
 #. total size)
-#: openexpress/cli.py:2735
+#: openexpress/cli.py:2636
 #, python-brace-format
 msgid "Podcasts: {count} ({size})"
 msgstr "Podcasts: {count} ({size})"
 
 #. TRANSLATORS: CLI music list: audiobooks on the device ({count}: how many, {size}: their total
 #. size)
-#: openexpress/cli.py:2738
+#: openexpress/cli.py:2639
 #, python-brace-format
 msgid "Audiobooks: {count} ({size})"
 msgstr "Hörbücher: {count} ({size})"
 
-#: openexpress/cli.py:2781
+#: openexpress/cli.py:2682
 #, python-brace-format
 msgid "Error: each TEXT must have at least {count} characters: {texts}"
 msgstr "Fehler: Jeder TEXT muss mindestens {count} Zeichen haben: {texts}"
 
 #. TRANSLATORS: CLI music list: how many playlists the device has ({names}: their names,
 #. comma-separated)
-#: openexpress/cli.py:2806
+#: openexpress/cli.py:2707
 #, python-brace-format
 msgid "Playlists: {count}: {names}"
 msgstr "Playlists: {count}: {names}"
 
-#: openexpress/cli.py:2808
+#: openexpress/cli.py:2709
 #, python-brace-format
 msgid "Playlists: {count}"
 msgstr "Playlists: {count}"
 
-#: openexpress/cli.py:2809
+#: openexpress/cli.py:2710
 #, python-brace-format
 msgid "Free space: {size}"
 msgstr "Freier Speicher: {size}"
 
-#: openexpress/cli.py:2815
+#: openexpress/cli.py:2716
 #, python-brace-format
 msgid ""
 "Found {count} playable file; {to_copy} to copy ({size}), {already} already "
@@ -3169,24 +3073,24 @@ msgstr[1] ""
 
 #. TRANSLATORS: CLI: the playlist file written on the device after the music was copied
 #. ({path}: its path)
-#: openexpress/cli.py:2840 openexpress/cli.py:2861
+#: openexpress/cli.py:2741 openexpress/cli.py:2762
 #, python-brace-format
 msgid "Playlist: {path}"
 msgstr "Playlist: {path}"
 
-#: openexpress/cli.py:2849
+#: openexpress/cli.py:2750
 #, python-brace-format
 msgid "Playlist '{name}': {count} track, {to_copy} to copy ({size})"
 msgid_plural "Playlist '{name}': {count} tracks, {to_copy} to copy ({size})"
 msgstr[0] "Playlist „{name}“: {count} Titel, {to_copy} zu kopieren ({size})"
 msgstr[1] "Playlist „{name}“: {count} Titel, {to_copy} zu kopieren ({size})"
 
-#: openexpress/cli.py:2870
+#: openexpress/cli.py:2771
 #, python-brace-format
 msgid "Files to remove: {count}"
 msgstr "Zu entfernende Dateien: {count}"
 
-#: openexpress/cli.py:2897
+#: openexpress/cli.py:2798
 msgid ""
 "In the Flatpak version, the menu entry is installed by Flatpak. Turn on "
 "background sync in the window: main menu, Preferences, Sync in the "
@@ -3198,30 +3102,30 @@ msgstr ""
 
 #. TRANSLATORS: CLI install-desktop --remove: a file of the launcher, icon or service
 #. that was removed ({path})
-#: openexpress/cli.py:2906
+#: openexpress/cli.py:2807
 #, python-brace-format
 msgid "Removed {path}"
 msgstr "{path} entfernt"
 
 #. TRANSLATORS: CLI install-desktop --remove, dry run: a file of the launcher,
 #. icon or service that would be removed ({path})
-#: openexpress/cli.py:2909
+#: openexpress/cli.py:2810
 #, python-brace-format
 msgid "Would remove {path}"
 msgstr "Würde {path} entfernen"
 
 #. TRANSLATORS: CLI install-desktop --remove: no launcher, icon or service file was found
-#: openexpress/cli.py:2912
+#: openexpress/cli.py:2813
 msgid "Nothing to remove."
 msgstr "Nichts zu entfernen."
 
-#: openexpress/cli.py:2916
+#: openexpress/cli.py:2817
 msgid "The background sync service was stopped and disabled."
 msgstr ""
 "Der Dienst für die Synchronisierung im Hintergrund wurde gestoppt und "
 "deaktiviert."
 
-#: openexpress/cli.py:2919
+#: openexpress/cli.py:2820
 msgid ""
 "The Flatpak of openExpress is installed and already provides the menu entry. "
 "A second entry with the same name would hide it. Use --force to install "
@@ -3234,101 +3138,101 @@ msgstr ""
 
 #. TRANSLATORS: CLI install-desktop: a file of the launcher, icon or service that was
 #. written ({path})
-#: openexpress/cli.py:2929
+#: openexpress/cli.py:2830
 #, python-brace-format
 msgid "Wrote {path}"
 msgstr "{path} geschrieben"
 
 #. TRANSLATORS: CLI install-desktop, dry run: a file of the launcher, icon or
 #. service that would be written ({path})
-#: openexpress/cli.py:2932
+#: openexpress/cli.py:2833
 #, python-brace-format
 msgid "Would write {path}"
 msgstr "Würde {path} schreiben"
 
-#: openexpress/cli.py:2934
+#: openexpress/cli.py:2835
 #, python-brace-format
 msgid "Removed old file {path}"
 msgstr "Alte Datei {path} entfernt"
 
-#: openexpress/cli.py:2935
+#: openexpress/cli.py:2836
 #, python-brace-format
 msgid "Would remove old file {path}"
 msgstr "Würde alte Datei {path} entfernen"
 
-#: openexpress/cli.py:2939
+#: openexpress/cli.py:2840
 msgid "To enable background sync, run:"
 msgstr "Um die Synchronisierung im Hintergrund zu aktivieren, führen Sie aus:"
 
 #. TRANSLATORS: argparse header before the command syntax, keep the trailing space
-#: openexpress/cli.py:2966
+#: openexpress/cli.py:2867
 msgid "usage: "
 msgstr "Aufruf: "
 
 #. TRANSLATORS: argparse help heading above the arguments given without a dash (here mostly the
 #. commands)
-#: openexpress/cli.py:2969
+#: openexpress/cli.py:2870
 msgid "positional arguments"
 msgstr "Positionsargumente"
 
 #. TRANSLATORS: argparse help heading above the list of options (--name)
-#: openexpress/cli.py:2971
+#: openexpress/cli.py:2872
 msgid "options"
 msgstr "Optionen"
 
-#: openexpress/cli.py:2972
+#: openexpress/cli.py:2873
 msgid "show this help message and exit"
 msgstr "diese Hilfe anzeigen und beenden"
 
-#: openexpress/cli.py:2973
+#: openexpress/cli.py:2874
 msgid "show program's version number and exit"
 msgstr "Versionsnummer des Programms anzeigen und beenden"
 
-#: openexpress/cli.py:2974
+#: openexpress/cli.py:2875
 #, python-format
 msgid "the following arguments are required: %s"
 msgstr "die folgenden Argumente sind erforderlich: %s"
 
 #. TRANSLATORS: argparse error (%s: the arguments it did not recognize)
-#: openexpress/cli.py:2976
+#: openexpress/cli.py:2877
 #, python-format
 msgid "unrecognized arguments: %s"
 msgstr "unbekannte Argumente: %s"
 
-#: openexpress/cli.py:2977
+#: openexpress/cli.py:2878
 #, python-format
 msgid "invalid choice: %(value)r (choose from %(choices)s)"
 msgstr "ungültige Auswahl: %(value)r (wählen Sie aus %(choices)s)"
 
 #. TRANSLATORS: argparse error after "argument --NAME: ": the option was given without its value
-#: openexpress/cli.py:2979
+#: openexpress/cli.py:2880
 msgid "expected one argument"
 msgstr "erwartet ein Argument"
 
-#: openexpress/cli.py:2980
+#: openexpress/cli.py:2881
 #, python-format
 msgid "%(prog)s: error: %(message)s\n"
 msgstr "%(prog)s: Fehler: %(message)s\n"
 
-#: openexpress/cli.py:2989
+#: openexpress/cli.py:2890
 msgid "Independent Garmin Express client for Linux."
 msgstr "Unabhängiger Garmin Express-Client für Linux."
 
 #. TRANSLATORS: CLI help of -v/--verbose: print more details
-#: openexpress/cli.py:2993
+#: openexpress/cli.py:2894
 msgid "more details"
 msgstr "mehr Details"
 
-#: openexpress/cli.py:2995
+#: openexpress/cli.py:2896
 #, python-brace-format
 msgid "interface language, e.g. {examples}"
 msgstr "Sprache der Oberfläche, z. B. {examples}"
 
-#: openexpress/cli.py:3003
+#: openexpress/cli.py:2904
 msgid "configuration: OAuth1 key, environment, locale"
 msgstr "Konfiguration: OAuth1-Schlüssel, Umgebung, Locale"
 
-#: openexpress/cli.py:3005
+#: openexpress/cli.py:2906
 msgid ""
 "read the needed data from the Garmin Express installer for Windows "
 "(GarminExpress.exe from garmin.com); it is only read, nothing is installed"
@@ -3337,38 +3241,38 @@ msgstr ""
 "(GarminExpress.exe von garmin.com); er wird nur gelesen, nichts wird "
 "installiert"
 
-#: openexpress/cli.py:3009
+#: openexpress/cli.py:2910
 msgid "path to Networking.dll from Garmin Express"
 msgstr "Pfad zu Networking.dll aus Garmin Express"
 
-#: openexpress/cli.py:3011
+#: openexpress/cli.py:2912
 msgid "path to Utilities.dll (default: next to Networking.dll)"
 msgstr "Pfad zu Utilities.dll (Standard: neben Networking.dll)"
 
-#: openexpress/cli.py:3013
+#: openexpress/cli.py:2914
 msgid "OAuth1 consumer key of Garmin Express; only together with --secret"
 msgstr "OAuth1-Consumer-Key von Garmin Express; nur zusammen mit --secret"
 
-#: openexpress/cli.py:3015
+#: openexpress/cli.py:2916
 msgid "OAuth1 consumer secret of Garmin Express; only together with --key"
 msgstr "OAuth1-Consumer-Secret von Garmin Express; nur zusammen mit --key"
 
-#: openexpress/cli.py:3017
+#: openexpress/cli.py:2918
 msgid "Garmin servers to use: production (default) or china"
 msgstr "zu verwendende Garmin-Server: production (Standard) oder china"
 
 #. TRANSLATORS: CLI help of "setup --locale": "for example" ({example}: a locale code such as
 #. pl_PL)
-#: openexpress/cli.py:3020
+#: openexpress/cli.py:2921
 #, python-brace-format
 msgid "e.g. {example}"
 msgstr "z. B. {example}"
 
-#: openexpress/cli.py:3022
+#: openexpress/cli.py:2923
 msgid "language of this program (\"system\": follow the system locale)"
 msgstr "Sprache dieses Programms („system“: der Locale des Systems folgen)"
 
-#: openexpress/cli.py:3024
+#: openexpress/cli.py:2925
 msgid ""
 "copy the device's diagnostic files to this computer at each connection in "
 "the window (never sent)"
@@ -3376,96 +3280,96 @@ msgstr ""
 "die Diagnosedateien des Geräts bei jeder Verbindung im Fenster auf diesen "
 "Computer kopieren (werden nie gesendet)"
 
-#: openexpress/cli.py:3028
+#: openexpress/cli.py:2929
 msgid "device report for GitHub, without serial numbers"
 msgstr "Gerätebericht für GitHub, ohne Seriennummern"
 
-#: openexpress/cli.py:3030
+#: openexpress/cli.py:2931
 msgid "print the last lines of the log file instead, for the form (filtered)"
 msgstr ""
 "stattdessen die letzten Zeilen der Protokolldatei für das Formular ausgeben "
 "(gefiltert)"
 
-#: openexpress/cli.py:3034
+#: openexpress/cli.py:2935
 msgid "information about the connected device"
 msgstr "Informationen über das angeschlossene Gerät"
 
-#: openexpress/cli.py:3035
+#: openexpress/cli.py:2936
 msgid "print the device information as JSON"
 msgstr "die Geräteinformationen als JSON ausgeben"
 
-#: openexpress/cli.py:3038
+#: openexpress/cli.py:2939
 msgid "files on the device by data type"
 msgstr "Dateien auf dem Gerät nach Datentyp"
 
-#: openexpress/cli.py:3039
+#: openexpress/cli.py:2940
 #, python-brace-format
 msgid "e.g. {example} (activities)"
 msgstr "z. B. {example} (Aktivitäten)"
 
-#: openexpress/cli.py:3041
+#: openexpress/cli.py:2942
 msgid "show only the last N files"
 msgstr "nur die letzten N Dateien anzeigen"
 
-#: openexpress/cli.py:3046
+#: openexpress/cli.py:2947
 msgid "activities on the device and in its backups"
 msgstr "Aktivitäten auf dem Gerät und in seinen Sicherungen"
 
-#: openexpress/cli.py:3049
+#: openexpress/cli.py:2950
 #, python-brace-format
 msgid "show the newest N (default: {count})"
 msgstr "die neuesten N anzeigen (Standard: {count})"
 
-#: openexpress/cli.py:3050
+#: openexpress/cli.py:2951
 msgid "show every activity"
 msgstr "alle Aktivitäten anzeigen"
 
-#: openexpress/cli.py:3053
+#: openexpress/cli.py:2954
 #, python-brace-format
 msgid "folder of the backups (default: {path})"
 msgstr "Ordner der Sicherungen (Standard: {path})"
 
-#: openexpress/cli.py:3057
+#: openexpress/cli.py:2958
 msgid "write activities as GPX files"
 msgstr "Aktivitäten als GPX-Dateien schreiben"
 
-#: openexpress/cli.py:3059
+#: openexpress/cli.py:2960
 msgid "the file name of an activity, as the list of activities shows it"
 msgstr ""
 "der Dateiname einer Aktivität, wie die Liste der Aktivitäten ihn anzeigt"
 
-#: openexpress/cli.py:3061
+#: openexpress/cli.py:2962
 #, python-brace-format
 msgid "folder for the GPX files (default: {path})"
 msgstr "Ordner für die GPX-Dateien (Standard: {path})"
 
-#: openexpress/cli.py:3064
+#: openexpress/cli.py:2965
 msgid "write the GPX files"
 msgstr "die GPX-Dateien schreiben"
 
-#: openexpress/cli.py:3067
+#: openexpress/cli.py:2968
 msgid "FIT files on this computer"
 msgstr "FIT-Dateien auf diesem Computer"
 
-#: openexpress/cli.py:3069
+#: openexpress/cli.py:2970
 msgid "what a FIT file holds: its type, its messages and whether it is whole"
 msgstr ""
 "was eine FIT-Datei enthält: ihren Typ, ihre Nachrichten und ob sie "
 "vollständig ist"
 
-#: openexpress/cli.py:3071
+#: openexpress/cli.py:2972
 msgid "a FIT file on this computer"
 msgstr "eine FIT-Datei auf diesem Computer"
 
-#: openexpress/cli.py:3075
+#: openexpress/cli.py:2976
 msgid "the device's error logs and their copy on this computer"
 msgstr "die Fehlerprotokolle des Geräts und ihre Kopie auf diesem Computer"
 
-#: openexpress/cli.py:3077
+#: openexpress/cli.py:2978
 msgid "copy the diagnostic files the device shows now"
 msgstr "die Diagnosedateien kopieren, die das Gerät jetzt anzeigt"
 
-#: openexpress/cli.py:3079
+#: openexpress/cli.py:2980
 msgid ""
 "also read the hidden crash logs (the device leaves the file manager for a "
 "moment)"
@@ -3473,46 +3377,46 @@ msgstr ""
 "auch die verborgenen Absturzprotokolle lesen (das Gerät verlässt dafür kurz "
 "die Dateiverwaltung)"
 
-#: openexpress/cli.py:3081
+#: openexpress/cli.py:2982
 msgid "also copy the memory dumps"
 msgstr "auch die Speicherabbilder kopieren"
 
-#: openexpress/cli.py:3084
+#: openexpress/cli.py:2985
 msgid "sign in to Garmin Connect"
 msgstr "bei Garmin Connect anmelden"
 
-#: openexpress/cli.py:3085
+#: openexpress/cli.py:2986
 msgid "sign in using a regular browser"
 msgstr "über einen normalen Browser anmelden"
 
-#: openexpress/cli.py:3088
+#: openexpress/cli.py:2989
 msgid "remove the local token"
 msgstr "das lokale Token entfernen"
 
-#: openexpress/cli.py:3093
+#: openexpress/cli.py:2994
 #, python-brace-format
 msgid "size of the cache by part ({parts}), and clearing it"
 msgstr "Größe des Zwischenspeichers nach Teilen ({parts}) und Leeren"
 
-#: openexpress/cli.py:3096
+#: openexpress/cli.py:2997
 msgid "delete what is in the cache (downloaded again when needed)"
 msgstr ""
 "löschen, was im Zwischenspeicher ist (wird bei Bedarf erneut heruntergeladen)"
 
-#: openexpress/cli.py:3098
+#: openexpress/cli.py:2999
 #, python-brace-format
 msgid "only these parts of the cache, separated by commas: {parts}"
 msgstr "nur diese Teile des Zwischenspeichers, durch Kommas getrennt: {parts}"
 
-#: openexpress/cli.py:3100
+#: openexpress/cli.py:3001
 msgid "really delete (with --clear)"
 msgstr "wirklich löschen (mit --clear)"
 
-#: openexpress/cli.py:3103
+#: openexpress/cli.py:3004
 msgid "the devices this installation has seen"
 msgstr "die Geräte, die diese Installation gesehen hat"
 
-#: openexpress/cli.py:3105
+#: openexpress/cli.py:3006
 msgid ""
 "forget device number N of the list and what this installation keeps of it "
 "(its sync state, its last sync)"
@@ -3520,7 +3424,7 @@ msgstr ""
 "Gerät Nummer N der Liste vergessen und was diese Installation darüber "
 "speichert (seinen Synchronisierungsstand, seine letzte Synchronisierung)"
 
-#: openexpress/cli.py:3108
+#: openexpress/cli.py:3009
 msgid ""
 "with --forget: also when files of it have not been uploaded yet (they are "
 "lost)"
@@ -3528,15 +3432,15 @@ msgstr ""
 "mit --forget: auch wenn Dateien davon noch nicht hochgeladen wurden (sie "
 "gehen verloren)"
 
-#: openexpress/cli.py:3111
+#: openexpress/cli.py:3012
 msgid "with --forget: delete its backups too"
 msgstr "mit --forget: auch seine Sicherungen löschen"
 
-#: openexpress/cli.py:3112
+#: openexpress/cli.py:3013
 msgid "really forget (with --forget)"
 msgstr "wirklich vergessen (mit --forget)"
 
-#: openexpress/cli.py:3115
+#: openexpress/cli.py:3016
 msgid ""
 "the sign-in, the devices connected, their last sync and updates, from what "
 "this installation knows"
@@ -3544,93 +3448,93 @@ msgstr ""
 "die Anmeldung, die angeschlossenen Geräte, ihre letzte Synchronisierung und "
 "Updates, nach dem, was diese Installation weiß"
 
-#: openexpress/cli.py:3118
+#: openexpress/cli.py:3019
 msgid "also ask Garmin Connect and Garmin's update server now"
 msgstr "jetzt auch Garmin Connect und Garmins Update-Server fragen"
 
 #. TRANSLATORS: CLI help of the whoami command, which shows the signed-in Garmin Connect account
-#: openexpress/cli.py:3122
+#: openexpress/cli.py:3023
 msgid "signed-in account"
 msgstr "angemeldetes Konto"
 
-#: openexpress/cli.py:3123
+#: openexpress/cli.py:3024
 msgid "verify the token with the server"
 msgstr "das Token beim Server prüfen"
 
-#: openexpress/cli.py:3127
+#: openexpress/cli.py:3028
 msgid "upload configuration from the Garmin server (OMT)"
 msgstr "Upload-Konfiguration vom Garmin-Server (OMT)"
 
-#: openexpress/cli.py:3129
+#: openexpress/cli.py:3030
 msgid "print the server's whole answer as JSON"
 msgstr "die ganze Antwort des Servers als JSON ausgeben"
 
-#: openexpress/cli.py:3132
+#: openexpress/cli.py:3033
 msgid "sync with Garmin Connect (dry run by default)"
 msgstr "mit Garmin Connect synchronisieren (standardmäßig Probelauf)"
 
-#: openexpress/cli.py:3133
+#: openexpress/cli.py:3034
 msgid "actually upload and write"
 msgstr "wirklich hochladen und schreiben"
 
-#: openexpress/cli.py:3134
+#: openexpress/cli.py:3035
 msgid "upload everything on the first sync"
 msgstr "bei der ersten Synchronisierung alles hochladen"
 
-#: openexpress/cli.py:3136
+#: openexpress/cli.py:3037
 msgid "only upload; leave what waits in Garmin Connect for the device"
 msgstr "nur hochladen; was in Garmin Connect auf das Gerät wartet, dort lassen"
 
-#: openexpress/cli.py:3138
+#: openexpress/cli.py:3039
 msgid "only write what waits in Garmin Connect; upload nothing"
 msgstr "nur schreiben, was in Garmin Connect wartet; nichts hochladen"
 
-#: openexpress/cli.py:3139
+#: openexpress/cli.py:3040
 msgid "only the given data type (repeatable)"
 msgstr "nur den angegebenen Datentyp (wiederholbar)"
 
-#: openexpress/cli.py:3141
+#: openexpress/cli.py:3042
 msgid "also upload device diagnostics and telemetry to Garmin"
 msgstr "auch Gerätediagnose und Telemetrie an Garmin hochladen"
 
-#: openexpress/cli.py:3144
+#: openexpress/cli.py:3045
 msgid "mark current files as already uploaded"
 msgstr "aktuelle Dateien als bereits hochgeladen markieren"
 
-#: openexpress/cli.py:3145
+#: openexpress/cli.py:3046
 msgid "mark the files (nothing is uploaded)"
 msgstr "die Dateien markieren (nichts wird hochgeladen)"
 
-#: openexpress/cli.py:3148
+#: openexpress/cli.py:3049
 msgid "local backup of device data"
 msgstr "lokale Sicherung der Gerätedaten"
 
-#: openexpress/cli.py:3150
+#: openexpress/cli.py:3051
 #, python-brace-format
 msgid "destination directory (default: {path})"
 msgstr "Zielverzeichnis (Standard: {path})"
 
-#: openexpress/cli.py:3153
+#: openexpress/cli.py:3054
 msgid "how many most recent backups to keep"
 msgstr "wie viele der neuesten Sicherungen behalten werden"
 
-#: openexpress/cli.py:3155
+#: openexpress/cli.py:3056
 msgid "copy the files (and remove backups beyond --keep)"
 msgstr "die Dateien kopieren (und Sicherungen über --keep hinaus entfernen)"
 
-#: openexpress/cli.py:3158
+#: openexpress/cli.py:3059
 msgid "device software updates"
 msgstr "Updates der Gerätesoftware"
 
-#: openexpress/cli.py:3160
+#: openexpress/cli.py:3061
 msgid "also show items available for reinstall"
 msgstr "auch Elemente anzeigen, die zur Neuinstallation verfügbar sind"
 
-#: openexpress/cli.py:3162
+#: openexpress/cli.py:3063
 msgid "part numbers to install, or 'all'"
 msgstr "zu installierende Teilenummern oder „all“"
 
-#: openexpress/cli.py:3164
+#: openexpress/cli.py:3065
 msgid ""
 "download the updates chosen with --install and copy them to the device, "
 "accepting their licenses"
@@ -3638,42 +3542,42 @@ msgstr ""
 "die mit --install gewählten Updates herunterladen und auf das Gerät "
 "kopieren, unter Annahme ihrer Lizenzen"
 
-#: openexpress/cli.py:3168
+#: openexpress/cli.py:3069
 msgid "maps on the device (TopoActive, base maps, CourseView…)"
 msgstr "Karten auf dem Gerät (TopoActive, Basiskarten, CourseView…)"
 
-#: openexpress/cli.py:3169
+#: openexpress/cli.py:3070
 msgid "also show maps available for download"
 msgstr "auch Karten anzeigen, die zum Download verfügbar sind"
 
-#: openexpress/cli.py:3171
+#: openexpress/cli.py:3072
 msgid "install a map"
 msgstr "eine Karte installieren"
 
-#: openexpress/cli.py:3173
+#: openexpress/cli.py:3074
 msgid ""
 "the map's name, or a part of it that only one map has, as maps --all lists it"
 msgstr ""
 "der Name der Karte oder ein Teil davon, den nur eine Karte hat, wie maps --"
 "all ihn auflistet"
 
-#: openexpress/cli.py:3176
+#: openexpress/cli.py:3077
 msgid "download the map and write it to the device"
 msgstr "die Karte herunterladen und auf das Gerät schreiben"
 
-#: openexpress/cli.py:3177
+#: openexpress/cli.py:3078
 msgid "update installed maps"
 msgstr "installierte Karten aktualisieren"
 
-#: openexpress/cli.py:3179
+#: openexpress/cli.py:3080
 msgid "download the updates and write them to the device"
 msgstr "die Updates herunterladen und auf das Gerät schreiben"
 
-#: openexpress/cli.py:3180
+#: openexpress/cli.py:3081
 msgid "remove a map from the device"
 msgstr "eine Karte vom Gerät entfernen"
 
-#: openexpress/cli.py:3182
+#: openexpress/cli.py:3083
 msgid ""
 "the map's name, or a part of it that only one map has; with --own the exact "
 "file name of your own map"
@@ -3681,35 +3585,35 @@ msgstr ""
 "der Name der Karte oder ein Teil davon, den nur eine Karte hat; mit --own "
 "der genaue Dateiname Ihrer eigenen Karte"
 
-#: openexpress/cli.py:3185
+#: openexpress/cli.py:3086
 msgid "remove a map of your own that was copied with 'maps add'"
 msgstr "eine eigene Karte entfernen, die mit „maps add“ kopiert wurde"
 
-#: openexpress/cli.py:3186
+#: openexpress/cli.py:3087
 msgid "remove the map from the device"
 msgstr "die Karte vom Gerät entfernen"
 
-#: openexpress/cli.py:3187
+#: openexpress/cli.py:3088
 msgid "copy a map of your own (.img) to the device"
 msgstr "eine eigene Karte (.img) auf das Gerät kopieren"
 
-#: openexpress/cli.py:3188
+#: openexpress/cli.py:3089
 msgid "a Garmin map file (.img) on this computer"
 msgstr "eine Garmin-Kartendatei (.img) auf diesem Computer"
 
-#: openexpress/cli.py:3189
+#: openexpress/cli.py:3090
 msgid "the file name on the device (default: that of FILE)"
 msgstr "der Dateiname auf dem Gerät (Standard: der von FILE)"
 
-#: openexpress/cli.py:3190
+#: openexpress/cli.py:3091
 msgid "copy the map to the device"
 msgstr "die Karte auf das Gerät kopieren"
 
-#: openexpress/cli.py:3194
+#: openexpress/cli.py:3095
 msgid "show the primary training device of the Garmin account"
 msgstr "das primäre Trainingsgerät des Garmin-Kontos anzeigen"
 
-#: openexpress/cli.py:3195
+#: openexpress/cli.py:3096
 msgid ""
 "the primary wearable (steps and sleep in Garmin Connect) instead of the "
 "primary training device"
@@ -3717,27 +3621,15 @@ msgstr ""
 "das primäre Wearable (Schritte und Schlaf in Garmin Connect) statt des "
 "primären Trainingsgeräts"
 
-#: openexpress/cli.py:3199
+#: openexpress/cli.py:3100
 msgid "make the connected device the primary training device"
 msgstr "das angeschlossene Gerät zum primären Trainingsgerät machen"
 
-#: openexpress/cli.py:3201
+#: openexpress/cli.py:3102
 msgid "change it in your Garmin account"
 msgstr "in Ihrem Garmin-Konto ändern"
 
-#: openexpress/cli.py:3204
-msgid "the sport profiles of the device and their data screens (read only)"
-msgstr "die Sportprofile des Geräts und ihre Datenseiten (nur lesen)"
-
-#: openexpress/cli.py:3207
-msgid "the data screens of one profile"
-msgstr "die Datenseiten eines Profils"
-
-#: openexpress/cli.py:3208
-msgid "the name of the profile, or a part of it"
-msgstr "der Name des Profils oder ein Teil davon"
-
-#: openexpress/cli.py:3211
+#: openexpress/cli.py:3105
 msgid ""
 "the courses on the device, the GPX files waiting for it and its saved "
 "locations (experimental)"
@@ -3745,7 +3637,7 @@ msgstr ""
 "die Strecken auf dem Gerät, die GPX-Dateien, die auf es warten, und seine "
 "gespeicherten Positionen (experimentell)"
 
-#: openexpress/cli.py:3214
+#: openexpress/cli.py:3108
 msgid ""
 "copy a GPX file to the device, which makes courses of its tracks and routes "
 "(experimental)"
@@ -3753,38 +3645,38 @@ msgstr ""
 "eine GPX-Datei auf das Gerät kopieren, das aus ihren Tracks und Routen "
 "Strecken macht (experimentell)"
 
-#: openexpress/cli.py:3216
+#: openexpress/cli.py:3110
 msgid "a GPX file on this computer"
 msgstr "eine GPX-Datei auf diesem Computer"
 
-#: openexpress/cli.py:3218
+#: openexpress/cli.py:3112
 msgid ""
 "the course's name (default: that of its track or route, else that of FILE)"
 msgstr ""
 "der Name der Strecke (Standard: der ihres Tracks oder ihrer Route, sonst der "
 "von FILE)"
 
-#: openexpress/cli.py:3220
+#: openexpress/cli.py:3114
 msgid "copy the file to the device"
 msgstr "die Datei auf das Gerät kopieren"
 
-#: openexpress/cli.py:3221
+#: openexpress/cli.py:3115
 msgid "remove a course or a GPX file waiting for the device (experimental)"
 msgstr ""
 "eine Strecke oder eine auf das Gerät wartende GPX-Datei entfernen "
 "(experimentell)"
 
-#: openexpress/cli.py:3224
+#: openexpress/cli.py:3118
 msgid ""
 "the name of the course or of its file, or a part of it that only one has"
 msgstr ""
 "der Name der Strecke oder ihrer Datei oder ein Teil davon, den nur eine hat"
 
-#: openexpress/cli.py:3226
+#: openexpress/cli.py:3120
 msgid "remove it from the device"
 msgstr "vom Gerät entfernen"
 
-#: openexpress/cli.py:3229
+#: openexpress/cli.py:3123
 msgid ""
 "add the connected device to your Garmin account (experimental; a trial run "
 "without --apply)"
@@ -3792,146 +3684,146 @@ msgstr ""
 "das angeschlossene Gerät zu Ihrem Garmin-Konto hinzufügen (experimentell; "
 "ohne --apply ein Probelauf)"
 
-#: openexpress/cli.py:3233
+#: openexpress/cli.py:3127
 msgid "add it: changes your Garmin account"
 msgstr "hinzufügen: ändert Ihr Garmin-Konto"
 
-#: openexpress/cli.py:3236
+#: openexpress/cli.py:3130
 msgid "Connect IQ apps, watch faces and data fields"
 msgstr "Connect IQ-Apps, Displaydesigns und Datenfelder"
 
-#: openexpress/cli.py:3237
+#: openexpress/cli.py:3131
 msgid "also list built-in activities"
 msgstr "auch integrierte Aktivitäten auflisten"
 
-#: openexpress/cli.py:3239
+#: openexpress/cli.py:3133
 msgid "write the change to the device (it takes effect once unplugged)"
 msgstr ""
 "die Änderung auf das Gerät schreiben (sie wird wirksam, sobald es getrennt "
 "ist)"
 
-#: openexpress/cli.py:3241
+#: openexpress/cli.py:3135
 msgid "install the app, or queue it in Garmin Connect where USB cannot"
 msgstr ""
 "die App installieren oder, wo USB es nicht kann, in Garmin Connect einreihen"
 
-#: openexpress/cli.py:3242
+#: openexpress/cli.py:3136
 msgid "remove it from the device (with --forget: also from your account list)"
 msgstr "vom Gerät entfernen (mit --forget: auch aus der Liste Ihres Kontos)"
 
-#: openexpress/cli.py:3246
+#: openexpress/cli.py:3140
 msgid "install an app from your Garmin account"
 msgstr "eine App aus Ihrem Garmin-Konto installieren"
 
-#: openexpress/cli.py:3247
+#: openexpress/cli.py:3141
 msgid "remove an app from the device"
 msgstr "eine App vom Gerät entfernen"
 
-#: openexpress/cli.py:3248
+#: openexpress/cli.py:3142
 msgid "enable an app or built-in activity"
 msgstr "eine App oder integrierte Aktivität aktivieren"
 
-#: openexpress/cli.py:3249
+#: openexpress/cli.py:3143
 msgid "disable an app or built-in activity"
 msgstr "eine App oder integrierte Aktivität deaktivieren"
 
-#: openexpress/cli.py:3251
+#: openexpress/cli.py:3145
 msgid "app name (or part of it) or app id"
 msgstr "App-Name (oder ein Teil davon) oder App-ID"
 
-#: openexpress/cli.py:3255 openexpress/cli.py:3269
+#: openexpress/cli.py:3149 openexpress/cli.py:3163
 msgid "also allow the new permissions an app asks for"
 msgstr "auch die neuen Berechtigungen erlauben, die eine App anfordert"
 
-#: openexpress/cli.py:3258
+#: openexpress/cli.py:3152
 msgid "also remove it from the app list in your Garmin account"
 msgstr "auch aus der App-Liste in Ihrem Garmin-Konto entfernen"
 
-#: openexpress/cli.py:3263
+#: openexpress/cli.py:3157
 msgid "which entry, when an app and a widget share a name"
 msgstr "welcher Eintrag, wenn eine App und ein Widget denselben Namen haben"
 
-#: openexpress/cli.py:3265
+#: openexpress/cli.py:3159
 msgid "update installed apps"
 msgstr "installierte Apps aktualisieren"
 
-#: openexpress/cli.py:3267
+#: openexpress/cli.py:3161
 msgid "install the updates, or queue them in Garmin Connect where USB cannot"
 msgstr ""
 "die Updates installieren oder, wo USB es nicht kann, in Garmin Connect "
 "einreihen"
 
-#: openexpress/cli.py:3270
+#: openexpress/cli.py:3164
 msgid "put the apps back in the order of a saved app list"
 msgstr ""
 "die Apps wieder in die Reihenfolge einer gespeicherten App-Liste bringen"
 
-#: openexpress/cli.py:3272
+#: openexpress/cli.py:3166
 msgid "a copy of the app list: part of its folder name, or a path"
 msgstr "eine Kopie der App-Liste: ein Teil ihres Ordnernamens oder ein Pfad"
 
-#: openexpress/cli.py:3274
+#: openexpress/cli.py:3168
 msgid "list every position that would change"
 msgstr "jede Position auflisten, die sich ändern würde"
 
-#: openexpress/cli.py:3276
+#: openexpress/cli.py:3170
 msgid ""
 "write the order of the copy to the device (it takes effect once unplugged)"
 msgstr ""
 "die Reihenfolge der Kopie auf das Gerät schreiben (sie wird wirksam, sobald "
 "es getrennt ist)"
 
-#: openexpress/cli.py:3280
+#: openexpress/cli.py:3174
 msgid "music, podcasts and audiobooks on the device"
 msgstr "Musik, Podcasts und Hörbücher auf dem Gerät"
 
-#: openexpress/cli.py:3282
+#: openexpress/cli.py:3176
 msgid "copy audio files or folders to the device"
 msgstr "Audiodateien oder Ordner auf das Gerät kopieren"
 
-#: openexpress/cli.py:3284
+#: openexpress/cli.py:3178
 msgid "audio files or folders on this computer"
 msgstr "Audiodateien oder Ordner auf diesem Computer"
 
-#: openexpress/cli.py:3286
+#: openexpress/cli.py:3180
 msgid "treat all files as this kind (default: detect from genre tag)"
 msgstr ""
 "alle Dateien als diese Art behandeln (Standard: aus dem Genre-Tag erkennen)"
 
-#: openexpress/cli.py:3287
+#: openexpress/cli.py:3181
 msgid "also create a playlist with these files"
 msgstr "auch eine Playlist mit diesen Dateien erstellen"
 
-#: openexpress/cli.py:3289
+#: openexpress/cli.py:3183
 msgid "copy the files to the device (and write the playlist with --playlist)"
 msgstr ""
 "die Dateien auf das Gerät kopieren (und mit --playlist die Playlist "
 "schreiben)"
 
-#: openexpress/cli.py:3290
+#: openexpress/cli.py:3184
 msgid "copy a local .m3u/.m3u8 playlist and its tracks"
 msgstr "eine lokale .m3u/.m3u8-Playlist und ihre Titel kopieren"
 
-#: openexpress/cli.py:3291
+#: openexpress/cli.py:3185
 msgid "a .m3u or .m3u8 playlist on this computer"
 msgstr "eine .m3u- oder .m3u8-Playlist auf diesem Computer"
 
-#: openexpress/cli.py:3293
+#: openexpress/cli.py:3187
 msgid "the playlist's name on the device (default: its name without extension)"
 msgstr "der Name der Playlist auf dem Gerät (Standard: ihr Name ohne Endung)"
 
-#: openexpress/cli.py:3296
+#: openexpress/cli.py:3190
 msgid "copy the tracks and write the playlist to the device"
 msgstr "die Titel kopieren und die Playlist auf das Gerät schreiben"
 
-#: openexpress/cli.py:3297
+#: openexpress/cli.py:3191
 msgid ""
 "remove files or playlists whose name, artist or album folder contains TEXT"
 msgstr ""
 "Dateien oder Playlists entfernen, deren Name, Interpreten- oder Albumordner "
 "TEXT enthält"
 
-#: openexpress/cli.py:3300
+#: openexpress/cli.py:3194
 #, python-brace-format
 msgid ""
 "text in a file name, an artist or album folder, or a whole path on the "
@@ -3940,58 +3832,58 @@ msgstr ""
 "Text in einem Dateinamen, einem Interpreten- oder Albumordner oder ein "
 "ganzer Pfad auf dem Gerät (mindestens {count} Zeichen)"
 
-#: openexpress/cli.py:3304
+#: openexpress/cli.py:3198
 msgid "remove the files and playlists from the device"
 msgstr "die Dateien und Playlists vom Gerät entfernen"
 
 #. TRANSLATORS: CLI help of the gui command, which opens the application window
-#: openexpress/cli.py:3308
+#: openexpress/cli.py:3202
 msgid "application window"
 msgstr "Anwendungsfenster"
 
-#: openexpress/cli.py:3311
+#: openexpress/cli.py:3205
 msgid "background service: sync when the device is connected"
 msgstr "Hintergrunddienst: synchronisieren, wenn das Gerät angeschlossen wird"
 
-#: openexpress/cli.py:3315
+#: openexpress/cli.py:3209
 msgid "add an application menu entry and a background sync service"
 msgstr ""
 "einen Eintrag im Anwendungsmenü und einen Dienst für die Synchronisierung im "
 "Hintergrund hinzufügen"
 
-#: openexpress/cli.py:3317
+#: openexpress/cli.py:3211
 msgid "write the files (with --remove: delete them)"
 msgstr "die Dateien schreiben (mit --remove: sie löschen)"
 
-#: openexpress/cli.py:3319
+#: openexpress/cli.py:3213
 msgid "remove the menu entry, icon and service instead"
 msgstr "stattdessen Menüeintrag, Symbol und Dienst entfernen"
 
-#: openexpress/cli.py:3321
+#: openexpress/cli.py:3215
 msgid "install even if the Flatpak of openExpress is installed"
 msgstr "auch installieren, wenn das Flatpak von openExpress installiert ist"
 
-#: openexpress/cli.py:3336
+#: openexpress/cli.py:3230
 msgid "a folder with a copy of a device's files, instead of a connected device"
 msgstr ""
 "ein Ordner mit einer Kopie der Dateien eines Geräts statt eines "
 "angeschlossenen Geräts"
 
-#: openexpress/cli.py:3339
+#: openexpress/cli.py:3233
 #, python-brace-format
 msgid "MTP device URI, e.g. {example}"
 msgstr "MTP-Geräte-URI, z. B. {example}"
 
-#: openexpress/cli.py:3342
+#: openexpress/cli.py:3236
 msgid "do not wait for a device that was just plugged in and is still starting"
 msgstr ""
 "nicht auf ein Gerät warten, das gerade angeschlossen wurde und noch startet"
 
-#: openexpress/cli.py:3401
+#: openexpress/cli.py:3295
 msgid "--key and --secret must be given together"
 msgstr "--key und --secret müssen zusammen angegeben werden"
 
-#: openexpress/cli.py:3442
+#: openexpress/cli.py:3336
 msgid ""
 "openExpress needs PyGObject with GTK 4 and libadwaita. Install them (Fedora: "
 "sudo dnf install python3-gobject gtk4 libadwaita; Arch: sudo pacman -S "
@@ -4006,19 +3898,19 @@ msgstr ""
 
 #. TRANSLATORS: CLI error from a Garmin server ({error}: the request's name and what went
 #. wrong)
-#: openexpress/cli.py:3495
+#: openexpress/cli.py:3389
 #, python-brace-format
 msgid "Server error: {error}"
 msgstr "Serverfehler: {error}"
 
-#: openexpress/cli.py:3507
+#: openexpress/cli.py:3401
 #, python-brace-format
 msgid "Network error: could not reach the Garmin server ({error})"
 msgstr ""
 "Netzwerkfehler: Der Garmin-Server konnte nicht erreicht werden ({error})"
 
 #. TRANSLATORS: CLI: the command was stopped with Ctrl+C
-#: openexpress/cli.py:3514
+#: openexpress/cli.py:3408
 msgid "Interrupted."
 msgstr "Unterbrochen."
 
@@ -4550,7 +4442,7 @@ msgid ""
 "To report it, choose “{item}” in the main menu."
 msgstr ""
 
-#: openexpress/device/gio_storage.py:1539 openexpress/gui/app.py:302
+#: openexpress/device/gio_storage.py:1539 openexpress/gui/app.py:292
 msgid "Report a Device or Problem…"
 msgstr "Ein Gerät oder Problem melden…"
 
@@ -4909,31 +4801,31 @@ msgstr "{url}: MD5-Prüfsumme stimmt nicht überein"
 msgid "Could not download the file:"
 msgstr "Die Datei konnte nicht heruntergeladen werden:"
 
-#: openexpress/fit.py:137
+#: openexpress/fit.py:134
 #, python-brace-format
 msgid "Damaged FIT file ({error})"
 msgstr "Beschädigte FIT-Datei ({error})"
 
 #. TRANSLATORS: error reading a FIT activity file: too few bytes to be one
-#: openexpress/fit.py:144
+#: openexpress/fit.py:141
 msgid "File too short"
 msgstr "Datei zu kurz"
 
-#: openexpress/fit.py:147
+#: openexpress/fit.py:144
 msgid "Not a FIT file"
 msgstr "Keine FIT-Datei"
 
-#: openexpress/fit.py:179 openexpress/fit.py:192 openexpress/fit.py:196
+#: openexpress/fit.py:176 openexpress/fit.py:189 openexpress/fit.py:193
 msgid "Truncated FIT definition message"
 msgstr "Abgeschnittene FIT-Definitionsnachricht"
 
-#: openexpress/fit.py:204
+#: openexpress/fit.py:201
 #, python-brace-format
 msgid "Data message without a definition (local type {local})"
 msgstr "Datennachricht ohne Definition (lokaler Typ {local})"
 
 #. TRANSLATORS: error reading a FIT file; file_id is the name of a FIT message, keep it
-#: openexpress/fit.py:330
+#: openexpress/fit.py:327
 msgid "No file_id message"
 msgstr "Keine file_id-Nachricht"
 
@@ -4964,8 +4856,8 @@ msgid "No GPS positions in this activity"
 msgstr "Keine GPS-Positionen in dieser Aktivität"
 
 #: openexpress/gui/activities_page.py:102 openexpress/gui/activity_page.py:138
-#: openexpress/gui/app.py:464 openexpress/gui/apps_page.py:632
-#: openexpress/gui/detection.py:755 openexpress/gui/device_page.py:897
+#: openexpress/gui/app.py:454 openexpress/gui/apps_page.py:632
+#: openexpress/gui/detection.py:755 openexpress/gui/device_page.py:895
 #: openexpress/gui/window_tasks.py:543
 msgid "Another operation is in progress"
 msgstr "Ein anderer Vorgang läuft"
@@ -5004,7 +4896,7 @@ msgid "This device does not keep activities."
 msgstr "Dieses Gerät speichert keine Aktivitäten."
 
 #: openexpress/gui/activities_page.py:188
-#: openexpress/gui/activities_page.py:245 openexpress/gui/app.py:110
+#: openexpress/gui/activities_page.py:245 openexpress/gui/app.py:108
 #, ignore-reused
 msgid "Reading Activities…"
 msgstr "Aktivitäten werden gelesen…"
@@ -5084,7 +4976,7 @@ msgstr "Im Konto"
 msgid "Not on the account {account}"
 msgstr "Nicht im Konto {account}"
 
-#: openexpress/gui/add_to_account.py:50 openexpress/gui/device_page.py:885
+#: openexpress/gui/add_to_account.py:50 openexpress/gui/device_page.py:883
 msgid "Add to Account…"
 msgstr "Zum Konto hinzufügen…"
 
@@ -5186,164 +5078,152 @@ msgstr "Gerät nicht hinzugefügt"
 msgid "Adding to the Account {account}…"
 msgstr "Wird zum Konto {account} hinzugefügt…"
 
-#: openexpress/gui/app.py:88
+#: openexpress/gui/app.py:86
 msgctxt "tab"
 msgid "Device"
 msgstr "Gerät"
 
-#: openexpress/gui/app.py:89 openexpress/gui/detection.py:747
+#: openexpress/gui/app.py:87 openexpress/gui/detection.py:747
 #: openexpress/gui/start.py:507
 msgid "Detecting the Device…"
 msgstr "Gerät wird erkannt…"
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:91 openexpress/gui/device_page.py:1061
+#: openexpress/gui/app.py:89 openexpress/gui/device_page.py:1059
 #: openexpress/gui/start.py:726
 msgctxt "tab"
 msgid "Updates"
 msgstr "Updates"
 
-#: openexpress/gui/app.py:92 openexpress/gui/updates_page.py:259
+#: openexpress/gui/app.py:90 openexpress/gui/updates_page.py:259
 msgid "Checking for Updates…"
 msgstr "Suche nach Updates…"
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:94 openexpress/gui/device_page.py:1074
+#: openexpress/gui/app.py:92 openexpress/gui/device_page.py:1072
 #: openexpress/gui/start.py:730
 msgctxt "tab"
 msgid "Maps"
 msgstr "Karten"
 
-#: openexpress/gui/app.py:95 openexpress/gui/maps_page.py:104
+#: openexpress/gui/app.py:93 openexpress/gui/maps_page.py:104
 #: openexpress/gui/maps_page.py:323
 msgid "Checking Maps…"
 msgstr "Karten werden geprüft…"
 
 #. TRANSLATORS: tab title (courses on the device, made of GPX files)
-#: openexpress/gui/app.py:97
+#: openexpress/gui/app.py:95
 msgctxt "tab"
 msgid "Courses"
 msgstr "Strecken"
 
-#: openexpress/gui/app.py:98 openexpress/gui/courses_page.py:353
+#: openexpress/gui/app.py:96 openexpress/gui/courses_page.py:353
 msgid "Reading Courses…"
 msgstr "Strecken werden gelesen…"
 
 #. TRANSLATORS: beside the title of the Courses page: not yet tried on
 #. every device
-#: openexpress/gui/app.py:101
+#: openexpress/gui/app.py:99
 msgctxt "chip"
 msgid "experimental"
 msgstr "experimentell"
 
 #. TRANSLATORS: tab title (Connect IQ apps)
-#: openexpress/gui/app.py:103 openexpress/gui/device_page.py:1087
+#: openexpress/gui/app.py:101 openexpress/gui/device_page.py:1085
 msgctxt "tab"
 msgid "Apps"
 msgstr "Apps"
 
-#: openexpress/gui/app.py:104 openexpress/gui/apps_page.py:106
+#: openexpress/gui/app.py:102 openexpress/gui/apps_page.py:106
 msgid "Loading Connect IQ Apps…"
 msgstr "Connect IQ-Apps werden geladen…"
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:106 openexpress/gui/device_page.py:1094
+#: openexpress/gui/app.py:104 openexpress/gui/device_page.py:1092
 #: openexpress/gui/music_page.py:45
 msgctxt "tab"
 msgid "Music"
 msgstr "Musik"
 
-#: openexpress/gui/app.py:107 openexpress/gui/music_page.py:50
+#: openexpress/gui/app.py:105 openexpress/gui/music_page.py:50
 msgid "Reading Music on the Device…"
 msgstr "Musik auf dem Gerät wird gelesen…"
 
 #. TRANSLATORS: tab title
-#: openexpress/gui/app.py:109
+#: openexpress/gui/app.py:107
 msgctxt "tab"
 msgid "Activities"
 msgstr "Aktivitäten"
 
-#. TRANSLATORS: tab title (the sport profiles of the device and their data screens)
-#: openexpress/gui/app.py:112
-msgctxt "tab"
-msgid "Activity Profiles"
-msgstr "Aktivitätsprofile"
-
-#. TRANSLATORS: shown while the device's activity (sport) profiles are read, not
-#. user profiles
-#: openexpress/gui/app.py:115 openexpress/gui/profiles_page.py:572
-msgid "Reading Profiles…"
-msgstr "Profile werden gelesen…"
-
-#: openexpress/gui/app.py:298 openexpress/gui/preferences.py:285
+#: openexpress/gui/app.py:288 openexpress/gui/preferences.py:285
 msgid "Preferences"
 msgstr "Einstellungen"
 
-#: openexpress/gui/app.py:300 openexpress/gui/preferences.py:286
+#: openexpress/gui/app.py:290 openexpress/gui/preferences.py:286
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: openexpress/gui/app.py:303
+#: openexpress/gui/app.py:293
 msgid "About openExpress"
 msgstr "Info zu openExpress"
 
-#: openexpress/gui/app.py:314 openexpress/gui/start_window.py:147
+#: openexpress/gui/app.py:304 openexpress/gui/start_window.py:147
 msgid "Main Menu"
 msgstr "Hauptmenü"
 
-#: openexpress/gui/app.py:346 openexpress/gui/app.py:408
+#: openexpress/gui/app.py:336 openexpress/gui/app.py:398
 #: openexpress/gui/preferences.py:284
 msgid "Refresh"
 msgstr "Aktualisieren"
 
 #. TRANSLATORS: button that starts syncing
-#: openexpress/gui/app.py:349 openexpress/gui/app.py:353
-#: openexpress/gui/app.py:472 openexpress/gui/preferences.py:284
+#: openexpress/gui/app.py:339 openexpress/gui/app.py:343
+#: openexpress/gui/app.py:462 openexpress/gui/preferences.py:284
 #: openexpress/gui/start.py:688
 msgid "Sync"
 msgstr "Synchronisieren"
 
-#: openexpress/gui/app.py:378
+#: openexpress/gui/app.py:368
 msgid "Do not unplug the device"
 msgstr "Trennen Sie das Gerät nicht"
 
 #. TRANSLATORS: button on the bar at the bottom: stop waiting for TrueUp
-#: openexpress/gui/app.py:386
+#: openexpress/gui/app.py:376
 msgid "Stop Waiting"
 msgstr "Nicht mehr warten"
 
-#: openexpress/gui/app.py:447
+#: openexpress/gui/app.py:437
 msgid "This device is not registered to your Garmin account"
 msgstr "Dieses Gerät ist nicht in Ihrem Garmin-Konto registriert"
 
-#: openexpress/gui/app.py:448
+#: openexpress/gui/app.py:438
 msgid "Could not check whether this device belongs to your Garmin account"
 msgstr ""
 "Es konnte nicht geprüft werden, ob dieses Gerät zu Ihrem Garmin-Konto gehört"
 
 #. TRANSLATORS: title when no device is plugged in: plug it in with a USB cable
 #. ("connect", not Garmin Connect)
-#: openexpress/gui/app.py:456 openexpress/gui/detection.py:587
+#: openexpress/gui/app.py:446 openexpress/gui/detection.py:587
 #: openexpress/gui/device_page.py:680
 msgid "Connect Your Device"
 msgstr "Schließen Sie Ihr Gerät an"
 
 #. TRANSLATORS: a device connected as a USB drive, not over MTP
-#: openexpress/gui/app.py:458 openexpress/gui/detection.py:579
-#: openexpress/gui/detection.py:598 openexpress/gui/device_page.py:1040
+#: openexpress/gui/app.py:448 openexpress/gui/detection.py:579
+#: openexpress/gui/detection.py:598 openexpress/gui/device_page.py:1038
 #, ignore-reused
 msgid "USB Drive"
 msgstr "USB-Laufwerk"
 
-#: openexpress/gui/app.py:460 openexpress/gui/device_page.py:878
+#: openexpress/gui/app.py:450 openexpress/gui/device_page.py:876
 msgid "Not signed in to Garmin Connect"
 msgstr "Nicht bei Garmin Connect angemeldet"
 
-#: openexpress/gui/app.py:538
+#: openexpress/gui/app.py:528
 msgid "Operation in Progress"
 msgstr "Vorgang läuft"
 
-#: openexpress/gui/app.py:539
+#: openexpress/gui/app.py:529
 msgid ""
 "Wait until it finishes before closing openExpress, so that no files on the "
 "device are left half-written."
@@ -5351,7 +5231,7 @@ msgstr ""
 "Warten Sie, bis er abgeschlossen ist, bevor Sie openExpress schließen, damit "
 "keine Dateien auf dem Gerät halb geschrieben bleiben."
 
-#: openexpress/gui/app.py:647
+#: openexpress/gui/app.py:637
 #, python-brace-format
 msgid "No display available ({details}): openExpress needs a graphical session"
 msgstr ""
@@ -6115,7 +5995,7 @@ msgstr "Primäres Wearable"
 
 #. TRANSLATORS: button beside "Primary Wearable" or "Primary Training Device": makes this
 #. device the account's primary one
-#: openexpress/gui/device_page.py:311 openexpress/gui/device_page.py:1169
+#: openexpress/gui/device_page.py:311 openexpress/gui/device_page.py:1167
 msgid "Set as Primary"
 msgstr "Als primär festlegen"
 
@@ -6137,7 +6017,7 @@ msgstr ""
 "Neu: {new}"
 
 #. TRANSLATORS: button that makes this device the primary training device
-#: openexpress/gui/device_page.py:327 openexpress/gui/device_page.py:1193
+#: openexpress/gui/device_page.py:327 openexpress/gui/device_page.py:1191
 msgid "Set"
 msgstr "Festlegen"
 
@@ -6225,13 +6105,13 @@ msgid "Not available"
 msgstr "Nicht verfügbar"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" when the account could not be asked
-#: openexpress/gui/device_page.py:538 openexpress/gui/device_page.py:1175
+#: openexpress/gui/device_page.py:538 openexpress/gui/device_page.py:1173
 msgid "Could not check"
 msgstr "Konnte nicht geprüft werden"
 
 #. TRANSLATORS: subtitle of a row (Device software, Maps, Primary training device) while Garmin's
 #. server is asked
-#: openexpress/gui/device_page.py:541 openexpress/gui/device_page.py:1404
+#: openexpress/gui/device_page.py:541 openexpress/gui/device_page.py:1402
 #: openexpress/gui/words.py:82
 msgid "Checking…"
 msgstr "Wird geprüft…"
@@ -6248,7 +6128,7 @@ msgstr ""
 "Diese Seite konnte nicht angezeigt werden. Versuchen Sie es erneut; passiert "
 "es wieder, melden Sie das Problem mit angehängtem Protokoll."
 
-#: openexpress/gui/device_page.py:871
+#: openexpress/gui/device_page.py:869
 msgid ""
 "One-time setup: choose the Garmin Express installer for Windows "
 "(GarminExpress.exe from garmin.com). openExpress only reads it."
@@ -6256,32 +6136,32 @@ msgstr ""
 "Einmalige Einrichtung: Wählen Sie den Garmin Express-Installer für Windows "
 "(GarminExpress.exe von garmin.com). openExpress liest ihn nur."
 
-#: openexpress/gui/device_page.py:874 openexpress/gui/preferences.py:128
+#: openexpress/gui/device_page.py:872 openexpress/gui/preferences.py:128
 #: openexpress/gui/preferences.py:570
 msgid "Choose Installer…"
 msgstr "Installer auswählen…"
 
-#: openexpress/gui/device_page.py:879 openexpress/gui/preferences.py:131
+#: openexpress/gui/device_page.py:877 openexpress/gui/preferences.py:131
 msgid "Sign In"
 msgstr "Anmelden"
 
 #. TRANSLATORS: group on the device page: the device's own storage
-#: openexpress/gui/device_page.py:1022
+#: openexpress/gui/device_page.py:1020
 msgid "Storage"
 msgstr "Speicher"
 
-#: openexpress/gui/device_page.py:1023
+#: openexpress/gui/device_page.py:1021
 msgid "Device Storage"
 msgstr "Gerätespeicher"
 
 #. TRANSLATORS: under "Sync With Garmin Connect" on the page of a device connected
 #. as a USB drive, which has no row of the background sync
-#: openexpress/gui/device_page.py:1044 openexpress/gui/preferences.py:360
+#: openexpress/gui/device_page.py:1042 openexpress/gui/preferences.py:360
 #: openexpress/gui/start.py:713
 msgid "Sync With Garmin Connect"
 msgstr "Mit Garmin Connect synchronisieren"
 
-#: openexpress/gui/device_page.py:1045
+#: openexpress/gui/device_page.py:1043
 msgid ""
 "A device connected as a USB drive is synced with the Sync button only, never "
 "in the background."
@@ -6290,85 +6170,85 @@ msgstr ""
 "„Synchronisieren“ synchronisiert, nie im Hintergrund."
 
 #. TRANSLATORS: subtitle of "Last Sync" of a device that cannot be synced
-#: openexpress/gui/device_page.py:1050 openexpress/gui/device_page.py:1053
+#: openexpress/gui/device_page.py:1048 openexpress/gui/device_page.py:1051
 #: openexpress/gui/start.py:715
 msgid "Last Sync"
 msgstr "Letzte Synchronisierung"
 
-#: openexpress/gui/device_page.py:1051
+#: openexpress/gui/device_page.py:1049
 msgctxt "sync"
 msgid "Not available"
 msgstr "Nicht verfügbar"
 
 #. TRANSLATORS: row of the device's own software (firmware) and its updates
-#: openexpress/gui/device_page.py:1063 openexpress/gui/start.py:728
+#: openexpress/gui/device_page.py:1061 openexpress/gui/start.py:728
 msgid "Device Software"
 msgstr "Gerätesoftware"
 
 #. TRANSLATORS: group on the device page with the rows "Apps" and "Music"
-#: openexpress/gui/device_page.py:1086
+#: openexpress/gui/device_page.py:1084
 msgid "Apps and Music"
 msgstr "Apps und Musik"
 
-#: openexpress/gui/device_page.py:1103 openexpress/gui/preferences.py:429
+#: openexpress/gui/device_page.py:1101 openexpress/gui/preferences.py:429
 #: openexpress/gui/start.py:721
 msgid "Garmin Connect Account"
 msgstr "Garmin Connect-Konto"
 
-#: openexpress/gui/device_page.py:1106 openexpress/gui/preferences.py:134
+#: openexpress/gui/device_page.py:1104 openexpress/gui/preferences.py:134
 msgid "Sign Out"
 msgstr "Abmelden"
 
 #. TRANSLATORS: title of the row with the Garmin account's primary training
 #. device (the main source of performance and training data)
-#: openexpress/gui/device_page.py:1115
+#: openexpress/gui/device_page.py:1113
 #, ignore-reused
 msgid "Primary Training Device"
 msgstr "Primäres Trainingsgerät"
 
-#: openexpress/gui/device_page.py:1128 openexpress/gui/start.py:736
+#: openexpress/gui/device_page.py:1126 openexpress/gui/start.py:736
 msgid "Tools"
 msgstr "Werkzeuge"
 
 #. TRANSLATORS: a noun: row under "Tools" on the device page, with the button that makes a
 #. copy of the device's files
-#: openexpress/gui/device_page.py:1132
+#: openexpress/gui/device_page.py:1130
 msgid "Backup"
 msgstr "Sicherung"
 
 #. TRANSLATORS: button that creates a backup
-#: openexpress/gui/device_page.py:1135
+#: openexpress/gui/device_page.py:1133
 msgid "Create"
 msgstr "Erstellen"
 
 #. TRANSLATORS: row with the device's Garmin part number, a product code such as 006-B1234-00
-#: openexpress/gui/device_page.py:1139 openexpress/gui/start.py:737
+#: openexpress/gui/device_page.py:1137 openexpress/gui/start.py:737
 msgid "Part Number"
 msgstr "Teilenummer"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
 #. has none set
-#: openexpress/gui/device_page.py:1150 openexpress/gui/words.py:174
+#: openexpress/gui/device_page.py:1148 openexpress/gui/words.py:174
 msgid "Not set"
 msgstr "Nicht festgelegt"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
 #. device shown
-#: openexpress/gui/device_page.py:1154 openexpress/gui/words.py:176
+#: openexpress/gui/device_page.py:1152 openexpress/gui/words.py:176
 msgid "This device"
 msgstr "Dieses Gerät"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
 #. of the account, its name not known
-#: openexpress/gui/device_page.py:1157 openexpress/gui/words.py:177
+#: openexpress/gui/device_page.py:1155 openexpress/gui/words.py:177
 msgid "Another device"
 msgstr "Ein anderes Gerät"
 
-#: openexpress/gui/device_page.py:1188
+#: openexpress/gui/device_page.py:1186
 msgid "Change the Primary Training Device?"
 msgstr "Primäres Trainingsgerät ändern?"
 
-#: openexpress/gui/device_page.py:1189
+#: openexpress/gui/device_page.py:1187
 #, python-brace-format
 msgid ""
 "The primary training device is the main source of performance and training "
@@ -6383,15 +6263,15 @@ msgstr ""
 "Aktuell: {old}\n"
 "Neu: {new}"
 
-#: openexpress/gui/device_page.py:1203
+#: openexpress/gui/device_page.py:1201
 msgid "Primary training device changed"
 msgstr "Primäres Trainingsgerät geändert"
 
-#: openexpress/gui/device_page.py:1207
+#: openexpress/gui/device_page.py:1205
 msgid "Changing the Primary Training Device…"
 msgstr "Primäres Trainingsgerät wird geändert…"
 
-#: openexpress/gui/device_page.py:1388 openexpress/gui/words.py:36
+#: openexpress/gui/device_page.py:1386 openexpress/gui/words.py:36
 #, python-brace-format
 msgid "{count} update available"
 msgid_plural "{count} updates available"
@@ -6399,47 +6279,47 @@ msgstr[0] "{count} Update verfügbar"
 msgstr[1] "{count} Updates verfügbar"
 
 #. TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
-#: openexpress/gui/device_page.py:1392
+#: openexpress/gui/device_page.py:1390
 msgid "All installed maps are up to date"
 msgstr "Alle installierten Karten sind auf dem neuesten Stand"
 
-#: openexpress/gui/device_page.py:1394
+#: openexpress/gui/device_page.py:1392
 msgid "No maps are installed"
 msgstr "Es sind keine Karten installiert"
 
-#: openexpress/gui/device_page.py:1402 openexpress/gui/words.py:81
+#: openexpress/gui/device_page.py:1400 openexpress/gui/words.py:81
 msgid "Could not check for updates"
 msgstr "Konnte nicht nach Updates suchen"
 
-#: openexpress/gui/device_page.py:1541
+#: openexpress/gui/device_page.py:1539
 msgid "Creating Backup…"
 msgstr "Sicherung wird erstellt…"
 
-#: openexpress/gui/device_page.py:1545
+#: openexpress/gui/device_page.py:1543
 #, python-brace-format
 msgid "Copied {count} file to {path}"
 msgid_plural "Copied {count} files to {path}"
 msgstr[0] "{count} Datei nach {path} kopiert"
 msgstr[1] "{count} Dateien nach {path} kopiert"
 
-#: openexpress/gui/device_page.py:1560 openexpress/watch.py:176
+#: openexpress/gui/device_page.py:1558 openexpress/watch.py:176
 msgid "Sync finished"
 msgstr "Synchronisierung abgeschlossen"
 
-#: openexpress/gui/device_page.py:1561
+#: openexpress/gui/device_page.py:1559
 msgid "Sync finished with errors"
 msgstr "Synchronisierung mit Fehlern abgeschlossen"
 
-#: openexpress/gui/device_page.py:1588
+#: openexpress/gui/device_page.py:1586
 msgid "Syncing…"
 msgstr "Wird synchronisiert…"
 
 #. TRANSLATORS: heading of the question before the first sync of a device
-#: openexpress/gui/device_page.py:1592
+#: openexpress/gui/device_page.py:1590
 msgid "First Sync"
 msgstr "Erste Synchronisierung"
 
-#: openexpress/gui/device_page.py:1593
+#: openexpress/gui/device_page.py:1591
 msgid ""
 "If the device also syncs via your phone, most data is already in Garmin "
 "Connect. You can mark the current files as uploaded and upload only new "
@@ -6452,13 +6332,13 @@ msgstr ""
 
 #. TRANSLATORS: button of the question "First Sync": uploads every activity file on
 #. the device
-#: openexpress/gui/device_page.py:1598
+#: openexpress/gui/device_page.py:1596
 msgid "Upload Everything"
 msgstr "Alles hochladen"
 
 #. TRANSLATORS: button of the question "First Sync": marks the files on the device as
 #. uploaded and uploads only new ones
-#: openexpress/gui/device_page.py:1601
+#: openexpress/gui/device_page.py:1599
 msgid "New Data Only"
 msgstr "Nur neue Daten"
 
@@ -7224,151 +7104,6 @@ msgstr "Anmeldung läuft…"
 #: openexpress/gui/preferences.py:621
 msgid "Signed out"
 msgstr "Abgemeldet"
-
-#. TRANSLATORS: a built-in screen hidden on the device
-#: openexpress/gui/profiles_page.py:74
-msgid "Hidden"
-msgstr "Ausgeblendet"
-
-#. TRANSLATORS: a built-in screen turned on
-#: openexpress/gui/profiles_page.py:77
-msgid "On"
-msgstr "Ein"
-
-#. TRANSLATORS: a built-in screen turned off
-#: openexpress/gui/profiles_page.py:79
-msgid "Off"
-msgstr "Aus"
-
-#. TRANSLATORS: where a screen stands among those the device always scrolls through
-#: openexpress/gui/profiles_page.py:330
-#, python-brace-format
-msgid "No. {place} in the scrolling order"
-msgstr "Nr. {place} in der Blätterreihenfolge"
-
-#. TRANSLATORS: heading on the page of an activity profile: the device's data screens (pages
-#. of data fields)
-#: openexpress/gui/profiles_page.py:385 openexpress/gui/profiles_page.py:411
-msgid "Data Screens"
-msgstr "Datenseiten"
-
-#: openexpress/gui/profiles_page.py:386
-msgid "The fields in their order on the screen"
-msgstr "Die Felder in ihrer Reihenfolge auf der Seite"
-
-#: openexpress/gui/profiles_page.py:394
-msgid "Built-In Screens in the Scrolling Order"
-msgstr "Integrierte Seiten in der Blätterreihenfolge"
-
-#: openexpress/gui/profiles_page.py:398 openexpress/gui/profiles_page.py:425
-msgid "Not known to openExpress yet"
-msgstr "openExpress noch nicht bekannt"
-
-#: openexpress/gui/profiles_page.py:403
-msgid "The device shows them only when they are needed"
-msgstr "Das Gerät zeigt sie nur, wenn sie benötigt werden"
-
-#: openexpress/gui/profiles_page.py:412
-msgid "No Data Screens Shown"
-msgstr "Keine Datenseiten angezeigt"
-
-#. TRANSLATORS: heading of the data screens of a profile that are turned off or hidden on the
-#. device
-#: openexpress/gui/profiles_page.py:420
-msgid "Off and Hidden"
-msgstr "Aus und ausgeblendet"
-
-#: openexpress/gui/profiles_page.py:430 openexpress/gui/profiles_page.py:477
-msgid "Details"
-msgstr "Details"
-
-#: openexpress/gui/profiles_page.py:452
-msgid ""
-"The fields in their order; where each stands on the screen depends on the "
-"layout"
-msgstr ""
-"Die Felder in ihrer Reihenfolge; wo jedes auf der Seite steht, hängt vom "
-"Layout ab"
-
-#. TRANSLATORS: heading and row on the page of a data screen: how its data fields are
-#. arranged
-#: openexpress/gui/profiles_page.py:457 openexpress/gui/profiles_page.py:458
-msgid "Layout"
-msgstr "Layout"
-
-#. TRANSLATORS: row on the page of a data screen: how many data fields it shows
-#: openexpress/gui/profiles_page.py:460
-msgid "Number of Fields"
-msgstr "Anzahl der Felder"
-
-#. TRANSLATORS: heading of the data fields of a data screen, in their order
-#: openexpress/gui/profiles_page.py:463
-msgid "Fields"
-msgstr "Felder"
-
-#: openexpress/gui/profiles_page.py:464
-msgid "In their order on the screen"
-msgstr "In ihrer Reihenfolge auf der Seite"
-
-#. TRANSLATORS: the n-th place of a data screen, where a field stands ("Field" is
-#. said only of a data field)
-#: openexpress/gui/profiles_page.py:468
-#, python-brace-format
-msgid "Place {place}"
-msgstr "Platz {place}"
-
-#. TRANSLATORS: the number of a data field in the profile file
-#: openexpress/gui/profiles_page.py:473
-#, python-brace-format
-msgid "number {number}"
-msgstr "Nummer {number}"
-
-#: openexpress/gui/profiles_page.py:478
-msgid "Screen Code"
-msgstr "Seitencode"
-
-#. TRANSLATORS: row on the page of a data screen: whether it is on, off or hidden on the device
-#. (not a country's state)
-#: openexpress/gui/profiles_page.py:481
-msgid "State"
-msgstr "Status"
-
-#: openexpress/gui/profiles_page.py:505
-msgid "No Activity Profiles"
-msgstr "Keine Aktivitätsprofile"
-
-#. TRANSLATORS: placeholder text of the search field on the Activity profiles page; {count}:
-#. how many profiles it searches
-#: openexpress/gui/profiles_page.py:519
-#, python-brace-format
-msgid "Search {count} profile"
-msgid_plural "Search {count} profiles"
-msgstr[0] "{count} Profil durchsuchen"
-msgstr[1] "{count} Profile durchsuchen"
-
-#. TRANSLATORS: heading above the activity profiles used by the newest activities on the
-#. device
-#: openexpress/gui/profiles_page.py:527
-msgid "Used Recently"
-msgstr "Zuletzt verwendet"
-
-#: openexpress/gui/profiles_page.py:527
-msgid "From the newest activities on the device"
-msgstr "Aus den neuesten Aktivitäten auf dem Gerät"
-
-#: openexpress/gui/profiles_page.py:531
-msgid "All Profiles"
-msgstr "Alle Profile"
-
-#: openexpress/gui/profiles_page.py:592
-msgid "Other Files"
-msgstr "Andere Dateien"
-
-#. TRANSLATORS: the copies an Edge keeps of its profiles itself; {date}: when made
-#: openexpress/gui/profiles_page.py:598
-#, python-brace-format
-msgid "The device keeps backups of its profiles from {date}"
-msgstr "Das Gerät hat Sicherungen seiner Profile vom {date}"
 
 #: openexpress/gui/report_dialog.py:74
 msgid "Attach the last log"
@@ -8170,13 +7905,11 @@ msgid "Time"
 msgstr "Zeit"
 
 #: openexpress/gui/words.py:502 openexpress/gui/words.py:503
-#, ignore-reused
 msgctxt "activity tile"
 msgid "Average pace"
 msgstr "Ø Pace"
 
 #: openexpress/gui/words.py:504
-#, ignore-reused
 msgctxt "activity tile"
 msgid "Average speed"
 msgstr "Ø Geschwindigkeit"
@@ -8197,7 +7930,6 @@ msgid "Calories"
 msgstr "Kalorien"
 
 #: openexpress/gui/words.py:508
-#, ignore-reused
 msgctxt "activity tile"
 msgid "Total ascent"
 msgstr "Anstieg gesamt"
@@ -8211,7 +7943,6 @@ msgstr "Details"
 #. TRANSLATORS: the details of the page of an activity, as Garmin Connect names them in
 #. your language: the time with the pauses
 #: openexpress/gui/words.py:556
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Elapsed time"
 msgstr "Verstrichene Zeit"
@@ -8232,7 +7963,6 @@ msgid "Rest time"
 msgstr "Erholungszeit"
 
 #: openexpress/gui/words.py:560
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Total descent"
 msgstr "Abstieg gesamt"
@@ -8243,7 +7973,6 @@ msgid "Minimum elevation"
 msgstr "Minimale Höhe"
 
 #: openexpress/gui/words.py:562
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Maximum elevation"
 msgstr "Maximale Höhe"
@@ -8264,7 +7993,6 @@ msgid "Best pace"
 msgstr "Beste Pace"
 
 #: openexpress/gui/words.py:566
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Maximum speed"
 msgstr "Maximale Geschwindigkeit"
@@ -8296,7 +8024,6 @@ msgid "Temperature"
 msgstr "Temperatur"
 
 #: openexpress/gui/words.py:572
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Respiration rate"
 msgstr "Atemfrequenz"
@@ -9218,1381 +8945,6 @@ msgstr ""
 #, python-brace-format
 msgid "{path} is still on the device; nothing was taken off the list."
 msgstr "{path} ist noch auf dem Gerät; nichts wurde aus der Liste genommen."
-
-#: openexpress/profile_names.py:60
-msgctxt "data field"
-msgid "Calories"
-msgstr "Kalorien"
-
-#: openexpress/profile_names.py:61
-msgctxt "data field"
-msgid "Course Pt. Distance"
-msgstr "Distanz bis Streckenpunkt"
-
-#: openexpress/profile_names.py:62
-msgctxt "data field"
-msgid "Cadence"
-msgstr "Trittfrequenz"
-
-#: openexpress/profile_names.py:63
-msgctxt "data field"
-msgid "Avg Cadence"
-msgstr "Ø Trittfrequenz"
-
-#: openexpress/profile_names.py:64
-msgctxt "data field"
-msgid "Lap Cadence"
-msgstr "Runde - Trittfrequenz"
-
-#: openexpress/profile_names.py:65
-msgctxt "data field"
-msgid "Distance"
-msgstr "Distanz"
-
-#: openexpress/profile_names.py:66
-msgctxt "data field"
-msgid "Lap Distance"
-msgstr "Rundendistanz"
-
-#: openexpress/profile_names.py:67
-msgctxt "data field"
-msgid "Elevation"
-msgstr "Höhe"
-
-#: openexpress/profile_names.py:68
-msgctxt "data field"
-msgid "Grade"
-msgstr "Neigung"
-
-#: openexpress/profile_names.py:69
-msgctxt "data field"
-msgid "Heading"
-msgstr "Richtung"
-
-#: openexpress/profile_names.py:70
-#, ignore-reused
-msgctxt "data field"
-msgid "Heart Rate"
-msgstr "Herzfrequenz"
-
-#: openexpress/profile_names.py:71
-msgctxt "data field"
-msgid "Avg Heart Rate"
-msgstr "Ø Herzfrequenz"
-
-#: openexpress/profile_names.py:72
-msgctxt "data field"
-msgid "Lap Heart Rate"
-msgstr "Runde Herzfrequenz"
-
-#: openexpress/profile_names.py:73
-msgctxt "data field"
-msgid "%Max Heart Rate"
-msgstr "% der maximalen Herzfrequenz"
-
-#: openexpress/profile_names.py:74
-msgctxt "data field"
-msgid "Avg %Max Heart Rate"
-msgstr "Ø %Max. Herzfrequenz"
-
-#: openexpress/profile_names.py:75
-msgctxt "data field"
-msgid "Lap %Max Heart Rate"
-msgstr "Runde - % der maximalen Herzfrequenz"
-
-#: openexpress/profile_names.py:76
-msgctxt "data field"
-msgid "%Heart Rate Reserve"
-msgstr "% der Herzfrequenzreserve"
-
-#: openexpress/profile_names.py:77
-msgctxt "data field"
-msgid "Avg %HRR"
-msgstr "Ø %HFR"
-
-#: openexpress/profile_names.py:78
-msgctxt "data field"
-msgid "Lap %HRR"
-msgstr "Runde %HFR"
-
-#: openexpress/profile_names.py:79
-msgctxt "data field"
-msgid "Heart Rate Zone"
-msgstr "Herzfrequenzbereich"
-
-#: openexpress/profile_names.py:80
-msgctxt "data field"
-msgid "HR Zone Bar"
-msgstr "Herzfrequenz-Bereichsbalken"
-
-#: openexpress/profile_names.py:81
-msgctxt "data field"
-msgid "Laps"
-msgstr "Runden"
-
-#: openexpress/profile_names.py:82
-msgctxt "data field"
-msgid "Distance to Destination"
-msgstr "Distanz zum Ziel"
-
-#: openexpress/profile_names.py:83
-msgctxt "data field"
-msgid "Time to Destination"
-msgstr "Zeit bis zum Ziel"
-
-#: openexpress/profile_names.py:84
-msgctxt "data field"
-msgid "Distance to Next"
-msgstr "Distanz bis nächster Wegpunkt"
-
-#: openexpress/profile_names.py:85
-msgctxt "data field"
-msgid "Time to Next"
-msgstr "Zeit bis nächster Wegpunkt"
-
-#: openexpress/profile_names.py:86
-msgctxt "data field"
-msgid "Destination Location"
-msgstr "Zielort"
-
-#: openexpress/profile_names.py:87
-msgctxt "data field"
-msgid "Next Waypoint"
-msgstr "Nächster Wegpunkt"
-
-#: openexpress/profile_names.py:88
-msgctxt "data field"
-msgid "Pace"
-msgstr "Pace"
-
-#: openexpress/profile_names.py:89
-#, ignore-reused
-msgctxt "data field"
-msgid "Average Pace"
-msgstr "Durchschnittspace"
-
-#: openexpress/profile_names.py:90
-msgctxt "data field"
-msgid "Lap Pace"
-msgstr "Rundenpace"
-
-#: openexpress/profile_names.py:91 openexpress/profile_names.py:214
-msgctxt "data field"
-msgid "SOG"
-msgstr "SOG"
-
-#: openexpress/profile_names.py:92
-msgctxt "data field"
-msgid "Power"
-msgstr "Leistung"
-
-#: openexpress/profile_names.py:93
-msgctxt "data field"
-msgid "Avg Power"
-msgstr "Ø Leistung"
-
-#: openexpress/profile_names.py:94
-msgctxt "data field"
-msgid "Kilojoules"
-msgstr "Kilojoule"
-
-#: openexpress/profile_names.py:95
-msgctxt "data field"
-msgid "Lap Power"
-msgstr "Rundenleistung"
-
-#: openexpress/profile_names.py:96
-msgctxt "data field"
-msgid "Max. Power"
-msgstr "Maximale Leistung"
-
-#: openexpress/profile_names.py:97
-msgctxt "data field"
-msgid "Max. Lap Power"
-msgstr "Maximale Rundenleistung"
-
-#: openexpress/profile_names.py:98
-msgctxt "data field"
-msgid "%FTP"
-msgstr "% FTP"
-
-#: openexpress/profile_names.py:99
-msgctxt "data field"
-msgid "Power Zone"
-msgstr "Leistungsbereich"
-
-#: openexpress/profile_names.py:100
-msgctxt "data field"
-msgid "Workout Step"
-msgstr "Trainingsabschnitt"
-
-#: openexpress/profile_names.py:101
-msgctxt "data field"
-msgid "Speed"
-msgstr "Geschwindigkeit"
-
-#: openexpress/profile_names.py:102
-#, ignore-reused
-msgctxt "data field"
-msgid "Avg Speed"
-msgstr "Ø Geschwindigkeit"
-
-#: openexpress/profile_names.py:103
-msgctxt "data field"
-msgid "Lap Speed"
-msgstr "Rundengeschwindigkeit"
-
-#: openexpress/profile_names.py:104
-msgctxt "data field"
-msgid "Sunrise"
-msgstr "Sonnenaufgang"
-
-#: openexpress/profile_names.py:105
-msgctxt "data field"
-msgid "Sunset"
-msgstr "Sonnenuntergang"
-
-#: openexpress/profile_names.py:106
-#, ignore-reused
-msgctxt "data field"
-msgid "Elapsed Time"
-msgstr "Verstrichene Zeit"
-
-#: openexpress/profile_names.py:107
-msgctxt "data field"
-msgid "Timer"
-msgstr "Timer"
-
-#: openexpress/profile_names.py:108
-msgctxt "data field"
-msgid "Avg Lap Time"
-msgstr "Durchschnittliche Rundenzeit"
-
-#: openexpress/profile_names.py:109
-msgctxt "data field"
-msgid "Lap Time"
-msgstr "Rundenzeit"
-
-#: openexpress/profile_names.py:110
-msgctxt "data field"
-msgid "Time of Day"
-msgstr "Uhrzeit"
-
-#: openexpress/profile_names.py:111
-#, ignore-reused
-msgctxt "data field"
-msgid "Total Ascent"
-msgstr "Anstieg gesamt"
-
-#: openexpress/profile_names.py:112
-#, ignore-reused
-msgctxt "data field"
-msgid "Total Descent"
-msgstr "Abstieg gesamt"
-
-#. TRANSLATORS: the distance ahead of or behind the Virtual Partner. The profile page
-#. shows no category of the device's menu, so the name must differ from "Time Ahead"'s,
-#. though a manual may name both alike (in Polish both are "Przewaga")
-#: openexpress/profile_names.py:116
-msgctxt "data field"
-msgid "Distance Ahead"
-msgstr "Vorsprung (Distanz)"
-
-#. TRANSLATORS: the time ahead of or behind the Virtual Partner; the name must differ
-#. from "Distance Ahead"'s, as the profile page shows no category of the device's menu
-#: openexpress/profile_names.py:119
-msgctxt "data field"
-msgid "Time Ahead"
-msgstr "Vorsprung (Zeit)"
-
-#: openexpress/profile_names.py:120
-msgctxt "data field"
-msgid "Calories to Go"
-msgstr "Verbleibende Kalorien"
-
-#: openexpress/profile_names.py:121
-msgctxt "data field"
-msgid "Distance to Go"
-msgstr "Verbleibende Distanz"
-
-#: openexpress/profile_names.py:122
-msgctxt "data field"
-msgid "Heart Rate to Go"
-msgstr "Differenz bis HF"
-
-#: openexpress/profile_names.py:123
-msgctxt "data field"
-msgid "Reps to Go"
-msgstr "Verbleibende Wiederholungen"
-
-#: openexpress/profile_names.py:124
-msgctxt "data field"
-msgid "Time to Go"
-msgstr "Verbleibende Zeit"
-
-#: openexpress/profile_names.py:125
-msgctxt "data field"
-msgid "VAM"
-msgstr "VAM"
-
-#: openexpress/profile_names.py:126
-msgctxt "data field"
-msgid "Temperature"
-msgstr "Temperatur"
-
-#: openexpress/profile_names.py:127
-msgctxt "data field"
-msgid "3s Power"
-msgstr "3s - Leistung"
-
-#: openexpress/profile_names.py:128
-msgctxt "data field"
-msgid "30s Power"
-msgstr "30s - Leistung"
-
-#: openexpress/profile_names.py:129
-#, ignore-same
-msgctxt "data field"
-msgid "Normalized Power"
-msgstr "Normalized Power"
-
-#: openexpress/profile_names.py:130
-msgctxt "data field"
-msgid "TSS"
-msgstr "TSS"
-
-#: openexpress/profile_names.py:131
-#, ignore-multiple-capital
-msgctxt "data field"
-msgid "Intensity Factor"
-msgstr "Intensity Factor"
-
-#: openexpress/profile_names.py:132
-msgctxt "data field"
-msgid "Last Lap Distance"
-msgstr "Letzte Runde - Distanz"
-
-#: openexpress/profile_names.py:133
-msgctxt "data field"
-msgid "Last Lap Speed"
-msgstr "Letzte Runde - Geschwindigkeit"
-
-#: openexpress/profile_names.py:134
-msgctxt "data field"
-msgid "Last Lap Time"
-msgstr "Letzte Runde - Zeit"
-
-#: openexpress/profile_names.py:135
-msgctxt "data field"
-msgid "30s VAM"
-msgstr "30s - VAM"
-
-#: openexpress/profile_names.py:136
-#, ignore-reused
-msgctxt "data field"
-msgid "Max. Speed"
-msgstr "Maximale Geschwindigkeit"
-
-#: openexpress/profile_names.py:137
-msgctxt "data field"
-msgid "ETA at Destination"
-msgstr "Geschätzte Ankunftszeit"
-
-#: openexpress/profile_names.py:138
-msgctxt "data field"
-msgid "ETA at Next"
-msgstr "Ankunft nächster Wegpunkt"
-
-#: openexpress/profile_names.py:139
-msgctxt "data field"
-msgid "Odometer"
-msgstr "Kilometerzähler"
-
-#: openexpress/profile_names.py:140
-msgctxt "data field"
-msgid "Battery Level"
-msgstr "Akkuladestand"
-
-#: openexpress/profile_names.py:141
-msgctxt "data field"
-msgid "GPS Signal Strength"
-msgstr "GPS-Signalstärke"
-
-#: openexpress/profile_names.py:142
-msgctxt "data field"
-msgid "Watts/kg"
-msgstr "Watt/kg"
-
-#: openexpress/profile_names.py:143
-msgctxt "data field"
-msgid "Aerobic Training Effect"
-msgstr "Aerober Training Effect"
-
-#: openexpress/profile_names.py:144
-msgctxt "data field"
-msgid "Last Lap Power"
-msgstr "Letzte Runde - Leistung"
-
-#: openexpress/profile_names.py:145
-msgctxt "data field"
-msgid "10s Power"
-msgstr "10s - Leistung"
-
-#: openexpress/profile_names.py:146
-msgctxt "data field"
-msgid "Lap NP"
-msgstr "Runde - NP"
-
-#: openexpress/profile_names.py:147
-msgctxt "data field"
-msgid "Last Lap NP"
-msgstr "Letzte Runde - NP"
-
-#: openexpress/profile_names.py:148
-msgctxt "data field"
-msgid "Balance"
-msgstr "Balance"
-
-#: openexpress/profile_names.py:149
-msgctxt "data field"
-msgid "Avg Balance"
-msgstr "Durchschnittsbalance"
-
-#: openexpress/profile_names.py:150
-msgctxt "data field"
-msgid "Lap Balance"
-msgstr "Rundenbalance"
-
-#: openexpress/profile_names.py:151
-msgctxt "data field"
-msgid "3s Balance"
-msgstr "Balance - 3s"
-
-#: openexpress/profile_names.py:152
-msgctxt "data field"
-msgid "10s Balance"
-msgstr "Balance - 10s"
-
-#: openexpress/profile_names.py:153
-msgctxt "data field"
-msgid "30s Balance"
-msgstr "Balance - 30s"
-
-#: openexpress/profile_names.py:154
-msgctxt "data field"
-msgid "Last Lap Heart Rate"
-msgstr "Letzte Runde - Herzfrequenz"
-
-#: openexpress/profile_names.py:155
-msgctxt "data field"
-msgid "Pedal Smoothness"
-msgstr "Gleichmäßigkeit des Tretens"
-
-#: openexpress/profile_names.py:156
-msgctxt "data field"
-msgid "Torque Effectiveness"
-msgstr "Drehmoment-Effektivität"
-
-#: openexpress/profile_names.py:157
-msgctxt "data field"
-msgid "Gears"
-msgstr "Gänge"
-
-#: openexpress/profile_names.py:158
-msgctxt "data field"
-msgid "Front Gear"
-msgstr "Kettenblatt"
-
-#: openexpress/profile_names.py:159
-msgctxt "data field"
-msgid "Rear Gear"
-msgstr "Ritzel"
-
-#: openexpress/profile_names.py:160
-msgctxt "data field"
-msgid "Gear Battery"
-msgstr "Gangsensorbatterie"
-
-#: openexpress/profile_names.py:161
-msgctxt "data field"
-msgid "Gear Ratio"
-msgstr "Übersetzungsverhältnis"
-
-#: openexpress/profile_names.py:162
-msgctxt "data field"
-msgid "Stroke Rate"
-msgstr "Schlagrate"
-
-#: openexpress/profile_names.py:163
-msgctxt "data field"
-msgid "24-Hour Maximum Temperature"
-msgstr "Maximale Temperatur - 24 Stunden"
-
-#: openexpress/profile_names.py:164
-msgctxt "data field"
-msgid "24-Hour Minimum Temperature"
-msgstr "Minimale Temperatur - 24 Stunden"
-
-#: openexpress/profile_names.py:165
-#, ignore-multiple-capital
-msgctxt "data field"
-msgid "Avg. Vertical Descent Speed"
-msgstr "Ø vertikale Abstiegsgeschwindigkeit"
-
-#: openexpress/profile_names.py:166
-msgctxt "data field"
-msgid "Lap Ascent"
-msgstr "Rundenanstieg"
-
-#: openexpress/profile_names.py:167
-msgctxt "data field"
-msgid "Lap Descent"
-msgstr "Rundenabstieg"
-
-#: openexpress/profile_names.py:168
-#, ignore-reused
-msgctxt "data field"
-msgid "Maximum Elevation"
-msgstr "Maximale Höhe"
-
-#: openexpress/profile_names.py:169
-msgctxt "data field"
-msgid "Ambient Pressure"
-msgstr "Umgebungsdruck"
-
-#: openexpress/profile_names.py:170
-msgctxt "data field"
-msgid "Location"
-msgstr "Position"
-
-#: openexpress/profile_names.py:171
-msgctxt "data field"
-msgid "Active Calories"
-msgstr "Aktiv-Kalorien"
-
-#: openexpress/profile_names.py:172
-msgctxt "data field"
-msgid "Time Standing"
-msgstr "Zeit stehend"
-
-#: openexpress/profile_names.py:173
-msgctxt "data field"
-msgid "Lap Time Standing"
-msgstr "Runde - Zeit stehend"
-
-#: openexpress/profile_names.py:174
-msgctxt "data field"
-msgid "Time Seated"
-msgstr "Zeit sitzend"
-
-#: openexpress/profile_names.py:175
-msgctxt "data field"
-msgid "Lap Time Seated"
-msgstr "Runde - Zeit sitzend"
-
-#: openexpress/profile_names.py:176
-msgctxt "data field"
-msgid "Platform Center Offset"
-msgstr "Platform Center Offset"
-
-#: openexpress/profile_names.py:177
-msgctxt "data field"
-msgid "Avg PCO"
-msgstr "Ø PCO"
-
-#: openexpress/profile_names.py:178
-msgctxt "data field"
-msgid "Lap PCO"
-msgstr "Runde - PCO"
-
-#: openexpress/profile_names.py:179
-msgctxt "data field"
-msgid "Right Power Phase"
-msgstr "Power Phase rechts"
-
-#: openexpress/profile_names.py:180
-msgctxt "data field"
-msgid "Avg Right Pwr Phase"
-msgstr "Durchschnittliche rechte Power Phase"
-
-#: openexpress/profile_names.py:181
-msgctxt "data field"
-msgid "Lap Right Pwr Phase"
-msgstr "Runde - Power Phase rechts"
-
-#: openexpress/profile_names.py:182
-msgctxt "data field"
-msgid "Right Peak Pwr Phase"
-msgstr "Maximale Power Phase rechts"
-
-#: openexpress/profile_names.py:183
-msgctxt "data field"
-msgid "Avg R. Peak Pwr Phase"
-msgstr "Ø max. Power Phase rechts"
-
-#: openexpress/profile_names.py:184
-msgctxt "data field"
-msgid "Lap R. Peak Pwr Phase"
-msgstr "Runde - Maximale Power Phase rechts"
-
-#: openexpress/profile_names.py:185
-msgctxt "data field"
-msgid "Left Power Phase"
-msgstr "Power Phase links"
-
-#: openexpress/profile_names.py:186
-msgctxt "data field"
-msgid "Avg Left Pwr Phase"
-msgstr "Durchschnittliche linke Power Phase"
-
-#: openexpress/profile_names.py:187
-msgctxt "data field"
-msgid "Lap Left Pwr Phase"
-msgstr "Runde - Power Phase links"
-
-#: openexpress/profile_names.py:188
-msgctxt "data field"
-msgid "Left Peak Pwr Phase"
-msgstr "Maximale Power Phase links"
-
-#: openexpress/profile_names.py:189
-msgctxt "data field"
-msgid "Avg L. Peak Pwr Phase"
-msgstr "Ø max. Power Phase links"
-
-#: openexpress/profile_names.py:190
-msgctxt "data field"
-msgid "Lap L. Peak Pwr Phase"
-msgstr "Runde - Maximale Power Phase links"
-
-#: openexpress/profile_names.py:191
-msgctxt "data field"
-msgid "Trainer Resistance"
-msgstr "Trainersteuerungen"
-
-#: openexpress/profile_names.py:192
-msgctxt "data field"
-msgid "Target Power"
-msgstr "Zielleistung"
-
-#: openexpress/profile_names.py:193
-msgctxt "data field"
-msgid "Step Distance"
-msgstr "Abschnitt - Distanz"
-
-#: openexpress/profile_names.py:194
-msgctxt "data field"
-msgid "Lights Connected"
-msgstr "Verbundene Lichter"
-
-#: openexpress/profile_names.py:195
-msgctxt "data field"
-msgid "Battery Status"
-msgstr "Akkustatus"
-
-#: openexpress/profile_names.py:196
-msgctxt "data field"
-msgid "Beam Angle Status"
-msgstr "Lichtkegelwinkel-Status"
-
-#: openexpress/profile_names.py:197
-msgctxt "data field"
-msgid "Light Mode"
-msgstr "Lichtmodus"
-
-#: openexpress/profile_names.py:198
-msgctxt "data field"
-msgid "Performance Condition"
-msgstr "Leistungszustand"
-
-#: openexpress/profile_names.py:199
-#, ignore-reused
-msgctxt "data field"
-msgid "Heart Rate Graph"
-msgstr "Herzfrequenzkurve"
-
-#: openexpress/profile_names.py:200
-#, ignore-reused
-msgctxt "data field"
-msgid "Speed Graph"
-msgstr "Geschwindigkeitsgrafik"
-
-#: openexpress/profile_names.py:201
-msgctxt "data field"
-msgid "Cadence Graph"
-msgstr "Trittfrequenzgrafik"
-
-#: openexpress/profile_names.py:202
-msgctxt "data field"
-msgid "3s Power Graph"
-msgstr "3s - Leistungsgrafik"
-
-#: openexpress/profile_names.py:203
-msgctxt "data field"
-msgid "Heart Rate Bars"
-msgstr "Herzfrequenzbalken"
-
-#: openexpress/profile_names.py:204
-msgctxt "data field"
-msgid "Speed Bars"
-msgstr "Geschwindigkeitsbalken"
-
-#: openexpress/profile_names.py:205
-msgctxt "data field"
-msgid "Cadence Bars"
-msgstr "Trittfrequenzbalken"
-
-#: openexpress/profile_names.py:206
-msgctxt "data field"
-msgid "3s Power Bar"
-msgstr "3s - Leistungsbalken"
-
-#: openexpress/profile_names.py:208
-msgctxt "data field"
-msgid "Heart Rate (Avg/Max)"
-msgstr "Herzfrequenz (Ø/Max.)"
-
-#: openexpress/profile_names.py:209
-msgctxt "data field"
-msgid "Speed (Avg/Max)"
-msgstr "Geschwindigkeit (Ø/Max.)"
-
-#: openexpress/profile_names.py:210
-msgctxt "data field"
-msgid "Cadence (Avg/Max)"
-msgstr "Trittfrequenz (Ø/Max.)"
-
-#: openexpress/profile_names.py:211
-msgctxt "data field"
-msgid "Power (Avg/Max)"
-msgstr "Leistung (Ø/Max.)"
-
-#: openexpress/profile_names.py:212
-msgctxt "data field"
-msgid "Elevation (Asc/Desc)"
-msgstr "Höhe (Anstieg/Abstieg)"
-
-#: openexpress/profile_names.py:213
-#, ignore-reused
-msgctxt "data field"
-msgid "Elevation Graph"
-msgstr "Höhengrafik"
-
-#: openexpress/profile_names.py:215
-msgctxt "data field"
-msgid "Battery Hours"
-msgstr "Akkustunden"
-
-#: openexpress/profile_names.py:216
-msgctxt "data field"
-msgid "Di2 Battery Level"
-msgstr "Di2-Akkuladestand"
-
-#: openexpress/profile_names.py:217
-msgctxt "data field"
-msgid "Gear Combo"
-msgstr "Gangkombination"
-
-#: openexpress/profile_names.py:218
-msgctxt "data field"
-msgid "Di2 Shift Mode"
-msgstr "Di2-Schaltmodus"
-
-#: openexpress/profile_names.py:219
-msgctxt "data field"
-msgid "Anaerobic Training Effect"
-msgstr "Anaerober Training Effect"
-
-#: openexpress/profile_names.py:220
-msgctxt "data field"
-msgid "Avg Watts/kg"
-msgstr "Ø - Watt/kg"
-
-#: openexpress/profile_names.py:221
-msgctxt "data field"
-msgid "Lap Watts/kg"
-msgstr "Runde - Watt/kg"
-
-#: openexpress/profile_names.py:222
-msgctxt "data field"
-msgid "3s Watts/kg"
-msgstr "3s - Watt/kg"
-
-#: openexpress/profile_names.py:223
-msgctxt "data field"
-msgid "10s Watts/kg"
-msgstr "10s - Watt/kg"
-
-#: openexpress/profile_names.py:224
-msgctxt "data field"
-msgid "30s Watts/kg"
-msgstr "30s - Watt/kg"
-
-#: openexpress/profile_names.py:225
-msgctxt "data field"
-msgid "Lap VAM"
-msgstr "Runden-VAM"
-
-#: openexpress/profile_names.py:226
-msgctxt "data field"
-msgid "Avg VAM"
-msgstr "Durchschnittliche VAM"
-
-#: openexpress/profile_names.py:227
-msgctxt "data field"
-msgid "Ascent Remaining"
-msgstr "Verbleibender Anstieg"
-
-#: openexpress/profile_names.py:228
-#, ignore-end-stop
-msgctxt "data field"
-msgid "Asc. to Next Course Pt."
-msgstr "Anstieg zum nächsten Streckenpunkt"
-
-#: openexpress/profile_names.py:229
-#, ignore-reused
-msgctxt "data field"
-msgid "Respiration Rate"
-msgstr "Atemfrequenz"
-
-#: openexpress/profile_names.py:230
-msgctxt "data field"
-msgid "Load"
-msgstr "Belastung"
-
-#: openexpress/profile_names.py:231
-msgctxt "data field"
-msgid "Grit"
-msgstr "Grit"
-
-#: openexpress/profile_names.py:232
-msgctxt "data field"
-msgid "Lap Grit"
-msgstr "Runden-Grit"
-
-#: openexpress/profile_names.py:233
-msgctxt "data field"
-msgid "Flow"
-msgstr "Flow"
-
-#: openexpress/profile_names.py:234
-msgctxt "data field"
-msgid "Lap Flow"
-msgstr "Runden-Flow"
-
-#: openexpress/profile_names.py:235
-msgctxt "data field"
-msgid "Assist Mode"
-msgstr "Assistenzmodus"
-
-#: openexpress/profile_names.py:236
-msgctxt "data field"
-msgid "Shifting Advice"
-msgstr "Schalttipps"
-
-#: openexpress/profile_names.py:237
-msgctxt "data field"
-msgid "eBike Battery"
-msgstr "E-Bike-Akku"
-
-#: openexpress/profile_names.py:238
-msgctxt "data field"
-msgid "Travel Range"
-msgstr "Reichweite"
-
-#: openexpress/profile_names.py:239
-msgctxt "data field"
-msgid "60s Grit"
-msgstr "60s Grit"
-
-#: openexpress/profile_names.py:240
-msgctxt "data field"
-msgid "60s Flow"
-msgstr "60s Flow"
-
-#: openexpress/profile_names.py:241
-msgctxt "data field"
-msgid "Workout Comparison"
-msgstr "Trainingsvergleich"
-
-#: openexpress/profile_names.py:242
-msgctxt "data field"
-msgid "Primary Target"
-msgstr "Primäres Ziel"
-
-#: openexpress/profile_names.py:243
-msgctxt "data field"
-msgid "Target"
-msgstr "Ziel"
-
-#: openexpress/profile_names.py:244
-msgctxt "data field"
-msgid "Duration"
-msgstr "Dauer"
-
-#: openexpress/profile_names.py:245
-msgctxt "data field"
-msgid "Step Time"
-msgstr "Abschnitt - Zeit"
-
-#: openexpress/profile_names.py:246
-msgctxt "data field"
-msgid "Compass"
-msgstr "Kompass"
-
-#: openexpress/profile_names.py:247
-msgctxt "data field"
-msgid "Training Effect Gauge"
-msgstr "Training Effect-Anzeige"
-
-#: openexpress/profile_names.py:248
-msgctxt "data field"
-msgid "Total Ascent/Descent Gauge"
-msgstr "Anzeige Anstieg/Abstieg gesamt"
-
-#: openexpress/profile_names.py:249
-msgctxt "data field"
-msgid "Secondary Target"
-msgstr "Sekundäres Ziel"
-
-#: openexpress/profile_names.py:250
-msgctxt "data field"
-msgid "Smart Travel Range"
-msgstr "SMART-REICHWEITE"
-
-#: openexpress/profile_names.py:251
-msgctxt "data field"
-msgid "Potential"
-msgstr "Stamina - Gesamt"
-
-#: openexpress/profile_names.py:252
-#, ignore-same
-msgctxt "data field"
-msgid "Stamina"
-msgstr "Stamina"
-
-#: openexpress/profile_names.py:253
-msgctxt "data field"
-msgid "Estimated Distance"
-msgstr "Voraussichtliche Distanz"
-
-#: openexpress/profile_names.py:254
-msgctxt "data field"
-msgid "Estimated Time"
-msgstr "Voraussichtliche Zeit"
-
-#: openexpress/profile_names.py:255
-#, ignore-reused
-msgctxt "data field"
-msgid "Elevation Chart"
-msgstr "Höhendiagramm"
-
-#: openexpress/profile_names.py:256
-#, ignore-reused
-msgctxt "data field"
-msgid "Heart Rate Chart"
-msgstr "Herzfrequenzdiagramm"
-
-#: openexpress/profile_names.py:257
-#, ignore-reused
-msgctxt "data field"
-msgid "Speed Chart"
-msgstr "Geschwindigkeitsdiagramm"
-
-#: openexpress/profile_names.py:258
-msgctxt "data field"
-msgid "Dist. to Point"
-msgstr "Distanz zum Punkt"
-
-#: openexpress/profile_names.py:259
-msgctxt "data field"
-msgid "Time to Point"
-msgstr "Zeit bis Punkt"
-
-#: openexpress/profile_names.py:260
-msgctxt "data field"
-msgid "Heart Rate Zones Ratio"
-msgstr "Verhältnis der Herzfrequenz-Bereiche"
-
-#: openexpress/profile_names.py:261
-msgctxt "data field"
-msgid "Segment Time"
-msgstr "Segmentzeit"
-
-#: openexpress/profile_names.py:262
-msgctxt "data field"
-msgid "Training Effect"
-msgstr "Training Effect"
-
-#: openexpress/profile_names.py:263
-msgctxt "data field"
-msgid "Map"
-msgstr "Karte"
-
-#: openexpress/profile_names.py:264
-#, ignore-multiple-capital
-msgctxt "data field"
-msgid "Vertical Descent Speed"
-msgstr "Vertikale Abstiegsgeschwindigkeit"
-
-#: openexpress/profile_names.py:265
-#, ignore-multiple-capital
-msgctxt "data field"
-msgid "30s Vertical Descent Speed"
-msgstr "30 s vertikale Abstiegsgeschwindigkeit"
-
-#: openexpress/profile_names.py:266
-#, ignore-multiple-capital
-msgctxt "data field"
-msgid "Lap Vertical Descent Speed"
-msgstr "Vertikale Runden-Abstiegsgeschwindigkeit"
-
-#: openexpress/profile_names.py:267
-msgctxt "data field"
-msgid "Avg Force"
-msgstr "Ø Kraft"
-
-#: openexpress/profile_names.py:268
-msgctxt "data field"
-msgid "Lap Force"
-msgstr "Runde - Kraft"
-
-#: openexpress/profile_names.py:269
-msgctxt "data field"
-msgid "Max. Force"
-msgstr "Maximale Kraft"
-
-#: openexpress/profile_names.py:270
-msgctxt "data field"
-msgid "Max. Lap Force"
-msgstr "Runde - Maximale Kraft"
-
-#: openexpress/profile_names.py:271
-msgctxt "data field"
-msgid "3s Force"
-msgstr "3s - Kraft"
-
-#: openexpress/profile_names.py:272
-msgctxt "data field"
-msgid "10s Force"
-msgstr "10s - Kraft"
-
-#: openexpress/profile_names.py:273
-msgctxt "data field"
-msgid "30s Force"
-msgstr "30s - Kraft"
-
-#: openexpress/profile_names.py:274
-msgctxt "data field"
-msgid "Last Lap Force"
-msgstr "Letzte Runde - Kraft"
-
-#: openexpress/profile_names.py:275
-msgctxt "data field"
-msgid "Normalized Force"
-msgstr "Normierte Kraft"
-
-#: openexpress/profile_names.py:276
-#, ignore-end-stop
-msgctxt "data field"
-msgid "Lap Norm. Force"
-msgstr "Runde - Normierte Kraft"
-
-#: openexpress/profile_names.py:277
-#, ignore-end-stop
-msgctxt "data field"
-msgid "Last Lap Norm. Force"
-msgstr "Letzte Runde - Normierte Kraft"
-
-#: openexpress/profile_names.py:278
-msgctxt "data field"
-msgid "Force"
-msgstr "Kraft"
-
-#: openexpress/profile_names.py:286
-msgctxt "data field"
-msgid "Vertical Speed"
-msgstr "Vertikalgeschwindigkeit"
-
-#: openexpress/profile_names.py:287
-msgctxt "data field"
-msgid "GPS"
-msgstr "GPS"
-
-#. TRANSLATORS: a place of a data screen with no data field in it
-#: openexpress/profile_names.py:301
-msgid "Empty field"
-msgstr "Leeres Feld"
-
-#: openexpress/profile_names.py:303
-msgid "Connect IQ data field"
-msgstr "Connect IQ-Datenfeld"
-
-#: openexpress/profile_names.py:308
-#, python-brace-format
-msgid "Time in Heart Rate Zone {zone}"
-msgstr "Zeit in HF-Bereich {zone}"
-
-#: openexpress/profile_names.py:309
-#, python-brace-format
-msgid "Time in Power Zone {zone}"
-msgstr "Zeit in Leistungsbereich {zone}"
-
-#. TRANSLATORS: a data field openExpress has no name for, by its number in the profile file
-#: openexpress/profile_names.py:314
-#, python-brace-format
-msgid "Field {number}"
-msgstr "Feld {number}"
-
-#. TRANSLATORS: when a device shows a built-in screen it shows only then ("ClimbPro
-#. (on a climb)")
-#: openexpress/profile_names.py:339
-msgctxt "built-in screen shown"
-msgid "during a workout"
-msgstr "während eines Trainings"
-
-#: openexpress/profile_names.py:340
-msgctxt "built-in screen shown"
-msgid "on a segment"
-msgstr "auf einem Segment"
-
-#: openexpress/profile_names.py:341 openexpress/profile_names.py:344
-msgctxt "built-in screen shown"
-msgid "during a group ride"
-msgstr "während einer Gruppenfahrt"
-
-#: openexpress/profile_names.py:342
-msgctxt "built-in screen shown"
-msgid "on a climb"
-msgstr "an einem Anstieg"
-
-#: openexpress/profile_names.py:343
-msgctxt "built-in screen shown"
-msgid "with an active power plan"
-msgstr "mit aktivem Leistungsplan"
-
-#. TRANSLATORS: the device's own data screens an activity profile scrolls through: "3
-#. built-in screens (+6 when needed, 1 hidden)"
-#: openexpress/profile_names.py:361
-#, python-brace-format
-msgid "{count} built-in screen"
-msgid_plural "{count} built-in screens"
-msgstr[0] "{count} integrierte Seite"
-msgstr[1] "{count} integrierte Seiten"
-
-#. TRANSLATORS: after the number of built-in screens, those shown only when needed
-#: openexpress/profile_names.py:365
-#, ignore-same, ignore-same-plurals, python-brace-format
-msgid "+{count} when needed"
-msgid_plural "+{count} when needed"
-msgstr[0] "+{count} bei Bedarf"
-msgstr[1] "+{count} bei Bedarf"
-
-#: openexpress/profile_names.py:368
-#, python-brace-format
-msgid "{count} built-in screen when needed"
-msgid_plural "{count} built-in screens when needed"
-msgstr[0] "{count} integrierte Seite bei Bedarf"
-msgstr[1] "{count} integrierte Seiten bei Bedarf"
-
-#. TRANSLATORS: after the number of built-in screens, those hidden on the device
-#: openexpress/profile_names.py:372
-#, python-brace-format
-msgid "{count} hidden"
-msgid_plural "{count} hidden"
-msgstr[0] "{count} ausgeblendet"
-msgstr[1] "{count} ausgeblendet"
-
-#. TRANSLATORS: a data screen of one's own, by its order on the device
-#: openexpress/profile_names.py:394
-#, python-brace-format
-msgid "Screen {number}"
-msgstr "Seite {number}"
-
-#: openexpress/profile_names.py:413 openexpress/profile_names.py:441
-msgctxt "built-in screen"
-msgid "Map"
-msgstr "Karte"
-
-#: openexpress/profile_names.py:414
-#, ignore-same
-msgctxt "built-in screen"
-msgid "Virtual Partner"
-msgstr "Virtual Partner"
-
-#: openexpress/profile_names.py:415
-msgctxt "built-in screen"
-msgid "Music Controls"
-msgstr "Musiksteuerung"
-
-#: openexpress/profile_names.py:416 openexpress/profile_names.py:442
-msgctxt "built-in screen"
-msgid "Compass"
-msgstr "Kompass"
-
-#: openexpress/profile_names.py:417
-msgctxt "built-in screen"
-msgid "Workout"
-msgstr "Training"
-
-#: openexpress/profile_names.py:418
-msgctxt "built-in screen"
-msgid "Elevation"
-msgstr "Höhe"
-
-#: openexpress/profile_names.py:419
-#, ignore-same
-msgctxt "built-in screen"
-msgid "Segment"
-msgstr "Segment"
-
-#: openexpress/profile_names.py:420
-#, ignore-same
-msgctxt "built-in screen"
-msgid "GroupTrack"
-msgstr "GroupTrack"
-
-#: openexpress/profile_names.py:421
-msgctxt "built-in screen"
-msgid "eBike"
-msgstr "E-Bike"
-
-#: openexpress/profile_names.py:422
-msgctxt "built-in screen"
-msgid "Cycling Dynamics"
-msgstr "Cycling Dynamics"
-
-#: openexpress/profile_names.py:423
-msgctxt "built-in screen"
-msgid "Lap Summary"
-msgstr "Rundenübersicht"
-
-#: openexpress/profile_names.py:424
-#, ignore-same
-msgctxt "built-in screen"
-msgid "Shimano STEPS"
-msgstr "Shimano STEPS"
-
-#: openexpress/profile_names.py:425
-#, ignore-same
-msgctxt "built-in screen"
-msgid "ClimbPro"
-msgstr "ClimbPro"
-
-#: openexpress/profile_names.py:426
-msgctxt "built-in screen"
-msgid "Power Guide"
-msgstr "Power Guide"
-
-#: openexpress/profile_names.py:427
-#, ignore-same
-msgctxt "built-in screen"
-msgid "Stamina"
-msgstr "Stamina"
-
-#: openexpress/profile_names.py:428
-msgctxt "built-in screen"
-msgid "Solar"
-msgstr "Solar"
-
-#: openexpress/profile_names.py:429
-#, ignore-same
-msgctxt "built-in screen"
-msgid "GroupRide"
-msgstr "GroupRide"
-
-#: openexpress/profile_names.py:430
-msgctxt "built-in screen"
-msgid "Radar"
-msgstr "Radar"
-
-#: openexpress/profile_names.py:439
-msgctxt "built-in screen"
-msgid "Clock with Status Icons"
-msgstr "Uhr mit Statussymbolen"
-
-#: openexpress/profile_names.py:440
-msgctxt "built-in screen"
-msgid "Heart Rate Zone Gauge"
-msgstr "Herzfrequenzbereich-Anzeige"
-
-#: openexpress/profile_names.py:443
-msgctxt "built-in screen"
-msgid "Set"
-msgstr "Satz"
-
-#: openexpress/profile_names.py:444
-msgctxt "built-in screen"
-msgid "Regatta Timer"
-msgstr "Regatta-Timer"
-
-#: openexpress/profile_names.py:445
-msgctxt "built-in screen"
-msgid "Tack Assist"
-msgstr "Wendeassistent"
-
-#: openexpress/profile_names.py:446
-msgctxt "built-in screen"
-msgid "Clock with Sun Info"
-msgstr "Uhr mit Sonneninfo"
-
-#. TRANSLATORS: a built-in screen openExpress has no name for, by its code in the profile
-#: openexpress/profile_names.py:466
-#, python-brace-format
-msgid "Built-in screen {code}"
-msgstr "Integrierte Seite {code}"
-
-#: openexpress/profile_names.py:478
-msgctxt "layout"
-msgid "No Labels"
-msgstr "Keine Beschriftungen"
-
-#: openexpress/profile_names.py:479
-msgctxt "layout"
-msgid "Stack"
-msgstr "Stapel"
-
-#. TRANSLATORS: the layout of a custom data screen when the profile file does not say it
-#. (otherwise e.g. "Layout A")
-#: openexpress/profile_names.py:493
-msgid "Layout not given"
-msgstr "Layout nicht angegeben"
-
-#. TRANSLATORS: the layout of a data screen by the letter of the device's menu
-#: openexpress/profile_names.py:496
-#, python-brace-format
-msgid "Layout {letter}"
-msgstr "Layout {letter}"
-
-#. TRANSLATORS: the layout of a watch's data screen by its family ("Stack")
-#: openexpress/profile_names.py:499
-#, python-brace-format
-msgid "Layout “{family}”"
-msgstr "Layout „{family}“"
-
-#. TRANSLATORS: a layout openExpress has no name for, by its code in the profile
-#: openexpress/profile_names.py:501
-#, python-brace-format
-msgid "Layout code {code}, unknown"
-msgstr "Layoutcode {code}, unbekannt"
-
-#: openexpress/profiles.py:158 openexpress/profiles.py:164
-#, python-brace-format
-msgid "The file of this profile could not be read ({error})"
-msgstr "Die Datei dieses Profils konnte nicht gelesen werden ({error})"
-
-#: openexpress/profiles.py:161 openexpress/profiles.py:166
-msgid "This file is not a sport profile."
-msgstr "Diese Datei ist kein Sportprofil."
-
-#: openexpress/profiles.py:165
-msgid "it ends too soon"
-msgstr "sie endet zu früh"
-
-#. TRANSLATORS: a step of a long task: the profile files read ("… · 2 of 30")
-#: openexpress/profiles.py:242
-msgid "Reading profiles"
-msgstr "Profile werden gelesen"
 
 #. TRANSLATORS: how far a step of a long task is: "3 of 8", "412.0 MB of 1.5 GB"
 #: openexpress/progress.py:61

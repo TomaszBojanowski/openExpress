@@ -36,7 +36,6 @@ openexpress/gui/music_page.py
 openexpress/gui/netstatus_view.py
 openexpress/gui/pictures.py
 openexpress/gui/preferences.py
-openexpress/gui/profiles_page.py
 openexpress/gui/report_dialog.py
 openexpress/gui/start.py
 openexpress/gui/start_window.py
@@ -50,8 +49,6 @@ openexpress/maps.py
 openexpress/music.py
 openexpress/netstatus.py
 openexpress/ownmaps.py
-openexpress/profile_names.py
-openexpress/profiles.py
 openexpress/progress.py
 openexpress/proto.py
 openexpress/service.py

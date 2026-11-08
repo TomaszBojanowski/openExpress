@@ -219,7 +219,7 @@ since the list was shown, or a device that stopped answering: the reason said, t
   device does with it, the space); with it the copy. `--name` names the course, as the entry;
   for a file that makes no course or several it is refused, with the reason.
 - `openexpress courses remove NAME [--apply]`: a course or a waiting file, by its name or a part
-  of it, as `profiles show` matches names; several matches list them and remove nothing.
+  of it (letter case and diacritics aside); several matches list them and remove nothing.
 - Every one works with `--path DIR` and `--device-uri URI`, as the other commands that open a
   device. No new exit code: a refusal is 1, with its reason.
 

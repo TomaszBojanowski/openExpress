@@ -79,12 +79,10 @@ def test_the_side_panel_chooses_a_section(window):
     from openexpress.paths import APP_ID
 
     keys = list(window.sections)
-    assert keys == ["watch", "updates", "maps", "courses", "apps", "music", "activities",
-                    "profiles"]
+    assert keys == ["watch", "updates", "maps", "courses", "apps", "music", "activities"]
     # Device: the small icon of no kind until a device is open (then of its kind).
     assert window.sections["watch"].icon == f"{APP_ID}-device-small-symbolic"
     assert window.sections["activities"].icon == f"{APP_ID}-activities-symbolic"
-    assert window.sections["profiles"].icon == f"{APP_ID}-profiles-symbolic"
     assert window.sections["courses"].icon == f"{APP_ID}-courses-symbolic"
     rows = [r for r in descendants(window.nav) if isinstance(r, Gtk.ListBoxRow)]
     assert [r.key for r in rows] == keys

@@ -68,8 +68,8 @@ for a workout, the question for the calendar, the page after a workout was sent.
 
 ### 4.1 Where it is offered
 
-A section of the device view, **Workouts and Courses** ("Treningi i kursy"), after Activities
-and Activity profiles: for a device of the account (checked as at a sync), while logged in, that
+A section of the device view, **Workouts and Courses** ("Treningi i kursy"), after
+Activities: for a device of the account (checked as at a sync), while logged in, that
 declares at least one of `FIT_TYPE_5`, `FIT_TYPE_6`, `FIT_TYPE_7` as `InputToUnit`. Its groups,
 each shown only for what the device declares:
 
@@ -156,7 +156,7 @@ The words are Garmin Connect's own in both languages ("Treningi", "Kursy", "Kale
 
 - `openexpress workouts` – the account's workouts (name, sport, duration, distance) and the
   calendar's summary; `openexpress workouts send NAME [--apply]` – a name or a part of it, as
-  `profiles show` matches names.
+  `courses remove` matches names.
 - `openexpress courses`, `openexpress courses send NAME [--apply]`.
 - `openexpress calendar`, `openexpress calendar send [--apply]`.
 
@@ -250,8 +250,8 @@ have succeeded (section 9), the second by another user.
 
 ### D11: the commands' names — recommended: 11a
 
-- **11a. `workouts`, `courses`, `calendar`, each with `send` (recommended)** – as `profiles` and
-  `profiles show`.
+- **11a. `workouts`, `courses`, `calendar`, each with `send` (recommended)** – as `courses` and
+  `courses remove`.
 - **11b. One command `send workout|course|calendar`.** − The lists would need another command.
 
 ### D12: the course's request — recommended: 12a

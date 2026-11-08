@@ -16,15 +16,6 @@ sport|Multisport|ignore-same
 chart unit|bpm|ignore-same
 |{minutes} min {seconds} s|ignore-same
 |Garmin Connect|ignore-same
-data field|Normalized Power|ignore-same
-data field|Stamina|ignore-same
-built-in screen|Virtual Partner|ignore-same
-built-in screen|Segment|ignore-same
-built-in screen|GroupTrack|ignore-same
-built-in screen|Shimano STEPS|ignore-same
-built-in screen|ClimbPro|ignore-same
-built-in screen|Stamina|ignore-same
-built-in screen|GroupRide|ignore-same
 |TrueUp: {time}…|ignore-same
 
 # ignore-same, ignore-same-plurals
@@ -33,7 +24,6 @@ built-in screen|GroupRide|ignore-same
 |Show {count} More|ignore-same, ignore-same-plurals
 |{n} min ago|ignore-same, ignore-same-plurals
 |{n} h ago|ignore-same, ignore-same-plurals
-|+{count} when needed|ignore-same, ignore-same-plurals
 
 # ignore-same-plurals: Polish says two forms of these alike ("Kursy" for 2–4 and for 5 or more)
 |Course: {names}|ignore-same-plurals
@@ -59,32 +49,11 @@ server request|Primary training device|ignore-reused
 |Setup|ignore-reused
 chip|USB drive|ignore-reused
 |Reading the Activity…|ignore-reused
-activity tile|Average pace|ignore-reused
-activity tile|Average speed|ignore-reused
-activity tile|Total ascent|ignore-reused
-activity detail|Elapsed time|ignore-reused
-activity detail|Total descent|ignore-reused
-activity detail|Maximum speed|ignore-reused
 activity detail|Heart rate|ignore-reused
 activity chart|Heart rate|ignore-reused
 |at {date} {time}|ignore-reused
-data field|Heart Rate|ignore-reused
-data field|Average Pace|ignore-reused
-data field|Avg Speed|ignore-reused
-data field|Elapsed Time|ignore-reused
-data field|Total Ascent|ignore-reused
-data field|Total Descent|ignore-reused
-data field|Max. Speed|ignore-reused
-# An Edge's graphs and a watch's charts: Garmin's manuals name each pair alike in Polish, and
-# a device's profiles hold only its own (the profile page shows one device)
-data field|Heart Rate Graph|ignore-reused
-data field|Heart Rate Chart|ignore-reused
-data field|Speed Graph|ignore-reused
-data field|Speed Chart|ignore-reused
-data field|Elevation Graph|ignore-reused
-data field|Elevation Chart|ignore-reused
 # Texts that differ only in their letters' case (the command line's and the window's in GNOME's
-# header capitalization; an activity's detail and a data field): Polish writes both alike
+# header capitalization): Polish writes both alike
 |Pictures and icons|ignore-reused
 |Pictures and Icons|ignore-reused
 |Activity map tiles|ignore-reused
@@ -95,25 +64,13 @@ data field|Elevation Chart|ignore-reused
 |Ejecting the Device…|ignore-reused
 |Primary wearable|ignore-reused
 |Primary Wearable|ignore-reused
-activity detail|Maximum elevation|ignore-reused
-data field|Maximum Elevation|ignore-reused
-activity detail|Respiration rate|ignore-reused
-data field|Respiration Rate|ignore-reused
 |Configuration|ignore-reused
 
 # ignore-multiple-capital
 sport|Stand-up paddleboarding|ignore-multiple-capital
-data field|Intensity Factor|ignore-multiple-capital
-data field|Avg. Vertical Descent Speed|ignore-multiple-capital
-data field|Vertical Descent Speed|ignore-multiple-capital
-data field|30s Vertical Descent Speed|ignore-multiple-capital
-data field|Lap Vertical Descent Speed|ignore-multiple-capital
 
 # ignore-end-stop
 |The given URL has no ticket=ST-... parameter|ignore-end-stop
-data field|Asc. to Next Course Pt.|ignore-end-stop
-data field|Lap Norm. Force|ignore-end-stop
-data field|Last Lap Norm. Force|ignore-end-stop
 
 # ignore-newline-count
 |\nTo finish the installation:\n  1. Disconnect the device from the computer.\n  2. If the device does not turn on by itself, turn it on.\n  3. The device installs the update by itself. It may ask whether to install it:\n     choose to install now. It may also restart. Wait until it has finished.\n  4. Reconnect it and run `openexpress updates`: the installed update\n     should no longer be listed.\n|ignore-newline-count

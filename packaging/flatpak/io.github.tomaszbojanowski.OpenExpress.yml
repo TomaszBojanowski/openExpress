@@ -122,9 +122,7 @@ modules:
       - install -Dm644 openexpress/data/${FLATPAK_ID}-blood-pressure-monitor-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-blood-pressure-monitor-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-bike-sensor-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-bike-sensor-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-view-auto-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-view-auto-symbolic.svg
-      - 'for icon in openexpress/data/${FLATPAK_ID}-screen-*-symbolic.svg; do install -Dm644 "$icon" ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/$(basename "$icon"); done'
       - 'for icon in openexpress/data/${FLATPAK_ID}-*-small-symbolic.svg openexpress/data/${FLATPAK_ID}-activit*-symbolic.svg; do install -Dm644 "$icon" ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/$(basename "$icon"); done'
-      - install -Dm644 openexpress/data/${FLATPAK_ID}-profiles-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-profiles-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}-courses-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/${FLATPAK_ID}-courses-symbolic.svg
       - install -Dm644 openexpress/data/${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
     sources:
