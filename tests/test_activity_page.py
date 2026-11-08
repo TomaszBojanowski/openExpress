@@ -1587,7 +1587,7 @@ def test_the_training_effect_under_the_zones(monkeypatch):
 
     assert [row_texts(r) for r in shown.rows] == [
         ["Aerobic", "2.4\u00a0· Maintaining"], ["Anaerobic", "1.2\u00a0· Minor benefit"],
-        ["Training load", "28"]]
+        ["Training Load", "28"]]
     bars = [bar_of(r, EffectBar) for r in shown.rows]
     assert [round(b.share, 2) for b in bars[:2]] == [0.48, 0.24] and bars[2] is None
     assert bars[0].fill().to_string() == accent_colour().to_string()

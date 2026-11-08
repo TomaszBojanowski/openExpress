@@ -4,24 +4,26 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name translate="no">openExpress</name>
-  <summary>Manage your Garmin watch on Linux</summary>
+  <summary>Manage your Garmin device on Linux</summary>
   <developer id="io.github.tomaszbojanowski">
     <name translate="no">Tomasz Bojanowski</name>
   </developer>
   <description>
     <p>
-      openExpress is an unofficial Linux app for Garmin watches connected with a USB cable.
-      It syncs the watch with Garmin Connect and installs software updates, maps,
+      openExpress is an unofficial Linux app for Garmin watches and bike computers connected with
+      a USB cable. It syncs them with Garmin Connect and installs software updates, maps,
       Connect IQ apps and music.
     </p>
     <ul>
-      <li>Upload activities, sleep, HRV and other health data to Garmin Connect</li>
-      <li>Send courses, workouts and apps queued in Garmin Connect to the watch</li>
-      <li>Install watch software updates and free maps such as TopoActive</li>
-      <li>Install, update and remove Connect IQ apps and watch faces</li>
-      <li>Copy music, podcasts, audiobooks and playlists</li>
-      <li>See each activity's track on a map, with its charts, laps, heart rate zones and training effect</li>
-      <li>Sync automatically in the background when the watch is connected</li>
+      <li>Upload new activities, sleep, HRV and other data to Garmin Connect</li>
+      <li>Send courses, workouts and Connect IQ apps queued in Garmin Connect to the device</li>
+      <li>Install and update software and free maps such as TopoActive, and copy maps of your own</li>
+      <li>Copy courses from GPX files to the device, without Garmin Connect (experimental)</li>
+      <li>Install, update and remove Connect IQ apps, turn them on or off and put them back in order</li>
+      <li>Copy music, podcasts and audiobooks, with playlists</li>
+      <li>See each activity on its own page: the track on a map, charts, laps, heart rate zones and training effect</li>
+      <li>Make backups of the device</li>
+      <li>Sync in the background whenever the device is connected</li>
       <!-- TRANSLATORS: a feature in the description for software centres: the program sends no
            usage data -->
       <li>No telemetry</li>

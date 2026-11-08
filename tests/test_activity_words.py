@@ -192,7 +192,7 @@ def test_the_words_of_the_heart_rate_zones(language):
 
 EFFECT = {
     "en": {"title": "Training Effect", "aerobic": "Aerobic", "anaerobic": "Anaerobic",
-           "load": "Training load",
+           "load": "Training Load",
            "words": ["No benefit", "No benefit", "Minor benefit", "Minor benefit", "Maintaining",
                      "Maintaining", "Improving", "Improving", "Highly improving",
                      "Highly improving", "Overreaching"],

@@ -1,7 +1,8 @@
 # The window's icons
 
-What each place of the window shows as its icon, and why.
-The icons of the device kinds on the
+Status: implemented.
+
+What each place of the window shows as its icon, and why. The icons of the device kinds on the
 start page's tiles stay as they are.
 
 ## How an icon is chosen
@@ -24,18 +25,19 @@ start page's tiles stay as they are.
 |---|---|---|---|
 | Side panel: Device | a clock | the small icon of the open device's kind (watch, cycling computer, handheld, bike accessory; any other: a neutral device), the neutral one until the kind is known | a clock suits a watch only; the tile's kind icons are drawn for a large size and come out too thin at 16 px, so the kinds are drawn again for 16 px |
 | Side panel, empty list, page without a summary: Activities | a calendar | a running figure | a calendar says "dates"; the runner was the one idea read as "workouts" |
+| Side panel, page without courses: Courses | the icon of the Distance tile | a trail of switchbacks from its start | one icon for one meaning: the Distance tile's icon is a length |
 | Tile: Distance | the pin | two points and the line between them | the pin is Maps, and a place, not a length |
 | Tile: Time | a clock | the stopwatch (the kit) | a duration |
-| Tiles: Pace, Speed | the theme's filled gauge | a speedometer (the kit) | the same meaning, drawn as the other tiles |
-| Tiles: Heart rate | the theme's emoji heart | the heart (the kit) | the same meaning, drawn as the other tiles |
+| Tiles: Average Pace, Average Speed | the theme's filled gauge | a speedometer (the kit) | the same meaning, drawn as the other tiles |
+| Tiles: Average Heart Rate, Maximum Heart Rate | the theme's emoji heart | the heart (the kit) | the same meaning, drawn as the other tiles |
 | Tile: Calories | knife and fork | a flame | food is not calories burned |
-| Tile: Ascent | an arrow up | two peaks | the same meaning as height, drawn as the other tiles |
+| Tile: Total Ascent | an arrow up | two peaks | the same meaning as height, drawn as the other tiles |
 
 The cycling computer's small icon stands on a handlebar: drawn alone, it read as a phone.
 
 ## What stays
 
-The header bar (main menu, refresh, Sync with the arrows of sending and receiving: arrows in a
+The header bar (main menu, Refresh, Sync with the arrows of sending and receiving: arrows in a
 circle would be confused with Refresh next to it), the start page's view buttons, the side
 panel's Updates, Maps, Apps and Music, warnings and errors, the arrows of rows, the update
 page's large icon, the Maps page without maps, the placeholder of an app's icon, Export as GPX

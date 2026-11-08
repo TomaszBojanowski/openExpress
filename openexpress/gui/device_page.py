@@ -314,7 +314,7 @@ def primary_wearable_row(win, wearable):
 
 
 def confirm_primary_wearable(win, wearable, button=None) -> None:
-    """Set as Primary on the row "Primary Wearable": asked first; once Set is chosen, the
+    """Set as Primary on the row "Primary Wearable": asked first; once Change is chosen, the
     change runs from `button`, which spins meanwhile."""
     s = win.session
     if s is None:
@@ -1185,7 +1185,7 @@ class DevicePage:
             done, failed)
 
     def confirm_primary_training(self, status, button: Gtk.Button | None = None) -> None:
-        """Set as Primary: asked first; once Set is chosen, the change runs from `button`,
+        """Set as Primary: asked first; once Change is chosen, the change runs from `button`,
         which spins meanwhile."""
         s = self.session
         if s is None:

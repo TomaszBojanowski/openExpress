@@ -50,9 +50,9 @@ Facts of its Android app, read from its files (no request was made):
   types the device declares `InputToUnit` in its `GarminDevice.xml`; the free space checked
   before each file.
 - The device checked against the account before any request about it (`require_verified`).
-- The questions `confirm()` and `inform()`, the tasks of a button (`run_task`), the writes to
+- The dialogs `confirm()` and `inform()`, the tasks of a button (`run_task`), the writes to
   the device locked (`writes_to_device`, `WRITING`), the answers of the servers kept a while
-  (`answers.ANSWERS`), the trial runs of the commands (`--apply`).
+  (`answers.ANSWERS`), the dry runs of the commands (`--apply`).
 - A fēnix 8 declares the workouts (`FIT_TYPE_5`), courses (`FIT_TYPE_6`) and schedules
   (`FIT_TYPE_7`) both ways: in through `Garmin/NewFiles`, out of `Garmin/Workouts`,
   `Garmin/Courses`, `Garmin/Schedule`. It declares no limit of their number.
@@ -63,8 +63,8 @@ Facts of its Android app, read from its files (no request was made):
 
 ## 4. The window and the command line
 
-Mockups: wide (1000 px) and narrow (360 px), light and dark, in Polish: the page, the question
-for a workout, the question for the calendar, the page after a workout was sent.
+Mockups: wide (1000 px) and narrow (360 px), light and dark, in Polish: the page, the confirmation dialog
+for a workout, the confirmation dialog for the calendar, the page after a workout was sent.
 
 ### 4.1 Where it is offered
 
@@ -86,7 +86,7 @@ each shown only for what the device declares:
 
 The lists come when the section is first shown and on Refresh (D8).
 
-### 4.2 The question and the work
+### 4.2 The confirmation dialog and the work
 
 **Send to Device…** of a workout asks (`confirm()`, Cancel by default; Escape and closing are
 Cancel):
@@ -99,14 +99,14 @@ Cancel):
 >
 > Cancel · **Send**
 
-The calendar's question names how many workouts and which days, and the limit:
+The calendar's confirmation dialog names how many workouts and which days, and the limit:
 
 > **Send the calendar to fēnix 8?**
 > 12 scheduled workouts from 5 to 18 November. Garmin Connect adds them to the file queue of
 > this device (account {account}) and openExpress writes them to the device now. A device holds
 > a limited number of workouts: the calendar can replace older ones on it.
 
-A course's question is the workout's, with "the course". In every question the device's
+A course's confirmation dialog is the workout's, with "the course". In every confirmation dialog the device's
 name stays on one line (its spaces do not break).
 
 Then, as the task of the button (busy meanwhile), the device's writes locked:
@@ -115,7 +115,7 @@ Then, as the task of the button (busy meanwhile), the device's writes locked:
    (D4);
 2. the request (D2, D10, D13);
 3. the queue read again: the new items must be in it (the answer has no body);
-4. the queue emptied onto the device, as at a sync (D3): every item waiting, the question has
+4. the queue emptied onto the device, as at a sync (D3): every item waiting, the confirmation dialog has
    said how many others wait.
 
 ### 4.3 The outcomes
@@ -166,7 +166,7 @@ Without `--apply` the plan: what would be added to the queue, for which device a
 
 ### 4.6 Experimental
 
-The window's question and the commands' help say "experimental" until two attempts on devices
+The window's confirmation dialog and the commands' help say "experimental" until two attempts on devices
 have succeeded (section 9), the second by another user.
 
 ## 5. Decisions
@@ -195,8 +195,8 @@ have succeeded (section 9), the second by another user.
 ### D3: when it is written — recommended: 3a
 
 - **3a. Right away: the queue emptied onto the device as at a sync (recommended).**
-  - \+ Done when the question is answered; the device shows it at the unplug.
-  - − Other items waiting go too: the question says how many.
+  - \+ Done when the confirmation dialog is answered; the device shows it at the unplug.
+  - − Other items waiting go too: the confirmation dialog says how many.
 - **3b. At the next sync.** − Nothing seen until then; the device may sync by its own Wi-Fi or
   the phone first, which is fine but not what was asked.
 
@@ -205,16 +205,16 @@ have succeeded (section 9), the second by another user.
 - **4a. Not added again; its `messageUrl` compared (recommended).**
 - **4b. Always added.** − Two copies of one workout on the device.
 
-### D5: the question — recommended: 5a
+### D5: the confirmation dialog — recommended: 5a
 
 - **5a. What, to which device, for which account, what follows; the calendar with its count, its
   days and the limit (recommended):** the texts of 4.2.
-- **5b. No question for a single workout.** − A write to the account without a question, unlike
+- **5b. No confirmation dialog for a single workout.** − A write to the account without one, unlike
   Add to Account.
 
 ### D6: the device's limit of workouts — recommended: 6a
 
-- **6a. The counts on the device shown, the calendar's question warns; nothing deleted
+- **6a. The counts on the device shown, the calendar's confirmation dialog warns; nothing deleted
   (recommended).**
   - \+ No guess of a number the device does not declare; a sync never deletes files on the
     device.
@@ -268,13 +268,13 @@ have succeeded (section 9), the second by another user.
 
 | What | How it is prevented, and found |
 |---|---|
-| The wrong device or account | the question names both; the device checked against the account first |
+| The wrong device or account | the confirmation dialog names both; the device checked against the account first |
 | Two copies | the queue read before the request (D4) |
 | The device full, or its limit reached | the free space checked before each file, as at a sync; the counts shown; the calendar's warning (D6) |
 | A workout of a sport the device lacks | the device's own rule; seen in section 9 |
 | Accepted, not in the queue | said (4.3); a sync writes it when it comes |
 | The sign-in refused by a service | said per service; the group of that service hidden |
-| Other items of the queue written with it | said in the question (D3) |
+| Other items of the queue written with it | said in the confirmation dialog (D3) |
 | No network, or no answer | not known whether it was added: the queue read on Refresh says |
 | The tests | no network: recorded answers only; no queue item made by a test |
 
@@ -287,9 +287,9 @@ the same commit, and passes the usual checks. Each waits for acceptance.
    `sendToDevice`, the calendar's request; tests of each request's form and answers.
 2. **Sending** (`service`): the queue before, the request, the queue after, the queue emptied
    onto the device; the log's lines (the kind, how many items; no names of workouts or
-   courses, no unit ID).
+   courses, no Unit ID).
 3. **The commands** `workouts`, `courses`, `calendar`; `docs/cli.md`.
-4. **The window**: the section, its groups, the questions, the task, the outcomes; the narrow
+4. **The window**: the section, its groups, the confirmation dialogs, the task, the outcomes; the narrow
    window.
 5. **The documents**: `docs/guide.md`, `docs/privacy.md` (what is sent: a queue item naming the
    workout or course and the device), README.

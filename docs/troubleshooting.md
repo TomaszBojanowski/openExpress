@@ -5,23 +5,20 @@
   *The device stopped responding. Unplug it and plug it in again.* Do that: only unplugging the
   device has ended such a hang; until then openExpress, while it runs, asks nothing more of
   the device ([more](guide.md#a-device-that-stops-responding)).
-- **The watch restarts by itself after it is unplugged.** A fēnix 8 (software 23.39) has done
-  this a few times while taking in a change, for example a new map or a removed Connect IQ
-  app; the same change went through without a restart right after the watch had been turned
-  off and on. The watch also kept memory dumps of crashes or restarts from before
-  openExpress was first used with it. This looks like a fault of the watch that appears
-  after it has been running for days, but it is not certain. Before a bigger change (maps,
-  several apps) it may help to turn the watch off and on first. No data on the watch was lost.
-  The watch keeps only the last such error in its log and overwrites it at the next restart,
-  sometimes already when it is unplugged, so to keep it, turn on **Preferences → Diagnostics
-  → Keep a copy of the device's diagnostic files on this computer** (what is copied and when:
-  [Privacy and security](privacy.md#privacy-and-security)). After such an error the device
-  page shows a row **Device Error Log** (under **Backup**) for 30 days, whether the copy is on
-  or not.
+- **The watch restarts by itself after it is unplugged.** A fēnix 8 has done this a few times
+  while taking in a change, for example a new map or a removed Connect IQ app. No data on the
+  watch was lost.
+  - Before a bigger change (maps, several apps), it may help to turn the watch off and on first.
+  - The watch keeps only the last such error in its log and overwrites it at the next restart,
+    sometimes already when it is unplugged. To keep it, turn on Preferences → **Diagnostics** →
+    **Keep Diagnostic Files** (what is copied and when: [Diagnostics](privacy.md#diagnostics)).
+  - After such an error the device page shows a row **Device Error Log** (under **Backup**) for
+    30 days, whether the copy is on or not.
 - **The watch is not found after the computer slept.** Watches (seen on a fēnix 8 and a Venu
   2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
   again.
-- **An Edge 1050 restarts each time it is unplugged.** It always does.
+- **An Edge 1050 restarts each time it is unplugged.** That is normal for this model; nothing
+  needs to be done.
 - **Device Not Supported.** The Garmin device connects neither over MTP nor as a USB drive
   that stays (an inReach Mini of the first generation connects with HID, and for its first
   minute with a small drive beside it): openExpress cannot use it. The window says so with
@@ -29,27 +26,29 @@
   still works and says what is connected ([Reporting a problem](#reporting-a-problem)).
 - **Garmin Connect shows a heat or altitude acclimation you did not expect.** With two
   devices on the account (for example a watch and an Edge), each keeps its own acclimation, and
-  the daily values in Garmin Connect come from the device that reported last: an Edge can keep
-  a high value from weeks ago while the watch shows 0. The acclimation on each device's own
-  screen tells which one it comes from. openExpress passes the devices' files on as they are
-  and changes no such value; an Edge 1050 has no reset of the acclimation alone.
+  the daily values in Garmin Connect come from the device that reported last. Compare the
+  acclimation on each device's own screen to see which one the value comes from.
 - **"This device is not registered to your Garmin account", although you registered it.**
   Registering the product on garmin.com does not add it to Garmin Connect, whose list of
   devices openExpress checks. Add the device in Garmin Connect (pair it with the Garmin
-  Connect app on your phone, or add it at connect.garmin.com), or here: **Add to Account…** on
+  Connect app on your phone, or add it at connect.garmin.com), or here: **Add to Account** on
   the banner or on the device page, `openexpress register` on the command line
   (experimental); then sync again. If it is there already, check that the phone app and
   openExpress are signed in to the same account.
 
 ## KDE Plasma and Dolphin
 
-**KDE Plasma and Dolphin:** Dolphin opens MTP devices through KDE's own MTP service (kmtpd
-from kio-extras, in the `kiod6` process), not through gvfs. Once started, the service keeps
-every MTP device it has opened, also after Dolphin is closed, and takes a device back as soon
-as its cable is plugged in again, so gvfs cannot offer it; after 45 seconds the window says
-**Device Not Ready**. To free the device, close Dolphin, run `kquitapp6 kiod6`, then
-unplug the cable and plug it back in. Open the device in openExpress rather than in Dolphin;
-if you open it in Dolphin again, repeat these steps.
+Dolphin opens MTP devices through KDE's own MTP service (kmtpd from kio-extras, in the `kiod6`
+process), not through gvfs. Once started, the service keeps every MTP device it has opened, also
+after Dolphin is closed, and takes a device back as soon as its cable is plugged in again, so
+gvfs cannot offer it; after 45 seconds the window says **Device Not Ready**. To free the device:
+
+1. Close Dolphin.
+2. Run `kquitapp6 kiod6`.
+3. Unplug the cable and plug it in again.
+
+Open the device in openExpress rather than in Dolphin; if you open it in Dolphin again, repeat
+these steps.
 
 ## Signing in
 
@@ -77,32 +76,37 @@ openExpress keeps a log of what it does, to make problems easier to find:
   the command, the version, whether it runs from source or is the Flatpak (with the
   repository it was installed from and its commit), the Python version, the language of the
   app, the locale of the C library and the process ID; nothing about you or your computer.
-- **What it contains:** which command or sync ran and how it ended, the steps of a sync
-  (numbers of files by type, not their contents), app installs and removals, which of the
-  software updates offered were chosen and which not, and why some were left out (by part
-  number and version), how the device was detected (including when it was mounted or
-  unmounted), requests to Garmin's servers as method, address without parameters, status and
-  duration, and error messages. Of each question or message of the window: its heading, its
-  words in one line and the answer; of those about your own files, maps, music or courses,
-  only which one it was and the answer.
-- **What it never contains:** serial numbers, unit IDs, MTP addresses, tokens, passwords,
+- **What it contains:**
+  - which command or sync ran and how it ended;
+  - the steps of a sync (numbers of files by type, not their contents);
+  - app installs and removals;
+  - which of the software updates offered were chosen and which not, and why some were left out
+    (by part number and version);
+  - how the device was detected (including when it was mounted or unmounted);
+  - requests to Garmin's servers as method, address without parameters, status and duration;
+  - error messages;
+  - of each dialog of the window (a confirmation dialog or a message): its heading, its words in
+    one line and the answer; of those about your own files, maps, music or courses, only which
+    one it was and the answer.
+- **What it never contains:** serial numbers, Unit IDs, MTP addresses, tokens, passwords,
   cookies, e-mail addresses, local paths, addresses of local files and network shares
   (`file://`, `smb://`, `sftp://`…), your user name, names of your music files, or file
-  contents.
-  Every line passes a filter that replaces such values before it is written. The log
+  contents. Every line passes a filter that replaces such values before it is written. The log
   stays on your computer; nothing is sent anywhere.
 - **More or less:** `OPENEXPRESS_LOG=debug` (or `-v`) writes more detail,
   `OPENEXPRESS_LOG=off` writes no file. What `-v` and the background sync print on the
   terminal passes the same filter; messages meant for you (e.g. the addresses to choose
   from with `--device-uri`) and the output of commands such as `openexpress info` do not.
-- **In a bug report:** `openexpress report` says where the log is; `openexpress report --log`
-  prints its last 200 lines instead, filtered once more, ready to paste into the form's
-  “Log” field or into a comment (the address it prints fills in the report). In the window,
-  tick **Attach the last log** in *Report a Device or Problem…*; the preview shows the report
-  with the log, as **Copy** copies it. **Open on GitHub** puts only the report into the form
-  and the same log lines into the clipboard, to paste into the form's “Log” field or into a comment: the log never
-  goes into the address. The log comes between two `~~~` lines, so that GitHub shows it as
-  code in a comment too. Read it before you send it.
+- **In a bug report:**
+  - On the command line, `openexpress report` says where the log is; `openexpress report --log`
+    prints its last 200 lines instead, filtered once more, ready to paste into the form's “Log”
+    field or into a comment (the address it prints fills in the report).
+  - In the window, tick **Attach the last log** in **Report a Device or Problem…**; the preview
+    shows the report with the log, as **Copy** copies it. **Open on GitHub** puts only the
+    report into the form and the same log lines into the clipboard, to paste into the form's
+    “Log” field or into a comment: the log never goes into the address.
+  - The log comes between two `~~~` lines, so that GitHub shows it as code in a comment too.
+    Read it before you send it.
 
 ## The Flatpak and the language of your system
 
@@ -120,21 +124,24 @@ flatpak update
 
 ## Reporting a problem
 
-A [device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml) says how openExpress works with your device, also when everything
-works. In the window: main menu (☰) → **Report a Device or Problem…**
-→ **Open on GitHub** opens the form with the report and a title filled in; or run
-`openexpress report`, which prints the report and an address that does the same. The report
-contains no serial number, unit ID or e-mail. Nothing is published until you submit the form.
-When no device can be opened (one not ready or not supported, none connected), both still
-give a report: why no device is open, the Garmin devices on USB (their USB ID, the name each
+A [device report](https://github.com/TomaszBojanowski/openExpress/issues/new?template=device_report.yml)
+says how openExpress works with your device, also when everything works. In the window: main
+menu (☰) → **Report a Device or Problem…** → **Open on GitHub** opens the form with the report
+and a title filled in; or run `openexpress report`, which prints the report and an address that
+does the same. The report contains no serial number, Unit ID or e-mail. Nothing is published
+until you submit the form.
+
+When no device can be opened (one not ready or not supported, none connected), the window and
+`openexpress report` still give a report: why no device is open, the Garmin devices on USB (their USB ID, the name each
 gives itself and the kinds of its interfaces) and whether gvfs has MTP, then the system;
 `openexpress report --log` gives the log as always.
 
 For a bug, send the device report with the command you ran and, if something failed, the
-output of `openexpress report --log` (see [Log file](#log-file)). Do not post the output of
-`openexpress info`: it shows the unit ID. Never post the files in `~/.config/openexpress/`
-(Flatpak: `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/`): `connect_auth.json` is
-your login token, and `consumer.json` holds what setup read from the Garmin Express
-installer (the application key, its secret and the value that signs download addresses).
-Do not post your `GarminDevice.xml` either (it contains the unit ID, the serial number and
-map unlock codes).
+output of `openexpress report --log` (see [Log file](#log-file)). Never post:
+
+- the output of `openexpress info`: it shows the Unit ID;
+- the files in `~/.config/openexpress/` (Flatpak:
+  `~/.var/app/io.github.tomaszbojanowski.OpenExpress/config/openexpress/`): `connect_auth.json`
+  is your login token, and `consumer.json` holds what setup read from the Garmin Express
+  installer (the application key, its secret and the value that signs download addresses);
+- your `GarminDevice.xml`: it contains the Unit ID, the serial number and map unlock codes.

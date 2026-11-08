@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 22:12+0100\n"
+"POT-Creation-Date: 2026-11-08 23:14+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -4295,14 +4295,14 @@ msgid "openExpress (background)"
 msgstr "openExpress (Hintergrund)"
 
 #. TRANSLATORS: generic name of the app in application menus (GenericName in the desktop file): a
-#. tool that syncs Garmin watches
+#. tool that syncs Garmin devices
 #: openexpress/desktop.py
-msgid "Garmin Watch Sync"
-msgstr "Garmin-Uhren-Synchronisierung"
+msgid "Garmin Device Sync"
+msgstr "Garmin-Gerätesynchronisierung"
 
 #: openexpress/desktop.py
-msgid "Sync, updates and maps for Garmin watches"
-msgstr "Synchronisierung, Updates und Karten für Garmin-Uhren"
+msgid "Sync, updates and maps for Garmin devices"
+msgstr "Synchronisierung, Updates und Karten für Garmin-Geräte"
 
 #. TRANSLATORS: search keywords for the application menu; keep the ";" separators and the ending ";"
 #: openexpress/desktop.py
@@ -8272,7 +8272,7 @@ msgstr "Überbelastung"
 
 #. TRANSLATORS: the training load of an activity (a number)
 #: openexpress/gui/words.py
-msgid "Training load"
+msgid "Training Load"
 msgstr "Belastungswert"
 
 #. TRANSLATORS: a series after "Track colour:", as a sentence goes on there (in Polish
@@ -10027,57 +10027,76 @@ msgid "{device} not synced"
 msgstr "{device} nicht synchronisiert"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Manage your Garmin watch on Linux"
-msgstr "Verwalten Sie Ihre Garmin-Uhr unter Linux"
+msgid "Manage your Garmin device on Linux"
+msgstr "Verwalten Sie Ihr Garmin-Gerät unter Linux"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid ""
-"openExpress is an unofficial Linux app for Garmin watches connected with a "
-"USB cable. It syncs the watch with Garmin Connect and installs software "
-"updates, maps, Connect IQ apps and music."
+"openExpress is an unofficial Linux app for Garmin watches and bike computers "
+"connected with a USB cable. It syncs them with Garmin Connect and installs "
+"software updates, maps, Connect IQ apps and music."
 msgstr ""
-"openExpress ist eine inoffizielle Linux-App für Garmin-Uhren, die mit einem "
-"USB-Kabel angeschlossen sind. Sie synchronisiert die Uhr mit Garmin Connect "
-"und installiert Software-Updates, Karten, Connect IQ-Apps und Musik."
+"openExpress ist eine inoffizielle Linux-App für Garmin-Uhren und "
+"Fahrradcomputer, die mit einem USB-Kabel angeschlossen sind. Sie "
+"synchronisiert sie mit Garmin Connect und installiert Software-Updates, "
+"Karten, Connect IQ-Apps und Musik."
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Upload activities, sleep, HRV and other health data to Garmin Connect"
+msgid "Upload new activities, sleep, HRV and other data to Garmin Connect"
 msgstr ""
-"Aktivitäten, Schlaf, HFV und andere Gesundheitsdaten zu Garmin Connect "
-"hochladen"
-
-#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Send courses, workouts and apps queued in Garmin Connect to the watch"
-msgstr ""
-"Strecken, Trainings und Apps, die in Garmin Connect eingereiht sind, an die "
-"Uhr senden"
-
-#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Install watch software updates and free maps such as TopoActive"
-msgstr ""
-"Software-Updates der Uhr und kostenlose Karten wie TopoActive installieren"
-
-#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Install, update and remove Connect IQ apps and watch faces"
-msgstr ""
-"Connect IQ-Apps und Displaydesigns installieren, aktualisieren und entfernen"
-
-#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Copy music, podcasts, audiobooks and playlists"
-msgstr "Musik, Podcasts, Hörbücher und Playlists kopieren"
+"Neue Aktivitäten, Schlaf, HFV und andere Daten zu Garmin Connect hochladen"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid ""
-"See each activity's track on a map, with its charts, laps, heart rate zones "
-"and training effect"
+"Send courses, workouts and Connect IQ apps queued in Garmin Connect to the "
+"device"
 msgstr ""
-"Den Track jeder Aktivität auf einer Karte sehen, mit Diagrammen, Runden, "
-"Herzfrequenz-Bereichen und Training Effect"
+"Strecken, Trainings und Connect IQ-Apps, die in Garmin Connect eingereiht "
+"sind, an das Gerät senden"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-msgid "Sync automatically in the background when the watch is connected"
+msgid ""
+"Install and update software and free maps such as TopoActive, and copy maps "
+"of your own"
 msgstr ""
-"Automatisch im Hintergrund synchronisieren, wenn die Uhr angeschlossen wird"
+"Software und kostenlose Karten wie TopoActive installieren und "
+"aktualisieren, eigene Karten kopieren"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid ""
+"Copy courses from GPX files to the device, without Garmin Connect "
+"(experimental)"
+msgstr ""
+"Strecken aus GPX-Dateien auf das Gerät kopieren, ohne Garmin Connect "
+"(experimentell)"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid ""
+"Install, update and remove Connect IQ apps, turn them on or off and put them "
+"back in order"
+msgstr ""
+"Connect IQ-Apps installieren, aktualisieren und entfernen, ein- oder "
+"ausschalten und ihre Reihenfolge wiederherstellen"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid "Copy music, podcasts and audiobooks, with playlists"
+msgstr "Musik, Podcasts und Hörbücher kopieren, mit Playlists"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid ""
+"See each activity on its own page: the track on a map, charts, laps, heart "
+"rate zones and training effect"
+msgstr ""
+"Jede Aktivität auf einer eigenen Seite sehen: den Track auf einer Karte, "
+"Diagramme, Runden, Herzfrequenz-Bereiche und Training Effect"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid "Make backups of the device"
+msgstr "Sicherungen des Geräts erstellen"
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid "Sync in the background whenever the device is connected"
+msgstr "Im Hintergrund synchronisieren, sobald das Gerät angeschlossen wird"
 
 #. TRANSLATORS: a feature in the description for software centres: the program sends no
 #. usage data

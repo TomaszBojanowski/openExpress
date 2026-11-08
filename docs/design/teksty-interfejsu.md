@@ -1,9 +1,9 @@
 # Design: the texts of the interface (English)
 
-Status: accepted. D1–D13 with the recommended option of each (D1 A, D5 A, D12 yes) and the answers
-of section 2.1. German stays with Weblate: its texts follow from the template.
+Status: implemented. D1–D13 with the recommended option of each (D1 A, D5 A, D12 yes) and the answers
+of section 2.1; the Polish and German translations follow.
 
-The counts are of `po/openexpress.pot` (1,676 texts) as it is now: each text by the files that use
+The counts are of `po/openexpress.pot` (1,676 texts) before this change: each text by the files that use
 it (window `gui/`, command line `cli.py`, the rest of the program "core"), and in the window by the
 part it plays (toast, description, heading, button), read from the code. A text used in several
 places counts once.
@@ -36,7 +36,7 @@ They are in force already and are not reopened here:
 
 ### D1. Unplugging: one verb, one phrase for "unplug and plug in again"
 
-Today: "unplug" 56 texts (window 16, command line 9, core 26, shared 5); "disconnect" 15; "reconnect"
+Before this change: "unplug" 56 texts (window 16, command line 9, core 26, shared 5); "disconnect" 15; "reconnect"
 8 (6 of them in "disconnect and reconnect"); "plug it in again" 9 and "plug it back in" 2 (with
 "unplug" before them); "connect it again" 1. One page mixes them: the chip "Unplug to install"
 beside "Update ready: disconnect the device to install it".
@@ -59,7 +59,7 @@ for the device.
 
 ### D2. Full stops, one rule for each part of the window
 
-| Part | Today | Rule (recommended) | To change |
+| Part | Before | Rule (recommended) | To change |
 |---|---|---|---|
 | Toast | 7 with a full stop, all of them texts of the command line used in the window; about 30 without | no full stop (a toast is a short status, HIG) | 8: through window msgids (D9) |
 | Group description | 4 with ("Changes take effect after you disconnect the device.", the two of the Connect IQ Store, the one of a USB drive's sync), 3 without | the caption rule: one sentence without, several with | 4 |
@@ -72,7 +72,7 @@ the three titles: „Brak aktywności”, „Brak map na tym urządzeniu”, „
 
 ### D3. Header case where a text is a name
 
-| Texts | Today | Proposal | Count |
+| Texts | Before | Proposal | Count |
 |---|---|---|---|
 | Rows of an activity's details | "Elapsed time", "Moving time", "Average moving pace"… | "Elapsed Time", "Moving Time", "Average Moving Pace"… (Garmin Connect writes them so in English) | 14 |
 | Tiles on top of an activity | "Average pace", "Average heart rate", "Total ascent"… | "Average Pace", "Average Heart Rate", "Total Ascent"… | 5 |
@@ -102,7 +102,7 @@ Connect IQ…”, „Aktywacja mapy na serwerze Garmin…”.
 
 ### D5. Headings of a failure: one pattern
 
-Today: 5 "Cannot …" ("Cannot Add the Course", "Cannot Remove the Course", "Cannot Add the Map",
+Before this change: 5 "Cannot …" ("Cannot Add the Course", "Cannot Remove the Course", "Cannot Add the Map",
 "Cannot Remove the Map", "Cannot Install the Map"), 1 "Could Not Open the Device", 9 "… Not …"
 ("Device Not Added", "Update Not Installed", "Cache Not Cleared"…).
 
@@ -120,7 +120,7 @@ urządzenia” (7 Polish texts).
 
 - "Error: …" and "Warning: …" only: "ERROR {error}", "ERROR {item}: {error}" and the two "WARNING:"
   change. 4 texts. PL already „Błąd:”/„Uwaga:”: 4 texts follow.
-- Dry run: one form, "Dry run: nothing was <done>. Add --apply to <do it>." Today 12 forms in 14
+- Dry run: one form, "Dry run: nothing was <done>. Add --apply to <do it>." Before, 12 forms in 14
   texts. To change: "Dry run. Add --apply." (one msgid, 19 places: "Dry run: nothing was changed. Add
   --apply."), "Dry run. Add --apply to copy the files the device shows now." ("Dry run: nothing was
   copied. …"), "Would remove it from your account list. Add --apply." ("Dry run: … Add --apply to
@@ -131,7 +131,7 @@ PL: „Tryb próbny: nic nie zmieniono. Dodaj --apply.” and the like; 4 texts.
 
 ### D7. Terms
 
-| Term | Today | Proposal | Count |
+| Term | Before | Proposal | Count |
 |---|---|---|---|
 | Garmin account | 6 wordings in 23 texts: "On the Account", "In Your Garmin Account", "on your account", "not on your account", "registered to your Garmin account", "your account list" | "your Garmin account" in sentences; the row "Garmin Account" (not "On the Account"); the apps' list "the app list of your Garmin account" | about 8 |
 | Connect IQ Store | "Connect IQ store" | "Connect IQ Store" (its name) | 4 |
@@ -152,7 +152,7 @@ podstawowe urządzenie typu wearable, Unit ID, oprogramowanie urządzenia); Poli
 
 ### D8. Punctuation
 
-| | Today | Proposal | Count |
+| | Before | Proposal | Count |
 |---|---|---|---|
 | Quotes | '…' around a name ("Map '{name}' cannot be installed…", "No app matches '{query}'") | “…” | 14 |
 | Dash | "—" in "Device not connected — connect it to sync or update" and one sentence of the Updates page | en dash with spaces ("–"), as elsewhere | 2 |
@@ -170,7 +170,7 @@ code: one window msgid "Removed {name}. The device finishes the removal after it
 of its own), "{device} was not forgotten.". The others ("{count} file", "Software {version}", "Last
 seen {when}", "disabled", the date format, "Garmin device") stay shared.
 
-PL: 11 new texts, the Polish of today without the full stop.
+PL: 11 new texts, the Polish from before without the full stop.
 
 ### D10. Comments for translators in the wrong place
 
@@ -202,8 +202,8 @@ handles).
 
 ### D12. The template without line numbers (`--add-location=file`)
 
-Today every reference has a line number, so any change of code moves hundreds of them in the
-template and in every `.po`, also when no text changes.
+Before this change every reference had a line number, so any change of code moved hundreds of them
+in the template and in every `.po`, also when no text changed.
 
 | Option | |
 |---|---|
@@ -237,7 +237,7 @@ or "Open openExpress and choose how to sync the device."). 4 texts become 3.
 
 ## 3. Smaller texts
 
-| Text today | Proposal | PL |
+| Text before | Proposal | PL |
 |---|---|---|
 | "{count} not: over the limit of {size}" | "{count} skipped: larger than {size}" (ngettext: "{count} file skipped…" / "{count} files skipped…") | „{count} plik pominięty: większy niż {size}” / „{count} pliki pominięte: większe niż {size}” / „{count} plików pominiętych: większych niż {size}” |
 | "now to upload: {count} activity" | "{count} activity to upload now" / "{count} activities to upload now" | „{count} aktywność do wysłania teraz” / „{count} aktywności do wysłania teraz” / „{count} aktywności do wysłania teraz” |

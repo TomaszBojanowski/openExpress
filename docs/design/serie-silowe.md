@@ -16,7 +16,7 @@ names.
   it is uploaded. A correction in Garmin Connect changes the activity on the account only: the
   file on the device keeps the watch's names.
 - **Stage 2, experimental, writes to the account:** correcting the exercise of one set or of
-  several at once, their repetitions and their weight, saved to Garmin Connect after a question;
+  several at once, their repetitions and their weight, saved to Garmin Connect after a confirmation dialog;
   a copy of the sets kept before each save, the previous version restorable.
 
 Not in scope: adding, deleting or reordering sets, their time and type; the file on the device
@@ -64,13 +64,13 @@ Facts of its interface, not yet checked with a request:
 - The duplicate check (`activity_matches`), today only whether Garmin Connect has each activity.
 - Its sign-in (OAuth1, as Garmin Express's) reads the activities and their sets.
 - The answers of the servers kept a while (`answers.ANSWERS`), asked fresh before a write; the
-  questions `confirm()` and `inform()`; the account's writes of Add to Account (asked, logged,
+  dialogs `confirm()` and `inform()`; the account's writes of Add to Account (asked, logged,
   experimental); the device's backup folder (the copies of app lists).
 
 ## 5. The window and the command line
 
 Mockups: wide (1000 px) and narrow (360 px), light and dark, in Polish: the section of stage 1,
-the dialog of stage 2, the choice of an exercise, the question.
+the dialog of stage 2, the choice of an exercise, the confirmation dialog.
 
 ### 5.1 Stage 1: the section Serie
 
@@ -99,14 +99,14 @@ On an activity's page, after the chart, for an activity with sets (D1):
 - Several sets: "Zaznacz", then **Zmień ćwiczenie…** for all of them (the usual case: three sets
   of one exercise the watch named wrongly).
 - What changed is marked; **Zapisz** is enabled once something changed.
-- Saving: the question (5.3), then a task: the sets asked fresh (when they changed on the account
+- Saving: the confirmation dialog (5.3), then a task: the sets asked fresh (when they changed on the account
   since the dialog opened, nothing is written and the dialog says so), a copy kept (D7), the whole
   list written (D6), asked again and compared, the section shown anew. A toast "Zapisano
   w Garmin Connect".
 - **Przywróć poprzednią wersję** in the section's menu: the copies of this activity, newest
-  first, by their time; the one chosen is written back the same way, after a question.
+  first, by their time; the one chosen is written back the same way, after a confirmation dialog.
 
-### 5.3 The question
+### 5.3 The confirmation dialog
 
 > **Zapisać zmiany serii w Garmin Connect?**
 >
@@ -156,14 +156,14 @@ the window's language (D3); none of them is kept in the repository.
   as the section shows them, and their source.
 - `openexpress activities sets NAME --set 1-3 --exercise TEXT [--reps N] [--weight KG]
   [--apply]`: TEXT a name or a part of it (one match; several are listed); without `--apply` a
-  trial run that prints the changes.
+  dry run that prints the changes.
 - `openexpress activities sets NAME --restore [WHEN] [--apply]`: the newest copy, or the one of
   WHEN.
 - `openexpress exercises [TEXT]`: the catalogue's names matching TEXT, with their category.
 
 ### 5.6 Experimental
 
-The question, the dialog and the commands' help say "experimental" until two saves succeed, the
+The confirmation dialog, the dialog and the commands' help say "experimental" until two saves succeed, the
 second by another user (D8).
 
 ## 6. Decisions
@@ -214,7 +214,7 @@ second by another user (D8).
 ### D7: the copy and the restore — recommended: 7a
 
 - **7a. Before each save the answer of the reading kept in the device's backup folder, the last
-  ten of an activity; Przywróć poprzednią wersję writes one back, after a question
+  ten of an activity; Przywróć poprzednią wersję writes one back, after a confirmation dialog
   (recommended).** + No undo on the server: this is it. − Files on the computer.
 - **7b. No copy.** − A wrong save is for good.
 
@@ -276,7 +276,7 @@ Writing, on a test activity only, each run after the maintainer's own ok:
    rows; the command): tests on made-up files.
 2. **Stage 1, the account** (`connect.py`: the activity's number from the duplicate check, the
    sets, the catalogue and names; `answers`): after checks 1–2.
-3. **Stage 2** (the dialog, the choice of an exercise, the question, the copy and the restore,
+3. **Stage 2** (the dialog, the choice of an exercise, the confirmation dialog, the copy and the restore,
    the commands): after checks 3–4, each write of the first attempt with the maintainer's ok.
 
 About 900 lines of code (stage 1: 400, stage 2: 500), about 1,200 lines of tests, about 45 texts
@@ -286,7 +286,7 @@ with their Polish; 7 commits.
 
 One test strength workout of the maintainer's (two sets of one exercise, recorded for it), its
 sets read and kept; one exercise changed with `openexpress activities sets NAME --set 1-2
---exercise TEXT` (the trial run first, then `--apply`); the change seen on connect.garmin.com;
+--exercise TEXT` (the dry run first, then `--apply`); the change seen on connect.garmin.com;
 then `--restore --apply` and the old name seen again. What says it worked: the write's answer
 2xx, the reading after it equal to what was written, Garmin Connect in the browser showing the
 change, and after the restore the sets as before.

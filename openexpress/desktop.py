@@ -18,9 +18,9 @@ NAME = "openExpress"
 # connected
 NAME_BACKGROUND = N_("openExpress (background)")
 # TRANSLATORS: generic name of the app in application menus (GenericName in the desktop file): a
-# tool that syncs Garmin watches
-GENERIC_NAME = N_("Garmin Watch Sync")
-COMMENT = N_("Sync, updates and maps for Garmin watches")
+# tool that syncs Garmin devices
+GENERIC_NAME = N_("Garmin Device Sync")
+COMMENT = N_("Sync, updates and maps for Garmin devices")
 # TRANSLATORS: search keywords for the application menu; keep the ";" separators and the ending ";"
 KEYWORDS = N_("Garmin;Fenix;Connect;sync;")
 SERVICE_DESCRIPTION = "openExpress: sync when the watch is connected"

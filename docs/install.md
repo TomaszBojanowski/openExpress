@@ -28,8 +28,8 @@ Requirements:
   openExpress runs in English.
   - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1 libshumate gettext`
   - Debian/Ubuntu: `sudo apt install python3-requests python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gvfs-backends python3-mutagen 7zip libusb-1.0-0 gir1.2-shumate-1.0 gettext`
-- Watch connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
-  openexpress uses the same connection, so the file manager can stay open.
+- A device connected with a USB cable. GNOME (gvfs-mtp) mounts it automatically, and
+  openExpress uses the same connection, so the file manager can stay open.
 - The official Garmin Express installer for Windows (`GarminExpress.exe`, free download from
   [garmin.com](https://www.garmin.com/en-US/software/express/windows/)), used once during
   setup. It is not installed or run; the installer for macOS does not work.
@@ -52,7 +52,7 @@ openexpress whoami --check
 
 # 3. Preview and first sync
 openexpress sync                     # plan only
-openexpress baseline --apply         # if the watch also syncs via your phone
+openexpress baseline --apply         # if the device also syncs via your phone
 openexpress sync --apply
 ```
 
@@ -61,22 +61,31 @@ banner at the top and **Sign In**.
 
 ## The Flatpak and the version from source
 
-They are separate installations: each keeps its own
-setup (the key from the Garmin Express installer), login, settings and sync state: its own
-last syncs, uploaded files and list of your own maps. After switching from one to the other,
-choose the installer and sign in again. The first sync of each device then starts anew in the
-Flatpak: the window asks whether to mark the files already on it as uploaded, and on the
-command line `openexpress sync --apply` stops and suggests `openexpress baseline --apply` or
-`--all`.
+They are separate installations. Each keeps its own setup (the key from the Garmin Express
+installer), login, settings and sync state: its own last syncs, uploaded files and list of your
+own maps.
 
-The version from source also reads (never writes) what the Flatpak keeps of a device: a file
-the Flatpak uploaded is not uploaded again (a settings file only while its content is the
-same), a file from Garmin Connect the Flatpak wrote to the device but could not report as
-received is only reported, and a device the Flatpak synced needs no first-sync choice. While
-the Flatpak syncs, a sync from source does not start: "openExpress (Flatpak) is syncing a
-device now; try again when it is done." When the Flatpak synced the device after it, the sync
-says so once: in the details of **Last Sync** and in the dry run of `openexpress sync`. The
-Flatpak cannot see the files of the version from source and works as before.
+- After switching from one to the other, choose the installer and sign in again.
+- The first sync of each device then starts anew in the Flatpak: the window asks whether to mark
+  the files already on it as uploaded, and on the command line `openexpress sync --apply` stops
+  and suggests `openexpress baseline --apply` or `--all`.
+- A file the version from source uploaded is new to the Flatpak; Garmin Connect recognises it as
+  a duplicate.
+
+The version from source also reads (never writes) what the Flatpak keeps of a device:
+
+- A file the Flatpak uploaded is not uploaded again (a settings file only while its content is
+  the same).
+- A file from Garmin Connect the Flatpak wrote to the device but could not report as received is
+  only reported.
+- A device the Flatpak synced needs no first-sync choice, and its tile does not say **Never
+  synced**.
+- While the Flatpak syncs, a sync from source does not start: "openExpress (Flatpak) is syncing a
+  device now; try again when it is done."
+- When the Flatpak synced the device after it, the sync says so once: in the details of **Last
+  Sync** and in the dry run of `openexpress sync`.
+
+The Flatpak cannot see the files of the version from source.
 
 ## Building the Flatpak yourself
 

@@ -828,7 +828,7 @@ def effect_text(value: float) -> str:
 
 def training_load_name() -> str:
     # TRANSLATORS: the training load of an activity (a number)
-    return _("Training load")
+    return _("Training Load")
 
 
 def training_load_text(load: float) -> str:

@@ -95,7 +95,7 @@ def test_the_template_holds_every_text_of_the_code_and_the_metainfo(tmp_path):
     assert _msgids(fresh) == _msgids(ROOT / "po" / "openexpress.pot"), \
         "run tools/update-template.sh"
     texts = {text for _ctx, text in _msgids(fresh)}
-    assert "Manage your Garmin watch on Linux" in texts  # the metainfo's summary
+    assert "Manage your Garmin device on Linux" in texts  # the metainfo's summary
     assert "No telemetry" in texts and "Connect IQ apps" in texts
     # Not to translate: the name, the developer, the keywords, the release notes.
     assert not texts & {"openExpress", "Tomasz Bojanowski", "Garmin", "fenix"}
@@ -274,7 +274,7 @@ def test_the_metainfo_is_translated_at_the_build_into_each_language(tmp_path):
     assert len(polish) == len(to_translate)
     assert {e.tag for e in polish} == {"summary", "p", "li", "caption"}
     assert root.find("summary[@{http://www.w3.org/XML/1998/namespace}lang='pl']").text == (
-        "Zarządzaj zegarkiem Garmin na Linuksie")
+        "Zarządzaj urządzeniem Garmin na Linuksie")
     assert not root.findall(".//releases//*[@{http://www.w3.org/XML/1998/namespace}lang]")
 
 
