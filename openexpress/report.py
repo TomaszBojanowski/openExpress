@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 
 from openexpress import __version__, paths
-from openexpress.device.storage import Storage
+from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import human_size
 
@@ -131,11 +131,64 @@ def _system(logged_in: bool | None) -> list[str]:
     return lines
 
 
+# The newest crashes the report lists.
+CRASHES_SHOWN = 5
+
+
+def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> list[str]:
+    """The section of the device's diagnostics: its crashes from every source (crashes.history)
+    with the date, the software version and the error, its memory dumps and whether their copy
+    is on. Never the program counter or the screen of a crash. `ask`: the error logs and the
+    dumps read now (the command line); else those the window read at the opening (`found`,
+    diagnostics.AtOpen; None: not read yet)."""
+    from openexpress import crashes, diagnostics
+
+    if ask:
+        missed: list[str] = []
+        entries = diagnostics.read_errors(storage, missed=missed)
+        entries = None if missed else entries
+        try:
+            dumps = diagnostics.dumps_on_device(storage)
+        except DeviceNotResponding:
+            raise
+        except DeviceError:
+            dumps = None
+    elif found is not None:
+        entries = found.entries if found.errors_known else None
+        dumps = found.dumps if found.dumps_known else None
+    else:
+        entries = dumps = None
+    found_crashes = crashes.history(device.unit_id, entries)
+    lines = ["### Diagnostics",
+             f"- Crashes that restarted the device: {len(found_crashes)}"
+             + ("" if entries is not None else " (the error logs on the device not read)")]
+    for crash in found_crashes[:CRASHES_SHOWN]:
+        # Both codes where both logs hold the crash: the boot log's tells the same error as
+        # the crashes only it holds.
+        codes = [f"error {crash.error}"] if crash.error else []
+        codes += [f"boot log error {crash.errnum}"] if crash.errnum else []
+        lines.append(f"  - {crash.at:%Y-%m-%d %H:%M}: software {crash.software or 'unknown'}, "
+                     + (", ".join(codes) or "error unknown"))
+    if len(found_crashes) > CRASHES_SHOWN:
+        lines.append(f"  - and {len(found_crashes) - CRASHES_SHOWN} earlier")
+    if dumps is not None:
+        total = sum(size for _path, size in dumps)
+        lines.append(f"- Memory dumps: {len(dumps)}, {_size(total) if total else '0 B'}")
+    else:
+        lines.append("- Memory dumps: " + ("not known" if ask or found is not None
+                                           else "not read yet"))
+    lines.append(f"- Copy of the diagnostic files: {'on' if diagnostics.copy_on() else 'off'}")
+    return lines
+
+
 def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
-          space: tuple[int | None, int | None] | None = None) -> str:
+          space: tuple[int | None, int | None] | None = None, found=None) -> str:
     """The report of the device. `space`: (free space, capacity) already read (the window
-    holds them with its session; None in either is "unknown"); without it they are asked of
-    the storage (the command line)."""
+    holds them with its session; None in either is "unknown"), and then nothing is asked of
+    the device: its diagnostics are what the window read at the opening (`found`,
+    diagnostics.AtOpen, or None) and the copies on this computer. Without `space` all of it is
+    asked of the storage (the command line)."""
+    ask = space is None
     free, capacity = space if space is not None else (storage.free_space(), storage.capacity())
     datatypes = set(device.datatypes())
     features = "\n".join(f"- [{'x' if test(datatypes) else ' '}] {label}"
@@ -152,6 +205,8 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
         "",
         "### Features declared by the device",
         features,
+        "",
+        *_diagnostics(device, storage, ask, found),
         "",
         *_system(logged_in),
     ]

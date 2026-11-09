@@ -80,6 +80,7 @@ class ErrorEntry:
     program_counter: str | None = None
     screen: str | None = None  # "pageStack"
     source: str = ""  # "err_log.bak"
+    software: str | None = None  # "system_version" when the entry was written, e.g. "23.39"
 
     @property
     def is_crash(self) -> bool:
@@ -131,8 +132,8 @@ def _moment(item: dict, extra: dict) -> datetime | None:
 
 def parse_err_log(data: bytes, source: str = "") -> list[ErrorEntry]:
     """The entries of an err_log file (a JSON list of objects; an object alone is one entry).
-    Empty, damaged or of another shape: no entries. Only the kind, time and crash fields are
-    read; the unit ID and the backtrace never leave the file."""
+    Empty, damaged or of another shape: no entries. Only the kind, time, software version and
+    crash fields are read; the unit ID and the backtrace never leave the file."""
     try:
         parsed = json.loads(data.decode("utf-8", errors="replace"))
     except ValueError:
@@ -149,7 +150,7 @@ def parse_err_log(data: bytes, source: str = "") -> list[ErrorEntry]:
         extra = extra if isinstance(extra, dict) else {}
         out.append(ErrorEntry(kind, _moment(item, extra), _field(extra, "RTL Error Number"),
                               _field(extra, "programCounter"), _field(extra, "pageStack"),
-                              source))
+                              source, _field(item, "system_version", 20)))
     return out
 
 
@@ -583,31 +584,26 @@ def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None
     return report
 
 
-def boot_log_crashes(unit_id: int) -> list[str]:
-    """The "RTL Trap" lines of the boot log in the newest copy of the crash logs (their time
-    and error number), for the command line; none without such a copy."""
+def kept_files(unit_id: int, names: tuple[str, ...]) -> list[tuple[str, bytes]]:
+    """What the copies of a device on this computer keep of the files of these names (in any
+    case), each content once, the oldest copy first: (the file's name, its content). A copy or
+    a content that cannot be read is passed over."""
     where = folder(unit_id)
-    item = _last(where, "crash logs").get("files", {}).get(CRASH_LOGS[0])
-    if not isinstance(item, dict):
-        return []
-    try:
-        text = (where / "objects" / str(item.get("sha256"))).read_text(
-            encoding="utf-8", errors="replace")
-    except OSError:
-        return []
-    from openexpress.i18n import full_time
-
-    out = []
-    for line in text.splitlines():
-        stamp, _sep, said = line.partition("]:")
-        if CRASH.casefold() not in said.casefold():
-            continue
-        try:  # "[10/26/26 22:24:39 <seconds>]": the device's local time
-            when = full_time(datetime.strptime(" ".join(stamp.lstrip("[").split()[:2]),
-                                               "%m/%d/%y %H:%M:%S"))
-        except ValueError:
-            when = "?"
-        out.append(f"{when}: {said.strip()[:80]}")
+    wanted = {name.casefold() for name in names}
+    out, seen = [], set()
+    for snapshot in _snapshots(where):
+        files = _load(snapshot).get("files")
+        for path, item in (files.items() if isinstance(files, dict) else ()):
+            name = posixpath.basename(str(path))
+            sha = item.get("sha256") if isinstance(item, dict) else None
+            if (name.casefold() not in wanted or not isinstance(sha, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", sha) or sha in seen):
+                continue
+            seen.add(sha)
+            try:
+                out.append((name, (where / "objects" / sha).read_bytes()))
+            except OSError:
+                continue
     return out
 
 

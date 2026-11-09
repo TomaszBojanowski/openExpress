@@ -233,11 +233,16 @@ def cmd_diagnostics(args) -> int:
         print(_("Memory dumps on the device: {count}, {size} (encrypted; copied only with "
                 "--dumps)").format(count=len(dumps),
                                    size=human_size(sum(size for _p, size in dumps))))
-    crashes = diagnostics.boot_log_crashes(dev.unit_id)
-    if crashes:
-        print(_("Crashes in the copied boot log:"))
-        for line in crashes:
-            print("  " + line)
+    from openexpress import crashes
+
+    found = crashes.history(dev.unit_id, entries)
+    print(_("Crashes that restarted the device (error logs, boot log, copies on this "
+            "computer):"))
+    for crash in found:
+        print(f"  {full_time(crash.at)}: {crash.words()} ({crash_sources(crash)})")
+    if not found:
+        # TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
+        print("  " + _("none found"))
     print(_("Copies on this computer: {copies}").format(
         copies=diagnostics.copies_text(dev.unit_id)))
     # Not the folder itself: it is named after the unit ID, and this is pasted into reports.
@@ -275,6 +280,19 @@ def cmd_diagnostics(args) -> int:
             count=hidden.new + hidden.unchanged, new=hidden.new) if hidden.saved
               else _("The device has no hidden crash logs."))
     return 0
+
+
+def crash_sources(crash) -> str:
+    """Where a crash was found, for `diagnostics`: the error logs on the device by their file
+    names, then the copies on this computer, then the boot log."""
+    from openexpress import crashes
+
+    words = {crashes.COPY: _("copy on this computer"),
+             # TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
+             crashes.BOOT_LOG: _("boot log")}
+    names = sorted(s for s in crash.sources if s not in words)
+    return ", ".join([*names, *(words[s] for s in (crashes.COPY, crashes.BOOT_LOG)
+                                if s in crash.sources)])
 
 
 # The newest connections `diagnostics` shows of the device log.

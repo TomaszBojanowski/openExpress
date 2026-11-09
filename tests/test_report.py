@@ -283,7 +283,8 @@ def _report_dialog(monkeypatch, device_root, connected=True):
     window_methods(win, ["_open_report_form"])
     MainWindow.show_report(win)
     (dialog,) = asked
-    text = report.build(session.device, st, True)
+    # Built as the window builds it: from its session, nothing asked of the device.
+    text = report.build(session.device, st, True, space=session.space, found=None)
     return dialog, text, opened, copied, said
 
 

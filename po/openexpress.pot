@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 21:02+0100\n"
+"POT-Creation-Date: 2026-11-09 23:43+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -929,7 +929,14 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
-msgid "Crashes in the copied boot log:"
+msgid ""
+"Crashes that restarted the device (error logs, boot log, copies on this "
+"computer):"
+msgstr ""
+
+#. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
+#: openexpress/cli.py
+msgid "none found"
 msgstr ""
 
 #: openexpress/cli.py
@@ -984,6 +991,15 @@ msgstr[1] ""
 
 #: openexpress/cli.py
 msgid "The device has no hidden crash logs."
+msgstr ""
+
+#: openexpress/cli.py
+msgid "copy on this computer"
+msgstr ""
+
+#. TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
+#: openexpress/cli.py
+msgid "boot log"
 msgstr ""
 
 #. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,

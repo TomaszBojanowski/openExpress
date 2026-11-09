@@ -57,8 +57,11 @@ Otherwise the device's diagnostic files stay on this computer:
 - Once per connection, when a device is opened, its error logs (`Garmin/Debug/err_log.*`) are
   read: by the window, to show a recent error, and by whatever opened the device first (the
   window, the command line or the background sync), for the log of each connection (above). Of
-  each entry only the kind, the time, the error number, where the software stopped and the screen
-  are used, never the Unit ID or the backtrace in it.
+  each entry only the kind, the time, the software version, the error number, where the software
+  stopped and the screen are used, never the Unit ID or the backtrace in it.
+- The device report (`openexpress report`, **Report a Device or Problem…**) lists the device's
+  last crashes (date, software version and error number) and its memory dumps; never where the
+  software stopped, the screen, the Unit ID or a serial number.
 - The window remembers where it found the error logs and the device's other diagnostic files, so
   that the next openings read them there without looking through the device's folders; they list
   only the folder of the error logs and that of the memory dumps. It looks through them again when

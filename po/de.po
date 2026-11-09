@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 21:02+0100\n"
+"POT-Creation-Date: 2026-11-09 23:43+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -1031,8 +1031,15 @@ msgstr ""
 "mit --dumps kopiert)"
 
 #: openexpress/cli.py
-msgid "Crashes in the copied boot log:"
-msgstr "Abstürze im kopierten Startprotokoll:"
+msgid ""
+"Crashes that restarted the device (error logs, boot log, copies on this "
+"computer):"
+msgstr ""
+
+#. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
+#: openexpress/cli.py
+msgid "none found"
+msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -1095,6 +1102,15 @@ msgstr[1] "Absturzprotokolle: {count} Dateien gelesen ({new} neu)."
 #: openexpress/cli.py
 msgid "The device has no hidden crash logs."
 msgstr "Das Gerät hat keine verborgenen Absturzprotokolle."
+
+#: openexpress/cli.py
+msgid "copy on this computer"
+msgstr ""
+
+#. TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
+#: openexpress/cli.py
+msgid "boot log"
+msgstr ""
 
 #. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
 #. lowercase, followed by its size

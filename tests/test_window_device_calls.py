@@ -465,7 +465,8 @@ class Space(Counting):
 
     def __init__(self, root, free=FREE, size=SIZE, fail=False, wait=None):
         super().__init__(root)
-        self.free, self.size, self.fail, self.wait = free, size, fail, wait
+        # Not `self.size`: that is the storage's method (Storage.size).
+        self.free, self.total, self.fail, self.wait = free, size, fail, wait
 
     def free_space(self):
         self._note("free_space")
@@ -483,7 +484,7 @@ class Space(Counting):
             from openexpress.device.storage import DeviceError
 
             raise DeviceError("Cannot read the size: the device is busy")
-        return self.size
+        return self.total
 
 
 NOT_READ = object()
@@ -760,14 +761,15 @@ def test_a_space_not_known_is_unknown_in_the_report(iq_device, monkeypatch, spac
 
 
 def test_the_command_line_report_still_asks_the_device(iq_device):
-    """`openexpress report` has no window and no session: it asks the device for its space."""
+    """`openexpress report` has no window and no session: it asks the device for its space,
+    and lists its folders for its error logs and memory dumps (the diagnostics)."""
     from openexpress import report
 
     st, dev = iq_device
     storage = Space(st.root)
     text = report.build(dev, storage, False)
     assert "- Storage: 64.0 GB total, 52.1 GB free" in text.splitlines()
-    assert sorted(storage.elsewhere + storage.on_gtk) == ["capacity", "free_space"]
+    assert {"capacity", "free_space", "list"} == set(storage.elsewhere + storage.on_gtk)
 
 
 # --- "Storage": the device's own on its page, the computer's disk in the preferences -------------

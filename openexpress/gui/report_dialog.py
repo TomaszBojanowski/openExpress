@@ -111,7 +111,8 @@ class ReportDialog:
         else:
             # The space as the session holds it: nothing is asked of the device here.
             body_text = report.build(s.device, s.storage, s.logged_in,
-                                     space=getattr(s, "space", None) or (None, None))
+                                     space=getattr(s, "space", None) or (None, None),
+                                     found=getattr(s, "diagnostics", None))
             text = about
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)

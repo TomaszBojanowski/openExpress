@@ -3,6 +3,7 @@ row on the device page), and the copy of its diagnostic files: off by default, m
 connection, never sent; the hidden crash logs and memory dumps only on request. All entries,
 files and devices are made up."""
 
+import hashlib
 import json
 import os
 import stat
@@ -150,7 +151,7 @@ def newest(kind="files"):
 def test_an_entry_keeps_neither_the_unit_id_nor_the_backtrace():
     (e,) = diagnostics.parse_err_log(err_log(TRAP), "err_log.bak")
     assert e == diagnostics.ErrorEntry("RTL Trap", datetime(2026, 10, 20, 22, 24, 6), "0x003",
-                                       "0x10000abc", "2301", "err_log.bak")
+                                       "0x10000abc", "2301", "err_log.bak", "23.39")
     assert e.is_crash
     assert e.words() == "RTL Trap at 2026-10-20 22:24:06, error 0x003, PC 0x10000abc, screen 2301"
     for text in (repr(e), e.words()):
@@ -368,8 +369,12 @@ def test_the_crash_logs_are_the_boot_log_and_the_event_logs_only(hiding, clock):
     assert set(files) == {"Garmin/Debug/recovery_mode_log.txt", "GARMIN/EVNTLOGS/EVT0001.TXT"}
     assert fake.sent(ptp.GET_OBJECT) == 2  # nothing else read
     assert fake.sent(ptp.SEND_OBJECT_INFO) == fake.sent(ptp.DELETE_OBJECT) == 0
-    assert diagnostics.boot_log_crashes(UNIT) == [
-        "2026-10-20 22:24: RTL Trap detected, errnum: 0x1a2b"]
+    from openexpress import crashes
+
+    # The boot log wrote at the next start the crash the error log holds: one crash.
+    (crash,) = crashes.history(UNIT, diagnostics.read_errors(st))
+    assert (crash.error, crash.errnum) == ("0x003", "0x1a2b")
+    assert crash.sources == {"err_log.bak", crashes.BOOT_LOG}
 
 
 def test_no_crash_logs_found_is_remembered(device, clock):
@@ -980,3 +985,179 @@ def test_the_copy_turned_on_looks_for_the_files_it_needs(device, clock):
     _connected_again(st)
     diagnostics.at_open(dev, st)
     assert sorted(st.lists) == LOGS_LISTED
+
+
+# --- the crashes, merged from every source --------------------------------------------------
+
+
+def kept_copy(kind, files, when="2026-10-21 11.00.00"):
+    """A copy kept on this computer as the program keeps it: its note and each content once."""
+    where = diagnostics.folder(UNIT)
+    (where / "objects").mkdir(parents=True, exist_ok=True)
+    (where / "snapshots").mkdir(exist_ok=True)
+    listed = {}
+    for path, data in files.items():
+        sha = hashlib.sha256(data).hexdigest()
+        (where / "objects" / sha).write_bytes(data)
+        listed[path] = {"sha256": sha, "size": len(data), "mtime": None}
+    (where / "snapshots" / f"{when}.json").write_text(json.dumps(
+        {"kind": kind, "at": when, "software_version": "23.39", "files": listed, "listed": {}}))
+
+
+def boot_log(*stamps, errnum="0x1a2b") -> bytes:
+    """The boot log as a fēnix 8 writes it (the shape seen; every value made up): a crash, then
+    the next start."""
+    return "".join(f"[{s} 1234]: RTL Trap detected, errnum: {errnum}\n"
+                   f"[{s} 1300]: New boot cycle\n" for s in stamps).encode()
+
+
+BOOT = "Garmin/Debug/recovery_mode_log.txt"
+STAMPS = ("09/01/26 10:00:00", "09/05/26 11:00:00", "10/01/26 12:00:00", "10/01/26 12:30:00",
+          "10/20/26 22:24:42")  # the last 36 s after the error log's crash (CRASH_AT)
+
+
+def test_five_crashes_of_the_boot_log_and_one_of_the_error_log_at_once_are_five(device, clock):
+    """The boot log has five crashes; the error log on the device holds the newest of them,
+    written at the crash, 36 s before the boot log wrote it at the next start: five, not six."""
+    from openexpress import crashes
+
+    st, _dev = device
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS)})
+    found = crashes.history(UNIT, diagnostics.read_errors(st))
+    assert len(found) == 5
+    newest_one = found[0]
+    assert newest_one.at == datetime(2026, 10, 20, 22, 24, 6)  # the error log's: the crash itself
+    assert (newest_one.software, newest_one.error, newest_one.errnum) == ("23.39", "0x003",
+                                                                          "0x1a2b")
+    assert newest_one.sources == {"err_log.bak", crashes.BOOT_LOG}
+    assert [c.software for c in found[1:]] == [None] * 4  # the boot log gives no version
+
+
+def test_the_same_boot_log_in_several_copies_counts_once(device, clock):
+    from openexpress import crashes
+
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS[:2])}, "2026-10-01 11.00.00")
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS[:3])}, "2026-10-05 11.00.00")
+    assert len(crashes.history(UNIT, [])) == 3
+
+
+def test_a_crash_kept_only_in_a_copy_is_found(device, clock):
+    """The device keeps only its last entries: one gone from its error log is in a copy."""
+    from openexpress import crashes
+
+    st, _dev = device
+    old = entry("RTL Trap", "2026-09-01 08:00:00", **{"RTL Error Number": "0x00f",
+                                                      "programCounter": "0x10000def"})
+    kept_copy("files", {"GARMIN/Debug/err_log.bak": err_log(old, TRAP)})
+    found = crashes.history(UNIT, diagnostics.read_errors(st))
+    assert [(c.error, c.sources) for c in found] == [
+        ("0x003", {"err_log.bak", crashes.COPY}), ("0x00f", {crashes.COPY})]
+
+
+def test_two_crashes_within_a_minute_with_other_errors_are_two(device, clock):
+    from openexpress import crashes
+
+    second = entry("RTL Trap", "2026-10-20 22:24:30", **{"RTL Error Number": "0x005",
+                                                         "programCounter": "0x10000123"})
+    st, _dev = device
+    (st.root / "GARMIN" / "Debug" / "err_log.bak").write_bytes(err_log(TRAP, second))
+    assert len(crashes.history(UNIT, diagnostics.read_errors(st))) == 2
+
+
+def test_other_kinds_of_entry_are_no_crashes(device, clock):
+    from openexpress import crashes
+
+    st, _dev = device
+    (st.root / "GARMIN" / "Debug" / "err_log.bak").write_bytes(
+        err_log(POWERDOWN, entry("Assert", "2026-10-21 08:01:00")))
+    assert crashes.history(UNIT, diagnostics.read_errors(st)) == []
+
+
+def test_a_copy_that_cannot_be_read_is_passed_over(device, clock):
+    from openexpress import crashes
+
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS[:1])})
+    where = diagnostics.folder(UNIT)
+    (where / "snapshots" / "2026-10-22 11.00.00.json").write_text("not JSON")
+    (where / "snapshots" / "2026-10-23 11.00.00.json").write_text(json.dumps(
+        {"kind": "crash logs", "files": {BOOT: {"sha256": "../../../made-up"}}}))
+    for sha in (where / "objects").iterdir():
+        sha.write_bytes(b"\xff\x00 not a log")
+    assert crashes.history(UNIT, []) == []
+
+
+def test_the_same_error_is_told_by_the_boot_log_where_it_has_one(device, clock):
+    """For "the same error as the crashes before" (the page): the boot log's error number where
+    both crashes have one (the error log's numbers are of another kind), else the error log's
+    error and program counter; a crash whose codes are of another kind than the other's is not
+    the same error."""
+    from openexpress import crashes
+
+    st, _dev = device
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS)})
+    newest_one, *before = crashes.history(UNIT, diagnostics.read_errors(st))
+    assert all(crashes.same_error(newest_one, other) for other in before)
+    other_boot = crashes.Crash(datetime(2026, 9, 1), errnum="0x9999")
+    assert not crashes.same_error(newest_one, other_boot)
+    logged = crashes.Crash(datetime(2026, 9, 1), error="0x003", program_counter="0x10000abc")
+    assert crashes.same_error(newest_one, logged)
+    elsewhere = crashes.Crash(datetime(2026, 9, 1), error="0x003", program_counter="0x10000def")
+    assert not crashes.same_error(newest_one, elsewhere)
+    only_boot = crashes.Crash(datetime(2026, 9, 2), errnum="0x1a2b")
+    assert not crashes.same_error(logged, only_boot)  # nothing to tell it by
+
+
+def test_cli_diagnostics_lists_the_crashes_of_every_source(device, clock, monkeypatch, capsys):
+    from openexpress import cli
+
+    st, dev = device
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS)})
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert cli.main(["diagnostics"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    start = out.index("Crashes that restarted the device (error logs, boot log, copies on this "
+                      "computer):")
+    assert out[start + 1] == ("  2026-10-20 22:24: RTL Trap, software 23.39, error 0x003, PC "
+                              "0x10000abc, screen 2301, boot log error 0x1a2b (err_log.bak, "
+                              "boot log)")
+    assert out[start + 5] == "  2026-09-01 10:00: RTL Trap, boot log error 0x1a2b (boot log)"
+    assert not any("copied boot log" in line for line in out)
+
+
+# --- the report ------------------------------------------------------------------------------
+
+
+def test_the_report_tells_the_crashes_and_the_dumps(device, clock):
+    from openexpress import report
+
+    st, dev = device
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS)})
+    text = report.build(dev, st)
+    section = text[text.index("### Diagnostics"):].split("\n\n")[0].splitlines()
+    assert section[1] == "- Crashes that restarted the device: 5"
+    # Both codes of a crash both logs hold: the same boot log error as the crashes before it.
+    assert section[2] == "  - 2026-10-20 22:24: software 23.39, error 0x003, boot log error 0x1a2b"
+    assert section[3] == "  - 2026-10-01 12:30: software unknown, boot log error 0x1a2b"
+    assert "- Memory dumps: 2, 500 B" in section
+    assert "- Copy of the diagnostic files: off" in section
+    found = [word for word in (str(UNIT), MADE_UP_UNIT, BACKTRACE[:16], "0x10000abc", "2301")
+             if word in text]
+    assert found == []  # no unit ID, backtrace, program counter or screen
+
+
+def test_the_report_in_the_window_asks_nothing_of_the_device(device, clock):
+    """The window builds the report from what it read at the opening (session.diagnostics)
+    and the copies on this computer; nothing is asked of the device."""
+    from openexpress import report
+
+    st, dev = device
+    found = diagnostics.at_open(dev, st)
+    st.lists.clear()
+    st.reads.clear()
+    st.infos.clear()
+    text = report.build(dev, st, space=(1000, 2000), found=found)
+    assert st.lists == st.reads == st.infos == []
+    assert "- Crashes that restarted the device: 1" in text and "- Memory dumps: 2, 500 B" in text
+    not_read = report.build(dev, st, space=(1000, 2000), found=None)
+    assert "- Memory dumps: not read yet" in not_read
+    assert st.lists == st.reads == st.infos == []
