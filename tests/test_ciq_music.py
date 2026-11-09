@@ -814,6 +814,66 @@ def test_cli_removes_app_files_and_forgets_the_app(iq_device, device_root, apps_
     assert not (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").exists()
 
 
+RADAR = uuid.UUID("0b1ce000-0000-4000-8000-0000000b1ce0")  # made up
+
+
+@pytest.fixture
+def radar_app(iq_device, device_root, apps_cli, monkeypatch):
+    """An app the device names otherwise than the store and the account do: "MyBikeTraffic"
+    in its app list, "My Bike Radar Traffic" in the store (made-up ID)."""
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (RADAR, 3, "MyBikeTraffic", False, "B1CE0001"),
+    ]))
+    (device_root / "GARMIN/APPS/MEDIA/B1CE0001.PRG").write_bytes(b"x")
+    monkeypatch.setattr(FakeStore, "account_apps", lambda self, device, locale: [
+        store_app(FACE, "Face It"), store_app(RADAR, "My Bike Radar Traffic")])
+    return device_root
+
+
+@pytest.mark.parametrize("name", ["My Bike Radar Traffic", "my bike radar", "MyBikeTraffic",
+                                  str(RADAR)])
+def test_cli_removes_an_app_by_its_name_in_the_store_too(radar_app, capsys, name):
+    from openexpress.cli import main
+
+    assert main(["--path", str(radar_app), "apps", "remove", name, "--apply"]) == 0
+    assert "Remove MyBikeTraffic from the device" in capsys.readouterr().out
+    assert not (radar_app / "GARMIN/APPS/MEDIA/B1CE0001.PRG").exists()
+
+
+def test_cli_disables_an_app_by_its_name_in_the_store(radar_app, capsys):
+    from openexpress.cli import main
+
+    assert main(["--path", str(radar_app), "apps", "disable", "My Bike Radar Traffic"]) == 0
+    out = capsys.readouterr().out
+    assert "MyBikeTraffic" in out and "No app matches" not in out
+
+
+def test_cli_installs_an_app_by_the_name_the_device_gives_it(radar_app, capsys):
+    from openexpress.cli import main
+
+    code = main(["--path", str(radar_app), "apps", "install", "MyBikeTraffic"])
+    out = capsys.readouterr().out
+    assert "No app matches" not in out and "My Bike Radar Traffic" in out
+    assert code == 0
+
+
+def test_a_name_both_apps_share_still_asks_which(radar_app, capsys):
+    """A part of the store's name of one app and of the device's name of another: ambiguous,
+    said with the names of both."""
+    from openexpress.cli import main
+
+    (radar_app / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (RADAR, 3, "MyBikeFace", False, "B1CE0001"),
+        (FACE, 3, "FaceIt2", True, "GACF4619"),
+    ]))
+    assert main(["--path", str(radar_app), "apps", "remove", "face"]) != 0
+    said = capsys.readouterr()
+    assert "Ambiguous name, matches: MyBikeFace (watch face); FaceIt2 (watch face)" in (
+        said.out + said.err)
+
+
 def test_the_preview_of_an_install_with_apps_waiting_and_a_list_that_does_not_match(capsys):
     from openexpress import cli
 

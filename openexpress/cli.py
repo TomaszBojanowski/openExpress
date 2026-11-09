@@ -1885,16 +1885,23 @@ APP_TYPE_OPTIONS = {"app": 1, "widget": 2, "watch-face": 3, "data-field": 4, "mu
                     "activity": 8}
 
 
-def _find_app(items, query: str, app_type: int | None = None):
+def _find_app(items, query: str, app_type: int | None = None, also: dict | None = None):
     """One app by name, part of the name or ID; `app_type` picks between entries that share
-    a name and ID (built-in items listed both as an app and as a widget)."""
+    a name and ID (built-in items listed both as an app and as a widget). `also`: the other
+    name of an app, by its ID, from the other list (the store's name of an app on the device,
+    the device's of one on the account), looked for as its own name is."""
     from openexpress import ciq
 
     if app_type is not None:
         items = [a for a in items if a.app_type == app_type]
     q = query.casefold()
-    exact = [a for a in items if a.name.casefold() == q or str(a.app_id) == q]
-    partial = exact or [a for a in items if q in a.name.casefold()]
+
+    def names(a) -> list[str]:
+        other = (also or {}).get(a.app_id)
+        return [a.name.casefold()] + ([other.casefold()] if other else [])
+
+    exact = [a for a in items if q in names(a) or str(a.app_id) == q]
+    partial = exact or [a for a in items if any(q in n for n in names(a))]
     if len(partial) == 1:
         return partial[0]
     if not partial:
@@ -2168,7 +2175,8 @@ def cmd_apps(args) -> int:
 
     if cmd in ("install", "update"):
         if cmd == "install":
-            targets = [_find_app(account, args.name)]
+            targets = [_find_app(account, args.name,
+                                 also={a.app_id: a.name for a in state.apps})]
         else:
             targets = api.updates(dev, state.store_apps, locale)
             if not targets:
@@ -2268,7 +2276,8 @@ def cmd_apps(args) -> int:
             print(_("The server has not queued the app yet; run `openexpress sync` in a moment."))
         return 0 if not rep.failed and not skipped else 1
 
-    app = _find_app(state.apps, args.name, APP_TYPE_OPTIONS.get(getattr(args, "type", None)))
+    app = _find_app(state.apps, args.name, APP_TYPE_OPTIONS.get(getattr(args, "type", None)),
+                    also={a.app_id: a.name for a in account})
     if cmd == "remove":
         if not app.removable:
             raise ciq.CiqError(_("{name} is part of the device software and cannot be removed")

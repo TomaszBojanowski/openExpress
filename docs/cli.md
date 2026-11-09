@@ -50,6 +50,9 @@ the two are separate installations, see
 | `openexpress watch` | background service: sync when a device is connected, with a notification |
 | `openexpress install-desktop [--remove] [--force] [--apply]` | application menu entry and systemd user service (version from source; in the Flatpak it does nothing); `--remove` removes them, `--force` installs them also when the Flatpak is installed |
 
+The NAME of an app is its name in the store or the one the device gives it (they can differ, as
+"My Bike Radar Traffic" and "MyBikeTraffic"), a part of either that only one app has, or its ID.
+
 Options before the command:
 
 - `--lang LANG`: the language of this run;
