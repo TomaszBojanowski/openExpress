@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 18:15+0100\n"
+"POT-Creation-Date: 2026-11-09 21:02+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -4377,16 +4377,16 @@ msgstr "Garmin;Fenix;Connect;sync;synchronizacja;zegarek;"
 msgid "the Flatpak is missing the permission to copy files to the device"
 msgstr "Flatpakowi brakuje uprawnienia do kopiowania plików na urządzenie"
 
-#: openexpress/device/gio_storage.py
-msgid "flatpak-spawn is not available"
-msgstr "flatpak-spawn jest niedostępny"
-
 #. TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
 #. its time limit ({seconds}: a number of seconds, e.g. 21600)
 #: openexpress/device/gio_storage.py
 #, python-brace-format
 msgid "timed out after {seconds} seconds"
 msgstr "przekroczono limit czasu ({seconds} s)"
+
+#: openexpress/device/gio_storage.py
+msgid "flatpak-spawn is not available"
+msgstr "flatpak-spawn jest niedostępny"
 
 #. TRANSLATORS: error: the contents of a folder on the device cannot be read ({path}: the
 #. folder)

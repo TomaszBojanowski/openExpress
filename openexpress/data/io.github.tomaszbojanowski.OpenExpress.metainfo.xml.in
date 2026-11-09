@@ -94,6 +94,22 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.9.1" date="2026-11-09">
+      <description translate="no">
+        <ul>
+          <li>When a device connected as a USB drive does not install a copied update after it was
+          unplugged, openExpress now says so ("Update Not Installed by the Device") instead of asking
+          for another eject. After the eject, it tells you to unplug the cable and leave the device
+          unplugged so it can install the update.</li>
+          <li>The openexpress apps commands find an app by its name in the Connect IQ Store as well as
+          by the name the device shows, so an app can be removed or turned on and off under either
+          name.</li>
+          <li>Messages about a failed copy to the device no longer show its MTP address, which
+          contains its serial number, and the log no longer keeps the full address of a failed
+          request to Garmin Connect.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.0" date="2026-11-09">
       <description translate="no">
         <ul>
