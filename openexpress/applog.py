@@ -62,7 +62,10 @@ _PATTERNS = [
     # JSON ("key": "value") and Python's own repr ('key': 'value', key='value') alike.
     (re.compile(rf"(?i)\b({_KEYS})\b([\"']?\s*[=:]\s*[\"']?)[^\s&\"',;]+"), r"\1\2<hidden>"),
     (re.compile(r"\bST-[\w-]+"), "<ticket>"),
-    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+"), "<email>"),
+    # At most 64 characters before "@", as an address has (RFC 5321), and parts of the domain
+    # that never give back what they took: without them every letter of a long word would
+    # start a look to its end, in time growing with the square of its length.
+    (re.compile(r"[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]++(?:\.[A-Za-z0-9-]++)+"), "<email>"),
     # 16 hex digits or more, also after "_" (garmindlm=<time>_<signature>): "_" counts as
     # a separator here, as any character that is not a letter or a digit.
     (re.compile(r"(?<![^\W_])[0-9A-Fa-f]{16,}(?![^\W_])"), "<hex>"),

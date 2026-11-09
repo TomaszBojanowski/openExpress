@@ -126,6 +126,31 @@ def test_a_redacted_line_stays_the_same_when_it_is_redacted_again(text):
     assert applog.redact(once) == once  # `tail()` filters the lines of the file once more
 
 
+LONG = 2_000_000  # characters: a server's answer or a program's error output without a space
+
+
+@pytest.mark.parametrize("unit", ["x", "a1A", "7", "f", "a.", "a_", "%+", "a@", "a@b"],
+                         ids=["letters", "mixed", "digits", "hex", "dots", "underscores",
+                              "signs", "at signs", "addresses without a dot"])
+def test_long_text_without_spaces_is_redacted_quickly(unit):
+    """Every rule looks at the text in time in proportion to its length: a line of megabytes
+    (the log, gio's output in a message) is filtered at once, not in minutes."""
+    import time
+
+    text = unit * (LONG // len(unit))
+    started = time.perf_counter()
+    applog.redact(text)
+    assert time.perf_counter() - started < 2
+
+
+def test_an_address_with_the_longest_name_is_hidden_whole():
+    """64 characters before "@", the most an e-mail address has (RFC 5321)."""
+    name = "a" * 63 + "b"
+    assert applog.redact(f"account {name}@example.org signed in") == "account <email> signed in"
+    longer = "c" * 10 + name  # no address: what is more than 64 characters before "@" stays
+    assert applog.redact(f"{longer}@example.org") == "c" * 10 + "<email>"
+
+
 def test_a_line_written_before_the_rule_is_hidden_when_the_log_is_attached(log_file):
     log_file.parent.mkdir(parents=True)
     log_file.write_text(f"old line: {GIO_COPY_ERROR}\n", encoding="utf-8")

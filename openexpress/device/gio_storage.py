@@ -28,6 +28,7 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress import applog  # noqa: E402
 from openexpress.device import ptp  # noqa: E402
 from openexpress.device.storage import (  # noqa: E402
     CopyNotStarted,
@@ -138,11 +139,31 @@ def copy_fraction(update: str) -> float | None:
     return min(1.0, a / b)
 
 
+DETAIL_CHARS = 1000  # of what gio said of a failed copy: more than its one line of error
+
+
 def _detail(stderr: str, stdout: str) -> str:
+    """What gio said of a failed copy, for the window and the command line. It names the
+    device by its address, which carries its serial number: filtered as the log is."""
     detail = stderr.strip() or stdout.strip()
     if "org.freedesktop.Flatpak" in detail or "Portal call failed" in detail:
         detail = _("the Flatpak is missing the permission to copy files to the device")
+    detail = applog.redact(detail)
+    if len(detail) > DETAIL_CHARS:
+        # The message is shown whole, in a dialog or the terminal: gio's error is its first
+        # line, and much more output would bury it. Cut at a space when there is one.
+        cut = detail.rfind(" ", 0, DETAIL_CHARS)
+        detail = detail[:cut if cut > 0 else DETAIL_CHARS] + " …"
     return detail
+
+
+def _timed_out(what: str) -> DeviceError:
+    """A copy stopped at its time limit, in the same words both ways (not subprocess's own,
+    which is the whole command, with the local path and the address of the device)."""
+    # TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
+    # its time limit ({seconds}: a number of seconds, e.g. 21600)
+    return DeviceError(f"{what}: " + _("timed out after {seconds} seconds").format(
+        seconds=HOST_COPY_TIMEOUT_S))
 
 
 def host_copy(local: Path, target_uri: str, what: str, progress=None, started=None) -> None:
@@ -169,7 +190,7 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         except OSError as e:  # the command could not be started
             raise CopyNotStarted(f"{what}: {e}") from e
         except subprocess.TimeoutExpired as e:
-            raise DeviceError(f"{what}: {e}") from e
+            raise _timed_out(what) from e
         if res.returncode != 0:
             raise DeviceError(f"{what}: {_detail(res.stderr, res.stdout)}")
         return
@@ -220,10 +241,7 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         watchdog.cancel()
     reader.join(5)
     if timed_out.is_set():
-        # TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
-        # its time limit ({seconds}: a number of seconds, e.g. 21600)
-        raise DeviceError(f"{what}: " + _("timed out after {seconds} seconds").format(
-            seconds=HOST_COPY_TIMEOUT_S))
+        raise _timed_out(what)
     if code != 0:
         stderr = b"".join(errors).decode("utf-8", "replace")
         raise DeviceError(f"{what}: {_detail(stderr, ''.join(said))}")
@@ -938,8 +956,6 @@ def _drive_usb(ids: tuple[str, str, int, int], folder: Path, volume) -> GarminUs
     """The USB device of a Garmin drive, with what tells it from another of its model: its
     USB serial and the UUID of its volume (udisks reads it without mounting), both hidden in
     the log at once."""
-    from openexpress import applog
-
     uuid = volume.get_identifier("uuid") if volume is not None else None
     usb = GarminUsb(ids[1], ids[2], ids[3], serial=_usb_serial(folder),
                     volume_uuid=uuid or None, vendor=ids[0])
@@ -2113,7 +2129,6 @@ def probe(found: FoundDevice) -> DeviceSummary:
     asked of such a device); else without details the summary says why. One log line,
     without the address or the unit ID. An MTP device read keeps what was opened (`device`,
     `storage`), for the window to count its activities later."""
-    from openexpress import applog
     from openexpress.device.xmldevice import parse
 
     summary = _probe(found, parse)

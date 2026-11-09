@@ -326,11 +326,51 @@ def test_output_that_cannot_be_read_leaves_the_bar_alone(host, chunks):
     assert copy_with_progress(host) == []  # no error, no progress: the copy goes on, no bar
 
 
+# Made up: gvfs names a device after its USB strings and serial number.
+DEVICE_ADDRESS = "mtp://Garmin_fenix_8_SERIAL0FAKE99/GARMIN/RemoteSW/map.img"
+SAID_ADDRESS = "mtp://<device>/GARMIN/RemoteSW/map.img"
+
+
 def test_a_failed_copy_is_reported_with_what_gio_said(host):
-    host.answer([MEASURED[0].encode()], code=1, stderr="gio: mtp://…: Brak miejsca\n".encode())
+    host.answer([MEASURED[0].encode()], code=1,
+                stderr=f"gio: {DEVICE_ADDRESS}: Brak miejsca\n".encode())
     with pytest.raises(DeviceError) as error:
         copy_with_progress(host)
-    assert str(error.value) == "Cannot write map.img: gio: mtp://…: Brak miejsca"
+    assert str(error.value) == f"Cannot write map.img: gio: {SAID_ADDRESS}: Brak miejsca"
+
+
+def _gio_refuses(monkeypatch, host):
+    """gio's error names the device by its address, as it does."""
+    stderr = f"gio: {DEVICE_ADDRESS}: Operation not supported\n"
+    host.answer([], code=1, stderr=stderr.encode())
+    monkeypatch.setattr(gio_storage.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", stderr))
+
+
+@pytest.mark.parametrize("with_progress", [False, True])
+def test_what_gio_says_of_a_failed_copy_names_no_device(host, monkeypatch, with_progress):
+    """The error goes to the window and the command line as it is, not through the filter of
+    the log: the address of the device, which carries its serial number, is hidden there."""
+    _gio_refuses(monkeypatch, host)
+    with pytest.raises(DeviceError) as error:
+        gio_storage.host_copy(host.local, DEVICE_ADDRESS, "Cannot write map.img",
+                              (lambda done, total: None) if with_progress else None)
+    said = str(error.value)
+    assert said == f"Cannot write map.img: gio: {SAID_ADDRESS}: Operation not supported"
+    assert "SERIAL0FAKE99" not in said
+
+
+def test_a_copy_without_progress_that_takes_too_long_names_no_command(host, monkeypatch):
+    """subprocess.run's own text of a timeout is the whole command, with the local path and
+    the address of the device: said as the copy with progress says it."""
+    def run(cmd, **kw):
+        raise subprocess.TimeoutExpired(cmd, kw["timeout"])
+
+    monkeypatch.setattr(gio_storage.subprocess, "run", run)
+    with pytest.raises(DeviceError) as error:
+        gio_storage.host_copy(host.local, DEVICE_ADDRESS, "Cannot write map.img")
+    assert str(error.value) == (f"Cannot write map.img: timed out after "
+                                f"{gio_storage.HOST_COPY_TIMEOUT_S} seconds")
 
 
 def test_a_missing_permission_is_still_explained(host):
@@ -342,8 +382,10 @@ def test_a_missing_permission_is_still_explained(host):
 
 def test_a_lot_of_error_output_does_not_block_the_copy(host):
     host.answer([u.encode() for u in MEASURED], code=1, stderr=b"x" * 2_000_000)
-    with pytest.raises(DeviceError):
+    with pytest.raises(DeviceError) as error:
         copy_with_progress(host)
+    # Said in short: the start of what gio said, so that its error is not buried.
+    assert len(str(error.value)) <= len("Cannot write map.img: ") + gio_storage.DETAIL_CHARS + 2
 
 
 def test_a_copy_that_takes_too_long_is_stopped(host, monkeypatch):

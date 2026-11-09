@@ -1,6 +1,7 @@
 import hashlib
 import http.server
 import json
+import logging
 import os
 import re
 import socket
@@ -157,6 +158,28 @@ def test_a_network_error_in_the_ticket_exchange_does_not_show_the_ticket(monkeyp
 def test_poll_location_network_error(monkeypatch):
     c = make_client(monkeypatch, unused_url())
     assert c.poll_location(c.connect_url("st/1"), 1, timeout_s=5) == 0
+
+
+@pytest.mark.parametrize("whole_address", [False, True])
+def test_a_failed_upload_status_check_logs_no_address(monkeypatch, caplog, whole_address):
+    """The text of a requests error names the address, query and all (an upload's number, a
+    ticket): its path after "with url:", or the whole address. The log line says the error
+    without it, as every network error does."""
+    from openexpress import applog
+
+    c = make_client(monkeypatch, unused_url())
+    url = c.connect_url("upload-service/upload/424242?ticket=made-up")
+    if whole_address:
+        def refused(address, **kw):
+            raise requests.ConnectionError(f"Connection aborted while asking {address}")
+
+        monkeypatch.setattr(c.http, "get", refused)
+    with caplog.at_level(logging.WARNING, logger="openexpress"):
+        assert c.poll_location(url, 1, timeout_s=5) == 0
+    said = [applog.redact(r.getMessage()) for r in caplog.records  # as the log file has it
+            if r.getMessage().startswith("Upload status check failed")]
+    assert len(said) == 1 and "<address>" in said[0]
+    assert "upload-service" not in said[0] and "424242" not in said[0]
 
 
 def test_poll_location_relative_and_clamped(monkeypatch, server):

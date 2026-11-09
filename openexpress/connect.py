@@ -456,7 +456,8 @@ class GarminClient:
             try:
                 resp = self.http.get(url, headers=h, timeout=TIMEOUT)
             except requests.RequestException as e:
-                log.warning("Upload status check failed (%s)", e)
+                # Its text names the address, query and all: left out, as in _request.
+                log.warning("Upload status check failed (%s)", applog.network_error_text(e))
                 netstatus.record_failure(_hosts(self), url)
                 return 0
             netstatus.record_response(_hosts(self), url, resp)
