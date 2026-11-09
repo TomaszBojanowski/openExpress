@@ -168,11 +168,13 @@ def _drive_sync(entry: KnownDevice, account: AccountFact | None, login: str | No
 # --- writing ------------------------------------------------------------------------------
 
 
-def note_update_check(device, new_updates: list, staged: list = ()) -> None:
+def note_update_check(device, new_updates: list, staged: list = (),
+                      not_installed: list = ()) -> None:
     """The window's check of updates answered for the open device: whether it found any to
     install, and what (update_summary; none clears both); the check itself (its time, the
-    device's software, whether an update was copied already: `staged`). Optional: a failure
-    is only written to the log."""
+    device's software, whether an update was copied already: `staged`, or copied and not
+    installed by the device: `not_installed`, which gives its tile no chip). Optional: a
+    failure is only written to the log."""
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return
@@ -181,7 +183,8 @@ def note_update_check(device, new_updates: list, staged: list = ()) -> None:
         known_devices.set_update_found(unit_id, bool(new_updates),
                                        summary=update_summary(device, new_updates),
                                        software_version=software if isinstance(software, str)
-                                       else None, ready=bool(staged))
+                                       else None, ready=bool(staged),
+                                       not_installed=bool(not_installed))
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
 

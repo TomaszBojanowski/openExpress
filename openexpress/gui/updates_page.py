@@ -17,7 +17,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import answers, service  # noqa: E402
+from openexpress import answers, known_devices, service  # noqa: E402
 from openexpress.connect import ApiError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     DriveNotMounted,
@@ -37,6 +37,8 @@ from openexpress.gui.window_tasks import (  # noqa: E402
 )
 from openexpress.gui.words import (  # noqa: E402
     copied_update_text,
+    not_installed_advice,
+    not_installed_text,
     software_text,
     update_state_text,
 )
@@ -268,7 +270,9 @@ class UpdatesPage:
 
         new = upd.pending(items)
         staged = upd.staged(items)
-        self._set_update_state(new, staged)
+        # Copied, not installed by the device although it was unplugged since: nothing waits.
+        untaken = upd.not_installed(items)
+        self._set_update_state(new, staged, untaken)
         # One copied already is told at the top of the page (it wins, as on the row "Device
         # software"), else a system update; the others (a second system one, rare) are listed.
         system = None if staged else next((u for u in new if u.is_system), None)
@@ -278,16 +282,25 @@ class UpdatesPage:
         self._updates_status(sec, system, len(new), beta, ready=staged,
                              only=new[0] if len(new) == 1 else None,
                              installable=[u for u in new
-                                          if u.device_path.casefold() not in waiting])
+                                          if u.device_path.casefold() not in waiting],
+                             untaken=untaken)
         rest = [u for u in new if u is not system]
         if rest:
             g = sec.group(_("Available Updates"))
             for u in rest:
                 self._update_row(g, u, waits_for=waiting.get(u.device_path.casefold()))
+        if untaken and (staged or new):
+            # The top tells what there is to do; these are listed with what became of them.
+            # TRANSLATORS: heading of a group on the Updates page: updates openExpress copied
+            # that the device has not installed although it was unplugged since
+            g = sec.group(_("Not Installed by the Device"))
+            for u in untaken:
+                self._not_installed_row(g, u)
         # A file the device already has is a reinstall, whatever the server calls it; but not
-        # an update copied that is waiting for the device to install it.
+        # an update copied that is waiting for the device to install it, nor one it did not
+        # install.
         re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata
-              and not any(u is w for w in staged)]
+              and not any(u is w for w in staged) and not any(u is n for n in untaken)]
         if re:
             # TRANSLATORS: heading of a group on the Updates page that holds the reinstall of
             # components already on the device
@@ -306,20 +319,22 @@ class UpdatesPage:
                                  waits_for=waiting.get(u.device_path.casefold()))
 
     def _updates_status(self, sec, system, count: int, beta: bool = False, ready=(),
-                        only=None, installable=()) -> None:
+                        only=None, installable=(), untaken=()) -> None:
         """Builds the top of the Updates page in `sec`: the state of the updates as "Device
         software" says it (update_state_text): `count` to install (`only`: the one of them),
         some copied that wait for the device (`ready`) with `count` still to install, or up
         to date; under it the
         `system` update or the device's version; whether Garmin offers it beta versions
         (`beta`). More than one update `installable`: Install all, one question and one copy
-        (a drive is ejected once after all of them; each Install ejects it after its own)."""
+        (a drive is ejected once after all of them; each Install ejects it after its own).
+        `untaken`: copied, and not installed by the device although it was unplugged since:
+        when nothing else is to do, what became of them, without Eject or Install."""
         from openexpress import updates as upd
 
         d = self.session.device
         mass_storage = getattr(self.session, "mass_storage", False)
         installed = software_text(d.software_version_str)
-        detail = note = None
+        detail = note = advice = None
         buttons = []
         if system is not None:
             icon = "software-update-available-symbolic"
@@ -363,6 +378,25 @@ class UpdatesPage:
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
             title = update_state_text("available", count, only)
+        elif untaken:
+            icon = "dialog-information-symbolic"
+            # TRANSLATORS: title of the Updates page: updates openExpress copied are on the
+            # device, which was unplugged since and has not installed them
+            title = ngettext("Update Not Installed by the Device",
+                             "Updates Not Installed by the Device", len(untaken))
+            lead = untaken[0] if len(untaken) == 1 else None
+            if lead is None:
+                subtitle = installed
+                detail = caption(*(u.title for u in untaken))
+            else:
+                versions = versions_text(lead, d)
+                subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
+                detail = caption(lead.title, lead.severity_text, lead.filename)
+                note = not_installed_text(lead, d)
+                if lead.changed_on_device:  # copied again, it may be taken this time
+                    buttons.append(self._button(_("Reinstall"),
+                                                lambda u=lead: self.confirm_update(u), None))
+            advice = not_installed_advice()
         else:
             icon, subtitle = "object-select-symbolic", installed
             title = update_state_text("current")
@@ -376,7 +410,7 @@ class UpdatesPage:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                       halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
         image = Gtk.Image(icon_name=icon, pixel_size=96)
-        if system is None and not ready and not count:
+        if system is None and not ready and not count and not untaken:
             image.add_css_class("success")  # up to date only
         box.append(image)
 
@@ -389,6 +423,7 @@ class UpdatesPage:
         for text, styles in ((title, ["title-1"]), (subtitle, ["dim-label"]),
                              (detail, ["caption", "dim-label"]),
                              (note, ["caption", "dim-label"]),
+                             (advice, ["caption", "dim-label"]),
                              (_(upd.BETA_OFFERED) if beta else None, ["caption", "dim-label"])):
             if isinstance(text, tuple):  # a beta version: "Beta" stands out
                 versions, word, after = text
@@ -451,6 +486,20 @@ class UpdatesPage:
                                         None if reinstall else "suggested-action"))
         parent.add_row(row) if isinstance(parent, Adw.ExpanderRow) else parent.add(row)
 
+    def _not_installed_row(self, parent, u) -> None:
+        """A row of update `u`, copied and not installed by the device although it was
+        unplugged since: what became of it, and Reinstall only when the device changed its
+        file (the same file again changes nothing)."""
+        d = self.session.device
+        subtitle = caption(versions_text(u, d), human_size(u.size), u.filename)
+        subtitle += "\n" + not_installed_text(u, d)
+        row = Adw.ActionRow(title=GLib.markup_escape_text(_("Device Software") if u.is_system
+                                                          else u.title),
+                            subtitle=GLib.markup_escape_text(subtitle))
+        if u.changed_on_device:
+            row.add_suffix(self._button(_("Reinstall"), lambda u=u: self.confirm_update(u), None))
+        parent.add(row)
+
     @staticmethod
     def _update_done_text(rep) -> str:
         """What the window says after an update was copied, with what to do next."""
@@ -496,12 +545,17 @@ class UpdatesPage:
         """Eject the drive of a device in mass storage mode; then the cable can go out. When
         the system refuses, why, that the cable must stay in, and Try Again. `button`: the
         Eject of the Updates page, which spins meanwhile; `files`: after a sync wrote the
-        files of Garmin Connect's queue to it, not an update."""
+        files of Garmin Connect's queue to it, not an update. Otherwise an update copied to it
+        waits: it is to stay unplugged. Seen unplugged later (gio_storage), that is kept with
+        the device: an update it has not installed by then it will not install so."""
+        update_waits = not files
+
         def ejected(_result):
             # After an update (not the files of a sync): how many are still available.
             still = "" if files else still_available_text(self, s)
             # For a bike accessory, as Garmin Express does: how it finishes the update.
-            inform(self, "ejected", _("Done"), ejected_text() + ("\n\n" + still if still else ""),
+            inform(self, "ejected", _("Done"),
+                   ejected_text(update_waits) + ("\n\n" + still if still else ""),
                    then=(lambda: tell_update_finish(self)) if bike_accessory else None)
 
         def failed(e) -> bool:
@@ -516,8 +570,15 @@ class UpdatesPage:
                     cancel=_("Close"))
             return True
 
-        self.run_task(_("Ejecting the Device…"), lambda: eject(s.storage), ejected, failed,
-                      button=button)
+        unit_id = getattr(getattr(s, "device", None), "unit_id", None)
+
+        def unplugged() -> None:
+            if unit_id:
+                known_devices.note_unplugged(unit_id)
+
+        self.run_task(_("Ejecting the Device…"),
+                      lambda: eject(s.storage, update_waits=update_waits, on_unplugged=unplugged),
+                      ejected, failed, button=button)
 
     def _show_installed(self, session, chosen) -> None:
         """After an update was copied: the files are on the device now, and wait for it to

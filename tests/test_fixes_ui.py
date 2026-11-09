@@ -792,7 +792,7 @@ def test_updates_page_with_several_updates(monkeypatch):
         session=types.SimpleNamespace(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39")),
         sections={"updates": Section()}, busy=False, _action_buttons=[],
-        _set_update_state=lambda new, staged=(): states.append(len(new)), confirm_update=lambda u: None,
+        _set_update_state=lambda new, staged=(), not_installed=(): states.append(len(new)), confirm_update=lambda u: None,
         load_section=lambda *a, **kw: None)
     window_methods(win, ["_update_row", "_updates_status", "_button"])
     MainWindow.show_updates(win, items)
@@ -963,7 +963,7 @@ def test_window_does_not_count_files_already_on_the_device(offered):
                               device=types.SimpleNamespace(raw=b""))
     states = []
     win = stand_in(session=s, _update_check_session=None, update_state=None,
-                   _set_update_state=lambda new, staged=(): states.append(new),
+                   _set_update_state=lambda new, staged=(), not_installed=(): states.append(new),
                    _render_update_state=lambda: None,
                    in_background=lambda work, done, failed: done(work()))
     MainWindow._check_updates_quietly(win)

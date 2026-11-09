@@ -30,6 +30,7 @@ chart unit|bpm|ignore-same
 |Copy the Course to the Device?|ignore-same-plurals
 |Update ready: unplug the device to install it|ignore-same-plurals
 |Update ready: eject the device to install it|ignore-same-plurals
+|Update Not Installed by the Device|ignore-same-plurals
 
 # ignore-reused
 sport|Paddling|ignore-reused

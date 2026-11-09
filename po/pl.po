@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 23:48+0100\n"
+"POT-Creation-Date: 2026-11-09 00:24+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1627,6 +1627,12 @@ msgstr "Oprogramowanie urządzenia: {text}"
 msgid "an update is ready: unplug the device to install it"
 msgstr "aktualizacja gotowa: odłącz urządzenie, żeby ją zainstalować"
 
+#. TRANSLATORS: after "Device software:" in openexpress status: an update openExpress
+#. copied is on the device, which was unplugged since and has not installed it
+#: openexpress/cli.py
+msgid "update copied, not installed by the device"
+msgstr "aktualizacja skopiowana, urządzenie jej nie zainstalowało"
+
 #. TRANSLATORS: after "Device software:" in openexpress status
 #. TRANSLATORS: map status
 #: openexpress/cli.py openexpress/maps.py
@@ -2044,6 +2050,30 @@ msgstr "Wysuwanie urządzenia…"
 #, python-brace-format
 msgid "The device was not ejected: {error}"
 msgstr "Nie wysunięto urządzenia: {error}"
+
+#. TRANSLATORS: `openexpress updates`: heading above the updates openExpress copied that the
+#. device has not installed although it was unplugged since
+#: openexpress/cli.py
+msgid "Copied, not installed by the device:"
+msgstr "Skopiowane, urządzenie ich nie zainstalowało:"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"Copied {when}; the device was unplugged since, changed or refused the file "
+"and has not installed it."
+msgstr ""
+"Skopiowano {when}; urządzenie było od tego czasu odłączone, zmieniło albo "
+"odrzuciło plik i jej nie zainstalowało."
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"Copied {when}; the device was unplugged since and has not installed it (the "
+"file is still on it)."
+msgstr ""
+"Skopiowano {when}; urządzenie było od tego czasu odłączone i jej nie "
+"zainstalowało (plik wciąż na nim jest)."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -4393,6 +4423,14 @@ msgid "Cannot eject the device"
 msgstr "Nie można wysunąć urządzenia"
 
 #: openexpress/device/gio_storage.py
+msgid ""
+"The device is ejected. Unplug the cable and leave the device unplugged so it "
+"can install the update."
+msgstr ""
+"Urządzenie zostało wysunięte. Odłącz kabel i zostaw urządzenie odłączone, "
+"żeby mogło zainstalować aktualizację."
+
+#: openexpress/device/gio_storage.py
 msgid "The device is ejected. You can unplug the cable."
 msgstr "Urządzenie zostało wysunięte. Możesz odłączyć kabel."
 
@@ -4493,6 +4531,14 @@ msgid ""
 msgstr ""
 "Urządzenie jest podłączone w trybie pamięci masowej (jako dysk USB): "
 "aplikacje, mapy i muzyka nie są w tym trybie obsługiwane."
+
+#: openexpress/device/gio_storage.py
+msgid ""
+"After it was ejected, the watch switched to its Garmin USB mode. Unplug the "
+"cable and leave the device unplugged so it can install the update."
+msgstr ""
+"Po wysunięciu zegarek przeszedł w tryb Garmin USB. Odłącz kabel i zostaw "
+"urządzenie odłączone, żeby mogło zainstalować aktualizację."
 
 #: openexpress/device/gio_storage.py
 msgid ""
@@ -7539,6 +7585,12 @@ msgstr "Zainstalować aktualizacje?"
 msgid "Available Updates"
 msgstr "Dostępne aktualizacje"
 
+#. TRANSLATORS: heading of a group on the Updates page: updates openExpress copied
+#. that the device has not installed although it was unplugged since
+#: openexpress/gui/updates_page.py
+msgid "Not Installed by the Device"
+msgstr "Niezainstalowane przez urządzenie"
+
 #. TRANSLATORS: heading of a group on the Updates page that holds the reinstall of
 #. components already on the device
 #: openexpress/gui/updates_page.py
@@ -7580,6 +7632,16 @@ msgstr "Zainstaluj ponownie"
 #: openexpress/gui/updates_page.py
 msgid "Eject"
 msgstr "Wysuń"
+
+#. TRANSLATORS: title of the Updates page: updates openExpress copied are on the
+#. device, which was unplugged since and has not installed them
+#: openexpress/gui/updates_page.py
+#, ignore-same-plurals
+msgid "Update Not Installed by the Device"
+msgid_plural "Updates Not Installed by the Device"
+msgstr[0] "Urządzenie nie zainstalowało aktualizacji"
+msgstr[1] "Urządzenie nie zainstalowało aktualizacji"
+msgstr[2] "Urządzenie nie zainstalowało aktualizacji"
 
 #. TRANSLATORS: button that installs every update offered to the device in one go
 #. (a device connected as a USB drive is then ejected once)
@@ -7693,6 +7755,54 @@ msgstr "Urządzenie zmieniło albo odrzuciło plik skopiowany {when}"
 msgid "Copied {when}, check on the device that it is installed"
 msgstr "Skopiowano {when}, sprawdź na urządzeniu, czy jest zainstalowana"
 
+#. TRANSLATORS: below an update the device has not installed although it was unplugged
+#. since: {when} when it was copied, {old} the version the device still reports
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid ""
+"Copied {when}. The device was unplugged since, changed or refused the file "
+"and still reports version {old}."
+msgstr ""
+"Skopiowano {when}. Urządzenie było od tego czasu odłączone, zmieniło albo "
+"odrzuciło plik i nadal podaje wersję {old}."
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid ""
+"Copied {when}. The device was unplugged since, changed or refused the file "
+"and has not installed it."
+msgstr ""
+"Skopiowano {when}. Urządzenie było od tego czasu odłączone, zmieniło albo "
+"odrzuciło plik i jej nie zainstalowało."
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid ""
+"Copied {when}. The device was unplugged since and still reports version "
+"{old}; the file is still on it, unchanged."
+msgstr ""
+"Skopiowano {when}. Urządzenie było od tego czasu odłączone i nadal podaje "
+"wersję {old}; plik wciąż na nim jest, bez zmian."
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid ""
+"Copied {when}. The device was unplugged since and has not installed it; the "
+"file is still on it, unchanged."
+msgstr ""
+"Skopiowano {when}. Urządzenie było od tego czasu odłączone i jej nie "
+"zainstalowało; plik wciąż na nim jest, bez zmian."
+
+#. TRANSLATORS: "Settings → System → About" is the menu of the device; use the words of the
+#. Garmin devices in your language
+#: openexpress/gui/words.py
+msgid ""
+"Check the version on the device (Settings → System → About). Ejecting it "
+"again does not help; a device report helps find out why."
+msgstr ""
+"Sprawdź wersję na urządzeniu (Ustawienia → System → Informacje). Ponowne "
+"wysunięcie nie pomoże; raport o urządzeniu pomoże ustalić dlaczego."
+
 #: openexpress/gui/words.py
 #, ignore-same-plurals
 msgid "Update ready: eject the device to install it"
@@ -7723,6 +7833,12 @@ msgstr[2] "jeszcze {count} dostępnych"
 #: openexpress/gui/words.py
 msgid "Software is up to date"
 msgstr "Oprogramowanie jest aktualne"
+
+#. TRANSLATORS: the state of the updates: an update openExpress copied is on the device,
+#. which was unplugged since and has not installed it; without a full stop
+#: openexpress/gui/words.py
+msgid "Update copied, not installed by the device"
+msgstr "Aktualizacja skopiowana, urządzenie jej nie zainstalowało"
 
 #. TRANSLATORS: after the state of the updates of a device: when the check that said it
 #. was (e.g. "checked 3 days ago")

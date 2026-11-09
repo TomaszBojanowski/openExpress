@@ -20,6 +20,7 @@ from test_detection import (  # noqa: F401 - the fixture
     FakeVolume,
     drive_folder,
     drives,
+    ejects_at_once,
     monitor_with,
     usb_drive,
 )
@@ -248,14 +249,8 @@ def test_a_volume_of_another_vendor_is_not_listed(drives, monkeypatch):
 def test_a_drive_ejected_by_openexpress_is_not_listed(drives, monkeypatch):
     _volume, _folder = _unmounted(drives, monkeypatch)
     _on_usb(drives, monkeypatch)
-    usb = gio_storage.GarminUsb(FR55, 1, 12)
-    with gio_storage._ejected_lock:
-        gio_storage._ejected.append(usb)
-    try:
-        assert gio_storage.find_ums_devices() == []
-    finally:
-        with gio_storage._ejected_lock:
-            gio_storage._ejected.remove(usb)
+    gio_storage.note_ejected(gio_storage.GarminUsb(FR55, 1, 12))
+    assert gio_storage.find_ums_devices() == []
 
 
 def test_the_volume_of_a_mounted_drive_is_listed_once(drives, monkeypatch):
@@ -586,6 +581,235 @@ def test_unplugged_for_longer_than_a_moment_forgets_the_drive(drives, monkeypatc
     gio_storage.usb_state(clock=clock)
     _reenumerated(drives, devnum=15)
     assert gio_storage.usb_state(clock=clock) == gio_storage.STARTING
+
+
+# --- a drive ejected by openExpress: unplugged, or only in its Garmin USB mode ------------------
+#
+# Its device number changes at each re-enumeration: when it is plugged in again, but also when the
+# watch switches to its Garmin USB mode (091e:0003) on the cable, and back. Its place on USB (the
+# port) stays: an unplugging is the place left empty for USB_GAP_S, or another device number there
+# while openExpress watched it without a break and saw no 091e:0003 meanwhile.
+
+UNPLUGGED = "device: the drive ejected by openExpress was unplugged (USB 091e:0f1d)"
+
+
+def _ejected_drive(drives, monkeypatch, vendor="091e", product=FR55, serial=DRIVE_SERIAL,
+                   **eject):
+    """A mounted drive at port 1-4 (device number 12), ejected by openExpress: the Forerunner 55
+    unless said otherwise. `serial`: its USB serial (None: it gives none, as a Varia). Returns
+    its storage."""
+    unix = usb_drive(drives, vendor=vendor, product=product, serial=serial)
+    _sized(drives, unix, FR55_SECTORS)
+    _on_usb(drives, monkeypatch)
+    folder = drive_folder(drives)
+    monitor_with(monkeypatch, FakeDriveMount(folder, unix))
+    ejects_at_once(monkeypatch)
+    usb = gio_storage.GarminUsb(product, 1, 12, serial=serial, vendor=vendor)
+    storage = types.SimpleNamespace(device_uri=folder.as_uri(), usb_id=usb.usb_id, usb=usb)
+    gio_storage.eject(storage, **eject)
+    return storage
+
+
+def _back_as_a_drive(drives, devnum=14):
+    """The watch at port 1-4 again as a drive, under another device number."""
+    _reenumerated(drives, product=FR55, devnum=devnum, cls="08")
+
+
+def test_in_its_garmin_usb_mode_on_the_cable_the_ejected_drive_is_not_unplugged(
+        drives, monkeypatch, caplog):
+    _ejected_drive(drives, monkeypatch)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        _reenumerated(drives)  # 091e:0003, device number 13
+        for _look in range(3):
+            assert gio_storage.ejected_drive_waits()  # the cable is still in
+    assert UNPLUGGED not in caplog.messages
+
+
+def test_its_place_empty_for_a_while_is_an_unplugging(drives, monkeypatch, caplog):
+    clock, unplugged = Clock(), []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    _gone(drives)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert gio_storage.ejected_drive_waits(clock=clock)
+        clock.now += 2
+        assert gio_storage.ejected_drive_waits(clock=clock) and unplugged == []
+        clock.now += gio_storage.USB_GAP_S
+        assert not gio_storage.ejected_drive_waits(clock=clock)
+    assert unplugged == [1] and caplog.messages.count(UNPLUGGED) == 1
+
+
+def test_another_device_number_at_its_place_while_watched_is_an_unplugging(drives, monkeypatch,
+                                                                          caplog):
+    """The cable out and in again within USB_GAP_S, no 091e:0003 between."""
+    clock, unplugged = Clock(), []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    assert gio_storage.ejected_drive_waits(clock=clock)
+    _gone(drives)
+    clock.now += 2
+    assert gio_storage.ejected_drive_waits(clock=clock)
+    _back_as_a_drive(drives)
+    clock.now += 2
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert not gio_storage.ejected_drive_waits(clock=clock)
+    assert unplugged == [1]
+    assert ("device: the drive ejected by openExpress was unplugged and plugged in again "
+            "(USB 091e:0f1d)") in caplog.messages
+
+
+def test_back_as_a_drive_after_its_garmin_usb_mode_is_no_unplugging(drives, monkeypatch, caplog):
+    clock, unplugged = Clock(), []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    _reenumerated(drives)
+    assert gio_storage.ejected_drive_waits(clock=clock)
+    clock.now += 2
+    _back_as_a_drive(drives)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        assert not gio_storage.ejected_drive_waits(clock=clock)  # a drive again: ours no more
+    assert unplugged == [] and UNPLUGGED not in caplog.messages
+
+
+def test_not_watched_without_a_break_another_device_number_is_no_unplugging(drives, monkeypatch):
+    """Between two looks more than USB_GAP_S: what happened meanwhile is not known."""
+    clock, unplugged = Clock(), []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    assert gio_storage.ejected_drive_waits(clock=clock)
+    _back_as_a_drive(drives)
+    clock.now += gio_storage.USB_GAP_S + 1
+    assert not gio_storage.ejected_drive_waits(clock=clock)
+    assert unplugged == []
+
+
+# --- the cable out and in again within a moment after an eject ----------------------------------
+#
+# Faster than USB_GAP_S, at the same port or at another: the drive opens as at any plugging in,
+# at once, and the window says nothing of an ejected drive. It was unplugged: the eject is over.
+
+OTHER_SERIAL = "0000abcdef78"  # made up: another watch of the same model
+
+
+def _plugged_in(drives, monkeypatch, port, vendor="091e", product=FR55, serial=DRIVE_SERIAL):
+    """The drive plugged in at `port` under a new device number (14) and a new block device,
+    and mounted by the system in the same folder."""
+    if not (gio_storage.SYSFS_USB / port).is_symlink():
+        _on_usb(drives, monkeypatch, port)
+    unix = usb_drive(drives, vendor=vendor, product=product, port=port, devnum=14, disk="sdc",
+                     partition="sdc1", serial=serial)
+    monitor_with(monkeypatch, FakeDriveMount(drives.media / "GARMIN", unix))
+
+
+def _what_the_window_sees():
+    """(the title of the window's notice, the address of the drive opened) right after the
+    drive is mounted: what it says while it opens the drive, and what it opens."""
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+
+    title = MainWindow._usb_notice(gio_storage.usb_state(), 0.0)[0]
+    return title, service.open_device_or_drive(wait=False).usb.address
+
+
+@pytest.mark.parametrize("looked_meanwhile", [True, False])
+def test_plugged_in_again_at_its_port_within_a_moment_it_opens_at_once(
+        drives, monkeypatch, caplog, looked_meanwhile):
+    unplugged = []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    assert gio_storage.ejected_drive_waits()
+    _gone(drives)
+    if looked_meanwhile:  # the window looks every few seconds: maybe not between the two
+        assert gio_storage.ejected_drive_waits()
+    _plugged_in(drives, monkeypatch, "1-4")
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        title, opened = _what_the_window_sees()
+    assert (title, opened) == ("USB Drive", 14)
+    assert not gio_storage.ejected_drive_waits() and unplugged == [1]
+    assert ("device: the drive ejected by openExpress was unplugged and plugged in again "
+            "(USB 091e:0f1d)") in caplog.messages
+
+
+@pytest.mark.parametrize("serial", [DRIVE_SERIAL, None], ids=["its serial", "no serial"])
+def test_plugged_in_at_another_port_within_a_moment_it_opens_at_once(drives, monkeypatch,
+                                                                      caplog, serial):
+    """Known by its USB serial; one that gives none (a Varia) by its product."""
+    unplugged = []
+    _ejected_drive(drives, monkeypatch, serial=serial, on_unplugged=lambda: unplugged.append(1))
+    _gone(drives)
+    assert gio_storage.ejected_drive_waits()  # off USB for a moment: not unplugged yet
+    _plugged_in(drives, monkeypatch, "1-2", serial=serial)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        title, opened = _what_the_window_sees()
+    assert (title, opened) == ("USB Drive", 14)
+    assert not gio_storage.ejected_drive_waits() and unplugged == [1]
+    assert ("device: the drive ejected by openExpress was unplugged and plugged in at another "
+            "port (USB 091e:0f1d)") in caplog.messages
+
+
+def test_another_watch_of_its_model_at_another_port_is_not_the_ejected_one(drives, monkeypatch,
+                                                                         caplog):
+    unplugged = []
+    _ejected_drive(drives, monkeypatch, on_unplugged=lambda: unplugged.append(1))
+    _gone(drives)
+    assert gio_storage.ejected_drive_waits()
+    _plugged_in(drives, monkeypatch, "1-2", serial=OTHER_SERIAL)
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        _title, opened = _what_the_window_sees()
+        assert opened == 14  # the other one opens
+        assert gio_storage.ejected_drive_waits() and unplugged == []
+    assert not [m for m in caplog.messages if "ejected by openExpress was" in m]
+
+
+@pytest.mark.parametrize("port, said", [("1-4", "was unplugged and plugged in again"),
+                                        ("1-2", "was unplugged and plugged in at another port")],
+                         ids=["its port", "another port"])
+def test_the_pendrive_for_testing_is_seen_back_as_a_watch_is(drives, monkeypatch, caplog, port,
+                                                             said):
+    """The drive named in TEST_DRIVE_ENV (of another vendor) stands in for a watch: plugged in
+    again within a moment, it is seen as a watch is."""
+    monkeypatch.setenv(gio_storage.TEST_DRIVE_ENV, "0781:55a9")
+    unplugged = []
+    _ejected_drive(drives, monkeypatch, vendor="0781", product="55a9",
+                   on_unplugged=lambda: unplugged.append(1))
+    _gone(drives)
+    assert gio_storage.ejected_drive_waits()
+    _plugged_in(drives, monkeypatch, port, vendor="0781", product="55a9")
+    with caplog.at_level(logging.INFO, logger=gio_storage.log.name):
+        _title, opened = _what_the_window_sees()
+    assert opened == 14
+    assert not gio_storage.ejected_drive_waits() and unplugged == [1]
+    assert f"device: the drive ejected by openExpress {said} (USB 0781:55a9)" in caplog.messages
+
+
+DRIVE_OFF_UPDATE_TEXT = ("After it was ejected, the watch switched to its Garmin USB mode. Unplug "
+                         "the cable and leave the device unplugged so it can install the update.")
+
+
+def test_in_its_garmin_usb_mode_with_an_update_waiting_it_is_to_stay_unplugged(drives,
+                                                                               monkeypatch):
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+
+    _ejected_drive(drives, monkeypatch, update_waits=True)
+    _reenumerated(drives)
+    assert gio_storage.usb_state() == gio_storage.DRIVE_OFF
+    assert MainWindow._usb_notice(gio_storage.DRIVE_OFF, 0.0) == (
+        "USB Drive", DRIVE_OFF_UPDATE_TEXT, False)
+    with pytest.raises(gio_storage.MassStorageNotice) as said:
+        service.open_device_or_drive(wait=False)
+    assert str(said.value) == DRIVE_OFF_UPDATE_TEXT
+
+
+def test_the_words_after_an_eject_with_an_update_waiting_in_polish():
+    from openexpress import i18n
+
+    i18n.setup("pl")
+    try:
+        ejected = gio_storage.ejected_text(update_waits=True)
+        off = gio_storage.drive_off_text(update_waits=True)
+    finally:
+        i18n.setup("en")
+    assert ejected == ("Urządzenie zostało wysunięte. Odłącz kabel i\u00a0zostaw urządzenie "
+                       "odłączone, "
+                       "żeby mogło zainstalować aktualizację.")
+    assert off == ("Po wysunięciu zegarek przeszedł w\u00a0tryb Garmin USB. Odłącz kabel "
+                   "i\u00a0zostaw urządzenie odłączone, żeby mogło zainstalować aktualizację.")
 
 
 def test_the_words_in_polish():

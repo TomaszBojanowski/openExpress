@@ -189,7 +189,7 @@ def test_trying_again_to_eject_after_a_sync_says_the_files(click, in_the_window)
 
     tries = []
 
-    def refuse(storage):
+    def refuse(storage, **told):
         tries.append(1)
         raise DeviceError("The system refused to eject it.")
 
@@ -210,7 +210,7 @@ def test_trying_again_to_eject(click, in_the_window):
 
     tries = []
 
-    def refuse(storage):
+    def refuse(storage, **told):
         tries.append(1)
         raise DeviceError("The system refused to eject it.")
 
@@ -595,7 +595,7 @@ def _eject_window(ctx, eject):
 
 
 def _ejected(ctx):
-    win = _eject_window(ctx, lambda storage: None)
+    win = _eject_window(ctx, lambda storage, **told: None)
     win.eject_device(win.session)  # a bike accessory's last step: test_a_bike_accessory_s_…
 
 
@@ -616,7 +616,7 @@ def _update_finish(ctx):
 def _eject_retry(ctx):
     from openexpress.device.storage import DeviceError
 
-    def refuse(storage):
+    def refuse(storage, **told):
         raise DeviceError("The system refused to eject it.")
 
     win = _eject_window(ctx, refuse)
@@ -709,7 +709,7 @@ def test_a_bike_accessory_s_last_step_follows_the_done_message(click, monkeypatc
     import logging
 
     ctx = types.SimpleNamespace(effects=[], monkeypatch=monkeypatch, in_the_window=in_the_window)
-    win = _eject_window(ctx, lambda storage: None)
+    win = _eject_window(ctx, lambda storage, **told: None)
     with caplog.at_level(logging.INFO, logger="openexpress.gui"):
         win.eject_device(win.session, True)
         click("OK", until=lambda: len(click.shown) == 2)

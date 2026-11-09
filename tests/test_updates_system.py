@@ -523,6 +523,151 @@ def test_cli_tells_an_update_copied_before_and_offered_again(device_root, monkey
         f"      Copied {COPIED_WHEN}: check on the device that it is installed."]
 
 
+# --- copied, and not installed by the device although it was unplugged since -----------------
+#
+# A copied update the server still offers once the device was seen unplugged after the copy (kept
+# with the device): its file there as copied, or changed in place, waits for nothing any more.
+# Without such an unplugging (none seen, or one before the copy; a device over MTP has none) it
+# still waits for the device.
+
+UNPLUGGED_AT = COPIED_AT + 600
+NOT_INSTALLED_TITLE = "Update Not Installed by the Device"
+NOT_INSTALLED_ROW = "Update copied, not installed by the device"
+NOT_INSTALLED_ADVICE = ("Check the version on the device (Settings \u2192 System \u2192 About). "
+                        "Ejecting it again does not help; a device report helps find out why.")
+AS_COPIED_LINE = (f"Copied {COPIED_WHEN}. The device was unplugged since and has not installed "
+                  "it; the file is still on it, unchanged.")
+CHANGED_LINE = (f"Copied {COPIED_WHEN}. The device was unplugged since, changed or refused the "
+                "file and has not installed it.")
+
+
+def _gps_on_the_device(root, data=GPS):
+    folder = root / "GARMIN" / "REMOTESW"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "GUPDATE.GCD").write_bytes(data)
+
+
+def _copied_gps(unplugged_at=UNPLUGGED_AT):
+    from openexpress import known_devices
+
+    _remember_the_device()
+    known_devices.note_copied(UNIT, ["006-B0001-00.6.70"], now=COPIED_AT)
+    if unplugged_at is not None:
+        known_devices.note_unplugged(UNIT, now=unplugged_at)
+
+
+def test_an_unplugging_seen_is_kept_with_the_device():
+    import json
+
+    from openexpress import known_devices
+
+    _remember_the_device()
+    assert known_devices.load()[UNIT].unplugged_at is None
+    assert known_devices.note_unplugged(UNIT, now=UNPLUGGED_AT)
+    assert known_devices.load()[UNIT].unplugged_at == UNPLUGGED_AT
+    kept = json.loads(known_devices.path().read_text())["devices"][str(UNIT)]
+    assert kept["unplugged_at"] == UNPLUGGED_AT
+
+
+@pytest.mark.parametrize(("on_the_device", "said"), [(GPS, "matches"),
+                                                     (bytes(len(GPS)), "other bytes")],
+                         ids=["as-copied", "changed"])
+def test_copied_and_unplugged_since_it_is_not_installed_and_waits_for_nothing(
+        device_root, caplog, on_the_device, said):
+    _copied_gps()
+    _gps_on_the_device(device_root, on_the_device)
+    with caplog.at_level(logging.INFO, logger="openexpress.updates"):
+        items = _offered_now(device_root, GPS_ENTRY)
+    assert updates.staged(items) == [] and updates.pending(items) == []
+    assert [u.part_number for u in updates.not_installed(items)] == ["006-B0001-00"]
+    assert ("software update: 006-B0001-00 6.70 copied 2026-11-01T11:37, on the device after an "
+            f"unplugging ({said}): not installed by the device"
+            in [r.getMessage() for r in caplog.records])
+
+
+@pytest.mark.parametrize("unplugged_at", [None, COPIED_AT - 600],
+                         ids=["none-seen", "before-the-copy"])
+def test_without_an_unplugging_since_the_copy_it_still_waits(device_root, unplugged_at):
+    _copied_gps(unplugged_at)
+    _gps_on_the_device(device_root)
+    items = _offered_now(device_root, GPS_ENTRY)
+    assert [u.part_number for u in updates.staged(items)] == ["006-B0001-00"]
+    assert updates.not_installed(items) == []
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("on_the_device", "line", "buttons"), [
+    (GPS, AS_COPIED_LINE, [("Check Again", False)]),
+    (bytes(len(GPS)), CHANGED_LINE, [("Reinstall", False), ("Check Again", False)]),
+], ids=["as-copied", "changed"])
+def test_the_updates_page_says_the_device_did_not_install_it(device_root, on_the_device, line,
+                                                             buttons):
+    """No Eject (also for a drive), no Install: copying the same file again changes nothing;
+    one the device changed may be copied again."""
+    _copied_gps()
+    _gps_on_the_device(device_root, on_the_device)
+    items = _offered_now(device_root, GPS_ENTRY)
+    _win, status, _groups, _buttons_ = _updates_page(items, drive=True)
+    texts = [text for text, _styles in status["texts"]]
+    assert texts[0] == NOT_INSTALLED_TITLE
+    assert line in texts and NOT_INSTALLED_ADVICE in texts
+    assert status["buttons"] == buttons
+
+
+def test_the_row_device_software_and_the_tile_say_it(device_root):
+    """No chip on its tile (neither "Eject to install" nor "Update available"); the row of the
+    device, also when it is not connected, says it."""
+    from datetime import timedelta
+
+    from openexpress import known_devices, tile_facts
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui import words
+
+    _copied_gps()
+    _gps_on_the_device(device_root)
+    items = _offered_now(device_root, GPS_ENTRY)
+    assert words.update_state_text("not-installed") == NOT_INSTALLED_ROW
+    device = parse((device_root / "GARMIN" / "GarminDevice.xml").read_bytes())
+    tile_facts.note_update_check(device, updates.pending(items), updates.staged(items),
+                                 updates.not_installed(items))
+    entry = known_devices.load()[UNIT]
+    assert entry.update_found is None and not entry.update_check.ready
+    assert entry.update_check.not_installed
+    now = datetime.fromtimestamp(entry.update_check.at) + timedelta(minutes=1)
+    assert words.remembered_update_text(entry, now) == words.checked_text(
+        NOT_INSTALLED_ROW, entry.update_check.at, now)
+
+
+def test_cli_says_the_device_did_not_install_it(device_root, monkeypatch, capsys):
+    _copied_gps()
+    _gps_on_the_device(device_root)
+    answer = lower_keys({"updates": [GPS_ENTRY]})
+    monkeypatch.setattr(GarminClient, "software_updates",
+                        lambda self, raw, include_reinstalls=False: answer)
+    assert main(["--path", str(device_root), "updates"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[1:4] == [
+        "Copied, not installed by the device:",
+        "  006-B0001-00          6.70  Recommended       12 B  Test GPS Software",
+        (f"      Copied {COPIED_WHEN}; the device was unplugged since and has not installed it "
+         "(the file is still on it).")]
+    assert not any("to install it" in line.lower() for line in out)
+    assert main(["--path", str(device_root), "updates", "--install", "all"]) == 0
+    assert "To install:" not in capsys.readouterr().out
+
+
+def test_the_words_of_the_row_in_polish():
+    from openexpress import i18n
+    from openexpress.gui import words
+
+    i18n.setup("pl")
+    try:
+        assert words.update_state_text("not-installed") == (
+            "Aktualizacja skopiowana, urządzenie jej nie zainstalowało")
+    finally:
+        i18n.setup("en")
+
+
 def test_a_check_that_keeps_nothing_forgets_nothing(device_root):
     """`openexpress status --online` keeps nothing: what the server no longer offers is not
     forgotten by its check."""
@@ -802,7 +947,7 @@ def _updates_page(items, beta=False, drive=False, device=None):
             description="Test watch", software_version_str="23.39", unit_id=None),
             mass_storage=drive),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
-        ejected=[], _set_update_state=lambda new, staged=(): None)
+        ejected=[], _set_update_state=lambda new, staged=(), not_installed=(): None)
     win.confirm_update = win.asked.append
     win.eject_device = lambda s, button=None: win.ejected.append(s)
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
@@ -1536,7 +1681,7 @@ def test_quiet_check_of_the_device_page_knows_a_waiting_update(offered):
     states, asked = [], []
     win = stand_in(
         session=s, _update_check_session=None, update_state=None,
-        _set_update_state=lambda new, staged=(): states.append(
+        _set_update_state=lambda new, staged=(), not_installed=(): states.append(
             ([u.part_number for u in new], [u.part_number for u in staged])),
         in_background=lambda work, done, failed: done(work()))
     MainWindow._check_updates_quietly(win)
@@ -2136,7 +2281,7 @@ def test_after_copying_components_the_page_says_ready_not_up_to_date(monkeypatch
     items = _items(FONT_ENTRY, MAP_DATA)
     win, _status, _groups, buttons = _updates_page(items, drive=drive)
     states = []
-    win._set_update_state = lambda new, staged=(): states.append(
+    win._set_update_state = lambda new, staged=(), not_installed=(): states.append(
         ([u.part_number for u in new], [u.part_number for u in staged]))
     monkeypatch.setattr(updates, "install", lambda chosen, storage, **kw: InstallReport(
         written=list(chosen)))

@@ -1014,7 +1014,7 @@ def test_eject_spins_its_button(monkeypatch, delay, text_shown, in_the_window):
 
     dialogs = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
-    in_the_window("eject", lambda storage: time.sleep(delay))
+    in_the_window("eject", lambda storage, **told: time.sleep(delay))
     s = types.SimpleNamespace(storage=object())
     win = _task_window(session=s)
     button = Gtk.Button(label="Eject")

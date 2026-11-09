@@ -169,6 +169,15 @@ connected device; no login is needed.
   no more.
 - On a USB drive each file written is read back from the drive, not from the computer's cache,
   and compared with the server's checksum before the copy counts.
+- After an eject with an update waiting, the window says to unplug the cable and leave the device
+  unplugged, so it can install the update.
+- An update copied to a device connected as a USB drive that the device has not installed,
+  although openExpress saw it unplugged after the eject, shows as **Update Not Installed by the
+  Device**: when it was copied, and whether its file is still on the device as copied or the
+  device changed it. Nothing asks to eject it again; **Reinstall** is offered only when the
+  device changed the file. Without such an unplugging seen (openExpress was closed when the
+  cable went out, or the watch only switched to its Garmin USB mode on the cable), the update
+  still waits for the device.
 - A device that connects as a USB drive is ejected first: after the copy the window ejects it by
   itself, as `openexpress updates --install` does, and says that the cable can be unplugged only
   once that has worked; when the system refuses (a program still uses the drive), it says why

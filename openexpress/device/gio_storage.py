@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1246,7 +1247,29 @@ def mount(dev: FoundDevice, timeout_s: float | None = None) -> None:
 # not open it again, also when something mounts it again.
 
 EJECT_TIMEOUT_S = 60.0
-_ejected: list[GarminUsb] = []  # where on USB the drives ejected by us are
+
+
+@dataclass
+class _Ejected:
+    """A drive ejected by openExpress that is still plugged in, as far as is known. Its place on
+    USB (the folder of the device in /sys, its port) stays while the device comes back under
+    another device number: when a watch switches to its Garmin USB mode (091e:0003) on the
+    cable, and when it comes back. Only an unplugging ends it: its place left empty for
+    USB_GAP_S, or another device number there while it was watched without a break and was
+    not seen in its Garmin USB mode, or the drive itself at another port while its place is
+    empty (plugged in elsewhere, at once)."""
+
+    usb: GarminUsb
+    place: str | None  # None: not known; then it ends when its device number is gone
+    update_waits: bool = False  # an update copied to it waits for the device to install it
+    on_unplugged: Callable[[], None] | None = None  # told once, when it is seen unplugged
+    looked: float | None = None  # when its place was last looked at
+    empty_since: float | None = None
+    garmin_usb_mode: bool = False  # 091e:0003 seen at its place since it was ejected
+    watched: bool = True  # looked at, no two looks more than USB_GAP_S apart
+
+
+_ejected: list[_Ejected] = []  # the drives ejected by us, while they are plugged in
 _ejected_lock = threading.Lock()
 
 
@@ -1254,11 +1277,15 @@ class DriveNotMounted(DeviceError):
     """The drive to eject is not mounted any more: ejected or unmounted meanwhile."""
 
 
-def eject(storage) -> None:
+def eject(storage, update_waits: bool = False,
+          on_unplugged: Callable[[], None] | None = None) -> None:
     """Eject the drive of a Garmin device in mass storage mode (`storage`: a UmsStorage): the
     system writes out what it still holds, unmounts the drive and tells the device that it
     may go. The drive is then not opened again until it is unplugged (ejected_by_us).
-    Raises DeviceError when the system refuses, e.g. while a program uses the drive."""
+    `update_waits`: an update copied to it waits for the device (what the window says while
+    it is plugged in); `on_unplugged`: called once it is seen unplugged (only while this
+    program runs and looks at USB). Raises DeviceError when the system refuses, e.g. while a
+    program uses the drive."""
     key = _key(storage.device_uri)
     found = next((m for m in Gio.VolumeMonitor.get().get_mounts()
                   if m.get_root() is not None and _key(m.get_root().get_uri()) == key), None)
@@ -1266,7 +1293,10 @@ def eject(storage) -> None:
         raise DriveNotMounted(_("The drive is not mounted any more. If it was ejected, you can "
                                 "unplug the cable."))
     what = _("Cannot eject the device")
-    note_drive_place(getattr(storage, "usb", None))  # a watch may go into Garmin USB mode
+    usb = getattr(storage, "usb", None)
+    # Its place before it goes: a watch may switch to its Garmin USB mode at once.
+    place = _place_of(usb)
+    note_drive_place(usb)  # a watch may go into Garmin USB mode
     if found.can_eject():
         _wait(lambda done, cancellable: found.eject_with_operation(
             Gio.MountUnmountFlags.NONE, None, cancellable,
@@ -1277,41 +1307,150 @@ def eject(storage) -> None:
             Gio.MountUnmountFlags.NONE, None, cancellable,
             lambda m, res: done(lambda: m.unmount_with_operation_finish(res))),
             EJECT_TIMEOUT_S, what, "eject (unmount)")
-    usb = getattr(storage, "usb", None)
     if usb is not None:
-        with _ejected_lock:
-            _ejected.append(usb)
+        note_ejected(usb, place, update_waits, on_unplugged)
     log.info("device: ejected (USB %s)", getattr(storage, "usb_id", None) or "?")
 
 
-def _forget_unplugged() -> None:
-    """The drives ejected by us that left their place on USB are ours no more."""
+def note_ejected(usb: GarminUsb, place: str | None = None, update_waits: bool = False,
+                 on_unplugged: Callable[[], None] | None = None) -> None:
+    """Keep that openExpress ejected the drive of `usb`, at `place` (None: its place now)."""
+    entry = _Ejected(usb, place if place is not None else _place_of(usb), update_waits,
+                     on_unplugged)
     with _ejected_lock:
-        for usb in [u for u in _ejected if not usb_still_there(u)]:
-            _ejected.remove(usb)
-            log.info("device: the drive ejected by openExpress was unplugged (USB %s)",
-                     usb.usb_id)
+        _ejected.append(entry)
 
 
-def ejected_by_us(usb: GarminUsb | None) -> bool:
+def _at_place(place: str, vendor: str = GARMIN_VID) -> tuple[str, int | None] | None:
+    """(USB product ID, device number) of the Garmin device at this place on USB, or of one of
+    `vendor` (the drive named in TEST_DRIVE_ENV); None when nothing of theirs is there. Only
+    /sys is read."""
+    base = SYSFS_USB / place
+    try:
+        if (base / "idVendor").read_text().strip().lower() not in (GARMIN_VID, vendor.lower()):
+            return None
+        product = (base / "idProduct").read_text().strip().lower()
+    except OSError:
+        return None
+    try:
+        devnum = int((base / "devnum").read_text())
+    except (OSError, ValueError):
+        devnum = None
+    return product, devnum
+
+
+def _forget_unplugged(clock=time.monotonic) -> None:
+    """The drives ejected by us that were unplugged are ours no more; each told once
+    (on_unplugged) and said in the log. A watch that only switched to its Garmin USB mode on
+    the cable, or came back from it, was not unplugged."""
+    now = clock()
+    told = []
+    with _ejected_lock:
+        for entry in list(_ejected):
+            gone, unplugged, said = _look_at(entry, now)
+            if gone:
+                _ejected.remove(entry)
+                log.info("device: the drive ejected by openExpress %s (USB %s)", said,
+                         entry.usb.usb_id)
+                if unplugged and entry.on_unplugged is not None:
+                    told.append(entry.on_unplugged)
+    for tell in told:  # outside the lock: it may write a file
+        try:
+            tell()
+        except Exception as e:  # noqa: BLE001 - optional; only for what the window says later
+            log.warning("device: an unplugging not kept (%s)", type(e).__name__)
+
+
+def _look_at(entry: _Ejected, now: float) -> tuple[bool, bool, str]:
+    """(whether the ejected drive is gone, whether it was unplugged, what to say of it)."""
+    if entry.place is None:
+        # Without its place only its device number tells, which a switch to the Garmin USB
+        # mode changes too: gone, but no unplugging can be told.
+        if usb_still_there(entry.usb):
+            return False, False, ""
+        return True, False, "is not at its place on USB any more"
+    if entry.looked is not None and now - entry.looked > USB_GAP_S:
+        entry.watched, entry.empty_since = False, None  # a break: what happened is not known
+    entry.looked = now
+    there = _at_place(entry.place, entry.usb.vendor)
+    if there is None:
+        if _at_another_port(entry):
+            # Moved to another port: the cable went out, nothing to wait for.
+            return True, True, "was unplugged and plugged in at another port"
+        if entry.empty_since is None:
+            entry.empty_since = now
+            return False, False, ""
+        if now - entry.empty_since >= USB_GAP_S:
+            return True, True, "was unplugged"
+        return False, False, ""
+    entry.empty_since = None
+    product, devnum = there
+    if product == STARTING_PRODUCT:
+        entry.garmin_usb_mode = True  # on the cable, in its Garmin USB mode
+        return False, False, ""
+    if devnum == entry.usb.address and (entry.usb.product is None
+                                        or product == entry.usb.product.lower()):
+        return False, False, ""  # still there, ejected
+    if entry.watched and not entry.garmin_usb_mode:
+        return True, True, "was unplugged and plugged in again"
+    return True, False, "is back on USB, not seen unplugged"
+
+
+def _at_another_port(entry: _Ejected) -> bool:
+    """Whether the ejected drive itself is on USB at another place than its own: the same
+    vendor and product, and the same USB serial (or none, for a device that gives none), so
+    that another device of its model is not taken for it. Only /sys is read."""
+    usb = entry.usb
+    if usb.product is None:
+        return False
+    try:
+        entries = sorted(SYSFS_USB.iterdir())
+    except OSError:
+        return False
+    for base in entries:
+        if base.name == entry.place:
+            continue
+        try:
+            if ((base / "idVendor").read_text().strip().lower() == usb.vendor.lower()
+                    and (base / "idProduct").read_text().strip().lower() == usb.product.lower()
+                    and _usb_serial(base) == usb.serial):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def ejected_by_us(usb: GarminUsb | None, clock=time.monotonic) -> bool:
     """Whether this drive was ejected by openExpress and is still at its place on USB: then it
     is neither opened nor listed, and its mount is ignored, until it is unplugged."""
     if usb is None:
         return False
-    _forget_unplugged()
+    _forget_unplugged(clock)
     with _ejected_lock:
-        return any(u == usb and (u.bus, u.address) == (usb.bus, usb.address) for u in _ejected)
+        return any(e.usb == usb and (e.usb.bus, e.usb.address) == (usb.bus, usb.address)
+                   for e in _ejected)
 
 
-def ejected_drive_waits() -> bool:
+def ejected_drive_waits(clock=time.monotonic) -> bool:
     """Whether a drive ejected by openExpress is still plugged in: the cable can go out."""
-    _forget_unplugged()
+    _forget_unplugged(clock)
     with _ejected_lock:
         return bool(_ejected)
 
 
-def ejected_text() -> str:
-    """A drive ejected by openExpress: the cable can go out now (and only now)."""
+def ejected_update_waits() -> bool:
+    """Whether a drive ejected by openExpress with an update copied to it is still plugged
+    in: the device installs it only once it is unplugged."""
+    with _ejected_lock:
+        return any(e.update_waits for e in _ejected)
+
+
+def ejected_text(update_waits: bool = False) -> str:
+    """A drive ejected by openExpress: the cable can go out now (and only now); with an update
+    copied to it, that it is to stay unplugged."""
+    if update_waits:
+        return _("The device is ejected. Unplug the cable and leave the device unplugged so it "
+                 "can install the update.")
     return _("The device is ejected. You can unplug the cable.")
 
 
@@ -1655,6 +1794,7 @@ def usb_state(clock=time.monotonic) -> str:
     (_drive_places): in Garmin USB mode after it was ejected."""
     devices = _garmin_at_places()
     _note_places(devices, clock())
+    _forget_unplugged(clock)  # the drives ejected by us, looked at with the rest
     if not devices:
         return ABSENT
     unsupported = _unsupported_places(devices)
@@ -1678,9 +1818,13 @@ def mass_storage_text() -> str:
              "music are not supported in this mode.")
 
 
-def drive_off_text() -> str:
+def drive_off_text(update_waits: bool = False) -> str:
     """A watch back on USB as 091e:0003 after its drive was ejected (DRIVE_OFF): the window
-    and the command line."""
+    and the command line. `update_waits`: an update copied to it waits for the device, which
+    installs it only while it stays unplugged."""
+    if update_waits:
+        return _("After it was ejected, the watch switched to its Garmin USB mode. Unplug the "
+                 "cable and leave the device unplugged so it can install the update.")
     return _("After it was ejected, the watch switched to its Garmin USB mode, which "
              "openExpress does not use. Unplug the cable and plug it in again.")
 
@@ -1775,7 +1919,7 @@ def not_ready_text(state: str) -> str:
     if state == MASS_STORAGE:
         return drive_notice_text()
     if state == DRIVE_OFF:
-        return drive_off_text()
+        return drive_off_text(ejected_update_waits())
     if state == UNSUPPORTED:
         return unsupported_text(window=False)
     return _("No Garmin device (MTP) found. Connect the device with a USB cable "

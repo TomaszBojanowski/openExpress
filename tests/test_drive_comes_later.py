@@ -74,15 +74,9 @@ def test_a_device_whose_volume_has_no_medium_yet_waits_too(drives, monkeypatch):
 def test_a_drive_ejected_by_openexpress_does_not_wait(drives, monkeypatch):
     volume, _key = _drive(drives, monkeypatch)
     _monitor(monkeypatch, volumes=[volume])
-    usb = gio_storage.GarminUsb(FR55, 1, 12)
-    with gio_storage._ejected_lock:
-        gio_storage._ejected.append(usb)
-    try:
-        assert gio_storage.find_ums_devices() == []
-        assert gio_storage.drives_without_a_volume() == set()
-    finally:
-        with gio_storage._ejected_lock:
-            gio_storage._ejected.remove(usb)
+    gio_storage.note_ejected(gio_storage.GarminUsb(FR55, 1, 12))
+    assert gio_storage.find_ums_devices() == []
+    assert gio_storage.drives_without_a_volume() == set()
 
 
 # --- the window hears the volumes ------------------------------------------------------------------
@@ -154,18 +148,11 @@ def test_these_volumes_bring_nothing(drives, monkeypatch, what):
                           else "091e")
     if what == "mounted":
         volume.mounted_at = object()
-    usb = gio_storage.GarminUsb(FR55, 1, 12)
     win, asked = _window(monkeypatch)
-    with gio_storage._ejected_lock:
-        if what == "ejected by openExpress":
-            gio_storage._ejected.append(usb)
-    try:
-        win._on_volume_added(None, volume)
-        win._on_volume_changed(None, volume)
-    finally:
-        with gio_storage._ejected_lock:
-            if usb in gio_storage._ejected:
-                gio_storage._ejected.remove(usb)
+    if what == "ejected by openExpress":
+        gio_storage.note_ejected(gio_storage.GarminUsb(FR55, 1, 12))
+    win._on_volume_added(None, volume)
+    win._on_volume_changed(None, volume)
     assert asked == []
 
 

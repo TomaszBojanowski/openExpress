@@ -847,6 +847,9 @@ def _status_updates(entry, software: str, now) -> str:
         if check is not None and check.ready:
             return words.checked_text(_("an update is ready: unplug the device to install it"),
                                       check.at, now)
+        if check is not None and check.not_installed:
+            return words.checked_text(_("update copied, not installed by the device"),
+                                      check.at, now)
         if check is not None and entry.update_found is None:
             # TRANSLATORS: after "Device software:" in openexpress status
             return words.checked_text(_("up to date"), check.at, now)
@@ -878,6 +881,10 @@ def _status_updates_online(client, s) -> str:
         return _("an update is ready: unplug the device to install it")
     if new:
         return words.updates_available(len(new), new[0] if len(new) == 1 else None)
+    if upd.not_installed(items):
+        # TRANSLATORS: after "Device software:" in openexpress status: an update openExpress
+        # copied is on the device, which was unplugged since and has not installed it
+        return _("update copied, not installed by the device")
     # TRANSLATORS: after "Device software:" in openexpress status
     return _("up to date")
 
@@ -1433,8 +1440,27 @@ def _eject_drive(st, files: bool = False) -> bool:
         _error(_("The device was not ejected: {error}").format(error=e))
         _error(gio_storage.not_ejected_text(window=False, files=files))
         return False
-    print(gio_storage.ejected_text())
+    print(gio_storage.ejected_text(update_waits=not files))
     return True
+
+
+def _print_not_installed(untaken) -> None:
+    """Updates copied, and not installed by the device although it was unplugged since
+    (updates.not_installed): what became of each; nothing to eject or to unplug for them."""
+    if not untaken:
+        return
+    # TRANSLATORS: `openexpress updates`: heading above the updates openExpress copied that the
+    # device has not installed although it was unplugged since
+    print(_("Copied, not installed by the device:"))
+    for u in untaken:
+        print("  " + _update_line(u))
+        when = full_time(datetime.fromtimestamp(u.copied_at))
+        if u.changed_on_device:
+            print("      " + _("Copied {when}; the device was unplugged since, changed or refused "
+                               "the file and has not installed it.").format(when=when))
+        else:
+            print("      " + _("Copied {when}; the device was unplugged since and has not "
+                               "installed it (the file is still on it).").format(when=when))
 
 
 def _print_present(present, verbose: bool) -> None:
@@ -1459,8 +1485,11 @@ def cmd_updates(args) -> int:
         items = [u for u in items if not u.is_reinstall]
     # A system update that is on the device already waits for the device to install it.
     staged = [] if args.reinstalls else upd.staged(items)
+    # Copied, and not installed by the device although it was unplugged since: nothing waits.
+    untaken = [] if args.reinstalls else upd.not_installed(items)
     # Offered by the server although the device has the very same file: not an update.
-    present = [u for u in items if u.on_device and not any(u is s for s in staged)]
+    present = [u for u in items if u.on_device and not any(u is s for s in staged)
+               and not any(u is n for n in untaken)]
     # TRANSLATORS: first line of `openexpress updates`: {device} the device's name, {version} its
     # software version
     print(_("{device}, software {version}").format(
@@ -1468,13 +1497,15 @@ def cmd_updates(args) -> int:
     if upd.beta_offered(resp):
         print(_(upd.BETA_OFFERED))
     if not args.install:
-        listed = items if args.reinstalls else [u for u in items if not u.on_device]
+        listed = items if args.reinstalls else [u for u in items if not u.on_device
+                                                and not any(u is n for n in untaken)]
         if not listed:
             if staged:
                 _print_staged(staged, st)  # not up to date: the update waits for the device
-            else:
+            elif not untaken:
                 print(_("Software is up to date.") if not args.reinstalls
                       else _("The server returned no items."))
+            _print_not_installed(untaken)
             _print_present(present, args.verbose)
             return 0
         visible = [u for u in listed if not u.is_metadata or args.verbose]
@@ -1495,6 +1526,7 @@ def cmd_updates(args) -> int:
         if not args.reinstalls:
             _print_present(present, args.verbose)
             _print_staged(staged, st)
+            _print_not_installed(untaken)
         # TRANSLATORS: `openexpress updates`, under the list: {command} is the command that installs
         # an update (not translated)
         print("\n" + _("Install: {command}").format(

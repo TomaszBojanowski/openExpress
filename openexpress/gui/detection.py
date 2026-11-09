@@ -38,6 +38,7 @@ from openexpress.device.gio_storage import (
     ejected_by_us,
     ejected_drive_waits,
     ejected_text,
+    ejected_update_waits,
     find_all_devices,
     garmin_products_on_usb,
     garmin_ums,
@@ -576,7 +577,7 @@ class DeviceDetection:
             return _("Device Starting…"), f"{text} {_(REPLUG_HINT)}", True
         if state == DRIVE_OFF:
             # TRANSLATORS: a device connected as a USB drive, not over MTP
-            return _("USB Drive"), drive_off_text(), False
+            return _("USB Drive"), drive_off_text(ejected_update_waits()), False
         if state == STARTING and STARTING_REPLUG_HINT_S <= waited_s < WAIT_FOR_DEVICE_S:
             # Still in its transitional mode: one sentence becomes two, as above.
             text = _("This takes a moment after the cable is plugged in.")
@@ -590,7 +591,7 @@ class DeviceDetection:
         if state == MASS_STORAGE:
             if ejected_drive_waits():
                 # TRANSLATORS: title while a drive ejected by openExpress is still plugged in
-                return _("Device Ejected"), ejected_text(), False
+                return _("Device Ejected"), ejected_text(ejected_update_waits()), False
             # The window opens such a drive once the system mounts it, so with none open it
             # is not mounted - or, in the Flatpak, mounted where the sandbox cannot see.
             text = drive_notice_text()

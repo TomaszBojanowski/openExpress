@@ -89,7 +89,9 @@ def test_done_after_the_drive_was_ejected(told, in_the_window, files, words):
     from openexpress.device.gio_storage import ejected_text
     from openexpress.gui.app import MainWindow
 
-    in_the_window("eject", lambda storage: None)
+    in_the_window("eject", lambda storage, **told: None)
     win = _window(2, drive=True)
     MainWindow.eject_device(win, win.session, files=files)
-    assert told == [("ejected", "Done", ejected_text() + ("\n\n" + words if words else ""))]
+    # After an update the device installs it only while it stays unplugged.
+    assert told == [("ejected", "Done",
+                     ejected_text(update_waits=not files) + ("\n\n" + words if words else ""))]

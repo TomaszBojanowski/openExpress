@@ -143,6 +143,7 @@ OTHER_UNIT = 3000000099
 MAP_GROUPING_UPDATE = types.SimpleNamespace(
     title="Map Region Grouping file", version="2.31", is_system=False,
     installs_when_disconnected=False, is_reinstall=False, is_metadata=False, on_device=False,
+    copied_at=None, changed_on_device=False, unplugged_since_copy=False,
     device_path="Garmin/SQL/MapRegionGrouping.db", key="006-D9267-00.2.31")
 
 

@@ -54,13 +54,45 @@ def copied_update_text(u) -> str | None:
     return _("Copied {when}, check on the device that it is installed").format(when=when)
 
 
+def not_installed_text(u, device) -> str:
+    """Below an update the device has not installed although it was unplugged since openExpress
+    copied it (updates.not_installed): when it was copied, what the device did with the file,
+    and the version it still reports, when that is known (versions_text)."""
+    from openexpress import updates as upd
+
+    when = full_time(datetime.fromtimestamp(u.copied_at))
+    old = u.installed_version or upd.the_device_version(u, device)
+    if u.changed_on_device:
+        if old:
+            # TRANSLATORS: below an update the device has not installed although it was unplugged
+            # since: {when} when it was copied, {old} the version the device still reports
+            return _("Copied {when}. The device was unplugged since, changed or refused the "
+                     "file and still reports version {old}.").format(when=when, old=old)
+        return _("Copied {when}. The device was unplugged since, changed or refused the file "
+                 "and has not installed it.").format(when=when)
+    if old:
+        return _("Copied {when}. The device was unplugged since and still reports version "
+                 "{old}; the file is still on it, unchanged.").format(when=when, old=old)
+    return _("Copied {when}. The device was unplugged since and has not installed it; the "
+             "file is still on it, unchanged.").format(when=when)
+
+
+def not_installed_advice() -> str:
+    """What to do about an update the device has not installed (not_installed_text)."""
+    # TRANSLATORS: "Settings → System → About" is the menu of the device; use the words of the
+    # Garmin devices in your language
+    return _("Check the version on the device (Settings → System → About). Ejecting "
+             "it again does not help; a device report helps find out why.")
+
+
 def update_state_text(state: str | None, count: int = 0, only=None,
                       mass_storage: bool = False, waiting: int = 1) -> str:
     """The state of the device's updates in one text, for the row "Device Software" and the
     top of the Updates page: "available" (updates_available), "ready" (`waiting` copied,
     waiting for the device to be disconnected, or ejected: `mass_storage`; it wins over the
-    `count` still to install, told after it), "current", "failed", or None (not known
-    yet)."""
+    `count` still to install, told after it), "not-installed" (copied, not installed by the
+    device although it was unplugged since: updates.not_installed), "current", "failed", or
+    None (not known yet)."""
     if state == "available":
         return updates_available(count, only)
     if state == "ready":
@@ -77,6 +109,10 @@ def update_state_text(state: str | None, count: int = 0, only=None,
     if state == "current":
         # TRANSLATORS: the state of the updates, without a full stop
         return _("Software is up to date")
+    if state == "not-installed":
+        # TRANSLATORS: the state of the updates: an update openExpress copied is on the device,
+        # which was unplugged since and has not installed it; without a full stop
+        return _("Update copied, not installed by the device")
     if state == "failed":
         return _("Could not check for updates")
     return _("Checking…")
@@ -117,6 +153,8 @@ def remembered_update_text(entry, now: datetime | None = None) -> str:
         if check.ready:
             # The device installs it once unplugged, which it has been since.
             return connect
+        if check.not_installed:
+            return checked_text(update_state_text("not-installed"), check.at, now)
         if entry.update_found is None:
             return checked_text(_("Software is up to date"), check.at, now)
     last = entry.update_check.at if entry.update_check is not None else entry.update_found

@@ -115,9 +115,15 @@ class UpdateCheck:
     at: float
     software_version: str
     ready: bool = False
+    # An update copied to it that it has not installed, although it was unplugged since
+    # (updates.not_installed); nothing waits for it.
+    not_installed: bool = False
 
     def to_json(self) -> dict:
-        return {"at": self.at, "software_version": self.software_version, "ready": self.ready}
+        kept = {"at": self.at, "software_version": self.software_version, "ready": self.ready}
+        if self.not_installed:
+            kept["not_installed"] = True  # written only then: older versions read the rest
+        return kept
 
     @classmethod
     def from_json(cls, value) -> UpdateCheck | None:
@@ -125,10 +131,12 @@ class UpdateCheck:
         if not isinstance(value, dict):
             return None
         at, software, ready = (value.get(key) for key in ("at", "software_version", "ready"))
+        not_installed = value.get("not_installed", False)
         if (isinstance(at, bool) or not isinstance(at, int | float)
-                or not isinstance(software, str) or not isinstance(ready, bool)):
+                or not isinstance(software, str) or not isinstance(ready, bool)
+                or not isinstance(not_installed, bool)):
             return None
-        return cls(float(at), software, ready)
+        return cls(float(at), software, ready, not_installed)
 
 
 @dataclass(frozen=True)
@@ -263,6 +271,10 @@ class KnownDevice:
     # last check, each by its key (part number and version) with when it was copied: one the
     # server offers again after it was copied was not installed by the device.
     copied_updates: tuple[tuple[str, float], ...] = ()
+    # When openExpress last saw it unplugged after it ejected its drive (gio_storage.eject:
+    # its place on USB left empty, or another device number there while it was watched); a
+    # copied update offered again after that was not installed by the device. None: not seen.
+    unplugged_at: float | None = None
 
     @property
     def shown_name(self) -> str:
@@ -394,7 +406,7 @@ def set_image_url(unit_id: int, url) -> bool:
 
 def set_update_found(unit_id: int, found: bool, now: float | None = None,
                      summary: UpdateSummary | None = None, software_version: str | None = None,
-                     ready: bool = False) -> bool:
+                     ready: bool = False, not_installed: bool = False) -> bool:
     """Keep what the window's check of updates found for a device remembered; whether the
     entry changed. `found`: the time of this check is kept, with `summary`; else both go.
     With `software_version` (the device's now), the check itself is kept too (UpdateCheck;
@@ -402,8 +414,8 @@ def set_update_found(unit_id: int, found: bool, now: float | None = None,
     entry."""
     def change(entry: KnownDevice) -> KnownDevice:
         at = time.time() if now is None else now
-        check = (UpdateCheck(at, software_version, ready) if software_version is not None
-                 else entry.update_check)
+        check = (UpdateCheck(at, software_version, ready, not_installed)
+                 if software_version is not None else entry.update_check)
         return replace(entry, update_found=at if found else None,
                        update_summary=summary if found else None, update_check=check)
 
@@ -412,9 +424,11 @@ def set_update_found(unit_id: int, found: bool, now: float | None = None,
         return False
     before, entry = changed
     said = (before.update_found is not None,
-            before.update_check is not None and before.update_check.ready)
+            before.update_check is not None and before.update_check.ready,
+            before.update_check is not None and before.update_check.not_installed)
     check = entry.update_check
-    if not found and said == (False, check is not None and check.ready):
+    if not found and said == (False, check is not None and check.ready,
+                              check is not None and check.not_installed):
         return True  # only the time of the check is new: nothing to say
     if found and ready:
         log.info("devices: an update for %s found, another copied already", entry.part_number)
@@ -423,6 +437,8 @@ def set_update_found(unit_id: int, found: bool, now: float | None = None,
     elif ready:
         log.info("devices: an update for %s copied already, it waits to be installed",
                  entry.part_number)
+    elif not_installed:
+        log.info("devices: an update copied to %s was not installed by it", entry.part_number)
     else:
         log.info("devices: no update waits for %s", entry.part_number)
     return True
@@ -444,6 +460,18 @@ def note_copied(unit_id: int, keys: list[str], now: float | None = None) -> bool
         return False
     log.info("devices: %d update%s copied to %s kept", len(kept), "" if len(kept) == 1 else "s",
              changed[1].part_number)
+    return True
+
+
+def note_unplugged(unit_id: int, now: float | None = None) -> bool:
+    """Keep that the device was seen unplugged now, after openExpress ejected its drive (the
+    updates copied before had their chance to be installed); whether the entry changed. A
+    device not remembered gets no entry."""
+    at = time.time() if now is None else now
+    changed = _update(unit_id, lambda entry: replace(entry, unplugged_at=at))
+    if changed is None:
+        return False
+    log.info("devices: %s seen unplugged after its drive was ejected", changed[1].part_number)
     return True
 
 
@@ -621,7 +649,8 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                 usb_serial=_identifier(value.get("usb_serial")),
                 volume_uuid=_identifier(value.get("volume_uuid")),
                 model_name=garmin_name(value.get("model_name")),
-                copied_updates=_copied(value.get("copied_updates")))
+                copied_updates=_copied(value.get("copied_updates")),
+                unplugged_at=_time(value.get("unplugged_at")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
@@ -657,6 +686,14 @@ def _copied(value) -> tuple[tuple[str, float], ...]:
                         and not isinstance(at, bool) and 0 <= at <= LAST_TIME))
 
 
+def _time(value) -> float | None:
+    """A time as written: a number that is a date (finite, in range); anything else is not
+    kept."""
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 <= value <= LAST_TIME:
+        return None
+    return float(value)
+
+
 def _product(value) -> str | None:
     """A USB product ID as written: four hexadecimal digits; anything else is not kept."""
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{4}", value) else None
@@ -681,7 +718,7 @@ def _write(known: dict[int, KnownDevice]) -> None:
         for name in _FACT_FIELDS:
             del fields[name]
         for optional in ("first_seen", "category", "image_url", "usb_product", "usb_serial",
-                         "volume_uuid", "model_name"):
+                         "volume_uuid", "model_name", "unplugged_at"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
         del fields["copied_updates"]

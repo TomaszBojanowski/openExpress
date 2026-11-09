@@ -133,6 +133,9 @@ class SoftwareUpdate:
     # The file at its place has the size offered but other bytes (mark_present): after a copy,
     # the device changed it, or refused it.
     changed_on_device: bool = False
+    # The device was seen unplugged after openExpress copied it (mark_copied: the device's
+    # unplugged_at after copied_at): it had its chance to install it.
+    unplugged_since_copy: bool = False
 
     @property
     def key(self) -> str:
@@ -297,14 +300,30 @@ def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     openExpress copied (copied_at). Two facts, no guess: the server still offers the update
     (not as a reinstall), so the device has not installed it, and the very same file (size
     and MD5) is on the device. The file of a component there without such a copy is no update
-    (mark_present)."""
+    (mark_present). One the device had its chance to install is not_installed instead."""
     return [u for u in updates if u.on_device and not u.is_reinstall and not u.is_metadata
-            and (u.installs_when_disconnected or u.copied_at is not None)]
+            and (u.installs_when_disconnected or u.copied_at is not None)
+            and not u.unplugged_since_copy]
 
 
 def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
-    """The real updates: not reinstalls, not metadata, not on the device already."""
-    return [u for u in updates if not u.is_reinstall and not u.is_metadata and not u.on_device]
+    """The real updates: not reinstalls, not metadata, not on the device already, and not
+    copied before and not installed by the device (not_installed)."""
+    return [u for u in updates if not u.is_reinstall and not u.is_metadata and not u.on_device
+            and not _not_installed(u)]
+
+
+def not_installed(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """Updates openExpress copied that the device has not installed although it was unplugged
+    since (seen: unplugged_since_copy): the server still offers them, not as reinstalls, and
+    the file at their place is as copied or changed in place by the device. Nothing waits for
+    them: copying the same file again changes nothing."""
+    return [u for u in updates if _not_installed(u)]
+
+
+def _not_installed(u: SoftwareUpdate) -> bool:
+    return (u.copied_at is not None and u.unplugged_since_copy and not u.is_reinstall
+            and not u.is_metadata and (u.on_device or u.changed_on_device))
 
 
 def offered(storage: Storage, response: dict, device,
@@ -331,6 +350,7 @@ def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
     try:
         entry = known_devices.load().get(unit_id)
         copied = dict(entry.copied_updates) if entry is not None else {}
+        unplugged = entry.unplugged_at if entry is not None else None
         if forget_installed and set(copied) - offered_now:
             known_devices.keep_copied(unit_id, offered_now)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
@@ -341,9 +361,15 @@ def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
         if at is None or u.key not in offered_now:
             continue
         u.copied_at = at
-        if not u.on_device:
+        u.unplugged_since_copy = unplugged is not None and unplugged > at
+        when = datetime.fromtimestamp(at).isoformat(timespec="minutes")
+        if _not_installed(u):
+            log.info("software update: %s %s copied %s, on the device after an unplugging "
+                     "(%s): not installed by the device", u.part_number, u.version, when,
+                     MATCHES if u.on_device else "other bytes")
+        elif not u.on_device:
             log.info("software update: %s %s copied %s is offered again%s", u.part_number,
-                     u.version, datetime.fromtimestamp(at).isoformat(timespec="minutes"),
+                     u.version, when,
                      "; the file at its place has other bytes of the same size: the device "
                      "changed or refused it" if u.changed_on_device else "")
     return updates

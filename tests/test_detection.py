@@ -2919,6 +2919,9 @@ def test_an_update_written_to_a_drive_is_on_the_disk_before_it_counts(drive_wind
 # After an update was saved on a Garmin drive: the drive is ejected at once, before the cable
 # may go out; only then is that said.
 EJECTED_TEXT = "The device is ejected. You can unplug the cable."
+# With an update copied to it: the device installs it only while it stays unplugged.
+EJECTED_UPDATE_TEXT = ("The device is ejected. Unplug the cable and leave the device unplugged "
+                       "so it can install the update.")
 NOT_EJECTED_TEXT = ("Do not unplug the cable yet: the device may not see the update. Close any "
                     "program that uses the drive and try again, or eject it in the file manager.")
 NOT_EJECTED_CLI_TEXT = ("Do not unplug the cable yet: the device may not see the update. Close "
@@ -2971,8 +2974,9 @@ def installed_on_a_drive(drive_window, monkeypatch, segment="fitness", refusal=N
 
 @pytest.mark.needs_display
 @pytest.mark.parametrize("segment, notes", [
-    ("bikeaccessory", [("Done", EJECTED_TEXT), ("Finish the Update", BIKE_ACCESSORY_TEXT)]),
-    ("fitness", [("Done", EJECTED_TEXT)]),
+    ("bikeaccessory", [("Done", EJECTED_UPDATE_TEXT),
+                       ("Finish the Update", BIKE_ACCESSORY_TEXT)]),
+    ("fitness", [("Done", EJECTED_UPDATE_TEXT)]),
 ])
 def test_window_installs_an_update_on_a_garmin_drive(drive_window, monkeypatch, segment, notes):
     """The window asks, then copies exactly one file to the drive and ejects it at once, with
@@ -3005,7 +3009,8 @@ def test_a_failed_eject_says_so_and_offers_to_try_again(drive_window, monkeypatc
     mount.refusal = None  # the program let go of the drive
     failed.emit("response", "retry")
     assert mount.ejected == 2
-    assert [(d.get_heading(), d.get_body()) for d in dialogs[2:]] == [("Done", EJECTED_TEXT)]
+    assert [(d.get_heading(), d.get_body()) for d in dialogs[2:]] == [
+        ("Done", EJECTED_UPDATE_TEXT)]
 
 
 @pytest.mark.needs_display
@@ -3091,8 +3096,11 @@ def test_a_drive_ejected_by_openexpress_is_not_opened_again_until_unplugged(driv
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0) == (
         "Device Ejected", EJECTED_TEXT, False)
     assert gio_storage.not_ready_text(gio_storage.MASS_STORAGE) == EJECTED_TEXT
+    clock = Clock()
     shutil.rmtree(world.root / "1-4")  # unplugged
-    assert not gio_storage.ejected_drive_waits()
+    assert gio_storage.ejected_drive_waits(clock=clock)  # a moment off the bus is no unplugging
+    clock.now += gio_storage.USB_GAP_S
+    assert not gio_storage.ejected_drive_waits(clock=clock)
     mass_storage_device(world.root, name="1-4")  # plugged in again
     assert [d.uri for d in gio_storage.find_ums_devices()] == [mount.root.get_uri()]
     assert MainWindow._usb_notice(gio_storage.MASS_STORAGE, 0)[:2] == (
@@ -3121,7 +3129,25 @@ def test_cli_ejects_a_drive_after_writing_an_update(watch_and_drives, monkeypatc
     out = capsys.readouterr().out
     assert mount.ejected == 1
     assert (out.index("Copied 1 file.") < out.index("Ejecting the device…")
-            < out.index(EJECTED_TEXT) < out.index("To finish the installation:"))
+            < out.index(EJECTED_UPDATE_TEXT) < out.index("To finish the installation:"))
+
+
+@pytest.mark.needs_display
+def test_an_unplugging_seen_after_an_update_is_kept_with_the_device(drive_window, monkeypatch):
+    """Its place on USB left empty for USB_GAP_S once the window ejected it: kept with the
+    device (devices.json), for the next connection, also in another run of the program."""
+    from openexpress import known_devices
+
+    known_devices.remember(3000000003, "Varia RTL515", "006-B3592-03", "3.36", "ums")
+    s, _mount, _dialogs, _asked = installed_on_a_drive(drive_window, monkeypatch)
+    assert gio_storage.ejected_by_us(s.storage.usb)
+    assert known_devices.load()[3000000003].unplugged_at is None
+    clock = Clock()
+    shutil.rmtree(drive_window.world.root / "1-4")  # the cable out
+    assert gio_storage.ejected_drive_waits(clock=clock)
+    clock.now += gio_storage.USB_GAP_S
+    assert not gio_storage.ejected_drive_waits(clock=clock)
+    assert known_devices.load()[3000000003].unplugged_at is not None
 
 
 def test_cli_says_when_a_drive_is_not_ejected(watch_and_drives, monkeypatch, capsys):

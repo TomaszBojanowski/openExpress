@@ -615,6 +615,10 @@ def show_update_record(win) -> bool:
             win.update_count = found.count
         return True
     if found is None:
+        if check is not None and check.not_installed:
+            win.update_state, win.update_count, win.update_only = "not-installed", 0, None
+            win._update_record_at = check.at
+            return True
         return False
     win.update_state, win.update_count = "available", found.count
     win.update_only = found if found.count == 1 and found.title is not None else None
@@ -1337,21 +1341,25 @@ class DevicePage:
         else:
             subtitle.remove_css_class("warning")
 
-    def _set_update_state(self, new_updates: list, staged: list = ()) -> None:
+    def _set_update_state(self, new_updates: list, staged: list = (),
+                          not_installed: list = ()) -> None:
         """`staged`: updates copied already, waiting for the device to install them
         when it is disconnected: "ready", which wins over the updates still to install
-        (those are told after it, with how many)."""
+        (those are told after it, with how many). `not_installed`: copied, and not installed
+        by the device although it was unplugged since: "not-installed" when nothing else is
+        to do, with no chip."""
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_checked_at = self._update_record_at = None  # an answer of now
         self.update_count = len(new_updates)
         self.update_only = new_updates[0] if len(new_updates) == 1 else None
         self.update_waiting = len(staged)
-        self.update_state = ("ready" if staged else "available" if new_updates else "current")
+        self.update_state = ("ready" if staged else "available" if new_updates
+                             else "not-installed" if not_installed else "current")
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now), and whether one
         # waits for the device to install it.
         remember_update_found(getattr(self.session, "device", None),
-                              new_updates, staged)
+                              new_updates, staged, not_installed)
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:
@@ -1367,7 +1375,7 @@ class DevicePage:
             # the row counts only what pending and staged leave.
             answer = s.client.software_updates(s.device.raw, include_reinstalls=True)
             items = upd.offered(s.storage, answer, s.device)
-            return upd.pending(items), upd.staged(items)
+            return upd.pending(items), upd.staged(items), upd.not_installed(items)
 
         def done(result):
             if self._update_check_session is s:
