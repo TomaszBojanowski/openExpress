@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import gettext
-import os
 import sys
 from pathlib import Path
 
-from openexpress import i18n
+from openexpress import i18n, paths
 from openexpress.i18n import N_
 from openexpress.paths import APP_ID as DESKTOP_ID
 
@@ -100,9 +99,8 @@ StartupNotify=true
 
 
 def files() -> dict[Path, str]:
-    home = Path.home()
-    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share"))
-    config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+    data = paths.xdg("XDG_DATA_HOME", ".local/share")
+    config = paths.xdg("XDG_CONFIG_HOME", ".config")
     root = _source_root()
     env = f"PYTHONPATH={root}" if root else ""
     args = (["env", env] if env else []) + [sys.executable, "-m", "openexpress", "gui"]
@@ -141,9 +139,8 @@ WantedBy=graphical-session.target
 
 
 def legacy_files() -> list[Path]:
-    home = Path.home()
-    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share"))
-    config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+    data = paths.xdg("XDG_DATA_HOME", ".local/share")
+    config = paths.xdg("XDG_CONFIG_HOME", ".config")
     paths_ = [data / f for f in LEGACY_FILES] + [config / "systemd" / "user" / LEGACY_SERVICE,
                                                  config / "systemd" / "user" /
                                                  "graphical-session.target.wants" / LEGACY_SERVICE]
@@ -177,7 +174,7 @@ def flatpak_installed() -> bool:
 
 
 def _service_wants_link() -> Path:
-    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    config = paths.xdg("XDG_CONFIG_HOME", ".config")
     return config / "systemd" / "user" / "graphical-session.target.wants" / SERVICE
 
 

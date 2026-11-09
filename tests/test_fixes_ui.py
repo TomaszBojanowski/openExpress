@@ -348,6 +348,23 @@ def test_files_without_source_root(xdg, monkeypatch):
     assert "Environment=" not in unit
 
 
+def test_an_empty_xdg_variable_counts_as_not_set(xdg, monkeypatch, tmp_path):
+    """XDG_DATA_HOME="" and XDG_CONFIG_HOME="" mean the folders below the home folder, as the
+    XDG rules say, not the folder the command is run in."""
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("XDG_DATA_HOME", "")
+    monkeypatch.setenv("XDG_CONFIG_HOME", "")
+    monkeypatch.setattr(desktop, "_source_root", lambda: None)
+    written = list(desktop.files())
+    assert written and all(p.is_relative_to(home) for p in written)
+    assert desktop._service_wants_link().is_relative_to(home / ".config")
+    old = home / ".local/share" / desktop.LEGACY_FILES[0]
+    old.parent.mkdir(parents=True)
+    old.write_text("")
+    assert desktop.legacy_files() == [old]
+
+
 # --- uninstall ---------------------------------------------------------------------------
 
 
