@@ -102,8 +102,7 @@ either):
 - the Device page gets, in its group **Garmin Connect Account**, the row **Garmin Account** –
   "Not on the account {account}" – with the same button, above **Primary Training Device**. The
   row is shown only for a device off the account: a device added loses it, and the group then
-  shows what it shows for any device of the account. Not implemented: the row's "Yes, on the
-  account {account}" for a device on the account.
+  shows what it shows for any device of the account.
 
 ### 4.2 The confirmation dialog and the work
 
@@ -139,8 +138,7 @@ the request, the status changed for a retired device (D6), the list asked anew.
 - **On another account (409)**: `inform()` "Device on Another Account": "This device is
   registered to another Garmin account. If it is your other account, sign in to it in
   openExpress. If it was someone else's, they have to remove it from their account in Garmin
-  Connect; then add it here. Nothing was changed." Not implemented: the row's "On another Garmin
-  account" after it.
+  Connect; then add it here. Nothing was changed."
 - **Another account's subscription (409, subcode 4091)**: "Subscription on Another Account":
   "Another Garmin account has an active subscription on this device; its owner has to end it
   first. Nothing was changed."
@@ -166,14 +164,12 @@ the request, the status changed for a retired device (D6), the list asked anew.
 |---|---|
 | Add to Account | Dodaj do konta |
 | Garmin Account / Not on the account {account} | Konto Garmin / Nie ma go na koncie {account} |
-| Yes, on the account {account} (not implemented) | Tak, na koncie {account} |
 | Adding to the Account {account}… | Dodawanie do konta {account}… |
 | Add {model} to Your Garmin Account? | Dodać {model} do konta Garmin? |
 | (the body of 4.2) | openExpress wyśle do Garmina opis urządzenia (plik GarminDevice.xml z jego numerem Unit ID) i doda je do konta {account} jako aktywne. Potem synchronizacja wyśle na to konto jego aktywności i dane o zdrowiu. … |
 | This is an experimental feature. | To funkcja eksperymentalna. |
 | Added to your Garmin account / On your Garmin account already | Dodano do konta Garmin / Już na koncie Garmin |
 | Device on Another Account / Subscription on Another Account / Device Not Added | Urządzenie na innym koncie / Subskrypcja na innym koncie / Nie dodano urządzenia |
-| On another Garmin account (not implemented) | Na innym koncie Garmin |
 | Garmin did not accept the description of this device. Nothing was changed. | Garmin nie przyjął opisu tego urządzenia. Niczego nie zmieniono. |
 | Garmin does not allow adding this device to an account. Nothing was changed. | Garmin nie pozwala dodać tego urządzenia do konta. Niczego nie zmieniono. |
 | Device Not Listed Yet / Garmin Accepted the Device | Urządzenia jeszcze nie ma na liście / Garmin przyjął urządzenie |
