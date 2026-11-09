@@ -190,7 +190,8 @@ class OtherRecords:
 
 def _read_json(path: Path):
     try:
-        return json.loads(path.read_text())
+        # Written in UTF-8, so read so whatever the locale's encoding is.
+        return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
 

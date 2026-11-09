@@ -64,6 +64,18 @@ def sentence(when: float) -> str:
             f"{day}; files it sent are not sent again")
 
 
+def test_a_record_with_letters_beyond_ascii_is_read_in_a_locale_that_is_not_utf8(tmp_path,
+                                                                                monkeypatch):
+    """The records are written in UTF-8 (a name such as "fēnix"): read in UTF-8 as well, not
+    in the locale's encoding, which before Python 3.15 may be another (in a C locale, ASCII)."""
+    import io
+
+    path = tmp_path / "state.json"
+    path.write_text(json.dumps({"device": "fēnix 8"}, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(io, "text_encoding", lambda encoding, stacklevel=2: encoding or "ascii")
+    assert sync._read_json(path) == {"device": "fēnix 8"}
+
+
 def test_the_second_install_plans_nothing_the_flatpak_sent_and_says_so(
         device, account, capsys):
     """The dry run of the version from source: nothing to upload (the Flatpak sent all of
