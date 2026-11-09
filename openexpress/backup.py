@@ -213,7 +213,8 @@ def run_backup(
     except BaseException:
         shutil.rmtree(partial, ignore_errors=True)
         raise
-    old = sorted((p for p in unit_dir.iterdir() if is_backup_dir(p)),
+    # A link named like a backup is the user's own, as backups_of has it: never removed.
+    old = sorted((p for p in unit_dir.iterdir() if not p.is_symlink() and is_backup_dir(p)),
                  key=lambda p: datetime.strptime(p.name, STAMP))
     removed = keep_newest(old, keep, new=target)
     log.info("backup: %d files (%s), %d still being written left out, %d old backups removed",

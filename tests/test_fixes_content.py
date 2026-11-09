@@ -137,6 +137,24 @@ def test_a_plain_backup_stays_inside_its_folder(device_root, tmp_path):
     _nothing_outside(tmp_path, before, res.path)
 
 
+def test_a_link_named_like_an_old_backup_is_left_alone(device_root, tmp_path):
+    """A link in the folder of backups, named like one (the user's own, to a folder kept
+    elsewhere), is no backup: not counted among the old ones, never removed, and the backup
+    is made without an error, as backups_of lists them."""
+    st = LocalStorage(device_root)
+    dev = parse((device_root / "GARMIN/GarminDevice.xml").read_bytes())
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "GARMIN").mkdir(parents=True)
+    (elsewhere / "GARMIN" / "kept.txt").write_text("x")
+    unit_dir = tmp_path / "bk" / str(dev.unit_id)
+    unit_dir.mkdir(parents=True)
+    link = unit_dir / "2020-01-01 (10.00.00)"
+    link.symlink_to(elsewhere, target_is_directory=True)
+    res = backup.run_backup(dev, st, tmp_path / "bk", keep=1)
+    assert res.removed == [] and link.is_symlink()
+    assert (elsewhere / "GARMIN" / "kept.txt").read_text() == "x"
+
+
 # --- Connect IQ -----------------------------------------------------------------------
 
 
