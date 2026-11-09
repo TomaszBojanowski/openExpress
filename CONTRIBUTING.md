@@ -36,15 +36,40 @@ for a Garmin device connected as a USB drive:
   same Unit ID and account, so `--apply` uploads to Garmin Connect as from that device.
 - Its sync leaves Garmin Connect's queue and TrueUp to the device: nothing is downloaded or
   acknowledged, and the sync says so in one line.
-- Its records are its own: what it uploaded and its last sync are kept apart from the device's
-  (`devices/<Unit ID>/test-drive/` in the data folder), so its first sync starts anew and the
-  device's tile and records stay as they were.
+- What it uploaded and its last sync are kept apart from the device's
+  (`devices/<Unit ID>/test-drive/` in the data folder), so its first sync starts anew.
+- The rest is shared with the device, as it goes by the Unit ID: the device's entry in
+  `devices.json` (how it connects, when it was last seen, its USB IDs, what the last check of
+  updates found, the updates copied to it and whether it was unplugged since) and its folder of
+  backups. The device's tile, its row "Device Software" and its Updates page may then show what
+  was tried with the pendrive.
 - The log says so in a warning (on the command line also in the terminal); a value in another
   form is ignored with a warning.
 - A connected MTP device still comes first, and a drive that is not mounted is not taken.
 
+The ID is that of your own pendrive: run `lsusb` before and after plugging it in, and take the
+`ID VVVV:PPPP` of the line that appeared.
+
 ```bash
-OPENEXPRESS_TEST_DRIVE_USB=0781:5581 python3 -m openexpress sync    # dry run
+lsusb                  # with the pendrive plugged in: "Bus … Device …: ID VVVV:PPPP <maker> …"
+DRIVE=VVVV:PPPP        # the ID of your own pendrive
+OPENEXPRESS_TEST_DRIVE_USB=$DRIVE python3 -m openexpress sync    # dry run
+```
+
+To keep the device's own records apart, run the tries with XDG folders of their own, with a
+copy of the configuration and the sign-in. openExpress keeps all its files in them; outside them
+it only reads the Flatpak's (whether it is syncing, its copies of courses). Backups go to the
+Documents folder named in `user-dirs.dirs` of that `XDG_CONFIG_HOME` (`~/Documents` without
+one). Close any openExpress window first: there is one per session, and starting another only
+brings that one up, with its own folders.
+
+```bash
+T=~/openexpress-pendrive
+mkdir -p "$T/config/openexpress" "$T/Documents" && chmod 700 "$T"
+cp -p ~/.config/openexpress/*.json "$T/config/openexpress/"
+echo "XDG_DOCUMENTS_DIR=\"$T/Documents\"" > "$T/config/user-dirs.dirs"
+XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_STATE_HOME="$T/state" \
+  XDG_CACHE_HOME="$T/cache" OPENEXPRESS_TEST_DRIVE_USB=$DRIVE python3 -m openexpress gui
 ```
 
 
