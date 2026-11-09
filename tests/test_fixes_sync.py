@@ -1,5 +1,6 @@
 import logging
 import struct
+import types
 
 import pytest
 from conftest import fit_crc, make_fit
@@ -421,17 +422,18 @@ def test_watcher_retries_open_session(monkeypatch):
     from openexpress import watch
 
     calls = []
+    session = types.SimpleNamespace(device=None, storage=None)  # a made-up session
 
     def open_session():
         calls.append(1)
         if len(calls) < 3:
             raise DeviceError("not ready")
-        return "session"
+        return session
 
     monkeypatch.setattr(watch.service, "open_session", open_session)
     w = watch.Watcher()
     sleeps = []
-    assert w._open_session(sleep=sleeps.append) == "session"
+    assert w._open_session(sleep=sleeps.append) is session
     assert sleeps == [5, 5]
     calls.clear()
     monkeypatch.setattr(watch.service, "open_session",

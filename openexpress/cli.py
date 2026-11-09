@@ -118,8 +118,14 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
                                             "types."))
 
     st = open_storage(args)
-    # A device found now is remembered; a folder given with --path may be a copy.
-    return st, service.read_device(st, found_now=not args.path, refuse=refuse)
+    # A device found now is remembered, and its connection noted in its log; a folder given
+    # with --path may be a copy.
+    dev = service.read_device(st, found_now=not args.path, refuse=refuse)
+    if not args.path:
+        from openexpress import history
+
+        history.note_connection(dev, st)
+    return st, dev
 
 
 def make_client(settings: Settings, need_auth: bool) -> GarminClient:
@@ -208,8 +214,17 @@ def cmd_diagnostics(args) -> int:
     print(_diagnostics_copy_text(diagnostics.copy_on()))
     entries = diagnostics.read_errors(st)
     print(_("Error logs on the device:"))
+    # The "Assert" entries an Edge writes at each start: their number, each of them with -v.
+    asserts = 0 if args.verbose else sum(e.is_assert for e in entries)
     for e in entries:
-        print(f"  {e.words()} ({e.source})")
+        if args.verbose or not e.is_assert:
+            print(f"  {e.words()} ({e.source})")
+    if asserts:
+        # TRANSLATORS: under "Error logs on the device:"; "Assert" is the kind of the entries,
+        # as the device writes it; -v is the option of the command line that shows them
+        print("  " + ngettext("{count} Assert entry, not shown (all with -v)",
+                              "{count} Assert entries, not shown (all with -v)",
+                              asserts).format(count=asserts))
     if not entries:
         # TRANSLATORS: under "Error logs on the device:" when the device has none
         print("  " + _("no entries"))
@@ -228,6 +243,8 @@ def cmd_diagnostics(args) -> int:
     # Not the folder itself: it is named after the unit ID, and this is pasted into reports.
     print("  " + _("in the folder of the device under {folder}").format(
         folder=paths.data_dir() / "devices"))
+    for line in history_lines(dev.unit_id, bool(getattr(st, "test_drive", False))):
+        print(line)
     if not args.apply:
         print(_("Dry run: nothing was copied. Add --apply to copy the files the device shows now."))
         if args.crash_logs:
@@ -258,6 +275,101 @@ def cmd_diagnostics(args) -> int:
             count=hidden.new + hidden.unchanged, new=hidden.new) if hidden.saved
               else _("The device has no hidden crash logs."))
     return 0
+
+
+# The newest connections `diagnostics` shows of the device log.
+CONNECTIONS_SHOWN = 5
+
+
+def _storage_kinds() -> dict[str, str]:
+    """The kinds of file of the device log (history.CATEGORIES), as the command line names
+    them."""
+    return {
+        # TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
+        # lowercase, followed by its size
+        "maps": pgettext("storage", "maps"),
+        "activities": pgettext("storage", "activities"),
+        "music": pgettext("storage", "music and audio"),
+        "apps": pgettext("storage", "apps"),
+        "courses": pgettext("storage", "courses and locations"),
+        "updates": pgettext("storage", "updates and satellite data"),
+        "logs": pgettext("storage", "logs and memory dumps"),
+        # TRANSLATORS: the rest of the used space: the device's own files and what its file
+        # system keeps
+        "system": pgettext("storage", "system"),
+    }
+
+
+def history_lines(unit_id: int, test_drive: bool = False) -> list[str]:
+    """The device log for `diagnostics`: how many connections it holds, the newest of them and
+    the space of each kind of file at the last one; damaged lines counted, never shown."""
+    from openexpress import history
+
+    kept = history.read(unit_id, test_drive)
+    lines = kept.lines
+    if not lines:
+        out = [_("Device log on this computer: no connection yet")]
+    else:
+        first = history.local_time(lines[0]).strftime("%Y-%m-%d")
+        out = [ngettext("Device log on this computer: {count} connection, the first on {day}",
+                        "Device log on this computer: {count} connections, the first on {day}",
+                        len(lines)).format(count=len(lines), day=first)]
+        out += ["  " + _history_line(line) for line in reversed(lines[-CONNECTIONS_SHOWN:])]
+        earlier = len(lines) - CONNECTIONS_SHOWN
+        if earlier > 0:
+            out.append("  " + ngettext("and {count} earlier connection",
+                                       "and {count} earlier connections", earlier).format(
+                count=earlier))
+        names, sizes = _storage_kinds(), lines[-1]["categories"]
+        shown = [f"{names[kind]} {human_size(sizes[kind])}" for kind in history.CATEGORIES
+                 if kind in sizes]
+        if shown:
+            out.append(_("Storage at the last connection: {sizes}").format(
+                sizes=", ".join(shown)))
+    if kept.skipped:
+        out.append("  " + ngettext("{count} damaged line skipped", "{count} damaged lines skipped",
+                                   kept.skipped).format(count=kept.skipped))
+    return out
+
+
+def _history_line(line: dict) -> str:
+    from openexpress import history
+
+    # TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
+    parts = [_("software {version}").format(version=line["software"])]
+    # What was not known at that connection is said so, apart from none (no dumps, no crash).
+    if "free" in line and "capacity" in line:
+        # TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
+        parts.append(_("{free} of {total} free").format(free=human_size(line["free"]),
+                                                       total=human_size(line["capacity"])))
+    else:
+        # TRANSLATORS: in a line of the device log (`diagnostics`): it could not be read
+        parts.append(_("free space not known"))
+    dumps = line.get("dumps")
+    if dumps is None:
+        # TRANSLATORS: in a line of the device log (`diagnostics`): they could not be listed
+        parts.append(_("memory dumps not known"))
+    elif dumps["count"]:
+        parts.append(ngettext("{count} memory dump ({size})", "{count} memory dumps ({size})",
+                              dumps["count"]).format(count=dumps["count"],
+                                                     size=human_size(dumps["bytes"])))
+    else:
+        # TRANSLATORS: in a line of the device log (`diagnostics`)
+        parts.append(_("no memory dumps"))
+    if "crash" not in line:
+        # TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
+        # be read
+        parts.append(_("crashes not known"))
+    elif line["crash"] is None:
+        # TRANSLATORS: in a line of the device log (`diagnostics`)
+        parts.append(_("no crash in the error logs"))
+    else:
+        # TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
+        # the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
+        parts.append(_("last crash: {crash}").format(crash=history.crash_entry(line).words()))
+    via = _("USB drive") if line["via"] == "drive" else "MTP"
+    when = history.local_time(line).strftime("%Y-%m-%d %H:%M")
+    return f"{when} {via}: " + ", ".join(parts)
 
 
 def storage_text(st) -> str:

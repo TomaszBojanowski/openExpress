@@ -679,8 +679,9 @@ def test_watcher_does_not_sync_a_garmin_drive(device_root, xdg, device, watcher,
 def test_watcher_opens_mtp_devices_only(watcher, monkeypatch):
     """It asks for a session without allow_ums: MTP alone."""
     calls = []
-    monkeypatch.setattr(service, "open_session", lambda *a, **kw: calls.append((a, kw)) or "s")
-    assert watcher._open_session() == "s" and calls == [((), {})]
+    session = types.SimpleNamespace(device=None, storage=None)  # a made-up session
+    monkeypatch.setattr(service, "open_session", lambda *a, **kw: calls.append((a, kw)) or session)
+    assert watcher._open_session() is session and calls == [((), {})]
 
 
 def test_run_sync_refuses_a_garmin_drive(device_root, xdg, device):

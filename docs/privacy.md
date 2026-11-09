@@ -30,7 +30,10 @@ Besides the login, this installation keeps what it knows of each device in
   number, version and when);
 - the names of the files already uploaded, and the last sync;
 - copies of files whose upload failed, until they are uploaded;
-- the list of your own maps.
+- the list of your own maps;
+- a short log of each connection (`history.jsonl`): the software version, the storage by kind of
+  file, the number and size of memory dumps and the last crash (kind, time, error, where the
+  software stopped, screen), without file names, kept whatever **Keep Diagnostic Files** says.
 
 **Forget Device** removes what it keeps of a device. The Flatpak and the version from source
 each keep their own files; what each sees of the other is described in
@@ -51,10 +54,11 @@ Insights. The device's diagnostics (error logs, KPIs, memory dumps, behaviour lo
 only with `openexpress sync --include-diagnostics`, which takes them from the device itself.
 Otherwise the device's diagnostic files stay on this computer:
 
-- Once per connection, when a device is opened, the window reads its error logs
-  (`Garmin/Debug/err_log.*`) to show a recent error. Of each entry it uses only the kind, the
-  time, the error number, where the software stopped and the screen, never the Unit ID or the
-  backtrace in it.
+- Once per connection, when a device is opened, its error logs (`Garmin/Debug/err_log.*`) are
+  read: by the window, to show a recent error, and by whatever opened the device first (the
+  window, the command line or the background sync), for the log of each connection (above). Of
+  each entry only the kind, the time, the error number, where the software stopped and the screen
+  are used, never the Unit ID or the backtrace in it.
 - The window remembers where it found the error logs and the device's other diagnostic files, so
   that the next openings read them there without looking through the device's folders; they list
   only the folder of the error logs and that of the memory dumps. It looks through them again when

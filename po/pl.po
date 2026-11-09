@@ -1014,6 +1014,16 @@ msgstr ""
 msgid "Error logs on the device:"
 msgstr "Dzienniki błędów na urządzeniu:"
 
+#. TRANSLATORS: under "Error logs on the device:"; "Assert" is the kind of the entries,
+#. as the device writes it; -v is the option of the command line that shows them
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} Assert entry, not shown (all with -v)"
+msgid_plural "{count} Assert entries, not shown (all with -v)"
+msgstr[0] "{count} wpis Assert, pomijany (wszystkie z -v)"
+msgstr[1] "{count} wpisy Assert, pomijane (wszystkie z -v)"
+msgstr[2] "{count} wpisów Assert, pomijane (wszystkie z -v)"
+
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
 #: openexpress/cli.py
 msgid "no entries"
@@ -1098,16 +1108,150 @@ msgstr[2] "Dzienniki awarii: odczytano {count} plików (nowe: {new})."
 msgid "The device has no hidden crash logs."
 msgstr "Urządzenie nie ma ukrytych dzienników awarii."
 
-#. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
+#. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
+#. lowercase, followed by its size
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "maps"
+msgstr "mapy"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "activities"
+msgstr "aktywności"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "music and audio"
+msgstr "muzyka i audio"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "apps"
+msgstr "aplikacje"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "courses and locations"
+msgstr "kursy i lokalizacje"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "updates and satellite data"
+msgstr "aktualizacje i dane satelitarne"
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "logs and memory dumps"
+msgstr "dzienniki i zrzuty pamięci"
+
+#. TRANSLATORS: the rest of the used space: the device's own files and what its file
+#. system keeps
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "system"
+msgstr "system"
+
+#: openexpress/cli.py
+msgid "Device log on this computer: no connection yet"
+msgstr "Dziennik urządzenia na tym komputerze: jeszcze bez podłączeń"
+
 #: openexpress/cli.py
 #, python-brace-format
-msgid "USB drive ({name})"
-msgstr "Dysk USB ({name})"
+msgid "Device log on this computer: {count} connection, the first on {day}"
+msgid_plural ""
+"Device log on this computer: {count} connections, the first on {day}"
+msgstr[0] ""
+"Dziennik urządzenia na tym komputerze: {count} podłączenie, pierwsze {day}"
+msgstr[1] ""
+"Dziennik urządzenia na tym komputerze: {count} podłączenia, pierwsze {day}"
+msgstr[2] ""
+"Dziennik urządzenia na tym komputerze: {count} podłączeń, pierwsze {day}"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "and {count} earlier connection"
+msgid_plural "and {count} earlier connections"
+msgstr[0] "i {count} wcześniejsze podłączenie"
+msgstr[1] "i {count} wcześniejsze podłączenia"
+msgstr[2] "i {count} wcześniejszych podłączeń"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Storage at the last connection: {sizes}"
+msgstr "Pamięć przy ostatnim podłączeniu: {sizes}"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} damaged line skipped"
+msgid_plural "{count} damaged lines skipped"
+msgstr[0] "{count} uszkodzony wiersz pominięty"
+msgstr[1] "{count} uszkodzone wiersze pominięte"
+msgstr[2] "{count} uszkodzonych wierszy pominiętych"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
+#: openexpress/cli.py
+#, python-brace-format
+msgid "software {version}"
+msgstr "oprogramowanie {version}"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{free} of {total} free"
+msgstr "wolne {free} z {total}"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): it could not be read
+#: openexpress/cli.py
+msgid "free space not known"
+msgstr "wolne miejsce: nie wiadomo"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): they could not be listed
+#: openexpress/cli.py
+msgid "memory dumps not known"
+msgstr "zrzuty pamięci: nie wiadomo"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} memory dump ({size})"
+msgid_plural "{count} memory dumps ({size})"
+msgstr[0] "{count} zrzut pamięci ({size})"
+msgstr[1] "{count} zrzuty pamięci ({size})"
+msgstr[2] "{count} zrzutów pamięci ({size})"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`)
+#: openexpress/cli.py
+msgid "no memory dumps"
+msgstr "bez zrzutów pamięci"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
+#. be read
+#: openexpress/cli.py
+msgid "crashes not known"
+msgstr "awarie: nie wiadomo"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`)
+#: openexpress/cli.py
+msgid "no crash in the error logs"
+msgstr "bez awarii w dziennikach błędów"
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
+#. the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
+#: openexpress/cli.py
+#, python-brace-format
+msgid "last crash: {crash}"
+msgstr "ostatnia awaria: {crash}"
 
 #: openexpress/cli.py
 #, ignore-reused
 msgid "USB drive"
 msgstr "Dysk USB"
+
+#. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
+#: openexpress/cli.py
+#, python-brace-format
+msgid "USB drive ({name})"
+msgstr "Dysk USB ({name})"
 
 #: openexpress/cli.py
 msgid "Device:"

@@ -907,6 +907,15 @@ msgstr ""
 msgid "Error logs on the device:"
 msgstr ""
 
+#. TRANSLATORS: under "Error logs on the device:"; "Assert" is the kind of the entries,
+#. as the device writes it; -v is the option of the command line that shows them
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} Assert entry, not shown (all with -v)"
+msgid_plural "{count} Assert entries, not shown (all with -v)"
+msgstr[0] ""
+msgstr[1] ""
+
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
 #: openexpress/cli.py
 msgid "no entries"
@@ -977,15 +986,142 @@ msgstr[1] ""
 msgid "The device has no hidden crash logs."
 msgstr ""
 
-#. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
+#. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
+#. lowercase, followed by its size
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "maps"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "activities"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "music and audio"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "apps"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "courses and locations"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "updates and satellite data"
+msgstr ""
+
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "logs and memory dumps"
+msgstr ""
+
+#. TRANSLATORS: the rest of the used space: the device's own files and what its file
+#. system keeps
+#: openexpress/cli.py
+msgctxt "storage"
+msgid "system"
+msgstr ""
+
+#: openexpress/cli.py
+msgid "Device log on this computer: no connection yet"
+msgstr ""
+
 #: openexpress/cli.py
 #, python-brace-format
-msgid "USB drive ({name})"
+msgid "Device log on this computer: {count} connection, the first on {day}"
+msgid_plural ""
+"Device log on this computer: {count} connections, the first on {day}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "and {count} earlier connection"
+msgid_plural "and {count} earlier connections"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Storage at the last connection: {sizes}"
+msgstr ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} damaged line skipped"
+msgid_plural "{count} damaged lines skipped"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
+#: openexpress/cli.py
+#, python-brace-format
+msgid "software {version}"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{free} of {total} free"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): it could not be read
+#: openexpress/cli.py
+msgid "free space not known"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): they could not be listed
+#: openexpress/cli.py
+msgid "memory dumps not known"
+msgstr ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} memory dump ({size})"
+msgid_plural "{count} memory dumps ({size})"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`)
+#: openexpress/cli.py
+msgid "no memory dumps"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
+#. be read
+#: openexpress/cli.py
+msgid "crashes not known"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`)
+#: openexpress/cli.py
+msgid "no crash in the error logs"
+msgstr ""
+
+#. TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
+#. the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
+#: openexpress/cli.py
+#, python-brace-format
+msgid "last crash: {crash}"
 msgstr ""
 
 #: openexpress/cli.py
 #, ignore-reused
 msgid "USB drive"
+msgstr ""
+
+#. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
+#: openexpress/cli.py
+#, python-brace-format
+msgid "USB drive ({name})"
 msgstr ""
 
 #: openexpress/cli.py

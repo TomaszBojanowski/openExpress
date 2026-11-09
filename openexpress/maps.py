@@ -247,12 +247,15 @@ NO_MAP_DATATYPE_PREFIXES = tuple(prefix.casefold() for prefix in (
     "FIT_TYPE_", "WELLNESS_TYPE_", "ACTIVITY_", "BACKUP_", "MEDIA_", "IQ", "Ephemeris"))
 
 
+def may_be_maps(datatype: str) -> bool:
+    """Whether a data type of GarminDevice.xml may be maps: any but those known to be no maps."""
+    name = datatype.casefold()
+    return name not in NO_MAP_DATATYPES and not name.startswith(NO_MAP_DATATYPE_PREFIXES)
+
+
 def declares_maps(device) -> bool:
-    """Whether the device's GarminDevice.xml declares a data type that may be maps: any but
-    those known to be no maps."""
-    names = [name.casefold() for name in device.datatypes()]
-    return any(name not in NO_MAP_DATATYPES and not name.startswith(NO_MAP_DATATYPE_PREFIXES)
-               for name in names)
+    """Whether the device's GarminDevice.xml declares a data type that may be maps."""
+    return any(may_be_maps(name) for name in device.datatypes())
 
 
 def no_maps_on_device_text() -> str:

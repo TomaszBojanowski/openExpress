@@ -16,13 +16,14 @@ import hashlib
 import json
 import logging
 import posixpath
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from openexpress import applog, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import DeviceError, DeviceNotResponding, Entry, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, ngettext
@@ -35,6 +36,10 @@ DEBUG = "Garmin/Debug"
 ERR_LOGS = (f"{DEBUG}/err_log.txt", f"{DEBUG}/err_log.bak")
 ERR_LOG_MAX = 1024 * 1024  # bigger is not an error log (a few kB with 14 entries)
 DUMPS = f"{DEBUG}/dump"
+# Memory dumps an Edge 1050 wrote with older software in the folder of its error logs
+# (ramdump1.log, ramdumpC2.log…), each with a ramdump_err1.txt that says what failed: a text, no
+# dump.
+DUMP_FILES = re.compile(r"ramdump[0-9a-z]*\.log", re.IGNORECASE)
 # Folders of event logs where some devices show them (Venu 2, Edge 1050); a fēnix 8
 # hides its GARMIN/EVNTLOGS from the ordinary connection.
 EVENT_LOGS = ("GARMIN/EVNTLOGS", f"{DEBUG}/EventLogs")
@@ -57,6 +62,8 @@ RECENT = timedelta(days=30)
 # The only kind shown as "the device reported an error": an Edge 1050 logs "Assert" at every
 # ordinary restart, "Abnormal Powerdown" is a power loss or a restart forced with the button.
 CRASH = "RTL Trap"
+# Written by an Edge at an ordinary start, many at once: counted, not listed one by one.
+ASSERT = "Assert"
 
 
 class DiagnosticsError(UserFacingError):
@@ -77,6 +84,10 @@ class ErrorEntry:
     @property
     def is_crash(self) -> bool:
         return self.kind.casefold() == CRASH.casefold()
+
+    @property
+    def is_assert(self) -> bool:
+        return self.kind.casefold() == ASSERT.casefold()
 
     def words(self) -> str:
         """The entry in one line for the log and the command line (no personal data)."""
@@ -142,16 +153,19 @@ def parse_err_log(data: bytes, source: str = "") -> list[ErrorEntry]:
     return out
 
 
-def read_errors(storage: Storage, at: dict[str, int] | None = None) -> list[ErrorEntry]:
+def read_errors(storage: Storage, at: dict[str, int] | None = None,
+                missed: list[str] | None = None) -> list[ErrorEntry]:
     """The entries of the device's error logs, read now through the ordinary connection,
     newest first. Missing files are no entries; a file that cannot be read is said in the
-    log. `at`: where they are already known (real path: size, Seen), read there without
-    looking for them."""
+    log, and its name added to `missed` (then what the logs hold is not known). `at`: where
+    they are already known (real path: size, Seen), read there without looking for them."""
     out: list[ErrorEntry] = []
+    missed = missed if missed is not None else []
     for real, size in (at or {}).items():
         name = posixpath.basename(real)
         if size > ERR_LOG_MAX:
             log.info("diagnostics: %s is %s, not read", name, applog.size(size))
+            missed.append(name)
             continue
         try:
             out += parse_err_log(storage.read_at(real), name)
@@ -159,6 +173,7 @@ def read_errors(storage: Storage, at: dict[str, int] | None = None) -> list[Erro
             raise
         except DeviceError as e:
             log.info("diagnostics: %s not read (%s)", name, type(e).__name__)
+            missed.append(name)
     for path in ERR_LOGS if at is None else ():
         name = posixpath.basename(path)
         try:
@@ -167,12 +182,14 @@ def read_errors(storage: Storage, at: dict[str, int] | None = None) -> list[Erro
                 continue
             if size > ERR_LOG_MAX:
                 log.info("diagnostics: %s is %s, not read", name, applog.size(size))
+                missed.append(name)
                 continue
             out += parse_err_log(storage.read(path), name)
         except DeviceNotResponding:
             raise
         except DeviceError as e:
             log.info("diagnostics: %s not read (%s)", name, type(e).__name__)
+            missed.append(name)
     return sorted(out, key=lambda e: e.at or datetime.min, reverse=True)
 
 
@@ -419,9 +436,32 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     return report
 
 
+def dump_files(storage: Storage) -> list[tuple[str, Entry]]:
+    """The memory dumps the device shows, (real path, entry): the files of its folder of dumps
+    and those beside its error logs (DUMP_FILES)."""
+    debug = storage.resolve(DEBUG)
+    if debug is None:
+        return []
+    found, folders = [], []
+    for e in storage.list_at(debug):
+        if e.is_dir and e.name.casefold() == posixpath.basename(DUMPS).casefold():
+            folders.append(posixpath.join(debug, e.name))
+        elif not e.is_dir and DUMP_FILES.fullmatch(e.name):
+            found.append((posixpath.join(debug, e.name), e))
+    while folders:
+        current = folders.pop()
+        for e in storage.list_at(current):
+            path = posixpath.join(current, e.name)
+            if e.is_dir:
+                folders.append(path)
+            else:
+                found.append((path, e))
+    return sorted(found, key=lambda t: t[0])
+
+
 def dumps_on_device(storage: Storage) -> list[tuple[str, int]]:
     """The memory dumps the device shows: (path, size)."""
-    return [(path, e.size) for path, e in storage.walk_files(DUMPS)]
+    return [(path, e.size) for path, e in dump_files(storage)]
 
 
 def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = None,
@@ -431,7 +471,7 @@ def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = No
     dump of how many ("Copying memory dumps · 1 of 3")."""
     now = now or datetime.now()
     where = folder(device.unit_id)
-    found = sorted(storage.walk_files(DUMPS), key=lambda t: t[1].mtime, reverse=True)
+    found = sorted(dump_files(storage), key=lambda t: t[1].mtime, reverse=True)
     report = Copied()
     files, room = {}, LIMIT
     chosen = []
@@ -687,13 +727,17 @@ def _written_since(storage: Storage, folders: list[str], err_logs: list[str],
         names = {posixpath.basename(p).casefold() for p in ERR_LOGS}
         if any(not e.is_dir and e.name.casefold() in names - logs for e in entries):
             return True
+        kept = {p.casefold() for p in dumps}
+        if any(not e.is_dir and DUMP_FILES.fullmatch(e.name)
+               and posixpath.join(debug, e.name).casefold() not in kept for e in entries):
+            return True
         folder = next((e for e in entries if e.is_dir
                        and e.name.casefold() == posixpath.basename(DUMPS).casefold()), None)
         if folder is None:
             return False
-        kept = {posixpath.basename(p).casefold() for p in dumps}
-        return any(not e.is_dir and e.name.casefold() not in kept
-                   for e in storage.list_at(posixpath.join(debug, folder.name)))
+        where = posixpath.join(debug, folder.name)
+        return any(not e.is_dir and posixpath.join(where, e.name).casefold() not in kept
+                   for e in storage.list_at(where))
     except DeviceNotResponding:
         raise
     except DeviceError:
@@ -734,6 +778,8 @@ class AtOpen:
     dumps: list[tuple[str, int]]
     hidden_logs: bool  # "Copy Crash Logs" is offered
     copied: Copied | None = None
+    errors_known: bool = True  # every error log there was read
+    dumps_known: bool = True  # the memory dumps were listed
 
 
 # Once per connection: the unit ID and where the device is on USB (a new connection gives a
@@ -773,14 +819,17 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     except DeviceError as e:
         log.info("diagnostics: the folders not listed (%s)", type(e).__name__)
         seen = None
-    entries = read_errors(storage, at=seen.err_logs if seen is not None else None)
+    missed: list[str] = []
+    entries = read_errors(storage, at=seen.err_logs if seen is not None else None,
+                          missed=missed)
     if seen is not None:
         dumps = seen.dumps
         hidden = (may_have_hidden_logs(storage, shown=seen.event_logs)
                   and not hidden_logs_known_absent(device.unit_id))
     else:
         dumps, hidden = [], False
-    found = AtOpen(entries, last_crash(entries, now), dumps, hidden)
+    found = AtOpen(entries, last_crash(entries, now), dumps, hidden,
+                   errors_known=not missed, dumps_known=seen is not None)
     if found.crash is not None:
         log.info("diagnostics: the device logged %s", found.crash.words())
     if copying:

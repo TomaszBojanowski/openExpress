@@ -733,6 +733,27 @@ def test_cli_diagnostics_dry_run_copies_nothing(device, clock, monkeypatch, caps
                    for line in out)
 
 
+def test_cli_diagnostics_shows_the_assert_entries_as_a_count(device, clock, monkeypatch,
+                                                              capsys):
+    """An Edge writes "Assert" entries at an ordinary start, many at once: one line with their
+    number, each of them only with -v."""
+    from openexpress import cli
+
+    st, dev = device
+    asserts = [entry("Assert", f"2026-10-21 08:0{n}:00") for n in range(3)]
+    (st.root / "GARMIN" / "Debug" / "err_log.bak").write_bytes(err_log(TRAP, *asserts))
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert cli.main(["diagnostics"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert "  3 Assert entries, not shown (all with -v)" in out
+    assert not any(line.startswith("  Assert at") for line in out)
+    assert any(line.startswith("  RTL Trap at") for line in out)
+    assert cli.main(["-v", "diagnostics"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert sum(line.startswith("  Assert at") for line in out) == 3
+    assert not any("not shown" in line for line in out)
+
+
 def test_cli_diagnostics_apply(hiding, clock, monkeypatch, capsys):
     from openexpress import cli
 
@@ -854,6 +875,22 @@ def test_an_error_log_and_a_dump_written_after_the_places_were_kept_are_found(tm
     _connected_again(st)
     diagnostics.at_open(dev, st)
     assert sorted(st.lists) == LOGS_LISTED  # the new note holds
+
+
+def test_the_memory_dumps_beside_the_error_logs_are_counted(device, clock):
+    """An Edge 1050 wrote its memory dumps with older software in the folder of its error logs
+    (ramdump1.log, with a ramdump_err1.txt that says what failed, a text): they are dumps too,
+    and one written there after the places were kept is found."""
+    st, dev = device
+    debug = st.root / "GARMIN" / "Debug"
+    (debug / "ramdump1.log").write_bytes(b"r" * 700)
+    (debug / "ramdump_err1.txt").write_text("what failed")
+    names = sorted(Path(p).name for p, _size in diagnostics.dumps_on_device(st))
+    assert names == ["RAM.zip", "RAM_bak1.zip", "ramdump1.log"]
+    assert sum(size for _p, size in diagnostics.at_open(dev, st).dumps) == 1200
+    (debug / "ramdumpC2.log").write_bytes(b"c" * 50)
+    _connected_again(st)
+    assert sum(size for _p, size in diagnostics.at_open(dev, st).dumps) == 1250
 
 
 def test_a_place_gone_is_looked_for_again(device, clock):

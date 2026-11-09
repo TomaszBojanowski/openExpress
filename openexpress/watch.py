@@ -16,7 +16,7 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import last_sync, service  # noqa: E402
+from openexpress import history, last_sync, service  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
     MassStorageNotice,
@@ -123,7 +123,7 @@ class Watcher(Gio.Application):
     def _open_session(self, sleep=time.sleep):
         for attempt in range(OPEN_RETRIES + 1):
             try:
-                return service.open_session()
+                s = service.open_session()
             except (SeveralDevices, MassStorageNotice, DeviceNotResponding):
                 # Nothing to wait for: syncing waits for a choice in the window, a drive is
                 # never synced, and a device that stopped responding stays so until it is
@@ -135,6 +135,10 @@ class Watcher(Gio.Application):
                     raise
                 log.info("Watch not ready, retrying in %d s", OPEN_RETRY_DELAY_S)
                 sleep(OPEN_RETRY_DELAY_S)
+                continue
+            # The line of this connection in the device log, whatever the sync does next.
+            history.note_connection(s.device, s.storage)
+            return s
         return None
 
     def _sync(self):

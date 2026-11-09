@@ -25,6 +25,7 @@ from gi.repository import Adw, Gio, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E40
 from openexpress import (  # noqa: E402
     devicelist,
     diagnostics,
+    history,
     i18n,
     known_devices,
     last_sync,
@@ -458,7 +459,10 @@ def read_diagnostics(win) -> None:
 
     def work():
         try:
-            return diagnostics.at_open(s.device, s.storage)
+            found = diagnostics.at_open(s.device, s.storage)
+            # The line of this connection in the device log, with what was just read.
+            history.note_connection(s.device, s.storage, found=found)
+            return found
         finally:
             reading.set()  # also when it failed: the tasks go on
 

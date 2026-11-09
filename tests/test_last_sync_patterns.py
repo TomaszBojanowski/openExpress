@@ -390,7 +390,7 @@ def test_the_notification_of_the_background_sync_says_what_the_row_says(monkeypa
                                   errors=list(record["errors"]), lines=list(record["lines"]))
     shown = []
     session = types.SimpleNamespace(
-        mass_storage=False, logged_in=True, first_sync=False, client=None,
+        mass_storage=False, logged_in=True, first_sync=False, client=None, storage=None,
         device=types.SimpleNamespace(part_number="006-B0000-00", unit_id=record["unit_id"], description="Test watch"))
     monkeypatch.setattr(watch.service, "open_session", lambda: session)
     monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit, fresh=False, **_kw: None)

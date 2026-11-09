@@ -151,7 +151,7 @@ def test_the_background_sync_does_not_log_its_progress(monkeypatch, caplog):
         return service.SyncSummary()
 
     session = types.SimpleNamespace(
-        mass_storage=False, logged_in=True, first_sync=False, client=None,
+        mass_storage=False, logged_in=True, first_sync=False, client=None, storage=None,
         device=types.SimpleNamespace(part_number="006-B0000-00", unit_id=1, description="Test watch"))
     monkeypatch.setattr(watch.service, "open_session", lambda: session)
     monkeypatch.setattr(watch.service, "require_account_device", lambda client, unit, fresh=False, **_kw: None)
