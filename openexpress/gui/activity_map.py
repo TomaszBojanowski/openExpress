@@ -41,7 +41,7 @@ try:
 except (ValueError, ImportError):  # not installed (the version from source): no map
     Shumate = None
 
-from openexpress import __version__, cache, paths, useragent  # noqa: E402
+from openexpress import __version__, cache, course_gpx, paths, useragent  # noqa: E402
 from openexpress.gui import activity_colours  # noqa: E402
 from openexpress.gui.activity_chart import nearest  # noqa: E402
 from openexpress.gui.gui_settings import load_gui_settings, update_gui_settings  # noqa: E402
@@ -181,19 +181,11 @@ def position_at(track: Track, at: float) -> tuple[float, float] | None:
     return None if i is None else track.points[i]
 
 
-def _metres(a, b) -> float:
-    """The distance between two (latitude, longitude) on the Earth (haversine)."""
-    lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
-    h = (math.sin((lat2 - lat1) / 2) ** 2
-         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
-    return 2 * 6_371_000 * math.asin(min(1.0, math.sqrt(h)))
-
-
 def ends_of(track: Track) -> list[tuple[str, tuple[float, float]]]:
     """The markers of the track's ends, in the order they are drawn: the start and the finish,
     or one for both at the start when the finish is closer than LOOP_M (a loop)."""
     first, last = track.points[0], track.points[-1]
-    if _metres(first, last) < LOOP_M:
+    if course_gpx.distance_m(first, last) < LOOP_M:
         return [("start-and-finish", first)]
     return [("start", first), ("finish", last)]
 

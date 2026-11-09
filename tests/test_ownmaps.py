@@ -189,6 +189,17 @@ def test_a_device_without_a_map_folder_has_no_own_maps(map_folder):
     assert ownmaps.list_own(device("Garmin/Maps"), LocalStorage(map_folder), []) == []  # missing
 
 
+def test_nothing_is_removed_from_a_device_without_a_map_folder(map_folder):
+    shown = ownmaps.OwnMap("osm-test.img", 1512, "Sometown cyclemap", "Garmin/osm-test.img")
+    for plan in (lambda: ownmaps.plan_remove(device(None), LocalStorage(map_folder), [],
+                                             "osm-test.img"),
+                 lambda: ownmaps.plan_remove_foreign(device(None), LocalStorage(map_folder), [],
+                                                     shown)):
+        with pytest.raises(ownmaps.MapError) as refused:
+            plan()
+        assert str(refused.value) == "This device has no folder for maps."
+
+
 # --- the "maps" command --------------------------------------------------------------------------
 
 MAPS_TYPE = """<DataType><Name>NMaps</Name>

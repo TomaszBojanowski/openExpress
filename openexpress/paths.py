@@ -15,18 +15,26 @@ APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 FLATPAK_INFO = Path("/.flatpak-info")
 
 
-def _xdg(var: str, default: str) -> Path:
+def xdg(var: str, default: str) -> Path:
+    """The XDG base folder in the variable `var` (e.g. XDG_DATA_HOME); `default` below the
+    home folder when the variable is not set or empty."""
     value = os.environ.get(var)
     return Path(value) if value else Path.home() / default
 
 
 def _app_dir(var: str, default: str) -> Path:
     """XDG directory for the app."""
-    return _xdg(var, default) / APP_NAME
+    return xdg(var, default) / APP_NAME
 
 
 def config_dir() -> Path:
     return _app_dir("XDG_CONFIG_HOME", ".config")
+
+
+def settings_file() -> Path:
+    """settings.json: the settings of the program (settings.Settings) and the language of
+    the interface (i18n)."""
+    return config_dir() / "settings.json"
 
 
 def data_dir() -> Path:
@@ -38,7 +46,7 @@ def cache_dir() -> Path:
 
 
 def in_flatpak() -> bool:
-    return Path("/.flatpak-info").exists()
+    return FLATPAK_INFO.exists()
 
 
 def flatpak_data_dir() -> Path:
@@ -179,18 +187,41 @@ def _make_private(root: Path) -> None:
 
 
 @contextlib.contextmanager
+def holding(f, *, shared: bool = False, wait: bool = True, busy=None):
+    """The lock (fcntl.flock) of the open file `f` held for the block, shared or exclusive;
+    the system lets go of it when the process ends. Without `wait` a lock another holds is
+    refused at once: BlockingIOError, or the exception `busy()` returns. What the block
+    raises goes on as it is."""
+    try:
+        fcntl.flock(f, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX)
+                    | (0 if wait else fcntl.LOCK_NB))
+    except BlockingIOError:
+        if busy is None:
+            raise
+        raise busy() from None
+    try:
+        yield
+    finally:
+        fcntl.flock(f, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def locked(path: Path, *, mode: str = "a", shared: bool = False, wait: bool = True, busy=None):
+    """The lock file `path`, opened with `mode` ("a" makes it when it is not there), held for
+    the block (holding). Its folder has to be there."""
+    with open(path, mode) as f, holding(f, shared=shared, wait=wait, busy=busy):
+        yield
+
+
+@contextlib.contextmanager
 def settings_locked():
     """One writer of settings.json at a time, in any process and any thread (each opens the
     lock file of its own); the system lets go of it when the process ends. Reading alone
     needs no lock: the file is replaced whole (write_private)."""
     folder = config_dir()
     make_dir(folder)
-    with open(folder / "settings.lock", "a") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with locked(folder / "settings.lock"):
+        yield
 
 
 def write_private(path: Path, data: str | bytes) -> None:

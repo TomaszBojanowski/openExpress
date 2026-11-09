@@ -394,6 +394,21 @@ def _a_record_has_a_position(data: bytes) -> bool:
         return False
 
 
+def _state(data: bytes) -> FileState:
+    """Whether an activity file is whole, cut short as the device was still writing it, or
+    damaged otherwise (not_whole), before it is read."""
+    found = not_whole(data)
+    return (FileState.WHOLE if found is None else FileState.STILL_BEING_WRITTEN if found[0]
+            else FileState.DAMAGED)
+
+
+def _sport(sessions: list[dict[int, Value]]) -> int | None:
+    """The sport of an activity: the one its sessions share, multisport when they have
+    several, None when none gives one."""
+    sports = {_whole_number(s.get(_SESSION_SPORT)) for s in sessions} - {None}
+    return sports.pop() if len(sports) == 1 else SPORT_MULTISPORT if sports else None
+
+
 def summary(data: bytes) -> ActivitySummary:
     """What the activity file `data` says of itself. Of a file the device was still writing
     (not_whole: cut short) only when it was created; of a damaged one what can be read up to
@@ -401,10 +416,9 @@ def summary(data: bytes) -> ActivitySummary:
     session's start position, else the first record that has one. FitError for what is no FIT
     file, as parse_file_id."""
     _check_header(data)
-    found = not_whole(data)
-    if found is not None and found[0]:
-        return ActivitySummary(FileState.STILL_BEING_WRITTEN, created=_created(data))
-    state = FileState.WHOLE if found is None else FileState.DAMAGED
+    state = _state(data)
+    if state is FileState.STILL_BEING_WRITTEN:
+        return ActivitySummary(state, created=_created(data))
     created = None
     sessions: list[dict[int, Value]] = []
     try:
@@ -417,18 +431,12 @@ def summary(data: bytes) -> ActivitySummary:
         state = FileState.DAMAGED
     if not sessions:
         return ActivitySummary(state, created=created)
-    sports = {_whole_number(s.get(_SESSION_SPORT)) for s in sessions} - {None}
-    sport = None
-    if len(sports) == 1:
-        sport = sports.pop()
-    elif sports:
-        sport = SPORT_MULTISPORT
     has_positions = (any(_has_position(s, _SESSION_START_LAT, _SESSION_START_LONG)
                          for s in sessions)
                      or _a_record_has_a_position(data))
     return ActivitySummary(
         state, created=created, start=_unix_time(sessions[0].get(_SESSION_START_TIME)),
-        sport=sport, timer_time=_total(sessions, _SESSION_TIMER_TIME, 1000),
+        sport=_sport(sessions), timer_time=_total(sessions, _SESSION_TIMER_TIME, 1000),
         distance=_total(sessions, _SESSION_DISTANCE, 100),
         ascent=_total(sessions, _SESSION_ASCENT), has_positions=has_positions)
 
@@ -520,14 +528,17 @@ def points(data: bytes) -> Iterator[Point]:
     enhanced altitude when it is given, else the altitude. FitError where the file breaks
     off, after the points before it."""
     for _num, values in iter_messages(data, wanted=(_MESG_RECORD,)):
-        lat, long = (_whole_number(values.get(n)) for n in (_RECORD_LAT, _RECORD_LONG))
-        if lat is None or long is None:
+        position = _position(values)
+        if position is None:
             continue
-        altitude = _metres(values.get(_RECORD_ENHANCED_ALTITUDE))
-        if altitude is None:
-            altitude = _metres(values.get(_RECORD_ALTITUDE))
-        yield Point(_degrees(lat), _degrees(long), altitude,
+        yield Point(*position, _altitude(values, _RECORD_ENHANCED_ALTITUDE, _RECORD_ALTITUDE),
                     _unix_time(values.get(FIELD_TIMESTAMP)))
+
+
+def _position(values: dict[int, Value]) -> tuple[float, float] | None:
+    """The position of a record (degrees); None for one without both of its coordinates."""
+    lat, long = (_whole_number(values.get(n)) for n in (_RECORD_LAT, _RECORD_LONG))
+    return None if lat is None or long is None else (_degrees(lat), _degrees(long))
 
 
 # FIT profile: more of a record, the lap, and more of a session.
@@ -689,16 +700,12 @@ def _sample(values: dict[int, Value]) -> Sample | None:
     time = _unix_time(values.get(FIELD_TIMESTAMP))
     if time is None:
         return None
-    lat, long = (_whole_number(values.get(n)) for n in (_RECORD_LAT, _RECORD_LONG))
-    altitude = _metres(values.get(_RECORD_ENHANCED_ALTITUDE))
-    if altitude is None:
-        altitude = _metres(values.get(_RECORD_ALTITUDE))
-    placed = lat is not None and long is not None
+    latitude, longitude = _position(values) or (None, None)
     return Sample(time, _scaled(values.get(_RECORD_DISTANCE), 100),
                   _speed(values, _RECORD_ENHANCED_SPEED, _RECORD_SPEED),
-                  _whole_number(values.get(_RECORD_HEART_RATE)), altitude,
-                  _degrees(lat) if placed else None, _degrees(long) if placed else None,
-                  _whole_number(values.get(_RECORD_TEMPERATURE)))
+                  _whole_number(values.get(_RECORD_HEART_RATE)),
+                  _altitude(values, _RECORD_ENHANCED_ALTITUDE, _RECORD_ALTITUDE),
+                  latitude, longitude, _whole_number(values.get(_RECORD_TEMPERATURE)))
 
 
 def _lap(values: dict[int, Value]) -> Lap:
@@ -817,8 +824,6 @@ def _sessions_together(sessions: list[dict[int, Value]]) -> dict:
     looked at); the details (_details_together)."""
     if not sessions:
         return {}
-    sports = {_whole_number(s.get(_SESSION_SPORT)) for s in sessions} - {None}
-    sport = sports.pop() if len(sports) == 1 else SPORT_MULTISPORT if sports else None
     timer_time = _total(sessions, _SESSION_TIMER_TIME, 1000)
     distance = _total(sessions, _SESSION_DISTANCE, 100)
     if len(sessions) == 1:
@@ -828,7 +833,7 @@ def _sessions_together(sessions: list[dict[int, Value]]) -> dict:
     avg_heart_rate = _weighted(sessions, lambda s: _whole_number(s.get(_SESSION_AVG_HEART_RATE)))
     return {
         "start": _unix_time(sessions[0].get(_SESSION_START_TIME)),
-        "sport": sport,
+        "sport": _sport(sessions),
         "elapsed_time": _total(sessions, _SESSION_ELAPSED_TIME, 1000),
         "timer_time": timer_time,
         "distance": distance,
@@ -875,9 +880,7 @@ def activity_data(data: bytes) -> ActivityData:
     or damaged, what reads up to where it breaks off, with its state. FitError for what is no
     FIT file, as summary."""
     _check_header(data)
-    found = not_whole(data)
-    state = (FileState.WHOLE if found is None else FileState.STILL_BEING_WRITTEN if found[0]
-             else FileState.DAMAGED)
+    state = _state(data)
     samples: list[Sample] = []
     laps: list[Lap] = []
     sessions: list[dict[int, Value]] = []

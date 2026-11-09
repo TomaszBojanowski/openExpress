@@ -44,12 +44,16 @@ def test_usb_id_comes_from_the_storage_not_from_the_address(device_root):
     # An address made of the USB strings carries no IDs, only the serial number.
     st.label = "mtp://Garmin_Edge_1050_0000abcdef12/Internal%20Storage"
     assert "- USB ID: unknown" in report.build(dev, st)
-    st.usb_id = "091e:5158"
+    from openexpress.device.gio_storage import GarminUsb
+
+    st.usb = GarminUsb("5158")  # read from the USB device
     text = report.build(dev, st)
     assert "- USB ID: 091e:5158" in text
     assert "0000abcdef12" not in text and "mtp://" not in text and "Garmin_Edge" not in text
-    st.usb_id = "091e:unknown"
+    st.usb = GarminUsb(None)
     assert "- USB ID: 091e:unknown" in report.build(dev, st)
+    st.usb = None
+    assert "- USB ID: unknown" in report.build(dev, st)
 
 
 # --- an address that opens the GitHub form filled in -------------------------------------------

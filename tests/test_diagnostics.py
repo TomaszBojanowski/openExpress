@@ -534,6 +534,51 @@ def test_files_unchanged_in_size_and_time_are_not_read_again(device, clock):
     assert [Path(p).name for p in st.reads] == ["SNS_ERR.TXT"] and later.new == 1
 
 
+def _sha(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(data).hexdigest()
+
+
+def test_a_file_of_another_time_with_the_same_bytes_is_unchanged(device, clock):
+    """Its time changed: it is read again, and as its content is the one of the copy before,
+    it counts as unchanged and nothing new is kept; the copy keeps its new time."""
+    st, dev = device
+    first = diagnostics.copy_files(dev, st)
+    touched = st.root / "GARMIN" / "Debug" / "SNS_ERR.TXT"
+    os.utime(touched, (1_700_000_000, 1_700_000_000))
+    clock.current += timedelta(minutes=1)
+    st.reads.clear()
+    again = diagnostics.copy_files(dev, st)
+    assert [Path(p).name for p in st.reads] == ["SNS_ERR.TXT"]
+    assert (again.new, again.unchanged, again.new_bytes, again.saved) == (0, first.new, 0, True)
+    assert newest()["files"]["GARMIN/Debug/SNS_ERR.TXT"] == {
+        "sha256": _sha(b"sensor hub history"), "size": 18, "mtime": 1_700_000_000}
+
+
+def test_dumps_copied_again_keep_their_content_once(device, clock):
+    st, dev = device
+    first = diagnostics.copy_dumps(dev, st)
+    clock.current += timedelta(minutes=1)
+    again = diagnostics.copy_dumps(dev, st)
+    assert (first.new, first.unchanged, first.new_bytes) == (2, 0, 500)
+    assert (again.new, again.unchanged, again.new_bytes) == (0, 2, 0)
+    assert newest("dumps")["files"]["GARMIN/Debug/dump/RAM_bak1.zip"] == {
+        "sha256": _sha(b"e" * 200), "size": 200, "mtime": 1_700_000_000}
+
+
+def test_crash_logs_copied_again_keep_their_content_once(hiding, clock):
+    st, dev, _fake = hiding
+    first = diagnostics.copy_crash_logs(dev, st)
+    clock.current += timedelta(minutes=1)
+    again = diagnostics.copy_crash_logs(dev, st)
+    # The boot log (101 bytes) and the event log (9).
+    assert (first.new, first.unchanged, first.new_bytes) == (2, 0, 110)
+    assert (again.new, again.unchanged, again.new_bytes) == (0, 2, 0)
+    assert newest("crash logs")["files"]["GARMIN/EVNTLOGS/EVT0001.TXT"] == {
+        "sha256": _sha(b"event log"), "size": 9, "mtime": None}
+
+
 def _window(found):
     from fakes import RunNow
 

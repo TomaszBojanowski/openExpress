@@ -2,6 +2,7 @@
 
 import os
 import struct
+import types
 
 import pytest
 from ptp_fake import STORAGE, FakeDevice
@@ -460,3 +461,145 @@ def test_a_node_that_cannot_be_used_leaves_no_descriptor_open(tmp_path, monkeypa
         os.fstat(given[0])
     with pytest.raises(ptp.UsbUnavailable, match="cannot be opened"):
         ptp.LibusbTransport.open_node(tmp_path / "missing")
+
+
+
+# --- a device opened by its place on USB or by a descriptor: what is released after a failure --
+
+
+class RecordingLibusb:
+    """libusb as LibusbTransport opens a device with it: each call kept, with the device's place
+    on USB or the descriptor; the devices on USB (bus, device number), the context (7) and
+    the handle (99) made up. `fails`: the call ("init", "open", "wrap") that answers with an
+    error, giving nothing."""
+
+    CONTEXT, HANDLE = 7, 99
+
+    def __init__(self, devices=((3, 14),), fails=None):
+        self.calls, self.devices, self.fails = [], list(devices), fails
+        self._list = (ptp.ctypes.c_void_p * len(self.devices))(
+            *range(1, len(self.devices) + 1))
+
+    def _gives(self, call, ref, value):
+        self.calls.append(call)
+        if (call if isinstance(call, str) else call[0]) == self.fails:
+            return -1
+        ref._obj.value = value
+        return 0
+
+    def libusb_init(self, ref):
+        return self._gives("init", ref, self.CONTEXT)
+
+    def libusb_set_option(self, context, option):
+        self.calls.append(("set_option", context, option))
+
+    def libusb_get_device_list(self, context, ref):
+        self.calls.append("get_device_list")
+        ref._obj.contents = ptp.ctypes.c_void_p.from_address(ptp.ctypes.addressof(self._list))
+        return len(self.devices)
+
+    def libusb_free_device_list(self, devices, unref):
+        self.calls.append("free_device_list")
+
+    def libusb_get_bus_number(self, device):
+        return self.devices[device.value - 1][0]
+
+    def libusb_get_device_address(self, device):
+        return self.devices[device.value - 1][1]
+
+    def libusb_open(self, device, ref):
+        return self._gives(("open", *self.devices[device.value - 1]), ref, self.HANDLE)
+
+    def libusb_wrap_sys_device(self, context, fd, ref):
+        return self._gives(("wrap", context.value, fd), ref, self.HANDLE)
+
+    def libusb_close(self, handle):
+        self.calls.append(("close", handle.value))
+
+    def libusb_exit(self, context):
+        self.calls.append(("exit", context.value))
+
+    def libusb_error_name(self, code):
+        return b"LIBUSB_ERROR_IO"
+
+
+@pytest.fixture
+def libusb(monkeypatch):
+    """A RecordingLibusb (`libusb.lib`, which a test may replace) and the claim of the
+    interface, recorded with the context and the handle: it raises `libusb.claim_fails` when
+    that is set."""
+    state = types.SimpleNamespace(lib=RecordingLibusb(), claim_fails=None)
+
+    def claim(cls, lib, context, handle):
+        lib.calls.append(("claim", context.value, handle.value))
+        if state.claim_fails is not None:
+            raise state.claim_fails
+        return "transport"
+
+    monkeypatch.setattr(ptp, "load_libusb", lambda: state.lib)
+    monkeypatch.setattr(ptp.LibusbTransport, "_claim", classmethod(claim))
+    return state
+
+
+CLOSE, EXIT = ("close", 99), ("exit", 7)
+FOUND = ["init", "get_device_list", ("open", 3, 14), "free_device_list"]
+
+
+def test_a_device_opened_by_its_place_on_usb(libusb):
+    libusb.lib = RecordingLibusb([(1, 5), (3, 14)])  # another device first
+    assert ptp.LibusbTransport.open(3, 14) == "transport"
+    assert libusb.lib.calls == [*FOUND, ("claim", 7, 99)]  # nothing released: it is in use
+
+
+@pytest.mark.parametrize("fails, calls", [
+    ("init", ["init"]),
+    ("open", [*FOUND, EXIT]),
+], ids=["no context", "not opened"])
+def test_a_device_libusb_does_not_open_releases_what_it_got(libusb, fails, calls):
+    libusb.lib.fails = fails
+    with pytest.raises(ptp.UsbUnavailable, match="cannot be used: LIBUSB_ERROR_IO"):
+        ptp.LibusbTransport.open(3, 14)
+    assert libusb.lib.calls == calls
+
+
+def test_a_device_not_on_usb_releases_the_context(libusb):
+    with pytest.raises(ptp.UsbUnavailable, match="was not found"):
+        ptp.LibusbTransport.open(3, 15)
+    assert libusb.lib.calls == ["init", "get_device_list", "free_device_list", EXIT]
+
+
+@pytest.mark.parametrize("error", [ptp.UsbUnavailable("no interface"), KeyboardInterrupt()],
+                         ids=["refused", "interrupted"])
+def test_a_device_whose_interface_is_not_claimed_is_closed(libusb, error):
+    libusb.claim_fails = error
+    with pytest.raises(type(error)):
+        ptp.LibusbTransport.open(3, 14)
+    assert libusb.lib.calls == [*FOUND, ("claim", 7, 99), CLOSE, EXIT]
+
+
+WRAPPED = [("set_option", None, ptp._LIBUSB_OPTION_NO_DEVICE_DISCOVERY), "init", ("wrap", 7, 5)]
+
+
+def test_a_device_opened_by_its_descriptor(libusb):
+    assert ptp.LibusbTransport.from_fd(5) == "transport"
+    assert libusb.lib.calls == [*WRAPPED, ("claim", 7, 99)]
+
+
+@pytest.mark.parametrize("fails, calls", [
+    ("init", WRAPPED[:2]),
+    ("wrap", [*WRAPPED, EXIT]),
+], ids=["no context", "not taken"])
+def test_a_descriptor_libusb_does_not_take_releases_what_it_got(libusb, fails, calls):
+    libusb.lib.fails = fails
+    with pytest.raises(ptp.UsbUnavailable, match="cannot be used: LIBUSB_ERROR_IO"):
+        ptp.LibusbTransport.from_fd(5)
+    assert libusb.lib.calls == calls
+
+
+@pytest.mark.parametrize("error", [ptp.UsbUnavailable("no interface"), KeyboardInterrupt()],
+                         ids=["refused", "interrupted"])
+def test_a_descriptor_whose_interface_is_not_claimed_is_closed(libusb, error):
+    libusb.claim_fails = error
+    with pytest.raises(type(error)):
+        ptp.LibusbTransport.from_fd(5)
+    assert libusb.lib.calls == [*WRAPPED, ("claim", 7, 99), CLOSE, EXIT]

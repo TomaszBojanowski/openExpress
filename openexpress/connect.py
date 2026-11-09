@@ -250,6 +250,22 @@ class GarminClient:
             ) from e
 
     @staticmethod
+    def _no_content(resp: requests.Response) -> bool:
+        """Whether the server has nothing to say: 204, or a body of white space only."""
+        return resp.status_code == 204 or not resp.content.strip()
+
+    @classmethod
+    def _json_object(cls, resp: requests.Response, what: str, null_is_empty: bool = False) -> dict:
+        """The answer, a JSON object, with its keys in lower case; anything else is an error
+        naming the request (`null_is_empty`: JSON null is an empty object)."""
+        body = lower_keys(cls._json(resp, what))
+        if body is None and null_is_empty:
+            return {}
+        if not isinstance(body, dict):
+            raise ApiError(unexpected_answer_text(what))
+        return body
+
+    @staticmethod
     def _clock_skew(resp: requests.Response, what: str) -> ClockSkew | None:
         """The error for a refusal (401, 403) the computer's wrong clock caused, if it did."""
         skew = netstatus.clock_skew(resp)
@@ -599,12 +615,7 @@ class GarminClient:
         # Connect), shown before an error
         what = _("Upload consent")
         r = self._connect("GET", f"gdprconsent-service/feature/consent/{consent_type}", what)
-        if r.status_code == 204 or not r.content.strip():
-            return None
-        body = lower_keys(self._json(r, what))
-        if not isinstance(body, dict):
-            raise ApiError(unexpected_answer_text(what))
-        return body
+        return None if self._no_content(r) else self._json_object(r, what)
 
     def device_sync_preference(self) -> dict | None:
         """The account's "device sync" preference: {"key": ..., "value": "true"|"false"}.
@@ -614,12 +625,7 @@ class GarminClient:
         # before an error
         what = _("Device sync setting")
         r = self._connect("GET", "userpreference-service/account.deviceSync", what)
-        if r.status_code == 204 or not r.content.strip():
-            return None
-        body = lower_keys(self._json(r, what))
-        if not isinstance(body, dict):
-            raise ApiError(unexpected_answer_text(what))
-        return body
+        return None if self._no_content(r) else self._json_object(r, what)
 
     def profile_country(self, fresh: bool = False) -> str | None:
         """The country code of the account's location, when the profile has one. Read-only.
@@ -632,7 +638,7 @@ class GarminClient:
             # an error
             what = _("Account location")
             r = self._connect("GET", "userprofile-service/userprofile/location", what)
-            if r.status_code == 204 or not r.content.strip():
+            if self._no_content(r):
                 return None
             body = lower_keys(self._json(r, what))
             code = body.get("countrycode") if isinstance(body, dict) else None
@@ -655,14 +661,7 @@ class GarminClient:
             what = pgettext("server request", "Primary training device")
             r = self._connect("GET", PRIMARY_TRAINING_PATH, what,
                               params={"ignoreCache": "false"})
-            if r.status_code == 204 or not r.content.strip():
-                return {}
-            body = lower_keys(self._json(r, what))
-            if body is None:
-                return {}
-            if not isinstance(body, dict):
-                raise ApiError(unexpected_answer_text(what))
-            return body
+            return {} if self._no_content(r) else self._json_object(r, what, null_is_empty=True)
 
         return answers.ANSWERS.ask(answers.PRIMARY_TRAINING, self.account_scope(), ask,
                                    fresh=fresh)
@@ -793,10 +792,7 @@ class GarminClient:
             what,
             params={"device_id": str(unit_id)},
         )
-        body = lower_keys(self._json(r, what))
-        if not isinstance(body, dict):
-            raise ApiError(unexpected_answer_text(what))
-        return body.get("messages") or []
+        return self._json_object(r, what).get("messages") or []
 
     def download_message(self, message_url: str, absolute: bool) -> bytes | None:
         """Download a file from the queue. None means no content (404/204): just acknowledge it."""

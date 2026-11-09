@@ -21,6 +21,7 @@ from openexpress.device.xmldevice import OUTPUT, GarminDevice
 from openexpress.fit import not_whole
 from openexpress.i18n import _, ngettext
 from openexpress.progress import Step, say_to
+from openexpress.sync import files_of
 
 log = logging.getLogger(__name__)
 
@@ -142,14 +143,9 @@ def _copy_files(device: GarminDevice, storage: Storage, target: Path,
             raise _not_a_path(src.datatype)
     # All the files first, for how many there are; each path is checked before any is read.
     files = []
-    seen: set[str] = set()
-    for src in backup_files(device):
-        for path, entry in storage.walk_files(src.path):
-            if not src.matches(path) or path.casefold() in seen:
-                continue
-            seen.add(path.casefold())
-            rel = posixpath.relpath(path, storage.resolve(src.path) or src.path)
-            files.append((path, entry, src.datatype, _out_path(target, src.datatype, rel)))
+    for src, path, entry in files_of(storage, backup_files(device)):
+        rel = posixpath.relpath(path, storage.resolve(src.path) or src.path)
+        files.append((path, entry, src.datatype, _out_path(target, src.datatype, rel)))
     # TRANSLATORS: a step of a backup ("… · 120 of 1530")
     head = _("Copying to the backup")
     # Every file of the backup counted, GarminDevice.xml (read already) the first.

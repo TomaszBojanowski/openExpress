@@ -615,6 +615,38 @@ def _back_as_a_drive(drives, devnum=14):
     _reenumerated(drives, product=FR55, devnum=devnum, cls="08")
 
 
+class _Rootless:
+    """A mount that gives no root."""
+
+    def get_root(self):
+        return None
+
+
+def test_a_mount_without_a_root_is_passed_over(drives, monkeypatch):
+    """The drive's own mount is found by its address, also behind a mount without a root: it
+    is ejected, and the device's state is told by it."""
+    unix = usb_drive(drives, product=FR55)
+    _sized(drives, unix, FR55_SECTORS)
+    _on_usb(drives, monkeypatch)
+    folder = drive_folder(drives)
+    mount = FakeDriveMount(folder, unix)
+    monitor_with(monkeypatch, _Rootless(), mount)
+    files = types.SimpleNamespace(exists=lambda path: True)
+    assert gio_storage._device_state(folder.as_uri(), files) == gio_storage.MOUNTED
+    ejects_at_once(monkeypatch)
+    usb = gio_storage.GarminUsb(FR55, 1, 12, serial=DRIVE_SERIAL)
+    gio_storage.eject(types.SimpleNamespace(device_uri=folder.as_uri() + "/", usb=usb))
+    assert mount.ejected == 1 and gio_storage.ejected_by_us(usb)
+    monitor_with(monkeypatch, _Rootless())
+    assert gio_storage._device_state(folder.as_uri(), files) == gio_storage.UNMOUNTED
+    with pytest.raises(gio_storage.DriveNotMounted):
+        gio_storage.eject(types.SimpleNamespace(device_uri=folder.as_uri(), usb=usb))
+    for mounts in ((), (_Rootless(),)):
+        monitor_with(monkeypatch, *mounts)
+        with pytest.raises(gio_storage.DeviceError, match=r"^The device is not mounted\.$"):
+            gio_storage._unmount(folder.as_uri())
+
+
 def test_in_its_garmin_usb_mode_on_the_cable_the_ejected_drive_is_not_unplugged(
         drives, monkeypatch, caplog):
     _ejected_drive(drives, monkeypatch)

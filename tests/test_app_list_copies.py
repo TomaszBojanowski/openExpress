@@ -9,7 +9,14 @@ import uuid
 
 import pytest
 from fakes import window as stand_in
-from test_ciq_music import PRELOADED, STORE_ID, copy_names, iq_device, out_bin  # noqa: F401
+from test_ciq_music import (  # noqa: F401
+    PRELOADED,
+    STORE_ID,
+    copy_names,
+    damaged_out_bin,
+    iq_device,
+    out_bin,
+)
 
 from openexpress import ciq, proto
 
@@ -87,6 +94,20 @@ def test_a_damaged_newest_copy_is_compared_byte_for_byte(iq_device, device_root,
     assert ciq.save_app_list_copy(dev, st, now=next(stamps)) == first
     _list(device_root, b"not an app list either")
     assert ciq.save_app_list_copy(dev, st, now=next(stamps)) != first
+
+
+def test_a_list_with_an_entry_that_cannot_be_read_is_compared_byte_for_byte(iq_device,
+                                                                            device_root, backups):
+    """Its other apps are not the whole list: the same bytes make no new copy, the same apps
+    with every entry readable do."""
+    st, dev = iq_device
+    stamps = _stamps()
+    damaged_out_bin(device_root, "truncated")
+    first = ciq.save_app_list_copy(dev, st, now=next(stamps))
+    assert ciq.save_app_list_copy(dev, st, now=next(stamps)) == first
+    _list(device_root, out_bin(APPS[:2]))  # the two apps that can be read of it
+    second = ciq.save_app_list_copy(dev, st, now=next(stamps))
+    assert copy_names(dev) == [first, second]
 
 
 # --- (2) at most ten copies --------------------------------------------------------------------
@@ -319,6 +340,18 @@ def test_different_lists_all_stay(iq_device, device_root, backups):
     _list(device_root, out_bin(APPS[:2]))
     c = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 20, 0, 0))
     assert copy_names(dev) == [*made, c]
+
+
+def test_copies_with_an_entry_that_cannot_be_read_are_no_series(iq_device, device_root, backups):
+    """The same bytes, with an entry that cannot be read: both stay (what it says is not
+    known)."""
+    st, dev = iq_device
+    damaged_out_bin(device_root, "truncated")
+    data = (device_root / "GARMIN/APPS/OUT.BIN").read_bytes()
+    damaged = [_copy_folder(backups, dev, f"1{n}.00.00", data) for n in range(2)]
+    _list(device_root, out_bin(APPS))
+    c = ciq.save_app_list_copy(dev, st, now=datetime.datetime(2026, 10, 12, 20, 0, 0))
+    assert copy_names(dev) == [*damaged, c]
 
 
 def test_unreadable_copies_and_full_backups_are_left_alone(iq_device, device_root, backups):

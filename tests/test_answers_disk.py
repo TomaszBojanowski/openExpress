@@ -239,3 +239,41 @@ def test_a_list_from_disk_names_the_devices_as_a_fresh_one():
         assert service.model_name(cut) == service.model_name(entry)
     assert devicelist.account_fields(only_given)["description"] == ""
     assert service.model_name(only_given) == ""
+
+
+def test_a_file_that_is_no_fresh_answer_is_none_to_a_forget_and_to_the_tidying(tmp_path):
+    """Each reading of the folder takes a file that does not read, or that is no object, for
+    no answer: none is given, a forget leaves it, the tidying takes it away with those out of
+    date; a fresh answer of a known kind stays."""
+    disk = Disk(tmp_path / "answers")
+    now = 1_000_000.0
+    kind, life = answers.SOFTWARE_UPDATES, answers.LIFETIMES[answers.SOFTWARE_UPDATES]
+    files = {"damaged": b"{not json", "list": b"[]",
+             "no time": json.dumps({"kind": kind}).encode(),
+             "a flag for a time": json.dumps({"kind": kind, "at": True}).encode(),
+             "unknown kind": json.dumps({"kind": "made-up", "at": now}).encode()}
+
+    def fill():
+        disk.put(kind, ("fresh",), {"updates": []}, frozenset({"t"}), now)
+        disk.put(kind, ("old",), {"updates": []}, frozenset(), now - life)
+        for key, data in files.items():
+            disk._path((key,)).write_bytes(data)
+
+    fill()
+    assert disk.get(kind, ("fresh",), now + 1) == (now, {"updates": []}, frozenset({"t"}))
+    assert disk.get(answers.UNIVERSAL_MAPS, ("fresh",), now + 1) is None  # another kind
+    assert disk.get(kind, ("fresh",), now - 1) is None  # from the future
+    assert disk.get(kind, ("fresh",), now + life) is None
+    assert disk.get(kind, ("old",), now) is None
+    assert [disk.get(kind, (key,), now) for key in files] == [None] * len(files)
+    assert disk.get("made-up", ("unknown kind",), now) is None  # not a kind kept on disk
+
+    disk.forget({kind}, answers._tag("other"))  # a tag no file has
+    assert len(list(disk.folder.glob("*.json"))) == 7
+    disk.forget(None, None)  # every answer, none of the files that are no answer
+    left = sorted(p.read_bytes() for p in disk.folder.glob("*.json"))
+    assert left == sorted([files["damaged"], files["list"]])
+
+    fill()
+    disk.tidy(now)
+    assert [p.name for p in disk.folder.glob("*.json")] == [disk._path(("fresh",)).name]

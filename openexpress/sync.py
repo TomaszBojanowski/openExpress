@@ -18,7 +18,7 @@ import math
 import posixpath
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -33,6 +33,7 @@ from openexpress.connect import (
 )
 from openexpress.device.storage import (
     DeviceNotResponding,
+    Entry,
     RemountFailed,
     Storage,
     refresh_to_read_again,
@@ -64,6 +65,9 @@ ACTIVITY_TYPE = "FIT_TYPE_4"
 MONITORING_TYPES = {"FIT_TYPE_32", "FIT_TYPE_33"}
 SLEEP_TYPES = {"FIT_TYPE_49", "FIT_TYPE_50", "FIT_TYPE_51", "FIT_TYPE_52",
                "FIT_TYPE_53", "FIT_TYPE_54", "FIT_TYPE_55"}
+# The types whose files must arrive in order: after one that is not uploaded, the later ones
+# of its type wait for the next sync.
+ORDERED_TYPES = frozenset(MONITORING_TYPES | SLEEP_TYPES)
 
 # Queue items handled by dedicated modules instead of a plain file download.
 SPECIAL_DOWNLOAD_PREFIXES = {"IQ": "Connect IQ"}
@@ -406,14 +410,22 @@ def _sources_for(device: GarminDevice, dt: dict) -> list[DeviceFile]:
     return out
 
 
-def _count_files(storage: Storage, sources) -> int:
-    """How many files of these sources the device has, each once; none are read."""
+def files_of(storage: Storage, sources) -> Iterator[tuple[DeviceFile, str, Entry]]:
+    """The files of these sources on the device, as (source, real path, entry): each once
+    (letter case aside), as the first source that names it gives it, when two name one folder.
+    The folder of a source is listed when its files are wanted, after those of the sources
+    before it."""
     seen: set[str] = set()
     for src in sources:
-        for path, _entry in storage.walk_files(src.path):
-            if src.matches(path):
+        for path, entry in storage.walk_files(src.path):
+            if src.matches(path) and path.casefold() not in seen:
                 seen.add(path.casefold())
-    return len(seen)
+                yield src, path, entry
+
+
+def _count_files(storage: Storage, sources) -> int:
+    """How many files of these sources the device has, each once; none are read."""
+    return sum(1 for _file in files_of(storage, sources))
 
 
 def plan_uploads(
@@ -461,25 +473,20 @@ def plan_uploads(
         sources = _sources_for(device, dt)
         if not sources:
             continue
-        seen: set[str] = set()
-        for src in sources:
-            for path, entry in storage.walk_files(src.path):
-                if not src.matches(path) or path.casefold() in seen:
+        for _src, path, entry in files_of(storage, sources):
+            fname = posixpath.basename(path)
+            is_zip = fname.lower().endswith(".zip")
+            cand = UploadCandidate(name, fname, entry.size, path, locations, is_zip)
+            if cand.multi:
+                if state.is_completed(name, fname):
+                    plan.already_done += 1
                     continue
-                seen.add(path.casefold())
-                fname = posixpath.basename(path)
-                is_zip = fname.lower().endswith(".zip")
-                cand = UploadCandidate(name, fname, entry.size, path, locations, is_zip)
-                if cand.multi:
-                    if state.is_completed(name, fname):
-                        plan.already_done += 1
-                        continue
-                else:
-                    cand.data = storage.read(path)
-                    if not state.singleton_changed(name, path, md5(cand.data)):
-                        plan.already_done += 1
-                        continue
-                plan.candidates.append(cand)
+            else:
+                cand.data = storage.read(path)
+                if not state.singleton_changed(name, path, md5(cand.data)):
+                    plan.already_done += 1
+                    continue
+            plan.candidates.append(cand)
         if name in MULTI_FILE_TYPES:
             on_device = {c.name.casefold() for c in plan.candidates if c.datatype == name}
             for p in state.pending_files(name):
@@ -673,7 +680,7 @@ def _run_uploads(plan, device, storage, client, state, progress) -> UploadReport
         # "activities", "monitoring" ("Uploading activities · 3 of 8")
         progress(Step(_("Uploading {what}").format(what=type_name(c.datatype)), idx + 1,
                       len(remaining)))
-        ordered = c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES
+        ordered = c.datatype in ORDERED_TYPES
         try:
             data, why = reads.read(c, state)
         except (RemountFailed, DeviceNotResponding):
@@ -781,7 +788,7 @@ def _upload_one(c, data, label, last, client, state, report, stop_types) -> None
         # device by the next sync, not told as an error. No copy is kept for it (the consent
         # may never come); files of a type that must arrive in order wait with it.
         report.not_taken.append(label)
-        if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
+        if c.datatype in ORDERED_TYPES:
             stop_types.add(c.datatype)
         return
     if ok:
@@ -798,7 +805,7 @@ def _upload_one(c, data, label, last, client, state, report, stop_types) -> None
         if c.multi:
             if c.device_path is not None:
                 state.keep_pending(c.datatype, c.name, data)
-            if c.datatype in MONITORING_TYPES or c.datatype in SLEEP_TYPES:
+            if c.datatype in ORDERED_TYPES:
                 stop_types.add(c.datatype)
 
 
@@ -904,11 +911,8 @@ def _activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToS
         log.info("activities: not counted, the device was never synced here")
         return ActivitiesToSync(device.unit_id, test_drive=test_drive)
     started = time.monotonic()
-    listed = set()
-    for src in device.sources(ACTIVITY_TYPE):
-        for path, _entry in storage.walk_files(src.path):
-            if src.matches(path):
-                listed.add(posixpath.basename(path).casefold())
+    listed = {posixpath.basename(path).casefold()
+              for _src, path, _entry in files_of(storage, device.sources(ACTIVITY_TYPE))}
     took = time.monotonic() - started
     result = _activities_left(device.unit_id, frozenset(listed), test_drive)
     log.info("activities: %d on the device, %d not uploaded yet (listed in %.2f s)",
@@ -1095,15 +1099,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
             quiet = f"{it.datatype} (message {it.message_id})"  # for the log
             mid = str(it.message_id)
             if mid in unacked:
-                try:
-                    acknowledge(client, it.message_id)
-                except (Unauthorized, DeviceNotVerified):
-                    raise
-                except Exception as e:  # noqa: BLE001
-                    log.warning("Acknowledgement of %s failed again: %s", quiet, e)
-                    report.ack_failed.append(label)
-                    report.ack_failed_in_log.append(quiet)
-                else:
+                if _acknowledged(client, it.message_id, label, quiet, report, again=True):
                     unacked.discard(mid)
                 continue
             count += 1
@@ -1138,15 +1134,7 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
             report.makers.append(makers.in_log(described))
             report.written.append(f"{label} -> {real}")
             report.written_types.append(it.datatype)
-            try:
-                acknowledge(client, it.message_id)
-            except (Unauthorized, DeviceNotVerified):
-                raise
-            except Exception as e:  # noqa: BLE001
-                log.warning("Acknowledgement of %s failed: %s", quiet, e)
-                report.ack_failed.append(label)
-                report.ack_failed_in_log.append(quiet)
-            else:
+            if _acknowledged(client, it.message_id, label, quiet, report, again=False):
                 unacked.discard(mid)
     finally:
         if unacked != initial:
@@ -1157,6 +1145,25 @@ def _run_downloads(items, storage, client, progress, state, makers: Makers) -> D
     for _label, error in report.failed:
         log.warning("download failed: %s", error)
     return report
+
+
+def _acknowledged(client, message_id, label: str, quiet: str, report: DownloadReport,
+                  again: bool) -> bool:
+    """Whether Garmin Connect took the acknowledgement of a message written to the device
+    (`again`: by an earlier sync). One it did not take is told in the report (`label`) and
+    the log (`quiet`); the next sync tries again. A refused sign-in or device stops the
+    downloads."""
+    try:
+        acknowledge(client, message_id)
+    except (Unauthorized, DeviceNotVerified):
+        raise
+    except Exception as e:  # noqa: BLE001 - any other failure: the next sync tries again
+        log.warning("Acknowledgement of %s failed again: %s" if again
+                    else "Acknowledgement of %s failed: %s", quiet, e)
+        report.ack_failed.append(label)
+        report.ack_failed_in_log.append(quiet)
+        return False
+    return True
 
 
 @dataclass(frozen=True)

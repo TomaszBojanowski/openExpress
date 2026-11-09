@@ -7,6 +7,7 @@ import os
 import random
 import threading
 import time
+import types
 
 import pytest
 from gio_fake import GioOf, GvfsDevice
@@ -57,9 +58,12 @@ def turn_default(seconds: float) -> None:
 
 
 def session(device):
-    """A PTP session of `device`, as an app install takes it: what it ended with."""
+    """A PTP session of `device` (at 3-14 on USB), as an app install takes it: what it ended
+    with."""
+    storage = types.SimpleNamespace(device_uri=URI, usb=gio_storage.GarminUsb(None, 3, 14),
+                                    exists=device.exists)
     try:
-        with gio_storage._exclusive(URI, 3, 14, device):
+        with gio_storage._exclusive(storage):
             return AssertionError("the session ran")
     except BaseException as e:  # noqa: BLE001 - told to the test
         return e

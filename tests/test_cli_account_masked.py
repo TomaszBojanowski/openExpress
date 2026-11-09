@@ -29,6 +29,18 @@ def test_the_auth_says_its_account_masked_for_the_command_line():
     assert store.ConnectAuth("t", "ts").masked_display == "(unknown account)"
 
 
+@pytest.mark.parametrize("account, whole, shown", [
+    ({"username": "tomek_b", "emailaddress": "tomek@example.com"}, "tomek_b", "t…b"),
+    ({"username": "", "emailaddress": "tomek@example.com"}, "tomek@example.com", "t…@e…"),
+    ({"emailaddress": "tomek@example.com"}, "tomek@example.com", "t…@e…"),
+    ({"username": None, "emailaddress": ""}, "(unknown account)", "(unknown account)"),
+    ({}, "(unknown account)", "(unknown account)"),
+], ids=["user name", "empty user name", "address only", "both empty", "neither"])
+def test_the_account_is_named_by_its_user_name_else_its_address(account, whole, shown):
+    auth = store.ConnectAuth("t", "ts", account=account)
+    assert (auth.display, auth.masked_display) == (whole, shown)
+
+
 def test_whoami_masks_the_account(xdg, capsys, monkeypatch):
     store.save(store.ConnectAuth("t", "ts", account={"username": "tomek_b"}))
     monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: types.SimpleNamespace(

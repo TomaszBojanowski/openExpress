@@ -25,7 +25,6 @@ the sync state, own maps…) stays. The unit ID is never written to the log."""
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import logging
 import re
@@ -66,6 +65,12 @@ UPDATE_FOUND_KEPT_S = 30 * 86400
 SYNC_COUNT_KEPT_S = 7 * 86400
 
 
+def _number(value, kind=int | float) -> bool:
+    """Whether a value read from the file is a number of this `kind` (a whole number: int): a
+    JSON true or false is none, although Python counts it as an int."""
+    return isinstance(value, kind) and not isinstance(value, bool)
+
+
 @dataclass(frozen=True)
 class UpdateSummary:
     """What the window's check of updates found, for the device page to show until its own
@@ -92,8 +97,7 @@ class UpdateSummary:
         if not isinstance(value, dict):
             return None
         count, software = value.get("count"), value.get("software_version")
-        if (isinstance(count, bool) or not isinstance(count, int) or count < 1
-                or not isinstance(software, str)):
+        if not _number(count, int) or count < 1 or not isinstance(software, str):
             return None
         one = [value.get(key) for key in ("title", "version", "is_system")]
         if one == [None, None, None]:
@@ -132,8 +136,7 @@ class UpdateCheck:
             return None
         at, software, ready = (value.get(key) for key in ("at", "software_version", "ready"))
         not_installed = value.get("not_installed", False)
-        if (isinstance(at, bool) or not isinstance(at, int | float)
-                or not isinstance(software, str) or not isinstance(ready, bool)
+        if (not _number(at) or not isinstance(software, str) or not isinstance(ready, bool)
                 or not isinstance(not_installed, bool)):
             return None
         return cls(float(at), software, ready, not_installed)
@@ -159,8 +162,7 @@ class SyncCount:
         if not isinstance(value, dict):
             return None
         count, at, state = (value.get(key) for key in ("count", "at", "state"))
-        if (isinstance(count, bool) or not isinstance(count, int) or count < 0
-                or isinstance(at, bool) or not isinstance(at, int | float)
+        if (not _number(count, int) or count < 0 or not _number(at)
                 or not isinstance(state, str)):
             return None
         return cls(count, float(at), state)
@@ -188,8 +190,7 @@ class AccountFact:
             return None
         on, primary, at, login = (value.get(k) for k in ("on_account", "primary", "at",
                                                          "login"))
-        if (not isinstance(on, bool) or not isinstance(primary, bool)
-                or isinstance(at, bool) or not isinstance(at, int | float)
+        if (not isinstance(on, bool) or not isinstance(primary, bool) or not _number(at)
                 or not isinstance(login, str)):
             return None
         return cls(on, primary, float(at), login)
@@ -218,10 +219,8 @@ class SyncedFact:
             return None
         once, last, not_uploaded, at, state = (
             value.get(k) for k in ("once", "last", "not_uploaded", "at", "state"))
-        if (not isinstance(once, bool) or not isinstance(not_uploaded, bool)
-                or isinstance(at, bool) or not isinstance(at, int | float)
-                or (last is not None and (isinstance(last, bool)
-                                          or not isinstance(last, int | float)))
+        if (not isinstance(once, bool) or not isinstance(not_uploaded, bool) or not _number(at)
+                or (last is not None and not _number(last))
                 or (state is not None and not isinstance(state, str))):
             return None
         return cls(once, float(last) if last is not None else None, not_uploaded, float(at),
@@ -356,13 +355,22 @@ def seen(unit_id: int, description: str, part_number: str, software_version: str
         return
     from openexpress import tile_facts  # it reads devices.json through this module
 
-    try:
+    with optional_change("devices: not remembered (%s)"):
         remember(unit_id, description, part_number, software_version, kind,
                  usb_product=usb_product, usb_serial=usb_serial, volume_uuid=volume_uuid)
+        # Only once it is remembered; optional itself, it never fails here.
+        tile_facts.note_synced(unit_id)
+
+
+@contextlib.contextmanager
+def optional_change(said: str, logger: logging.Logger = log):
+    """A change of devices.json that never stops what makes it (e.g. a full disk): its failure
+    is one warning of `logger`, `said` with the kind of the error (%s), never the error's
+    text, which may name the folder."""
+    try:
+        yield
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: not remembered (%s)", type(e).__name__)
-        return
-    tile_facts.note_synced(unit_id)
+        logger.warning(said, type(e).__name__)
 
 
 def set_model_name(unit_id: int, name: str) -> bool:
@@ -602,12 +610,8 @@ def _locked():
     of it when the process ends. Reading alone needs no lock: the file is replaced whole."""
     folder = paths.data_dir()
     paths.make_dir(folder)
-    with open(folder / LOCK_NAME, "a") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with paths.locked(folder / LOCK_NAME):
+        yield
 
 
 def _read() -> tuple[dict[int, KnownDevice], bool]:
@@ -638,8 +642,7 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                 last_seen=float(value["last_seen"]),
                 category=category if category in CATEGORIES else None,
                 image_url=image_url if picture_urls.allowed(image_url) else None,
-                update_found=float(update_found) if isinstance(update_found, int | float)
-                and not isinstance(update_found, bool) else None,
+                update_found=float(update_found) if _number(update_found) else None,
                 update_summary=UpdateSummary.from_json(update.get("summary")),
                 update_check=UpdateCheck.from_json(update.get("check")),
                 sync_count=SyncCount.from_json(facts.get("sync")),
@@ -682,14 +685,13 @@ def _copied(value) -> tuple[tuple[str, float], ...]:
     if not isinstance(value, dict):
         return ()
     return tuple(sorted((key, float(at)) for key, at in value.items()
-                        if _identifier(key) and isinstance(at, int | float)
-                        and not isinstance(at, bool) and 0 <= at <= LAST_TIME))
+                        if _identifier(key) and _number(at) and 0 <= at <= LAST_TIME))
 
 
 def _time(value) -> float | None:
     """A time as written: a number that is a date (finite, in range); anything else is not
     kept."""
-    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 <= value <= LAST_TIME:
+    if not _number(value) or not 0 <= value <= LAST_TIME:
         return None
     return float(value)
 

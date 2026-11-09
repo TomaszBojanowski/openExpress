@@ -2032,6 +2032,27 @@ def test_an_update_too_big_for_a_small_drive_says_what_is_kept_free(device_root,
     assert not (device_root / "GARMIN" / "REMOTESW").exists()
 
 
+@pytest.mark.parametrize("size", [204_000, 1_200_000], ids=["fits", "too big"])
+def test_the_room_is_asked_of_the_device_once_before_the_copy(device_root, tmp_path,
+                                                             monkeypatch, size):
+    """Its free space, then its size (for the room kept free), once each before anything is
+    copied; an update too big asks nothing more."""
+    storage, update, _data = _small_drive(device_root, tmp_path, monkeypatch, size)
+    asked = []
+    monkeypatch.setattr(storage, "free_space", lambda: asked.append("free space") or 929_800)
+    monkeypatch.setattr(storage, "capacity", lambda: asked.append("capacity") or 1_300_000)
+    real_write = storage.write_file_checked
+    monkeypatch.setattr(storage, "write_file_checked",
+                        lambda *a, **kw: asked.append("copy") or real_write(*a, **kw))
+    if size > 929_800:
+        with pytest.raises(updates.UpdateError):
+            updates.install([update], storage)
+        assert asked == ["free space", "capacity"]
+    else:
+        updates.install([update], storage)
+        assert asked[:3] == ["free space", "capacity", "copy"]
+
+
 def test_the_room_kept_free_on_a_big_or_unknown_storage_is_2_mib(device_root, monkeypatch):
     storage = LocalStorage(device_root)
     monkeypatch.setattr(storage, "capacity", lambda: 32_000_000_000)  # a watch

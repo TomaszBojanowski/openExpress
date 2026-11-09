@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 00:24+0100\n"
+"POT-Creation-Date: 2026-11-09 18:15+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -481,7 +481,7 @@ msgstr[2] ""
 "których nie można odczytać. Niczego nie zmieniono, aby żadna aplikacja nie "
 "wypadła z listy."
 
-#: openexpress/ciq.py openexpress/cli.py
+#: openexpress/ciq.py
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
 "ready and try again"
@@ -2426,15 +2426,6 @@ msgid "The apps on the device are already in this order."
 msgstr "Aplikacje na urządzeniu są już w tej kolejności."
 
 #: openexpress/cli.py
-#, python-brace-format
-msgid ""
-"App list to be written (IN.BIN): {entries} entries; the device lists {count} "
-"(OUT.BIN)"
-msgstr ""
-"Lista aplikacji do zapisania (IN.BIN): wpisów: {entries}; na urządzeniu "
-"(OUT.BIN): {count}"
-
-#: openexpress/cli.py
 msgid "the same apps with the same flags; only the order changes"
 msgstr "te same aplikacje z tymi samymi flagami; zmienia się tylko kolejność"
 
@@ -2488,6 +2479,17 @@ msgstr "do usunięcia: {name} ({type})"
 msgid "The app file was already gone; only the app list was updated."
 msgstr "Pliku aplikacji już nie było; zaktualizowano tylko listę aplikacji."
 
+#. TRANSLATORS: `openexpress apps remove`: the app that was removed, {name} its name, {type} its
+#. kind ("watch face")
+#: openexpress/cli.py
+#, python-brace-format
+msgid "removed: {name} ({type})"
+msgstr "usunięto: {name} ({type})"
+
+#: openexpress/cli.py
+msgid "The device finishes the removal after it is unplugged."
+msgstr "Urządzenie dokończy usuwanie po odłączeniu."
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid ""
@@ -2501,16 +2503,14 @@ msgstr[1] ""
 msgstr[2] ""
 "Usunięto {count} plików. Usunięto także z listy aplikacji na koncie Garmin."
 
-#. TRANSLATORS: `openexpress apps remove`: the app that was removed, {name} its name, {type} its
-#. kind ("watch face")
 #: openexpress/cli.py
 #, python-brace-format
-msgid "removed: {name} ({type})"
-msgstr "usunięto: {name} ({type})"
-
-#: openexpress/cli.py
-msgid "The device finishes the removal after it is unplugged."
-msgstr "Urządzenie dokończy usuwanie po odłączeniu."
+msgid ""
+"App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+"(OUT.BIN)"
+msgstr ""
+"Lista aplikacji do zapisania (IN.BIN): wpisów: {entries}; na urządzeniu "
+"(OUT.BIN): {count}"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -4381,6 +4381,13 @@ msgstr "Flatpakowi brakuje uprawnienia do kopiowania plików na urządzenie"
 msgid "flatpak-spawn is not available"
 msgstr "flatpak-spawn jest niedostępny"
 
+#. TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
+#. its time limit ({seconds}: a number of seconds, e.g. 21600)
+#: openexpress/device/gio_storage.py
+#, python-brace-format
+msgid "timed out after {seconds} seconds"
+msgstr "przekroczono limit czasu ({seconds} s)"
+
 #. TRANSLATORS: error: the contents of a folder on the device cannot be read ({path}: the
 #. folder)
 #: openexpress/device/gio_storage.py openexpress/device/storage.py
@@ -4772,6 +4779,15 @@ msgstr "Nie znaleziono pliku na urządzeniu: {path}"
 #, python-brace-format
 msgid "Cannot write {path}: it is a directory"
 msgstr "Nie można zapisać {path}: to katalog"
+
+#: openexpress/device/storage.py
+#, python-brace-format
+msgid ""
+"Not enough space on the device: {need} needed and {margin} kept free, but "
+"only {free} free"
+msgstr ""
+"Za mało miejsca na urządzeniu: potrzeba {need} i {margin} zapasu, wolne "
+"{free}"
 
 #: openexpress/device/storage.py
 #, python-brace-format
@@ -9068,6 +9084,16 @@ msgid "Choose another one with --name."
 msgstr "Wybierz inną przez --name."
 
 #: openexpress/ownmaps.py
+msgid "This device has no folder for maps."
+msgstr "To urządzenie nie ma katalogu na mapy."
+
+#: openexpress/ownmaps.py
+#, python-brace-format
+msgid "{name} is named like one of Garmin's own maps, so it is not removed."
+msgstr ""
+"Plik {name} ma nazwę taką jak mapy Garmina, więc nie zostanie usunięty."
+
+#: openexpress/ownmaps.py
 #, python-brace-format
 msgid "{file} is not a Garmin map file (.img)."
 msgstr "{file} nie jest plikiem mapy Garmin (.img)."
@@ -9080,10 +9106,6 @@ msgid ""
 msgstr ""
 "Nazwy {name} nie można użyć: dozwolone są tylko litery, cyfry, spacje oraz . "
 "_ - ( ), a nazwa musi kończyć się na .img."
-
-#: openexpress/ownmaps.py
-msgid "This device has no folder for maps."
-msgstr "To urządzenie nie ma katalogu na mapy."
 
 #: openexpress/ownmaps.py
 #, python-brace-format
@@ -9123,12 +9145,6 @@ msgstr ""
 "Plik {name} nie został skopiowany przez tę instalację openExpress (mógł "
 "zostać skopiowany ręcznie albo przez inną instalację), więc nie zostanie "
 "usunięty. Jeśli chcesz go usunąć, zrób to w menedżerze plików."
-
-#: openexpress/ownmaps.py
-#, python-brace-format
-msgid "{name} is named like one of Garmin's own maps, so it is not removed."
-msgstr ""
-"Plik {name} ma nazwę taką jak mapy Garmina, więc nie zostanie usunięty."
 
 #: openexpress/ownmaps.py
 #, python-brace-format
@@ -10129,15 +10145,6 @@ msgid ""
 msgstr ""
 "Serwer podał nazwę, której nie można użyć jako ścieżki na tym komputerze: "
 "„{name}”"
-
-#: openexpress/updates.py
-#, python-brace-format
-msgid ""
-"Not enough space on the device: {need} needed and {margin} kept free, but "
-"only {free} free"
-msgstr ""
-"Za mało miejsca na urządzeniu: potrzeba {need} i {margin} zapasu, wolne "
-"{free}"
 
 #: openexpress/updates.py
 #, python-brace-format

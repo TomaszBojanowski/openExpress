@@ -22,7 +22,7 @@ from typing import NamedTuple
 from openexpress import answers, applog, cache, download, known_devices, paths
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
-from openexpress.i18n import N_, _, human_size
+from openexpress.i18n import N_, _
 from openexpress.progress import (
     Step,
     byte_steps,
@@ -164,6 +164,11 @@ class SoftwareUpdate:
         return self.part_number.endswith("-META")
 
     @property
+    def is_offer(self) -> bool:
+        """An update the server offers to install: neither a reinstall nor a -META entry."""
+        return not self.is_reinstall and not self.is_metadata
+
+    @property
     def is_beta(self) -> bool:
         return "beta" in self.release_state.casefold()
 
@@ -276,7 +281,7 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
     it briefly does not list right after it is plugged in). They are not updates.
 
     `components`: how many components the device's GarminDevice.xml lists, for the log."""
-    offered = [u for u in updates if not u.is_reinstall and not u.is_metadata]
+    offered = [u for u in updates if u.is_offer]
     found = []
     for u in offered:
         found.append(presence(storage, u))
@@ -301,7 +306,7 @@ def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     (not as a reinstall), so the device has not installed it, and the very same file (size
     and MD5) is on the device. The file of a component there without such a copy is no update
     (mark_present). One the device had its chance to install is not_installed instead."""
-    return [u for u in updates if u.on_device and not u.is_reinstall and not u.is_metadata
+    return [u for u in updates if u.on_device and u.is_offer
             and (u.installs_when_disconnected or u.copied_at is not None)
             and not u.unplugged_since_copy]
 
@@ -309,8 +314,7 @@ def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
 def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """The real updates: not reinstalls, not metadata, not on the device already, and not
     copied before and not installed by the device (not_installed)."""
-    return [u for u in updates if not u.is_reinstall and not u.is_metadata and not u.on_device
-            and not _not_installed(u)]
+    return [u for u in updates if u.is_offer and not u.on_device and not _not_installed(u)]
 
 
 def not_installed(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
@@ -322,8 +326,8 @@ def not_installed(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
 
 
 def _not_installed(u: SoftwareUpdate) -> bool:
-    return (u.copied_at is not None and u.unplugged_since_copy and not u.is_reinstall
-            and not u.is_metadata and (u.on_device or u.changed_on_device))
+    return (u.copied_at is not None and u.unplugged_since_copy and u.is_offer
+            and (u.on_device or u.changed_on_device))
 
 
 def offered(storage: Storage, response: dict, device,
@@ -346,7 +350,7 @@ def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
     log."""
     if not unit_id:
         return updates
-    offered_now = {u.key for u in updates if not u.is_reinstall and not u.is_metadata}
+    offered_now = {u.key for u in updates if u.is_offer}
     try:
         entry = known_devices.load().get(unit_id)
         copied = dict(entry.copied_updates) if entry is not None else {}
@@ -587,12 +591,8 @@ def _install(
     what was written before a failure is in it."""
     updates = one_per_file(updates)[0]  # the others are told in the log
     need, free = check_space(storage, updates)
-    margin = space_margin(storage)
-    if free is not None and need + margin > free:
-        raise UpdateError(_("Not enough space on the device: {need} needed and {margin} kept "
-                            "free, but only {free} free")
-                          .format(need=human_size(need), margin=human_size(margin),
-                                  free=human_size(free)))
+    storage.require_space(need, space_margin(storage), error=UpdateError, free=free,
+                          margin_said=True)
     # Download everything first so the watch is never left with only some of the files.
     local_files: dict[str, Path] = {}
     say = say_to(progress)

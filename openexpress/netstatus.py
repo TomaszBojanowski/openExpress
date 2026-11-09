@@ -284,9 +284,8 @@ def ago(ts: float, now: float | None = None) -> str:
 
 def at_full(ts: float) -> str:
     """ "at 2026-10-14 23:41": always with the date (the tooltip of a row)."""
-    t = time.localtime(ts)
-    return _("at {date} {time}").format(date=time.strftime(_("%Y-%m-%d"), t),
-                                         time=time.strftime("%H:%M", t))
+    _today, date, hour = _day(ts, None)
+    return _("at {date} {time}").format(date=date, time=hour)
 
 
 # TRANSLATORS: heading of the window with the state of Garmin's servers, when all is well

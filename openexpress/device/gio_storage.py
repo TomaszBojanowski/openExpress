@@ -20,6 +20,7 @@ from collections.abc import Callable
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NewType
 
 import gi
 
@@ -83,6 +84,26 @@ def _staging_dir() -> Path:
     return d
 
 
+@contextmanager
+def _temporary_file(what: str, keep_open: bool):
+    """A temporary file on its way to the device, removed after the block: in the Flatpak in
+    the staging folder (_staging_dir, the cache held meanwhile), elsewhere in the system's.
+    Gives (its descriptor, open when `keep_open`, else None; its path). Failing to make it:
+    CopyNotStarted with `what`; then there is nothing to remove."""
+    with _staging():
+        try:
+            fd, tmp = tempfile.mkstemp(prefix="openexpress-",
+                                       dir=_staging_dir() if in_flatpak() else None)
+            if not keep_open:
+                os.close(fd)
+        except OSError as e:
+            raise CopyNotStarted(f"{what}: {e}") from e
+        try:
+            yield (fd if keep_open else None), Path(tmp)
+        finally:
+            os.unlink(tmp)
+
+
 HOST_COPY_TIMEOUT_S = 6 * 3600
 # A size as `gio copy -p` prints it: a number, then a unit ("1,0 MB", "56 bytes"). The words
 # around it and the decimal separator follow the language of the system, so only these are read.
@@ -136,6 +157,10 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
     # The whole path, as _host_visible saw it: one given as typed ("-x.mp3", "Name: x.mp3")
     # would be an option or an address to the host's gio.
     source = str(Path(local).resolve())
+    # Two ways. Without `progress` the copy runs to its end in subprocess.run, which keeps its
+    # time limit itself. With it, `-p` has gio print its updates, read as they come: a read of
+    # the pipe has no time limit, so a timer kills a copy that takes too long, and its error
+    # output is read meanwhile (much of it would block the copy).
     if progress is None:
         try:
             res = subprocess.run([*command, source, target_uri],
@@ -195,7 +220,10 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         watchdog.cancel()
     reader.join(5)
     if timed_out.is_set():
-        raise DeviceError(f"{what}: timed out after {HOST_COPY_TIMEOUT_S} seconds")
+        # TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
+        # its time limit ({seconds}: a number of seconds, e.g. 21600)
+        raise DeviceError(f"{what}: " + _("timed out after {seconds} seconds").format(
+            seconds=HOST_COPY_TIMEOUT_S))
     if code != 0:
         stderr = b"".join(errors).decode("utf-8", "replace")
         raise DeviceError(f"{what}: {_detail(stderr, ''.join(said))}")
@@ -251,8 +279,6 @@ class GioStorage(Storage):
         self._opened = time.monotonic()
         self.root = Gio.File.new_for_uri(root_uri.rstrip("/") + "/")
         self.label = root_uri
-        # "vendor:product" of the USB device (never the serial number), when known.
-        self.usb_id: str | None = None
         self.usb: GarminUsb | None = None
         self.device_uri: str | None = None  # the address gvfs mounts, above the storage
         # Each write under way: what the target was before it, and whether gio copy said it
@@ -428,21 +454,13 @@ class GioStorage(Storage):
         left is known to _discard_partial). Failing before the copy: CopyNotStarted."""
         self._responding()  # before the temporary file, which _write_file would not need
         what = _("Cannot write {path}").format(path=real_path)
-        with _staging():
+        with _temporary_file(what, keep_open=True) as (fd, tmp):
             try:
-                fd, tmp = tempfile.mkstemp(prefix="openexpress-",
-                                           dir=_staging_dir() if in_flatpak() else None)
+                with os.fdopen(fd, "wb") as f:
+                    f.write(data)
             except OSError as e:
                 raise CopyNotStarted(f"{what}: {e}") from e
-            try:
-                try:
-                    with os.fdopen(fd, "wb") as f:
-                        f.write(data)
-                except OSError as e:
-                    raise CopyNotStarted(f"{what}: {e}") from e
-                self._write_file(real_path, Path(tmp))
-            finally:
-                os.unlink(tmp)
+            self._write_file(real_path, tmp)
 
     def _write_file(self, real_path: str, local, progress=None) -> None:
         """Everything that can fail before the device is touched (the file to send, its
@@ -468,20 +486,12 @@ class GioStorage(Storage):
     def _send(self, local: Path, real_path: str, progress, what: str) -> None:
         if in_flatpak() and not _host_visible(local):
             # E.g. a file in the sandbox's private /tmp: stage it where the host can read it.
-            with _staging():
+            with _temporary_file(what, keep_open=False) as (_fd, tmp):
                 try:
-                    fd, tmp = tempfile.mkstemp(prefix="openexpress-", dir=_staging_dir())
-                    os.close(fd)
+                    shutil.copyfile(local, tmp)
                 except OSError as e:
                     raise CopyNotStarted(f"{what}: {e}") from e
-                try:
-                    try:
-                        shutil.copyfile(local, tmp)
-                    except OSError as e:
-                        raise CopyNotStarted(f"{what}: {e}") from e
-                    self._copy_local(Path(tmp), real_path, progress, what)
-                finally:
-                    os.unlink(tmp)
+                self._copy_local(tmp, real_path, progress, what)
             return
         self._copy_local(local, real_path, progress, what)
 
@@ -588,7 +598,7 @@ class GioStorage(Storage):
     def exclusive_ptp(self):
         self._responding()  # the device would have to be unmounted from gvfs first
         usb = self.usb
-        if usb is None or usb.bus is None or usb.address is None or not self.device_uri:
+        if usb_place(usb) is None or not self.device_uri:
             return None
         # A Flatpak reaches the device only through its node, which it has with the
         # --device=usb permission; without it the app is only queued.
@@ -599,18 +609,16 @@ class GioStorage(Storage):
             ptp.load_libusb()
         except ptp.UsbUnavailable:
             return None
-        return _exclusive(self.device_uri, usb.bus, usb.address, self, node)
+        return _exclusive(self, node)
 
     def refresh(self, progress=None) -> bool:
         self._responding()  # it would be unmounted and mounted again through gvfs
-        usb = self.usb
         # Without its place on USB our own unmount would be taken for an unplug.
-        if usb is None or usb.bus is None or usb.address is None or not self.device_uri:
+        if usb_place(self.usb) is None or not self.device_uri:
             return False
         say_to(progress)(refreshing_text())
         try:
-            with _unmounted(self.device_uri, usb.bus, usb.address, self, "refresh",
-                            "device mounted again"):
+            with _unmounted(self, "refresh", "device mounted again"):
                 pass
         except (RemountFailed, DeviceNotResponding):
             raise  # the callers say to unplug the device and plug it in again
@@ -666,25 +674,84 @@ _URI_GARMIN_IDS = re.compile(rf"mtp://{GARMIN_VID}_([0-9a-f]{{4}})_", re.IGNOREC
 _URI_GARMIN_NAME = "mtp://garmin_"
 
 
+# --- the USB devices in /sys ---------------------------------------------------------------
+#
+# Where a USB device is, written in two ways that are never to be mixed. Its address,
+# "bus-devnum" (usb_address): the bus and the device number, which it gets anew each time it
+# comes on USB. Its port: the name of its folder in /sys/bus/usb/devices (e.g. "1-4"), which
+# stays while it comes back at the same port under another device number or product ID.
+
+UsbAddress = NewType("UsbAddress", str)
+UsbPort = NewType("UsbPort", str)
+
+
+def usb_address(bus: int, devnum: int) -> UsbAddress:
+    return UsbAddress(f"{bus}-{devnum}")
+
+
+@dataclass(frozen=True)
+class _UsbRecord:
+    """A USB device as /sys shows it: its folder, whose name in /sys/bus/usb/devices is its
+    port. Each attribute is read when it is asked for, never kept, and fails as the read does:
+    OSError, or ValueError (UnicodeDecodeError among them) for what is not text or not a
+    number. Each caller passes over what it cannot read."""
+
+    folder: Path
+
+    @property
+    def port(self) -> UsbPort:
+        return UsbPort(self.folder.name)
+
+    def vendor(self) -> str:
+        return (self.folder / "idVendor").read_text().strip().lower()
+
+    def product(self) -> str:
+        return (self.folder / "idProduct").read_text().strip().lower()
+
+    def busnum(self) -> int:
+        return int((self.folder / "busnum").read_text())
+
+    def devnum(self) -> int:
+        return int((self.folder / "devnum").read_text())
+
+
+def _usb_records() -> list[_UsbRecord]:
+    """Each entry of /sys/bus/usb/devices (devices, their interfaces and the hubs), in the
+    order of their names; none when it cannot be listed."""
+    try:
+        return [_UsbRecord(base) for base in sorted(SYSFS_USB.iterdir())]
+    except OSError:
+        return []
+
+
+def _at_address(bus: int, devnum: int, read):
+    """read(record) of the USB device with this bus and device number: the first one whose
+    numbers and what `read` asks for can be read; None when there is none."""
+    for record in _usb_records():
+        try:
+            if record.busnum() == bus and record.devnum() == devnum:
+                return read(record)
+        except (OSError, ValueError):
+            continue
+    return None
+
+
 def _sysfs_ids(bus: int, devnum: int) -> tuple[str, str] | None:
     """(idVendor, idProduct) of the USB device with this bus and device number.
 
     Only these four sysfs attributes are read; the device node itself is not needed
     (a Flatpak sandbox has /sys but no /dev/bus/usb).
     """
+    return _at_address(bus, devnum, lambda record: (record.vendor(), record.product()))
+
+
+def _product_name(folder: Path) -> str | None:
+    """The name a USB device gives USB (its product string, in its folder of /sys); None when
+    it gives none or it cannot be read."""
     try:
-        entries = sorted(SYSFS_USB.iterdir())
+        return (folder / "product").read_text().strip() or None
     except OSError:
         return None
-    for base in entries:
-        try:
-            if (int((base / "busnum").read_text()) == bus
-                    and int((base / "devnum").read_text()) == devnum):
-                return ((base / "idVendor").read_text().strip().lower(),
-                        (base / "idProduct").read_text().strip().lower())
-        except (OSError, ValueError):
-            continue
-    return None
 
 
 def usb_still_there(usb: GarminUsb | None) -> bool:
@@ -692,7 +759,7 @@ def usb_still_there(usb: GarminUsb | None) -> bool:
     and device number, and the same product when it is known. A device that was unplugged
     and plugged in again (or restarted) gets a new device number, so it is not. False when
     its place is not known. Only /sys is read."""
-    if usb is None or usb.bus is None or usb.address is None:
+    if usb_place(usb) is None:
         return False
     ids = _sysfs_ids(usb.bus, usb.address)
     return (ids is not None and ids[0] == GARMIN_VID
@@ -819,9 +886,9 @@ def _stalled_keys() -> set[tuple[int, int]]:
         return set(_stalled_at)
 
 
-def _sysfs_place(base: Path) -> tuple[int, int] | None:
+def _sysfs_place(record: _UsbRecord) -> tuple[int, int] | None:
     try:
-        return int((base / "busnum").read_text()), int((base / "devnum").read_text())
+        return record.busnum(), record.devnum()
     except (OSError, ValueError):
         return None
 
@@ -850,11 +917,10 @@ def _block_usb(unix_device: str | None) -> tuple[tuple[str, str, int, int], Path
     # not on USB (e.g. NVMe) has none above it.
     for folder in (here, *here.parents):
         if (folder / "idVendor").is_file():
+            record = _UsbRecord(folder)
             try:
-                return (((folder / "idVendor").read_text().strip().lower(),
-                         (folder / "idProduct").read_text().strip().lower(),
-                         int((folder / "busnum").read_text()),
-                         int((folder / "devnum").read_text())), folder)
+                return ((record.vendor(), record.product(), record.busnum(), record.devnum()),
+                        folder)
             except (OSError, ValueError):
                 return None
     return None
@@ -911,23 +977,23 @@ def drive_volume(volume) -> tuple[str, GarminUsb, bool] | None:
             bool(_block_size(unix)))
 
 
-# The USB places ("bus-devnum") of the Garmin devices in mass storage mode that the last list
-# found without a drive to list: gvfs had no volume of theirs yet, or none with a medium. A
-# drive may come a moment after its USB device: the window looks for them again a few times
+# The USB addresses ("bus-devnum") of the Garmin devices in mass storage mode that the last
+# list found without a drive to list: gvfs had no volume of theirs yet, or none with a medium.
+# A drive may come a moment after its USB device: the window looks for them again a few times
 # (gui/detection.py, look_again_for_drives).
-_without_drive: frozenset[str] = frozenset()
+_without_drive: frozenset[UsbAddress] = frozenset()
 
 
-def drives_without_a_volume() -> frozenset[str]:
+def drives_without_a_volume() -> frozenset[UsbAddress]:
     """What the last list found of _without_drive."""
     with _places_lock:
         return _without_drive
 
 
-def drives_on_usb() -> frozenset[str]:
-    """The USB places ("bus-devnum") of the Garmin devices in mass storage mode now. Only /sys
-    is read."""
-    return frozenset(place for place, _product in _mass_storage_on_usb())
+def drives_on_usb() -> frozenset[UsbAddress]:
+    """The USB addresses ("bus-devnum") of the Garmin devices in mass storage mode now. Only
+    /sys is read."""
+    return frozenset(address for address, _product in _mass_storage_on_usb())
 
 
 # For testing only, not for ordinary use: the mounted USB drive with the USB IDs in this
@@ -1001,12 +1067,12 @@ def find_ums_devices() -> list[FoundDevice]:
     any letter case, then those that are not mounted (_unmounted_drives, `mounted` False).
     Only the folder listings on the way to that file are read."""
     found = []
-    usb_seen: set[str] = set()  # the USB places of the drives looked at, "bus-devnum"
+    usb_seen: set[UsbAddress] = set()  # the USB addresses of the drives looked at
     for mount in Gio.VolumeMonitor.get().get_mounts():
         usb = garmin_ums(mount)
         if usb is None:
             continue
-        usb_seen.add(f"{usb.bus}-{usb.address}")
+        usb_seen.add(usb_address(usb.bus, usb.address))
         if _drive_of_unsupported(mount):
             # It goes away after a minute or so, and updates do not go through it.
             log.info("device: a Garmin drive (USB %s) of a device that openExpress cannot use "
@@ -1040,15 +1106,16 @@ def find_ums_devices() -> list[FoundDevice]:
     return found
 
 
-def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
+def _unmounted_drives(seen: set[UsbAddress]) -> list[FoundDevice]:
     """The Garmin drives the system has not mounted, to be mounted when chosen: one for each USB
     device of vendor 091e with a mass storage interface, its drive the first of its block
-    devices (gvfs volumes) with a medium. Skips the USB places in `seen` and adds those looked
-    at; leaves the places of devices without a drive in `_without_drive`."""
+    devices (gvfs volumes) with a medium. Skips the USB addresses in `seen` and adds those
+    looked at; leaves the addresses of devices without a drive in `_without_drive`."""
     global _without_drive
     found = []
-    waiting = set()  # the places of devices in mass storage mode without a drive to list
-    places: dict[str, list] = {}  # the unmounted volumes of each Garmin drive, by USB place
+    waiting = set()  # the addresses of devices in mass storage mode without a drive to list
+    # The unmounted volumes of each Garmin drive, by its USB address.
+    by_address: dict[UsbAddress, list] = {}
     # KDE mounts a drive only once a file manager opens it. The volumes come from gvfs
     # (Gio.VolumeMonitor): the Flatpak needs no new permission to see them.
     for vol in Gio.VolumeMonitor.get().get_volumes():
@@ -1058,14 +1125,14 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
         if mounted is not None or block is None or block[0][0] != GARMIN_VID:
             continue
         ids, folder = block
-        place = f"{ids[2]}-{ids[3]}"
-        if place in seen or not _mass_storage_only(folder):
+        address = usb_address(ids[2], ids[3])
+        if address in seen or not _mass_storage_only(folder):
             continue
         with _places_lock:
-            _drive_places[folder.name] = None
-        places.setdefault(place, []).append((vol, unix, ids, folder))
-    for place, volumes in places.items():
-        seen.add(place)
+            _drive_places[UsbPort(folder.name)] = None
+        by_address.setdefault(address, []).append((vol, unix, ids, folder))
+    for address, volumes in by_address.items():
+        seen.add(address)
         ids = volumes[0][2]
         usb = GarminUsb(ids[1], ids[2], ids[3])
         if ejected_by_us(usb):
@@ -1083,7 +1150,7 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
             # not listed, only said in the log.
             log.info("device: a Garmin drive (USB %s) has no medium (removed safely?), not "
                      "listed: unplug it and plug it in again", usb.usb_id)
-            waiting.add(place)  # or not yet
+            waiting.add(address)  # or not yet
             continue
         vol, unix = with_medium[0]
         usb = _drive_usb(ids, volumes[0][3], vol)  # the volume of its drive: its UUID
@@ -1091,30 +1158,23 @@ def _unmounted_drives(seen: set[str]) -> list[FoundDevice]:
                  usb.usb_id)
         found.append(FoundDevice(UNMOUNTED_DRIVE + unix, vol.get_name(), False, vol, usb,
                                  kind="ums"))
-    for base, product in _mass_storage_on_usb():
-        if base not in seen:  # no volume at all: only a replug helps
+    for address, product in _mass_storage_on_usb():
+        if address not in seen:  # no volume at all: only a replug helps
             log.info("device: a Garmin device in mass storage mode (USB %s:%s) without a "
                      "drive: unplug it and plug it in again", GARMIN_VID, product)
-            waiting.add(base)  # or not yet
+            waiting.add(address)  # or not yet
     with _places_lock:
         _without_drive = frozenset(waiting)
     return found
 
 
-def _mass_storage_on_usb() -> list[tuple[str, str]]:
-    """("bus-devnum", USB product ID) of each Garmin device on USB in mass storage mode."""
+def _mass_storage_on_usb() -> list[tuple[UsbAddress, str]]:
+    """(USB address, USB product ID) of each Garmin device on USB in mass storage mode."""
     found = []
-    try:
-        entries = sorted(SYSFS_USB.iterdir())
-    except OSError:
-        return found
-    for base in entries:
+    for record in _usb_records():
         try:
-            if ((base / "idVendor").read_text().strip().lower() == GARMIN_VID
-                    and _mass_storage_only(base)):
-                place = (f"{int((base / 'busnum').read_text())}-"
-                         f"{int((base / 'devnum').read_text())}")
-                found.append((place, (base / "idProduct").read_text().strip().lower()))
+            if record.vendor() == GARMIN_VID and _mass_storage_only(record.folder):
+                found.append((usb_address(record.busnum(), record.devnum()), record.product()))
         except (OSError, ValueError):
             continue
     return found
@@ -1260,7 +1320,7 @@ class _Ejected:
     empty (plugged in elsewhere, at once)."""
 
     usb: GarminUsb
-    place: str | None  # None: not known; then it ends when its device number is gone
+    place: UsbPort | None  # None: not known; then it ends when its device number is gone
     update_waits: bool = False  # an update copied to it waits for the device to install it
     on_unplugged: Callable[[], None] | None = None  # told once, when it is seen unplugged
     looked: float | None = None  # when its place was last looked at
@@ -1286,16 +1346,14 @@ def eject(storage, update_waits: bool = False,
     it is plugged in); `on_unplugged`: called once it is seen unplugged (only while this
     program runs and looks at USB). Raises DeviceError when the system refuses, e.g. while a
     program uses the drive."""
-    key = _key(storage.device_uri)
-    found = next((m for m in Gio.VolumeMonitor.get().get_mounts()
-                  if m.get_root() is not None and _key(m.get_root().get_uri()) == key), None)
+    found = _mount_of(storage.device_uri)
     if found is None:
         raise DriveNotMounted(_("The drive is not mounted any more. If it was ejected, you can "
                                 "unplug the cable."))
     what = _("Cannot eject the device")
     usb = getattr(storage, "usb", None)
-    # Its place before it goes: a watch may switch to its Garmin USB mode at once.
-    place = _place_of(usb)
+    # Its port before it goes: a watch may switch to its Garmin USB mode at once.
+    place = _port_of(usb)
     note_drive_place(usb)  # a watch may go into Garmin USB mode
     if found.can_eject():
         _wait(lambda done, cancellable: found.eject_with_operation(
@@ -1312,28 +1370,29 @@ def eject(storage, update_waits: bool = False,
     log.info("device: ejected (USB %s)", getattr(storage, "usb_id", None) or "?")
 
 
-def note_ejected(usb: GarminUsb, place: str | None = None, update_waits: bool = False,
+def note_ejected(usb: GarminUsb, place: UsbPort | None = None, update_waits: bool = False,
                  on_unplugged: Callable[[], None] | None = None) -> None:
-    """Keep that openExpress ejected the drive of `usb`, at `place` (None: its place now)."""
-    entry = _Ejected(usb, place if place is not None else _place_of(usb), update_waits,
+    """Keep that openExpress ejected the drive of `usb`, at the port `place` (None: its port
+    now)."""
+    entry = _Ejected(usb, place if place is not None else _port_of(usb), update_waits,
                      on_unplugged)
     with _ejected_lock:
         _ejected.append(entry)
 
 
-def _at_place(place: str, vendor: str = GARMIN_VID) -> tuple[str, int | None] | None:
-    """(USB product ID, device number) of the Garmin device at this place on USB, or of one of
-    `vendor` (the drive named in TEST_DRIVE_ENV); None when nothing of theirs is there. Only
-    /sys is read."""
-    base = SYSFS_USB / place
+def _at_place(place: UsbPort, vendor: str = GARMIN_VID) -> tuple[str, int | None] | None:
+    """(USB product ID, device number) of the Garmin device at this port, or of one of `vendor`
+    (the drive named in TEST_DRIVE_ENV); None when nothing of theirs is there. Only /sys is
+    read."""
+    record = _UsbRecord(SYSFS_USB / place)
     try:
-        if (base / "idVendor").read_text().strip().lower() not in (GARMIN_VID, vendor.lower()):
+        if record.vendor() not in (GARMIN_VID, vendor.lower()):
             return None
-        product = (base / "idProduct").read_text().strip().lower()
+        product = record.product()
     except OSError:
         return None
     try:
-        devnum = int((base / "devnum").read_text())
+        devnum = record.devnum()
     except (OSError, ValueError):
         devnum = None
     return product, devnum
@@ -1403,17 +1462,12 @@ def _at_another_port(entry: _Ejected) -> bool:
     usb = entry.usb
     if usb.product is None:
         return False
-    try:
-        entries = sorted(SYSFS_USB.iterdir())
-    except OSError:
-        return False
-    for base in entries:
-        if base.name == entry.place:
+    for record in _usb_records():
+        if record.port == entry.place:
             continue
         try:
-            if ((base / "idVendor").read_text().strip().lower() == usb.vendor.lower()
-                    and (base / "idProduct").read_text().strip().lower() == usb.product.lower()
-                    and _usb_serial(base) == usb.serial):
+            if (record.vendor() == usb.vendor.lower() and record.product() == usb.product.lower()
+                    and _usb_serial(record.folder) == usb.serial):
                 return True
         except OSError:
             continue
@@ -1539,28 +1593,26 @@ class SeveralDevices(DeviceError):
         self.devices: list[FoundDevice] = list(devices or [])
 
 
+def _interface_class(interface: Path) -> str | None:
+    """The class of an interface of a USB device (its folder in /sys); None when it cannot be
+    read."""
+    try:
+        return (interface / "bInterfaceClass").read_text().strip().lower()
+    except OSError:
+        return None
+
+
 def _mass_storage_only(base: Path) -> bool:
     """Whether every interface of this USB device is a mass storage interface. False when
-    none of their classes can be read."""
-    classes = []
-    for interface in base.glob(f"{base.name}:*"):
-        try:
-            classes.append((interface / "bInterfaceClass").read_text().strip().lower())
-        except OSError:
-            continue
+    none of their classes can be read. The interfaces are read as /sys lists them."""
+    classes = [c for c in map(_interface_class, base.glob(f"{base.name}:*")) if c is not None]
     return bool(classes) and all(c == MASS_STORAGE_CLASS for c in classes)
 
 
 def _interface_classes(base: Path) -> list[str | None]:
     """The class of each interface of this USB device, in their order; None for one whose
     class cannot be read."""
-    classes: list[str | None] = []
-    for interface in sorted(base.glob(f"{base.name}:*")):
-        try:
-            classes.append((interface / "bInterfaceClass").read_text().strip().lower())
-        except OSError:
-            classes.append(None)
-    return classes
+    return [_interface_class(interface) for interface in sorted(base.glob(f"{base.name}:*"))]
 
 
 def _unsupported(base: Path) -> bool:
@@ -1572,26 +1624,26 @@ def _unsupported(base: Path) -> bool:
             and all(c in (HID_CLASS, MASS_STORAGE_CLASS) for c in classes))
 
 
-# What the log said of the devices openExpress cannot use, by their place on USB: their
-# product ID, once each while they stay.
-_said_unsupported: dict[str, str] = {}
+# What the log said of the devices openExpress cannot use, by their port: their product ID,
+# once each while they stay.
+_said_unsupported: dict[UsbPort, str] = {}
 
 
-def _unsupported_places(devices: list[tuple[str, str, bool]]) -> set[str]:
-    """The places on USB of the `devices` (_garmin_at_places) that openExpress cannot use,
-    each said once in the log while it stays (its product ID and the classes of its
-    interfaces; not its name, nor its serial number)."""
-    found = {place: product for place, product, mass_storage in devices
-             if not mass_storage and _unsupported(SYSFS_USB / place)}
+def _unsupported_ports(devices: list[tuple[UsbPort, str, bool]]) -> set[UsbPort]:
+    """The ports of the `devices` (_garmin_at_ports) that openExpress cannot use, each said
+    once in the log while it stays (its product ID and the classes of its interfaces; not its
+    name, nor its serial number)."""
+    found = {port: product for port, product, mass_storage in devices
+             if not mass_storage and _unsupported(SYSFS_USB / port)}
     with _places_lock:
-        for place, product in found.items():
-            if _said_unsupported.get(place) != product:
-                _said_unsupported[place] = product
-                classes = _interface_classes(SYSFS_USB / place)
+        for port, product in found.items():
+            if _said_unsupported.get(port) != product:
+                _said_unsupported[port] = product
+                classes = _interface_classes(SYSFS_USB / port)
                 log.info("USB: a Garmin device %s:%s with interfaces %s: HID without MTP, not "
                          "supported", GARMIN_VID, product, ", ".join(c or "?" for c in classes))
-        for place in [p for p in _said_unsupported if p not in found]:
-            del _said_unsupported[place]
+        for port in [p for p in _said_unsupported if p not in found]:
+            del _said_unsupported[port]
     return set(found)
 
 
@@ -1599,15 +1651,11 @@ def unsupported_devices() -> list[tuple[str, str | None]]:
     """(USB ID, the name it gives USB, if any) of each Garmin device on USB that openExpress
     cannot use. Only its IDs and its product string are read, never its serial number."""
     found = []
-    for place, product, mass_storage in _garmin_at_places():
-        base = SYSFS_USB / place
+    for port, product, mass_storage in _garmin_at_ports():
+        base = SYSFS_USB / port
         if mass_storage or not _unsupported(base):
             continue
-        try:
-            name = (base / "product").read_text().strip() or None
-        except OSError:
-            name = None
-        found.append((f"{GARMIN_VID}:{product}", name))
+        found.append((f"{GARMIN_VID}:{product}", _product_name(base)))
     return found
 
 
@@ -1617,22 +1665,15 @@ def garmin_usb_summary() -> list[tuple[str, str | None, list[str | None]]]:
     idVendor, idProduct, product and the classes are read: never the serial number, nor the
     place on USB."""
     found = []
-    try:
-        entries = sorted(SYSFS_USB.iterdir())
-    except OSError:
-        return found
-    for base in entries:
+    for record in _usb_records():
         try:
-            if (base / "idVendor").read_text().strip().lower() != GARMIN_VID:
+            if record.vendor() != GARMIN_VID:
                 continue
-            product = (base / "idProduct").read_text().strip().lower()
+            product = record.product()
         except OSError:
             continue
-        try:
-            name = (base / "product").read_text().strip() or None
-        except OSError:
-            name = None
-        found.append((f"{GARMIN_VID}:{product}", name, _interface_classes(base)))
+        found.append((f"{GARMIN_VID}:{product}", _product_name(record.folder),
+                      _interface_classes(record.folder)))
     return found
 
 
@@ -1686,82 +1727,69 @@ def unsupported_text(window: bool = True) -> str:
              "report it, run openexpress report.").format(name=name, id=usb_id)
 
 
-def _garmin_at_places() -> list[tuple[str, str, bool]]:
-    """(place, USB product ID, whether it is in mass storage mode) of each Garmin device
-    plugged in. The place: the name of its folder in /sys/bus/usb/devices (e.g. "1-4"), which
-    stays when it comes back under another product ID at the same port."""
+def _garmin_at_ports() -> list[tuple[UsbPort, str, bool]]:
+    """(port, USB product ID, whether it is in mass storage mode) of each Garmin device
+    plugged in. The port stays when it comes back under another product ID."""
     found = []
-    try:
-        entries = sorted(SYSFS_USB.iterdir())
-    except OSError:
-        return found
+    records = _usb_records()
     stalled = _stalled_keys()  # devices that stopped responding are left out
-    for base in entries:
+    for record in records:
         try:
-            if (base / "idVendor").read_text().strip().lower() == GARMIN_VID:
-                if stalled and _sysfs_place(base) in stalled:
+            if record.vendor() == GARMIN_VID:
+                if stalled and _sysfs_place(record) in stalled:
                     continue
-                found.append((base.name, (base / "idProduct").read_text().strip().lower(),
-                              _mass_storage_only(base)))
+                found.append((record.port, record.product(), _mass_storage_only(record.folder)))
         except OSError:
             continue
     return found
 
 
-# The places on USB where a Garmin drive was seen in this run of the program, or went away
-# (unmounted, ejected), with since when nothing is there (None: something is). A Garmin device
-# at such a place as 091e:0003 is that watch in its Garmin USB mode after its drive was ejected
-# (a Forerunner 55), not a device starting. A place is forgotten once a device in its
-# normal mode is there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
-_drive_places: dict[str, float | None] = {}
-# What the log said last of a device 091e:0003 at a place: whether it was in Garmin USB mode.
-_said_0003: dict[str, bool] = {}
+# The ports where a Garmin drive was seen in this run of the program, or went away (unmounted,
+# ejected), with since when nothing is there (None: something is). A Garmin device at such a
+# port as 091e:0003 is that watch in its Garmin USB mode after its drive was ejected (a
+# Forerunner 55), not a device starting. A port is forgotten once a device in its normal mode
+# is there, or nothing for USB_GAP_S (unplugged). Only /sys is read.
+_drive_places: dict[UsbPort, float | None] = {}
+# What the log said last of a device 091e:0003 at a port: whether it was in Garmin USB mode.
+_said_0003: dict[UsbPort, bool] = {}
 _places_lock = threading.Lock()
 
 
 def note_drive_place(usb: GarminUsb | None) -> None:
-    """A Garmin drive is (or was a moment ago) at the place of `usb` (its bus and device
-    number): seen, unmounted or ejected. Nothing when it is not on USB any more."""
-    place = _place_of(usb)
-    if place is not None:
+    """A Garmin drive is (or was a moment ago) at the port of `usb` (found by its bus and
+    device number): seen, unmounted or ejected. Nothing when it is not on USB any more."""
+    port = _port_of(usb)
+    if port is not None:
         with _places_lock:
-            _drive_places[place] = None
+            _drive_places[port] = None
 
 
-def _place_of(usb: GarminUsb | None) -> str | None:
-    if usb is None or usb.bus is None or usb.address is None:
+def _port_of(usb: GarminUsb | None) -> UsbPort | None:
+    """The port of the USB device at the bus and device number of `usb`; None when they are
+    not known or nothing is there."""
+    place = usb_place(usb)
+    if place is None:
         return None
-    try:
-        entries = sorted(SYSFS_USB.iterdir())
-    except OSError:
-        return None
-    for base in entries:
-        try:
-            if (int((base / "busnum").read_text()) == usb.bus
-                    and int((base / "devnum").read_text()) == usb.address):
-                return base.name
-        except (OSError, ValueError):
-            continue
-    return None
+    return _at_address(*place, lambda record: record.port)
 
 
-def _note_places(devices: list[tuple[str, str, bool]], now: float) -> None:
+def _note_ports(devices: list[tuple[UsbPort, str, bool]], now: float) -> None:
     """What is on USB now, for _drive_places (and one line in the log for each device
     091e:0003 that comes, saying which it is)."""
     with _places_lock:
         here = set()
-        for place, product, mass_storage in devices:
-            here.add(place)
+        for port, product, mass_storage in devices:
+            here.add(port)
             if mass_storage:
-                _drive_places[place] = None
+                _drive_places[port] = None
             elif product != STARTING_PRODUCT:
-                _drive_places.pop(place, None)
+                _drive_places.pop(port, None)
             else:
-                drive = place in _drive_places
+                drive = port in _drive_places
                 if drive:
-                    _drive_places[place] = None
-                if _said_0003.get(place) != drive:
-                    _said_0003[place] = drive
+                    _drive_places[port] = None
+                if _said_0003.get(port) != drive:
+                    _said_0003[port] = drive
                     if drive:
                         log.info("USB: a Garmin device %s:%s where a Garmin drive was: in its "
                                  "Garmin USB mode after its drive was ejected, to be plugged "
@@ -1769,20 +1797,20 @@ def _note_places(devices: list[tuple[str, str, bool]], now: float) -> None:
                     else:
                         log.info("USB: a Garmin device %s:%s: in its transitional mode, "
                                  "starting", GARMIN_VID, product)
-        for place in [p for p in _said_0003 if p not in here]:
-            del _said_0003[place]
-        for place, gone in list(_drive_places.items()):
-            if place in here:
+        for port in [p for p in _said_0003 if p not in here]:
+            del _said_0003[port]
+        for port, gone in list(_drive_places.items()):
+            if port in here:
                 continue
             if gone is None:
-                _drive_places[place] = now
+                _drive_places[port] = now
             elif now - gone >= USB_GAP_S:
-                del _drive_places[place]
+                del _drive_places[port]
 
 
 def garmin_products_on_usb() -> list[str]:
     """USB product IDs of the Garmin devices plugged in, whatever state they are in."""
-    return [product for _place, product, _mass_storage in _garmin_at_places()]
+    return [product for _port, product, _mass_storage in _garmin_at_ports()]
 
 
 def usb_state(clock=time.monotonic) -> str:
@@ -1792,21 +1820,21 @@ def usb_state(clock=time.monotonic) -> str:
     ones openExpress cannot use; UNSUPPORTED: the only ones are those it cannot use
     (_unsupported); DRIVE_OFF: those that are not are 091e:0003 where a Garmin drive was
     (_drive_places): in Garmin USB mode after it was ejected."""
-    devices = _garmin_at_places()
-    _note_places(devices, clock())
+    devices = _garmin_at_ports()
+    _note_ports(devices, clock())
     _forget_unplugged(clock)  # the drives ejected by us, looked at with the rest
     if not devices:
         return ABSENT
-    unsupported = _unsupported_places(devices)
-    others = [(place, product) for place, product, mass_storage in devices
-              if not mass_storage and place not in unsupported]
+    unsupported = _unsupported_ports(devices)
+    others = [(port, product) for port, product, mass_storage in devices
+              if not mass_storage and port not in unsupported]
     if not others:
-        drives = any(mass_storage for _place, _product, mass_storage in devices)
+        drives = any(mass_storage for _port, _product, mass_storage in devices)
         return MASS_STORAGE if drives else UNSUPPORTED
-    if any(p != STARTING_PRODUCT for _place, p in others):
+    if any(p != STARTING_PRODUCT for _port, p in others):
         return PRESENT
     with _places_lock:
-        drives = all(place in _drive_places for place, _p in others)
+        drives = all(port in _drive_places for port, _p in others)
     return DRIVE_OFF if drives else STARTING
 
 
@@ -2043,7 +2071,6 @@ def _mtp_storage(uri: str, usb: GarminUsb | None) -> GioStorage:
         st.usb = usb
     for st in storages + [top]:
         if st.exists("GARMIN/GarminDevice.xml"):
-            st.usb_id = usb.usb_id if usb is not None else None
             st.device_uri = uri
             return st
     raise NotThereYet(_("GARMIN/GarminDevice.xml not found on device {uri}").format(uri=uri))
@@ -2170,10 +2197,19 @@ def _key(uri: str) -> str:
     return uri.rstrip("/").lower()
 
 
+def _mount_of(uri: str):
+    """The mount the volume monitor shows whose root is at `uri` (_key: any letter case, with
+    or without the final "/"); None when there is none. A mount without a root is passed
+    over."""
+    key = _key(uri)
+    return next((m for m in Gio.VolumeMonitor.get().get_mounts()
+                 if m.get_root() is not None and _key(m.get_root().get_uri()) == key), None)
+
+
 def usb_node(usb: GarminUsb | None) -> Path | None:
     """The node of this USB device in /dev/bus/usb, when this process may read and write
     it; None otherwise (in a Flatpak without the --device=usb permission there is none)."""
-    if usb is None or usb.bus is None or usb.address is None:
+    if usb_place(usb) is None:
         return None
     node = USB_NODES / f"{usb.bus:03d}" / f"{usb.address:03d}"
     return node if os.access(node, os.R_OK | os.W_OK) else None
@@ -2323,8 +2359,7 @@ def _wait(start, timeout_s: float, what: str, name: str = "operation", context=N
 
 
 def _unmount(uri: str) -> None:
-    found = next((m for m in Gio.VolumeMonitor.get().get_mounts()
-                  if _key(m.get_root().get_uri()) == _key(uri)), None)
+    found = _mount_of(uri)
     if found is None:
         raise DeviceError(_("The device is not mounted."))
     _wait(lambda done, cancellable: found.unmount_with_operation(
@@ -2388,9 +2423,7 @@ MOUNT_BACK_TRIES = 3
 def _device_state(uri: str, storage: Storage) -> str:
     """MOUNTED: the volume monitor shows its mount and its GarminDevice.xml is seen;
     UNMOUNTED: no mount of it; BETWEEN: a mount, but no files."""
-    key = _key(uri)
-    if not any(m.get_root() is not None and _key(m.get_root().get_uri()) == key
-               for m in Gio.VolumeMonitor.get().get_mounts()):
+    if _mount_of(uri) is None:
         return UNMOUNTED
     try:
         seen = storage.exists("GARMIN/GarminDevice.xml")
@@ -2446,14 +2479,15 @@ def _mount_back(uri: str, storage: Storage) -> None:
 
 
 @contextmanager
-def _unmounted(uri: str, bus: int, address: int, storage: Storage, what: str, closed: str):
-    """The device unmounted from gvfs for the block and mounted again after it, also after an
-    error; our own unmount and mount are not taken for an unplug (own_remount) meanwhile and
-    for REMOUNT_QUIET_S after. Gives the time it started. `what` begins its lines of the log;
-    `closed` is the last one, said with the time once the device is mounted again."""
+def _unmounted(storage: Storage, what: str, closed: str):
+    """The device of `storage` (its device_uri, and its usb with its place on USB) unmounted
+    from gvfs for the block and mounted again after it, also after an error; our own unmount
+    and mount are not taken for an unplug (own_remount) meanwhile and for REMOUNT_QUIET_S
+    after. Gives the time it started. `what` begins its lines of the log; `closed` is the last
+    one, said with the time once the device is mounted again."""
+    uri = storage.device_uri
     _quiet_until[_key(uri)] = float("inf")
-    known = getattr(storage, "usb", None)
-    _quiet_usb[_key(uri)] = GarminUsb(known.product if known else None, bus, address)
+    _quiet_usb[_key(uri)] = storage.usb
     started = time.monotonic()
     try:
         log.info("%s: unmounting the device from gvfs", what)
@@ -2481,12 +2515,13 @@ def _unmounted(uri: str, bus: int, address: int, storage: Storage, what: str, cl
 
 
 @contextmanager
-def _exclusive(uri: str, bus: int, address: int, storage: Storage, node: Path | None = None):
-    with _unmounted(uri, bus, address, storage, "PTP",
-                    "session closed, device mounted again") as started:
+def _exclusive(storage: Storage, node: Path | None = None):
+    """A PTP session to the device of `storage` while it is unmounted (_unmounted): opened
+    through its `node` in /dev/bus/usb when given, else by its place on USB."""
+    with _unmounted(storage, "PTP", "session closed, device mounted again") as started:
         try:
             transport = (ptp.LibusbTransport.open_node(node) if node is not None
-                         else ptp.LibusbTransport.open(bus, address))
+                         else ptp.LibusbTransport.open(storage.usb.bus, storage.usb.address))
             with ptp.Session(transport) as session:
                 log.info("PTP: session open after %.1f s%s", time.monotonic() - started,
                          " (through the device node)" if node is not None else "")

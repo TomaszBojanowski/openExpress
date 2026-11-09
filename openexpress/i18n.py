@@ -66,18 +66,14 @@ def _configured_language() -> str | None:
     return saved_ui_language() or None
 
 
-def _settings_path() -> Path:
-    from openexpress import paths  # it imports this module
-
-    return paths.config_dir() / "settings.json"
-
-
 def saved_ui_language() -> str:
     """The language of the interface chosen in the program ("ui_language" in
     settings.json): its code, or "" for the system's (also when none is kept, or the file
     cannot be read). The one reader of it, for the start, the window and the command line."""
+    from openexpress import paths
+
     try:
-        data = json.loads(_settings_path().read_text())
+        data = json.loads(paths.settings_file().read_text())
     except (OSError, ValueError):
         return ""
     value = data.get("ui_language") if isinstance(data, dict) else None
@@ -90,7 +86,7 @@ def save_ui_language(code: str) -> None:
     (ValueError, OSError). The one writer of it."""
     from openexpress import paths
 
-    path = _settings_path()
+    path = paths.settings_file()
     with paths.settings_locked():  # not over a client GUID written in the meantime
         data = json.loads(path.read_text()) if path.exists() else {}
         if not isinstance(data, dict):
@@ -211,6 +207,13 @@ def caption(*parts: str) -> str:
     them; a separator inside a part (a translation, the words of the command line) is made
     the same."""
     return SEPARATOR.join(part.replace(" · ", SEPARATOR) for part in parts if part)
+
+
+def plain_spaces(text: str) -> str:
+    """The hard spaces of the program's texts (U+00A0, so that a size or a Polish one-letter
+    word stays on its line in the window) as plain ones: for the log and the command line,
+    whose lines are copied, searched and parsed."""
+    return text.replace("\u00a0", " ")
 
 
 @functools.cache

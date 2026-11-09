@@ -350,6 +350,29 @@ def test_a_time_of_another_day_has_its_date():
     assert netstatus.when(now - 3 * 86400, now).count("-") == 2
 
 
+@pytest.mark.parametrize("language, words", [
+    ("en", ["23:41", "2026-10-14 23:41", "at 23:41", "at 2026-10-14 23:41",
+            "at 2026-10-14 23:41"]),
+    ("pl", ["23:41", "14.10.2026 o\u00a023:41", "o\u00a023:41", "14.10.2026 o\u00a023:41",
+            "14.10.2026 o\u00a023:41"])])
+def test_the_times_of_an_answer_in_the_format_of_the_language(language, words):
+    """The hour on the day of the answer; on another day with the date, which `at_full`
+    always has."""
+    import time
+
+    from openexpress import i18n
+
+    at = time.mktime((2026, 10, 14, 23, 41, 0, 0, 0, -1))
+    later = at + 3 * 86400
+    i18n.setup(language)
+    try:
+        said = [netstatus.when(at, at), netstatus.when(at, later), netstatus.at(at, at),
+                netstatus.at(at, later), netstatus.at_full(at)]
+    finally:
+        i18n.setup("en")
+    assert said == words
+
+
 def _status_window():
     import gi
 

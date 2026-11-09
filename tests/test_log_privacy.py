@@ -62,6 +62,30 @@ def test_a_course_whose_acknowledgement_fails_is_logged_without_its_name(device_
     assert "Acknowledgement of FIT_TYPE_6 (message 7) failed again" in logged
 
 
+def test_an_acknowledgement_that_fails_is_tried_again_by_the_next_sync(device_root, tmp_path,
+                                                                       caplog):
+    """The written file is not written again: the next sync only acknowledges it; each failure
+    is told in the report and the log, and once acknowledged the message is no longer kept."""
+    st, dev, state = _setup(device_root, tmp_path)
+    quiet = "FIT_TYPE_6 (message 7)"
+    with caplog.at_level(logging.INFO, logger="openexpress"):
+        first = sync.run_downloads(_course(dev), st, AckFails(), state=state)
+        second = sync.run_downloads(_course(dev), st, AckFails(),
+                                    state=sync.SyncState(dev.unit_id, base=tmp_path / "state"))
+    assert len(first.written) == 1 and second.written == []
+    assert [len(r.ack_failed) for r in (first, second)] == [1, 1]
+    assert first.ack_failed_in_log == second.ack_failed_in_log == [quiet]
+    warned = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert warned == [f"Acknowledgement of {quiet} failed: ack failed",
+                      f"Acknowledgement of {quiet} failed again: ack failed"]
+    state = sync.SyncState(dev.unit_id, base=tmp_path / "state")
+    assert state.unacked() == {"7"}
+    client = SyncClient()
+    third = sync.run_downloads(_course(dev), st, client, state=state)
+    assert client.acks == [7] and third.ack_failed == [] and third.written == []
+    assert sync.SyncState(dev.unit_id, base=tmp_path / "state").unacked() == set()
+
+
 def test_a_course_that_cannot_be_downloaded_is_logged_without_its_name(device_root, tmp_path,
                                                                        caplog):
     st, dev, state = _setup(device_root, tmp_path)

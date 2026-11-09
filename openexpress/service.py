@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import collections
 import contextlib
-import fcntl
 import json
 import logging
 import re
@@ -366,7 +365,7 @@ def _open_found(found) -> Storage:
     if found.usb is not None:
         # Read from the USB device when it was found; an address with names (e.g. an Edge)
         # does not tell the product.
-        storage.usb, storage.usb_id = found.usb, found.usb.usb_id
+        storage.usb = found.usb
     return storage
 
 
@@ -1338,16 +1337,9 @@ def sync_lock():
     it is there: the two never sync at the same time either. Its lock file is never made."""
     path = paths.data_dir() / "sync.lock"
     paths.make_dir(path.parent)
-    with open(path, "w") as f:
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise SyncBusy(_("A sync is already running in another process.")) from None
-        try:
-            with _other_install_lock():
-                yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with paths.locked(path, mode="w", wait=False, busy=lambda: SyncBusy(
+            _("A sync is already running in another process."))), _other_install_lock():
+        yield
 
 
 @contextlib.contextmanager
@@ -1360,17 +1352,14 @@ def _other_install_lock():
     if f is None:
         yield
         return
-    with f:
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            log.info("sync: the other install of this computer is syncing")
-            raise SyncBusy(_("openExpress (Flatpak) is syncing a device now; try again when "
-                             "it is done.")) from None
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with f, paths.holding(f, wait=False, busy=_other_install_syncing):
+        yield
+
+
+def _other_install_syncing() -> SyncBusy:
+    log.info("sync: the other install of this computer is syncing")
+    return SyncBusy(_("openExpress (Flatpak) is syncing a device now; try again when "
+                      "it is done."))
 
 
 def run_sync(

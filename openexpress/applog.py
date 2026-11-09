@@ -17,7 +17,6 @@ the user (e.g. the addresses for `--device-uri`) is not.
 from __future__ import annotations
 
 import faulthandler
-import fcntl
 import getpass
 import json
 import logging
@@ -187,19 +186,13 @@ def answer_excerpt(body, limit: int = ANSWER_CHARS) -> str:
     return text if len(text) <= limit else text[:limit - 1] + "…"
 
 
-def _plain(text: str) -> str:
-    """The hard spaces of the program's texts (U+00A0: the window keeps a size or a Polish
-    one-letter word on its line) as plain spaces, as every line of the log has them."""
-    return text.replace("\u00a0", " ")
-
-
 class _Redacting(logging.Formatter):
     """Formats the whole record (message, traceback, stack) and redacts the result: for the
     log file and for the terminal alike (e.g. `-v`, or the journal of the watcher); with
     plain spaces."""
 
     def format(self, record: logging.LogRecord) -> str:
-        return _plain(redact(super().format(record)))
+        return i18n.plain_spaces(redact(super().format(record)))
 
 
 class _Formatter(_Redacting):
@@ -236,8 +229,7 @@ class _LogFile(logging.handlers.WatchedFileHandler):
 
 def rotate(path: Path) -> None:
     """Start a new log file when the current one is full, keeping `OLD_FILES` old ones."""
-    with open(path.with_name(path.name + ".lock"), "a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with paths.locked(path.with_name(path.name + ".lock")):
         try:
             if path.stat().st_size < MAX_BYTES:
                 return  # another process has just done it
@@ -312,7 +304,7 @@ def tail(count: int = 200) -> list[str]:
         except OSError:
             continue
         lines = text.splitlines() + lines
-    return [_plain(redact(line)) for line in lines[-count:]]
+    return [i18n.plain_spaces(redact(line)) for line in lines[-count:]]
 
 
 CRASH_NAME = "crash.log"

@@ -113,6 +113,14 @@ def device_map_dir(device: GarminDevice, storage: Storage) -> str | None:
     return storage.resolve(folder) or folder
 
 
+def _map_folder(device: GarminDevice, storage: Storage) -> str:
+    """device_map_dir, or MapError for a device without maps."""
+    folder = device_map_dir(device, storage)
+    if folder is None:
+        raise MapError(_("This device has no folder for maps."))
+    return folder
+
+
 def garmin_paths(garmin_maps: list) -> set[str]:
     """Every file Garmin's server names for the device's maps, installed or not (casefolded):
     the files of a map and those a newer version of it removes."""
@@ -121,6 +129,19 @@ def garmin_paths(garmin_maps: list) -> set[str]:
         listed.update(f.device_path.casefold() for f in m.files)
         listed.update(p.casefold() for p in m.files_to_remove)
     return listed
+
+
+def _garmins(name: str, path: str, garmin_maps: list) -> bool:
+    """Whether a file of the map folder is one of Garmin's: named like Garmin's files, or
+    named by Garmin's server for one of its maps."""
+    return is_garmin_name(name) or path.casefold() in garmin_paths(garmin_maps)
+
+
+def _not_garmins(name: str, path: str, garmin_maps: list) -> None:
+    """MapError for a removal of one of Garmin's files (_garmins)."""
+    if _garmins(name, path, garmin_maps):
+        raise MapError(_("{name} is named like one of Garmin's own maps, so it is not removed.")
+                       .format(name=name))
 
 
 def list_own(device: GarminDevice, storage: Storage, garmin_maps: list) -> list[OwnMap]:
@@ -163,7 +184,7 @@ def overview(device: GarminDevice, storage: Storage, garmin_maps: list) -> Overv
     except DeviceError as e:
         log.info("own maps: the map folder could not be read (%s)", type(e).__name__)
         return Overview(folder, [], set(), unreadable=True)
-    ours = {str(m.get("filename", "")).casefold() for m in recorded(device)}
+    ours = recorded_names(device)
     removable = {m.filename for m in maps if m.filename.casefold() in ours}
     foreign = {m.filename for m in maps if m.filename not in removable and m.title is not None}
     return Overview(folder, maps, removable, foreign=foreign)
@@ -226,13 +247,11 @@ def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: P
     """Everything that is checked before a map is copied; nothing is written. Raises
     MapError with the reason when the map cannot be added."""
     name, title, size = check_local(local, name)
-    folder = device_map_dir(device, storage)
-    if folder is None:
-        raise MapError(_("This device has no folder for maps."))
+    folder = _map_folder(device, storage)
     path = f"{folder}/{name}"
     # A file with one of Garmin's names would be overwritten or deleted by a later install
     # or removal of that map.
-    if is_garmin_name(name) or path.casefold() in garmin_paths(garmin_maps):
+    if _garmins(name, path, garmin_maps):
         raise OwnMapError(_("The name {name} is reserved for Garmin's own maps.").format(
             name=name), "reserved")
     if storage.resolve(path) is not None:  # whatever it is, and whatever its case
@@ -292,6 +311,16 @@ def _state_file(device: GarminDevice) -> Path:
     return paths.device_dir(device.unit_id) / STATE_NAME
 
 
+def _name_of(entry: dict) -> str:
+    """The file name of an entry of recorded(), casefolded."""
+    return str(entry.get("filename", "")).casefold()
+
+
+def recorded_names(device: GarminDevice) -> set[str]:
+    """The file names of the maps this program copied to the device, casefolded."""
+    return {_name_of(m) for m in recorded(device)}
+
+
 def recorded(device: GarminDevice) -> list[dict]:
     """The maps this program copied to the device: file name, size, map name, date."""
     try:
@@ -310,8 +339,7 @@ def _save(device: GarminDevice, maps: list[dict]) -> None:
 
 
 def _record(device: GarminDevice, entry: dict) -> None:
-    maps = [m for m in recorded(device)
-            if str(m.get("filename", "")).casefold() != entry["filename"].casefold()]
+    maps = [m for m in recorded(device) if _name_of(m) != entry["filename"].casefold()]
     maps.append(entry)
     try:
         _save(device, maps)
@@ -321,8 +349,7 @@ def _record(device: GarminDevice, entry: dict) -> None:
 
 
 def _forget(device: GarminDevice, name: str) -> None:
-    maps = [m for m in recorded(device)
-            if str(m.get("filename", "")).casefold() != name.casefold()]
+    maps = [m for m in recorded(device) if _name_of(m) != name.casefold()]
     try:
         _save(device, maps)
     except OSError as e:
@@ -358,11 +385,8 @@ def plan_remove(device: GarminDevice, storage: Storage, garmin_maps: list,
     that this installation copied (it is on the list in the device's state) can be removed,
     and only while its size on the device is the one that was written."""
     applog.hide(name, "file")
-    folder = device_map_dir(device, storage)
-    if folder is None:
-        raise MapError(_("This device has no folder for maps."))
-    entry = next((m for m in recorded(device)
-                  if str(m.get("filename", "")).casefold() == name.casefold()), None)
+    folder = _map_folder(device, storage)
+    entry = next((m for m in recorded(device) if _name_of(m) == name.casefold()), None)
     if entry is None:
         raise MapError(_(
             "{name} was not copied to the device by this installation of openExpress (it may "
@@ -373,10 +397,7 @@ def plan_remove(device: GarminDevice, storage: Storage, garmin_maps: list,
     applog.hide(filename, "file")
     applog.hide(title, "map")
     path = f"{folder}/{filename}"
-    # Never one of Garmin's files, even if such a name got onto the list.
-    if is_garmin_name(filename) or path.casefold() in garmin_paths(garmin_maps):
-        raise MapError(_("{name} is named like one of Garmin's own maps, so it is not removed.")
-                       .format(name=filename))
+    _not_garmins(filename, path, garmin_maps)  # even if such a name got onto the list
     real = storage.resolve(path)
     if real is None:
         return RemovePlan(filename, path, title, size, storage.free_space(), on_device=False)
@@ -408,13 +429,9 @@ def plan_remove_foreign(device: GarminDevice, storage: Storage, garmin_maps: lis
     by its header and has not changed since it was shown."""
     applog.hide(shown.filename, "file")
     applog.hide(shown.title, "map")
-    folder = device_map_dir(device, storage)
-    if folder is None:
-        raise MapError(_("This device has no folder for maps."))
+    folder = _map_folder(device, storage)
     path = f"{folder}/{shown.filename}"
-    if is_garmin_name(shown.filename) or path.casefold() in garmin_paths(garmin_maps):
-        raise MapError(_("{name} is named like one of Garmin's own maps, so it is not removed.")
-                       .format(name=shown.filename))
+    _not_garmins(shown.filename, path, garmin_maps)
     if shown.title is None:  # not a map by its header: nobody knows what it is
         raise MapError(_("{file} is not a Garmin map file (.img).").format(file=shown.filename))
     _check_as_shown(storage, path, shown.filename, shown.size, shown.title)

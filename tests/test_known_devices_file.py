@@ -287,6 +287,49 @@ def test_copied_updates_keep_only_times_that_are_times(store):
     assert known_devices.load()[VARIA].copied_updates == (("d.4", 100.0),)
 
 
+# Each number of the objects of the facts: (the object, what it reads, the field, a whole number
+# only). A count is a whole number; a time any number, read as a float.
+_NUMBERS = [
+    ("UpdateSummary", {"count": 2, "software_version": "23.39"}, "count", True),
+    ("UpdateCheck", {"at": 5, "software_version": "23.39", "ready": False}, "at", False),
+    ("SyncCount", {"count": 2, "at": 5, "state": "made-up"}, "count", True),
+    ("SyncCount", {"count": 2, "at": 5, "state": "made-up"}, "at", False),
+    ("AccountFact", {"on_account": True, "primary": False, "at": 5, "login": "made-up"}, "at",
+     False),
+    ("SyncedFact", {"once": True, "last": 4, "not_uploaded": False, "at": 5, "state": None}, "at",
+     False),
+    ("SyncedFact", {"once": True, "last": 4, "not_uploaded": False, "at": 5, "state": None},
+     "last", False)]
+
+
+@pytest.mark.parametrize("name, value, number, whole", _NUMBERS,
+                         ids=[f"{n[0]} {n[2]}" for n in _NUMBERS])
+def test_a_number_of_a_fact_is_a_number_not_true_or_false(name, value, number, whole):
+    from openexpress import known_devices
+
+    read = getattr(known_devices, name).from_json
+    for wrong in (True, False, "5", [5], {}) + ((5.0,) if whole else ()):
+        assert read({**value, number: wrong}) is None, wrong
+    for right in (7, 7.5) if not whole else (7,):
+        fact = read({**value, number: right})
+        assert getattr(fact, number) == right
+        assert type(getattr(fact, number)) is (int if whole else float)
+
+
+@pytest.mark.parametrize("value, kept", [(5, 5.0), (5.5, 5.5), (True, None), (False, None),
+                                         ("5", None), (None, None)])
+def test_the_time_an_update_was_found_and_unplugged_are_numbers(store, value, kept):
+    from openexpress import known_devices
+
+    data = _pattern()
+    _fenix(data)["tile_facts"]["update"]["found"] = value
+    _fenix(data)["unplugged_at"] = value
+    store.write_text(json.dumps(data))
+    entry = known_devices.load()[FENIX]
+    assert (entry.update_found, entry.unplugged_at) == (kept, kept)
+    assert type(entry.update_found) is type(kept) and type(entry.unplugged_at) is type(kept)
+
+
 # --- when nothing is written ------------------------------------------------------------------
 
 

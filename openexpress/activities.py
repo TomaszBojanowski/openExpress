@@ -28,7 +28,7 @@ from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import _, pgettext
 from openexpress.progress import Step, say_to
-from openexpress.sync import ACTIVITY_TYPE
+from openexpress.sync import ACTIVITY_TYPE, files_of
 
 log = logging.getLogger(__name__)
 
@@ -185,14 +185,9 @@ class DeviceActivities:
                  time.monotonic() - started)
 
     def _on_device(self) -> list[Activity]:
-        seen: set[str] = set()
-        found = []
-        for src in self.device.sources(ACTIVITY_TYPE):
-            for path, entry in self.storage.walk_files(src.path):
-                if src.matches(path) and path.casefold() not in seen:
-                    seen.add(path.casefold())
-                    found.append(Activity(Source.DEVICE, path, posixpath.basename(path),
-                                          entry.size, entry.mtime))
+        found = [Activity(Source.DEVICE, path, posixpath.basename(path), entry.size, entry.mtime)
+                 for _src, path, entry in files_of(self.storage,
+                                                   self.device.sources(ACTIVITY_TYPE))]
         return sorted(found, key=lambda a: (a.mtime, a.name.casefold()), reverse=True)
 
     def read_next(self, count: int = PAGE,

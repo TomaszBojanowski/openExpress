@@ -1,4 +1,5 @@
 """Writing to the watch from the Flatpak goes through the host's `gio copy`."""
+import os
 import subprocess
 import types
 from pathlib import Path
@@ -7,7 +8,7 @@ import pytest
 from gio_fake import GioOp
 
 from openexpress.device import gio_storage
-from openexpress.device.storage import DeviceError
+from openexpress.device.storage import CopyNotStarted, DeviceError
 
 
 class FakeTarget:
@@ -94,6 +95,87 @@ def test_host_copy_error_is_reported(flatpak, monkeypatch):
                         lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "boom"))
     with pytest.raises(DeviceError, match="boom"):
         st._write("x.FIT", b"1")
+
+
+# --- the temporary file on the way to the device ------------------------------------------------
+
+
+def _no_room(**kwargs):
+    raise OSError(28, "No space left on device")
+
+
+def _private_file(tmp_path, monkeypatch):
+    """A file only the sandbox sees: staged in the cache for the host's copy."""
+    local = tmp_path / "map.img"
+    local.write_bytes(b"MAP")
+    monkeypatch.setattr(gio_storage, "_host_visible", lambda p: False)
+    return local
+
+
+def test_bytes_without_a_temporary_file_are_a_copy_not_started(flatpak, monkeypatch):
+    st, calls = flatpak
+    monkeypatch.setattr(gio_storage.tempfile, "mkstemp", _no_room)
+    with pytest.raises(CopyNotStarted) as said:
+        st._write("GARMIN/x.FIT", b"DATA")
+    assert str(said.value) == "Cannot write GARMIN/x.FIT: [Errno 28] No space left on device"
+    assert calls == []
+
+
+def test_bytes_that_cannot_be_put_in_the_temporary_file_leave_none(flatpak, monkeypatch):
+    st, calls = flatpak
+    made = []
+    mkstemp = gio_storage.tempfile.mkstemp
+
+    def read_only(**kwargs):
+        fd, path = mkstemp(**kwargs)
+        os.close(fd)
+        made.append(Path(path))
+        return os.open(path, os.O_RDONLY), path
+
+    monkeypatch.setattr(gio_storage.tempfile, "mkstemp", read_only)
+    with pytest.raises(CopyNotStarted, match="^Cannot write GARMIN/x.FIT: "):
+        st._write("GARMIN/x.FIT", b"DATA")
+    assert calls == [] and made[0].parent == gio_storage._staging_dir()
+    assert not made[0].exists()
+
+
+def test_a_private_file_is_staged_for_the_copy_and_removed_after_it(flatpak, tmp_path,
+                                                                    monkeypatch):
+    st, calls = flatpak
+    st._write_file("GARMIN/map.img", _private_file(tmp_path, monkeypatch))
+    (cmd, content), = calls
+    staged = Path(cmd[-2])
+    assert content == b"MAP" and staged.parent == gio_storage._staging_dir()
+    assert not staged.exists()
+
+
+def test_a_private_file_without_a_staging_file_is_a_copy_not_started(flatpak, tmp_path,
+                                                                     monkeypatch):
+    st, calls = flatpak
+    local = _private_file(tmp_path, monkeypatch)
+    monkeypatch.setattr(gio_storage.tempfile, "mkstemp", _no_room)
+    with pytest.raises(CopyNotStarted) as said:
+        st._write_file("GARMIN/map.img", local)
+    assert str(said.value) == "Cannot write GARMIN/map.img: [Errno 28] No space left on device"
+    assert calls == []
+
+
+def test_a_private_file_that_cannot_be_staged_leaves_no_staging_file(flatpak, tmp_path,
+                                                                     monkeypatch):
+    st, calls = flatpak
+    local = _private_file(tmp_path, monkeypatch)
+    made = []
+
+    def broken(src, dst):
+        made.append(Path(dst))
+        raise OSError(5, "Input/output error")
+
+    monkeypatch.setattr(gio_storage.shutil, "copyfile", broken)
+    with pytest.raises(CopyNotStarted) as said:
+        st._write_file("GARMIN/map.img", local)
+    assert str(said.value) == "Cannot write GARMIN/map.img: [Errno 5] Input/output error"
+    assert calls == [] and made[0].parent == gio_storage._staging_dir()
+    assert not made[0].exists()
 
 
 # --- progress of a copy that runs on the host --------------------------------------------------
@@ -290,7 +372,7 @@ def test_a_copy_that_takes_too_long_is_stopped(host, monkeypatch):
     monkeypatch.setattr(gio_storage.subprocess, "Popen", lambda cmd, **kw: stuck)
     with pytest.raises(DeviceError) as error:
         copy_with_progress(host)
-    assert stuck.killed and "timed out" in str(error.value)
+    assert stuck.killed and str(error.value) == "Cannot write map.img: timed out after 0.05 seconds"
 
 
 def test_without_a_progress_function_the_copy_runs_without_gio_progress(flatpak, tmp_path, monkeypatch):

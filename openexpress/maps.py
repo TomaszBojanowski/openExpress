@@ -432,7 +432,7 @@ def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[Cle
     rules = maps[0].cleanup_rules if maps else ()
     if not rules:
         return []
-    named = {p.casefold() for m in maps for p in m.all_paths}
+    named = ownmaps.garmin_paths(maps)
     # Only in a folder of the files of the answer's maps (or the device's map folder), only
     # with the extension of such a file.
     folders = {posixpath.dirname(p) for p in named}
@@ -444,7 +444,7 @@ def cleanup_plan(storage: Storage, device, maps: list[UniversalMap]) -> list[Cle
     skipped = 0
     try:
         own = {o.path.casefold() for o in ownmaps.list_own(device, storage, maps)}
-        copied = {str(r.get("filename", "")).casefold() for r in ownmaps.recorded(device)}
+        copied = ownmaps.recorded_names(device)
         for rule in rules:
             match, folder = _rule_matcher(rule.file_match), _rule_folder(rule.path)
             why = ("pattern" if match is None else "memory card" if folder is None

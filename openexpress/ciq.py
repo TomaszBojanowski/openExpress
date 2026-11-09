@@ -33,7 +33,7 @@ from openexpress.device.storage import (
     Storage,
     replug_text,
 )
-from openexpress.device.xmldevice import GarminDevice
+from openexpress.device.xmldevice import DeviceFile, GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, NC_, _, caption, ngettext, pgettext
 from openexpress.progress import Step, downloading_text, say_to, writing_text
@@ -442,20 +442,25 @@ def preview_in_bin(state: InstalledState, targets: list[StoreApp]) -> InBinPrevi
         new=[(a.name, a.app_type, a.disabled) for a in new])
 
 
+def _file_in(target: DeviceFile, filename: str, extension: str) -> str:
+    """The path of an app's file named `filename` in the folder of `target`, with the
+    extension it declares (`extension` when it declares none)."""
+    return posixpath.join(target.path, f"{filename}.{target.extension or extension}")
+
+
 def app_file_path(device: GarminDevice, app: InstalledApp) -> str | None:
     dt = APPTYPE_TO_DATATYPE.get(app.app_type)
     targets = device.targets(dt) if dt else []
     if not targets or not app.filename:
         return None
-    t = targets[0]
-    return posixpath.join(t.path, f"{app.filename}.{t.extension or 'PRG'}")
+    return _file_in(targets[0], app.filename, "PRG")
 
 
 def settings_file_path(device: GarminDevice, app: InstalledApp) -> str | None:
     targets = device.targets(SETTINGS_DATATYPE)
     if not targets or not app.filename:
         return None
-    return posixpath.join(targets[0].path, f"{app.filename}.{targets[0].extension or 'SET'}")
+    return _file_in(targets[0], app.filename, "SET")
 
 
 # --- store API -----------------------------------------------------------------------
@@ -934,8 +939,7 @@ def _check_slot(free_slots: int | None, taken: int) -> None:
 
 def _check_not_leaving(existing: InstalledApp | None) -> None:
     if existing is not None and existing.pending_removal:
-        raise CiqError(_("the device has not applied earlier changes yet; unplug "
-                         "it, wait until it is ready and try again"))
+        raise CiqError(waiting_list_text())
 
 
 def _check_space(state: InstalledState, used: int, size: int) -> None:
@@ -1278,8 +1282,7 @@ def _install_pass(device, storage, client, messages, known, only, progress, op: 
                 filename = uuid.uuid4().hex[:8].upper()
                 while existing is not None and filename == existing.filename:
                     filename = uuid.uuid4().hex[:8].upper()
-                path = posixpath.join(targets[0].path,
-                                      f"{filename}.{targets[0].extension or 'PRG'}")
+                path = _file_in(targets[0], filename, "PRG")
                 entry = None
                 if existing is None:
                     store = known.get(app_id)
@@ -1365,9 +1368,7 @@ def _install_hidden(device, storage, state, hidden: list[_Hidden], new_entries, 
     in_path = _config_path(device, True)
     if storage.exists(in_path):
         # Not replaced over PTP; the device consumes it once it is unplugged.
-        report.failed += [(h.name, _("the device has not applied earlier changes yet; unplug "
-                                     "it, wait until it is ready and try again"))
-                          for h in hidden]
+        report.failed += [(h.name, waiting_list_text()) for h in hidden]
         return False
     opener = storage.exclusive_ptp()
     sent: list[_Hidden] = []
@@ -1669,8 +1670,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
     became of the app."""
     in_path = _config_path(device, True)
     if storage.exists(in_path):
-        raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
-                         "until it is ready and try again"))
+        raise CiqError(waiting_list_text())
     listed = state.find(app.app_id, app.app_type)
     if listed is None:
         raise CiqError(_("App not found on the device"))
@@ -1721,8 +1721,7 @@ def _remove_hidden(device, storage, state: InstalledState, app: InstalledApp) ->
             if folder is None or not folder.is_dir or parent is None:
                 raise CiqError(_("the app folder was not found on the device"))
             if session.lookup(store, in_path) is not None:
-                raise CiqError(_("the device has not applied earlier changes yet; unplug it, "
-                                 "wait until it is ready and try again"))
+                raise CiqError(waiting_list_text())
             settings = (session.lookup(store, settings_path) if settings_path is not None
                         else None)
             file = session.lookup(store, path)
@@ -1910,9 +1909,14 @@ def _copy_folders(unit_dir: Path) -> list[Path]:
     return [p for *_key, p in sorted(found)]
 
 
+def _order_of(state: InstalledState) -> tuple | None:
+    """The apps of an app list in their order ((app ID, type) of each), None when it has an
+    entry that cannot be read."""
+    return None if state.unreadable else tuple((a.app_id, a.app_type) for a in state.apps)
+
+
 def _list_of(folder: Path) -> tuple | None:
-    """The apps of a copy in their order ((app ID, type) of each), None when it cannot be
-    read whole."""
+    """The apps of a copy in their order (_order_of), None when it cannot be read whole."""
     path = _find_out_bin(folder)
     if path is None:
         return None
@@ -1920,7 +1924,7 @@ def _list_of(folder: Path) -> tuple | None:
         state = parse_out_bin(path.read_bytes())
     except (OSError, CiqError):
         return None
-    return None if state.unreadable else tuple((a.app_id, a.app_type) for a in state.apps)
+    return _order_of(state)
 
 
 def _older_same_lists(copies: list[Path]) -> list[Path]:
@@ -1948,10 +1952,8 @@ def _same_list(a: bytes, b: bytes) -> bool:
         first, second = parse_out_bin(a), parse_out_bin(b)
     except CiqError:
         return False
-    if first.unreadable or second.unreadable:
-        return False
-    return ([(x.app_id, x.app_type) for x in first.apps]
-            == [(x.app_id, x.app_type) for x in second.apps])
+    order = _order_of(first)
+    return order is not None and order == _order_of(second)
 
 
 def save_app_list_copy(device: GarminDevice, storage: Storage,
@@ -2135,8 +2137,7 @@ def restore_order(device: GarminDevice, storage: Storage,
     state = read_installed(device, storage)
     require_complete(state)
     if changes_waiting(device, storage):
-        raise CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
-                         "until it is ready and try again"))
+        raise CiqError(waiting_list_text())
     plan = plan_order(state, copy)
     if not plan.moved:
         return plan, None

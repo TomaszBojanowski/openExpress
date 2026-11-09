@@ -4,6 +4,7 @@ tile_facts.read for start.chips(); each holds for a time and while what it was t
 stays the same, past that no chip. All devices, unit IDs and files are made up."""
 
 import json
+import logging
 import sys
 import time
 import types
@@ -89,8 +90,8 @@ def test_the_chips_read_only_the_facts_and_what_the_device_shows():
     allowed = {PACKAGE / "gui" / "start.py", PACKAGE / "gui" / "words.py", PACKAGE / "i18n.py"}
     own = [(Path(f), name) for f, name in calls if Path(f).is_relative_to(PACKAGE)]
     assert [(f, name) for f, name in own if f not in allowed] == [
-        (PACKAGE / "tile_facts.py", "update_still_recent")] * sum(
-        name == "update_still_recent" for _f, name in own)
+        (PACKAGE / "known_devices.py", "update_found_recently")] * sum(
+        name == "update_found_recently" for _f, name in own)
 
 
 def test_the_facts_of_a_tile_come_from_the_reader_only(monkeypatch):
@@ -336,6 +337,65 @@ def test_forget_takes_the_facts_with_the_entry():
     tile_facts.note_account([{"unitid": FENIX}])
     assert forget.forget_device(FENIX)
     assert FENIX not in known_devices.load()
+
+
+def _cannot_write(*_args, **_kwargs):
+    raise OSError("/made/up/folder/devices.json")
+
+
+def _update_check():
+    tile_facts.note_update_check(types.SimpleNamespace(unit_id=FENIX,
+                                                       software_version_str="23.39"), ["update"])
+
+
+def _count():
+    tile_facts.note_count(types.SimpleNamespace(unit_id=FENIX, count=3, test_drive=False))
+
+
+def _account_list():
+    tile_facts.note_account([{"unitid": FENIX}])
+
+
+def _synced():
+    tile_facts.note_synced(FENIX)
+
+
+@pytest.mark.parametrize("write, writer, said", [
+    (_update_check, "set_update_found", "what the check of updates found not kept"),
+    (_count, "set_sync_count", "the count of activities not kept"),
+    (_account_list, "set_account_facts", "what the account says of them not kept"),
+    (_synced, "set_synced", "what is known of its sync not kept")],
+    ids=["update check", "count", "account's list", "sync"])
+def test_a_fact_that_cannot_be_written_is_only_said_in_the_log(write, writer, said, caplog,
+                                                               monkeypatch):
+    """Optional: the source goes on, one warning of this module names the kind of the error,
+    never its text (it may name the folder), and nothing says the fact was kept."""
+    _login()
+    _seen()
+    sync.SyncState(FENIX).save()
+    monkeypatch.setattr(known_devices, writer, _cannot_write)
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        write()
+    lines = [(r.name, r.levelname, r.getMessage(), r.exc_info) for r in caplog.records]
+    assert lines == [("openexpress.tile_facts", "WARNING", f"devices: {said} (OSError)", None)]
+
+
+def test_a_device_that_cannot_be_remembered_gets_no_sync_fact(caplog, monkeypatch):
+    """The detection goes on; one warning, and what is known of its sync is not written."""
+    synced = []
+    remember = known_devices.remember
+    monkeypatch.setattr(known_devices, "remember", _cannot_write)
+    monkeypatch.setattr(known_devices, "set_synced", lambda *args: synced.append(args))
+    with caplog.at_level(logging.INFO):
+        known_devices.seen(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp")
+    lines = [(r.name, r.levelname, r.getMessage()) for r in caplog.records]
+    assert lines == [("openexpress.known_devices", "WARNING",
+                      "devices: not remembered (OSError)")]
+    assert synced == []
+    monkeypatch.setattr(known_devices, "remember", remember)
+    known_devices.seen(FENIX, "fēnix 8", "006-B4532-00", "23.39", "mtp")
+    assert [unit for unit, _fact in synced] == [FENIX]
 
 
 # --- two openings on the same files ------------------------------------------------------

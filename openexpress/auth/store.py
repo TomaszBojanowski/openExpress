@@ -26,18 +26,22 @@ class ConnectAuth:
     def display(self) -> str:
         """The account's name as the window shows it: its user name, else its e-mail
         address, whole."""
-        a = self.account
-        # TRANSLATORS: shown in place of the signed-in Garmin account's name when it has no user
-        # name and no e-mail address
-        return a.get("username") or a.get("emailaddress") or _("(unknown account)")
+        return self._name(lambda name: name)
 
     @property
     def masked_display(self) -> str:
         """The account's name as the command line shows it, masked (masked()): its output is
         pasted into reports."""
+        return self._name(masked)
+
+    def _name(self, shown) -> str:
+        """shown(the account's user name, else its e-mail address); a word of its own when it
+        has neither."""
         a = self.account
         name = a.get("username") or a.get("emailaddress")
-        return masked(name) if name else _("(unknown account)")
+        # TRANSLATORS: shown in place of the signed-in Garmin account's name when it has no user
+        # name and no e-mail address
+        return shown(name) if name else _("(unknown account)")
 
 
 def masked(name: str) -> str:

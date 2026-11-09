@@ -30,7 +30,6 @@ RENDERING_ENV = ("GDK_BACKEND", "GDK_DEBUG", "GDK_DISABLE", "GSK_RENDERER",
                  "WEBKIT_DISABLE_DMABUF_RENDERER", "WEBKIT_SKIA_ENABLE_CPU_RENDERING")
 GPU_VENDORS = {"0x10de": "NVIDIA", "0x1002": "AMD", "0x8086": "Intel", "0x1af4": "virtio",
                "0x15ad": "VMware", "0x1234": "QEMU", "0x1414": "Microsoft"}
-FLATPAK_INFO = Path("/.flatpak-info")
 DRM = Path("/sys/class/drm")
 # Signing in without the window: the address is opened in a web browser and pasted back.
 MANUAL_LOGIN_FLATPAK = "flatpak run io.github.tomaszbojanowski.OpenExpress login --manual"
@@ -84,7 +83,7 @@ def _without_query(url: str) -> str:
 # --- what the window runs on, and what happens in it: for the log --------------------------
 
 
-def flatpak_runtime(info: Path = FLATPAK_INFO) -> str:
+def flatpak_runtime(info: Path = paths.FLATPAK_INFO) -> str:
     """The runtime of the Flatpak the program runs in, e.g. "org.gnome.Platform/x86_64/50";
     "none" outside one."""
     try:

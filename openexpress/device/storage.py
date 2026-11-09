@@ -18,6 +18,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
 
 from openexpress import applog
 from openexpress.errors import UserFacingError
@@ -119,6 +120,14 @@ class Storage(ABC):
         return None
 
     @property
+    def usb_id(self) -> str | None:
+        """The USB ID of the storage's device, "vendor:product" (never its serial number), as
+        its `usb` (gio_storage.GarminUsb) says it; None when that is not known. A storage that
+        is not on USB (a folder) has no `usb`, and so no usb_id either (AttributeError)."""
+        usb = self.usb
+        return usb.usb_id if usb is not None else None
+
+    @property
     def stalled(self) -> bool:
         """Whether the device stopped responding to this storage (over MTP: a step with no
         answer within its time limit); then every operation of it fails at once."""
@@ -159,14 +168,10 @@ class Storage(ABC):
                 raise  # not a missing folder
             except DeviceError:
                 return None
-            match = next((e.name for e in entries if e.name == part), None)
-            if match is None:
-                match = next(
-                    (e.name for e in entries if e.name.casefold() == part.casefold()), None
-                )
+            match = _entry_named(entries, part)
             if match is None:
                 return None
-            real = posixpath.join(real, match) if real else match
+            real = posixpath.join(real, match.name) if real else match.name
         return real
 
     def exists(self, path: str) -> bool:
@@ -238,9 +243,7 @@ class Storage(ABC):
     def _target(self, path: str) -> str:
         parent, name = _split_file_path(path)
         real_parent = self._ensure_dir(parent)
-        existing = next(
-            (e for e in self._list(real_parent) if e.name.casefold() == name.casefold()), None
-        )
+        existing = named_in_any_case(self._list(real_parent), name)
         if existing is not None and existing.is_dir:
             raise DeviceError(_("Cannot write {path}: it is a directory").format(path=path))
         target_name = existing.name if existing else name
@@ -308,6 +311,11 @@ class Storage(ABC):
         log.warning("device: a file written has %s instead of %s%s",
                     "no size" if found is None else applog.size(found), applog.size(size),
                     "" if keep else "; deleted")
+        self._not_written(real, error, keep)
+
+    def _not_written(self, real: str, error: type[Exception], keep: bool) -> NoReturn:
+        """A file a check found other than it was written (said in the log by the check):
+        deleted, unless `keep`, and `error` raised."""
         if not keep:
             self.delete_quietly(real)
         raise error(_("Write verification of {path} failed").format(path=real))
@@ -326,12 +334,20 @@ class Storage(ABC):
         return True
 
     def require_space(self, need: int, margin: int, *,
-                      error: type[Exception] = DeviceError) -> int | None:
+                      error: type[Exception] = DeviceError, free=...,
+                      margin_said: bool = False) -> int | None:
         """Room on the device for `need` bytes and `margin` kept free, or `error` saying how
-        much is needed and free. The free space, or None when it is not known (then nothing
-        is checked)."""
-        free = self.free_space()
+        much is needed and free (`margin_said`: and how much is kept free, a margin that
+        depends on the device). The free space, or None when it is not known (then nothing
+        is checked); `free`: as the device told it already, not asked again."""
+        if free is ...:
+            free = self.free_space()
         if free is not None and need + margin > free:
+            if margin_said:
+                raise error(_("Not enough space on the device: {need} needed and {margin} kept "
+                              "free, but only {free} free")
+                            .format(need=human_size(need), margin=human_size(margin),
+                                    free=human_size(free)))
             raise error(_("Not enough space on the device: {need} needed, {free} free")
                         .format(need=human_size(need), free=human_size(free)))
         return free
@@ -376,9 +392,7 @@ class Storage(ABC):
                 found = entries(real)
                 if found is None:
                     return None
-                entry = (next((e for e in found if e.name == part), None)
-                         or next((e for e in found if e.name.casefold() == part.casefold()),
-                                 None))
+                entry = _entry_named(found, part)
                 if entry is None:
                     return None
                 real = posixpath.join(real, entry.name) if real else entry.name
@@ -396,13 +410,28 @@ class Storage(ABC):
     def _ensure_dir(self, path: str) -> str:
         real = ""
         for part in [p for p in path.split("/") if p]:
-            entries = self._list(real)
-            match = next((e.name for e in entries if e.name.casefold() == part.casefold()), None)
-            nxt = posixpath.join(real, match or part) if real else (match or part)
+            match = named_in_any_case(self._list(real), part)
+            name = match.name if match is not None else part
+            nxt = posixpath.join(real, name) if real else name
             if match is None:
                 self._mkdir(nxt)
             real = nxt
         return real
+
+
+def named_in_any_case(items, name: str):
+    """The first of `items` (each with a `name`, in the order the device lists them) whose name
+    is `name` in any letter case; None when none is. What a write and the folders made for it
+    take, and what PTP looks a path up by."""
+    wanted = name.casefold()
+    return next((item for item in items if item.name.casefold() == wanted), None)
+
+
+def _entry_named(entries: list[Entry], name: str) -> Entry | None:
+    """The entry of this name in its exact letter case, else the first in any
+    (named_in_any_case): what looking a path up takes."""
+    exact = next((e for e in entries if e.name == name), None)
+    return exact if exact is not None else named_in_any_case(entries, name)
 
 
 def _split_file_path(path: str) -> tuple[str, str]:
@@ -609,9 +638,7 @@ class LocalStorage(Storage):
         `keep`), said in the log without its name, and `error` raised."""
         log.warning("drive: a file of %s read back with other bytes than were written%s",
                     applog.size(size), "" if keep else "; deleted")
-        if not keep:
-            self.delete_quietly(real)
-        raise error(_("Write verification of {path} failed").format(path=real))
+        self._not_written(real, error, keep)
 
     def free_space(self) -> int | None:
         return shutil.disk_usage(self.root).free
@@ -638,7 +665,6 @@ class UmsStorage(LocalStorage):
         self.device_uri = device_uri
         self.label = device_uri.rstrip("/") + "/"
         self.usb = usb  # gio_storage.GarminUsb, when known
-        self.usb_id: str | None = usb.usb_id if usb is not None else None
 
     @property
     def test_drive(self) -> bool:

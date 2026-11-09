@@ -317,12 +317,18 @@ def copy(plan: CopyPlan, storage: Storage,
     return written
 
 
-def write_playlist(device: GarminDevice, storage: Storage, name: str,
-                   device_paths: list[str]) -> str:
+def _playlist_path(device: GarminDevice, name: str) -> str:
+    """Where the playlist `name` goes on the device; MusicError for a device without
+    playlists."""
     files = device.targets(PLAYLIST)
     if not files:
         raise MusicError(_("This device does not support playlists"))
-    path = posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
+    return posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
+
+
+def write_playlist(device: GarminDevice, storage: Storage, name: str,
+                   device_paths: list[str]) -> str:
+    path = _playlist_path(device, name)
     body = "".join(p + "\n" for p in device_paths).encode("utf-8")
     return storage.write_checked(path, body)
 
@@ -359,11 +365,9 @@ def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
     Entries that are missing or in a format the device does not play are skipped with a
     reason instead of stopping the whole playlist. Nothing is written.
     """
-    files = device.targets(PLAYLIST)
-    if not files:
-        raise MusicError(_("This device does not support playlists"))
     m3u = Path(m3u)
     name = name or m3u.stem
+    target = _playlist_path(device, name)  # before the playlist is read
     tracks: dict[Path, Track] = {}  # one copy per local file, however often it is listed
     order: list[Path] = []
     skipped: list[tuple[str, str]] = []
@@ -383,7 +387,6 @@ def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
         order.append(key)
     copy_plan = plan_copy(list(tracks.values()), device, storage)
     dest = {t.local.resolve(): d for t, d in copy_plan.to_copy + copy_plan.already}
-    target = posixpath.join(files[0].path.strip("/"), safe(name) + ".m3u8")
     return PlaylistPlan(name, target, storage.resolve(target) is not None, copy_plan, skipped,
                         [dest[key] for key in order])
 

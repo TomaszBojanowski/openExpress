@@ -342,18 +342,29 @@ class Disk:
         except (OSError, TypeError, ValueError) as e:
             log.info("answers: %s not kept on disk (%s)", kind, type(e).__name__)
 
+    @staticmethod
+    def _read(p) -> dict | None:
+        """What the file of an answer holds; None when it does not read or is no object (a
+        file changed by hand)."""
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    @staticmethod
+    def _fresh(kind: str, at, now: float) -> bool:
+        """Whether an answer of `kind` given at `at` (seconds) is still fresh at `now`."""
+        return isinstance(at, (int, float)) and 0 <= now - at < LIFETIMES[kind]
+
     def get(self, kind: str, full: tuple, now: float):
         if kind not in DISK_FIELDS:
             return None
-        try:
-            data = json.loads(self._path(full).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return None
-        if not isinstance(data, dict):  # a file changed by hand: none
+        data = self._read(self._path(full))
+        if data is None:
             return None
         at = data.get("at")
-        if data.get("kind") != kind or not isinstance(at, (int, float)) \
-                or not 0 <= now - at < LIFETIMES[kind]:
+        if data.get("kind") != kind or not self._fresh(kind, at, now):
             return None
         return at, data.get("value"), frozenset(data.get("tags") or ())
 
@@ -361,11 +372,8 @@ class Disk:
         if not self.folder.is_dir():
             return
         for p in self.folder.glob("*.json"):
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                continue
-            if not isinstance(data, dict):
+            data = self._read(p)
+            if data is None:
                 continue
             if (kinds is None or data.get("kind") in kinds) \
                     and (tag is None or tag in (data.get("tags") or ())):
@@ -377,14 +385,9 @@ class Disk:
         login) would else stay until the cache is cleared."""
         gone = 0
         for p in self.folder.glob("*.json"):
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                data = None
-            kind = data.get("kind") if isinstance(data, dict) else None
-            at = data.get("at") if isinstance(data, dict) else None
-            if kind in LIFETIMES and isinstance(at, (int, float)) \
-                    and 0 <= now - at < LIFETIMES[kind]:
+            data = self._read(p) or {}
+            kind = data.get("kind")
+            if kind in LIFETIMES and self._fresh(kind, data.get("at"), now):
                 continue
             p.unlink(missing_ok=True)
             gone += 1

@@ -113,7 +113,7 @@ class Settings:
     @classmethod
     def _read(cls) -> tuple[Settings, dict]:
         """The settings as the file has them, and the file as it was read."""
-        path = paths.config_dir() / "settings.json"
+        path = paths.settings_file()
         data: object = {}
         if path.exists():
             try:
@@ -141,7 +141,7 @@ class Settings:
 
     def _write(self) -> None:
         """settings.json written; the caller holds the lock (paths.settings_locked)."""
-        path = paths.config_dir() / "settings.json"
+        path = paths.settings_file()
         data = dict(self._extra)
         try:
             # Keys written by others since load() (e.g. the GUI language choice) win.

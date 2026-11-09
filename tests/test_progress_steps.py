@@ -147,6 +147,29 @@ def test_the_command_line_writes_one_line_over_itself_on_a_terminal():
     assert out.getvalue() == "  Checking for files from Garmin Connect…\n"
 
 
+@pytest.mark.parametrize("tty", [True, False], ids=["terminal", "elsewhere"])
+def test_the_command_line_writes_its_progress_with_plain_spaces(tty):
+    """Its own streams too (not the command's, which write plain spaces anyway): every kind of
+    message, on a terminal and elsewhere."""
+    from openexpress.cli import _Status
+    from openexpress.progress import TimedWait
+
+    err, out = Stream(tty), Stream(False)
+    status = _Status(err=err, out=out)
+    status(TimedWait("Waiting 3\u00a0min", seconds=200))
+    status(TimedWait("Waiting 3\u00a0min", seconds=200, done=1))
+    status(Step("Copying a\u00a0map", 1, 2))
+    status("Done in 2\u00a0s")
+    status.close()
+    if tty:
+        assert err.getvalue() == ("\r  Waiting 3 min   0%\r  Waiting 3 min 100%\n"
+                                  "\r\x1b[K  Copying a map · 1 of 2\n")
+        assert out.getvalue() == "  Done in 2 s\n"
+    else:
+        assert err.getvalue() == ""
+        assert out.getvalue() == "  Waiting 3 min\n  Copying a map\n  Done in 2 s\n"
+
+
 def test_elsewhere_a_line_a_step():
     from openexpress.cli import _Status
 

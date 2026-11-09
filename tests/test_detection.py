@@ -254,8 +254,10 @@ def test_open_device_storage_records_the_usb_id(sysfs, monkeypatch):
     monkeypatch.setattr(gio_storage.Gio.VolumeMonitor, "get", staticmethod(lambda: monitor))
 
     class Storage:
+        usb_id = gio_storage.Storage.usb_id  # from its usb, as a real storage's
+
         def __init__(self, uri):
-            self.label, self.usb_id = uri, None
+            self.label, self.usb = uri, None
 
         def _list(self, path):
             return [types.SimpleNamespace(name="Internal Storage", is_dir=True)]
@@ -889,6 +891,16 @@ def test_a_garmin_drive_is_recognised(drives, monkeypatch, xml_path, partition):
     assert DRIVE_SERIAL not in repr(found)  # the serial number is never read
 
 
+def test_a_drive_whose_usb_numbers_cannot_be_read_is_no_garmin_drive(drives, monkeypatch):
+    """The USB device above the block device has its IDs but a bus number that is not one: not
+    known, so no Garmin drive (none of the folders further up is looked at)."""
+    unix = usb_drive(drives)
+    (drives.hub / "1-4" / "busnum").write_text("not a number\n")
+    assert gio_storage.drive_volume(FakeVolume(None, unix)) is None
+    assert gio_storage.garmin_ums(FakeDriveMount(drive_folder(drives), unix)) is None
+    monitor_with(monkeypatch, FakeDriveMount(drive_folder(drives, label="OTHER"), unix))
+    assert gio_storage.find_ums_devices() == []
+
 
 def test_the_drive_of_a_device_openexpress_cannot_use_is_not_opened(drives, monkeypatch, caplog):
     """An inReach Mini of the first generation offers a drive beside its HID interface for its
@@ -1244,7 +1256,7 @@ def watch_and_drives(plugged, drives, device_root, monkeypatch):
     class MtpStorage(LocalStorage):
         def __init__(self, uri):
             super().__init__(device_root)
-            self.label, self.usb_id, self.usb, self.device_uri = uri, None, None, None
+            self.label, self.usb, self.device_uri = uri, None, None
 
         def _f(self, name):
             return FakeFile(self.label + name)
@@ -3809,8 +3821,10 @@ def plugged(tmp_path, monkeypatch):
     monkeypatch.setattr(gio_storage, "mount", lambda dev, timeout_s=30: None)
 
     class Storage:
+        usb_id = gio_storage.Storage.usb_id  # from its usb, as a real storage's
+
         def __init__(self, uri):
-            self.uri, self.usb_id, self.usb, self.device_uri = uri, None, None, None
+            self.uri, self.usb, self.device_uri = uri, None, None
             world.opened.append(uri)
 
         def _list(self, real):

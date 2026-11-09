@@ -27,6 +27,7 @@ from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, ngettext
 from openexpress.progress import Step, say_to
+from openexpress.sync import DIAGNOSTIC_TYPES
 
 log = logging.getLogger(__name__)
 
@@ -40,9 +41,9 @@ EVENT_LOGS = ("GARMIN/EVNTLOGS", f"{DEBUG}/EventLogs")
 # The hidden crash logs of a fēnix 8: its boot log and its event logs.
 CRASH_LOGS = (f"{DEBUG}/recovery_mode_log.txt",)
 CRASH_LOG_FOLDERS = ("GARMIN/EVNTLOGS",)
-# The data types of the device's diagnostics (sync.DIAGNOSTIC_TYPES without the files of
-# a FIT type): their folders are copied with Garmin/Debug.
-TYPES = ("ErrorShutdownReports", "ULFLogs", "IQErrorReports", "KPI", "RAMDump", "BLELogs")
+# The data types of the device's diagnostics (those of the sync, without the files of a FIT
+# type): their folders are copied with Garmin/Debug.
+TYPES = frozenset(t for t in DIAGNOSTIC_TYPES if not t.startswith("FIT_TYPE_"))
 # Never copied, only listed: memory dumps (encrypted, MB each), health metrics and
 # settings kept by the device (personal, nothing to do with errors) and big files.
 LISTED_ONLY = ("dump", "metricsbackup", "backup")
@@ -206,6 +207,11 @@ class Copied:
     kept_bytes: int = 0
     not_copied: list[str] = field(default_factory=list)  # dumps over the limit
 
+    def add(self, new: bool) -> None:
+        """One file more, new or unchanged."""
+        self.new += new
+        self.unchanged += not new
+
 
 def _listed_only(path: str, size: int) -> bool:
     parts = [p.casefold() for p in path.split("/")]
@@ -299,6 +305,17 @@ def _keep(where: Path, data: bytes) -> tuple[str, bool]:
     return sha, True
 
 
+def _keep_file(where: Path, files: dict, report: Copied, path: str, data: bytes,
+               mtime: float | None) -> tuple[str, bool]:
+    """The content of the file at `path` kept (once: _keep) and its entry in `files`; its
+    bytes counted in `report` when its content was not kept yet. Its SHA-256 and whether it
+    was new."""
+    sha, new = _keep(where, data)
+    files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
+    report.new_bytes += len(data) if new else 0
+    return sha, new
+
+
 def _save(where: Path, kind: str, files: dict, listed: dict, now: datetime,
           software: str) -> None:
     _private(where)
@@ -388,14 +405,9 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     for n, (path, mtime, old) in enumerate(to_read, 1):
         say_to(progress)(Step(head, n, len(to_read)))
         data = storage.read_at(path)  # a real path, as listed
-        sha, stored = _keep(where, data)
-        files[path] = {"sha256": sha, "size": len(data), "mtime": mtime}
-        report.new_bytes += len(data) if stored else 0
+        sha, _stored = _keep_file(where, files, report, path, data, mtime)
         # Unchanged: as in the copy before (not merely the content of another file).
-        if isinstance(old, dict) and old.get("sha256") == sha:
-            report.unchanged += 1
-        else:
-            report.new += 1
+        report.add(not (isinstance(old, dict) and old.get("sha256") == sha))
     if files != last.get("files") or listed != last.get("listed"):
         _save(where, "files", files, listed, now, device.software_version_str)
         report.saved = True
@@ -434,11 +446,7 @@ def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = No
     for n, (path, entry) in enumerate(chosen, 1):
         say_to(progress)(Step(head, n, len(chosen)))
         data = storage.read(path)
-        sha, new = _keep(where, data)
-        files[path] = {"sha256": sha, "size": len(data), "mtime": entry.mtime}
-        report.new += new
-        report.new_bytes += len(data) if new else 0
-        report.unchanged += not new
+        report.add(_keep_file(where, files, report, path, data, entry.mtime)[1])
     if files:
         _save(where, "dumps", files, {}, now, device.software_version_str)
         report.saved = True
@@ -519,11 +527,7 @@ def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None
     report = Copied()
     files = {}
     for path, data in read.items():
-        sha, new = _keep(where, data)
-        files[path] = {"sha256": sha, "size": len(data), "mtime": None}
-        report.new += new
-        report.new_bytes += len(data) if new else 0
-        report.unchanged += not new
+        report.add(_keep_file(where, files, report, path, data, None)[1])
     if files:
         _save(where, "crash logs", files, {}, now, device.software_version_str)
         report.saved = True
@@ -607,7 +611,7 @@ def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[See
         if real is not None:
             folders.append(real)
     events = [real for path in EVENT_LOGS if (real := storage.resolve(path)) is not None]
-    dumps = [(path, e.size) for path, e in storage.walk_files(DUMPS)]
+    dumps = dumps_on_device(storage)
     files = None
     if with_files:
         types = _type_folders(device, storage)

@@ -101,12 +101,9 @@ def of_account_entry(primary: bool) -> TileFacts:
     return TileFacts(primary=primary, on_account=True)
 
 
-def update_still_recent(found: float | None, now: float | None = None) -> float | None:
-    """When an update was found, if that was less than UPDATE_KEPT_S ago; else None (for the
-    chips, which are drawn again later than read)."""
-    if found is None:
-        return None
-    return found if (time.time() if now is None else now) - found < UPDATE_KEPT_S else None
+# When an update was found, if that was less than UPDATE_KEPT_S ago; else None: for the chips,
+# which are drawn again later than read, the reader's own rule.
+update_still_recent = known_devices.update_found_recently
 
 
 def _update_found(entry: KnownDevice, software_version: str, now: float) -> float | None:
@@ -179,14 +176,13 @@ def note_update_check(device, new_updates: list, staged: list = (),
     if not unit_id:
         return
     software = getattr(device, "software_version_str", None)
-    try:
+    with known_devices.optional_change(
+            "devices: what the check of updates found not kept (%s)", log):
         known_devices.set_update_found(unit_id, bool(new_updates),
                                        summary=update_summary(device, new_updates),
                                        software_version=software if isinstance(software, str)
                                        else None, ready=bool(staged),
                                        not_installed=bool(not_installed))
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: what the check of updates found not kept (%s)", type(e).__name__)
 
 
 def update_summary(device, new_updates: list) -> known_devices.UpdateSummary | None:
@@ -216,11 +212,9 @@ def note_count(counted) -> None:
     stamp = service.sync_stamp(counted.unit_id)
     if stamp is None:
         return
-    try:
+    with known_devices.optional_change("devices: the count of activities not kept (%s)", log):
         known_devices.set_sync_count(counted.unit_id, SyncCount(counted.count, time.time(),
                                                                 stamp))
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: the count of activities not kept (%s)", type(e).__name__)
 
 
 def account_facts(devices, units, at: float, login: str) -> dict[int, AccountFact]:
@@ -246,13 +240,11 @@ def note_account(devices) -> None:
     login = store.stamp()
     if devices is None or login is None:
         return
-    try:
+    with known_devices.optional_change(
+            "devices: what the account says of them not kept (%s)", log):
         facts = account_facts(devices, known_devices.load(), time.time(), login)
         changed = known_devices.set_account_facts(facts)
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: what the account says of them not kept (%s)", type(e).__name__)
-        return
-    log.info("devices: the account's list kept for %d of %d remembered", changed, len(facts))
+        log.info("devices: the account's list kept for %d of %d remembered", changed, len(facts))
 
 
 def synced_fact(unit_id: int, now: float | None = None) -> SyncedFact:
@@ -270,7 +262,5 @@ def note_synced(unit_id: int | None) -> None:
     now. Optional: a failure is only written to the log."""
     if not unit_id:
         return
-    try:
+    with known_devices.optional_change("devices: what is known of its sync not kept (%s)", log):
         known_devices.set_synced(unit_id, synced_fact(unit_id))
-    except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
-        log.warning("devices: what is known of its sync not kept (%s)", type(e).__name__)

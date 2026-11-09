@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 00:24+0100\n"
+"POT-Creation-Date: 2026-11-09 18:15+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -428,7 +428,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: openexpress/ciq.py openexpress/cli.py
+#: openexpress/ciq.py
 msgid ""
 "the device has not applied earlier changes yet; unplug it, wait until it is "
 "ready and try again"
@@ -2188,13 +2188,6 @@ msgid "The apps on the device are already in this order."
 msgstr ""
 
 #: openexpress/cli.py
-#, python-brace-format
-msgid ""
-"App list to be written (IN.BIN): {entries} entries; the device lists {count} "
-"(OUT.BIN)"
-msgstr ""
-
-#: openexpress/cli.py
 msgid "the same apps with the same flags; only the order changes"
 msgstr ""
 
@@ -2241,15 +2234,6 @@ msgstr ""
 msgid "The app file was already gone; only the app list was updated."
 msgstr ""
 
-#: openexpress/cli.py
-#, python-brace-format
-msgid ""
-"Removed {count} file. Also removed from the app list of your Garmin account."
-msgid_plural ""
-"Removed {count} files. Also removed from the app list of your Garmin account."
-msgstr[0] ""
-msgstr[1] ""
-
 #. TRANSLATORS: `openexpress apps remove`: the app that was removed, {name} its name, {type} its
 #. kind ("watch face")
 #: openexpress/cli.py
@@ -2259,6 +2243,22 @@ msgstr ""
 
 #: openexpress/cli.py
 msgid "The device finishes the removal after it is unplugged."
+msgstr ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"Removed {count} file. Also removed from the app list of your Garmin account."
+msgid_plural ""
+"Removed {count} files. Also removed from the app list of your Garmin account."
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+"(OUT.BIN)"
 msgstr ""
 
 #: openexpress/cli.py
@@ -3946,6 +3946,13 @@ msgstr ""
 msgid "flatpak-spawn is not available"
 msgstr ""
 
+#. TRANSLATORS: error, after "Cannot write {path}: ": a copy to the device stopped at
+#. its time limit ({seconds}: a number of seconds, e.g. 21600)
+#: openexpress/device/gio_storage.py
+#, python-brace-format
+msgid "timed out after {seconds} seconds"
+msgstr ""
+
 #. TRANSLATORS: error: the contents of a folder on the device cannot be read ({path}: the
 #. folder)
 #: openexpress/device/gio_storage.py openexpress/device/storage.py
@@ -4285,6 +4292,13 @@ msgstr ""
 #: openexpress/device/storage.py
 #, python-brace-format
 msgid "Cannot write {path}: it is a directory"
+msgstr ""
+
+#: openexpress/device/storage.py
+#, python-brace-format
+msgid ""
+"Not enough space on the device: {need} needed and {margin} kept free, but "
+"only {free} free"
 msgstr ""
 
 #: openexpress/device/storage.py
@@ -8329,6 +8343,15 @@ msgid "Choose another one with --name."
 msgstr ""
 
 #: openexpress/ownmaps.py
+msgid "This device has no folder for maps."
+msgstr ""
+
+#: openexpress/ownmaps.py
+#, python-brace-format
+msgid "{name} is named like one of Garmin's own maps, so it is not removed."
+msgstr ""
+
+#: openexpress/ownmaps.py
 #, python-brace-format
 msgid "{file} is not a Garmin map file (.img)."
 msgstr ""
@@ -8338,10 +8361,6 @@ msgstr ""
 msgid ""
 "The name {name} cannot be used: only letters, digits, spaces and . _ - ( ) "
 "are allowed, and it must end with .img."
-msgstr ""
-
-#: openexpress/ownmaps.py
-msgid "This device has no folder for maps."
 msgstr ""
 
 #: openexpress/ownmaps.py
@@ -8374,11 +8393,6 @@ msgid ""
 "{name} was not copied to the device by this installation of openExpress (it "
 "may have been copied by hand or by another installation), so it is not "
 "removed. Delete it in the file manager if you want it gone."
-msgstr ""
-
-#: openexpress/ownmaps.py
-#, python-brace-format
-msgid "{name} is named like one of Garmin's own maps, so it is not removed."
 msgstr ""
 
 #: openexpress/ownmaps.py
@@ -9241,13 +9255,6 @@ msgstr ""
 msgid ""
 "The server gave a name that cannot be used as a path on this computer: "
 "“{name}”"
-msgstr ""
-
-#: openexpress/updates.py
-#, python-brace-format
-msgid ""
-"Not enough space on the device: {need} needed and {margin} kept free, but "
-"only {free} free"
 msgstr ""
 
 #: openexpress/updates.py

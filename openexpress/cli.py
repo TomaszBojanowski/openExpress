@@ -27,7 +27,16 @@ from openexpress.connect import (
 from openexpress.console import error as _error
 from openexpress.device.storage import DeviceError, DeviceNotResponding, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
-from openexpress.i18n import N_, _, decimal, full_time, human_size, ngettext, pgettext
+from openexpress.i18n import (
+    N_,
+    _,
+    decimal,
+    full_time,
+    human_size,
+    ngettext,
+    pgettext,
+    plain_spaces,
+)
 from openexpress.progress import Reporter
 from openexpress.settings import (
     ENVIRONMENTS,
@@ -1333,35 +1342,30 @@ class _Status:
             self.head = None
             if not self.err.isatty():
                 if message.done == 0:
-                    print("  " + _plain(message), file=self.out)
+                    print("  " + plain_spaces(message), file=self.out)
                 return
-            print(f"\r  {_plain(message)} {int(message.done * 100):3d}%", end="", file=self.err,
-                  flush=True)
+            print(f"\r  {plain_spaces(message)} {int(message.done * 100):3d}%", end="",
+                  file=self.err, flush=True)
             self.open = message.done < 1
             if not self.open:
                 print(file=self.err)
             return
         if isinstance(message, Step):
             if self.err.isatty():
-                print(f"\r\x1b[K  {_plain(message)}", end="", file=self.err, flush=True)
+                print(f"\r\x1b[K  {plain_spaces(message)}", end="", file=self.err, flush=True)
                 self.open = True
             elif message.head != self.head:
-                print("  " + _plain(message.head), file=self.out)
+                print("  " + plain_spaces(message.head), file=self.out)
             self.head = message.head
             return
         self.close()
         self.head = None
-        print("  " + _plain(message), file=self.out)
+        print("  " + plain_spaces(message), file=self.out)
 
     def close(self) -> None:
         if self.open:
             print(file=self.err)
             self.open = False
-
-
-def _plain(text: str) -> str:
-    """The hard spaces of the program's texts as plain ones, as the command line writes."""
-    return text.replace("\u00a0", " ")
 
 
 @contextlib.contextmanager
@@ -1962,16 +1966,15 @@ def _apps_order(args, dev, st, state) -> int:
 
     backups = paths.default_backup_dir()
     if not args.source:
-        copies = ciq.app_list_copies(dev)
-        if not copies:
+        choices = ciq.order_choices(dev, state)
+        if not choices:
             # The folder of this device is named after its unit ID: only the one above it.
             print(_("No copies of the app list in {path}.").format(path=backups))
             return 0
         print(_("Copies of the app list (OUT.BIN); entries on the device now: {count}").format(
             count=len(state.listed)))
-        for c in copies:
-            # The same measure as the window: the apps to move.
-            plan = ciq.plan_order(state, c.state)
+        # The oldest first; the same measure as the window: the apps to move.
+        for c, plan in reversed(choices):
             print("  " + _("{name}: {entries} entries, {difference}").format(
                 name=c.name, entries=len(c.state.apps), difference=ciq.order_difference(plan)))
         print(_("Show what a copy would change: openexpress apps order --from COPY"))
@@ -1979,8 +1982,7 @@ def _apps_order(args, dev, st, state) -> int:
 
     copy = ciq.load_app_list_copy(dev, args.source)
     if ciq.changes_waiting(dev, st):
-        raise ciq.CiqError(_("the device has not applied earlier changes yet; unplug it, wait "
-                             "until it is ready and try again"))
+        raise ciq.CiqError(ciq.waiting_list_text())
     plan = ciq.plan_order(state, copy.state)
     log.info("apps order: plan with %d entries, %d would move; apply: %s", len(plan.entries),
              len(plan.moved), args.apply)
@@ -1990,9 +1992,7 @@ def _apps_order(args, dev, st, state) -> int:
         return 0
     for line, indented in ciq.describe_order(plan, None if args.all else 10):
         print(("  " if indented else "") + line)
-    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
-            "(OUT.BIN)").format(entries=len(plan.entries),
-                                count=sum(1 for a in state.apps if not a.pending)))
+    _print_app_list_size(len(plan.entries), sum(1 for a in state.apps if not a.pending))
     print("  " + _("the same apps with the same flags; only the order changes"))
     if not args.apply:
         print(ciq.app_list_copy_note(dev, st))
@@ -2019,11 +2019,9 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
                    "will delete it over a direct USB connection; the device disappears from "
                    "the file manager for a moment."))
     preview = ciq.preview_removal(state, app)
-    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
-            "(OUT.BIN)").format(entries=preview.entries, count=preview.on_device))
+    _print_app_list_size(preview.entries, preview.on_device)
     if preview.pending or not preview.kept:
-        raise ciq.CiqError(_("The app list that would be written does not match the device. "
-                             "Nothing was changed."))
+        raise _app_list_mismatch()
     print("  " + _("every other app on the device is kept, in the same order and with the "
                    "same flags"))
     kind = ciq.app_type_name(app.app_type) or app.app_type
@@ -2035,6 +2033,17 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     removed = ciq.remove(dev, st, app)
     if app_file not in removed:
         print(_("The app file was already gone; only the app list was updated."))
+    _forget_and_say_removed(args, dev, app, api, removed)
+    # TRANSLATORS: `openexpress apps remove`: the app that was removed, {name} its name, {type} its
+    # kind ("watch face")
+    print("  " + _("removed: {name} ({type})").format(name=app.name, type=kind))
+    print(_("The device finishes the removal after it is unplugged."))
+    return 0
+
+
+def _forget_and_say_removed(args, dev, app, api, removed: list) -> None:
+    """After `apps remove` deleted the app's files (`removed`): with --forget the app goes
+    from the account's app list too; then how many files were deleted."""
     if args.forget:
         api.forget(dev, [app.app_id])
         msg = ngettext("Removed {count} file. Also removed from the app list of your Garmin "
@@ -2045,19 +2054,29 @@ def _remove_app_directly(args, dev, st, state, app, api) -> int:
     else:
         msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
     print(msg.format(count=len(removed)))
-    # TRANSLATORS: `openexpress apps remove`: the app that was removed, {name} its name, {type} its
-    # kind ("watch face")
-    print("  " + _("removed: {name} ({type})").format(name=app.name, type=kind))
-    print(_("The device finishes the removal after it is unplugged."))
-    return 0
+
+
+def _print_app_list_size(entries: int, on_device: int) -> None:
+    """The first line of an app list (IN.BIN) to be written: its entries and those the device
+    lists now."""
+    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
+            "(OUT.BIN)").format(entries=entries, count=on_device))
+
+
+def _app_list_mismatch():
+    """The error of an app list to be written that does not match the device's: nothing is
+    written."""
+    from openexpress import ciq
+
+    return ciq.CiqError(_("The app list that would be written does not match the device. "
+                          "Nothing was changed."))
 
 
 def _print_in_bin_preview(preview) -> None:
     """The app list (IN.BIN) that an install would write to the device."""
     from openexpress import ciq
 
-    print(_("App list to be written (IN.BIN): {entries} entries; the device lists {count} "
-            "(OUT.BIN)").format(entries=preview.entries, count=preview.on_device))
+    _print_app_list_size(preview.entries, preview.on_device)
     if preview.pending:
         print("  " + ngettext("{count} more app is registered and waits for the device",
                               "{count} more apps are registered and wait for the device",
@@ -2070,8 +2089,7 @@ def _print_in_bin_preview(preview) -> None:
                       else _("new: {name} ({type}), added as active")).format(
             name=name, type=ciq.app_type_name(app_type) or app_type))
     if not preview.kept:
-        raise ciq.CiqError(_("The app list that would be written does not match the device. "
-                             "Nothing was changed."))
+        raise _app_list_mismatch()
 
 
 def cmd_apps(args) -> int:
@@ -2290,16 +2308,7 @@ def cmd_apps(args) -> int:
             print(_("Dry run: nothing was changed. Add --apply."))
             return 0
         removed = ciq.remove(dev, st, app)
-        if args.forget:
-            api.forget(dev, [app.app_id])
-            msg = ngettext("Removed {count} file. Also removed from the app list of your "
-                           "Garmin account.",
-                           "Removed {count} files. Also removed from the app list of your "
-                           "Garmin account.",
-                           len(removed))
-        else:
-            msg = ngettext("Removed {count} file.", "Removed {count} files.", len(removed))
-        print(msg.format(count=len(removed)))
+        _forget_and_say_removed(args, dev, app, api, removed)
         return 0
 
     enable = cmd == "enable"
@@ -3313,7 +3322,7 @@ class _PlainSpaces:
         self._stream = stream
 
     def write(self, text: str) -> int:
-        return self._stream.write(text.replace("\u00a0", " "))
+        return self._stream.write(plain_spaces(text))
 
     def __getattr__(self, name):
         return getattr(self._stream, name)

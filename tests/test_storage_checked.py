@@ -185,3 +185,42 @@ def test_a_long_check_of_a_drive_tells_its_bytes_as_the_copy_does(tmp_path, monk
     drive.write_file_checked("GARMIN/b.img", src, checking=lambda *step: checked.append(step))
     assert checked == [(0, size), (storage.COPY_CHUNK, size), (2 * storage.COPY_CHUNK, size),
                        (size, size)]
+
+
+# --- what the log says of a check that failed ---------------------------------------------------
+
+
+def test_a_write_of_another_size_says_both_sizes_and_whether_it_was_deleted(tmp_path, local,
+                                                                            caplog):
+    with caplog.at_level(logging.WARNING, logger="openexpress.device.storage"):
+        with pytest.raises(DeviceError):
+            Short(folder(tmp_path)).write_checked("GARMIN/A.BIN", b"abc")
+        with pytest.raises(DeviceError):
+            Short(folder(tmp_path, "kept")).write_file_checked("GARMIN/B.BIN", local,
+                                                               keep_partial=True)
+        with pytest.raises(DeviceError):
+            Unknown(folder(tmp_path, "unknown")).write_checked("GARMIN/C.BIN", b"abc")
+    assert [r.getMessage() for r in caplog.records] == [
+        "device: a file written has 2 B instead of 3 B; deleted",
+        "device: a file written has 9 B instead of 10 B",
+        "device: a file written has no size instead of 3 B; deleted"]
+    assert (tmp_path / "kept/GARMIN/B.BIN").stat().st_size == 9
+
+
+def test_a_file_read_back_with_other_bytes_says_its_size_and_whether_it_was_deleted(tmp_path,
+                                                                                    caplog):
+    src = tmp_path / "update.gcd"
+    src.write_bytes(UPDATE)
+    root = folder(tmp_path)
+    drive = other_bytes_drive()(root)
+    with caplog.at_level(logging.WARNING, logger="openexpress.device.storage"):
+        with pytest.raises(MadeUpError, match="Write verification of GARMIN/update.gcd failed"):
+            drive.write_file_checked("GARMIN/update.gcd", src, keep_partial=True,
+                                     error=MadeUpError)
+        with pytest.raises(DeviceError, match="Write verification of GARMIN/queue.fit failed"):
+            drive.write_checked("GARMIN/queue.fit", UPDATE)
+    assert [r.getMessage() for r in caplog.records] == [
+        "drive: a file of 12 B read back with other bytes than were written",
+        "drive: a file of 12 B read back with other bytes than were written; deleted"]
+    assert (root / "GARMIN" / "update.gcd").read_bytes() == bytes(len(UPDATE))  # kept
+    assert not (root / "GARMIN" / "queue.fit").exists()

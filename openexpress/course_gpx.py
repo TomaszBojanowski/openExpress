@@ -87,7 +87,7 @@ class _OffTheEarth(Exception):
     pass
 
 
-def _metres(a, b) -> float:
+def distance_m(a, b) -> float:
     """The distance between two (latitude, longitude) on the Earth (haversine)."""
     lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
     h = (math.sin((lat2 - lat1) / 2) ** 2
@@ -196,7 +196,7 @@ def _line(found: dict) -> Line:
     for segment in found["segments"]:
         points += len(segment)
         for a, b in itertools.pairwise(segment):
-            distance += _metres(a[:2], b[:2])
+            distance += distance_m(a[:2], b[:2])
         eles = [p[2] for p in segment if p[2] is not None]
         any_ele = any_ele or bool(eles)
         ascent += sum(max(0.0, b - a) for a, b in itertools.pairwise(eles))

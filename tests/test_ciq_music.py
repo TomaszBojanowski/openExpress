@@ -313,6 +313,16 @@ def test_plan_playlist_needs_a_device_with_playlists(device_root, library):
         music.plan_playlist(library, dev, st)
 
 
+def test_write_playlist_needs_a_device_with_playlists(device_root):
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    before = sorted(device_root.rglob("*"))
+    with pytest.raises(music.MusicError) as refused:
+        music.write_playlist(dev, st, "Mix", ["Music/a.mp3"])
+    assert str(refused.value) == "This device does not support playlists"
+    assert sorted(device_root.rglob("*")) == before
+
+
 def test_window_playlist_summary(iq_device, library):
     from openexpress.gui.app import MainWindow
 
@@ -788,6 +798,38 @@ def test_cli_remove_with_files_still_deletes_them(iq_device, device_root, apps_c
     assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--apply"]) == 0
     assert "Removed 1 file." in capsys.readouterr().out
     assert not (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").exists()
+
+
+def test_cli_removes_app_files_and_forgets_the_app(iq_device, device_root, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    with_phone_installed_face(device_root)
+    (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").write_bytes(b"x")
+    assert main(["--path", str(device_root), "apps", "remove", "FaceIt2", "--forget",
+                 "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == (
+        "Removed 1 file. Also removed from the app list of your Garmin account.")
+    assert FakeStore.forgotten == [[FACE]]
+    assert not (device_root / "GARMIN/APPS/MEDIA/GACF4619.PRG").exists()
+
+
+def test_the_preview_of_an_install_with_apps_waiting_and_a_list_that_does_not_match(capsys):
+    from openexpress import cli
+
+    preview = ciq.InBinPreview(on_device=3, pending=2, entries=6, kept=False,
+                               new=[("Face It", 3, True), ("Run Data", 4, False)])
+    with pytest.raises(ciq.CiqError) as error:
+        cli._print_in_bin_preview(preview)
+    assert str(error.value) == ("The app list that would be written does not match the "
+                                "device. Nothing was changed.")
+    assert capsys.readouterr().out.splitlines() == [
+        "App list to be written (IN.BIN): 6 entries; the device lists 3 (OUT.BIN)",
+        "  2 more apps are registered and wait for the device",
+        "  Warning: the new list does not match the apps on the device",
+        "  new: Face It (watch face), added as inactive",
+        "  new: Run Data (data field), added as active",
+    ]
 
 
 def test_window_offers_only_forget_for_apps_without_files(iq_device):
@@ -1687,6 +1729,20 @@ def test_removal_is_refused_while_an_app_list_waits(hidden_spot):
     assert st.sessions == 0 and fake.operations == []
 
 
+def test_removal_is_refused_when_the_session_finds_an_app_list_waiting(hidden_spot):
+    """None waited on the mounted storage; the session finds one (written in between):
+    nothing is deleted."""
+    from openexpress.device import ptp
+
+    st, dev, fake, app = hidden_spot
+    fake.add("GARMIN/Apps/IN.BIN", ciq.build_in_bin(ciq.read_installed(dev, st).apps))
+    with pytest.raises(ciq.CiqError) as refused:
+        ciq.remove(dev, st, app)
+    assert str(refused.value) == WAITING
+    assert fake.names("GARMIN/Apps/Media") == ["0A1B2C3D.PRG", "DADE7E4.PRG"]
+    assert fake.sent(ptp.DELETE_OBJECT) == fake.sent(ptp.SEND_OBJECT_INFO) == 0
+
+
 def test_refused_delete_changes_nothing(hidden_spot):
     from openexpress.device import ptp
 
@@ -2016,6 +2072,42 @@ def test_cli_removes_a_hidden_app(hidden_spot, apps_cli, monkeypatch, capsys):
     assert fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"] and FakeStore.forgotten == []
 
 
+def test_cli_removes_a_hidden_app_and_forgets_it(hidden_spot, apps_cli, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--forget",
+                 "--apply"]) == 0
+    assert capsys.readouterr().out.splitlines()[-3:] == [
+        "Removed 1 file. Also removed from the app list of your Garmin account.",
+        "  removed: Face It (watch face)",
+        "The device finishes the removal after it is unplugged.",
+    ]
+    assert FakeStore.forgotten == [[FACE]] and fake.names("GARMIN/Apps/Media") == ["DADE7E4.PRG"]
+
+
+@pytest.mark.parametrize("pending, kept", [(1, True), (0, False)])
+def test_a_hidden_app_is_not_removed_when_the_list_would_not_match(hidden_spot, apps_cli,
+                                                                    monkeypatch, capsys,
+                                                                    pending, kept):
+    from openexpress import cli
+    from openexpress.cli import main
+
+    st, dev, fake, _app = hidden_spot
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    monkeypatch.setattr(ciq, "preview_removal", lambda state, app: ciq.InBinPreview(
+        on_device=3, pending=pending, entries=2, kept=kept, new=[]))
+    assert main(["--path", str(st.root), "apps", "remove", "Face It", "--apply"]) == 1
+    out, err = capsys.readouterr()
+    assert out.splitlines()[-1] == (
+        "App list to be written (IN.BIN): 2 entries; the device lists 3 (OUT.BIN)")
+    assert ("The app list that would be written does not match the device. Nothing was "
+            "changed.") in err
+    assert fake.operations == [] and FakeStore.forgotten == []
+
+
 def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, in_the_window):
     """The question before a removal over PTP names the settings, as the one through the
     mounted storage does."""
@@ -2292,6 +2384,29 @@ def test_restore_order_is_refused_with_unreadable_entries(order_device, device_r
     with pytest.raises(ciq.CiqError, match="cannot be read"):
         ciq.restore_order(dev, st, copy.state)
     assert not (st.root / "GARMIN/APPS/IN.BIN").exists()
+
+
+def test_cli_apps_order_without_copies(iq_device, apps_cli, backups, capsys):
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    assert main(["--path", str(st.root), "apps", "order"]) == 0
+    assert capsys.readouterr().out.splitlines() == [f"No copies of the app list in {backups}."]
+
+
+def test_cli_apps_order_lists_the_copies_oldest_first(order_device, apps_cli, capsys):
+    from openexpress.cli import main
+
+    st, dev, backups = order_device
+    newer = backups / str(dev.unit_id) / "GARMIN-APPS 2026-01-03 (03.04.05)" / "OUT.BIN"
+    newer.parent.mkdir(parents=True)
+    newer.write_bytes(order_entries("s", "a1", "w2", "w1", "a1w", "w4"))
+    assert main(["--path", str(st.root), "apps", "order"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Copies of the app list (OUT.BIN); entries on the device now: 7",
+        "  GARMIN-APPS 2026-01-02 (03.04.05): 7 entries, 2 apps moved",
+        "  GARMIN-APPS 2026-01-03 (03.04.05): 6 entries, 0 apps moved · 1 not in the copy",
+        "Show what a copy would change: openexpress apps order --from COPY"]
 
 
 def test_copy_is_found_by_name_or_path(order_device, tmp_path):
@@ -3397,6 +3512,26 @@ def test_install_refusals_are_keyed_by_app_id(iq_device, monkeypatch):
     assert ciq.install_refusals(dev, st, state, [listed, twins[0], twins[1]]) == {TWIN_B: NO_SLOT}
     device_reports(monkeypatch, slots=5)
     assert ciq.install_refusals(dev, st, ciq.read_installed(dev, st), twins) == {}
+
+
+WAITING = ("the device has not applied earlier changes yet; unplug it, wait until it is ready "
+           "and try again")
+
+
+def test_an_app_the_waiting_list_removes_is_not_installed_again(iq_device, device_root):
+    """Left out of the app list that waits for the device: refused until the device applied
+    it, with the words of every write while a list waits."""
+    st, dev = iq_device
+    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
+        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
+        (FACE, 3, "Face It", True, "0A1B2C3D"),
+    ]))
+    (st.root / "GARMIN/APPS/IN.BIN").write_bytes(
+        ciq.build_in_bin([a for a in ciq.read_installed(dev, st).apps if a.app_id != FACE]))
+    state = ciq.read_installed(dev, st)
+    assert state.find(FACE).pending_removal
+    assert ciq.Operation(dev, st, state).folder("IQWatchFaces") != ciq.DIRECT
+    assert ciq.install_refusals(dev, st, state, [store_app(FACE, "Face It")]) == {FACE: WAITING}
 
 
 def test_install_refusals_add_up_the_space(iq_device, monkeypatch):

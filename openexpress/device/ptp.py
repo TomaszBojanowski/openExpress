@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from openexpress import applog
-from openexpress.device.storage import DeviceError
+from openexpress.device.storage import DeviceError, named_in_any_case
 from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
@@ -302,10 +302,8 @@ class LibusbTransport:
     def open(cls, bus: int, address: int) -> LibusbTransport:
         """Open the device at this bus and device number (as in /sys/bus/usb/devices)."""
         lib = load_libusb()
-        context = ctypes.c_void_p()
-        cls._check(lib, lib.libusb_init(ctypes.byref(context)))
-        handle = ctypes.c_void_p()
-        try:
+
+        def find(context, handle):
             devices = ctypes.POINTER(ctypes.c_void_p)()
             count = lib.libusb_get_device_list(context, ctypes.byref(devices))
             cls._check(lib, min(count, 0))
@@ -320,12 +318,8 @@ class LibusbTransport:
                     raise UsbUnavailable(_("The USB device was not found."))
             finally:
                 lib.libusb_free_device_list(devices, 1)
-            return cls._claim(lib, context, handle)
-        except BaseException:
-            if handle:
-                lib.libusb_close(handle)
-            lib.libusb_exit(context)
-            raise
+
+        return cls._opened(lib, find)
 
     @classmethod
     def from_fd(cls, fd: int) -> LibusbTransport:
@@ -336,11 +330,22 @@ class LibusbTransport:
             raise UsbUnavailable(_("This libusb cannot use a device opened by the system."))
         # Without this libusb would scan the USB tree, which a sandbox does not show.
         lib.libusb_set_option(None, _LIBUSB_OPTION_NO_DEVICE_DISCOVERY)
+
+        def wrap(context, handle):
+            cls._check(lib, lib.libusb_wrap_sys_device(context, fd, ctypes.byref(handle)))
+
+        return cls._opened(lib, wrap)
+
+    @classmethod
+    def _opened(cls, lib, attach) -> LibusbTransport:
+        """A libusb context, the device handle `attach(context, handle)` gives in it, and its
+        file transfer interface claimed (_claim); whatever of them was got is released when a
+        step fails, also on Ctrl+C."""
         context = ctypes.c_void_p()
         cls._check(lib, lib.libusb_init(ctypes.byref(context)))
         handle = ctypes.c_void_p()
         try:
-            cls._check(lib, lib.libusb_wrap_sys_device(context, fd, ctypes.byref(handle)))
+            attach(context, handle)
             return cls._claim(lib, context, handle)
         except BaseException:
             if handle:
@@ -600,7 +605,7 @@ class Session:
             if current is not None and not current.is_dir:
                 return None
             parent = ROOT if current is None else current.handle
-            current = _named(self.all_children(storage, parent), part)
+            current = named_in_any_case(self.all_children(storage, parent), part)
             if current is None:
                 return None
         return current
@@ -617,7 +622,7 @@ class Session:
         in a hidden folder. `verify_content` also reads it back (plain files only)."""
         if parent == ROOT:
             raise PtpWriteError(_("Refusing to write into the top folder of the device."))
-        if _named(self.all_children(storage, parent), name) is not None:
+        if named_in_any_case(self.all_children(storage, parent), name) is not None:
             raise PtpWriteError(_("“{name}” already exists on the device.").format(name=name))
         _data, answer = self._ok(SEND_OBJECT_INFO, storage, parent,
                                  data_out=object_info_dataset(name, len(data)))
@@ -639,8 +644,3 @@ class Session:
 
     def delete(self, handle: int) -> None:
         self._ok(DELETE_OBJECT, handle, 0)
-
-
-def _named(items: list[ObjectInfo], name: str) -> ObjectInfo | None:
-    wanted = name.casefold()
-    return next((item for item in items if item.name.casefold() == wanted), None)

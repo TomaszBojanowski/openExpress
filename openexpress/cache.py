@@ -8,7 +8,6 @@ below ~/.var/app/<app ID>/cache (its XDG_CACHE_HOME) in the Flatpak."""
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import logging
 import os
 import shutil
@@ -72,39 +71,26 @@ def using(wait: bool = True):
     """Hold the cache while its files are downloaded, written or read for an install. Many
     may hold it at once; while a clearing runs, this waits for it (a clearing is short), or,
     without `wait`, raises CacheBusy at once (what holds a lock the clearing may need)."""
-    with _lock_file() as f:
-        try:
-            fcntl.flock(f, fcntl.LOCK_SH | (0 if wait else fcntl.LOCK_NB))
-        except BlockingIOError:
-            raise CacheBusy(_("The cache is being cleared.")) from None
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with paths.locked(_lock_path(), shared=True, wait=wait,
+                      busy=lambda: CacheBusy(_("The cache is being cleared."))):
+        yield
 
 
 @contextlib.contextmanager
 def clearing():
     """Hold the cache alone, to clear it. Refused at once (CacheBusy) while anything uses it;
     no download starts until it ends."""
-    with _lock_file() as f:
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise CacheBusy(_("The cache is in use (a download or an install is running). "
-                              "Try again later.")) from None
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    with paths.locked(_lock_path(), wait=False, busy=lambda: CacheBusy(
+            _("The cache is in use (a download or an install is running). "
+              "Try again later."))):
+        yield
 
 
-@contextlib.contextmanager
-def _lock_file():
+def _lock_path() -> Path:
+    """The lock file of the cache; its folder is made when it is not there."""
     root = paths.cache_dir()
     root.mkdir(parents=True, exist_ok=True)
-    with open(root / LOCK_NAME, "a") as f:
-        yield f
+    return root / LOCK_NAME
 
 
 @dataclass
