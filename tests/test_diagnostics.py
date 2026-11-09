@@ -796,9 +796,13 @@ def test_the_row_in_polish():
 # --- the places of the diagnostic files, kept for the next openings ---------------------------
 # Over MTP each listing of a folder is a round trip: looking through the diagnostic folders takes
 # 4-5 s on a Venu 2, even with no file to read. The first opening looks through them and keeps
-# where it found the files and folders (in the device's folder); the next ones
-# read those paths only, without listing; a path gone, one not there before that is there now,
-# or other software on the device: looked through again, and the note made anew.
+# where it found the files and folders (in the device's folder); the next ones read those paths,
+# listing only the folders of the error logs and of the dumps (LOGS_LISTED); a path gone, an
+# error log or a dump written since, or other software on the device: looked through again, and
+# the note made anew.
+
+# What an opening at the places kept lists of the made-up watch: for a file written since.
+LOGS_LISTED = ["GARMIN/Debug", "GARMIN/Debug/dump"]
 
 
 def _connected_again(st):
@@ -814,7 +818,7 @@ def _same(a, b):
 
 
 @pytest.mark.parametrize("copy", [True, False])
-def test_a_second_opening_reads_the_places_kept_without_listing(device, clock, copy):
+def test_a_second_opening_reads_the_places_kept_listing_only_the_logs_folders(device, clock, copy):
     st, dev = device
     copy_on(copy)
     first = diagnostics.at_open(dev, st)
@@ -822,12 +826,34 @@ def test_a_second_opening_reads_the_places_kept_without_listing(device, clock, c
     assert diagnostics.places_path(UNIT).exists()
     _connected_again(st)
     again = diagnostics.at_open(dev, st)
-    assert st.lists == []
+    assert sorted(st.lists) == LOGS_LISTED
     _same(again, first)
     if copy:
         assert again.copied.unchanged == first.copied.new and not again.copied.saved
     # Only the error logs are read again, as at each opening.
     assert sorted(Path(p).name for p in st.reads) == ["err_log.bak", "err_log.txt"]
+
+
+def test_an_error_log_and_a_dump_written_after_the_places_were_kept_are_found(tmp_path, clock):
+    """A crash writes err_log.bak and a memory dump after the places were kept, the software
+    the same: the next opening finds them, and keeps the places anew."""
+    root = tmp_path / "device"
+    debug = root / "GARMIN" / "Debug"
+    debug.mkdir(parents=True)
+    (root / "GARMIN" / "GarminDevice.xml").write_text(DEVICE_XML)
+    st = Device(root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    first = diagnostics.at_open(dev, st)
+    assert first.entries == [] and first.dumps == []
+    (debug / "err_log.bak").write_bytes(err_log(TRAP))
+    (debug / "dump").mkdir()
+    (debug / "dump" / "RAM.zip").write_bytes(b"d" * 300)
+    _connected_again(st)
+    found = diagnostics.at_open(dev, st)
+    assert found.crash is not None and [size for _p, size in found.dumps] == [300]
+    _connected_again(st)
+    diagnostics.at_open(dev, st)
+    assert sorted(st.lists) == LOGS_LISTED  # the new note holds
 
 
 def test_a_place_gone_is_looked_for_again(device, clock):
@@ -842,7 +868,7 @@ def test_a_place_gone_is_looked_for_again(device, clock):
     assert "SNS_ERR.TXT" not in kept
     _connected_again(st)
     diagnostics.at_open(dev, st)
-    assert st.lists == []  # the note made anew holds
+    assert sorted(st.lists) == LOGS_LISTED  # the note made anew holds
 
 
 def test_the_places_not_there_are_not_asked_about_again(device, clock):
@@ -857,7 +883,7 @@ def test_the_places_not_there_are_not_asked_about_again(device, clock):
     diagnostics.at_open(dev, st)
     _connected_again(st)
     diagnostics.at_open(dev, st)
-    assert st.infos and not set(st.infos) & not_there and st.lists == []
+    assert st.infos and not set(st.infos) & not_there and sorted(st.lists) == LOGS_LISTED
 
 
 def test_a_note_that_lists_the_places_not_there_still_holds(device, clock):
@@ -871,7 +897,7 @@ def test_a_note_that_lists_the_places_not_there_still_holds(device, clock):
     place.write_text(json.dumps({**note, "absent": ["GARMIN/EVNTLOGS"]}))
     _connected_again(st)
     diagnostics.at_open(dev, st)
-    assert st.lists == []
+    assert sorted(st.lists) == LOGS_LISTED
 
 
 def test_a_place_not_there_before_is_looked_for_with_other_software(device, clock):
@@ -885,7 +911,7 @@ def test_a_place_not_there_before_is_looked_for_with_other_software(device, cloc
     events.mkdir()
     (events / "E1.TXT").write_text("events")
     _connected_again(st)
-    assert diagnostics.at_open(dev, st).hidden_logs and st.lists == []
+    assert diagnostics.at_open(dev, st).hidden_logs and sorted(st.lists) == LOGS_LISTED
     newer = parse(st.read("GARMIN/GarminDevice.xml").replace(
         b"<SoftwareVersion>2339<", b"<SoftwareVersion>2340<"))
     _connected_again(st)
@@ -916,4 +942,4 @@ def test_the_copy_turned_on_looks_for_the_files_it_needs(device, clock):
     assert st.lists and found.copied.saved
     _connected_again(st)
     diagnostics.at_open(dev, st)
-    assert st.lists == []
+    assert sorted(st.lists) == LOGS_LISTED

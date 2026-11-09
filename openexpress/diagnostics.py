@@ -588,7 +588,8 @@ class Seen:
 
 # Where a device keeps its diagnostic files, as an opening found them by looking through its
 # folders: in the device's folder (not with the copies, made only when the copy is on), so
-# that the next openings read those paths only. Over MTP each listing of a folder is a round
+# that the next openings read those paths, listing only the folder of the logs and that of the
+# dumps for a file written since (_written_since). Over MTP each listing of a folder is a round
 # trip: looking through them took 4-5 s on a Venu 2, even with no file to read.
 PLACES = "diagnostic-places.json"
 
@@ -663,21 +664,53 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
         return None
     if any(at(path) is None or at(path).is_dir for path in (*err_logs, *dumps, *files)):
         return None
+    if _written_since(storage, folders, err_logs, dumps):
+        return None
     return Seen({path: at(path).size for path in err_logs},
                 [(path, at(path).size) for path in dumps],
                 {path: (at(path).size, at(path).mtime) for path in files}
                 if with_files else None, event_logs)
 
 
+def _written_since(storage: Storage, folders: list[str], err_logs: list[str],
+                   dumps: list[str]) -> bool:
+    """Whether the device wrote an error log or a memory dump the note does not have (a crash
+    after the places were kept, the software the same): the folder of the logs is listed, and
+    that of the dumps when it is there; one or two listings, not a look through the folders.
+    A folder that cannot be listed: True, looked through again."""
+    debug = next((f for f in folders if f.casefold() == DEBUG.casefold()), None)
+    if debug is None:
+        return False
+    try:
+        entries = storage.list_at(debug)
+        logs = {posixpath.basename(p).casefold() for p in err_logs}
+        names = {posixpath.basename(p).casefold() for p in ERR_LOGS}
+        if any(not e.is_dir and e.name.casefold() in names - logs for e in entries):
+            return True
+        folder = next((e for e in entries if e.is_dir
+                       and e.name.casefold() == posixpath.basename(DUMPS).casefold()), None)
+        if folder is None:
+            return False
+        kept = {posixpath.basename(p).casefold() for p in dumps}
+        return any(not e.is_dir and e.name.casefold() not in kept
+                   for e in storage.list_at(posixpath.join(debug, folder.name)))
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        return True
+
+
 def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
     """The diagnostic files of the device now: at the places kept for it when they still
-    hold (read alone, nothing listed), else looked for through its folders, and the places
-    kept anew. `with_files`: also the files a copy takes."""
+    hold (read alone, only the folders of the logs and the dumps listed), else looked for
+    through its folders, and the places kept anew. `with_files`: also the files a copy
+    takes."""
     where = places_path(device.unit_id) if device.unit_id else None
     note = _load(where) if where is not None else {}
     seen = _at_the_places(note, device, storage, with_files) if note else None
     if seen is not None:
-        log.info("diagnostics: read at the places kept (%d files), no folder listed",
+        log.info("diagnostics: read at the places kept (%d files), only the logs' folders "
+                 "listed",
                  len(seen.err_logs) + len(seen.dumps) + len(seen.files or {}))
         return seen
     held_before = bool(note)

@@ -56,11 +56,12 @@ Otherwise the device's diagnostic files stay on this computer:
   time, the error number, where the software stopped and the screen, never the Unit ID or the
   backtrace in it.
 - The window remembers where it found the error logs and the device's other diagnostic files, so
-  that the next openings read them there without looking through the device's folders. It looks
-  through them again when one of the files is gone or the device has other software; only then
-  does it look again for what was not there. This is kept in `diagnostic-places.json` in the
-  device's folder (below): the paths, the device's software version and whether its event logs
-  are visible, nothing of the files themselves.
+  that the next openings read them there without looking through the device's folders; they list
+  only the folder of the error logs and that of the memory dumps. It looks through them again when
+  one of the files is gone, an error log or a memory dump was written since, or the device has
+  other software; only then does it look again for what was not there. This is kept in
+  `diagnostic-places.json` in the device's folder (below): the paths, the device's software
+  version and whether its event logs are visible, nothing of the files themselves.
 - With Preferences → **Diagnostics** → **Keep Diagnostic Files** turned on (off by default;
   `openexpress setup --diagnostics-copy on`), the window also copies the diagnostic files the
   device shows: `Garmin/Debug`, the folders of its diagnostic data types and its event logs. It
