@@ -484,17 +484,18 @@ def descendants(widget):
 
 
 @contextlib.contextmanager
-def gtk_complaints():
-    """What Adwaita and GTK say as CRITICAL or WARNING inside the block, as (domain, message)
-    pairs: a row removed from a group it is not in, a widget given to a second parent… They
-    go to the terminal only and the window carries on, so a test asks for them."""
+def gtk_complaints(domains=("Adwaita", "Gtk")):
+    """What Adwaita and GTK (or `domains`) say as CRITICAL or WARNING inside the block, as
+    (domain, message) pairs: a row removed from a group it is not in, a widget given to a second
+    parent, a window narrower than its content… They go to the terminal only and the window
+    carries on, so a test asks for them."""
     from gi.repository import GLib
 
     said = []
     levels = GLib.LogLevelFlags.LEVEL_CRITICAL | GLib.LogLevelFlags.LEVEL_WARNING
     handlers = [(domain, GLib.log_set_handler(
         domain, levels, lambda domain, _level, message, _data: said.append((domain, message)),
-        None)) for domain in ("Adwaita", "Gtk")]
+        None)) for domain in domains]
     try:
         yield said
     finally:
@@ -723,6 +724,7 @@ def remembered_window(textures=None):
     import types
 
     from openexpress.gui.start import RememberedPage
+    from openexpress.gui.status_page import show_kept_status
 
     pushed = []
     win = window(
@@ -730,6 +732,8 @@ def remembered_window(textures=None):
         pushed=pushed, _device_textures=dict(textures or {}), _pictures_asked=set(),
         _account=None, _on_start_page=lambda: True,
         in_background=lambda fn, on_done, on_error=None: on_done(fn()))
+    # As the window connects it: its page Device Status from the records.
+    win.remembered.status_row.connect("activated", lambda _row: show_kept_status(win))
     return window_methods(win, REMEMBERED_METHODS)
 
 

@@ -2,11 +2,13 @@
 computer has.
 
 The sources: the error logs on the device (err_log.txt, err_log.bak), read by the caller; the
-copies of them kept on this computer; and the boot log in the copies of the crash logs (Copy
-Crash Logs), which the device writes at the start after a crash. The device keeps only its last
-entries, the copies older ones. A crash written in several of them (the error log at the crash,
-the boot log at the next start, the same entry in each copy) counts once: within a minute, with
-the same error, program counter and boot log error number where both give one. Other kinds of
+copies of them kept on this computer; the boot log in the copies of the crash logs (Copy Crash
+Logs), which the device writes at the start after a crash; and the newest crash of each line of
+the device log (history), which holds them also when no copy is kept, and while the device is not
+connected. The device keeps only its last entries, the copies older ones. A crash written in
+several of them (the error log at the crash, the boot log at the next start, the same entry in
+each copy and in the device log) counts once: within a minute, with the same error, program
+counter and boot log error number where both give one. Other kinds of
 entry ("Assert" at a start, "Abnormal Powerdown") are no crashes here. Of an entry only what
 diagnostics.parse_err_log keeps is used, never the unit ID or the backtrace.
 """
@@ -23,6 +25,7 @@ SAME = timedelta(minutes=1)
 # The sources besides the error logs on the device (named after their file).
 BOOT_LOG = "boot log"
 COPY = "copy"
+DEVICE_LOG = "device log"
 _BOOT_LOG_NAME = diagnostics.CRASH_LOGS[0].rsplit("/", 1)[1]
 _ERR_LOG_NAMES = tuple(path.rsplit("/", 1)[1] for path in diagnostics.ERR_LOGS)
 _ERRNUM = re.compile(r"errnum:\s*(0x[0-9a-f]+)", re.IGNORECASE)
@@ -108,13 +111,20 @@ def merge(found: list[Crash]) -> list[Crash]:
     return sorted(out, key=lambda c: c.at, reverse=True)
 
 
-def history(unit_id: int | None, entries=None) -> list[Crash]:
+def history(unit_id: int | None, entries=None, test_drive: bool = False) -> list[Crash]:
     """The device's crashes, newest first: those of `entries` (its error logs read now,
-    diagnostics.read_errors; None or none: not read) and those the copies on this computer
-    keep (none for a device without a unit ID)."""
+    diagnostics.read_errors; None or none: not read), those the copies on this computer keep
+    and those its device log wrote (a test drive's own log; none for a device without a unit
+    ID)."""
+    from openexpress import history as device_log
+
     found = [_from_entry(e, e.source or "err_log")
              for e in entries or () if e.is_crash and e.at is not None]
     if unit_id:
+        for line in device_log.read(unit_id, test_drive).lines:
+            entry = device_log.crash_entry(line)
+            if entry is not None and entry.is_crash and entry.at is not None:
+                found.append(_from_entry(entry, DEVICE_LOG))
         for name, data in diagnostics.kept_files(unit_id, (*_ERR_LOG_NAMES, _BOOT_LOG_NAME)):
             if name.casefold() == _BOOT_LOG_NAME.casefold():
                 found += _boot_log(data)

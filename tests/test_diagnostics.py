@@ -313,6 +313,26 @@ def test_rotation_keeps_30_copies_and_50_mb_and_never_the_newest(device, clock, 
         "GARMIN/Debug/err_log.txt"]["size"] == 13
 
 
+def test_forgetting_the_device_removes_its_log_and_every_copy(device, clock):
+    """Forget Device leaves no history of crashes and no copy behind: the device log, the
+    diagnostic copies and the copies of removed dumps, a test drive's too."""
+    from openexpress import freeing, history, known_devices
+
+    st, dev = device
+    known_devices.seen(UNIT, "Test watch", "006-B0000-00", "23.39", "mtp")
+    history.note_connection(dev, st)
+    diagnostics.copy_files(dev, st)
+    removal = freeing.removed_folder(UNIT) / "2026-10-21 12.00.00"
+    removal.mkdir(parents=True)
+    (removal / "RAM_bak1.zip").write_bytes(b"e" * 200)
+    test_drive = history.path(UNIT, test_drive=True)
+    test_drive.parent.mkdir(parents=True)
+    test_drive.write_text("")
+    assert history.path(UNIT).exists() and diagnostics.copies_facts(UNIT)[0] == 2
+    assert forget.forget_device(UNIT)
+    assert not paths.device_dir(UNIT).exists()
+
+
 def test_forgetting_the_device_removes_the_copies(device, clock):
     from openexpress import known_devices
 
@@ -1011,6 +1031,23 @@ def test_five_crashes_of_the_boot_log_and_one_of_the_error_log_at_once_are_five(
     assert [c.software for c in found[1:]] == [None] * 4  # the boot log gives no version
 
 
+def test_the_device_log_counts_its_crashes_once_connected_or_not(device, clock):
+    """Like a fēnix 8 whose boot log was copied before its newest crash: that crash is in its
+    error log and in the line the device log wrote at the connection. Five crashes, connected
+    (the error log read) or not (the copies and the device log only): never four, never six."""
+    from openexpress import crashes, history
+
+    st, dev = device
+    kept_copy("crash logs", {BOOT: boot_log(*STAMPS[:4])})
+    history.note_connection(dev, st)
+    away = crashes.history(UNIT)
+    here = crashes.history(UNIT, diagnostics.read_errors(st))
+    assert (len(away), len(here)) == (5, 5)
+    assert away[0].sources == {crashes.DEVICE_LOG}
+    assert here[0].sources == {"err_log.bak", crashes.DEVICE_LOG}
+    assert (away[0].error, away[0].program_counter) == ("0x003", "0x10000abc")
+
+
 def test_the_same_boot_log_in_several_copies_counts_once(device, clock):
     from openexpress import crashes
 
@@ -1093,8 +1130,8 @@ def test_cli_diagnostics_lists_the_crashes_of_every_source(device, clock, monkey
     monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
     assert cli.main(["diagnostics"]) == 0
     out = capsys.readouterr().out.splitlines()
-    start = out.index("Crashes that restarted the device (error logs, boot log, copies on this "
-                      "computer):")
+    start = out.index("Crashes that restarted the device (error logs, boot log, copies and "
+                      "device log on this computer):")
     assert out[start + 1] == ("  2026-10-20 22:24: RTL Trap, software 23.39, error 0x003, PC "
                               "0x10000abc, screen 2301, boot log error 0x1a2b (err_log.bak, "
                               "boot log)")

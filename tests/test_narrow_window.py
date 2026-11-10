@@ -778,6 +778,34 @@ def test_a_name_of_the_legend_that_wraps_makes_only_its_line_taller(narrow_windo
     assert legend.get_height() - (last.get_y() + last.get_height()) < 1
 
 
+@pytest.mark.parametrize("language", ["en", "pl", "de"])
+def test_the_copy_buttons_leave_their_subtitles_room(narrow_window, language):
+    """In the narrowest window the buttons of Crash Logs and Memory Dumps say only "Copy" (their
+    full names for screen readers and in their tooltips): their subtitles keep the room of a
+    few words a line, not one or two."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.window_tasks import row_subtitle
+    from openexpress.i18n import _
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "status")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("status")
+    _iterate(0.3)
+    rows = [w for w in descendants(win.sections["status"].stack)
+            if isinstance(w, Adw.ActionRow) and w.get_title() in (_("Crash Logs"),
+                                                                  _("Memory Dumps"))]
+    assert len(rows) == 2
+    for row in rows:
+        assert row_subtitle(row).get_width() >= 160, (row.get_title(),
+                                                      row_subtitle(row).get_width())
+        (button,) = [w for w in descendants(row) if isinstance(w, Gtk.Button)]
+        assert button.get_tooltip_text() and button.get_tooltip_text() != button.get_label()
+
+
 @pytest.mark.parametrize("why", ["logged-out", "failed"])
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_sentence_about_the_account_fits_the_narrowest_window(narrow_window, language,
@@ -860,10 +888,11 @@ def _breaks_badly(texts) -> list[str]:
     return [t for t in texts if SIZE_WITH_A_SPACE.search(t) or " ·" in t]
 
 
-@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("language", ["en", "pl", "de"])
 def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window, language):
-    """Its content, with the button "Forget Device" at the bottom. Its title bar is not
-    measured: with the words of Sync it is 375 px wide in Polish (not fixed yet)."""
+    """The whole view: its title bar (Sync as an icon, as on the device view: its words would
+    make it 375 px wide in Polish, 398 px in German) and its content, with the button "Forget
+    Device" at the bottom."""
     from openexpress import known_devices
 
     known = known_devices.remember(UNIT, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=1.0)
@@ -873,7 +902,7 @@ def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window
     win.navigation.push(win.remembered.page)
     _iterate(0.05)
     assert win.remembered.forget_group.get_visible()
-    assert _min_width(win.remembered.page.get_child().get_content()) <= NARROWEST
+    assert _min_width(win.remembered.page.get_child()) <= NARROWEST
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

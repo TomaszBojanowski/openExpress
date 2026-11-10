@@ -449,8 +449,10 @@ def read_diagnostics(win) -> None:
             found = diagnostics.at_open(s.device, s.storage)
             # The line of this connection in the device log, with what was just read.
             history.note_connection(s.device, s.storage, found=found)
-            return found, crashes.history(getattr(s.device, "unit_id", None),
-                                          found.entries if found.errors_known else None)
+            return found, crashes.history(
+                getattr(s.device, "unit_id", None),
+                found.entries if found.errors_known else None,
+                test_drive=bool(getattr(s.storage, "test_drive", False)))
         finally:
             reading.set()  # also when it failed: the tasks go on
 

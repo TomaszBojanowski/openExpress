@@ -214,7 +214,8 @@ def utc():
 
 FORGOTTEN_WITH_IT = (
     "What this installation keeps of it goes too: what was uploaded from it, its last sync, "
-    "the maps of your own copied to it and the copies of its diagnostic files. Its next sync "
+    "the log of its connections, the maps of your own copied to it and the copies of its "
+    "diagnostic files. Its next sync "
     "with this program will be a first sync again.")
 
 

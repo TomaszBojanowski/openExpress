@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 09:12+0100\n"
+"POT-Creation-Date: 2026-11-10 18:44+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -1032,11 +1032,11 @@ msgstr ""
 
 #: openexpress/cli.py
 msgid ""
-"Crashes that restarted the device (error logs, boot log, copies on this "
-"computer):"
+"Crashes that restarted the device (error logs, boot log, copies and device "
+"log on this computer):"
 msgstr ""
 "Abstürze, nach denen das Gerät neu gestartet ist (Fehlerprotokolle, "
-"Startprotokoll, Kopien auf diesem Computer):"
+"Startprotokoll, Kopien und Geräteprotokoll auf diesem Computer):"
 
 #. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
 #: openexpress/cli.py
@@ -1209,6 +1209,12 @@ msgstr "Kopie auf diesem Computer"
 #: openexpress/cli.py
 msgid "boot log"
 msgstr "Startprotokoll"
+
+#. TRANSLATORS: where a crash was found: the log of the device's connections that
+#. openExpress keeps (the line "Device log on this computer: …")
+#: openexpress/cli.py
+msgid "device log on this computer"
+msgstr "Geräteprotokoll auf diesem Computer"
 
 #. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
 #. lowercase, followed by its size
@@ -1973,13 +1979,15 @@ msgstr "Zu vergessendes Gerät: {device}"
 #: openexpress/cli.py
 msgid ""
 "What this installation keeps of it goes too: what was uploaded from it, its "
-"last sync, the maps of your own copied to it and the copies of its "
-"diagnostic files. Its next sync with this program will be a first sync again."
+"last sync, the log of its connections, the maps of your own copied to it and "
+"the copies of its diagnostic files. Its next sync with this program will be "
+"a first sync again."
 msgstr ""
 "Was diese Installation darüber speichert, wird ebenfalls entfernt: was von "
-"ihm hochgeladen wurde, seine letzte Synchronisierung, die darauf kopierten "
-"eigenen Karten und die Kopien seiner Diagnosedateien. Seine nächste "
-"Synchronisierung mit diesem Programm ist wieder eine erste Synchronisierung."
+"ihm hochgeladen wurde, seine letzte Synchronisierung, das Protokoll seiner "
+"Verbindungen, die darauf kopierten eigenen Karten und die Kopien seiner "
+"Diagnosedateien. Seine nächste Synchronisierung mit diesem Programm ist "
+"wieder eine erste Synchronisierung."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -5494,6 +5502,7 @@ msgstr "Aktivitäten"
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
+#: openexpress/gui/start.py openexpress/gui/status_page.py
 msgctxt "tab"
 msgid "Device Status"
 msgstr "Gerätestatus"
@@ -6700,17 +6709,18 @@ msgstr "Gerät vergessen"
 #: openexpress/gui/forget_device.py
 msgid ""
 "openExpress forgets what it keeps of this device on this computer: what was "
-"uploaded from it, its last sync, the maps of your own copied to it and the "
-"copies of its diagnostic files. Nothing changes on the device or on your "
-"Garmin account.\n"
+"uploaded from it, its last sync, the log of its connections, the maps of "
+"your own copied to it and the copies of its diagnostic files. Nothing "
+"changes on the device or on your Garmin account.\n"
 "\n"
 "Connected again, it is a new device: its first sync asks again whether to "
 "upload everything or new data only."
 msgstr ""
 "openExpress vergisst, was es auf diesem Computer über dieses Gerät "
-"speichert: was von ihm hochgeladen wurde, seine letzte Synchronisierung, die "
-"darauf kopierten eigenen Karten und die Kopien seiner Diagnosedateien. Auf "
-"dem Gerät und in Ihrem Garmin-Konto ändert sich nichts.\n"
+"speichert: was von ihm hochgeladen wurde, seine letzte Synchronisierung, das "
+"Protokoll seiner Verbindungen, die darauf kopierten eigenen Karten und die "
+"Kopien seiner Diagnosedateien. Auf dem Gerät und in Ihrem Garmin-Konto "
+"ändert sich nichts.\n"
 "\n"
 "Wird es wieder angeschlossen, ist es ein neues Gerät: Bei seiner ersten "
 "Synchronisierung wird erneut gefragt, ob alles oder nur neue Daten "
@@ -7834,6 +7844,13 @@ msgstr ""
 msgid "{size} used"
 msgstr "{size} belegt"
 
+#. TRANSLATORS: subtitle of "Category Details" of a device not connected, from the
+#. records: when its last connection counted them, e.g. "… connection, 2 days ago"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Counted at the last connection, {when}"
+msgstr "Bei der letzten Verbindung gezählt, {when}"
+
 #. TRANSLATORS: subtitle of "Category Details" after files were removed from the device
 #. (Free Up Space), e.g. "… removal, just now"
 #: openexpress/gui/status_page.py
@@ -8122,10 +8139,21 @@ msgstr "Diagnosedateien"
 msgid "Copies on This Computer"
 msgstr "Kopien auf diesem Computer"
 
-#. TRANSLATORS: button that opens the folder of the copies in the file manager
+#. TRANSLATORS: button of "Copies on This Computer": opens the folder of the copies in
+#. the file manager; short, for a narrow window
+#: openexpress/gui/status_page.py
+msgctxt "open the folder of the copies"
+msgid "Open"
+msgstr "Öffnen"
+
+#. TRANSLATORS: the full name of the button that opens the folder of the copies
 #: openexpress/gui/status_page.py
 msgid "Open Folder"
 msgstr "Ordner öffnen"
+
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps"
+msgstr "Speicherabbilder"
 
 #: openexpress/gui/status_page.py
 msgid "Crash Logs"
@@ -8161,12 +8189,21 @@ msgid "encrypted"
 msgstr "verschlüsselt"
 
 #: openexpress/gui/status_page.py
-msgid "Memory Dumps"
-msgstr "Speicherabbilder"
-
-#: openexpress/gui/status_page.py
 msgid "Copy Memory Dumps"
 msgstr "Speicherabbilder kopieren"
+
+#. TRANSLATORS: a button of the rows "Crash Logs" and "Memory Dumps" on the page Device
+#. Status: copies them to this computer (the row says what); short, for a narrow window
+#: openexpress/gui/status_page.py
+msgctxt "copy diagnostic files"
+msgid "Copy"
+msgstr "Kopieren"
+
+#. TRANSLATORS: in the subtitle of "Memory Dumps" of a device not connected: the dumps were
+#. counted at its last connection, e.g. "6 dumps · 54.0 MB · at the last connection"
+#: openexpress/gui/status_page.py
+msgid "at the last connection"
+msgstr "bei der letzten Verbindung"
 
 #. TRANSLATORS: group of the page Device Status
 #: openexpress/gui/status_page.py
@@ -8190,6 +8227,32 @@ msgstr ""
 #: openexpress/gui/status_page.py
 msgid "Report…"
 msgstr "Melden…"
+
+#. TRANSLATORS: in the subtitle of the row "Device Status" of a device not connected: when
+#. its records are from (its last connection), e.g. "as of 2026-11-09 21:52"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "as of {when}"
+msgstr "Stand {when}"
+
+#. TRANSLATORS: banner on top of the page Device Status of a device not connected: what
+#. it shows is from its records, as of its last connection
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid ""
+"Device not connected – as of {when}; connect it to free up space or copy its "
+"logs"
+msgstr ""
+"Gerät nicht angeschlossen – Stand {when}; schließen Sie es an, um Speicher "
+"freizugeben oder seine Protokolle zu kopieren"
+
+#. TRANSLATORS: banner on top of the page Device Status of a device not connected whose
+#. last connection is not known
+#: openexpress/gui/status_page.py
+msgid "Device not connected – connect it to free up space or copy its logs"
+msgstr ""
+"Gerät nicht angeschlossen – schließen Sie es an, um Speicher freizugeben "
+"oder seine Protokolle zu kopieren"
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
 #: openexpress/gui/status_page.py

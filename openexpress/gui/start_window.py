@@ -279,10 +279,17 @@ def account_rows(win, unit_id) -> list[tuple[str, str]]:
 
 
 def show_remembered_more(win, unit_id) -> None:
-    """The view of a device not connected: the details of its last sync and the rows of the
-    account."""
+    """The view of a device not connected: the details of its last sync, the rows of the
+    account and its row Device Status, from its records (read in the background)."""
+    from openexpress.gui.status_page import kept_status_row
+
     win.remembered.set_last_sync_details(*last_sync_more(unit_id))
     win.remembered.set_account_rows(account_rows(win, unit_id))
+    if unit_id:
+        kept_status_row(win, unit_id)
+    else:
+        win.kept_status = None
+        win.remembered.show_status_row(None)
 
 
 def remembered_texts(win, known) -> dict:
@@ -421,7 +428,11 @@ class StartWindow:
             self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
 
     def _on_remembered_page(self) -> bool:
-        return self.navigation.get_visible_page() is self.remembered.page
+        """The view of a remembered device shown, or its page Device Status above it."""
+        visible = self.navigation.get_visible_page()
+        kept = self.kept_status
+        return visible is self.remembered.page or (kept is not None and kept.page is not None
+                                                   and visible is kept.page)
 
     def _show_device_view(self) -> None:
         """The view of the device open now, above the start page, or the page shown

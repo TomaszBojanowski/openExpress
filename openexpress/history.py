@@ -381,6 +381,52 @@ def _append(where: Path, line: dict, now: datetime) -> bool:
     return True
 
 
+def note_counted(device: GarminDevice, storage: Storage,
+                 now: datetime | None = None) -> tuple[dict[str, int], int | None, int | None]:
+    """After files were removed from the device (freeing): its storage by kind, its space and
+    its memory dumps counted again and put in the line of this connection, in place (the number
+    of connections stays), with when ("counted"), so that what the records tell is true without
+    connecting it again. A log whose last line is of another connection (its line not written)
+    is left as it is. Returns the kinds, the capacity and the free space counted."""
+    from openexpress import diagnostics
+
+    kinds, capacity, free = storage_by_kind(device, storage)
+    try:
+        dumps = diagnostics.dumps_on_device(storage)
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        dumps = None
+    if not getattr(device, "unit_id", None):
+        return kinds, capacity, free
+    now = now or datetime.now()
+    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    key = _key(device, storage, via)
+    where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    with _locked(where.parent):
+        kept = read_file(where)
+        if not kept.lines or kept.lines[-1]["conn"] != key:
+            log.info("history: the line of this connection is not the last one, not put right")
+            return kinds, capacity, free
+        line = kept.lines[-1]
+        line["categories"] = kinds
+        line["counted"] = now.astimezone().isoformat(timespec="seconds")
+        for name, value in (("capacity", capacity), ("free", free)):
+            if value is None:
+                line.pop(name, None)  # not known now: not what it was before
+            else:
+                line[name] = value
+        if dumps is None:
+            line.pop("dumps", None)
+        else:
+            line["dumps"] = {"count": len(dumps), "bytes": sum(size for _p, size in dumps)}
+        paths.write_private(where, "".join(json.dumps(x, ensure_ascii=False, sort_keys=True)
+                                           + "\n" for x in kept.lines))
+    log.info("history: the line of this connection put right after a removal (%d kinds of "
+             "file, %s free)", len(kinds), applog.size(free))
+    return kinds, capacity, free
+
+
 # --- reading it back -------------------------------------------------------------------------
 
 
@@ -469,6 +515,12 @@ def valid(raw: str) -> dict | None:
             return None
         line["crash"] = None if crash is None else {k: crash.get(k) for k in
                                                     ("kind", "at", "error", "pc", "screen")}
+    if "counted" in item:
+        try:
+            datetime.fromisoformat(item["counted"])
+        except (TypeError, ValueError):
+            return None
+        line["counted"] = item["counted"]
     return line
 
 
@@ -480,6 +532,16 @@ def _when(line: dict) -> datetime:
 def local_time(line: dict) -> datetime:
     """When the line was written, in this computer's time now (naive)."""
     return _when(line).astimezone().replace(tzinfo=None)
+
+
+def counted_time(line: dict) -> datetime:
+    """When the storage and the dumps of the line were counted, in this computer's time now
+    (naive): again after a removal ("counted", note_counted), else at the connection."""
+    if "counted" not in line:
+        return local_time(line)
+    when = datetime.fromisoformat(line["counted"])
+    return (when if when.tzinfo is not None else when.astimezone()).astimezone().replace(
+        tzinfo=None)
 
 
 def crash_entry(line: dict):

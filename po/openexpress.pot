@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 09:12+0100\n"
+"POT-Creation-Date: 2026-11-10 18:44+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -930,8 +930,8 @@ msgstr ""
 
 #: openexpress/cli.py
 msgid ""
-"Crashes that restarted the device (error logs, boot log, copies on this "
-"computer):"
+"Crashes that restarted the device (error logs, boot log, copies and device "
+"log on this computer):"
 msgstr ""
 
 #. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
@@ -1091,6 +1091,12 @@ msgstr ""
 #. TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
 #: openexpress/cli.py
 msgid "boot log"
+msgstr ""
+
+#. TRANSLATORS: where a crash was found: the log of the device's connections that
+#. openExpress keeps (the line "Device log on this computer: …")
+#: openexpress/cli.py
+msgid "device log on this computer"
 msgstr ""
 
 #. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
@@ -1824,8 +1830,9 @@ msgstr ""
 #: openexpress/cli.py
 msgid ""
 "What this installation keeps of it goes too: what was uploaded from it, its "
-"last sync, the maps of your own copied to it and the copies of its "
-"diagnostic files. Its next sync with this program will be a first sync again."
+"last sync, the log of its connections, the maps of your own copied to it and "
+"the copies of its diagnostic files. Its next sync with this program will be "
+"a first sync again."
 msgstr ""
 
 #: openexpress/cli.py
@@ -4975,6 +4982,7 @@ msgstr ""
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
+#: openexpress/gui/start.py openexpress/gui/status_page.py
 msgctxt "tab"
 msgid "Device Status"
 msgstr ""
@@ -6109,9 +6117,9 @@ msgstr ""
 #: openexpress/gui/forget_device.py
 msgid ""
 "openExpress forgets what it keeps of this device on this computer: what was "
-"uploaded from it, its last sync, the maps of your own copied to it and the "
-"copies of its diagnostic files. Nothing changes on the device or on your "
-"Garmin account.\n"
+"uploaded from it, its last sync, the log of its connections, the maps of "
+"your own copied to it and the copies of its diagnostic files. Nothing "
+"changes on the device or on your Garmin account.\n"
 "\n"
 "Connected again, it is a new device: its first sync asks again whether to "
 "upload everything or new data only."
@@ -7164,6 +7172,13 @@ msgstr ""
 msgid "{size} used"
 msgstr ""
 
+#. TRANSLATORS: subtitle of "Category Details" of a device not connected, from the
+#. records: when its last connection counted them, e.g. "… connection, 2 days ago"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Counted at the last connection, {when}"
+msgstr ""
+
 #. TRANSLATORS: subtitle of "Category Details" after files were removed from the device
 #. (Free Up Space), e.g. "… removal, just now"
 #: openexpress/gui/status_page.py
@@ -7436,9 +7451,20 @@ msgstr ""
 msgid "Copies on This Computer"
 msgstr ""
 
-#. TRANSLATORS: button that opens the folder of the copies in the file manager
+#. TRANSLATORS: button of "Copies on This Computer": opens the folder of the copies in
+#. the file manager; short, for a narrow window
+#: openexpress/gui/status_page.py
+msgctxt "open the folder of the copies"
+msgid "Open"
+msgstr ""
+
+#. TRANSLATORS: the full name of the button that opens the folder of the copies
 #: openexpress/gui/status_page.py
 msgid "Open Folder"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps"
 msgstr ""
 
 #: openexpress/gui/status_page.py
@@ -7473,11 +7499,20 @@ msgid "encrypted"
 msgstr ""
 
 #: openexpress/gui/status_page.py
-msgid "Memory Dumps"
+msgid "Copy Memory Dumps"
 msgstr ""
 
+#. TRANSLATORS: a button of the rows "Crash Logs" and "Memory Dumps" on the page Device
+#. Status: copies them to this computer (the row says what); short, for a narrow window
 #: openexpress/gui/status_page.py
-msgid "Copy Memory Dumps"
+msgctxt "copy diagnostic files"
+msgid "Copy"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of "Memory Dumps" of a device not connected: the dumps were
+#. counted at its last connection, e.g. "6 dumps · 54.0 MB · at the last connection"
+#: openexpress/gui/status_page.py
+msgid "at the last connection"
 msgstr ""
 
 #. TRANSLATORS: group of the page Device Status
@@ -7499,6 +7534,28 @@ msgstr ""
 #. TRANSLATORS: button that opens the report of the device (a dialog with more to do)
 #: openexpress/gui/status_page.py
 msgid "Report…"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row "Device Status" of a device not connected: when
+#. its records are from (its last connection), e.g. "as of 2026-11-09 21:52"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "as of {when}"
+msgstr ""
+
+#. TRANSLATORS: banner on top of the page Device Status of a device not connected: what
+#. it shows is from its records, as of its last connection
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid ""
+"Device not connected – as of {when}; connect it to free up space or copy its "
+"logs"
+msgstr ""
+
+#. TRANSLATORS: banner on top of the page Device Status of a device not connected whose
+#. last connection is not known
+#: openexpress/gui/status_page.py
+msgid "Device not connected – connect it to free up space or copy its logs"
 msgstr ""
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data

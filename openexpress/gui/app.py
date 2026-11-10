@@ -51,7 +51,7 @@ from openexpress.gui.report_dialog import ReportDialog  # noqa: E402
 from openexpress.gui.start import SMALL_DEVICE_ICON, RememberedPage, StartPage  # noqa: E402
 from openexpress.gui.start_window import StartView, StartWindow  # noqa: E402
 from openexpress.gui.status_page import PAGE_ICON as STATUS_ICON  # noqa: E402
-from openexpress.gui.status_page import StatusPage  # noqa: E402
+from openexpress.gui.status_page import StatusPage, show_kept_status  # noqa: E402
 from openexpress.gui.status_page import on_folded as status_on_folded  # noqa: E402
 from openexpress.gui.updates_page import UpdatesPage  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
@@ -277,6 +277,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.status_show_all = False
         self.status_history = None
         self.status_history_rows: list = []
+        # The page Device Status of a device not connected, from its records
+        # (status_page.KeptStatus): read for the row of its view, its page once shown.
+        self.kept_status = None
         # The pictures of devices drawn and asked for (pictures.py).
         self._device_textures = self._pictures_asked = self._pictures_waiting = None
         # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device
@@ -420,7 +423,10 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.navigation.add(self.start.page)  # the first one added is shown
         self.navigation.add(self.device_view)
         self.remembered = RememberedPage()  # the read-only view of a remembered device
+        breakpoint.add_setter(self.remembered.sync_button, "visible", False)
+        breakpoint.add_setter(self.remembered.sync_icon_button, "visible", True)
         self.remembered.forget_button.connect("clicked", self.ask_forget)
+        self.remembered.status_row.connect("activated", lambda _row: show_kept_status(self))
         self.navigation.add(self.remembered.page)
         self.navigation.connect("popped", self._on_popped)
         # The texts told against now are drawn again while the page with them is shown.

@@ -416,7 +416,10 @@ def visible_view(win) -> View:
     page = win.navigation.get_visible_page()
     if page is win.start.page:
         return View(Page.START)
-    if page is win.remembered.page:
+    kept = win.kept_status
+    if page is win.remembered.page or (kept is not None and page is kept.page):
+        # Its page Device Status above it is the same view: the device plugged in brings its
+        # own view in their place.
         return View(Page.REMEMBERED, win._remembered_unit,
                     win._remembered_from_account)
     return View(Page.DEVICE)

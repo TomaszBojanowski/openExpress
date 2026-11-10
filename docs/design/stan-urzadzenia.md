@@ -1,10 +1,11 @@
 # Design: the page Device Status
 
-Status: steps a to c implemented, step d dropped, step e (freeing space) decided. Decided: D1 (the
-name), D4 (layout A), D5's threshold of little space, D8 (the log always kept), D9 (removal at
-step e: both candidates, always confirmed, a copy first where it fits, an update in the main
-folder only shown, the command line too); D13's remembered device is decided at step f. The other
-decisions are proposed, each with the option recommended. Mockups of layout A (step c, read only, and step e, with removal and
+Status: steps a to c and e implemented, step d dropped, step f (the remembered device) decided.
+Decided: D1 (the name), D4 (layout A), D5's threshold of little space, D8 (the log always kept),
+D9 (removal at step e: both candidates, always confirmed, a copy first where it fits, an update in
+the main folder only shown, the command line too), D13's remembered device (A, from the records,
+the device's actions left out). The other decisions are proposed, each with the option
+recommended. Mockups of layout A (step c, read only, and step e, with removal and
 its confirmations), in English and Polish, at 1000 × 740 (the size of the program's screenshots)
 and 360 × 740, light and dark, were drawn with libadwaita widgets on made-up data; every number and
 date below is made up.
@@ -133,8 +134,11 @@ not used: a device's crash is a fact to know, not an alarm.
 - Only crashes that restarted the device ("RTL Trap"): the kinds an Edge writes at an ordinary
   start ("Assert") and "Abnormal Powerdown" are counted in the log only.
 - **Sources, merged:** `err_log.txt` and `err_log.bak` on the device, the boot log (copied by Copy
-  Crash Logs), and every copy kept on this computer (the device keeps only its last entries). One
-  crash = the same error and program counter within a minute, whatever the sources.
+  Crash Logs), every copy kept on this computer (the device keeps only its last entries), and the
+  newest crash the device log (D8) wrote at each connection, so that a device whose diagnostic
+  files are not kept still has its crashes, also when it is not connected. One crash = the same
+  error and program counter within a minute, whatever the sources: a crash in the device log and
+  in a copy counts once.
 - **Shown** newest first with a relative date and the software version; "the same error as the {n}
   before" when it repeats. The codes (error number, address, screens) only in Error Details.
 - **Show All:** beside the group's description on a wide window; on a narrow one the last row of
@@ -151,7 +155,14 @@ not used: a device's crash is a fact to know, not an alarm.
 Crashes and Updates show from it: crashes and software updates (a new version between two lines).
 The first connection is when this computer first saw the device (`first_seen` in `devices.json`),
 not the log's first line, which may come long after; its version only when the log began with that
-connection; without `first_seen` (a test drive) no such row. Storage over time is kept, not shown (a later chart, if wanted).
+connection; without `first_seen` (a test drive) no such row. Storage over time is kept, not
+shown (a later chart, if wanted).
+
+After a removal (D9, the window and the command line alike) the line of that connection is put
+right in place: the kinds of file, the space and the memory dumps counted again, and when
+("counted"); a new line would count the connection twice. So the page of the device not connected
+(D13) and `openexpress diagnostics` tell the state after the removal without connecting it again.
+A log whose last line is of another connection is left as it is.
 
 Step a adds one sentence to "What is kept of each device" in `docs/privacy.md`: "a short log of
 each connection: the software version, the storage by category, the number and size of memory dumps
@@ -181,10 +192,11 @@ Decided: both candidates, removed from step e on; the page of step c only reads.
 - **Step c (read only):** the group **Space to Free**, "Files the device no longer needs"; each
   candidate with what it is and its size at the end of its row, no buttons.
 - **Step e:** the group becomes **Free Up Space**, "Activities, maps, music, courses and settings are
-  never removed"; the rows get **Copy and Remove** (dumps, at least one copied first) or **Remove**
-  (dumps none of which can be copied; an update file) in the destructive style (as Forget
-  Device), and each asks first through `confirm()`: Cancel, then the answer in the destructive
-  style; Cancel is the default (Enter), and closing the question cancels it. The question names
+  never removed"; the rows get **Remove** in the destructive style (as Forget Device); for the
+  dumps its tooltip and its name for screen readers say **Copy and Remove** when at least one is
+  copied first (the longer words would leave the subtitle no room in a narrow window). Each asks
+  first through `confirm()`: Cancel, then the answer in the destructive style, **Copy and
+  Remove** (dumps, at least one copied first) or **Remove**; Cancel is the default (Enter), and closing the question cancels it. The question names
   what goes, the space, and what is not copied:
   - "Remove Older Memory Dumps?" – "5 memory dumps (44.9 MB) will be copied to this computer and
     then removed from the device. The newest dump stays on the device." – Cancel, Copy and Remove;
@@ -254,7 +266,7 @@ Nothing disappears but the row Device Error Log, whose content moves.
 | Device over MTP | everything |
 | Device as a USB drive | storage (the drive's size and free space, the same categories), crashes from its error log where it keeps one, memory dumps, freeing space; no hidden crash logs (no PTP on a drive) |
 | Device without diagnostic files (e.g. a bike accessory) | D14 |
-| Remembered device, not connected | decided at step f, between **A:** its page gets a row Device Status leading to the page read from the records (history, crashes, storage "as of {when}"), every action off with "Connect the device to …"; and **B:** nothing, the page only for a connected device |
+| Remembered device, not connected | **A (decided):** its view gets a row Device Status in Tools, its subtitle the summary and "as of {when}" (the last connection); it leads to the page read from the records of this computer only: the device log (storage of the last connection, software updates, its crashes), the copies of the diagnostic files and the crashes in them. On top a banner: "Device not connected – as of {when}; connect it to free up space or copy its logs". What needs the device is left out, not greyed: Free Up Space, Copy Crash Logs and Copy Memory Dumps, and the report (the main menu has it). The memory dumps as the last connection counted them, without a button. What the records do not tell is "Not known", never none. A device with no records (only on the account, or never logged) gets no row. Connected meanwhile, its view gives way to the device view, as the remembered view does |
 | Device that openExpress cannot use (HID) | not offered: there is no device view; the start page's notice and the main menu's report stay |
 | No device, or the device unplugged while the page is open | the side panel is not there (start page); unplugged: the usual "Connect Your Device" |
 
@@ -285,7 +297,10 @@ c. **The page, read only** (D4–D7, D10, D12–D14): summary, storage, crashes 
 d. Dropped: no archive for Garmin's support (D11). The steps after it keep their letters.
 e. **Freeing space** (D9): the buttons and their questions. Trial: the test drive with made-up dump
    and update files, then a device with old dumps of its own, after the maintainer's consent.
-f. **The remembered device** (D13), decided then.
+f. **The remembered device** (D13): the row on the remembered view, the page from the records,
+   the device log's crashes in the history of crashes (D7). Trial: the watch and the bike
+   computer unplugged, their pages beside those of the last connection (the same crashes and
+   storage); plugged in while the page is shown.
 
 ## 4. Texts
 
@@ -303,17 +318,20 @@ f. **The remembered device** (D13), decided then.
 | Group, step c | Space to Free – "Files the device no longer needs" | Miejsce do zwolnienia – „Pliki, których urządzenie już nie potrzebuje” |
 | Group, step e | Free Up Space – "Activities, maps, music, courses and settings are never removed" | Zwolnij miejsce – „Aktywności, mapy, muzyka, kursy i ustawienia nigdy nie są usuwane” |
 | Rows | Older Memory Dumps – "{count} files; the newest dump is not counted · {size}"; {name} {version} – "The device took the file in but did not install it · {size}" | Starsze zrzuty pamięci – „{count} pliki; najnowszy zrzut nie jest liczony · {size}”; {name} {version} – „Urządzenie przyjęło plik, ale go nie zainstalowało · {size}” |
-| Buttons, step e | Copy and Remove; Remove | Skopiuj i usuń; Usuń |
+| Buttons, step e | Remove on the rows (tooltip: Copy and Remove when copied first); in the questions Copy and Remove or Remove | Usuń na wierszach (podpowiedź: Skopiuj i usuń); w pytaniach Skopiuj i usuń albo Usuń |
 | Questions, step e | Remove Older Memory Dumps?; Remove the Update File? (bodies in D9); Cancel | Usunąć starsze zrzuty pamięci?; Usunąć plik aktualizacji?; Anuluj |
 | Row, step e | {name} {version} – "Waits to be installed; removing the file would cancel the update" (no button, no size) | {name} {version} – „Czeka na instalację; usunięcie pliku anulowałoby aktualizację” (bez przycisku i rozmiaru) |
 | After a removal, step e | "{count} memory dumps removed, {size} freed"; "Update file removed, {size} freed"; "The device did not remove {count} of the files; the others are removed." | „Usunięto {count} zrzutów pamięci, zwolniono {size}”; „Usunięto plik aktualizacji, zwolniono {size}”; „Urządzenie nie usunęło {count} z plików; pozostałe są usunięte.” |
 | Group | Diagnostic Files | Pliki diagnostyczne |
 | Rows | Keep Diagnostic Files; Copies on This Computer; Crash Logs; Memory Dumps | Przechowywanie plików diagnostycznych; Kopie na tym komputerze; Dzienniki awarii; Zrzuty pamięci |
-| Buttons | Open Folder; Copy Crash Logs; Copy Memory Dumps | Otwórz folder; Skopiuj dzienniki awarii; Skopiuj zrzuty pamięci |
+| Buttons | Open (Copies on This Computer; "Open Folder" in the tooltip and for screen readers); Copy (the rows Crash Logs and Memory Dumps; their full names "Copy Crash Logs", "Copy Memory Dumps" in the tooltip and for screen readers): a narrow window keeps room for the subtitles | Otwórz („Otwórz folder” w podpowiedzi i dla czytników ekranu); Skopiuj („Skopiuj dzienniki awarii”, „Skopiuj zrzuty pamięci”) |
 | Group | Report a Problem | Zgłoszenie problemu |
 | Row | Report to openExpress | Zgłoszenie do openExpressu |
 | Button | Report… | Zgłoś… |
 | Device page row | Device Status | Stan urządzenia |
+| Remembered view row, step f | Device Status – "{summary} · as of {when}" | Stan urządzenia – „{summary} · stan z {when}” |
+| Banner, step f | Device not connected – as of {when}; connect it to free up space or copy its logs | Urządzenie niepodłączone – stan z {when}; podłącz je, aby zwolnić miejsce lub skopiować dzienniki |
+| Rows, step f | Category Details – "Counted at the last connection, {when}"; Memory Dumps – "{count} dumps · {size} · at the last connection" | Szczegóły kategorii – „Policzone przy ostatnim podłączeniu, {when}”; Zrzuty pamięci – „{count} zrzutów · {size} · przy ostatnim podłączeniu” |
 | Empty page (D14) | No Diagnostic Data | Brak danych diagnostycznych |
 
 English in header case for titles and buttons and in sentences for subtitles and descriptions, as
@@ -339,6 +357,5 @@ follows); Polish in sentence case, a hard space after one-letter words and befor
 ## 7. Open
 
 - The proposed decisions: D2, D3 (the blind test), D5 to D7 but the threshold, D10 to D12, D14.
-- D13's remembered device, at step f.
 - A narrow window shortens the Polish title "Stan urządzenia" in the header, as it does "Aktualizacje"
   today: one solution for both.

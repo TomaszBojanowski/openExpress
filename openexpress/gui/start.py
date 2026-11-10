@@ -712,9 +712,15 @@ class RememberedPage:
         # TRANSLATORS: button that starts syncing
         self.sync_button = Gtk.Button(label=_("Sync"), sensitive=False)
         header.pack_end(self.sync_button)
+        # In a narrow window its icon instead, as the device view has it (the window's
+        # breakpoint): the words of Sync would make the header wider than the window.
+        self.sync_icon_button = Gtk.Button(icon_name="mail-send-receive-symbolic",
+                                           sensitive=False, visible=False)
+        header.pack_end(self.sync_icon_button)
         self.banner = Adw.Banner(
             title=_("Device not connected\u00a0– connect it to sync or update"), revealed=True)
         self.sync_button.set_tooltip_text(self.banner.get_title())
+        self.sync_icon_button.set_tooltip_text(self.banner.get_title())
 
         content = Adw.PreferencesPage()
         hero = Adw.PreferencesGroup()
@@ -759,6 +765,12 @@ class RememberedPage:
         content.add(group)
 
         self.tools_group = Adw.PreferencesGroup(title=_("Tools"))
+        # The page Device Status of the device from its records (show_status_row); the window
+        # connects it. Hidden without records.
+        self.status_row = Adw.ActionRow(title=pgettext("tab", "Device Status"), activatable=True,
+                                        visible=False)
+        self.status_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        self.tools_group.add(self.status_row)
         self.part_row = Adw.ActionRow(title=_("Part Number"), subtitle_selectable=True)
         self.tools_group.add(self.part_row)
         content.add(self.tools_group)
@@ -790,8 +802,17 @@ class RememberedPage:
         self.version_label.set_visible(bool(version))
         self.seen_label.set_tooltip_text(seen_tooltip)
         self.part_row.set_subtitle(GLib.markup_escape_text(part_number))
-        self.tools_group.set_visible(bool(part_number))
+        self.part_row.set_visible(bool(part_number))
+        self.show_status_row(None)  # until the records are read (the window)
         self.show_texts(last_seen, last_sync, update)
+
+    def show_status_row(self, subtitle: str | None) -> None:
+        """The row Device Status with the summary of the records (`subtitle`), or hidden (None:
+        no records, or not read yet); Tools shown while it has a row."""
+        if subtitle is not None:
+            self.status_row.set_subtitle(GLib.markup_escape_text(subtitle))
+        self.status_row.set_visible(subtitle is not None)
+        self.tools_group.set_visible(self.part_row.get_visible() or subtitle is not None)
 
     def show_texts(self, last_seen: str, last_sync: str, update: str | None = None) -> None:
         """The texts told against now (show; once a minute, the window): each set only when

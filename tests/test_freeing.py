@@ -239,6 +239,42 @@ def test_the_log_names_no_file(tmp_path, clock, small_limit, caplog):
     assert "RAM_bak" not in said and "ramdump" not in said
 
 
+# --- the device log after a removal ----------------------------------------------------------
+
+
+def test_after_a_removal_the_device_log_tells_the_state_after_it(tmp_path, clock, small_limit):
+    """The line of this connection is put right in place (the number of connections stays):
+    the kinds of file, the space and the dumps counted again, and when; the page from the
+    records tells the truth without connecting the device again."""
+    from openexpress import history, status
+
+    st, dev = make_device(tmp_path)
+    history.note_connection(dev, st)
+    clock.current += timedelta(minutes=1)
+    freeing.remove_dumps(st, UNIT, older(st))
+    status.recount(dev, st)
+    lines = history.read(UNIT).lines
+    assert len(lines) == 1 and lines[0]["dumps"] == {"count": 1, "bytes": 90}
+    made = status.read_kept(UNIT)
+    assert made.dumps_at_last == (1, 90)
+    assert made.categories["logs"] == 90 + len("what failed")  # RAM.zip and the text beside
+    assert made.recounted and made.counted_at == clock.current
+
+
+def test_the_command_line_puts_the_device_log_right_after_a_removal(tmp_path, clock,
+                                                                    small_limit,
+                                                                    no_update_check, capsys):
+    from openexpress import history
+
+    st, dev = make_device(tmp_path)
+    history.note_connection(dev, st)  # as the command line notes a device it finds connected
+    code, _out = run_cli(st, "--free-space", "--apply", capsys=capsys)
+    assert code == 0
+    lines = history.read(UNIT).lines
+    assert len(lines) == 1 and lines[0]["dumps"] == {"count": 1, "bytes": 90}
+    assert "counted" in lines[0]
+
+
 # --- removing an update file ------------------------------------------------------------------
 
 

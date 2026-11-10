@@ -4515,6 +4515,9 @@ class FakeRememberedPage:
     def allow_forget(self, on):
         pass
 
+    def show_status_row(self, subtitle):
+        self.status_row = subtitle
+
 
 class FakeSection:
     def __init__(self):

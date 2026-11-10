@@ -92,6 +92,9 @@ class Facts:
     has_diagnostics: bool = True  # error logs, dumps, crashes or copies: else the empty page
     recounted: bool = False  # categories and space counted again after a removal (recount)
     updates_why: str | None = None  # why the update files were not checked (freeing.Plan.why)
+    connected: bool = True  # False: a device not connected, from its records (read_kept)
+    dumps_at_last: tuple[int, int] | None = None  # not connected: (count, bytes) at the last
+    # connection; None: not known
 
     def older_dumps(self) -> list[tuple[str, int, float]] | None:
         """The memory dumps but the newest (which always stays); None: not known
@@ -113,10 +116,11 @@ class Recount:
 
 
 def recount(device, storage) -> Recount:
-    """Count the kinds of file and the space again, as at the connection
-    (history.storage_by_kind)."""
-    categories, capacity, free = history.storage_by_kind(device, storage)
-    return Recount(categories, free, capacity, datetime.now())
+    """Count the kinds of file, the space and the dumps again, as at the connection, and put
+    them in the device log's line of this connection (history.note_counted)."""
+    now = datetime.now()
+    categories, capacity, free = history.note_counted(device, storage, now)
+    return Recount(categories, free, capacity, now)
 
 
 def read(session, wait: float = READING_WAIT_S) -> Facts:
@@ -148,13 +152,14 @@ def read(session, wait: float = READING_WAIT_S) -> Facts:
         capacity = counted.capacity if counted.capacity is not None else capacity
         categories, counted_at = dict(counted.categories), counted.at
     elif newest is not None:
-        categories, counted_at = dict(newest["categories"]), history.local_time(newest)
+        categories, counted_at = dict(newest["categories"]), history.counted_time(newest)
     else:
         categories, counted_at = {}, None
     errors_known = found is not None and found.errors_known
     found_crashes = getattr(session, "crash_history", None)
     if found_crashes is None:
-        found_crashes = crashes.history(unit, found.entries if errors_known else None)
+        found_crashes = crashes.history(unit, found.entries if errors_known else None,
+                                        test_drive=test_drive)
     plan = (freeing.plan(storage, device, getattr(session, "client", None))
             if storage is not None else None)
     dumps = plan.dumps if plan is not None else None
@@ -170,5 +175,38 @@ def read(session, wait: float = READING_WAIT_S) -> Facts:
         events=events(found_crashes, lines, known.first_seen if known else None),
         hidden_logs=hidden, copies=copies,
         not_installed=[*plan.updates, *plan.waiting] if plan is not None else [],
-        has_diagnostics=has, recounted=counted is not None,
+        has_diagnostics=has,
+        recounted=counted is not None or (newest is not None and "counted" in newest),
         updates_why=plan.why if plan is not None else None)
+
+
+def read_kept(unit_id: int) -> Facts | None:
+    """The facts of a remembered device that is not connected, from the records of this
+    computer only: the last line of its device log (its storage, its memory dumps, whether its
+    error logs were read: "crash" left out of the line when not), its crashes (the copies and
+    the device log), its software updates and first connection, its copies. None when there is
+    no record of it. What the records do not tell is None, never none or 0."""
+    from openexpress import known_devices
+
+    lines = history.read(unit_id).lines
+    copies = diagnostics.copies_facts(unit_id)
+    if not lines and not copies[0]:
+        return None
+    newest = lines[-1] if lines else None
+    found_crashes = crashes.history(unit_id)
+    known = known_devices.load().get(unit_id)
+    errors_known = newest is not None and "crash" in newest
+    dumps = newest.get("dumps") if newest is not None else None
+    dumps_at_last = (dumps["count"], dumps["bytes"]) if dumps is not None else None
+    return Facts(
+        via=newest["via"] if newest is not None else "mtp",
+        free=newest.get("free") if newest is not None else None,
+        capacity=newest.get("capacity") if newest is not None else None,
+        categories=dict(newest["categories"]) if newest is not None else {},
+        counted_at=history.counted_time(newest) if newest is not None else None,
+        crashes=found_crashes, errors_known=errors_known, dumps=None,
+        events=events(found_crashes, lines, known.first_seen if known else None),
+        hidden_logs=False, copies=copies, not_installed=[],
+        has_diagnostics=bool(errors_known or found_crashes or copies[0] or dumps_at_last),
+        connected=False, dumps_at_last=dumps_at_last,
+        recounted=newest is not None and "counted" in newest)

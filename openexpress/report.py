@@ -158,7 +158,8 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
         dumps = found.dumps if found.dumps_known else None
     else:
         entries = dumps = None
-    found_crashes = crashes.history(device.unit_id, entries)
+    found_crashes = crashes.history(device.unit_id, entries,
+                                    test_drive=bool(getattr(storage, "test_drive", False)))
     lines = ["### Diagnostics",
              f"- Crashes that restarted the device: {len(found_crashes)}"
              + ("" if entries is not None else " (the error logs on the device not read)")]

@@ -238,9 +238,10 @@ def cmd_diagnostics(args) -> int:
                                    size=human_size(sum(size for _p, size in dumps))))
     from openexpress import crashes
 
-    found = crashes.history(dev.unit_id, entries)
-    print(_("Crashes that restarted the device (error logs, boot log, copies on this "
-            "computer):"))
+    found = crashes.history(dev.unit_id, entries,
+                            test_drive=bool(getattr(st, "test_drive", False)))
+    print(_("Crashes that restarted the device (error logs, boot log, copies and device log "
+            "on this computer):"))
     for crash in found:
         print(f"  {full_time(crash.at)}: {crash.words()} ({crash_sources(crash)})")
     if not found:
@@ -351,9 +352,9 @@ def _print_free_space(plan) -> None:
 def _free_space(st, dev, plan) -> int:
     """--free-space --apply: the older dumps copied (where they fit) and removed, then the
     update files; 1 when the device refused or kept a file, or a copy failed."""
-    from openexpress import freeing
+    from openexpress import freeing, history
 
-    problems = []
+    problems, removed = [], False
     if plan.older:
         with _progress() as progress:
             freed = freeing.remove_dumps(st, dev.unit_id, plan.older, progress=progress)
@@ -364,6 +365,7 @@ def _free_space(st, dev, plan) -> int:
             text += "; " + _("{count} copied to this computer first").format(
                 count=len(freed.copied))
         print(text + ".")
+        removed = removed or bool(freed.removed)
         problems += [(path, why) for path, why in freed.kept]
         # TRANSLATORS: why a memory dump stays on the device after --free-space
         problems += [(path, _("its copy on this computer failed")) for path in freed.copy_failed]
@@ -372,7 +374,10 @@ def _free_space(st, dev, plan) -> int:
         if freed.removed:
             print(_("Removed: the file of {name} {version}, {size} freed.").format(
                 name=u.name, version=u.version, size=human_size(freed.freed)))
+        removed = removed or bool(freed.removed)
         problems += freed.kept
+    if removed:  # the device log tells the state after it (the page of a device not connected)
+        history.note_counted(dev, st)
     for path, why in problems:
         # TRANSLATORS: `diagnostics --free-space --apply`: a file that stayed on the device
         print("  " + _("not removed: {name}: {why}").format(name=posixpath.basename(path),
@@ -387,9 +392,13 @@ def crash_sources(crash) -> str:
 
     words = {crashes.COPY: _("copy on this computer"),
              # TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
-             crashes.BOOT_LOG: _("boot log")}
+             crashes.BOOT_LOG: _("boot log"),
+             # TRANSLATORS: where a crash was found: the log of the device's connections that
+             # openExpress keeps (the line "Device log on this computer: …")
+             crashes.DEVICE_LOG: _("device log on this computer")}
     names = sorted(s for s in crash.sources if s not in words)
-    return ", ".join([*names, *(words[s] for s in (crashes.COPY, crashes.BOOT_LOG)
+    return ", ".join([*names, *(words[s] for s in (crashes.COPY, crashes.BOOT_LOG,
+                                                   crashes.DEVICE_LOG)
                                 if s in crash.sources)])
 
 
@@ -1212,9 +1221,9 @@ def cmd_devices(args) -> int:
     if not args.apply:
         print(_("Device to forget: {device}").format(device=name))
         print(_("What this installation keeps of it goes too: what was uploaded from it, its "
-                "last sync, the maps of your own copied to it and the copies of its diagnostic "
-                "files. Its next sync with this "
-                "program will be a first sync again."))
+                "last sync, the log of its connections, the maps of your own copied to it and "
+                "the copies of its diagnostic files. Its next sync with this program will be a "
+                "first sync again."))
         if kept.pending:
             lost = str(forget.PendingFiles(kept.pending))
             print(lost if args.discard_pending else f"{lost} {anyway}")

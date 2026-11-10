@@ -410,10 +410,10 @@ choose under Free Up Space.
   device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), or
   no problems found.
 - **Storage:** the space of each kind of file, counted when the device was connected (and again
-  after files were removed under Free Up Space), the largest first (a kind the device holds none of is left out) and the free space last; the
-  kinds with a page of their own lead to it.
-- **Crashes and Updates:** each crash once, from the device's error logs, its boot log and the
-  copies on this computer, with its details inside; the software updates, from the log of the
+  after files were removed under Free Up Space), the largest first (a kind the device holds
+  none of is left out) and the free space last; the kinds with a page of their own lead to it.
+- **Crashes and Updates:** each crash once, from the device's error logs, its boot log, the
+  copies on this computer and the log of its connections, with its details inside; the software updates, from the log of the
   device's connections (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
   saw the device.
 - **Free Up Space:** the files the device no longer needs, with their size, each removed only
@@ -425,11 +425,18 @@ choose under Free Up Space.
   never removed. The same list from the command line: `openexpress diagnostics --free-space`, a
   dry run until `--apply`.
 - **Diagnostic Files** and **Report a Problem:** the copy of the diagnostic files (the same
-  switch as in Preferences), Copy Crash Logs and Copy Memory Dumps, and the report.
+  switch as in Preferences), the rows **Crash Logs** and **Memory Dumps**, each with **Copy**,
+  and the report.
 
 What could not be read is said so, never shown as none. A device that keeps no error logs or
 memory dumps (a bike sensor, a USB drive) gets a page with its storage only. The device page
 leads there from its rows **Device Storage** and **Device Status**.
+
+A remembered device that is not connected has the row **Device Status** under **Tools** of its
+view, when this computer has records of it: the same page from those records only, as of its
+last connection (said in a banner on top): its storage then, its crashes and updates, its
+copies and its memory dumps as that connection counted them. What needs the device (Free Up
+Space, copying its crash logs and memory dumps, the report) is left out until it is connected.
 
 ## Sync details
 

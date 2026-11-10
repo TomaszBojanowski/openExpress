@@ -102,6 +102,52 @@ def test_the_first_connection_is_read_from_the_devices_remembered(monkeypatch):
     assert [e.kind for e in status.read(session(True)).events] == ["update"]
 
 
+def write_log(unit: int, lines: list[dict]) -> None:
+    """The device log of a made-up device, as the program writes it."""
+    import json
+
+    from openexpress import history, paths
+
+    paths.write_private(history.path(unit), "".join(json.dumps(item) + "\n" for item in lines))
+
+
+KEPT_UNIT = 3_000_000_123
+
+
+def test_the_facts_of_a_device_not_connected_come_from_its_records(clock):
+    """The device log's last line (storage, dumps, whether the error logs were read), its
+    crashes, the updates and the first connection; the copies; nothing asked of a device.
+    Without records: none."""
+    from openexpress import known_devices
+
+    assert status.read_kept(KEPT_UNIT) is None
+    known_devices.remember(KEPT_UNIT, "Made-up watch", "006-B0000-00", "21.05", "mtp",
+                           now=FIRST_SEEN)
+    crash_at = (NOW - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+    write_log(KEPT_UNIT, [line(150, "21.05"), line(1, "21.18", crash={
+        "kind": "RTL Trap", "at": crash_at, "error": "0x003", "pc": "0x10000abc",
+        "screen": "2301"})])
+    made = status.read_kept(KEPT_UNIT)
+    assert (made.connected, made.free, made.capacity, made.errors_known) == (
+        False, 12_400 * MB, 31_100 * MB, True)
+    assert made.categories == CATEGORIES and made.counted_at == NOW - timedelta(days=1)
+    assert made.dumps_at_last == (2, 18_300_000) and made.dumps is None
+    assert [(c.error, c.sources) for c in made.crashes] == [("0x003", {"device log"})]
+    assert [e.kind for e in made.events] == ["update", "crash", "first"]
+    assert made.not_installed == [] and made.has_diagnostics
+
+
+def test_what_the_records_do_not_tell_is_not_known(clock):
+    """A line without the space, the dumps or the error logs: not known, never none."""
+    write_log(KEPT_UNIT, [{"v": 1, "time": (NOW - timedelta(days=1)).astimezone().isoformat(),
+                           "conn": "made-up", "via": "mtp", "software": "21.18",
+                           "categories": {}}])
+    made = status.read_kept(KEPT_UNIT)
+    assert (made.free, made.capacity, made.dumps_at_last, made.errors_known) == (
+        None, None, None, False)
+    assert made.categories == {} and made.crashes == []
+
+
 def test_the_events_are_the_crashes_the_updates_and_the_first_connection():
     made = facts()
     kinds = [(e.kind, e.previous, e.software, e.same_before) for e in made.events]
@@ -406,7 +452,10 @@ def test_free_up_space_offers_a_button_for_each_file_it_may_remove(clock):
     # The size in the subtitle: the end of the row is the button's, as the mockup has it.
     assert older.get_subtitle() == ("2 files; the newest dump is not counted\u00a0· "
                                     "18.0\u00a0MB")
-    assert button_of(older).get_label() == "Copy and Remove"
+    # Short, so that a narrow window leaves the subtitle room; its question says Copy and
+    # Remove, and so do its tooltip and its name for screen readers.
+    assert button_of(older).get_label() == "Remove"
+    assert button_of(older).get_tooltip_text() == "Copy and Remove"
     assert button_of(older).has_css_class("destructive-action")
     assert "18.0\u00a0MB" not in labels(older)
     # An update file: its name and version the title, what became of it the subtitle.
@@ -760,6 +809,44 @@ def test_what_the_page_shows_is_said_in_the_log(clock, caplog, changes, said):
 
 
 @pytest.mark.needs_display
+def test_the_page_of_a_device_not_connected_has_nothing_that_needs_it(clock):
+    """From the records: no Free Up Space, no copy of crash logs or dumps, no report; the dumps
+    as the last connection counted them; the kinds of file lead nowhere."""
+    from fakes import descendants
+    from gi.repository import Gtk
+
+    made = facts(connected=False, dumps=None, dumps_at_last=(6, 54 * MB), hidden_logs=True,
+                 not_installed=[made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD")])
+    _win, section = page(made)
+    assert [g.get_title() for g in section.groups] == [
+        "", "Storage", "Crashes and Updates", "Diagnostic Files"]
+    shown = {b.get_label() for b in descendants(section.stack) if isinstance(b, Gtk.Button)}
+    assert not shown & {"Copy and Remove", "Remove", "Copy", "Copy Crash Logs",
+                        "Copy Memory Dumps", "Report…"}
+    assert titled(section, "Memory Dumps").get_subtitle() == (
+        "6 dumps\u00a0· 54.0\u00a0MB\u00a0· at the last connection")
+    assert titled(section, "Category Details").get_subtitle() == (
+        "Counted at the last connection, 10 min ago")
+    assert not titled(section, "Maps").get_activatable()
+
+
+@pytest.mark.needs_display
+def test_the_records_counted_again_after_a_removal_say_so(clock):
+    """Not connected, from a device log whose line was put right after a removal: the subtitle
+    tells that count, not the connection's."""
+    _win, section = page(facts(connected=False, recounted=True, dumps=None,
+                               dumps_at_last=(1, 9 * MB)))
+    assert titled(section, "Category Details").get_subtitle() == (
+        "Counted again after a removal, 10 min ago")
+
+
+@pytest.mark.needs_display
+def test_the_dumps_of_a_device_not_connected_not_counted_are_not_known(clock):
+    _win, section = page(facts(connected=False, dumps=None, dumps_at_last=None))
+    assert titled(section, "Memory Dumps").get_subtitle() == "Not known"
+
+
+@pytest.mark.needs_display
 def test_a_device_without_diagnostic_data_has_the_empty_page(clock):
     _win, section = page(facts(has_diagnostics=False, crashes=[], events=[], dumps=[],
                                hidden_logs=False, copies=(0, 0, None)))
@@ -791,3 +878,62 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
                                                      "3 Crashes in the Last 30 Days")
     row.emit("activated")
     assert chosen == ["status"]
+
+
+# --- a device not connected: its view leads to the page from the records ----------------------
+
+
+def crash_line(days_ago_crash: float, days: float = 1) -> dict:
+    """A line of the device log whose error logs held a crash `days_ago_crash` days back."""
+    at = (NOW - timedelta(days=days_ago_crash)).strftime("%Y-%m-%d %H:%M:%S")
+    return line(days, "21.18", crash={"kind": "RTL Trap", "at": at, "error": "0x003",
+                                      "pc": "0x10000abc", "screen": "2301"})
+
+
+@pytest.mark.needs_display
+def test_the_view_of_a_device_not_connected_leads_to_its_status_from_the_records(clock):
+    """A row Device Status under Tools, its subtitle the summary of the records and when they
+    are from; it opens the page, with a banner that says so."""
+    from fakes import descendants, remembered_device, remembered_window
+    from gi.repository import Adw
+
+    known = remembered_device()
+    write_log(known.unit_id, [crash_line(2)])
+    win = remembered_window()
+    win._show_remembered(known)
+    row = win.remembered.status_row
+    assert row.get_visible() and row.get_activatable()
+    assert row.get_subtitle() == "1 Crash in the Last 30 Days\u00a0· as of 2026-10-20 12:00"
+    row.emit("activated")
+    shown = win.pushed[-1]
+    assert shown.get_tag() == "kept-status" and win.kept_status.page is shown
+    (banner,) = [w for w in descendants(shown) if isinstance(w, Adw.Banner)]
+    assert banner.get_title() == ("Device not connected\u00a0– as of 2026-10-20 12:00; connect "
+                                  "it to free up space or copy its logs")
+
+
+@pytest.mark.needs_display
+def test_a_device_without_records_has_no_status_row(clock):
+    from fakes import remembered_device, remembered_window
+
+    win = remembered_window()
+    win._show_remembered(remembered_device())
+    assert not win.remembered.status_row.get_visible()
+
+
+def test_the_status_of_a_device_not_connected_counts_as_its_view_for_navigation():
+    """Plugged in while its page is shown, the device's view takes its place as from the
+    remembered view (navigation): the page is not the device view."""
+    from fakes import window
+
+    from openexpress.gui.detection import visible_view
+    from openexpress.gui.navigation import Page
+
+    kept = object()
+    win = window(start=types.SimpleNamespace(page=object()),
+                 remembered=types.SimpleNamespace(page=object()),
+                 navigation=types.SimpleNamespace(get_visible_page=lambda: kept),
+                 _remembered_unit=1234567890, _remembered_from_account=False)
+    win.kept_status = types.SimpleNamespace(page=kept)
+    view = visible_view(win)
+    assert (view.page, view.shown_unit_id) == (Page.REMEMBERED, 1234567890)

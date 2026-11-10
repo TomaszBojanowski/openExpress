@@ -2,18 +2,22 @@
 space), its storage by kind of file, its crashes and software updates, the files it no longer
 needs, its diagnostic files and the report. Its facts are read in the background
 (status.read), nothing is asked of the device on the window's thread; the only writes are the
-removals of Free Up Space, each asked first (freeing.py).
+removals of Free Up Space, each asked first (freeing.py). For a remembered device not connected,
+the same page from the records of this computer (status.read_kept), led to by a row of its view,
+without what needs the device.
 
 Has: status_facts (the facts shown), status_show_all (every crash and update shown, after Show
 All), status_history and status_history_rows (the group of the crashes and updates and its rows,
 drawn again when the window folds or unfolds: Show All beside the group's description, or as its
-last row on a narrow window).
+last row on a narrow window), kept_status (the page of a device not connected, from its
+records: KeptStatus).
 """
 
 from __future__ import annotations
 
 import logging
 import posixpath
+from dataclasses import dataclass, field
 from datetime import datetime
 
 import gi
@@ -25,6 +29,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 from openexpress import applog, diagnostics, freeing, history, status  # noqa: E402
 from openexpress.gui import words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
+    Section,
     copy_crash_logs,
     copy_dumps,
     device_error_details,
@@ -34,7 +39,15 @@ from openexpress.gui.preferences import diagnostics_switch  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.updates_page import ARROW  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm, inform  # noqa: E402
-from openexpress.i18n import _, caption, human_size, ngettext, pgettext, relative_time  # noqa: E402
+from openexpress.i18n import (  # noqa: E402
+    _,
+    caption,
+    full_time,
+    human_size,
+    ngettext,
+    pgettext,
+    relative_time,
+)
 from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -84,26 +97,37 @@ class StatusPage:
     def show_status(self, facts: status.Facts) -> str | None:
         """The page built from `facts`; "info" for a device without diagnostic data (its
         storage under a status page), else its groups."""
-        self.status_facts = facts
-        self.status_show_all = False
-        self.status_history, self.status_history_rows = None, []
-        sec = self.sections["status"]
-        now = datetime.now()
-        _log_shown(facts, now)
-        if not facts.has_diagnostics:
-            _empty_page(sec, facts)
-            return "info"
-        _summary(sec, facts, now)
-        _storage(self, sec, facts, now)
-        # TRANSLATORS: group of the page Device Status
-        self.status_history = sec.group(_("Crashes and Updates"),
-                                        _("Crashes that restarted the device, and its software "
-                                          "updates"))
-        render_history(self)
-        _free_up_space(self, sec, facts)
-        _diagnostic_files(self, sec, facts, now)
-        _report(self, sec)
-        return None
+        return _build(self, self.sections["status"], facts, self)
+
+
+def _build(win, sec, facts: status.Facts, view, unit: int | None = None) -> str | None:
+    """The page of `facts` in `sec`: that of the open device (`view` the window), or of a
+    device not connected, from its records (facts.connected false; `view` its holder,
+    win.kept_status): then what needs the device is left out (Free Up Space, the copies of its
+    crash logs and dumps, the report). `view` holds the page's crashes and updates and their
+    rows (render_history). `unit`: the device whose copies Open Folder shows (the open one's
+    when None). "info" for a device without diagnostic data."""
+    view.status_facts = facts
+    view.status_show_all = False
+    view.status_history, view.status_history_rows = None, []
+    now = datetime.now()
+    _log_shown(facts, now)
+    if not facts.has_diagnostics:
+        _empty_page(sec, facts)
+        return "info"
+    _summary(sec, facts, now)
+    _storage(win, sec, facts, now)
+    # TRANSLATORS: group of the page Device Status
+    view.status_history = sec.group(_("Crashes and Updates"),
+                                    _("Crashes that restarted the device, and its software "
+                                      "updates"))
+    render_history(win, view)
+    if facts.connected:
+        _free_up_space(win, sec, facts)
+    _diagnostic_files(win, sec, facts, now, unit)
+    if facts.connected:
+        _report(win, sec)
+    return None
 
 
 def _log_shown(facts: status.Facts, now: datetime) -> None:
@@ -120,8 +144,9 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
     waiting = len(facts.not_installed) - len(files)
     checked = (f"not checked ({facts.updates_why})" if facts.updates_why is not None
                else "checked")
-    log.info("device status: %s%s; crashes in the last 30 days: %d; %s free of %s; to free: %s, "
-             "%d update files%s; update files %s", look, why,
+    log.info("device status%s: %s%s; crashes in the last 30 days: %d; %s free of %s; to free: "
+             "%s, %d update files%s; update files %s",
+             "" if facts.connected else " (not connected, from the records)", look, why,
              len(status.recent(facts.crashes, now)), applog.size(facts.free),
              applog.size(facts.capacity), dumps, len(files),
              f", {waiting} waiting to be installed" if waiting else "", checked)
@@ -267,6 +292,10 @@ def _counted_text(facts: status.Facts, now: datetime) -> str:
     if facts.counted_at is None:
         return ""
     when = relative_time(facts.counted_at, now)
+    if not facts.connected and not facts.recounted:
+        # TRANSLATORS: subtitle of "Category Details" of a device not connected, from the
+        # records: when its last connection counted them, e.g. "… connection, 2 days ago"
+        return _("Counted at the last connection, {when}").format(when=when)
     if facts.recounted:
         # TRANSLATORS: subtitle of "Category Details" after files were removed from the device
         # (Free Up Space), e.g. "… removal, just now"
@@ -291,7 +320,7 @@ def _storage(win, sec, facts: status.Facts, now: datetime) -> None:
     for kind, size in kinds:
         row = Adw.ActionRow(title=names[kind], subtitle=human_size(size))
         row.add_prefix(_dot(kind))
-        if kind in PAGES and kind in win.sections:
+        if facts.connected and kind in PAGES and kind in win.sections:
             row.set_activatable(True)
             row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
             row.connect("activated", lambda _r, k=kind: win.select_section(k))
@@ -349,18 +378,20 @@ def _event_row(event: status.Event, now: datetime) -> Adw.PreferencesRow:
     return row
 
 
-def render_history(win) -> None:
+def render_history(win, view=None) -> None:
     """The crashes and updates, newest first: the five newest, or all after Show All; Show All
     beside the group's description, or its last row on a narrow window (where the description
-    leaves it no room). Drawn again when the window folds or unfolds."""
-    g, facts = win.status_history, win.status_facts
+    leaves it no room). Drawn again when the window folds or unfolds. `view`: what holds the
+    page's group and rows (_build): the window's page by default."""
+    view = win if view is None else view
+    g, facts = view.status_history, view.status_facts
     if g is None or facts is None:
         return
-    for row in win.status_history_rows:
+    for row in view.status_history_rows:
         g.remove(row)
-    win.status_history_rows = []
+    view.status_history_rows = []
     now = datetime.now()
-    shown = facts.events if win.status_show_all else facts.events[:status.SHOWN_EVENTS]
+    shown = facts.events if view.status_show_all else facts.events[:status.SHOWN_EVENTS]
     more = len(shown) < len(facts.events)
     added = [_event_row(event, now) for event in shown]
     if not facts.errors_known:
@@ -376,27 +407,32 @@ def render_history(win) -> None:
         # TRANSLATORS: shows every crash and update on the page Device Status
         last = Adw.ActionRow(title=_("Show All"), activatable=True)
         last.add_suffix(Gtk.Image(icon_name="go-down-symbolic"))
-        last.connect("activated", lambda _r: show_all(win))
+        last.connect("activated", lambda _r: show_all(win, view))
         added.append(last)
     for row in added:
         g.add(row)
-    win.status_history_rows = added
+    view.status_history_rows = added
     if more and not narrow:
         button = Gtk.Button(label=_("Show All"), valign=Gtk.Align.CENTER, css_classes=["flat"])
-        button.connect("clicked", lambda _b: show_all(win))
+        button.connect("clicked", lambda _b: show_all(win, view))
         g.set_header_suffix(button)
     else:
         g.set_header_suffix(None)
 
 
-def show_all(win) -> None:
-    win.status_show_all = True
-    render_history(win)
+def show_all(win, view=None) -> None:
+    view = win if view is None else view
+    view.status_show_all = True
+    render_history(win, view)
 
 
 def on_folded(win) -> None:
-    """The window folded or unfolded: Show All in its place."""
+    """The window folded or unfolded: Show All in its place, on the page of the open device and
+    on that of a device not connected."""
     render_history(win)
+    kept = win.kept_status
+    if kept is not None and kept.status_history is not None:
+        render_history(win, kept)
 
 
 # --- freeing space ----------------------------------------------------------------------------
@@ -425,9 +461,14 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
             "{count} file; the newest dump is not counted",
             "{count} files; the newest dump is not counted", len(older)).format(count=len(older)),
             human_size(sum(size for _p, size, _t in older))))
-        row.add_suffix(win._button(_dumps_answer(older),
-                                   lambda button: confirm_dumps(win, older, button),
-                                   style="destructive-action", with_button=True))
+        # Remove on the row (its question names the copy first): Copy and Remove would leave
+        # its subtitle no room in a narrow window. The full name in its tooltip and for screen
+        # readers.
+        button = win._button(_("Remove"), lambda button: confirm_dumps(win, older, button),
+                             style="destructive-action", with_button=True)
+        button.set_tooltip_text(_dumps_answer(older))
+        button.update_property([Gtk.AccessibleProperty.LABEL], [_dumps_answer(older)])
+        row.add_suffix(button)
         g.add(row)
     for u in facts.not_installed:
         # TRANSLATORS: the title of the row of an update file in "Free Up Space": the update's
@@ -611,11 +652,12 @@ def _copies_text(facts: status.Facts, now: datetime) -> str:
     return caption(*parts)
 
 
-def open_copies(win) -> None:
+def open_copies(win, unit: int | None = None) -> None:
     """Open Folder: the folder of the device's copies in the file manager (its name is the
-    device's unit ID: never shown, nor written to the log)."""
-    s = win.session
-    unit = getattr(getattr(s, "device", None), "unit_id", None)
+    device's unit ID: never shown, nor written to the log); the open device's when `unit` is
+    None."""
+    if unit is None:
+        unit = getattr(getattr(win.session, "device", None), "unit_id", None)
     if not unit:
         return
     log.info("status page: the folder of the copies opened")
@@ -623,7 +665,8 @@ def open_copies(win) -> None:
         win, None, None, None)
 
 
-def _diagnostic_files(win, sec, facts: status.Facts, now: datetime) -> None:
+def _diagnostic_files(win, sec, facts: status.Facts, now: datetime,
+                      unit: int | None = None) -> None:
     # TRANSLATORS: group of the page Device Status
     g = sec.group(_("Diagnostic Files"))
     g.add(diagnostics_switch(win))
@@ -631,15 +674,26 @@ def _diagnostic_files(win, sec, facts: status.Facts, now: datetime) -> None:
     copies = Adw.ActionRow(title=_("Copies on This Computer"),
                            subtitle=_copies_text(facts, now))
     if facts.copies[0]:
-        # TRANSLATORS: button that opens the folder of the copies in the file manager
-        copies.add_suffix(win._button(_("Open Folder"), lambda: open_copies(win)))
+        # Open on the row, Open Folder in its tooltip and for screen readers: the longer words
+        # would leave its subtitle no room in a narrow window.
+        # TRANSLATORS: button of "Copies on This Computer": opens the folder of the copies in
+        # the file manager; short, for a narrow window
+        button = win._button(pgettext("open the folder of the copies", "Open"),
+                             lambda: open_copies(win, unit))
+        # TRANSLATORS: the full name of the button that opens the folder of the copies
+        button.set_tooltip_text(_("Open Folder"))
+        button.update_property([Gtk.AccessibleProperty.LABEL], [_("Open Folder")])
+        copies.add_suffix(button)
     g.add(copies)
+    if not facts.connected:
+        g.add(Adw.ActionRow(title=_("Memory Dumps"), subtitle=_dumps_at_last(facts)))
+        return
     if facts.hidden_logs:
         row = Adw.ActionRow(title=_("Crash Logs"), subtitle=_(
             "Hidden from the file manager: while they are copied, the device disappears from it "
             "for a moment"))
-        row.add_suffix(win._button(_("Copy Crash Logs"),
-                                   lambda button: copy_crash_logs(win, button), with_button=True))
+        row.add_suffix(_copy_button(win, _("Copy Crash Logs"),
+                                    lambda button: copy_crash_logs(win, button)))
         g.add(row)
     dumps = facts.dumps
     if dumps is None:
@@ -653,9 +707,34 @@ def _diagnostic_files(win, sec, facts: status.Facts, now: datetime) -> None:
             human_size(sum(size for _p, size, _t in dumps)), _("encrypted"))
     row = Adw.ActionRow(title=_("Memory Dumps"), subtitle=subtitle)
     if dumps:
-        row.add_suffix(win._button(_("Copy Memory Dumps"),
-                                   lambda button: copy_dumps(win, button), with_button=True))
+        row.add_suffix(_copy_button(win, _("Copy Memory Dumps"),
+                                    lambda button: copy_dumps(win, button)))
     g.add(row)
+
+
+def _copy_button(win, name: str, cb) -> Gtk.Button:
+    """A button of Diagnostic Files that says only "Copy", so that its row keeps room for its
+    subtitle in a narrow window; its full `name` in its tooltip and for screen readers."""
+    # TRANSLATORS: a button of the rows "Crash Logs" and "Memory Dumps" on the page Device
+    # Status: copies them to this computer (the row says what); short, for a narrow window
+    button = win._button(pgettext("copy diagnostic files", "Copy"), cb, with_button=True)
+    button.set_tooltip_text(name)
+    button.update_property([Gtk.AccessibleProperty.LABEL], [name])
+    return button
+
+
+def _dumps_at_last(facts: status.Facts) -> str:
+    """The memory dumps of a device not connected, as its last connection counted them."""
+    if facts.dumps_at_last is None:
+        return _("Not known")
+    count, size = facts.dumps_at_last
+    # TRANSLATORS: in the subtitle of "Memory Dumps" of a device not connected: the dumps were
+    # counted at its last connection, e.g. "6 dumps · 54.0 MB · at the last connection"
+    when = _("at the last connection")
+    if not count:
+        return caption(pgettext("dumps", "None"), when)
+    return caption(ngettext("{count} dump", "{count} dumps", count).format(count=count),
+                   human_size(size), when)
 
 
 def _report(win, sec) -> None:
@@ -667,6 +746,80 @@ def _report(win, sec) -> None:
     # TRANSLATORS: button that opens the report of the device (a dialog with more to do)
     row.add_suffix(win._button(_("Report…"), lambda: win.show_report()))
     g.add(row)
+
+
+# --- a device not connected: the page from its records ----------------------------------------
+
+
+@dataclass
+class KeptStatus:
+    """The page Device Status of a device not connected (win.kept_status): its unit ID, the
+    facts its records give (status.read_kept), its page once shown, and what render_history
+    keeps of the page (as the window keeps it of the open device's)."""
+
+    unit: int
+    facts: status.Facts
+    page: Adw.NavigationPage | None = None
+    status_facts: status.Facts | None = None
+    status_show_all: bool = False
+    status_history: Adw.PreferencesGroup | None = None
+    status_history_rows: list = field(default_factory=list)
+
+
+def _as_of(facts: status.Facts) -> str:
+    """When the records of a device not connected are from: its last connection."""
+    if facts.counted_at is None:
+        return ""
+    # TRANSLATORS: in the subtitle of the row "Device Status" of a device not connected: when
+    # its records are from (its last connection), e.g. "as of 2026-11-09 21:52"
+    return _("as of {when}").format(when=full_time(facts.counted_at))
+
+
+def kept_status_row(win, unit_id: int) -> None:
+    """The row Device Status of the view of a device not connected: its records read in the
+    background (status.read_kept), then the row shown with their summary and when they are
+    from; hidden without records."""
+    win.kept_status = None
+    win.remembered.show_status_row(None)
+
+    def done(facts):
+        entry = win._remembered_entry
+        if facts is None or getattr(entry, "unit_id", None) != unit_id:
+            return  # no records, or another device shown meanwhile
+        win.kept_status = KeptStatus(unit_id, facts)
+        title = words.status_summary(facts.crashes, facts.errors_known, facts.free,
+                                     facts.capacity, datetime.now())[1]
+        win.remembered.show_status_row(caption(title, _as_of(facts)))
+
+    win.in_background(lambda: status.read_kept(unit_id), done)
+
+
+def show_kept_status(win) -> None:
+    """The page Device Status of the device not connected (its row), above its view: built
+    from its records, with a banner that says so; what needs the device left out (_build)."""
+    kept = win.kept_status
+    if kept is None:
+        return
+    facts = kept.facts
+    sec = Section("kept-status", pgettext("tab", "Device Status"), PAGE_ICON, "")
+    sec.show(_build(win, sec, facts, kept, unit=kept.unit) or "content")
+    if facts.counted_at is not None:
+        # TRANSLATORS: banner on top of the page Device Status of a device not connected: what
+        # it shows is from its records, as of its last connection
+        title = _("Device not connected\u00a0– as of {when}; connect it to free up space or "
+                  "copy its logs").format(when=full_time(facts.counted_at))
+    else:
+        # TRANSLATORS: banner on top of the page Device Status of a device not connected whose
+        # last connection is not known
+        title = _("Device not connected\u00a0– connect it to free up space or copy its logs")
+    sec.banner.set_title(title)
+    sec.banner.set_revealed(True)
+    view = Adw.ToolbarView(content=sec.stack)
+    view.add_top_bar(Adw.HeaderBar())
+    kept.page = Adw.NavigationPage(title=pgettext("tab", "Device Status"), tag="kept-status",
+                                   child=view)
+    log.info("status page: shown from the records of a device not connected")
+    win.navigation.push(kept.page)
 
 
 # --- a device without diagnostic data ---------------------------------------------------------
