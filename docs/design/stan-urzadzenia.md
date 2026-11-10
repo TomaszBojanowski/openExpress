@@ -114,14 +114,20 @@ not used: a device's crash is a fact to know, not an alarm.
   the files listed: the device's hidden files and what its file system keeps), and the free part.
   Which folder belongs where comes from the data types the device declares, as the sync and the
   pages already sort them.
-- **The bar:** one `Gtk.DrawingArea`, the categories in GNOME's palette (the same in light and
-  dark), the free part as the track. No category is red: in libadwaita red means an error, so Logs
+- **The bar:** one `Gtk.DrawingArea`, the categories from the largest to the smallest in GNOME's
+  palette (the same in light and dark), the free part last, as the track. No category is red: in libadwaita red means an error, so Logs
   and Memory Dumps are slate and System light grey.
-- **The legend:** two columns on a wide window, a single one on a narrow one; in both each name
-  with its size at the end of its line, so a name that wraps leaves no uneven gaps. The free part
-  as a ring.
-- **Category Details** (a row that expands): each category with its count and size; those with a
-  page (Maps, Activities, Music and Audio, Apps, Courses and Locations) lead to it.
+- **The legend:** in the bar's order, the free part last, as a ring; each name with its size at
+  the end of its line. Two columns only where both names fit on one line (the flow box lays them
+  out at their natural width): at the page's width the longest names (Updates and Satellite Data,
+  Logs and Memory Dumps) do not, so it is one column. A name wraps only in a window too narrow
+  for it, and only its line is the taller for it: every line keeps its natural height, with no
+  room left under the last one.
+- **A category of 0 B** is left out of the legend and of Category Details (a USB drive holds
+  none of most); the free part stays always, at 0 B too.
+- **Category Details** (a row that expands): each category with its count and size, in the bar's
+  order; those with a page (Maps, Activities, Music and Audio, Apps, Courses and Locations) lead
+  to it.
 
 ### D7. Crashes
 
@@ -143,8 +149,10 @@ not used: a device's crash is a fact to know, not an alarm.
 | **A (decided)** | `devices/<Unit ID>/history.jsonl` (0600), one line at each connection, written by the window and the background service, once a connection (as the diagnostics' reading): time, connection kind (MTP, drive), software version, capacity, free space, category sizes, number and size of memory dumps, the newest crash (kind, time, error, program counter, screens). No file names, no Unit ID, no serial number. Lines older than two years are dropped. Kept whatever Keep Diagnostic Files says: it holds only counts, like `devices.json`. Forget Device deletes it with the rest of the device's folder |
 | B | the same, but only with Keep Diagnostic Files on | less history for most users (the switch is off by default) |
 
-Crashes and Updates show from it: crashes, software updates (a new version between two lines) and
-the first connection. Storage over time is kept, not shown (a later chart, if wanted).
+Crashes and Updates show from it: crashes and software updates (a new version between two lines).
+The first connection is when this computer first saw the device (`first_seen` in `devices.json`),
+not the log's first line, which may come long after; its version only when the log began with that
+connection; without `first_seen` (a test drive) no such row. Storage over time is kept, not shown (a later chart, if wanted).
 
 Step a adds one sentence to "What is kept of each device" in `docs/privacy.md`: "a short log of
 each connection: the software version, the storage by category, the number and size of memory dumps

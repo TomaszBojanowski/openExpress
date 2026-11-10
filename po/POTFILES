@@ -39,6 +39,7 @@ openexpress/gui/preferences.py
 openexpress/gui/report_dialog.py
 openexpress/gui/start.py
 openexpress/gui/start_window.py
+openexpress/gui/status_page.py
 openexpress/gui/updates_page.py
 openexpress/gui/window_tasks.py
 openexpress/gui/words.py

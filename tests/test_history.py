@@ -241,7 +241,7 @@ def test_the_window_writes_it_with_what_it_read_of_the_errors(made_up, clock, in
     session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
                                     diagnostics_reading=None)
     background = []
-    in_the_window("device_error_row", lambda win, group=None: None)
+    in_the_window("status_row", lambda win, group=None: None)
     win = stand_in(session=session, in_background=lambda fn, done, failed=None:
                    background.append((fn, done)))
     read_diagnostics(win)
@@ -462,7 +462,7 @@ def test_the_window_passes_on_what_it_could_not_read(made_up, clock, in_the_wind
     session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
                                     diagnostics_reading=None)
     background = []
-    in_the_window("device_error_row", lambda win, group=None: None)
+    in_the_window("status_row", lambda win, group=None: None)
     win = stand_in(session=session, in_background=lambda fn, done, failed=None:
                    background.append((fn, done)))
     read_diagnostics(win)

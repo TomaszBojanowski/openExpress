@@ -23,6 +23,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import (  # noqa: E402
+    crashes,
     devicelist,
     diagnostics,
     history,
@@ -79,7 +80,9 @@ from openexpress.gui.words import (  # noqa: E402
     no_sync_record,
     primary_wearable_text,
     software_text,
+    space_text,
     stalled_text,
+    status_summary,
     update_state_text,
     with_activities_to_upload,
 )
@@ -204,12 +207,6 @@ def show_backups(win) -> None:
     row.set_tooltip_text(str(paths.default_backup_dir()))
 
 
-def device_error_text(entry) -> str:
-    """The subtitle of "Device Error Log": the kind of the error, as the device names it, and
-    when it logged it."""
-    return caption(entry.kind, i18n.full_time(entry.at)) if entry.at else entry.kind
-
-
 def device_error_details(entry) -> str:
     """What else the device logged with the error (its number, where, on which screen)."""
     parts = []
@@ -225,55 +222,44 @@ def device_error_details(entry) -> str:
     return caption(*parts)
 
 
-def device_error_row(win, group=None) -> None:
-    """The row "Device Error Log" under "Backup": only when the device logged an "RTL Trap"
-    in the last 30 days (read when it was opened, the copy on or off).
-    Inside, where they apply: Copy Crash Logs (a device that hides its event logs) and Copy
-    Memory Dumps. Drawn again in its place when that changes."""
-    old = win.device_error_row
-    group = group or win.device_error_group
-    win.device_error_row, win.device_error_group = None, group
-    if old is not None and group is not None:
-        group.remove(old)
+def status_row(win, group=None) -> None:
+    """The row "Device Status" under "Backup": the title of the summary of the page Device
+    Status (words.status_summary), which it leads to; "Reading…" until the window has read the
+    device's error logs, "Not known" when that failed. Drawn again in its place, or in `group`
+    when the device page is built anew (Refresh, the next device opened)."""
+    old, old_group = win.status_row, win.status_row_group
+    group = group or old_group
+    win.status_row, win.status_row_group = None, group
+    if old is not None:
+        old_group.remove(old)  # from the group it went into: a new page's group never had it
+    if group is None:
+        return
     s = win.session
     found = getattr(s, "diagnostics", None)
-    crash = getattr(found, "crash", None)
-    if crash is None or group is None:
-        return
-    rows = []
-    details = device_error_details(crash)
-    if details:
-        # TRANSLATORS: title of the row with what the device wrote in its error log (error
-        # number, address, screen)
-        rows.append(Adw.ActionRow(title=_("Error Details"),
-                                  subtitle=GLib.markup_escape_text(details)))
-    if found.hidden_logs:
-        r = Adw.ActionRow(title=_("Crash Logs"), subtitle=_(
-            "Hidden from the file manager: while they are copied, the device disappears from it "
-            "for a moment"))
-        r.add_suffix(win._button(_("Copy Crash Logs"),
-                                 lambda button: copy_crash_logs(win, button), with_button=True))
-        rows.append(r)
-    if found.dumps:
-        size = sum(n for _p, n in found.dumps)
-        r = Adw.ActionRow(title=_("Memory Dumps"), subtitle=caption(
-            # TRANSLATORS: subtitle of "Memory Dumps": how many memory dump files the device holds
-            ngettext("{count} dump", "{count} dumps", len(found.dumps)).format(
-                count=len(found.dumps)), human_size(size),
-            # TRANSLATORS: of the memory dumps of the device: only Garmin can read them
-            _("encrypted")))
-        r.add_suffix(win._button(_("Copy Memory Dumps"),
-                                 lambda button: copy_dumps(win, button), with_button=True))
-        rows.append(r)
-    subtitle = GLib.markup_escape_text(device_error_text(crash))
-    if rows:
-        row = Adw.ExpanderRow(title=_("Device Error Log"), subtitle=subtitle)
-        for r in rows:
-            row.add_row(r)
+    if found is not None:
+        free, capacity = getattr(s, "space", None) or (None, None)
+        subtitle = status_summary(getattr(s, "crash_history", None) or [], found.errors_known,
+                                  free, capacity, datetime.now())[1]
+    elif getattr(getattr(s, "diagnostics_reading", None), "is_set", lambda: False)():
+        subtitle = _("Not known")
     else:
-        row = Adw.ActionRow(title=_("Device Error Log"), subtitle=subtitle)
+        subtitle = space_text(None, reading=True)
+    row = Adw.ActionRow(title=pgettext("tab", "Device Status"),
+                        subtitle=GLib.markup_escape_text(subtitle), activatable=True)
+    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+    row.connect("activated", lambda *_a: win.select_section("status"))
     group.add(row)
-    win.device_error_row = row
+    win.status_row = row
+
+
+def status_changed(win) -> None:
+    """The row "Device Status" and, when it was shown, the page Device Status drawn again with
+    what changed (a copy made, the crash logs found absent)."""
+    status_row(win)
+    sections = getattr(win, "sections", None)
+    sec = sections.get("status") if isinstance(sections, dict) else None
+    if sec is not None and sec.loaded:
+        win.load_section("status", force=True)
 
 
 def device_name(s) -> str:
@@ -448,7 +434,8 @@ def account_picture_refused_text(status: int | None) -> str:
 def read_diagnostics(win) -> None:
     """Reads in the background what the open device logged as errors, and copies its
     diagnostic files when the copy is on (diagnostics.at_open: once per connection, never a
-    session of our own); leaves them in `session.diagnostics` and draws "Device Error Log".
+    session of our own); leaves them in `session.diagnostics`, the crashes from every source in
+    `session.crash_history` (crashes.history), and draws the row "Device Status".
     `session.diagnostics_reading` is set once done: tasks that write to the device wait for
     it (window_tasks.wait_for_the_diagnostics)."""
     s = win.session
@@ -462,18 +449,23 @@ def read_diagnostics(win) -> None:
             found = diagnostics.at_open(s.device, s.storage)
             # The line of this connection in the device log, with what was just read.
             history.note_connection(s.device, s.storage, found=found)
-            return found
+            return found, crashes.history(getattr(s.device, "unit_id", None),
+                                          found.entries if found.errors_known else None)
         finally:
             reading.set()  # also when it failed: the tasks go on
 
-    def done(found) -> None:
-        s.diagnostics = found
+    def done(result) -> None:
+        s.diagnostics, s.crash_history = result
         if win.session is s:
-            device_error_row(win)
+            status_row(win)
+
+    def failed(_error) -> None:
+        if win.session is s:
+            status_row(win)  # "Not known"
 
     # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
     # 4.5-5 s of an opening.
-    win.in_background(work, done)
+    win.in_background(work, done, failed)
 
 
 def copy_crash_logs(win, button=None) -> None:
@@ -491,11 +483,12 @@ def copy_crash_logs(win, button=None) -> None:
             return
         if copied.saved:
             win.toast(_("Crash logs copied to this computer"))
+            status_changed(win)  # the crashes of its boot log, the copies kept
             return
         win.toast(_("The device has no hidden crash logs"))
         if s.diagnostics is not None:
             s.diagnostics.hidden_logs = False
-        device_error_row(win)
+        status_changed(win)
 
     win.run_task(_("Copying the Crash Logs…"), work, done, button=button)
 
@@ -525,6 +518,7 @@ def copy_dumps(win, button=None) -> None:
                 len(copied.not_copied)).format(count=len(copied.not_copied),
                                                size=human_size(diagnostics.LIMIT)))
         win.toast(text)
+        status_changed(win)  # the copies kept
 
     win.run_task(_("Copying the Memory Dumps…"), work, done, button=button)
 
@@ -933,8 +927,9 @@ class DevicePage:
 
     def _load(self, key: str, title: str, work, show, device: bool = True,
               on_error=None) -> None:
-        """Common pattern: spinner in the section, work in a thread, then `show(result)`.
-        `on_error(e)` when the work failed for the device that is still open."""
+        """Common pattern: spinner in the section, work in a thread, then `show(result)`, which
+        may name what the section shows instead of its content ("info"). `on_error(e)` when
+        the work failed for the device that is still open."""
         sec = self.sections[key]
         sess = self.session
         source = self._retry_sources.pop(key, None)
@@ -952,7 +947,7 @@ class DevicePage:
             # Without the buttons of the page that was just cleared.
             self._action_buttons = still_in_window(self._action_buttons)
             try:
-                show(result)
+                shown = show(result)
             except Exception:  # noqa: BLE001 - said on the page, written to the log
                 # Not "loading" for good: the page says so, and is read again when it is
                 # chosen again (or with Try again).
@@ -964,7 +959,7 @@ class DevicePage:
                 sec.show_error(_(PAGE_NOT_SHOWN))
                 return
             sec.loaded = True
-            sec.show("content")
+            sec.show(shown or "content")
 
         def failed(e):
             if self.session is sess:
@@ -1032,13 +1027,15 @@ class DevicePage:
         # wrote to it): the page asks the device nothing.
         # TRANSLATORS: group on the device page: the device's own storage
         g = sec.group(_("Storage"))
-        self.storage_row = Adw.ActionRow(title=_("Device Storage"))
+        self.storage_row = Adw.ActionRow(title=_("Device Storage"), activatable=True)
+        self.storage_row.connect("activated", lambda *_a: self.select_section("status"))
         self.storage_bar = Gtk.LevelBar(min_value=0, max_value=1, valign=Gtk.Align.CENTER,
                                         width_request=120, visible=False)
         self.storage_bar.add_offset_value("low", 0.75)
         self.storage_bar.add_offset_value("high", 0.9)
         self.storage_bar.add_offset_value("full", 1.0)
         self.storage_row.add_suffix(self.storage_bar)
+        self.storage_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         g.add(self.storage_row)
         render_space(self)
         if getattr(s, "space", None) is None:
@@ -1148,7 +1145,7 @@ class DevicePage:
         # TRANSLATORS: button that creates a backup
         self.backup_row.add_suffix(self._button(_("Create"), self.backup))
         g.add(self.backup_row)
-        device_error_row(self, g)  # only when the device logged an error lately
+        status_row(self, g)  # leads to the page Device Status, with its summary
         # TRANSLATORS: row with the device's Garmin part number, a product code such as 006-B1234-00
         row = Adw.ActionRow(title=_("Part Number"), subtitle=d.part_number,
                             subtitle_selectable=True)

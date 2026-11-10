@@ -50,6 +50,9 @@ from openexpress.gui.preferences import KEYS, Preferences  # noqa: E402
 from openexpress.gui.report_dialog import ReportDialog  # noqa: E402
 from openexpress.gui.start import SMALL_DEVICE_ICON, RememberedPage, StartPage  # noqa: E402
 from openexpress.gui.start_window import StartView, StartWindow  # noqa: E402
+from openexpress.gui.status_page import PAGE_ICON as STATUS_ICON  # noqa: E402
+from openexpress.gui.status_page import StatusPage  # noqa: E402
+from openexpress.gui.status_page import on_folded as status_on_folded  # noqa: E402
 from openexpress.gui.updates_page import UpdatesPage  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     TaskRunner,
@@ -69,7 +72,7 @@ log = logging.getLogger(__name__)
 
 
 class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage, CoursesPage,
-                 MusicPage, AppsPage, UpdatesPage, ActivitiesPage, Preferences,
+                 MusicPage, AppsPage, UpdatesPage, ActivitiesPage, StatusPage, Preferences,
                  NetStatusPanel, ForgetDevice, ReportDialog, Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="openExpress")
@@ -106,6 +109,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             # TRANSLATORS: tab title
             Section("activities", pgettext("tab", "Activities"), ACTIVITIES_ICON,
                     _("Reading Activities…")),
+            # TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
+            Section("status", pgettext("tab", "Device Status"), STATUS_ICON,
+                    _("Reading the Device…")),
         )}
         for sec in self.sections.values():
             sec.retry.connect("clicked", lambda _b, k=sec.key: self.load_section(k, force=True))
@@ -263,7 +269,14 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # that grow as more are read (gui/activities_page.py).
         self.activities = self.activities_list = self.activities_more = None
         self.account_picture_offer = self.account_picture_row = None
-        self.device_error_group = self.device_error_row = None
+        # The row "Device Status" of the device page and its group (device_page.status_row);
+        # the page Device Status (gui/status_page.py): its facts, whether every crash and update
+        # is shown, the group of the crashes and updates and its rows.
+        self.status_row_group = self.status_row = None
+        self.status_facts = None
+        self.status_show_all = False
+        self.status_history = None
+        self.status_history_rows: list = []
         # The pictures of devices drawn and asked for (pictures.py).
         self._device_textures = self._pictures_asked = self._pictures_waiting = None
         # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device
@@ -508,6 +521,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             split.set_show_content(self._content_chosen)
         else:
             split.set_show_content(False)
+        status_on_folded(self)  # Show All of the page Device Status, in its place
 
     def _on_show_content(self, split, _pspec) -> None:
         """Folded, back from the page to the side panel (or a page chosen) is kept for the

@@ -159,6 +159,33 @@ label.oe-note.warning {
   color: @warning_color;
   background-color: alpha(@warning_bg_color, 0.22);
 }
+/* The page Device Status: its summary, the round icon in the colour of its state, and the
+   card of the storage. */
+box.oe-status-summary {
+  padding: 18px;
+}
+box.oe-status-storage {
+  padding: 16px;
+  /* Its own: under a status page (a device without diagnostic data) libadwaita spaces the
+     boxes wide. */
+  border-spacing: 12px;
+}
+image.oe-status-icon {
+  padding: 12px;
+  border-radius: 999px;
+}
+image.oe-status-icon.good {
+  color: @success_color;
+  background-color: alpha(@success_bg_color, 0.18);
+}
+image.oe-status-icon.warning {
+  color: @warning_color;
+  background-color: alpha(@warning_bg_color, 0.22);
+}
+image.oe-status-icon.unknown {
+  color: alpha(currentColor, 0.7);
+  background-color: alpha(currentColor, 0.1);
+}
 """
 
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 23:43+0100\n"
+"POT-Creation-Date: 2026-11-10 00:12+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -1013,8 +1013,8 @@ msgstr "Fehlerprotokolle auf dem Gerät:"
 #, python-brace-format
 msgid "{count} Assert entry, not shown (all with -v)"
 msgid_plural "{count} Assert entries, not shown (all with -v)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} Assert-Eintrag, nicht angezeigt (alle mit -v)"
+msgstr[1] "{count} Assert-Einträge, nicht angezeigt (alle mit -v)"
 
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
 #: openexpress/cli.py
@@ -1034,12 +1034,12 @@ msgstr ""
 msgid ""
 "Crashes that restarted the device (error logs, boot log, copies on this "
 "computer):"
-msgstr ""
+msgstr "Abstürze, nach denen das Gerät neu gestartet ist (Fehlerprotokolle, Startprotokoll, Kopien auf diesem Computer):"
 
 #. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
 #: openexpress/cli.py
 msgid "none found"
-msgstr ""
+msgstr "keine gefunden"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -1105,139 +1105,139 @@ msgstr "Das Gerät hat keine verborgenen Absturzprotokolle."
 
 #: openexpress/cli.py
 msgid "copy on this computer"
-msgstr ""
+msgstr "Kopie auf diesem Computer"
 
 #. TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
 #: openexpress/cli.py
 msgid "boot log"
-msgstr ""
+msgstr "Startprotokoll"
 
 #. TRANSLATORS: a kind of file in "Storage at the last connection: …" of `diagnostics`,
 #. lowercase, followed by its size
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "maps"
-msgstr ""
+msgstr "Karten"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "activities"
-msgstr ""
+msgstr "Aktivitäten"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "music and audio"
-msgstr ""
+msgstr "Musik und Audio"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "apps"
-msgstr ""
+msgstr "Apps"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "courses and locations"
-msgstr ""
+msgstr "Strecken und Positionen"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "updates and satellite data"
-msgstr ""
+msgstr "Updates und Satellitendaten"
 
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "logs and memory dumps"
-msgstr ""
+msgstr "Protokolle und Speicherabbilder"
 
 #. TRANSLATORS: the rest of the used space: the device's own files and what its file
 #. system keeps
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "system"
-msgstr ""
+msgstr "System"
 
 #: openexpress/cli.py
 msgid "Device log on this computer: no connection yet"
-msgstr ""
+msgstr "Geräteprotokoll auf diesem Computer: noch keine Verbindung"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Device log on this computer: {count} connection, the first on {day}"
 msgid_plural ""
 "Device log on this computer: {count} connections, the first on {day}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Geräteprotokoll auf diesem Computer: {count} Verbindung, die erste am {day}"
+msgstr[1] "Geräteprotokoll auf diesem Computer: {count} Verbindungen, die erste am {day}"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "and {count} earlier connection"
 msgid_plural "and {count} earlier connections"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "und {count} frühere Verbindung"
+msgstr[1] "und {count} frühere Verbindungen"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Storage at the last connection: {sizes}"
-msgstr ""
+msgstr "Speicher bei der letzten Verbindung: {sizes}"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "{count} damaged line skipped"
 msgid_plural "{count} damaged lines skipped"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} beschädigte Zeile übersprungen"
+msgstr[1] "{count} beschädigte Zeilen übersprungen"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
 #: openexpress/cli.py
 #, python-brace-format
 msgid "software {version}"
-msgstr ""
+msgstr "Software {version}"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
 #: openexpress/cli.py
 #, python-brace-format
 msgid "{free} of {total} free"
-msgstr ""
+msgstr "{free} von {total} frei"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): it could not be read
 #: openexpress/cli.py
 msgid "free space not known"
-msgstr ""
+msgstr "freier Speicher unbekannt"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): they could not be listed
 #: openexpress/cli.py
 msgid "memory dumps not known"
-msgstr ""
+msgstr "Speicherabbilder unbekannt"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "{count} memory dump ({size})"
 msgid_plural "{count} memory dumps ({size})"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} Speicherabbild ({size})"
+msgstr[1] "{count} Speicherabbilder ({size})"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`)
 #: openexpress/cli.py
 msgid "no memory dumps"
-msgstr ""
+msgstr "keine Speicherabbilder"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
 #. be read
 #: openexpress/cli.py
 msgid "crashes not known"
-msgstr ""
+msgstr "Abstürze unbekannt"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`)
 #: openexpress/cli.py
 msgid "no crash in the error logs"
-msgstr ""
+msgstr "kein Absturz in den Fehlerprotokollen"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
 #. the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
 #: openexpress/cli.py
 #, python-brace-format
 msgid "last crash: {crash}"
-msgstr ""
+msgstr "letzter Absturz: {crash}"
 
 #: openexpress/cli.py
 #, ignore-reused
@@ -5364,6 +5364,17 @@ msgctxt "tab"
 msgid "Activities"
 msgstr "Aktivitäten"
 
+#. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
+#: openexpress/gui/app.py openexpress/gui/device_page.py
+msgctxt "tab"
+msgid "Device Status"
+msgstr "Gerätestatus"
+
+#. TRANSLATORS: while the page Device Status reads what it shows
+#: openexpress/gui/app.py openexpress/gui/status_page.py
+msgid "Reading the Device…"
+msgstr "Gerät wird gelesen…"
+
 #: openexpress/gui/app.py openexpress/gui/preferences.py
 msgid "Preferences"
 msgstr "Einstellungen"
@@ -6178,52 +6189,9 @@ msgstr "bei {address}"
 msgid "screen {number}"
 msgstr "Bildschirm {number}"
 
-#. TRANSLATORS: title of the row with what the device wrote in its error log (error
-#. number, address, screen)
-#: openexpress/gui/device_page.py
-msgid "Error Details"
-msgstr "Fehlerdetails"
-
-#: openexpress/gui/device_page.py
-msgid "Crash Logs"
-msgstr "Absturzprotokolle"
-
-#: openexpress/gui/device_page.py
-msgid ""
-"Hidden from the file manager: while they are copied, the device disappears "
-"from it for a moment"
-msgstr ""
-"In der Dateiverwaltung verborgen: Während sie kopiert werden, verschwindet "
-"das Gerät kurz daraus"
-
-#: openexpress/gui/device_page.py
-msgid "Copy Crash Logs"
-msgstr "Absturzprotokolle kopieren"
-
-#: openexpress/gui/device_page.py
-msgid "Memory Dumps"
-msgstr "Speicherabbilder"
-
-#. TRANSLATORS: subtitle of "Memory Dumps": how many memory dump files the device holds
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "{count} dump"
-msgid_plural "{count} dumps"
-msgstr[0] "{count} Abbild"
-msgstr[1] "{count} Abbilder"
-
-#. TRANSLATORS: of the memory dumps of the device: only Garmin can read them
-#: openexpress/gui/device_page.py
-msgid "encrypted"
-msgstr "verschlüsselt"
-
-#: openexpress/gui/device_page.py
-msgid "Copy Memory Dumps"
-msgstr "Speicherabbilder kopieren"
-
-#: openexpress/gui/device_page.py
-msgid "Device Error Log"
-msgstr "Fehlerprotokoll des Geräts"
+#: openexpress/gui/device_page.py openexpress/gui/status_page.py
+msgid "Not known"
+msgstr "Unbekannt"
 
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
@@ -6392,7 +6360,8 @@ msgid "Sign In"
 msgstr "Anmelden"
 
 #. TRANSLATORS: group on the device page: the device's own storage
-#: openexpress/gui/device_page.py
+#. TRANSLATORS: group of the page Device Status: the device's own storage
+#: openexpress/gui/device_page.py openexpress/gui/status_page.py
 msgid "Storage"
 msgstr "Speicher"
 
@@ -7073,8 +7042,8 @@ msgstr ""
 msgid "Diagnostics"
 msgstr "Diagnose"
 
-#. TRANSLATORS: switch in the preferences: a copy of the device's diagnostic files at each
-#. connection
+#. TRANSLATORS: switch in the preferences and on the page Device Status: a copy of the
+#. device's diagnostic files at each connection
 #: openexpress/gui/preferences.py
 msgid "Keep Diagnostic Files"
 msgstr "Diagnosedateien behalten"
@@ -7663,6 +7632,292 @@ msgid "Several Garmin devices are connected. Choose one on the Device page."
 msgstr ""
 "Mehrere Garmin-Geräte sind angeschlossen. Wählen Sie eines auf der Seite "
 "„Gerät“."
+
+#. TRANSLATORS: a kind of file in the storage of the page Device Status
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Maps"
+msgstr "Karten"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Activities"
+msgstr "Aktivitäten"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Music and Audio"
+msgstr "Musik und Audio"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Apps"
+msgstr "Apps"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Courses and Locations"
+msgstr "Strecken und Positionen"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Updates and Satellite Data"
+msgstr "Updates und Satellitendaten"
+
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Logs and Memory Dumps"
+msgstr "Protokolle und Speicherabbilder"
+
+#. TRANSLATORS: the rest of the used space: the device's own files and what its file
+#. system keeps
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "System"
+msgstr "System"
+
+#. TRANSLATORS: the used space when it was not counted by kind of file
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Used"
+msgstr "Belegt"
+
+#. TRANSLATORS: the free space in the storage of the page Device Status
+#: openexpress/gui/status_page.py
+msgctxt "storage kind"
+msgid "Free"
+msgstr "Frei"
+
+#. TRANSLATORS: group of the page Device Status
+#: openexpress/gui/status_page.py
+msgid "Crashes and Updates"
+msgstr "Abstürze und Updates"
+
+#: openexpress/gui/status_page.py
+msgid "Crashes that restarted the device, and its software updates"
+msgstr "Abstürze, nach denen das Gerät neu gestartet ist, und seine Software-Updates"
+
+#. TRANSLATORS: beside "… free of …" on the page Device Status
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{size} used"
+msgstr "{size} belegt"
+
+#. TRANSLATORS: row of the page Device Status that opens to each kind of file
+#: openexpress/gui/status_page.py
+msgid "Category Details"
+msgstr "Kategoriedetails"
+
+#. TRANSLATORS: subtitle of "Category Details": when the kinds of file were counted,
+#. e.g. "… connected, 10 min ago"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Counted when the device was connected, {when}"
+msgstr "Gezählt, als das Gerät verbunden wurde, {when}"
+
+#. TRANSLATORS: in the subtitle of a crash on the page Device Status
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgctxt "crash"
+msgid "software {version}"
+msgstr "Software {version}"
+
+#. TRANSLATORS: in the subtitle of a crash on the page Device Status
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "the same error as the one before"
+msgid_plural "the same error as the {count} before"
+msgstr[0] "derselbe Fehler wie beim vorigen"
+msgstr[1] "derselbe Fehler wie bei den {count} vorigen"
+
+#. TRANSLATORS: a row of "Crashes and Updates" on the page Device Status
+#: openexpress/gui/status_page.py
+msgid "Crash"
+msgstr "Absturz"
+
+#. TRANSLATORS: the error number of a crash in the boot log, e.g. "boot log error
+#. 0x6e5d8003"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "boot log error {number}"
+msgstr "Fehler im Startprotokoll {number}"
+
+#: openexpress/gui/status_page.py
+msgid "Error Details"
+msgstr "Fehlerdetails"
+
+#. TRANSLATORS: a row of "Crashes and Updates": a new version of the device's software
+#: openexpress/gui/status_page.py
+msgid "Software Updated"
+msgstr "Software aktualisiert"
+
+#. TRANSLATORS: a row of "Crashes and Updates": the first connection to this computer
+#: openexpress/gui/status_page.py
+msgid "First Connected Here"
+msgstr "Erstmals hier verbunden"
+
+#. TRANSLATORS: a row of "Crashes and Updates" when the device's error logs could not be
+#. read
+#. TRANSLATORS: title of the summary of the page Device Status: the device's error logs
+#. could not be read, so whether it crashed is not known
+#: openexpress/gui/status_page.py openexpress/gui/words.py
+msgid "Error Logs Not Read"
+msgstr "Fehlerprotokolle nicht gelesen"
+
+#: openexpress/gui/status_page.py
+msgid "Only the crashes kept on this computer are shown"
+msgstr "Nur die auf diesem Computer gespeicherten Abstürze werden angezeigt"
+
+#. TRANSLATORS: the only row of "Crashes and Updates" when there is none of either
+#: openexpress/gui/status_page.py
+msgid "No Crashes or Updates Yet"
+msgstr "Noch keine Abstürze oder Updates"
+
+#. TRANSLATORS: shows every crash and update on the page Device Status
+#: openexpress/gui/status_page.py
+msgid "Show All"
+msgstr "Alle anzeigen"
+
+#. TRANSLATORS: group of the page Device Status: files the device no longer needs
+#: openexpress/gui/status_page.py
+msgid "Space to Free"
+msgstr "Freizugebender Speicher"
+
+#: openexpress/gui/status_page.py
+msgid "Files the device no longer needs"
+msgstr "Dateien, die das Gerät nicht mehr braucht"
+
+#. TRANSLATORS: a row of "Space to Free": the memory dumps but the newest
+#: openexpress/gui/status_page.py
+msgid "Older Memory Dumps"
+msgstr "Ältere Speicherabbilder"
+
+#. TRANSLATORS: subtitle of "Older Memory Dumps"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} file; the newest dump is not counted"
+msgid_plural "{count} files; the newest dump is not counted"
+msgstr[0] "{count} Datei; das neueste Abbild wird nicht mitgezählt"
+msgstr[1] "{count} Dateien; das neueste Abbild wird nicht mitgezählt"
+
+#. TRANSLATORS: a row of "Space to Free": an update openExpress copied that the device
+#. did not install
+#: openexpress/gui/status_page.py
+msgctxt "space to free"
+msgid "Update Not Installed by the Device"
+msgstr "Vom Gerät nicht installiertes Update"
+
+#. TRANSLATORS: subtitle of "Update Not Installed by the Device", e.g. "GPS 6.20; …"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{name} {version}; the device took the file in but did not install it"
+msgstr "{name} {version}; das Gerät hat die Datei übernommen, aber nicht installiert"
+
+#. TRANSLATORS: subtitle of "Copies on This Computer" when none was made
+#: openexpress/gui/status_page.py
+msgctxt "copies"
+msgid "None yet"
+msgstr "Noch keine"
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} copy"
+msgid_plural "{count} copies"
+msgstr[0] "{count} Kopie"
+msgstr[1] "{count} Kopien"
+
+#. TRANSLATORS: in the subtitle of "Copies on This Computer": when the last was made
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "the last {when}"
+msgstr "die letzte {when}"
+
+#. TRANSLATORS: group of the page Device Status
+#: openexpress/gui/status_page.py
+msgid "Diagnostic Files"
+msgstr "Diagnosedateien"
+
+#. TRANSLATORS: row of the page Device Status: the copies of the diagnostic files kept here
+#: openexpress/gui/status_page.py
+msgid "Copies on This Computer"
+msgstr "Kopien auf diesem Computer"
+
+#. TRANSLATORS: button that opens the folder of the copies in the file manager
+#: openexpress/gui/status_page.py
+msgid "Open Folder"
+msgstr "Ordner öffnen"
+
+#: openexpress/gui/status_page.py
+msgid "Crash Logs"
+msgstr "Absturzprotokolle"
+
+#: openexpress/gui/status_page.py
+msgid ""
+"Hidden from the file manager: while they are copied, the device disappears "
+"from it for a moment"
+msgstr ""
+"In der Dateiverwaltung verborgen: Während sie kopiert werden, verschwindet "
+"das Gerät kurz daraus"
+
+#: openexpress/gui/status_page.py
+msgid "Copy Crash Logs"
+msgstr "Absturzprotokolle kopieren"
+
+#. TRANSLATORS: subtitle of "Memory Dumps" when the device holds none
+#: openexpress/gui/status_page.py
+msgctxt "dumps"
+msgid "None"
+msgstr "Keine"
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} dump"
+msgid_plural "{count} dumps"
+msgstr[0] "{count} Abbild"
+msgstr[1] "{count} Abbilder"
+
+#: openexpress/gui/status_page.py
+msgid "encrypted"
+msgstr "verschlüsselt"
+
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps"
+msgstr "Speicherabbilder"
+
+#: openexpress/gui/status_page.py
+msgid "Copy Memory Dumps"
+msgstr "Speicherabbilder kopieren"
+
+#. TRANSLATORS: group of the page Device Status
+#: openexpress/gui/status_page.py
+msgid "Report a Problem"
+msgstr "Ein Problem melden"
+
+#. TRANSLATORS: row of the page Device Status: the report for openExpress's issues
+#: openexpress/gui/status_page.py
+msgid "Report to openExpress"
+msgstr "Bericht an openExpress"
+
+#: openexpress/gui/status_page.py
+msgid ""
+"The device, the system and the recent crashes; no serial number, Unit ID or "
+"e-mail"
+msgstr "Das Gerät, das System und die letzten Abstürze; ohne Seriennummer, Geräte-ID oder E-Mail"
+
+#. TRANSLATORS: button that opens the report of the device (a dialog with more to do)
+#: openexpress/gui/status_page.py
+msgid "Report…"
+msgstr "Melden…"
+
+#. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
+#: openexpress/gui/status_page.py
+msgid "No Diagnostic Data"
+msgstr "Keine Diagnosedaten"
+
+#: openexpress/gui/status_page.py
+msgid ""
+"This device keeps no error logs or memory dumps that openExpress can read"
+msgstr "Dieses Gerät speichert keine Fehlerprotokolle oder Speicherabbilder, die openExpress lesen kann"
 
 #: openexpress/gui/updates_page.py
 #, python-brace-format
@@ -8658,6 +8913,36 @@ msgstr "Keine Herzfrequenz, Höhe oder Geschwindigkeit in dieser Aktivität"
 #: openexpress/gui/words.py
 msgid "no reading"
 msgstr "kein Messwert"
+
+#. TRANSLATORS: title of the summary of the page Device Status
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{count} Crash in the Last 30 Days"
+msgid_plural "{count} Crashes in the Last 30 Days"
+msgstr[0] "{count} Absturz in den letzten 30 Tagen"
+msgstr[1] "{count} Abstürze in den letzten 30 Tagen"
+
+#. TRANSLATORS: in the summary of the page Device Status: the last crash, e.g. "Last one
+#. 2 days ago"
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Last one {when}"
+msgstr "Zuletzt {when}"
+
+#. TRANSLATORS: in the summary of the page Device Status, after "Last one …"
+#: openexpress/gui/words.py
+msgid "the same error each time"
+msgstr "jedes Mal derselbe Fehler"
+
+#. TRANSLATORS: title of the summary of the page Device Status
+#: openexpress/gui/words.py
+msgid "Little Free Space"
+msgstr "Wenig freier Speicher"
+
+#. TRANSLATORS: title of the summary of the page Device Status
+#: openexpress/gui/words.py
+msgid "No Problems Found"
+msgstr "Keine Probleme gefunden"
 
 #. TRANSLATORS: the name of your language in your language ("Polski", "Deutsch",
 #. "Français"), as the list of languages in the Preferences shows it

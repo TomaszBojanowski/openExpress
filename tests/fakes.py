@@ -2,6 +2,7 @@
 data; nothing here reaches a device, the network or the disk of this computer outside the
 test's own folder."""
 
+import contextlib
 import os
 import struct
 import subprocess
@@ -480,6 +481,25 @@ def descendants(widget):
         yield child
         yield from descendants(child)
         child = child.get_next_sibling()
+
+
+@contextlib.contextmanager
+def gtk_complaints():
+    """What Adwaita and GTK say as CRITICAL or WARNING inside the block, as (domain, message)
+    pairs: a row removed from a group it is not in, a widget given to a second parent… They
+    go to the terminal only and the window carries on, so a test asks for them."""
+    from gi.repository import GLib
+
+    said = []
+    levels = GLib.LogLevelFlags.LEVEL_CRITICAL | GLib.LogLevelFlags.LEVEL_WARNING
+    handlers = [(domain, GLib.log_set_handler(
+        domain, levels, lambda domain, _level, message, _data: said.append((domain, message)),
+        None)) for domain in ("Adwaita", "Gtk")]
+    try:
+        yield said
+    finally:
+        for domain, handler in handlers:
+            GLib.log_remove_handler(domain, handler)
 
 
 # What a device that stopped responding says after the step it stopped at.

@@ -400,6 +400,30 @@ fēnix 8 over MTP.
   <img src="screenshots/activities.png" width="700" alt="Activities">
 </p>
 
+## Device Status
+
+The Device Status page, last in the side panel, tells what needs attention on the connected
+device and what takes its space. It only reads: nothing is removed and nothing is sent.
+
+- **The summary on top:** the crashes of the last 30 days (only those that restarted the
+  device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), or
+  no problems found.
+- **Storage:** the space of each kind of file, counted when the device was connected, the
+  largest first (a kind the device holds none of is left out) and the free space last; the
+  kinds with a page of their own lead to it.
+- **Crashes and Updates:** each crash once, from the device's error logs, its boot log and the
+  copies on this computer, with its details inside; the software updates, from the log of the
+  device's connections (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
+  saw the device.
+- **Space to Free:** the files the device no longer needs (memory dumps but the newest, an
+  update it did not install), with their size.
+- **Diagnostic Files** and **Report a Problem:** the copy of the diagnostic files (the same
+  switch as in Preferences), Copy Crash Logs and Copy Memory Dumps, and the report.
+
+What could not be read is said so, never shown as none. A device that keeps no error logs or
+memory dumps (a bike sensor, a USB drive) gets a page with its storage only. The device page
+leads there from its rows **Device Storage** and **Device Status**.
+
 ## Sync details
 
 - The device must be registered to the Garmin account you are signed in to. Before every sync

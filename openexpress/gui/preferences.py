@@ -46,11 +46,19 @@ save_ui_language = i18n.save_ui_language
 
 def diagnostics_group(win) -> Adw.PreferencesGroup:
     """The "Diagnostics" group of the preferences: the copy of the device's diagnostic files
-    at each connection, off unless chosen (settings.json; the same as `setup
-    --diagnostics-copy`). A change that cannot be saved puts the switch back."""
+    at each connection (diagnostics_switch)."""
     g = Adw.PreferencesGroup(title=_("Diagnostics"))
-    # TRANSLATORS: switch in the preferences: a copy of the device's diagnostic files at each
-    # connection
+    g.add(diagnostics_switch(win))
+    return g
+
+
+def diagnostics_switch(win) -> Adw.SwitchRow:
+    """Keep Diagnostic Files: the copy of the device's diagnostic files at each connection,
+    off unless chosen (settings.json; the same as `setup --diagnostics-copy`), in the
+    preferences and on the page Device Status. A change that cannot be saved puts the switch
+    back."""
+    # TRANSLATORS: switch in the preferences and on the page Device Status: a copy of the
+    # device's diagnostic files at each connection
     sw = Adw.SwitchRow(title=_("Keep Diagnostic Files"),
                        subtitle=_("A copy of the device's diagnostic files stays on this "
                                   "computer; openExpress never sends them"),
@@ -71,8 +79,7 @@ def diagnostics_group(win) -> Adw.PreferencesGroup:
         log.info("diagnostics: the copy at each connection turned %s", "on" if wanted else "off")
 
     sw.connect("notify::active", toggled)
-    g.add(sw)
-    return g
+    return sw
 
 
 def maps_group(win) -> Adw.PreferencesGroup:

@@ -434,7 +434,7 @@ def _reading_window(session, in_the_window):
     """A window with `session` open, its work in the background kept to be run by the test,
     and the row of the device's errors noted when it is drawn."""
     background, drawn = [], []
-    in_the_window("device_error_row",
+    in_the_window("status_row",
                   lambda win, group=None: drawn.append(win.session.diagnostics))
     win = stand_in(session=session, in_background=lambda fn, done, failed=None:
                    background.append((fn, done)))
@@ -457,7 +457,8 @@ def test_they_are_read_in_the_background_once_the_page_is_shown(device, clock, i
     done(work())
     assert reading.is_set()
     assert session.diagnostics.crash is not None and session.diagnostics.copied.saved
-    assert drawn == [session.diagnostics]  # the row of the errors drawn with them
+    assert drawn == [session.diagnostics]  # the row "Device Status" drawn with them
+    assert [c.error for c in session.crash_history] == ["0x003"]
 
 
 def test_they_are_kept_but_not_drawn_for_a_device_no_longer_open(device, clock, in_the_window):
@@ -584,12 +585,17 @@ def test_crash_logs_copied_again_keep_their_content_once(hiding, clock):
         "sha256": _sha(b"event log"), "size": 9, "mtime": None}
 
 
-def _window(found):
+def _window(found, reading=None):
     from fakes import RunNow
+
+    from openexpress import crashes
 
     toasts = []
     return stand_in(
-        session=types.SimpleNamespace(device=None, storage=None, diagnostics=found),
+        session=types.SimpleNamespace(device=None, storage=None, diagnostics=found,
+                                      diagnostics_reading=reading,
+                                      crash_history=crashes.history(None, found.entries)
+                                      if found is not None else None),
         _button=lambda label, cb, style=None, with_button=False: _labelled(label),
         run_task=RunNow(), toast=toasts.append, toasts=toasts, progress=lambda message: None)
 
@@ -600,29 +606,6 @@ def _labelled(label):
     return Gtk.Button(label=label)
 
 
-def _rows(win):
-    from gi.repository import Adw, Gtk
-
-    row = win.device_error_row
-    if row is None:
-        return None
-    out = [(row.get_title(), row.get_subtitle())]
-    stack = [row]
-    while stack:
-        w = stack.pop()
-        child = w.get_first_child()
-        while child is not None:
-            # (the header of the expander is an action row of its own, with its title)
-            if isinstance(child, Adw.ActionRow) and child.get_title() != row.get_title():
-                buttons = [b.get_label() for b in descendants(child) if isinstance(b, Gtk.Button)
-                           and b.get_label()]
-                out.append((child.get_title(), child.get_subtitle(), buttons))
-            else:
-                stack.append(child)
-            child = child.get_next_sibling()
-    return out
-
-
 def _found(**kw):
     (crash,) = diagnostics.parse_err_log(err_log(TRAP))
     values = {"entries": [crash], "crash": crash, "dumps": [("GARMIN/Debug/dump/RAM.zip", 8_090_553)],
@@ -630,56 +613,57 @@ def _found(**kw):
     return diagnostics.AtOpen(**{**values, **kw})
 
 
+def _row(win):
+    row = win.status_row
+    return None if row is None else (row.get_title(), row.get_subtitle())
+
+
 @pytest.mark.needs_display
-def test_the_row_says_the_crash_with_the_copy_off():
+def test_the_row_of_the_device_page_says_the_summary(clock):
     from gi.repository import Adw
 
-    from openexpress.gui.device_page import device_error_row
+    from openexpress.gui.device_page import status_row
 
     win = _window(_found())
-    group = Adw.PreferencesGroup()
-    device_error_row(win, group)
-    assert _rows(win) == [
-        ("Device Error Log", "RTL Trap\u00a0· 2026-10-20 22:24"),
-        ("Error Details", "error 0x003\u00a0· at 0x10000abc\u00a0· screen 2301", []),
-        ("Crash Logs", ("Hidden from the file manager: while they are copied, the device "
-                        "disappears from it for a moment"), ["Copy Crash Logs"]),
-        ("Memory Dumps", "1 dump\u00a0· 8.1\u00a0MB\u00a0· encrypted", ["Copy Memory Dumps"])]
+    status_row(win, Adw.PreferencesGroup())
+    assert _row(win) == ("Device Status", "1 Crash in the Last 30 Days")
 
 
 @pytest.mark.needs_display
-def test_no_row_without_a_recent_crash_and_no_buttons_that_do_not_apply():
+def test_the_row_before_the_reading_and_after_it_failed(clock):
+    import threading
+
     from gi.repository import Adw
 
-    from openexpress.gui.device_page import device_error_row
+    from openexpress.gui.device_page import status_row
 
-    win = _window(_found(crash=None))
-    device_error_row(win, Adw.PreferencesGroup())
-    assert win.device_error_row is None
-    win = _window(None)  # not read
-    device_error_row(win, Adw.PreferencesGroup())
-    assert win.device_error_row is None
-    win = _window(_found(hidden_logs=False, dumps=[]))
-    device_error_row(win, Adw.PreferencesGroup())
-    assert [r[0] for r in _rows(win)] == ["Device Error Log", "Error Details"]
+    win = _window(_found(crash=None, entries=[]))
+    status_row(win, Adw.PreferencesGroup())
+    assert _row(win) == ("Device Status", "No Problems Found")
+    win = _window(None, reading=threading.Event())  # being read
+    status_row(win, Adw.PreferencesGroup())
+    assert _row(win) == ("Device Status", "Reading…")
+    win.session.diagnostics_reading.set()  # done, and failed
+    status_row(win)
+    assert _row(win) == ("Device Status", "Not known")
 
 
 @pytest.mark.needs_display
 def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
     from gi.repository import Adw
 
-    from openexpress.gui.device_page import copy_crash_logs, device_error_row
+    from openexpress.gui.device_page import copy_crash_logs, status_row
 
     found = _found()
     win = _window(found)
     group = Adw.PreferencesGroup()
-    device_error_row(win, group)
+    status_row(win, group)
     monkeypatch.setattr(diagnostics, "copy_crash_logs",
                         lambda device, storage, progress=None: diagnostics.Copied())
     copy_crash_logs(win)
     assert win.toasts == ["The device has no hidden crash logs"]
-    assert not found.hidden_logs
-    assert "Crash Logs" not in [r[0] for r in _rows(win)]
+    assert not found.hidden_logs  # the page Device Status offers no Copy Crash Logs
+    assert win.status_row is not None  # drawn again
     monkeypatch.setattr(diagnostics, "copy_crash_logs",
                         lambda device, storage, progress=None: diagnostics.Copied(
                             new=2, saved=True))
@@ -797,26 +781,20 @@ def test_nothing_is_sent(device, clock):
 
 
 @pytest.mark.needs_display
-def test_the_row_in_polish():
+def test_the_row_in_polish(clock):
     from gi.repository import Adw
 
     from openexpress import i18n
-    from openexpress.gui.device_page import device_error_row
+    from openexpress.gui.device_page import status_row
 
     i18n.setup("pl")
     try:
         win = _window(_found())
-        device_error_row(win, Adw.PreferencesGroup())
-        rows = _rows(win)
+        status_row(win, Adw.PreferencesGroup())
+        row = _row(win)
     finally:
         i18n.setup("en")
-    assert rows == [
-        ("Dziennik błędów urządzenia", "RTL Trap\u00a0· 20.10.2026 o\u00a022:24"),
-        ("Szczegóły błędu", "błąd 0x003\u00a0· adres 0x10000abc\u00a0· ekran 2301", []),
-        ("Dzienniki awarii", ("Ukryte przed menedżerem plików: podczas kopiowania urządzenie "
-                              "na chwilę z\u00a0niego znika"), ["Skopiuj dzienniki awarii"]),
-        ("Zrzuty pamięci", "1 zrzut\u00a0· 8,1\u00a0MB\u00a0· zawartość zaszyfrowana",
-         ["Skopiuj zrzuty pamięci"])]
+    assert row == ("Stan urządzenia", "1 awaria w\u00a0ostatnich 30 dniach")
 
 
 # --- the places of the diagnostic files, kept for the next openings ---------------------------

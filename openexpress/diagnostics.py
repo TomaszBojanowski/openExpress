@@ -841,20 +841,29 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     return found
 
 
+def copies_facts(unit_id: int) -> tuple[int, int, datetime | None]:
+    """The copies kept of a device's diagnostic files: how many, their bytes, when the last
+    was made (None: no copy, or a name that does not say)."""
+    where = folder(unit_id)
+    snaps = _snapshots(where)
+    if not snaps:
+        return 0, 0, None
+    try:
+        when = datetime.strptime(snaps[-1].stem.split(" (")[0], STAMP)
+    except ValueError:
+        when = None
+    return len(snaps), _object_bytes(where), when
+
+
 def copies_text(unit_id: int) -> str:
     """How many copies are kept, how big and when the last was made, for the command line."""
     from openexpress.i18n import full_time, human_size
 
-    where = folder(unit_id)
-    snaps = _snapshots(where)
-    if not snaps:
+    count, size, when = copies_facts(unit_id)
+    if not count:
         # TRANSLATORS: shown after "Copies on this computer:" when no copy of the device's
         # diagnostic files has been made
         return _("No copy yet")
-    try:
-        when = full_time(datetime.strptime(snaps[-1].stem.split(" (")[0], STAMP))
-    except ValueError:
-        when = "?"
     return ngettext("{count} copy, {size}, the last on {when}",
-                    "{count} copies, {size}, the last on {when}", len(snaps)).format(
-        count=len(snaps), size=human_size(_object_bytes(where)), when=when)
+                    "{count} copies, {size}, the last on {when}", count).format(
+        count=count, size=human_size(size), when=full_time(when) if when else "?")

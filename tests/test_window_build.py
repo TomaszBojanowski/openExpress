@@ -79,7 +79,8 @@ def test_the_side_panel_chooses_a_section(window):
     from openexpress.paths import APP_ID
 
     keys = list(window.sections)
-    assert keys == ["watch", "updates", "maps", "courses", "apps", "music", "activities"]
+    assert keys == ["watch", "updates", "maps", "courses", "apps", "music", "activities",
+                    "status"]
     # Device: the small icon of no kind until a device is open (then of its kind).
     assert window.sections["watch"].icon == f"{APP_ID}-device-small-symbolic"
     assert window.sections["activities"].icon == f"{APP_ID}-activities-symbolic"

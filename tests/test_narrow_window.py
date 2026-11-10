@@ -61,8 +61,7 @@ def _session(device, drive=False):
 
 
 def _device_errors():
-    """A crash the device logged lately, its hidden crash logs and five memory dumps: the row
-    "Device Error Log" with both buttons."""
+    """A crash the device logged lately, its hidden crash logs and five memory dumps."""
     from datetime import datetime
 
     from openexpress import diagnostics
@@ -71,6 +70,40 @@ def _device_errors():
                                    "0x10000abc", "2301", "err_log.bak")
     return diagnostics.AtOpen([crash], crash, [("Garmin/Debug/dump/RAM.zip", 8_090_553)] * 5,
                               True)
+
+
+def _status_facts():
+    """The page Device Status at its fullest: crashes of the same error and updates, more than
+    it shows at first (Show All as its last row in the narrowest window), every kind of file,
+    older dumps and an update the device did not install, its copies and its hidden crash
+    logs."""
+    from datetime import datetime, timedelta
+
+    from openexpress import status
+    from openexpress.crashes import Crash
+
+    now = datetime(2026, 10, 21, 12, 0)
+    crashes = [Crash(now - timedelta(days=d), software="23.39", error="0x003",
+                     program_counter="0x10000abc", screen="2886,2500,2502", errnum="0x1a2b3c4d")
+               for d in (2, 9, 21, 25, 40, 60)]
+    when = [(now - timedelta(days=d)).astimezone().isoformat(timespec="seconds")
+            for d in (150, 30, 1)]
+    lines = [{"time": t, "software": v} for t, v in zip(when, ("23.37", "23.38", "23.39"),
+                                                          strict=True)]
+    update = _update("Oprogramowanie systemu GPS z bardzo długą nazwą", "6.20", "GARMIN/GPS.GCD",
+                     4_100_000, on_device=True)
+    return status.Facts(
+        via="mtp", free=12_400_000_000, capacity=31_100_000_000,
+        categories={"maps": 17_200_000_000, "activities": 52_000_000, "music": 410_000_000,
+                    "apps": 12_000_000, "courses": 305_000, "updates": 9_100_000,
+                    "logs": 61_000_000, "system": 930_000_000},
+        counted_at=now - timedelta(minutes=10), crashes=crashes, errors_known=True,
+        dumps=[("GARMIN/Debug/dump/RAM.zip", 9_000_000, 300.0),
+               ("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 200.0)],
+        events=status.events(crashes, lines, (now - timedelta(days=200)).timestamp()),
+        hidden_logs=True,
+        copies=(12, 3_100_000, now - timedelta(hours=3)), not_installed=[update],
+        has_diagnostics=True)
 
 
 def _update(name, version, path, size, beta=False, system=False, reinstall=False,
@@ -277,6 +310,8 @@ def _fill(win, page: str) -> str:
     elif key == "courses":
         MainWindow.show_courses(win, _courses(empty=page == "courses-empty",
                                               uncounted=page == "courses-uncounted"))
+    elif key == "status":
+        MainWindow.show_status(win, _status_facts())
     win.sections[key].show("content")
     win._update_actions()
     win._update_banner()
@@ -395,7 +430,7 @@ DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "device-
                 "updates-beta-drive",
                 "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
                 "music", "activities", "courses", "courses-empty",
-                "courses-uncounted"]
+                "courses-uncounted", "status"]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
@@ -648,19 +683,91 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
-def test_the_device_error_log_fits_the_narrowest_window(narrow_window, language):
-    """The row under "Backup", open, with its two buttons."""
+def test_the_page_device_status_opened_fits_the_narrowest_window(narrow_window, language):
+    """The page with its newest crash and its details open, the kinds of file listed, Show All
+    as the last row of the crashes and updates."""
+    from gi.repository import Adw
+
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
-    _fill(win, "device")
+    _fill(win, "status")
     win.navigation.set_animate_transitions(False)
     win.navigation.push(win.device_view)
-    win.select_section("watch")
-    win.device_error_row.set_expanded(True)
+    win.select_section("status")
+    expanders = [w for w in descendants(win.sections["status"].stack)
+                 if isinstance(w, Adw.ExpanderRow)]
+    for row in expanders:
+        row.set_expanded(True)
     _iterate(0.3)
-    assert win.device_error_row.get_title() == {"en": "Device Error Log",
-                                                 "pl": "Dziennik błędów urządzenia"}[language]
+    assert win.status_history.get_header_suffix() is None
+    assert win.status_history_rows[-1].get_title() == {"en": "Show All",
+                                                       "pl": "Pokaż wszystko"}[language]
     assert _min_width(win.device_view) <= NARROWEST
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_names_of_the_legend_wrap_only_in_a_narrow_window(narrow_window, language):
+    """In a wide window no kind's name wraps (the longest ones: "Updates and Satellite Data",
+    "Aktualizacje i dane satelitarne"), its lines all as tall; in the narrowest one a name may."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.status_page import kind_names
+
+    win = narrow_window(language)
+    win.set_default_size(1000, 800)
+    _fill(win, "status")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("status")
+    _iterate(0.3)
+    names = set(kind_names().values())
+    legend = next(w for w in descendants(win.sections["status"].stack)
+                  if isinstance(w, Gtk.FlowBox))
+    shown = [w for w in descendants(legend) if isinstance(w, Gtk.Label) and w.get_label() in names]
+    assert shown and all(w.get_layout().get_line_count() == 1 for w in shown)
+    heights = {child.get_height() for child in descendants(legend)
+               if isinstance(child, Gtk.FlowBoxChild)}
+    assert len(heights) == 1
+
+
+def test_a_name_of_the_legend_that_wraps_makes_only_its_line_taller(narrow_window):
+    """The narrowest window in Polish, the updates as large as a bike computer's: "Aktualizacje
+    i dane satelitarne" wraps; its line alone is taller, the others keep the height of one,
+    and no room is left under the last one (Free)."""
+    from dataclasses import replace
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.status_page import kind_names
+
+    win = narrow_window("pl")
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "status")
+    made = _status_facts()
+    win.sections["status"].clear()
+    MainWindow.show_status(win, replace(made, categories={**made.categories,
+                                                          "updates": 682_800_000}))
+    win.sections["status"].show("content")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("status")
+    _iterate(0.3)
+    names = set(kind_names().values())
+    legend = next(w for w in descendants(win.sections["status"].stack)
+                  if isinstance(w, Gtk.FlowBox))
+    lines = [w for w in descendants(legend) if isinstance(w, Gtk.FlowBoxChild)]
+
+    def name(line):
+        return next(w for w in descendants(line)
+                    if isinstance(w, Gtk.Label) and w.get_label() in names)
+
+    wrapped = [line for line in lines if name(line).get_layout().get_line_count() > 1]
+    assert [name(line).get_label() for line in wrapped] == ["Aktualizacje i\u00a0dane satelitarne"]
+    one_line = {line.get_height() for line in lines if line not in wrapped}
+    assert len(one_line) == 1 and wrapped[0].get_height() > max(one_line)
+    _found, last = lines[-1].compute_bounds(legend)
+    assert legend.get_height() - (last.get_y() + last.get_height()) < 1
 
 
 @pytest.mark.parametrize("why", ["logged-out", "failed"])
@@ -778,7 +885,9 @@ def test_captions_break_only_where_they_should(narrow_window, language, page):
         win.select_section(key)
         root = win.device_view
     texts = list(_texts(root))
-    assert any("\u00a0·" in t for t in texts) or page in ("maps-none", "music", "courses-empty")
+    # The pages without a caption of several parts.
+    assert any("\u00a0·" in t for t in texts) or page in (
+        "maps-none", "music", "courses-empty", "device-off-account", "device-refused-drive")
     assert _breaks_badly(texts) == []
 
 

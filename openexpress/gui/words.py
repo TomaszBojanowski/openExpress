@@ -966,3 +966,36 @@ def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
     # TRANSLATORS: beside the chart of an activity, where its cursor is on a gap or a pause
     shown = _("no reading") if value is None else chart_value_text(kind, value)
     return caption(activity_clock(seconds), shown)
+
+
+def status_summary(found, errors_known: bool, free: int | None, capacity: int | None,
+                   now: datetime) -> tuple[str, str, str]:
+    """The summary on top of the page Device Status, and the subtitle of its row on the device
+    page: (its look: "good", "warning" or "unknown"; its title; its line). Crashes of the last
+    30 days first (the error colour is never used: a crash is a fact to know, not an alarm),
+    then little free space (status.little_space), then error logs that were not read."""
+    from openexpress import crashes, status
+
+    lately = status.recent(found, now)
+    if lately:
+        # TRANSLATORS: title of the summary of the page Device Status
+        title = ngettext("{count} Crash in the Last 30 Days", "{count} Crashes in the Last 30 Days",
+                         len(lately)).format(count=len(lately))
+        # TRANSLATORS: in the summary of the page Device Status: the last crash, e.g. "Last one
+        # 2 days ago"
+        parts = [_("Last one {when}").format(when=relative_time(lately[0].at, now))]
+        if len(lately) > 1 and all(crashes.same_error(lately[0], c) for c in lately[1:]):
+            # TRANSLATORS: in the summary of the page Device Status, after "Last one …"
+            parts.append(_("the same error each time"))
+        if free is not None:
+            parts.append(space_text(free))
+        return "warning", title, caption(*parts)
+    if status.little_space(free, capacity):
+        # TRANSLATORS: title of the summary of the page Device Status
+        return "warning", _("Little Free Space"), space_text(free, capacity)
+    if not errors_known:
+        # TRANSLATORS: title of the summary of the page Device Status: the device's error logs
+        # could not be read, so whether it crashed is not known
+        return "unknown", _("Error Logs Not Read"), space_text(free, capacity)
+    # TRANSLATORS: title of the summary of the page Device Status
+    return "good", _("No Problems Found"), space_text(free, capacity)
