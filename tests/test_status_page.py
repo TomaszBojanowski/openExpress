@@ -83,8 +83,9 @@ def test_the_first_connection_is_when_the_device_was_first_seen():
 def test_the_first_connection_is_read_from_the_devices_remembered(monkeypatch):
     """The time of devices.json, not the log's first line; a test drive carries a real
     device's unit ID, so it has none."""
-    from openexpress import history, known_devices
+    from openexpress import freeing, history, known_devices
 
+    monkeypatch.setattr(freeing, "plan", lambda storage, device, client, fresh=False: None)
     unit = 3_000_000_123
     known_devices.remember(unit, "Made-up watch", "006-B0000-00", "21.05", "mtp", now=FIRST_SEEN)
     lines = [line(150, "21.05"), line(40, "21.12")]
@@ -209,7 +210,7 @@ def test_the_page_has_the_groups_of_the_design(clock):
     _win, section = page()
     assert section.stack.get_visible_child_name() == "content"
     assert [g.get_title() for g in section.groups] == [
-        "", "Storage", "Crashes and Updates", "Space to Free", "Diagnostic Files",
+        "", "Storage", "Crashes and Updates", "Free Up Space", "Diagnostic Files",
         "Report a Problem"]
     summary_labels = labels(section.groups[0])
     assert "3 Crashes in the Last 30 Days" in summary_labels
@@ -349,16 +350,365 @@ def test_folding_show_all_and_a_refresh_leave_gtk_nothing_to_complain_of(clock, 
     assert (len(status_rows(first)), len(status_rows(again))) == (0, 1)
 
 
-@pytest.mark.needs_display
-def test_the_space_to_free_is_told_and_nothing_removes_it(clock):
+def made_up_update(path, name="GPS software", version="6.20", size=4_100_000):
+    from openexpress import updates
+
+    return updates.SoftwareUpdate(
+        part_number="006-D0000-00", name=name, version=version, severity="Recommended",
+        is_primary=False, is_reinstall=False, restart_required=False, device_path=path, url="",
+        md5=None, size=size, order=0, on_device=True)
+
+
+def questions(in_the_window):
+    """The questions of the window (confirm), recorded; answered by running an answer."""
+    asked = []
+    in_the_window("confirm", lambda parent, name, heading, body, *answers, **kw: asked.append(
+        types.SimpleNamespace(name=name, heading=heading, body=body, answers=answers)))
+    return asked
+
+
+def button_of(row):
     from fakes import descendants
     from gi.repository import Gtk
 
-    _win, section = page()
+    found = [w for w in descendants(row) if isinstance(w, Gtk.Button)]
+    return found[0] if found else None
+
+
+def working(win, monkeypatch):
+    """The page's window able to run a task on a made-up open device (whose kinds of file are
+    not counted again: status.recount gives nothing): its toasts in `win.toasts`, the pages it
+    reads again in `win.reloads`."""
+    from openexpress import status
+
+    monkeypatch.setattr(status, "recount", lambda device, storage: None)
+    win.toasts, win.reloads = [], []
+    win.toast = win.toasts.append
+    win.load_section = lambda key, force=False: win.reloads.append(key)
+    win.session.device = types.SimpleNamespace(unit_id=1234567890)
+    win.session.storage = types.SimpleNamespace(test_drive=False)
+    win.progress = lambda message: None
+    win.sections["status"].loaded = True  # as the window loaded it (_load)
+    return win
+
+
+@pytest.mark.needs_display
+def test_free_up_space_offers_a_button_for_each_file_it_may_remove(clock):
+    """Copy and Remove for the dumps, Remove for an update file, both destructive; an update
+    file in the main folder waits to be installed: no button, no size."""
+    gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD")
+    bundle = made_up_update("Garmin/GUPDATE.GSP", "Edge Software Bundle", "33.20", 97_700_000)
+    _win, section = page(facts(not_installed=[gps, bundle]))
     group = section.groups[3]
+    assert (group.get_title(), group.get_description()) == (
+        "Free Up Space", "Activities, maps, music, courses and settings are never removed")
     older = titled(section, "Older Memory Dumps")
-    assert older.get_subtitle() == "2 files; the newest dump is not counted"
-    assert not [w for w in descendants(group) if isinstance(w, Gtk.Button)]
+    # The size in the subtitle: the end of the row is the button's, as the mockup has it.
+    assert older.get_subtitle() == ("2 files; the newest dump is not counted\u00a0· "
+                                    "18.0\u00a0MB")
+    assert button_of(older).get_label() == "Copy and Remove"
+    assert button_of(older).has_css_class("destructive-action")
+    assert "18.0\u00a0MB" not in labels(older)
+    # An update file: its name and version the title, what became of it the subtitle.
+    update = titled(section, "GPS software 6.20")
+    assert update.get_subtitle() == ("The device took the file in but did not install "
+                                     "it\u00a0· 4.1\u00a0MB")
+    assert button_of(update).get_label() == "Remove"
+    assert button_of(update).has_css_class("destructive-action")
+    waiting = titled(section, "Edge Software Bundle 33.20")
+    assert waiting.get_subtitle() == ("Waits to be installed; removing the file would cancel "
+                                      "the update")
+    assert button_of(waiting) is None
+    assert "97.7\u00a0MB" not in labels(waiting)
+
+
+@pytest.mark.needs_display
+def test_a_dump_whose_time_is_not_known_offers_nothing(clock):
+    """The newest cannot be told."""
+    dumps = [("GARMIN/Debug/dump/RAM.zip", 9 * MB, 300.0), ("GARMIN/Debug/dump/RAM_bak1.zip",
+                                                           8 * MB, 0)]
+    _win, section = page(facts(dumps=dumps))
+    older = titled(section, "Older Memory Dumps")
+    assert older.get_subtitle() == "Not known" and button_of(older) is None
+
+
+GB_DUMPS = {
+    # fēnix-like: all fit in the copies
+    "all": [("GARMIN/Debug/dump/RAM.zip", 9_100_000, 900.0),
+            *[(f"GARMIN/Debug/dump/RAM_bak{n}.zip", 8_980_000, 900.0 - n) for n in range(1, 6)]],
+    # Edge-like: two zips fit, three old logs are too large
+    "some": [("GARMIN/Debug/dump/ramdump2.zip", 13_300_000, 900.0),
+             ("GARMIN/Debug/dump/ramdump1.zip", 45_800_000, 800.0),
+             ("GARMIN/Debug/dump/ramdump3.zip", 29_500_000, 799.0),
+             *[(f"GARMIN/Debug/ramdump{n}.log", 202_500_000, 100.0 - n) for n in range(1, 4)]],
+    # none fits
+    "none": [("GARMIN/Debug/dump/ramdump2.zip", 13_300_000, 900.0),
+             *[(f"GARMIN/Debug/ramdump{n}.log", 202_500_000, 100.0 - n) for n in range(1, 4)]],
+}
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("dumps", "body", "answer"), [
+    ("all", ("5 memory dumps (44.9\u00a0MB) will be copied to this computer and then removed "
+             "from the device. The newest dump stays on the device."), "Copy and Remove"),
+    ("some", ("5 memory dumps (682.8\u00a0MB) will be removed from the device: 2 (75.3\u00a0MB) "
+              "after a copy on this computer, 3 (607.5\u00a0MB) without a copy, as they are too "
+              "large. The newest dump stays on the device."), "Copy and Remove"),
+    ("none", ("3 memory dumps (607.5\u00a0MB) will be removed from the device without a copy: "
+              "they are too large to copy. The newest dump stays on the device."), "Remove")])
+def test_the_question_names_what_goes_and_what_is_not_copied(clock, in_the_window, dumps,
+                                                              body, answer):
+    asked = questions(in_the_window)
+    _win, section = page(facts(dumps=GB_DUMPS[dumps]))
+    button_of(titled(section, "Older Memory Dumps")).emit("clicked")
+    (q,) = asked
+    assert (q.heading, q.body) == ("Remove Older Memory Dumps?", body)
+    assert [(a.label, a.look) for a in q.answers] == [(answer, "destructive")]
+
+
+@pytest.mark.needs_display
+def test_the_question_in_polish(clock, in_the_window):
+    from openexpress import i18n
+
+    asked = questions(in_the_window)
+    i18n.setup("pl")
+    try:
+        _win, section = page(facts(dumps=GB_DUMPS["some"]))
+        button_of(titled(section, "Starsze zrzuty pamięci")).emit("clicked")
+    finally:
+        i18n.setup("en")
+    (q,) = asked
+    assert q.heading == "Usunąć starsze zrzuty pamięci?"
+    assert q.body == ("Z\u00a0urządzenia zostanie usuniętych 5 zrzutów pamięci (682,8\u00a0MB): "
+                      "2 (75,3\u00a0MB) po skopiowaniu na ten komputer, 3 (607,5\u00a0MB) bez "
+                      "kopii, bo są za duże. Najnowszy zrzut zostaje na urządzeniu.")
+    assert [a.label for a in q.answers] == ["Skopiuj i\u00a0usuń"]
+
+
+@pytest.mark.needs_display
+def test_copy_and_remove_runs_a_task_and_reads_the_page_again(clock, in_the_window,
+                                                              monkeypatch):
+    from openexpress import freeing
+
+    asked = questions(in_the_window)
+    win, section = page()
+    working(win, monkeypatch)
+    called = []
+
+    def remove_dumps(storage, unit_id, older, test_drive=False, progress=None):
+        called.append(([p for p, _s, _t in older], unit_id, test_drive))
+        return freeing.Freed(removed=[(p, s) for p, s, _t in older])
+
+    monkeypatch.setattr(freeing, "remove_dumps", remove_dumps)
+    button_of(titled(section, "Older Memory Dumps")).emit("clicked")
+    asked[0].answers[0].run()
+    assert called == [(["GARMIN/Debug/dump/RAM_bak1.zip", "GARMIN/Debug/dump/RAM_bak2.zip"],
+                       1234567890, False)]
+    assert win.toasts == ["2 memory dumps removed, 18.0\u00a0MB freed"]
+    assert win.reloads == ["status"]
+
+
+@pytest.mark.needs_display
+def test_what_the_device_did_not_remove_is_told(clock, in_the_window, monkeypatch):
+    from openexpress import freeing
+
+    asked = questions(in_the_window)
+    told = []
+    in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(
+        (heading, body)))
+    win, section = page()
+    working(win, monkeypatch)
+    monkeypatch.setattr(freeing, "remove_dumps", lambda storage, unit_id, older, **kw:
+                        freeing.Freed(removed=[("GARMIN/Debug/dump/RAM_bak2.zip", 10 * MB)],
+                                      kept=[("GARMIN/Debug/dump/RAM_bak1.zip",
+                                             "Cannot delete RAM_bak1.zip: the device said no")]))
+    button_of(titled(section, "Older Memory Dumps")).emit("clicked")
+    asked[0].answers[0].run()
+    assert told == [("Not All Files Removed",
+                     ("The device did not remove 1 of the files; the others are removed.\n\n"
+                      "RAM_bak1.zip: Cannot delete RAM_bak1.zip: the device said no"))]
+    assert win.reloads == ["status"]  # the page shows what is left
+
+
+@pytest.fixture
+def drive_page(clock, in_the_window, tmp_path):
+    """The page of a made-up watch connected as a test drive, in a window 1000 pixels wide:
+    three dumps (the newest stays) and a course, the line of its connection counted ten
+    minutes before. `remove()` runs Copy and Remove for real on it, and the page is read again
+    as the window reads it."""
+    import os
+
+    from conftest import DEVICE_XML
+
+    from openexpress import diagnostics, history, status
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui.app import MainWindow
+
+    class Drive(LocalStorage):
+        """1 MB of capacity; its free space what its files and the system (300 kB) leave."""
+
+        test_drive = True
+
+        def capacity(self):
+            return 1_000_000
+
+        def free_space(self):
+            files = sum(p.stat().st_size for p in self.root.rglob("*") if p.is_file())
+            return 1_000_000 - 300_000 - files
+
+    dump = tmp_path / "drive" / "GARMIN" / "Debug" / "dump"
+    dump.mkdir(parents=True)
+    (tmp_path / "drive" / "GARMIN" / "GarminDevice.xml").write_text(DEVICE_XML)
+    for name, size, when in (("RAM.zip", 9_000, 300), ("RAM_bak1.zip", 8_000, 200),
+                             ("RAM_bak2.zip", 10_000, 100)):
+        (dump / name).write_bytes(b"d" * size)
+        os.utime(dump / name, (1_700_000_000 + when, 1_700_000_000 + when))
+    storage = Drive(tmp_path / "drive")
+    device = parse(storage.read("GARMIN/GarminDevice.xml"))
+    history.note_connection(device, storage, now=NOW - timedelta(minutes=10))
+    # What the window read of it when it opened it: no error log, the dumps listed.
+    at_open = diagnostics.AtOpen(entries=[], crash=None, hidden_logs=False, dumps=[
+        (f"GARMIN/Debug/dump/{p.name}", p.stat().st_size) for p in dump.iterdir()])
+    session = types.SimpleNamespace(device=device, storage=storage, diagnostics=at_open,
+                                    crash_history=[], space=None)
+    asked = questions(in_the_window)
+    win, section = page(status.read(session))
+    win.session = session
+    win.toasts = []
+    win.toast = win.toasts.append
+    win.progress = lambda message: None
+    win.show_status = lambda made: MainWindow.show_status(win, made)
+    win.load_section = lambda key, force=False: MainWindow.load_status(win)
+    section.loaded = True
+    win.toplevel.set_default_size(1000, 900)
+    win.toplevel.present()
+    shown(0.3)
+
+    def remove():
+        button_of(titled(section, "Older Memory Dumps")).emit("clicked")
+        asked[-1].answers[0].run()
+        shown(0.3)
+
+    yield types.SimpleNamespace(win=win, section=section, storage=storage, remove=remove)
+    win.toplevel.destroy()
+
+
+def shown(seconds: float) -> None:
+    """The window drawn: its main loop run for `seconds`."""
+    import time
+
+    from gi.repository import GLib
+
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        GLib.MainContext.default().iteration(False)
+
+
+def legend_columns(section) -> int:
+    """How many columns the legend of the storage has as drawn: the places its names start at."""
+    from fakes import descendants
+    from gi.repository import Gtk
+
+    from openexpress.gui.status_page import kind_names
+
+    names = set(kind_names().values())
+    card = next(w for w in descendants(section.groups[1]) if w.has_css_class("oe-status-storage"))
+    starts = set()
+    for label in descendants(card):
+        if isinstance(label, Gtk.Label) and label.get_label() in names:
+            _found, bounds = label.compute_bounds(card)
+            starts.add(round(bounds.get_x()))
+    return len(starts)
+
+
+@pytest.fixture
+def removed_on_a_drive(drive_page):
+    """The page after Copy and Remove ran for real on the made-up drive."""
+    drive_page.remove()
+    return drive_page.win, drive_page.section, drive_page.storage
+
+
+@pytest.mark.needs_display
+def test_the_legend_has_system_and_one_column_before_and_after_a_removal(drive_page):
+    """The count after a removal gives the kinds the count of the connection gives (the rest
+    of the used space as System too), and the legend stays one column at any width."""
+    before = labels(drive_page.section.groups[1])
+    assert "System" in before and legend_columns(drive_page.section) == 1
+    drive_page.remove()
+    after = labels(drive_page.section.groups[1])
+    assert "System" in after and legend_columns(drive_page.section) == 1
+    assert [n for n in after if n in KIND_NAMES] == [n for n in before if n in KIND_NAMES]
+
+
+KIND_NAMES = ("Maps", "Activities", "Music and Audio", "Apps", "Courses and Locations",
+              "Updates and Satellite Data", "Logs and Memory Dumps", "System", "Free")
+
+
+@pytest.mark.needs_display
+def test_after_a_removal_the_storage_is_counted_again(removed_on_a_drive):
+    """Not the count of the connection: the kinds of file and the free space counted again,
+    and the subtitle says when."""
+    from openexpress.i18n import human_size
+
+    _win, section, storage = removed_on_a_drive
+    legend = labels(section.groups[1])
+    assert legend[legend.index("Logs and Memory Dumps") + 1] == human_size(9_000)
+    assert f"{human_size(1_000_000 - storage.free_space())} used" in legend
+    assert titled(section, "Category Details").get_subtitle() == (
+        "Counted again after a removal, just now")
+
+
+@pytest.mark.needs_display
+def test_after_a_removal_its_copies_count_on_this_computer(removed_on_a_drive):
+    win, section, _storage = removed_on_a_drive
+    assert win.toasts == ["2 memory dumps removed, 18.0\u00a0kB freed"]
+    assert titled(section, "Copies on This Computer").get_subtitle() == (
+        "1 copy\u00a0· 18.0\u00a0kB\u00a0· the last just now")
+
+
+@pytest.mark.needs_display
+def test_a_removal_that_fails_reads_the_page_again(clock, in_the_window, monkeypatch):
+    """A part may be removed: the page shows what is left, and the error is said."""
+    from fakes import RunNow
+
+    from openexpress import freeing
+    from openexpress.device.storage import DeviceError
+
+    asked = questions(in_the_window)
+    win, section = page()
+    working(win, monkeypatch)
+    win.run_task = RunNow(error="record")
+
+    def fails(storage, unit_id, older, **kw):
+        raise DeviceError("Cannot delete RAM_bak2.zip")
+
+    monkeypatch.setattr(freeing, "remove_dumps", fails)
+    button_of(titled(section, "Older Memory Dumps")).emit("clicked")
+    asked[0].answers[0].run()
+    assert win.run_task.errors and win.reloads == ["status"]
+
+
+@pytest.mark.needs_display
+def test_removing_an_update_file_offers_the_update_again(clock, in_the_window, monkeypatch):
+    from openexpress import freeing
+
+    asked = questions(in_the_window)
+    gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD")
+    win, section = page(facts(not_installed=[gps]))
+    working(win, monkeypatch)
+    monkeypatch.setattr(freeing, "remove_update", lambda storage, u: freeing.Freed(
+        removed=[(u.device_path, u.size)]))
+    button_of(titled(section, "GPS software 6.20")).emit("clicked")
+    (q,) = asked
+    assert (q.heading, q.body) == (
+        "Remove the Update File?",
+        ("The device took in GPS software 6.20 (4.1\u00a0MB) but did not install it. The file "
+         "will be removed from the device; the Updates page will offer the update again."))
+    q.answers[0].run()
+    assert win.toasts == ["Update file removed, 4.1\u00a0MB freed"]
+    assert not gps.on_device  # the Updates page offers it again
+    assert win.reloads == ["status"]
 
 
 @pytest.mark.needs_display
@@ -387,6 +737,26 @@ def test_not_known_is_told_apart_from_none(clock):
     none = page(facts(dumps=[], crashes=[], events=[]))[1]
     assert titled(none, "Memory Dumps").get_subtitle() == "None"
     assert "Older Memory Dumps" not in [r.get_title() for r in rows(none)]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize(("changes", "said"), [
+    ({}, ("device status: warning; crashes in the last 30 days: 3; 12_400_000_000 B free of "
+          "31_100_000_000 B; to free: 2 older dumps (18_000_000 B), 0 update files; update "
+          "files checked")),
+    ({"errors_known": False, "crashes": [], "updates_why": "no connection"},
+     ("device status: unknown (error logs not read); crashes in the last 30 days: 0; "
+      "12_400_000_000 B free of 31_100_000_000 B; to free: 2 older dumps (18_000_000 B), 0 "
+      "update files; update files not checked (no connection)")),
+    ({"dumps": None, "free": None},
+     ("device status: warning; crashes in the last 30 days: 3; ? free of 31_100_000_000 B; to "
+      "free: older dumps not known, 0 update files; update files checked"))])
+def test_what_the_page_shows_is_said_in_the_log(clock, caplog, changes, said):
+    """What the page read and how it sums it up, in one line; why it is not known when not."""
+    caplog.set_level("INFO", logger="openexpress.gui.status_page")
+    page(facts(**changes))
+    assert [r.getMessage() for r in caplog.records
+            if r.getMessage().startswith("device status:")] == [said]
 
 
 @pytest.mark.needs_display

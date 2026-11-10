@@ -9,6 +9,7 @@ import dataclasses
 import importlib.util
 import json
 import logging
+import posixpath
 import sys
 import time
 import unicodedata
@@ -211,6 +212,8 @@ def cmd_diagnostics(args) -> int:
     from openexpress import diagnostics
 
     st, dev = open_device(args)
+    if args.free_space:
+        return _free_space_command(st, dev, args.apply)
     print(_diagnostics_copy_text(diagnostics.copy_on()))
     entries = diagnostics.read_errors(st)
     print(_("Error logs on the device:"))
@@ -280,6 +283,101 @@ def cmd_diagnostics(args) -> int:
             count=hidden.new + hidden.unchanged, new=hidden.new) if hidden.saved
               else _("The device has no hidden crash logs."))
     return 0
+
+
+def _free_space_command(st, dev, apply: bool) -> int:
+    """`diagnostics --free-space`: only what can be freed, as the page Device Status lists it
+    (freeing.plan); a dry run, or with --apply the copy before the removal and the removal,
+    nothing else (not the copy of the diagnostic files)."""
+    from openexpress import freeing
+
+    plan = freeing.plan(st, dev, GarminClient(Settings.load()), fresh=apply)
+    if not apply:
+        _print_free_space(plan)
+        # TRANSLATORS: `openexpress diagnostics --free-space` without --apply
+        print(_("Dry run: nothing was copied or removed. Add --apply to copy and remove the "
+                "files listed; that cannot be undone."))
+        return 0
+    if not plan.older and not plan.updates:
+        _print_free_space(plan)
+        return 0
+    if plan.why is not None:
+        print(_("update files: not checked ({why})").format(why=plan.why))
+    return _free_space(st, dev, plan)
+
+
+def _count_size(items) -> str:
+    return f"{len(items)} ({human_size(sum(item[1] for item in items))})"
+
+
+def _print_free_space(plan) -> None:
+    """What --free-space would remove: the older memory dumps, which of them it would copy
+    first and which not (too large), the update files; an update that waits to be installed
+    only shown."""
+    # TRANSLATORS: `openexpress diagnostics --free-space`: heading above what it removes
+    print(_("Space to free on the device:"))
+    if plan.older is None:
+        # TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
+        print("  " + _("older memory dumps: not known (the newest cannot be told)"))
+    elif plan.older:
+        # TRANSLATORS: under "Space to free on the device:"; {dumps} is a count and a size,
+        # e.g. "3 (2.5 MB)"
+        print("  " + _("older memory dumps: {dumps}; the newest stays").format(
+            dumps=_count_size(plan.older)))
+        if plan.copied:
+            # TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would copy
+            # to this computer before it removes them
+            print("    " + _("to copy before the removal: {dumps}").format(
+                dumps=_count_size(plan.copied)))
+        if plan.too_large:
+            # TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would
+            # remove without a copy, as too large to copy
+            print("    " + _("to remove without a copy, too large: {dumps}").format(
+                dumps=_count_size(plan.too_large)))
+    for u in plan.updates:
+        print("  " + _("update file not installed by the device: {name} {version} ({size})")
+              .format(name=u.name, version=u.version, size=human_size(u.size)))
+    for u in plan.waiting:
+        print("  " + _("waiting to be installed, not removed: {name} {version} ({file})").format(
+            name=u.name, version=u.version, file=u.filename))
+    if plan.why is not None:
+        print("  " + _("update files: not checked ({why})").format(why=plan.why))
+    if not plan.older and not plan.updates:
+        print("  " + _("nothing to remove"))
+    else:
+        print("  " + _("in all: {size}").format(size=human_size(plan.size)))
+
+
+def _free_space(st, dev, plan) -> int:
+    """--free-space --apply: the older dumps copied (where they fit) and removed, then the
+    update files; 1 when the device refused or kept a file, or a copy failed."""
+    from openexpress import freeing
+
+    problems = []
+    if plan.older:
+        with _progress() as progress:
+            freed = freeing.remove_dumps(st, dev.unit_id, plan.older, progress=progress)
+        text = ngettext("Removed: {count} memory dump, {size} freed",
+                        "Removed: {count} memory dumps, {size} freed", len(freed.removed)).format(
+            count=len(freed.removed), size=human_size(freed.freed))
+        if freed.copied:
+            text += "; " + _("{count} copied to this computer first").format(
+                count=len(freed.copied))
+        print(text + ".")
+        problems += [(path, why) for path, why in freed.kept]
+        # TRANSLATORS: why a memory dump stays on the device after --free-space
+        problems += [(path, _("its copy on this computer failed")) for path in freed.copy_failed]
+    for u in plan.updates:
+        freed = freeing.remove_update(st, u)
+        if freed.removed:
+            print(_("Removed: the file of {name} {version}, {size} freed.").format(
+                name=u.name, version=u.version, size=human_size(freed.freed)))
+        problems += freed.kept
+    for path, why in problems:
+        # TRANSLATORS: `diagnostics --free-space --apply`: a file that stayed on the device
+        print("  " + _("not removed: {name}: {why}").format(name=posixpath.basename(path),
+                                                            why=why))
+    return 1 if problems else 0
 
 
 def crash_sources(crash) -> str:
@@ -3170,7 +3268,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("also read the hidden crash logs (the device leaves the file "
                           "manager for a moment)"))
     s.add_argument("--dumps", action="store_true", help=_("also copy the memory dumps"))
-    s.set_defaults(func=cmd_diagnostics)
+    s.add_argument("--free-space", action="store_true",
+                   help=_("also free up space on the device: remove the older memory dumps "
+                          "(copied to this computer first where they fit) and the files of "
+                          "updates it did not install"))
+    s.set_defaults(func=cmd_diagnostics, _parser=s)
 
     s = sub.add_parser("login", help=_("sign in to Garmin Connect"))
     s.add_argument("--manual", action="store_true", help=_("sign in using a regular browser"))
@@ -3484,6 +3586,9 @@ def _main(argv: list[str] | None) -> int:
     args = build_parser().parse_args(argv)
     if args.cmd == "setup" and bool(args.key) != bool(args.secret):
         args._parser.error(_("--key and --secret must be given together"))
+    if args.cmd == "diagnostics" and args.free_space and (args.dumps or args.crash_logs):
+        # TRANSLATORS: --free-space is an action of its own; the options are not translated
+        args._parser.error(_("--free-space cannot be given with --dumps or --crash-logs"))
     if args.lang:
         i18n.setup(args.lang)
     if importlib.util.find_spec("gi") is None:

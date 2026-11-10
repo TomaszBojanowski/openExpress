@@ -198,7 +198,8 @@ def count(device: GarminDevice, storage: Storage) -> dict[str, int]:
     return sizes
 
 
-def _space(storage: Storage) -> tuple[int | None, int | None]:
+def space(storage: Storage) -> tuple[int | None, int | None]:
+    """(capacity, free space) of the device; None: not known."""
     out = []
     for ask in (storage.capacity, storage.free_space):
         try:
@@ -212,6 +213,21 @@ def _space(storage: Storage) -> tuple[int | None, int | None]:
 
 
 # --- the line of a connection ----------------------------------------------------------------
+
+
+def storage_by_kind(device: GarminDevice, storage: Storage
+                    ) -> tuple[dict[str, int], int | None, int | None]:
+    """The space each kind of file takes (count) with "system", the rest of the used space,
+    and the capacity and the free space: at the connection and after a removal alike."""
+    capacity, free = space(storage)
+    kinds = count(device, storage)
+    # The rest of the used space only when every kind was counted, else it would hold the kind
+    # left out.
+    if capacity is not None and free is not None and _declared(device) <= kinds.keys():
+        rest = capacity - free - sum(kinds.values())
+        if rest >= 0:
+            kinds["system"] = rest
+    return kinds, capacity, free
 
 
 def _boot() -> str:
@@ -246,14 +262,7 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
           via: str) -> dict:
     from openexpress import diagnostics
 
-    capacity, free = _space(storage)
-    kinds = count(device, storage)
-    # The rest of the used space only when every kind was counted, else it would hold the kind
-    # left out.
-    if capacity is not None and free is not None and _declared(device) <= kinds.keys():
-        rest = capacity - free - sum(kinds.values())
-        if rest >= 0:
-            kinds["system"] = rest
+    kinds, capacity, free = storage_by_kind(device, storage)
     if found is not None:
         entries = found.entries if found.errors_known else None
         dumps = found.dumps if found.dumps_known else None

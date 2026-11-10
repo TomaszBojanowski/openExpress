@@ -19,6 +19,7 @@ openexpress/diagnostics.py
 openexpress/download.py
 openexpress/fit.py
 openexpress/forget.py
+openexpress/freeing.py
 openexpress/gpx.py
 openexpress/gui/activities_page.py
 openexpress/gui/activity_map.py

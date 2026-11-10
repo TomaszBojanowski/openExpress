@@ -80,10 +80,17 @@ Otherwise the device's diagnostic files stay on this computer:
   openExpress's own; the memory dumps (encrypted by Garmin) are copied with **Copy Memory Dumps**
   or `openexpress diagnostics --dumps --apply`.
 
+- Before older memory dumps are removed from the device (**Free Up Space** → **Copy and
+  Remove** on the Device Status page, `openexpress diagnostics --free-space --apply`), those
+  that fit are copied to this computer, whatever **Keep Diagnostic Files** says, and each copy is
+  checked first: at most 100 MB per device, apart from the copies above, the oldest removal
+  dropped first. A dump too large for that is removed without a copy, and the question says so.
+
 The copies are in the device's folder of openExpress's data (`~/.local/share/openexpress/devices/`,
 in the Flatpak `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress/devices/`),
-readable only by you: at most 30 copies and 50 MB per device, the oldest removed first.
-**Forget Device** removes them. These copies are never sent.
+readable only by you: at most 30 copies and 50 MB per device, the oldest removed first, and the
+copies of removed dumps in `diagnostics/removed/`. **Forget Device** removes them. These copies
+are never sent.
 
 ## Activities
 

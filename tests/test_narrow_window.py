@@ -705,6 +705,15 @@ def test_the_page_device_status_opened_fits_the_narrowest_window(narrow_window, 
     assert _min_width(win.device_view) <= NARROWEST
 
 
+def _lines_of(legend) -> list:
+    """The lines of the legend of the storage, one kind each."""
+    lines, child = [], legend.get_first_child()
+    while child is not None:
+        lines.append(child)
+        child = child.get_next_sibling()
+    return lines
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_names_of_the_legend_wrap_only_in_a_narrow_window(narrow_window, language):
     """In a wide window no kind's name wraps (the longest ones: "Updates and Satellite Data",
@@ -722,11 +731,10 @@ def test_the_names_of_the_legend_wrap_only_in_a_narrow_window(narrow_window, lan
     _iterate(0.3)
     names = set(kind_names().values())
     legend = next(w for w in descendants(win.sections["status"].stack)
-                  if isinstance(w, Gtk.FlowBox))
+                  if w.has_css_class("oe-status-legend"))
     shown = [w for w in descendants(legend) if isinstance(w, Gtk.Label) and w.get_label() in names]
     assert shown and all(w.get_layout().get_line_count() == 1 for w in shown)
-    heights = {child.get_height() for child in descendants(legend)
-               if isinstance(child, Gtk.FlowBoxChild)}
+    heights = {line.get_height() for line in _lines_of(legend)}
     assert len(heights) == 1
 
 
@@ -755,8 +763,8 @@ def test_a_name_of_the_legend_that_wraps_makes_only_its_line_taller(narrow_windo
     _iterate(0.3)
     names = set(kind_names().values())
     legend = next(w for w in descendants(win.sections["status"].stack)
-                  if isinstance(w, Gtk.FlowBox))
-    lines = [w for w in descendants(legend) if isinstance(w, Gtk.FlowBoxChild)]
+                  if w.has_css_class("oe-status-legend"))
+    lines = _lines_of(legend)
 
     def name(line):
         return next(w for w in descendants(line)

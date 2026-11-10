@@ -317,7 +317,7 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
 
 INFORMS = {"close-busy", "order-none-differs", "ejected", "error", "backup-incomplete",
            "add-to-account-refused", "added-not-listed", "added-not-checked", "update-done",
-           "update-finish"}
+           "update-finish", "free-not-removed"}
 AFTER_ESCAPE = {}
 
 
@@ -629,6 +629,35 @@ def _error(ctx):
     MainWindow.error(_escape_window(ctx), "Something", "went wrong")
 
 
+def _free_dumps(ctx):
+    from openexpress.gui.status_page import confirm_dumps
+
+    confirm_dumps(_escape_window(ctx), [("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 200.0)])
+
+
+def _free_update(ctx):
+    from openexpress import updates
+    from openexpress.gui.status_page import confirm_update
+
+    u = updates.SoftwareUpdate(
+        part_number="006-D0000-00", name="GPS software", version="6.20", severity="Recommended",
+        is_primary=False, is_reinstall=False, restart_required=False,
+        device_path="GARMIN/RemoteSW/006-D0000-00.GCD", url="", md5=None, size=4_100_000,
+        order=0, on_device=True)
+    confirm_update(_escape_window(ctx), u)
+
+
+def _free_not_removed(ctx):
+    """After a removal the device refused in part."""
+    from openexpress import freeing
+    from openexpress.gui import status_page
+
+    win = _escape_window(ctx)
+    status_page._freed(win, win.session, freeing.Freed(
+        removed=[("GARMIN/Debug/dump/RAM_bak2.zip", 9_000_000)],
+        kept=[("GARMIN/Debug/dump/RAM_bak1.zip", "the device kept it")]), "1 removed")
+
+
 def _report(ctx):
     from openexpress.gui.app import MainWindow
 
@@ -681,6 +710,7 @@ OPENERS = {
     "eject-ask": _eject_ask, "ejected": _ejected,
     "eject-retry": _eject_retry, "error": _error, "report": _report,
     "update-done": _update_done, "update-finish": _update_finish,
+    "free-dumps": _free_dumps, "free-update": _free_update, "free-not-removed": _free_not_removed,
 }
 
 

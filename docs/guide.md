@@ -403,20 +403,27 @@ fēnix 8 over MTP.
 ## Device Status
 
 The Device Status page, last in the side panel, tells what needs attention on the connected
-device and what takes its space. It only reads: nothing is removed and nothing is sent.
+device and what takes its space. Nothing is sent, and nothing is removed but what you
+choose under Free Up Space.
 
 - **The summary on top:** the crashes of the last 30 days (only those that restarted the
   device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), or
   no problems found.
-- **Storage:** the space of each kind of file, counted when the device was connected, the
-  largest first (a kind the device holds none of is left out) and the free space last; the
+- **Storage:** the space of each kind of file, counted when the device was connected (and again
+  after files were removed under Free Up Space), the largest first (a kind the device holds none of is left out) and the free space last; the
   kinds with a page of their own lead to it.
 - **Crashes and Updates:** each crash once, from the device's error logs, its boot log and the
   copies on this computer, with its details inside; the software updates, from the log of the
   device's connections (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
   saw the device.
-- **Space to Free:** the files the device no longer needs (memory dumps but the newest, an
-  update it did not install), with their size.
+- **Free Up Space:** the files the device no longer needs, with their size, each removed only
+  after a question: **Copy and Remove** for the memory dumps but the newest (copied to this
+  computer first where they fit; the question names those too large to copy, which are removed
+  without a copy), **Remove** for the file of an update the device did not install (the Updates
+  page offers the update again). A software update waiting in the device's main folder is only
+  shown: removing it would cancel the update. Activities, maps, music, courses and settings are
+  never removed. The same list from the command line: `openexpress diagnostics --free-space`, a
+  dry run until `--apply`.
 - **Diagnostic Files** and **Report a Problem:** the copy of the diagnostic files (the same
   switch as in Preferences), Copy Crash Logs and Copy Memory Dumps, and the report.
 

@@ -58,6 +58,9 @@ MAX_FILES = 500
 COPIES_KEPT = 30
 LIMIT = 50 * 1000 * 1000
 STAMP = "%Y-%m-%d %H.%M.%S"
+# The folder of the copies of the dumps removed from the device (freeing.py), beside the
+# snapshots: a limit of its own, never rotated with them.
+REMOVED = "removed"
 RECENT = timedelta(days=30)
 # The only kind shown as "the device reported an error": an Edge 1050 logs "Assert" at every
 # ordinary restart, "Abnormal Powerdown" is a power loss or a restart forced with the button.
@@ -841,18 +844,30 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     return found
 
 
+def _stamp_time(name: str) -> datetime | None:
+    try:
+        return datetime.strptime(name.split(" (")[0], STAMP)
+    except ValueError:
+        return None
+
+
 def copies_facts(unit_id: int) -> tuple[int, int, datetime | None]:
-    """The copies kept of a device's diagnostic files: how many, their bytes, when the last
-    was made (None: no copy, or a name that does not say)."""
+    """The copies kept of a device's diagnostic files, the copies of the dumps removed from it
+    too (one a removal): how many, their bytes, when the last was made (None: no copy, or a
+    name that does not say)."""
     where = folder(unit_id)
     snaps = _snapshots(where)
-    if not snaps:
-        return 0, 0, None
     try:
-        when = datetime.strptime(snaps[-1].stem.split(" (")[0], STAMP)
-    except ValueError:
-        when = None
-    return len(snaps), _object_bytes(where), when
+        removals = sorted(p for p in (where / REMOVED).iterdir() if p.is_dir())
+    except OSError:
+        removals = []
+    if not snaps and not removals:
+        return 0, 0, None
+    size = _object_bytes(where) + sum(f.stat().st_size for r in removals for f in r.rglob("*")
+                                      if f.is_file())
+    times = [t for t in (_stamp_time(snaps[-1].stem) if snaps else None,
+                         _stamp_time(removals[-1].name) if removals else None) if t is not None]
+    return len(snaps) + len(removals), size, max(times) if times else None
 
 
 def copies_text(unit_id: int) -> str:

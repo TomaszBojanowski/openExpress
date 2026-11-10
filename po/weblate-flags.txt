@@ -17,6 +17,7 @@ chart unit|bpm|ignore-same
 |{minutes} min {seconds} s|ignore-same
 |Garmin Connect|ignore-same
 |TrueUp: {time}…|ignore-same
+|{name} {version}|ignore-same
 
 # ignore-same, ignore-same-plurals
 |… and {count} more|ignore-same, ignore-same-plurals

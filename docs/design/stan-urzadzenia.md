@@ -1,9 +1,10 @@
 # Design: the page Device Status
 
-Status: partly decided, nothing implemented. Decided: D1 (the name), D4 (layout A), D5's threshold
-of little space, D8 (the log always kept), D9 (removal at step e, both candidates, always
-confirmed); D13's remembered device is decided at step f. The other decisions are proposed, each
-with the option recommended. Mockups of layout A (step c, read only, and step e, with removal and
+Status: steps a to c implemented, step d dropped, step e (freeing space) decided. Decided: D1 (the
+name), D4 (layout A), D5's threshold of little space, D8 (the log always kept), D9 (removal at
+step e: both candidates, always confirmed, a copy first where it fits, an update in the main
+folder only shown, the command line too); D13's remembered device is decided at step f. The other
+decisions are proposed, each with the option recommended. Mockups of layout A (step c, read only, and step e, with removal and
 its confirmations), in English and Polish, at 1000 × 740 (the size of the program's screenshots)
 and 360 × 740, light and dark, were drawn with libadwaita widgets on made-up data; every number and
 date below is made up.
@@ -117,11 +118,10 @@ not used: a device's crash is a fact to know, not an alarm.
   palette (the same in light and dark), the free part last, as the track. No category is red: in libadwaita red means an error, so Logs
   and Memory Dumps are slate and System light grey.
 - **The legend:** in the bar's order, the free part last, as a ring; each name with its size at
-  the end of its line. Two columns only where both names fit on one line (the flow box lays them
-  out at their natural width): at the page's width the longest names (Updates and Satellite Data,
-  Logs and Memory Dumps) do not, so it is one column. A name wraps only in a window too narrow
-  for it, and only its line is the taller for it: every line keeps its natural height, with no
-  room left under the last one.
+  the end of its line, one column at any width: a layout of two columns where the names happen
+  to fit would change by itself when the sizes change (after a removal). A name wraps only in a
+  window too narrow for it, and only its line is the taller for it: every line keeps its natural
+  height, with no room left under the last one.
 - **A category of 0 B** is left out of the legend and of Category Details (a USB drive holds
   none of most); the free part stays always, at 0 B too.
 - **Category Details** (a row that expands): each category with its count and size, in the bar's
@@ -162,24 +162,58 @@ kept whatever Keep Diagnostic Files says;".
 
 | Candidate | What is done | Never |
 |---|---|---|
-| Older memory dumps | copied to this computer (with the diagnostic copies), checked, then removed from the device; the newest dump always stays | – |
-| Files of an update the device did not install ("Update Not Installed by the Device") | the file is removed; the Updates page offers the update again | a waiting update (`GUPDATE` in the device's main folder), whose removal cancels it |
-| – | – | activities, maps, music, courses, settings and profiles, `.sid` files, satellite data, the device's logs, hidden files, anything not on this list |
+| Older memory dumps: all but the newest, by the time of each file | copied to this computer first, each copy checked, then removed from the device; the newest dump always stays (the only one of the last crash). No dump is offered when the time of one is not known (the newest cannot be told) | – |
+| Files of an update the device did not install, outside the device's main folder (a row titled by the update's name and version: "The device took the file in but did not install it") | the file is removed; the Updates page offers the update again | – |
+| An update file in the device's main folder (`GUPDATE.GCD`, `GUPDATE.GSP`) the device did not install | shown as waiting to install, without a button, and not counted as space to free | removed: that cancels the update |
+| – | – | activities, maps, music, courses, settings and profiles, `.sid` files, satellite data, the device's logs (also the `ramdump_err*.txt` texts beside an Edge's dumps), hidden files, anything not on this list |
 
 Decided: both candidates, removed from step e on; the page of step c only reads.
 
+- **The copy before a removal** is made always, also with Keep Diagnostic Files off: it is what
+  makes a removal of the device's only diagnostic material safe. It goes to
+  `devices/<Unit ID>/diagnostics/removed/` (a test drive's too, where its other diagnostic
+  copies are), apart from the 50 MB of the diagnostic copies, so that the dumps never push out
+  the copies of the error logs the crash history reads. At most 100 MB a device: the newest dumps first while they fit;
+  older removals are dropped first to make room. A dump larger than that (the `ramdump*.log` an
+  Edge 1050 wrote with its older software, about 200 MB each) is removed without a copy, and the
+  question says so plainly. A dump whose copy failed or does not match is not removed. The copies
+  count in "Copies on This Computer" and go with Forget Device.
 - **Step c (read only):** the group **Space to Free**, "Files the device no longer needs"; each
   candidate with what it is and its size at the end of its row, no buttons.
 - **Step e:** the group becomes **Free Up Space**, "Activities, maps, music, courses and settings are
-  never removed"; the rows get **Copy and Remove** and **Remove** in the destructive style (as Forget
+  never removed"; the rows get **Copy and Remove** (dumps, at least one copied first) or **Remove**
+  (dumps none of which can be copied; an update file) in the destructive style (as Forget
   Device), and each asks first through `confirm()`: Cancel, then the answer in the destructive
   style; Cancel is the default (Enter), and closing the question cancels it. The question names
-  what goes and the space:
-  - "Remove Older Memory Dumps?" – "2 memory dumps (18.3 MB) will be copied to this computer and
+  what goes, the space, and what is not copied:
+  - "Remove Older Memory Dumps?" – "5 memory dumps (44.9 MB) will be copied to this computer and
     then removed from the device. The newest dump stays on the device." – Cancel, Copy and Remove;
+  - some too large: "5 memory dumps (682.8 MB) will be removed from the device: 2 (75.3 MB) after
+    a copy on this computer, 3 (607.5 MB) without a copy, as they are too large. The newest dump
+    stays on the device." – Cancel, Copy and Remove;
+  - none can be copied: "3 memory dumps (607.5 MB) will be removed from the device without a copy:
+    they are too large to copy. The newest dump stays on the device." – Cancel, Remove;
   - "Remove the Update File?" – "The device took in GPS software 6.20 (4.1 MB) but did not install
     it. The file will be removed from the device; the Updates page will offer the update again." –
     Cancel, Remove.
+- **The removal** lists the device again first and removes only the files the question named
+  that are still there with the same size, never the newest of that listing. Each removal is
+  checked by listing again: a file the device keeps is not counted as removed.
+- **One list:** the page and the command line list what can be freed with the same function: the
+  dumps listed again, and the update files from the update server's answer (the one the device
+  page and the Updates page share), never from what the Updates page happens to hold.
+- **After it:** "5 memory dumps removed, 44.9 MB freed" (or "Update file removed, 4.1 MB freed");
+  the kinds of file and the free space are counted again, and Category Details says so ("Counted
+  again after a removal, {when}"), then the page is read again. When the device refused a file, or kept it, the
+  window says so ("The device did not remove 2 of the files; the others are removed.", with the
+  device's answer); what was removed stays removed, the page shows what is left. A device that
+  stops responding gets the usual banner.
+- **Command line:** `openexpress diagnostics --free-space` is an action of its own (not with
+  `--dumps` or `--crash-logs`): it shows only the space to free, the same list as the page, in
+  the future tense ("to copy before the removal", "to remove without a copy, too large") and one
+  sentence of the dry run; with `--apply` it copies and removes them as the window does, and
+  nothing else (not the copy of the diagnostic files). The update files need the update
+  server's answer: without it only the dumps, and it says so.
 
 ### D10. Diagnostic files
 
@@ -209,7 +243,7 @@ Decided: both candidates, removed from step e on; the page of step c only reads.
 | Main menu: **Report a Device or Problem…** | stays, and is on the page too (D11) | the only way to report without a device (not supported, not detected) |
 | Device page, Tools: **Backup**, **Part Number** | stay | the user's data and the device's identity, not its diagnostics |
 | Maps, Music, Apps: their sizes and free space | stay | they serve their page's own choices |
-| Command line `openexpress diagnostics` | stays, and lists the merged crashes and the device log | the same data in both |
+| Command line `openexpress diagnostics` | stays, lists the merged crashes and the device log, and frees space with `--free-space` (D9) | the same data and the same actions in both |
 
 Nothing disappears but the row Device Error Log, whose content moves.
 
@@ -262,15 +296,17 @@ f. **The remembered device** (D13), decided then.
 | Group | Storage | Pamięć |
 | Storage card | {free} free of {total} · {used} used | {free} wolne z {total} · Zajęte: {used} |
 | Categories | Maps, Activities, Music and Audio, Apps, Courses and Locations, Updates and Satellite Data, Logs and Memory Dumps, System, Free | Mapy, Aktywności, Muzyka i audio, Aplikacje, Kursy i lokalizacje, Aktualizacje i dane satelitarne, Dzienniki i zrzuty pamięci, System, Wolne |
-| Row | Category Details – "Counted when the device was connected, {when}" | Szczegóły kategorii – „Policzone przy podłączeniu urządzenia, {when}” |
+| Row | Category Details – "Counted when the device was connected, {when}"; after a removal "Counted again after a removal, {when}" | Szczegóły kategorii – „Policzone przy podłączeniu urządzenia, {when}”; po usunięciu „Policzone ponownie po usunięciu, {when}” |
 | Group | Crashes and Updates – "Crashes that restarted the device, and its software updates" | Awarie i aktualizacje – „Awarie, po których urządzenie uruchomiło się ponownie, i aktualizacje jego oprogramowania” |
 | Rows | Crash; Software Updated; First Connected Here | Awaria; Zaktualizowano oprogramowanie; Pierwsze podłączenie |
 | Button | Show All | Pokaż wszystko |
 | Group, step c | Space to Free – "Files the device no longer needs" | Miejsce do zwolnienia – „Pliki, których urządzenie już nie potrzebuje” |
 | Group, step e | Free Up Space – "Activities, maps, music, courses and settings are never removed" | Zwolnij miejsce – „Aktywności, mapy, muzyka, kursy i ustawienia nigdy nie są usuwane” |
-| Rows | Older Memory Dumps – "{count} files; the newest dump is not counted"; Update Not Installed by the Device – "{name} {version}; the device took the file in but did not install it" | Starsze zrzuty pamięci – „{count} pliki; najnowszy zrzut nie jest liczony”; Urządzenie nie zainstalowało aktualizacji – „{name} {version}; urządzenie przyjęło plik, ale go nie zainstalowało” |
+| Rows | Older Memory Dumps – "{count} files; the newest dump is not counted · {size}"; {name} {version} – "The device took the file in but did not install it · {size}" | Starsze zrzuty pamięci – „{count} pliki; najnowszy zrzut nie jest liczony · {size}”; {name} {version} – „Urządzenie przyjęło plik, ale go nie zainstalowało · {size}” |
 | Buttons, step e | Copy and Remove; Remove | Skopiuj i usuń; Usuń |
 | Questions, step e | Remove Older Memory Dumps?; Remove the Update File? (bodies in D9); Cancel | Usunąć starsze zrzuty pamięci?; Usunąć plik aktualizacji?; Anuluj |
+| Row, step e | {name} {version} – "Waits to be installed; removing the file would cancel the update" (no button, no size) | {name} {version} – „Czeka na instalację; usunięcie pliku anulowałoby aktualizację” (bez przycisku i rozmiaru) |
+| After a removal, step e | "{count} memory dumps removed, {size} freed"; "Update file removed, {size} freed"; "The device did not remove {count} of the files; the others are removed." | „Usunięto {count} zrzutów pamięci, zwolniono {size}”; „Usunięto plik aktualizacji, zwolniono {size}”; „Urządzenie nie usunęło {count} z plików; pozostałe są usunięte.” |
 | Group | Diagnostic Files | Pliki diagnostyczne |
 | Rows | Keep Diagnostic Files; Copies on This Computer; Crash Logs; Memory Dumps | Przechowywanie plików diagnostycznych; Kopie na tym komputerze; Dzienniki awarii; Zrzuty pamięci |
 | Buttons | Open Folder; Copy Crash Logs; Copy Memory Dumps | Otwórz folder; Skopiuj dzienniki awarii; Skopiuj zrzuty pamięci |
@@ -304,8 +340,5 @@ follows); Polish in sentence case, a hard space after one-letter words and befor
 
 - The proposed decisions: D2, D3 (the blind test), D5 to D7 but the threshold, D10 to D12, D14.
 - D13's remembered device, at step f.
-- Step e: the memory dumps an Edge 1050 wrote beside its error logs (`ramdump*.log`) are about
-  200 MB each, over the 50 MB limit of a copy, and removing a dump needs its copy on this computer
-  first: a larger limit for Copy and Remove, or another way, decided at step e.
 - A narrow window shortens the Polish title "Stan urządzenia" in the header, as it does "Aktualizacje"
   today: one solution for both.

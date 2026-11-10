@@ -73,6 +73,10 @@ class DeviceSession:
     # device waits for it); None: not started.
     diagnostics: object | None = None
     diagnostics_reading: threading.Event | None = field(default=None, repr=False)
+    # The kinds of file and the space counted again after the window removed files from the
+    # device (status.recount): the page Device Status shows them instead of the count of the
+    # connection; None: no removal yet.
+    recount: object | None = None
     # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
     # quitting); cleared before each wait.
     stop_waiting: threading.Event = field(default_factory=threading.Event, repr=False)

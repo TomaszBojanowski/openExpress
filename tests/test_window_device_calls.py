@@ -676,7 +676,8 @@ WRITING = {"Syncing…", "Installing Update…", "Installing Updates…", "Copyi
            "Copying the Course…",
            "Installing {name}…",
            "Removing {name}…", "Restoring the Order…", "Installing Apps…", "Saving…",
-           "Copying Music…", "Removing…"}
+           "Copying Music…", "Removing…", "Removing the Memory Dumps…",
+           "Removing the Update File…"}
 
 
 def test_every_task_that_writes_to_the_device_says_so():
