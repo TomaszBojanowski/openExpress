@@ -18,8 +18,7 @@ Preferences and the command line, or not shown at all:
 - **crashes and updates:** the device's own crashes (only those that restarted it) and its software
   versions over time;
 - **freeing space:** the few files that can go, and only after a copy;
-- **a report:** the openExpress report with the device's diagnostics, and a local archive for
-  Garmin's support.
+- **a report:** the openExpress report with the device's diagnostics.
 
 Out of scope: the battery (no cheap way to read it), anything sent anywhere (the rule "no
 telemetry" stays: nothing leaves the computer unless the user sends it), editing the device's
@@ -38,8 +37,8 @@ settings.
 | `diagnostics.py` | at each connection (window only): reads `err_log.txt`/`.bak` (kind, time, error, PC, screens; never `unit_id` or `backtrace`), lists memory dumps and the places of the diagnostic files; with Keep Diagnostic Files, copies the visible diagnostic files into `devices/<Unit ID>/diagnostics/` (content by hash, snapshots with the time and software version, at most 30 snapshots and 50 MB); on request: memory dumps (newest first, 50 MB a time), hidden crash logs over a short PTP session | the boot log is read only from the newest copy; no history over time |
 
 What is missing (section 6 lists it for each step): a log of the device over time, a history of
-crashes merged from all sources, storage by category in the window, freeing space, the archive for
-Garmin's support and diagnostic lines in the report.
+crashes merged from all sources, storage by category in the window, freeing space and diagnostic
+lines in the report.
 
 ## 3. Decisions
 
@@ -197,14 +196,8 @@ Decided: both candidates, removed from step e on; the page of step c only reads.
   screens), the crashes of the last 30 days in the boot log, the number and size of memory dumps,
   whether copies are kept. Masked as the report and the log are today; `unit_id` and `backtrace`
   are never read.
-- **Files for Garmin Support:** a ZIP saved to a folder picked in the save dialog, never sent. Two scopes:
-  "Diagnostic files" (default: the error logs, the reports waiting on the device, the boot and event
-  logs if copied, the memory dumps if chosen, the Connect IQ error logs, and a `README.txt` with the
-  list and the openExpress report) and "The device's Garmin folder without music, pictures and
-  maps" (what the support may ask for; it holds activities and health data, said so). Taken from the
-  copies on this computer where they are newer than the device's. The dialog says plainly: "It
-  holds the device's Unit ID and its logs. Memory dumps are encrypted by Garmin, so nothing in them
-  can be masked. Send it only to Garmin's support."
+- No archive of files for Garmin's support is made (the step that would have built one, d, was
+  dropped).
 
 ### D12. What moves, what stays
 
@@ -248,15 +241,14 @@ a. **The device log** (D8), no window: written at each connection by the window 
    service; the category count (D6); the sentence in `docs/privacy.md`. Trial: a test drive with XDG
    folders of its own (as CONTRIBUTING describes; a drive: storage, categories, the log's lines),
    then a watch and a bike computer over MTP.
-b. **Crash history and the report** (D7, D11 first part): the merge, the command line, the report's
+b. **Crash history and the report** (D7, D11): the merge, the command line, the report's
    new section. Trial: the test drive with a made-up error log (written there only with the
    maintainer's consent), then a watch with its boot log.
 c. **The page, read only** (D4–D7, D10, D12–D14): summary, storage, crashes and updates, Space to
    Free without buttons (D9), diagnostic files, report; the row on the device page; the Device
    Error Log row removed. Trial: the test drive (a drive without diagnostic data: D14), the watch,
    the bike computer, narrow and wide windows, both themes, both languages.
-d. **Files for Garmin Support** (D11 second part). Trial: an archive of the test drive and of the
-   watch, opened and listed.
+d. Dropped: no archive for Garmin's support (D11). The steps after it keep their letters.
 e. **Freeing space** (D9): the buttons and their questions. Trial: the test drive with made-up dump
    and update files, then a device with old dumps of its own, after the maintainer's consent.
 f. **The remembered device** (D13), decided then.
@@ -283,8 +275,8 @@ f. **The remembered device** (D13), decided then.
 | Rows | Keep Diagnostic Files; Copies on This Computer; Crash Logs; Memory Dumps | Przechowywanie plików diagnostycznych; Kopie na tym komputerze; Dzienniki awarii; Zrzuty pamięci |
 | Buttons | Open Folder; Copy Crash Logs; Copy Memory Dumps | Otwórz folder; Skopiuj dzienniki awarii; Skopiuj zrzuty pamięci |
 | Group | Report a Problem | Zgłoszenie problemu |
-| Rows | Report to openExpress; Files for Garmin Support | Zgłoszenie do openExpressu; Pliki dla wsparcia Garmina |
-| Buttons | Report…; Save… | Zgłoś…; Zapisz… |
+| Row | Report to openExpress | Zgłoszenie do openExpressu |
+| Button | Report… | Zgłoś… |
 | Device page row | Device Status | Stan urządzenia |
 | Empty page (D14) | No Diagnostic Data | Brak danych diagnostycznych |
 
@@ -294,9 +286,9 @@ follows); Polish in sentence case, a hard space after one-letter words and befor
 
 ## 5. Privacy
 
-- Nothing is sent: the report goes where the user pastes it, the archive where the user saves it.
+- Nothing is sent: the report goes where the user pastes it.
 - The device log and the category counts hold no file names, no Unit ID and no serial number.
-- The report is masked as today; the archive for Garmin cannot be, and says so before it is saved.
+- The report is masked as today.
 - The error log's `unit_id` and `backtrace` are never read into the program.
 
 ## 6. Missing today, by step
@@ -306,7 +298,6 @@ follows); Polish in sentence case, a hard space after one-letter words and befor
 | a | a log over time (today only the last values in `devices.json`, and snapshots of the diagnostic copies when something changed); the category count in the window; writing at a connection outside the window |
 | b | merging crashes from the error logs, the boot log and the copies (today: the current `err_log` without removing duplicates, the newest boot log copy, command line only); diagnostic lines in the report |
 | c | the page itself; the copy buttons outside the error row |
-| d | building the archive |
 | e | removing memory dumps; listing update leftovers (today `GUPDATE.TMP` is only removed before an update is written) |
 
 ## 7. Open
