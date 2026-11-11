@@ -198,6 +198,31 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
     </div>
   </section>
 
+  <section class="updates" id="device-status" aria-labelledby="status-title">
+    <h2 id="status-title">Device Status</h2>
+    <p>What needs attention on the device: its crashes and software updates, what takes its space, and the files it no longer needs, removed only after asking first.</p>
+    <div class="shot-row">
+      <figure class="shot" style="--ratio: 1.6">
+        <a class="zoom" href="screenshots/full/light-status.webp" data-dark="screenshots/full/dark-status.webp">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-status.webp">
+            <img src="screenshots/light-status.webp" width="1400" height="875" loading="lazy" alt="The Device Status page of a fēnix 8: five crashes in the last 30 days, and its storage by kind of file, maps the largest">
+          </picture>
+        </a>
+        <figcaption>Crashes in the last 30 days and the storage by kind of file</figcaption>
+      </figure>
+      <figure class="shot" style="--ratio: 1.302">
+        <a class="zoom" href="screenshots/full/light-status-history.webp" data-dark="screenshots/full/dark-status-history.webp">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-status-history.webp">
+            <img src="screenshots/light-status-history.webp" width="1400" height="1075" loading="lazy" alt="The crashes and software updates of a fēnix 8, one crash opened with its error details, and its diagnostic files">
+          </picture>
+        </a>
+        <figcaption>Each crash once, with its details, beside the software updates</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <section class="features" aria-labelledby="features-title">
     <h2 id="features-title">What it does</h2>
     <ul class="cards">
@@ -226,7 +251,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="3.5" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/><path d="M6.3 9h3.4"/></svg></span>
         <div>
           <h3>Backups and diagnostics</h3>
-          <p>Backups of the device and copies of its diagnostic files, kept on your computer. Shows and sets the primary training device and the primary wearable.</p>
+          <p>Backups of the device and copies of its diagnostic files, kept on your computer. Device Status shows the device's crashes and what takes its space, and frees space taken by old memory dumps. Shows and sets the primary training device and the primary wearable.</p>
         </div>
       </li>
     </ul>
@@ -263,7 +288,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
     </ul>
-    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.9.1">0.9.1</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.10.0">0.10.0</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
   </section>
 
   <section class="privacy" aria-labelledby="privacy-title">
