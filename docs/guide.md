@@ -8,7 +8,7 @@ Fedora/GNOME; the devices it was tried on: [Supported devices](devices.md).
 
 <p align="center">
   <img src="screenshots/updates.png" width="800"
-       alt="The Updates page: a beta system update offered for a fēnix 8, with Install, Install All, Check Again, a component update and Reinstall Components">
+       alt="The Updates page of an Edge 1050: beta version 33.21 available (33.20 → 33.21, 97.7 MB), with Install, Check Again and Reinstall Components">
 </p>
 
 ## Setup
@@ -145,7 +145,8 @@ connected device; no login is needed.
   `[BETA]` on the command line.
 - Before a system update is copied, the window and `openexpress updates --install` warn to
   charge the device and not to unplug it while copying. The confirmation dialog shows both
-  versions and links to the license (EULA).
+  versions, the size, where the file goes on the device, the list of changes when Garmin
+  provides one, and links to the license (EULA).
 - Devices that lose their data on an update: before every update of a device that Garmin files
   as one of these kinds (Wellness and Vivomove), the window and `openexpress updates --install`
   warn that the update erases the data stored on it and say to sync it first. The update is not
@@ -185,12 +186,17 @@ connected device; no login is needed.
   Until it is unplugged, the window does not open a drive it ejected again. **Install All**
   ejects it once, after all of them.
 
-Installing a system update was tested on an Edge 1050 (beta 33.12) and
+Installing a system update was tested on an Edge 1050 (betas 33.12, 33.20 and 33.21) and
 reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2.
 
 <p align="center">
   <img src="screenshots/update-confirm.png" width="700"
-       alt="The confirmation dialog before a system update: versions, size, changes, license link and warning">
+       alt="The confirmation dialog before a system update of an Edge 1050: both versions, the size, where the file goes on the device, that it is a beta, the license link and a warning">
+</p>
+
+<p align="center">
+  <img src="screenshots/update-ready.png" width="700"
+       alt="The Updates page after the copy: Update ready: unplug the device to install it, 33.20 → 33.21, a beta, with Check Again">
 </p>
 
 ## Maps
@@ -436,7 +442,7 @@ choose under Free Up Space.
 
 <p align="center">
   <img src="screenshots/status-history.png" width="700"
-       alt="The Device Status page of a fēnix 8: its crashes and software updates, one crash opened with its error details, and its diagnostic files">
+       alt="The Device Status page of an Edge 1050: its software update from 33.20 to 33.21 and its first connection to this computer, its diagnostic files (two copies on this computer, one memory dump) and Report a Problem">
 </p>
 
 What could not be read is said so, never shown as none. A device that keeps no error logs or

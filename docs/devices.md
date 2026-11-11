@@ -77,7 +77,8 @@ Checked by the developer over MTP, on the same account:
 
 - Detected automatically; read-only commands and backup.
 - Sync in the window: new files uploaded, files from Garmin Connect written to the device.
-- Software updates: two system software updates installed in the window (betas 33.12 and 33.20).
+- Software updates: three system software updates installed in the window (betas 33.12, 33.20
+  and 33.21).
 - Made the primary training device, and back.
 - Connect IQ apps: an app updated; a data field installed and removed on the command line.
 - Courses from GPX files (experimental):
