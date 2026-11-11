@@ -122,7 +122,7 @@ def test_the_window_says_it_in_a_message_after_its_toast(device_root, tmp_path, 
                    toast=lambda text: told.append(text), _closed=False,
                    progress=lambda message: None, backup_row=None)
     MainWindow.backup(win)
-    assert told[0].startswith("Copied 342 files to ")
+    assert told[0] == "Backup made: 342 files (1.0\u00a0kB)"
     assert told[1] == ("backup-incomplete", "Backup Incomplete", TEXT)
 
 

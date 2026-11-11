@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 21:15+0100\n"
+"POT-Creation-Date: 2026-11-11 22:02+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5777,6 +5777,14 @@ msgid_plural "{count} backups"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: message after a backup of the device ({size}: "34.4 MB")
+#: openexpress/gui/device_page.py
+#, python-brace-format
+msgid "Backup made: {count} file ({size})"
+msgid_plural "Backup made: {count} files ({size})"
+msgstr[0] ""
+msgstr[1] ""
+
 #: openexpress/gui/device_page.py
 msgid "Backup Incomplete"
 msgstr ""
@@ -6048,13 +6056,6 @@ msgstr ""
 #: openexpress/gui/device_page.py
 msgid "Creating Backup…"
 msgstr ""
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "Copied {count} file to {path}"
-msgid_plural "Copied {count} files to {path}"
-msgstr[0] ""
-msgstr[1] ""
 
 #: openexpress/gui/device_page.py
 msgid "Sync finished"

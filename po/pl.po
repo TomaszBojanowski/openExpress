@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 21:15+0100\n"
+"POT-Creation-Date: 2026-11-11 22:02+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -6376,6 +6376,15 @@ msgstr[0] "{count} kopia"
 msgstr[1] "{count} kopie"
 msgstr[2] "{count} kopii"
 
+#. TRANSLATORS: message after a backup of the device ({size}: "34.4 MB")
+#: openexpress/gui/device_page.py
+#, python-brace-format
+msgid "Backup made: {count} file ({size})"
+msgid_plural "Backup made: {count} files ({size})"
+msgstr[0] "Kopia zapasowa gotowa: {count} plik ({size})"
+msgstr[1] "Kopia zapasowa gotowa: {count} pliki ({size})"
+msgstr[2] "Kopia zapasowa gotowa: {count} plików ({size})"
+
 #: openexpress/gui/device_page.py
 msgid "Backup Incomplete"
 msgstr "Nie wszystko trafiło do kopii zapasowej"
@@ -6669,14 +6678,6 @@ msgstr "Nie udało się sprawdzić aktualizacji"
 #: openexpress/gui/device_page.py
 msgid "Creating Backup…"
 msgstr "Tworzenie kopii zapasowej…"
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "Copied {count} file to {path}"
-msgid_plural "Copied {count} files to {path}"
-msgstr[0] "Skopiowano {count} plik do {path}"
-msgstr[1] "Skopiowano {count} pliki do {path}"
-msgstr[2] "Skopiowano {count} plików do {path}"
 
 #: openexpress/gui/device_page.py
 msgid "Sync finished"

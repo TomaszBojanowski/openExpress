@@ -84,7 +84,7 @@ from openexpress.gui.words import (  # noqa: E402
     status_summary,
     update_state_text,
 )
-from openexpress.i18n import N_, _, caption, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -165,6 +165,15 @@ def backups_text(unit_id) -> str:
                    # there are
                    ngettext("{count} backup", "{count} backups", len(found)).format(
                        count=len(found)))
+
+
+def backup_made_text(result) -> str:
+    """The message after a backup: how many files it holds and how large it is, the numbers of
+    the command line. Not where: the device's folder is named after its unit ID; the row
+    "Backup" and its tooltip say where the backups are."""
+    # TRANSLATORS: message after a backup of the device ({size}: "34.4 MB")
+    return ngettext("Backup made: {count} file ({size})", "Backup made: {count} files ({size})",
+                    result.files).format(count=result.files, size=human_size(result.bytes))
 
 
 def tell_left_out(win, result) -> None:
@@ -1476,10 +1485,8 @@ class DevicePage:
             lets_the_window_close(
                 lambda: run_backup(s.device, s.storage, paths.default_backup_dir(),
                                    progress=stop_when_closed(self, self.progress))),
-            lambda r: (self.toast(ngettext("Copied {count} file to {path}",
-                                           "Copied {count} files to {path}",
-                                           r.files).format(count=r.files, path=r.path)),
-                       show_backups(self), tell_left_out(self, r)),
+            lambda r: (self.toast(backup_made_text(r)), show_backups(self),
+                       tell_left_out(self, r)),
         )
 
     # --- sync -------------------------------------------------------------------------

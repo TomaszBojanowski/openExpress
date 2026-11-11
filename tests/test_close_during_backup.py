@@ -104,6 +104,29 @@ def test_a_backup_with_the_window_open_makes_its_copy_and_says_so(device_root, b
                    progress=lambda path: None)
     win.backup_row = None
     MainWindow.backup(win)
-    assert len(told) == 1 and told[0].startswith("Copied ")
+    assert len(told) == 1 and told[0].startswith("Backup made: ")
     (made,) = (backups / str(device.unit_id)).iterdir()
     assert (made / "GarminDevice.xml").is_file()
+
+
+def test_the_message_after_a_backup_says_how_much_and_not_where(device_root, backups):
+    """The device's folder of backups is named after its unit ID: the message says how many
+    files the backup holds and how large it is, as the command line does; where it is, the row
+    Backup and its tooltip say (the folder of all devices)."""
+    from openexpress.gui.app import MainWindow
+    from openexpress.i18n import human_size
+
+    storage = LocalStorage(device_root)
+    device = parse(storage.read("GARMIN/GarminDevice.xml"))
+    told = []
+    win = stand_in(session=types.SimpleNamespace(device=device, storage=storage),
+                   run_task=RunNow(), toast=told.append, _closed=False,
+                   progress=lambda path: None)
+    win.backup_row = None
+    MainWindow.backup(win)
+    (made,) = (backups / str(device.unit_id)).iterdir()
+    files = [p for p in made.rglob("*") if p.is_file()]
+    shown_unit_id = str(device.unit_id) in told[0]
+    assert not shown_unit_id
+    size = human_size(sum(p.stat().st_size for p in files))
+    assert told == [f"Backup made: {len(files)} files ({size})"]
