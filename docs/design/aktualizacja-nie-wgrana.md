@@ -125,8 +125,8 @@ When the eject follows a copied update that waits for the device ("ready"):
 
 | Where | EN | PL |
 |---|---|---|
-| "Done" after the eject (window), and the command line | The device is ejected. Unplug the cable and leave the device unplugged so it can install the update. | Urządzenie zostało wysunięte. Odłącz kabel i zostaw urządzenie odłączone, żeby mogło zainstalować aktualizację. |
-| Start page and command line, the watch in its Garmin USB mode (091e:0003) | After it was ejected, the watch switched to its Garmin USB mode. Unplug the cable and leave the device unplugged so it can install the update. | Po wysunięciu zegarek przełączył się w swój tryb Garmin USB. Odłącz kabel i zostaw urządzenie odłączone, żeby mogło zainstalować aktualizację. |
+| "Done" after the eject (window), and the command line | The device is ejected. Unplug the cable and leave the device unplugged so it can install the update. | Urządzenie zostało wysunięte. Odłącz kabel i zostaw urządzenie odłączone, aby mogło zainstalować aktualizację. |
+| Start page and command line, the watch in its Garmin USB mode (091e:0003) | After it was ejected, the watch switched to its Garmin USB mode. Unplug the cable and leave the device unplugged so it can install the update. | Po wysunięciu zegarek przełączył się w swój tryb Garmin USB. Odłącz kabel i zostaw urządzenie odłączone, aby mogło zainstalować aktualizację. |
 
 Without a waiting update (the files of a sync, an eject from the Updates page with nothing
 copied), both texts stay as they are. Which applies is kept with the ejected drive

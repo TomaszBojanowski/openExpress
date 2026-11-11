@@ -119,6 +119,14 @@ def test_no_polish_one_letter_word_is_left_at_the_end_of_a_line():
     assert left == []
 
 
+def test_polish_says_aby_never_zeby():
+    """One word for "so that" in the window and on the command line: "aby"."""
+    zeby = re.compile(r"(?<![\wąćęłńóśźż])żeby(?![\wąćęłńóśźż])", re.IGNORECASE)
+    left = [e["msgid"] for e in _entries(ROOT / "po" / "pl.po")
+            for key, value in e.items() if key.startswith("msgstr") and zeby.search(value)]
+    assert left == []
+
+
 SAMPLE_PO = """msgid ""
 msgstr ""
 "Language: pl\\n"

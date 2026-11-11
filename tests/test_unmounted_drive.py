@@ -839,9 +839,9 @@ def test_the_words_after_an_eject_with_an_update_waiting_in_polish():
         i18n.setup("en")
     assert ejected == ("Urządzenie zostało wysunięte. Odłącz kabel i\u00a0zostaw urządzenie "
                        "odłączone, "
-                       "żeby mogło zainstalować aktualizację.")
+                       "aby mogło zainstalować aktualizację.")
     assert off == ("Po wysunięciu zegarek przeszedł w\u00a0tryb Garmin USB. Odłącz kabel "
-                   "i\u00a0zostaw urządzenie odłączone, żeby mogło zainstalować aktualizację.")
+                   "i\u00a0zostaw urządzenie odłączone, aby mogło zainstalować aktualizację.")
 
 
 def test_the_words_in_polish():

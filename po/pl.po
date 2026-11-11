@@ -787,7 +787,7 @@ msgstr ""
 "Plik aplikacji {name} został usunięty, ale nie udało się zaktualizować listy "
 "aplikacji na urządzeniu: {error} Urządzenie może nadal pokazywać tę "
 "aplikację. Odłącz je i sprawdź; jeśli {name} nadal jest na liście, podłącz "
-"urządzenie i usuń aplikację jeszcze raz, żeby zaktualizować listę."
+"urządzenie i usuń aplikację jeszcze raz, aby zaktualizować listę."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -877,7 +877,7 @@ msgid ""
 "Cannot read the app list of the device to make a copy of it: {error}. "
 "Nothing was changed."
 msgstr ""
-"Nie można odczytać listy aplikacji z urządzenia, żeby utworzyć jej kopię: "
+"Nie można odczytać listy aplikacji z urządzenia, aby utworzyć jej kopię: "
 "{error}. Niczego nie zmieniono."
 
 #: openexpress/ciq.py
@@ -1085,7 +1085,7 @@ msgid ""
 "Dry run: nothing was copied. Add --apply to copy the files the device shows "
 "now."
 msgstr ""
-"Tryb próbny: niczego nie skopiowano. Dodaj --apply, żeby skopiować pliki, "
+"Tryb próbny: niczego nie skopiowano. Dodaj --apply, aby skopiować pliki, "
 "które urządzenie teraz pokazuje."
 
 #: openexpress/cli.py
@@ -1142,7 +1142,7 @@ msgid ""
 "Dry run: nothing was copied or removed. Add --apply to copy and remove the "
 "files listed; that cannot be undone."
 msgstr ""
-"Tryb próbny: niczego nie skopiowano ani nie usunięto. Dodaj --apply, żeby "
+"Tryb próbny: niczego nie skopiowano ani nie usunięto. Dodaj --apply, aby "
 "skopiować i usunąć wymienione pliki; tego nie da się cofnąć."
 
 #: openexpress/cli.py
@@ -1529,7 +1529,7 @@ msgid ""
 "Log file: {path} (add --log to print its last lines for the “Log” field of "
 "the form or a comment)"
 msgstr ""
-"Plik logu: {path} (dodaj --log, żeby wypisać jego ostatnie linie do pola "
+"Plik logu: {path} (dodaj --log, aby wypisać jego ostatnie linie do pola "
 "„Log” formularza albo do komentarza)"
 
 #: openexpress/cli.py openexpress/gui/preferences.py
@@ -1941,7 +1941,7 @@ msgstr "Oprogramowanie urządzenia: {text}"
 
 #: openexpress/cli.py
 msgid "an update is ready: unplug the device to install it"
-msgstr "aktualizacja gotowa: odłącz urządzenie, żeby ją zainstalować"
+msgstr "aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować"
 
 #. TRANSLATORS: after "Device software:" in openexpress status: an update openExpress
 #. copied is on the device, which was unplugged since and has not installed it
@@ -2032,11 +2032,11 @@ msgstr "Na liście nie ma urządzenia numer {number} (jest ich {count})."
 #: openexpress/cli.py openexpress/gui/forget_device.py
 #, python-brace-format
 msgid "{device} is connected: unplug it to forget it."
-msgstr "Urządzenie {device} jest podłączone: odłącz je, żeby je zapomnieć."
+msgstr "Urządzenie {device} jest podłączone: odłącz je, aby je zapomnieć."
 
 #: openexpress/cli.py
 msgid "Add --discard-pending to forget it anyway."
-msgstr "Dodaj --discard-pending, żeby mimo to je zapomnieć."
+msgstr "Dodaj --discard-pending, aby mimo to je zapomnieć."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -2069,13 +2069,13 @@ msgid "{count} backup of it stays in {path} (add --backups to delete it too)."
 msgid_plural ""
 "{count} backups of it stay in {path} (add --backups to delete them too)."
 msgstr[0] ""
-"{count} kopia zapasowa w {path} zostaje (dodaj --backups, żeby ją też "
+"{count} kopia zapasowa w {path} zostaje (dodaj --backups, aby ją też "
 "usunąć)."
 msgstr[1] ""
-"{count} kopie zapasowe w {path} zostają (dodaj --backups, żeby je też "
+"{count} kopie zapasowe w {path} zostają (dodaj --backups, aby je też "
 "usunąć)."
 msgstr[2] ""
-"{count} kopii zapasowych w {path} zostaje (dodaj --backups, żeby je też "
+"{count} kopii zapasowych w {path} zostaje (dodaj --backups, aby je też "
 "usunąć)."
 
 #: openexpress/cli.py
@@ -2515,7 +2515,7 @@ msgid ""
 "{name} is no longer on the device. Run the command with --apply to take it "
 "off the list of own maps."
 msgstr ""
-"Pliku {name} nie ma już na urządzeniu. Uruchom polecenie z --apply, żeby "
+"Pliku {name} nie ma już na urządzeniu. Uruchom polecenie z --apply, aby "
 "usunąć go z listy własnych map."
 
 #: openexpress/cli.py
@@ -2712,7 +2712,7 @@ msgid ""
 "permissions to allow them."
 msgstr ""
 "{name}: potrzebuje nowych uprawnień, więc zostaje pominięta. Dodaj --allow-"
-"permissions, żeby na nie zezwolić."
+"permissions, aby na nie zezwolić."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -3020,7 +3020,7 @@ msgstr ""
 msgid ""
 "To remove it only from the app list of your Garmin account, use --forget."
 msgstr ""
-"Żeby usunąć ją tylko z listy aplikacji na koncie Garmin, użyj --forget."
+"Aby usunąć ją tylko z listy aplikacji na koncie Garmin, użyj --forget."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -3037,7 +3037,7 @@ msgid ""
 "Dry run: nothing was removed. Add --apply to remove it from the app list of "
 "your Garmin account."
 msgstr ""
-"Tryb próbny: niczego nie usunięto. Dodaj --apply, żeby usunąć ją z listy "
+"Tryb próbny: niczego nie usunięto. Dodaj --apply, aby usunąć ją z listy "
 "aplikacji na koncie Garmin."
 
 #: openexpress/cli.py
@@ -3383,7 +3383,7 @@ msgid ""
 "Could not read the account's device list to check it. Check the devices of "
 "your account in Garmin Connect."
 msgstr ""
-"Nie udało się odczytać listy urządzeń konta, żeby to sprawdzić. Sprawdź "
+"Nie udało się odczytać listy urządzeń konta, aby to sprawdzić. Sprawdź "
 "urządzenia swojego konta w Garmin Connect."
 
 #: openexpress/cli.py
@@ -4757,7 +4757,7 @@ msgid ""
 "can install the update."
 msgstr ""
 "Urządzenie zostało wysunięte. Odłącz kabel i zostaw urządzenie odłączone, "
-"żeby mogło zainstalować aktualizację."
+"aby mogło zainstalować aktualizację."
 
 #: openexpress/device/gio_storage.py
 msgid "The device is ejected. You can unplug the cable."
@@ -4867,7 +4867,7 @@ msgid ""
 "cable and leave the device unplugged so it can install the update."
 msgstr ""
 "Po wysunięciu zegarek przeszedł w tryb Garmin USB. Odłącz kabel i zostaw "
-"urządzenie odłączone, żeby mogło zainstalować aktualizację."
+"urządzenie odłączone, aby mogło zainstalować aktualizację."
 
 #: openexpress/device/gio_storage.py
 msgid ""
@@ -5464,7 +5464,7 @@ msgid ""
 "if the device is still missing, check the devices of your account in Garmin "
 "Connect."
 msgstr ""
-"Nie udało się odczytać listy konta, żeby to sprawdzić. Odśwież za kilka "
+"Nie udało się odczytać listy konta, aby to sprawdzić. Odśwież za kilka "
 "minut; jeśli urządzenia nadal brakuje, sprawdź urządzenia swojego konta "
 "w Garmin Connect."
 
