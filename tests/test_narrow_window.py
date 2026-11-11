@@ -356,7 +356,7 @@ def _courses(empty: bool, uncounted: bool = False):
                                _waiting_gpx())]
     if uncounted:
         return courses.Overview("Garmin/NewFiles", found, waiting, None, ("locations",))
-    return courses.Overview("Garmin/NewFiles", found, waiting, 1234)
+    return courses.Overview("Garmin/NewFiles", found, waiting, 1234, locations_file=True)
 
 
 def _iterate(seconds):

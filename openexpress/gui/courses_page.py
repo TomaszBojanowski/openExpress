@@ -210,6 +210,26 @@ def _empty(win, sec) -> None:
     sec.group().add(box)
 
 
+def _saved_locations(sec, seen) -> None:
+    """The group Saved Locations, when the device holds a locations file (Device Status counts
+    it under Courses and Locations and leads to this page), also with no course; none without
+    such a file."""
+    if not seen.locations_file and "locations" not in seen.unreadable:
+        return
+    # TRANSLATORS: group of the Courses page: the device's saved locations
+    g = sec.group(pgettext("courses", "Saved Locations"))
+    # TRANSLATORS: the row of the saved locations kept on the device
+    row = Adw.ActionRow(title=pgettext("saved locations", "On the Device"),
+                        subtitle=_("Waypoints from GPX files and locations saved on the device"))
+    row.add_suffix(Gtk.Label(
+        label=(str(seen.locations) if seen.locations is not None
+               # TRANSLATORS: in place of how many saved locations the device keeps, when its
+               # locations file does not read whole
+               else pgettext("saved locations", "Could not be counted")),
+        wrap=True, justify=Gtk.Justification.RIGHT, css_classes=["dim-label"]))
+    g.add(row)
+
+
 def add_tooltip() -> str:
     # TRANSLATORS: tooltip of Add Course… on the Courses page
     return _("Copy a GPX file to the device (experimental)")
@@ -366,6 +386,7 @@ class CoursesPage:
             sec.banner.set_revealed(True)
         if not seen.courses and not seen.waiting and not seen.unreadable:
             _empty(self, sec)
+            _saved_locations(sec, seen)
             log.info("courses page: none on the device")
             return
         # TRANSLATORS: group of the Courses page: the courses the device keeps
@@ -398,20 +419,7 @@ class CoursesPage:
                     parts.append(human_size(waiting.size))
                 g.add(_row(waiting.title, caption(*parts),
                            remove=self._remove_button(waiting)))
-        if seen.locations is not None or "locations" in seen.unreadable:
-            # TRANSLATORS: group of the Courses page: the device's saved locations
-            g = sec.group(pgettext("courses", "Saved Locations"))
-            # TRANSLATORS: the row of the saved locations kept on the device
-            row = Adw.ActionRow(title=pgettext("saved locations", "On the Device"),
-                                subtitle=_("Waypoints from GPX files and locations saved on "
-                                           "the device"))
-            row.add_suffix(Gtk.Label(
-                label=(str(seen.locations) if seen.locations is not None
-                       # TRANSLATORS: in place of how many saved locations the device keeps,
-                       # when its locations file does not read whole
-                       else pgettext("saved locations", "Could not be counted")),
-                wrap=True, justify=Gtk.Justification.RIGHT, css_classes=["dim-label"]))
-            g.add(row)
+        _saved_locations(sec, seen)
         log.info("courses page: %d courses, %d files waiting", len(seen.courses),
                  len(seen.waiting))
 

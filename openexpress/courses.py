@@ -202,6 +202,7 @@ class Overview:
     waiting: list[Waiting]
     locations: int | None  # how many saved locations; None: not known
     unreadable: tuple[str, ...] = ()  # "courses", "waiting", "locations": could not be read
+    locations_file: bool = False  # the device holds a locations file, of any count
 
 
 def _origin(described: fit.Described, copies: list[dict]) -> str | None:
@@ -259,23 +260,24 @@ def _waiting(storage: Storage, path: str, size: int) -> Waiting:
     return Waiting(path.rpartition("/")[2], path, size, gpx)
 
 
-def _locations(device: GarminDevice, storage: Storage) -> int | None:
-    """How many saved locations the device keeps: the location messages of its locations
-    file; None for a device that declares none. FitError when a file of them does not read
-    whole."""
+def _locations(device: GarminDevice, storage: Storage) -> tuple[int, bool] | None:
+    """How many saved locations the device keeps (the location messages of its locations
+    file) and whether it holds such a file; None for a device that declares none. FitError
+    when a file of them does not read whole."""
     folder = _out_folder(device, LOCATION_DATATYPE)
     if folder is None:
         return None
     declared = device.sources(LOCATION_DATATYPE)
-    count = 0
+    count, held = 0, False
     for path, _size in _files(storage, folder, ".fit"):
         if not any(d.matches(path) for d in declared):
             continue
+        held = True
         found = fit.inspect(storage.read(path))
         if not found.whole:
             raise fit.FitError("a locations file does not read whole")  # the log: its class
         count += found.messages.get(fit.MESG_LOCATION, 0)
-    return count
+    return count, held
 
 
 def overview(device: GarminDevice, storage: Storage) -> Overview:
@@ -304,14 +306,15 @@ def overview(device: GarminDevice, storage: Storage) -> Overview:
         except (DeviceError, fit.FitError) as e:
             log.info("courses: the %s could not be read (%s)", part, type(e).__name__)
             unreadable.append(part)
-    courses, waiting, locations = (read.get("courses", []), read.get("waiting", []),
-                                   read.get("locations"))
+    courses, waiting = read.get("courses", []), read.get("waiting", [])
+    locations, held = read.get("locations") or (None, False)
     log.info("courses: %d on the device (%d of openExpress, %d of Garmin Connect), %d files "
              "waiting, saved locations: %s", len(courses),
              sum(c.origin == ORIGIN_OPENEXPRESS for c in courses),
              sum(c.origin == ORIGIN_CONNECT for c in courses), len(waiting),
              "?" if locations is None else locations)  # counts only: the names are the user's
-    return Overview(target.path.strip("/"), courses, waiting, locations, tuple(unreadable))
+    return Overview(target.path.strip("/"), courses, waiting, locations, tuple(unreadable),
+                    held)
 
 
 # --- copying a GPX file --------------------------------------------------------------------------

@@ -121,6 +121,40 @@ def test_without_a_course_or_a_file_waiting_the_page_says_so(drive):
     assert not section.banner.get_revealed()
 
 
+def saved_locations(section) -> list[list[str]] | None:
+    """The rows of the group Saved Locations; None: the page has no such group."""
+    group = next((g for g in section.groups if g.get_title() == "Saved Locations"), None)
+    return None if group is None else rows(group)
+
+
+SAVED = ["On the Device", "Waypoints from GPX files and locations saved on the device"]
+
+
+@pytest.mark.parametrize("count", [0, 5])
+def test_the_saved_locations_are_shown_also_without_a_course(drive, count):
+    """Device Status counts the locations file under Courses and Locations and leads here: the
+    page shows it under its words that there is no course, also a file without a location (a
+    device may keep one)."""
+    (drive / "Garmin/Locations/Locations.fit").write_bytes(locations_fit(count))
+    win, section = courses_window(drive)
+    win.load_courses()
+    assert labels(section.page)[:3] == [
+        "No Courses on the Device",
+        "Copy a GPX file with a track or a route – the device turns it into a course.",
+        "Add Course…"]
+    assert saved_locations(section) == [[*SAVED, str(count)]]
+
+
+@pytest.mark.parametrize("with_a_course", [False, True])
+def test_a_device_without_a_locations_file_has_no_group_of_them(drive, clock, with_a_course):
+    """Nothing to show: no group of saved locations, with a course or without one."""
+    if with_a_course:
+        (drive / "Garmin/Courses/Hand.fit").write_bytes(course_fit("By Hand", made=now()))
+    win, section = courses_window(drive)
+    win.load_courses()
+    assert saved_locations(section) is None
+
+
 def test_a_device_that_makes_no_courses_of_gpx_files(drive):
     win, section = courses_window(drive, offered=False)
     win.load_courses()
