@@ -563,6 +563,47 @@ def recorded_check(entry: KnownDevice | None, software_version: str,
     return check if check.software_version == software_version else None
 
 
+@dataclass(frozen=True)
+class RecordedState:
+    """What the last check of updates kept with a device says now (recorded_state)."""
+
+    state: str  # as updates.state: "ready", "available", "not-installed" or "current"
+    at: float  # when the check said it
+    found: UpdateSummary | None = None  # what it found to install (also after "ready")
+
+    @property
+    def count(self) -> int:
+        return self.found.count if self.found is not None else 0
+
+    @property
+    def only(self) -> UpdateSummary | None:
+        """The one update found, when it was one and its name is kept."""
+        found = self.found
+        return found if found is not None and found.count == 1 and found.title is not None \
+            else None
+
+
+def recorded_state(entry: KnownDevice | None, software_version: str,
+                   now: float | None = None) -> RecordedState | None:
+    """The state of the updates the last check kept with this device, while it holds (less
+    than UPDATE_FOUND_KEPT_S ago, of the software the device has now): as updates.state, an
+    update copied already ("ready") wins over updates still to install. None when nothing
+    holds: no check, an older one, or one of other software, or an update found that is too
+    old to tell."""
+    at = time.time() if now is None else now
+    found = recorded_updates(entry, software_version, at)
+    check = recorded_check(entry, software_version, at)
+    if check is not None and check.ready:
+        return RecordedState("ready", check.at, found)
+    if found is not None:
+        return RecordedState("available", entry.update_found, found)
+    if check is None:
+        return None
+    if check.not_installed:
+        return RecordedState("not-installed", check.at)
+    return RecordedState("current", check.at) if entry.update_found is None else None
+
+
 def update_found_recently(found: float | None, now: float | None = None) -> float | None:
     """When an update was found, if that was less than UPDATE_FOUND_KEPT_S ago; else None
     (an older finding counts as none)."""

@@ -777,7 +777,7 @@ def test_a_part_in_the_top_folder_is_never_shown_against_the_device_software():
                                    software_version_str="23.39", unit_id=None, update_files=[])
     (u,) = updates.parse_updates(lower_keys({"updates": [part]}), device)
     assert u.installed_version is None
-    assert versions_text(u, device) == "6.70"
+    assert versions_text(u) == "6.70"
 
 
 @pytest.mark.needs_display
@@ -824,13 +824,11 @@ def _dialog(monkeypatch, part, answer=None, device=None):
 
     from openexpress.gui.app import MainWindow
 
+    device = device or types.SimpleNamespace(software_version_str="23.39")
     items = updates.parse_updates(lower_keys(answer or server_answer()), device)
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = stand_in(
-        session=types.SimpleNamespace(
-            device=device or types.SimpleNamespace(software_version_str="23.39")),
-        updates_cache=items)
+    win = stand_in(session=types.SimpleNamespace(device=device), updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
     (dialog,) = asked
     return dialog
@@ -949,6 +947,13 @@ def _text(widget):
     return "".join(p.get_label() for p in parts), [sorted(p.get_css_classes()) for p in parts]
 
 
+def _test_watch():
+    """The plain device of these tests: software 23.39, no part numbers listed. Updates shown
+    with it are read with it too (parse_updates), as the window reads them."""
+    return types.SimpleNamespace(description="Test watch", software_version_str="23.39",
+                                 unit_id=None)
+
+
 def _updates_page(items, beta=False, drive=False, device=None):
     """The Updates page of a window that is never shown; returns the window, the status at the
     top (icon, its styles, the texts with their styles, the buttons) and the other groups.
@@ -957,9 +962,7 @@ def _updates_page(items, beta=False, drive=False, device=None):
     from openexpress.gui.app import MainWindow
 
     win = stand_in(
-        session=types.SimpleNamespace(device=device or types.SimpleNamespace(
-            description="Test watch", software_version_str="23.39", unit_id=None),
-            mass_storage=drive),
+        session=types.SimpleNamespace(device=device or _test_watch(), mass_storage=drive),
         sections={"updates": _Section()}, busy=False, _action_buttons=[], asked=[], loads=[],
         ejected=[], _set_update_state=lambda new, staged=(), not_installed=(): None)
     win.confirm_update = win.asked.append
@@ -992,7 +995,7 @@ def _buttons(row):
 
 
 def _items(*answer_entries):
-    return updates.parse_updates(lower_keys({"updates": list(answer_entries)}))
+    return updates.parse_updates(lower_keys({"updates": list(answer_entries)}), _test_watch())
 
 
 BUNDLE_ENTRY = _entry("006-V0000-00", "Test Bundle", "Firmware", "Garmin", "GUPDATE.GSP", BUNDLE)
@@ -1158,7 +1161,7 @@ def test_cli_marks_beta_in_polish(offered_beta, no_download, capsys):
 
 @pytest.mark.needs_display
 def test_status_with_a_beta_system_update():
-    items = updates.parse_updates(lower_keys(beta_answer()))
+    items = updates.parse_updates(lower_keys(beta_answer()), _test_watch())
     _win, status, _groups, _buttons = _updates_page(items, beta=True)
     assert status["texts"] == [
         ("2 updates available", ["title-1"]),
@@ -1172,7 +1175,7 @@ def test_status_with_a_beta_system_update():
 @pytest.mark.needs_display
 def test_status_says_beta_versions_are_offered_when_none_is_listed():
     # The device is in the beta program, but the system update offered is not a beta.
-    items = updates.parse_updates(lower_keys(beta_answer("live")))
+    items = updates.parse_updates(lower_keys(beta_answer("live")), _test_watch())
     _win, status, _groups, _buttons = _updates_page(items, beta=True)
     assert [t for t, _c in status["texts"]][1:] == [
         f"{VERSIONS}\u00a0· 12\u00a0B", "Test Bundle\u00a0· Recommended\u00a0· GUPDATE.GSP",
@@ -1226,7 +1229,7 @@ def test_beta_in_the_window_in_polish(monkeypatch):
     i18n.setup("pl")
     try:
         body, warning = _beta_question(monkeypatch, BETA)
-        items = updates.parse_updates(lower_keys(beta_answer()))
+        items = updates.parse_updates(lower_keys(beta_answer()), _test_watch())
         _w, status, _g, _b = _updates_page(items, beta=True)
     finally:
         i18n.setup("en")
@@ -1269,7 +1272,7 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
 
     for state, beta in ((BETA, True), ("live", False)):
         _win, status, _groups, _buttons = _updates_page(
-            updates.parse_updates(lower_keys(beta_answer(state))))
+            updates.parse_updates(lower_keys(beta_answer(state)), _test_watch()))
         text, styles = status["texts"][1]
         if beta:
             assert text == f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B"
@@ -1281,7 +1284,7 @@ def test_the_beta_mark_is_a_part_of_its_own_only_for_a_beta():
     from openexpress.gui.window_tasks import WRAP_BOX
 
     win, _status, _groups, _buttons = _updates_page(
-        updates.parse_updates(lower_keys(beta_answer())))
+        updates.parse_updates(lower_keys(beta_answer()), _test_watch()))
     (box,) = win.sections["updates"].groups[0].rows
     line = list(_children(box))[2]
     assert isinstance(line, WRAP_BOX or Gtk.FlowBox)
@@ -1533,7 +1536,7 @@ def test_cli_copied_update_in_polish(offered, no_download, capsys):
 def _staged_items(bundle_state="live", font_on_device=True):
     """The bundle copied already (on the device, still offered); the font on the device too, or
     still to be installed."""
-    items = updates.parse_updates(lower_keys(beta_answer(bundle_state)))
+    items = updates.parse_updates(lower_keys(beta_answer(bundle_state)), _test_watch())
     font, bundle = items
     bundle.on_device, font.on_device = True, font_on_device
     return items
@@ -1563,7 +1566,7 @@ def test_with_an_older_libadwaita_the_beta_line_is_one_text_that_wraps(in_the_wi
 
     in_the_window("WRAP_BOX", None)
     win, _status, _groups, _shown = _updates_page(
-        updates.parse_updates(lower_keys(beta_answer())))
+        updates.parse_updates(lower_keys(beta_answer()), _test_watch()))
     (box,) = win.sections["updates"].groups[0].rows
     _image, _title, line, *_rest, row = _children(box)
     assert line.get_text() == f"{VERSIONS}\u00a0· Beta\u00a0· 12\u00a0B"

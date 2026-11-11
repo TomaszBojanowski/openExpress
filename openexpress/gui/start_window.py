@@ -25,7 +25,6 @@ from openexpress.gui import start  # noqa: E402
 from openexpress.gui.connected import session_summary, unit_ids, uris  # noqa: E402
 from openexpress.gui.detection import _take_asked, decided, seen_open  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
-    last_sync_subtitle,
     refresh_last_sync_subtitle,
     remember_sync_count,
 )
@@ -43,6 +42,7 @@ from openexpress.gui.start import kind_icon  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_text,
     last_seen_tooltip,
+    last_sync_subtitle,
     never_synced_tooltip,
     primary_wearable_text,
     remembered_update_text,

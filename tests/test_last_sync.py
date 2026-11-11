@@ -64,7 +64,7 @@ def test_every_row_in_english_and_polish(data, english, polish):
     window (when, then the same words; a hard space before "·")."""
     from datetime import datetime
 
-    from openexpress.gui.device_page import last_sync_words
+    from openexpress.gui.words import last_sync_words
 
     data = {**data, "time": datetime(2026, 10, 19, 12, 0).timestamp()}
     now = datetime(2026, 10, 22, 12, 0)
@@ -161,7 +161,7 @@ def test_the_row_of_a_sync_in_polish():
     when, told against now, then the numbers; the details name the files and the 2."""
     from datetime import datetime
 
-    from openexpress.gui.device_page import last_sync_words
+    from openexpress.gui.words import last_sync_words
 
     data = {"time": datetime(2026, 10, 18, 21, 14).timestamp(), "uploaded": 6,
             "skipped_known": 2, "downloaded": 0, "rejected": 0, "errors": [], "lines": [
@@ -474,7 +474,7 @@ def test_a_record_of_the_last_sync_of_an_unexpected_shape_reads_as_none(xdg, fie
     import json
 
     from openexpress import paths
-    from openexpress.gui.device_page import last_sync_words
+    from openexpress.gui.words import last_sync_words
 
     good = {"time": 1761000000.0, "unit_id": UNIT, "uploaded": 1, "downloaded": 0,
             "skipped_known": 0, "rejected": 0, "errors": [], "lines": []}

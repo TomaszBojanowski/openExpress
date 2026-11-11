@@ -4,9 +4,10 @@ use them too."""
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from datetime import datetime
 
-from openexpress import known_devices, service
+from openexpress import known_devices, last_sync, service, sync
 from openexpress.i18n import (
     _,
     caption,
@@ -54,14 +55,12 @@ def copied_update_text(u) -> str | None:
     return _("Copied {when}, check on the device that it is installed").format(when=when)
 
 
-def not_installed_text(u, device) -> str:
+def not_installed_text(u) -> str:
     """Below an update the device has not installed although it was unplugged since openExpress
     copied it (updates.not_installed): when it was copied, what the device did with the file,
     and the version it still reports, when that is known (versions_text)."""
-    from openexpress import updates as upd
-
     when = full_time(datetime.fromtimestamp(u.copied_at))
-    old = u.installed_version or upd.the_device_version(u, device)
+    old = u.installed_version
     if u.changed_on_device:
         if old:
             # TRANSLATORS: below an update the device has not installed although it was unplugged
@@ -101,11 +100,7 @@ def update_state_text(state: str | None, count: int = 0, only=None,
                  if mass_storage else
                  ngettext("Update ready: unplug the device to install it",
                           "Updates ready: unplug the device to install them", waiting))
-        # TRANSLATORS: after "Update ready: unplug the device to install it": updates
-        # still to install besides the one copied already
-        more = ngettext("{count} more available", "{count} more available", count).format(
-            count=count) if count else ""
-        return caption(ready, more)
+        return caption(ready, more_available(count))
     if state == "current":
         # TRANSLATORS: the state of the updates, without a full stop
         return _("Software is up to date")
@@ -116,6 +111,16 @@ def update_state_text(state: str | None, count: int = 0, only=None,
     if state == "failed":
         return _("Could not check for updates")
     return _("Checking…")
+
+
+def more_available(count: int) -> str:
+    """After an update copied already: how many more there are to install ("" for none)."""
+    if not count:
+        return ""
+    # TRANSLATORS: after "Update ready: unplug the device to install it": updates
+    # still to install besides the one copied already
+    return ngettext("{count} more available", "{count} more available", count).format(
+        count=count)
 
 
 def checked_text(text: str, at: float, now: datetime | None = None) -> str:
@@ -143,20 +148,16 @@ def remembered_update_text(entry, now: datetime | None = None) -> str:
     connect = _("Connect the device to check")
     if entry is None:
         return connect
-    at = now.timestamp()
-    found = known_devices.recorded_updates(entry, entry.software_version, at)
-    if found is not None:
-        only = found if found.count == 1 and found.title is not None else None
-        return checked_text(updates_available(found.count, only), entry.update_found, now)
-    check = known_devices.recorded_check(entry, entry.software_version, at)
-    if check is not None:
-        if check.ready:
-            # The device installs it once unplugged, which it has been since.
+    recorded = known_devices.recorded_state(entry, entry.software_version, now.timestamp())
+    if recorded is not None and recorded.state == "ready":
+        # The device installs it once unplugged, which it has been since: only what else the
+        # check found still holds.
+        if recorded.found is None:
             return connect
-        if check.not_installed:
-            return checked_text(update_state_text("not-installed"), check.at, now)
-        if entry.update_found is None:
-            return checked_text(_("Software is up to date"), check.at, now)
+        recorded = replace(recorded, state="available", at=entry.update_found)
+    if recorded is not None:
+        return checked_text(update_state_text(recorded.state, recorded.count, recorded.only),
+                            recorded.at, now)
     last = entry.update_check.at if entry.update_check is not None else entry.update_found
     return not_checked_since(last) if last is not None else connect
 
@@ -182,6 +183,25 @@ def no_sync_record() -> str:
     # TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
     # uploaded without a sync (or synced by an old version)
     return _("No record of the last sync; the next sync uploads new data only")
+
+
+def last_sync_words(data: dict, now: datetime | None = None) -> str:
+    """The row under "Last Sync": when, told against now ("yesterday, 23:41"), and the
+    numbers of that sync (last_sync.describe). Now is the window's clock."""
+    return last_sync.describe(data).row(now or datetime.now())
+
+
+def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
+                       now: datetime | None = None, test_drive: bool = False) -> str:
+    """The subtitle of "Last Sync": "Never synced" when the device was never synced here
+    (sync.synced_here, the one source of it, as on the tile; a test drive: by its own record);
+    else the last sync (`data`, last_sync.json) or that none is recorded, then the new
+    activities to upload (`to_sync`, the count of the chip "To sync"), unless that sync could
+    not upload (no chip then). The same on the device page and in `openexpress status`."""
+    if not unit_id or not sync.synced_here(unit_id, test_drive):
+        return never_synced()
+    text = last_sync_words(data, now) if data else no_sync_record()
+    return with_activities_to_upload(text, data, to_sync)
 
 
 def to_upload_text(count: int) -> str:

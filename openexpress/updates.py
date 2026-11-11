@@ -352,6 +352,16 @@ def _not_installed(u: SoftwareUpdate) -> bool:
             and (u.on_device or u.changed_on_device))
 
 
+def state(new: list, staged: list, not_installed: list) -> str:
+    """The state of a device's updates from one answer of the server (its pending, staged and
+    not_installed): "ready" (copied, waiting for the device to install it once disconnected),
+    which wins over updates still to install; "available"; "not-installed" (copied, not
+    installed by the device although it was unplugged since); "current". The window and
+    `openexpress status` tell this one state, each in its own words."""
+    return ("ready" if staged else "available" if new
+            else "not-installed" if not_installed else "current")
+
+
 def offered(storage: Storage, response: dict, device,
             forget_installed: bool = True) -> list[SoftwareUpdate]:
     """What the update server's `response` offers `device` (its GarminDevice.xml), each

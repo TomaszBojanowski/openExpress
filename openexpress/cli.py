@@ -32,6 +32,7 @@ from openexpress.errors import UserFacingError
 from openexpress.i18n import (
     N_,
     _,
+    caption,
     decimal,
     full_time,
     human_size,
@@ -1118,7 +1119,7 @@ def cmd_status(args) -> int:
 def _print_status(s, entry, listed, client, now) -> None:
     """One device of `openexpress status`: its line, its last sync (not of a drive) and its
     updates (`client`: asked of the update server now; None: what the last check found)."""
-    from openexpress import last_sync, service, sync, tile_facts
+    from openexpress import service, sync, tile_facts
     from openexpress.gui import words
 
     drive = s.found.kind == "ums"
@@ -1139,16 +1140,12 @@ def _print_status(s, entry, listed, client, now) -> None:
                      if on is False else _("account not known"))
     print(" · ".join(parts))
     if not drive:
-        data = service.load_last_sync(s.unit_id)
-        if not sync.synced_here(s.unit_id):
-            text = words.never_synced()
-        else:
-            text = (last_sync.describe(data).row(now) if data is not None else
-                    _("No record of the last sync; the next sync uploads new data only"))
-            if on is not False and s.device is not None and s.storage is not None:
-                # As the device page: the activities it has to upload now, listed only.
-                text = words.with_activities_to_upload(
-                    text, data, sync.activities_to_sync(s.device, s.storage))
+        # As the device page: the activities it has to upload now, listed only.
+        to_sync = (sync.activities_to_sync(s.device, s.storage)
+                   if on is not False and s.device is not None and s.storage is not None
+                   and sync.synced_here(s.unit_id) else None)
+        text = words.last_sync_subtitle(s.unit_id, service.load_last_sync(s.unit_id), to_sync,
+                                        now)
         # TRANSLATORS: `openexpress status`: {text} gives the window's words for the device's last
         # sync
         print("  " + _("Last sync: {text}").format(text=text))
@@ -1159,28 +1156,34 @@ def _print_status(s, entry, listed, client, now) -> None:
     print("  " + _("Device software: {text}").format(text=text))
 
 
+def _update_words(state: str, count: int = 0, only=None) -> str:
+    """The words of `openexpress status` for the state of a device's updates (updates.state,
+    known_devices.recorded_state); `count`: the updates to install, `only`: the one of them."""
+    from openexpress.gui import words
+
+    if state == "ready":
+        return caption(_("an update is ready: unplug the device to install it"),
+                       words.more_available(count))
+    if state == "available":
+        return words.updates_available(count, only)
+    if state == "not-installed":
+        # TRANSLATORS: after "Device software:" in openexpress status: an update openExpress
+        # copied is on the device, which was unplugged since and has not installed it
+        return _("update copied, not installed by the device")
+    # TRANSLATORS: after "Device software:" in openexpress status
+    return _("up to date")
+
+
 def _status_updates(entry, software: str, now) -> str:
     """What the last check of updates kept with the device found, while it holds (recent, of
     the software it has now)."""
     from openexpress.gui import words
 
-    at = now.timestamp()
     if entry is not None:
-        found = known_devices.recorded_updates(entry, software, at)
-        if found is not None:
-            only = found if found.count == 1 and found.title is not None else None
-            return words.checked_text(words.updates_available(found.count, only),
-                                      entry.update_found, now)
-        check = known_devices.recorded_check(entry, software, at)
-        if check is not None and check.ready:
-            return words.checked_text(_("an update is ready: unplug the device to install it"),
-                                      check.at, now)
-        if check is not None and check.not_installed:
-            return words.checked_text(_("update copied, not installed by the device"),
-                                      check.at, now)
-        if check is not None and entry.update_found is None:
-            # TRANSLATORS: after "Device software:" in openexpress status
-            return words.checked_text(_("up to date"), check.at, now)
+        recorded = known_devices.recorded_state(entry, software, now.timestamp())
+        if recorded is not None:
+            return words.checked_text(
+                _update_words(recorded.state, recorded.count, recorded.only), recorded.at, now)
         last = entry.update_check.at if entry.update_check is not None else entry.update_found
         if last is not None:
             return words.not_checked_since(last)
@@ -1191,7 +1194,6 @@ def _status_updates_online(client, s) -> str:
     """The updates of the device as Garmin's update server offers them now."""
     from openexpress import updates as upd
     from openexpress.device import gio_storage
-    from openexpress.gui import words
 
     try:
         device, storage = s.device, s.storage
@@ -1204,17 +1206,9 @@ def _status_updates_online(client, s) -> str:
         raise
     except (ApiError, DeviceError) as e:
         return _("could not be checked: {error}").format(error=e)
-    new, staged = upd.pending(items), upd.staged(items)
-    if staged:
-        return _("an update is ready: unplug the device to install it")
-    if new:
-        return words.updates_available(len(new), new[0] if len(new) == 1 else None)
-    if upd.not_installed(items):
-        # TRANSLATORS: after "Device software:" in openexpress status: an update openExpress
-        # copied is on the device, which was unplugged since and has not installed it
-        return _("update copied, not installed by the device")
-    # TRANSLATORS: after "Device software:" in openexpress status
-    return _("up to date")
+    new = upd.pending(items)
+    return _update_words(upd.state(new, upd.staged(items), upd.not_installed(items)), len(new),
+                         new[0] if len(new) == 1 else None)
 
 
 def cmd_cache(args) -> int:

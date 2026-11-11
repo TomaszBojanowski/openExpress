@@ -75,40 +75,19 @@ from openexpress.gui.window_tasks import (  # noqa: E402
 )
 from openexpress.gui.words import (  # noqa: E402
     checked_text,
-    never_synced,
+    last_sync_subtitle,
     never_synced_tooltip,
-    no_sync_record,
     primary_wearable_text,
     software_text,
     space_text,
     stalled_text,
     status_summary,
     update_state_text,
-    with_activities_to_upload,
 )
 from openexpress.i18n import N_, _, caption, ngettext, pgettext  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
-
-
-def last_sync_words(data: dict, now: datetime | None = None) -> str:
-    """The row under "Last Sync": when, told against now ("yesterday, 23:41"), and the
-    numbers of that sync (last_sync.describe). Now is the window's clock."""
-    return last_sync.describe(data).row(now or datetime.now())
-
-
-def last_sync_subtitle(unit_id, data: dict | None, to_sync=None,
-                       now: datetime | None = None, test_drive: bool = False) -> str:
-    """The subtitle of "Last Sync": "Never synced" when the device was never synced here
-    (sync.synced_here, the one source of it, as on the tile; a test drive: by its own record);
-    else the last sync (`data`, last_sync.json) or that none is recorded, then the new
-    activities to upload (`to_sync`, the count of the chip "To sync"), unless that sync could
-    not upload (no chip then)."""
-    if not unit_id or not sync.synced_here(unit_id, test_drive):
-        return never_synced()
-    text = last_sync_words(data, now) if data else no_sync_record()
-    return with_activities_to_upload(text, data, to_sync)
 
 
 def open_to_sync(s):
@@ -564,29 +543,18 @@ def show_update_record(win) -> bool:
     unit_id = getattr(device, "unit_id", None)
     if not unit_id:
         return False
-    entry = known_devices.load().get(unit_id)
-    software = getattr(device, "software_version_str", None)
-    found = known_devices.recorded_updates(entry, software)
-    check = known_devices.recorded_check(entry, software)
+    recorded = known_devices.recorded_state(known_devices.load().get(unit_id),
+                                            getattr(device, "software_version_str", None))
     # Until the check now running ends: it confirms or changes this; a failed one leaves it
-    # and says when it was (update_checked_at).
-    if check is not None and check.ready:
-        # How many wait the record does not say: one, until the check now running answers.
-        win.update_state, win.update_count, win.update_only = "ready", 0, None
-        win.update_waiting = 1
-        win._update_record_at = check.at
-        if found is not None:
-            win.update_count = found.count
-        return True
-    if found is None:
-        if check is not None and check.not_installed:
-            win.update_state, win.update_count, win.update_only = "not-installed", 0, None
-            win._update_record_at = check.at
-            return True
+    # and says when it was (update_checked_at). Up to date: nothing until that check says it.
+    if recorded is None or recorded.state == "current":
         return False
-    win.update_state, win.update_count = "available", found.count
-    win.update_only = found if found.count == 1 and found.title is not None else None
-    win._update_record_at = entry.update_found
+    win.update_state, win.update_count = recorded.state, recorded.count
+    win.update_only = recorded.only if recorded.state == "available" else None
+    if recorded.state == "ready":
+        # How many wait the record does not say: one, until the check now running answers.
+        win.update_waiting = 1
+    win._update_record_at = recorded.at
     return True
 
 
@@ -1299,13 +1267,14 @@ class DevicePage:
         (those are told after it, with how many). `not_installed`: copied, and not installed
         by the device although it was unplugged since: "not-installed" when nothing else is
         to do, with no chip."""
+        from openexpress import updates as upd
+
         self._update_check_session = None  # the row has its answer (show_device may wait)
         self.update_checked_at = self._update_record_at = None  # an answer of now
         self.update_count = len(new_updates)
         self.update_only = new_updates[0] if len(new_updates) == 1 else None
         self.update_waiting = len(staged)
-        self.update_state = ("ready" if staged else "available" if new_updates
-                             else "not-installed" if not_installed else "current")
+        self.update_state = upd.state(new_updates, staged, not_installed)
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now), and whether one
         # waits for the device to install it.

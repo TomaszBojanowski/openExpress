@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 13:51+0100\n"
+"POT-Creation-Date: 2026-11-11 16:28+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1750,12 +1750,6 @@ msgstr ""
 #. whether the device is on the Garmin account
 #: openexpress/cli.py
 msgid "account not known"
-msgstr ""
-
-#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
-#. uploaded without a sync (or synced by an old version)
-#: openexpress/cli.py openexpress/gui/words.py
-msgid "No record of the last sync; the next sync uploads new data only"
 msgstr ""
 
 #. TRANSLATORS: `openexpress status`: {text} gives the window's words for the device's last
@@ -7955,15 +7949,6 @@ msgid_plural "Updates ready: unplug the device to install them"
 msgstr[0] ""
 msgstr[1] ""
 
-#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
-#. still to install besides the one copied already
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{count} more available"
-msgid_plural "{count} more available"
-msgstr[0] ""
-msgstr[1] ""
-
 #. TRANSLATORS: the state of the updates, without a full stop
 #: openexpress/gui/words.py
 msgid "Software is up to date"
@@ -7974,6 +7959,15 @@ msgstr ""
 #: openexpress/gui/words.py
 msgid "Update copied, not installed by the device"
 msgstr ""
+
+#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
+#. still to install besides the one copied already
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{count} more available"
+msgid_plural "{count} more available"
+msgstr[0] ""
+msgstr[1] ""
 
 #. TRANSLATORS: after the state of the updates of a device: when the check that said it
 #. was (e.g. "checked 3 days ago")
@@ -7997,6 +7991,12 @@ msgstr ""
 
 #: openexpress/gui/words.py
 msgid "Never synced by this installation of openExpress"
+msgstr ""
+
+#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
+#. uploaded without a sync (or synced by an old version)
+#: openexpress/gui/words.py
+msgid "No record of the last sync; the next sync uploads new data only"
 msgstr ""
 
 #. TRANSLATORS: at the end of the subtitle of "Last Sync" of a connected device (and of

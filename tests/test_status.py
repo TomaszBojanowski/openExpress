@@ -63,6 +63,67 @@ def test_status_says_what_is_known_without_asking_a_server(monkeypatch, capsys, 
         "  Device software: up to date · checked just now"]
 
 
+COPIED = object()  # an update copied already: only that there is one counts here
+
+# A record of a check of updates (what it found to install, copied already, copied and not
+# installed by the device) | the window's state and count from it | the line of `status`.
+RECORDS = {
+    "to install": (dict(updates=[MAP_GROUPING]), ("available", 1),
+                   "Update available: Map Region Grouping file 2.31 · checked just now"),
+    "copied and one more": (dict(updates=[MAP_GROUPING], staged=[COPIED]), ("ready", 1),
+                            ("an update is ready: unplug the device to install it · 1 more "
+                             "available · checked just now")),
+    "copied": (dict(staged=[COPIED]), ("ready", 0),
+               "an update is ready: unplug the device to install it · checked just now"),
+    "not installed": (dict(not_installed=[COPIED]), ("not-installed", 0),
+                      "update copied, not installed by the device · checked just now"),
+}
+
+
+def _recorded(kind):
+    found, _window, _line = RECORDS[kind]
+    tile_facts.note_update_check(
+        types.SimpleNamespace(unit_id=FENIX, software_version_str="23.39"),
+        list(found.get("updates", ())), found.get("staged", ()), found.get("not_installed", ()))
+
+
+def test_status_says_an_update_copied_already_before_one_to_install(monkeypatch, capsys, clock):
+    """As the device page says it: an update copied, waiting for the device to be unplugged,
+    wins over one still to install, which is told after it."""
+    login()
+    fenix = _fenix()
+    _connected(monkeypatch, [fenix])
+    noted([fenix], account=[{"unitid": FENIX}])
+    _recorded("copied and one more")
+    assert main(["status"]) == 0
+    assert "  Device software: " + RECORDS["copied and one more"][2] in \
+        capsys.readouterr().out.splitlines()
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("kind", list(RECORDS))
+def test_status_and_the_device_page_say_the_same_of_a_record(monkeypatch, capsys, clock, kind):
+    """From the same record of the last check, the device page (show_update_record) and
+    `openexpress status` say the same state, each in its own words."""
+    from fakes import device_session
+    from fakes import window as stand_in
+
+    from openexpress.gui.device_page import show_update_record
+
+    login()
+    fenix = _fenix()
+    _connected(monkeypatch, [fenix])
+    noted([fenix], account=[{"unitid": FENIX}])
+    _recorded(kind)
+    device = types.SimpleNamespace(unit_id=FENIX, software_version_str="23.39")
+    win = stand_in(session=device_session(device=device))
+    assert show_update_record(win)
+    assert main(["status"]) == 0
+    line = capsys.readouterr().out.splitlines()[-1]
+    assert ((win.update_state, win.update_count), line) == (
+        RECORDS[kind][1], "  Device software: " + RECORDS[kind][2])
+
+
 def test_status_says_how_many_activities_there_are_to_upload_now(monkeypatch, capsys, clock,
                                                                  device_root):
     """As the device page says it after its last sync, with the same count (its activity

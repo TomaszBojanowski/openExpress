@@ -935,7 +935,7 @@ def test_the_line_of_the_last_sync_keeps_its_separators_too(language):
     """When the last sync was and its numbers, joined in the command line's words (service):
     in the window "·" stays with the part before it."""
     from openexpress import i18n
-    from openexpress.gui.device_page import last_sync_words
+    from openexpress.gui.words import last_sync_words
 
     i18n.setup(language)
     try:

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 13:51+0100\n"
+"POT-Creation-Date: 2026-11-11 16:28+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1924,12 +1924,6 @@ msgstr "poza Twoim kontem"
 #: openexpress/cli.py
 msgid "account not known"
 msgstr "konto nieznane"
-
-#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
-#. uploaded without a sync (or synced by an old version)
-#: openexpress/cli.py openexpress/gui/words.py
-msgid "No record of the last sync; the next sync uploads new data only"
-msgstr "Brak zapisu ostatniej synchronizacji; następna wyśle tylko nowe dane"
 
 #. TRANSLATORS: `openexpress status`: {text} gives the window's words for the device's last
 #. sync
@@ -8738,16 +8732,6 @@ msgstr[0] "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować"
 msgstr[1] "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"
 msgstr[2] "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"
 
-#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
-#. still to install besides the one copied already
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{count} more available"
-msgid_plural "{count} more available"
-msgstr[0] "jeszcze {count} dostępna"
-msgstr[1] "jeszcze {count} dostępne"
-msgstr[2] "jeszcze {count} dostępnych"
-
 #. TRANSLATORS: the state of the updates, without a full stop
 #: openexpress/gui/words.py
 msgid "Software is up to date"
@@ -8758,6 +8742,16 @@ msgstr "Oprogramowanie jest aktualne"
 #: openexpress/gui/words.py
 msgid "Update copied, not installed by the device"
 msgstr "Aktualizacja skopiowana, urządzenie jej nie zainstalowało"
+
+#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
+#. still to install besides the one copied already
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{count} more available"
+msgid_plural "{count} more available"
+msgstr[0] "jeszcze {count} dostępna"
+msgstr[1] "jeszcze {count} dostępne"
+msgstr[2] "jeszcze {count} dostępnych"
 
 #. TRANSLATORS: after the state of the updates of a device: when the check that said it
 #. was (e.g. "checked 3 days ago")
@@ -8782,6 +8776,12 @@ msgstr "Nie zsynchronizowano"
 #: openexpress/gui/words.py
 msgid "Never synced by this installation of openExpress"
 msgstr "Ta instalacja openExpress nie synchronizowała tego urządzenia"
+
+#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
+#. uploaded without a sync (or synced by an old version)
+#: openexpress/gui/words.py
+msgid "No record of the last sync; the next sync uploads new data only"
+msgstr "Brak zapisu ostatniej synchronizacji; następna wyśle tylko nowe dane"
 
 #. TRANSLATORS: at the end of the subtitle of "Last Sync" of a connected device (and of
 #. `openexpress status`), after what the last sync found ("nothing to upload")

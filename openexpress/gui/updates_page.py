@@ -50,14 +50,12 @@ log = logging.getLogger(__name__)
 ARROW = "\u00a0→\u00a0"
 
 
-def versions_text(u, device) -> str:
-    """The version of update `u`, after the one the device has when that is known and other:
-    the version GarminDevice.xml lists for its part number, or for the device's own software
-    the device's ("23.39 → 23.40"). A part of the device with no version listed: only its
-    own ("6.70"), never the device's software against it."""
-    from openexpress import updates as upd
-
-    old = u.installed_version or upd.the_device_version(u, device)
+def versions_text(u) -> str:
+    """The version of update `u`, after the one the device has when that is known and other
+    (u.installed_version: the version GarminDevice.xml lists for its part number, or for the
+    device's own software the device's; "23.39 → 23.40"). A part of the device with no
+    version listed: only its own ("6.70"), never the device's software against it."""
+    old = u.installed_version
     return f"{old}{ARROW}{u.version}" if old and old != u.version else u.version
 
 
@@ -211,7 +209,7 @@ def confirm_install_all(win, items) -> None:
     parts = {u.part_number.upper() for u in kept}
     chosen = [x for x in win.updates_cache if any(x is u for u in kept) or (
         x.is_metadata and x.part_number.upper().removesuffix("-META") in parts)]
-    lines = [f"{u.title} {versions_text(u, s.device)}" for u in kept]
+    lines = [f"{u.title} {versions_text(u)}" for u in kept]
     lines += [f"{u.title}: " + _("Can be installed once the device has installed {name}").format(
         name=other.title) for u, other in put_off]
     body = ("\n".join(lines) + "\n\n"
@@ -339,7 +337,7 @@ class UpdatesPage:
         if system is not None:
             icon = "software-update-available-symbolic"
             title = update_state_text("available", count, only)
-            versions = versions_text(system, d)
+            versions = versions_text(system)
             size = human_size(system.size)
             subtitle = caption(versions, size)
             if system.is_beta:
@@ -371,7 +369,7 @@ class UpdatesPage:
             if lead is None:
                 subtitle = installed
             else:
-                versions = versions_text(lead, d)
+                versions = versions_text(lead)
                 subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
             detail = (caption(lead.title, lead.severity_text, lead.filename) if len(ready) == 1
                       else caption(*(u.title for u in ready)))
@@ -389,10 +387,10 @@ class UpdatesPage:
                 subtitle = installed
                 detail = caption(*(u.title for u in untaken))
             else:
-                versions = versions_text(lead, d)
+                versions = versions_text(lead)
                 subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
                 detail = caption(lead.title, lead.severity_text, lead.filename)
-                note = not_installed_text(lead, d)
+                note = not_installed_text(lead)
                 if lead.changed_on_device:  # copied again, it may be taken this time
                     buttons.append(self._button(_("Reinstall"),
                                                 lambda u=lead: self.confirm_update(u), None))
@@ -460,7 +458,7 @@ class UpdatesPage:
         """A row of update `u`; `waits_for`: the update copied already to its file, which the
         device has not installed yet: then no button, as a copy would replace it. One copied
         before that is offered again says so, with Reinstall."""
-        details = caption(versions_text(u, self.session.device), human_size(u.size),
+        details = caption(versions_text(u), human_size(u.size),
                           u.severity_text, u.filename)
         # A system update says so in its title; the name the server gives it goes first.
         subtitle = caption(u.title, details) if u.is_system else details
@@ -490,9 +488,8 @@ class UpdatesPage:
         """A row of update `u`, copied and not installed by the device although it was
         unplugged since: what became of it, and Reinstall only when the device changed its
         file (the same file again changes nothing)."""
-        d = self.session.device
-        subtitle = caption(versions_text(u, d), human_size(u.size), u.filename)
-        subtitle += "\n" + not_installed_text(u, d)
+        subtitle = caption(versions_text(u), human_size(u.size), u.filename)
+        subtitle += "\n" + not_installed_text(u)
         row = Adw.ActionRow(title=GLib.markup_escape_text(_("Device Software") if u.is_system
                                                           else u.title),
                             subtitle=GLib.markup_escape_text(subtitle))
@@ -511,7 +508,7 @@ class UpdatesPage:
         # The update clicked, with its -META entries: not another version of its part.
         chosen = [x for x in self.updates_cache if x is u or (
             x.is_metadata and x.part_number.upper().removesuffix("-META") == u.part_number.upper())]
-        body = (f"{u.title} {versions_text(u, s.device)}\n"
+        body = (f"{u.title} {versions_text(u)}\n"
                 + _("Size: {size}").format(size=human_size(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
                 # TRANSLATORS: in the question before installing an update: above the list of what
