@@ -23,7 +23,6 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import (  # noqa: E402
-    crashes,
     devicelist,
     diagnostics,
     history,
@@ -32,6 +31,7 @@ from openexpress import (  # noqa: E402
     last_sync,
     paths,
     service,
+    status,
     sync,
     tile_facts,
 )
@@ -224,9 +224,10 @@ def device_error_details(entry) -> str:
 
 def status_row(win, group=None) -> None:
     """The row "Device Status" under "Backup": the title of the summary of the page Device
-    Status (words.status_summary), which it leads to; "Reading…" until the window has read the
-    device's error logs, "Not known" when that failed. Drawn again in its place, or in `group`
-    when the device page is built anew (Refresh, the next device opened)."""
+    Status (status.told, words.status_summary), which it leads to, as the page tells it (also
+    when the reading of the error logs failed); "Reading…" until the window has read them.
+    Drawn again in its place, or in `group` when the device page is built anew (Refresh, the
+    next device opened)."""
     old, old_group = win.status_row, win.status_row_group
     group = group or old_group
     win.status_row, win.status_row_group = None, group
@@ -235,13 +236,11 @@ def status_row(win, group=None) -> None:
     if group is None:
         return
     s = win.session
-    found = getattr(s, "diagnostics", None)
-    if found is not None:
-        free, capacity = getattr(s, "space", None) or (None, None)
-        subtitle = status_summary(getattr(s, "crash_history", None) or [], found.errors_known,
-                                  free, capacity, datetime.now())[1]
-    elif getattr(getattr(s, "diagnostics_reading", None), "is_set", lambda: False)():
-        subtitle = _("Not known")
+    reading = getattr(s, "diagnostics_reading", None)
+    if getattr(s, "diagnostics", None) is not None or (reading is not None and reading.is_set()):
+        t = status.told(s)  # as the page's summary (also when the reading failed)
+        subtitle = status_summary(t.crashes, t.errors_known, t.free, t.capacity,
+                                  datetime.now(), t.has_diagnostics)[1]
     else:
         subtitle = space_text(None, reading=True)
     row = Adw.ActionRow(title=pgettext("tab", "Device Status"),
@@ -253,13 +252,26 @@ def status_row(win, group=None) -> None:
 
 
 def status_changed(win) -> None:
-    """The row "Device Status" and, when it was shown, the page Device Status drawn again with
-    what changed (a copy made, the crash logs found absent)."""
+    """The row "Device Status" and, when it was shown or waits for the reading of the error
+    logs, the page Device Status read again with what changed (the reading done, a copy made,
+    the crash logs found absent, a file written to the device or removed): at once while it is
+    shown, else when it is chosen."""
     status_row(win)
     sections = getattr(win, "sections", None)
     sec = sections.get("status") if isinstance(sections, dict) else None
-    if sec is not None and sec.loaded:
+    if sec is None:
+        return
+    waited = bool(getattr(win.session, "page_waits", False))
+    if not (waited or sec.loaded):
+        return
+    pages = getattr(win, "pages", None)
+    shown = pages.get_visible_child_name() if pages is not None else "status"
+    if shown == "status":
         win.load_section("status", force=True)
+    else:
+        sec.loaded = False  # read again when it is chosen, not now
+        if waited:
+            win.session.page_waits = False
 
 
 def device_name(s) -> str:
@@ -434,8 +446,8 @@ def account_picture_refused_text(status: int | None) -> str:
 def read_diagnostics(win) -> None:
     """Reads in the background what the open device logged as errors, and copies its
     diagnostic files when the copy is on (diagnostics.at_open: once per connection, never a
-    session of our own); leaves them in `session.diagnostics`, the crashes from every source in
-    `session.crash_history` (crashes.history), and draws the row "Device Status".
+    session of our own); leaves them in `session.diagnostics` and draws the row "Device
+    Status" (its crashes from every source: status.told).
     `session.diagnostics_reading` is set once done: tasks that write to the device wait for
     it (window_tasks.wait_for_the_diagnostics)."""
     s = win.session
@@ -449,21 +461,19 @@ def read_diagnostics(win) -> None:
             found = diagnostics.at_open(s.device, s.storage)
             # The line of this connection in the device log, with what was just read.
             history.note_connection(s.device, s.storage, found=found)
-            return found, crashes.history(
-                getattr(s.device, "unit_id", None),
-                found.entries if found.errors_known else None,
-                test_drive=bool(getattr(s.storage, "test_drive", False)))
+            # In the session before anyone learns that the reading is done: the page Device
+            # Status reads them then (status.read).
+            s.diagnostics = found
         finally:
             reading.set()  # also when it failed: the tasks go on
 
-    def done(result) -> None:
-        s.diagnostics, s.crash_history = result
+    def done(_result) -> None:
         if win.session is s:
-            status_row(win)
+            status_changed(win)  # the row, and the page when it waits or is shown
 
     def failed(_error) -> None:
         if win.session is s:
-            status_row(win)  # "Not known"
+            status_changed(win)  # the row and the page as the records tell them
 
     # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
     # 4.5-5 s of an opening.
@@ -478,6 +488,8 @@ def copy_crash_logs(win, button=None) -> None:
         return
 
     def work():
+        # Its boot log is among the copies then: the row, the page and the report count the
+        # crashes from them anew (status.told, report).
         return diagnostics.copy_crash_logs(s.device, s.storage, progress=win.progress)
 
     def done(copied):
@@ -513,10 +525,11 @@ def copy_dumps(win, button=None) -> None:
                         "{count} memory dumps copied to this computer",
                         copied_count).format(count=copied_count)
         if copied.not_copied:
-            # TRANSLATORS: after the files copied to this computer: those left out as too large
+            # TRANSLATORS: after the files copied to this computer: those left out as they did
+            # not fit in the room the copies may take ({size}: "50 MB")
             text = caption(text, ngettext(
-                "{count} file skipped: larger than {size}",
-                "{count} files skipped: larger than {size}",
+                "{count} file skipped: did not fit in {size}",
+                "{count} files skipped: did not fit in {size}",
                 len(copied.not_copied)).format(count=len(copied.not_copied),
                                                size=human_size(diagnostics.LIMIT)))
         win.toast(text)
@@ -856,12 +869,13 @@ class DevicePage:
         elif page == "updates":
             self._update_check_session = self.session
         self.show_overview()
+        # Before the page: the page Device Status waits for this reading.
+        read_diagnostics(self)
         self.load_section(page)
         # Else the one device: its tile comes from the session.
         self.connected.keep_if_open(lambda c: self._is_open(c))
         resolve_account(self)
         self._show_device_view()
-        read_diagnostics(self)
 
     def _update_banner(self) -> None:
         s = self.session

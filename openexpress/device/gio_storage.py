@@ -665,6 +665,10 @@ class GarminUsb:
     # Garmin's; another only for the drive named for testing (TEST_DRIVE_ENV), so that the log
     # names it by the vendor it has.
     vendor: str = field(default=GARMIN_VID, compare=False)
+    # Where /sys cannot be read, the place on USB the address or the volume tells (bus, device
+    # number): not checked, so never taken for `bus` and `address`; only what tells one
+    # connection of the device from the next (history).
+    told_place: tuple[int, int] | None = field(default=None, compare=False, repr=False)
 
     @property
     def usb_id(self) -> str:
@@ -811,12 +815,17 @@ def _identify(uri: str | None, volume, monitor=None) -> GarminUsb | None:
         if ids[0] != GARMIN_VID:
             return None
         return GarminUsb(ids[1], int(address.group(1)), int(address.group(2)))
-    # The USB properties are not available: fall back to the start of the host name.
+    # The USB properties are not available: fall back to the start of the host name. Where /sys
+    # cannot be read at all, the place on USB the address or the volume tells is kept apart
+    # (told_place: each plugging in is a connection of its own); where it can, a place it does
+    # not know is an old one.
+    told = ((int(address.group(1)), int(address.group(2)))
+            if address and not SYSFS_USB.is_dir() else None)
     by_ids = _URI_GARMIN_IDS.match(uri)
     if by_ids:
-        return GarminUsb(by_ids.group(1).lower())
+        return GarminUsb(by_ids.group(1).lower(), told_place=told)
     if uri.lower().startswith(_URI_GARMIN_NAME):
-        return GarminUsb(None)
+        return GarminUsb(None, told_place=told)
     return None
 
 

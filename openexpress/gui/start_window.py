@@ -463,7 +463,11 @@ class StartWindow:
     def _on_popped(self, _navigation, page) -> None:
         """Back from the device view or from the read-only view of a remembered device (the
         arrow, Alt+Left, a swipe, or the window itself): the open device stays open; the
-        start page is drawn anew (the same tiles keep their widgets)."""
+        start page is drawn anew (the same tiles keep their widgets). The page Device Status of a
+        remembered device closed is let go."""
+        from openexpress.gui.status_page import kept_page_closed
+
+        kept_page_closed(self, page)
         if page is not self.start.page:
             self._render_start()
 

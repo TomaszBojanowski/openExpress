@@ -407,26 +407,37 @@ device and what takes its space. Nothing is sent, and nothing is removed but wha
 choose under Free Up Space.
 
 - **The summary on top:** the crashes of the last 30 days (only those that restarted the
-  device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), or
-  no problems found.
+  device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), error
+  logs that could not be read (whether it crashed is then not known), or no problems found. A
+  device that keeps no error logs or memory dumps shows "No Diagnostic Data" instead; error
+  logs or dumps that could not be read are not known, never none.
 - **Storage:** the space of each kind of file, counted when the device was connected (and again
-  after files were removed under Free Up Space), the largest first (a kind the device holds
+  after anything was written to it or removed from it), the largest first (a kind the device holds
   none of is left out) and the free space last; the kinds with a page of their own lead to it.
 - **Crashes and Updates:** each crash once, from the device's error logs, its boot log, the
   copies on this computer and the log of its connections, with its details inside; the software updates, from the log of the
   device's connections (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
   saw the device.
-- **Free Up Space:** the files the device no longer needs, with their size, each removed only
-  after a question: **Copy and Remove** for the memory dumps but the newest (copied to this
-  computer first where they fit; the question names those too large to copy, which are removed
-  without a copy), **Remove** for the file of an update the device did not install (the Updates
-  page offers the update again). A software update waiting in the device's main folder is only
+- **Free Up Space:** the files the device no longer needs, with their size, each removed with
+  **Remove** only after a question: the memory dumps but the newest (copied to this computer
+  first where the copies fit in 100 MB, the question's answer is then **Copy and Remove**; the
+  question names those whose copies would not fit, which are removed without a copy) and the
+  file of an update the device did not install, outside its main folder (the Updates page offers
+  the update again; map support files and satellite data are never offered). Only
+  the files the question named go: when the device holds other ones by then, nothing is removed
+  and the page is read again. No memory dump is offered while their times cannot be trusted (a
+  device whose clock is not set). A software update waiting in the device's main folder is only
   shown: removing it would cancel the update. Activities, maps, music, courses and settings are
   never removed. The same list from the command line: `openexpress diagnostics --free-space`, a
   dry run until `--apply`.
 - **Diagnostic Files** and **Report a Problem:** the copy of the diagnostic files (the same
-  switch as in Preferences), the rows **Crash Logs** and **Memory Dumps**, each with **Copy**,
-  and the report.
+  switch as in Preferences), the copies on this computer (**Open** shows their folder), the rows
+  **Crash Logs** and **Memory Dumps**, each with **Copy**, and the report.
+
+<p align="center">
+  <img src="screenshots/status-history.png" width="700"
+       alt="The Device Status page of a fēnix 8: its crashes and software updates, one crash opened with its error details, and its diagnostic files">
+</p>
 
 What could not be read is said so, never shown as none. A device that keeps no error logs or
 memory dumps (a bike sensor, a USB drive) gets a page with its storage only. The device page

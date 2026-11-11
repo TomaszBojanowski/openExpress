@@ -890,7 +890,7 @@ def test_file_with_the_same_size_and_md5_is_not_an_update(offered):
     assert sorted((p.name, p.read_bytes()) for p in (root / "GARMIN/SID").iterdir()) == before
 
 
-def test_nothing_can_be_said_without_a_size_or_an_md5(offered):
+def test_nothing_can_be_said_without_a_size_or_an_md5(offered, monkeypatch):
     from openexpress import updates as upd
     from openexpress.device.storage import DeviceError, LocalStorage
 
@@ -907,8 +907,15 @@ def test_nothing_can_be_said_without_a_size_or_an_md5(offered):
     def broken(path):
         raise DeviceError("the device went away")
 
+    # Read before and the same size and time: its MD5 is known without reading it again.
     st.read = broken
-    assert not upd.mark_present(st, [u])[0].on_device  # not known to be there: offered
+    assert upd.mark_present(st, [u])[0].on_device
+    # Never read: not known to be there, offered.
+    monkeypatch.setattr(upd, "_md5_read", {})
+    assert not upd.mark_present(st, [u])[0].on_device
+    # Its size and time not known either.
+    st.info = broken
+    assert not upd.mark_present(st, [u])[0].on_device
 
 
 def test_readable_names_of_types_and_severities(offered):

@@ -580,9 +580,10 @@ def test_the_storage_row_says_dots_until_the_space_is_read(iq_device):
 
 @pytest.mark.needs_display
 def test_after_a_task_that_writes_the_free_space_is_read_again(iq_device):
-    """A task that writes to the device: once it ends, the free space alone is read again in
-    the background (the size stays) and the subtitle of the row is put right; a task that
-    only reads asks nothing more."""
+    """A task that writes to the device: once it ends, the device is counted again in the
+    background (its kinds of file and its space: status.recount) and the subtitle of the row
+    is put right; nothing of it on the window's thread; a task that only reads asks nothing
+    more."""
     st, dev = iq_device
     storage = Space(st.root)
     win, section, s = _overview_window(storage, dev, space=(FREE, SIZE))
@@ -600,7 +601,7 @@ def test_after_a_task_that_writes_the_free_space_is_read_again(iq_device):
     win.run_task("Copying…", writes_to_device(write), lambda result: None)
     _turn_until(lambda: _storage_subtitle(section) != READ)
     assert _storage_subtitle(section) == "40.0\u00a0GB free of 64.0\u00a0GB"
-    assert storage.on_gtk == [] and storage.elsewhere == ["free_space"]
+    assert storage.on_gtk == [] and "free_space" in storage.elsewhere
     assert s.space == (40_000_000_000, SIZE)
 
 

@@ -317,7 +317,7 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
 
 INFORMS = {"close-busy", "order-none-differs", "ejected", "error", "backup-incomplete",
            "add-to-account-refused", "added-not-listed", "added-not-checked", "update-done",
-           "update-finish", "free-not-removed"}
+           "update-finish", "free-not-removed", "free-stopped", "free-device-changed"}
 AFTER_ESCAPE = {}
 
 
@@ -630,9 +630,12 @@ def _error(ctx):
 
 
 def _free_dumps(ctx):
+    from openexpress import freeing
     from openexpress.gui.status_page import confirm_dumps
 
-    confirm_dumps(_escape_window(ctx), [("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 200.0)])
+    confirm_dumps(_escape_window(ctx), freeing.dump_plan(
+        [("GARMIN/Debug/dump/RAM.zip", 9_000_000, 1_700_000_300.0),
+         ("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 1_700_000_200.0)]))
 
 
 def _free_update(ctx):
@@ -656,6 +659,26 @@ def _free_not_removed(ctx):
     status_page._freed(win, win.session, freeing.Freed(
         removed=[("GARMIN/Debug/dump/RAM_bak2.zip", 9_000_000)],
         kept=[("GARMIN/Debug/dump/RAM_bak1.zip", "the device kept it")]), "1 removed")
+
+
+def _free_stopped(ctx):
+    """After a removal the device stopped responding (or could not be counted again)."""
+    from openexpress import freeing
+    from openexpress.gui import status_page
+
+    win = _escape_window(ctx)
+    status_page._freed(win, win.session, freeing.Freed(
+        removed=[("GARMIN/Debug/dump/RAM_bak2.zip", 9_000_000)],
+        stopped="the device stopped responding"), "1 removed")
+
+
+def _free_device_changed(ctx):
+    """A question of the page Device Status answered after the device was unplugged or opened
+    again: nothing removed."""
+    from openexpress.gui import status_page
+
+    win = _escape_window(ctx)
+    status_page._for_the_question(win, object(), lambda: ctx.effects.append(("removal",)))()
 
 
 def _report(ctx):
@@ -711,6 +734,7 @@ OPENERS = {
     "eject-retry": _eject_retry, "error": _error, "report": _report,
     "update-done": _update_done, "update-finish": _update_finish,
     "free-dumps": _free_dumps, "free-update": _free_update, "free-not-removed": _free_not_removed,
+    "free-stopped": _free_stopped, "free-device-changed": _free_device_changed,
 }
 
 

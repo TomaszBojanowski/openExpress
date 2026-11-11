@@ -2,22 +2,25 @@
 (devices/<unit ID>/history.jsonl, readable by its owner alone).
 
 A line says when and how the device was connected, its software version, its capacity and free
-space, the space each kind of file takes, its memory dumps and the newest crash its error logs
-hold: counts and short fields only, never a file name, the unit ID or a serial number. It is
-written at most once a connection, whoever opened the device (the window, the command line, the
-background sync: note_connection), and kept whatever the copy of the diagnostic files says; Forget
-Device deletes it with the rest of the device's folder. Read back line by line, a damaged or
-foreign line skipped; lines older than two years and the oldest beyond MAX_LINES are dropped.
+space, the space each kind of file takes, its memory dumps and every crash its error logs hold
+(the newest apart): counts and short fields only, never a file name of the user's, the unit ID
+or a serial number. It is written at most once a connection, whoever opened the device (the
+window, the command line, the background sync: note_connection), and kept whatever the copy of
+the diagnostic files says; Forget Device deletes it with the rest of the device's folder. Read
+back line by line, a damaged or foreign line skipped (and kept as it is when the log is written
+again); lines older than two years (counted from the middle of the times of the newest
+KEEP_AT_LEAST, so that a clock set wrong at fewer than half of them drops nothing), but never the
+newest KEEP_AT_LEAST, and the oldest beyond MAX_LINES are dropped.
 """
 
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import logging
 import os
 import posixpath
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -32,6 +35,7 @@ from openexpress.device.storage import (
     named_in_any_case,
 )
 from openexpress.device.xmldevice import GarminDevice
+from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -47,9 +51,16 @@ CATEGORIES = ("maps", "activities", "music", "apps", "courses", "updates", "logs
 VIA = ("mtp", "drive")
 # What Garmin Connect queued for the device waits there until the device takes it in.
 QUEUE = "garmin/newfiles"
-# Declared for the device's whole main folder (FITBinary, FTLImageVersion): only its own files
-# are counted, not those of the folders under it.
+# Declared for the device's whole main folder (FITBinary, FTLImageVersion, the maps of a fēnix 8):
+# only its own files are counted, not those of the folders under it, and only by a rule that names
+# an extension or a file (one without would take GarminDevice.xml and the update files there).
 MAIN_FOLDERS = ("", "garmin")
+# A line is kept while it is younger than KEEP, measured from the middle of the times of the newest
+# KEEP_AT_LEAST lines (a clock set wrong at fewer than half of them never drops the rest), and the
+# newest KEEP_AT_LEAST always.
+KEEP_AT_LEAST = 100
+# The largest size or count a line may hold: more is no device's (and would not fit a float).
+MOST = 1 << 53
 
 
 def path(unit_id: int, test_drive: bool = False) -> Path:
@@ -101,7 +112,8 @@ class _Folders:
     def resolve(self, folder: str) -> str | None:
         real = ""
         for part in [p for p in folder.split("/") if p]:
-            entries = [e for e in self.entries(real) if e.is_dir]
+            # A folder behind a link is elsewhere on this computer: not the device's.
+            entries = [e for e in self.entries(real) if e.is_dir and not e.is_link]
             match = next((e for e in entries if e.name == part), None) or named_in_any_case(
                 entries, part)
             if match is None:
@@ -120,7 +132,7 @@ class _Folders:
                 p = posixpath.join(current, e.name) if current else e.name
                 if not e.is_dir:
                     out.append((p, e))
-                elif deep:
+                elif deep and not e.is_link:
                     stack.append(p)
         return out
 
@@ -166,17 +178,21 @@ def count(device: GarminDevice, storage: Storage) -> dict[str, int]:
             unknown |= {kind for f, kinds in wanted.items() if _within(f, folder) or f == folder
                         for kind in kinds}
             continue
+        main = folder in MAIN_FOLDERS
         for real, entry in found:
             key = real.casefold()
-            if key in seen:
+            if key in seen or entry.is_link:
                 continue
-            seen.add(key)
             if any(_within(key, place.casefold()) for place in logs):
                 kind = "logs"
             else:
-                kind = next((k for _order, k, f in rules if f.matches(real)), None)
-            if kind is not None:
-                sizes[kind] += entry.size
+                kind = next((k for _order, k, f in rules
+                             if (not main or f.extension or f.basename) and f.matches(real)),
+                            None)
+            if kind is None:
+                continue  # of no kind: an update file of the main folder is counted below
+            seen.add(key)
+            sizes[kind] += entry.size
     if device.update_files:
         sizes.setdefault("updates", 0)
         for u in device.update_files:
@@ -239,23 +255,69 @@ def _boot() -> str:
         return ""
 
 
+def _mount_id(root) -> str | None:
+    """The system's ID of the mount of a drive at `root` (/proc/self/mountinfo), made anew at
+    each mount; None: not a mount point, or not known."""
+    if root is None:
+        return None
+    try:
+        with open("/proc/self/mountinfo", encoding="utf-8") as f:
+            for line in f:
+                fields = line.split()
+                if len(fields) > 4 and fields[4].replace("\\040", " ") == str(root):
+                    return fields[0]
+    except OSError:
+        return None
+    return None
+
+
+def _place(device: GarminDevice, storage: Storage) -> str:
+    """What tells one connection of the device from the next one: where it is on USB (a new
+    address at each plugging in); a drive whose place is not known, its mount (made anew at
+    each one); else its software version (an update or a restart after it is a new connection;
+    a plugging in again with nothing changed is not told)."""
+    usb = getattr(storage, "usb", None)
+    bus, address = getattr(usb, "bus", None), getattr(usb, "address", None)
+    if bus is None or address is None:
+        bus, address = getattr(usb, "told_place", None) or (None, None)
+    if bus is not None and address is not None:
+        return f"usb|{bus}|{address}"
+    mount = (_mount_id(getattr(storage, "root", None))
+             if getattr(storage, "mass_storage", False) else None)
+    if mount is not None:
+        return f"mount|{mount}"
+    return f"software|{getattr(device, 'software_version_str', None)}"
+
+
 def _key(device: GarminDevice, storage: Storage, via: str) -> str:
     """The connection, as a short digest of what tells it (the start of the computer, the
-    device, where it is on USB): the same for every opening while it stays plugged in."""
-    usb = getattr(storage, "usb", None)
+    device, its place: _place): the same for every opening while it stays plugged in."""
     told = "|".join(str(part) for part in (_boot(), device.unit_id, via,
-                                           getattr(usb, "bus", None),
-                                           getattr(usb, "address", None)))
+                                           _place(device, storage)))
     return hashlib.sha256(told.encode()).hexdigest()[:12]
+
+
+def _log_of(entry) -> dict:
+    """{"log": n}: the place of the entry's error log in diagnostics.ERR_LOGS; {} unknown."""
+    from openexpress.diagnostics import ERR_LOGS
+
+    names = [posixpath.basename(p).casefold() for p in ERR_LOGS]
+    name = (entry.source or "").casefold()
+    return {"log": names.index(name)} if name in names else {}
+
+
+def _crash_fields(crash) -> dict:
+    fields = {"kind": crash.kind,
+              "at": crash.at.strftime("%Y-%m-%d %H:%M:%S") if crash.at else None,
+              "error": crash.error, "pc": crash.program_counter, "screen": crash.screen}
+    if getattr(crash, "software", None):
+        fields["software"] = crash.software  # the version then, as the page shows it
+    return fields
 
 
 def _crash(entries) -> dict | None:
     crash = next((e for e in entries if e.is_crash), None)
-    if crash is None:
-        return None
-    return {"kind": crash.kind,
-            "at": crash.at.strftime("%Y-%m-%d %H:%M:%S") if crash.at else None,
-            "error": crash.error, "pc": crash.program_counter, "screen": crash.screen}
+    return None if crash is None else _crash_fields(crash)
 
 
 def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str,
@@ -287,7 +349,34 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
         line["dumps"] = {"count": len(dumps), "bytes": sum(size for _p, size in dumps)}
     if entries is not None:
         line["crash"] = _crash(entries)  # None: the error logs hold no crash
+        # Every crash they hold, so that the device's page from its records tells as many as
+        # the page of the device connected did.
+        # With the error log of each, by its place in diagnostics.ERR_LOGS ("log"; no file name):
+        # two like entries of one file are two crashes, one in both error logs is one
+        # (crashes.history).
+        line["crashes"] = [{**_crash_fields(e), **_log_of(e)} for e in entries if e.is_crash]
+        line["errors"] = len(entries)
+    hidden = _hidden_logs(device, storage, found)
+    if hidden is not None:
+        line["hidden"] = hidden
     return line
+
+
+def _hidden_logs(device: GarminDevice, storage: Storage, found) -> bool | None:
+    """Whether the device has crash logs that only Copy Crash Logs reads (as at the opening);
+    None: not known."""
+    from openexpress import diagnostics
+
+    if found is not None:
+        return bool(found.hidden_logs)
+    try:
+        return (diagnostics.may_have_hidden_logs(storage)
+                and not diagnostics.hidden_logs_known_absent(
+                    device.unit_id, bool(getattr(storage, "test_drive", False))))
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        return None
 
 
 def _declared(device: GarminDevice) -> set[str]:
@@ -301,6 +390,51 @@ def _declared(device: GarminDevice) -> set[str]:
 
 # Connections noted by this process: (the log, key).
 _noted: set[tuple[str, str]] = set()
+# Devices forgotten by this process (Forget Device): when (time.monotonic).
+_forgotten: dict[int, float] = {}
+LOCK = "records.lock"
+
+
+@contextmanager
+def device_locked(unit_id: int):
+    """The lock of the records of the devices on this computer, in any process: the device log
+    (note_connection, note_counted), a removal from the device with the copies it keeps
+    (freeing.remove_dumps) and Forget Device (forget._delete) take it, one at a time. A lock
+    file of its own, outside the device's folder, so that taking it never makes that folder
+    again."""
+    folder = paths.data_dir()
+    paths.make_dir(folder)
+    with paths.locked(folder / LOCK):
+        yield
+
+
+def forgotten(unit_id: int) -> None:
+    """Forget Device deleted what this computer kept of the device (under device_locked): a
+    write begun before it (the reading of a device just unplugged, a count after a removal)
+    does not make its records again, and its next connection is noted anew."""
+    _forgotten[unit_id] = time.monotonic()
+    folder = str(paths.device_dir(unit_id))
+    _noted.difference_update({n for n in _noted if n[0].startswith(folder)})
+
+
+@dataclass(frozen=True)
+class Began:
+    """When a write of a device's records began, and whether its folder was there then."""
+
+    at: float
+    folder: bool
+
+
+def begin(unit_id: int | None) -> Began:
+    """A write of the device's records begins: what forgotten_since compares with."""
+    return Began(time.monotonic(), bool(unit_id) and paths.device_dir(unit_id).is_dir())
+
+
+def forgotten_since(unit_id: int, began: Began) -> bool:
+    """Whether Forget Device came after the write began: in this process (forgotten), or in
+    another one (the device's folder was there then and is gone now)."""
+    return (_forgotten.get(unit_id, float("-inf")) >= began.at
+            or (began.folder and not paths.device_dir(unit_id).is_dir()))
 
 
 def note_connection(device: GarminDevice, storage: Storage | None, found=None,
@@ -313,6 +447,8 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
     when a line was written."""
     if storage is None or not getattr(device, "unit_id", None):
         return False
+    # With the reading at the opening: since it began (Forget Device meanwhile writes nothing).
+    began = getattr(found, "began", None) or begin(device.unit_id)
     via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
@@ -324,7 +460,7 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
             return False
         now = now or datetime.now()
         line = _line(device, storage, found, now, key, via)
-        written = _append(where, line, now)
+        written = _append(where, line, device.unit_id, began)
     except DeviceNotResponding:
         raise
     except Exception as e:  # noqa: BLE001 - the log is a side line: never a failed opening
@@ -337,28 +473,17 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
     return written
 
 
-@contextmanager
-def _locked(folder: Path):
-    """The device's folder locked while its log is read and written (the window and the
-    background service may note the same connection at once); the folder, not the file, which
-    a dropping of lines replaces."""
-    paths.make_dir(folder)
-    fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        yield
-    finally:
-        os.close(fd)
-
-
 def _last_key(where: Path) -> str | None:
     kept = read_file(where)
     return kept.lines[-1]["conn"] if kept.lines else None
 
 
-def _append(where: Path, line: dict, now: datetime) -> bool:
+def _append(where: Path, line: dict, unit_id: int, began: Began) -> bool:
     text = json.dumps(line, ensure_ascii=False, sort_keys=True) + "\n"
-    with _locked(where.parent):
+    with device_locked(unit_id):
+        if forgotten_since(unit_id, began):
+            log.info("history: the device was forgotten meanwhile, no line written")
+            return False
         try:
             data = where.read_bytes()
         except FileNotFoundError:
@@ -368,28 +493,111 @@ def _append(where: Path, line: dict, now: datetime) -> bool:
             return False
         if data and not data.endswith(b"\n"):
             text = "\n" + text  # a write cut short: its piece stays a line of its own
+        paths.make_dir(where.parent)
         fd = os.open(where, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a", encoding="utf-8") as f:
             os.fchmod(fd, 0o600)
             f.write(text)
         lines = [*kept.lines, line]
-        cut = now.astimezone() - KEEP
-        recent = [x for x in lines if _when(x) >= cut][-MAX_LINES:]
+        recent = _kept(lines)
         if len(recent) < len(lines):
-            paths.write_private(where, "".join(json.dumps(x, ensure_ascii=False, sort_keys=True)
-                                               + "\n" for x in recent))
+            dropped = {id(x) for x in lines} - {id(x) for x in recent}
+            _rewrite(where, data + text.encode(),
+                     lambda n, _parsed: None if id(lines[n]) in dropped else ...)
     return True
 
 
+def _kept(lines: list[dict]) -> list[dict]:
+    """The lines kept after `lines[-1]` was added: the newest KEEP_AT_LEAST whatever their
+    times, and those younger than KEEP measured from the middle of the times of those newest
+    lines (a clock set wrong, ahead or behind, at fewer than half of them drops nothing), at
+    most MAX_LINES."""
+    last = len(lines) - KEEP_AT_LEAST
+    if last <= 0:
+        return lines[-MAX_LINES:]
+    recent = sorted(_when(x) for x in lines[last:])
+    cut = recent[len(recent) // 2] - KEEP
+    return [x for n, x in enumerate(lines) if n >= last or _when(x) >= cut][-MAX_LINES:]
+
+
+def _raw_lines(data: bytes) -> list[tuple[bytes, dict | None]]:
+    """Each line of the log as written, with what the program reads of it (valid); None: a
+    damaged or foreign line (not UTF-8, not one of the program's), which a reader skips and a
+    writer keeps as it is. Not splitlines(): it also breaks at characters a JSON text may hold
+    (U+2028…)."""
+    out = []
+    for raw in data.split(b"\n"):
+        if not raw.strip():
+            continue
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            out.append((raw, None))
+            continue
+        out.append((raw, valid(text)))
+    return out
+
+
+def _rewrite(where: Path, data: bytes, change) -> None:
+    """The log written again from `data` line by line, each line as it was unless
+    `change(n, parsed)` (n: its place among the valid lines) gives another: None drops it, a
+    dict replaces it, ... keeps it. A damaged or foreign line stays as it was (a reader skips
+    it; a writer never drops what it cannot read)."""
+    out, n = [], 0
+    for raw, parsed in _raw_lines(data):
+        if parsed is None:
+            out.append(raw)
+            continue
+        got = change(n, parsed)
+        n += 1
+        if got is None:
+            continue
+        out.append(raw if got is ... else
+                   json.dumps(got, ensure_ascii=False, sort_keys=True).encode())
+    paths.write_private(where, b"".join(line + b"\n" for line in out))
+
+
+def _put_right(where: Path, key: str, fix) -> bool:
+    """The last valid line of the log, when it is the line of the connection `key`, put right in
+    place by `fix(item)` (the line as written, with the fields this version does not know);
+    every other line as it was. False when the last line is of another connection."""
+    try:
+        data = where.read_bytes()
+    except FileNotFoundError:
+        return False
+    kept = _parse(data)
+    if not kept.lines or kept.lines[-1]["conn"] != key:
+        return False
+    last = len(kept.lines) - 1
+    raws = [raw for raw, parsed in _raw_lines(data) if parsed is not None]
+    item = json.loads(raws[last])
+    fix(item)
+    _rewrite(where, data, lambda n, _parsed: item if n == last else ...)
+    return True
+
+
+class NotCounted(DeviceError):
+    """The count after a removal told neither the free space nor the memory dumps (the device
+    unplugged meanwhile, each question answered with an error): its line is put right by what
+    was removed instead (after_removal)."""
+
+
 def note_counted(device: GarminDevice, storage: Storage,
-                 now: datetime | None = None) -> tuple[dict[str, int], int | None, int | None]:
+                 now: datetime | None = None, after_removal_of: dict | None = None
+                 ) -> tuple[dict[str, int], int | None, int | None, list | None]:
     """After files were removed from the device (freeing): its storage by kind, its space and
     its memory dumps counted again and put in the line of this connection, in place (the number
     of connections stays), with when ("counted"), so that what the records tell is true without
     connecting it again. A log whose last line is of another connection (its line not written)
-    is left as it is. Returns the kinds, the capacity and the free space counted."""
+    is left as it is, and so is a line counted after this count began (`now`: when it began; a
+    count begun before a removal and ended after it never undoes the count of that removal).
+    Returns the kinds, the capacity, the free space and the memory dumps (path, size; None: not
+    listed) counted. `after_removal_of`: the files just removed, by kind (after_removal): a count
+    that tells neither the free space nor the dumps then writes nothing and raises NotCounted."""
     from openexpress import diagnostics
 
+    began = begin(getattr(device, "unit_id", None))
+    now = now or datetime.now()
     kinds, capacity, free = storage_by_kind(device, storage)
     try:
         dumps = diagnostics.dumps_on_device(storage)
@@ -397,34 +605,137 @@ def note_counted(device: GarminDevice, storage: Storage,
         raise
     except DeviceError:
         dumps = None
+    if after_removal_of and free is None and dumps is None:
+        log.info("history: the device could not be counted after the removal")
+        raise NotCounted(_("The device could not be counted again after the removal; its "
+                           "records keep what was removed."))
     if not getattr(device, "unit_id", None):
-        return kinds, capacity, free
-    now = now or datetime.now()
+        return kinds, capacity, free, dumps
     via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
-    with _locked(where.parent):
-        kept = read_file(where)
-        if not kept.lines or kept.lines[-1]["conn"] != key:
-            log.info("history: the line of this connection is not the last one, not put right")
-            return kinds, capacity, free
-        line = kept.lines[-1]
-        line["categories"] = kinds
-        line["counted"] = now.astimezone().isoformat(timespec="seconds")
-        for name, value in (("capacity", capacity), ("free", free)):
-            if value is None:
-                line.pop(name, None)  # not known now: not what it was before
+    later = []
+    with device_locked(device.unit_id):
+        if forgotten_since(device.unit_id, began):
+            log.info("history: the device was forgotten meanwhile, its line not put right")
+            return kinds, capacity, free, dumps
+
+        def fix(line: dict) -> None:
+            if counted_after(line, now):
+                later.append(line)
+                return
+            line["categories"] = kinds
+            line["counted"] = _counted_text(now)
+            if capacity is not None:  # not told now: the one known (it does not change)
+                line["capacity"] = capacity
+            if free is None:
+                line.pop("free", None)  # not known now: not what it was before
             else:
-                line[name] = value
-        if dumps is None:
-            line.pop("dumps", None)
-        else:
-            line["dumps"] = {"count": len(dumps), "bytes": sum(size for _p, size in dumps)}
-        paths.write_private(where, "".join(json.dumps(x, ensure_ascii=False, sort_keys=True)
-                                           + "\n" for x in kept.lines))
+                line["free"] = free
+            if dumps is None:
+                line.pop("dumps", None)
+            else:
+                line["dumps"] = {"count": len(dumps), "bytes": sum(size for _p, size in dumps)}
+
+        if not _put_right(where, key, fix):
+            log.info("history: the line of this connection is not the last one, not put right")
+            return kinds, capacity, free, dumps
+    if later:
+        log.info("history: the line of this connection was counted after this count began, "
+                 "left as it is")
+        return kinds, capacity, free, dumps
     log.info("history: the line of this connection put right after a removal (%d kinds of "
              "file, %s free)", len(kinds), applog.size(free))
-    return kinds, capacity, free
+    return kinds, capacity, free, dumps
+
+
+def _counted_text(when: datetime) -> str:
+    return when.astimezone().isoformat(timespec="milliseconds")
+
+
+def counted_after(line: dict, when: datetime) -> bool:
+    """Whether the line was counted again ("counted") after `when`."""
+    if "counted" not in line:
+        return False
+    counted = datetime.fromisoformat(line["counted"])
+    counted = counted if counted.tzinfo is not None else counted.astimezone()
+    return counted > when.astimezone()
+
+
+def after_removal(device: GarminDevice, storage: Storage,
+                  removed: dict[str, list[tuple[str, int]]], now: datetime | None = None
+                  ) -> tuple[dict[str, int], int | None, int | None, list | None]:
+    """After files were removed from the device (`removed`: by kind, "logs" for memory dumps,
+    "updates" for update files, each path and size): the device counted again and its line put
+    right (note_counted); when that count fails (the device stopped responding, was unplugged,
+    Ctrl+C), the line put right by what was removed (note_removed) and the failure raised as it
+    is. The window and the command line alike."""
+    now = now or datetime.now()
+    began = begin(getattr(device, "unit_id", None))
+    try:
+        return note_counted(device, storage, now, after_removal_of=removed)
+    except BaseException:
+        for kind, files in removed.items():
+            note_removed(device, storage, files, kind, now, began)
+        raise
+
+
+def connection_line(device: GarminDevice, storage: Storage) -> dict | None:
+    """The line of this connection in the device's log (as it is now: put right after a
+    removal by the window or the command line); None: it has none, or another is the last."""
+    if not getattr(device, "unit_id", None):
+        return None
+    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    lines = read(device.unit_id, bool(getattr(storage, "test_drive", False))).lines
+    return lines[-1] if lines and lines[-1]["conn"] == _key(device, storage, via) else None
+
+
+def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str, int]],
+                 kind: str, now: datetime | None = None, began: Began | None = None) -> bool:
+    """After a removal that could not be counted again (the device stopped responding, or was
+    unplugged): the line of this connection put right by what was removed (`removed`: path,
+    size; `kind`: "logs" for memory dumps, "updates" for update files): its memory dumps fewer,
+    its free space larger and that kind smaller by their sizes, with when ("counted"). Nothing
+    is asked of the device. True when the line was put right."""
+    if not removed or not getattr(device, "unit_id", None):
+        return False
+    began = began or begin(device.unit_id)  # `began`: the caller's, when its work began first
+    now = now or datetime.now()
+    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    try:
+        key = _key(device, storage, via)
+    except DeviceNotResponding:
+        raise
+    except Exception as e:  # noqa: BLE001 - as below
+        log.info("history: not put right by what was removed (%s)", type(e).__name__)
+        return False
+    where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    size = sum(s for _p, s in removed)
+
+    def fix(line: dict) -> None:
+        if counted_after(line, now):
+            return  # counted after the removal (another process): it tells it already
+        line["counted"] = _counted_text(now)
+        if "free" in line:
+            line["free"] += size
+        kinds = line.get("categories", {})
+        if kind in kinds:
+            kinds[kind] = max(0, kinds[kind] - size)
+        if kind == "logs" and isinstance(line.get("dumps"), dict):
+            line["dumps"] = {"count": max(0, line["dumps"]["count"] - len(removed)),
+                             "bytes": max(0, line["dumps"]["bytes"] - size)}
+
+    try:
+        with device_locked(device.unit_id):
+            if forgotten_since(device.unit_id, began):
+                return False
+            done = _put_right(where, key, fix)
+    except Exception as e:  # noqa: BLE001 - the log is a side line: never the removal's result lost
+        log.info("history: not put right by what was removed (%s)", type(e).__name__)
+        return False
+    log.info("history: the line of this connection %s by what was removed (%d files, %s)",
+             "put right" if done else "not put right", len(removed), applog.size(size))
+    return done
 
 
 # --- reading it back -------------------------------------------------------------------------
@@ -453,11 +764,7 @@ def read_file(where: Path) -> Log:
 
 def _parse(data: bytes) -> Log:
     out = Log()
-    # Not splitlines(): it also breaks at characters a JSON text may hold (U+2028…).
-    for raw in data.decode("utf-8", errors="replace").split("\n"):
-        if not raw.strip():
-            continue
-        line = valid(raw)
+    for _raw, line in _raw_lines(data):
         if line is None:
             out.skipped += 1
         else:
@@ -466,7 +773,7 @@ def _parse(data: bytes) -> Log:
 
 
 def _count(value) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    return isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MOST
 
 
 def _text(value, empty_ok: bool = True) -> bool:
@@ -484,16 +791,16 @@ def valid(raw: str) -> dict | None:
     if not isinstance(item, dict) or item.get("v") != VERSION:
         return None
     try:
-        time, conn, via = item["time"], item["conn"], item["via"]
+        when, conn, via = item["time"], item["conn"], item["via"]
         software, categories = item["software"], item["categories"]
-        datetime.fromisoformat(time)
-    except (KeyError, TypeError, ValueError):
+        _usable_time(when)
+    except (KeyError, TypeError, ValueError, OverflowError, OSError):
         return None
     if not (isinstance(conn, str) and via in VIA and isinstance(software, str)
             and isinstance(categories, dict)
             and all(_count(v) for k, v in categories.items() if k in CATEGORIES)):
         return None
-    line = {"v": VERSION, "time": time, "conn": conn, "via": via, "software": software,
+    line = {"v": VERSION, "time": when, "conn": conn, "via": via, "software": software,
             "categories": {k: v for k, v in categories.items() if k in CATEGORIES}}
     for key in ("capacity", "free"):
         if key in item:
@@ -508,20 +815,50 @@ def valid(raw: str) -> dict | None:
         line["dumps"] = {"count": dumps["count"], "bytes": dumps["bytes"]}
     if "crash" in item:
         crash = item["crash"]
-        if crash is not None and not (isinstance(crash, dict)
-                                      and isinstance(crash.get("kind"), str)
-                                      and all(_text(crash.get(k))
-                                              for k in ("at", "error", "pc", "screen"))):
+        if crash is not None and not _crash_ok(crash):
             return None
-        line["crash"] = None if crash is None else {k: crash.get(k) for k in
-                                                    ("kind", "at", "error", "pc", "screen")}
+        line["crash"] = None if crash is None else _crash_kept(crash)
+    if "crashes" in item:
+        found = item["crashes"]
+        if not (isinstance(found, list) and all(_crash_ok(c) for c in found)):
+            return None
+        line["crashes"] = [_crash_kept(c) for c in found]
+    if "errors" in item:
+        if not _count(item["errors"]):
+            return None
+        line["errors"] = item["errors"]
+    if "hidden" in item:
+        if not isinstance(item["hidden"], bool):
+            return None
+        line["hidden"] = item["hidden"]
     if "counted" in item:
         try:
-            datetime.fromisoformat(item["counted"])
-        except (TypeError, ValueError):
+            _usable_time(item["counted"])
+        except (TypeError, ValueError, OverflowError, OSError):
             return None
         line["counted"] = item["counted"]
     return line
+
+
+def _crash_ok(crash) -> bool:
+    return (isinstance(crash, dict) and isinstance(crash.get("kind"), str)
+            and all(_text(crash.get(k)) for k in ("at", "error", "pc", "screen", "software"))
+            and ("log" not in crash or _count(crash["log"])))
+
+
+def _crash_kept(crash: dict) -> dict:
+    """What the program reads of a crash of a line (valid): the optional fields only when
+    written."""
+    return {**{k: crash.get(k) for k in ("kind", "at", "error", "pc", "screen")},
+            **{k: crash[k] for k in ("log", "software") if crash.get(k) is not None}}
+
+
+def _usable_time(text) -> None:
+    """Raises unless `text` is a time the readers can use (in this computer's zone, back and
+    forth): a time at the ends of the calendar ("0001-01-01T00:00:00") is not."""
+    when = datetime.fromisoformat(text)
+    (when if when.tzinfo is not None else when.astimezone()).astimezone().replace(
+        tzinfo=None).astimezone()
 
 
 def _when(line: dict) -> datetime:
@@ -544,16 +881,32 @@ def counted_time(line: dict) -> datetime:
         tzinfo=None)
 
 
-def crash_entry(line: dict):
-    """The newest crash of the line as an error entry (diagnostics.ErrorEntry), for its words."""
+def _entry(crash: dict):
     from openexpress.diagnostics import ErrorEntry
 
-    crash = line.get("crash")
-    if not crash:
-        return None
     try:
         at = datetime.strptime(crash["at"], "%Y-%m-%d %H:%M:%S") if crash.get("at") else None
     except ValueError:
         at = None
+    from openexpress.diagnostics import ERR_LOGS
+
+    log_ = crash.get("log")
+    source = (posixpath.basename(ERR_LOGS[log_]) if isinstance(log_, int)
+              and 0 <= log_ < len(ERR_LOGS) else "")
     return ErrorEntry(crash["kind"], at, crash.get("error"), crash.get("pc"),
-                      crash.get("screen"))
+                      crash.get("screen"), source=source, software=crash.get("software"))
+
+
+def crash_entry(line: dict):
+    """The newest crash of the line as an error entry (diagnostics.ErrorEntry), for its words."""
+    crash = line.get("crash")
+    return _entry(crash) if crash else None
+
+
+def crash_entries(line: dict) -> list:
+    """Every crash the error logs held at the line's connection (error entries); a line written
+    before they were kept: its newest."""
+    if "crashes" in line:
+        return [_entry(c) for c in line["crashes"]]
+    newest = crash_entry(line)
+    return [newest] if newest is not None else []

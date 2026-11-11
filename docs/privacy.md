@@ -32,8 +32,10 @@ Besides the login, this installation keeps what it knows of each device in
 - copies of files whose upload failed, until they are uploaded;
 - the list of your own maps;
 - a short log of each connection (`history.jsonl`): the software version, the storage by kind of
-  file, the number and size of memory dumps and the last crash (kind, time, error, where the
-  software stopped, screen), without file names, kept whatever **Keep Diagnostic Files** says.
+  file, the number and size of memory dumps, the crashes the error logs held (kind, time, error,
+  where the software stopped, screen, which of the two logs), how many entries they held and
+  whether the device has
+  hidden crash logs, without file names, kept whatever **Keep Diagnostic Files** says.
 
 **Forget Device** removes what it keeps of a device. The Flatpak and the version from source
 each keep their own files; what each sees of the other is described in
@@ -80,16 +82,18 @@ Otherwise the device's diagnostic files stay on this computer:
   openExpress's own; the memory dumps (encrypted by Garmin) are copied with **Copy Memory Dumps**
   or `openexpress diagnostics --dumps --apply`.
 
-- Before older memory dumps are removed from the device (**Free Up Space** → **Copy and
-  Remove** on the Device Status page, `openexpress diagnostics --free-space --apply`), those
+- Before older memory dumps are removed from the device (**Free Up Space** → **Remove** on the
+  Device Status page, `openexpress diagnostics --free-space --apply`), those
   that fit are copied to this computer, whatever **Keep Diagnostic Files** says, and each copy is
   checked first: at most 100 MB per device, apart from the copies above, the oldest removal
   dropped first. A dump too large for that is removed without a copy, and the question says so.
 
 The copies are in the device's folder of openExpress's data (`~/.local/share/openexpress/devices/`,
 in the Flatpak `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress/devices/`),
-readable only by you: at most 30 copies and 50 MB per device, the oldest removed first, and the
-copies of removed dumps in `diagnostics/removed/`. **Forget Device** removes them. These copies
+readable only by you: at most 30 copies and 50 MB per device for the error and crash logs, as
+many for the memory dumps of Copy Memory Dumps, the oldest removed first, and the
+copies of removed dumps in `diagnostics/removed/` (those of a test drive, as all its copies, in
+`test-drive/diagnostics/`, with limits of their own). **Forget Device** removes them. These copies
 are never sent.
 
 ## Activities

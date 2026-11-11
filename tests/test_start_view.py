@@ -347,3 +347,27 @@ def test_the_chip_to_sync_stays_through_a_change_of_view_and_a_later_count_lands
     StartView.choose(win, "grid")
     (tile,) = win.start.tiles()
     assert not isinstance(tile, start.DeviceRow) and _chips_on(tile) == ["Synced"]
+
+
+# --- the notice on top ------------------------------------------------------------------------
+
+
+@pytest.mark.needs_display
+def test_the_notice_on_top_waits_for_its_words():
+    """No device open and none to choose from: the notice on top is wanted, but its words come
+    with the first look at USB, a few seconds later (and again after the open device was
+    unplugged). Until then no card without a title is shown; with its words it is, and it
+    goes when it is no longer wanted."""
+    from openexpress.gui.start import StartPage
+
+    start = StartPage()
+    start.show([], True)
+    assert not start.notice_group.get_visible()
+    start.set_empty("Connect Your Device", "Connect your Garmin device with a USB cable.", False)
+    assert start.notice_group.get_visible()
+    start.show([], False)
+    assert not start.notice_group.get_visible()
+    start.show([], True)
+    assert start.notice_group.get_visible()
+    start.set_empty("", "", False)
+    assert not start.notice_group.get_visible()

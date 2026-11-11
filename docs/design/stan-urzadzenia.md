@@ -97,19 +97,22 @@ A card with a round icon in the colour of the state, a title and one line.
 | Good | no crash in the last 30 days and not little space | `object-select-symbolic`, success | No Problems Found | Nie znaleziono problemów |
 | Crashes | a crash in the last 30 days | `dialog-warning-symbolic`, warning | {count} Crash in the Last 30 Days / {count} Crashes in the Last 30 Days | {count} awaria / awarie / awarii w ostatnich 30 dniach |
 | Little space (decided) | free space below the smaller of 10 % of the capacity and 500 MB: devices hold from some megabytes to tens of gigabytes, so a share alone would warn a large device too late and a size alone a small one always | `dialog-warning-symbolic`, warning | Little Free Space | Mało wolnego miejsca |
+| Error logs not read | none of the above, and the device's error logs could not all be read (also when their folder cannot be listed): whether it crashed is not known | `dialog-question-symbolic`, no colour | Error Logs Not Read | Nie odczytano dzienników błędów |
 | Reading | the counts are not known yet | a spinner | Reading the Device… | Odczyt urządzenia… |
 
 The line under it: "Last one {when} · the same error each time · {free} free" / "Ostatnia {when}
 · za każdym razem ten sam błąd · {free} wolne" (parts left out when they do not apply). Both
 crashes and little space: the crashes in the title, the space in the line. The error colour is
-not used: a device's crash is a fact to know, not an alarm.
+not used: a device's crash is a fact to know, not an alarm. The row Device Status of the device
+page says the summary's title, from the same facts (also when the reading of the error logs
+failed); for a device without diagnostic data (D14), as its page: "No Diagnostic Data".
 
 ### D6. Storage by category
 
 - **Counted** at each connection, in the background after the device page is shown: one listing of
   the device's folders over the ordinary connection (gvfs, or the drive's folder), sizes and counts
-  only; nothing read from the files, no name kept. On a large device it takes a moment, so the
-  card shows "Counting…" until then.
+  only; nothing read from the files, no name kept. On a large device it takes a moment: the page
+  says it reads the device until then.
 - **Categories:** Maps, Activities, Music and Audio, Apps, Courses and Locations, Updates and
   Satellite Data, Logs and Memory Dumps, System (the capacity minus the free space minus
   the files listed: the device's hidden files and what its file system keeps), and the free part.
@@ -125,7 +128,7 @@ not used: a device's crash is a fact to know, not an alarm.
   height, with no room left under the last one.
 - **A category of 0 B** is left out of the legend and of Category Details (a USB drive holds
   none of most); the free part stays always, at 0 B too.
-- **Category Details** (a row that expands): each category with its count and size, in the bar's
+- **Category Details** (a row that expands): each category with its size, in the bar's
   order; those with a page (Maps, Activities, Music and Audio, Apps, Courses and Locations) lead
   to it.
 
@@ -134,11 +137,16 @@ not used: a device's crash is a fact to know, not an alarm.
 - Only crashes that restarted the device ("RTL Trap"): the kinds an Edge writes at an ordinary
   start ("Assert") and "Abnormal Powerdown" are counted in the log only.
 - **Sources, merged:** `err_log.txt` and `err_log.bak` on the device, the boot log (copied by Copy
-  Crash Logs), every copy kept on this computer (the device keeps only its last entries), and the
-  newest crash the device log (D8) wrote at each connection, so that a device whose diagnostic
+  Crash Logs), every copy kept on this computer (the device keeps only its last entries), and
+  every crash the device log (D8) wrote at each connection (with the number of its error log
+  and the software version then), so that a device whose diagnostic
   files are not kept still has its crashes, also when it is not connected. One crash = the same
-  error and program counter within a minute, whatever the sources: a crash in the device log and
-  in a copy counts once.
+  entry seen again (the same time and codes, in each copy of an error log and in the device log),
+  or one crash in two sources (the error log and the boot log) within a minute with codes that
+  agree: a boot log line joins one crash, the nearest before it, and never two crashes. Two entries of one file are two crashes, however close, even of the same time and codes:
+  a device restarting again and again writes each.
+- **"The same error as the {n} before":** the crashes just before it, one after another, that had
+  its error; a crash of another error between them ends the count.
 - **Shown** newest first with a relative date and the software version; "the same error as the {n}
   before" when it repeats. The codes (error number, address, screens) only in Error Details.
 - **Show All:** beside the group's description on a wide window; on a narrow one the last row of
@@ -149,7 +157,7 @@ not used: a device's crash is a fact to know, not an alarm.
 
 | Option | |
 |---|---|
-| **A (decided)** | `devices/<Unit ID>/history.jsonl` (0600), one line at each connection, written by the window and the background service, once a connection (as the diagnostics' reading): time, connection kind (MTP, drive), software version, capacity, free space, category sizes, number and size of memory dumps, the newest crash (kind, time, error, program counter, screens). No file names, no Unit ID, no serial number. Lines older than two years are dropped. Kept whatever Keep Diagnostic Files says: it holds only counts, like `devices.json`. Forget Device deletes it with the rest of the device's folder |
+| **A (decided)** | `devices/<Unit ID>/history.jsonl` (0600), one line at each connection, written by the window and the background service, once a connection (as the diagnostics' reading): time, connection kind (MTP, drive), software version, capacity, free space, category sizes, number and size of memory dumps, every crash the error logs hold and the newest of them (kind, time, error, program counter, screens), how many entries they hold and whether the device has crash logs only Copy Crash Logs reads. No file names, no Unit ID, no serial number. Lines older than two years (counted from the middle of the times of the newest 100 lines, so that a clock set wrong at fewer than half of them drops nothing) are dropped, but never the newest 100; a line that is not the program's (damaged, not UTF-8, a size no device has) is skipped by the readers and kept as it is by the writers. Kept whatever Keep Diagnostic Files says: it holds only counts, like `devices.json`. Forget Device deletes it with the rest of the device's folder |
 | B | the same, but only with Keep Diagnostic Files on | less history for most users (the switch is off by default) |
 
 Crashes and Updates show from it: crashes and software updates (a new version between two lines).
@@ -158,23 +166,38 @@ not the log's first line, which may come long after; its version only when the l
 connection; without `first_seen` (a test drive) no such row. Storage over time is kept, not
 shown (a later chart, if wanted).
 
-After a removal (D9, the window and the command line alike) the line of that connection is put
-right in place: the kinds of file, the space and the memory dumps counted again, and when
-("counted"); a new line would count the connection twice. So the page of the device not connected
+After a removal (D9, the window and the command line alike), and after anything else the window
+wrote to the device, the line of that connection is put right in place: the kinds of file, the
+space and the memory dumps counted again, and when ("counted"); a new line would count the
+connection twice. So the page of the device not connected
 (D13) and `openexpress diagnostics` tell the state after the removal without connecting it again.
-A log whose last line is of another connection is left as it is.
+A log whose last line is of another connection is left as it is, and so is a line counted again
+after the count began (a count begun before a removal never undoes the removal's): a task of the
+window waits for a count still going, which is in the session before the task goes on. The page,
+its row, the row Device Storage and the report take the latest count: the session's (a reading
+at Refresh, a count after a write) or this connection's line when the command line counted it
+later; never another connection's line. A capacity not told by a count is the
+one known (it does not change); free space and memory dumps not told are not known. A folder
+behind a link is not counted. A write begun before Forget Device (the reading at the opening,
+the line of the connection, a count, a removal put right), in this process or another, writes
+nothing: the device's folder was there when it began and is gone, or this process forgot it.
+A connection is told from the next one by the device's place on USB (a new one at each plugging
+in; where /sys cannot be read, the one the volume tells, kept for this alone), a drive's by its
+mount, else by its software version. The writers of the log, the removals of D9 and Forget Device take one lock of
+the records, in any process; a write begun before Forget Device does not make the device's
+folder again.
 
-Step a adds one sentence to "What is kept of each device" in `docs/privacy.md`: "a short log of
-each connection: the software version, the storage by category, the number and size of memory dumps
-and the last crash (kind, time, error, where the software stopped, screen), without file names,
-kept whatever Keep Diagnostic Files says;".
+Step a adds one sentence to "What is kept of each device" in `docs/privacy.md`: a short log of
+each connection: the software version, the storage by category, the number and size of memory
+dumps and the crashes the error logs held (kind, time, error, where the software stopped, screen,
+which of the two logs), without file names, kept whatever Keep Diagnostic Files says.
 
 ### D9. Freeing space
 
 | Candidate | What is done | Never |
 |---|---|---|
-| Older memory dumps: all but the newest, by the time of each file | copied to this computer first, each copy checked, then removed from the device; the newest dump always stays (the only one of the last crash). No dump is offered when the time of one is not known (the newest cannot be told) | – |
-| Files of an update the device did not install, outside the device's main folder (a row titled by the update's name and version: "The device took the file in but did not install it") | the file is removed; the Updates page offers the update again | – |
+| Older memory dumps: all but the newest, by the time of each file; a dump is a file named as the devices name them (`RAM.zip`, `RAM_bak1.zip`, `ramdump*.zip` in the folder of dumps, `ramdump*.log` beside the error logs), never another file there, a hidden one or a link | copied to this computer first, each copy checked, then removed from the device; the newest dump always stays (the only one of the last crash). No dump is offered when the times cannot be trusted: one not known, before 2010 or ahead of this computer by more than a day, or the two newest at the same time (the newest cannot be told) | – |
+| Files of an update the device did not install, outside the device's main folder (a row titled by the update's name and version: "The device took the file in but did not install it") | the file is removed; the Updates page offers the update again | a map support file (`Garmin/SID`, `.sid`), satellite data (`Garmin/GPS`), a hidden file, a file behind a link (a drive or `--path` on this computer): never offered |
 | An update file in the device's main folder (`GUPDATE.GCD`, `GUPDATE.GSP`) the device did not install | shown as waiting to install, without a button, and not counted as space to free | removed: that cancels the update |
 | – | – | activities, maps, music, courses, settings and profiles, `.sid` files, satellite data, the device's logs (also the `ramdump_err*.txt` texts beside an Edge's dumps), hidden files, anything not on this list |
 
@@ -182,12 +205,24 @@ Decided: both candidates, removed from step e on; the page of step c only reads.
 
 - **The copy before a removal** is made always, also with Keep Diagnostic Files off: it is what
   makes a removal of the device's only diagnostic material safe. It goes to
-  `devices/<Unit ID>/diagnostics/removed/` (a test drive's too, where its other diagnostic
-  copies are), apart from the 50 MB of the diagnostic copies, so that the dumps never push out
-  the copies of the error logs the crash history reads. At most 100 MB a device: the newest dumps first while they fit;
-  older removals are dropped first to make room. A dump larger than that (the `ramdump*.log` an
-  Edge 1050 wrote with its older software, about 200 MB each) is removed without a copy, and the
-  question says so plainly. A dump whose copy failed or does not match is not removed. The copies
+  `devices/<Unit ID>/diagnostics/removed/`, one folder a removal, numbered (the oldest goes first
+  whatever this computer's clock said), its folders for their owner alone as the other copies (a
+  test drive's, as all its copies and its records, in `devices/<Unit ID>/test-drive/`, with limits
+  of their own: they never push out the device's), apart from the 50 MB of the diagnostic copies, so that the dumps never push out
+  the copies of the error logs the crash history reads. At most 100 MB a device: the newest dumps
+  first while they fit; older removals are dropped first to make room. A dump whose copy would not
+  fit in what is left (the `ramdump*.log` an Edge 1050 wrote with its older software, about
+  200 MB each, or one of several that together exceed 100 MB) is removed without a copy, and the
+  question says so plainly: "as the copies would not fit in 100 MB". A dump whose copy failed or does not match is not removed. The copy of a
+  dump that stays on the device (refused, or not reached when the removal stopped) is dropped:
+  it is not its only copy; that of a dump something else removed meanwhile stays, the only one.
+  A device without a unit ID has no removal of its dumps: its copies would have no folder of the
+  device (the command line says so). One dump alone is the newest, whatever its time: nothing
+  older to remove. A removal stopped while copying (Ctrl+C, the device stopping) keeps no copy
+  of a dump still on the device. `diagnostics --path` (a copy of a device's files) keeps its
+  copies apart from the device's, as a test drive: they never push out the device's. The copies of Copy Memory Dumps share neither this limit nor that of
+  the error logs' copies (each kind its own 30 copies and 50 MB), and never push those out; a Copy
+  Memory Dumps that finds the same dumps makes no new copy. The copies
   count in "Copies on This Computer" and go with Forget Device.
 - **Step c (read only):** the group **Space to Free**, "Files the device no longer needs"; each
   candidate with what it is and its size at the end of its row, no buttons.
@@ -200,29 +235,47 @@ Decided: both candidates, removed from step e on; the page of step c only reads.
   what goes, the space, and what is not copied:
   - "Remove Older Memory Dumps?" – "5 memory dumps (44.9 MB) will be copied to this computer and
     then removed from the device. The newest dump stays on the device." – Cancel, Copy and Remove;
-  - some too large: "5 memory dumps (682.8 MB) will be removed from the device: 2 (75.3 MB) after
-    a copy on this computer, 3 (607.5 MB) without a copy, as they are too large. The newest dump
-    stays on the device." – Cancel, Copy and Remove;
-  - none can be copied: "3 memory dumps (607.5 MB) will be removed from the device without a copy:
-    they are too large to copy. The newest dump stays on the device." – Cancel, Remove;
+  - some not copied: "5 memory dumps (682.8 MB) will be removed from the device: 2 (75.3 MB) after
+    a copy on this computer, 3 (607.5 MB) without a copy, as the copies would not fit in 100 MB.
+    The newest dump stays on the device." – Cancel, Copy and Remove;
+  - none can be copied: "3 memory dumps (607.5 MB) will be removed from the device without a copy,
+    as the copies would not fit in 100 MB. The newest dump stays on the device." – Cancel, Remove;
   - "Remove the Update File?" – "The device took in GPS software 6.20 (4.1 MB) but did not install
     it. The file will be removed from the device; the Updates page will offer the update again." –
     Cancel, Remove.
-- **The removal** lists the device again first and removes only the files the question named
-  that are still there with the same size, never the newest of that listing. Each removal is
-  checked by listing again: a file the device keeps is not counted as removed.
+- **The removal** goes exactly as the question named it: under the lock of the records (another
+  removal, from the window or the command line, waits), the device is listed again first, and
+  only when it holds the same dumps (the same newest, the same older ones with their sizes and
+  times) are they removed, with the question's split into copied and not copied; else nothing is
+  removed and the window or the command line says the files changed ("Look at the list again"),
+  the page read again. An update file is looked at again too (the same size and time) and the
+  update server asked anew; what was freed is the size of the file removed. Each removal is
+  checked by listing again: a file the device keeps is not counted as removed. What a removal did
+  is always told, in the window or on the command line and in the program's log: also when the
+  device stops half-way, is unplugged, or cannot be counted after it ("Removal Not Finished",
+  with the files the device refused, and those not removed as their copy failed, said apart), on
+  the command line also after Ctrl+C; the device log is then put right by what was removed (also
+  when the count after it tells nothing, the device unplugged meanwhile). A file
+  gone by the time it is removed (something else removed it) is not counted as freed; when none
+  was left to remove, the window and the command line say "Nothing removed: the files were no
+  longer on the device". A file whose folder cannot be listed then stays, told as not removed
+  with why (exit code 1 on the command line). An answer
+  given after the device was unplugged or opened again (a restart, plugged in again) removes
+  nothing: "Nothing Removed", and the page is read again.
 - **One list:** the page and the command line list what can be freed with the same function: the
   dumps listed again, and the update files from the update server's answer (the one the device
   page and the Updates page share), never from what the Updates page happens to hold.
 - **After it:** "5 memory dumps removed, 44.9 MB freed" (or "Update file removed, 4.1 MB freed");
   the kinds of file and the free space are counted again, and Category Details says so ("Counted
-  again after a removal, {when}"), then the page is read again. When the device refused a file, or kept it, the
+  again after a change, {when}": also after another file was written), then the page is read
+  again. When the device refused a file, or kept it, the
   window says so ("The device did not remove 2 of the files; the others are removed.", with the
   device's answer); what was removed stays removed, the page shows what is left. A device that
   stops responding gets the usual banner.
 - **Command line:** `openexpress diagnostics --free-space` is an action of its own (not with
   `--dumps` or `--crash-logs`): it shows only the space to free, the same list as the page, in
-  the future tense ("to copy before the removal", "to remove without a copy, too large") and one
+  the future tense ("to copy before the removal", "to remove without a copy, as the copies would
+  not fit in 100 MB") and one
   sentence of the dry run; with `--apply` it copies and removes them as the window does, and
   nothing else (not the copy of the diagnostic files). The update files need the update
   server's answer: without it only the dumps, and it says so.
@@ -277,7 +330,8 @@ pages), "No Diagnostic Data" / "Brak danych diagnostycznych" and one
 sentence: "This device keeps no error logs or memory dumps that openExpress can read" / "To
 urządzenie nie zapisuje dzienników błędów ani zrzutów pamięci, które openExpress potrafi
 odczytać"; under it the storage card. A device that gives neither its storage nor diagnostic files:
-the status page alone.
+the status page alone. Error logs not read and memory dumps not listed are not known, never
+none: such a device has the page, not this one.
 
 ### D15. Steps
 
@@ -311,7 +365,7 @@ f. **The remembered device** (D13): the row on the remembered view, the page fro
 | Group | Storage | Pamięć |
 | Storage card | {free} free of {total} · {used} used | {free} wolne z {total} · Zajęte: {used} |
 | Categories | Maps, Activities, Music and Audio, Apps, Courses and Locations, Updates and Satellite Data, Logs and Memory Dumps, System, Free | Mapy, Aktywności, Muzyka i audio, Aplikacje, Kursy i lokalizacje, Aktualizacje i dane satelitarne, Dzienniki i zrzuty pamięci, System, Wolne |
-| Row | Category Details – "Counted when the device was connected, {when}"; after a removal "Counted again after a removal, {when}" | Szczegóły kategorii – „Policzone przy podłączeniu urządzenia, {when}”; po usunięciu „Policzone ponownie po usunięciu, {when}” |
+| Row | Category Details – "Counted when the device was connected, {when}"; after a change "Counted again after a change, {when}" | Szczegóły kategorii – „Policzone przy podłączeniu urządzenia, {when}”; po zmianie „Policzone ponownie po zmianie, {when}” |
 | Group | Crashes and Updates – "Crashes that restarted the device, and its software updates" | Awarie i aktualizacje – „Awarie, po których urządzenie uruchomiło się ponownie, i aktualizacje jego oprogramowania” |
 | Rows | Crash; Software Updated; First Connected Here | Awaria; Zaktualizowano oprogramowanie; Pierwsze podłączenie |
 | Button | Show All | Pokaż wszystko |

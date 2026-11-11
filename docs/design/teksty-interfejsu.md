@@ -239,7 +239,7 @@ or "Open openExpress and choose how to sync the device."). 4 texts become 3.
 
 | Text before | Proposal | PL |
 |---|---|---|
-| "{count} not: over the limit of {size}" | "{count} skipped: larger than {size}" (ngettext: "{count} file skipped…" / "{count} files skipped…") | „{count} plik pominięty: większy niż {size}” / „{count} pliki pominięte: większe niż {size}” / „{count} plików pominiętych: większych niż {size}” |
+| "{count} not: over the limit of {size}" | "{count} skipped: did not fit in {size}" (ngettext: "{count} file skipped…" / "{count} files skipped…"; not "larger than": a dump smaller than the limit is left out too when the newer ones took the room) | „{count} plik pominięty: nie zmieścił się w {size}” / „{count} pliki pominięte: nie zmieściły się w {size}” / „{count} plików pominiętych: nie zmieściły się w {size}” |
 | "now to upload: {count} activity" | "{count} activity to upload now" / "{count} activities to upload now" | „{count} aktywność do wysłania teraz” / „{count} aktywności do wysłania teraz” / „{count} aktywności do wysłania teraz” |
 | "Garmin's update server has none. Getting it sends the Unit ID…" | "Garmin's update server has no picture of this device. Getting one sends the Unit ID…" | accordingly |
 | "{action}: computer clock is off from the server by {minutes} min" | "{action}: this computer's clock is {minutes} min off; let the system set the time and try again" | „…: zegar tego komputera różni się o {minutes} min; włącz automatyczne ustawianie czasu i spróbuj ponownie” |

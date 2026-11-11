@@ -111,7 +111,7 @@ class ForgetDevice:
                 self._remembered_unit = None
             # TRANSLATORS: toast after a remembered device was forgotten
             self.toast(_("Forgot {device}").format(device=name))
-            if self.navigation.get_visible_page() is self.remembered.page:
+            if self._on_remembered_page():  # its view, or its page Device Status above it
                 self.navigation.pop_to_page(self.start.page)  # drawn by _on_popped
 
         def failed(e: Exception) -> None:

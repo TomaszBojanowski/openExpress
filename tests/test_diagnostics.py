@@ -16,7 +16,7 @@ from conftest import DEVICE_XML
 from fakes import descendants
 from fakes import window as stand_in
 
-from openexpress import diagnostics, forget, paths
+from openexpress import diagnostics, forget, paths, status
 from openexpress.device import ptp
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -478,7 +478,7 @@ def test_they_are_read_in_the_background_once_the_page_is_shown(device, clock, i
     assert reading.is_set()
     assert session.diagnostics.crash is not None and session.diagnostics.copied.saved
     assert drawn == [session.diagnostics]  # the row "Device Status" drawn with them
-    assert [c.error for c in session.crash_history] == ["0x003"]
+    assert [c.error for c in status.told(session).crashes] == ["0x003"]
 
 
 def test_they_are_kept_but_not_drawn_for_a_device_no_longer_open(device, clock, in_the_window):
@@ -540,6 +540,33 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
     time.sleep(0.3)  # long enough for a task that does not wait
     assert order == ([] if writes else ["work", "done"])
     reading.set()
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and len(order) < 2:
+        time.sleep(0.01)
+    assert order == ["work", "done"]
+
+
+def test_any_task_of_the_device_waits_for_its_count_after_a_write(monkeypatch, in_the_window):
+    """The count after a write (in the background) ends before any task of the device, also
+    one that only reads it, asks the device: one thing asks it at a time."""
+    import threading
+    import time
+
+    from gi.repository import GLib
+
+    from openexpress.gui import app
+
+    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
+    counting = threading.Event()
+    session = types.SimpleNamespace(diagnostics_reading=None, counting=counting)
+    order = []
+    win = stand_in(busy=False, session=session, _task_lets_close=False,
+                   set_busy=lambda busy, *a, **kw: None, _run_pending_refresh=lambda: None)
+    app.MainWindow.run_task(win, "Reading…", lambda: order.append("work"),
+                            lambda result: order.append("done"))
+    time.sleep(0.3)  # long enough for a task that does not wait
+    assert order == []
+    counting.set()
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline and len(order) < 2:
         time.sleep(0.01)
@@ -608,14 +635,10 @@ def test_crash_logs_copied_again_keep_their_content_once(hiding, clock):
 def _window(found, reading=None):
     from fakes import RunNow
 
-    from openexpress import crashes
-
     toasts = []
     return stand_in(
         session=types.SimpleNamespace(device=None, storage=None, diagnostics=found,
-                                      diagnostics_reading=reading,
-                                      crash_history=crashes.history(None, found.entries)
-                                      if found is not None else None),
+                                      diagnostics_reading=reading),
         _button=lambda label, cb, style=None, with_button=False: _labelled(label),
         run_task=RunNow(), toast=toasts.append, toasts=toasts, progress=lambda message: None)
 
@@ -663,9 +686,9 @@ def test_the_row_before_the_reading_and_after_it_failed(clock):
     win = _window(None, reading=threading.Event())  # being read
     status_row(win, Adw.PreferencesGroup())
     assert _row(win) == ("Device Status", "Reading…")
-    win.session.diagnostics_reading.set()  # done, and failed
+    win.session.diagnostics_reading.set()  # done, and failed: as the page tells it
     status_row(win)
-    assert _row(win) == ("Device Status", "Not known")
+    assert _row(win) == ("Device Status", "Error Logs Not Read")
 
 
 @pytest.mark.needs_display
@@ -687,8 +710,11 @@ def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
     monkeypatch.setattr(diagnostics, "copy_crash_logs",
                         lambda device, storage, progress=None: diagnostics.Copied(
                             new=2, saved=True))
+    win.status_row = None
     copy_crash_logs(win)
     assert win.toasts[-1] == "Crash logs copied to this computer"
+    # The row drawn again (its crashes counted anew with the copies kept now: status.told).
+    assert win.status_row is not None
 
 
 @pytest.mark.needs_display
@@ -701,7 +727,7 @@ def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
                             new=1, unchanged=1, saved=True, not_copied=["RAM_bak2.zip"]))
     copy_dumps(win)
     assert win.toasts == [("2 memory dumps copied to this computer\u00a0· 1 file skipped: "
-                           "larger than 50.0\u00a0MB")]
+                           "did not fit in 50.0\u00a0MB")]
 
 
 @pytest.mark.needs_display
@@ -1176,3 +1202,71 @@ def test_the_report_in_the_window_asks_nothing_of_the_device(device, clock):
     not_read = report.build(dev, st, space=(1000, 2000), found=None)
     assert "- Memory dumps: not read yet" in not_read
     assert st.lists == st.reads == st.infos == []
+    # After a removal the window keeps the dumps counted again: the report tells them, still
+    # without asking the device.
+    status.counted_again(types.SimpleNamespace(diagnostics=found),
+                         status.Recount({}, None, None, datetime(2026, 10, 30),
+                                        dumps=[("GARMIN/Debug/dump/RAM.zip", 300)]))
+    after = report.build(dev, st, space=(1000, 2000), found=found)
+    assert "- Memory dumps: 1, 300 B" in after and st.lists == st.reads == st.infos == []
+
+
+# --- the same dumps copied again, a test drive's copies on the command line ------------------
+
+
+def watch(root):
+    """A made-up watch with two memory dumps."""
+    dump = root / "GARMIN" / "Debug" / "dump"
+    dump.mkdir(parents=True)
+    (root / "GARMIN" / "GarminDevice.xml").write_text(DEVICE_XML)
+    (dump / "RAM.zip").write_bytes(b"d" * 300)
+    (dump / "RAM_bak1.zip").write_bytes(b"e" * 200)
+    os.utime(dump / "RAM_bak1.zip", (1_700_000_000, 1_700_000_000))
+    st = LocalStorage(root)
+    return st, parse(st.read("GARMIN/GarminDevice.xml"))
+
+
+def test_the_same_dumps_copied_again_make_no_new_copy(tmp_path, clock):
+    """A copy of the dumps is kept only when they changed: copied again unchanged, no new copy
+    is made (it would push older copies out for nothing)."""
+    st, dev = watch(tmp_path / "device")
+    assert diagnostics.copy_dumps(dev, st).saved
+    clock.current += timedelta(minutes=1)
+    again = diagnostics.copy_dumps(dev, st)
+    assert not again.saved and again.copies == 1
+    assert diagnostics.copies_facts(UNIT)[0] == 1
+
+
+def test_the_command_line_tells_a_test_drives_own_copies(tmp_path, clock, monkeypatch, capsys):
+    """A test drive carries a real device's unit ID: the command line tells the drive's own
+    copies on this computer, never the real device's."""
+    from openexpress import cli
+
+    real, dev = watch(tmp_path / "real")
+    diagnostics.copy_dumps(dev, real)
+    assert diagnostics.copies_facts(UNIT)[0] == 1  # the real device's copy
+    drive, _dev = watch(tmp_path / "drive")
+    drive.test_drive = True
+    monkeypatch.setattr(cli, "open_device", lambda args: (drive, dev))
+    assert cli.main(["--path", str(drive.root), "diagnostics"]) == 0
+    said = next(line for line in capsys.readouterr().out.splitlines()
+                if line.startswith("Copies on this computer:"))
+    assert said == "Copies on this computer: No copy yet"
+
+
+# --- two copies of one second ----------------------------------------------------------------
+
+
+def test_rotate_keeps_the_newer_of_two_copies_of_one_second(tmp_path):
+    where = tmp_path / "diagnostics"
+    now = datetime(2026, 10, 21, 12, 0, 0)
+    diagnostics._keep(where, b"older")
+    diagnostics._save(where, "files", {"GARMIN/Debug/err_log.txt": {
+        "sha256": diagnostics._sha(b"older"), "size": 5, "mtime": None}}, {}, now, "23.39")
+    diagnostics._keep(where, b"newer")
+    diagnostics._save(where, "files", {"GARMIN/Debug/err_log.txt": {
+        "sha256": diagnostics._sha(b"newer"), "size": 5, "mtime": None}}, {}, now, "23.39")
+    diagnostics.rotate(where, copies=1)
+    kept = diagnostics._last(where, "files")
+    assert kept["files"]["GARMIN/Debug/err_log.txt"]["sha256"] == diagnostics._sha(b"newer"), \
+        [p.name for p in diagnostics._snapshots(where)]

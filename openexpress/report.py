@@ -158,6 +158,14 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
         dumps = found.dumps if found.dumps_known else None
     else:
         entries = dumps = None
+    counted = None
+    if not ask:
+        # The window: the device log's line of this connection, put right after any removal
+        # (from the window or the command line), tells the dumps of now.
+        from openexpress import history
+
+        line = history.connection_line(device, storage)
+        counted = line.get("dumps") if line is not None else None
     found_crashes = crashes.history(device.unit_id, entries,
                                     test_drive=bool(getattr(storage, "test_drive", False)))
     lines = ["### Diagnostics",
@@ -172,7 +180,10 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
                      + (", ".join(codes) or "error unknown"))
     if len(found_crashes) > CRASHES_SHOWN:
         lines.append(f"  - and {len(found_crashes) - CRASHES_SHOWN} earlier")
-    if dumps is not None:
+    if counted is not None:
+        total = counted["bytes"]
+        lines.append(f"- Memory dumps: {counted['count']}, {_size(total) if total else '0 B'}")
+    elif dumps is not None:
         total = sum(size for _path, size in dumps)
         lines.append(f"- Memory dumps: {len(dumps)}, {_size(total) if total else '0 B'}")
     else:

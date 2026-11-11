@@ -545,6 +545,8 @@ class StartPage:
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
         self._notice = None
+        # Whether the page wants the notice (show); it is shown once it has its words.
+        self._notice_wanted = False
         # The picture known of a part number (never by unit ID), read from the window's
         # store when a tile is built; set_picture puts one into the tiles already there.
         self._picture_of = picture_of or (lambda _part: None)
@@ -600,6 +602,13 @@ class StartPage:
         self.notice.set_subtitle(description)
         self.notice_spinner.set_visible(busy)
         self.notice_icon.set_visible(not busy)
+        self._show_notice()
+
+    def _show_notice(self) -> None:
+        """The notice shown while the page wants it and it has a title: its words come with the
+        window's first look at USB, a moment after the page (and after the open device was
+        unplugged), never a card with only its icon."""
+        self.notice_group.set_visible(self._notice_wanted and bool(self.notice.get_title()))
 
     def set_stalled(self, text: str | None) -> None:
         """The banner of the devices that stopped responding (stalled.show); None: none."""
@@ -618,7 +627,8 @@ class StartPage:
         """The tiles (devicelist.Tile, how the device is connected), each in its section, in
         this order within it; `notice`: whether the notice on top is shown. Each item keeps
         its place in `entries`, which on_open is given."""
-        self.notice_group.set_visible(notice)
+        self._notice_wanted = notice
+        self._show_notice()
         parts: dict[str, list] = {name: [] for name in self._sections}
         for key, (tile, how) in enumerate(entries):
             parts[devicelist.section(tile)].append((key, tile, how))

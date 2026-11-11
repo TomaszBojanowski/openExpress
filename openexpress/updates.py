@@ -234,23 +234,42 @@ class Presence(NamedTuple):
     real: str | None = None
 
 
+# The MD5 of files on the devices read in this process, by (device, path, size, time): a file
+# of an update is read whole only once while it stays the same (the page Device Status and the
+# Updates page ask again and again; over MTP a big file takes seconds).
+_md5_read: dict[tuple, str] = {}
+
+
+def _md5_of(storage: Storage, real: str, size: int, mtime: float) -> str:
+    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+    key = (where, real, size, mtime)
+    if mtime and key in _md5_read:
+        return _md5_read[key]
+    digest = hashlib.md5(storage.read(real)).hexdigest()
+    if mtime:
+        _md5_read[key] = digest
+    return digest
+
+
 def presence(storage: Storage, u: SoftwareUpdate) -> Presence:
     """Whether the file of this update is on the device already (MATCHES: same size and same
-    MD5), and if not, why not. The file is looked for in any letter case. Only reads. Without
-    a size and an MD5 from the server nothing can be said."""
+    MD5), and if not, why not. The file is looked for in any letter case. Only reads; a file
+    read before and still the same (size and time) is not read again. Without a size and an
+    MD5 from the server nothing can be said."""
     md5 = download.normalize_md5(u.md5) if u.md5 else None
     if not u.device_path or not u.size or md5 is None:
         return Presence("not compared (no size or MD5 from the server)")
     real = None
     try:
         real = storage.resolve(u.device_path)
-        size = storage.size(real) if real is not None else None
+        entry = storage.info(real) if real is not None else None
+        size = entry.size if entry is not None and not entry.is_dir else None
         if size is None:
             return Presence(NOT_ON_THE_DEVICE)
         if size != u.size:
             return Presence(f"size differs ({applog.size(size)} on the device, "
                             f"{applog.size(u.size)} offered)", real)
-        same = hashlib.md5(storage.read(real)).hexdigest() == md5
+        same = _md5_of(storage, real, size, entry.mtime) == md5
         return Presence(MATCHES if same else MD5_DIFFERS, real)
     except DeviceNotResponding:
         raise
@@ -334,10 +353,15 @@ def offered(storage: Storage, response: dict, device,
             forget_installed: bool = True) -> list[SoftwareUpdate]:
     """What the update server's `response` offers `device` (its GarminDevice.xml), each
     compared with the device's storage (mark_present) and with what openExpress copied to it
-    before (mark_copied; `forget_installed`: False for a check that keeps nothing)."""
+    before (mark_copied; `forget_installed`: False for a check that keeps nothing). A test
+    drive carries a real device's unit ID: what was copied to that device is not its."""
+    unit = None if _test_drive(storage) else getattr(device, "unit_id", None)
     return mark_copied(mark_present(storage, parse_updates(response, device),
-                                    component_count(device)),
-                       getattr(device, "unit_id", None), forget_installed)
+                                    component_count(device)), unit, forget_installed)
+
+
+def _test_drive(storage) -> bool:
+    return bool(getattr(storage, "test_drive", False))
 
 
 def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
@@ -725,7 +749,10 @@ def install(*args, unit_id: int | None = None, offered: list[SoftwareUpdate] | N
             return _install(*args, report=report, **kwargs)
     finally:
         answers.forget_device(answers.SOFTWARE_UPDATES, unit_id)
-        if unit_id and report.copied:  # also what was written before a failure
+        # Also what was written before a failure; never a test drive's, which carries a real
+        # device's unit ID.
+        storage = next((a for a in (*args, *kwargs.values()) if isinstance(a, Storage)), None)
+        if unit_id and report.copied and not _test_drive(storage):
             try:
                 known_devices.note_copied(unit_id, report.copied)
             except Exception as e:  # noqa: BLE001 - optional; the error may name the folder

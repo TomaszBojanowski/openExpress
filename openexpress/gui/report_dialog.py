@@ -95,7 +95,7 @@ class ReportDialog:
         return box, buffer
 
     def show_report(self) -> None:
-        from openexpress import report
+        from openexpress import report, status
 
         s = self.session
         about = _("Open on GitHub starts a new issue with this report filled in; nothing is "
@@ -109,9 +109,10 @@ class ReportDialog:
             # GitHub starts a new issue…"
             text = f"{_('No device is open: the report says what is connected over USB.')} {about}"
         else:
-            # The space as the session holds it: nothing is asked of the device here.
+            # The space of the latest count, as the page has it: nothing is asked of the
+            # device here.
             body_text = report.build(s.device, s.storage, s.logged_in,
-                                     space=getattr(s, "space", None) or (None, None),
+                                     space=status.space_now(s) or (None, None),
                                      found=getattr(s, "diagnostics", None))
             text = about
         log.info("report dialog opened (device connected: %s)", s is not None)

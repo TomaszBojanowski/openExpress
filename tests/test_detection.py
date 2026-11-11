@@ -7379,3 +7379,21 @@ def test_a_row_gets_its_picture_like_a_tile():
     assert tile_image(rows[1]).get_paintable() is None
     start.show([*entries, (tile(8), "y")], False)  # one more: rows built anew
     assert tile_image(start.tiles()[2]).get_paintable() is texture
+
+
+# --- a place on USB that /sys does not know ---------------------------------------------------
+
+
+def test_a_place_on_usb_that_sys_does_not_know_is_not_kept(sysfs):
+    """Where /sys can be read, a place on USB the volume tells but /sys does not know is an old
+    one (the device unplugged meanwhile): neither its place nor a place told is kept, so it never
+    tells one connection from the next."""
+    from openexpress import history
+
+    uri = "mtp://091e_51b4_MADEUPSERIAL/"
+    usb = gio_storage._identify(uri, FakeVolume(uri, "/dev/bus/usb/001/040"))
+    assert (usb.product, usb.bus, usb.address, usb.told_place) == ("51b4", None, None, None)
+    other = gio_storage._identify(uri, FakeVolume(uri, "/dev/bus/usb/001/041"))
+    dev = types.SimpleNamespace(unit_id=1234567890, software_version_str="23.39")
+    assert history._key(dev, types.SimpleNamespace(usb=usb), "mtp") == history._key(
+        dev, types.SimpleNamespace(usb=other), "mtp")

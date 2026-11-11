@@ -4,6 +4,7 @@ connection; the space each kind of file takes, the memory dumps and the newest c
 error logs; never a file name, the unit ID or a serial number. Read back line by line, a damaged
 or foreign line skipped; old lines dropped. All devices, files and entries are made up."""
 
+import io
 import json
 import os
 import stat
@@ -50,6 +51,9 @@ TYPES = """
   <DataType><Name>FITBinary</Name>
    <File><Location><Path>Garmin</Path><FileExtension>FIT</FileExtension></Location>
     <TransferDirection>InputOutput</TransferDirection></File></DataType>
+  <DataType><Name>NMaps</Name>
+   <File><Location><Path>Garmin</Path><FileExtension>img</FileExtension></Location>
+    <TransferDirection>InputOutput</TransferDirection></File></DataType>
 """
 
 TRAP = {"unit_id": OTHER_UNIT, "backtrace": BACKTRACE, "error_cause": "RTL Trap",
@@ -61,6 +65,8 @@ FILES = {  # path: size, or the content
     "GARMIN/Activity/2026-10-01-10-00-00.fit": 1000,
     "GARMIN/Activity/2026-10-02-10-00-00.fit": 2000,
     "GARMIN/Maps/topo.img": 50_000,
+    "GARMIN/gmapbmap.img": 2_000,  # a map declared for the main folder (as a fēnix 8 does)
+    "GARMIN/Secret/Deep/hidden.img": 30,  # under the main folder: never looked through
     "GARMIN/Maps/readme.txt": 10,  # not a map: no kind
     "Music/Made-up Artist/song.mp3": 7000,
     "GARMIN/APPS/MEDIA/app.PRG": 4000,
@@ -83,7 +89,7 @@ def size_of(value) -> int:
 
 
 LOGS = sum(size_of(v) for p, v in FILES.items() if p.startswith("GARMIN/Debug/"))
-KINDS = {"maps": 50_000, "activities": 3000, "music": 7000, "apps": 4000, "courses": 500,
+KINDS = {"maps": 52_000, "activities": 3000, "music": 7000, "apps": 4000, "courses": 500,
          "updates": 9800, "logs": LOGS}
 
 
@@ -96,15 +102,19 @@ class Device(LocalStorage):
         self.usb = types.SimpleNamespace(bus=1, address=address, serial=SERIAL)
         self.mass_storage = drive
         self.lists, self.reads = [], []
+        self.told = CAPACITY  # None: the device does not tell it
+        self.dumps_fail = False  # its folder of memory dumps cannot be listed
 
     def capacity(self):
-        return CAPACITY
+        return self.told
 
     def free_space(self):
         return FREE
 
     def _list(self, real_path):
         self.lists.append(real_path)
+        if self.dumps_fail and real_path.casefold() == "garmin/debug/dump":
+            raise DeviceError(f"Cannot list {real_path}")
         return super()._list(real_path)
 
     def _read(self, real_path):
@@ -350,9 +360,11 @@ def test_an_unknown_kind_of_file_is_dropped_not_the_line(clock):
     assert line["categories"] == {"maps": 1}
 
 
-def test_lines_older_than_two_years_are_dropped(made_up, clock):
+def test_lines_older_than_two_years_are_dropped(made_up, clock, monkeypatch):
     st, dev = made_up
-    old = (clock.current - timedelta(days=731)).astimezone().isoformat(timespec="seconds")
+    monkeypatch.setattr(history, "KEEP_AT_LEAST", 1)
+    # Two years and a day before the newest line before the new one (written a day ago).
+    old = (clock.current - timedelta(days=732)).astimezone().isoformat(timespec="seconds")
     recent = (clock.current - timedelta(days=1)).astimezone().isoformat(timespec="seconds")
     write_lines(written(time=old, conn="made-up-old"), written(time=recent, conn="made-up-b"))
     assert history.note_connection(dev, st)
@@ -392,7 +404,8 @@ def test_diagnostics_shows_the_device_log(made_up, clock, monkeypatch, capsys):
             "RTL Trap at 2026-10-20 22:24:06, error 0x003, PC 0x10000abc, screen 2301")
     assert line in out
     storage = next(x for x in out if x.startswith("Storage at the last connection: "))
-    assert storage.startswith(f"Storage at the last connection: maps {size(50_000)}, "
+    maps = size(KINDS["maps"])
+    assert storage.startswith(f"Storage at the last connection: maps {maps}, "
                               f"activities {size(3000)}, music and audio ")
     assert out[-1].startswith("Dry run: nothing was copied.")
 
@@ -499,3 +512,183 @@ def test_the_memory_dumps_beside_the_error_logs_are_in_the_line(root, clock):
     assert history.note_connection(device_of(st), st)
     (line,) = history.read(UNIT).lines
     assert line["dumps"] == {"count": 3, "bytes": 1200}
+
+
+# --- a count after a removal, links, a drive's mounts ----------------------------------------
+
+
+def test_a_capacity_not_told_after_a_removal_is_the_one_known(device_root, clock, monkeypatch):
+    """Counted again after a removal: a capacity the device does not tell now is the one known
+    (it does not change); a free space it does not tell is not known, not what it was."""
+    st = Device(device_root)
+    dev = device_of(st)
+    assert history.note_connection(dev, st)
+    st.told = None
+    history.note_counted(dev, st)
+    (line,) = history.read(UNIT).lines
+    assert "counted" in line and (line["capacity"], line["free"]) == (CAPACITY, FREE)
+    monkeypatch.setattr(Device, "free_space", lambda self: None)
+    history.note_counted(dev, st)
+    (line,) = history.read(UNIT).lines
+    assert line["capacity"] == CAPACITY and "free" not in line
+
+
+def test_a_count_after_a_removal_leaves_another_connections_line_alone(device_root, clock):
+    """Only the line of its own connection is put right: plugged in again meanwhile (another
+    place on USB), the device has a newer line, which a late count of the connection before
+    leaves as it is."""
+    first = Device(device_root, address=5)
+    dev = device_of(first)
+    assert history.note_connection(dev, first)
+    assert history.note_connection(dev, Device(device_root, address=6))
+    before = history.read(UNIT).lines
+    history.note_counted(dev, first)
+    assert history.read(UNIT).lines == before
+
+
+def test_the_line_of_this_connection_is_none_when_another_connection_wrote_the_last(device_root,
+                                                                                    clock):
+    """The report and the page tell this connection's line, never another's."""
+    first = Device(device_root, address=5)
+    dev = device_of(first)
+    assert history.note_connection(dev, first)
+    assert history.connection_line(dev, first) is not None
+    assert history.connection_line(dev, Device(device_root, address=6)) is None
+
+
+def test_a_linked_file_is_counted_in_no_kind(device_root, tmp_path, clock):
+    """A folder on this computer (a test drive, --path) may hold links: the file a link leads to
+    elsewhere is not on the device, and its size counts in no kind."""
+    st = Device(device_root)
+    dev = device_of(st)
+    before = history.count(dev, st)["activities"]
+    elsewhere = tmp_path / "elsewhere.fit"
+    elsewhere.write_bytes(b"x" * 5_000)
+    (device_root / "GARMIN" / "Activity" / "linked.fit").symlink_to(elsewhere)
+    assert history.count(dev, st)["activities"] == before
+
+
+class Drive(LocalStorage):
+    """A drive whose place on USB is not known: its connection is told by its mount."""
+
+    mass_storage = True
+
+
+def test_a_drive_mounted_at_a_path_with_a_space_is_a_new_connection_at_each_mount(
+        tmp_path, clock, monkeypatch):
+    """The system writes a space in a mount point as \\040 (/proc/self/mountinfo): a drive
+    mounted at a path with a space is still found, and each mount of it is a connection."""
+    root = tmp_path / "GARMIN DRIVE"
+    (root / "GARMIN").mkdir(parents=True)
+    (root / "GARMIN" / "GarminDevice.xml").write_text(DEVICE_XML)
+    mount = {"id": "41"}
+    real_open = open
+
+    def mountinfo(file, *args, **kwargs):
+        if file == "/proc/self/mountinfo":
+            point = str(root).replace(" ", "\\040")
+            return io.StringIO(f"{mount['id']} 30 8:17 / {point} rw,nosuid - vfat /dev/sdz1 rw\n")
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(history, "open", mountinfo, raising=False)
+    st = Drive(root)
+    assert history.note_connection(device_of(st), st)
+    mount["id"] = "42"  # unplugged and mounted again at the same place
+    again = Drive(root)
+    assert history.note_connection(device_of(again), again)
+    assert len(history.read(UNIT).lines) == 2
+
+
+# --- the newest lines, linked folders, dumps not listed after a removal -----------------------
+
+
+def test_the_newest_lines_stay_whatever_their_times(device_root, clock, monkeypatch):
+    """One of the newest KEEP_AT_LEAST lines written while this computer's clock was years
+    behind is still a recent connection: never dropped as old."""
+    monkeypatch.setattr(history, "KEEP_AT_LEAST", 3)
+
+    def at(days):
+        return (clock.current - timedelta(days=days)).astimezone().isoformat(timespec="seconds")
+
+    write_lines(written(time=at(3), conn="made-up-a"), written(time=at(2), conn="made-up-b"),
+                written(time=at(3 * 365), conn="made-up-behind"),
+                written(time=at(1), conn="made-up-d"))
+    st = Device(device_root)
+    assert history.note_connection(device_of(st), st)
+    conns = [line["conn"] for line in history.read(UNIT).lines]
+    assert "made-up-behind" in conns and len(conns) == 5
+
+
+def test_a_folder_behind_a_link_inside_a_counted_folder_counts_in_no_kind(device_root, tmp_path,
+                                                                         clock):
+    """A folder on this computer (a test drive, --path) may hold a link to a folder elsewhere:
+    the files there are not on the device, and their size counts in no kind."""
+    st = Device(device_root)
+    dev = device_of(st)
+    before = history.count(dev, st)["activities"]
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "big.fit").write_bytes(b"x" * 5_000)
+    (device_root / "GARMIN" / "Activity" / "linked").symlink_to(elsewhere,
+                                                                 target_is_directory=True)
+    assert history.count(dev, st)["activities"] == before
+
+
+def test_a_count_after_a_removal_that_cannot_list_the_dumps_leaves_them_not_known(device_root,
+                                                                                  clock):
+    """Counted again after a removal, the line tells the memory dumps of now: when their folder
+    cannot be listed they are not known, never those of before the removal."""
+    dump = device_root / "GARMIN" / "Debug" / "dump" / "RAM.zip"
+    dump.parent.mkdir(parents=True)
+    dump.write_bytes(b"d" * 300)
+    st = Device(device_root)
+    dev = device_of(st)
+    assert history.note_connection(dev, st)
+    assert history.read(UNIT).lines[-1]["dumps"] == {"count": 1, "bytes": 300}
+    st.dumps_fail = True
+    history.note_counted(dev, st)
+    (line,) = history.read(UNIT).lines
+    assert "counted" in line and "dumps" not in line
+
+
+# --- a crash's error log and crash logs to copy, of their kinds; at most MAX_LINES -----------
+
+
+def crash_in(log) -> dict:
+    """A made-up crash of a line, kept with the place of its error log ("log")."""
+    return {"kind": "RTL Trap", "at": "2026-10-20 10:00:00", "error": "0x003",
+            "pc": "0x10000abc", "screen": "2301", "log": log}
+
+
+@pytest.mark.parametrize("log", ["0", -1, True, 1.5], ids=["text", "negative", "bool", "float"])
+def test_a_crash_whose_error_log_is_not_a_whole_number_skips_the_line(clock, log):
+    """The error log of a crash is its place among the error logs, a whole number from 0: a line
+    with anything else there is not the program's, and is skipped."""
+    write_lines(written(conn="made-up-a", crashes=[crash_in(log)]),
+                written(conn="made-up-b", crashes=[crash_in(1)]))
+    kept = history.read(UNIT)
+    assert [line["conn"] for line in kept.lines] == ["made-up-b"] and kept.skipped == 1
+
+
+@pytest.mark.parametrize("hidden", [1, "true", None], ids=["number", "text", "null"])
+def test_crash_logs_to_copy_told_by_anything_but_true_or_false_skip_the_line(clock, hidden):
+    """Whether the device has crash logs to copy is true or false: a line with anything else
+    there is not the program's, and is skipped."""
+    write_lines(written(conn="made-up-a", hidden=hidden), written(conn="made-up-b", hidden=True))
+    kept = history.read(UNIT)
+    assert [line["conn"] for line in kept.lines] == ["made-up-b"] and kept.skipped == 1
+
+
+def test_the_log_keeps_at_most_max_lines_also_when_more_are_recent(device_root, clock,
+                                                                    monkeypatch):
+    """Beyond the newest KEEP_AT_LEAST, lines younger than two years stay, but never more than
+    MAX_LINES: the oldest go."""
+    monkeypatch.setattr(history, "KEEP_AT_LEAST", 2)
+    monkeypatch.setattr(history, "MAX_LINES", 3)
+    write_lines(*(written(conn=f"made-up-{n}",
+                          time=(clock.current - timedelta(hours=10 - n)).astimezone()
+                          .isoformat(timespec="seconds")) for n in range(5)))
+    st = LocalStorage(device_root)
+    assert history.note_connection(device_of(st), st)
+    conns = [line["conn"] for line in history.read(UNIT).lines]
+    assert len(conns) == 3 and conns[:2] == ["made-up-3", "made-up-4"]

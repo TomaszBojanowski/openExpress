@@ -26,8 +26,16 @@ SHOWN_EVENTS = 5
 # A device log whose first line came this soon after the device was first seen began with that
 # connection: its version is the one of then.
 FIRST_LINE_WITHIN = timedelta(hours=1)
-# How long the page waits for the window's reading of the error logs at the opening.
-READING_WAIT_S = 120
+
+
+def has_diagnostics(errors_known: bool, errors: int | None, crashes_found: list,
+                    dumps: int | None, copies: int, hidden: bool) -> bool:
+    """Whether the page shows the device's diagnostics, else "No Diagnostic Data": its error
+    logs not read (the page says so), an entry in them (`errors`; None: not known), a crash from
+    any source, a memory dump (`dumps`; None: not known, so not "none"), a copy kept here, or
+    crash logs to copy. One rule for the device connected and for its records."""
+    return (not errors_known or errors is None or errors > 0 or bool(crashes_found)
+            or dumps is None or dumps > 0 or copies > 0 or hidden)
 
 
 def little_space(free: int | None, capacity: int | None) -> bool | None:
@@ -61,7 +69,7 @@ def events(found: list[crashes.Crash], lines: list[dict],
     computer first saw the device (`first_seen`, devices.json), not the log's first line, which
     may come long after; its version only when the log began with it; none without that time."""
     out = [Event("crash", c.at, crash=c, software=c.software,
-                 same_before=sum(crashes.same_error(c, older) for older in found[n + 1:]))
+                 same_before=_same_in_a_row(c, found[n + 1:]))
            for n, c in enumerate(found)]
     for before, line in pairwise(lines):
         if line["software"] != before["software"]:
@@ -73,6 +81,17 @@ def events(found: list[crashes.Crash], lines: list[dict],
             FIRST_LINE_WITHIN
         out.append(Event("first", first, software=lines[0]["software"] if began else None))
     return sorted(out, key=lambda e: e.at, reverse=True)
+
+
+def _same_in_a_row(crash: crashes.Crash, older: list[crashes.Crash]) -> int:
+    """How many crashes just before this one, one after another, had its error: "the same error
+    as the one before" is the crash just before."""
+    count = 0
+    for before in older:
+        if not crashes.same_error(crash, before):
+            break
+        count += 1
+    return count
 
 
 @dataclass
@@ -93,6 +112,7 @@ class Facts:
     recounted: bool = False  # categories and space counted again after a removal (recount)
     updates_why: str | None = None  # why the update files were not checked (freeing.Plan.why)
     connected: bool = True  # False: a device not connected, from its records (read_kept)
+    dumps_removable: bool = True  # its older dumps may be removed (freeing.dumps_removable)
     dumps_at_last: tuple[int, int] | None = None  # not connected: (count, bytes) at the last
     # connection; None: not known
 
@@ -106,78 +126,191 @@ class Facts:
 
 @dataclass
 class Recount:
-    """The kinds of file and the space of the device counted again (after a removal): what
-    the page shows instead of the count of the connection (the device log's line)."""
+    """The kinds of file, the space and the memory dumps of the device counted again (after a
+    removal): what the page, the device page and the report show instead of the count of the
+    connection (the device log's line, the window's reading at the opening)."""
 
     categories: dict[str, int]
     free: int | None
     capacity: int | None
     at: datetime
+    dumps: list[tuple[str, int]] | None = None  # None: not listed
 
 
-def recount(device, storage) -> Recount:
+def recount(device, storage, removed: dict | None = None) -> Recount:
     """Count the kinds of file, the space and the dumps again, as at the connection, and put
-    them in the device log's line of this connection (history.note_counted)."""
+    them in the device log's line of this connection (history.note_counted; after a removal,
+    `removed` by kind: history.after_removal, which puts the line right by what was removed
+    when the count fails). `at`: when the count began."""
     now = datetime.now()
-    categories, capacity, free = history.note_counted(device, storage, now)
-    return Recount(categories, free, capacity, now)
+    if removed:
+        categories, capacity, free, dumps = history.after_removal(device, storage, removed, now)
+    else:
+        categories, capacity, free, dumps = history.note_counted(device, storage, now)
+    return Recount(categories, free, capacity, now, dumps)
 
 
-def read(session, wait: float = READING_WAIT_S) -> Facts:
-    """The facts of the open device, once the window's reading of its error logs is done (or
-    after `wait` seconds). In the background: what can be freed (freeing.plan: the memory
-    dumps listed again for their times, the update server asked for the updates the device
-    did not install), nothing else asked of the device. After a removal, the kinds of file and
-    the space counted then (session.recount)."""
+def space_read(session, space: tuple[int | None, int | None],
+               at: datetime | None = None) -> None:
+    """The free space and the capacity of the open device, read (or counted) now or `at`, kept
+    in the session with when: the latest count wins (latest_count)."""
+    session.space = space
+    session.space_at = at or datetime.now()
+
+
+def counted_again(session, counted: Recount) -> bool:
+    """After a removal or another write: what was counted again kept in the session, for the
+    page, the row of the device page and the report alike (the space, and the memory dumps the
+    window read at the opening, which Refresh keeps: diagnostics.at_open). A count begun before
+    the one kept already is not kept (it ended later, but tells an older state): False."""
+    kept = getattr(session, "recount", None)
+    if kept is not None and kept.at > counted.at:
+        return False
+    session.recount = counted
+    # A free space not told by this count is not known now; a capacity not told is still the
+    # one known: it does not change.
+    known = getattr(session, "space", None)
+    space_read(session, (counted.free, counted.capacity if counted.capacity is not None
+                         else known[1] if known is not None else None), counted.at)
+    found = getattr(session, "diagnostics", None)
+    if found is not None:
+        # Not listed by this count: not known now (not those of the opening).
+        found.dumps = counted.dumps
+        found.dumps_known = counted.dumps is not None
+    return True
+
+
+def session_crashes(session) -> list[crashes.Crash]:
+    """The crashes of the open device from every source (crashes.history): those of its error
+    logs as the window read them at the opening (none when they could not all be read), the
+    copies on this computer and its device log. Counted anew each time (after Copy Crash Logs
+    the copies hold its boot log): the page, its row and the report alike."""
+    found = getattr(session, "diagnostics", None)
+    errors_known = found is not None and found.errors_known
+    unit = getattr(getattr(session, "device", None), "unit_id", None)
+    return crashes.history(unit, found.entries if errors_known else None,
+                           test_drive=bool(getattr(getattr(session, "storage", None),
+                                                   "test_drive", False)))
+
+
+@dataclass
+class Told:
+    """What the summary of the page Device Status and the row of the device page that leads to
+    it are told from: one answer for both (told)."""
+
+    crashes: list[crashes.Crash]
+    errors_known: bool
+    free: int | None
+    capacity: int | None
+    categories: dict[str, int]
+    counted_at: datetime | None
+    recounted: bool
+    hidden: bool
+    copies: tuple[int, int, datetime | None]
+    has_diagnostics: bool
+
+
+def told(session) -> Told:
+    """The crashes of every source (session_crashes), whether the error logs were read, the
+    kinds of file and the space of the latest count: the session's own (at the opening, after
+    a write: session.recount) or the line of this connection in the device log
+    (history.connection_line, put right by the command line later), whichever was counted
+    later; and whether the device has diagnostic data (has_diagnostics, by what the window read
+    at the opening, the copies and the crash logs to copy). Nothing is asked of the device:
+    the page and the row of the device page alike."""
+    found = getattr(session, "diagnostics", None)
+    device, storage = getattr(session, "device", None), getattr(session, "storage", None)
+    unit = getattr(device, "unit_id", None)
+    test_drive = bool(getattr(storage, "test_drive", False))
+    free, capacity, categories, counted_at, recounted = latest_count(session)
+    errors_known = found is not None and found.errors_known
+    found_crashes = session_crashes(session)
+    dumps = found.dumps if found is not None and found.dumps_known else None
+    copies = diagnostics.copies_facts(unit, test_drive) if unit else (0, 0, None)
+    hidden = diagnostics.hidden_logs_to_copy(found is not None and found.hidden_logs, unit,
+                                             test_drive)
+    has = has_diagnostics(errors_known, len(found.entries) if errors_known else None,
+                          found_crashes, len(dumps) if dumps is not None else None,
+                          copies[0], hidden)
+    return Told(found_crashes, errors_known, free, capacity, categories, counted_at, recounted,
+                hidden, copies, has)
+
+
+def latest_count(session) -> tuple[int | None, int | None, dict[str, int], datetime | None,
+                                   bool]:
+    """The free space, the capacity, the kinds of file and when they were counted, of the
+    latest count: the session's own (at the opening, after a write: session.recount) or the
+    line of this connection in the device log (history.connection_line, put right by the
+    command line later), whichever was counted later; and whether it was counted again after
+    the connection. Nothing is asked of the device."""
+    device, storage = getattr(session, "device", None), getattr(session, "storage", None)
+    unit = getattr(device, "unit_id", None)
+    line = history.connection_line(device, storage) if unit and storage is not None else None
+    free, capacity = getattr(session, "space", None) or (None, None)
+    space_at = getattr(session, "space_at", None)  # None: read at the opening
+    counted = getattr(session, "recount", None)
+    line_counted = (history.counted_time(line) if line is not None and "counted" in line
+                    else None)
+    # The kinds of file: the session's count or the line counted later.
+    if line_counted is not None and (counted is None or line_counted > counted.at):
+        categories, counted_at = dict(line["categories"]), line_counted
+    elif counted is not None:
+        categories, counted_at = dict(counted.categories), counted.at
+    elif line is not None:
+        categories, counted_at = dict(line["categories"]), history.counted_time(line)
+    else:
+        categories, counted_at = {}, None
+    # The space: the session's reading (Refresh, a count) or the line counted later.
+    if line_counted is not None and (space_at is None or line_counted > space_at):
+        free, capacity = line.get("free"), line.get("capacity", capacity)
+    elif line is not None and free is None and space_at is None:
+        free = line.get("free")  # not read at the opening: the connection's
+    if line is not None and capacity is None:
+        capacity = line.get("capacity")
+    return (free, capacity, categories, counted_at,
+            counted is not None or line_counted is not None)
+
+
+def space_now(session) -> tuple[int | None, int | None] | None:
+    """The free space and the capacity of the latest count (latest_count), for the row Device
+    Storage and the report as the page has them; None while the session's space is not read
+    yet."""
+    if getattr(session, "space", None) is None:
+        return None
+    free, capacity, *_rest = latest_count(session)
+    return free, capacity
+
+
+def read(session) -> Facts:
+    """The facts of the open device, once the window's reading of its error logs is done (the
+    window reads the page only then: its results are in the session before it says it is
+    done). In the background: what can be freed (freeing.plan: the memory dumps listed again
+    for their times, the update server asked for the updates the device did not install),
+    nothing else asked of the device. After a removal, the kinds of file and the space counted
+    then (session.recount)."""
     from openexpress import freeing, known_devices
 
-    reading = getattr(session, "diagnostics_reading", None)
-    if reading is not None:
-        reading.wait(wait)
-    found = getattr(session, "diagnostics", None)
     device, storage = session.device, session.storage
     unit = device.unit_id
     test_drive = bool(getattr(storage, "test_drive", False))
     lines = history.read(unit, test_drive).lines if unit else []
     # A test drive carries a real device's unit ID: when that device was first seen is not its.
     known = known_devices.load().get(unit) if unit and not test_drive else None
-    newest = lines[-1] if lines else None
-    free, capacity = getattr(session, "space", None) or (None, None)
-    if newest is not None:
-        free = newest.get("free") if free is None else free
-        capacity = newest.get("capacity") if capacity is None else capacity
-    counted = getattr(session, "recount", None)
-    if counted is not None:
-        free = counted.free if counted.free is not None else free
-        capacity = counted.capacity if counted.capacity is not None else capacity
-        categories, counted_at = dict(counted.categories), counted.at
-    elif newest is not None:
-        categories, counted_at = dict(newest["categories"]), history.counted_time(newest)
-    else:
-        categories, counted_at = {}, None
-    errors_known = found is not None and found.errors_known
-    found_crashes = getattr(session, "crash_history", None)
-    if found_crashes is None:
-        found_crashes = crashes.history(unit, found.entries if errors_known else None,
-                                        test_drive=test_drive)
+    t = told(session)
     plan = (freeing.plan(storage, device, getattr(session, "client", None))
             if storage is not None else None)
-    dumps = plan.dumps if plan is not None else None
-    copies = diagnostics.copies_facts(unit) if unit else (0, 0, None)
-    hidden = bool(found is not None and found.hidden_logs)
-    has = (not errors_known or bool(found.entries) or bool(found_crashes) or bool(dumps)
-           or copies[0] > 0 or hidden)
     return Facts(
         via="drive" if getattr(session, "mass_storage", False) else "mtp",
-        free=free, capacity=capacity,
-        categories=categories, counted_at=counted_at,
-        crashes=found_crashes, errors_known=errors_known, dumps=dumps,
-        events=events(found_crashes, lines, known.first_seen if known else None),
-        hidden_logs=hidden, copies=copies,
+        free=t.free, capacity=t.capacity,
+        categories=t.categories, counted_at=t.counted_at,
+        crashes=t.crashes, errors_known=t.errors_known,
+        dumps=plan.dumps if plan is not None else None,
+        events=events(t.crashes, lines, known.first_seen if known else None),
+        hidden_logs=t.hidden, copies=t.copies,
         not_installed=[*plan.updates, *plan.waiting] if plan is not None else [],
-        has_diagnostics=has,
-        recounted=counted is not None or (newest is not None and "counted" in newest),
-        updates_why=plan.why if plan is not None else None)
+        has_diagnostics=t.has_diagnostics, recounted=t.recounted,
+        updates_why=plan.why if plan is not None else None,
+        dumps_removable=freeing.dumps_removable(device))
 
 
 def read_kept(unit_id: int) -> Facts | None:
@@ -198,6 +331,10 @@ def read_kept(unit_id: int) -> Facts | None:
     errors_known = newest is not None and "crash" in newest
     dumps = newest.get("dumps") if newest is not None else None
     dumps_at_last = (dumps["count"], dumps["bytes"]) if dumps is not None else None
+    has = has_diagnostics(errors_known, newest.get("errors") if newest is not None else None,
+                          found_crashes, dumps_at_last[0] if dumps_at_last else None,
+                          copies[0], diagnostics.hidden_logs_to_copy(
+                              newest.get("hidden") if newest is not None else None, unit_id))
     return Facts(
         via=newest["via"] if newest is not None else "mtp",
         free=newest.get("free") if newest is not None else None,
@@ -207,6 +344,6 @@ def read_kept(unit_id: int) -> Facts | None:
         crashes=found_crashes, errors_known=errors_known, dumps=None,
         events=events(found_crashes, lines, known.first_seen if known else None),
         hidden_logs=False, copies=copies, not_installed=[],
-        has_diagnostics=bool(errors_known or found_crashes or copies[0] or dumps_at_last),
+        has_diagnostics=has,
         connected=False, dumps_at_last=dumps_at_last,
         recounted=newest is not None and "counted" in newest)

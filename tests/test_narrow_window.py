@@ -8,6 +8,7 @@ import re
 import time
 import types
 import uuid
+from datetime import datetime, timedelta
 
 import pytest
 from fakes import (
@@ -98,8 +99,8 @@ def _status_facts():
                     "apps": 12_000_000, "courses": 305_000, "updates": 9_100_000,
                     "logs": 61_000_000, "system": 930_000_000},
         counted_at=now - timedelta(minutes=10), crashes=crashes, errors_known=True,
-        dumps=[("GARMIN/Debug/dump/RAM.zip", 9_000_000, 300.0),
-               ("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 200.0)],
+        dumps=[("GARMIN/Debug/dump/RAM.zip", 9_000_000, 1_700_000_300.0),
+               ("GARMIN/Debug/dump/RAM_bak1.zip", 8_000_000, 1_700_000_200.0)],
         events=status.events(crashes, lines, (now - timedelta(days=200)).timestamp()),
         hidden_logs=True,
         copies=(12, 3_100_000, now - timedelta(hours=3)), not_installed=[update],
@@ -1256,3 +1257,37 @@ def test_the_report_dialog_fits_the_narrowest_window(narrow_window, device_root,
     dialog = win.get_visible_dialog()
     assert _min_width(dialog.get_extra_child()) <= NARROWEST - DIALOG_MARGINS
     dialog.force_close()
+
+
+# --- the page from the records -----------------------------------------------------------------
+
+
+pytestmark = [pytest.mark.needs_display,
+              pytest.mark.filterwarnings("ignore:'asyncio.*:DeprecationWarning")]
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_page_from_the_records_fits_the_narrowest_window(narrow_window, language):
+    from openexpress import status
+    from openexpress.crashes import Crash
+    from openexpress.gui import status_page
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    now = datetime.now()
+    crashes = [Crash(now - timedelta(days=2), software="21.18", error="0x003",
+                     program_counter="0x10000abc", screen="2301", sources={"device log"})]
+    facts = status.Facts(
+        via="mtp", free=12_400_000_000, capacity=31_100_000_000,
+        categories={"maps": 17_200_000_000, "music": 410_000_000, "logs": 61_000_000,
+                    "updates": 9_100_000, "courses": 305_000, "system": 930_000_000},
+        counted_at=now - timedelta(days=3), crashes=crashes, errors_known=True, dumps=None,
+        events=status.events(crashes, [], None), hidden_logs=False,
+        copies=(12, 3_100_000, now - timedelta(hours=3)), connected=False,
+        dumps_at_last=(6, 54_000_000), recounted=True)
+    win.kept_status = status_page.KeptStatus(3000000001, facts)
+    win.navigation.set_animate_transitions(False)
+    status_page.show_kept_status(win)
+    _iterate(0.3)
+    width = _min_width(win.kept_status.page)
+    assert width <= NARROWEST, width

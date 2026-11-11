@@ -15,7 +15,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from openexpress import known_devices, paths, service, sync
+from openexpress import history, known_devices, paths, service, sync
 from openexpress.backup import PARTIAL_PREFIX, is_backup_dir
 from openexpress.ciq import APP_LIST_COPY_PREFIX
 from openexpress.errors import OrdinaryStop
@@ -81,8 +81,12 @@ def _delete(unit_id: int, discard_pending: bool, backups: bool) -> str:
         except OSError:
             pass
     folder = paths.device_dir(unit_id)
-    if folder.exists():
-        shutil.rmtree(folder)
+    # Under the lock of the device records: a write begun before (the reading of a device just
+    # unplugged, a count after a removal) waits, then sees the device forgotten.
+    with history.device_locked(unit_id):
+        if folder.exists():
+            shutil.rmtree(folder)
+        history.forgotten(unit_id)
     shared = service.last_sync_path()
     try:
         of_it = json.loads(shared.read_text(encoding="utf-8")).get("unit_id") == unit_id

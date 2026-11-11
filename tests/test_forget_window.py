@@ -81,6 +81,10 @@ def window(unit=FENIX, connected=(), session=None):
     for name, member in vars(ForgetDevice).items():
         if callable(member):
             setattr(win, name, types.MethodType(member, win))
+    from openexpress.gui.app import MainWindow
+
+    # Whether its view (or its page Device Status above it) is shown: the window's own.
+    win._on_remembered_page = types.MethodType(MainWindow._on_remembered_page, win)
     return win
 
 
@@ -423,3 +427,15 @@ def test_clicking_forget_in_the_window_forgets(monkeypatch):
     finally:
         netstatus.STATUS.remove_listener(win._net_listener)
         win.destroy()
+
+
+@pytest.mark.needs_display
+def test_forgetting_from_its_page_device_status_goes_back_to_the_start_page(asked):
+    """Its page Device Status opened while Forget Device runs: that page goes too."""
+    remembered()
+    win = window()
+    win.ask_forget()
+    win.kept_status = types.SimpleNamespace(page="its page Device Status")
+    win.navigation.visible = "its page Device Status"
+    answer(asked[0], "forget")
+    assert win.navigation.popped == ["start page"]

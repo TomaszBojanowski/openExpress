@@ -24,21 +24,30 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Graphene, Gtk  # noqa: E402
 
 from openexpress import applog, diagnostics, freeing, history, status  # noqa: E402
+from openexpress.device.storage import DeviceNotResponding  # noqa: E402
 from openexpress.gui import words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
     copy_crash_logs,
     copy_dumps,
     device_error_details,
+    read_diagnostics,
     status_changed,
 )
 from openexpress.gui.preferences import diagnostics_switch  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.updates_page import ARROW  # noqa: E402
-from openexpress.gui.window_tasks import Answer, confirm, inform  # noqa: E402
+from openexpress.gui.window_tasks import (  # noqa: E402
+    Answer,
+    confirm,
+    inform,
+    refresh_space,
+    render_space,
+    row_title,
+)
 from openexpress.i18n import (  # noqa: E402
     _,
     caption,
@@ -89,7 +98,22 @@ def kind_names() -> dict[str, str]:
 
 class StatusPage:
     def load_status(self) -> None:
+        """The page read once the window's reading of the device's error logs is done (its
+        results are in the session then); until then it shows that it reads, without a task:
+        the window stays free (Sync, closing), and read_diagnostics reads the page when done."""
         s = self.session
+        if s is None:
+            return
+        reading = getattr(s, "diagnostics_reading", None)
+        if reading is None and getattr(s, "diagnostics", None) is None:
+            read_diagnostics(self)
+            reading = getattr(s, "diagnostics_reading", None)
+        if reading is not None and not reading.is_set():
+            # On the session (the window holds nothing of it): never read for another one.
+            s.page_waits = True
+            self.sections["status"].show("loading")
+            return
+        s.page_waits = False
         # TRANSLATORS: while the page Device Status reads what it shows
         self._load("status", _("Reading the Device…"), lambda: status.read(s),
                    self.show_status, device=False)
@@ -136,7 +160,7 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
     (no file name, no title of the window)."""
     look = words.status_summary(facts.crashes, facts.errors_known, facts.free, facts.capacity,
                                 now)[0] if facts.has_diagnostics else "no diagnostic data"
-    why = " (error logs not read)" if look == "unknown" else ""
+    why = " (error logs not read)" if facts.has_diagnostics and not facts.errors_known else ""
     older = facts.older_dumps()
     dumps = ("older dumps not known" if older is None else
              f"{len(older)} older dumps ({applog.size(sum(s for _p, s, _t in older))})")
@@ -228,23 +252,52 @@ def _bar(facts: status.Facts) -> Gtk.DrawingArea:
     return area
 
 
+def _paint_dot(widget, cr, kind: str, x: float, y: float) -> None:
+    """The colour of a kind of file around (x, y); the free space as a ring, the track of the
+    bar."""
+    if kind == "free":
+        rgba = widget.get_color()
+        cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 0.55)
+        cr.set_line_width(1.5)
+        cr.arc(x, y, 4.2, 0, 6.2832)
+        cr.stroke()
+        return
+    rgba = _colour(kind)
+    cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 1)
+    cr.arc(x, y, 5, 0, 6.2832)
+    cr.fill()
+
+
 def _dot(kind: str) -> Gtk.DrawingArea:
-    """The colour of a kind of file; the free space as a ring, the track of the bar."""
+    """The colour of a kind of file in the legend, level with the first line of its name."""
     area = Gtk.DrawingArea(content_width=10, content_height=10, valign=Gtk.Align.START,
                            margin_top=5)
+    area.set_draw_func(lambda w, cr, width, height: _paint_dot(w, cr, kind, width / 2,
+                                                                height / 2))
+    return area
+
+
+def title_level(area) -> float | None:
+    """How far below the top of `area` the middle of the first line of the title of the row
+    holding it is; None outside a row or before the row is laid out."""
+    row = area.get_ancestor(Adw.ActionRow)
+    title = row_title(row) if row is not None else None
+    if title is None:
+        return None
+    _ink, line = title.get_layout().get_line_readonly(0).get_pixel_extents()
+    ok, point = title.compute_point(area, Graphene.Point().init(0, line.height / 2))
+    return point.y if ok else None
+
+
+def _row_dot(kind: str) -> Gtk.DrawingArea:
+    """The colour of a kind of file beside its row of Category Details, level with the first
+    line of the row's title as in the legend: drawn where the title is, which the row's height
+    and the title's wrapping move (a prefix of a row is as tall as the row)."""
+    area = Gtk.DrawingArea(content_width=10)
 
     def draw(widget, cr, width, height):
-        if kind == "free":
-            rgba = widget.get_color()
-            cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 0.55)
-            cr.set_line_width(1.5)
-            cr.arc(width / 2, height / 2, 4.2, 0, 6.2832)
-            cr.stroke()
-            return
-        rgba = _colour(kind)
-        cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 1)
-        cr.arc(width / 2, height / 2, 5, 0, 6.2832)
-        cr.fill()
+        level = title_level(widget)
+        _paint_dot(widget, cr, kind, width / 2, height / 2 if level is None else level)
 
     area.set_draw_func(draw)
     return area
@@ -297,9 +350,9 @@ def _counted_text(facts: status.Facts, now: datetime) -> str:
         # records: when its last connection counted them, e.g. "… connection, 2 days ago"
         return _("Counted at the last connection, {when}").format(when=when)
     if facts.recounted:
-        # TRANSLATORS: subtitle of "Category Details" after files were removed from the device
-        # (Free Up Space), e.g. "… removal, just now"
-        return _("Counted again after a removal, {when}").format(when=when)
+        # TRANSLATORS: subtitle of "Category Details" after files were written to the device or
+        # removed from it (Free Up Space), e.g. "… change, just now"
+        return _("Counted again after a change, {when}").format(when=when)
     # TRANSLATORS: subtitle of "Category Details": when the kinds of file were counted,
     # e.g. "… connected, 10 min ago"
     return _("Counted when the device was connected, {when}").format(when=when)
@@ -319,7 +372,7 @@ def _storage(win, sec, facts: status.Facts, now: datetime) -> None:
         subtitle=_counted_text(facts, now))
     for kind, size in kinds:
         row = Adw.ActionRow(title=names[kind], subtitle=human_size(size))
-        row.add_prefix(_dot(kind))
+        row.add_prefix(_row_dot(kind))
         if facts.connected and kind in PAGES and kind in win.sections:
             row.set_activatable(True)
             row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
@@ -384,6 +437,7 @@ def render_history(win, view=None) -> None:
     leaves it no room). Drawn again when the window folds or unfolds. `view`: what holds the
     page's group and rows (_build): the window's page by default."""
     view = win if view is None else view
+    kept = view is not win
     g, facts = view.status_history, view.status_facts
     if g is None or facts is None:
         return
@@ -407,21 +461,26 @@ def render_history(win, view=None) -> None:
         # TRANSLATORS: shows every crash and update on the page Device Status
         last = Adw.ActionRow(title=_("Show All"), activatable=True)
         last.add_suffix(Gtk.Image(icon_name="go-down-symbolic"))
-        last.connect("activated", lambda _r: show_all(win, view))
+        last.connect("activated", lambda _r, kept=kept: show_all(win, kept=kept))
         added.append(last)
     for row in added:
         g.add(row)
     view.status_history_rows = added
     if more and not narrow:
         button = Gtk.Button(label=_("Show All"), valign=Gtk.Align.CENTER, css_classes=["flat"])
-        button.connect("clicked", lambda _b: show_all(win, view))
+        button.connect("clicked", lambda _b, kept=kept: show_all(win, kept=kept))
         g.set_header_suffix(button)
     else:
         g.set_header_suffix(None)
 
 
-def show_all(win, view=None) -> None:
-    view = win if view is None else view
+def show_all(win, kept: bool = False) -> None:
+    """Show All of the page of the open device, or of that of a device not connected (`kept`):
+    looked up when clicked, so that the handler holds no page (the page is released once it
+    is closed)."""
+    view = win.kept_status if kept else win
+    if view is None:
+        return
     view.status_show_all = True
     render_history(win, view)
 
@@ -443,6 +502,7 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
     question (freeing.py); an update file in the main folder only shown, as waiting to be
     installed."""
     older = facts.older_dumps()
+    plan = freeing.dump_plan(facts.dumps) if facts.dumps_removable else None
     if older == [] and not facts.not_installed:
         return
     # TRANSLATORS: group of the page Device Status: files the device no longer needs, each
@@ -463,12 +523,13 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
             human_size(sum(size for _p, size, _t in older))))
         # Remove on the row (its question names the copy first): Copy and Remove would leave
         # its subtitle no room in a narrow window. The full name in its tooltip and for screen
-        # readers.
-        button = win._button(_("Remove"), lambda button: confirm_dumps(win, older, button),
-                             style="destructive-action", with_button=True)
-        button.set_tooltip_text(_dumps_answer(older))
-        button.update_property([Gtk.AccessibleProperty.LABEL], [_dumps_answer(older)])
-        row.add_suffix(button)
+        # readers. None when they may not be removed (freeing.dumps_removable).
+        if plan is not None:
+            button = win._button(_("Remove"), lambda button: confirm_dumps(win, plan, button),
+                                 style="destructive-action", with_button=True)
+            button.set_tooltip_text(_dumps_answer(plan))
+            button.update_property([Gtk.AccessibleProperty.LABEL], [_dumps_answer(plan)])
+            row.add_suffix(button)
         g.add(row)
     for u in facts.not_installed:
         # TRANSLATORS: the title of the row of an update file in "Free Up Space": the update's
@@ -493,29 +554,32 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
         g.add(row)
 
 
-def _dumps_answer(older) -> str:
+def _dumps_answer(plan: freeing.DumpPlan) -> str:
     """Copy and Remove when at least one dump is copied first, else Remove."""
-    copied, _too_large = freeing.copy_split(older)
     # TRANSLATORS: button and answer that copy the older memory dumps to this computer, then
     # remove them from the device
-    return _("Copy and Remove") if copied else _("Remove")
+    return _("Copy and Remove") if plan.copied else _("Remove")
 
 
-def _dumps_question(older) -> str:
+def _dumps_question(plan: freeing.DumpPlan) -> str:
     """The question before the older dumps are removed: how many, the space, which are copied
-    first and which are not (too large); the newest stays."""
-    copied, too_large = freeing.copy_split(older)
+    first and which are not (their copies would not fit within the limit); the newest
+    stays."""
+    copied, too_large, older = plan.copied, plan.too_large, plan.older
     count, size = len(older), human_size(sum(s for _p, s, _t in older))
+    limit = freeing.limit_words()
     if not too_large:
         text = ngettext("{count} memory dump ({size}) will be copied to this computer and then "
                         "removed from the device.",
                         "{count} memory dumps ({size}) will be copied to this computer and then "
                         "removed from the device.", count).format(count=count, size=size)
     elif not copied:
+        # TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
         text = ngettext("{count} memory dump ({size}) will be removed from the device without a "
-                        "copy: it is too large to copy.",
+                        "copy, as the copies would not fit in {limit}.",
                         "{count} memory dumps ({size}) will be removed from the device without a "
-                        "copy: they are too large to copy.", count).format(count=count, size=size)
+                        "copy, as the copies would not fit in {limit}.", count).format(
+            count=count, size=size, limit=limit)
     else:
         # TRANSLATORS: the first part of the question when some dumps are copied first and
         # some are too large; "{copied part}, {not copied part}." follows
@@ -530,26 +594,80 @@ def _dumps_question(older) -> str:
             count=n, size=room)
         n, room = len(too_large), human_size(sum(s for _p, s, _t in too_large))
         # TRANSLATORS: a part of the question: how many dumps are removed without a copy
-        second = ngettext("{count} ({size}) without a copy, as it is too large",
-                          "{count} ({size}) without a copy, as they are too large", n).format(
-            count=n, size=room)
+        # TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
+        second = ngettext("{count} ({size}) without a copy, as the copies would not fit in "
+                          "{limit}",
+                          "{count} ({size}) without a copy, as the copies would not fit in "
+                          "{limit}", n).format(count=n, size=room, limit=limit)
         text = f"{head} {first}, {second}."
     return f"{text} {_('The newest dump stays on the device.')}"
 
 
-def _then_counted(s, remove):
-    """The work of a removal: `remove()`, then, when something was removed, the kinds of file
-    and the space counted again (status.recount), still off the window's thread."""
-    def work():
-        freed = remove()
-        return freed, status.recount(s.device, s.storage) if freed.removed else None
+def _stopped_words(e: BaseException) -> str:
+    if isinstance(e, DeviceNotResponding):
+        # TRANSLATORS: why a removal from the device did not go to its end
+        return _("the device stopped responding")
+    # TRANSLATORS: why a removal from the device did not go to its end, or was not counted
+    # after it
+    return _("the device could not be read after the removal")
 
+
+def _then_counted(s, remove, kind: str = "logs"):
+    """The work of a removal: `remove(freed)`, which fills a result of its own as it goes,
+    then, when something was removed, the kinds of file, the space and the dumps counted again
+    (status.recount), still off the window's thread. What comes after the first removal (the
+    device stopping, a count that fails) never loses what was done: it is told with it
+    (freed.stopped). Before it (the files changed since the question: freeing.ListChanged, or
+    nothing removed) the task fails as it is, and the page is read again."""
+    def work():
+        freed = freeing.Freed()
+        try:
+            freed = remove(freed) or freed
+        except freeing.ListChanged:
+            raise
+        except Exception as e:
+            if not freed.removed and not freed.kept:
+                raise  # nothing removed: the failure as it is
+            log.info("freeing: stopped after a removal (%s)", type(e).__name__)
+            freed.stopped = _stopped_words(e)
+        counted = None
+        if freed.removed:
+            try:
+                # Not counted (the device stopped or went): the records put right by what was
+                # removed, so that the page from them does not tell what is gone.
+                counted = status.recount(s.device, s.storage, removed={kind: freed.removed})
+            except Exception as e:  # noqa: BLE001 - the removal is told; its count is not known
+                log.info("freeing: not counted again after the removal (%s)", type(e).__name__)
+                freed.stopped = freed.stopped or _stopped_words(e)
+        return freed, counted
+
+    work.counts_again = True  # the window does not count the device again after it
     return work
 
 
-def confirm_dumps(win, older, button=None) -> None:
-    """Remove Older Memory Dumps?: after the question, the task that copies and removes them
-    (freeing.remove_dumps), then the page read again."""
+def _for_the_question(win, s, remove):
+    """The answer of a question of the page, run only for the session it was asked for: a
+    device unplugged, or opened again (a restart, plugged in again), meanwhile has nothing
+    removed, and its page is read again."""
+    def answered():
+        if win.session is s:
+            remove()
+            return
+        log.info("freeing: the device changed since the question, nothing removed")
+        # TRANSLATORS: heading of the message when the device was unplugged or opened again
+        # while a question of the page Device Status was open
+        inform(win, "free-device-changed", _("Nothing Removed"),
+               _("The device was unplugged or connected again since the question. Look at the "
+                 "list again."))
+        status_changed(win)
+
+    return answered
+
+
+def confirm_dumps(win, plan: freeing.DumpPlan, button=None) -> None:
+    """Remove Older Memory Dumps?: after the question, the task that copies and removes them as
+    the question names them (freeing.remove_dumps with its plan: nothing removed when the
+    device holds other dumps now), then the page read again."""
     s = win.session
 
     def done(result):
@@ -563,13 +681,14 @@ def confirm_dumps(win, older, button=None) -> None:
         win.run_task(
             # TRANSLATORS: while the older memory dumps are copied and removed
             _("Removing the Memory Dumps…"),
-            writes_to_device(_then_counted(s, lambda: freeing.remove_dumps(
-                s.storage, s.device.unit_id, older, progress=win.progress))),
+            writes_to_device(_then_counted(s, lambda freed: freeing.remove_dumps(
+                s.storage, s.device.unit_id, plan, progress=win.progress, freed=freed))),
             done, read_again_after_failure(win, "status"), button=button)
 
     # TRANSLATORS: heading of the question before the older memory dumps are removed
-    confirm(win, "free-dumps", _("Remove Older Memory Dumps?"), _dumps_question(older),
-            Answer("ok", _dumps_answer(older), remove, look="destructive"))
+    confirm(win, "free-dumps", _("Remove Older Memory Dumps?"), _dumps_question(plan),
+            Answer("ok", _dumps_answer(plan), _for_the_question(win, s, remove),
+                   look="destructive"))
 
 
 def confirm_update(win, u, button=None) -> None:
@@ -591,8 +710,9 @@ def confirm_update(win, u, button=None) -> None:
     def remove():
         # TRANSLATORS: while the file of an update the device did not install is removed
         win.run_task(_("Removing the Update File…"),
-                     writes_to_device(_then_counted(s, lambda: freeing.remove_update(
-                         s.storage, u))),
+                     writes_to_device(_then_counted(s, lambda freed: freeing.remove_update(
+                         s.storage, u, getattr(s, "client", None), s.device, freed=freed),
+                         kind="updates")),
                      done, read_again_after_failure(win, "status"), button=button)
 
     confirm(win, "free-update",
@@ -601,25 +721,37 @@ def confirm_update(win, u, button=None) -> None:
             _("Remove the Update File?"),
             _("The device took in {name} {version} ({size}) but did not install it. The file "
               "will be removed from the device; the Updates page will offer the update "
-              "again.").format(name=u.name, version=u.version, size=human_size(u.size or 0)),
-            Answer("ok", _("Remove"), remove, look="destructive"))
+              "again.").format(name=u.name, version=u.version, size=human_size(
+                  u.listed_file[0] if getattr(u, "listed_file", None) else u.size or 0)),
+            Answer("ok", _("Remove"), _for_the_question(win, s, remove), look="destructive"))
 
 
 def _freed(win, s, freed: freeing.Freed, done_text: str, counted=None) -> None:
     """After a removal: the kinds of file and the space counted again kept for the page and the
-    device page (`counted`, status.recount), what was freed (a toast), what the device did not
-    remove or what was not removed as its copy failed (a message), then the page read again."""
-    if win.session is not s:
-        return
-    if counted is not None:
-        s.recount = counted
-        if counted.free is not None:
-            s.space = (counted.free, counted.capacity)
-    if freed.removed:
-        win.toast(done_text)
+    device page (`counted`, status.recount; the row Device Storage drawn again; its free space
+    read again when the count failed), what was freed (a toast), what the device did not remove
+    or what was not removed as its copy failed, and why the removal stopped (one message), then
+    the page read again. A device unplugged meanwhile: what was removed is still told, its
+    pages left alone."""
+    gone = win.session is not s
+    read_later = False  # the page read again when the free space is (refresh_space)
+    if not gone:
+        if counted is not None:
+            status.counted_again(s, counted)
+            render_space(win)
+        elif freed.removed:
+            refresh_space(win, s)
+            read_later = True
+    elif freed.removed and freed.stopped is None and counted is None:
+        # Unplugged before it was counted again (one counted went to its end).
+        # TRANSLATORS: why a removal from the device did not go to its end
+        freed.stopped = _("the device was unplugged")
     problems = [(path, why) for path, why in freed.kept]
-    # TRANSLATORS: why a memory dump stays on the device after Copy and Remove
-    problems += [(path, _("its copy on this computer failed")) for path in freed.copy_failed]
+    parts = []
+    if freed.stopped is not None and freed.removed:
+        # TRANSLATORS: in the message when a removal from the device stopped, or was not
+        # counted again, after files were removed; {done} tells what was removed, {why} why
+        parts.append(_("{done}. Then {why}.").format(done=done_text, why=freed.stopped))
     if problems:
         n = len(problems)
         if freed.removed:
@@ -631,9 +763,32 @@ def _freed(win, s, freed: freeing.Freed, done_text: str, counted=None) -> None:
             text = ngettext("The device did not remove the file.",
                             "The device did not remove the {count} files.", n).format(count=n)
         reasons = "\n".join(f"{posixpath.basename(path)}: {why}" for path, why in problems)
+        parts.append(f"{text}\n\n{reasons}")
+    if freed.copy_failed:
+        n = len(freed.copy_failed)
+        # TRANSLATORS: after Copy and Remove, the memory dumps left on the device because
+        # their copy on this computer failed; their names follow
+        text = ngettext("{count} memory dump was not removed, as its copy on this computer "
+                        "failed.",
+                        "{count} memory dumps were not removed, as their copies on this "
+                        "computer failed.", n).format(count=n)
+        names = "\n".join(posixpath.basename(path) for path in freed.copy_failed)
+        parts.append(f"{text}\n\n{names}")
+    if freed.stopped is not None and freed.removed:
+        # TRANSLATORS: heading of the message when a removal from the device stopped, or was
+        # not counted again, after files were removed
+        inform(win, "free-stopped", _("Removal Not Finished"), "\n\n".join(parts))
+    elif problems or freed.copy_failed:
         # TRANSLATORS: heading of the message when the device did not remove every file
-        inform(win, "free-not-removed", _("Not All Files Removed"), f"{text}\n\n{reasons}")
-    status_changed(win)  # the page and the row of the device page read again
+        inform(win, "free-not-removed", _("Not All Files Removed"), "\n\n".join(parts))
+    elif freed.removed:
+        win.toast(done_text)
+    elif freed.nothing:
+        # TRANSLATORS: toast after Remove on the page Device Status when the files were removed
+        # by something else meanwhile
+        win.toast(_("Nothing removed: the files were no longer on the device"))
+    if not gone and not read_later:
+        status_changed(win)  # the page and the row of the device page read again
 
 
 # --- the diagnostic files and the report ------------------------------------------------------
@@ -656,12 +811,14 @@ def open_copies(win, unit: int | None = None) -> None:
     """Open Folder: the folder of the device's copies in the file manager (its name is the
     device's unit ID: never shown, nor written to the log); the open device's when `unit` is
     None."""
+    test_drive = False
     if unit is None:
         unit = getattr(getattr(win.session, "device", None), "unit_id", None)
+        test_drive = bool(getattr(getattr(win.session, "storage", None), "test_drive", False))
     if not unit:
         return
     log.info("status page: the folder of the copies opened")
-    Gtk.FileLauncher.new(Gio.File.new_for_path(str(diagnostics.folder(unit)))).launch(
+    Gtk.FileLauncher.new(Gio.File.new_for_path(str(diagnostics.folder(unit, test_drive)))).launch(
         win, None, None, None)
 
 
@@ -779,19 +936,37 @@ def kept_status_row(win, unit_id: int) -> None:
     """The row Device Status of the view of a device not connected: its records read in the
     background (status.read_kept), then the row shown with their summary and when they are
     from; hidden without records."""
-    win.kept_status = None
+    kept = win.kept_status
+    if kept is None or kept.unit != unit_id:
+        win.kept_status = None
     win.remembered.show_status_row(None)
 
     def done(facts):
         entry = win._remembered_entry
         if facts is None or getattr(entry, "unit_id", None) != unit_id:
             return  # no records, or another device shown meanwhile
-        win.kept_status = KeptStatus(unit_id, facts)
+        kept = win.kept_status
+        if kept is not None and kept.unit == unit_id:
+            # Its page may be shown: it stays the view of this device (navigation, Refresh,
+            # the window folding), with the records read now for its next showing.
+            kept.facts = facts
+        else:
+            win.kept_status = KeptStatus(unit_id, facts)
         title = words.status_summary(facts.crashes, facts.errors_known, facts.free,
-                                     facts.capacity, datetime.now())[1]
+                                     facts.capacity, datetime.now(), facts.has_diagnostics)[1]
         win.remembered.show_status_row(caption(title, _as_of(facts)))
 
     win.in_background(lambda: status.read_kept(unit_id), done)
+
+
+def kept_page_closed(win, page) -> None:
+    """Back from the page Device Status of a device not connected: the page let go, with what
+    was kept of it (built anew when its row is chosen again)."""
+    kept = win.kept_status
+    if kept is not None and kept.page is not None and page is kept.page:
+        kept.page = None
+        kept.status_history = None
+        kept.status_history_rows = []
 
 
 def show_kept_status(win) -> None:

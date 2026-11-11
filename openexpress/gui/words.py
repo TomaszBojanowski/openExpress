@@ -969,12 +969,16 @@ def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
 
 
 def status_summary(found, errors_known: bool, free: int | None, capacity: int | None,
-                   now: datetime) -> tuple[str, str, str]:
+                   now: datetime, has_diagnostics: bool = True) -> tuple[str, str, str]:
     """The summary on top of the page Device Status, and the subtitle of its row on the device
-    page: (its look: "good", "warning" or "unknown"; its title; its line). Crashes of the last
-    30 days first (the error colour is never used: a crash is a fact to know, not an alarm),
-    then little free space (status.little_space), then error logs that were not read."""
+    page: (its look: "good", "warning", "unknown", or "none" without diagnostic data; its title;
+    its line). A device without diagnostic data: as its page, "No Diagnostic Data". Else crashes
+    of the last 30 days first (the error colour is never used: a crash is a fact to know, not an
+    alarm), then little free space (status.little_space), then error logs that were not read."""
     from openexpress import crashes, status
+
+    if not has_diagnostics:
+        return "none", _("No Diagnostic Data"), space_text(free, capacity)
 
     lately = status.recent(found, now)
     if lately:

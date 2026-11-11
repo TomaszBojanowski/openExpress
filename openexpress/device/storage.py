@@ -85,6 +85,9 @@ class Entry:
     is_dir: bool
     size: int = 0
     mtime: float = 0.0
+    # A symbolic link (a folder on this computer: a test drive, --path); a device over MTP and
+    # a FAT drive have none. Never followed where files are removed or counted.
+    is_link: bool = False
 
 
 class Storage(ABC):
@@ -158,8 +161,10 @@ class Storage(ABC):
         """Total size of the storage in bytes, when known."""
         return None
 
-    def resolve(self, path: str) -> str | None:
-        """Return the real path (with the correct case) or None."""
+    def resolve(self, path: str, strict: bool = False) -> str | None:
+        """Return the real path (with the correct case) or None. A folder on the way that
+        cannot be listed is taken for a missing one, unless `strict`: then its DeviceError is
+        raised (what is not known is not "not there")."""
         real = ""
         for part in [p for p in path.split("/") if p]:
             try:
@@ -167,6 +172,8 @@ class Storage(ABC):
             except DeviceNotResponding:
                 raise  # not a missing folder
             except DeviceError:
+                if strict:
+                    raise
                 return None
             match = _entry_named(entries, part)
             if match is None:
@@ -176,6 +183,12 @@ class Storage(ABC):
 
     def exists(self, path: str) -> bool:
         return self.resolve(path) is not None
+
+    def through_link(self, real_path: str) -> bool:
+        """Whether a symbolic link is on the way to this real path or is the file itself: what
+        is behind one is elsewhere on this computer, never removed as the device's. A device over
+        MTP has none."""
+        return False
 
     def info(self, real_path: str) -> Entry | None:
         """The entry of the file or folder at this real path (in its letter case, as listed
@@ -363,8 +376,10 @@ class Storage(ABC):
         """Create a directory with its missing parents. Returns the real path."""
         return self._ensure_dir(path)
 
-    def size(self, path: str) -> int | None:
-        real = self.resolve(path)
+    def size(self, path: str, strict: bool = False) -> int | None:
+        """The size of the file at `path`; None when it is not there. `strict`: a folder on
+        the way that cannot be listed raises its DeviceError (resolve)."""
+        real = self.resolve(path, strict=True) if strict else self.resolve(path)
         if real is None:
             return None
         parent, name = posixpath.split(real)
@@ -400,12 +415,16 @@ class Storage(ABC):
 
         return {path: size_of(path) for path in dict.fromkeys(paths)}
 
-    def delete(self, path: str) -> None:
-        real = self.resolve(path)
+    def delete(self, path: str, strict: bool = False) -> bool:
+        """Remove the file at `path`; False when it is not there (nothing removed). `strict`:
+        a folder on the way that cannot be listed raises its DeviceError (resolve)."""
+        real = self.resolve(path, strict=True) if strict else self.resolve(path)
         if real == "":
             raise DeviceError(_("Refusing to delete the root of the device storage"))
-        if real is not None:
-            self._delete(real)
+        if real is None:
+            return False
+        self._delete(real)
+        return True
 
     def _ensure_dir(self, path: str) -> str:
         real = ""
@@ -508,6 +527,14 @@ class LocalStorage(Storage):
     def _p(self, real: str) -> Path:
         return self.root / real if real else self.root
 
+    def through_link(self, real_path: str) -> bool:
+        where = self.root
+        for part in [p for p in real_path.split("/") if p]:
+            where = where / part
+            if where.is_symlink():
+                return True
+        return False
+
     def _list(self, real_path: str) -> list[Entry]:
         p = self._p(real_path)
         if not p.is_dir():
@@ -515,8 +542,13 @@ class LocalStorage(Storage):
         out = []
         with _os_errors(_("Cannot list {path}").format(path=real_path or "/")):
             for child in p.iterdir():
-                st = child.stat()
-                out.append(Entry(child.name, child.is_dir(), st.st_size, st.st_mtime))
+                link = child.is_symlink()
+                try:
+                    st = child.stat()
+                except FileNotFoundError:  # a link that leads nowhere
+                    st = child.lstat()
+                out.append(Entry(child.name, child.is_dir(), st.st_size, st.st_mtime,
+                                 is_link=link))
         return out
 
     def _read(self, real_path: str) -> bytes:

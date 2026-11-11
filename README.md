@@ -53,6 +53,8 @@ devices that connect over USB (MTP) should work too – reports are welcome.
   map coloured by heart rate, pace or elevation (streets from OpenStreetMap once you turn them
   on), charts, laps, heart rate zones, training effect and details. Exports them as GPX.
 - Shows what any FIT file holds, and what a sync will write to the device.
+- Shows what needs attention on the device: its crashes, its software updates and what takes
+  its space; frees up space taken by old memory dumps and update files it did not install.
 - Makes backups of the device and keeps copies of its diagnostic files on this computer.
 - Shows and sets the primary training device and the primary wearable.
 - Works in a GTK 4 / libadwaita window, on the command line and in the background.
@@ -68,6 +70,11 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 <p align="center">
   <img src="docs/screenshots/activities.png" width="700"
        alt="The Activities page: activities of a fēnix 8 with their sport, time, distance and ascent">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/status.png" width="700"
+       alt="The Device Status page of a fēnix 8: five crashes in the last 30 days, and its storage by kind of file, maps the largest">
 </p>
 
 ## Supported devices
@@ -174,6 +181,10 @@ changes anything only shows its plan until you add `--apply`. Every command:
   Updates page or with `openexpress updates --install`.
 - A device that connects only over HID, such as the inReach Mini of the first generation
   ([#31](https://github.com/TomaszBojanowski/openExpress/issues/31)), is not supported.
+- Removing the file of an update the device did not install (**Free Up Space** on the Device
+  Status page) was checked only on a test USB drive, not on a real device; removing older memory
+  dumps was checked on a fēnix 8 and an Edge 1050
+  ([what was checked](docs/devices.md#the-developers-fēnix-8-and-edge-1050)).
 
 ## Privacy
 

@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: openexpress 0.9.1\n"
+"Project-Id-Version: openexpress 0.10.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 18:44+0100\n"
+"POT-Creation-Date: 2026-11-10 19:56+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -916,9 +916,24 @@ msgid_plural "{count} Assert entries, not shown (all with -v)"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: under "Error logs on the device:" when one of them could not be read:
+#. as on the page Device Status, the crashes are then those kept on this computer
+#: openexpress/cli.py
+msgid ""
+"not every error log could be read: the crashes below are those kept on this "
+"computer"
+msgstr ""
+
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
 #: openexpress/cli.py
 msgid "no entries"
+msgstr ""
+
+#. TRANSLATORS: `openexpress diagnostics` when the device's folder of memory dumps
+#. could not be listed
+#: openexpress/cli.py
+msgid ""
+"Memory dumps on the device: not known (their folder could not be listed)"
 msgstr ""
 
 #: openexpress/cli.py
@@ -979,7 +994,7 @@ msgstr ""
 
 #: openexpress/cli.py
 #, python-brace-format
-msgid "Not copied, over the limit of {size}: {names}"
+msgid "Not copied, as they did not fit in {size}: {names}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1010,9 +1025,24 @@ msgstr ""
 msgid "Space to free on the device:"
 msgstr ""
 
+#. TRANSLATORS: under "Space to free on the device:" when the device's folder of memory
+#. dumps could not be listed
+#: openexpress/cli.py
+msgid "older memory dumps: not known (their folder could not be listed)"
+msgstr ""
+
 #. TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
 #: openexpress/cli.py
 msgid "older memory dumps: not known (the newest cannot be told)"
+msgstr ""
+
+#. TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
+#. gives no unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"older memory dumps: {dumps}; not removed: the device gives no unit ID, so "
+"their copies would have no folder of the device"
 msgstr ""
 
 #. TRANSLATORS: under "Space to free on the device:"; {dumps} is a count and a size,
@@ -1030,10 +1060,11 @@ msgid "to copy before the removal: {dumps}"
 msgstr ""
 
 #. TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would
-#. remove without a copy, as too large to copy
+#. remove without a copy; {limit} is the most the copies may take, "100 MB"
 #: openexpress/cli.py
 #, python-brace-format
-msgid "to remove without a copy, too large: {dumps}"
+msgid ""
+"to remove without a copy, as the copies would not fit in {limit}: {dumps}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -1055,6 +1086,11 @@ msgstr ""
 msgid "in all: {size}"
 msgstr ""
 
+#. TRANSLATORS: why an update file stays on the device after --free-space
+#: openexpress/cli.py
+msgid "it changed since it was listed"
+msgstr ""
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Removed: {count} memory dump, {size} freed"
@@ -1068,8 +1104,7 @@ msgid "{count} copied to this computer first"
 msgstr ""
 
 #. TRANSLATORS: why a memory dump stays on the device after --free-space
-#. TRANSLATORS: why a memory dump stays on the device after Copy and Remove
-#: openexpress/cli.py openexpress/gui/status_page.py
+#: openexpress/cli.py
 msgid "its copy on this computer failed"
 msgstr ""
 
@@ -1082,6 +1117,18 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid "not removed: {name}: {why}"
+msgstr ""
+
+#. TRANSLATORS: `diagnostics --free-space --apply` when the files were removed by
+#. something else meanwhile
+#: openexpress/cli.py
+msgid "Nothing removed: the files were no longer on the device."
+msgstr ""
+
+#: openexpress/cli.py openexpress/history.py
+msgid ""
+"The device could not be counted again after the removal; its records keep "
+"what was removed."
 msgstr ""
 
 #: openexpress/cli.py
@@ -4694,6 +4741,13 @@ msgstr[1] ""
 msgid "the device kept it"
 msgstr ""
 
+#. TRANSLATORS: why nothing was removed from the device after the question was answered
+#: openexpress/freeing.py
+msgid ""
+"The files on the device changed since the question; nothing was removed. "
+"Look at the list again."
+msgstr ""
+
 #. TRANSLATORS: a step of removing the memory dumps ("… · 1 of 3")
 #: openexpress/freeing.py
 msgid "Removing memory dumps"
@@ -5761,10 +5815,6 @@ msgstr ""
 msgid "screen {number}"
 msgstr ""
 
-#: openexpress/gui/device_page.py openexpress/gui/status_page.py
-msgid "Not known"
-msgstr ""
-
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/gui/device_page.py openexpress/gui/start_window.py
@@ -5855,8 +5905,8 @@ msgstr[1] ""
 
 #: openexpress/gui/device_page.py
 #, python-brace-format
-msgid "{count} file skipped: larger than {size}"
-msgid_plural "{count} files skipped: larger than {size}"
+msgid "{count} file skipped: did not fit in {size}"
+msgid_plural "{count} files skipped: did not fit in {size}"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -7179,11 +7229,11 @@ msgstr ""
 msgid "Counted at the last connection, {when}"
 msgstr ""
 
-#. TRANSLATORS: subtitle of "Category Details" after files were removed from the device
-#. (Free Up Space), e.g. "… removal, just now"
+#. TRANSLATORS: subtitle of "Category Details" after files were written to the device or
+#. removed from it (Free Up Space), e.g. "… change, just now"
 #: openexpress/gui/status_page.py
 #, python-brace-format
-msgid "Counted again after a removal, {when}"
+msgid "Counted again after a change, {when}"
 msgstr ""
 
 #. TRANSLATORS: subtitle of "Category Details": when the kinds of file were counted,
@@ -7277,6 +7327,10 @@ msgstr ""
 msgid "Older Memory Dumps"
 msgstr ""
 
+#: openexpress/gui/status_page.py
+msgid "Not known"
+msgstr ""
+
 #. TRANSLATORS: subtitle of "Older Memory Dumps", followed by their size
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -7319,14 +7373,15 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid ""
-"{count} memory dump ({size}) will be removed from the device without a copy: "
-"it is too large to copy."
+"{count} memory dump ({size}) will be removed from the device without a copy, "
+"as the copies would not fit in {limit}."
 msgid_plural ""
 "{count} memory dumps ({size}) will be removed from the device without a "
-"copy: they are too large to copy."
+"copy, as the copies would not fit in {limit}."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -7349,15 +7404,40 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a part of the question: how many dumps are removed without a copy
+#. TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
 #: openexpress/gui/status_page.py
 #, python-brace-format
-msgid "{count} ({size}) without a copy, as it is too large"
-msgid_plural "{count} ({size}) without a copy, as they are too large"
+msgid "{count} ({size}) without a copy, as the copies would not fit in {limit}"
+msgid_plural ""
+"{count} ({size}) without a copy, as the copies would not fit in {limit}"
 msgstr[0] ""
 msgstr[1] ""
 
 #: openexpress/gui/status_page.py
 msgid "The newest dump stays on the device."
+msgstr ""
+
+#. TRANSLATORS: why a removal from the device did not go to its end
+#: openexpress/gui/status_page.py
+msgid "the device stopped responding"
+msgstr ""
+
+#. TRANSLATORS: why a removal from the device did not go to its end, or was not counted
+#. after it
+#: openexpress/gui/status_page.py
+msgid "the device could not be read after the removal"
+msgstr ""
+
+#. TRANSLATORS: heading of the message when the device was unplugged or opened again
+#. while a question of the page Device Status was open
+#: openexpress/gui/status_page.py
+msgid "Nothing Removed"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+msgid ""
+"The device was unplugged or connected again since the question. Look at the "
+"list again."
 msgstr ""
 
 #: openexpress/gui/status_page.py
@@ -7402,6 +7482,18 @@ msgid ""
 "again."
 msgstr ""
 
+#. TRANSLATORS: why a removal from the device did not go to its end
+#: openexpress/gui/status_page.py
+msgid "the device was unplugged"
+msgstr ""
+
+#. TRANSLATORS: in the message when a removal from the device stopped, or was not
+#. counted again, after files were removed; {done} tells what was removed, {why} why
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{done}. Then {why}."
+msgstr ""
+
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "The device did not remove {count} of the files; the others are removed."
@@ -7417,9 +7509,33 @@ msgid_plural "The device did not remove the {count} files."
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: after Copy and Remove, the memory dumps left on the device because
+#. their copy on this computer failed; their names follow
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid ""
+"{count} memory dump was not removed, as its copy on this computer failed."
+msgid_plural ""
+"{count} memory dumps were not removed, as their copies on this computer "
+"failed."
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: heading of the message when a removal from the device stopped, or was
+#. not counted again, after files were removed
+#: openexpress/gui/status_page.py
+msgid "Removal Not Finished"
+msgstr ""
+
 #. TRANSLATORS: heading of the message when the device did not remove every file
 #: openexpress/gui/status_page.py
 msgid "Not All Files Removed"
+msgstr ""
+
+#. TRANSLATORS: toast after Remove on the page Device Status when the files were removed
+#. by something else meanwhile
+#: openexpress/gui/status_page.py
+msgid "Nothing removed: the files were no longer on the device"
 msgstr ""
 
 #. TRANSLATORS: subtitle of "Copies on This Computer" when none was made
@@ -7559,7 +7675,7 @@ msgid "Device not connected – connect it to free up space or copy its logs"
 msgstr ""
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
-#: openexpress/gui/status_page.py
+#: openexpress/gui/status_page.py openexpress/gui/words.py
 msgid "No Diagnostic Data"
 msgstr ""
 
@@ -10095,6 +10211,12 @@ msgid ""
 msgstr ""
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid ""
+"See the device's crashes, software updates and what takes its space, and "
+"free up space taken by old memory dumps"
+msgstr ""
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Make backups of the device"
 msgstr ""
 
@@ -10149,4 +10271,10 @@ msgstr ""
 msgid ""
 "Activities of the device and of its backups, with their sport, time, "
 "distance and ascent"
+msgstr ""
+
+#: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
+msgid ""
+"Device Status: the device's crashes in the last 30 days and its storage by "
+"kind of file"
 msgstr ""

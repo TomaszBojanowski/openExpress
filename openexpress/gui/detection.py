@@ -163,7 +163,9 @@ def with_space(found):
     passed on as it is. Its diagnostics come after its page is shown
     (device_page.read_diagnostics)."""
     if not isinstance(found, DeviceChoices):
-        found.space = read_space(found.storage)
+        from openexpress import status
+
+        status.space_read(found, read_space(found.storage))
     return found
 
 

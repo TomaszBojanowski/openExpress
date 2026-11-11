@@ -224,6 +224,19 @@ def wait_for_the_diagnostics(session, fn) -> None:
                  DIAGNOSTICS_WAIT_S)
 
 
+def wait_for_the_count(session) -> None:
+    """Any work of the device waits, in its thread, until the device's count after a write
+    (count_again, in the background) is done: one thing asks the device at a time (Copy Crash
+    Logs leaves the file manager for a moment), and a count begun before a removal never ends
+    after it."""
+    counting = getattr(session, "counting", None)
+    if counting is None or counting.is_set():
+        return
+    log.info("task: waits until the device is counted again")
+    if not counting.wait(DIAGNOSTICS_WAIT_S):
+        log.info("task: the device still not counted after %d s, it goes on", DIAGNOSTICS_WAIT_S)
+
+
 def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | None]:
     """(free space, capacity) of the device, asked of it: never on the window's thread. The
     capacity is asked only when it is not given (it does not change). What cannot be asked
@@ -248,7 +261,9 @@ def render_space(win) -> None:
     s = win.session
     if row is None or s is None:
         return
-    space = getattr(s, "space", None)
+    from openexpress import status
+
+    space = status.space_now(s)  # the latest count, as the page has it
     if space is None:
         row.set_subtitle(space_text(None, reading=True))
         bar.set_visible(False)
@@ -274,10 +289,56 @@ def refresh_space(win, s) -> None:
         if win.session is not s:
             log.info("device storage: read after the device was closed, not shown")
             return
-        s.space = space
+        from openexpress import status
+
+        status.space_read(s, space)
         render_space(win)
+        # The page Device Status, when shown, with the space and the files of now.
+        from openexpress.gui.device_page import status_changed
+
+        status_changed(win)
 
     TaskRunner.in_background(lambda: read_space(s.storage, capacity), got)
+
+
+def count_again(win, s) -> None:
+    """After a work that wrote to the device: its kinds of file, its space and its memory dumps
+    counted again in the background (status.recount, into the device log's line too), then the
+    row "Device Storage" and the page Device Status shown with them (status.counted_again):
+    the page tells the device as it is now, its kinds of file and its free space of one count.
+    When that cannot be counted, the free space alone is read again (refresh_space). Any task of
+    the device waits until it is done (wait_for_the_count)."""
+    from openexpress import status
+
+    counting = s.counting = threading.Event()
+
+    def done(kept):
+        if win.session is not s:
+            log.info("device storage: counted after the device was closed, not shown")
+            return
+        if not kept:
+            log.info("device storage: a later count is shown already, this one not")
+            return
+        render_space(win)
+        from openexpress.gui.device_page import status_changed
+
+        status_changed(win)
+
+    def failed(e):
+        log.info("device storage: not counted again (%s)", type(e).__name__)
+        refresh_space(win, s)
+        return True
+
+    def count():
+        # In the session before any task waiting for it goes on (wait_for_the_count); a device
+        # unplugged meanwhile keeps what it had.
+        try:
+            counted = status.recount(s.device, s.storage)
+            return win.session is s and status.counted_again(s, counted)
+        finally:
+            counting.set()
+
+    TaskRunner.in_background(count, done, failed)
 
 
 def row_subtitle(row) -> Gtk.Label | None:
@@ -288,6 +349,20 @@ def row_subtitle(row) -> Gtk.Label | None:
         if isinstance(child, Gtk.Label) and child.has_css_class("subtitle"):
             return child
         found = row_subtitle(child)
+        if found is not None:
+            return found
+        child = child.get_next_sibling()
+    return None
+
+
+def row_title(row) -> Gtk.Label | None:
+    """The label of the title of an Adw.ActionRow, which libadwaita does not give: the one with
+    the style class "title" (so in 1.5 as in 1.9). None when there is none."""
+    child = row.get_first_child()
+    while child is not None:
+        if isinstance(child, Gtk.Label) and child.has_css_class("title"):
+            return child
+        found = row_title(child)
         if found is not None:
             return found
         child = child.get_next_sibling()
@@ -543,6 +618,7 @@ class TaskRunner:
         (no "keep it plugged in"). `in_page`: as set_busy. `button`: spins at once, the bar
         with `title` after TEXT_AFTER_MS."""
         if self.busy:
+            log.info("task %s: not started, another one is running", task_name(fn))
             self.toast(_("Another operation is in progress"))
             return
         # The window may close during it (_on_close_request).
@@ -577,6 +653,7 @@ class TaskRunner:
         def worker():
             try:
                 wait_for_the_diagnostics(started, fn)
+                wait_for_the_count(started)
                 result = fn()
             except Exception as e:  # noqa: BLE001 - every failure of a task is shown
                 GLib.idle_add(finish_error, e)
@@ -584,19 +661,22 @@ class TaskRunner:
                 GLib.idle_add(finish_ok, result)
 
         # A work that writes to the device (writes_to_device): once it ends, also when it
-        # failed (a part may be written), the free space is read again in the background.
+        # failed (a part may be written), the device is counted again in the background (a
+        # work that counts it itself, as the removals of the page Device Status, is left).
         def written() -> None:
             if getattr(fn, "writes_to_device", False) and started is not None \
-                    and self.session is started:
-                refresh_space(self, started)
+                    and self.session is started and not getattr(fn, "counts_again", False):
+                count_again(self, started)
 
+        # The count after a write begins before what the task's end starts (a page read again,
+        # another task): those wait for it (wait_for_the_count).
         def finish_ok(result):
             ended()
+            written()
             try:
                 if on_done:
                     on_done(result)
             finally:
-                written()
                 self._run_pending_refresh()
             return False
 
@@ -617,12 +697,12 @@ class TaskRunner:
                 # so that a report from the window says where it failed.
                 log.warning("task failed: %s: %s", type(e).__name__, e, exc_info=e)
             ended()
+            written()
             try:
                 with stalled.telling(self, e):  # a stall: the banner, no error dialog
                     if not (on_error and on_error(e)):
                         self.error(title, str(e) or e.__class__.__name__)
             finally:
-                written()
                 self._run_pending_refresh()
             return False
 

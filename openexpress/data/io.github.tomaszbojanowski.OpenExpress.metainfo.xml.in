@@ -22,6 +22,7 @@
       <li>Install, update and remove Connect IQ apps, turn them on or off and put them back in order</li>
       <li>Copy music, podcasts and audiobooks, with playlists</li>
       <li>See each activity on its own page: the track on a map, charts, laps, heart rate zones and training effect</li>
+      <li>See the device's crashes, software updates and what takes its space, and free up space taken by old memory dumps</li>
       <li>Make backups of the device</li>
       <li>Sync in the background whenever the device is connected</li>
       <!-- TRANSLATORS: a feature in the description for software centres: the program sends no
@@ -72,6 +73,10 @@
       <caption>Activities of the device and of its backups, with their sport, time, distance and ascent</caption>
       <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/activities.png</image>
     </screenshot>
+    <screenshot>
+      <caption>Device Status: the device's crashes in the last 30 days and its storage by kind of file</caption>
+      <image>https://raw.githubusercontent.com/TomaszBojanowski/openExpress/main/docs/screenshots/status.png</image>
+    </screenshot>
   </screenshots>
   <categories>
     <category>Utility</category>
@@ -94,6 +99,32 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.0" date="2026-11-10">
+      <description translate="no">
+        <ul>
+          <li>A new page, Device Status, tells what needs attention on a device and what takes its
+          space: a summary (crashes in the last 30 days, little free space), the storage by kind
+          of file, the crashes and software updates, each crash once with its details, and the
+          diagnostic files, which can be copied from there.</li>
+          <li>Free Up Space on that page removes, after a question, the memory dumps but the
+          newest and the files of updates the device took in but did not install. The memory
+          dumps are copied to this computer first where they fit (up to 100 MB per device).
+          Activities, maps, music, courses and settings are never removed. On the command line:
+          openexpress diagnostics --free-space, a dry run until --apply.</li>
+          <li>A remembered device that is not connected has the row Device Status in its view:
+          the same page from what this computer keeps of it, as of its last connection.</li>
+          <li>openExpress keeps a short log of each connection of a device on this computer: the
+          software version, the storage by kind of file, the memory dumps and the last crash,
+          without file names, Unit ID or serial number. The software updates on Device Status
+          come from it, and openexpress diagnostics shows it.</li>
+          <li>The device report has a Diagnostics section: the last crashes (date, software
+          version, error number), the memory dumps and whether the copy of the diagnostic files
+          is on.</li>
+          <li>The window finds an error log or a memory dump written after the device was first
+          opened; before, it read only those it had found the first time.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.1" date="2026-11-09">
       <description translate="no">
         <ul>

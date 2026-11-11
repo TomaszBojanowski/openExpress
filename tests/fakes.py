@@ -582,12 +582,14 @@ def window_methods(win, names):
 def tasks_at_once(monkeypatch):
     """The window's thread and main loop, run at once: a task of run_task (and a work of
     in_background) runs and tells its end within the call."""
+    import threading
     import types
 
     from gi.repository import GLib
 
-    replace_in_window(monkeypatch, "threading", types.SimpleNamespace(
-        Thread=lambda target, daemon: types.SimpleNamespace(start=target)))
+    # The rest of the module as it is (a count after a write is waited for with an Event).
+    replace_in_window(monkeypatch, "threading", types.SimpleNamespace(**{
+        **vars(threading), "Thread": lambda target, daemon: types.SimpleNamespace(start=target)}))
     monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
 
 

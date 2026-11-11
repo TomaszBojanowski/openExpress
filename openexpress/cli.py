@@ -28,6 +28,7 @@ from openexpress.connect import (
 from openexpress.console import error as _error
 from openexpress.device.storage import DeviceError, DeviceNotResponding, LocalStorage, Storage
 from openexpress.device.xmldevice import GarminDevice, parse
+from openexpress.errors import UserFacingError
 from openexpress.i18n import (
     N_,
     _,
@@ -212,10 +213,16 @@ def cmd_diagnostics(args) -> int:
     from openexpress import diagnostics
 
     st, dev = open_device(args)
+    if args.path:
+        # A copy of a device's files: what this command keeps of it (the copies, those of the
+        # dumps it removes) goes apart from the device's records, as a test drive's, and never
+        # pushes out the device's own.
+        st.test_drive = True
     if args.free_space:
         return _free_space_command(st, dev, args.apply)
     print(_diagnostics_copy_text(diagnostics.copy_on()))
-    entries = diagnostics.read_errors(st)
+    missed: list[str] = []
+    entries = diagnostics.read_errors(st, missed=missed)
     print(_("Error logs on the device:"))
     # The "Assert" entries an Edge writes at each start: their number, each of them with -v.
     asserts = 0 if args.verbose else sum(e.is_assert for e in entries)
@@ -228,17 +235,30 @@ def cmd_diagnostics(args) -> int:
         print("  " + ngettext("{count} Assert entry, not shown (all with -v)",
                               "{count} Assert entries, not shown (all with -v)",
                               asserts).format(count=asserts))
-    if not entries:
+    if missed:
+        # TRANSLATORS: under "Error logs on the device:" when one of them could not be read:
+        # as on the page Device Status, the crashes are then those kept on this computer
+        print("  " + _("not every error log could be read: the crashes below are those kept "
+                       "on this computer"))
+    elif not entries:
         # TRANSLATORS: under "Error logs on the device:" when the device has none
         print("  " + _("no entries"))
-    dumps = diagnostics.dumps_on_device(st)
+    try:
+        dumps = diagnostics.dumps_on_device(st)
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        # TRANSLATORS: `openexpress diagnostics` when the device's folder of memory dumps
+        # could not be listed
+        print(_("Memory dumps on the device: not known (their folder could not be listed)"))
+        dumps = []
     if dumps:
         print(_("Memory dumps on the device: {count}, {size} (encrypted; copied only with "
                 "--dumps)").format(count=len(dumps),
                                    size=human_size(sum(size for _p, size in dumps))))
     from openexpress import crashes
 
-    found = crashes.history(dev.unit_id, entries,
+    found = crashes.history(dev.unit_id, None if missed else entries,
                             test_drive=bool(getattr(st, "test_drive", False)))
     print(_("Crashes that restarted the device (error logs, boot log, copies and device log "
             "on this computer):"))
@@ -248,7 +268,7 @@ def cmd_diagnostics(args) -> int:
         # TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
         print("  " + _("none found"))
     print(_("Copies on this computer: {copies}").format(
-        copies=diagnostics.copies_text(dev.unit_id)))
+        copies=diagnostics.copies_text(dev.unit_id, bool(getattr(st, "test_drive", False)))))
     # Not the folder itself: it is named after the unit ID, and this is pasted into reports.
     print("  " + _("in the folder of the device under {folder}").format(
         folder=paths.data_dir() / "devices"))
@@ -273,7 +293,7 @@ def cmd_diagnostics(args) -> int:
         print(_("Memory dumps copied: {count} new ({size}).").format(
             count=dumped.new, size=human_size(dumped.new_bytes)))
         if dumped.not_copied:
-            print(_("Not copied, over the limit of {size}: {names}").format(
+            print(_("Not copied, as they did not fit in {size}: {names}").format(
                 size=human_size(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
     if args.crash_logs:
         with _progress() as progress:
@@ -292,19 +312,20 @@ def _free_space_command(st, dev, apply: bool) -> int:
     nothing else (not the copy of the diagnostic files)."""
     from openexpress import freeing
 
-    plan = freeing.plan(st, dev, GarminClient(Settings.load()), fresh=apply)
+    client = GarminClient(Settings.load())
+    plan = freeing.plan(st, dev, client, fresh=apply)
     if not apply:
         _print_free_space(plan)
         # TRANSLATORS: `openexpress diagnostics --free-space` without --apply
         print(_("Dry run: nothing was copied or removed. Add --apply to copy and remove the "
                 "files listed; that cannot be undone."))
         return 0
-    if not plan.older and not plan.updates:
-        _print_free_space(plan)
+    if (not plan.older or plan.dumps_plan is None) and not plan.updates:
+        _print_free_space(plan)  # nothing it may remove, and why
         return 0
     if plan.why is not None:
         print(_("update files: not checked ({why})").format(why=plan.why))
-    return _free_space(st, dev, plan)
+    return _free_space(st, dev, plan, client)
 
 
 def _count_size(items) -> str:
@@ -313,13 +334,25 @@ def _count_size(items) -> str:
 
 def _print_free_space(plan) -> None:
     """What --free-space would remove: the older memory dumps, which of them it would copy
-    first and which not (too large), the update files; an update that waits to be installed
-    only shown."""
+    first and which not (the copies would not fit), the update files; an update that waits to
+    be installed only shown."""
+    from openexpress import freeing
+
     # TRANSLATORS: `openexpress diagnostics --free-space`: heading above what it removes
     print(_("Space to free on the device:"))
-    if plan.older is None:
+    if plan.dumps is None:
+        # TRANSLATORS: under "Space to free on the device:" when the device's folder of memory
+        # dumps could not be listed
+        print("  " + _("older memory dumps: not known (their folder could not be listed)"))
+    elif plan.older is None:
         # TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
         print("  " + _("older memory dumps: not known (the newest cannot be told)"))
+    elif plan.older and plan.dumps_plan is None:
+        # TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
+        # gives no unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"
+        print("  " + _("older memory dumps: {dumps}; not removed: the device gives no unit ID, "
+                       "so their copies would have no folder of the device").format(
+            dumps=_count_size(plan.older)))
     elif plan.older:
         # TRANSLATORS: under "Space to free on the device:"; {dumps} is a count and a size,
         # e.g. "3 (2.5 MB)"
@@ -332,9 +365,10 @@ def _print_free_space(plan) -> None:
                 dumps=_count_size(plan.copied)))
         if plan.too_large:
             # TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would
-            # remove without a copy, as too large to copy
-            print("    " + _("to remove without a copy, too large: {dumps}").format(
-                dumps=_count_size(plan.too_large)))
+            # remove without a copy; {limit} is the most the copies may take, "100 MB"
+            print("    " + _("to remove without a copy, as the copies would not fit in "
+                             "{limit}: {dumps}").format(limit=freeing.limit_words(),
+                                                        dumps=_count_size(plan.too_large)))
     for u in plan.updates:
         print("  " + _("update file not installed by the device: {name} {version} ({size})")
               .format(name=u.name, version=u.version, size=human_size(u.size)))
@@ -343,46 +377,94 @@ def _print_free_space(plan) -> None:
             name=u.name, version=u.version, file=u.filename))
     if plan.why is not None:
         print("  " + _("update files: not checked ({why})").format(why=plan.why))
-    if not plan.older and not plan.updates:
+    if not plan.size and not plan.updates:
         print("  " + _("nothing to remove"))
     else:
         print("  " + _("in all: {size}").format(size=human_size(plan.size)))
 
 
-def _free_space(st, dev, plan) -> int:
-    """--free-space --apply: the older dumps copied (where they fit) and removed, then the
-    update files; 1 when the device refused or kept a file, or a copy failed."""
-    from openexpress import freeing, history
+def _free_space(st, dev, plan, client) -> int:
+    """--free-space --apply: the older dumps copied (where they fit) and removed as listed, then
+    the update files, each looked at again first; 1 when the device refused or kept a file, a
+    copy failed, or the files changed since they were listed (then nothing of them is removed).
+    What was removed is told and put in the device log also when it stops half-way (Ctrl+C, the
+    device stopping)."""
+    from openexpress import freeing
 
-    problems, removed = [], False
-    if plan.older:
-        with _progress() as progress:
-            freed = freeing.remove_dumps(st, dev.unit_id, plan.older, progress=progress)
+    problems: list[tuple[str, str]] = []
+    dumps = freeing.Freed()
+    files: list[tuple[object, freeing.Freed]] = []
+    changed = False
+    try:
+        if plan.older and plan.dumps_plan is not None:
+            with _progress() as progress:
+                try:
+                    freeing.remove_dumps(st, dev.unit_id, plan.dumps_plan, progress=progress,
+                                         freed=dumps)
+                except freeing.ListChanged as e:
+                    print(str(e))
+                    changed = True
+        for u in plan.updates:
+            freed = freeing.Freed()
+            files.append((u, freed))
+            try:
+                freeing.remove_update(st, u, client, dev, freed=freed)
+            except freeing.ListChanged:
+                # TRANSLATORS: why an update file stays on the device after --free-space
+                problems.append((u.device_path, _("it changed since it was listed")))
+            except UserFacingError as e:
+                problems.append((u.device_path, str(e)))
+    finally:
+        _tell_freed(dev, st, dumps, files, problems)
+    return 1 if problems or changed else 0
+
+
+def _tell_freed(dev, st, dumps, files, problems: list[tuple[str, str]]) -> None:
+    """What a --free-space --apply removed and the files that stayed, with why (`problems`,
+    those of the device's refusals added), told also after it stopped half-way; then the device
+    counted again and its device log put right (history.after_removal: by what was removed when
+    the count fails), for the page of a device not connected."""
+    from openexpress import history
+
+    if dumps.removed or dumps.kept or dumps.copy_failed:
         text = ngettext("Removed: {count} memory dump, {size} freed",
-                        "Removed: {count} memory dumps, {size} freed", len(freed.removed)).format(
-            count=len(freed.removed), size=human_size(freed.freed))
-        if freed.copied:
+                        "Removed: {count} memory dumps, {size} freed", len(dumps.removed)).format(
+            count=len(dumps.removed), size=human_size(dumps.freed))
+        if dumps.copied:
             text += "; " + _("{count} copied to this computer first").format(
-                count=len(freed.copied))
+                count=len(dumps.copied))
         print(text + ".")
-        removed = removed or bool(freed.removed)
-        problems += [(path, why) for path, why in freed.kept]
+        problems += [(path, why) for path, why in dumps.kept]
         # TRANSLATORS: why a memory dump stays on the device after --free-space
-        problems += [(path, _("its copy on this computer failed")) for path in freed.copy_failed]
-    for u in plan.updates:
-        freed = freeing.remove_update(st, u)
+        problems += [(path, _("its copy on this computer failed")) for path in dumps.copy_failed]
+    for u, freed in files:
         if freed.removed:
             print(_("Removed: the file of {name} {version}, {size} freed.").format(
                 name=u.name, version=u.version, size=human_size(freed.freed)))
-        removed = removed or bool(freed.removed)
         problems += freed.kept
-    if removed:  # the device log tells the state after it (the page of a device not connected)
-        history.note_counted(dev, st)
     for path, why in problems:
         # TRANSLATORS: `diagnostics --free-space --apply`: a file that stayed on the device
         print("  " + _("not removed: {name}: {why}").format(name=posixpath.basename(path),
                                                             why=why))
-    return 1 if problems else 0
+    if (dumps.gone or any(freed.gone for _u, freed in files)) and dumps.nothing \
+            and all(freed.nothing for _u, freed in files):
+        # TRANSLATORS: `diagnostics --free-space --apply` when the files were removed by
+        # something else meanwhile
+        print(_("Nothing removed: the files were no longer on the device."))
+    removed = {kind: found for kind, found in (
+        ("logs", dumps.removed), ("updates", [f for _u, freed in files for f in freed.removed]))
+        if found}
+    if removed:
+        try:  # the device log tells the state after it (the page of a device not connected)
+            history.after_removal(dev, st, removed)
+        except DeviceNotResponding:
+            raise
+        except (DeviceError, OSError) as e:
+            # TRANSLATORS: after --free-space --apply removed files, when the device could not
+            # be counted again
+            log.info("free space: not counted again after the removal (%s)", type(e).__name__)
+            print(_("The device could not be counted again after the removal; its records keep "
+                    "what was removed."))
 
 
 def crash_sources(crash) -> str:

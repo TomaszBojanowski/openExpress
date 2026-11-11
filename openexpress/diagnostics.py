@@ -18,7 +18,7 @@ import logging
 import posixpath
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -36,9 +36,12 @@ DEBUG = "Garmin/Debug"
 ERR_LOGS = (f"{DEBUG}/err_log.txt", f"{DEBUG}/err_log.bak")
 ERR_LOG_MAX = 1024 * 1024  # bigger is not an error log (a few kB with 14 entries)
 DUMPS = f"{DEBUG}/dump"
-# Memory dumps an Edge 1050 wrote with older software in the folder of its error logs
-# (ramdump1.log, ramdumpC2.log…), each with a ramdump_err1.txt that says what failed: a text, no
-# dump.
+# What a memory dump is, for the list, the counts and the removal alike (is_dump). In the folder
+# of dumps: a fēnix 8's RAM.zip and RAM_bak1.zip…, an Edge 1050's ramdumpC2.zip…; beside the
+# error logs: the dumps an Edge 1050 wrote with older software (ramdump1.log, ramdumpC2.log…),
+# each with a ramdump_err1.txt that says what failed (a text, no dump). Nothing else there is a
+# dump: a text, a hidden file, a file being written.
+DUMP_IN_FOLDER = re.compile(r"(?:ram(?:_bak\d+)?|ramdump[0-9a-z]*)\.zip", re.IGNORECASE)
 DUMP_FILES = re.compile(r"ramdump[0-9a-z]*\.log", re.IGNORECASE)
 # Folders of event logs where some devices show them (Venu 2, Edge 1050); a fēnix 8
 # hides its GARMIN/EVNTLOGS from the ordinary connection.
@@ -181,7 +184,8 @@ def read_errors(storage: Storage, at: dict[str, int] | None = None,
     for path in ERR_LOGS if at is None else ():
         name = posixpath.basename(path)
         try:
-            size = storage.size(path)
+            # A folder that cannot be listed: not read (missed), never "no error log".
+            size = storage.size(path, strict=True)
             if size is None:
                 continue
             if size > ERR_LOG_MAX:
@@ -208,10 +212,17 @@ def last_crash(entries: list[ErrorEntry], now: datetime) -> ErrorEntry | None:
 # --- the copy on this computer ------------------------------------------------------------
 
 
-def folder(unit_id: int) -> Path:
+def folder(unit_id: int, test_drive: bool = False) -> Path:
     """Where the copies of a device are: in its own folder, so that forgetting the device
-    removes them too."""
-    return paths.device_dir(unit_id) / "diagnostics"
+    removes them too; those of a test drive (Storage.test_drive), which carries a real
+    device's unit ID, in its own records (as its device log), never among the device's."""
+    from openexpress.sync import records_dir
+
+    return records_dir(unit_id, test_drive) / "diagnostics"
+
+
+def _folder_of(device: GarminDevice, storage: Storage) -> Path:
+    return folder(device.unit_id, bool(getattr(storage, "test_drive", False)))
 
 
 @dataclass
@@ -226,7 +237,7 @@ class Copied:
     saved: bool = False  # a new copy was written (nothing changed: none)
     copies: int = 0  # copies kept afterwards
     kept_bytes: int = 0
-    not_copied: list[str] = field(default_factory=list)  # dumps over the limit
+    not_copied: list[str] = field(default_factory=list)  # dumps that did not fit in the limit
 
     def add(self, new: bool) -> None:
         """One file more, new or unchanged."""
@@ -292,9 +303,17 @@ def _private(where: Path) -> None:
         folder_.chmod(0o700)
 
 
+def _snapshot_order(path: Path) -> tuple[str, int]:
+    """The order of the copies: by their time, then by their number within one second
+    ("<time> (2).json" after "<time>.json")."""
+    found = re.fullmatch(r"(.*) \((\d+)\)", path.stem)
+    return (found.group(1), int(found.group(2))) if found else (path.stem, 1)
+
+
 def _snapshots(where: Path) -> list[Path]:
+    """The copies kept, the oldest first (_snapshot_order)."""
     try:
-        return sorted((where / "snapshots").glob("*.json"))
+        return sorted((where / "snapshots").glob("*.json"), key=_snapshot_order)
     except OSError:
         return []
 
@@ -358,10 +377,14 @@ def _object_bytes(where: Path) -> int:
         return 0
 
 
-def rotate(where: Path, copies: int = COPIES_KEPT, limit: int = LIMIT) -> tuple[int, int]:
-    """At most `copies` copies and `limit` bytes of content: the oldest copies go first, the
-    newest never; then the content no copy refers to. Returns the copies and the bytes
-    kept."""
+def rotate(where: Path, copies: int = COPIES_KEPT, limit: int | None = None
+           ) -> tuple[int, int]:
+    """At most `copies` copies and `limit` bytes of content (LIMIT, read when it rotates) of
+    each part: the copies of memory dumps (Copy Memory Dumps), and the others (the error logs
+    and the crash logs, which the crash history reads), so that neither ever pushes out the
+    other. In each part the oldest copies go first, its newest never; then the content no copy
+    refers to. Returns the copies and the bytes kept."""
+    limit = LIMIT if limit is None else limit
     snaps = _snapshots(where)
     removed = 0
 
@@ -373,12 +396,14 @@ def rotate(where: Path, copies: int = COPIES_KEPT, limit: int = LIMIT) -> tuple[
                     out[item["sha256"]] = int(item.get("size") or 0)
         return out
 
-    while len(snaps) > max(1, copies):
-        snaps.pop(0).unlink(missing_ok=True)
-        removed += 1
-    while len(snaps) > 1 and sum(referenced(snaps).values()) > limit:
-        snaps.pop(0).unlink(missing_ok=True)
-        removed += 1
+    for part in ([p for p in snaps if _load(p).get("kind") == "dumps"],
+                 [p for p in snaps if _load(p).get("kind") != "dumps"]):
+        while len(part) > max(1, copies) or (len(part) > 1
+                                             and sum(referenced(part).values()) > limit):
+            oldest = part.pop(0)
+            oldest.unlink(missing_ok=True)
+            snaps.remove(oldest)
+            removed += 1
     wanted = referenced(snaps)
     objects = where / "objects"
     if objects.is_dir():
@@ -392,14 +417,14 @@ def rotate(where: Path, copies: int = COPIES_KEPT, limit: int = LIMIT) -> tuple[
 
 def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = None,
                found: dict[str, tuple[int, float]] | None = None,
-               progress: Callable[[str], None] | None = None) -> Copied:
+               progress: Callable[[str], None] | None = None, began=None) -> Copied:
     """Copy the diagnostic files the device shows (through the ordinary connection, never a
     session of its own): the content not kept yet, a new copy only when something changed.
     Memory dumps, health metrics, settings and big files are only listed. `found`: those
     files already known (Seen.files), not looked for again. `progress`: which file read of
     how many ("Copying diagnostic files · 3 of 12")."""
     now = now or datetime.now()
-    where = folder(device.unit_id)
+    where = _folder_of(device, storage)
     found = _visible_files(device, storage) if found is None else found
     last = _last(where, "files")
     before = last.get("files", {})
@@ -426,9 +451,13 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     for n, (path, mtime, old) in enumerate(to_read, 1):
         say_to(progress)(Step(head, n, len(to_read)))
         data = storage.read_at(path)  # a real path, as listed
+        if _forgotten_meanwhile(device, began):
+            return report
         sha, _stored = _keep_file(where, files, report, path, data, mtime)
         # Unchanged: as in the copy before (not merely the content of another file).
         report.add(not (isinstance(old, dict) and old.get("sha256") == sha))
+    if _forgotten_meanwhile(device, began):
+        return report
     if files != last.get("files") or listed != last.get("listed"):
         _save(where, "files", files, listed, now, device.software_version_str)
         report.saved = True
@@ -440,25 +469,36 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     return report
 
 
+def is_dump(entry: Entry, in_dump_folder: bool) -> bool:
+    """Whether a file is a memory dump: by its name (DUMP_IN_FOLDER in the folder of dumps and
+    the folders under it, DUMP_FILES beside the error logs); never a link."""
+    if entry.is_dir or entry.is_link:
+        return False
+    return bool((DUMP_IN_FOLDER if in_dump_folder else DUMP_FILES).fullmatch(entry.name))
+
+
 def dump_files(storage: Storage) -> list[tuple[str, Entry]]:
-    """The memory dumps the device shows, (real path, entry): the files of its folder of dumps
-    and those beside its error logs (DUMP_FILES)."""
-    debug = storage.resolve(DEBUG)
-    if debug is None:
+    """The memory dumps the device shows, (real path, entry): those of its folder of dumps and
+    those beside its error logs (is_dump); a link is not followed, also when it is the folder
+    Debug or one above it. A folder on the way that cannot be listed raises its DeviceError:
+    the dumps are not known then, never none."""
+    debug = storage.resolve(DEBUG, strict=True)
+    if debug is None or storage.through_link(debug):
         return []
     found, folders = [], []
     for e in storage.list_at(debug):
-        if e.is_dir and e.name.casefold() == posixpath.basename(DUMPS).casefold():
+        if e.is_dir and not e.is_link \
+                and e.name.casefold() == posixpath.basename(DUMPS).casefold():
             folders.append(posixpath.join(debug, e.name))
-        elif not e.is_dir and DUMP_FILES.fullmatch(e.name):
+        elif is_dump(e, in_dump_folder=False):
             found.append((posixpath.join(debug, e.name), e))
     while folders:
         current = folders.pop()
         for e in storage.list_at(current):
             path = posixpath.join(current, e.name)
-            if e.is_dir:
+            if e.is_dir and not e.is_link:
                 folders.append(path)
-            else:
+            elif is_dump(e, in_dump_folder=True):
                 found.append((path, e))
     return sorted(found, key=lambda t: t[0])
 
@@ -471,10 +511,10 @@ def dumps_on_device(storage: Storage) -> list[tuple[str, int]]:
 def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = None,
                progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the memory dumps (on request only), the newest first while they fit within the
-    limit; those that do not fit even alone are not copied (`not_copied`). `progress`: which
-    dump of how many ("Copying memory dumps · 1 of 3")."""
+    limit; those that do not fit in what is left of it are not copied (`not_copied`).
+    `progress`: which dump of how many ("Copying memory dumps · 1 of 3")."""
     now = now or datetime.now()
-    where = folder(device.unit_id)
+    where = _folder_of(device, storage)
     found = sorted(dump_files(storage), key=lambda t: t[1].mtime, reverse=True)
     report = Copied()
     files, room = {}, LIMIT
@@ -491,13 +531,13 @@ def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = No
         say_to(progress)(Step(head, n, len(chosen)))
         data = storage.read(path)
         report.add(_keep_file(where, files, report, path, data, entry.mtime)[1])
-    if files:
+    if files and files != _last(where, "dumps").get("files"):
         _save(where, "dumps", files, {}, now, device.software_version_str)
         report.saved = True
     report.copies, report.kept_bytes = rotate(where)
-    log.info("diagnostics: memory dumps: %d copied (%s), %d not (over the limit); %d copies "
-             "kept (%s)", len(files), applog.size(report.new_bytes), len(report.not_copied),
-             report.copies, applog.size(report.kept_bytes))
+    log.info("diagnostics: memory dumps: %d copied (%s), %d not (did not fit in the limit); "
+             "%d copies kept (%s)", len(files), applog.size(report.new_bytes),
+             len(report.not_copied), report.copies, applog.size(report.kept_bytes))
     return report
 
 
@@ -508,10 +548,18 @@ def _state(where: Path) -> dict:
     return _load(where / "state.json")
 
 
-def hidden_logs_known_absent(unit_id: int) -> bool:
+def hidden_logs_known_absent(unit_id: int, test_drive: bool = False) -> bool:
     """Whether a session asked for found no hidden crash log on this device: the window
     then no longer offers one."""
-    return _state(folder(unit_id)).get("crash_logs") == "none"
+    return _state(folder(unit_id, test_drive)).get("crash_logs") == "none"
+
+
+def hidden_logs_to_copy(said: bool | None, unit_id: int | None, test_drive: bool = False
+                        ) -> bool:
+    """Whether the device has crash logs that only Copy Crash Logs reads: as said at the
+    opening (`said`; for a device not connected, its device log's line), unless a copy made
+    since found none. One answer for the page of the device connected and of its records."""
+    return bool(said) and not (unit_id and hidden_logs_known_absent(unit_id, test_drive))
 
 
 def may_have_hidden_logs(storage: Storage, shown: bool | None = None) -> bool:
@@ -544,7 +592,7 @@ def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None
     from openexpress import ciq
 
     now = now or datetime.now()
-    where = folder(device.unit_id)
+    where = _folder_of(device, storage)
     opener = storage.exclusive_ptp()
     if opener is None:
         raise DiagnosticsError(ptp_unavailable_text(storage))
@@ -587,11 +635,12 @@ def copy_crash_logs(device: GarminDevice, storage: Storage, now: datetime | None
     return report
 
 
-def kept_files(unit_id: int, names: tuple[str, ...]) -> list[tuple[str, bytes]]:
+def kept_files(unit_id: int, names: tuple[str, ...],
+               test_drive: bool = False) -> list[tuple[str, bytes]]:
     """What the copies of a device on this computer keep of the files of these names (in any
     case), each content once, the oldest copy first: (the file's name, its content). A copy or
     a content that cannot be read is passed over."""
-    where = folder(unit_id)
+    where = folder(unit_id, test_drive)
     wanted = {name.casefold() for name in names}
     out, seen = [], set()
     for snapshot in _snapshots(where):
@@ -633,24 +682,30 @@ class Seen:
 PLACES = "diagnostic-places.json"
 
 
-def places_path(unit_id: int) -> Path:
-    return paths.device_dir(unit_id) / PLACES
+def places_path(unit_id: int, test_drive: bool = False) -> Path:
+    """Where the places of a device's diagnostic files are kept; a test drive's in its own
+    records, never among the device's."""
+    from openexpress.sync import records_dir
+
+    return records_dir(unit_id, test_drive) / PLACES
 
 
 def _look(device: GarminDevice, storage: Storage, with_files: bool) -> tuple[Seen, dict]:
     """Through the folders, when the places kept do not hold (seen_now): what is there now,
     and the note of where it is (the real paths of the files and folders found)."""
+    # A folder that cannot be listed raises (strict): what it holds is not known, never none.
     err, folders = {}, []
     for path in ERR_LOGS:
-        real = storage.resolve(path)
+        real = storage.resolve(path, strict=True)
         entry = storage.info(real) if real is not None else None
         if entry is not None and not entry.is_dir:
             err[real] = entry.size
     for path in (DEBUG, DUMPS, *EVENT_LOGS):
-        real = storage.resolve(path)
+        real = storage.resolve(path, strict=True)
         if real is not None:
             folders.append(real)
-    events = [real for path in EVENT_LOGS if (real := storage.resolve(path)) is not None]
+    events = [real for path in EVENT_LOGS
+              if (real := storage.resolve(path, strict=True)) is not None]
     dumps = dumps_on_device(storage)
     files = None
     if with_files:
@@ -703,6 +758,12 @@ def _at_the_places(note: dict, device: GarminDevice, storage: Storage,
         return None
     if any(at(path) is None or at(path).is_dir for path in (*err_logs, *dumps, *files)):
         return None
+    # Kept by an earlier rule of what a dump is (any file of the folder of dumps): looked for
+    # again, so that every reader counts the dumps by one rule (is_dump).
+    if not all(is_dump(replace(at(path), name=posixpath.basename(path)),
+                       posixpath.dirname(path).casefold().startswith(DUMPS.casefold()))
+               for path in dumps):
+        return None
     if _written_since(storage, folders, err_logs, dumps):
         return None
     return Seen({path: at(path).size for path in err_logs},
@@ -727,15 +788,16 @@ def _written_since(storage: Storage, folders: list[str], err_logs: list[str],
         if any(not e.is_dir and e.name.casefold() in names - logs for e in entries):
             return True
         kept = {p.casefold() for p in dumps}
-        if any(not e.is_dir and DUMP_FILES.fullmatch(e.name)
+        if any(is_dump(e, in_dump_folder=False)
                and posixpath.join(debug, e.name).casefold() not in kept for e in entries):
             return True
-        folder = next((e for e in entries if e.is_dir
+        folder = next((e for e in entries if e.is_dir and not e.is_link
                        and e.name.casefold() == posixpath.basename(DUMPS).casefold()), None)
         if folder is None:
             return False
         where = posixpath.join(debug, folder.name)
-        return any(not e.is_dir and posixpath.join(where, e.name).casefold() not in kept
+        return any(is_dump(e, in_dump_folder=True)
+                   and posixpath.join(where, e.name).casefold() not in kept
                    for e in storage.list_at(where))
     except DeviceNotResponding:
         raise
@@ -743,12 +805,25 @@ def _written_since(storage: Storage, folders: list[str], err_logs: list[str],
         return True
 
 
-def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
+def _forgotten_meanwhile(device: GarminDevice, began) -> bool:
+    """Whether Forget Device came after the reading at the opening began (`began`:
+    history.begin; None: not asked): nothing more is written of the device then."""
+    from openexpress import history
+
+    if began is None or not device.unit_id or not history.forgotten_since(device.unit_id,
+                                                                          began):
+        return False
+    log.info("diagnostics: the device was forgotten meanwhile, nothing kept of it")
+    return True
+
+
+def seen_now(device: GarminDevice, storage: Storage, with_files: bool, began=None) -> Seen:
     """The diagnostic files of the device now: at the places kept for it when they still
     hold (read alone, only the folders of the logs and the dumps listed), else looked for
     through its folders, and the places kept anew. `with_files`: also the files a copy
     takes."""
-    where = places_path(device.unit_id) if device.unit_id else None
+    where = (places_path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+             if device.unit_id else None)
     note = _load(where) if where is not None else {}
     seen = _at_the_places(note, device, storage, with_files) if note else None
     if seen is not None:
@@ -758,7 +833,7 @@ def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
         return seen
     held_before = bool(note)
     seen, note = _look(device, storage, with_files)
-    if where is not None:
+    if where is not None and not _forgotten_meanwhile(device, began):
         paths.make_dir(where.parent)
         paths.write_private(where, json.dumps(note, indent=1, sort_keys=True))
     log.info("diagnostics: looked through the folders (%s); %d files, %d folders kept",
@@ -779,6 +854,9 @@ class AtOpen:
     copied: Copied | None = None
     errors_known: bool = True  # every error log there was read
     dumps_known: bool = True  # the memory dumps were listed
+    # When the reading began (history.begin): the line of this connection written with it
+    # (history.note_connection) is not written for a device forgotten since.
+    began: object = field(default=None, repr=False, compare=False)
 
 
 # Once per connection: the unit ID and where the device is on USB (a new connection gives a
@@ -806,13 +884,16 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     """At the opening of a device, once per connection: its error logs read (always), and its
     diagnostic files copied when the copy is on. Never a session of our own; a failure is
     a line in the log, never a failed opening."""
+    from openexpress import history
+
     key = _connection(device, storage)
     if key is not None and key in _done:
         return _done[key]
+    began = history.begin(device.unit_id)  # nothing kept of a device forgotten meanwhile
     now = now or datetime.now()
     copying = copy_on()
     try:
-        seen = seen_now(device, storage, with_files=copying)
+        seen = seen_now(device, storage, with_files=copying, began=began)
     except DeviceNotResponding:
         raise
     except DeviceError as e:
@@ -824,17 +905,19 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     if seen is not None:
         dumps = seen.dumps
         hidden = (may_have_hidden_logs(storage, shown=seen.event_logs)
-                  and not hidden_logs_known_absent(device.unit_id))
+                  and not hidden_logs_known_absent(
+                      device.unit_id, bool(getattr(storage, "test_drive", False))))
     else:
         dumps, hidden = [], False
     found = AtOpen(entries, last_crash(entries, now), dumps, hidden,
-                   errors_known=not missed, dumps_known=seen is not None)
+                   errors_known=not missed, dumps_known=seen is not None, began=began)
     if found.crash is not None:
         log.info("diagnostics: the device logged %s", found.crash.words())
     if copying:
         try:
             found.copied = copy_files(device, storage, now,
-                                      found=seen.files if seen is not None else None)
+                                      found=seen.files if seen is not None else None,
+                                      began=began)
         except DeviceNotResponding:
             raise
         except (DeviceError, OSError) as e:
@@ -845,36 +928,44 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
 
 
 def _stamp_time(name: str) -> datetime | None:
+    """The time in the name of a copy, or of a removal's folder after its number."""
     try:
-        return datetime.strptime(name.split(" (")[0], STAMP)
+        return datetime.strptime(re.sub(r"^\d+ (?=\d{4}-)", "", name).split(" (")[0], STAMP)
     except ValueError:
         return None
 
 
-def copies_facts(unit_id: int) -> tuple[int, int, datetime | None]:
+def copies_facts(unit_id: int, test_drive: bool = False) -> tuple[int, int, datetime | None]:
     """The copies kept of a device's diagnostic files, the copies of the dumps removed from it
-    too (one a removal): how many, their bytes, when the last was made (None: no copy, or a
-    name that does not say)."""
-    where = folder(unit_id)
+    too (one a removal; a test drive's own: freeing.removed_folder): how many, their bytes, when
+    the last was made (None: no copy, or a name that does not say)."""
+    from openexpress import freeing
+
+    where = folder(unit_id, test_drive)
     snaps = _snapshots(where)
-    try:
-        removals = sorted(p for p in (where / REMOVED).iterdir() if p.is_dir())
-    except OSError:
-        removals = []
+    removals = freeing.removals(unit_id, test_drive)
     if not snaps and not removals:
         return 0, 0, None
-    size = _object_bytes(where) + sum(f.stat().st_size for r in removals for f in r.rglob("*")
-                                      if f.is_file())
+    size = _object_bytes(where) + sum(_file_size(f) for r in removals for f in r.rglob("*"))
     times = [t for t in (_stamp_time(snaps[-1].stem) if snaps else None,
                          _stamp_time(removals[-1].name) if removals else None) if t is not None]
     return len(snaps) + len(removals), size, max(times) if times else None
 
 
-def copies_text(unit_id: int) -> str:
+def _file_size(path: Path) -> int:
+    """The size of a file of the copies; 0 for a folder, or a file another process (a removal
+    keeping its limit, Forget Device) removed meanwhile."""
+    try:
+        return path.stat().st_size if path.is_file() else 0
+    except FileNotFoundError:
+        return 0
+
+
+def copies_text(unit_id: int, test_drive: bool = False) -> str:
     """How many copies are kept, how big and when the last was made, for the command line."""
     from openexpress.i18n import full_time, human_size
 
-    count, size, when = copies_facts(unit_id)
+    count, size, when = copies_facts(unit_id, test_drive)
     if not count:
         # TRANSLATORS: shown after "Copies on this computer:" when no copy of the device's
         # diagnostic files has been made

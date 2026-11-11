@@ -63,7 +63,12 @@ Checked by the developer over MTP:
   named as in the file, once the watch was unplugged; it was listed as copied by openExpress and
   removed. A course sent from Garmin Connect is listed as such, with the name, distance and
   ascent Garmin Connect shows.
-- Not tested on this watch yet: updating a Connect IQ app, installing a software update.
+- Device Status in the window: the page with five crashes of the same error and the storage by
+  kind of file; Free Up Space removed five older memory dumps (44.9 MB) after copying them, the
+  checksums of the copies matching, and the newest dump stayed; the page from the records once
+  the watch was unplugged, and the ordinary page again once it was plugged in.
+- Not tested on this watch yet: updating a Connect IQ app, installing a software update, the
+  button **Copy Crash Logs** of the Device Status page (over PTP).
 
 ### Edge 1050
 
@@ -82,6 +87,13 @@ Checked by the developer over MTP, on the same account:
     count of saved locations is the same as the Edge's;
   - the courses were listed as copied by openExpress and removed, on the command line and in the
     window.
+- Device Status in the window: the page without crashes; Free Up Space removed five older memory
+  dumps (682.8 MB): two after copying them (75.3 MB, the checksums of the copies matching) and
+  three without a copy, as too large to copy (607.5 MB); the newest dump stayed; the page from the
+  records once the Edge was unplugged, and the ordinary page again once it was plugged in.
+
+Removing the file of an update a device did not install (**Free Up Space** on the Device Status
+page) was checked only on a test USB drive laid out as a Garmin device, not on a real device.
 
 ## USB modes: MTP and mass storage
 
