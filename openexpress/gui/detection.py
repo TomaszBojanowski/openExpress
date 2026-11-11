@@ -83,7 +83,7 @@ from openexpress.gui.navigation import (
 )
 from openexpress.gui.navigation import plan as detection_plan
 from openexpress.gui.tasks import forget_on_refresh
-from openexpress.gui.window_tasks import read_space
+from openexpress.gui.window_tasks import error_text, read_space
 from openexpress.i18n import N_, _
 
 log = logging.getLogger(__name__)
@@ -788,7 +788,7 @@ class DeviceDetection:
         def failed(e):
             opened()
             # Unplugged meanwhile, or not readable: said, and the devices detected again.
-            self.error(_("Device Not Opened"), str(e) or type(e).__name__)
+            self.error(_("Device Not Opened"), error_text(e))
             self.connected.stop_choosing()
             self.refresh_device(cause=Cause.CHOICE_FAILED)
             return True

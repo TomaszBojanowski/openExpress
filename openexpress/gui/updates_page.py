@@ -31,6 +31,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     WRAP_BOX,
     Answer,
     confirm,
+    error_text,
     inform,
     still_in_window,
     wrapping_row,
@@ -155,7 +156,7 @@ def _install_task(win, s, chosen):
     def failed(e) -> bool:
         # Under a heading of its own, not the name of the task ("Installing Update…").
         # TRANSLATORS: heading of the error message when installing an update failed
-        win.error(_("Update Not Installed"), str(e) or type(e).__name__)
+        win.error(_("Update Not Installed"), error_text(e))
         return True
 
     return install, installed, failed

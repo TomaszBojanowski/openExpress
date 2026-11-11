@@ -66,6 +66,7 @@ from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
     confirm,
+    error_text,
     inform,
     log_unexpected,
     refresh_space,
@@ -890,7 +891,7 @@ class DevicePage:
 
         def failed(e):
             if self.session is sess:
-                sec.show_error(str(e) or e.__class__.__name__)
+                sec.show_error(error_text(e))
                 if on_error is not None:
                     on_error(e)
             return True

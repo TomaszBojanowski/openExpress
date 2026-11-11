@@ -178,6 +178,14 @@ def trash_button(tooltip: str, cb) -> Gtk.Button:
 TEXT_AFTER_MS = 500
 
 
+def error_text(e: Exception) -> str:
+    """What the window says of a failure: a message for the user (UserFacingError) as it is;
+    the words of an error nobody foresaw filtered as the log is (a path, an address, a unit
+    ID), as the command line tells them."""
+    text = str(e) or type(e).__name__
+    return text if isinstance(e, UserFacingError) else applog.redact(text)
+
+
 def show_working(button: Gtk.Button):
     """The button spins instead of showing its label or icon and cannot be clicked; returns
     the function that puts it back (clickable or not). The label or icon stays under the
@@ -699,7 +707,7 @@ class TaskRunner:
             try:
                 with stalled.telling(self, e):  # a stall: the banner, no error dialog
                     if not (on_error and on_error(e)):
-                        self.error(title, str(e) or e.__class__.__name__)
+                        self.error(title, error_text(e))
             finally:
                 self._run_pending_refresh()
             return False

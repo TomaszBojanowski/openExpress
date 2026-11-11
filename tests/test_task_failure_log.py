@@ -6,7 +6,7 @@ one line at INFO. All addresses are made up."""
 import types
 
 import pytest
-from fakes import replace_in_window
+from fakes import device_session, replace_in_window
 from fakes import window as stand_in
 
 ADDRESS = "mtp://Garmin_Edge_1050_0a1b2c3d4e5f/"
@@ -59,7 +59,62 @@ def test_a_failed_task_writes_its_traceback_to_the_log_filtered(monkeypatch, log
     text = log_file.read_text()
     assert "Traceback (most recent call last)" in text and "in _failing_work" in text
     assert ADDRESS not in text and EMAIL not in text and "Garmin_Edge" not in text
-    assert told == [f"could not read {ADDRESS} for {EMAIL}"]  # the user is told it in full
+    # Its own words filtered as the log is, as the command line tells them.
+    assert told == ["could not read mtp://<device>/ for <email>"]
+
+
+# A folder of the program named after the device's unit ID (made up), in a file error's words.
+UNIT = "1234567890"
+
+
+def _not_written(*args, **kwargs):
+    raise OSError(28, "No space left on device",
+                  f"/home/someone/.local/share/openexpress/devices/{UNIT}/diagnostics/a.zip")
+
+
+def _the_window(device_root, told):
+    """A window with the made-up device open, whose tasks run as the window runs them."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+    from openexpress.gui import app
+
+    storage = LocalStorage(device_root)
+    win = stand_in(busy=False, set_busy=lambda *a, **kw: None, _closed=False,
+                   session=device_session(device=parse(storage.read(
+                       "GARMIN/GarminDevice.xml")), storage=storage),
+                   error=lambda title, text: told.append(text), progress=lambda m: None,
+                   backup_row=None, _run_pending_refresh=lambda: None)
+    win.run_task = types.MethodType(app.MainWindow.run_task, win)
+    return win
+
+
+def test_a_backup_not_written_names_no_folder_of_the_unit_id(monkeypatch, device_root):
+    from openexpress import backup
+    from openexpress.gui import app
+
+    _at_once(monkeypatch)
+    monkeypatch.setattr(backup, "run_backup", _not_written)
+    told = []
+    app.MainWindow.backup(_the_window(device_root, told))
+    shown_unit_id = any(UNIT in text for text in told)
+    assert not shown_unit_id
+    assert told == ["[Errno 28] No space left on device: '<path>'"]
+
+
+def test_memory_dumps_not_copied_name_no_folder_of_the_unit_id(monkeypatch, device_root):
+    from openexpress import diagnostics
+    from openexpress.gui import status_page
+
+    _at_once(monkeypatch)
+    monkeypatch.setattr(diagnostics, "copy_dumps", _not_written)
+    monkeypatch.setattr(diagnostics, "copy_crash_logs", _not_written)
+    told = []
+    win = _the_window(device_root, told)
+    status_page.copy_dumps(win)
+    status_page.copy_crash_logs(win)
+    shown_unit_id = any(UNIT in text for text in told)
+    assert not shown_unit_id
+    assert told == ["[Errno 28] No space left on device: '<path>'"] * 2
 
 
 def test_work_in_the_background_that_fails_writes_its_traceback_at_info(monkeypatch,
