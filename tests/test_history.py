@@ -360,10 +360,9 @@ def test_an_unknown_kind_of_file_is_dropped_not_the_line(clock):
     assert line["categories"] == {"maps": 1}
 
 
-def test_lines_older_than_two_years_are_dropped(made_up, clock, monkeypatch):
+def test_lines_older_than_two_years_are_dropped(made_up, clock):
     st, dev = made_up
-    monkeypatch.setattr(history, "KEEP_AT_LEAST", 1)
-    # Two years and a day before the newest line before the new one (written a day ago).
+    # Two years and a day before the new line.
     old = (clock.current - timedelta(days=732)).astimezone().isoformat(timespec="seconds")
     recent = (clock.current - timedelta(days=1)).astimezone().isoformat(timespec="seconds")
     write_lines(written(time=old, conn="made-up-old"), written(time=recent, conn="made-up-b"))
@@ -599,24 +598,7 @@ def test_a_drive_mounted_at_a_path_with_a_space_is_a_new_connection_at_each_moun
     assert len(history.read(UNIT).lines) == 2
 
 
-# --- the newest lines, linked folders, dumps not listed after a removal -----------------------
-
-
-def test_the_newest_lines_stay_whatever_their_times(device_root, clock, monkeypatch):
-    """One of the newest KEEP_AT_LEAST lines written while this computer's clock was years
-    behind is still a recent connection: never dropped as old."""
-    monkeypatch.setattr(history, "KEEP_AT_LEAST", 3)
-
-    def at(days):
-        return (clock.current - timedelta(days=days)).astimezone().isoformat(timespec="seconds")
-
-    write_lines(written(time=at(3), conn="made-up-a"), written(time=at(2), conn="made-up-b"),
-                written(time=at(3 * 365), conn="made-up-behind"),
-                written(time=at(1), conn="made-up-d"))
-    st = Device(device_root)
-    assert history.note_connection(device_of(st), st)
-    conns = [line["conn"] for line in history.read(UNIT).lines]
-    assert "made-up-behind" in conns and len(conns) == 5
+# --- linked folders, dumps not listed after a removal ---------------------------------------------
 
 
 def test_a_folder_behind_a_link_inside_a_counted_folder_counts_in_no_kind(device_root, tmp_path,
@@ -675,9 +657,7 @@ def test_crash_logs_to_copy_told_by_anything_but_true_or_false_skip_the_line(clo
 
 def test_the_log_keeps_at_most_max_lines_also_when_more_are_recent(device_root, clock,
                                                                     monkeypatch):
-    """Beyond the newest KEEP_AT_LEAST, lines younger than two years stay, but never more than
-    MAX_LINES: the oldest go."""
-    monkeypatch.setattr(history, "KEEP_AT_LEAST", 2)
+    """Lines younger than two years stay, but never more than MAX_LINES: the oldest go."""
     monkeypatch.setattr(history, "MAX_LINES", 3)
     write_lines(*(written(conn=f"made-up-{n}",
                           time=(clock.current - timedelta(hours=10 - n)).astimezone()

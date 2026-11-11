@@ -278,16 +278,7 @@ def clock_now():
 # --- the device log ---------------------------------------------------------------------------
 
 
-def test_a_clock_set_wrong_once_drops_no_line(tmp_path, clock):
-    root = make_root(tmp_path, err=[])
-    write_lines(*[line_at(clock.current - timedelta(days=30 * n), n) for n in reversed(range(5))])
-    st, dev = opened(root)
-    assert history.note_connection(dev, st, now=clock.current + timedelta(days=3 * 365))
-    assert len(history.read(UNIT).lines) == 6
-
-
-def test_old_lines_still_go_after_two_years(tmp_path, clock, monkeypatch):
-    monkeypatch.setattr(history, "KEEP_AT_LEAST", 2)
+def test_old_lines_still_go_after_two_years(tmp_path, clock):
     root = make_root(tmp_path, err=[])
     write_lines(line_at(clock.current - timedelta(days=900), 0),
                 line_at(clock.current - timedelta(days=800), 1),
@@ -296,21 +287,6 @@ def test_old_lines_still_go_after_two_years(tmp_path, clock, monkeypatch):
     assert history.note_connection(dev, st)
     kept = [x["conn"] for x in history.read(UNIT).lines]
     assert len(kept) == 2 and kept[0] == "made-up-2"  # 800 and 900 days old: gone
-
-
-def test_a_line_with_a_time_the_readers_cannot_use_is_skipped(tmp_path, clock):
-    from openexpress import cli
-
-    bad = {"v": 1, "time": "0001-01-01T00:00:00", "conn": "made-up", "via": "mtp",
-           "software": "23.39", "categories": {}}
-    write_lines(bad)
-    assert history.read(UNIT).lines == [] and history.read(UNIT).skipped == 1
-    root = make_root(tmp_path, err=[])
-    st, dev = opened(root)
-    assert history.note_connection(dev, st)
-    assert len(history.read(UNIT).lines) == 1
-    cli.history_lines(UNIT)
-    assert status.read_kept(UNIT) is not None
 
 
 def test_a_device_plugged_in_again_is_a_new_connection_without_its_place_on_usb(tmp_path,
@@ -415,21 +391,6 @@ def test_the_free_space_line_matches_the_page(tmp_path, clock, capsys, monkeypat
 
 
 # --- the device log written again, and what it tells after a removal --------------------------
-
-
-def test_a_clock_ahead_once_drops_nothing_at_the_next_connection_either(clock):
-    from datetime import datetime
-
-    def at(when):
-        return when.astimezone().isoformat(timespec="seconds")
-
-    base = datetime(2025, 1, 1, 12, 0)
-    lines = [{"time": at(base + timedelta(days=n)), "conn": f"c{n}"} for n in range(150)]
-    wrong = {"time": at(datetime(2099, 1, 1, 12, 0)), "conn": "wrong"}
-    after_wrong = history._kept([*lines, wrong])
-    right = base + timedelta(days=151)
-    after_next = history._kept([*after_wrong, {"time": at(right), "conn": "next"}])
-    assert len(after_next) == 152
 
 
 def test_a_line_it_cannot_read_and_fields_it_does_not_know_stay_when_it_writes(tmp_path, clock,
@@ -614,16 +575,25 @@ def test_copies_of_the_error_logs_never_push_out_the_newest_copy_of_the_dumps(tm
     assert kinds.count("dumps") == 1 and kinds.count("files") == diagnostics.COPIES_KEPT
 
 
-def test_a_clock_wrong_at_two_connections_drops_no_real_line(clock):
-    def at(when):
-        return when.astimezone().isoformat(timespec="seconds")
-
-    base = clock.current - timedelta(days=300)
-    lines = [{"time": at(base + timedelta(days=n)), "conn": f"c{n}"} for n in range(150)]
-    wrong = clock.current + timedelta(days=3 * 365)
-    first = history._kept([*lines, {"time": at(wrong), "conn": "w1"}])
-    second = history._kept([*first, {"time": at(wrong + timedelta(hours=1)), "conn": "w2"}])
-    assert len(second) == 152
+def test_a_last_line_cut_in_a_character_loses_nothing_else(tmp_path, clock):
+    """A write cut short in the middle of a character of two bytes ("ē" of "fēnix"): the
+    reader skips that line alone, the next connection is written after it, and no other line
+    is lost."""
+    root = make_root(tmp_path, err=[])
+    st, dev = opened(root)
+    assert history.note_connection(dev, st)
+    where = history.path(UNIT)
+    cut = '{"v": 1, "conn": "made-up", "software": "f\u0113'.encode()[:-1]
+    assert cut.endswith(b"f\xc4")  # the first of the two bytes of "ē" alone
+    where.write_bytes(where.read_bytes() + cut)  # no line end: the write stopped there
+    kept = history.read(UNIT)
+    assert (len(kept.lines), kept.skipped) == (1, 1)
+    history._noted.clear()
+    st2, dev2 = opened(root, address=9)
+    assert history.note_connection(dev2, st2)
+    kept = history.read(UNIT)
+    assert (len(kept.lines), kept.skipped) == (2, 1)
+    assert where.read_bytes().count(b"\n") == 3  # the cut line ended before the new one
 
 
 def test_a_line_that_is_not_utf8_stays_as_it_was_when_the_log_is_written_again(tmp_path, clock):
@@ -645,15 +615,6 @@ def test_the_same_error_as_the_one_before_is_the_crash_just_before(clock):
     found = [crashes.Crash(clock.current - timedelta(days=d), **kind)
              for d, kind in ((1, x), (2, y), (3, x), (4, x))]
     assert [e.same_before for e in status.events(found, [], None)] == [0, 0, 1, 0]
-
-
-def test_a_line_with_a_size_too_large_is_skipped(clock):
-    from openexpress import cli
-
-    huge = 10 ** 400
-    write_lines(line_at(clock.current, capacity=huge, free=huge // 2))
-    assert history.read(UNIT).lines == [] and history.read(UNIT).skipped == 1
-    cli.history_lines(UNIT)
 
 
 def test_no_diagnostic_data_means_the_same_connected_and_from_the_records(tmp_path, clock):

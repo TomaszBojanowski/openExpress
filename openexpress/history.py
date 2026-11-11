@@ -8,9 +8,8 @@ or a serial number. It is written at most once a connection, whoever opened the 
 window, the command line, the background sync: note_connection), and kept whatever the copy of
 the diagnostic files says; Forget Device deletes it with the rest of the device's folder. Read
 back line by line, a damaged or foreign line skipped (and kept as it is when the log is written
-again); lines older than two years (counted from the middle of the times of the newest
-KEEP_AT_LEAST, so that a clock set wrong at fewer than half of them drops nothing), but never the
-newest KEEP_AT_LEAST, and the oldest beyond MAX_LINES are dropped.
+again); lines more than two years older than the newest and the oldest beyond MAX_LINES are
+dropped.
 """
 
 from __future__ import annotations
@@ -51,12 +50,6 @@ CATEGORIES = ("maps", "activities", "music", "apps", "courses", "updates", "logs
 VIA = ("mtp", "drive")
 # What Garmin Connect queued for the device waits there until the device takes it in.
 QUEUE = "garmin/newfiles"
-# A line is kept while it is younger than KEEP, measured from the middle of the times of the newest
-# KEEP_AT_LEAST lines (a clock set wrong at fewer than half of them never drops the rest), and the
-# newest KEEP_AT_LEAST always.
-KEEP_AT_LEAST = 100
-# The largest size or count a line may hold: more is no device's (and would not fit a float).
-MOST = 1 << 53
 
 
 def path(unit_id: int, test_drive: bool = False) -> Path:
@@ -469,16 +462,10 @@ def _append(where: Path, line: dict) -> bool:
 
 
 def _kept(lines: list[dict]) -> list[dict]:
-    """The lines kept after `lines[-1]` was added: the newest KEEP_AT_LEAST whatever their
-    times, and those younger than KEEP measured from the middle of the times of those newest
-    lines (a clock set wrong, ahead or behind, at fewer than half of them drops nothing), at
-    most MAX_LINES."""
-    last = len(lines) - KEEP_AT_LEAST
-    if last <= 0:
-        return lines[-MAX_LINES:]
-    recent = sorted(_when(x) for x in lines[last:])
-    cut = recent[len(recent) // 2] - KEEP
-    return [x for n, x in enumerate(lines) if n >= last or _when(x) >= cut][-MAX_LINES:]
+    """The lines kept after `lines[-1]` was added: those less than KEEP older than it, at most
+    MAX_LINES."""
+    cut = _when(lines[-1]) - KEEP
+    return [x for x in lines if _when(x) >= cut][-MAX_LINES:]
 
 
 def _raw_lines(data: bytes) -> list[tuple[bytes, dict | None]]:
@@ -720,7 +707,7 @@ def _parse(data: bytes) -> Log:
 
 
 def _count(value) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MOST
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def _text(value, empty_ok: bool = True) -> bool:
@@ -740,8 +727,8 @@ def valid(raw: str) -> dict | None:
     try:
         when, conn, via = item["time"], item["conn"], item["via"]
         software, categories = item["software"], item["categories"]
-        _usable_time(when)
-    except (KeyError, TypeError, ValueError, OverflowError, OSError):
+        datetime.fromisoformat(when)
+    except (KeyError, TypeError, ValueError):
         return None
     if not (isinstance(conn, str) and via in VIA and isinstance(software, str)
             and isinstance(categories, dict)
@@ -781,8 +768,8 @@ def valid(raw: str) -> dict | None:
         line["hidden"] = item["hidden"]
     if "counted" in item:
         try:
-            _usable_time(item["counted"])
-        except (TypeError, ValueError, OverflowError, OSError):
+            datetime.fromisoformat(item["counted"])
+        except (TypeError, ValueError):
             return None
         line["counted"] = item["counted"]
     return line
@@ -798,14 +785,6 @@ def _crash_kept(crash: dict) -> dict:
     field "log" (the place of its error log), which a line may hold, is left out."""
     return {**{k: crash.get(k) for k in ("kind", "at", "error", "pc", "screen")},
             **({"software": crash["software"]} if crash.get("software") is not None else {})}
-
-
-def _usable_time(text) -> None:
-    """Raises unless `text` is a time the readers can use (in this computer's zone, back and
-    forth): a time at the ends of the calendar ("0001-01-01T00:00:00") is not."""
-    when = datetime.fromisoformat(text)
-    (when if when.tzinfo is not None else when.astimezone()).astimezone().replace(
-        tzinfo=None).astimezone()
 
 
 def _when(line: dict) -> datetime:
