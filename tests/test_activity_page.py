@@ -275,6 +275,20 @@ def test_the_tiles_share_the_whole_line_of_a_wide_window(data, sport, count):
         win.toplevel.destroy()
 
 
+def test_a_tile_looks_under_the_pointer_as_it_does_elsewhere():
+    """A tile does nothing when clicked: nothing under the pointer says it would (the class
+    oe-plain of the flow boxes that only lay out), and it takes no focus nor selection."""
+    from gi.repository import Gtk
+
+    win, _the_list = a_window(hike())
+    page = open_page(win, read_of(sport=HIKING))
+    flow = next(w for w in descendants(page) if isinstance(w, Gtk.FlowBox))
+    tiles = [w for w in descendants(flow) if isinstance(w, Gtk.FlowBoxChild)]
+    assert flow.has_css_class("oe-plain")
+    assert flow.get_selection_mode() == Gtk.SelectionMode.NONE
+    assert tiles and not any(t.get_focusable() for t in tiles)
+
+
 # --- the chart -------------------------------------------------------------------------------
 
 WALKING = 11

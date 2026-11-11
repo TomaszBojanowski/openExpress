@@ -251,6 +251,7 @@ class ActivityView:
         flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
                            min_children_per_line=2, max_children_per_line=max(2, len(tiles)),
                            column_spacing=12, row_spacing=12)
+        flow.add_css_class("oe-plain")  # a tile does nothing when clicked: no look of a button
         group = sport_group(data.sport)
         for kind, value in tiles:
             flow.append(Gtk.FlowBoxChild(child=_tile(kind, value, group), focusable=False))
