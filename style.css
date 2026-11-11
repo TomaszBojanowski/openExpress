@@ -151,11 +151,6 @@ code, pre {
 
 .new a:hover { text-decoration: underline; }
 
-/* On a phone the label keeps to one line: what the page shows only on wider screens. */
-@media (max-width: 519px) {
-  .new .more { display: none; }
-}
-
 /* That openExpress is not Garmin's: said at once, under what it does. */
 .unofficial {
   display: inline-block;
