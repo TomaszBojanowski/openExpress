@@ -115,6 +115,7 @@ class Facts:
     dumps_removable: bool = True  # its older dumps may be removed (freeing.dumps_removable)
     dumps_at_last: tuple[int, int] | None = None  # not connected: (count, bytes) at the last
     # connection; None: not known
+    device_busy: bool = False  # read while another task ran: what needs the device left out
 
     def older_dumps(self) -> list[tuple[str, int, float]] | None:
         """The memory dumps but the newest (which always stays); None: not known
@@ -281,13 +282,14 @@ def space_now(session) -> tuple[int | None, int | None] | None:
     return free, capacity
 
 
-def read(session) -> Facts:
+def read(session, ask_device: bool = True) -> Facts:
     """The facts of the open device, once the window's reading of its error logs is done (the
     window reads the page only then: its results are in the session before it says it is
     done). In the background: what can be freed (freeing.plan: the memory dumps listed again
     for their times, the update server asked for the updates the device did not install),
     nothing else asked of the device. After a removal, the kinds of file and the space counted
-    then (session.recount)."""
+    then (session.recount). `ask_device` False while another task runs: nothing
+    asked, what can be freed left out (device_busy)."""
     from openexpress import freeing, known_devices
 
     device, storage = session.device, session.storage
@@ -298,7 +300,7 @@ def read(session) -> Facts:
     known = known_devices.load().get(unit) if unit and not test_drive else None
     t = told(session)
     plan = (freeing.plan(storage, device, getattr(session, "client", None))
-            if storage is not None else None)
+            if storage is not None and ask_device else None)
     return Facts(
         free=t.free, capacity=t.capacity,
         categories=t.categories, counted_at=t.counted_at,
@@ -309,7 +311,7 @@ def read(session) -> Facts:
         not_installed=[*plan.updates, *plan.waiting] if plan is not None else [],
         has_diagnostics=t.has_diagnostics, recounted=t.recounted,
         updates_why=plan.why if plan is not None else None,
-        dumps_removable=freeing.dumps_removable(device))
+        dumps_removable=freeing.dumps_removable(device), device_busy=not ask_device)
 
 
 def read_kept(unit_id: int) -> Facts | None:

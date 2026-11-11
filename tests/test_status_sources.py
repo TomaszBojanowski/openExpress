@@ -270,7 +270,7 @@ def test_the_log_line_of_the_page_says_the_error_logs_were_not_read(caplog):
     facts = types.SimpleNamespace(
         crashes=[crashes.Crash(clock_now())], errors_known=False, free=5, capacity=10,
         has_diagnostics=True, older_dumps=list, not_installed=[], updates_why=None,
-        connected=True)
+        connected=True, device_busy=False)
     with caplog.at_level("INFO"):
         status_page._log_shown(facts, clock_now())
     assert "(error logs not read)" in caplog.text

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 12:10+0100\n"
+"POT-Creation-Date: 2026-11-11 13:51+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7195,6 +7195,13 @@ msgstr ""
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Free"
+msgstr ""
+
+#. TRANSLATORS: banner on top of the page Device Status while another task (such as a
+#. sync) runs: freeing space and copying crash logs and memory dumps wait until it ends
+#: openexpress/gui/status_page.py
+msgid ""
+"Another task is running – free up space or copy diagnostic files when it ends"
 msgstr ""
 
 #. TRANSLATORS: group of the page Device Status

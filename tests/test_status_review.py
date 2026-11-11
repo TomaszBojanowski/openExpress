@@ -738,3 +738,45 @@ def test_the_page_chosen_while_the_error_logs_are_read(review, shape, monkeypatc
              and sec.stack.get_visible_child_name() in ("content", "info"), "the page")
         check(r, said, "after-the-reading", r.win.status_facts)
         agree(r, s)
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("width", [NARROWEST, WIDE], ids=["360", "wide"])
+@pytest.mark.parametrize("shape", list(SHAPES))
+def test_the_page_chosen_while_another_task_runs(review, shape, width, language):
+    """Chosen while another task (a sync) runs: the page at once from what needs
+    nothing of the device, under its banner, with no button that needs the device; once the task
+    ends, the page read in full."""
+    import threading
+
+    from gi.repository import Gtk
+
+    from openexpress.i18n import _, pgettext
+
+    gate = threading.Event()
+    with gtk_complaints(("Adwaita", "Gtk", "GLib", "GLib-GObject")) as said:
+        r = review(language, width)
+        r.shape = shape
+        s = plug(r, shape)
+        sec = r.win.sections["status"]
+        r.win.run_task("Syncing…", lambda: gate.wait(10), lambda _result: None)
+        wait(lambda: r.win.busy, "the task")
+        r.win.select_section("status")
+        wait(lambda: sec.loaded and sec.stack.get_visible_child_name() in ("content", "info"),
+             "the page while the task runs")
+        facts = r.win.status_facts
+        assert facts.device_busy and r.win.busy
+        if facts.has_diagnostics:
+            assert sec.banner.get_revealed(), "no banner while the task runs"
+        allowed = {pgettext("open the folder of the copies", "Open"), _("Show All"),
+                   _("Report…")}
+        labels = {b.get_label() for b in descendants(shown_page(r))
+                  if isinstance(b, Gtk.Button) and b.get_label() and b.get_mapped()}
+        assert labels <= allowed, f"a button that needs the device: {labels - allowed}"
+        check(r, said, "while-another-task-runs", facts)
+        gate.set()
+        wait(lambda: not r.win.busy and r.win.status_facts is not facts and sec.loaded
+             and sec.stack.get_visible_child_name() in ("content", "info"), "the page after it")
+        assert not r.win.status_facts.device_busy and not sec.banner.get_revealed()
+        check(r, said, "after-the-task", r.win.status_facts)
+        agree(r, s)

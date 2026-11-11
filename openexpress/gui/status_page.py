@@ -32,6 +32,7 @@ from openexpress.gui import words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
     read_diagnostics,
+    show_loaded,
     status_changed,
 )
 from openexpress.gui.preferences import diagnostics_switch  # noqa: E402
@@ -184,14 +185,44 @@ class StatusPage:
             self.sections["status"].show("loading")
             return
         s.page_waits = False
+        if self.busy:
+            # Another task runs (a sync: TrueUp waits for minutes): the page at once from what
+            # needs nothing of the device, read in full once the task ends.
+            show_loaded(self, "status", self.show_status, status.read(s, ask_device=False))
+            _read_when_free(self, s)
+            return
         # TRANSLATORS: while the page Device Status reads what it shows
         self._load("status", _("Reading the Device…"), lambda: status.read(s),
                    self.show_status, device=False)
 
     def show_status(self, facts: status.Facts) -> str | None:
         """The page built from `facts`; "info" for a device without diagnostic data (its
-        storage under a status page), else its groups."""
-        return _build(self, self.sections["status"], facts, self)
+        storage under a status page), else its groups, under a banner while another task
+        runs."""
+        sec = self.sections["status"]
+        # TRANSLATORS: banner on top of the page Device Status while another task (such as a
+        # sync) runs: freeing space and copying crash logs and memory dumps wait until it ends
+        sec.banner.set_title(_("Another task is running\u00a0– free up space or copy diagnostic "
+                               "files when it ends"))
+        sec.banner.set_revealed(facts.device_busy)
+        return _build(self, sec, facts, self)
+
+
+def _read_when_free(win, s) -> None:
+    """The page read in full once the window's task ends (status_changed: at once while it is
+    shown, else when it is chosen); nothing for a device no longer open."""
+    def check():
+        if win.session is s and win.busy:
+            return True
+        win._retry_sources.pop("status", None)
+        if win.session is s:
+            status_changed(win)
+        return False
+
+    old = win._retry_sources.pop("status", None)
+    if old is not None:
+        GLib.source_remove(old)
+    win._retry_sources["status"] = GLib.timeout_add(700, check)
 
 
 def _build(win, sec, facts: status.Facts, view, unit: int | None = None) -> str | None:
@@ -216,7 +247,7 @@ def _build(win, sec, facts: status.Facts, view, unit: int | None = None) -> str 
                                     _("Crashes that restarted the device, and its software "
                                       "updates"))
     render_history(win, view)
-    if facts.connected:
+    if facts.connected and not facts.device_busy:
         _free_up_space(win, sec, facts)
     _diagnostic_files(win, sec, facts, now, unit)
     if facts.connected:
@@ -236,11 +267,13 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
              f"{len(older)} older dumps ({applog.size(sum(s for _p, s, _t in older))})")
     files = [u for u in facts.not_installed if not freeing.waits_to_install(u)]
     waiting = len(facts.not_installed) - len(files)
-    checked = (f"not checked ({facts.updates_why})" if facts.updates_why is not None
+    checked = ("not checked (another task is running)" if facts.device_busy else
+               f"not checked ({facts.updates_why})" if facts.updates_why is not None
                else "checked")
     log.info("device status%s: %s%s; crashes in the last 30 days: %d; %s free of %s; to free: "
              "%s, %d update files%s; update files %s",
-             "" if facts.connected else " (not connected, from the records)", look, why,
+             " (not connected, from the records)" if not facts.connected else
+             " (another task is running)" if facts.device_busy else "", look, why,
              len(status.recent(facts.crashes, now)), applog.size(facts.free),
              applog.size(facts.capacity), dumps, len(files),
              f", {waiting} waiting to be installed" if waiting else "", checked)
@@ -915,6 +948,8 @@ def _diagnostic_files(win, sec, facts: status.Facts, now: datetime,
     if not facts.connected:
         g.add(Adw.ActionRow(title=_("Memory Dumps"), subtitle=_dumps_at_last(facts)))
         return
+    if facts.device_busy:
+        return  # the copies of its logs wait until the task ends (the banner)
     if facts.hidden_logs:
         row = Adw.ActionRow(title=_("Crash Logs"), subtitle=_(
             "Hidden from the file manager: while they are copied, the device disappears from it "

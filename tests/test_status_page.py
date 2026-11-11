@@ -1639,6 +1639,53 @@ def test_a_page_that_waited_is_read_when_chosen_not_while_another_is_shown(clock
     assert loads == [] and win.sections["status"].loaded is False
 
 
+@pytest.mark.needs_display
+def test_the_page_chosen_during_another_task_shows_what_needs_no_device(clock, monkeypatch):
+    """Another task (a sync) runs: the page shows at once what needs nothing of the
+    device, under a banner that says what waits, and asks the device nothing; once the task ends, the
+    page is read in full, without the banner."""
+    import threading
+    import time
+
+    from fakes import page_window
+    from gi.repository import GLib
+
+    from openexpress import diagnostics, freeing
+    from openexpress.gui.app import MainWindow
+
+    planned = []
+    monkeypatch.setattr(freeing, "plan", lambda storage, device, client: planned.append(1) or
+                        freeing.Plan(dumps=None, dumps_plan=None, updates=[], waiting=[],
+                                     why=None))
+    win, section = page_window("status")
+    reading = threading.Event()
+    reading.set()  # the error logs were read at the opening, before the task began
+    win.session = device_session(
+        device=types.SimpleNamespace(unit_id=None), storage=object(), space=(9 * MB, 10 * MB),
+        diagnostics=diagnostics.AtOpen(entries=[], dumps=[], hidden_logs=False, error_logs=1),
+        diagnostics_reading=reading)
+    win.show_status = types.MethodType(MainWindow.show_status, win)
+    win.load_section = lambda key, force=False: MainWindow.load_status(win)
+    win.busy = True  # the sync's task
+    MainWindow.load_status(win)
+    groups = [g.get_title() for g in section.groups]
+    assert section.stack.get_visible_child_name() == "content" and section.loaded
+    assert (win.run_task.calls, planned) == ([], [])
+    assert "Free Up Space" not in groups and "Storage" in groups
+    assert section.banner.get_revealed()
+    assert section.banner.get_title() == ("Another task is running\u00a0– free up space or "
+                                          "copy diagnostic files when it ends")
+
+    win.busy = False  # the task ended
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and not planned:
+        GLib.main_context_default().iteration(False)
+        time.sleep(0.01)
+    assert planned == [1] and len(win.run_task.calls) == 1
+    assert "Free Up Space" in [g.get_title() for g in section.groups]
+    assert not section.banner.get_revealed()
+
+
 # --- a removal the window cannot count again, the count after a write, the question --------
 
 

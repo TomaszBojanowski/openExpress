@@ -236,6 +236,30 @@ def status_row(win, group=None) -> None:
     win.status_row = row
 
 
+def show_loaded(win, key: str, show, result) -> None:
+    """The section `key` built anew by `show(result)` (_load), which may name what it shows
+    instead of its content ("info"); a failure of it is said on the page."""
+    sec = win.sections[key]
+    sec.loaded = True
+    sec.clear()
+    # Without the buttons of the page that was just cleared.
+    win._action_buttons = still_in_window(win._action_buttons)
+    try:
+        shown = show(result)
+    except Exception:  # noqa: BLE001 - said on the page, written to the log
+        # Not "loading" for good: the page says so, and is read again when it is chosen again
+        # (or with Try again).
+        log_unexpected(f"showing the page {key}", sys.exc_info())
+        traceback.print_exc()  # to stderr too
+        sec.loaded = False
+        sec.clear()
+        win._action_buttons = still_in_window(win._action_buttons)
+        sec.show_error(_(PAGE_NOT_SHOWN))
+        return
+    sec.loaded = True
+    sec.show(shown or "content")
+
+
 def status_changed(win) -> None:
     """The row "Device Status" and, when it was shown or waits for the reading of the error
     logs, the page Device Status read again with what changed (the reading done, a copy made,
@@ -885,24 +909,7 @@ class DevicePage:
         def done(result):
             if self.session is not sess:
                 return  # the watch was disconnected or replaced meanwhile
-            sec.loaded = True
-            sec.clear()
-            # Without the buttons of the page that was just cleared.
-            self._action_buttons = still_in_window(self._action_buttons)
-            try:
-                shown = show(result)
-            except Exception:  # noqa: BLE001 - said on the page, written to the log
-                # Not "loading" for good: the page says so, and is read again when it is
-                # chosen again (or with Try again).
-                log_unexpected(f"showing the page {key}", sys.exc_info())
-                traceback.print_exc()  # to stderr too
-                sec.loaded = False
-                sec.clear()
-                self._action_buttons = still_in_window(self._action_buttons)
-                sec.show_error(_(PAGE_NOT_SHOWN))
-                return
-            sec.loaded = True
-            sec.show(shown or "content")
+            show_loaded(self, key, show, result)
 
         def failed(e):
             if self.session is sess:
