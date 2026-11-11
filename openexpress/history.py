@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import posixpath
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -395,8 +394,6 @@ def _declared(device: GarminDevice) -> set[str]:
 
 # Connections noted by this process: (the log, key).
 _noted: set[tuple[str, str]] = set()
-# Devices forgotten by this process (Forget Device): when (time.monotonic).
-_forgotten: dict[int, float] = {}
 LOCK = "records.lock"
 
 
@@ -414,32 +411,10 @@ def records_locked():
 
 
 def forgotten(unit_id: int) -> None:
-    """Forget Device deleted what this computer kept of the device (under records_locked): a
-    write begun before it (the reading of a device just unplugged, a count after a removal)
-    does not make its records again, and its next connection is noted anew."""
-    _forgotten[unit_id] = time.monotonic()
+    """Forget Device deleted what this computer kept of the device (under records_locked): its
+    next connection is noted anew, also in this window."""
     folder = str(paths.device_dir(unit_id))
     _noted.difference_update({n for n in _noted if n[0].startswith(folder)})
-
-
-@dataclass(frozen=True)
-class Began:
-    """When a write of a device's records began, and whether its folder was there then."""
-
-    at: float
-    folder: bool
-
-
-def begin(unit_id: int | None) -> Began:
-    """A write of the device's records begins: what forgotten_since compares with."""
-    return Began(time.monotonic(), bool(unit_id) and paths.device_dir(unit_id).is_dir())
-
-
-def forgotten_since(unit_id: int, began: Began) -> bool:
-    """Whether Forget Device came after the write began: in this process (forgotten), or in
-    another one (the device's folder was there then and is gone now)."""
-    return (_forgotten.get(unit_id, float("-inf")) >= began.at
-            or (began.folder and not paths.device_dir(unit_id).is_dir()))
 
 
 def note_connection(device: GarminDevice, storage: Storage | None, found=None,
@@ -452,8 +427,6 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
     when a line was written."""
     if storage is None or not getattr(device, "unit_id", None):
         return False
-    # With the reading at the opening: since it began (Forget Device meanwhile writes nothing).
-    began = getattr(found, "began", None) or begin(device.unit_id)
     via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
@@ -465,7 +438,7 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
             return False
         now = now or datetime.now()
         line = _line(device, storage, found, now, key, via)
-        written = _append(where, line, device.unit_id, began)
+        written = _append(where, line)
     except DeviceNotResponding:
         raise
     except Exception as e:  # noqa: BLE001 - the log is a side line: never a failed opening
@@ -483,12 +456,9 @@ def _last_key(where: Path) -> str | None:
     return kept.lines[-1]["conn"] if kept.lines else None
 
 
-def _append(where: Path, line: dict, unit_id: int, began: Began) -> bool:
+def _append(where: Path, line: dict) -> bool:
     text = json.dumps(line, ensure_ascii=False, sort_keys=True) + "\n"
     with records_locked():
-        if forgotten_since(unit_id, began):
-            log.info("history: the device was forgotten meanwhile, no line written")
-            return False
         try:
             data = where.read_bytes()
         except FileNotFoundError:
@@ -601,7 +571,6 @@ def note_counted(device: GarminDevice, storage: Storage,
     that tells neither the free space nor the dumps then writes nothing and raises NotCounted."""
     from openexpress import diagnostics
 
-    began = begin(getattr(device, "unit_id", None))
     now = now or datetime.now()
     kinds, capacity, free = storage_by_kind(device, storage)
     try:
@@ -621,10 +590,6 @@ def note_counted(device: GarminDevice, storage: Storage,
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
     later = []
     with records_locked():
-        if forgotten_since(device.unit_id, began):
-            log.info("history: the device was forgotten meanwhile, its line not put right")
-            return kinds, capacity, free, dumps
-
         def fix(line: dict) -> None:
             if counted_after(line, now):
                 later.append(line)
@@ -649,8 +614,8 @@ def note_counted(device: GarminDevice, storage: Storage,
         log.info("history: the line of this connection was counted after this count began, "
                  "left as it is")
         return kinds, capacity, free, dumps
-    log.info("history: the line of this connection put right after a removal (%d kinds of "
-             "file, %s free)", len(kinds), applog.size(free))
+    log.info("history: the line of this connection put right by a count (%d kinds of file, "
+             "%s free)", len(kinds), applog.size(free))
     return kinds, capacity, free, dumps
 
 
@@ -676,12 +641,11 @@ def after_removal(device: GarminDevice, storage: Storage,
     Ctrl+C), the line put right by what was removed (note_removed) and the failure raised as it
     is. The window and the command line alike."""
     now = now or datetime.now()
-    began = begin(getattr(device, "unit_id", None))
     try:
         return note_counted(device, storage, now, after_removal_of=removed)
     except BaseException:
         for kind, files in removed.items():
-            note_removed(device, storage, files, kind, now, began)
+            note_removed(device, storage, files, kind, now)
         raise
 
 
@@ -696,7 +660,7 @@ def connection_line(device: GarminDevice, storage: Storage) -> dict | None:
 
 
 def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str, int]],
-                 kind: str, now: datetime | None = None, began: Began | None = None) -> bool:
+                 kind: str, now: datetime | None = None) -> bool:
     """After a removal that could not be counted again (the device stopped responding, or was
     unplugged): the line of this connection put right by what was removed (`removed`: path,
     size; `kind`: "logs" for memory dumps, "updates" for update files): its memory dumps fewer,
@@ -704,7 +668,6 @@ def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str
     is asked of the device. True when the line was put right."""
     if not removed or not getattr(device, "unit_id", None):
         return False
-    began = began or begin(device.unit_id)  # `began`: the caller's, when its work began first
     now = now or datetime.now()
     via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
     try:
@@ -732,8 +695,6 @@ def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str
 
     try:
         with records_locked():
-            if forgotten_since(device.unit_id, began):
-                return False
             done = _put_right(where, key, fix)
     except Exception as e:  # noqa: BLE001 - the log is a side line: never the removal's result lost
         log.info("history: not put right by what was removed (%s)", type(e).__name__)

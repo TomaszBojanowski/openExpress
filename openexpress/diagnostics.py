@@ -422,7 +422,7 @@ def rotate(where: Path, copies: int = COPIES_KEPT, limit: int | None = None
 
 def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = None,
                found: dict[str, tuple[int, float]] | None = None,
-               progress: Callable[[str], None] | None = None, began=None) -> Copied:
+               progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the diagnostic files the device shows (through the ordinary connection, never a
     session of its own): the content not kept yet, a new copy only when something changed.
     Memory dumps, health metrics, settings and big files are only listed. `found`: those
@@ -456,13 +456,9 @@ def copy_files(device: GarminDevice, storage: Storage, now: datetime | None = No
     for n, (path, mtime, old) in enumerate(to_read, 1):
         say_to(progress)(Step(head, n, len(to_read)))
         data = storage.read_at(path)  # a real path, as listed
-        if _forgotten_meanwhile(device, began):
-            return report
         sha, _stored = _keep_file(where, files, report, path, data, mtime)
         # Unchanged: as in the copy before (not merely the content of another file).
         report.add(not (isinstance(old, dict) and old.get("sha256") == sha))
-    if _forgotten_meanwhile(device, began):
-        return report
     if files != last.get("files") or listed != last.get("listed"):
         _save(where, "files", files, listed, now, device.software_version_str)
         report.saved = True
@@ -810,19 +806,7 @@ def _written_since(storage: Storage, folders: list[str], err_logs: list[str],
         return True
 
 
-def _forgotten_meanwhile(device: GarminDevice, began) -> bool:
-    """Whether Forget Device came after the reading at the opening began (`began`:
-    history.begin; None: not asked): nothing more is written of the device then."""
-    from openexpress import history
-
-    if began is None or not device.unit_id or not history.forgotten_since(device.unit_id,
-                                                                          began):
-        return False
-    log.info("diagnostics: the device was forgotten meanwhile, nothing kept of it")
-    return True
-
-
-def seen_now(device: GarminDevice, storage: Storage, with_files: bool, began=None) -> Seen:
+def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
     """The diagnostic files of the device now: at the places kept for it when they still
     hold (read alone, only the folders of the logs and the dumps listed), else looked for
     through its folders, and the places kept anew. `with_files`: also the files a copy
@@ -838,7 +822,7 @@ def seen_now(device: GarminDevice, storage: Storage, with_files: bool, began=Non
         return seen
     held_before = bool(note)
     seen, note = _look(device, storage, with_files)
-    if where is not None and not _forgotten_meanwhile(device, began):
+    if where is not None:
         paths.make_dir(where.parent)
         paths.write_private(where, json.dumps(note, indent=1, sort_keys=True))
     log.info("diagnostics: looked through the folders (%s); %d files, %d folders kept",
@@ -859,9 +843,6 @@ class AtOpen:
     errors_known: bool = True  # every error log there was read
     error_logs: int = 0  # how many error logs the device has, read or not
     dumps_known: bool = True  # the memory dumps were listed
-    # When the reading began (history.begin): the line of this connection written with it
-    # (history.note_connection) is not written for a device forgotten since.
-    began: object = field(default=None, repr=False, compare=False)
 
 
 # Once per connection: the unit ID and where the device is on USB (a new connection gives a
@@ -889,16 +870,13 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     """At the opening of a device, once per connection: its error logs read (always), and its
     diagnostic files copied when the copy is on. Never a session of our own; a failure is
     a line in the log, never a failed opening."""
-    from openexpress import history
-
     key = _connection(device, storage)
     if key is not None and key in _done:
         return _done[key]
-    began = history.begin(device.unit_id)  # nothing kept of a device forgotten meanwhile
     now = now or datetime.now()
     copying = copy_on()
     try:
-        seen = seen_now(device, storage, with_files=copying, began=began)
+        seen = seen_now(device, storage, with_files=copying)
     except DeviceNotResponding:
         raise
     except DeviceError as e:
@@ -916,15 +894,14 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
     else:
         dumps, hidden = [], False
     found = AtOpen(entries, dumps, hidden, errors_known=not missed, error_logs=len(present),
-                   dumps_known=seen is not None, began=began)
+                   dumps_known=seen is not None)
     crash = last_crash(entries, now)
     if crash is not None:
         log.info("diagnostics: the device logged %s", crash.words())
     if copying:
         try:
             found.copied = copy_files(device, storage, now,
-                                      found=seen.files if seen is not None else None,
-                                      began=began)
+                                      found=seen.files if seen is not None else None)
         except DeviceNotResponding:
             raise
         except (DeviceError, OSError) as e:

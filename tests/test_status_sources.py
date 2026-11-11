@@ -3,21 +3,16 @@ memory dumps, whether the device has diagnostic data and whether its error logs 
 same on the page of the device connected, on its page from the records, on the command line and
 in the report; the device log keeps what the page from the records needs (every crash, the
 connection told from the next one), drops nothing for a clock set wrong, skips a line it cannot
-read, and is not made again for a device forgotten meanwhile; the space of the main folder's
+read, and notes a device forgotten and connected again anew; the space of the main folder's
 files goes to their kind. All devices, files and times are made up."""
 
 import hashlib
 import io
 import json
 import os
-import shutil
-import subprocess
-import sys
-import textwrap
 import threading
-import time
 import types
-from contextlib import contextmanager, redirect_stdout
+from contextlib import redirect_stdout
 from datetime import datetime, timedelta
 
 import pytest
@@ -31,7 +26,6 @@ from openexpress import (
     freeing,
     history,
     known_devices,
-    paths,
     report,
     status,
 )
@@ -98,7 +92,6 @@ def session_of(st, dev, found):
 @pytest.fixture(autouse=True)
 def fresh_process(monkeypatch):
     monkeypatch.setattr(history, "_noted", set())
-    monkeypatch.setattr(history, "_forgotten", {})
     monkeypatch.setattr(diagnostics, "_done", {})
 
 
@@ -318,39 +311,6 @@ def test_a_line_with_a_time_the_readers_cannot_use_is_skipped(tmp_path, clock):
     assert len(history.read(UNIT).lines) == 1
     cli.history_lines(UNIT)
     assert status.read_kept(UNIT) is not None
-
-
-def test_a_device_forgotten_meanwhile_is_not_made_again_by_a_late_line(tmp_path, clock,
-                                                                       monkeypatch):
-    """The reading of a device just unplugged, or a count after a removal, ending after Forget
-    Device: neither makes its folder again."""
-    from openexpress import forget
-
-    root = make_root(tmp_path, err=[])
-    st, dev = opened(root)
-    real_line = history._line
-
-    def forgotten_meanwhile(*a, **kw):
-        out = real_line(*a, **kw)
-        forget._delete(UNIT, discard_pending=True, backups=False)
-        return out
-
-    monkeypatch.setattr(history, "_line", forgotten_meanwhile)
-    assert not history.note_connection(dev, st)
-    assert not paths.device_dir(UNIT).exists()
-    monkeypatch.setattr(history, "_line", real_line)
-    real_count = history.storage_by_kind
-
-    def counted_meanwhile(*a, **kw):
-        out = real_count(*a, **kw)
-        forget._delete(UNIT, discard_pending=True, backups=False)
-        return out
-
-    history._noted.clear()
-    assert history.note_connection(dev, st)
-    monkeypatch.setattr(history, "storage_by_kind", counted_meanwhile)
-    history.note_counted(dev, st)
-    assert not paths.device_dir(UNIT).exists()
 
 
 def test_a_device_plugged_in_again_is_a_new_connection_without_its_place_on_usb(tmp_path,
@@ -1073,7 +1033,7 @@ def test_updates_copied_to_a_test_drive_are_not_the_device_s(tmp_path, monkeypat
     assert noted == ([] if test_drive else [UNIT])
 
 
-# --- folders that cannot be listed, the latest count, one boot log line, a device forgotten -
+# --- folders that cannot be listed, the space of now, one boot log line, Forget Device ------------
 
 
 def test_a_dump_left_out_for_want_of_room_is_told_it_did_not_fit(tmp_path, clock, monkeypatch,
@@ -1322,53 +1282,6 @@ def test_two_crashes_of_the_two_error_logs_stay_two_also_with_the_boot_line_of_t
     assert len(merged) == 2, [(c.at, sorted(c.sources)) for c in merged]
 
 
-def test_the_reading_at_the_opening_does_not_make_a_forgotten_devices_folder_again(
-        tmp_path, clock, monkeypatch):
-    root = make_root(tmp_path, err=[trap("2026-10-20 22:24:06")], dumps=[("RAM.zip", 300)])
-    st, dev = opened(root)
-    history.note_connection(dev, st)  # an earlier connection: its folder exists
-    assert paths.device_dir(UNIT).exists()
-    real_look = diagnostics._look
-
-    def forgotten_meanwhile(*a, **kw):
-        out = real_look(*a, **kw)
-        forget._delete(UNIT, discard_pending=True, backups=False)  # Forget Device meanwhile
-        return out
-
-    monkeypatch.setattr(diagnostics, "_look", forgotten_meanwhile)
-    found = diagnostics.at_open(dev, st)  # the window's reading of the device just unplugged
-    history.note_connection(dev, st, found=found)
-    left = sorted(p.name for p in paths.device_dir(UNIT).rglob("*")) \
-        if paths.device_dir(UNIT).exists() else []
-    assert not paths.device_dir(UNIT).exists(), f"made again with {left}"
-
-
-def test_the_copy_at_the_opening_does_not_make_a_forgotten_devices_folder_again(
-        tmp_path, clock, monkeypatch):
-    from openexpress.settings import Settings
-
-    s = Settings.load()
-    s.diagnostics_copy = True
-    s.save()
-    root = make_root(tmp_path, err=[trap("2026-10-20 22:24:06")])
-    st, dev = opened(root)
-    real = diagnostics._visible_files
-
-    def forgotten_meanwhile(*a, **kw):
-        out = real(*a, **kw)
-        forget._delete(UNIT, discard_pending=True, backups=False)
-        return out
-
-    monkeypatch.setattr(diagnostics, "_visible_files", forgotten_meanwhile)
-    monkeypatch.setattr(diagnostics, "seen_now",
-                        lambda device, storage, with_files, began=None: diagnostics.Seen(
-                            {}, [], None, False))
-    diagnostics.at_open(dev, st)
-    left = sorted(p.name for p in paths.device_dir(UNIT).rglob("*")) \
-        if paths.device_dir(UNIT).exists() else []
-    assert not paths.device_dir(UNIT).exists(), f"made again with {left}"
-
-
 def test_a_device_forgotten_then_connected_again_has_a_line(tmp_path, clock):
     """A device forgotten, then plugged in again in the same run of the window, gets the line of this
     connection."""
@@ -1381,90 +1294,7 @@ def test_a_device_forgotten_then_connected_again_has_a_line(tmp_path, clock):
     assert history.read(UNIT).lines, "no line: the records of the device stay empty"
 
 
-CHILD = textwrap.dedent("""
-    import sys, time, types
-    from pathlib import Path
-    from openexpress import history
-    from openexpress.device.storage import LocalStorage
-    from openexpress.device.xmldevice import parse
-
-    root, began, go = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-
-    class Slow(LocalStorage):
-        mass_storage = False
-        def __init__(self, root):
-            super().__init__(root)
-            self.usb = types.SimpleNamespace(bus=1, address=7)
-        def capacity(self):
-            began.write_text("counting")
-            while not go.exists():
-                time.sleep(0.05)
-            return 10_000_000
-        def free_space(self):
-            return 4_000_000
-
-    st = Slow(root)
-    dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    print(history.note_connection(dev, st))
-""")
-
-
-def test_a_line_begun_in_another_process_does_not_bring_a_forgotten_device_back(tmp_path,
-                                                                               clock):
-    root = make_root(tmp_path, err=[])
-    (paths.device_dir(UNIT)).mkdir(parents=True)  # the device is remembered: its folder
-    began, go = tmp_path / "began", tmp_path / "go"
-    child = subprocess.Popen([sys.executable, "-c", CHILD, str(root), str(began), str(go)],
-                             cwd=os.getcwd(), env=dict(os.environ), stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True)
-    end = time.monotonic() + 20
-    while not began.exists() and time.monotonic() < end:
-        time.sleep(0.05)
-    assert began.exists(), child.stderr.read() if child.poll() is not None else "no start"
-    forget._delete(UNIT, discard_pending=True, backups=False)  # Forget Device in the window
-    assert not paths.device_dir(UNIT).exists()
-    go.write_text("go")
-    out, err = child.communicate(timeout=30)
-    left = sorted(p.name for p in paths.device_dir(UNIT).rglob("*")) \
-        if paths.device_dir(UNIT).exists() else []
-    assert not paths.device_dir(UNIT).exists(), (f"made again by the other process: {left}",
-                                                 out, err[-500:])
-
-
-# --- a removal put right after Forget Device, a boot log line that disagrees ------------------
-
-
-def test_a_removal_put_right_after_forget_device_leaves_the_records_alone(tmp_path, clock,
-                                                                         monkeypatch):
-    """A removal not counted again waits for the lock of the records while Forget Device holds
-    it: begun before the device was forgotten, it never changes the records kept after (a line
-    of the same connection written again once it was forgotten)."""
-    root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200), ("RAM.zip", 300)])
-    st, dev = opened(root)
-    assert history.note_connection(dev, st)
-    later = history.read(UNIT).lines
-    real_lock = history.records_locked
-    waits = threading.Event()
-
-    @contextmanager
-    def lock_asked():
-        waits.set()
-        with real_lock():
-            yield
-
-    monkeypatch.setattr(history, "records_locked", lock_asked)
-    put_right = []
-    removal = threading.Thread(target=lambda: put_right.append(history.note_removed(
-        dev, st, [("GARMIN/Debug/dump/RAM_bak1.zip", 200)], "logs")))
-    with real_lock():  # Forget Device
-        removal.start()
-        assert waits.wait(10), "the removal never asked for the lock of the records"
-        shutil.rmtree(paths.device_dir(UNIT))
-        history.forgotten(UNIT)
-        write_lines(*later)  # the records kept after it: the connection's line written again
-    removal.join(10)
-    assert history.read(UNIT).lines == later
-    assert put_right == [False]
+# --- a boot log line that disagrees ---------------------------------------------------------------
 
 
 def test_a_boot_log_line_whose_error_number_disagrees_is_a_crash_of_its_own():

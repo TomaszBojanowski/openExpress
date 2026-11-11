@@ -177,16 +177,16 @@ window waits for a count still going, which is in the session before the task go
 its row, the row Device Storage and the report take one free space, the one the window read last
 (at the opening, at Refresh, after a write, and each time the page is read), and the kinds of
 file of this connection's line, which every count puts right, the command line's too (the
-window's own count only for a device the log does not keep); never another connection's line. A capacity not told by a count is the
-one known (it does not change); free space and memory dumps not told are not known. A folder
-behind a link is not counted. A write begun before Forget Device (the reading at the opening,
-the line of the connection, a count, a removal put right), in this process or another, writes
-nothing: the device's folder was there when it began and is gone, or this process forgot it.
+window's own count only for a device the log does not keep); never another connection's line.
+A capacity not told by a count is the one known (it does not change); free space and memory
+dumps not told are not known. A folder behind a link is not counted.
 A connection is told from the next one by the device's place on USB (a new one at each plugging
 in; where /sys cannot be read, the one the volume tells, kept for this alone), a drive's by its
 mount, else by its software version. The writers of the log, the removals of D9 and Forget Device take one lock of
-the records, in any process; a write begun before Forget Device does not make the device's
-folder again.
+the records, in any process. After Forget Device the device's next connection is noted anew,
+also in the same window. A write already under way when the device is forgotten (a device
+unplugged while it is read, forgotten in that moment) may still write its line: a folder
+with that line again, nothing lost; guarding against it is not worth its code.
 
 Step a adds one sentence to "What is kept of each device" in `docs/privacy.md`: a short log of
 each connection: the software version, the storage by category, the number and size of memory

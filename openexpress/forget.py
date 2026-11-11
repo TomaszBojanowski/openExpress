@@ -81,8 +81,7 @@ def _delete(unit_id: int, discard_pending: bool, backups: bool) -> str:
         except OSError:
             pass
     folder = paths.device_dir(unit_id)
-    # Under the lock of the device records: a write begun before (the reading of a device just
-    # unplugged, a count after a removal) waits, then sees the device forgotten.
+    # Under the lock of the device records: a write of the device log waits until it is done.
     with history.records_locked():
         if folder.exists():
             shutil.rmtree(folder)
