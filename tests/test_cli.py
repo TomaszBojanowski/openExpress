@@ -53,6 +53,33 @@ def test_backup_keeps_n(device_root, xdg, tmp_path, capsys, monkeypatch):
     assert (latest / "FIT_TYPE_4" / "2026-10-01-10-00-00.fit").exists()
 
 
+def test_backup_names_no_folder_named_after_the_unit_id(device_root, xdg, tmp_path, capsys,
+                                                        monkeypatch):
+    """The device's folder of backups is named after its unit ID: the lines name a backup by
+    its own folder and the folder of the backups above the device's, also for an old backup
+    removed."""
+    from datetime import datetime as real_dt
+
+    import openexpress.backup as b
+
+    dest = tmp_path / "backups"
+    for i in range(2):
+        class FakeDT(real_dt):
+            @classmethod
+            def now(cls, tz=None, _i=i):
+                return real_dt(2026, 1, 1, 10, 0, _i)
+        monkeypatch.setattr(b, "datetime", FakeDT)
+        assert main(["--path", str(device_root), "backup", "--dest", str(dest), "--keep", "1",
+                     "--apply"]) == 0
+    out = capsys.readouterr().out
+    shown_unit_id = "1234567890" in out
+    assert not shown_unit_id
+    assert "files" in out and "to 2026-01-01 (10.00.01)" in out
+    assert f"in the folder of the device under {dest}" in out
+    assert "Removed old backup 2026-01-01 (10.00.00)" in out
+    assert [p.name for p in (dest / "1234567890").iterdir()] == ["2026-01-01 (10.00.01)"]
+
+
 def test_sync_requires_setup(device_root, xdg, capsys):
     assert main(["--path", str(device_root), "sync"]) == 1
     assert "openexpress setup" in capsys.readouterr().err

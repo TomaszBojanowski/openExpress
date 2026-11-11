@@ -1627,11 +1627,14 @@ def cmd_backup(args) -> int:
         return 0
     with _progress() as progress:
         res = run_backup(dev, st, dest, keep=args.keep, progress=progress)
+    # A backup by its own folder, under the folder of the backups: the device's folder between
+    # them is named after the unit ID.
     print(ngettext("Copied {count} file ({size}) to {path}",
                    "Copied {count} files ({size}) to {path}", res.files).format(
-        count=res.files, size=human_size(res.bytes), path=res.path))
+        count=res.files, size=human_size(res.bytes), path=res.path.name))
+    print("  " + _("in the folder of the device under {folder}").format(folder=dest))
     for p in res.removed:
-        print(_("Removed old backup {path}").format(path=p))
+        print(_("Removed old backup {path}").format(path=p.name))
     if res.incomplete:
         from openexpress.backup import incomplete_text
 

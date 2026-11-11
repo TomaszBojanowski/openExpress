@@ -49,4 +49,4 @@ def test_the_command_line_tells_the_backup_once(device_root, tmp_path, capsys):
     assert main(["--path", str(device_root), "backup", "--apply",
                  "--dest", str(tmp_path / "bk")]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert [line for line in out if line.startswith("  ")] == ["  Copying to the backup"]
+    assert [line for line in out if line.startswith("  Copying")] == ["  Copying to the backup"]
