@@ -24,6 +24,9 @@ from openexpress import applog
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, human_size
 
+# The device's main folder, as a path from its root in lower case: the root itself or GARMIN.
+MAIN_FOLDERS = ("", "garmin")
+
 log = logging.getLogger(__name__)
 
 

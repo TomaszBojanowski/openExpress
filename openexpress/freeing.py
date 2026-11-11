@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from openexpress import applog, diagnostics, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _
 from openexpress.progress import Step, say_to
@@ -133,7 +133,7 @@ def removable_update(u) -> bool:
     satellite data (Garmin/GPS)."""
     path = u.device_path.strip("/").casefold()
     folder, name = posixpath.split(path)
-    if folder in ("", "garmin") or name.startswith("."):
+    if folder in MAIN_FOLDERS or name.startswith("."):
         return False
     if any(folder == f or folder.startswith(f + "/") for f in NEVER_FOLDERS):
         return False
@@ -144,7 +144,7 @@ def waits_to_install(u) -> bool:
     """An update file in the device's main folder (GUPDATE.GCD, GUPDATE.GSP): the device
     installs it at a restart; removing it would cancel the update."""
     folder = posixpath.dirname(u.device_path).casefold()
-    return u.filename.upper() in SYSTEM_FILES and folder in ("", "garmin")
+    return u.filename.upper() in SYSTEM_FILES and folder in MAIN_FOLDERS
 
 
 @dataclass

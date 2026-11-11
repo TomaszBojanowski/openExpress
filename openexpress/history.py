@@ -27,6 +27,7 @@ from pathlib import Path
 
 from openexpress import applog, paths
 from openexpress.device.storage import (
+    MAIN_FOLDERS,
     DeviceError,
     DeviceNotResponding,
     Entry,
@@ -50,10 +51,6 @@ CATEGORIES = ("maps", "activities", "music", "apps", "courses", "updates", "logs
 VIA = ("mtp", "drive")
 # What Garmin Connect queued for the device waits there until the device takes it in.
 QUEUE = "garmin/newfiles"
-# Declared for the device's whole main folder (FITBinary, FTLImageVersion, the maps of a fēnix 8):
-# only its own files are counted, not those of the folders under it, and only by a rule that names
-# an extension or a file (one without would take GarminDevice.xml and the update files there).
-MAIN_FOLDERS = ("", "garmin")
 # A line is kept while it is younger than KEEP, measured from the middle of the times of the newest
 # KEEP_AT_LEAST lines (a clock set wrong at fewer than half of them never drops the rest), and the
 # newest KEEP_AT_LEAST always.
@@ -136,6 +133,9 @@ class _Folders:
         return out
 
 
+# Declared for the device's whole main folder (FITBinary, FTLImageVersion, the maps of a fēnix 8):
+# only its own files are counted, not those of the folders under it, and only by a rule that names
+# an extension or a file (one without would take GarminDevice.xml and the update files there).
 def _within(folder: str, parent: str) -> bool:
     return parent not in MAIN_FOLDERS and (folder == parent or folder.startswith(parent + "/"))
 
@@ -320,17 +320,10 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
         error_logs = found.error_logs
         dumps = found.dumps if found.dumps_known else None
     else:
-        missed: list[str] = []
         present: list[str] = []
-        entries = diagnostics.read_errors(storage, missed=missed, present=present)
-        entries = None if missed else entries
+        entries = diagnostics.errors_or_none(storage, present=present)
         error_logs = len(present)
-        try:
-            dumps = diagnostics.dumps_on_device(storage)
-        except DeviceNotResponding:
-            raise
-        except DeviceError:
-            dumps = None
+        dumps = diagnostics.dumps_or_none(storage)
     line = {"v": VERSION, "time": now.astimezone().isoformat(timespec="seconds"), "conn": key,
             "via": via, "software": device.software_version_str, "categories": kinds}
     # What could not be read is left out, never written as none or 0.
@@ -362,9 +355,9 @@ def _hidden_logs(device: GarminDevice, storage: Storage, found) -> bool | None:
     if found is not None:
         return bool(found.hidden_logs)
     try:
-        return (diagnostics.may_have_hidden_logs(storage)
-                and not diagnostics.hidden_logs_known_absent(
-                    device.unit_id, bool(getattr(storage, "test_drive", False))))
+        return diagnostics.hidden_logs_to_copy(diagnostics.may_have_hidden_logs(storage),
+                                               device.unit_id,
+                                               bool(getattr(storage, "test_drive", False)))
     except DeviceNotResponding:
         raise
     except DeviceError:
@@ -415,7 +408,7 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
     when a line was written."""
     if storage is None or not getattr(device, "unit_id", None):
         return False
-    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    via = _via(storage)
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
     if (str(where), key) in _noted:
@@ -437,6 +430,11 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
         log.info("history: a line for this connection (%d kinds of file, %s free)",
                  len(line["categories"]), applog.size(line.get("free")))
     return written
+
+
+def _via(storage: Storage) -> str:
+    """How the device is connected, as the log keeps it (VIA): a drive or MTP."""
+    return "drive" if getattr(storage, "mass_storage", False) else "mtp"
 
 
 def _last_key(where: Path) -> str | None:
@@ -561,19 +559,14 @@ def note_counted(device: GarminDevice, storage: Storage,
 
     now = now or datetime.now()
     kinds, capacity, free = storage_by_kind(device, storage)
-    try:
-        dumps = diagnostics.dumps_on_device(storage)
-    except DeviceNotResponding:
-        raise
-    except DeviceError:
-        dumps = None
+    dumps = diagnostics.dumps_or_none(storage)
     if after_removal_of and free is None and dumps is None:
         log.info("history: the device could not be counted after the removal")
         raise NotCounted(_("The device could not be counted again after the removal; its "
                            "records keep what was removed."))
     if not getattr(device, "unit_id", None):
         return kinds, capacity, free, dumps
-    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    via = _via(storage)
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
     later = []
@@ -642,7 +635,7 @@ def connection_line(device: GarminDevice, storage: Storage) -> dict | None:
     removal by the window or the command line); None: it has none, or another is the last."""
     if not getattr(device, "unit_id", None):
         return None
-    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    via = _via(storage)
     lines = read(device.unit_id, bool(getattr(storage, "test_drive", False))).lines
     return lines[-1] if lines and lines[-1]["conn"] == _key(device, storage, via) else None
 
@@ -657,7 +650,7 @@ def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str
     if not removed or not getattr(device, "unit_id", None):
         return False
     now = now or datetime.now()
-    via = "drive" if getattr(storage, "mass_storage", False) else "mtp"
+    via = _via(storage)
     try:
         key = _key(device, storage, via)
     except DeviceNotResponding:

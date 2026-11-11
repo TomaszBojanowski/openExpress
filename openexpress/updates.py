@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from openexpress import answers, applog, cache, download, known_devices, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _
 from openexpress.progress import (
@@ -188,7 +188,7 @@ class SoftwareUpdate:
                 self.part_number.casefold() == self.model_part_number.casefold():
             return True
         folder = posixpath.dirname(self.device_path).casefold()
-        return self.filename.upper() in SYSTEM_FILES and folder in ("", "garmin")
+        return self.filename.upper() in SYSTEM_FILES and folder in MAIN_FOLDERS
 
     @property
     def installs_when_disconnected(self) -> bool:

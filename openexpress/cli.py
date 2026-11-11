@@ -244,11 +244,8 @@ def cmd_diagnostics(args) -> int:
     elif not entries:
         # TRANSLATORS: under "Error logs on the device:" when the device has none
         print("  " + _("no entries"))
-    try:
-        dumps = diagnostics.dumps_on_device(st)
-    except DeviceNotResponding:
-        raise
-    except DeviceError:
+    dumps = diagnostics.dumps_or_none(st)
+    if dumps is None:
         # TRANSLATORS: `openexpress diagnostics` when the device's folder of memory dumps
         # could not be listed
         print(_("Memory dumps on the device: not known (their folder could not be listed)"))

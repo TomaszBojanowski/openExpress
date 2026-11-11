@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 
 from openexpress import __version__, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import human_size
 
@@ -149,17 +149,11 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
     from openexpress import crashes, diagnostics, status
 
     if ask:
-        missed: list[str] = []
-        entries = diagnostics.read_errors(storage, missed=missed)
-        errors_known = not missed
-        found_crashes = crashes.history(device.unit_id, entries if errors_known else None,
+        entries = diagnostics.errors_or_none(storage)
+        errors_known = entries is not None
+        found_crashes = crashes.history(device.unit_id, entries,
                                         test_drive=bool(getattr(storage, "test_drive", False)))
-        try:
-            listed = diagnostics.dumps_on_device(storage)
-        except DeviceNotResponding:
-            raise
-        except DeviceError:
-            listed = None
+        listed = diagnostics.dumps_or_none(storage)
         dumps = (len(listed), sum(size for _p, size in listed)) if listed is not None else None
     else:
         errors_known = found is not None and found.errors_known

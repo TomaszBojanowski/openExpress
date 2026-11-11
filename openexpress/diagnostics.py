@@ -509,6 +509,26 @@ def dumps_on_device(storage: Storage) -> list[tuple[str, int]]:
     return [(path, e.size) for path, e in dump_files(storage)]
 
 
+def dumps_or_none(storage: Storage) -> list[tuple[str, int]] | None:
+    """The memory dumps the device shows (dumps_on_device); None when their folder could not
+    be listed. A device that stopped responding raises."""
+    try:
+        return dumps_on_device(storage)
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        return None
+
+
+def errors_or_none(storage: Storage, present: list[str] | None = None
+                   ) -> list[ErrorEntry] | None:
+    """The entries of the device's error logs (read_errors); None when one of them could not
+    be read. `present`: as read_errors."""
+    missed: list[str] = []
+    entries = read_errors(storage, missed=missed, present=present)
+    return None if missed else entries
+
+
 def copy_dumps(device: GarminDevice, storage: Storage, now: datetime | None = None,
                progress: Callable[[str], None] | None = None) -> Copied:
     """Copy the memory dumps (on request only), the newest first while they fit within the
@@ -888,9 +908,8 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
                           missed=missed, present=present)
     if seen is not None:
         dumps = seen.dumps
-        hidden = (may_have_hidden_logs(storage, shown=seen.event_logs)
-                  and not hidden_logs_known_absent(
-                      device.unit_id, bool(getattr(storage, "test_drive", False))))
+        hidden = hidden_logs_to_copy(may_have_hidden_logs(storage, shown=seen.event_logs),
+                                     device.unit_id, bool(getattr(storage, "test_drive", False)))
     else:
         dumps, hidden = [], False
     found = AtOpen(entries, dumps, hidden, errors_known=not missed, error_logs=len(present),
