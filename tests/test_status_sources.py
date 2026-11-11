@@ -214,16 +214,27 @@ def test_after_a_removal_the_report_tells_the_dumps_of_now(tmp_path, clock):
 # --- whether there is diagnostic data, whether the error logs were read ------------------------
 
 
-def test_a_device_without_diagnostic_data_is_so_connected_and_from_its_records(tmp_path,
-                                                                              clock):
-    root = make_root(tmp_path)  # no error log, no dumps
+@pytest.mark.parametrize("err, title", [(None, "No Diagnostic Data"),
+                                        ([], "No Problems Found")])
+@pytest.mark.parametrize("by_the_window", [True, False])
+def test_only_a_device_without_error_logs_or_dumps_has_no_diagnostic_data(tmp_path, clock, err,
+                                                                         title, by_the_window):
+    """No error log and no dumps (an accessory, a drive): "No Diagnostic Data". Error logs that
+    hold no entries: "No Problems Found", as any device without crashes. The page and the row
+    Device Status alike, connected and from the records (the line written by the window or by
+    the command line)."""
+    from openexpress.gui.words import status_summary
+
+    root = make_root(tmp_path, err=err)  # no dumps
     (root / "GARMIN" / "EVNTLOGS").mkdir()  # shows its event logs: nothing hidden
     st, dev = opened(root)
     found = diagnostics.at_open(dev, st)
-    history.note_connection(dev, st, found=found)
+    history.note_connection(dev, st, found=found if by_the_window else None)
     live = status.read(session_of(st, dev, found))
     kept = status.read_kept(UNIT)
-    assert (live.has_diagnostics, kept.has_diagnostics) == (False, False)
+    titles = [status_summary(f.crashes, f.errors_known, f.free, f.capacity, clock.current,
+                             f.has_diagnostics)[1] for f in (live, kept)]
+    assert titles == [title, title]
 
 
 def test_records_without_the_error_logs_say_they_were_not_read(clock):
@@ -678,7 +689,7 @@ def test_a_line_with_a_size_too_large_is_skipped(clock):
 def test_no_diagnostic_data_means_the_same_connected_and_from_the_records(tmp_path, clock):
     """Copy Crash Logs found none on a watch that hides them, with nothing else to show: the
     page of the device connected and the page from its records both say No Diagnostic Data."""
-    root = make_root(tmp_path, err=[])
+    root = make_root(tmp_path)  # no error log
     st, dev = opened(root)
     found = diagnostics.AtOpen(entries=[], hidden_logs=True, dumps=[])
     history.note_connection(dev, st, found=found)

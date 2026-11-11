@@ -327,11 +327,14 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
     kinds, capacity, free = storage_by_kind(device, storage)
     if found is not None:
         entries = found.entries if found.errors_known else None
+        error_logs = found.error_logs
         dumps = found.dumps if found.dumps_known else None
     else:
         missed: list[str] = []
-        entries = diagnostics.read_errors(storage, missed=missed)
+        present: list[str] = []
+        entries = diagnostics.read_errors(storage, missed=missed, present=present)
         entries = None if missed else entries
+        error_logs = len(present)
         try:
             dumps = diagnostics.dumps_on_device(storage)
         except DeviceNotResponding:
@@ -356,6 +359,8 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
         # (crashes.history).
         line["crashes"] = [{**_crash_fields(e), **_log_of(e)} for e in entries if e.is_crash]
         line["errors"] = len(entries)
+        # Error logs without entries are not "no diagnostic data" (status.has_diagnostics).
+        line["error_logs"] = error_logs
     hidden = _hidden_logs(device, storage, found)
     if hidden is not None:
         line["hidden"] = hidden
@@ -823,10 +828,11 @@ def valid(raw: str) -> dict | None:
         if not (isinstance(found, list) and all(_crash_ok(c) for c in found)):
             return None
         line["crashes"] = [_crash_kept(c) for c in found]
-    if "errors" in item:
-        if not _count(item["errors"]):
-            return None
-        line["errors"] = item["errors"]
+    for key in ("errors", "error_logs"):
+        if key in item:
+            if not _count(item[key]):
+                return None
+            line[key] = item[key]
     if "hidden" in item:
         if not isinstance(item["hidden"], bool):
             return None

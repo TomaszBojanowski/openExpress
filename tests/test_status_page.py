@@ -886,14 +886,13 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
     from fakes import window
     from gi.repository import Adw
 
-    from openexpress.diagnostics import ErrorEntry
+    from openexpress.diagnostics import AtOpen, ErrorEntry
     from openexpress.gui.device_page import status_row
 
     chosen = []
     entries = [ErrorEntry("RTL Trap", c.at, c.error, c.program_counter, c.screen, "err_log.txt")
                for c in facts().crashes]
-    found = types.SimpleNamespace(entries=entries, errors_known=True, dumps=[], dumps_known=True,
-                                  hidden_logs=False)
+    found = AtOpen(entries, [], False, error_logs=1)
     win = window(session=device_session(diagnostics=found, device=None, storage=None,
                                         space=(12_400 * MB, 31_100 * MB)),
                  select_section=chosen.append)

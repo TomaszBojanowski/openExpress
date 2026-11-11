@@ -161,15 +161,19 @@ def parse_err_log(data: bytes, source: str = "") -> list[ErrorEntry]:
 
 
 def read_errors(storage: Storage, at: dict[str, int] | None = None,
-                missed: list[str] | None = None) -> list[ErrorEntry]:
+                missed: list[str] | None = None,
+                present: list[str] | None = None) -> list[ErrorEntry]:
     """The entries of the device's error logs, read now through the ordinary connection,
     newest first. Missing files are no entries; a file that cannot be read is said in the
     log, and its name added to `missed` (then what the logs hold is not known). `at`: where
-    they are already known (real path: size, Seen), read there without looking for them."""
+    they are already known (real path: size, Seen), read there without looking for them.
+    `present`: the name of each error log the device has added to it, read or not."""
     out: list[ErrorEntry] = []
     missed = missed if missed is not None else []
+    present = present if present is not None else []
     for real, size in (at or {}).items():
         name = posixpath.basename(real)
+        present.append(name)
         if size > ERR_LOG_MAX:
             log.info("diagnostics: %s is %s, not read", name, applog.size(size))
             missed.append(name)
@@ -188,6 +192,7 @@ def read_errors(storage: Storage, at: dict[str, int] | None = None,
             size = storage.size(path, strict=True)
             if size is None:
                 continue
+            present.append(name)
             if size > ERR_LOG_MAX:
                 log.info("diagnostics: %s is %s, not read", name, applog.size(size))
                 missed.append(name)
@@ -852,6 +857,7 @@ class AtOpen:
     hidden_logs: bool  # "Copy Crash Logs" is offered
     copied: Copied | None = None
     errors_known: bool = True  # every error log there was read
+    error_logs: int = 0  # how many error logs the device has, read or not
     dumps_known: bool = True  # the memory dumps were listed
     # When the reading began (history.begin): the line of this connection written with it
     # (history.note_connection) is not written for a device forgotten since.
@@ -899,8 +905,9 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
         log.info("diagnostics: the folders not listed (%s)", type(e).__name__)
         seen = None
     missed: list[str] = []
+    present: list[str] = []
     entries = read_errors(storage, at=seen.err_logs if seen is not None else None,
-                          missed=missed)
+                          missed=missed, present=present)
     if seen is not None:
         dumps = seen.dumps
         hidden = (may_have_hidden_logs(storage, shown=seen.event_logs)
@@ -908,7 +915,7 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
                       device.unit_id, bool(getattr(storage, "test_drive", False))))
     else:
         dumps, hidden = [], False
-    found = AtOpen(entries, dumps, hidden, errors_known=not missed,
+    found = AtOpen(entries, dumps, hidden, errors_known=not missed, error_logs=len(present),
                    dumps_known=seen is not None, began=began)
     crash = last_crash(entries, now)
     if crash is not None:

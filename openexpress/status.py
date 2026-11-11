@@ -28,13 +28,14 @@ SHOWN_EVENTS = 5
 FIRST_LINE_WITHIN = timedelta(hours=1)
 
 
-def has_diagnostics(errors_known: bool, errors: int | None, crashes_found: list,
+def has_diagnostics(errors_known: bool, error_logs: int | None, crashes_found: list,
                     dumps: int | None, copies: int, hidden: bool) -> bool:
     """Whether the page shows the device's diagnostics, else "No Diagnostic Data": its error
-    logs not read (the page says so), an entry in them (`errors`; None: not known), a crash from
-    any source, a memory dump (`dumps`; None: not known, so not "none"), a copy kept here, or
-    crash logs to copy. One rule for the device connected and for its records."""
-    return (not errors_known or errors is None or errors > 0 or bool(crashes_found)
+    logs not read (the page says so), an error log, also one without entries (`error_logs`;
+    None: not known), a crash from any source, a memory dump (`dumps`; None: not known, so not
+    "none"), a copy kept here, or crash logs to copy. One rule for the device connected and
+    for its records."""
+    return (not errors_known or error_logs is None or error_logs > 0 or bool(crashes_found)
             or dumps is None or dumps > 0 or copies > 0 or hidden)
 
 
@@ -228,7 +229,7 @@ def told(session) -> Told:
     copies = diagnostics.copies_facts(unit, test_drive) if unit else (0, 0, None)
     hidden = diagnostics.hidden_logs_to_copy(found is not None and found.hidden_logs, unit,
                                              test_drive)
-    has = has_diagnostics(errors_known, len(found.entries) if errors_known else None,
+    has = has_diagnostics(errors_known, found.error_logs if errors_known else None,
                           found_crashes, len(dumps) if dumps is not None else None,
                           copies[0], hidden)
     return Told(found_crashes, errors_known, free, capacity, categories, counted_at, recounted,
@@ -329,7 +330,10 @@ def read_kept(unit_id: int) -> Facts | None:
     errors_known = newest is not None and "crash" in newest
     dumps = newest.get("dumps") if newest is not None else None
     dumps_at_last = (dumps["count"], dumps["bytes"]) if dumps is not None else None
-    has = has_diagnostics(errors_known, newest.get("errors") if newest is not None else None,
+    # A line written before it told its error logs: the device had one if it had entries.
+    error_logs = (newest.get("error_logs", newest.get("errors")) if newest is not None
+                  else None)
+    has = has_diagnostics(errors_known, error_logs,
                           found_crashes, dumps_at_last[0] if dumps_at_last else None,
                           copies[0], diagnostics.hidden_logs_to_copy(
                               newest.get("hidden") if newest is not None else None, unit_id))

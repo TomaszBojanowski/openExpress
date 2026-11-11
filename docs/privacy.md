@@ -33,9 +33,9 @@ Besides the login, this installation keeps what it knows of each device in
 - the list of your own maps;
 - a short log of each connection (`history.jsonl`): the software version, the storage by kind of
   file, the number and size of memory dumps, the crashes the error logs held (kind, time, error,
-  where the software stopped, screen, which of the two logs), how many entries they held and
-  whether the device has
-  hidden crash logs, without file names, kept whatever **Keep Diagnostic Files** says.
+  where the software stopped, screen, which of the two logs), how many error logs it has and how
+  many entries they held, and whether the device has hidden crash logs, without file names,
+  kept whatever **Keep Diagnostic Files** says.
 
 **Forget Device** removes what it keeps of a device. The Flatpak and the version from source
 each keep their own files; what each sees of the other is described in
